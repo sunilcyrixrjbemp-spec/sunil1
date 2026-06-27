@@ -33,6 +33,18 @@ const api: AxiosInstance = axios.create({
 // Inject bearer token into request headers if exists
 api.interceptors.request.use(
   async (config) => {
+    // Do not inject tokens or restore them for public auth endpoints
+    const isPublicEndpoint = config.url?.includes("/auth/login") || 
+                             config.url?.includes("/auth/forgot-password") || 
+                             config.url?.includes("/auth/verify-otp") || 
+                             config.url?.includes("/auth/reset-password") || 
+                             config.url?.includes("/auth/unlock-account") ||
+                             config.url?.includes("/api/health");
+
+    if (isPublicEndpoint) {
+      return config;
+    }
+
     let token = localStorage.getItem("access_token");
     
     // If token is missing from localStorage on a native mobile platform,
