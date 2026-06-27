@@ -235,16 +235,40 @@ class D1Connection:
 
 # Check if force local database is enabled - allow override in testing or CI environments
 import sys
-force_local = settings.FORCE_LOCAL_DB or "pytest" in sys.modules or os.getenv("GITHUB_ACTIONS") == "true"
 
-token = None
-account_id = None
-database_id = None
+def read_secret_file(name: str) -> Optional[str]:
+    for path in [name, f"/app/{name}"]:
+        if os.path.exists(path):
+            try:
+                with open(path, "r") as f:
+                    return f.read().strip()
+            except Exception:
+                pass
+    return None
 
-# Attempt to load Cloudflare token/account configuration from settings
-token = settings.CLOUDFLARE_API_TOKEN or os.getenv("CLOUDFLARE_API_TOKEN") or os.getenv("CF_API_TOKEN") or os.getenv("CF_TOKEN")
-account_id = settings.CLOUDFLARE_ACCOUNT_ID or os.getenv("CLOUDFLARE_ACCOUNT_ID")
-database_id = settings.CLOUDFLARE_DATABASE_ID or os.getenv("CLOUDFLARE_DATABASE_ID")
+force_local_val = os.getenv("FORCE_LOCAL_DB") or read_secret_file("FORCE_LOCAL_DB")
+if force_local_val is not None:
+    force_local = force_local_val.lower() in ("true", "1")
+else:
+    force_local = settings.FORCE_LOCAL_DB or "pytest" in sys.modules or os.getenv("GITHUB_ACTIONS") == "true"
+
+token = (
+    settings.CLOUDFLARE_API_TOKEN
+    or os.getenv("CLOUDFLARE_API_TOKEN")
+    or os.getenv("CF_API_TOKEN")
+    or os.getenv("CF_TOKEN")
+    or read_secret_file("CLOUDFLARE_API_TOKEN")
+)
+account_id = (
+    settings.CLOUDFLARE_ACCOUNT_ID
+    or os.getenv("CLOUDFLARE_ACCOUNT_ID")
+    or read_secret_file("CLOUDFLARE_ACCOUNT_ID")
+)
+database_id = (
+    settings.CLOUDFLARE_DATABASE_ID
+    or os.getenv("CLOUDFLARE_DATABASE_ID")
+    or read_secret_file("CLOUDFLARE_DATABASE_ID")
+)
 
 # If token is empty in settings, try reading it from the user's active wrangler session
 if not token:
