@@ -1137,6 +1137,7 @@ export default function ExpensePage() {
 
               {itineraries.map((leg, index) => {
                 const legNum = index + 1;
+                const isFirst = legNum === 1;
                 const rawDistOpts = Object.keys(facilities).length > 0 ? Object.keys(facilities) : [
                   "Ajmer", "Beawer", "Bhilwara", "Nagaur", "Tonk", "Bikaner", "Churu", "Ganganar", "Hanumangarh", 
                   "Barmer", "Balotra", "Jaisalmer", "Jalore", "Jodhpur", "Pali", "Phalodi", "Sirohi", 
