@@ -83,9 +83,9 @@ export const biometricAuth = {
   isAvailable: async (): Promise<boolean> => {
     if (!isNativeApp()) return false;
     try {
-      const { BiometricAuth } = await import('capacitor-biometric-auth');
-      const result = await (BiometricAuth as any).isAvailable();
-      return result?.has === true;
+      const { NativeBiometric } = await import('@capgo/capacitor-native-biometric');
+      const result = await NativeBiometric.isAvailable();
+      return result.isAvailable;
     } catch (_) {
       return false;
     }
@@ -99,12 +99,15 @@ export const biometricAuth = {
       return { success: false, error: 'Biometric not available in browser' };
     }
     try {
-      const { BiometricAuth } = await import('capacitor-biometric-auth');
-      const result = await (BiometricAuth as any).verify({ reason });
-      if (result?.verified) {
-        return { success: true };
-      }
-      return { success: false, error: result?.status?.description || 'Authentication failed' };
+      const { NativeBiometric } = await import('@capgo/capacitor-native-biometric');
+      await NativeBiometric.verifyIdentity({
+        reason,
+        title: 'Biometric Login',
+        subtitle: 'Log in to your account',
+        description: reason,
+        negativeButtonText: 'Cancel'
+      });
+      return { success: true };
     } catch (error: any) {
       return {
         success: false,
@@ -114,18 +117,23 @@ export const biometricAuth = {
   },
 
   /**
-   * Get the type of biometric available (fingerprint/face) — simplified detection
+   * Get the type of biometric available (fingerprint/face)
    */
   getBiometryType: async (): Promise<'fingerprint' | 'face' | 'none'> => {
     if (!isNativeApp()) return 'none';
     try {
-      const { BiometricAuth } = await import('capacitor-biometric-auth');
-      const result = await (BiometricAuth as any).isAvailable();
-      if (!result?.has) return 'none';
-      // On Android, check if it's face biometry via status description
-      const desc = (result?.status?.description || '').toLowerCase();
-      if (desc.includes('face')) return 'face';
-      return 'fingerprint';
+      const { NativeBiometric, BiometryType } = await import('@capgo/capacitor-native-biometric');
+      const result = await NativeBiometric.isAvailable();
+      if (!result.isAvailable) return 'none';
+      
+      const type = result.biometryType;
+      if (type === BiometryType.FACE_ID || type === BiometryType.FACE_AUTHENTICATION) {
+        return 'face';
+      }
+      if (type === BiometryType.TOUCH_ID || type === BiometryType.FINGERPRINT) {
+        return 'fingerprint';
+      }
+      return 'fingerprint'; // default fallback for other active locks
     } catch (_) {
       return 'none';
     }
