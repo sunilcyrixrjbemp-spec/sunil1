@@ -48,6 +48,27 @@ def _get_access_token() -> Optional[str]:
     if _cached_token and time.time() < (_token_expiry - 60):
         return _cached_token
 
+    # Check environment variable first
+    service_account_json = os.getenv("FIREBASE_SERVICE_ACCOUNT_JSON")
+    
+    if service_account_json:
+        try:
+            info = json.loads(service_account_json)
+            from google.oauth2 import service_account
+            from google.auth.transport.requests import Request as GoogleAuthRequest
+            credentials = service_account.Credentials.from_service_account_info(
+                info,
+                scopes=["https://www.googleapis.com/auth/firebase.messaging"]
+            )
+            credentials.refresh(GoogleAuthRequest())
+            _cached_token = credentials.token
+            _token_expiry = credentials.expiry.timestamp() if credentials.expiry else (time.time() + 3600)
+            logger.info("FCM: Access token obtained successfully from FIREBASE_SERVICE_ACCOUNT_JSON env var")
+            return _cached_token
+        except Exception as e:
+            logger.error(f"FCM: Failed to parse credentials from FIREBASE_SERVICE_ACCOUNT_JSON: {e}")
+            return None
+
     # Check if service account file exists
     if not os.path.exists(SERVICE_ACCOUNT_PATH):
         logger.warning(
@@ -72,7 +93,7 @@ def _get_access_token() -> Optional[str]:
         _cached_token = credentials.token
         _token_expiry = credentials.expiry.timestamp() if credentials.expiry else (time.time() + 3600)
 
-        logger.info("FCM: Access token obtained successfully")
+        logger.info("FCM: Access token obtained successfully from file")
         return _cached_token
 
     except ImportError:
@@ -82,7 +103,7 @@ def _get_access_token() -> Optional[str]:
         )
         return None
     except Exception as e:
-        logger.error(f"FCM: Failed to get access token: {e}")
+        logger.error(f"FCM: Failed to get access token from file: {e}")
         return None
 
 
@@ -137,7 +158,6 @@ def send_push_notification(
                     "notification": {
                         "title": title,
                         "body": body,
-                        "icon": "brand",
                         "priority": "HIGH",
                         "sound": "default"
                     },

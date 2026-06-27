@@ -672,7 +672,8 @@ export default function ApprovalPage() {
                           else if (url.includes("_Communication_Mail_")) cleanType = "Approval Mail Screenshot";
                           else if (url.includes("_Other_Expense_")) cleanType = "Local Purchase Invoice";
 
-                          const fullUrl = `${import.meta.env.VITE_API_URL || window.location.origin}${url}`;
+                          const API_BASE = import.meta.env.VITE_API_URL || "https://expense-backend-zio8.onrender.com";
+                          const fullUrl = url.startsWith("http") ? url : `${API_BASE}${url}`;
                           return (
                             <button
                               key={attIdx}

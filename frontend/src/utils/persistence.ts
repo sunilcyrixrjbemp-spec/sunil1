@@ -386,6 +386,32 @@ export const tokenPersistence = {
     deleteBackupFile();
   },
 
+  saveReadNotificationIds: (ids: string[]) => {
+    try {
+      localStorage.setItem("read_notification_ids", JSON.stringify(ids));
+      if (Capacitor.isNativePlatform()) {
+        Preferences.set({ key: "read_notification_ids", value: JSON.stringify(ids) });
+        
+        const dataStr = JSON.stringify(ids);
+        Filesystem.writeFile({
+          path: "CyrixField/read_notifications.json",
+          data: dataStr,
+          directory: Directory.Data,
+          encoding: Encoding.UTF8,
+          recursive: true
+        }).catch(() => {});
+        
+        Filesystem.writeFile({
+          path: "CyrixField/read_notifications.json",
+          data: dataStr,
+          directory: Directory.External,
+          encoding: Encoding.UTF8,
+          recursive: true
+        }).catch(() => {});
+      }
+    } catch (_) {}
+  },
+
   /**
    * Synchronous auth check — uses in-memory cache first, then cookie.
    * No async needed — prevents ProtectedRoute from redirecting to login incorrectly.
@@ -423,6 +449,29 @@ export const tokenPersistence = {
 
     _restorationPromise = (async () => {
       try {
+        // Pre-restore read_notification_ids from physical Filesystem / Preferences
+        try {
+          let capIds: string | null = null;
+          if (Capacitor.isNativePlatform()) {
+            const { value } = await Preferences.get({ key: "read_notification_ids" });
+            capIds = value;
+            
+            if (!capIds) {
+              const fileRes = await Filesystem.readFile({
+                path: "CyrixField/read_notifications.json",
+                directory: Directory.Data,
+                encoding: Encoding.UTF8
+              });
+              if (fileRes && typeof fileRes.data === 'string') {
+                capIds = fileRes.data;
+              }
+            }
+          }
+          if (capIds) {
+            localStorage.setItem("read_notification_ids", capIds);
+          }
+        } catch (_) {}
+
         if (localStorage.getItem("access_token") && localStorage.getItem("user")) {
           _cachedToken = localStorage.getItem("access_token");
           return;

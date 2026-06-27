@@ -4,6 +4,7 @@ import { authService } from "../services/authService";
 import { expenseService } from "../services/expenseService";
 import { approvalService } from "../services/approvalService";
 import { ticketService } from "../services/ticketService";
+import { tokenPersistence } from "../utils/persistence";
 import toast from "react-hot-toast";
 import Loader from "../components/common/Loader";
 import { 
@@ -231,7 +232,7 @@ export default function NotificationsPage() {
     } else {
       updatedReadIds.push(id);
     }
-    localStorage.setItem("read_notification_ids", JSON.stringify(updatedReadIds));
+    tokenPersistence.saveReadNotificationIds(updatedReadIds);
     
     setNotifications(prev => prev.map(n => n.id === id ? { ...n, read: !n.read } : n));
   };
@@ -246,7 +247,7 @@ export default function NotificationsPage() {
       }
     });
 
-    localStorage.setItem("read_notification_ids", JSON.stringify(updatedReadIds));
+    tokenPersistence.saveReadNotificationIds(updatedReadIds);
     setNotifications(prev => prev.map(n => ({ ...n, read: true })));
     toast.success("All notifications marked as read.");
   };

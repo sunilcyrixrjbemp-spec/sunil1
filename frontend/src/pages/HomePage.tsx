@@ -1016,7 +1016,8 @@ export default function HomePage() {
                           else if (url.includes("_Hotel_")) cleanType = "Hotel Invoice";
                           else if (url.includes("_Communication_Mail_")) cleanType = "Approval Mail";
                           else if (url.includes("_Other_Expense_")) cleanType = "Purchase Bill";
-                          const fullUrl = `${import.meta.env.VITE_API_URL || window.location.origin}${url}`;
+                          const API_BASE = import.meta.env.VITE_API_URL || "https://expense-backend-zio8.onrender.com";
+                          const fullUrl = url.startsWith("http") ? url : `${API_BASE}${url}`;
                           return (
                             <div key={attIdx} className="inline-flex items-center gap-2 p-2 bg-gray-50 border border-gray-200 rounded text-xs">
                               <span className="font-bold text-gray-700">{cleanType}</span>

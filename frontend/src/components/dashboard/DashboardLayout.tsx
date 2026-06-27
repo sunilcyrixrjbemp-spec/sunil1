@@ -4,6 +4,7 @@ import { authService } from "../../services/authService";
 import { approvalService } from "../../services/approvalService";
 import { expenseService } from "../../services/expenseService";
 import { ticketService } from "../../services/ticketService";
+import { tokenPersistence } from "../../utils/persistence";
 import brandLogo from "../../assets/images/brand.png";
 import { 
   Home, 
@@ -256,7 +257,7 @@ export default function DashboardLayout() {
     const readNotifIds = JSON.parse(localStorage.getItem("read_notification_ids") || "[]");
     if (!readNotifIds.includes(id)) {
       readNotifIds.push(id);
-      localStorage.setItem("read_notification_ids", JSON.stringify(readNotifIds));
+      tokenPersistence.saveReadNotificationIds(readNotifIds);
     }
   };
 
@@ -268,7 +269,7 @@ export default function DashboardLayout() {
         readNotifIds.push(n.id);
       }
     });
-    localStorage.setItem("read_notification_ids", JSON.stringify(readNotifIds));
+    tokenPersistence.saveReadNotificationIds(readNotifIds);
   };
 
   if (!user) return null;

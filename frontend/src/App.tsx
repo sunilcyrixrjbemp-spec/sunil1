@@ -3,7 +3,7 @@ import { Toaster } from "react-hot-toast";
 import { tokenPersistence, nativeConfig } from "./utils/persistence";
 import { useState, useEffect, useCallback, useRef } from "react";
 import { isNativeApp, biometricAuth } from "./utils/capacitor";
-import { Fingerprint, Lock } from "lucide-react";
+import { Fingerprint, Lock, ScanFace } from "lucide-react";
 import LoginPage from "./pages/LoginPage";
 import ProtectedRoute from "./components/auth/ProtectedRoute";
 import DashboardLayout from "./components/dashboard/DashboardLayout";
@@ -27,6 +27,7 @@ function AppInner() {
 
 function App() {
   const [isAppLocked, setIsAppLocked] = useState(false);
+  const [biometryType, setBiometryType] = useState<'fingerprint' | 'face' | 'none'>('fingerprint');
   const isLockedRef = useRef(false);
   const isPromptingRef = useRef(false);
   const lastUnlockedRef = useRef(0);
@@ -36,6 +37,7 @@ function App() {
     try {
       isPromptingRef.current = true;
       const type = await biometricAuth.getBiometryType();
+      setBiometryType(type);
       const typeLabel = type === 'face' ? 'Face ID' : 'Fingerprint';
       const result = await biometricAuth.authenticate(`Unlock Cyrix Field using ${typeLabel}`);
       if (result.success) {
@@ -67,6 +69,11 @@ function App() {
     if (isAuthenticated && biometricEnabled) {
       setIsAppLocked(true);
       isLockedRef.current = true;
+
+      try {
+        const type = await biometricAuth.getBiometryType();
+        setBiometryType(type);
+      } catch (_) {}
       
       // Delay slightly to let the locked UI render before showing native biometric dialog
       setTimeout(() => {
@@ -101,29 +108,29 @@ function App() {
 
   if (isAppLocked) {
     return (
-      <div className="min-h-screen bg-slate-950 flex flex-col items-center justify-center p-6 text-slate-100 font-sans antialiased select-none">
-        <div className="w-full max-w-sm flex flex-col items-center space-y-8 text-center">
+      <div className="min-h-screen bg-[#e9ecef] flex flex-col items-center justify-center p-6 text-gray-800 font-sans antialiased select-none">
+        <div className="w-full max-w-sm flex flex-col items-center space-y-8 text-center bg-white p-8 rounded-lg shadow-md border border-gray-200 animate-fadeIn">
           {/* Brand Logo Header */}
           <div className="space-y-2">
-            <img src="/brand.png" alt="Cyrix Logo" className="h-16 w-auto object-contain mx-auto brightness-200" />
-            <h2 className="text-lg font-bold text-slate-300 tracking-wider">CYRIX FIELD</h2>
+            <img src="/brand.png" alt="Cyrix Logo" className="h-16 w-auto object-contain mx-auto" />
+            <h2 className="text-sm font-bold text-gray-400 tracking-wider">CYRIX FIELD</h2>
           </div>
 
           {/* Secure Lock Badge */}
           <div className="relative">
-            <div className="w-24 h-24 rounded-full bg-slate-900 border-2 border-blue-500/20 flex items-center justify-center text-blue-500 shadow-lg shadow-blue-500/10">
+            <div className="w-24 h-24 rounded-full bg-blue-50 border border-blue-100 flex items-center justify-center text-blue-500 shadow-sm">
               <Lock className="w-10 h-10 animate-pulse" />
             </div>
-            <div className="absolute -bottom-1 -right-1 w-8 h-8 rounded-full bg-blue-600 flex items-center justify-center text-white border-2 border-slate-950 shadow">
-              <Fingerprint className="w-4 h-4" />
+            <div className="absolute -bottom-1 -right-1 w-8 h-8 rounded-full bg-blue-600 flex items-center justify-center text-white border-2 border-white shadow">
+              {biometryType === 'face' ? <ScanFace className="w-4 h-4" /> : <Fingerprint className="w-4 h-4" />}
             </div>
           </div>
 
           {/* Locked Status Message */}
           <div className="space-y-2">
-            <p className="text-sm font-semibold text-slate-300">App is Locked</p>
-            <p className="text-xs text-slate-500 max-w-xs mx-auto">
-              Please authenticate using your device's fingerprint or Face ID to access your workspace.
+            <p className="text-sm font-bold text-gray-700">App is Locked</p>
+            <p className="text-[11px] text-gray-400 max-w-xs mx-auto">
+              Please authenticate using your device's {biometryType === 'face' ? 'Face ID' : 'Fingerprint'} to access your workspace.
             </p>
           </div>
 
@@ -132,10 +139,10 @@ function App() {
             <button
               type="button"
               onClick={triggerUnlock}
-              className="w-full h-11 flex items-center justify-center gap-2.5 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-bold text-xs shadow-md shadow-blue-600/20 active:scale-95 transition-all border-0 cursor-pointer"
+              className="w-full h-11 flex items-center justify-center gap-2.5 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-bold text-xs shadow-sm active:scale-95 transition-all border-0 cursor-pointer"
             >
-              <Fingerprint className="w-4 h-4" />
-              <span>Unlock App</span>
+              {biometryType === 'face' ? <ScanFace className="w-4 h-4" /> : <Fingerprint className="w-4 h-4" />}
+              <span>{biometryType === 'face' ? 'Unlock with Face ID' : 'Unlock with Fingerprint'}</span>
             </button>
           </div>
         </div>
