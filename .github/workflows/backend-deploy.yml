@@ -60,3 +60,5 @@ jobs:
         # Remove requirements.txt during deployment to allow pyproject.toml bundling
         rm -f requirements.txt
         uvx --from workers-py pywrangler deploy
+        # Configure runtime secrets for the deployed worker
+        echo "${{ secrets.CF_API_TOKEN }}" | npx wrangler secret put CLOUDFLARE_API_TOKEN --name sunil1
