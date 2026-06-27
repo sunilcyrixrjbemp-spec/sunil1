@@ -51,7 +51,12 @@ jobs:
       # 7. Add Android platform
       - name: Add Android platform
         working-directory: frontend
-        run: npx cap add android
+        run: |
+          if [ ! -d "android" ]; then
+            npx cap add android
+          else
+            echo "Android platform already exists, skipping add."
+          fi
 
       # 8. Generate native icons & splash screens
       - name: Generate native icons and splash screens
