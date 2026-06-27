@@ -253,20 +253,25 @@ export default function ApprovalPage() {
     let successCount = 0;
     let failCount = 0;
 
-    // Process all selected approvals sequentially
-    for (const id of selectedIds) {
-      try {
-        if (bulkActionType === "approve") {
-          await approvalService.approveExpense(id, bulkComments.trim());
-          successCount++;
-        } else {
-          await approvalService.rejectExpense(id, bulkComments.trim());
-          successCount++;
+    // Process all selected approvals concurrently
+    try {
+      const results = await Promise.all(selectedIds.map(async (id) => {
+        try {
+          if (bulkActionType === "approve") {
+            await approvalService.approveExpense(id, bulkComments.trim());
+          } else {
+            await approvalService.rejectExpense(id, bulkComments.trim());
+          }
+          return { success: true };
+        } catch (err) {
+          console.error(`Failed to process bulk action for claim ${id}:`, err);
+          return { success: false };
         }
-      } catch (err) {
-        console.error(`Failed to process bulk action for claim ${id}:`, err);
-        failCount++;
-      }
+      }));
+      successCount = results.filter(r => r.success).length;
+      failCount = results.filter(r => !r.success).length;
+    } catch (err) {
+      console.error("Bulk action failed:", err);
     }
 
     if (successCount > 0) {

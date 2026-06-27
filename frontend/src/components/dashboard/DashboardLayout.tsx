@@ -524,8 +524,8 @@ export default function DashboardLayout() {
             </div>
 
             {/* Menu Items Grid */}
-            <div className="flex-1 overflow-y-auto p-5 pb-8">
-              <div className="grid grid-cols-3 gap-x-3 gap-y-4 text-center">
+            <div className="flex-1 overflow-y-auto p-3.5 pb-6">
+              <div className="grid grid-cols-3 gap-2.5 text-center">
                 {allowedMenuItems.map((item) => {
                   const Icon = item.icon;
                   const isActive = currentActiveItem?.id === item.id;
@@ -534,16 +534,16 @@ export default function DashboardLayout() {
                       key={item.id}
                       to={item.path}
                       onClick={() => setIsMobileMenuOpen(false)}
-                      className={`flex flex-col items-center justify-center p-3 rounded-lg border transition-all ${
+                      className={`flex flex-col items-center justify-center p-2 rounded-lg border transition-all ${
                         isActive 
                           ? "bg-blue-50 border-blue-200 text-blue-700 font-bold" 
                           : "bg-gray-50 border-gray-100 hover:bg-gray-100 text-gray-700"
                       }`}
                     >
-                      <div className={`p-2 rounded-full ${isActive ? "bg-blue-600 text-white" : "bg-white text-gray-500 border border-gray-100 shadow-sm"}`}>
-                        <Icon className="w-5 h-5" />
+                      <div className={`p-1.5 rounded-full ${isActive ? "bg-blue-600 text-white" : "bg-white text-gray-500 border border-gray-100 shadow-sm"}`}>
+                        <Icon className="w-4.5 h-4.5" />
                       </div>
-                      <span className="text-[10px] font-bold uppercase tracking-wider mt-2.5 leading-tight truncate w-full">
+                      <span className="text-[10px] font-bold uppercase tracking-wider mt-1.5 leading-tight truncate w-full">
                         {item.name}
                       </span>
                     </Link>
@@ -556,12 +556,12 @@ export default function DashboardLayout() {
                     setIsMobileMenuOpen(false);
                     handleLogout();
                   }}
-                  className="flex flex-col items-center justify-center p-3 rounded-lg border bg-rose-50 border-rose-100 hover:bg-rose-100/50 text-rose-700 transition-all cursor-pointer"
+                  className="flex flex-col items-center justify-center p-2 rounded-lg border bg-rose-50 border-rose-100 hover:bg-rose-100/50 text-rose-700 transition-all cursor-pointer"
                 >
-                  <div className="p-2 rounded-full bg-rose-600 text-white shadow-sm">
-                    <LogOut className="w-5 h-5" />
+                  <div className="p-1.5 rounded-full bg-rose-600 text-white shadow-sm">
+                    <LogOut className="w-4.5 h-4.5" />
                   </div>
-                  <span className="text-[10px] font-bold uppercase tracking-wider mt-2.5 leading-tight">
+                  <span className="text-[10px] font-bold uppercase tracking-wider mt-1.5 leading-tight">
                     Logout
                   </span>
                 </button>

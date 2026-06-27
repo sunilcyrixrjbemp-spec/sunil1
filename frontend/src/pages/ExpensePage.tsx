@@ -1959,10 +1959,7 @@ export default function ExpensePage() {
 
         <div className="overflow-x-auto p-4">
           {claimsLoading ? (
-            <div className="py-12 flex justify-center items-center gap-2">
-              <span className="animate-spin border-2 border-blue-500 border-t-transparent h-4 w-4 rounded-full"></span>
-              <span className="text-xs font-bold uppercase tracking-wider text-gray-450">Loading claims list...</span>
-            </div>
+            <Loader message="Loading claims list..." />
           ) : claims.length === 0 ? (
             <div className="py-12 text-center text-gray-400 text-xs font-semibold">
               No submitted claims found.

@@ -62,65 +62,71 @@ export default function NotificationsPage() {
     try {
       const readNotifIds = JSON.parse(localStorage.getItem("read_notification_ids") || "[]");
 
-      // 1. Pending approvals for Managers
       const allowedWindows = currentUser.allowed_windows
         ? currentUser.allowed_windows.split(",").map((w: string) => w.trim().toLowerCase())
         : ["home", "profile", "help"];
       const isApprover = currentUser.role === "Admin" || allowedWindows.includes("approval");
-      if (isApprover) {
-        try {
-          const pendings = await approvalService.getPendingApprovals();
-          pendings.forEach((p: any) => {
-            const id = `approval-${p.id}`;
-            list.push({
-              id: id,
-              title: "Pending Approval",
-              description: `Expense claim from ${p.employeeName} (${p.eCode}) for "${p.purpose || p.description}" of ₹${p.amount.toLocaleString()} is waiting for your review.`,
-              time: "Action Required",
-              type: "warning",
-              read: readNotifIds.includes(id),
-              link: "/approval-center",
-              created_at: p.created_at || p.updated_at
-            });
-          });
-        } catch (e) {
-          console.error("Failed to load approvals inside notifications page", e);
+
+      let pendings: any[] = [];
+      let expenses: any[] = [];
+
+      try {
+        if (isApprover) {
+          const [pendingsRes, expensesRes] = await Promise.all([
+            approvalService.getPendingApprovals(),
+            expenseService.getExpenses()
+          ]);
+          pendings = pendingsRes || [];
+          expenses = expensesRes || [];
+        } else {
+          expenses = await expenseService.getExpenses();
         }
+      } catch (e) {
+        console.error("Failed loading notifications concurrently", e);
       }
 
-      // 2. Load user's own expenses to check for status updates
-      try {
-        const expenses = await expenseService.getExpenses();
-        // Load notification items directly from base list without trigger additional backend details queries
-        expenses.forEach((e: any) => {
-          const id = `claim-${e.id}`;
-          if (e.status === "approved" || e.status === "rejected") {
-            list.push({
-              id: id,
-              title: `Claim ${e.status.toUpperCase()}`,
-              description: `Your claim of ₹${e.amount.toLocaleString()} for "${e.description || e.purpose}" has been ${e.status}.`,
-              time: "Recent Update",
-              type: e.status === "approved" ? "success" : "error",
-              read: readNotifIds.includes(id),
-              link: "/home",
-              created_at: e.created_at || e.updated_at
-            });
-          } else if (e.status.startsWith("submitted")) {
-            list.push({
-              id: id,
-              title: "Claim Submitted",
-              description: `Your claim of ₹${e.amount.toLocaleString()} for "${e.description || e.purpose}" is successfully submitted and pending review.`,
-              time: "Submitted",
-              type: "info",
-              read: readNotifIds.includes(id) || true,
-              link: "/home",
-              created_at: e.created_at || e.updated_at
-            });
-          }
+      // Process Pending Approvals
+      pendings.forEach((p: any) => {
+        const id = `approval-${p.id}`;
+        list.push({
+          id: id,
+          title: "Pending Approval",
+          description: `Expense claim from ${p.employeeName} (${p.eCode}) for "${p.purpose || p.description}" of ₹${p.amount.toLocaleString()} is waiting for your review.`,
+          time: "Action Required",
+          type: "warning",
+          read: readNotifIds.includes(id),
+          link: "/approval-center",
+          created_at: p.created_at || p.updated_at
         });
-      } catch (e) {
-        console.error("Failed to load claims inside notifications page", e);
-      }
+      });
+
+      // Process own expenses status changes
+      expenses.forEach((e: any) => {
+        const id = `claim-${e.id}`;
+        if (e.status === "approved" || e.status === "rejected") {
+          list.push({
+            id: id,
+            title: `Claim ${e.status.toUpperCase()}`,
+            description: `Your claim of ₹${e.amount.toLocaleString()} for "${e.description || e.purpose}" has been ${e.status}.`,
+            time: "Recent Update",
+            type: e.status === "approved" ? "success" : "error",
+            read: readNotifIds.includes(id),
+            link: "/home",
+            created_at: e.created_at || e.updated_at
+          });
+        } else if (e.status.startsWith("submitted")) {
+          list.push({
+            id: id,
+            title: "Claim Submitted",
+            description: `Your claim of ₹${e.amount.toLocaleString()} for "${e.description || e.purpose}" is successfully submitted and pending review.`,
+            time: "Submitted",
+            type: "info",
+            read: readNotifIds.includes(id) || true,
+            link: "/home",
+            created_at: e.created_at || e.updated_at
+          });
+        }
+      });
 
       // 3. Add default system welcome notification
       list.push({

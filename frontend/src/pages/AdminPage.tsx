@@ -3,6 +3,7 @@ import toast from "react-hot-toast";
 import { adminService, UserCreatePayload, UserEditPayload, ApprovalHierarchyResponse } from "../services/adminService";
 import { authService } from "../services/authService";
 import { Search, UploadCloud, Pencil, Trash2, Plus, LogOut } from "lucide-react";
+import Loader from "../components/common/Loader";
 
 const LteSpinner = () => (
   <div className="relative flex items-center justify-center w-4 h-4 shrink-0 mr-2">
@@ -143,11 +144,14 @@ export default function AdminPage() {
     }
     setError(null);
     try {
-      const u = await adminService.getUsers();
+      const [u, dd, hqs] = await Promise.all([
+        adminService.getUsers(),
+        authService.getDropdowns(),
+        adminService.getHierarchies()
+      ]);
       setUsers(u);
       localStorage.setItem("cache_admin_users", JSON.stringify(u));
       
-      const dd = await authService.getDropdowns();
       setDropdowns(dd);
       localStorage.setItem("cache_dropdowns", JSON.stringify(dd));
       if (dd?.zones) {
@@ -165,8 +169,6 @@ export default function AdminPage() {
         setGrade((current: string) => (grades.includes(current) ? current : grades[0]));
       }
       
-      // Load team hierarchies
-      const hqs = await adminService.getHierarchies();
       setHierarchies(hqs);
       localStorage.setItem("cache_hierarchies", JSON.stringify(hqs));
     } catch (err: any) {
@@ -748,10 +750,7 @@ export default function AdminPage() {
           {/* Table Container */}
           <div className="overflow-x-auto">
             {loading ? (
-              <div className="py-12 flex justify-center items-center">
-                <span className="animate-spin border-2 border-blue-500 border-t-transparent h-5 w-5 rounded-full"></span>
-                <span className="ml-3 text-xs tracking-wider uppercase font-bold text-gray-500">Loading configurations...</span>
-              </div>
+              <Loader message="Loading configurations..." />
             ) : filteredUsers.length === 0 ? (
               <div className="py-12 text-center text-xs uppercase tracking-wider text-gray-500 font-semibold">
                 No users found.

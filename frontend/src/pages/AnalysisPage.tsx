@@ -93,12 +93,16 @@ export default function AnalysisPage() {
     const fetchData = async () => {
       setLoading(true);
       try {
-        const own = await expenseService.getExpenses();
-        setMyExpenses(own || []);
-
         if (isReviewer) {
-          const team = await expenseService.getTeamExpenses();
+          const [own, team] = await Promise.all([
+            expenseService.getExpenses(),
+            expenseService.getTeamExpenses()
+          ]);
+          setMyExpenses(own || []);
           setTeamExpenses(team || []);
+        } else {
+          const own = await expenseService.getExpenses();
+          setMyExpenses(own || []);
         }
       } catch (err) {
         console.error("Error fetching analysis data:", err);
