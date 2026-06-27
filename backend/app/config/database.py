@@ -242,9 +242,9 @@ account_id = None
 database_id = None
 
 # Attempt to load Cloudflare token/account configuration from settings
-token = settings.CLOUDFLARE_API_TOKEN
-account_id = settings.CLOUDFLARE_ACCOUNT_ID
-database_id = settings.CLOUDFLARE_DATABASE_ID
+token = settings.CLOUDFLARE_API_TOKEN or os.getenv("CLOUDFLARE_API_TOKEN")
+account_id = settings.CLOUDFLARE_ACCOUNT_ID or os.getenv("CLOUDFLARE_ACCOUNT_ID")
+database_id = settings.CLOUDFLARE_DATABASE_ID or os.getenv("CLOUDFLARE_DATABASE_ID")
 
 # If token is empty in settings, try reading it from the user's active wrangler session
 if not token:
