@@ -62,3 +62,9 @@ jobs:
       run: |
         uv run pywrangler deploy
         echo "${{ secrets.CF_API_TOKEN }}" | npx wrangler secret put CLOUDFLARE_API_TOKEN
+        
+    - name: Dump wrangler logs on failure
+      if: failure()
+      run: |
+        find ~/.config/.wrangler/logs/ -type f -exec cat {} + || true
+        find ~/.wrangler/logs/ -type f -exec cat {} + || true
