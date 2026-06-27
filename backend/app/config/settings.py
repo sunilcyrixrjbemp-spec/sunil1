@@ -36,6 +36,10 @@ class Settings(BaseSettings):
     CLOUDFLARE_R2_BUCKET_NAME: str = "fieldops-uploads"
     FORCE_LOCAL_DB: bool = False
 
+    # Firebase Cloud Messaging (Push Notifications)
+    FIREBASE_SERVICE_ACCOUNT_PATH: str = "./firebase-service-account.json"
+    FCM_PROJECT_ID: str = "indrae-740bb"
+
     class Config:
         env_file = ".env"
         case_sensitive = True

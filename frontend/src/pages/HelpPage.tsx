@@ -101,7 +101,7 @@ export default function HelpPage() {
 
   // Tabs & filters
   const [activeTab, setActiveTab] = useState<"raise" | "my-tickets" | "assigned-tickets">((() => {
-    return (localStorage.getItem("help_active_tab") as "raise" | "my-tickets" | "assigned-tickets") || "raise";
+    return (localStorage.getItem("help_active_tab") as "raise" | "my-tickets" | "assigned-tickets") || "my-tickets";
   }));
 
   const handleTabChange = (tab: "raise" | "my-tickets" | "assigned-tickets") => {
@@ -134,7 +134,7 @@ export default function HelpPage() {
     let apiHost = import.meta.env.VITE_API_URL || window.location.origin;
     apiHost = apiHost.replace(/^https?:\/\//, "");
     const wsProto = window.location.protocol === "https:" ? "wss:" : "ws:";
-    const token = localStorage.getItem("token") || "";
+    const token = localStorage.getItem("access_token") || "";
     const wsUrl = `${wsProto}//${apiHost}/api/ticket/ws/${selectedTicket.id}?token=${token}`;
 
     const ws = new WebSocket(wsUrl);
@@ -534,7 +534,7 @@ export default function HelpPage() {
           Refresh desk
         </button>
       </div>      {/* Analytics block */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+      <div className="hidden lg:grid grid-cols-1 lg:grid-cols-3 gap-6">
         
         {/* Bar Chart 1: Category */}
         <div className="bg-white border border-gray-200 border-t-4 border-t-blue-600 rounded shadow-sm p-4">
@@ -829,7 +829,7 @@ export default function HelpPage() {
                     <div 
                       key={tkt.id} 
                       onClick={() => setSelectedTicket(tkt)}
-                      className={`p-4 transition-colors cursor-pointer flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-l-3 ${
+                      className={`p-4 transition-colors cursor-pointer flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-l-[3px] ${
                         isSelected 
                           ? "bg-blue-50/20 border-l-blue-600" 
                           : "bg-white hover:bg-gray-50 border-l-transparent"

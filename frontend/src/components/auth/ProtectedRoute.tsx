@@ -1,8 +1,9 @@
 import { Navigate, Outlet } from "react-router-dom";
-import { authService } from "../../services/authService";
+import { tokenPersistence } from "../../utils/persistence";
 
 export default function ProtectedRoute() {
-  if (!authService.isAuthenticated()) {
+  // Uses in-memory cache + cookie check — synchronous, no flicker
+  if (!tokenPersistence.isAuthenticated()) {
     return <Navigate to="/login" replace />;
   }
   return <Outlet />;

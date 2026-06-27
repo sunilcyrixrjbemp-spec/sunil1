@@ -627,9 +627,9 @@ export default function ProfilePage() {
               )}
 
               {/* Footer */}
-              <div className="px-6 py-3 border-t border-gray-200 bg-gray-50 text-[9px] font-bold text-gray-500 uppercase tracking-widest flex justify-between shrink-0">
+              <div className="px-6 py-3 border-t border-gray-200 bg-gray-50 text-[9px] font-bold text-gray-500 uppercase tracking-widest flex flex-col sm:flex-row sm:justify-between gap-1 text-center sm:text-left shrink-0">
                 <span>Cyrix Healthcare Pvt. Ltd.</span>
-                <span>Designed & Developed by <a href="https://sunilbishnoi.co.in/" target="_blank" rel="noopener noreferrer">Sunil Bishnoi</a></span>
+                <span>Designed &amp; Developed by <a href="https://sunilbishnoi.co.in/" target="_blank" rel="noopener noreferrer">Sunil Bishnoi</a></span>
               </div>
             </div>
 

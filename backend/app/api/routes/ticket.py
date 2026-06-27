@@ -12,6 +12,7 @@ from app.api.routes.dependencies import get_current_user
 from app.models.user import User
 from app.models.ticket import SupportTicket
 from app.models.expense import Expense
+from app.utils.push_notifications import send_push_to_user_by_name, send_push_to_user_by_code
 
 router = APIRouter()
 
@@ -115,6 +116,19 @@ def create_ticket(
     db.add(new_ticket)
     db.commit()
     db.refresh(new_ticket)
+
+    # Push notification to the assigned person
+    try:
+        send_push_to_user_by_name(
+            db,
+            user_name=assigned_name,
+            title=f"New Support Ticket — {ticket_code}",
+            body=f"{current_user.name} raised a {request.priority} priority {request.concern_type} concern.",
+            data={"ticket_id": str(new_ticket.id), "ticket_code": ticket_code, "type": "new_ticket"}
+        )
+    except Exception:
+        pass  # Non-critical — don't fail ticket creation if push fails
+
     return new_ticket
 
 @router.post("/{ticket_id}/comment")
@@ -152,12 +166,37 @@ def add_comment(
     else:
         ticket.comments = log_entry
 
-    # If assignee replies, we can mark it as "Updated" to notify creator
+    # If assignee replies, mark as "Updated" to notify creator
     if is_assignee and ticket.status == "Open":
         ticket.status = "Updated"
 
     db.commit()
     db.refresh(ticket)
+
+    # Push notification — notify the other party about the new comment
+    try:
+        comment_preview = request.comment.strip()[:80] + ("..." if len(request.comment.strip()) > 80 else "")
+        if is_creator:
+            # Creator commented → notify assignee
+            send_push_to_user_by_name(
+                db,
+                user_name=ticket.assigned_to_name,
+                title=f"Reply on Ticket {ticket.ticket_code}",
+                body=f"{current_user.name}: {comment_preview}",
+                data={"ticket_id": str(ticket.id), "ticket_code": ticket.ticket_code, "type": "comment"}
+            )
+        elif is_assignee:
+            # Assignee commented → notify creator
+            send_push_to_user_by_code(
+                db,
+                user_code=ticket.created_by_code,
+                title=f"Update on Ticket {ticket.ticket_code}",
+                body=f"{current_user.name}: {comment_preview}",
+                data={"ticket_id": str(ticket.id), "ticket_code": ticket.ticket_code, "type": "comment"}
+            )
+    except Exception:
+        pass  # Non-critical
+
     return ticket
 
 @router.post("/{ticket_id}/close")
@@ -182,6 +221,20 @@ def close_ticket(
     ticket.closed_at = datetime.now()
     db.commit()
     db.refresh(ticket)
+
+    # Push notification — notify ticket creator that it's been closed
+    try:
+        if not is_creator:  # Only notify if someone else closed it
+            send_push_to_user_by_code(
+                db,
+                user_code=ticket.created_by_code,
+                title=f"Ticket {ticket.ticket_code} Closed",
+                body=f"Your support concern has been resolved and closed by {current_user.name}.",
+                data={"ticket_id": str(ticket.id), "ticket_code": ticket.ticket_code, "type": "closed"}
+            )
+    except Exception:
+        pass
+
     return ticket
 
 @router.post("/{ticket_id}/reopen")

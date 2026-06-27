@@ -80,22 +80,50 @@ export const authService = {
   },
 
   isAuthenticated: (): boolean => {
-    return !!localStorage.getItem("access_token");
+    // Check localStorage first (primary store)
+    if (localStorage.getItem("access_token")) return true;
+    // Fallback: check cookie (mobile WebView may wipe localStorage on process kill)
+    const cookieToken = document.cookie
+      .split("; ")
+      .find(row => row.startsWith("fallback_access_token="))
+      ?.split("=")[1];
+    if (cookieToken) {
+      // Restore from cookie back to localStorage to ensure isAuthenticated works next time
+      const decoded = decodeURIComponent(cookieToken);
+      if (decoded) {
+        localStorage.setItem("access_token", decoded);
+        return true;
+      }
+    }
+    return false;
   },
 
   getProfile: async (): Promise<any> => {
     const response = await api.get("/users/profile");
-    const accessToken = localStorage.getItem("access_token") || "";
-    const refreshToken = localStorage.getItem("refresh_token") || "";
-    tokenPersistence.save(accessToken, refreshToken, response.data);
+    // Use existing token from localStorage/cookie rather than potentially reading empty string
+    const accessToken = localStorage.getItem("access_token") 
+      || document.cookie.split("; ").find(r => r.startsWith("fallback_access_token="))?.split("=")[1]?.replace(/%[0-9A-F]{2}/gi, c => decodeURIComponent(c))
+      || "";
+    const refreshToken = localStorage.getItem("refresh_token")
+      || document.cookie.split("; ").find(r => r.startsWith("fallback_refresh_token="))?.split("=")[1]?.replace(/%[0-9A-F]{2}/gi, c => decodeURIComponent(c))
+      || "";
+    if (accessToken) {
+      tokenPersistence.save(accessToken, refreshToken, response.data);
+    }
     return response.data;
   },
 
   updateProfile: async (data: ProfileUpdateRequest): Promise<any> => {
     const response = await api.put("/users/profile", data);
-    const accessToken = localStorage.getItem("access_token") || "";
-    const refreshToken = localStorage.getItem("refresh_token") || "";
-    tokenPersistence.save(accessToken, refreshToken, response.data);
+    const accessToken = localStorage.getItem("access_token")
+      || document.cookie.split("; ").find(r => r.startsWith("fallback_access_token="))?.split("=")[1]?.replace(/%[0-9A-F]{2}/gi, c => decodeURIComponent(c))
+      || "";
+    const refreshToken = localStorage.getItem("refresh_token")
+      || document.cookie.split("; ").find(r => r.startsWith("fallback_refresh_token="))?.split("=")[1]?.replace(/%[0-9A-F]{2}/gi, c => decodeURIComponent(c))
+      || "";
+    if (accessToken) {
+      tokenPersistence.save(accessToken, refreshToken, response.data);
+    }
     return response.data;
   },
 

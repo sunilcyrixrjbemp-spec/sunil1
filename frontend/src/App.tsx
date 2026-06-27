@@ -13,11 +13,20 @@ import ProfilePage from "./pages/ProfilePage";
 import AdminPage from "./pages/AdminPage";
 import NotificationsPage from "./pages/NotificationsPage";
 import NotFoundPage from "./pages/NotFoundPage";
+import { useFCMNotifications } from "./hooks/useFCMNotifications";
+
+function AppInner() {
+  // Initialize FCM push notifications (requests permission + listens for foreground messages)
+  useFCMNotifications();
+  return null;
+}
 
 function App() {
   return (
     <Router>
       <div className="min-h-screen bg-[#f4f6f9] text-[#212529] font-sans antialiased">
+        {/* FCM notification system — runs silently in background */}
+        <AppInner />
         <Routes>
           {/* Public Routes */}
           <Route path="/login" element={<LoginPage />} />

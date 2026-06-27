@@ -600,7 +600,7 @@ export default function HomePage() {
               </div>
 
                 {activeTab === "my-claims" && hasAccess("expense") && (
-                  <Link to="/submit-expense" className="btn-lte-primary py-1 px-3 flex items-center gap-1.5 text-[11px] font-bold">
+                  <Link to="/submit-expense" className="hidden lg:flex btn-lte-primary py-1 px-3 items-center gap-1.5 text-[11px] font-bold">
                     <Plus className="w-3.5 h-3.5" />
                     File Claim
                   </Link>

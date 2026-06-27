@@ -61,3 +61,13 @@ docker-compose.override.yml
 .tmp/
 temp/
 scratch/
+
+# Firebase Sensitive Files (DO NOT COMMIT)
+backend/firebase-service-account.json
+frontend/android/app/google-services.json
+google-services.json
+
+# Capacitor Android build outputs
+frontend/android/app/build/
+frontend/android/.gradle/
+frontend/android/local.properties

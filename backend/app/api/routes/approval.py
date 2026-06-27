@@ -12,6 +12,7 @@ from app.models.expense import Expense
 from app.models.approval import Approval
 from app.models.expense_itinerary import ExpenseItinerary
 from app.schemas.approval import ApprovalActionRequest, ApprovalResponse
+from app.utils.push_notifications import send_push_to_user_by_code
 
 router = APIRouter()
 
@@ -185,6 +186,30 @@ async def approve_expense(
     from app.utils import cache
     cache.clear_user_and_managers_cache(db, expense.user_id)
 
+    # Push notification to the expense submitter
+    try:
+        submitter = db.query(User).filter(User.id == expense.user_id).first()
+        if submitter:
+            if expense.status == "approved":
+                send_push_to_user_by_code(
+                    db,
+                    user_code=submitter.user_id,
+                    title="✅ Expense Claim Approved!",
+                    body=f"Your claim {expense.expense_code} (\u20b9{expense.amount:,.0f}) has been fully approved.",
+                    data={"expense_id": str(expense.id), "expense_code": expense.expense_code, "type": "approved"}
+                )
+            else:
+                # Partially approved (moved to next level)
+                send_push_to_user_by_code(
+                    db,
+                    user_code=submitter.user_id,
+                    title="🔄 Claim Moving to Next Level",
+                    body=f"Your claim {expense.expense_code} has been approved by {current_user.name} and forwarded for further review.",
+                    data={"expense_id": str(expense.id), "expense_code": expense.expense_code, "type": "forwarded"}
+                )
+    except Exception:
+        pass
+
     return {
         "status": "success",
         "message": "Expense claim approved successfully.",
@@ -278,6 +303,21 @@ async def reject_expense(
 
     from app.utils import cache
     cache.clear_user_and_managers_cache(db, expense.user_id)
+
+    # Push notification to the expense submitter about rejection
+    try:
+        submitter = db.query(User).filter(User.id == expense.user_id).first()
+        if submitter:
+            remark = (request.comments or "").strip()[:80]
+            send_push_to_user_by_code(
+                db,
+                user_code=submitter.user_id,
+                title="❌ Expense Claim Rejected",
+                body=f"{expense.expense_code} rejected by {current_user.name}: {remark}",
+                data={"expense_id": str(expense.id), "expense_code": expense.expense_code, "type": "rejected"}
+            )
+    except Exception:
+        pass
 
     return {
         "status": "success",

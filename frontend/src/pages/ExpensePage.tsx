@@ -577,16 +577,97 @@ export default function ExpensePage() {
     });
   };
 
-  const handleLegFileChange = (legNum: number, key: keyof LegFiles, file: File | null) => {
-    if (file && file.size > 5 * 1024 * 1024) {
-      toast.error("File size must be under 5MB.");
+  // Compress an image file to ≤50KB JPEG using Canvas API (fast, in-browser)
+  const compressImage = (file: File): Promise<File> => {
+    return new Promise((resolve) => {
+      // If it's a PDF, pass through unchanged (can't compress PDFs in browser)
+      if (file.type === "application/pdf") {
+        resolve(file);
+        return;
+      }
+      const TARGET_SIZE = 50 * 1024; // 50 KB
+      const img = new Image();
+      const objectUrl = URL.createObjectURL(file);
+      img.onload = () => {
+        URL.revokeObjectURL(objectUrl);
+        const canvas = document.createElement("canvas");
+        let { width, height } = img;
+        // Scale down large images to max 1600px on longest side
+        const maxDim = 1600;
+        if (width > maxDim || height > maxDim) {
+          if (width > height) {
+            height = Math.round((height * maxDim) / width);
+            width = maxDim;
+          } else {
+            width = Math.round((width * maxDim) / height);
+            height = maxDim;
+          }
+        }
+        canvas.width = width;
+        canvas.height = height;
+        const ctx = canvas.getContext("2d");
+        if (!ctx) { resolve(file); return; }
+        ctx.drawImage(img, 0, 0, width, height);
+
+        // Binary search for the right quality to hit ≤50KB
+        let lo = 0.1, hi = 0.95, quality = 0.7;
+        let bestBlob: Blob | null = null;
+        const tryQuality = (q: number, done: (blob: Blob) => void) => {
+          canvas.toBlob((blob) => {
+            if (blob) done(blob);
+            else resolve(file);
+          }, "image/jpeg", q);
+        };
+        // Iterative compression — 6 passes max
+        const iterate = (pass: number, lo: number, hi: number) => {
+          quality = (lo + hi) / 2;
+          tryQuality(quality, (blob) => {
+            bestBlob = blob;
+            if (pass >= 6 || Math.abs(blob.size - TARGET_SIZE) < 2048) {
+              // Done — wrap blob as File
+              const compressedFile = new File([bestBlob!], file.name.replace(/\.[^.]+$/, ".jpg"), {
+                type: "image/jpeg",
+                lastModified: Date.now()
+              });
+              resolve(compressedFile);
+            } else if (blob.size > TARGET_SIZE) {
+              iterate(pass + 1, lo, quality);
+            } else {
+              iterate(pass + 1, quality, hi);
+            }
+          });
+        };
+        iterate(0, lo, hi);
+      };
+      img.onerror = () => { URL.revokeObjectURL(objectUrl); resolve(file); };
+      img.src = objectUrl;
+    });
+  };
+
+  const handleLegFileChange = async (legNum: number, key: keyof LegFiles, file: File | null) => {
+    if (!file) {
+      setFiles(prev => ({ ...prev, [legNum]: { ...prev[legNum], [key]: null } }));
       return;
+    }
+    // Show compressing toast for images > 50KB
+    const isPDF = file.type === "application/pdf";
+    let compressedFile = file;
+    if (!isPDF && file.size > 50 * 1024) {
+      const toastId = toast.loading(`Compressing image... (${Math.round(file.size / 1024)}KB)`);
+      try {
+        compressedFile = await compressImage(file);
+        toast.dismiss(toastId);
+        toast.success(`Compressed to ${Math.round(compressedFile.size / 1024)}KB ✓`, { duration: 2000 });
+      } catch {
+        toast.dismiss(toastId);
+        compressedFile = file;
+      }
     }
     setFiles(prev => ({
       ...prev,
       [legNum]: {
         ...prev[legNum],
-        [key]: file
+        [key]: compressedFile
       }
     }));
   };
@@ -607,6 +688,9 @@ export default function ExpensePage() {
     let totalKmVal = 0;
     let totalAmtVal = 0;
     let totalAutoVal = 0;
+    let totalDAVal = 0;
+    let totalHotelVal = 0;
+    let totalOtherVal = 0;
 
     itineraries.forEach((leg, index) => {
       const legNum = index + 1;
@@ -626,16 +710,21 @@ export default function ExpensePage() {
       }
 
       totalAmtVal += legAmt + subAmt + otherAmt;
+      totalOtherVal += otherAmt;
 
       if (legNum === 1) {
-        totalAmtVal += (parseFloat(leg.da) || 0) + (parseFloat(leg.hotel) || 0);
+        const daAmt = parseFloat(leg.da) || 0;
+        const hotelAmt = parseFloat(leg.hotel) || 0;
+        totalAmtVal += daAmt + hotelAmt;
+        totalDAVal += daAmt;
+        totalHotelVal += hotelAmt;
       }
     });
 
-    return { totalKm: totalKmVal, totalAmt: totalAmtVal, totalAuto: totalAutoVal };
+    return { totalKm: totalKmVal, totalAmt: totalAmtVal, totalAuto: totalAutoVal, totalDA: totalDAVal, totalHotel: totalHotelVal, totalOther: totalOtherVal };
   };
 
-  const { totalKm, totalAmt, totalAuto } = calculateTotals();
+  const { totalKm, totalAmt, totalAuto, totalDA, totalHotel, totalOther } = calculateTotals();
 
   const checkLimitsExceeded = () => {
     const maxKmAllowed = (allowance.max_km_per_month || 2000) + approvedKm;
@@ -1397,7 +1486,7 @@ export default function ExpensePage() {
                             {!files[leg.leg]?.main_bill && !hasExistingFile(leg.leg, leg.mode) ? (
                               <input
                                 type="file"
-                                accept="image/*"
+                                accept="image/*,application/pdf,.pdf"
                                 onChange={(e) => handleLegFileChange(leg.leg, "main_bill", e.target.files ? e.target.files[0] : null)}
                                 className="text-xs file:mr-4 file:py-1.5 file:px-3 file:rounded file:border file:border-gray-305 file:text-[10px] file:font-bold file:uppercase file:bg-white file:text-gray-700 hover:file:bg-gray-50 cursor-pointer"
                               />
@@ -1442,7 +1531,7 @@ export default function ExpensePage() {
                             {!files[leg.leg]?.comm_mail && !hasExistingFile(leg.leg, "Communication_Mail") ? (
                               <input
                                 type="file"
-                                accept="image/*"
+                                accept="image/*,application/pdf,.pdf"
                                 required={!hasExistingFile(leg.leg, "Communication_Mail")}
                                 onChange={(e) => handleLegFileChange(leg.leg, "comm_mail", e.target.files ? e.target.files[0] : null)}
                                 className="text-xs file:mr-4 file:py-1.5 file:px-3 file:rounded file:border file:border-indigo-300 file:text-[10px] file:font-bold file:uppercase file:bg-white file:text-indigo-700 hover:file:bg-indigo-50 cursor-pointer"
@@ -1551,7 +1640,7 @@ export default function ExpensePage() {
                                 {!files[leg.leg]?.sub_bill && !hasExistingFile(leg.leg, leg.sub_mode) ? (
                                   <input
                                     type="file"
-                                    accept="image/*"
+                                    accept="image/*,application/pdf,.pdf"
                                     onChange={(e) => handleLegFileChange(leg.leg, "sub_bill", e.target.files ? e.target.files[0] : null)}
                                     className="text-xs file:mr-4 file:py-1 file:px-2 file:rounded file:border-0 file:text-[9px] file:font-bold file:uppercase file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100 cursor-pointer w-full mt-1.5"
                                   />
@@ -1626,7 +1715,7 @@ export default function ExpensePage() {
                             {!files[leg.leg]?.hotel_bill && !hasExistingFile(leg.leg, "Hotel") ? (
                               <input
                                 type="file"
-                                accept="image/*"
+                                accept="image/*,application/pdf,.pdf"
                                 onChange={(e) => handleLegFileChange(leg.leg, "hotel_bill", e.target.files ? e.target.files[0] : null)}
                                 className="text-xs file:mr-4 file:py-1 file:px-2 file:rounded file:border-0 file:text-[9px] file:font-bold file:uppercase file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100 cursor-pointer w-full mt-1.5"
                               />
@@ -1692,7 +1781,7 @@ export default function ExpensePage() {
                             {!files[leg.leg]?.oth_bill && !hasExistingFile(leg.leg, "Other") ? (
                               <input
                                 type="file"
-                                accept="image/*"
+                                accept="image/*,application/pdf,.pdf"
                                 onChange={(e) => handleLegFileChange(leg.leg, "oth_bill", e.target.files ? e.target.files[0] : null)}
                                 className="text-xs file:mr-4 file:py-1 file:px-2 file:rounded file:border-0 file:text-[9px] file:font-bold file:uppercase file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100 cursor-pointer"
                               />
@@ -1899,8 +1988,8 @@ export default function ExpensePage() {
                 </div>
               )}
 
-              {/* Actions triggers (Visible on Desktop, also acts as fallback in-flow triggers on Mobile) */}
-              <div className="flex flex-col gap-2 pt-2 border-t border-gray-150">
+              {/* Actions triggers (Desktop Only - Mobile uses fixed bottom bar below) */}
+              <div className="hidden lg:flex flex-col gap-2 pt-2 border-t border-gray-150">
                 <button
                   type="submit"
                   disabled={isLimitExceeded || submitting}
@@ -1923,7 +2012,7 @@ export default function ExpensePage() {
                   onClick={() => navigate("/home")}
                   className="btn-lte-outline py-2 w-full font-bold uppercase tracking-wider text-center cursor-pointer"
                 >
-                  Cancel & Go Home
+                  Cancel &amp; Go Home
                 </button>
               </div>
 
@@ -2054,9 +2143,22 @@ export default function ExpensePage() {
             <div className="space-y-4 mt-4 text-left text-xs font-semibold">
               <div className="p-3 bg-gray-50 border border-gray-200 rounded space-y-1.5">
                 <p>Date of Travel: <span className="font-bold text-gray-900">{date}</span></p>
-                <p>Total distance travel: <span className="font-bold text-gray-900">{totalKm.toFixed(1)} KM</span></p>
-                <p>Total connections auto: <span className="font-bold text-gray-900">₹{totalAuto.toLocaleString()}</span></p>
-                <p>Total Claim Amount: <span className="font-black text-blue-700">₹{totalAmt.toLocaleString()}</span></p>
+                {totalKm > 0 && (
+                  <p>Total Distance: <span className="font-bold text-gray-900">{totalKm.toFixed(1)} KM</span></p>
+                )}
+                {totalAuto > 0 && (
+                  <p>Auto / Rickshaw Fare: <span className="font-bold text-gray-900">₹{totalAuto.toLocaleString()}</span></p>
+                )}
+                {totalDA > 0 && (
+                  <p>Daily Allowance (DA): <span className="font-bold text-emerald-700">₹{totalDA.toLocaleString()}</span></p>
+                )}
+                {totalHotel > 0 && (
+                  <p>Hotel Stay: <span className="font-bold text-indigo-700">₹{totalHotel.toLocaleString()}</span></p>
+                )}
+                {totalOther > 0 && (
+                  <p>Other Expenses: <span className="font-bold text-amber-700">₹{totalOther.toLocaleString()}</span></p>
+                )}
+                <p className="border-t border-gray-200 pt-1.5 mt-1.5">Total Claim Amount: <span className="font-black text-blue-700">₹{totalAmt.toLocaleString()}</span></p>
               </div>
 
               <div className="p-3 bg-blue-50 border border-blue-200 text-blue-800 rounded flex items-start gap-1.5">

@@ -3,6 +3,8 @@ import logging
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 from sqlalchemy import desc
+from pydantic import BaseModel
+from typing import Optional
 
 from app.config.database import get_db
 from app.api.routes.dependencies import get_current_user
@@ -19,6 +21,25 @@ from app.utils.security import (
 
 logger = logging.getLogger(__name__)
 router = APIRouter()
+
+class FCMTokenRequest(BaseModel):
+    fcm_token: str
+
+@router.post("/fcm-token")
+async def save_fcm_token(
+    request: FCMTokenRequest,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    """Save or update the user's FCM push notification token"""
+    db_user = db.query(User).filter(User.id == current_user.id).first()
+    if not db_user:
+        raise HTTPException(status_code=404, detail="User not found")
+    db_user.fcm_token = request.fcm_token
+    db.commit()
+    logger.info(f"FCM token saved for user {current_user.user_id}")
+    return {"status": "success", "message": "FCM token saved"}
+
 
 @router.get("/profile", response_model=UserResponse)
 async def get_profile(current_user: User = Depends(get_current_user), db: Session = Depends(get_db)):

@@ -1,7 +1,8 @@
 import React, { useState } from "react";
-import { User, Lock, Eye, EyeOff, ArrowRight, AlertTriangle, X } from "lucide-react";
+import { User, Lock, Eye, EyeOff, ArrowRight, AlertTriangle, X, Fingerprint } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { authService } from "../../services/authService";
+import { useBiometricLogin } from "../../hooks/useBiometricLogin";
 
 interface LoginFormProps {
   onForgotPassword: () => void;
@@ -22,6 +23,9 @@ export default function LoginForm({ onForgotPassword, onUnlockAccount }: LoginFo
   const [loading, setLoading] = useState(false);
   const [statusMessage, setStatusMessage] = useState<{ type: "success" | "error"; text: string } | null>(null);
   const [showAlreadyLoggedInModal, setShowAlreadyLoggedInModal] = useState(false);
+  const [showBiometricPrompt, setShowBiometricPrompt] = useState(false);
+
+  const { biometricAvailable, biometryType, biometricEnabled, loginWithBiometric, enableBiometricLogin } = useBiometricLogin();
 
   const saveBootstrapData = (response: any) => {
     const loggedUser = response.user;
@@ -53,6 +57,12 @@ export default function LoginForm({ onForgotPassword, onUnlockAccount }: LoginFo
     try {
       const response = await authService.login({ user_id: userId, password });
       saveBootstrapData(response);
+      // If biometric is available but not enabled, prompt user to enable it
+      if (biometricAvailable && !biometricEnabled) {
+        setShowBiometricPrompt(true);
+        setLoading(false);
+        return;
+      }
       navigate("/home");
     } catch (err: any) {
       if (err.response?.status === 409 && err.response?.data?.detail === "ALREADY_LOGGED_IN") {
@@ -171,6 +181,24 @@ export default function LoginForm({ onForgotPassword, onUnlockAccount }: LoginFo
             )}
           </button>
         </div>
+
+        {/* Biometric Login Button — only shown in native app when enabled */}
+        {biometricAvailable && biometricEnabled && (
+          <button
+            type="button"
+            onClick={async () => {
+              setLoading(true);
+              const success = await loginWithBiometric();
+              setLoading(false);
+              if (success) navigate("/home");
+            }}
+            disabled={loading}
+            className="w-full h-10 flex items-center justify-center gap-2 border-2 border-blue-500 text-blue-600 rounded font-bold text-xs hover:bg-blue-50 transition-all"
+          >
+            <Fingerprint size={18} />
+            <span>{biometryType === 'face' ? 'Login with Face ID' : 'Login with Fingerprint'}</span>
+          </button>
+        )}
       </form>
 
       <div className="flex items-center justify-between text-xs pt-3 border-t border-gray-100 text-gray-500">
@@ -235,6 +263,46 @@ export default function LoginForm({ onForgotPassword, onUnlockAccount }: LoginFo
               </button>
             </div>
 
+          </div>
+        </div>
+      )}
+
+      {/* Biometric Enable Prompt */}
+      {showBiometricPrompt && (
+        <div className="fixed inset-0 bg-black/50 backdrop-blur-[1px] flex items-center justify-center p-4 z-50 animate-fadeIn">
+          <div className="bg-white border border-gray-300 rounded shadow-xl w-full max-w-sm overflow-hidden animate-scaleIn">
+            <div className="px-4 py-3 bg-blue-50 border-b border-blue-200">
+              <h3 className="text-xs font-bold uppercase tracking-wider text-blue-800 flex items-center gap-1.5">
+                <Fingerprint className="w-4 h-4" />
+                Enable {biometryType === 'face' ? 'Face ID' : 'Fingerprint'} Login
+              </h3>
+            </div>
+            <div className="p-4 text-xs space-y-3">
+              <p className="font-semibold text-gray-700">
+                Would you like to use {biometryType === 'face' ? 'Face ID' : 'Fingerprint'} for faster login next time?
+              </p>
+              <p className="text-gray-500">You can disable this anytime from Profile settings.</p>
+            </div>
+            <div className="px-4 py-3 bg-gray-50 border-t border-gray-200 flex items-center justify-end gap-2">
+              <button
+                type="button"
+                onClick={() => { setShowBiometricPrompt(false); navigate("/home"); }}
+                className="px-3 py-1.5 bg-gray-200 hover:bg-gray-300 text-gray-700 rounded text-[11px] font-bold border-0 cursor-pointer transition-all"
+              >
+                Skip
+              </button>
+              <button
+                type="button"
+                onClick={async () => {
+                  await enableBiometricLogin(userId, password);
+                  setShowBiometricPrompt(false);
+                  navigate("/home");
+                }}
+                className="px-3 py-1.5 bg-blue-600 hover:bg-blue-700 text-white rounded text-[11px] font-bold border-0 cursor-pointer shadow-sm transition-all flex items-center gap-1"
+              >
+                <Fingerprint size={12} /> Enable
+              </button>
+            </div>
           </div>
         </div>
       )}
