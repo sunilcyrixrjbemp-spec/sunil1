@@ -1,0 +1,104 @@
+import api from "./api";
+import { 
+  LoginCredentials, 
+  AuthResponse, 
+  OTPResponse, 
+  DropdownData,
+  ProfileUpdateRequest,
+  ChangePasswordRequest
+} from "../types/auth";
+
+export const authService = {
+  login: async (credentials: LoginCredentials): Promise<AuthResponse> => {
+    const response = await api.post("/auth/login", credentials);
+    const { access_token, refresh_token, user } = response.data;
+    localStorage.setItem("access_token", access_token);
+    localStorage.setItem("refresh_token", refresh_token);
+    localStorage.setItem("user", JSON.stringify(user));
+    return response.data;
+  },
+
+  logout: () => {
+    localStorage.removeItem("access_token");
+    localStorage.removeItem("refresh_token");
+    localStorage.removeItem("user");
+  },
+
+  forgotPassword: async (user_id: string, date_of_birth: string): Promise<OTPResponse> => {
+    const response = await api.post("/auth/forgot-password", { user_id, date_of_birth });
+    return response.data;
+  },
+
+  verifyOtp: async (user_id: string, otp: string, otp_type: string): Promise<any> => {
+    const response = await api.post("/auth/verify-otp", { user_id, otp, otp_type });
+    return response.data;
+  },
+
+  resetPassword: async (
+    user_id: string, 
+    otp: string, 
+    new_password: string, 
+    confirm_password: string
+  ): Promise<any> => {
+    const response = await api.post("/auth/reset-password", { 
+      user_id, 
+      otp, 
+      new_password, 
+      confirm_password 
+    });
+    return response.data;
+  },
+
+  unlockAccount: async (
+    user_id: string, 
+    date_of_joining: string, 
+    date_of_birth: string
+  ): Promise<OTPResponse> => {
+    const response = await api.post("/auth/unlock-account", { 
+      user_id, 
+      date_of_joining, 
+      date_of_birth 
+    });
+    return response.data;
+  },
+
+  unlockVerifyOtp: async (user_id: string, otp: string): Promise<any> => {
+    const response = await api.post("/auth/unlock-verify-otp", { 
+      user_id, 
+      otp, 
+      otp_type: "unlock_account" 
+    });
+    return response.data;
+  },
+
+  getDropdowns: async (): Promise<DropdownData> => {
+    const response = await api.get("/auth/dropdowns");
+    return response.data;
+  },
+
+  getCurrentUser: () => {
+    const user = localStorage.getItem("user");
+    return user ? JSON.parse(user) : null;
+  },
+
+  isAuthenticated: (): boolean => {
+    return !!localStorage.getItem("access_token");
+  },
+
+  getProfile: async (): Promise<any> => {
+    const response = await api.get("/users/profile");
+    localStorage.setItem("user", JSON.stringify(response.data));
+    return response.data;
+  },
+
+  updateProfile: async (data: ProfileUpdateRequest): Promise<any> => {
+    const response = await api.put("/users/profile", data);
+    localStorage.setItem("user", JSON.stringify(response.data));
+    return response.data;
+  },
+
+  changePassword: async (data: ChangePasswordRequest): Promise<any> => {
+    const response = await api.post("/users/change-password", data);
+    return response.data;
+  }
+};

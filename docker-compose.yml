@@ -1,0 +1,60 @@
+version: '3.8'
+
+services:
+  postgres:
+    image: postgres:15-alpine
+    container_name: fieldops_db
+    environment:
+      POSTGRES_USER: fieldops
+      POSTGRES_PASSWORD: fieldops123
+      POSTGRES_DB: fieldops
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    ports:
+      - "5432:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U fieldops"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: fieldops_backend
+    command: python main.py
+    environment:
+      DATABASE_URL: postgresql://fieldops:fieldops123@postgres:5432/fieldops
+      DEBUG: "True"
+      SECRET_KEY: dev-secret-key-change-in-production
+    ports:
+      - "8000:8000"
+    volumes:
+      - ./backend:/app
+    depends_on:
+      postgres:
+        condition: service_healthy
+    restart: unless-stopped
+
+  frontend:
+    image: node:20-alpine
+    container_name: fieldops_frontend
+    working_dir: /app
+    command: npm run dev
+    ports:
+      - "5173:5173"
+    volumes:
+      - ./frontend:/app
+      - node_modules:/app/node_modules
+    environment:
+      VITE_API_BASE_URL: http://localhost:8000/api
+    restart: unless-stopped
+
+volumes:
+  postgres_data:
+  node_modules:
+
+networks:
+  default:
+    name: fieldops_network

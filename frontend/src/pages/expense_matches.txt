@@ -1,0 +1,150 @@
+Line 24: mode: string;
+Line 27: sub_mode: string;
+Line 65: mode: "",
+Line 68: sub_mode: "",
+Line 105: mode: "",
+Line 108: sub_mode: "",
+Line 168: const [approvedAuto, setApprovedAuto] = useState(() => {
+Line 172: return cached ? (JSON.parse(cached).approved_auto || 0) : 0;
+Line 180: const [existingAutoReq, setExistingAutoReq] = useState<any>(() => {
+Line 184: return cached ? JSON.parse(cached).existing_auto_req : null;
+Line 211: const [exceededType, setExceededType] = useState<"KM" | "AUTO">("KM");
+Line 217: const [selectedClaim, setSelectedClaim] = useState<any>(null);
+Line 223: // Edit Mode & Calendar Constraints states
+Line 282: mode: leg.mode || "",
+Line 285: sub_mode: leg.sub_mode || "",
+Line 297: show_sub_leg: !!leg.sub_mode
+Line 359: setApprovedAuto(data.approved_auto || 0);
+Line 361: setExistingAutoReq(data.existing_auto_req);
+Line 464: if (field === "mode") {
+Line 467: updatedLeg.sub_mode = "";
+Line 482: if (field === "km" && (updatedLeg.mode === "Bike" || updatedLeg.mode === "Car")) {
+Line 484: const rate = updatedLeg.mode === "Bike" ? (allowance.rate_bike || 4.5) : (allowance.rate_car || 9.0);
+Line 542: `Bus Station ${district}`,
+Line 557: let totalAutoVal = 0;
+Line 566: if (leg.mode === "Bike" || leg.mode === "Car") {
+Line 569: if (leg.mode === "Auto") {
+Line 570: totalAutoVal += legAmt;
+Line 572: if (leg.sub_mode === "Auto") {
+Line 573: totalAutoVal += subAmt;
+Line 583: return { totalKm: totalKmVal, totalAmt: totalAmtVal, totalAuto: totalAutoVal };
+Line 586: const { totalKm, totalAmt, totalAuto } = calculateTotals();
+Line 590: const maxAutoAllowed = (allowance.max_auto_per_month || 1000) + approvedAuto;
+Line 592: let limitType: "KM" | "AUTO" | null = null;
+Line 598: } else if ((allowance.current_month_auto + totalAuto) > maxAutoAllowed) {
+Line 599: limitType = "AUTO";
+Line 600: excess = (allowance.current_month_auto + totalAuto) - maxAutoAllowed;
+Line 622: toast.error("Please select the date of expense.");
+Line 638: if (!leg.mode) {
+Line 639: toast.error(`Visit #${legNum}: Travel Mode is required.`);
+Line 643: if (leg.mode === "Bike" || leg.mode === "Car") {
+Line 658: const hasMainAttachment = mainBill || hasExistingFile(legNum, leg.mode);
+Line 659: if (leg.mode === "Train" && !hasMainAttachment) {
+Line 663: if ((leg.mode === "Bus" || leg.mode === "Auto") && (parseFloat(leg.amount) || 0) >= 300 && !hasMainAttachment) {
+Line 664: toast.error(`Visit #${legNum}: ${leg.mode} claim of ₹300 or more requires a receipt attachment.`);
+Line 668: if (leg.sub_mode) {
+Line 675: const hasSubAttachment = subBill || hasExistingFile(legNum, leg.sub_mode);
+Line 676: if (leg.sub_mode === "Train" && !hasSubAttachment) {
+Line 680: if ((leg.sub_mode === "Bus" || leg.sub_mode === "Auto") && subAmt >= 300 && !hasSubAttachment) {
+Line 681: toast.error(`Visit #${legNum}: ${leg.sub_mode} connection claim of ₹300 or more requires a receipt attachment.`);
+Line 776: mode: leg.mode,
+Line 779: sub_mode: leg.sub_mode,
+Line 856: setExistingAutoReq({ status: "Pending", requested_value: reqAdditional });
+Line 870: setSelectedClaim(details);
+Line 935: <div className="card-lte p-4 bg-gray-50 border-gray-250 grid grid-cols-2 md:grid-cols-6 gap-4 text-xs font-semibold">
+Line 959: <span className="text-[9px] uppercase font-bold text-gray-400 block tracking-wider leading-none mb-0.5">Auto CAP</span>
+Line 961: ₹{allowance.current_month_auto} / ₹{(1000 + approvedAuto)}
+Line 969: {/* Step 1 Date Selection card */}
+Line 970: <div className="card-lte-primary bg-white">
+Line 978: <label className="label-lte">Select Date <span className="text-red-500">*</span></label>
+Line 1011: <div key={leg.leg} className="card-lte border-t-4 border-t-gray-700 bg-white animate-fadeIn text-xs">
+Line 1062: {/* From / To Districts select */}
+Line 1067: <select
+Line 1073: </select>
+Line 1078: <select
+Line 1085: </select>
+Line 1150: className="h-12 w-auto rounded border border-gray-250"
+Line 1182: {/* Mode select, KM and amount fields */}
+Line 1186: <div className={`grid grid-cols-1 sm:grid-cols-2 ${(leg.mode === "Bike" || leg.mode === "Car") ? "md:grid-cols-2" : "md:grid-cols-4"} gap-4`}>
+Line 1188: <label className="label-lte">Travel Mode <span className="text-red-500">*</span></label>
+Line 1189: <select
+Line 1190: value={leg.mode}
+Line 1192: onChange={(e) => handleItineraryChange(leg.leg, "mode", e.target.value)}
+Line 1195: <option value="">Select Mode</option>
+Line 1196: <option value="Auto">Auto</option>
+Line 1197: <option value="Bus">Bus</option>
+Line 1199: {allowance.vehicle_type === "Bike" && <option value="Bike">Bike</option>}
+Line 1200: {allowance.vehicle_type === "Car" && <option value="Car">Car</option>}
+Line 1201: </select>
+Line 1205: <label className="label-lte">Distance (KM) {(leg.mode === "Bike" || leg.mode === "Car") && <span className="text-red-500">*</span>}</label>
+Line 1211: disabled={leg.mode !== "Bike" && leg.mode !== "Car"}
+Line 1218: {leg.mode !== "Bike" && leg.mode !== "Car" && (
+Line 1221: <label className="label-lte">Amount (₹) {leg.mode !== "" && <span className="text-red-500">*</span>}</label>
+Line 1227: disabled={leg.mode === "Bike" || leg.mode === "Car"}
+Line 1237: {leg.mode === "Train" && <span className="text-red-500"> *</span>}
+Line 1238: {(leg.mode === "Bus" || leg.mode === "Auto") && (parseFloat(leg.amount) || 0) >= 300 && <span className="text-red-500"> *</span>}
+Line 1241: {!leg.mode ? (
+Line 1242: <span className="text-[10px] text-gray-400 italic">Select mode first</span>
+Line 1265: className="h-10 w-auto rounded border border-gray-250"
+Line 1277: {hasExistingFile(leg.leg, leg.mode) && !files[leg.leg]?.main_bill && (
+Line 1283: {getExistingFileUrl(leg.leg, leg.mode) && (
+Line 1286: onClick={() => setLightboxImage(getExistingFileUrl(leg.leg, leg.mode))}
+Line 1304: {(leg.mode === "Bus" || leg.mode === "Train") && (
+Line 1312: <Plus className="w-3.5 h-3.5 animate-pulse" /> Add Extra Sub-Connection (Auto / Bus / Train)
+Line 1324: handleItineraryChange(leg.leg, "sub_mode", "");
+Line 1336: <label className="label-lte">Mode <span className="text-red-500">*</span></label>
+Line 1337: <select
+Line 1338: value={leg.sub_mode}
+Line 1339: onChange={(e) => handleItineraryChange(leg.leg, "sub_mode", e.target.value)}
+Line 1342: <option value="">Select Connection</option>
+Line 1343: <option value="Auto">Auto</option>
+Line 1344: <option value="Bus">Bus</option>
+Line 1346: </select>
+Line 1362: {leg.sub_mode === "Train" && <span className="text-red-500"> *</span>}
+Line 1363: {(leg.sub_mode === "Bus" || leg.sub_mode === "Auto") && (parseFloat(leg.sub_amount) || 0) >= 300 && <span className="text-red-500"> *</span>}
+Line 1385: className="h-10 w-auto rounded border border-gray-250"
+Line 1397: {hasExistingFile(leg.leg, leg.sub_mode) && !files[leg.leg]?.sub_bill && (
+Line 1403: {getExistingFileUrl(leg.leg, leg.sub_mode) && (
+Line 1406: onClick={() => setLightboxImage(getExistingFileUrl(leg.leg, leg.sub_mode))}
+Line 1430: className="input-lte bg-gray-100 text-gray-500 font-bold select-none cursor-not-allowed"
+Line 1469: className="h-10 w-auto rounded border border-gray-250"
+Line 1552: className="h-8 w-auto rounded border border-gray-250"
+Line 1684: {(existingKmReq || existingAutoReq) && (
+Line 1705: {existingAutoReq && (
+Line 1708: <span className="font-bold text-gray-700">+₹{existingAutoReq.requested_value} Auto CAP</span>
+Line 1712: existingAutoReq.status.toLowerCase() === "approved" ? "bg-green-50 border-green-200 text-green-700" :
+Line 1713: existingAutoReq.status.toLowerCase() === "rejected" ? "bg-red-50 border-red-200 text-red-700" :
+Line 1716: {existingAutoReq.status}
+Line 1724: {!isLimitExceeded && !(existingKmReq || existingAutoReq) && (
+Line 1729: <p className="mt-0.5">Please ensure all receipt images match your visit modes and values. Fuel bills are required for own-vehicle claims. Double-check your daily allowances before final submission.</p>
+Line 1745: <span className="text-gray-800">{date || "No date selected"}</span>
+Line 1752: <span className="text-gray-400 uppercase text-[9px]">TOTAL AUTO FARE</span>
+Line 1753: <span className="text-gray-800 font-mono">₹{totalAuto.toLocaleString()}</span>
+Line 1799: <div className="overflow-x-auto p-4">
+Line 1816: <th className="py-2.5 px-3">Travel Mode</th>
+Line 1828: <td className="py-3 px-3 text-gray-500">{exp.travel_mode}</td>
+Line 1873: <p>Total connections auto: <span className="font-bold text-gray-900">₹{totalAuto.toLocaleString()}</span></p>
+Line 1963: {showDetailsModal && selectedClaim && (
+Line 1964: <div className="fixed inset-0 bg-black/60 flex items-center justify-center p-4 z-50 overflow-y-auto animate-fadeIn">
+Line 1971: Claim Status Logs: {selectedClaim.expense_code}
+Line 1975: onClick={() => { setShowDetailsModal(false); setSelectedClaim(null); }}
+Line 1982: <div className="flex-1 overflow-y-auto p-5 space-y-6">
+Line 1987: <span className="font-mono text-gray-800 font-bold block">{selectedClaim.expense_code}</span>
+Line 1991: <span className="text-gray-800 block">{selectedClaim.date}</span>
+Line 1995: <span className="text-blue-700 font-bold block">₹{selectedClaim.amount.toLocaleString()}</span>
+Line 1999: <span className={`inline-flex items-center px-2 py-0.5 rounded border text-[9px] font-bold uppercase tracking-wider mt-0.5 ${getStatusBadgeClass(selectedClaim.status)}`}>
+Line 2000: {getStatusLabel(selectedClaim.status)}
+Line 2014: <th className="py-2.5 px-3">Mode</th>
+Line 2024: {selectedClaim.itineraries && selectedClaim.itineraries.map((leg: any, idx: number) => {
+Line 2043: {leg.mode}
+Line 2045: {leg.sub_mode && (
+Line 2047: +{leg.sub_mode}
+Line 2076: {selectedClaim.attachments && selectedClaim.attachments.length > 0 && (
+Line 2080: {selectedClaim.attachments.map((url: string, attIdx: number) => {
+Line 2083: if (url.includes("_Bike_")) cleanType = "Bike Fuel Receipt";
+Line 2084: else if (url.includes("_Car_")) cleanType = "Car Fuel Receipt";
+Line 2085: else if (url.includes("_Auto_")) cleanType = "Auto Fare Bill";
+Line 2086: else if (url.includes("_Bus_")) cleanType = "Bus Ticket";
+Line 2129: {selectedClaim.approvals && selectedClaim.approvals.map((app: any, appIdx: number) => (
+Line 2164: onClick={() => { setShowDetailsModal(false); setSelectedClaim(null); }}
+Line 2191: className="max-w-full max-h-[80vh] rounded shadow-2xl border border-white/10 object-contain select-none pointer-events-auto"

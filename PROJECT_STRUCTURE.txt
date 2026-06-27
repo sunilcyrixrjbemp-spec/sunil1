@@ -1,0 +1,216 @@
+new-app/
+│
+├── frontend/                      # React + TypeScript + Vite
+│   ├── src/
+│   │   ├── components/           # Reusable UI components
+│   │   │   ├── common/           # Shared components
+│   │   │   │   ├── Navbar.tsx
+│   │   │   │   ├── Sidebar.tsx
+│   │   │   │   ├── Footer.tsx
+│   │   │   │   ├── Button.tsx
+│   │   │   │   ├── Card.tsx
+│   │   │   │   ├── Modal.tsx
+│   │   │   │   └── Toast.tsx
+│   │   │   │
+│   │   │   ├── auth/             # Auth-related components
+│   │   │   │   ├── LoginForm.tsx
+│   │   │   │   ├── ForgotPassword.tsx
+│   │   │   │   ├── ResetPassword.tsx
+│   │   │   │   └── ProtectedRoute.tsx
+│   │   │   │
+│   │   │   ├── expense/          # Expense module components
+│   │   │   │   ├── ExpenseForm.tsx
+│   │   │   │   ├── ExpenseTable.tsx
+│   │   │   │   ├── ExpenseDetail.tsx
+│   │   │   │   └── ItineraryBlock.tsx
+│   │   │   │
+│   │   │   ├── dashboard/        # Dashboard components
+│   │   │   │   ├── StatCard.tsx
+│   │   │   │   ├── Chart.tsx
+│   │   │   │   ├── DetailPanel.tsx
+│   │   │   │   └── Summary.tsx
+│   │   │   │
+│   │   │   ├── approval/         # Approval module components
+│   │   │   │   ├── ApprovalList.tsx
+│   │   │   │   ├── ApprovalModal.tsx
+│   │   │   │   └── ApprovalTable.tsx
+│   │   │   │
+│   │   │   ├── admin/            # Admin panel components
+│   │   │   │   ├── UserManagement.tsx
+│   │   │   │   ├── AssetMaster.tsx
+│   │   │   │   └── Reports.tsx
+│   │   │   │
+│   │   │   └── profile/          # Profile components
+│   │   │       ├── ProfileCard.tsx
+│   │   │       ├── OrgChart.tsx
+│   │   │       └── Settings.tsx
+│   │   │
+│   │   ├── pages/                # Page-level components
+│   │   │   ├── LoginPage.tsx
+│   │   │   ├── DashboardPage.tsx
+│   │   │   ├── ExpensePage.tsx
+│   │   │   ├── ApprovalPage.tsx
+│   │   │   ├── HomePage.tsx
+│   │   │   ├── ProfilePage.tsx
+│   │   │   ├── AdminPage.tsx
+│   │   │   ├── MonthSummaryPage.tsx
+│   │   │   └── NotFoundPage.tsx
+│   │   │
+│   │   ├── hooks/                # Custom React hooks
+│   │   │   ├── useAuth.ts
+│   │   │   ├── useFetch.ts
+│   │   │   ├── useForm.ts
+│   │   │   ├── useLocalStorage.ts
+│   │   │   └── useNotification.ts
+│   │   │
+│   │   ├── context/              # React Context API
+│   │   │   ├── AuthContext.tsx
+│   │   │   ├── NotificationContext.tsx
+│   │   │   └── AppContext.tsx
+│   │   │
+│   │   ├── services/             # API services
+│   │   │   ├── api.ts            # Axios/Fetch instance
+│   │   │   ├── authService.ts
+│   │   │   ├── expenseService.ts
+│   │   │   ├── dashboardService.ts
+│   │   │   ├── approvalService.ts
+│   │   │   ├── adminService.ts
+│   │   │   ├── uploadService.ts
+│   │   │   └── reportService.ts
+│   │   │
+│   │   ├── utils/                # Utility functions
+│   │   │   ├── constants.ts
+│   │   │   ├── helpers.ts
+│   │   │   ├── validators.ts
+│   │   │   ├── formatters.ts
+│   │   │   ├── imageOptimizer.ts
+│   │   │   └── dateUtils.ts
+│   │   │
+│   │   ├── types/                # TypeScript types & interfaces
+│   │   │   ├── index.ts
+│   │   │   ├── auth.ts
+│   │   │   ├── expense.ts
+│   │   │   ├── approval.ts
+│   │   │   ├── dashboard.ts
+│   │   │   └── api.ts
+│   │   │
+│   │   ├── styles/               # Global styles & Tailwind config
+│   │   │   ├── globals.css
+│   │   │   ├── animations.css
+│   │   │   └── utilities.css
+│   │   │
+│   │   ├── assets/               # Static files
+│   │   │   ├── images/
+│   │   │   ├── icons/
+│   │   │   └── fonts/
+│   │   │
+│   │   ├── App.tsx               # Main app component
+│   │   ├── main.tsx              # Entry point
+│   │   └── vite-env.d.ts
+│   │
+│   ├── public/
+│   │   └── favicon.ico
+│   │
+│   ├── package.json
+│   ├── tsconfig.json
+│   ├── vite.config.ts
+│   ├── tailwind.config.js
+│   ├── postcss.config.js
+│   └── .env.example
+│
+├── backend/                       # Python FastAPI backend
+│   ├── app/
+│   │   ├── __init__.py
+│   │   ├── main.py               # FastAPI app instance
+│   │   │
+│   │   ├── api/
+│   │   │   ├── __init__.py
+│   │   │   ├── routes/
+│   │   │   │   ├── __init__.py
+│   │   │   │   ├── auth.py       # Auth endpoints
+│   │   │   │   ├── expense.py    # Expense CRUD
+│   │   │   │   ├── dashboard.py  # Dashboard data
+│   │   │   │   ├── approval.py   # Approval workflow
+│   │   │   │   ├── admin.py      # Admin operations
+│   │   │   │   ├── upload.py     # File upload handler
+│   │   │   │   ├── reports.py    # PDF/Report generation
+│   │   │   │   └── users.py      # User management
+│   │   │   │
+│   │   │   └── dependencies.py   # Auth, permissions middleware
+│   │   │
+│   │   ├── models/               # Database models (SQLAlchemy)
+│   │   │   ├── __init__.py
+│   │   │   ├── user.py
+│   │   │   ├── expense.py
+│   │   │   ├── approval.py
+│   │   │   ├── asset.py
+│   │   │   └── report.py
+│   │   │
+│   │   ├── schemas/              # Pydantic request/response schemas
+│   │   │   ├── __init__.py
+│   │   │   ├── user.py
+│   │   │   ├── expense.py
+│   │   │   ├── approval.py
+│   │   │   └── common.py
+│   │   │
+│   │   ├── services/             # Business logic
+│   │   │   ├── __init__.py
+│   │   │   ├── auth_service.py
+│   │   │   ├── expense_service.py
+│   │   │   ├── approval_service.py
+│   │   │   ├── admin_service.py
+│   │   │   ├── upload_service.py
+│   │   │   ├── report_service.py
+│   │   │   ├── email_service.py
+│   │   │   └── notification_service.py
+│   │   │
+│   │   ├── utils/                # Utility functions
+│   │   │   ├── __init__.py
+│   │   │   ├── security.py       # JWT, password hashing
+│   │   │   ├── validators.py     # Data validation
+│   │   │   ├── helpers.py        # General helpers
+│   │   │   ├── logger.py         # Logging setup
+│   │   │   └── constants.py
+│   │   │
+│   │   ├── config/               # Configuration
+│   │   │   ├── __init__.py
+│   │   │   ├── settings.py       # Environment variables
+│   │   │   └── database.py       # Database setup
+│   │   │
+│   │   ├── middleware/           # Custom middleware
+│   │   │   ├── __init__.py
+│   │   │   ├── cors.py
+│   │   │   ├── auth.py
+│   │   │   └── error_handler.py
+│   │   │
+│   │   └── core/                 # Core app logic
+│   │       ├── __init__.py
+│   │       ├── security.py
+│   │       └── exceptions.py
+│   │
+│   ├── migrations/               # Alembic database migrations
+│   │   ├── versions/
+│   │   ├── env.py
+│   │   └── script.py.mako
+│   │
+│   ├── tests/                    # Unit & integration tests
+│   │   ├── __init__.py
+│   │   ├── test_auth.py
+│   │   ├── test_expense.py
+│   │   ├── test_approval.py
+│   │   └── conftest.py
+│   │
+│   ├── requirements.txt          # Python dependencies
+│   ├── .env.example              # Environment variables template
+│   ├── alembic.ini               # Database migration config
+│   └── main.py                   # Entry point (dev server)
+│
+├── .github/
+│   └── workflows/
+│       ├── frontend-deploy.yml   # Frontend CI/CD
+│       └── backend-deploy.yml    # Backend CI/CD
+│
+├── docker-compose.yml            # Local development setup
+├── .gitignore
+├── README.md
+└── ARCHITECTURE.md               # Architecture documentation
