@@ -10,6 +10,7 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import { biometricAuth, isNativeApp } from '../utils/capacitor';
+import { nativeConfig } from '../utils/persistence';
 import toast from 'react-hot-toast';
 
 const BIOMETRIC_ENABLED_KEY = 'biometric_login_enabled';
@@ -38,7 +39,7 @@ export const useBiometricLogin = (): UseBiometricLoginReturn => {
         const type = await biometricAuth.getBiometryType();
         setBiometryType(type);
       }
-      const enabled = localStorage.getItem(BIOMETRIC_ENABLED_KEY) === 'true';
+      const enabled = (await nativeConfig.get(BIOMETRIC_ENABLED_KEY)) === 'true';
       setBiometricEnabled(enabled && available);
     };
     checkBiometric();
@@ -61,7 +62,7 @@ export const useBiometricLogin = (): UseBiometricLoginReturn => {
     }
 
     // Get saved credentials
-    const savedCreds = localStorage.getItem(SAVED_CREDENTIALS_KEY);
+    const savedCreds = await nativeConfig.get(SAVED_CREDENTIALS_KEY);
     if (!savedCreds) {
       toast.error('No saved credentials found. Please login with password first.');
       return false;
@@ -98,8 +99,8 @@ export const useBiometricLogin = (): UseBiometricLoginReturn => {
       return;
     }
 
-    localStorage.setItem(SAVED_CREDENTIALS_KEY, JSON.stringify({ username, password }));
-    localStorage.setItem(BIOMETRIC_ENABLED_KEY, 'true');
+    await nativeConfig.set(SAVED_CREDENTIALS_KEY, JSON.stringify({ username, password }));
+    await nativeConfig.set(BIOMETRIC_ENABLED_KEY, 'true');
     setBiometricEnabled(true);
 
     const typeLabel = biometryType === 'face' ? 'Face ID' : 'Fingerprint';
@@ -109,9 +110,9 @@ export const useBiometricLogin = (): UseBiometricLoginReturn => {
   /**
    * Disable biometric login and clear saved credentials
    */
-  const disableBiometricLogin = useCallback((): void => {
-    localStorage.removeItem(SAVED_CREDENTIALS_KEY);
-    localStorage.removeItem(BIOMETRIC_ENABLED_KEY);
+  const disableBiometricLogin = useCallback(async (): Promise<void> => {
+    await nativeConfig.remove(SAVED_CREDENTIALS_KEY);
+    await nativeConfig.remove(BIOMETRIC_ENABLED_KEY);
     setBiometricEnabled(false);
     toast.success('Biometric login disabled');
   }, []);

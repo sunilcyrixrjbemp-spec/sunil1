@@ -121,14 +121,49 @@ const medianRemoveItem = (key: string): void => {
   } catch (_) {}
 };
 
+import { Preferences } from '@capacitor/preferences';
+
+// Helper to save general values natively (survives app close/clear)
+export const nativeConfig = {
+  set: async (key: string, value: string): Promise<void> => {
+    try {
+      await Preferences.set({ key, value });
+      localStorage.setItem(key, value);
+    } catch (_) {
+      localStorage.setItem(key, value);
+    }
+  },
+  get: async (key: string): Promise<string | null> => {
+    try {
+      const { value } = await Preferences.get({ key });
+      if (value) {
+        localStorage.setItem(key, value);
+        return value;
+      }
+    } catch (_) {}
+    return localStorage.getItem(key);
+  },
+  remove: async (key: string): Promise<void> => {
+    try {
+      await Preferences.remove({ key });
+      localStorage.removeItem(key);
+    } catch (_) {
+      localStorage.removeItem(key);
+    }
+  }
+};
+
+let _restorationPromise: Promise<void> | null = null;
+
 // ─── Main persistence API ─────────────────────────────────────────────────────
 export const tokenPersistence = {
   /**
-   * Save tokens to all 4 storage layers:
+   * Save tokens to all 5 storage layers:
    * 1. localStorage (fastest)
    * 2. Cookies (survives some WebView kills)
    * 3. IndexedDB (survives localStorage clear)
-   * 4. Median.co Native Storage (most persistent — survives process kill)
+   * 4. Median.co Native Storage (most persistent — WebView)
+   * 5. Capacitor Preferences (most persistent — Native App)
    */
   save: (accessToken: string, refreshToken: string, user: any) => {
     _cachedToken = accessToken;
@@ -152,10 +187,17 @@ export const tokenPersistence = {
     medianSetItem("access_token", accessToken);
     medianSetItem("refresh_token", refreshToken);
     medianSetItem("user", JSON.stringify(user));
+
+    try {
+      Preferences.set({ key: "access_token", value: accessToken });
+      Preferences.set({ key: "refresh_token", value: refreshToken });
+      Preferences.set({ key: "user", value: JSON.stringify(user) });
+    } catch (_) {}
   },
 
   clear: () => {
     _cachedToken = null;
+    _restorationPromise = null;
 
     try {
       localStorage.removeItem("access_token");
@@ -174,6 +216,12 @@ export const tokenPersistence = {
     medianRemoveItem("access_token");
     medianRemoveItem("refresh_token");
     medianRemoveItem("user");
+
+    try {
+      Preferences.remove({ key: "access_token" });
+      Preferences.remove({ key: "refresh_token" });
+      Preferences.remove({ key: "user" });
+    } catch (_) {}
   },
 
   /**
@@ -198,81 +246,112 @@ export const tokenPersistence = {
   },
 
   /**
-   * Async restore — tries all 4 storage layers in priority order.
+   * Helper to check if the app is currently restoring the token natively.
+   */
+  isRestoring: (): boolean => {
+    return _restorationPromise !== null && _cachedToken === null;
+  },
+
+  /**
+   * Async restore — tries all 5 storage layers in priority order.
    * Called on app startup and on resume from background.
    */
   restore: async (): Promise<void> => {
-    try {
-      if (localStorage.getItem("access_token") && localStorage.getItem("user")) {
-        _cachedToken = localStorage.getItem("access_token");
-        return;
-      }
+    if (_restorationPromise) return _restorationPromise;
 
-      // Layer 1: Cookies (fast, synchronous)
-      const fallbackAccess = getCookie("fallback_access_token");
-      const fallbackRefresh = getCookie("fallback_refresh_token");
-      const fallbackUser = getCookie("fallback_user");
+    _restorationPromise = (async () => {
+      try {
+        if (localStorage.getItem("access_token") && localStorage.getItem("user")) {
+          _cachedToken = localStorage.getItem("access_token");
+          return;
+        }
 
-      if (fallbackAccess && fallbackUser) {
-        localStorage.setItem("access_token", fallbackAccess);
-        if (fallbackRefresh) localStorage.setItem("refresh_token", fallbackRefresh);
-        localStorage.setItem("user", fallbackUser);
-        _cachedToken = fallbackAccess;
-        console.log("[Session] Restored from cookie");
-        return;
-      }
+        // Layer 1: Capacitor Preferences (NATIVE APP - most reliable)
+        try {
+          const { value: capAccess } = await Preferences.get({ key: "access_token" });
+          const { value: capUser } = await Preferences.get({ key: "user" });
+          const { value: capRefresh } = await Preferences.get({ key: "refresh_token" });
 
-      // Layer 2: IndexedDB
-      const idbAccess = await getIDBValue("access_token");
-      const idbUser = await getIDBValue("user");
-      const idbRefresh = await getIDBValue("refresh_token");
+          if (capAccess && capUser) {
+            localStorage.setItem("access_token", capAccess);
+            if (capRefresh) localStorage.setItem("refresh_token", capRefresh);
+            localStorage.setItem("user", capUser);
+            _cachedToken = capAccess;
+            console.log("[Session] Restored from Capacitor Preferences");
+            return;
+          }
+        } catch (_) {}
 
-      if (idbAccess && idbUser) {
-        localStorage.setItem("access_token", idbAccess);
-        if (idbRefresh) localStorage.setItem("refresh_token", idbRefresh);
-        localStorage.setItem("user", JSON.stringify(idbUser));
-        _cachedToken = idbAccess;
-        setCookieVal("fallback_access_token", idbAccess, COOKIE_EXPIRY_DAYS);
-        setCookieVal("fallback_refresh_token", idbRefresh || "", COOKIE_EXPIRY_DAYS);
-        setCookieVal("fallback_user", JSON.stringify(idbUser), COOKIE_EXPIRY_DAYS);
-        console.log("[Session] Restored from IndexedDB");
-        return;
-      }
+        // Layer 2: Cookies (fast, synchronous)
+        const fallbackAccess = getCookie("fallback_access_token");
+        const fallbackRefresh = getCookie("fallback_refresh_token");
+        const fallbackUser = getCookie("fallback_user");
 
-      // Layer 3: Median.co Native Storage (async callback-based)
-      await new Promise<void>((resolve) => {
-        let resolved = false;
-        const timeout = setTimeout(() => {
-          if (!resolved) { resolved = true; resolve(); }
-        }, 1500);
+        if (fallbackAccess && fallbackUser) {
+          localStorage.setItem("access_token", fallbackAccess);
+          if (fallbackRefresh) localStorage.setItem("refresh_token", fallbackRefresh);
+          localStorage.setItem("user", fallbackUser);
+          _cachedToken = fallbackAccess;
+          console.log("[Session] Restored from cookie");
+          return;
+        }
 
-        medianGetItem("access_token", (token) => {
-          if (resolved) return;
-          if (!token) { resolved = true; clearTimeout(timeout); resolve(); return; }
+        // Layer 3: IndexedDB
+        const idbAccess = await getIDBValue("access_token");
+        const idbUser = await getIDBValue("user");
+        const idbRefresh = await getIDBValue("refresh_token");
 
-          medianGetItem("user", (userStr) => {
-            if (!userStr) { resolved = true; clearTimeout(timeout); resolve(); return; }
+        if (idbAccess && idbUser) {
+          localStorage.setItem("access_token", idbAccess);
+          if (idbRefresh) localStorage.setItem("refresh_token", idbRefresh);
+          localStorage.setItem("user", JSON.stringify(idbUser));
+          _cachedToken = idbAccess;
+          setCookieVal("fallback_access_token", idbAccess, COOKIE_EXPIRY_DAYS);
+          setCookieVal("fallback_refresh_token", idbRefresh || "", COOKIE_EXPIRY_DAYS);
+          setCookieVal("fallback_user", JSON.stringify(idbUser), COOKIE_EXPIRY_DAYS);
+          console.log("[Session] Restored from IndexedDB");
+          return;
+        }
 
-            medianGetItem("refresh_token", (refreshToken) => {
-              localStorage.setItem("access_token", token);
-              if (refreshToken) localStorage.setItem("refresh_token", refreshToken);
-              localStorage.setItem("user", userStr);
-              _cachedToken = token;
-              setCookieVal("fallback_access_token", token, COOKIE_EXPIRY_DAYS);
-              setCookieVal("fallback_user", userStr, COOKIE_EXPIRY_DAYS);
-              setIDBValue("access_token", token);
-              try { setIDBValue("user", JSON.parse(userStr)); } catch (_) {}
-              console.log("[Session] Restored from Median.co Native Storage");
-              resolved = true;
-              clearTimeout(timeout);
-              resolve();
+        // Layer 4: Median.co Native Storage (async callback-based)
+        await new Promise<void>((resolve) => {
+          let resolved = false;
+          const timeout = setTimeout(() => {
+            if (!resolved) { resolved = true; resolve(); }
+          }, 1500);
+
+          medianGetItem("access_token", (token) => {
+            if (resolved) return;
+            if (!token) { resolved = true; clearTimeout(timeout); resolve(); return; }
+
+            medianGetItem("user", (userStr) => {
+              if (!userStr) { resolved = true; clearTimeout(timeout); resolve(); return; }
+
+              medianGetItem("refresh_token", (refreshToken) => {
+                localStorage.setItem("access_token", token);
+                if (refreshToken) localStorage.setItem("refresh_token", refreshToken);
+                localStorage.setItem("user", userStr);
+                _cachedToken = token;
+                setCookieVal("fallback_access_token", token, COOKIE_EXPIRY_DAYS);
+                setCookieVal("fallback_user", userStr, COOKIE_EXPIRY_DAYS);
+                setIDBValue("access_token", token);
+                try { setIDBValue("user", JSON.parse(userStr)); } catch (_) {}
+                console.log("[Session] Restored from Median.co Native Storage");
+                resolved = true;
+                clearTimeout(timeout);
+                resolve();
+              });
             });
           });
         });
-      });
 
-    } catch (e) {
-      console.error("[Session] Restore error:", e);
-    }
+      } catch (e) {
+        console.error("[Session] Restore error:", e);
+      }
+    })();
+
+    return _restorationPromise;
   }
 };
+
+

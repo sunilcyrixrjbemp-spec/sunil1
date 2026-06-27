@@ -1,6 +1,7 @@
 import axios, { AxiosInstance, AxiosError } from "axios";
 import { tokenPersistence } from "../utils/persistence";
 import { Capacitor } from "@capacitor/core";
+import { Preferences } from "@capacitor/preferences";
 
 // Define the production fallback URL for mobile apps
 const PROD_BACKEND_URL = "https://expense-backend-zio8.onrender.com";
@@ -31,8 +32,27 @@ const api: AxiosInstance = axios.create({
 
 // Inject bearer token into request headers if exists
 api.interceptors.request.use(
-  (config) => {
-    const token = localStorage.getItem("access_token");
+  async (config) => {
+    let token = localStorage.getItem("access_token");
+    
+    // If token is missing from localStorage on a native mobile platform,
+    // restore it from Preferences before sending the request to avoid 401 logouts.
+    if (!token && Capacitor.isNativePlatform()) {
+      try {
+        const { value: capAccess } = await Preferences.get({ key: "access_token" });
+        if (capAccess) {
+          token = capAccess;
+          localStorage.setItem("access_token", capAccess);
+          
+          const { value: capRefresh } = await Preferences.get({ key: "refresh_token" });
+          if (capRefresh) localStorage.setItem("refresh_token", capRefresh);
+          
+          const { value: capUser } = await Preferences.get({ key: "user" });
+          if (capUser) localStorage.setItem("user", capUser);
+        }
+      } catch (_) {}
+    }
+    
     if (token) {
       config.headers.Authorization = `Bearer ${token}`;
     }
