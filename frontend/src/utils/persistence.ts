@@ -1,4 +1,67 @@
+import { Filesystem, Directory, Encoding } from '@capacitor/filesystem';
+import { Capacitor } from '@capacitor/core';
+
 const COOKIE_EXPIRY_DAYS = 365;
+const BACKUP_PATH = "CyrixField/session.json";
+
+// ─── File Backup Helpers (Android/iOS Documents folder) ──────────────────────
+const saveToBackupFile = async (accessToken: string, refreshToken: string, user: any) => {
+  if (!Capacitor.isNativePlatform()) return;
+  try {
+    // Check/request permission
+    try {
+      const status = await Filesystem.checkPermissions();
+      if (status.publicStorage !== 'granted') {
+        await Filesystem.requestPermissions();
+      }
+    } catch (_) {}
+
+    await Filesystem.writeFile({
+      path: BACKUP_PATH,
+      data: JSON.stringify({ accessToken, refreshToken, user }),
+      directory: Directory.Documents,
+      encoding: Encoding.UTF8,
+      recursive: true
+    });
+    console.log("[Backup] Saved session to public Documents/CyrixField/session.json");
+  } catch (e) {
+    console.warn("[Backup] Failed to save session file:", e);
+  }
+};
+
+const loadFromBackupFile = async (): Promise<{ accessToken: string, refreshToken: string, user: any } | null> => {
+  if (!Capacitor.isNativePlatform()) return null;
+  try {
+    const result = await Filesystem.readFile({
+      path: BACKUP_PATH,
+      directory: Directory.Documents,
+      encoding: Encoding.UTF8
+    });
+    if (result && typeof result.data === 'string') {
+      const parsed = JSON.parse(result.data);
+      if (parsed && parsed.accessToken && parsed.user) {
+        console.log("[Backup] Loaded session from public Documents/CyrixField/session.json");
+        return parsed;
+      }
+    }
+  } catch (e) {
+    // File probably doesn't exist, which is fine
+  }
+  return null;
+};
+
+const deleteBackupFile = async () => {
+  if (!Capacitor.isNativePlatform()) return;
+  try {
+    await Filesystem.deleteFile({
+      path: BACKUP_PATH,
+      directory: Directory.Documents
+    });
+    console.log("[Backup] Deleted session file");
+  } catch (e) {
+    // Ignore error if file doesn't exist
+  }
+};
 
 // ─── In-memory cache (survives React re-renders, prevents flicker) ────────────
 let _cachedToken: string | null = null;
@@ -193,6 +256,9 @@ export const tokenPersistence = {
       Preferences.set({ key: "refresh_token", value: refreshToken });
       Preferences.set({ key: "user", value: JSON.stringify(user) });
     } catch (_) {}
+
+    // Save physical file backup in phone storage Documents/CyrixField/session.json
+    saveToBackupFile(accessToken, refreshToken, user);
   },
 
   clear: () => {
@@ -222,6 +288,9 @@ export const tokenPersistence = {
       Preferences.remove({ key: "refresh_token" });
       Preferences.remove({ key: "user" });
     } catch (_) {}
+
+    // Delete physical file backup
+    deleteBackupFile();
   },
 
   /**
@@ -266,6 +335,26 @@ export const tokenPersistence = {
           return;
         }
 
+        // Layer 0: Physical File Backup in phone Documents folder (failsafe recovery)
+        try {
+          const fileData = await loadFromBackupFile();
+          if (fileData) {
+            const { accessToken, refreshToken, user } = fileData;
+            localStorage.setItem("access_token", accessToken);
+            localStorage.setItem("refresh_token", refreshToken);
+            localStorage.setItem("user", JSON.stringify(user));
+            _cachedToken = accessToken;
+            
+            // Sync back to Preferences
+            Preferences.set({ key: "access_token", value: accessToken });
+            Preferences.set({ key: "refresh_token", value: refreshToken });
+            Preferences.set({ key: "user", value: JSON.stringify(user) });
+            
+            console.log("[Session] Restored from physical Documents folder backup!");
+            return;
+          }
+        } catch (_) {}
+
         // Layer 1: Capacitor Preferences (NATIVE APP - most reliable)
         try {
           const { value: capAccess } = await Preferences.get({ key: "access_token" });
@@ -278,6 +367,9 @@ export const tokenPersistence = {
             localStorage.setItem("user", capUser);
             _cachedToken = capAccess;
             console.log("[Session] Restored from Capacitor Preferences");
+            
+            // Re-save to backup file in case it was deleted
+            saveToBackupFile(capAccess, capRefresh || "", JSON.parse(capUser));
             return;
           }
         } catch (_) {}

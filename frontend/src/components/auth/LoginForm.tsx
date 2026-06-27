@@ -3,6 +3,8 @@ import { User, Lock, Eye, EyeOff, ArrowRight, AlertTriangle, X, Fingerprint } fr
 import { useNavigate } from "react-router-dom";
 import { authService } from "../../services/authService";
 import { useBiometricLogin } from "../../hooks/useBiometricLogin";
+import { isNativeApp, biometricAuth } from "../../utils/capacitor";
+import { nativeConfig } from "../../utils/persistence";
 
 interface LoginFormProps {
   onForgotPassword: () => void;
@@ -57,12 +59,20 @@ export default function LoginForm({ onForgotPassword, onUnlockAccount }: LoginFo
     try {
       const response = await authService.login({ user_id: userId, password });
       saveBootstrapData(response);
-      // If biometric is available but not enabled, prompt user to enable it
-      if (biometricAvailable && !biometricEnabled) {
-        setShowBiometricPrompt(true);
-        setLoading(false);
-        return;
+      
+      // If running as native app, check if biometric login is available but not enabled yet
+      if (isNativeApp()) {
+        try {
+          const available = await biometricAuth.isAvailable();
+          const enabled = (await nativeConfig.get('biometric_login_enabled')) === 'true';
+          if (available && !enabled) {
+            setShowBiometricPrompt(true);
+            setLoading(false);
+            return;
+          }
+        } catch (_) {}
       }
+      
       navigate("/home");
     } catch (err: any) {
       if (err.response?.status === 409 && err.response?.data?.detail === "ALREADY_LOGGED_IN") {
@@ -84,6 +94,20 @@ export default function LoginForm({ onForgotPassword, onUnlockAccount }: LoginFo
     try {
       const response = await authService.login({ user_id: userId, password, force: true });
       saveBootstrapData(response);
+      
+      // Check biometric for force login as well
+      if (isNativeApp()) {
+        try {
+          const available = await biometricAuth.isAvailable();
+          const enabled = (await nativeConfig.get('biometric_login_enabled')) === 'true';
+          if (available && !enabled) {
+            setShowBiometricPrompt(true);
+            setLoading(false);
+            return;
+          }
+        } catch (_) {}
+      }
+      
       navigate("/home");
     } catch (err: any) {
       const errorMsg = err.response?.data?.detail || "Invalid User ID or Password";
