@@ -76,9 +76,16 @@ export const useBiometricLogin = (): UseBiometricLoginReturn => {
         await authService.login({ user_id: username, password });
         toast.success(`Welcome back! 👋`, { icon: biometryType === 'face' ? '😊' : '👆' });
         return true;
-      } catch (_) {
-        toast.error('Session expired. Please login with password.');
-        disableBiometricLogin();
+      } catch (err: any) {
+        const status = err.response?.status;
+        if (status === 400 || status === 401 || status === 403) {
+          toast.error('Session expired. Please login with password.');
+          await disableBiometricLogin();
+        } else {
+          // Network error or Render server cold start (sleeping). Do NOT clear biometric credentials!
+          const errMsg = err.response?.data?.detail || 'Server is waking up. Please try again in a few seconds!';
+          toast.error(errMsg, { duration: 6000 });
+        }
         return false;
       }
     } catch (e) {

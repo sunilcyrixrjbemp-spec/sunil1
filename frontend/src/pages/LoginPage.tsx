@@ -1,4 +1,6 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
+import { tokenPersistence } from "../utils/persistence";
 import LoginForm from "../components/auth/LoginForm";
 import ForgotPassword from "../components/auth/ForgotPassword";
 import UnlockAccount from "../components/auth/UnlockAccount";
@@ -6,7 +8,14 @@ import UnlockAccount from "../components/auth/UnlockAccount";
 type AuthMode = "login" | "forgot" | "unlock";
 
 export default function LoginPage() {
+  const navigate = useNavigate();
   const [mode, setMode] = useState<AuthMode>("login");
+
+  useEffect(() => {
+    if (tokenPersistence.isAuthenticated()) {
+      navigate("/home", { replace: true });
+    }
+  }, [navigate]);
 
   return (
     <div className="min-h-screen bg-[#e9ecef] flex flex-col items-center justify-center py-12 px-4 sm:px-6 lg:px-8 text-gray-800">

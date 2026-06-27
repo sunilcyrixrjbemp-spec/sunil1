@@ -1,5 +1,6 @@
 import { HashRouter as Router, Routes, Route, Navigate } from "react-router-dom";
 import { Toaster } from "react-hot-toast";
+import { tokenPersistence } from "./utils/persistence";
 import LoginPage from "./pages/LoginPage";
 import ProtectedRoute from "./components/auth/ProtectedRoute";
 import DashboardLayout from "./components/dashboard/DashboardLayout";
@@ -48,7 +49,11 @@ function App() {
           </Route>
 
           {/* Navigation Fallbacks */}
-          <Route path="/" element={<Navigate to="/login" replace />} />
+          <Route path="/" element={
+            tokenPersistence.isAuthenticated() 
+              ? <Navigate to="/home" replace /> 
+              : <Navigate to="/login" replace />
+          } />
           <Route path="*" element={<Navigate to="/not-found" replace />} />
         </Routes>
         <Toaster 
