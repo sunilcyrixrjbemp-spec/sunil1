@@ -1,0 +1,840 @@
+﻿2026-06-27T12:31:23.3439875Z Current runner version: '2.335.1'
+2026-06-27T12:31:23.3465355Z ##[group]Runner Image Provisioner
+2026-06-27T12:31:23.3466713Z Hosted Compute Agent
+2026-06-27T12:31:23.3467471Z Version: 20260611.554
+2026-06-27T12:31:23.3468253Z Commit: 5e0782fdc9014723d3be820dd114dd31555c2bd1
+2026-06-27T12:31:23.3469083Z Build Date: 2026-06-11T21:40:46Z
+2026-06-27T12:31:23.3469849Z Worker ID: {6b3b7c0b-60e7-4004-8365-cceb10f87675}
+2026-06-27T12:31:23.3470640Z Azure Region: northcentralus
+2026-06-27T12:31:23.3471361Z ##[endgroup]
+2026-06-27T12:31:23.3473036Z ##[group]Operating System
+2026-06-27T12:31:23.3473804Z Ubuntu
+2026-06-27T12:31:23.3474543Z 24.04.4
+2026-06-27T12:31:23.3475176Z LTS
+2026-06-27T12:31:23.3476030Z ##[endgroup]
+2026-06-27T12:31:23.3476702Z ##[group]Runner Image
+2026-06-27T12:31:23.3477437Z Image: ubuntu-24.04
+2026-06-27T12:31:23.3478090Z Version: 20260622.220.1
+2026-06-27T12:31:23.3479496Z Included Software: https://github.com/actions/runner-images/blob/ubuntu24/20260622.220/images/ubuntu/Ubuntu2404-Readme.md
+2026-06-27T12:31:23.3481176Z Image Release: https://github.com/actions/runner-images/releases/tag/ubuntu24%2F20260622.220
+2026-06-27T12:31:23.3482615Z ##[endgroup]
+2026-06-27T12:31:23.3483999Z ##[group]GITHUB_TOKEN Permissions
+2026-06-27T12:31:23.3486695Z Contents: read
+2026-06-27T12:31:23.3487426Z Metadata: read
+2026-06-27T12:31:23.3488067Z Packages: read
+2026-06-27T12:31:23.3488762Z ##[endgroup]
+2026-06-27T12:31:23.3490968Z Secret source: Actions
+2026-06-27T12:31:23.3492071Z Prepare workflow directory
+2026-06-27T12:31:23.3846374Z Prepare all required actions
+2026-06-27T12:31:23.3885126Z Getting action download info
+2026-06-27T12:31:23.6202588Z Download action repository 'actions/checkout@v3' (SHA:f43a0e5ff2bd294095638e18286ca9a3d1956744)
+2026-06-27T12:31:23.6949495Z Download action repository 'actions/setup-python@v4' (SHA:7f4fc3e22c37d6ff65e88745f38bd3157c663f7c)
+2026-06-27T12:31:23.9250271Z Complete job name: deploy
+2026-06-27T12:31:23.9993201Z Node 20 is being deprecated. This workflow is running with Node 24 by default. If you need to temporarily use Node 20, you can set the ACTIONS_ALLOW_USE_UNSECURE_NODE_VERSION=true environment variable. For more information see: https://github.blog/changelog/2025-09-19-deprecation-of-node-20-on-github-actions-runners/
+2026-06-27T12:31:24.0002779Z ##[group]Run actions/checkout@v3
+2026-06-27T12:31:24.0003599Z with:
+2026-06-27T12:31:24.0004137Z   repository: sunilcyrixrjbemp-spec/sunil1
+2026-06-27T12:31:24.0009360Z   token: ***
+2026-06-27T12:31:24.0009837Z   ssh-strict: true
+2026-06-27T12:31:24.0010335Z   persist-credentials: true
+2026-06-27T12:31:24.0010897Z   clean: true
+2026-06-27T12:31:24.0011413Z   sparse-checkout-cone-mode: true
+2026-06-27T12:31:24.0011982Z   fetch-depth: 1
+2026-06-27T12:31:24.0012469Z   fetch-tags: false
+2026-06-27T12:31:24.0012975Z   lfs: false
+2026-06-27T12:31:24.0013456Z   submodules: false
+2026-06-27T12:31:24.0013985Z   set-safe-directory: true
+2026-06-27T12:31:24.0014895Z ##[endgroup]
+2026-06-27T12:31:24.0849374Z (node:2168) [DEP0040] DeprecationWarning: The `punycode` module is deprecated. Please use a userland alternative instead.
+2026-06-27T12:31:24.0957735Z (Use `node --trace-deprecation ...` to show where the warning was created)
+2026-06-27T12:31:24.0959313Z Syncing repository: sunilcyrixrjbemp-spec/sunil1
+2026-06-27T12:31:24.0962005Z ##[group]Getting Git version info
+2026-06-27T12:31:24.0962839Z Working directory is '/home/runner/work/sunil1/sunil1'
+2026-06-27T12:31:24.0963953Z [command]/usr/bin/git version
+2026-06-27T12:31:24.1365145Z git version 2.54.0
+2026-06-27T12:31:24.1379258Z ##[endgroup]
+2026-06-27T12:31:24.1399854Z Temporarily overriding HOME='/home/runner/work/_temp/641e684a-1ae4-4e7d-bcd7-0178cf93e9ad' before making global git config changes
+2026-06-27T12:31:24.1402083Z Adding repository directory to the temporary git global config as a safe directory
+2026-06-27T12:31:24.1416379Z [command]/usr/bin/git config --global --add safe.directory /home/runner/work/sunil1/sunil1
+2026-06-27T12:31:24.1788201Z Deleting the contents of '/home/runner/work/sunil1/sunil1'
+2026-06-27T12:31:24.1794133Z ##[group]Initializing the repository
+2026-06-27T12:31:24.1809694Z [command]/usr/bin/git init /home/runner/work/sunil1/sunil1
+2026-06-27T12:31:24.4320904Z hint: Using 'master' as the name for the initial branch. This default branch name
+2026-06-27T12:31:24.4323029Z hint: will change to "main" in Git 3.0. To configure the initial branch name
+2026-06-27T12:31:24.4324949Z hint: to use in all of your new repositories, which will suppress this warning,
+2026-06-27T12:31:24.4326736Z hint: call:
+2026-06-27T12:31:24.4327549Z hint:
+2026-06-27T12:31:24.4328551Z hint: 	git config --global init.defaultBranch <name>
+2026-06-27T12:31:24.4329806Z hint:
+2026-06-27T12:31:24.4330987Z hint: Names commonly chosen instead of 'master' are 'main', 'trunk' and
+2026-06-27T12:31:24.4332772Z hint: 'development'. The just-created branch can be renamed via this command:
+2026-06-27T12:31:24.4334147Z hint:
+2026-06-27T12:31:24.4334668Z hint: 	git branch -m <name>
+2026-06-27T12:31:24.4335219Z hint:
+2026-06-27T12:31:24.4336144Z hint: Disable this message with "git config set advice.defaultBranchName false"
+2026-06-27T12:31:24.4819190Z Initialized empty Git repository in /home/runner/work/sunil1/sunil1/.git/
+2026-06-27T12:31:24.4830794Z [command]/usr/bin/git remote add origin https://github.com/sunilcyrixrjbemp-spec/sunil1
+2026-06-27T12:31:24.4883007Z ##[endgroup]
+2026-06-27T12:31:24.4884552Z ##[group]Disabling automatic garbage collection
+2026-06-27T12:31:24.4887696Z [command]/usr/bin/git config --local gc.auto 0
+2026-06-27T12:31:24.4917780Z ##[endgroup]
+2026-06-27T12:31:24.4919273Z ##[group]Setting up auth
+2026-06-27T12:31:24.4923615Z [command]/usr/bin/git config --local --name-only --get-regexp core\.sshCommand
+2026-06-27T12:31:24.4959600Z [command]/usr/bin/git submodule foreach --recursive sh -c "git config --local --name-only --get-regexp 'core\.sshCommand' && git config --local --unset-all 'core.sshCommand' || :"
+2026-06-27T12:31:24.5277742Z [command]/usr/bin/git config --local --name-only --get-regexp http\.https\:\/\/github\.com\/\.extraheader
+2026-06-27T12:31:24.5339333Z [command]/usr/bin/git submodule foreach --recursive sh -c "git config --local --name-only --get-regexp 'http\.https\:\/\/github\.com\/\.extraheader' && git config --local --unset-all 'http.https://github.com/.extraheader' || :"
+2026-06-27T12:31:24.5563249Z [command]/usr/bin/git config --local http.https://github.com/.extraheader AUTHORIZATION: basic ***
+2026-06-27T12:31:24.5599316Z ##[endgroup]
+2026-06-27T12:31:24.5600751Z ##[group]Fetching the repository
+2026-06-27T12:31:24.5609058Z [command]/usr/bin/git -c protocol.version=2 fetch --no-tags --prune --progress --no-recurse-submodules --depth=1 origin +baaa919ecc0f645ec586164accfb2ea059871eca:refs/remotes/origin/main
+2026-06-27T12:31:24.7774613Z remote: Enumerating objects: 221, done.        
+2026-06-27T12:31:24.7777639Z remote: Counting objects:   0% (1/221)        
+2026-06-27T12:31:24.7779602Z remote: Counting objects:   1% (3/221)        
+2026-06-27T12:31:24.7781389Z remote: Counting objects:   2% (5/221)        
+2026-06-27T12:31:24.7783164Z remote: Counting objects:   3% (7/221)        
+2026-06-27T12:31:24.7784956Z remote: Counting objects:   4% (9/221)        
+2026-06-27T12:31:24.7786968Z remote: Counting objects:   5% (12/221)        
+2026-06-27T12:31:24.7788752Z remote: Counting objects:   6% (14/221)        
+2026-06-27T12:31:24.7790494Z remote: Counting objects:   7% (16/221)        
+2026-06-27T12:31:24.7792299Z remote: Counting objects:   8% (18/221)        
+2026-06-27T12:31:24.7794129Z remote: Counting objects:   9% (20/221)        
+2026-06-27T12:31:24.7796147Z remote: Counting objects:  10% (23/221)        
+2026-06-27T12:31:24.7797900Z remote: Counting objects:  11% (25/221)        
+2026-06-27T12:31:24.7799621Z remote: Counting objects:  12% (27/221)        
+2026-06-27T12:31:24.7801601Z remote: Counting objects:  13% (29/221)        
+2026-06-27T12:31:24.7803588Z remote: Counting objects:  14% (31/221)        
+2026-06-27T12:31:24.7805419Z remote: Counting objects:  15% (34/221)        
+2026-06-27T12:31:24.7807918Z remote: Counting objects:  16% (36/221)        
+2026-06-27T12:31:24.7809680Z remote: Counting objects:  17% (38/221)        
+2026-06-27T12:31:24.7811322Z remote: Counting objects:  18% (40/221)        
+2026-06-27T12:31:24.7812996Z remote: Counting objects:  19% (42/221)        
+2026-06-27T12:31:24.7814838Z remote: Counting objects:  20% (45/221)        
+2026-06-27T12:31:24.7816975Z remote: Counting objects:  21% (47/221)        
+2026-06-27T12:31:24.7818926Z remote: Counting objects:  22% (49/221)        
+2026-06-27T12:31:24.7820754Z remote: Counting objects:  23% (51/221)        
+2026-06-27T12:31:24.7822667Z remote: Counting objects:  24% (54/221)        
+2026-06-27T12:31:24.7824547Z remote: Counting objects:  25% (56/221)        
+2026-06-27T12:31:24.7826788Z remote: Counting objects:  26% (58/221)        
+2026-06-27T12:31:24.7828776Z remote: Counting objects:  27% (60/221)        
+2026-06-27T12:31:24.7831436Z remote: Counting objects:  28% (62/221)        
+2026-06-27T12:31:24.7833572Z remote: Counting objects:  29% (65/221)        
+2026-06-27T12:31:24.7835461Z remote: Counting objects:  30% (67/221)        
+2026-06-27T12:31:24.7837684Z remote: Counting objects:  31% (69/221)        
+2026-06-27T12:31:24.7839765Z remote: Counting objects:  32% (71/221)        
+2026-06-27T12:31:24.7841618Z remote: Counting objects:  33% (73/221)        
+2026-06-27T12:31:24.7843423Z remote: Counting objects:  34% (76/221)        
+2026-06-27T12:31:24.7845220Z remote: Counting objects:  35% (78/221)        
+2026-06-27T12:31:24.7847296Z remote: Counting objects:  36% (80/221)        
+2026-06-27T12:31:24.7849105Z remote: Counting objects:  37% (82/221)        
+2026-06-27T12:31:24.7850984Z remote: Counting objects:  38% (84/221)        
+2026-06-27T12:31:24.7852767Z remote: Counting objects:  39% (87/221)        
+2026-06-27T12:31:24.7854636Z remote: Counting objects:  40% (89/221)        
+2026-06-27T12:31:24.7857076Z remote: Counting objects:  41% (91/221)        
+2026-06-27T12:31:24.7858780Z remote: Counting objects:  42% (93/221)        
+2026-06-27T12:31:24.7860326Z remote: Counting objects:  43% (96/221)        
+2026-06-27T12:31:24.7861931Z remote: Counting objects:  44% (98/221)        
+2026-06-27T12:31:24.7863515Z remote: Counting objects:  45% (100/221)        
+2026-06-27T12:31:24.7865150Z remote: Counting objects:  46% (102/221)        
+2026-06-27T12:31:24.7867146Z remote: Counting objects:  47% (104/221)        
+2026-06-27T12:31:24.7868719Z remote: Counting objects:  48% (107/221)        
+2026-06-27T12:31:24.7870303Z remote: Counting objects:  49% (109/221)        
+2026-06-27T12:31:24.7871871Z remote: Counting objects:  50% (111/221)        
+2026-06-27T12:31:24.7873413Z remote: Counting objects:  51% (113/221)        
+2026-06-27T12:31:24.7874996Z remote: Counting objects:  52% (115/221)        
+2026-06-27T12:31:24.7876874Z remote: Counting objects:  53% (118/221)        
+2026-06-27T12:31:24.7878596Z remote: Counting objects:  54% (120/221)        
+2026-06-27T12:31:24.7880300Z remote: Counting objects:  55% (122/221)        
+2026-06-27T12:31:24.7881897Z remote: Counting objects:  56% (124/221)        
+2026-06-27T12:31:24.7883425Z remote: Counting objects:  57% (126/221)        
+2026-06-27T12:31:24.7884988Z remote: Counting objects:  58% (129/221)        
+2026-06-27T12:31:24.7886943Z remote: Counting objects:  59% (131/221)        
+2026-06-27T12:31:24.7888498Z remote: Counting objects:  60% (133/221)        
+2026-06-27T12:31:24.7890111Z remote: Counting objects:  61% (135/221)        
+2026-06-27T12:31:24.7891678Z remote: Counting objects:  62% (138/221)        
+2026-06-27T12:31:24.7893212Z remote: Counting objects:  63% (140/221)        
+2026-06-27T12:31:24.7894841Z remote: Counting objects:  64% (142/221)        
+2026-06-27T12:31:24.7896772Z remote: Counting objects:  65% (144/221)        
+2026-06-27T12:31:24.7898334Z remote: Counting objects:  66% (146/221)        
+2026-06-27T12:31:24.7899903Z remote: Counting objects:  67% (149/221)        
+2026-06-27T12:31:24.7901620Z remote: Counting objects:  68% (151/221)        
+2026-06-27T12:31:24.7904019Z remote: Counting objects:  69% (153/221)        
+2026-06-27T12:31:24.7906444Z remote: Counting objects:  70% (155/221)        
+2026-06-27T12:31:24.7908209Z remote: Counting objects:  71% (157/221)        
+2026-06-27T12:31:24.7909783Z remote: Counting objects:  72% (160/221)        
+2026-06-27T12:31:24.7911394Z remote: Counting objects:  73% (162/221)        
+2026-06-27T12:31:24.7913016Z remote: Counting objects:  74% (164/221)        
+2026-06-27T12:31:24.7914672Z remote: Counting objects:  75% (166/221)        
+2026-06-27T12:31:24.7916624Z remote: Counting objects:  76% (168/221)        
+2026-06-27T12:31:24.7917890Z remote: Counting objects:  77% (171/221)        
+2026-06-27T12:31:24.7918893Z remote: Counting objects:  78% (173/221)        
+2026-06-27T12:31:24.7919892Z remote: Counting objects:  79% (175/221)        
+2026-06-27T12:31:24.7920898Z remote: Counting objects:  80% (177/221)        
+2026-06-27T12:31:24.7921853Z remote: Counting objects:  81% (180/221)        
+2026-06-27T12:31:24.7922810Z remote: Counting objects:  82% (182/221)        
+2026-06-27T12:31:24.7923742Z remote: Counting objects:  83% (184/221)        
+2026-06-27T12:31:24.7924718Z remote: Counting objects:  84% (186/221)        
+2026-06-27T12:31:24.7926006Z remote: Counting objects:  85% (188/221)        
+2026-06-27T12:31:24.7927633Z remote: Counting objects:  86% (191/221)        
+2026-06-27T12:31:24.7929177Z remote: Counting objects:  87% (193/221)        
+2026-06-27T12:31:24.7929995Z remote: Counting objects:  88% (195/221)        
+2026-06-27T12:31:24.7930762Z remote: Counting objects:  89% (197/221)        
+2026-06-27T12:31:24.7931533Z remote: Counting objects:  90% (199/221)        
+2026-06-27T12:31:24.7932268Z remote: Counting objects:  91% (202/221)        
+2026-06-27T12:31:24.7933036Z remote: Counting objects:  92% (204/221)        
+2026-06-27T12:31:24.7934085Z remote: Counting objects:  93% (206/221)        
+2026-06-27T12:31:24.7934886Z remote: Counting objects:  94% (208/221)        
+2026-06-27T12:31:24.7935905Z remote: Counting objects:  95% (210/221)        
+2026-06-27T12:31:24.7936701Z remote: Counting objects:  96% (213/221)        
+2026-06-27T12:31:24.7937449Z remote: Counting objects:  97% (215/221)        
+2026-06-27T12:31:24.7938226Z remote: Counting objects:  98% (217/221)        
+2026-06-27T12:31:24.7938998Z remote: Counting objects:  99% (219/221)        
+2026-06-27T12:31:24.7939756Z remote: Counting objects: 100% (221/221)        
+2026-06-27T12:31:24.7940575Z remote: Counting objects: 100% (221/221), done.        
+2026-06-27T12:31:24.7941408Z remote: Compressing objects:   0% (1/185)        
+2026-06-27T12:31:24.7942170Z remote: Compressing objects:   1% (2/185)        
+2026-06-27T12:31:24.7942949Z remote: Compressing objects:   2% (4/185)        
+2026-06-27T12:31:24.7943721Z remote: Compressing objects:   3% (6/185)        
+2026-06-27T12:31:24.7944507Z remote: Compressing objects:   4% (8/185)        
+2026-06-27T12:31:24.7945269Z remote: Compressing objects:   5% (10/185)        
+2026-06-27T12:31:24.7946221Z remote: Compressing objects:   6% (12/185)        
+2026-06-27T12:31:24.7946994Z remote: Compressing objects:   7% (13/185)        
+2026-06-27T12:31:24.7947807Z remote: Compressing objects:   8% (15/185)        
+2026-06-27T12:31:24.7948600Z remote: Compressing objects:   9% (17/185)        
+2026-06-27T12:31:24.7949450Z remote: Compressing objects:  10% (19/185)        
+2026-06-27T12:31:24.7950235Z remote: Compressing objects:  11% (21/185)        
+2026-06-27T12:31:24.7951006Z remote: Compressing objects:  12% (23/185)        
+2026-06-27T12:31:24.7951773Z remote: Compressing objects:  13% (25/185)        
+2026-06-27T12:31:24.7952545Z remote: Compressing objects:  14% (26/185)        
+2026-06-27T12:31:24.7953343Z remote: Compressing objects:  15% (28/185)        
+2026-06-27T12:31:24.7954108Z remote: Compressing objects:  16% (30/185)        
+2026-06-27T12:31:24.7954883Z remote: Compressing objects:  17% (32/185)        
+2026-06-27T12:31:24.7955801Z remote: Compressing objects:  18% (34/185)        
+2026-06-27T12:31:24.7956731Z remote: Compressing objects:  19% (36/185)        
+2026-06-27T12:31:24.7957493Z remote: Compressing objects:  20% (37/185)        
+2026-06-27T12:31:24.7958295Z remote: Compressing objects:  21% (39/185)        
+2026-06-27T12:31:24.7959038Z remote: Compressing objects:  22% (41/185)        
+2026-06-27T12:31:24.7959809Z remote: Compressing objects:  23% (43/185)        
+2026-06-27T12:31:24.7960555Z remote: Compressing objects:  24% (45/185)        
+2026-06-27T12:31:24.7961326Z remote: Compressing objects:  25% (47/185)        
+2026-06-27T12:31:24.7962097Z remote: Compressing objects:  26% (49/185)        
+2026-06-27T12:31:24.7962890Z remote: Compressing objects:  27% (50/185)        
+2026-06-27T12:31:24.7963680Z remote: Compressing objects:  28% (52/185)        
+2026-06-27T12:31:24.7964460Z remote: Compressing objects:  29% (54/185)        
+2026-06-27T12:31:24.7965236Z remote: Compressing objects:  30% (56/185)        
+2026-06-27T12:31:24.7966153Z remote: Compressing objects:  31% (58/185)        
+2026-06-27T12:31:24.7966936Z remote: Compressing objects:  32% (60/185)        
+2026-06-27T12:31:24.7968335Z remote: Compressing objects:  33% (62/185)        
+2026-06-27T12:31:24.7969147Z remote: Compressing objects:  34% (63/185)        
+2026-06-27T12:31:24.7970340Z remote: Compressing objects:  35% (65/185)        
+2026-06-27T12:31:24.7971172Z remote: Compressing objects:  36% (67/185)        
+2026-06-27T12:31:24.7972024Z remote: Compressing objects:  37% (69/185)        
+2026-06-27T12:31:24.7973367Z remote: Compressing objects:  38% (71/185)        
+2026-06-27T12:31:24.7974571Z remote: Compressing objects:  39% (73/185)        
+2026-06-27T12:31:24.7976079Z remote: Compressing objects:  40% (74/185)        
+2026-06-27T12:31:24.7977363Z remote: Compressing objects:  41% (76/185)        
+2026-06-27T12:31:24.7978656Z remote: Compressing objects:  42% (78/185)        
+2026-06-27T12:31:24.7980177Z remote: Compressing objects:  43% (80/185)        
+2026-06-27T12:31:24.7981166Z remote: Compressing objects:  44% (82/185)        
+2026-06-27T12:31:24.7981999Z remote: Compressing objects:  45% (84/185)        
+2026-06-27T12:31:24.7982821Z remote: Compressing objects:  46% (86/185)        
+2026-06-27T12:31:24.7983644Z remote: Compressing objects:  47% (87/185)        
+2026-06-27T12:31:24.7984467Z remote: Compressing objects:  48% (89/185)        
+2026-06-27T12:31:24.7985281Z remote: Compressing objects:  49% (91/185)        
+2026-06-27T12:31:24.7986317Z remote: Compressing objects:  50% (93/185)        
+2026-06-27T12:31:24.7987152Z remote: Compressing objects:  51% (95/185)        
+2026-06-27T12:31:24.7987958Z remote: Compressing objects:  52% (97/185)        
+2026-06-27T12:31:24.7988766Z remote: Compressing objects:  53% (99/185)        
+2026-06-27T12:31:24.7989582Z remote: Compressing objects:  54% (100/185)        
+2026-06-27T12:31:24.7990419Z remote: Compressing objects:  55% (102/185)        
+2026-06-27T12:31:24.7991255Z remote: Compressing objects:  56% (104/185)        
+2026-06-27T12:31:24.7992079Z remote: Compressing objects:  57% (106/185)        
+2026-06-27T12:31:24.7992887Z remote: Compressing objects:  58% (108/185)        
+2026-06-27T12:31:24.7993706Z remote: Compressing objects:  59% (110/185)        
+2026-06-27T12:31:24.7994548Z remote: Compressing objects:  60% (111/185)        
+2026-06-27T12:31:24.7995386Z remote: Compressing objects:  61% (113/185)        
+2026-06-27T12:31:24.7996368Z remote: Compressing objects:  62% (115/185)        
+2026-06-27T12:31:24.7997200Z remote: Compressing objects:  63% (117/185)        
+2026-06-27T12:31:24.7998011Z remote: Compressing objects:  64% (119/185)        
+2026-06-27T12:31:24.7998816Z remote: Compressing objects:  65% (121/185)        
+2026-06-27T12:31:24.7999644Z remote: Compressing objects:  66% (123/185)        
+2026-06-27T12:31:24.8000474Z remote: Compressing objects:  67% (124/185)        
+2026-06-27T12:31:24.8001324Z remote: Compressing objects:  68% (126/185)        
+2026-06-27T12:31:24.8002142Z remote: Compressing objects:  69% (128/185)        
+2026-06-27T12:31:24.8003139Z remote: Compressing objects:  70% (130/185)        
+2026-06-27T12:31:24.8003955Z remote: Compressing objects:  71% (132/185)        
+2026-06-27T12:31:24.8004808Z remote: Compressing objects:  72% (134/185)        
+2026-06-27T12:31:24.8005753Z remote: Compressing objects:  73% (136/185)        
+2026-06-27T12:31:24.8006618Z remote: Compressing objects:  74% (137/185)        
+2026-06-27T12:31:24.8007423Z remote: Compressing objects:  75% (139/185)        
+2026-06-27T12:31:24.8008218Z remote: Compressing objects:  76% (141/185)        
+2026-06-27T12:31:24.8009048Z remote: Compressing objects:  77% (143/185)        
+2026-06-27T12:31:24.8009875Z remote: Compressing objects:  78% (145/185)        
+2026-06-27T12:31:24.8010686Z remote: Compressing objects:  79% (147/185)        
+2026-06-27T12:31:24.8011500Z remote: Compressing objects:  80% (148/185)        
+2026-06-27T12:31:24.8012354Z remote: Compressing objects:  81% (150/185)        
+2026-06-27T12:31:24.8013177Z remote: Compressing objects:  82% (152/185)        
+2026-06-27T12:31:24.8013980Z remote: Compressing objects:  83% (154/185)        
+2026-06-27T12:31:24.8014828Z remote: Compressing objects:  84% (156/185)        
+2026-06-27T12:31:24.8015780Z remote: Compressing objects:  85% (158/185)        
+2026-06-27T12:31:24.8016596Z remote: Compressing objects:  86% (160/185)        
+2026-06-27T12:31:24.8017416Z remote: Compressing objects:  87% (161/185)        
+2026-06-27T12:31:24.8018235Z remote: Compressing objects:  88% (163/185)        
+2026-06-27T12:31:24.8019035Z remote: Compressing objects:  89% (165/185)        
+2026-06-27T12:31:24.8019858Z remote: Compressing objects:  90% (167/185)        
+2026-06-27T12:31:24.8020661Z remote: Compressing objects:  91% (169/185)        
+2026-06-27T12:31:24.8021500Z remote: Compressing objects:  92% (171/185)        
+2026-06-27T12:31:24.8022464Z remote: Compressing objects:  93% (173/185)        
+2026-06-27T12:31:24.8023315Z remote: Compressing objects:  94% (174/185)        
+2026-06-27T12:31:24.8024156Z remote: Compressing objects:  95% (176/185)        
+2026-06-27T12:31:24.8025909Z remote: Compressing objects:  96% (178/185)        
+2026-06-27T12:31:24.8026842Z remote: Compressing objects:  97% (180/185)        
+2026-06-27T12:31:24.8027680Z remote: Compressing objects:  98% (182/185)        
+2026-06-27T12:31:24.8029088Z remote: Compressing objects:  99% (184/185)        
+2026-06-27T12:31:24.8030426Z remote: Compressing objects: 100% (185/185)        
+2026-06-27T12:31:24.8031364Z remote: Compressing objects: 100% (185/185), done.        
+2026-06-27T12:31:24.8032211Z Receiving objects:   0% (1/221)
+2026-06-27T12:31:24.8032863Z Receiving objects:   1% (3/221)
+2026-06-27T12:31:24.8033525Z Receiving objects:   2% (5/221)
+2026-06-27T12:31:24.8034162Z Receiving objects:   3% (7/221)
+2026-06-27T12:31:24.8034813Z Receiving objects:   4% (9/221)
+2026-06-27T12:31:24.8035739Z Receiving objects:   5% (12/221)
+2026-06-27T12:31:24.8036420Z Receiving objects:   6% (14/221)
+2026-06-27T12:31:24.8037088Z Receiving objects:   7% (16/221)
+2026-06-27T12:31:24.8037758Z Receiving objects:   8% (18/221)
+2026-06-27T12:31:24.8038413Z Receiving objects:   9% (20/221)
+2026-06-27T12:31:24.8039079Z Receiving objects:  10% (23/221)
+2026-06-27T12:31:24.8039706Z Receiving objects:  11% (25/221)
+2026-06-27T12:31:24.8040329Z Receiving objects:  12% (27/221)
+2026-06-27T12:31:24.8040972Z Receiving objects:  13% (29/221)
+2026-06-27T12:31:24.8041629Z Receiving objects:  14% (31/221)
+2026-06-27T12:31:24.8057143Z Receiving objects:  15% (34/221)
+2026-06-27T12:31:24.8060233Z Receiving objects:  16% (36/221)
+2026-06-27T12:31:24.8230685Z Receiving objects:  17% (38/221)
+2026-06-27T12:31:24.8233267Z Receiving objects:  18% (40/221)
+2026-06-27T12:31:24.8237720Z Receiving objects:  19% (42/221)
+2026-06-27T12:31:24.8239417Z Receiving objects:  20% (45/221)
+2026-06-27T12:31:24.8240617Z Receiving objects:  21% (47/221)
+2026-06-27T12:31:24.8258550Z Receiving objects:  22% (49/221)
+2026-06-27T12:31:24.8261199Z Receiving objects:  23% (51/221)
+2026-06-27T12:31:24.8262346Z Receiving objects:  24% (54/221)
+2026-06-27T12:31:24.8263032Z Receiving objects:  25% (56/221)
+2026-06-27T12:31:24.8370508Z Receiving objects:  26% (58/221)
+2026-06-27T12:31:24.8372881Z Receiving objects:  27% (60/221)
+2026-06-27T12:31:24.8375281Z Receiving objects:  28% (62/221)
+2026-06-27T12:31:24.8447034Z Receiving objects:  29% (65/221)
+2026-06-27T12:31:24.8448218Z Receiving objects:  30% (67/221)
+2026-06-27T12:31:24.8449069Z Receiving objects:  31% (69/221)
+2026-06-27T12:31:24.8449781Z Receiving objects:  32% (71/221)
+2026-06-27T12:31:24.8450426Z Receiving objects:  33% (73/221)
+2026-06-27T12:31:24.8451050Z Receiving objects:  34% (76/221)
+2026-06-27T12:31:24.8451819Z Receiving objects:  35% (78/221)
+2026-06-27T12:31:24.8452935Z Receiving objects:  36% (80/221)
+2026-06-27T12:31:24.8454065Z Receiving objects:  37% (82/221)
+2026-06-27T12:31:24.8455133Z Receiving objects:  38% (84/221)
+2026-06-27T12:31:24.8456375Z Receiving objects:  39% (87/221)
+2026-06-27T12:31:24.8457427Z Receiving objects:  40% (89/221)
+2026-06-27T12:31:24.8458445Z Receiving objects:  41% (91/221)
+2026-06-27T12:31:24.8459459Z Receiving objects:  42% (93/221)
+2026-06-27T12:31:24.8460498Z Receiving objects:  43% (96/221)
+2026-06-27T12:31:24.8461590Z Receiving objects:  44% (98/221)
+2026-06-27T12:31:24.8462601Z Receiving objects:  45% (100/221)
+2026-06-27T12:31:24.8463625Z Receiving objects:  46% (102/221)
+2026-06-27T12:31:24.8464671Z Receiving objects:  47% (104/221)
+2026-06-27T12:31:24.8466065Z Receiving objects:  48% (107/221)
+2026-06-27T12:31:24.8466766Z Receiving objects:  49% (109/221)
+2026-06-27T12:31:24.8467412Z Receiving objects:  50% (111/221)
+2026-06-27T12:31:24.8468070Z Receiving objects:  51% (113/221)
+2026-06-27T12:31:24.8468733Z Receiving objects:  52% (115/221)
+2026-06-27T12:31:24.8469371Z Receiving objects:  53% (118/221)
+2026-06-27T12:31:24.8470077Z Receiving objects:  54% (120/221)
+2026-06-27T12:31:24.8470965Z Receiving objects:  55% (122/221)
+2026-06-27T12:31:24.8471624Z Receiving objects:  56% (124/221)
+2026-06-27T12:31:24.8472279Z Receiving objects:  57% (126/221)
+2026-06-27T12:31:24.8472928Z Receiving objects:  58% (129/221)
+2026-06-27T12:31:24.8571777Z Receiving objects:  59% (131/221)
+2026-06-27T12:31:24.8577528Z Receiving objects:  60% (133/221)
+2026-06-27T12:31:24.8578626Z Receiving objects:  61% (135/221)
+2026-06-27T12:31:24.8579284Z Receiving objects:  62% (138/221)
+2026-06-27T12:31:24.8579915Z Receiving objects:  63% (140/221)
+2026-06-27T12:31:24.8580550Z Receiving objects:  64% (142/221)
+2026-06-27T12:31:24.8581184Z Receiving objects:  65% (144/221)
+2026-06-27T12:31:24.8581850Z Receiving objects:  66% (146/221)
+2026-06-27T12:31:24.8582566Z Receiving objects:  67% (149/221)
+2026-06-27T12:31:24.8584136Z Receiving objects:  68% (151/221)
+2026-06-27T12:31:24.8585173Z Receiving objects:  69% (153/221)
+2026-06-27T12:31:24.8586583Z Receiving objects:  70% (155/221)
+2026-06-27T12:31:24.8627624Z Receiving objects:  71% (157/221)
+2026-06-27T12:31:24.8629426Z Receiving objects:  72% (160/221)
+2026-06-27T12:31:24.8630807Z Receiving objects:  73% (162/221)
+2026-06-27T12:31:24.8637632Z Receiving objects:  74% (164/221)
+2026-06-27T12:31:24.8638418Z Receiving objects:  75% (166/221)
+2026-06-27T12:31:24.8639052Z Receiving objects:  76% (168/221)
+2026-06-27T12:31:24.8639691Z Receiving objects:  77% (171/221)
+2026-06-27T12:31:24.8640324Z Receiving objects:  78% (173/221)
+2026-06-27T12:31:24.8640943Z Receiving objects:  79% (175/221)
+2026-06-27T12:31:24.8641553Z Receiving objects:  80% (177/221)
+2026-06-27T12:31:24.8642199Z Receiving objects:  81% (180/221)
+2026-06-27T12:31:24.8642808Z Receiving objects:  82% (182/221)
+2026-06-27T12:31:24.8644018Z Receiving objects:  83% (184/221)
+2026-06-27T12:31:24.8655990Z Receiving objects:  84% (186/221)
+2026-06-27T12:31:24.8770892Z Receiving objects:  85% (188/221)
+2026-06-27T12:31:24.8771992Z Receiving objects:  86% (191/221)
+2026-06-27T12:31:24.8773470Z remote: Total 221 (delta 21), reused 209 (delta 21), pack-reused 0 (from 0)        
+2026-06-27T12:31:24.8784853Z Receiving objects:  87% (193/221)
+2026-06-27T12:31:24.8786271Z Receiving objects:  88% (195/221)
+2026-06-27T12:31:24.8787311Z Receiving objects:  89% (197/221)
+2026-06-27T12:31:24.8788311Z Receiving objects:  90% (199/221)
+2026-06-27T12:31:24.8789297Z Receiving objects:  91% (202/221)
+2026-06-27T12:31:24.8790305Z Receiving objects:  92% (204/221)
+2026-06-27T12:31:24.8791283Z Receiving objects:  93% (206/221)
+2026-06-27T12:31:24.8792305Z Receiving objects:  94% (208/221)
+2026-06-27T12:31:24.8793328Z Receiving objects:  95% (210/221)
+2026-06-27T12:31:24.8794328Z Receiving objects:  96% (213/221)
+2026-06-27T12:31:24.8795335Z Receiving objects:  97% (215/221)
+2026-06-27T12:31:24.8796619Z Receiving objects:  98% (217/221)
+2026-06-27T12:31:24.8797615Z Receiving objects:  99% (219/221)
+2026-06-27T12:31:24.8798423Z Receiving objects: 100% (221/221)
+2026-06-27T12:31:24.8799297Z Receiving objects: 100% (221/221), 368.20 KiB | 4.00 MiB/s, done.
+2026-06-27T12:31:24.8800238Z Resolving deltas:   0% (0/21)
+2026-06-27T12:31:24.8800859Z Resolving deltas:   4% (1/21)
+2026-06-27T12:31:24.8801469Z Resolving deltas:   9% (2/21)
+2026-06-27T12:31:24.8812874Z Resolving deltas:  14% (3/21)
+2026-06-27T12:31:24.8813581Z Resolving deltas:  23% (5/21)
+2026-06-27T12:31:24.8814212Z Resolving deltas:  28% (6/21)
+2026-06-27T12:31:24.8814844Z Resolving deltas:  33% (7/21)
+2026-06-27T12:31:24.8815447Z Resolving deltas:  38% (8/21)
+2026-06-27T12:31:24.8816861Z Resolving deltas:  42% (9/21)
+2026-06-27T12:31:24.8817963Z Resolving deltas:  47% (10/21)
+2026-06-27T12:31:24.8818646Z Resolving deltas:  52% (11/21)
+2026-06-27T12:31:24.8819268Z Resolving deltas:  57% (12/21)
+2026-06-27T12:31:24.8819939Z Resolving deltas:  61% (13/21)
+2026-06-27T12:31:24.8820545Z Resolving deltas:  66% (14/21)
+2026-06-27T12:31:24.8821149Z Resolving deltas:  71% (15/21)
+2026-06-27T12:31:24.8821755Z Resolving deltas:  76% (16/21)
+2026-06-27T12:31:24.8822939Z Resolving deltas:  80% (17/21)
+2026-06-27T12:31:24.8823647Z Resolving deltas:  85% (18/21)
+2026-06-27T12:31:24.8824285Z Resolving deltas:  90% (19/21)
+2026-06-27T12:31:24.8824931Z Resolving deltas:  95% (20/21)
+2026-06-27T12:31:24.8825885Z Resolving deltas: 100% (21/21)
+2026-06-27T12:31:24.8826608Z Resolving deltas: 100% (21/21), done.
+2026-06-27T12:31:24.8982215Z From https://github.com/sunilcyrixrjbemp-spec/sunil1
+2026-06-27T12:31:24.8984117Z  * [new ref]         baaa919ecc0f645ec586164accfb2ea059871eca -> origin/main
+2026-06-27T12:31:24.9017376Z ##[endgroup]
+2026-06-27T12:31:24.9018279Z ##[group]Determining the checkout info
+2026-06-27T12:31:24.9019667Z ##[endgroup]
+2026-06-27T12:31:24.9020500Z ##[group]Checking out the ref
+2026-06-27T12:31:24.9030007Z [command]/usr/bin/git checkout --progress --force -B main refs/remotes/origin/main
+2026-06-27T12:31:24.9207577Z Switched to a new branch 'main'
+2026-06-27T12:31:24.9211071Z branch 'main' set up to track 'origin/main'.
+2026-06-27T12:31:24.9217676Z ##[endgroup]
+2026-06-27T12:31:24.9252553Z [command]/usr/bin/git log -1 --format='%H'
+2026-06-27T12:31:24.9276233Z 'baaa919ecc0f645ec586164accfb2ea059871eca'
+2026-06-27T12:31:24.9562573Z Node 20 is being deprecated. This workflow is running with Node 24 by default. If you need to temporarily use Node 20, you can set the ACTIONS_ALLOW_USE_UNSECURE_NODE_VERSION=true environment variable. For more information see: https://github.blog/changelog/2025-09-19-deprecation-of-node-20-on-github-actions-runners/
+2026-06-27T12:31:24.9566555Z ##[group]Run actions/setup-python@v4
+2026-06-27T12:31:24.9567217Z with:
+2026-06-27T12:31:24.9567709Z   python-version: 3.11
+2026-06-27T12:31:24.9568271Z   check-latest: false
+2026-06-27T12:31:24.9574019Z   token: ***
+2026-06-27T12:31:24.9574510Z   update-environment: true
+2026-06-27T12:31:24.9575095Z   allow-prereleases: false
+2026-06-27T12:31:24.9575853Z ##[endgroup]
+2026-06-27T12:31:25.0981514Z ##[group]Installed versions
+2026-06-27T12:31:25.1076660Z (node:2255) [DEP0040] DeprecationWarning: The `punycode` module is deprecated. Please use a userland alternative instead.
+2026-06-27T12:31:25.1078783Z (Use `node --trace-deprecation ...` to show where the warning was created)
+2026-06-27T12:31:25.1080782Z Successfully set up CPython (3.11.15)
+2026-06-27T12:31:25.1082454Z ##[endgroup]
+2026-06-27T12:31:25.1247213Z ##[group]Run python -m pip install --upgrade pip
+2026-06-27T12:31:25.1248243Z [36;1mpython -m pip install --upgrade pip[0m
+2026-06-27T12:31:25.1249342Z [36;1m# Install requirements into python_modules directory for wrangler bundling[0m
+2026-06-27T12:31:25.1250555Z [36;1mpip install -r requirements.txt --target python_modules[0m
+2026-06-27T12:31:25.1410948Z shell: /usr/bin/bash -e {0}
+2026-06-27T12:31:25.1411636Z env:
+2026-06-27T12:31:25.1412285Z   pythonLocation: /opt/hostedtoolcache/Python/3.11.15/x64
+2026-06-27T12:31:25.1413336Z   PKG_CONFIG_PATH: /opt/hostedtoolcache/Python/3.11.15/x64/lib/pkgconfig
+2026-06-27T12:31:25.1414402Z   Python_ROOT_DIR: /opt/hostedtoolcache/Python/3.11.15/x64
+2026-06-27T12:31:25.1415328Z   Python2_ROOT_DIR: /opt/hostedtoolcache/Python/3.11.15/x64
+2026-06-27T12:31:25.1416669Z   Python3_ROOT_DIR: /opt/hostedtoolcache/Python/3.11.15/x64
+2026-06-27T12:31:25.1417632Z   LD_LIBRARY_PATH: /opt/hostedtoolcache/Python/3.11.15/x64/lib
+2026-06-27T12:31:25.1418468Z ##[endgroup]
+2026-06-27T12:31:25.7345120Z Requirement already satisfied: pip in /opt/hostedtoolcache/Python/3.11.15/x64/lib/python3.11/site-packages (26.1.2)
+2026-06-27T12:31:26.3968073Z Collecting fastapi>=0.104.1 (from -r requirements.txt (line 1))
+2026-06-27T12:31:26.4478227Z   Downloading fastapi-0.138.1-py3-none-any.whl.metadata (27 kB)
+2026-06-27T12:31:26.4769874Z Collecting uvicorn>=0.24.0 (from -r requirements.txt (line 2))
+2026-06-27T12:31:26.4807665Z   Downloading uvicorn-0.49.0-py3-none-any.whl.metadata (6.7 kB)
+2026-06-27T12:31:26.7243068Z Collecting sqlalchemy>=2.0.23 (from -r requirements.txt (line 3))
+2026-06-27T12:31:26.7283825Z   Downloading sqlalchemy-2.0.51-cp311-cp311-manylinux2014_x86_64.manylinux_2_17_x86_64.manylinux_2_28_x86_64.whl.metadata (9.5 kB)
+2026-06-27T12:31:26.7531110Z Collecting alembic>=1.12.1 (from -r requirements.txt (line 4))
+2026-06-27T12:31:26.7565015Z   Downloading alembic-1.18.5-py3-none-any.whl.metadata (7.2 kB)
+2026-06-27T12:31:26.8481915Z Collecting pydantic>=2.5.0 (from -r requirements.txt (line 5))
+2026-06-27T12:31:26.8518354Z   Downloading pydantic-2.13.4-py3-none-any.whl.metadata (109 kB)
+2026-06-27T12:31:26.8762154Z Collecting pydantic-settings>=2.1.0 (from -r requirements.txt (line 6))
+2026-06-27T12:31:26.8796705Z   Downloading pydantic_settings-2.14.2-py3-none-any.whl.metadata (3.4 kB)
+2026-06-27T12:31:26.8933362Z Collecting python-dotenv>=1.0.0 (from -r requirements.txt (line 7))
+2026-06-27T12:31:26.8968827Z   Downloading python_dotenv-1.2.2-py3-none-any.whl.metadata (27 kB)
+2026-06-27T12:31:26.9113488Z Collecting python-multipart>=0.0.6 (from -r requirements.txt (line 8))
+2026-06-27T12:31:26.9148460Z   Downloading python_multipart-0.0.32-py3-none-any.whl.metadata (2.1 kB)
+2026-06-27T12:31:26.9256303Z Collecting python-jose>=3.3.0 (from -r requirements.txt (line 9))
+2026-06-27T12:31:26.9296297Z   Downloading python_jose-3.5.0-py2.py3-none-any.whl.metadata (5.5 kB)
+2026-06-27T12:31:26.9405994Z Collecting passlib>=1.7.4 (from -r requirements.txt (line 10))
+2026-06-27T12:31:26.9439878Z   Downloading passlib-1.7.4-py2.py3-none-any.whl.metadata (1.7 kB)
+2026-06-27T12:31:26.9927054Z Collecting bcrypt>=4.0.0 (from -r requirements.txt (line 11))
+2026-06-27T12:31:26.9962221Z   Downloading bcrypt-5.0.0-cp39-abi3-manylinux_2_34_x86_64.whl.metadata (10 kB)
+2026-06-27T12:31:27.0109878Z Collecting PyJWT>=2.8.0 (from -r requirements.txt (line 12))
+2026-06-27T12:31:27.0142730Z   Downloading pyjwt-2.13.0-py3-none-any.whl.metadata (3.4 kB)
+2026-06-27T12:31:27.0245021Z Collecting aiofiles==23.2.1 (from -r requirements.txt (line 13))
+2026-06-27T12:31:27.0278037Z   Downloading aiofiles-23.2.1-py3-none-any.whl.metadata (9.7 kB)
+2026-06-27T12:31:27.1801880Z Collecting pillow>=10.1.0 (from -r requirements.txt (line 14))
+2026-06-27T12:31:27.1838270Z   Downloading pillow-12.2.0-cp311-cp311-manylinux_2_27_x86_64.manylinux_2_28_x86_64.whl.metadata (8.8 kB)
+2026-06-27T12:31:27.2768938Z Collecting reportlab==4.0.7 (from -r requirements.txt (line 15))
+2026-06-27T12:31:27.2808027Z   Downloading reportlab-4.0.7-py3-none-any.whl.metadata (1.3 kB)
+2026-06-27T12:31:27.2920319Z Collecting python-dateutil==2.8.2 (from -r requirements.txt (line 16))
+2026-06-27T12:31:27.2955128Z   Downloading python_dateutil-2.8.2-py2.py3-none-any.whl.metadata (8.2 kB)
+2026-06-27T12:31:27.3257485Z Collecting pytz==2023.3 (from -r requirements.txt (line 17))
+2026-06-27T12:31:27.3293662Z   Downloading pytz-2023.3-py2.py3-none-any.whl.metadata (22 kB)
+2026-06-27T12:31:27.3488561Z Collecting requests==2.31.0 (from -r requirements.txt (line 18))
+2026-06-27T12:31:27.3523115Z   Downloading requests-2.31.0-py3-none-any.whl.metadata (4.6 kB)
+2026-06-27T12:31:27.3640777Z Collecting email-validator==2.1.0 (from -r requirements.txt (line 19))
+2026-06-27T12:31:27.3676633Z   Downloading email_validator-2.1.0-py3-none-any.whl.metadata (25 kB)
+2026-06-27T12:31:27.4002810Z Collecting cors==1.0.1 (from -r requirements.txt (line 20))
+2026-06-27T12:31:27.4038191Z   Downloading cors-1.0.1-py3-none-any.whl.metadata (9.3 kB)
+2026-06-27T12:31:27.4276321Z Collecting pytest==7.4.3 (from -r requirements.txt (line 21))
+2026-06-27T12:31:27.4312522Z   Downloading pytest-7.4.3-py3-none-any.whl.metadata (7.9 kB)
+2026-06-27T12:31:27.4493190Z Collecting pytest-asyncio==0.21.1 (from -r requirements.txt (line 22))
+2026-06-27T12:31:27.4528928Z   Downloading pytest_asyncio-0.21.1-py3-none-any.whl.metadata (4.0 kB)
+2026-06-27T12:31:27.4680447Z Collecting httpx==0.25.2 (from -r requirements.txt (line 23))
+2026-06-27T12:31:27.4713970Z   Downloading httpx-0.25.2-py3-none-any.whl.metadata (6.9 kB)
+2026-06-27T12:31:27.4868835Z Collecting six>=1.5 (from python-dateutil==2.8.2->-r requirements.txt (line 16))
+2026-06-27T12:31:27.4901834Z   Downloading six-1.17.0-py2.py3-none-any.whl.metadata (1.7 kB)
+2026-06-27T12:31:27.5915363Z Collecting charset-normalizer<4,>=2 (from requests==2.31.0->-r requirements.txt (line 18))
+2026-06-27T12:31:27.5952036Z   Downloading charset_normalizer-3.4.7-cp311-cp311-manylinux2014_x86_64.manylinux_2_17_x86_64.manylinux_2_28_x86_64.whl.metadata (40 kB)
+2026-06-27T12:31:27.6117174Z Collecting idna<4,>=2.5 (from requests==2.31.0->-r requirements.txt (line 18))
+2026-06-27T12:31:27.6149868Z   Downloading idna-3.18-py3-none-any.whl.metadata (6.1 kB)
+2026-06-27T12:31:27.6343142Z Collecting urllib3<3,>=1.21.1 (from requests==2.31.0->-r requirements.txt (line 18))
+2026-06-27T12:31:27.6383891Z   Downloading urllib3-2.7.0-py3-none-any.whl.metadata (6.9 kB)
+2026-06-27T12:31:27.6560687Z Collecting certifi>=2017.4.17 (from requests==2.31.0->-r requirements.txt (line 18))
+2026-06-27T12:31:27.6594685Z   Downloading certifi-2026.6.17-py3-none-any.whl.metadata (2.5 kB)
+2026-06-27T12:31:27.6715509Z Collecting dnspython>=2.0.0 (from email-validator==2.1.0->-r requirements.txt (line 19))
+2026-06-27T12:31:27.6749643Z   Downloading dnspython-2.8.0-py3-none-any.whl.metadata (5.7 kB)
+2026-06-27T12:31:27.6913230Z Collecting colorama (from cors==1.0.1->-r requirements.txt (line 20))
+2026-06-27T12:31:27.6945876Z   Downloading colorama-0.4.6-py2.py3-none-any.whl.metadata (17 kB)
+2026-06-27T12:31:27.7054181Z Collecting argparse (from cors==1.0.1->-r requirements.txt (line 20))
+2026-06-27T12:31:27.7089691Z   Downloading argparse-1.4.0-py2.py3-none-any.whl.metadata (2.8 kB)
+2026-06-27T12:31:27.7982188Z Collecting gevent (from cors==1.0.1->-r requirements.txt (line 20))
+2026-06-27T12:31:27.8018550Z   Downloading gevent-26.5.0-cp311-cp311-manylinux_2_28_x86_64.whl.metadata (14 kB)
+2026-06-27T12:31:27.8210283Z Collecting tldextract (from cors==1.0.1->-r requirements.txt (line 20))
+2026-06-27T12:31:27.8256585Z   Downloading tldextract-5.3.1-py3-none-any.whl.metadata (7.3 kB)
+2026-06-27T12:31:27.8373973Z Collecting future (from cors==1.0.1->-r requirements.txt (line 20))
+2026-06-27T12:31:27.8410590Z   Downloading future-1.0.0-py3-none-any.whl.metadata (4.0 kB)
+2026-06-27T12:31:27.8507805Z Collecting PySocks (from cors==1.0.1->-r requirements.txt (line 20))
+2026-06-27T12:31:27.8540886Z   Downloading PySocks-1.7.1-py3-none-any.whl.metadata (13 kB)
+2026-06-27T12:31:27.8658719Z Collecting iniconfig (from pytest==7.4.3->-r requirements.txt (line 21))
+2026-06-27T12:31:27.8692516Z   Downloading iniconfig-2.3.0-py3-none-any.whl.metadata (2.5 kB)
+2026-06-27T12:31:27.8837811Z Collecting packaging (from pytest==7.4.3->-r requirements.txt (line 21))
+2026-06-27T12:31:27.8870923Z   Downloading packaging-26.2-py3-none-any.whl.metadata (3.5 kB)
+2026-06-27T12:31:27.8987606Z Collecting pluggy<2.0,>=0.12 (from pytest==7.4.3->-r requirements.txt (line 21))
+2026-06-27T12:31:27.9021617Z   Downloading pluggy-1.6.0-py3-none-any.whl.metadata (4.8 kB)
+2026-06-27T12:31:27.9206579Z Collecting anyio (from httpx==0.25.2->-r requirements.txt (line 23))
+2026-06-27T12:31:27.9241610Z   Downloading anyio-4.14.1-py3-none-any.whl.metadata (4.6 kB)
+2026-06-27T12:31:27.9390134Z Collecting httpcore==1.* (from httpx==0.25.2->-r requirements.txt (line 23))
+2026-06-27T12:31:27.9423710Z   Downloading httpcore-1.0.9-py3-none-any.whl.metadata (21 kB)
+2026-06-27T12:31:27.9533204Z Collecting sniffio (from httpx==0.25.2->-r requirements.txt (line 23))
+2026-06-27T12:31:27.9566050Z   Downloading sniffio-1.3.1-py3-none-any.whl.metadata (3.9 kB)
+2026-06-27T12:31:27.9679220Z Collecting h11>=0.16 (from httpcore==1.*->httpx==0.25.2->-r requirements.txt (line 23))
+2026-06-27T12:31:27.9713682Z   Downloading h11-0.16.0-py3-none-any.whl.metadata (8.3 kB)
+2026-06-27T12:31:27.9961174Z Collecting starlette>=0.46.0 (from fastapi>=0.104.1->-r requirements.txt (line 1))
+2026-06-27T12:31:27.9994680Z   Downloading starlette-1.3.1-py3-none-any.whl.metadata (6.4 kB)
+2026-06-27T12:31:28.0170971Z Collecting typing-extensions>=4.8.0 (from fastapi>=0.104.1->-r requirements.txt (line 1))
+2026-06-27T12:31:28.0205062Z   Downloading typing_extensions-4.15.0-py3-none-any.whl.metadata (3.3 kB)
+2026-06-27T12:31:28.0321820Z Collecting typing-inspection>=0.4.2 (from fastapi>=0.104.1->-r requirements.txt (line 1))
+2026-06-27T12:31:28.0354220Z   Downloading typing_inspection-0.4.2-py3-none-any.whl.metadata (2.6 kB)
+2026-06-27T12:31:28.0447754Z Collecting annotated-doc>=0.0.2 (from fastapi>=0.104.1->-r requirements.txt (line 1))
+2026-06-27T12:31:28.0480499Z   Downloading annotated_doc-0.0.4-py3-none-any.whl.metadata (6.6 kB)
+2026-06-27T12:31:28.0640986Z Collecting click>=7.0 (from uvicorn>=0.24.0->-r requirements.txt (line 2))
+2026-06-27T12:31:28.0672742Z   Downloading click-8.4.2-py3-none-any.whl.metadata (2.6 kB)
+2026-06-27T12:31:28.1911862Z Collecting greenlet>=1 (from sqlalchemy>=2.0.23->-r requirements.txt (line 3))
+2026-06-27T12:31:28.1951053Z   Downloading greenlet-3.5.3-cp311-cp311-manylinux_2_24_x86_64.manylinux_2_28_x86_64.whl.metadata (3.8 kB)
+2026-06-27T12:31:28.2162754Z Collecting Mako (from alembic>=1.12.1->-r requirements.txt (line 4))
+2026-06-27T12:31:28.2197658Z   Downloading mako-1.3.12-py3-none-any.whl.metadata (2.9 kB)
+2026-06-27T12:31:28.2311720Z Collecting annotated-types>=0.6.0 (from pydantic>=2.5.0->-r requirements.txt (line 5))
+2026-06-27T12:31:28.2345813Z   Downloading annotated_types-0.7.0-py3-none-any.whl.metadata (15 kB)
+2026-06-27T12:31:28.8510050Z Collecting pydantic-core==2.46.4 (from pydantic>=2.5.0->-r requirements.txt (line 5))
+2026-06-27T12:31:28.8546708Z   Downloading pydantic_core-2.46.4-cp311-cp311-manylinux_2_17_x86_64.manylinux2014_x86_64.whl.metadata (6.6 kB)
+2026-06-27T12:31:28.8734398Z Collecting ecdsa!=0.15 (from python-jose>=3.3.0->-r requirements.txt (line 9))
+2026-06-27T12:31:28.8771002Z   Downloading ecdsa-0.19.2-py2.py3-none-any.whl.metadata (29 kB)
+2026-06-27T12:31:28.8908713Z Collecting rsa!=4.1.1,!=4.4,<5.0,>=4.0 (from python-jose>=3.3.0->-r requirements.txt (line 9))
+2026-06-27T12:31:28.8944549Z   Downloading rsa-4.9.1-py3-none-any.whl.metadata (5.6 kB)
+2026-06-27T12:31:28.9138262Z Collecting pyasn1>=0.5.0 (from python-jose>=3.3.0->-r requirements.txt (line 9))
+2026-06-27T12:31:28.9173289Z   Downloading pyasn1-0.6.3-py3-none-any.whl.metadata (8.4 kB)
+2026-06-27T12:31:28.9479692Z Collecting zope.event (from gevent->cors==1.0.1->-r requirements.txt (line 20))
+2026-06-27T12:31:28.9514112Z   Downloading zope_event-6.2-py3-none-any.whl.metadata (5.4 kB)
+2026-06-27T12:31:29.0470535Z Collecting zope.interface (from gevent->cors==1.0.1->-r requirements.txt (line 20))
+2026-06-27T12:31:29.0511464Z   Downloading zope_interface-8.5-cp311-cp311-manylinux1_x86_64.manylinux2014_x86_64.manylinux_2_17_x86_64.manylinux_2_5_x86_64.whl.metadata (47 kB)
+2026-06-27T12:31:29.1028948Z Collecting MarkupSafe>=0.9.2 (from Mako->alembic>=1.12.1->-r requirements.txt (line 4))
+2026-06-27T12:31:29.1067811Z   Downloading markupsafe-3.0.3-cp311-cp311-manylinux2014_x86_64.manylinux_2_17_x86_64.manylinux_2_28_x86_64.whl.metadata (2.7 kB)
+2026-06-27T12:31:29.1208921Z Collecting requests-file>=1.4 (from tldextract->cors==1.0.1->-r requirements.txt (line 20))
+2026-06-27T12:31:29.1243290Z   Downloading requests_file-3.0.1-py2.py3-none-any.whl.metadata (1.7 kB)
+2026-06-27T12:31:29.1430846Z Collecting filelock>=3.0.8 (from tldextract->cors==1.0.1->-r requirements.txt (line 20))
+2026-06-27T12:31:29.1465885Z   Downloading filelock-3.29.4-py3-none-any.whl.metadata (2.0 kB)
+2026-06-27T12:31:29.1541939Z WARNING: The candidate selected for download or install is a yanked version: 'email-validator' candidate (version 2.1.0 at https://files.pythonhosted.org/packages/90/41/4767ff64e422734487a06384a66e62615b1f5cf9cf3b23295e22d3ecf711/email_validator-2.1.0-py3-none-any.whl (from https://pypi.org/simple/email-validator/) (requires-python:>=3.7))
+2026-06-27T12:31:29.1544199Z Reason for being yanked: Forgot to drop Python 3.7 from python_requires, see https://github.com/JoshData/python-email-validator/pull/118
+2026-06-27T12:31:29.1576227Z Downloading aiofiles-23.2.1-py3-none-any.whl (15 kB)
+2026-06-27T12:31:29.1637253Z Downloading reportlab-4.0.7-py3-none-any.whl (1.9 MB)
+2026-06-27T12:31:29.1819182Z    ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 1.9/1.9 MB 136.8 MB/s  0:00:00
+2026-06-27T12:31:29.1855402Z Downloading python_dateutil-2.8.2-py2.py3-none-any.whl (247 kB)
+2026-06-27T12:31:29.1917565Z Downloading pytz-2023.3-py2.py3-none-any.whl (502 kB)
+2026-06-27T12:31:29.2006830Z Downloading requests-2.31.0-py3-none-any.whl (62 kB)
+2026-06-27T12:31:29.2062178Z Downloading email_validator-2.1.0-py3-none-any.whl (32 kB)
+2026-06-27T12:31:29.2124647Z Downloading cors-1.0.1-py3-none-any.whl (2.3 MB)
+2026-06-27T12:31:29.2260012Z    ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 2.3/2.3 MB 188.7 MB/s  0:00:00
+2026-06-27T12:31:29.2295876Z Downloading pytest-7.4.3-py3-none-any.whl (325 kB)
+2026-06-27T12:31:29.2368798Z Downloading pytest_asyncio-0.21.1-py3-none-any.whl (13 kB)
+2026-06-27T12:31:29.2423796Z Downloading httpx-0.25.2-py3-none-any.whl (74 kB)
+2026-06-27T12:31:29.2484729Z Downloading charset_normalizer-3.4.7-cp311-cp311-manylinux2014_x86_64.manylinux_2_17_x86_64.manylinux_2_28_x86_64.whl (214 kB)
+2026-06-27T12:31:29.2546140Z Downloading httpcore-1.0.9-py3-none-any.whl (78 kB)
+2026-06-27T12:31:29.2603493Z Downloading idna-3.18-py3-none-any.whl (65 kB)
+2026-06-27T12:31:29.2659548Z Downloading pluggy-1.6.0-py3-none-any.whl (20 kB)
+2026-06-27T12:31:29.2712505Z Downloading urllib3-2.7.0-py3-none-any.whl (131 kB)
+2026-06-27T12:31:29.2768373Z Downloading fastapi-0.138.1-py3-none-any.whl (129 kB)
+2026-06-27T12:31:29.2825218Z Downloading uvicorn-0.49.0-py3-none-any.whl (71 kB)
+2026-06-27T12:31:29.2881160Z Downloading sqlalchemy-2.0.51-cp311-cp311-manylinux2014_x86_64.manylinux_2_17_x86_64.manylinux_2_28_x86_64.whl (3.3 MB)
+2026-06-27T12:31:29.3003784Z    ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 3.3/3.3 MB 310.2 MB/s  0:00:00
+2026-06-27T12:31:29.3039862Z Downloading alembic-1.18.5-py3-none-any.whl (264 kB)
+2026-06-27T12:31:29.3102044Z Downloading pydantic-2.13.4-py3-none-any.whl (472 kB)
+2026-06-27T12:31:29.3166532Z Downloading pydantic_core-2.46.4-cp311-cp311-manylinux_2_17_x86_64.manylinux2014_x86_64.whl (2.1 MB)
+2026-06-27T12:31:29.3265112Z    ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 2.1/2.1 MB 251.0 MB/s  0:00:00
+2026-06-27T12:31:29.3301928Z Downloading pydantic_settings-2.14.2-py3-none-any.whl (61 kB)
+2026-06-27T12:31:29.3358732Z Downloading python_dotenv-1.2.2-py3-none-any.whl (22 kB)
+2026-06-27T12:31:29.3412023Z Downloading python_multipart-0.0.32-py3-none-any.whl (30 kB)
+2026-06-27T12:31:29.3463410Z Downloading python_jose-3.5.0-py2.py3-none-any.whl (34 kB)
+2026-06-27T12:31:29.3515259Z Downloading rsa-4.9.1-py3-none-any.whl (34 kB)
+2026-06-27T12:31:29.3576271Z Downloading passlib-1.7.4-py2.py3-none-any.whl (525 kB)
+2026-06-27T12:31:29.3628825Z    ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 525.6/525.6 kB 98.3 MB/s  0:00:00
+2026-06-27T12:31:29.3662449Z Downloading bcrypt-5.0.0-cp39-abi3-manylinux_2_34_x86_64.whl (278 kB)
+2026-06-27T12:31:29.3726035Z Downloading pyjwt-2.13.0-py3-none-any.whl (31 kB)
+2026-06-27T12:31:29.3779097Z Downloading pillow-12.2.0-cp311-cp311-manylinux_2_27_x86_64.manylinux_2_28_x86_64.whl (7.1 MB)
+2026-06-27T12:31:29.4008865Z    ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 7.1/7.1 MB 331.9 MB/s  0:00:00
+2026-06-27T12:31:29.4043585Z Downloading annotated_doc-0.0.4-py3-none-any.whl (5.3 kB)
+2026-06-27T12:31:29.4098304Z Downloading annotated_types-0.7.0-py3-none-any.whl (13 kB)
+2026-06-27T12:31:29.4150608Z Downloading certifi-2026.6.17-py3-none-any.whl (133 kB)
+2026-06-27T12:31:29.4211252Z Downloading click-8.4.2-py3-none-any.whl (119 kB)
+2026-06-27T12:31:29.4267352Z Downloading dnspython-2.8.0-py3-none-any.whl (331 kB)
+2026-06-27T12:31:29.4331592Z Downloading ecdsa-0.19.2-py2.py3-none-any.whl (150 kB)
+2026-06-27T12:31:29.4389105Z Downloading greenlet-3.5.3-cp311-cp311-manylinux_2_24_x86_64.manylinux_2_28_x86_64.whl (617 kB)
+2026-06-27T12:31:29.4441700Z    ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 617.4/617.4 kB 115.7 MB/s  0:00:00
+2026-06-27T12:31:29.4475319Z Downloading h11-0.16.0-py3-none-any.whl (37 kB)
+2026-06-27T12:31:29.4529097Z Downloading pyasn1-0.6.3-py3-none-any.whl (83 kB)
+2026-06-27T12:31:29.4583756Z Downloading six-1.17.0-py2.py3-none-any.whl (11 kB)
+2026-06-27T12:31:29.4635639Z Downloading starlette-1.3.1-py3-none-any.whl (73 kB)
+2026-06-27T12:31:29.4690737Z Downloading anyio-4.14.1-py3-none-any.whl (124 kB)
+2026-06-27T12:31:29.4746724Z Downloading typing_extensions-4.15.0-py3-none-any.whl (44 kB)
+2026-06-27T12:31:29.4802325Z Downloading typing_inspection-0.4.2-py3-none-any.whl (14 kB)
+2026-06-27T12:31:29.4855641Z Downloading argparse-1.4.0-py2.py3-none-any.whl (23 kB)
+2026-06-27T12:31:29.4909001Z Downloading colorama-0.4.6-py2.py3-none-any.whl (25 kB)
+2026-06-27T12:31:29.4965232Z Downloading future-1.0.0-py3-none-any.whl (491 kB)
+2026-06-27T12:31:29.5047148Z Downloading gevent-26.5.0-cp311-cp311-manylinux_2_28_x86_64.whl (2.1 MB)
+2026-06-27T12:31:29.5135101Z    ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 2.1/2.1 MB 277.2 MB/s  0:00:00
+2026-06-27T12:31:29.5168462Z Downloading iniconfig-2.3.0-py3-none-any.whl (7.5 kB)
+2026-06-27T12:31:29.5221024Z Downloading mako-1.3.12-py3-none-any.whl (78 kB)
+2026-06-27T12:31:29.5299407Z Downloading markupsafe-3.0.3-cp311-cp311-manylinux2014_x86_64.manylinux_2_17_x86_64.manylinux_2_28_x86_64.whl (22 kB)
+2026-06-27T12:31:29.5350540Z Downloading packaging-26.2-py3-none-any.whl (100 kB)
+2026-06-27T12:31:29.5405988Z Downloading PySocks-1.7.1-py3-none-any.whl (16 kB)
+2026-06-27T12:31:29.5460024Z Downloading sniffio-1.3.1-py3-none-any.whl (10 kB)
+2026-06-27T12:31:29.5513145Z Downloading tldextract-5.3.1-py3-none-any.whl (105 kB)
+2026-06-27T12:31:29.5569668Z Downloading filelock-3.29.4-py3-none-any.whl (42 kB)
+2026-06-27T12:31:29.5627500Z Downloading requests_file-3.0.1-py2.py3-none-any.whl (4.5 kB)
+2026-06-27T12:31:29.5678515Z Downloading zope_event-6.2-py3-none-any.whl (6.5 kB)
+2026-06-27T12:31:29.5730114Z Downloading zope_interface-8.5-cp311-cp311-manylinux1_x86_64.manylinux2014_x86_64.manylinux_2_17_x86_64.manylinux_2_5_x86_64.whl (265 kB)
+2026-06-27T12:31:29.7241211Z Installing collected packages: pytz, passlib, argparse, zope.interface, zope.event, urllib3, typing-extensions, sniffio, six, python-multipart, python-dotenv, PySocks, PyJWT, pyasn1, pluggy, pillow, packaging, MarkupSafe, iniconfig, idna, h11, greenlet, future, filelock, dnspython, colorama, click, charset-normalizer, certifi, bcrypt, annotated-types, annotated-doc, aiofiles, uvicorn, typing-inspection, sqlalchemy, rsa, requests, reportlab, python-dateutil, pytest, pydantic-core, Mako, httpcore, gevent, email-validator, ecdsa, anyio, starlette, requests-file, python-jose, pytest-asyncio, pydantic, httpx, alembic, tldextract, pydantic-settings, fastapi, cors
+2026-06-27T12:31:35.0127184Z 
+2026-06-27T12:31:35.0158436Z Successfully installed Mako-1.3.12 MarkupSafe-3.0.3 PyJWT-2.13.0 PySocks-1.7.1 aiofiles-23.2.1 alembic-1.18.5 annotated-doc-0.0.4 annotated-types-0.7.0 anyio-4.14.1 argparse-1.4.0 bcrypt-5.0.0 certifi-2026.6.17 charset-normalizer-3.4.7 click-8.4.2 colorama-0.4.6 cors-1.0.1 dnspython-2.8.0 ecdsa-0.19.2 email-validator-2.1.0 fastapi-0.138.1 filelock-3.29.4 future-1.0.0 gevent-26.5.0 greenlet-3.5.3 h11-0.16.0 httpcore-1.0.9 httpx-0.25.2 idna-3.18 iniconfig-2.3.0 packaging-26.2 passlib-1.7.4 pillow-12.2.0 pluggy-1.6.0 pyasn1-0.6.3 pydantic-2.13.4 pydantic-core-2.46.4 pydantic-settings-2.14.2 pytest-7.4.3 pytest-asyncio-0.21.1 python-dateutil-2.8.2 python-dotenv-1.2.2 python-jose-3.5.0 python-multipart-0.0.32 pytz-2023.3 reportlab-4.0.7 requests-2.31.0 requests-file-3.0.1 rsa-4.9.1 six-1.17.0 sniffio-1.3.1 sqlalchemy-2.0.51 starlette-1.3.1 tldextract-5.3.1 typing-extensions-4.15.0 typing-inspection-0.4.2 urllib3-2.7.0 uvicorn-0.49.0 zope.event-6.2 zope.interface-8.5
+2026-06-27T12:31:35.1952253Z ##[group]Run npx wrangler deploy
+2026-06-27T12:31:35.1952581Z [36;1mnpx wrangler deploy[0m
+2026-06-27T12:31:35.1953346Z [36;1mecho "***" | npx wrangler secret put CLOUDFLARE_API_TOKEN[0m
+2026-06-27T12:31:35.1987270Z shell: /usr/bin/bash -e {0}
+2026-06-27T12:31:35.1987527Z env:
+2026-06-27T12:31:35.1987800Z   pythonLocation: /opt/hostedtoolcache/Python/3.11.15/x64
+2026-06-27T12:31:35.1988252Z   PKG_CONFIG_PATH: /opt/hostedtoolcache/Python/3.11.15/x64/lib/pkgconfig
+2026-06-27T12:31:35.1988707Z   Python_ROOT_DIR: /opt/hostedtoolcache/Python/3.11.15/x64
+2026-06-27T12:31:35.1989111Z   Python2_ROOT_DIR: /opt/hostedtoolcache/Python/3.11.15/x64
+2026-06-27T12:31:35.1989497Z   Python3_ROOT_DIR: /opt/hostedtoolcache/Python/3.11.15/x64
+2026-06-27T12:31:35.1989903Z   LD_LIBRARY_PATH: /opt/hostedtoolcache/Python/3.11.15/x64/lib
+2026-06-27T12:31:35.1990436Z   CLOUDFLARE_API_TOKEN: ***
+2026-06-27T12:31:35.1990755Z   CLOUDFLARE_ACCOUNT_ID: ***
+2026-06-27T12:31:35.1990995Z ##[endgroup]
+2026-06-27T12:31:45.5630700Z npm warn exec The following package was not found and will be installed: wrangler@4.105.0
+2026-06-27T12:31:51.7379360Z 
+2026-06-27T12:31:51.7380100Z  ⛅️ wrangler 4.105.0
+2026-06-27T12:31:51.7380749Z ────────────────────
+2026-06-27T12:31:53.3472731Z Attaching additional modules:
+2026-06-27T12:31:53.3671566Z ┌──────────────────────────────────┬────────┬──────────────┐
+2026-06-27T12:31:53.3672617Z │ Name                             │ Type   │ Size         │
+2026-06-27T12:31:53.3673604Z ├──────────────────────────────────┼────────┼──────────────┤
+2026-06-27T12:31:53.3674662Z │ __init__.py                      │ python │ 0.02 KiB     │
+2026-06-27T12:31:53.3676024Z ├──────────────────────────────────┼────────┼──────────────┤
+2026-06-27T12:31:53.3677032Z │ api/__init__.py                  │ python │ 0.02 KiB     │
+2026-06-27T12:31:53.3678056Z ├──────────────────────────────────┼────────┼──────────────┤
+2026-06-27T12:31:53.3678986Z │ api/routes/__init__.py           │ python │ 0.09 KiB     │
+2026-06-27T12:31:53.3679999Z ├──────────────────────────────────┼────────┼──────────────┤
+2026-06-27T12:31:53.3680921Z │ api/routes/admin.py              │ python │ 19.25 KiB    │
+2026-06-27T12:31:53.3681899Z ├──────────────────────────────────┼────────┼──────────────┤
+2026-06-27T12:31:53.3682592Z │ api/routes/approval.py           │ python │ 10.65 KiB    │
+2026-06-27T12:31:53.3683071Z ├──────────────────────────────────┼────────┼──────────────┤
+2026-06-27T12:31:53.3683521Z │ api/routes/auth.py               │ python │ 10.47 KiB    │
+2026-06-27T12:31:53.3683970Z ├──────────────────────────────────┼────────┼──────────────┤
+2026-06-27T12:31:53.3684730Z │ api/routes/dashboard.py          │ python │ 0.51 KiB     │
+2026-06-27T12:31:53.3685182Z ├──────────────────────────────────┼────────┼──────────────┤
+2026-06-27T12:31:53.3686002Z │ api/routes/dependencies.py       │ python │ 1.72 KiB     │
+2026-06-27T12:31:53.3686491Z ├──────────────────────────────────┼────────┼──────────────┤
+2026-06-27T12:31:53.3687168Z │ api/routes/expense.py            │ python │ 44.49 KiB    │
+2026-06-27T12:31:53.3687652Z ├──────────────────────────────────┼────────┼──────────────┤
+2026-06-27T12:31:53.3688085Z │ api/routes/reports.py            │ python │ 0.44 KiB     │
+2026-06-27T12:31:53.3688549Z ├──────────────────────────────────┼────────┼──────────────┤
+2026-06-27T12:31:53.3688988Z │ api/routes/ticket.py             │ python │ 12.58 KiB    │
+2026-06-27T12:31:53.3689433Z ├──────────────────────────────────┼────────┼──────────────┤
+2026-06-27T12:31:53.3689854Z │ api/routes/upload.py             │ python │ 4.86 KiB     │
+2026-06-27T12:31:53.3690318Z ├──────────────────────────────────┼────────┼──────────────┤
+2026-06-27T12:31:53.3690735Z │ api/routes/users.py              │ python │ 5.04 KiB     │
+2026-06-27T12:31:53.3691175Z ├──────────────────────────────────┼────────┼──────────────┤
+2026-06-27T12:31:53.3691590Z │ config/__init__.py               │ python │ 0.02 KiB     │
+2026-06-27T12:31:53.3692045Z ├──────────────────────────────────┼────────┼──────────────┤
+2026-06-27T12:31:53.3692458Z │ config/database.py               │ python │ 11.03 KiB    │
+2026-06-27T12:31:53.3692923Z ├──────────────────────────────────┼────────┼──────────────┤
+2026-06-27T12:31:53.3693343Z │ config/seed.py                   │ python │ 11.22 KiB    │
+2026-06-27T12:31:53.3693791Z ├──────────────────────────────────┼────────┼──────────────┤
+2026-06-27T12:31:53.3694209Z │ config/settings.py               │ python │ 1.50 KiB     │
+2026-06-27T12:31:53.3694644Z ├──────────────────────────────────┼────────┼──────────────┤
+2026-06-27T12:31:53.3695231Z │ core/exceptions.py               │ python │ 0.00 KiB     │
+2026-06-27T12:31:53.3696019Z ├──────────────────────────────────┼────────┼──────────────┤
+2026-06-27T12:31:53.3696474Z │ core/security.py                 │ python │ 0.00 KiB     │
+2026-06-27T12:31:53.3697116Z ├──────────────────────────────────┼────────┼──────────────┤
+2026-06-27T12:31:53.3697908Z │ middleware/auth.py               │ python │ 0.00 KiB     │
+2026-06-27T12:31:53.3698767Z ├──────────────────────────────────┼────────┼──────────────┤
+2026-06-27T12:31:53.3699528Z │ middleware/cors.py               │ python │ 0.00 KiB     │
+2026-06-27T12:31:53.3700349Z ├──────────────────────────────────┼────────┼──────────────┤
+2026-06-27T12:31:53.3701134Z │ middleware/error_handler.py      │ python │ 0.00 KiB     │
+2026-06-27T12:31:53.3701971Z ├──────────────────────────────────┼────────┼──────────────┤
+2026-06-27T12:31:53.3702726Z │ models/__init__.py               │ python │ 0.89 KiB     │
+2026-06-27T12:31:53.3703546Z ├──────────────────────────────────┼────────┼──────────────┤
+2026-06-27T12:31:53.3704372Z │ models/allowance_master.py       │ python │ 0.93 KiB     │
+2026-06-27T12:31:53.3705182Z ├──────────────────────────────────┼────────┼──────────────┤
+2026-06-27T12:31:53.3706255Z │ models/approval.py               │ python │ 0.66 KiB     │
+2026-06-27T12:31:53.3707102Z ├──────────────────────────────────┼────────┼──────────────┤
+2026-06-27T12:31:53.3708159Z │ models/approval_hierarchy.py     │ python │ 1.84 KiB     │
+2026-06-27T12:31:53.3708993Z ├──────────────────────────────────┼────────┼──────────────┤
+2026-06-27T12:31:53.3709735Z │ models/approval_level_config.py  │ python │ 0.05 KiB     │
+2026-06-27T12:31:53.3710531Z ├──────────────────────────────────┼────────┼──────────────┤
+2026-06-27T12:31:53.3711267Z │ models/asset.py                  │ python │ 0.50 KiB     │
+2026-06-27T12:31:53.3712130Z ├──────────────────────────────────┼────────┼──────────────┤
+2026-06-27T12:31:53.3712888Z │ models/expense.py                │ python │ 1.32 KiB     │
+2026-06-27T12:31:53.3713920Z ├──────────────────────────────────┼────────┼──────────────┤
+2026-06-27T12:31:53.3714679Z │ models/expense_attachment.py     │ python │ 0.43 KiB     │
+2026-06-27T12:31:53.3715465Z ├──────────────────────────────────┼────────┼──────────────┤
+2026-06-27T12:31:53.3716481Z │ models/expense_itinerary.py      │ python │ 1.40 KiB     │
+2026-06-27T12:31:53.3717295Z ├──────────────────────────────────┼────────┼──────────────┤
+2026-06-27T12:31:53.3718098Z │ models/facility_detail.py        │ python │ 0.52 KiB     │
+2026-06-27T12:31:53.3718903Z ├──────────────────────────────────┼────────┼──────────────┤
+2026-06-27T12:31:53.3719649Z │ models/level_approver.py         │ python │ 0.05 KiB     │
+2026-06-27T12:31:53.3720447Z ├──────────────────────────────────┼────────┼──────────────┤
+2026-06-27T12:31:53.3721193Z │ models/limit_approval_request.py │ python │ 0.78 KiB     │
+2026-06-27T12:31:53.3721986Z ├──────────────────────────────────┼────────┼──────────────┤
+2026-06-27T12:31:53.3722719Z │ models/login_log.py              │ python │ 0.55 KiB     │
+2026-06-27T12:31:53.3723528Z ├──────────────────────────────────┼────────┼──────────────┤
+2026-06-27T12:31:53.3724234Z │ models/otp.py                    │ python │ 0.62 KiB     │
+2026-06-27T12:31:53.3725016Z ├──────────────────────────────────┼────────┼──────────────┤
+2026-06-27T12:31:53.3726013Z │ models/password_history.py       │ python │ 0.47 KiB     │
+2026-06-27T12:31:53.3727040Z ├──────────────────────────────────┼────────┼──────────────┤
+2026-06-27T12:31:53.3727784Z │ models/report.py                 │ python │ 0.00 KiB     │
+2026-06-27T12:31:53.3728552Z ├──────────────────────────────────┼────────┼──────────────┤
+2026-06-27T12:31:53.3729268Z │ models/ticket.py                 │ python │ 1.43 KiB     │
+2026-06-27T12:31:53.3730026Z ├──────────────────────────────────┼────────┼──────────────┤
+2026-06-27T12:31:53.3730735Z │ models/user.py                   │ python │ 1.73 KiB     │
+2026-06-27T12:31:53.3731480Z ├──────────────────────────────────┼────────┼──────────────┤
+2026-06-27T12:31:53.3732236Z │ models/user_approval_chain.py    │ python │ 0.67 KiB     │
+2026-06-27T12:31:53.3733019Z ├──────────────────────────────────┼────────┼──────────────┤
+2026-06-27T12:31:53.3733740Z │ models/user_role.py              │ python │ 0.63 KiB     │
+2026-06-27T12:31:53.3734527Z ├──────────────────────────────────┼────────┼──────────────┤
+2026-06-27T12:31:53.3735295Z │ schemas/__init__.py              │ python │ 0.02 KiB     │
+2026-06-27T12:31:53.3736366Z ├──────────────────────────────────┼────────┼──────────────┤
+2026-06-27T12:31:53.3737123Z │ schemas/approval.py              │ python │ 1.13 KiB     │
+2026-06-27T12:31:53.3737908Z ├──────────────────────────────────┼────────┼──────────────┤
+2026-06-27T12:31:53.3738658Z │ schemas/common.py                │ python │ 0.33 KiB     │
+2026-06-27T12:31:53.3739441Z ├──────────────────────────────────┼────────┼──────────────┤
+2026-06-27T12:31:53.3740194Z │ schemas/expense.py               │ python │ 0.72 KiB     │
+2026-06-27T12:31:53.3741232Z ├──────────────────────────────────┼────────┼──────────────┤
+2026-06-27T12:31:53.3741977Z │ schemas/user.py                  │ python │ 4.12 KiB     │
+2026-06-27T12:31:53.3742752Z ├──────────────────────────────────┼────────┼──────────────┤
+2026-06-27T12:31:53.3743490Z │ services/__init__.py             │ python │ 0.02 KiB     │
+2026-06-27T12:31:53.3744273Z ├──────────────────────────────────┼────────┼──────────────┤
+2026-06-27T12:31:53.3745230Z │ services/admin_service.py        │ python │ 0.00 KiB     │
+2026-06-27T12:31:53.3746324Z ├──────────────────────────────────┼────────┼──────────────┤
+2026-06-27T12:31:53.3747127Z │ services/approval_service.py     │ python │ 0.00 KiB     │
+2026-06-27T12:31:53.3747973Z ├──────────────────────────────────┼────────┼──────────────┤
+2026-06-27T12:31:53.3748733Z │ services/auth_service.py         │ python │ 17.43 KiB    │
+2026-06-27T12:31:53.3749542Z ├──────────────────────────────────┼────────┼──────────────┤
+2026-06-27T12:31:53.3750308Z │ services/email_service.py        │ python │ 7.35 KiB     │
+2026-06-27T12:31:53.3751171Z ├──────────────────────────────────┼────────┼──────────────┤
+2026-06-27T12:31:53.3751942Z │ services/expense_service.py      │ python │ 0.00 KiB     │
+2026-06-27T12:31:53.3752774Z ├──────────────────────────────────┼────────┼──────────────┤
+2026-06-27T12:31:53.3753583Z │ services/notification_service.py │ python │ 0.00 KiB     │
+2026-06-27T12:31:53.3754446Z ├──────────────────────────────────┼────────┼──────────────┤
+2026-06-27T12:31:53.3755208Z │ services/report_service.py       │ python │ 0.00 KiB     │
+2026-06-27T12:31:53.3756320Z ├──────────────────────────────────┼────────┼──────────────┤
+2026-06-27T12:31:53.3757087Z │ services/upload_service.py       │ python │ 0.00 KiB     │
+2026-06-27T12:31:53.3757882Z ├──────────────────────────────────┼────────┼──────────────┤
+2026-06-27T12:31:53.3758635Z │ utils/__init__.py                │ python │ 0.02 KiB     │
+2026-06-27T12:31:53.3759437Z ├──────────────────────────────────┼────────┼──────────────┤
+2026-06-27T12:31:53.3760477Z │ utils/cache.py                   │ python │ 4.06 KiB     │
+2026-06-27T12:31:53.3761301Z ├──────────────────────────────────┼────────┼──────────────┤
+2026-06-27T12:31:53.3762050Z │ utils/constants.py               │ python │ 5.57 KiB     │
+2026-06-27T12:31:53.3762848Z ├──────────────────────────────────┼────────┼──────────────┤
+2026-06-27T12:31:53.3763629Z │ utils/helpers.py                 │ python │ 0.00 KiB     │
+2026-06-27T12:31:53.3764416Z ├──────────────────────────────────┼────────┼──────────────┤
+2026-06-27T12:31:53.3765138Z │ utils/logger.py                  │ python │ 0.00 KiB     │
+2026-06-27T12:31:53.3766180Z ├──────────────────────────────────┼────────┼──────────────┤
+2026-06-27T12:31:53.3766922Z │ utils/security.py                │ python │ 3.34 KiB     │
+2026-06-27T12:31:53.3767711Z ├──────────────────────────────────┼────────┼──────────────┤
+2026-06-27T12:31:53.3768468Z │ utils/validators.py              │ python │ 0.00 KiB     │
+2026-06-27T12:31:53.3769295Z ├──────────────────────────────────┼────────┼──────────────┤
+2026-06-27T12:31:53.3770019Z │ Vendored Modules                 │        │ 71632.96 KiB │
+2026-06-27T12:31:53.3770791Z ├──────────────────────────────────┼────────┼──────────────┤
+2026-06-27T12:31:53.3771506Z │ Total (3544 modules)             │        │ 71826.44 KiB │
+2026-06-27T12:31:53.3772276Z └──────────────────────────────────┴────────┴──────────────┘
+2026-06-27T12:31:53.5172215Z 
+2026-06-27T12:31:53.5173315Z Cloudflare collects anonymous telemetry about your usage of Wrangler. Learn more at https://github.com/cloudflare/workers-sdk/tree/main/packages/wrangler/telemetry.md
+2026-06-27T12:31:53.5179804Z 
+2026-06-27T12:31:53.5703909Z [31m✘ [41;31m[[41;97mERROR[41;31m][0m [1mA request to the Cloudflare API (/accounts/***/workers/services/sunil1) failed.[0m
+2026-06-27T12:31:53.5704762Z 
+2026-06-27T12:31:53.5704956Z   Authentication error [code: 10000]
+2026-06-27T12:31:53.5705276Z 
+2026-06-27T12:31:53.5705291Z 
+2026-06-27T12:31:53.5706679Z 📎 It looks like you are authenticating Wrangler via a custom API token set in an environment variable.
+2026-06-27T12:31:53.5707721Z Please ensure it has the correct permissions for this operation.
+2026-06-27T12:31:53.5708210Z 
+2026-06-27T12:31:53.5719468Z Getting User settings...
+2026-06-27T12:31:53.8949259Z 
+2026-06-27T12:31:53.8960022Z [31m✘ [41;31m[[41;97mERROR[41;31m][0m [1mA request to the Cloudflare API (/accounts) failed.[0m
+2026-06-27T12:31:53.8960878Z 
+2026-06-27T12:31:53.8961114Z   Invalid access token [code: 9109]
+2026-06-27T12:31:53.8961680Z   
+2026-06-27T12:31:53.8962714Z   If you think this is a bug, please open an issue at: [4mhttps://github.com/cloudflare/workers-sdk/issues/new/choose[0m
+2026-06-27T12:31:53.8963430Z 
+2026-06-27T12:31:53.8963435Z 
+2026-06-27T12:31:53.9075729Z 🪵  Logs were written to "/home/runner/.config/.wrangler/logs/wrangler-2026-06-27_12-31-51_343.log"
+2026-06-27T12:31:53.9928988Z ##[error]Process completed with exit code 1.
+2026-06-27T12:31:54.0070700Z Node 20 is being deprecated. This workflow is running with Node 24 by default. If you need to temporarily use Node 20, you can set the ACTIONS_ALLOW_USE_UNSECURE_NODE_VERSION=true environment variable. For more information see: https://github.blog/changelog/2025-09-19-deprecation-of-node-20-on-github-actions-runners/
+2026-06-27T12:31:54.0071970Z Post job cleanup.
+2026-06-27T12:31:54.0774595Z (node:2411) [DEP0040] DeprecationWarning: The `punycode` module is deprecated. Please use a userland alternative instead.
+2026-06-27T12:31:54.0776172Z (Use `node --trace-deprecation ...` to show where the warning was created)
+2026-06-27T12:31:54.0809983Z [command]/usr/bin/git version
+2026-06-27T12:31:54.0846331Z git version 2.54.0
+2026-06-27T12:31:54.0886312Z Temporarily overriding HOME='/home/runner/work/_temp/6a0d917f-cb3f-47d3-a874-b8b039c52e35' before making global git config changes
+2026-06-27T12:31:54.0887938Z Adding repository directory to the temporary git global config as a safe directory
+2026-06-27T12:31:54.0891493Z [command]/usr/bin/git config --global --add safe.directory /home/runner/work/sunil1/sunil1
+2026-06-27T12:31:54.0929445Z [command]/usr/bin/git config --local --name-only --get-regexp core\.sshCommand
+2026-06-27T12:31:54.0963261Z [command]/usr/bin/git submodule foreach --recursive sh -c "git config --local --name-only --get-regexp 'core\.sshCommand' && git config --local --unset-all 'core.sshCommand' || :"
+2026-06-27T12:31:54.1196917Z [command]/usr/bin/git config --local --name-only --get-regexp http\.https\:\/\/github\.com\/\.extraheader
+2026-06-27T12:31:54.1222178Z http.https://github.com/.extraheader
+2026-06-27T12:31:54.1237456Z [command]/usr/bin/git config --local --unset-all http.https://github.com/.extraheader
+2026-06-27T12:31:54.1267794Z [command]/usr/bin/git submodule foreach --recursive sh -c "git config --local --name-only --get-regexp 'http\.https\:\/\/github\.com\/\.extraheader' && git config --local --unset-all 'http.https://github.com/.extraheader' || :"
+2026-06-27T12:31:54.1617794Z Cleaning up orphan processes
+2026-06-27T12:31:54.1929001Z ##[warning]Node.js 20 is deprecated. The following actions target Node.js 20 but are being forced to run on Node.js 24: actions/checkout@v3, actions/setup-python@v4. For more information see: https://github.blog/changelog/2025-09-19-deprecation-of-node-20-on-github-actions-runners/

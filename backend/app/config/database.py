@@ -235,7 +235,7 @@ class D1Connection:
 
 # Check if force local database is enabled - allow override in testing or CI environments
 import sys
-force_local = os.getenv("FORCE_LOCAL_DB", "false").lower() == "true" or "pytest" in sys.modules or os.getenv("GITHUB_ACTIONS") == "true"
+force_local = settings.FORCE_LOCAL_DB or "pytest" in sys.modules or os.getenv("GITHUB_ACTIONS") == "true"
 
 token = None
 account_id = None

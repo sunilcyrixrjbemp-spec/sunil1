@@ -1,0 +1,904 @@
+ï»¿2026-06-27T12:45:18.6919647Z Current runner version: '2.335.1'
+2026-06-27T12:45:18.6945570Z ##[group]Runner Image Provisioner
+2026-06-27T12:45:18.6946655Z Hosted Compute Agent
+2026-06-27T12:45:18.6947361Z Version: 20260611.554
+2026-06-27T12:45:18.6948015Z Commit: 5e0782fdc9014723d3be820dd114dd31555c2bd1
+2026-06-27T12:45:18.6948854Z Build Date: 2026-06-11T21:40:46Z
+2026-06-27T12:45:18.6949587Z Worker ID: {b2419768-db59-46d1-8402-91f5584bb421}
+2026-06-27T12:45:18.6950306Z Azure Region: westcentralus
+2026-06-27T12:45:18.6950992Z ##[endgroup]
+2026-06-27T12:45:18.6952481Z ##[group]Operating System
+2026-06-27T12:45:18.6953660Z Ubuntu
+2026-06-27T12:45:18.6954288Z 24.04.4
+2026-06-27T12:45:18.6954804Z LTS
+2026-06-27T12:45:18.6955420Z ##[endgroup]
+2026-06-27T12:45:18.6955989Z ##[group]Runner Image
+2026-06-27T12:45:18.6956641Z Image: ubuntu-24.04
+2026-06-27T12:45:18.6957318Z Version: 20260622.220.1
+2026-06-27T12:45:18.6958664Z Included Software: https://github.com/actions/runner-images/blob/ubuntu24/20260622.220/images/ubuntu/Ubuntu2404-Readme.md
+2026-06-27T12:45:18.6960273Z Image Release: https://github.com/actions/runner-images/releases/tag/ubuntu24%2F20260622.220
+2026-06-27T12:45:18.6961729Z ##[endgroup]
+2026-06-27T12:45:18.6962989Z ##[group]GITHUB_TOKEN Permissions
+2026-06-27T12:45:18.6965467Z Contents: read
+2026-06-27T12:45:18.6966099Z Metadata: read
+2026-06-27T12:45:18.6966834Z Packages: read
+2026-06-27T12:45:18.6967473Z ##[endgroup]
+2026-06-27T12:45:18.6969588Z Secret source: Actions
+2026-06-27T12:45:18.6970648Z Prepare workflow directory
+2026-06-27T12:45:18.7322837Z Prepare all required actions
+2026-06-27T12:45:18.7361425Z Getting action download info
+2026-06-27T12:45:19.0393572Z Download action repository 'actions/checkout@v3' (SHA:f43a0e5ff2bd294095638e18286ca9a3d1956744)
+2026-06-27T12:45:19.1234626Z Download action repository 'astral-sh/setup-uv@v5' (SHA:d4b2f3b6ecc6e67c4457f6d3e41ec42d3d0fcb86)
+2026-06-27T12:45:20.1327197Z Complete job name: deploy
+2026-06-27T12:45:20.2100022Z Node 20 is being deprecated. This workflow is running with Node 24 by default. If you need to temporarily use Node 20, you can set the ACTIONS_ALLOW_USE_UNSECURE_NODE_VERSION=true environment variable. For more information see: https://github.blog/changelog/2025-09-19-deprecation-of-node-20-on-github-actions-runners/
+2026-06-27T12:45:20.2109531Z ##[group]Run actions/checkout@v3
+2026-06-27T12:45:20.2110356Z with:
+2026-06-27T12:45:20.2110897Z   repository: sunilcyrixrjbemp-spec/sunil1
+2026-06-27T12:45:20.2116282Z   token: ***
+2026-06-27T12:45:20.2116805Z   ssh-strict: true
+2026-06-27T12:45:20.2117327Z   persist-credentials: true
+2026-06-27T12:45:20.2117888Z   clean: true
+2026-06-27T12:45:20.2118385Z   sparse-checkout-cone-mode: true
+2026-06-27T12:45:20.2118963Z   fetch-depth: 1
+2026-06-27T12:45:20.2119439Z   fetch-tags: false
+2026-06-27T12:45:20.2119931Z   lfs: false
+2026-06-27T12:45:20.2120395Z   submodules: false
+2026-06-27T12:45:20.2120905Z   set-safe-directory: true
+2026-06-27T12:45:20.2121834Z ##[endgroup]
+2026-06-27T12:45:20.2904717Z (node:2173) [DEP0040] DeprecationWarning: The `punycode` module is deprecated. Please use a userland alternative instead.
+2026-06-27T12:45:20.2906893Z (Use `node --trace-deprecation ...` to show where the warning was created)
+2026-06-27T12:45:20.3001810Z Syncing repository: sunilcyrixrjbemp-spec/sunil1
+2026-06-27T12:45:20.3004448Z ##[group]Getting Git version info
+2026-06-27T12:45:20.3005441Z Working directory is '/home/runner/work/sunil1/sunil1'
+2026-06-27T12:45:20.3006656Z [command]/usr/bin/git version
+2026-06-27T12:45:20.3070635Z git version 2.54.0
+2026-06-27T12:45:20.3092152Z ##[endgroup]
+2026-06-27T12:45:20.3106768Z Temporarily overriding HOME='/home/runner/work/_temp/c802b759-ac8b-4e57-a3ae-57e2dda1e536' before making global git config changes
+2026-06-27T12:45:20.3108371Z Adding repository directory to the temporary git global config as a safe directory
+2026-06-27T12:45:20.3110382Z [command]/usr/bin/git config --global --add safe.directory /home/runner/work/sunil1/sunil1
+2026-06-27T12:45:20.3162598Z Deleting the contents of '/home/runner/work/sunil1/sunil1'
+2026-06-27T12:45:20.3167396Z ##[group]Initializing the repository
+2026-06-27T12:45:20.3171001Z [command]/usr/bin/git init /home/runner/work/sunil1/sunil1
+2026-06-27T12:45:20.3302378Z hint: Using 'master' as the name for the initial branch. This default branch name
+2026-06-27T12:45:20.3304425Z hint: will change to "main" in Git 3.0. To configure the initial branch name
+2026-06-27T12:45:20.3305761Z hint: to use in all of your new repositories, which will suppress this warning,
+2026-06-27T12:45:20.3306808Z hint: call:
+2026-06-27T12:45:20.3307359Z hint:
+2026-06-27T12:45:20.3308040Z hint: 	git config --global init.defaultBranch <name>
+2026-06-27T12:45:20.3308971Z hint:
+2026-06-27T12:45:20.3309777Z hint: Names commonly chosen instead of 'master' are 'main', 'trunk' and
+2026-06-27T12:45:20.3311292Z hint: 'development'. The just-created branch can be renamed via this command:
+2026-06-27T12:45:20.3312898Z hint:
+2026-06-27T12:45:20.3313875Z hint: 	git branch -m <name>
+2026-06-27T12:45:20.3314475Z hint:
+2026-06-27T12:45:20.3315368Z hint: Disable this message with "git config set advice.defaultBranchName false"
+2026-06-27T12:45:20.3316933Z Initialized empty Git repository in /home/runner/work/sunil1/sunil1/.git/
+2026-06-27T12:45:20.3323760Z [command]/usr/bin/git remote add origin https://github.com/sunilcyrixrjbemp-spec/sunil1
+2026-06-27T12:45:20.3367639Z ##[endgroup]
+2026-06-27T12:45:20.3368536Z ##[group]Disabling automatic garbage collection
+2026-06-27T12:45:20.3370143Z [command]/usr/bin/git config --local gc.auto 0
+2026-06-27T12:45:20.3402285Z ##[endgroup]
+2026-06-27T12:45:20.3404421Z ##[group]Setting up auth
+2026-06-27T12:45:20.3407551Z [command]/usr/bin/git config --local --name-only --get-regexp core\.sshCommand
+2026-06-27T12:45:20.3442502Z [command]/usr/bin/git submodule foreach --recursive sh -c "git config --local --name-only --get-regexp 'core\.sshCommand' && git config --local --unset-all 'core.sshCommand' || :"
+2026-06-27T12:45:20.3812436Z [command]/usr/bin/git config --local --name-only --get-regexp http\.https\:\/\/github\.com\/\.extraheader
+2026-06-27T12:45:20.3842744Z [command]/usr/bin/git submodule foreach --recursive sh -c "git config --local --name-only --get-regexp 'http\.https\:\/\/github\.com\/\.extraheader' && git config --local --unset-all 'http.https://github.com/.extraheader' || :"
+2026-06-27T12:45:20.4060159Z [command]/usr/bin/git config --local http.https://github.com/.extraheader AUTHORIZATION: basic ***
+2026-06-27T12:45:20.4097027Z ##[endgroup]
+2026-06-27T12:45:20.4098731Z ##[group]Fetching the repository
+2026-06-27T12:45:20.4106929Z [command]/usr/bin/git -c protocol.version=2 fetch --no-tags --prune --progress --no-recurse-submodules --depth=1 origin +7c0d6fe4c0573df90c6b87733349346e4667ccf6:refs/remotes/origin/main
+2026-06-27T12:45:20.7232504Z remote: Enumerating objects: 222, done.        
+2026-06-27T12:45:20.7234852Z remote: Counting objects:   0% (1/222)        
+2026-06-27T12:45:20.7236766Z remote: Counting objects:   1% (3/222)        
+2026-06-27T12:45:20.7238665Z remote: Counting objects:   2% (5/222)        
+2026-06-27T12:45:20.7240598Z remote: Counting objects:   3% (7/222)        
+2026-06-27T12:45:20.7242379Z remote: Counting objects:   4% (9/222)        
+2026-06-27T12:45:20.7244640Z remote: Counting objects:   5% (12/222)        
+2026-06-27T12:45:20.7246737Z remote: Counting objects:   6% (14/222)        
+2026-06-27T12:45:20.7248620Z remote: Counting objects:   7% (16/222)        
+2026-06-27T12:45:20.7250455Z remote: Counting objects:   8% (18/222)        
+2026-06-27T12:45:20.7252375Z remote: Counting objects:   9% (20/222)        
+2026-06-27T12:45:20.7254852Z remote: Counting objects:  10% (23/222)        
+2026-06-27T12:45:20.7256749Z remote: Counting objects:  11% (25/222)        
+2026-06-27T12:45:20.7258374Z remote: Counting objects:  12% (27/222)        
+2026-06-27T12:45:20.7259585Z remote: Counting objects:  13% (29/222)        
+2026-06-27T12:45:20.7260877Z remote: Counting objects:  14% (32/222)        
+2026-06-27T12:45:20.7262157Z remote: Counting objects:  15% (34/222)        
+2026-06-27T12:45:20.7264111Z remote: Counting objects:  16% (36/222)        
+2026-06-27T12:45:20.7265544Z remote: Counting objects:  17% (38/222)        
+2026-06-27T12:45:20.7267156Z remote: Counting objects:  18% (40/222)        
+2026-06-27T12:45:20.7268783Z remote: Counting objects:  19% (43/222)        
+2026-06-27T12:45:20.7270397Z remote: Counting objects:  20% (45/222)        
+2026-06-27T12:45:20.7272044Z remote: Counting objects:  21% (47/222)        
+2026-06-27T12:45:20.7273913Z remote: Counting objects:  22% (49/222)        
+2026-06-27T12:45:20.7275569Z remote: Counting objects:  23% (52/222)        
+2026-06-27T12:45:20.7277231Z remote: Counting objects:  24% (54/222)        
+2026-06-27T12:45:20.7278983Z remote: Counting objects:  25% (56/222)        
+2026-06-27T12:45:20.7280771Z remote: Counting objects:  26% (58/222)        
+2026-06-27T12:45:20.7282545Z remote: Counting objects:  27% (60/222)        
+2026-06-27T12:45:20.7284612Z remote: Counting objects:  28% (63/222)        
+2026-06-27T12:45:20.7286369Z remote: Counting objects:  29% (65/222)        
+2026-06-27T12:45:20.7288118Z remote: Counting objects:  30% (67/222)        
+2026-06-27T12:45:20.7289836Z remote: Counting objects:  31% (69/222)        
+2026-06-27T12:45:20.7291578Z remote: Counting objects:  32% (72/222)        
+2026-06-27T12:45:20.7293502Z remote: Counting objects:  33% (74/222)        
+2026-06-27T12:45:20.7295268Z remote: Counting objects:  34% (76/222)        
+2026-06-27T12:45:20.7297009Z remote: Counting objects:  35% (78/222)        
+2026-06-27T12:45:20.7298735Z remote: Counting objects:  36% (80/222)        
+2026-06-27T12:45:20.7300470Z remote: Counting objects:  37% (83/222)        
+2026-06-27T12:45:20.7302129Z remote: Counting objects:  38% (85/222)        
+2026-06-27T12:45:20.7304052Z remote: Counting objects:  39% (87/222)        
+2026-06-27T12:45:20.7305720Z remote: Counting objects:  40% (89/222)        
+2026-06-27T12:45:20.7307573Z remote: Counting objects:  41% (92/222)        
+2026-06-27T12:45:20.7309251Z remote: Counting objects:  42% (94/222)        
+2026-06-27T12:45:20.7310858Z remote: Counting objects:  43% (96/222)        
+2026-06-27T12:45:20.7312448Z remote: Counting objects:  44% (98/222)        
+2026-06-27T12:45:20.7314400Z remote: Counting objects:  45% (100/222)        
+2026-06-27T12:45:20.7316012Z remote: Counting objects:  46% (103/222)        
+2026-06-27T12:45:20.7317632Z remote: Counting objects:  47% (105/222)        
+2026-06-27T12:45:20.7319277Z remote: Counting objects:  48% (107/222)        
+2026-06-27T12:45:20.7320899Z remote: Counting objects:  49% (109/222)        
+2026-06-27T12:45:20.7322509Z remote: Counting objects:  50% (111/222)        
+2026-06-27T12:45:20.7324224Z remote: Counting objects:  51% (114/222)        
+2026-06-27T12:45:20.7325799Z remote: Counting objects:  52% (116/222)        
+2026-06-27T12:45:20.7327355Z remote: Counting objects:  53% (118/222)        
+2026-06-27T12:45:20.7328939Z remote: Counting objects:  54% (120/222)        
+2026-06-27T12:45:20.7330538Z remote: Counting objects:  55% (123/222)        
+2026-06-27T12:45:20.7332107Z remote: Counting objects:  56% (125/222)        
+2026-06-27T12:45:20.7333886Z remote: Counting objects:  57% (127/222)        
+2026-06-27T12:45:20.7335515Z remote: Counting objects:  58% (129/222)        
+2026-06-27T12:45:20.7337133Z remote: Counting objects:  59% (131/222)        
+2026-06-27T12:45:20.7338737Z remote: Counting objects:  60% (134/222)        
+2026-06-27T12:45:20.7340344Z remote: Counting objects:  61% (136/222)        
+2026-06-27T12:45:20.7341935Z remote: Counting objects:  62% (138/222)        
+2026-06-27T12:45:20.7343641Z remote: Counting objects:  63% (140/222)        
+2026-06-27T12:45:20.7345274Z remote: Counting objects:  64% (143/222)        
+2026-06-27T12:45:20.7347266Z remote: Counting objects:  65% (145/222)        
+2026-06-27T12:45:20.7348896Z remote: Counting objects:  66% (147/222)        
+2026-06-27T12:45:20.7350527Z remote: Counting objects:  67% (149/222)        
+2026-06-27T12:45:20.7352142Z remote: Counting objects:  68% (151/222)        
+2026-06-27T12:45:20.7354229Z remote: Counting objects:  69% (154/222)        
+2026-06-27T12:45:20.7355859Z remote: Counting objects:  70% (156/222)        
+2026-06-27T12:45:20.7357527Z remote: Counting objects:  71% (158/222)        
+2026-06-27T12:45:20.7359126Z remote: Counting objects:  72% (160/222)        
+2026-06-27T12:45:20.7360748Z remote: Counting objects:  73% (163/222)        
+2026-06-27T12:45:20.7362330Z remote: Counting objects:  74% (165/222)        
+2026-06-27T12:45:20.7364072Z remote: Counting objects:  75% (167/222)        
+2026-06-27T12:45:20.7365734Z remote: Counting objects:  76% (169/222)        
+2026-06-27T12:45:20.7367325Z remote: Counting objects:  77% (171/222)        
+2026-06-27T12:45:20.7368910Z remote: Counting objects:  78% (174/222)        
+2026-06-27T12:45:20.7370489Z remote: Counting objects:  79% (176/222)        
+2026-06-27T12:45:20.7372075Z remote: Counting objects:  80% (178/222)        
+2026-06-27T12:45:20.7373785Z remote: Counting objects:  81% (180/222)        
+2026-06-27T12:45:20.7375335Z remote: Counting objects:  82% (183/222)        
+2026-06-27T12:45:20.7376851Z remote: Counting objects:  83% (185/222)        
+2026-06-27T12:45:20.7378367Z remote: Counting objects:  84% (187/222)        
+2026-06-27T12:45:20.7379882Z remote: Counting objects:  85% (189/222)        
+2026-06-27T12:45:20.7381415Z remote: Counting objects:  86% (191/222)        
+2026-06-27T12:45:20.7382958Z remote: Counting objects:  87% (194/222)        
+2026-06-27T12:45:20.7384618Z remote: Counting objects:  88% (196/222)        
+2026-06-27T12:45:20.7386145Z remote: Counting objects:  89% (198/222)        
+2026-06-27T12:45:20.7387689Z remote: Counting objects:  90% (200/222)        
+2026-06-27T12:45:20.7389191Z remote: Counting objects:  91% (203/222)        
+2026-06-27T12:45:20.7390695Z remote: Counting objects:  92% (205/222)        
+2026-06-27T12:45:20.7392371Z remote: Counting objects:  93% (207/222)        
+2026-06-27T12:45:20.7394187Z remote: Counting objects:  94% (209/222)        
+2026-06-27T12:45:20.7395699Z remote: Counting objects:  95% (211/222)        
+2026-06-27T12:45:20.7397191Z remote: Counting objects:  96% (214/222)        
+2026-06-27T12:45:20.7398667Z remote: Counting objects:  97% (216/222)        
+2026-06-27T12:45:20.7400138Z remote: Counting objects:  98% (218/222)        
+2026-06-27T12:45:20.7401608Z remote: Counting objects:  99% (220/222)        
+2026-06-27T12:45:20.7403085Z remote: Counting objects: 100% (222/222)        
+2026-06-27T12:45:20.7404784Z remote: Counting objects: 100% (222/222), done.        
+2026-06-27T12:45:20.7406375Z remote: Compressing objects:   0% (1/185)        
+2026-06-27T12:45:20.7407892Z remote: Compressing objects:   1% (2/185)        
+2026-06-27T12:45:20.7409406Z remote: Compressing objects:   2% (4/185)        
+2026-06-27T12:45:20.7410934Z remote: Compressing objects:   3% (6/185)        
+2026-06-27T12:45:20.7412466Z remote: Compressing objects:   4% (8/185)        
+2026-06-27T12:45:20.7414154Z remote: Compressing objects:   5% (10/185)        
+2026-06-27T12:45:20.7415678Z remote: Compressing objects:   6% (12/185)        
+2026-06-27T12:45:20.7417211Z remote: Compressing objects:   7% (13/185)        
+2026-06-27T12:45:20.7418728Z remote: Compressing objects:   8% (15/185)        
+2026-06-27T12:45:20.7420259Z remote: Compressing objects:   9% (17/185)        
+2026-06-27T12:45:20.7421828Z remote: Compressing objects:  10% (19/185)        
+2026-06-27T12:45:20.7423493Z remote: Compressing objects:  11% (21/185)        
+2026-06-27T12:45:20.7425040Z remote: Compressing objects:  12% (23/185)        
+2026-06-27T12:45:20.7426604Z remote: Compressing objects:  13% (25/185)        
+2026-06-27T12:45:20.7428156Z remote: Compressing objects:  14% (26/185)        
+2026-06-27T12:45:20.7429712Z remote: Compressing objects:  15% (28/185)        
+2026-06-27T12:45:20.7431243Z remote: Compressing objects:  16% (30/185)        
+2026-06-27T12:45:20.7432798Z remote: Compressing objects:  17% (32/185)        
+2026-06-27T12:45:20.7434637Z remote: Compressing objects:  18% (34/185)        
+2026-06-27T12:45:20.7436375Z remote: Compressing objects:  19% (36/185)        
+2026-06-27T12:45:20.7474853Z remote: Compressing objects:  20% (37/185)        
+2026-06-27T12:45:20.7477738Z remote: Compressing objects:  21% (39/185)        
+2026-06-27T12:45:20.7480941Z remote: Compressing objects:  22% (41/185)        
+2026-06-27T12:45:20.7484370Z remote: Compressing objects:  23% (43/185)        
+2026-06-27T12:45:20.7487407Z remote: Compressing objects:  24% (45/185)        
+2026-06-27T12:45:20.7490539Z remote: Compressing objects:  25% (47/185)        
+2026-06-27T12:45:20.7493819Z remote: Compressing objects:  26% (49/185)        
+2026-06-27T12:45:20.7496906Z remote: Compressing objects:  27% (50/185)        
+2026-06-27T12:45:20.7499931Z remote: Compressing objects:  28% (52/185)        
+2026-06-27T12:45:20.7503039Z remote: Compressing objects:  29% (54/185)        
+2026-06-27T12:45:20.7506384Z remote: Compressing objects:  30% (56/185)        
+2026-06-27T12:45:20.7509544Z remote: Compressing objects:  31% (58/185)        
+2026-06-27T12:45:20.7512623Z remote: Compressing objects:  32% (60/185)        
+2026-06-27T12:45:20.7515882Z remote: Compressing objects:  33% (62/185)        
+2026-06-27T12:45:20.7518902Z remote: Compressing objects:  34% (63/185)        
+2026-06-27T12:45:20.7521915Z remote: Compressing objects:  35% (65/185)        
+2026-06-27T12:45:20.7525157Z remote: Compressing objects:  36% (67/185)        
+2026-06-27T12:45:20.7528172Z remote: Compressing objects:  37% (69/185)        
+2026-06-27T12:45:20.7531122Z remote: Compressing objects:  38% (71/185)        
+2026-06-27T12:45:20.7534206Z remote: Compressing objects:  39% (73/185)        
+2026-06-27T12:45:20.7537287Z remote: Compressing objects:  40% (74/185)        
+2026-06-27T12:45:20.7540352Z remote: Compressing objects:  41% (76/185)        
+2026-06-27T12:45:20.7543666Z remote: Compressing objects:  42% (78/185)        
+2026-06-27T12:45:20.7547103Z remote: Compressing objects:  43% (80/185)        
+2026-06-27T12:45:20.7550169Z remote: Compressing objects:  44% (82/185)        
+2026-06-27T12:45:20.7553416Z remote: Compressing objects:  45% (84/185)        
+2026-06-27T12:45:20.7556423Z remote: Compressing objects:  46% (86/185)        
+2026-06-27T12:45:20.7559475Z remote: Compressing objects:  47% (87/185)        
+2026-06-27T12:45:20.7562494Z remote: Compressing objects:  48% (89/185)        
+2026-06-27T12:45:20.7565778Z remote: Compressing objects:  49% (91/185)        
+2026-06-27T12:45:20.7568768Z remote: Compressing objects:  50% (93/185)        
+2026-06-27T12:45:20.7571726Z remote: Compressing objects:  51% (95/185)        
+2026-06-27T12:45:20.7575039Z remote: Compressing objects:  52% (97/185)        
+2026-06-27T12:45:20.7578047Z remote: Compressing objects:  53% (99/185)        
+2026-06-27T12:45:20.7581058Z remote: Compressing objects:  54% (100/185)        
+2026-06-27T12:45:20.7584327Z remote: Compressing objects:  55% (102/185)        
+2026-06-27T12:45:20.7587389Z remote: Compressing objects:  56% (104/185)        
+2026-06-27T12:45:20.7590543Z remote: Compressing objects:  57% (106/185)        
+2026-06-27T12:45:20.7593858Z remote: Compressing objects:  58% (108/185)        
+2026-06-27T12:45:20.7596919Z remote: Compressing objects:  59% (110/185)        
+2026-06-27T12:45:20.7599971Z remote: Compressing objects:  60% (111/185)        
+2026-06-27T12:45:20.7602975Z remote: Compressing objects:  61% (113/185)        
+2026-06-27T12:45:20.7605935Z remote: Compressing objects:  62% (115/185)        
+2026-06-27T12:45:20.7608545Z remote: Compressing objects:  63% (117/185)        
+2026-06-27T12:45:20.7611215Z remote: Compressing objects:  64% (119/185)        
+2026-06-27T12:45:20.7614109Z remote: Compressing objects:  65% (121/185)        
+2026-06-27T12:45:20.7616737Z remote: Compressing objects:  66% (123/185)        
+2026-06-27T12:45:20.7619345Z remote: Compressing objects:  67% (124/185)        
+2026-06-27T12:45:20.7622045Z remote: Compressing objects:  68% (126/185)        
+2026-06-27T12:45:20.7624970Z remote: Compressing objects:  69% (128/185)        
+2026-06-27T12:45:20.7627864Z remote: Compressing objects:  70% (130/185)        
+2026-06-27T12:45:20.7630536Z remote: Compressing objects:  71% (132/185)        
+2026-06-27T12:45:20.7633458Z remote: Compressing objects:  72% (134/185)        
+2026-06-27T12:45:20.7636081Z remote: Compressing objects:  73% (136/185)        
+2026-06-27T12:45:20.7638649Z remote: Compressing objects:  74% (137/185)        
+2026-06-27T12:45:20.7641234Z remote: Compressing objects:  75% (139/185)        
+2026-06-27T12:45:20.7644079Z remote: Compressing objects:  76% (141/185)        
+2026-06-27T12:45:20.7646882Z remote: Compressing objects:  77% (143/185)        
+2026-06-27T12:45:20.7649589Z remote: Compressing objects:  78% (145/185)        
+2026-06-27T12:45:20.7652289Z remote: Compressing objects:  79% (147/185)        
+2026-06-27T12:45:20.7655190Z remote: Compressing objects:  80% (148/185)        
+2026-06-27T12:45:20.7657821Z remote: Compressing objects:  81% (150/185)        
+2026-06-27T12:45:20.7660467Z remote: Compressing objects:  82% (152/185)        
+2026-06-27T12:45:20.7663379Z remote: Compressing objects:  83% (154/185)        
+2026-06-27T12:45:20.7666021Z remote: Compressing objects:  84% (156/185)        
+2026-06-27T12:45:20.7668670Z remote: Compressing objects:  85% (158/185)        
+2026-06-27T12:45:20.7671318Z remote: Compressing objects:  86% (160/185)        
+2026-06-27T12:45:20.7674167Z remote: Compressing objects:  87% (161/185)        
+2026-06-27T12:45:20.7676828Z remote: Compressing objects:  88% (163/185)        
+2026-06-27T12:45:20.7679446Z remote: Compressing objects:  89% (165/185)        
+2026-06-27T12:45:20.7682037Z remote: Compressing objects:  90% (167/185)        
+2026-06-27T12:45:20.7684876Z remote: Compressing objects:  91% (169/185)        
+2026-06-27T12:45:20.7687519Z remote: Compressing objects:  92% (171/185)        
+2026-06-27T12:45:20.7690479Z remote: Compressing objects:  93% (173/185)        
+2026-06-27T12:45:20.7693107Z remote: Compressing objects:  94% (174/185)        
+2026-06-27T12:45:20.7696032Z remote: Compressing objects:  95% (176/185)        
+2026-06-27T12:45:20.7698590Z remote: Compressing objects:  96% (178/185)        
+2026-06-27T12:45:20.7701187Z remote: Compressing objects:  97% (180/185)        
+2026-06-27T12:45:20.7704112Z remote: Compressing objects:  98% (182/185)        
+2026-06-27T12:45:20.7706726Z remote: Compressing objects:  99% (184/185)        
+2026-06-27T12:45:20.7709381Z remote: Compressing objects: 100% (185/185)        
+2026-06-27T12:45:20.7712162Z remote: Compressing objects: 100% (185/185), done.        
+2026-06-27T12:45:20.7715100Z Receiving objects:   0% (1/222)
+2026-06-27T12:45:20.7717108Z Receiving objects:   1% (3/222)
+2026-06-27T12:45:20.7719089Z Receiving objects:   2% (5/222)
+2026-06-27T12:45:20.7721051Z Receiving objects:   3% (7/222)
+2026-06-27T12:45:20.7723014Z Receiving objects:   4% (9/222)
+2026-06-27T12:45:20.7725347Z Receiving objects:   5% (12/222)
+2026-06-27T12:45:20.7727352Z Receiving objects:   6% (14/222)
+2026-06-27T12:45:20.7729412Z Receiving objects:   7% (16/222)
+2026-06-27T12:45:20.7731445Z Receiving objects:   8% (18/222)
+2026-06-27T12:45:20.7733695Z Receiving objects:   9% (20/222)
+2026-06-27T12:45:20.7735684Z Receiving objects:  10% (23/222)
+2026-06-27T12:45:20.7737688Z Receiving objects:  11% (25/222)
+2026-06-27T12:45:20.7739514Z Receiving objects:  12% (27/222)
+2026-06-27T12:45:20.7741474Z Receiving objects:  13% (29/222)
+2026-06-27T12:45:20.7744417Z Receiving objects:  14% (32/222)
+2026-06-27T12:45:20.7746457Z Receiving objects:  15% (34/222)
+2026-06-27T12:45:20.7890244Z Receiving objects:  16% (36/222)
+2026-06-27T12:45:20.8064167Z Receiving objects:  17% (38/222)
+2026-06-27T12:45:20.8067922Z Receiving objects:  18% (40/222)
+2026-06-27T12:45:20.8071207Z Receiving objects:  19% (43/222)
+2026-06-27T12:45:20.8074246Z Receiving objects:  20% (45/222)
+2026-06-27T12:45:20.8080143Z Receiving objects:  21% (47/222)
+2026-06-27T12:45:20.8087313Z Receiving objects:  22% (49/222)
+2026-06-27T12:45:20.8094374Z Receiving objects:  23% (52/222)
+2026-06-27T12:45:20.8096023Z Receiving objects:  24% (54/222)
+2026-06-27T12:45:20.8165010Z Receiving objects:  25% (56/222)
+2026-06-27T12:45:20.8166579Z Receiving objects:  26% (58/222)
+2026-06-27T12:45:20.8308844Z Receiving objects:  27% (60/222)
+2026-06-27T12:45:20.8311478Z Receiving objects:  28% (63/222)
+2026-06-27T12:45:20.8313567Z Receiving objects:  29% (65/222)
+2026-06-27T12:45:20.8314942Z Receiving objects:  30% (67/222)
+2026-06-27T12:45:20.8316275Z Receiving objects:  31% (69/222)
+2026-06-27T12:45:20.8317595Z Receiving objects:  32% (72/222)
+2026-06-27T12:45:20.8337787Z Receiving objects:  33% (74/222)
+2026-06-27T12:45:20.8339577Z Receiving objects:  34% (76/222)
+2026-06-27T12:45:20.8340776Z Receiving objects:  35% (78/222)
+2026-06-27T12:45:20.8341940Z Receiving objects:  36% (80/222)
+2026-06-27T12:45:20.8481698Z Receiving objects:  37% (83/222)
+2026-06-27T12:45:20.8484456Z Receiving objects:  38% (85/222)
+2026-06-27T12:45:20.8486595Z Receiving objects:  39% (87/222)
+2026-06-27T12:45:20.8488759Z Receiving objects:  40% (89/222)
+2026-06-27T12:45:20.8490833Z Receiving objects:  41% (92/222)
+2026-06-27T12:45:20.8492866Z Receiving objects:  42% (94/222)
+2026-06-27T12:45:20.8494634Z Receiving objects:  43% (96/222)
+2026-06-27T12:45:20.8495806Z Receiving objects:  44% (98/222)
+2026-06-27T12:45:20.8497539Z Receiving objects:  45% (100/222)
+2026-06-27T12:45:20.8498868Z Receiving objects:  46% (103/222)
+2026-06-27T12:45:20.8500879Z Receiving objects:  47% (105/222)
+2026-06-27T12:45:20.8502850Z Receiving objects:  48% (107/222)
+2026-06-27T12:45:20.8504609Z Receiving objects:  49% (109/222)
+2026-06-27T12:45:20.8506676Z Receiving objects:  50% (111/222)
+2026-06-27T12:45:20.8508731Z Receiving objects:  51% (114/222)
+2026-06-27T12:45:20.8510644Z Receiving objects:  52% (116/222)
+2026-06-27T12:45:20.8511878Z Receiving objects:  53% (118/222)
+2026-06-27T12:45:20.8513310Z Receiving objects:  54% (120/222)
+2026-06-27T12:45:20.8514749Z Receiving objects:  55% (123/222)
+2026-06-27T12:45:20.8515939Z Receiving objects:  56% (125/222)
+2026-06-27T12:45:20.8517960Z Receiving objects:  57% (127/222)
+2026-06-27T12:45:20.8519911Z Receiving objects:  58% (129/222)
+2026-06-27T12:45:20.8521876Z Receiving objects:  59% (131/222)
+2026-06-27T12:45:20.8523758Z Receiving objects:  60% (134/222)
+2026-06-27T12:45:20.8524949Z Receiving objects:  61% (136/222)
+2026-06-27T12:45:20.8526132Z Receiving objects:  62% (138/222)
+2026-06-27T12:45:20.8527305Z Receiving objects:  63% (140/222)
+2026-06-27T12:45:20.8528484Z Receiving objects:  64% (143/222)
+2026-06-27T12:45:20.8529639Z Receiving objects:  65% (145/222)
+2026-06-27T12:45:20.8530810Z Receiving objects:  66% (147/222)
+2026-06-27T12:45:20.8531976Z Receiving objects:  67% (149/222)
+2026-06-27T12:45:20.8533503Z Receiving objects:  68% (151/222)
+2026-06-27T12:45:20.8534943Z Receiving objects:  69% (154/222)
+2026-06-27T12:45:20.8536124Z Receiving objects:  70% (156/222)
+2026-06-27T12:45:20.8537307Z Receiving objects:  71% (158/222)
+2026-06-27T12:45:20.8538476Z Receiving objects:  72% (160/222)
+2026-06-27T12:45:20.8539689Z Receiving objects:  73% (163/222)
+2026-06-27T12:45:20.8540860Z Receiving objects:  74% (165/222)
+2026-06-27T12:45:20.8723462Z Receiving objects:  75% (167/222)
+2026-06-27T12:45:20.8725284Z Receiving objects:  76% (169/222)
+2026-06-27T12:45:20.8726712Z Receiving objects:  77% (171/222)
+2026-06-27T12:45:20.8756182Z Receiving objects:  78% (174/222)
+2026-06-27T12:45:20.8894658Z Receiving objects:  79% (176/222)
+2026-06-27T12:45:20.8897476Z Receiving objects:  80% (178/222)
+2026-06-27T12:45:20.8900015Z Receiving objects:  81% (180/222)
+2026-06-27T12:45:20.8901691Z Receiving objects:  82% (183/222)
+2026-06-27T12:45:20.8907255Z Receiving objects:  83% (185/222)
+2026-06-27T12:45:20.8918746Z Receiving objects:  84% (187/222)
+2026-06-27T12:45:20.8924137Z Receiving objects:  85% (189/222)
+2026-06-27T12:45:20.8927090Z remote: Total 222 (delta 21), reused 207 (delta 21), pack-reused 0 (from 0)        
+2026-06-27T12:45:20.8930133Z Receiving objects:  86% (191/222)
+2026-06-27T12:45:20.8932342Z Receiving objects:  87% (194/222)
+2026-06-27T12:45:20.8934838Z Receiving objects:  88% (196/222)
+2026-06-27T12:45:20.8936904Z Receiving objects:  89% (198/222)
+2026-06-27T12:45:20.8939045Z Receiving objects:  90% (200/222)
+2026-06-27T12:45:20.8941048Z Receiving objects:  91% (203/222)
+2026-06-27T12:45:20.8942980Z Receiving objects:  92% (205/222)
+2026-06-27T12:45:20.8945189Z Receiving objects:  93% (207/222)
+2026-06-27T12:45:20.8947197Z Receiving objects:  94% (209/222)
+2026-06-27T12:45:20.8949080Z Receiving objects:  95% (211/222)
+2026-06-27T12:45:20.8950522Z Receiving objects:  96% (214/222)
+2026-06-27T12:45:20.8952706Z Receiving objects:  97% (216/222)
+2026-06-27T12:45:20.8954694Z Receiving objects:  98% (218/222)
+2026-06-27T12:45:20.8956376Z Receiving objects:  99% (220/222)
+2026-06-27T12:45:20.8958418Z Receiving objects: 100% (222/222)
+2026-06-27T12:45:20.8960947Z Receiving objects: 100% (222/222), 368.27 KiB | 2.83 MiB/s, done.
+2026-06-27T12:45:20.8963984Z Resolving deltas:   0% (0/21)
+2026-06-27T12:45:20.8966025Z Resolving deltas:   4% (1/21)
+2026-06-27T12:45:20.8967983Z Resolving deltas:   9% (2/21)
+2026-06-27T12:45:20.8969860Z Resolving deltas:  14% (3/21)
+2026-06-27T12:45:20.8971803Z Resolving deltas:  23% (5/21)
+2026-06-27T12:45:20.8973953Z Resolving deltas:  28% (6/21)
+2026-06-27T12:45:20.8975843Z Resolving deltas:  33% (7/21)
+2026-06-27T12:45:20.8977699Z Resolving deltas:  38% (8/21)
+2026-06-27T12:45:20.8979274Z Resolving deltas:  42% (9/21)
+2026-06-27T12:45:20.8980413Z Resolving deltas:  47% (10/21)
+2026-06-27T12:45:20.8981532Z Resolving deltas:  52% (11/21)
+2026-06-27T12:45:20.8982664Z Resolving deltas:  57% (12/21)
+2026-06-27T12:45:20.8984207Z Resolving deltas:  61% (13/21)
+2026-06-27T12:45:20.8985392Z Resolving deltas:  66% (14/21)
+2026-06-27T12:45:20.8986513Z Resolving deltas:  71% (15/21)
+2026-06-27T12:45:20.8987787Z Resolving deltas:  76% (16/21)
+2026-06-27T12:45:20.8989852Z Resolving deltas:  80% (17/21)
+2026-06-27T12:45:20.8991276Z Resolving deltas:  85% (18/21)
+2026-06-27T12:45:20.8992835Z Resolving deltas:  90% (19/21)
+2026-06-27T12:45:20.8994310Z Resolving deltas:  95% (20/21)
+2026-06-27T12:45:20.8995423Z Resolving deltas: 100% (21/21)
+2026-06-27T12:45:20.8996569Z Resolving deltas: 100% (21/21), done.
+2026-06-27T12:45:20.9117890Z From https://github.com/sunilcyrixrjbemp-spec/sunil1
+2026-06-27T12:45:20.9120216Z  * [new ref]         7c0d6fe4c0573df90c6b87733349346e4667ccf6 -> origin/main
+2026-06-27T12:45:20.9161274Z ##[endgroup]
+2026-06-27T12:45:20.9164947Z ##[group]Determining the checkout info
+2026-06-27T12:45:20.9167949Z ##[endgroup]
+2026-06-27T12:45:20.9170438Z ##[group]Checking out the ref
+2026-06-27T12:45:20.9173116Z [command]/usr/bin/git checkout --progress --force -B main refs/remotes/origin/main
+2026-06-27T12:45:20.9366407Z Switched to a new branch 'main'
+2026-06-27T12:45:20.9368943Z branch 'main' set up to track 'origin/main'.
+2026-06-27T12:45:20.9379276Z ##[endgroup]
+2026-06-27T12:45:20.9421347Z [command]/usr/bin/git log -1 --format='%H'
+2026-06-27T12:45:20.9445276Z '7c0d6fe4c0573df90c6b87733349346e4667ccf6'
+2026-06-27T12:45:20.9844277Z Node 20 is being deprecated. This workflow is running with Node 24 by default. If you need to temporarily use Node 20, you can set the ACTIONS_ALLOW_USE_UNSECURE_NODE_VERSION=true environment variable. For more information see: https://github.blog/changelog/2025-09-19-deprecation-of-node-20-on-github-actions-runners/
+2026-06-27T12:45:20.9849871Z ##[group]Run astral-sh/setup-uv@v5
+2026-06-27T12:45:20.9850954Z with:
+2026-06-27T12:45:20.9851770Z   enable-cache: true
+2026-06-27T12:45:20.9863581Z   github-token: ***
+2026-06-27T12:45:20.9864766Z   cache-dependency-glob: **/uv.lock
+**/requirements*.txt
+
+2026-06-27T12:45:20.9866128Z   prune-cache: true
+2026-06-27T12:45:20.9867091Z   ignore-nothing-to-cache: false
+2026-06-27T12:45:20.9868204Z   ignore-empty-workdir: false
+2026-06-27T12:45:20.9869235Z ##[endgroup]
+2026-06-27T12:45:21.1609262Z (node:2263) [DEP0040] DeprecationWarning: The `punycode` module is deprecated. Please use a userland alternative instead.
+2026-06-27T12:45:21.1614831Z (Use `node --trace-deprecation ...` to show where the warning was created)
+2026-06-27T12:45:21.6305777Z Downloading uv from "https://github.com/astral-sh/uv/releases/download/0.11.25/uv-x86_64-unknown-linux-gnu.tar.gz" ...
+2026-06-27T12:45:22.1975077Z [command]/usr/bin/tar xz --warning=no-unknown-keyword --overwrite -C /home/runner/work/_temp/fcc26a3a-6b64-409e-99f2-248c68b367c2 -f /home/runner/work/_temp/29ed0b4c-eeef-408c-b4be-e8102180a455
+2026-06-27T12:45:22.7169208Z Added /home/runner/.local/bin to the path
+2026-06-27T12:45:22.7172755Z Added /opt/hostedtoolcache/uv/0.11.25/x86_64 to the path
+2026-06-27T12:45:22.7195982Z Set UV_CACHE_DIR to /home/runner/work/_temp/setup-uv-cache
+2026-06-27T12:45:22.7196580Z Successfully installed uv version 0.11.25
+2026-06-27T12:45:22.7197045Z Searching files using cache dependency glob: **/uv.lock,**/requirements*.txt
+2026-06-27T12:45:22.7588757Z No matches found for glob
+2026-06-27T12:45:22.7618577Z ##[warning]No file matched to [**/uv.lock,**/requirements*.txt]. The cache will never get invalidated. Make sure you have checked out the target repository and configured the cache-dependency-glob input correctly.
+2026-06-27T12:45:22.8361610Z Trying to restore uv cache from GitHub Actions cache with key: setup-uv-1-x86_64-unknown-linux-gnu-3.12.3-no-dependency-glob
+2026-06-27T12:45:23.0011391Z Cache hit for: setup-uv-1-x86_64-unknown-linux-gnu-3.12.3-no-dependency-glob
+2026-06-27T12:45:23.0118281Z (node:2263) [DEP0169] DeprecationWarning: `url.parse()` behavior is not standardized and prone to errors that have security implications. Use the WHATWG URL API instead. CVEs are not issued for `url.parse()` vulnerabilities.
+2026-06-27T12:45:23.9819225Z Received 4045288 of 4045288 (100.0%), 5.2 MBs/sec
+2026-06-27T12:45:23.9819960Z Cache Size: ~4 MB (4045288 B)
+2026-06-27T12:45:23.9846298Z [command]/usr/bin/tar -xf /home/runner/work/_temp/58179058-8ea2-44f1-8f2c-a71086332722/cache.tzst -P -C /home/runner/work/sunil1/sunil1 --use-compress-program unzstd
+2026-06-27T12:45:24.0304275Z Cache restored successfully
+2026-06-27T12:45:24.0312892Z uv cache restored from GitHub Actions cache with key: setup-uv-1-x86_64-unknown-linux-gnu-3.12.3-no-dependency-glob
+2026-06-27T12:45:24.0545475Z ##[group]Run uv sync
+2026-06-27T12:45:24.0545829Z [36;1muv sync[0m
+2026-06-27T12:45:24.0753900Z shell: /usr/bin/bash -e {0}
+2026-06-27T12:45:24.0754261Z env:
+2026-06-27T12:45:24.0754576Z   UV_CACHE_DIR: /home/runner/work/_temp/setup-uv-cache
+2026-06-27T12:45:24.0754971Z ##[endgroup]
+2026-06-27T12:45:24.0983594Z Using CPython 3.12.3 interpreter at: /usr/bin/python3
+2026-06-27T12:45:24.0984319Z Creating virtual environment at: .venv
+2026-06-27T12:45:24.3762179Z Resolved 49 packages in 276ms
+2026-06-27T12:45:24.3764010Z warning: `email-validator==2.1.0` is yanked (reason: "Forgot to drop Python 3.7 from python_requires, see https://github.com/JoshData/python-email-validator/pull/118")
+2026-06-27T12:45:24.4855115Z Downloading sqlalchemy (3.2MiB)
+2026-06-27T12:45:24.4858866Z Downloading pydantic-core (2.0MiB)
+2026-06-27T12:45:24.4860642Z Downloading pygments (1.2MiB)
+2026-06-27T12:45:24.6898681Z  Downloaded pydantic-core
+2026-06-27T12:45:24.7781165Z  Downloaded sqlalchemy
+2026-06-27T12:45:24.7826638Z  Downloaded pygments
+2026-06-27T12:45:24.8142428Z Prepared 45 packages in 432ms
+2026-06-27T12:45:24.8498732Z Installed 45 packages in 35ms
+2026-06-27T12:45:24.8499287Z  + aiofiles==23.2.1
+2026-06-27T12:45:24.8499706Z  + annotated-doc==0.0.4
+2026-06-27T12:45:24.8500230Z  + annotated-types==0.7.0
+2026-06-27T12:45:24.8500669Z  + anyio==4.14.1
+2026-06-27T12:45:24.8501047Z  + certifi==2026.6.17
+2026-06-27T12:45:24.8501512Z  + charset-normalizer==3.4.7
+2026-06-27T12:45:24.8501946Z  + click==8.4.2
+2026-06-27T12:45:24.8502426Z  + dnspython==2.8.0
+2026-06-27T12:45:24.8502874Z  + ecdsa==0.19.2
+2026-06-27T12:45:24.8503699Z  + email-validator==2.1.0
+2026-06-27T12:45:24.8504228Z  + fastapi==0.138.1
+2026-06-27T12:45:24.8504663Z  + greenlet==3.5.3
+2026-06-27T12:45:24.8505110Z  + h11==0.16.0
+2026-06-27T12:45:24.8505935Z  + httpcore==1.0.9
+2026-06-27T12:45:24.8506373Z  + httpx==0.25.2
+2026-06-27T12:45:24.8506793Z  + idna==3.18
+2026-06-27T12:45:24.8507228Z  + markdown-it-py==4.2.0
+2026-06-27T12:45:24.8507718Z  + mdurl==0.1.2
+2026-06-27T12:45:24.8508156Z  + passlib==1.7.4
+2026-06-27T12:45:24.8508584Z  + pyasn1==0.6.3
+2026-06-27T12:45:24.8509012Z  + pydantic==2.13.4
+2026-06-27T12:45:24.8509459Z  + pydantic-core==2.46.4
+2026-06-27T12:45:24.8509934Z  + pydantic-settings==2.14.2
+2026-06-27T12:45:24.8510414Z  + pygments==2.20.0
+2026-06-27T12:45:24.8510825Z  + pyjson5==2.0.1
+2026-06-27T12:45:24.8511211Z  + pyjwt==2.13.0
+2026-06-27T12:45:24.8511609Z  + pyodide-cli==0.5.0
+2026-06-27T12:45:24.8512027Z  + pyodide-py==0.27.7
+2026-06-27T12:45:24.8512458Z  + python-dateutil==2.8.2
+2026-06-27T12:45:24.8512911Z  + python-dotenv==1.2.2
+2026-06-27T12:45:24.8513565Z  + python-jose==3.5.0
+2026-06-27T12:45:24.8513961Z  + python-multipart==0.0.32
+2026-06-27T12:45:24.8514333Z  + pytz==2023.3
+2026-06-27T12:45:24.8514649Z  + requests==2.31.0
+2026-06-27T12:45:24.8514978Z  + rich==15.0.0
+2026-06-27T12:45:24.8515402Z  + rsa==4.9.1
+2026-06-27T12:45:24.8515725Z  + six==1.17.0
+2026-06-27T12:45:24.8516190Z  + sniffio==1.3.1
+2026-06-27T12:45:24.8516714Z  + sqlalchemy==2.0.51
+2026-06-27T12:45:24.8517226Z  + starlette==1.3.1
+2026-06-27T12:45:24.8517700Z  + typing-extensions==4.15.0
+2026-06-27T12:45:24.8518192Z  + typing-inspection==0.4.2
+2026-06-27T12:45:24.8518616Z  + urllib3==2.7.0
+2026-06-27T12:45:24.8518967Z  + workers-py==1.14.0
+2026-06-27T12:45:24.8519329Z  + workers-runtime-sdk==1.5.0
+2026-06-27T12:45:24.8624516Z ##[group]Run uv run pywrangler deploy
+2026-06-27T12:45:24.8624905Z [36;1muv run pywrangler deploy[0m
+2026-06-27T12:45:24.8625669Z [36;1mecho "***" | npx wrangler secret put CLOUDFLARE_API_TOKEN[0m
+2026-06-27T12:45:24.8656917Z shell: /usr/bin/bash -e {0}
+2026-06-27T12:45:24.8657193Z env:
+2026-06-27T12:45:24.8657459Z   UV_CACHE_DIR: /home/runner/work/_temp/setup-uv-cache
+2026-06-27T12:45:24.8658012Z   CLOUDFLARE_API_TOKEN: ***
+2026-06-27T12:45:24.8658360Z   CLOUDFLARE_ACCOUNT_ID: ***
+2026-06-27T12:45:24.8658610Z ##[endgroup]
+2026-06-27T12:45:25.2278535Z Using CPython 3.12.3 interpreter at: /usr/bin/python3.12
+2026-06-27T12:45:25.2279484Z Creating virtual environment at: .venv-workers
+2026-06-27T12:45:25.2285961Z Activate with: .venv-workers/bin/activate
+2026-06-27T12:45:25.5826641Z Downloading pyodide-3.12.7-emscripten-wasm32-musl (download) (5.7MiB)
+2026-06-27T12:45:26.1199600Z  Downloaded pyodide-3.12.7-emscripten-wasm32-musl (download)
+2026-06-27T12:45:28.2819419Z Using CPython 3.12.7
+2026-06-27T12:45:28.2820088Z Creating virtual environment at: .venv-workers/pyodide-venv
+2026-06-27T12:45:28.2826904Z Activate with: .venv-workers/pyodide-venv/bin/activate
+2026-06-27T12:45:30.5372684Z INFO     Resolved 35 requirements from                                          
+2026-06-27T12:45:30.5373819Z          /home/runner/work/sunil1/sunil1/backend/pylock.toml.                   
+2026-06-27T12:45:30.5544261Z INFO     Installing packages into python_modules...                             
+2026-06-27T12:45:33.1085879Z INFO     Packages installed in python_modules.                                  
+2026-06-27T12:45:33.1218683Z INFO     Installing packages into .venv-workers...                              
+2026-06-27T12:45:33.4971555Z INFO     Packages installed in .venv-workers.                                   
+2026-06-27T12:45:33.5105430Z INFO     Passing command to npx wrangler: npx --yes wrangler deploy             
+2026-06-27T12:45:43.7010163Z 
+2026-06-27T12:45:43.7010973Z  âï¸ wrangler 4.105.0
+2026-06-27T12:45:43.7011466Z ââââââââââââââââââââ
+2026-06-27T12:45:44.4025746Z Attaching additional modules:
+2026-06-27T12:45:44.4083573Z ââââââââââââââââââââââââ¬âââââââ¬âââââââââââââââ
+2026-06-27T12:45:44.4084503Z â Name                 â Type â Size         â
+2026-06-27T12:45:44.4085000Z ââââââââââââââââââââââââ¼âââââââ¼âââââââââââââââ¤
+2026-06-27T12:45:44.4085471Z â Vendored Modules     â      â 24381.39 KiB â
+2026-06-27T12:45:44.4085926Z ââââââââââââââââââââââââ¼âââââââ¼âââââââââââââââ¤
+2026-06-27T12:45:44.4086733Z â Total (1981 modules) â      â 24381.39 KiB â
+2026-06-27T12:45:44.4087188Z ââââââââââââââââââââââââ´âââââââ´âââââââââââââââ
+2026-06-27T12:45:44.9327094Z 
+2026-06-27T12:45:44.9328116Z Cloudflare collects anonymous telemetry about your usage of Wrangler. Learn more at https://github.com/cloudflare/workers-sdk/tree/main/packages/wrangler/telemetry.md
+2026-06-27T12:45:44.9334814Z 
+2026-06-27T12:45:44.9788798Z [31mâ [41;31m[[41;97mERROR[41;31m][0m [1mA request to the Cloudflare API (/accounts/***/workers/services/sunil1) failed.[0m
+2026-06-27T12:45:44.9789535Z 
+2026-06-27T12:45:44.9789671Z   Authentication error [code: 10000]
+2026-06-27T12:45:44.9789869Z 
+2026-06-27T12:45:44.9789873Z 
+2026-06-27T12:45:44.9804725Z ð It looks like you are authenticating Wrangler via a custom API token set in an environment variable.
+2026-06-27T12:45:44.9805505Z Please ensure it has the correct permissions for this operation.
+2026-06-27T12:45:44.9805810Z 
+2026-06-27T12:45:44.9805933Z Getting User settings...
+2026-06-27T12:45:45.3755891Z 
+2026-06-27T12:45:45.3765361Z [31mâ [41;31m[[41;97mERROR[41;31m][0m [1mA request to the Cloudflare API (/accounts) failed.[0m
+2026-06-27T12:45:45.3765995Z 
+2026-06-27T12:45:45.3766120Z   Invalid access token [code: 9109]
+2026-06-27T12:45:45.3766402Z   
+2026-06-27T12:45:45.3767011Z   If you think this is a bug, please open an issue at: [4mhttps://github.com/cloudflare/workers-sdk/issues/new/choose[0m
+2026-06-27T12:45:45.3767494Z 
+2026-06-27T12:45:45.3767498Z 
+2026-06-27T12:45:45.4046155Z ðªµ  Logs were written to "/home/runner/.config/.wrangler/logs/wrangler-2026-06-27_12-45-43_341.log"
+2026-06-27T12:45:45.5004260Z ##[error]Process completed with exit code 1.
+2026-06-27T12:45:45.5037449Z ##[group]Run find ~/.config/.wrangler/logs/ -type f -exec cat {} + || true
+2026-06-27T12:45:45.5038018Z [36;1mfind ~/.config/.wrangler/logs/ -type f -exec cat {} + || true[0m
+2026-06-27T12:45:45.5038486Z [36;1mfind ~/.wrangler/logs/ -type f -exec cat {} + || true[0m
+2026-06-27T12:45:45.5069816Z shell: /usr/bin/bash -e {0}
+2026-06-27T12:45:45.5070086Z env:
+2026-06-27T12:45:45.5070350Z   UV_CACHE_DIR: /home/runner/work/_temp/setup-uv-cache
+2026-06-27T12:45:45.5070680Z ##[endgroup]
+2026-06-27T12:45:45.5139817Z 
+2026-06-27T12:45:45.5140036Z --- 2026-06-27T12:45:43.598Z debug
+2026-06-27T12:45:45.5141258Z ðªµ  Writing logs to "/home/runner/.config/.wrangler/logs/wrangler-2026-06-27_12-45-43_341.log"
+2026-06-27T12:45:45.5142049Z ---
+2026-06-27T12:45:45.5142240Z 
+2026-06-27T12:45:45.5142394Z --- 2026-06-27T12:45:43.598Z debug
+2026-06-27T12:45:45.5144159Z .env file not found at "/home/runner/work/sunil1/sunil1/backend/.env". Continuing... For more details, refer to https://developers.cloudflare.com/workers/wrangler/system-environment-variables/
+2026-06-27T12:45:45.5145618Z ---
+2026-06-27T12:45:45.5145805Z 
+2026-06-27T12:45:45.5145956Z --- 2026-06-27T12:45:43.599Z debug
+2026-06-27T12:45:45.5147371Z .env file not found at "/home/runner/work/sunil1/sunil1/backend/.env.local". Continuing... For more details, refer to https://developers.cloudflare.com/workers/wrangler/system-environment-variables/
+2026-06-27T12:45:45.5148745Z ---
+2026-06-27T12:45:45.5148855Z 
+2026-06-27T12:45:45.5148994Z --- 2026-06-27T12:45:43.700Z log
+2026-06-27T12:45:45.5149169Z 
+2026-06-27T12:45:45.5149348Z  âï¸ wrangler 4.105.0
+2026-06-27T12:45:45.5149609Z ââââââââââââââââââââ
+2026-06-27T12:45:45.5149809Z ---
+2026-06-27T12:45:45.5149916Z 
+2026-06-27T12:45:45.5150010Z --- 2026-06-27T12:45:43.717Z debug
+2026-06-27T12:45:45.5150396Z Running autoconfig detection in /home/runner/work/sunil1/sunil1/backend...
+2026-06-27T12:45:45.5150787Z ---
+2026-06-27T12:45:45.5150886Z 
+2026-06-27T12:45:45.5150985Z --- 2026-06-27T12:45:43.718Z debug
+2026-06-27T12:45:45.5153800Z Metrics dispatcher: Posting data {"deviceId":"5d53d2de-4130-4115-a7c1-a7b10f7085f8","event":"wrangler command started","timestamp":1782564343718,"properties":{"amplitude_session_id":1782564343706,"amplitude_event_id":0,"wranglerVersion":"4.105.0","wranglerMajorVersion":4,"wranglerMinorVersion":105,"wranglerPatchVersion":0,"osPlatform":"Linux","osVersion":"#18~24.04.1-Ubuntu SMP Thu May 28 16:39:11 UTC 2026","nodeVersion":22,"packageManager":"npm","isFirstUsage":true,"configFileType":"toml","isCI":true,"isPagesCI":false,"isWorkersCI":false,"isInteractive":false,"hasAssets":false,"agent":null,"argsUsed":[],"argsCombination":"","sanitizedCommand":"deploy","sanitizedArgs":{},"currentAgentSkillsInstalled":null}}
+2026-06-27T12:45:45.5157251Z ---
+2026-06-27T12:45:45.5157442Z 
+2026-06-27T12:45:45.5157598Z --- 2026-06-27T12:45:43.725Z debug
+2026-06-27T12:45:45.5161286Z Metrics dispatcher: Posting data {"deviceId":"5d53d2de-4130-4115-a7c1-a7b10f7085f8","event":"autoconfig_process_started","timestamp":1782564343725,"properties":{"amplitude_session_id":1782564343717,"amplitude_event_id":0,"wranglerVersion":"4.105.0","wranglerMajorVersion":4,"wranglerMinorVersion":105,"wranglerPatchVersion":0,"osPlatform":"Linux","osVersion":"#18~24.04.1-Ubuntu SMP Thu May 28 16:39:11 UTC 2026","nodeVersion":22,"packageManager":"npm","isFirstUsage":false,"configFileType":"none","isCI":true,"isPagesCI":false,"isWorkersCI":false,"isInteractive":false,"hasAssets":false,"agent":null,"category":"Workers","os":"linux:x64","autoConfigId":"4b4f7e0d-2c34-4bc8-8928-1898a281ba4a","command":"wrangler deploy","dryRun":false,"currentAgentSkillsInstalled":null}}
+2026-06-27T12:45:45.5164643Z ---
+2026-06-27T12:45:45.5164763Z 
+2026-06-27T12:45:45.5164854Z --- 2026-06-27T12:45:43.726Z debug
+2026-06-27T12:45:45.5167753Z Metrics dispatcher: Posting data {"deviceId":"5d53d2de-4130-4115-a7c1-a7b10f7085f8","event":"autoconfig_detection_started","timestamp":1782564343726,"properties":{"amplitude_session_id":1782564343717,"amplitude_event_id":0,"wranglerVersion":"4.105.0","wranglerMajorVersion":4,"wranglerMinorVersion":105,"wranglerPatchVersion":0,"osPlatform":"Linux","osVersion":"#18~24.04.1-Ubuntu SMP Thu May 28 16:39:11 UTC 2026","nodeVersion":22,"packageManager":"npm","isFirstUsage":false,"configFileType":"none","isCI":true,"isPagesCI":false,"isWorkersCI":false,"isInteractive":false,"hasAssets":false,"agent":null,"category":"Workers","os":"linux:x64","autoConfigId":"4b4f7e0d-2c34-4bc8-8928-1898a281ba4a","command":"wrangler deploy","currentAgentSkillsInstalled":null}}
+2026-06-27T12:45:45.5170426Z ---
+2026-06-27T12:45:45.5170537Z 
+2026-06-27T12:45:45.5170631Z --- 2026-06-27T12:45:43.730Z debug
+2026-06-27T12:45:45.5173644Z Metrics dispatcher: Posting data {"deviceId":"5d53d2de-4130-4115-a7c1-a7b10f7085f8","event":"autoconfig_detection_completed","timestamp":1782564343730,"properties":{"amplitude_session_id":1782564343717,"amplitude_event_id":0,"wranglerVersion":"4.105.0","wranglerMajorVersion":4,"wranglerMinorVersion":105,"wranglerPatchVersion":0,"osPlatform":"Linux","osVersion":"#18~24.04.1-Ubuntu SMP Thu May 28 16:39:11 UTC 2026","nodeVersion":22,"packageManager":"npm","isFirstUsage":false,"configFileType":"none","isCI":true,"isPagesCI":false,"isWorkersCI":false,"isInteractive":false,"hasAssets":false,"agent":null,"category":"Workers","os":"linux:x64","autoConfigId":"4b4f7e0d-2c34-4bc8-8928-1898a281ba4a","configured":true,"success":true,"currentAgentSkillsInstalled":null}}
+2026-06-27T12:45:45.5176328Z ---
+2026-06-27T12:45:45.5176434Z 
+2026-06-27T12:45:45.5176520Z --- 2026-06-27T12:45:43.731Z debug
+2026-06-27T12:45:45.5179263Z Metrics dispatcher: Posting data {"deviceId":"5d53d2de-4130-4115-a7c1-a7b10f7085f8","event":"autoconfig_process_ended","timestamp":1782564343731,"properties":{"amplitude_session_id":1782564343727,"amplitude_event_id":0,"wranglerVersion":"4.105.0","wranglerMajorVersion":4,"wranglerMinorVersion":105,"wranglerPatchVersion":0,"osPlatform":"Linux","osVersion":"#18~24.04.1-Ubuntu SMP Thu May 28 16:39:11 UTC 2026","nodeVersion":22,"packageManager":"npm","isFirstUsage":false,"configFileType":"none","isCI":true,"isPagesCI":false,"isWorkersCI":false,"isInteractive":false,"hasAssets":false,"agent":null,"category":"Workers","os":"linux:x64","autoConfigId":"4b4f7e0d-2c34-4bc8-8928-1898a281ba4a","command":"wrangler deploy","dryRun":false,"success":true,"currentAgentSkillsInstalled":null}}
+2026-06-27T12:45:45.5182128Z ---
+2026-06-27T12:45:45.5182227Z 
+2026-06-27T12:45:45.5182318Z --- 2026-06-27T12:45:44.402Z info
+2026-06-27T12:45:45.5182592Z Attaching additional modules:
+2026-06-27T12:45:45.5182840Z ---
+2026-06-27T12:45:45.5182936Z 
+2026-06-27T12:45:45.5183028Z --- 2026-06-27T12:45:44.408Z log
+2026-06-27T12:45:45.5183734Z ââââââââââââââââââââââââ¬âââââââ¬âââââââââââââââ
+2026-06-27T12:45:45.5184117Z â Name                 â Type â Size         â
+2026-06-27T12:45:45.5184486Z ââââââââââââââââââââââââ¼âââââââ¼âââââââââââââââ¤
+2026-06-27T12:45:45.5184831Z â Vendored Modules     â      â 24381.39 KiB â
+2026-06-27T12:45:45.5185207Z ââââââââââââââââââââââââ¼âââââââ¼âââââââââââââââ¤
+2026-06-27T12:45:45.5185537Z â Total (1981 modules) â      â 24381.39 KiB â
+2026-06-27T12:45:45.5185888Z ââââââââââââââââââââââââ´âââââââ´âââââââââââââââ
+2026-06-27T12:45:45.5186154Z ---
+2026-06-27T12:45:45.5186253Z 
+2026-06-27T12:45:45.5186348Z --- 2026-06-27T12:45:44.417Z debug
+2026-06-27T12:45:45.5186732Z Starting verifyWorkerMatchesCITag() with tag: undefined, name: sunil1
+2026-06-27T12:45:45.5187115Z ---
+2026-06-27T12:45:45.5187210Z 
+2026-06-27T12:45:45.5187303Z --- 2026-06-27T12:45:44.417Z debug
+2026-06-27T12:45:45.5187701Z No WRANGLER_CI_MATCH_TAG variable provided, aborting verifyWorkerMatchesCITag()
+2026-06-27T12:45:45.5188110Z ---
+2026-06-27T12:45:45.5188203Z 
+2026-06-27T12:45:45.5188296Z --- 2026-06-27T12:45:44.418Z debug
+2026-06-27T12:45:45.5188988Z -- START CF API REQUEST: GET https://api.cloudflare.com/client/v4/accounts/***/workers/services/sunil1
+2026-06-27T12:45:45.5189468Z ---
+2026-06-27T12:45:45.5189572Z 
+2026-06-27T12:45:45.5189814Z --- 2026-06-27T12:45:44.418Z debug
+2026-06-27T12:45:45.5190225Z QUERY STRING: omitted; set WRANGLER_LOG_SANITIZE=false to include sanitized data
+2026-06-27T12:45:45.5190625Z ---
+2026-06-27T12:45:45.5190727Z 
+2026-06-27T12:45:45.5190812Z --- 2026-06-27T12:45:44.418Z debug
+2026-06-27T12:45:45.5191187Z HEADERS: omitted; set WRANGLER_LOG_SANITIZE=false to include sanitized data
+2026-06-27T12:45:45.5191574Z ---
+2026-06-27T12:45:45.5191675Z 
+2026-06-27T12:45:45.5191759Z --- 2026-06-27T12:45:44.419Z debug
+2026-06-27T12:45:45.5192116Z INIT: omitted; set WRANGLER_LOG_SANITIZE=false to include sanitized data
+2026-06-27T12:45:45.5192481Z ---
+2026-06-27T12:45:45.5192582Z 
+2026-06-27T12:45:45.5192666Z --- 2026-06-27T12:45:44.419Z debug
+2026-06-27T12:45:45.5192921Z -- END CF API REQUEST
+2026-06-27T12:45:45.5193389Z ---
+2026-06-27T12:45:45.5193535Z 
+2026-06-27T12:45:45.5193626Z --- 2026-06-27T12:45:44.929Z debug
+2026-06-27T12:45:45.5193915Z -- START CF API RESPONSE: Unauthorized 401
+2026-06-27T12:45:45.5194193Z ---
+2026-06-27T12:45:45.5194294Z 
+2026-06-27T12:45:45.5194390Z --- 2026-06-27T12:45:44.930Z debug
+2026-06-27T12:45:45.5194756Z HEADERS: omitted; set WRANGLER_LOG_SANITIZE=false to include sanitized data
+2026-06-27T12:45:45.5195134Z ---
+2026-06-27T12:45:45.5195235Z 
+2026-06-27T12:45:45.5195323Z --- 2026-06-27T12:45:44.930Z debug
+2026-06-27T12:45:45.5195690Z RESPONSE: omitted; set WRANGLER_LOG_SANITIZE=false to include sanitized data
+2026-06-27T12:45:45.5196073Z ---
+2026-06-27T12:45:45.5196176Z 
+2026-06-27T12:45:45.5196267Z --- 2026-06-27T12:45:44.930Z debug
+2026-06-27T12:45:45.5196514Z -- END CF API RESPONSE
+2026-06-27T12:45:45.5196730Z ---
+2026-06-27T12:45:45.5196835Z 
+2026-06-27T12:45:45.5196931Z --- 2026-06-27T12:45:44.932Z log
+2026-06-27T12:45:45.5197091Z 
+2026-06-27T12:45:45.5197651Z Cloudflare collects anonymous telemetry about your usage of Wrangler. Learn more at https://github.com/cloudflare/workers-sdk/tree/main/packages/wrangler/telemetry.md
+2026-06-27T12:45:45.5198365Z ---
+2026-06-27T12:45:45.5198469Z 
+2026-06-27T12:45:45.5198569Z --- 2026-06-27T12:45:44.933Z log
+2026-06-27T12:45:45.5198725Z 
+2026-06-27T12:45:45.5198808Z ---
+2026-06-27T12:45:45.5198910Z 
+2026-06-27T12:45:45.5199001Z --- 2026-06-27T12:45:44.978Z error
+2026-06-27T12:45:45.5199666Z â [ERROR] A request to the Cloudflare API (/accounts/***/workers/services/sunil1) failed.
+2026-06-27T12:45:45.5200173Z 
+2026-06-27T12:45:45.5200280Z   Authentication error [code: 10000]
+2026-06-27T12:45:45.5200475Z 
+2026-06-27T12:45:45.5200479Z 
+2026-06-27T12:45:45.5200558Z ---
+2026-06-27T12:45:45.5200663Z 
+2026-06-27T12:45:45.5200750Z --- 2026-06-27T12:45:44.978Z log
+2026-06-27T12:45:45.5201308Z ð It looks like you are authenticating Wrangler via a custom API token set in an environment variable.
+2026-06-27T12:45:45.5201888Z Please ensure it has the correct permissions for this operation.
+2026-06-27T12:45:45.5202167Z 
+2026-06-27T12:45:45.5202241Z ---
+2026-06-27T12:45:45.5202345Z 
+2026-06-27T12:45:45.5202436Z --- 2026-06-27T12:45:44.979Z log
+2026-06-27T12:45:45.5202685Z Getting User settings...
+2026-06-27T12:45:45.5202912Z ---
+2026-06-27T12:45:45.5203014Z 
+2026-06-27T12:45:45.5203320Z --- 2026-06-27T12:45:44.980Z debug
+2026-06-27T12:45:45.5206104Z Metrics dispatcher: Posting data {"deviceId":"5d53d2de-4130-4115-a7c1-a7b10f7085f8","event":"wrangler command errored","timestamp":1782564344980,"properties":{"amplitude_session_id":1782564343706,"amplitude_event_id":1,"wranglerVersion":"4.105.0","wranglerMajorVersion":4,"wranglerMinorVersion":105,"wranglerPatchVersion":0,"osPlatform":"Linux","osVersion":"#18~24.04.1-Ubuntu SMP Thu May 28 16:39:11 UTC 2026","nodeVersion":22,"packageManager":"npm","isFirstUsage":false,"configFileType":"toml","isCI":true,"isPagesCI":false,"isWorkersCI":false,"isInteractive":false,"hasAssets":false,"agent":null,"argsUsed":[],"argsCombination":"","sanitizedCommand":"deploy","sanitizedArgs":{},"durationMs":1332,"errorType":"AuthenticationError","currentAgentSkillsInstalled":null}}
+2026-06-27T12:45:45.5208826Z ---
+2026-06-27T12:45:45.5208929Z 
+2026-06-27T12:45:45.5209139Z --- 2026-06-27T12:45:44.981Z debug
+2026-06-27T12:45:45.5209552Z -- START CF API REQUEST: GET https://api.cloudflare.com/client/v4/user/tokens/verify
+2026-06-27T12:45:45.5209963Z ---
+2026-06-27T12:45:45.5210062Z 
+2026-06-27T12:45:45.5210154Z --- 2026-06-27T12:45:44.981Z debug
+2026-06-27T12:45:45.5210554Z QUERY STRING: omitted; set WRANGLER_LOG_SANITIZE=false to include sanitized data
+2026-06-27T12:45:45.5210952Z ---
+2026-06-27T12:45:45.5211055Z 
+2026-06-27T12:45:45.5211139Z --- 2026-06-27T12:45:44.981Z debug
+2026-06-27T12:45:45.5211507Z HEADERS: omitted; set WRANGLER_LOG_SANITIZE=false to include sanitized data
+2026-06-27T12:45:45.5211925Z ---
+2026-06-27T12:45:45.5212027Z 
+2026-06-27T12:45:45.5212110Z --- 2026-06-27T12:45:44.981Z debug
+2026-06-27T12:45:45.5212465Z INIT: omitted; set WRANGLER_LOG_SANITIZE=false to include sanitized data
+2026-06-27T12:45:45.5212833Z ---
+2026-06-27T12:45:45.5212936Z 
+2026-06-27T12:45:45.5213017Z --- 2026-06-27T12:45:44.981Z debug
+2026-06-27T12:45:45.5213531Z -- END CF API REQUEST
+2026-06-27T12:45:45.5213758Z ---
+2026-06-27T12:45:45.5213859Z 
+2026-06-27T12:45:45.5213942Z --- 2026-06-27T12:45:45.136Z debug
+2026-06-27T12:45:45.5214220Z -- START CF API RESPONSE: Unauthorized 401
+2026-06-27T12:45:45.5214494Z ---
+2026-06-27T12:45:45.5214592Z 
+2026-06-27T12:45:45.5214675Z --- 2026-06-27T12:45:45.136Z debug
+2026-06-27T12:45:45.5215041Z HEADERS: omitted; set WRANGLER_LOG_SANITIZE=false to include sanitized data
+2026-06-27T12:45:45.5215414Z ---
+2026-06-27T12:45:45.5215515Z 
+2026-06-27T12:45:45.5215603Z --- 2026-06-27T12:45:45.136Z debug
+2026-06-27T12:45:45.5215964Z RESPONSE: omitted; set WRANGLER_LOG_SANITIZE=false to include sanitized data
+2026-06-27T12:45:45.5216349Z ---
+2026-06-27T12:45:45.5216448Z 
+2026-06-27T12:45:45.5216535Z --- 2026-06-27T12:45:45.136Z debug
+2026-06-27T12:45:45.5216777Z -- END CF API RESPONSE
+2026-06-27T12:45:45.5216988Z ---
+2026-06-27T12:45:45.5217087Z 
+2026-06-27T12:45:45.5217173Z --- 2026-06-27T12:45:45.137Z debug
+2026-06-27T12:45:45.5217523Z -- START CF API REQUEST: GET https://api.cloudflare.com/client/v4/user
+2026-06-27T12:45:45.5217886Z ---
+2026-06-27T12:45:45.5217985Z 
+2026-06-27T12:45:45.5218071Z --- 2026-06-27T12:45:45.137Z debug
+2026-06-27T12:45:45.5218444Z QUERY STRING: omitted; set WRANGLER_LOG_SANITIZE=false to include sanitized data
+2026-06-27T12:45:45.5218970Z ---
+2026-06-27T12:45:45.5219069Z 
+2026-06-27T12:45:45.5219157Z --- 2026-06-27T12:45:45.137Z debug
+2026-06-27T12:45:45.5219510Z HEADERS: omitted; set WRANGLER_LOG_SANITIZE=false to include sanitized data
+2026-06-27T12:45:45.5219881Z ---
+2026-06-27T12:45:45.5219981Z 
+2026-06-27T12:45:45.5220067Z --- 2026-06-27T12:45:45.137Z debug
+2026-06-27T12:45:45.5220414Z INIT: omitted; set WRANGLER_LOG_SANITIZE=false to include sanitized data
+2026-06-27T12:45:45.5220774Z ---
+2026-06-27T12:45:45.5220874Z 
+2026-06-27T12:45:45.5220965Z --- 2026-06-27T12:45:45.137Z debug
+2026-06-27T12:45:45.5221211Z -- END CF API REQUEST
+2026-06-27T12:45:45.5221418Z ---
+2026-06-27T12:45:45.5221518Z 
+2026-06-27T12:45:45.5221612Z --- 2026-06-27T12:45:45.255Z debug
+2026-06-27T12:45:45.5221873Z -- START CF API RESPONSE: Forbidden 403
+2026-06-27T12:45:45.5222134Z ---
+2026-06-27T12:45:45.5222235Z 
+2026-06-27T12:45:45.5222324Z --- 2026-06-27T12:45:45.255Z debug
+2026-06-27T12:45:45.5222678Z HEADERS: omitted; set WRANGLER_LOG_SANITIZE=false to include sanitized data
+2026-06-27T12:45:45.5223061Z ---
+2026-06-27T12:45:45.5223403Z 
+2026-06-27T12:45:45.5223503Z --- 2026-06-27T12:45:45.255Z debug
+2026-06-27T12:45:45.5223877Z RESPONSE: omitted; set WRANGLER_LOG_SANITIZE=false to include sanitized data
+2026-06-27T12:45:45.5224264Z ---
+2026-06-27T12:45:45.5224359Z 
+2026-06-27T12:45:45.5224447Z --- 2026-06-27T12:45:45.255Z debug
+2026-06-27T12:45:45.5224692Z -- END CF API RESPONSE
+2026-06-27T12:45:45.5224908Z ---
+2026-06-27T12:45:45.5241967Z 
+2026-06-27T12:45:45.5242102Z --- 2026-06-27T12:45:45.256Z debug
+2026-06-27T12:45:45.5242545Z -- START CF API REQUEST: GET https://api.cloudflare.com/client/v4/accounts
+2026-06-27T12:45:45.5242954Z ---
+2026-06-27T12:45:45.5243067Z 
+2026-06-27T12:45:45.5243612Z --- 2026-06-27T12:45:45.256Z debug
+2026-06-27T12:45:45.5244056Z QUERY STRING: omitted; set WRANGLER_LOG_SANITIZE=false to include sanitized data
+2026-06-27T12:45:45.5244473Z ---
+2026-06-27T12:45:45.5244575Z 
+2026-06-27T12:45:45.5244673Z --- 2026-06-27T12:45:45.256Z debug
+2026-06-27T12:45:45.5245064Z HEADERS: omitted; set WRANGLER_LOG_SANITIZE=false to include sanitized data
+2026-06-27T12:45:45.5245450Z ---
+2026-06-27T12:45:45.5245550Z 
+2026-06-27T12:45:45.5245646Z --- 2026-06-27T12:45:45.256Z debug
+2026-06-27T12:45:45.5245996Z INIT: omitted; set WRANGLER_LOG_SANITIZE=false to include sanitized data
+2026-06-27T12:45:45.5246364Z ---
+2026-06-27T12:45:45.5246458Z 
+2026-06-27T12:45:45.5246545Z --- 2026-06-27T12:45:45.256Z debug
+2026-06-27T12:45:45.5246788Z -- END CF API REQUEST
+2026-06-27T12:45:45.5247005Z ---
+2026-06-27T12:45:45.5247105Z 
+2026-06-27T12:45:45.5247195Z --- 2026-06-27T12:45:45.256Z debug
+2026-06-27T12:45:45.5247578Z -- START CF API REQUEST: GET https://api.cloudflare.com/client/v4/memberships
+2026-06-27T12:45:45.5247970Z ---
+2026-06-27T12:45:45.5248070Z 
+2026-06-27T12:45:45.5248156Z --- 2026-06-27T12:45:45.256Z debug
+2026-06-27T12:45:45.5248530Z QUERY STRING: omitted; set WRANGLER_LOG_SANITIZE=false to include sanitized data
+2026-06-27T12:45:45.5248926Z ---
+2026-06-27T12:45:45.5249021Z 
+2026-06-27T12:45:45.5249109Z --- 2026-06-27T12:45:45.256Z debug
+2026-06-27T12:45:45.5249466Z HEADERS: omitted; set WRANGLER_LOG_SANITIZE=false to include sanitized data
+2026-06-27T12:45:45.5249848Z ---
+2026-06-27T12:45:45.5249944Z 
+2026-06-27T12:45:45.5250032Z --- 2026-06-27T12:45:45.256Z debug
+2026-06-27T12:45:45.5250382Z INIT: omitted; set WRANGLER_LOG_SANITIZE=false to include sanitized data
+2026-06-27T12:45:45.5250741Z ---
+2026-06-27T12:45:45.5250842Z 
+2026-06-27T12:45:45.5250923Z --- 2026-06-27T12:45:45.256Z debug
+2026-06-27T12:45:45.5251168Z -- END CF API REQUEST
+2026-06-27T12:45:45.5251375Z ---
+2026-06-27T12:45:45.5251508Z 
+2026-06-27T12:45:45.5251593Z --- 2026-06-27T12:45:45.367Z debug
+2026-06-27T12:45:45.5251879Z -- START CF API RESPONSE: Forbidden 403
+2026-06-27T12:45:45.5252161Z ---
+2026-06-27T12:45:45.5252264Z 
+2026-06-27T12:45:45.5252346Z --- 2026-06-27T12:45:45.368Z debug
+2026-06-27T12:45:45.5252701Z HEADERS: omitted; set WRANGLER_LOG_SANITIZE=false to include sanitized data
+2026-06-27T12:45:45.5253433Z ---
+2026-06-27T12:45:45.5253647Z 
+2026-06-27T12:45:45.5253737Z --- 2026-06-27T12:45:45.368Z debug
+2026-06-27T12:45:45.5254113Z RESPONSE: omitted; set WRANGLER_LOG_SANITIZE=false to include sanitized data
+2026-06-27T12:45:45.5254494Z ---
+2026-06-27T12:45:45.5254596Z 
+2026-06-27T12:45:45.5254680Z --- 2026-06-27T12:45:45.368Z debug
+2026-06-27T12:45:45.5254931Z -- END CF API RESPONSE
+2026-06-27T12:45:45.5255144Z ---
+2026-06-27T12:45:45.5255244Z 
+2026-06-27T12:45:45.5255328Z --- 2026-06-27T12:45:45.374Z debug
+2026-06-27T12:45:45.5255602Z -- START CF API RESPONSE: Unauthorized 401
+2026-06-27T12:45:45.5255871Z ---
+2026-06-27T12:45:45.5255969Z 
+2026-06-27T12:45:45.5256058Z --- 2026-06-27T12:45:45.374Z debug
+2026-06-27T12:45:45.5256416Z HEADERS: omitted; set WRANGLER_LOG_SANITIZE=false to include sanitized data
+2026-06-27T12:45:45.5256789Z ---
+2026-06-27T12:45:45.5256888Z 
+2026-06-27T12:45:45.5256972Z --- 2026-06-27T12:45:45.374Z debug
+2026-06-27T12:45:45.5257336Z RESPONSE: omitted; set WRANGLER_LOG_SANITIZE=false to include sanitized data
+2026-06-27T12:45:45.5257719Z ---
+2026-06-27T12:45:45.5257821Z 
+2026-06-27T12:45:45.5257906Z --- 2026-06-27T12:45:45.374Z debug
+2026-06-27T12:45:45.5258162Z -- END CF API RESPONSE
+2026-06-27T12:45:45.5258374Z ---
+2026-06-27T12:45:45.5258474Z 
+2026-06-27T12:45:45.5258561Z --- 2026-06-27T12:45:45.375Z log
+2026-06-27T12:45:45.5258721Z 
+2026-06-27T12:45:45.5258799Z ---
+2026-06-27T12:45:45.5258901Z 
+2026-06-27T12:45:45.5258984Z --- 2026-06-27T12:45:45.376Z error
+2026-06-27T12:45:45.5259422Z â [ERROR] A request to the Cloudflare API (/accounts) failed.
+2026-06-27T12:45:45.5259688Z 
+2026-06-27T12:45:45.5259793Z   Invalid access token [code: 9109]
+2026-06-27T12:45:45.5260186Z   
+2026-06-27T12:45:45.5260633Z   If you think this is a bug, please open an issue at: https://github.com/cloudflare/workers-sdk/issues/new/choose
+2026-06-27T12:45:45.5261048Z 
+2026-06-27T12:45:45.5261052Z 
+2026-06-27T12:45:45.5261132Z ---
+2026-06-27T12:45:45.5261238Z 
+2026-06-27T12:45:45.5261332Z --- 2026-06-27T12:45:45.377Z debug
+2026-06-27T12:45:45.5264116Z Metrics dispatcher: Posting data {"deviceId":"5d53d2de-4130-4115-a7c1-a7b10f7085f8","event":"wrangler command started","timestamp":1782564345377,"properties":{"amplitude_session_id":1782564343595,"amplitude_event_id":0,"wranglerVersion":"4.105.0","wranglerMajorVersion":4,"wranglerMinorVersion":105,"wranglerPatchVersion":0,"osPlatform":"Linux","osVersion":"#18~24.04.1-Ubuntu SMP Thu May 28 16:39:11 UTC 2026","nodeVersion":22,"packageManager":"npm","isFirstUsage":false,"configFileType":"toml","isCI":true,"isPagesCI":false,"isWorkersCI":false,"isInteractive":false,"hasAssets":false,"agent":null,"argsUsed":[],"argsCombination":"","sanitizedCommand":"","sanitizedArgs":{},"currentAgentSkillsInstalled":null}}
+2026-06-27T12:45:45.5266623Z ---
+2026-06-27T12:45:45.5266728Z 
+2026-06-27T12:45:45.5266822Z --- 2026-06-27T12:45:45.377Z debug
+2026-06-27T12:45:45.5269451Z Metrics dispatcher: Posting data {"deviceId":"5d53d2de-4130-4115-a7c1-a7b10f7085f8","event":"wrangler command errored","timestamp":1782564345377,"properties":{"amplitude_session_id":1782564343595,"amplitude_event_id":1,"wranglerVersion":"4.105.0","wranglerMajorVersion":4,"wranglerMinorVersion":105,"wranglerPatchVersion":0,"osPlatform":"Linux","osVersion":"#18~24.04.1-Ubuntu SMP Thu May 28 16:39:11 UTC 2026","nodeVersion":22,"packageManager":"npm","isFirstUsage":false,"configFileType":"toml","isCI":true,"isPagesCI":false,"isWorkersCI":false,"isInteractive":false,"hasAssets":false,"agent":null,"argsUsed":[],"argsCombination":"","sanitizedCommand":"","sanitizedArgs":{},"durationMs":1790,"errorType":"APIError","currentAgentSkillsInstalled":null}}
+2026-06-27T12:45:45.5272048Z ---
+2026-06-27T12:45:45.5272442Z find: â/home/runner/.wrangler/logs/â: No such file or directory
+2026-06-27T12:45:45.5379337Z Node 20 is being deprecated. This workflow is running with Node 24 by default. If you need to temporarily use Node 20, you can set the ACTIONS_ALLOW_USE_UNSECURE_NODE_VERSION=true environment variable. For more information see: https://github.blog/changelog/2025-09-19-deprecation-of-node-20-on-github-actions-runners/
+2026-06-27T12:45:45.5380761Z Post job cleanup.
+2026-06-27T12:45:45.6008815Z (node:2625) [DEP0040] DeprecationWarning: The `punycode` module is deprecated. Please use a userland alternative instead.
+2026-06-27T12:45:45.6010157Z (Use `node --trace-deprecation ...` to show where the warning was created)
+2026-06-27T12:45:45.6042598Z [command]/usr/bin/git version
+2026-06-27T12:45:45.6076817Z git version 2.54.0
+2026-06-27T12:45:45.6116334Z Temporarily overriding HOME='/home/runner/work/_temp/c98f2f2f-6d73-4509-94a1-eaf6b6525320' before making global git config changes
+2026-06-27T12:45:45.6117858Z Adding repository directory to the temporary git global config as a safe directory
+2026-06-27T12:45:45.6121738Z [command]/usr/bin/git config --global --add safe.directory /home/runner/work/sunil1/sunil1
+2026-06-27T12:45:45.6155010Z [command]/usr/bin/git config --local --name-only --get-regexp core\.sshCommand
+2026-06-27T12:45:45.6187677Z [command]/usr/bin/git submodule foreach --recursive sh -c "git config --local --name-only --get-regexp 'core\.sshCommand' && git config --local --unset-all 'core.sshCommand' || :"
+2026-06-27T12:45:45.6401839Z [command]/usr/bin/git config --local --name-only --get-regexp http\.https\:\/\/github\.com\/\.extraheader
+2026-06-27T12:45:45.6425780Z http.https://github.com/.extraheader
+2026-06-27T12:45:45.6434372Z [command]/usr/bin/git config --local --unset-all http.https://github.com/.extraheader
+2026-06-27T12:45:45.6464689Z [command]/usr/bin/git submodule foreach --recursive sh -c "git config --local --name-only --get-regexp 'http\.https\:\/\/github\.com\/\.extraheader' && git config --local --unset-all 'http.https://github.com/.extraheader' || :"
+2026-06-27T12:45:45.6813567Z Cleaning up orphan processes
+2026-06-27T12:45:45.7109075Z ##[warning]Node.js 20 is deprecated. The following actions target Node.js 20 but are being forced to run on Node.js 24: actions/checkout@v3, astral-sh/setup-uv@v5. For more information see: https://github.blog/changelog/2025-09-19-deprecation-of-node-20-on-github-actions-runners/
