@@ -3,7 +3,7 @@ import { tokenPersistence } from "../utils/persistence";
 import { Capacitor } from "@capacitor/core";
 
 // Define the production fallback URL for mobile apps
-const PROD_BACKEND_URL = "https://sunil1.sunilbishnoi.workers.dev";
+const PROD_BACKEND_URL = "https://expense-backend-zio8.onrender.com";
 
 let API_BASE_URL = import.meta.env.VITE_API_BASE_URL || "";
 
