@@ -46,9 +46,17 @@ jobs:
     steps:
     - uses: actions/checkout@v3
     
-    - name: Deploy to Cloudflare Workers
-      uses: cloudflare/wrangler-action@v3
+    - name: Setup uv
+      uses: astral-sh/setup-uv@v3
       with:
-        apiToken: ${{ secrets.CF_API_TOKEN }}
-        accountId: ${{ secrets.CF_ACCOUNT_ID }}
-        workingDirectory: backend
+        version: "latest"
+        
+    - name: Deploy to Cloudflare Workers via pywrangler
+      working-directory: ./backend
+      env:
+        CLOUDFLARE_API_TOKEN: ${{ secrets.CF_API_TOKEN }}
+        CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CF_ACCOUNT_ID }}
+      run: |
+        # Remove requirements.txt during deployment to allow pyproject.toml bundling
+        rm -f requirements.txt
+        uvx --from workers-py pywrangler deploy

@@ -15,7 +15,3 @@ CLOUDFLARE_R2_BUCKET_NAME = "fieldops-uploads"
 binding = "DB"
 database_name = "fieldops_db"
 database_id = "34e085d8-c078-4f2f-b240-9bf8f4cf9301"
-
-[[r2_buckets]]
-binding = "UPLOADS_BUCKET"
-bucket_name = "fieldops-uploads"
