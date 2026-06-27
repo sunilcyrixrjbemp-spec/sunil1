@@ -258,18 +258,10 @@ export default function DashboardLayout() {
   return (
     <div className="min-h-screen bg-[#f4f6f9] text-[#212529] flex flex-col lg:flex-row antialiased">
       
-      {/* Mobile Sidebar Backdrop */}
-      {!isSidebarCollapsed && (
-        <div 
-          className="fixed inset-0 bg-black/50 z-40 lg:hidden"
-          onClick={() => setIsSidebarCollapsed(true)}
-        />
-      )}
-
-      {/* SIDEBAR DRAWER - MOBILE & DESKTOP */}
-      <aside className={`fixed inset-y-0 left-0 z-50 lg:sticky lg:flex flex-col bg-[#343a40] text-[#c2c7d0] transition-all duration-200 ${
-        isSidebarCollapsed ? "-translate-x-full lg:translate-x-0 lg:w-16" : "translate-x-0 w-60"
-      } h-screen shrink-0 shadow-lg`}>
+      {/* SIDEBAR - DESKTOP ONLY */}
+      <aside className={`hidden lg:flex flex-col bg-[#343a40] text-[#c2c7d0] transition-all duration-200 ${
+        isSidebarCollapsed ? "w-16" : "w-60"
+      } sticky top-0 h-screen shrink-0 z-30 shadow-lg`}>
         
         {/* Brand Header */}
         <div className="h-14 flex items-center justify-center border-b border-gray-700 px-4 bg-[#2f353f]/50 shrink-0 overflow-hidden">
@@ -504,69 +496,75 @@ export default function DashboardLayout() {
 
       {/* MOBILE FULL NAVIGATION OVERLAY MODAL */}
       {isMobileMenuOpen && (
-        <div className="fixed inset-0 bg-black/60 z-50 flex flex-col justify-end lg:hidden animate-fadeIn">
-          {/* Backdrop tap to close */}
-          <div className="absolute inset-0" onClick={() => setIsMobileMenuOpen(false)} />
-          
-          {/* Menu Card Content */}
-          <div className="relative bg-white rounded-t-2xl shadow-2xl w-full max-h-[80vh] flex flex-col z-50 overflow-hidden text-gray-800 animate-slideUp">
-            {/* Header */}
-            <div className="px-4 py-3 bg-gray-50 border-b border-gray-200 flex items-center justify-between shrink-0">
-              <span className="text-xs font-bold uppercase tracking-wider text-gray-500 flex items-center gap-1.5">
-                <MenuGridIcon /> Navigation Menu
-              </span>
-              <button 
-                onClick={() => setIsMobileMenuOpen(false)}
-                className="p-1 hover:bg-gray-200 rounded transition-colors text-gray-500 hover:text-gray-800 border-0 bg-transparent cursor-pointer"
-              >
-                <X className="w-5 h-5" />
-              </button>
-            </div>
+        <div className="fixed inset-0 bg-[#f4f6f9] z-[999] flex flex-col lg:hidden animate-fadeIn">
+          {/* Header */}
+          <div className="h-14 px-4 bg-white border-b border-gray-200 flex items-center justify-between shrink-0 shadow-sm">
+            <span className="text-xs font-bold uppercase tracking-wider text-gray-700 flex items-center gap-1.5">
+              <MenuGridIcon /> Navigation Menu
+            </span>
+            <button 
+              onClick={() => setIsMobileMenuOpen(false)}
+              className="p-1 hover:bg-gray-100 rounded transition-colors text-gray-500 hover:text-gray-800 border-0 bg-transparent cursor-pointer"
+            >
+              <X className="w-5 h-5" />
+            </button>
+          </div>
 
-            {/* Menu Items Grid */}
-            <div className="flex-1 overflow-y-auto p-3.5 pb-6">
-              <div className="grid grid-cols-3 gap-2.5 text-center">
-                {allowedMenuItems.map((item) => {
-                  const Icon = item.icon;
-                  const isActive = currentActiveItem?.id === item.id;
-                  return (
-                    <Link
-                      key={item.id}
-                      to={item.path}
-                      onClick={() => setIsMobileMenuOpen(false)}
-                      className={`flex flex-col items-center justify-center p-2 rounded-lg border transition-all ${
-                        isActive 
-                          ? "bg-blue-50 border-blue-200 text-blue-700 font-bold" 
-                          : "bg-gray-50 border-gray-100 hover:bg-gray-100 text-gray-700"
-                      }`}
-                    >
-                      <div className={`p-1.5 rounded-full ${isActive ? "bg-blue-600 text-white" : "bg-white text-gray-500 border border-gray-100 shadow-sm"}`}>
-                        <Icon className="w-4.5 h-4.5" />
-                      </div>
-                      <span className="text-[10px] font-bold uppercase tracking-wider mt-1.5 leading-tight truncate w-full">
-                        {item.name}
-                      </span>
-                    </Link>
-                  );
-                })}
-                {/* Logout Button in Grid */}
-                <button
-                  type="button"
-                  onClick={() => {
-                    setIsMobileMenuOpen(false);
-                    handleLogout();
-                  }}
-                  className="flex flex-col items-center justify-center p-2 rounded-lg border bg-rose-50 border-rose-100 hover:bg-rose-100/50 text-rose-700 transition-all cursor-pointer"
-                >
-                  <div className="p-1.5 rounded-full bg-rose-600 text-white shadow-sm">
-                    <LogOut className="w-4.5 h-4.5" />
-                  </div>
-                  <span className="text-[10px] font-bold uppercase tracking-wider mt-1.5 leading-tight">
-                    Logout
-                  </span>
-                </button>
-              </div>
+          {/* User Info Bar */}
+          <div className="p-4 bg-white border-b border-gray-150 shrink-0 flex items-center gap-3">
+            <div className="h-10 w-10 rounded-full bg-blue-600 flex items-center justify-center text-white font-black text-sm shadow-sm select-none">
+              {user?.name ? user.name.charAt(0).toUpperCase() : "U"}
             </div>
+            <div>
+              <p className="text-xs font-bold text-gray-800 leading-tight">{user?.name || "Employee"}</p>
+              <p className="text-[10px] text-gray-500 font-mono mt-0.5">{user?.user_id}</p>
+            </div>
+            <div className="ml-auto bg-green-50 border border-green-200 rounded px-2 py-0.5">
+              <span className="text-[9px] text-green-700 font-bold uppercase tracking-wide">{userRole}</span>
+            </div>
+          </div>
+
+          {/* Menu Items Grid - centered vertically */}
+          <div className="flex-1 overflow-y-auto flex items-center justify-center p-6">
+            <div className="w-full max-w-sm grid grid-cols-3 gap-3 text-center">
+              {allowedMenuItems.map((item) => {
+                const Icon = item.icon;
+                const isActive = currentActiveItem?.id === item.id;
+                return (
+                  <Link
+                    key={item.id}
+                    to={item.path}
+                    onClick={() => setIsMobileMenuOpen(false)}
+                    className={`flex flex-col items-center justify-center p-3 rounded-lg border transition-all ${
+                      isActive 
+                        ? "bg-blue-50 border-blue-200 text-blue-700 font-bold" 
+                        : "bg-white border-gray-200 hover:bg-gray-50 text-gray-700 shadow-sm"
+                    }`}
+                  >
+                    <div className={`p-2.5 rounded-full ${isActive ? "bg-blue-600 text-white" : "bg-gray-50 text-gray-500 border border-gray-100 shadow-inner"}`}>
+                      <Icon className="w-5 h-5" />
+                    </div>
+                    <span className="text-[10px] font-bold uppercase tracking-wider mt-2 leading-tight truncate w-full">
+                      {item.name}
+                    </span>
+                  </Link>
+                );
+              })}
+            </div>
+          </div>
+
+          {/* Footer with Logout */}
+          <div className="p-4 bg-white border-t border-gray-200 shrink-0">
+            <button
+              type="button"
+              onClick={() => {
+                setIsMobileMenuOpen(false);
+                handleLogout();
+              }}
+              className="w-full py-2.5 bg-rose-600 hover:bg-rose-700 text-white rounded text-xs font-bold transition-all cursor-pointer border-0 flex items-center justify-center gap-1.5 shadow-sm"
+            >
+              <LogOut className="w-4 h-4" /> LOG OUT
+            </button>
           </div>
         </div>
       )}

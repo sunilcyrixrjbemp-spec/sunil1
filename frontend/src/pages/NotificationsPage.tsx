@@ -29,8 +29,17 @@ interface NotificationItem {
 export default function NotificationsPage() {
   const navigate = useNavigate();
   const [user, setUser] = useState<any>(null);
-  const [notifications, setNotifications] = useState<NotificationItem[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [notifications, setNotifications] = useState<NotificationItem[]>(() => {
+    const currentUser = JSON.parse(localStorage.getItem("user") || "null");
+    if (!currentUser) return [];
+    const cached = localStorage.getItem(`notifications_${currentUser.user_id}`);
+    return cached ? JSON.parse(cached) : [];
+  });
+  const [loading, setLoading] = useState(() => {
+    const currentUser = JSON.parse(localStorage.getItem("user") || "null");
+    if (!currentUser) return true;
+    return !localStorage.getItem(`notifications_${currentUser.user_id}`);
+  });
 
   // Filter states
   const [filterStatus, setFilterStatus] = useState<string>("all");
@@ -57,7 +66,11 @@ export default function NotificationsPage() {
   };
 
   const loadNotifications = async (currentUser: any) => {
-    setLoading(true);
+    const cacheKey = `notifications_${currentUser.user_id}`;
+    const hasCache = !!localStorage.getItem(cacheKey);
+    if (!hasCache) {
+      setLoading(true);
+    }
     const list: NotificationItem[] = [];
     try {
       const readNotifIds = JSON.parse(localStorage.getItem("read_notification_ids") || "[]");

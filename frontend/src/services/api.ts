@@ -50,28 +50,28 @@ api.interceptors.response.use(
   async (error: AxiosError) => {
     const originalRequest = error.config;
     
-    // Check if error status is 401 Unauthorized and not already retried
-    if (error.response?.status === 401 && originalRequest && !(originalRequest as any)._retry) {
-      if (isRefreshing) {
-        return new Promise((resolve, reject) => {
-          failedQueue.push({ resolve, reject });
-        }).then(token => {
-          if (originalRequest.headers) {
-            originalRequest.headers.Authorization = `Bearer ${token}`;
-          }
-          return api(originalRequest);
-        }).catch(err => {
-          return Promise.reject(err);
-        });
-      }
-      
-      (originalRequest as any)._retry = true;
-      isRefreshing = true;
-      
+    // Only handle 401 Unauthorized status codes
+    if (error.response?.status === 401) {
       const refreshToken = localStorage.getItem("refresh_token");
       
-      // If we have a refresh token, we can try to request a new access token
-      if (refreshToken) {
+      // Try refreshing the token if we have a refresh token and haven't retried yet
+      if (refreshToken && originalRequest && !(originalRequest as any)._retry) {
+        if (isRefreshing) {
+          return new Promise((resolve, reject) => {
+            failedQueue.push({ resolve, reject });
+          }).then(token => {
+            if (originalRequest.headers) {
+              originalRequest.headers.Authorization = `Bearer ${token}`;
+            }
+            return api(originalRequest);
+          }).catch(err => {
+            return Promise.reject(err);
+          });
+        }
+        
+        (originalRequest as any)._retry = true;
+        isRefreshing = true;
+        
         try {
           const response = await axios.post(`${API_BASE_URL}/auth/refresh`, {
             refresh_token: refreshToken
@@ -94,7 +94,7 @@ api.interceptors.response.use(
         } catch (refreshError) {
           processQueue(refreshError, null);
           
-          // Refresh failed — session invalidated by admin or another device login
+          // Refresh failed — clear credentials and redirect to login
           localStorage.removeItem("access_token");
           localStorage.removeItem("refresh_token");
           localStorage.removeItem("user");
@@ -105,11 +105,10 @@ api.interceptors.response.use(
           isRefreshing = false;
         }
       } else {
-        // No refresh token available, log out
+        // No refresh token or retry already failed — log out
         localStorage.removeItem("access_token");
         localStorage.removeItem("refresh_token");
         localStorage.removeItem("user");
-        // Only redirect if we are not already on login page
         if (!window.location.hash.includes("/login")) {
           window.location.hash = "#/login";
           window.location.reload();

@@ -18,9 +18,24 @@ const months = [
 ];
 
 export default function AnalysisPage() {
-  const [loading, setLoading] = useState(true);
-  const [myExpenses, setMyExpenses] = useState<any[]>([]);
-  const [teamExpenses, setTeamExpenses] = useState<any[]>([]);
+  const [myExpenses, setMyExpenses] = useState<any[]>(() => {
+    const currentUser = authService.getCurrentUser();
+    if (!currentUser) return [];
+    const cached = localStorage.getItem(`cache_my_expenses_${currentUser.user_id}`);
+    return cached ? JSON.parse(cached) : [];
+  });
+  const [teamExpenses, setTeamExpenses] = useState<any[]>(() => {
+    const currentUser = authService.getCurrentUser();
+    if (!currentUser) return [];
+    const cached = localStorage.getItem(`cache_team_expenses_${currentUser.user_id}`);
+    return cached ? JSON.parse(cached) : [];
+  });
+  const [loading, setLoading] = useState(() => {
+    const currentUser = authService.getCurrentUser();
+    if (!currentUser) return true;
+    const hasMyCache = !!localStorage.getItem(`cache_my_expenses_${currentUser.user_id}`);
+    return !hasMyCache;
+  });
   const [viewMode, setViewMode] = useState<"my" | "team">(() => {
     const saved = localStorage.getItem("analysis_viewMode");
     return (saved === "my" || saved === "team") ? saved : "my";
@@ -90,8 +105,14 @@ export default function AnalysisPage() {
   const isReviewer = userRole === "Admin" || allowedWindows.includes("approval");
 
   useEffect(() => {
+    const currentUser = authService.getCurrentUser();
+    const uId = currentUser?.user_id || "";
+    
     const fetchData = async () => {
-      setLoading(true);
+      const hasCache = uId && localStorage.getItem(`cache_my_expenses_${uId}`);
+      if (!hasCache) {
+        setLoading(true);
+      }
       try {
         if (isReviewer) {
           const [own, team] = await Promise.all([
@@ -100,9 +121,16 @@ export default function AnalysisPage() {
           ]);
           setMyExpenses(own || []);
           setTeamExpenses(team || []);
+          if (uId) {
+            localStorage.setItem(`cache_my_expenses_${uId}`, JSON.stringify(own || []));
+            localStorage.setItem(`cache_team_expenses_${uId}`, JSON.stringify(team || []));
+          }
         } else {
           const own = await expenseService.getExpenses();
           setMyExpenses(own || []);
+          if (uId) {
+            localStorage.setItem(`cache_my_expenses_${uId}`, JSON.stringify(own || []));
+          }
         }
       } catch (err) {
         console.error("Error fetching analysis data:", err);
@@ -111,7 +139,7 @@ export default function AnalysisPage() {
       }
     };
     fetchData();
-  }, []);
+  }, [isReviewer]);
 
   // Filter expenses by selected month/year
   const filterByMonth = (expenses: any[]) => {

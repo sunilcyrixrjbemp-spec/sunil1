@@ -74,9 +74,21 @@ export default function HelpPage() {
   });
 
   // Data states
-  const [tickets, setTickets] = useState<any[]>([]);
-  const [myExpenses, setMyExpenses] = useState<any[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [tickets, setTickets] = useState<any[]>(() => {
+    const currentUserId = (() => { try { const u = JSON.parse(localStorage.getItem("user") || "{}"); return u.user_id || "Admin"; } catch(e) { return "Admin"; } })().trim();
+    const cached = localStorage.getItem(`cache_support_tickets_${currentUserId}`);
+    return cached ? JSON.parse(cached) : [];
+  });
+  const [myExpenses, setMyExpenses] = useState<any[]>(() => {
+    const currentUserId = (() => { try { const u = JSON.parse(localStorage.getItem("user") || "{}"); return u.user_id || "Admin"; } catch(e) { return "Admin"; } })().trim();
+    const cached = localStorage.getItem(`cache_my_expenses_${currentUserId}`);
+    return cached ? JSON.parse(cached) : [];
+  });
+  const [loading, setLoading] = useState(() => {
+    const currentUserId = (() => { try { const u = JSON.parse(localStorage.getItem("user") || "{}"); return u.user_id || "Admin"; } catch(e) { return "Admin"; } })().trim();
+    const hasTicketsCache = !!localStorage.getItem(`cache_support_tickets_${currentUserId}`);
+    return !hasTicketsCache;
+  });
   const [raising, setRaising] = useState(false);
 
   // Form states
@@ -189,7 +201,11 @@ export default function HelpPage() {
   };
 
   const fetchInitialData = async () => {
-    setLoading(true);
+    const currentUserId = currentUser?.user_id || "Admin";
+    const hasCache = !!localStorage.getItem(`cache_support_tickets_${currentUserId}`);
+    if (!hasCache) {
+      setLoading(true);
+    }
     try {
       // Fetch tickets and expenses concurrently for faster load
       const [ticketList, expenseList] = await Promise.all([
@@ -198,9 +214,15 @@ export default function HelpPage() {
       ]);
       setTickets(ticketList);
       setMyExpenses(expenseList);
+      localStorage.setItem(`cache_support_tickets_${currentUserId}`, JSON.stringify(ticketList));
+      if (currentUser) {
+        localStorage.setItem(`cache_my_expenses_${currentUserId}`, JSON.stringify(expenseList));
+      }
     } catch (e) {
       console.error("Failed to load help center tickets", e);
-      toast.error("Failed to load support tickets.");
+      if (!hasCache) {
+        toast.error("Failed to load support tickets.");
+      }
     } finally {
       setLoading(false);
     }
