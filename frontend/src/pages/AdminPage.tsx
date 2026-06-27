@@ -924,7 +924,7 @@ export default function AdminPage() {
 
       {/* ================= MODAL: CREATE SINGLE USER ================= */}
       {showSingleUserModal && (
-        <div className="fixed inset-0 bg-black/50 flex justify-center items-start p-4 py-8 z-50 overflow-y-auto animate-fadeIn">
+        <div className="fixed inset-0 bg-black/50 flex justify-center items-start p-4 py-8 z-[9999] overflow-y-auto animate-fadeIn">
           <div className="bg-white border border-gray-300 rounded shadow-xl w-full max-w-4xl p-6 relative my-8 md:my-16 animate-scaleIn text-gray-800">
             <h3 className="text-sm font-bold uppercase tracking-wider border-b border-gray-200 pb-3 text-gray-800">
               Register New Employee
@@ -1212,7 +1212,7 @@ export default function AdminPage() {
 
       {/* ================= MODAL: EDIT USER DETAILS ================= */}
       {showEditUserModal && editingUser && (
-        <div className="fixed inset-0 bg-black/50 flex justify-center items-start p-4 py-8 z-50 overflow-y-auto animate-fadeIn">
+        <div className="fixed inset-0 bg-black/50 flex justify-center items-start p-4 py-8 z-[9999] overflow-y-auto animate-fadeIn">
           <div className="bg-white border border-gray-300 rounded shadow-xl w-full max-w-4xl p-6 relative my-8 md:my-16 animate-scaleIn text-gray-800">
             <h3 className="text-sm font-bold uppercase tracking-wider border-b border-gray-200 pb-3 text-gray-800">
               Update Employee: <span className="text-blue-600 font-mono font-bold">{editingUser.user_id}</span>
@@ -1498,7 +1498,7 @@ export default function AdminPage() {
 
       {/* ================= MODAL: CSV BULK IMPORT ================= */}
       {showBulkUploadModal && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50 overflow-y-auto animate-fadeIn">
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-[9999] overflow-y-auto animate-fadeIn">
           <div className="bg-white border border-gray-300 rounded shadow-lg w-full max-w-2xl p-6 relative animate-scaleIn text-gray-800">
             <h3 className="text-sm font-bold uppercase tracking-wider border-b border-gray-200 pb-3 text-gray-800">
               Import Employees via CSV
@@ -1590,7 +1590,7 @@ export default function AdminPage() {
 
       {/* ================= MODAL: USER UPDATE ROLE MAPPING (HIERARCHY CONFIG) ================= */}
       {showHierarchyModal && (
-        <div className="fixed inset-0 bg-black/50 flex justify-center items-start p-4 py-8 z-50 overflow-y-auto animate-fadeIn">
+        <div className="fixed inset-0 bg-black/50 flex justify-center items-start p-4 py-8 z-[9999] overflow-y-auto animate-fadeIn">
           <div className="bg-white border border-gray-300 rounded shadow-xl w-full max-w-3xl p-6 relative my-8 md:my-16 animate-scaleIn text-gray-800">
             <h3 className="text-base font-bold text-gray-850 tracking-wide border-b border-gray-200 pb-3 text-left">
               User Update Role Mapping

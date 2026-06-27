@@ -59,8 +59,17 @@ export default function DashboardLayout() {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [user, setUser] = useState<any>(null);
   
-  // Notification State
-  const [notifications, setNotifications] = useState<NotificationItem[]>([]);
+  // Notification State (loads instantly from cache for maximum speed)
+  const [notifications, setNotifications] = useState<NotificationItem[]>(() => {
+    try {
+      const currentUser = JSON.parse(localStorage.getItem("user") || "null");
+      if (currentUser) {
+        const cached = localStorage.getItem(`notifications_${currentUser.user_id}`);
+        return cached ? JSON.parse(cached).slice(0, 10) : [];
+      }
+    } catch (_) {}
+    return [];
+  });
   const [isNotifOpen, setIsNotifOpen] = useState(false);
 
   useEffect(() => {

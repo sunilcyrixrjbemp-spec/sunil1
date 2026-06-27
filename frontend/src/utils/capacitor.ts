@@ -162,6 +162,13 @@ const saveFCMToken = async (token: string): Promise<void> => {
   }
 };
 
+export const syncFCMToken = async (): Promise<void> => {
+  const token = localStorage.getItem('fcm_token');
+  if (!token) return;
+  console.log('[FCM] Syncing FCM token to backend...');
+  await saveFCMToken(token);
+};
+
 export const initCapacitorPush = async (): Promise<void> => {
   if (!isNativeApp()) return;
 
@@ -175,12 +182,29 @@ export const initCapacitorPush = async (): Promise<void> => {
       return;
     }
 
+    // Create default channel for Android (importance 5 triggers heads-up alert popup)
+    try {
+      await PushNotifications.createChannel({
+        id: 'default',
+        name: 'Default Channel',
+        description: 'General push notifications',
+        importance: 5,
+        visibility: 1,
+        sound: 'default',
+        vibration: true,
+      });
+      console.log('[FCM] Android push channel created successfully');
+    } catch (channelError) {
+      console.warn('[FCM] Failed to create push channel:', channelError);
+    }
+
     // Register with FCM
     await PushNotifications.register();
 
     // FCM Token received
     PushNotifications.addListener('registration', (token) => {
       console.log('[FCM] Native token received:', token.value.slice(-10));
+      localStorage.setItem('fcm_token', token.value); // Cache always!
       saveFCMToken(token.value);
     });
 

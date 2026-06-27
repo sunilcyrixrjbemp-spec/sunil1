@@ -1,6 +1,5 @@
 import { useEffect, useRef } from "react";
 import toast from "react-hot-toast";
-import { Bell } from "lucide-react";
 import {
   initFirebaseMessaging,
   requestNotificationPermission,
@@ -57,26 +56,24 @@ export const useFCMNotifications = () => {
         const body = payload.notification?.body || "";
 
         // Show a custom toast notification
-        toast.custom(
+        toast(
           (t) => (
-            <div
-              className={`flex items-start gap-3 bg-white border border-gray-200 shadow-lg rounded-lg p-3.5 max-w-sm w-full ${
-                t.visible ? "animate-slideIn" : "opacity-0"
-              }`}
-              onClick={() => toast.dismiss(t.id)}
-            >
-              <div className="w-8 h-8 bg-blue-600 rounded-full flex items-center justify-center shrink-0">
-                <Bell className="w-4 h-4 text-white" />
-              </div>
-              <div className="flex-1 min-w-0">
-                <p className="text-xs font-bold text-gray-800 leading-tight">{title}</p>
-                {body && (
-                  <p className="text-[11px] text-gray-500 mt-0.5 leading-relaxed">{body}</p>
-                )}
-              </div>
+            <div className="flex flex-col gap-0.5 pr-2 select-none" onClick={() => toast.dismiss(t.id)}>
+              <span className="font-bold text-[#1a202c] text-xs uppercase tracking-wide">
+                {title}
+              </span>
+              {body && (
+                <span className="text-[10px] text-gray-500 font-semibold leading-normal">
+                  {body}
+                </span>
+              )}
             </div>
           ),
-          { duration: 5000, position: "top-right" }
+          {
+            icon: "🔔",
+            duration: 5000,
+            position: "top-right"
+          }
         );
       });
     }, 3000);

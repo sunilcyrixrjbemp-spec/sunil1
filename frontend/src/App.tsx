@@ -87,6 +87,11 @@ function App() {
     
     // Check lock on startup
     checkAppLock();
+
+    // Sync FCM push token on startup
+    import("./utils/capacitor").then(({ syncFCMToken }) => {
+      syncFCMToken();
+    }).catch(() => {});
     
     let activeListener: any = null;
     

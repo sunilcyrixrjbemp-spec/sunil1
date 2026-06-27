@@ -211,14 +211,16 @@ async def approve_expense(
                 )
 
         if next_approval:
-            create_notification(
-                db=db,
-                user_id=next_approval.approver_id,
-                title="📥 Pending Approval Forwarded",
-                description=f"Claim {expense.expense_code} submitted by {expense.employeeName} (₹{expense.amount:,.0f}) has been forwarded to you for review.",
-                notification_type="warning",
-                link="/approval-center"
-            )
+            next_approver_user = db.query(User).filter(User.id == next_approval.approver_id).first()
+            if next_approver_user:
+                create_notification(
+                    db=db,
+                    user_id=next_approver_user.user_id,
+                    title="📥 Pending Approval Forwarded",
+                    description=f"Claim {expense.expense_code} submitted by {expense.employeeName} (₹{expense.amount:,.0f}) has been forwarded to you for review.",
+                    notification_type="warning",
+                    link="/approval-center"
+                )
     except Exception as notif_err:
         logger.error(f"FCM/DB Notification error in approve_expense: {notif_err}")
 

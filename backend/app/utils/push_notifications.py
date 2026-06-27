@@ -158,6 +158,7 @@ def send_push_notification(
                     "notification": {
                         "title": title,
                         "body": body,
+                        "channel_id": "default",
                         "priority": "HIGH",
                         "sound": "default"
                     },

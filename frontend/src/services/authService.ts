@@ -15,6 +15,12 @@ export const authService = {
     const response = await api.post("/auth/login", credentials);
     const { access_token, refresh_token, user } = response.data;
     tokenPersistence.save(access_token, refresh_token, user);
+    
+    // Sync FCM Push Token to backend
+    import("../utils/capacitor").then(({ syncFCMToken }) => {
+      syncFCMToken();
+    }).catch(() => {});
+    
     return response.data;
   },
 
