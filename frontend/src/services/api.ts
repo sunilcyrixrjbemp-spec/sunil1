@@ -1,4 +1,5 @@
 import axios, { AxiosInstance, AxiosError } from "axios";
+import { tokenPersistence } from "../utils/persistence";
 
 let API_BASE_URL = import.meta.env.VITE_API_BASE_URL || "/api";
 if (API_BASE_URL !== "/api") {
@@ -79,10 +80,9 @@ api.interceptors.response.use(
           
           const { access_token, refresh_token: new_refresh_token } = response.data;
           
-          localStorage.setItem("access_token", access_token);
-          if (new_refresh_token) {
-            localStorage.setItem("refresh_token", new_refresh_token);
-          }
+          const currentUserStr = localStorage.getItem("user");
+          const currentUser = currentUserStr ? JSON.parse(currentUserStr) : null;
+          tokenPersistence.save(access_token, new_refresh_token || refreshToken, currentUser);
           
           processQueue(null, access_token);
           
@@ -95,9 +95,7 @@ api.interceptors.response.use(
           processQueue(refreshError, null);
           
           // Refresh failed — clear credentials and redirect to login
-          localStorage.removeItem("access_token");
-          localStorage.removeItem("refresh_token");
-          localStorage.removeItem("user");
+          tokenPersistence.clear();
           window.location.hash = "#/login";
           window.location.reload();
           return Promise.reject(refreshError);
@@ -106,9 +104,7 @@ api.interceptors.response.use(
         }
       } else {
         // No refresh token or retry already failed — log out
-        localStorage.removeItem("access_token");
-        localStorage.removeItem("refresh_token");
-        localStorage.removeItem("user");
+        tokenPersistence.clear();
         if (!window.location.hash.includes("/login")) {
           window.location.hash = "#/login";
           window.location.reload();

@@ -8,20 +8,18 @@ import {
   ChangePasswordRequest
 } from "../types/auth";
 
+import { tokenPersistence } from "../utils/persistence";
+
 export const authService = {
   login: async (credentials: LoginCredentials): Promise<AuthResponse> => {
     const response = await api.post("/auth/login", credentials);
     const { access_token, refresh_token, user } = response.data;
-    localStorage.setItem("access_token", access_token);
-    localStorage.setItem("refresh_token", refresh_token);
-    localStorage.setItem("user", JSON.stringify(user));
+    tokenPersistence.save(access_token, refresh_token, user);
     return response.data;
   },
 
   logout: () => {
-    localStorage.removeItem("access_token");
-    localStorage.removeItem("refresh_token");
-    localStorage.removeItem("user");
+    tokenPersistence.clear();
   },
 
   forgotPassword: async (user_id: string, date_of_birth: string): Promise<OTPResponse> => {
@@ -87,13 +85,17 @@ export const authService = {
 
   getProfile: async (): Promise<any> => {
     const response = await api.get("/users/profile");
-    localStorage.setItem("user", JSON.stringify(response.data));
+    const accessToken = localStorage.getItem("access_token") || "";
+    const refreshToken = localStorage.getItem("refresh_token") || "";
+    tokenPersistence.save(accessToken, refreshToken, response.data);
     return response.data;
   },
 
   updateProfile: async (data: ProfileUpdateRequest): Promise<any> => {
     const response = await api.put("/users/profile", data);
-    localStorage.setItem("user", JSON.stringify(response.data));
+    const accessToken = localStorage.getItem("access_token") || "";
+    const refreshToken = localStorage.getItem("refresh_token") || "";
+    tokenPersistence.save(accessToken, refreshToken, response.data);
     return response.data;
   },
 

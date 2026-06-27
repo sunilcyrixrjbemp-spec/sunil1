@@ -3,6 +3,10 @@ import ReactDOM from "react-dom/client";
 import App from "./App";
 import "./styles/globals.css";
 import "./styles/animations.css";
+import { tokenPersistence } from "./utils/persistence";
+
+// Restore session from cookie fallback if localStorage was cleared (e.g. mobile WebView process kill)
+tokenPersistence.restore();
 
 ReactDOM.createRoot(document.getElementById("root")!).render(
   <React.StrictMode>
