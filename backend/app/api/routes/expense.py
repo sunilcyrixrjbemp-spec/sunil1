@@ -38,20 +38,51 @@ def parse_client_timestamp(ts_str: str | None) -> datetime:
             return datetime.now()
 
 def save_upload_file(upload_file: UploadFile, exp_id: str, type_str: str) -> str:
-    """Saves uploaded file to the static uploads directory and returns local path URL."""
+    """Saves uploaded file to Cloudflare R2 bucket (or local fallback) and returns the proxy path URL."""
     if not upload_file or not upload_file.filename:
         return ""
-    os.makedirs(settings.UPLOAD_DIR, exist_ok=True)
-    
+        
+    import requests
+    import logging
+    logger = logging.getLogger(__name__)
+
     # Clean filename
     safe_name = upload_file.filename.replace(" ", "_")
     filename = f"{exp_id}_{type_str}_{int(time.time()*1000)}_{safe_name}"
-    filepath = os.path.join(settings.UPLOAD_DIR, filename)
+    key = f"images/{filename}"
     
-    with open(filepath, "wb") as buffer:
-        shutil.copyfileobj(upload_file.file, buffer)
-        
-    return f"/static/{filename}"
+    # R2 Upload path
+    if settings.CLOUDFLARE_API_TOKEN and settings.CLOUDFLARE_ACCOUNT_ID and settings.CLOUDFLARE_R2_BUCKET_NAME:
+        try:
+            upload_file.file.seek(0)
+            file_content = upload_file.file.read()
+            url = f"https://api.cloudflare.com/client/v4/accounts/{settings.CLOUDFLARE_ACCOUNT_ID}/r2/buckets/{settings.CLOUDFLARE_R2_BUCKET_NAME}/objects/{key}"
+            headers = {
+                "Authorization": f"Bearer {settings.CLOUDFLARE_API_TOKEN}",
+                "Content-Type": upload_file.content_type or "application/octet-stream"
+            }
+            response = requests.put(url, headers=headers, data=file_content, timeout=30)
+            if response.status_code == 200:
+                logger.info(f"Successfully uploaded {key} to Cloudflare R2 bucket: {settings.CLOUDFLARE_R2_BUCKET_NAME}")
+                return f"/api/upload/file/{key}"
+            else:
+                logger.error(f"R2 Upload API returned status {response.status_code}: {response.text}")
+        except Exception as e:
+            logger.error(f"Failed to upload {key} to R2: {str(e)}")
+            
+    # Local fallback path
+    try:
+        from app.api.routes.upload import UPLOAD_DIR
+        target_dir = os.path.join(UPLOAD_DIR, "images")
+        os.makedirs(target_dir, exist_ok=True)
+        filepath = os.path.join(target_dir, filename)
+        upload_file.file.seek(0)
+        with open(filepath, "wb") as buffer:
+            shutil.copyfileobj(upload_file.file, buffer)
+        return f"/api/upload/file/{key}"
+    except Exception as e:
+        logger.error(f"Failed to save upload locally: {str(e)}")
+        return ""
 
 @router.get("/init")
 async def init_expense(

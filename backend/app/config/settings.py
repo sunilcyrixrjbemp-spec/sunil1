@@ -29,10 +29,11 @@ class Settings(BaseSettings):
     PASSWORD_MIN_LENGTH: int = 8
     PASSWORD_HISTORY_COUNT: int = 5
 
-    # Cloudflare D1 Integration Settings
+    # Cloudflare D1 & R2 Integration Settings
     CLOUDFLARE_ACCOUNT_ID: str = "befbd2e0ff580a1d0d0865f011002053"
     CLOUDFLARE_DATABASE_ID: str = "34e085d8-c078-4f2f-b240-9bf8f4cf9301"
     CLOUDFLARE_API_TOKEN: str = ""
+    CLOUDFLARE_R2_BUCKET_NAME: str = "fieldops-uploads"
     FORCE_LOCAL_DB: bool = False
 
     class Config:
