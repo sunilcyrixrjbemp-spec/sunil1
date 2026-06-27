@@ -1,7 +1,7 @@
 import { HashRouter as Router, Routes, Route, Navigate } from "react-router-dom";
 import { Toaster } from "react-hot-toast";
 import { tokenPersistence, nativeConfig } from "./utils/persistence";
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { isNativeApp, biometricAuth } from "./utils/capacitor";
 import { Fingerprint, Lock } from "lucide-react";
 import LoginPage from "./pages/LoginPage";
@@ -27,36 +27,53 @@ function AppInner() {
 
 function App() {
   const [isAppLocked, setIsAppLocked] = useState(false);
+  const isLockedRef = useRef(false);
+  const isPromptingRef = useRef(false);
+  const lastUnlockedRef = useRef(0);
 
   const triggerUnlock = useCallback(async () => {
+    if (isPromptingRef.current) return;
     try {
+      isPromptingRef.current = true;
       const type = await biometricAuth.getBiometryType();
       const typeLabel = type === 'face' ? 'Face ID' : 'Fingerprint';
       const result = await biometricAuth.authenticate(`Unlock Cyrix Field using ${typeLabel}`);
       if (result.success) {
         setIsAppLocked(false);
+        isLockedRef.current = false;
+        lastUnlockedRef.current = Date.now(); // Set cool-down timestamp!
       }
-    } catch (_) {}
+    } catch (_) {
+    } finally {
+      isPromptingRef.current = false;
+    }
   }, []);
 
   const checkAppLock = useCallback(async () => {
     if (!isNativeApp()) return;
+    
+    // Check cool-down (do not lock again if unlocked less than 4 seconds ago)
+    if (Date.now() - lastUnlockedRef.current < 4000) {
+      console.log("[Lock] Skipping app lock: within cool-down period");
+      return;
+    }
+
+    // Bypass if already locked or currently prompting
+    if (isLockedRef.current || isPromptingRef.current) return;
+
     const isAuthenticated = tokenPersistence.isAuthenticated();
     const biometricEnabled = (await nativeConfig.get('biometric_login_enabled')) === 'true';
     
     if (isAuthenticated && biometricEnabled) {
       setIsAppLocked(true);
-      // Trigger authentication immediately
-      try {
-        const type = await biometricAuth.getBiometryType();
-        const typeLabel = type === 'face' ? 'Face ID' : 'Fingerprint';
-        const result = await biometricAuth.authenticate(`Unlock Cyrix Field using ${typeLabel}`);
-        if (result.success) {
-          setIsAppLocked(false);
-        }
-      } catch (_) {}
+      isLockedRef.current = true;
+      
+      // Delay slightly to let the locked UI render before showing native biometric dialog
+      setTimeout(() => {
+        triggerUnlock();
+      }, 150);
     }
-  }, []);
+  }, [triggerUnlock]);
 
   useEffect(() => {
     if (!isNativeApp()) return;
