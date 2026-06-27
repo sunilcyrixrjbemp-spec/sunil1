@@ -7,7 +7,7 @@ import os
 
 from app.config.database import engine, Base, SessionLocal
 from app.config.seed import seed_admin_user, seed_approval_levels, run_schema_updates, seed_allowance_master, seed_facility_details
-from app.api.routes import auth, expense, dashboard, approval, admin, upload, reports, users, ticket
+from app.api.routes import auth, expense, dashboard, approval, admin, upload, reports, users, ticket, notification
 import app.models
 
 
@@ -38,7 +38,17 @@ async def lifespan(app: FastAPI):
         finally:
             db.close()
     else:
-        logger.info("Skipping database initialization (production worker mode)...")
+        logger.info("Initializing database tables (production mode)...")
+        try:
+            Base.metadata.create_all(bind=engine)
+            db = SessionLocal()
+            try:
+                run_schema_updates(db)
+            finally:
+                db.close()
+            logger.info("Production database tables initialized successfully.")
+        except Exception as e:
+            logger.error(f"Error during production database initialization: {str(e)}")
         
     yield
     logger.info("Shutting down API service...")
@@ -74,6 +84,7 @@ app.include_router(upload.router, prefix="/api/upload", tags=["upload"])
 app.include_router(reports.router, prefix="/api/reports", tags=["reports"])
 app.include_router(users.router, prefix="/api/users", tags=["users"])
 app.include_router(ticket.router, prefix="/api/ticket", tags=["ticket"])
+app.include_router(notification.router, prefix="/api/notifications", tags=["notifications"])
 
 @app.get("/api/health")
 def health_check():

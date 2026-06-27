@@ -773,6 +773,22 @@ async def submit_expense(
 
     db.commit()
 
+    # Trigger notification to the first approver
+    try:
+        if approvers:
+            first_approver_code = approvers[0].approver_id
+            from app.utils.db_notifications import create_notification
+            create_notification(
+                db=db,
+                user_id=first_approver_code,
+                title="📥 New Pending Approval",
+                description=f"New claim {expense.expense_code} submitted by {current_user.name} (₹{expense.amount:,.0f}) is waiting for your review.",
+                notification_type="warning",
+                link="/approval-center"
+            )
+    except Exception as notif_err:
+        logger.error(f"FCM/DB Notification error in submit_expense: {notif_err}")
+
     from app.utils import cache
     cache.clear_user_and_managers_cache(db, current_user.user_id)
 

@@ -186,29 +186,41 @@ async def approve_expense(
     from app.utils import cache
     cache.clear_user_and_managers_cache(db, expense.user_id)
 
-    # Push notification to the expense submitter
+    # Database and Push notifications
     try:
+        from app.utils.db_notifications import create_notification
         submitter = db.query(User).filter(User.id == expense.user_id).first()
         if submitter:
             if expense.status == "approved":
-                send_push_to_user_by_code(
-                    db,
-                    user_code=submitter.user_id,
+                create_notification(
+                    db=db,
+                    user_id=submitter.user_id,
                     title="✅ Expense Claim Approved!",
-                    body=f"Your claim {expense.expense_code} (\u20b9{expense.amount:,.0f}) has been fully approved.",
-                    data={"expense_id": str(expense.id), "expense_code": expense.expense_code, "type": "approved"}
+                    description=f"Your claim {expense.expense_code} (₹{expense.amount:,.0f}) has been fully approved by {current_user.name}.",
+                    notification_type="success",
+                    link="/home"
                 )
             else:
-                # Partially approved (moved to next level)
-                send_push_to_user_by_code(
-                    db,
-                    user_code=submitter.user_id,
-                    title="🔄 Claim Moving to Next Level",
-                    body=f"Your claim {expense.expense_code} has been approved by {current_user.name} and forwarded for further review.",
-                    data={"expense_id": str(expense.id), "expense_code": expense.expense_code, "type": "forwarded"}
+                create_notification(
+                    db=db,
+                    user_id=submitter.user_id,
+                    title="🔄 Claim Forwarded",
+                    description=f"Your claim {expense.expense_code} has been approved by {current_user.name} and forwarded to the next level.",
+                    notification_type="info",
+                    link="/home"
                 )
-    except Exception:
-        pass
+
+        if next_approval:
+            create_notification(
+                db=db,
+                user_id=next_approval.approver_id,
+                title="📥 Pending Approval Forwarded",
+                description=f"Claim {expense.expense_code} submitted by {expense.employeeName} (₹{expense.amount:,.0f}) has been forwarded to you for review.",
+                notification_type="warning",
+                link="/approval-center"
+            )
+    except Exception as notif_err:
+        logger.error(f"FCM/DB Notification error in approve_expense: {notif_err}")
 
     return {
         "status": "success",
@@ -304,20 +316,22 @@ async def reject_expense(
     from app.utils import cache
     cache.clear_user_and_managers_cache(db, expense.user_id)
 
-    # Push notification to the expense submitter about rejection
+    # Trigger notification to the submitter about rejection
     try:
         submitter = db.query(User).filter(User.id == expense.user_id).first()
         if submitter:
             remark = (request.comments or "").strip()[:80]
-            send_push_to_user_by_code(
-                db,
-                user_code=submitter.user_id,
+            from app.utils.db_notifications import create_notification
+            create_notification(
+                db=db,
+                user_id=submitter.user_id,
                 title="❌ Expense Claim Rejected",
-                body=f"{expense.expense_code} rejected by {current_user.name}: {remark}",
-                data={"expense_id": str(expense.id), "expense_code": expense.expense_code, "type": "rejected"}
+                description=f"Your claim {expense.expense_code} has been rejected by {current_user.name}. Reason: {remark}",
+                notification_type="error",
+                link="/home"
             )
-    except Exception:
-        pass
+    except Exception as notif_err:
+        logger.error(f"FCM/DB Notification error in reject_expense: {notif_err}")
 
     return {
         "status": "success",

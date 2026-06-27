@@ -1,32 +1,18 @@
 import { useEffect, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { authService } from "../services/authService";
-import { expenseService } from "../services/expenseService";
-import { approvalService } from "../services/approvalService";
-import { ticketService } from "../services/ticketService";
-import { tokenPersistence } from "../utils/persistence";
+import { notificationService, NotificationItem } from "../services/notificationService";
 import toast from "react-hot-toast";
 import Loader from "../components/common/Loader";
 import { 
   Bell, 
   Search, 
-  Calendar, 
-  CheckSquare, 
   Trash2, 
-  ExternalLink,
-  Filter
+  Filter,
+  CheckSquare,
+  Calendar,
+  ExternalLink
 } from "lucide-react";
-
-interface NotificationItem {
-  id: string;
-  title: string;
-  description: string;
-  time: string;
-  type: "warning" | "success" | "error" | "info";
-  read: boolean;
-  link: string;
-  created_at?: string;
-}
 
 export default function NotificationsPage() {
   const navigate = useNavigate();
@@ -73,139 +59,10 @@ export default function NotificationsPage() {
     if (!hasCache) {
       setLoading(true);
     }
-    const list: NotificationItem[] = [];
     try {
-      const readNotifIds = JSON.parse(localStorage.getItem("read_notification_ids") || "[]");
-
-      const allowedWindows = currentUser.allowed_windows
-        ? currentUser.allowed_windows.split(",").map((w: string) => w.trim().toLowerCase())
-        : ["home", "profile", "help"];
-      const isApprover = currentUser.role === "Admin" || allowedWindows.includes("approval");
-
-      let pendings: any[] = [];
-      let expenses: any[] = [];
-      let tickets: any[] = [];
-
-      try {
-        const promises: Promise<any>[] = [];
-        if (isApprover) {
-          promises.push(approvalService.getPendingApprovals().then(res => pendings = res || []).catch(() => {}));
-        }
-        promises.push(expenseService.getExpenses().then(res => expenses = res || []).catch(() => {}));
-        
-        const hasHelpAccess = allowedWindows.includes("help") || currentUser.role === "Admin";
-        if (hasHelpAccess) {
-          promises.push(ticketService.getTickets().then(res => tickets = res || []).catch(() => {}));
-        }
-        
-        await Promise.all(promises);
-      } catch (e) {
-        console.error("Failed loading notifications concurrently", e);
-      }
-
-      // Process Pending Approvals
-      pendings.forEach((p: any) => {
-        const id = `approval-${p.id}`;
-        list.push({
-          id: id,
-          title: "Pending Approval",
-          description: `Expense claim from ${p.employeeName} (${p.eCode}) for "${p.purpose || p.description}" of ₹${p.amount.toLocaleString()} is waiting for your review.`,
-          time: "Action Required",
-          type: "warning",
-          read: readNotifIds.includes(id),
-          link: "/approval-center",
-          created_at: p.created_at || p.updated_at
-        });
-      });
-
-      // Process own expenses status changes
-      expenses.forEach((e: any) => {
-        const id = `claim-${e.id}`;
-        if (e.status === "approved" || e.status === "rejected") {
-          list.push({
-            id: id,
-            title: `Claim ${e.status.toUpperCase()}`,
-            description: `Your claim of ₹${e.amount.toLocaleString()} for "${e.description || e.purpose}" has been ${e.status}.`,
-            time: "Recent Update",
-            type: e.status === "approved" ? "success" : "error",
-            read: readNotifIds.includes(id),
-            link: "/home",
-            created_at: e.created_at || e.updated_at
-          });
-        } else if (e.status.startsWith("submitted")) {
-          list.push({
-            id: id,
-            title: "Claim Submitted",
-            description: `Your claim of ₹${e.amount.toLocaleString()} for "${e.description || e.purpose}" is successfully submitted and pending review.`,
-            time: "Submitted",
-            type: "info",
-            read: readNotifIds.includes(id) || true,
-            link: "/home",
-            created_at: e.created_at || e.updated_at
-          });
-        }
-      });
-
-      // Process Support Tickets alerts
-      tickets.forEach((t: any) => {
-        const isCreator = t.created_by_code === currentUser.user_id;
-        const isAssignee = t.assigned_to_name === currentUser.name;
-        
-        if (isCreator) {
-          if (t.status !== "Open" && t.status !== "Final Closed") {
-            const id = `ticket-status-${t.id}-${t.status}`;
-            list.push({
-              id: id,
-              title: `Ticket ${t.status}`,
-              description: `Your support ticket ${t.ticket_code} ("${t.concern_type}") has been updated to ${t.status}.`,
-              time: "Ticket Update",
-              type: t.status === "Closed" || t.status === "Resolved" ? "success" : "info",
-              read: readNotifIds.includes(id),
-              link: "/help-center",
-              created_at: t.updated_at
-            });
-          }
-        }
-        
-        if (isAssignee) {
-          if (t.status === "Open" || t.status === "Updated") {
-            const id = `ticket-action-${t.id}-${t.status}`;
-            list.push({
-              id: id,
-              title: "Ticket Action Required",
-              description: `Support ticket ${t.ticket_code} ("${t.concern_type}") raised by ${t.created_by_name} is ${t.status} and assigned to you.`,
-              time: "Action Required",
-              type: "warning",
-              read: readNotifIds.includes(id),
-              link: "/help-center",
-              created_at: t.updated_at
-            });
-          }
-        }
-      });
-
-      // 3. Add default system welcome notification
-      list.push({
-        id: "sys-welcome",
-        title: "System Active",
-        description: `Welcome to Cyrix Healthcare Expense Management System.`,
-        time: "Now",
-        type: "info",
-        read: readNotifIds.includes("sys-welcome") || true,
-        link: "/home",
-        created_at: currentUser.created_at || new Date().toISOString()
-      });
-
-      // Sort notifications by date descending
-      list.sort((a, b) => {
-        const dateA = new Date(a.created_at || 0).getTime();
-        const dateB = new Date(b.created_at || 0).getTime();
-        return dateB - dateA;
-      });
-
+      const list = await notificationService.getNotifications();
       setNotifications(list);
-      // Sync with localStorage for Bell Dropdown caching
-      localStorage.setItem(`notifications_${currentUser.user_id}`, JSON.stringify(list));
+      localStorage.setItem(cacheKey, JSON.stringify(list));
     } catch (err) {
       toast.error("Failed to load notifications.");
     } finally {
@@ -223,42 +80,38 @@ export default function NotificationsPage() {
     loadNotifications(currentUser);
   }, [navigate]);
 
-  const toggleReadStatus = (id: string) => {
-    const readNotifIds = JSON.parse(localStorage.getItem("read_notification_ids") || "[]");
-    let updatedReadIds = [...readNotifIds];
-
-    if (readNotifIds.includes(id)) {
-      updatedReadIds = updatedReadIds.filter(x => x !== id);
-    } else {
-      updatedReadIds.push(id);
-    }
-    tokenPersistence.saveReadNotificationIds(updatedReadIds);
-    
+  const toggleReadStatus = async (id: number) => {
+    // Optimistic UI update
     setNotifications(prev => prev.map(n => n.id === id ? { ...n, read: !n.read } : n));
-  };
-
-  const markAllAsRead = () => {
-    const readNotifIds = JSON.parse(localStorage.getItem("read_notification_ids") || "[]");
-    const updatedReadIds = [...readNotifIds];
-
-    notifications.forEach(n => {
-      if (!updatedReadIds.includes(n.id)) {
-        updatedReadIds.push(n.id);
-      }
-    });
-
-    tokenPersistence.saveReadNotificationIds(updatedReadIds);
-    setNotifications(prev => prev.map(n => ({ ...n, read: true })));
-    toast.success("All notifications marked as read.");
-  };
-
-  const deleteNotification = (id: string) => {
-    if (id === "sys-welcome") {
-      toast.error("System configuration notifications cannot be deleted.");
-      return;
+    try {
+      await notificationService.markAsRead(id);
+    } catch (err) {
+      // Revert if API failed
+      setNotifications(prev => prev.map(n => n.id === id ? { ...n, read: !n.read } : n));
+      toast.error("Failed to update notification.");
     }
+  };
+
+  const markAllAsRead = async () => {
+    // Optimistic UI update
+    setNotifications(prev => prev.map(n => ({ ...n, read: true })));
+    try {
+      await notificationService.markAllAsRead();
+      toast.success("All notifications marked as read.");
+    } catch (err) {
+      toast.error("Failed to mark all as read.");
+    }
+  };
+
+  const deleteNotification = async (id: number) => {
+    // Optimistic UI update
     setNotifications(prev => prev.filter(n => n.id !== id));
-    toast.success("Notification removed.");
+    try {
+      await notificationService.deleteNotification(id);
+      toast.success("Notification removed.");
+    } catch (err) {
+      toast.error("Failed to delete notification.");
+    }
   };
 
   // Filter & Search Logic
@@ -277,7 +130,7 @@ export default function NotificationsPage() {
         const isApproved = n.title.toLowerCase().includes("approved") || n.type === "success";
         const isRejected = n.title.toLowerCase().includes("rejected") || n.type === "error";
         const isPending = n.title.toLowerCase().includes("pending") || n.title.toLowerCase().includes("submitted") || n.type === "warning";
-        const isSystem = n.id.startsWith("sys") || n.type === "info";
+        const isSystem = String(n.id).startsWith("sys") || n.type === "info";
 
         if (filterStatus === "approved" && !isApproved) return false;
         if (filterStatus === "rejected" && !isRejected) return false;
@@ -474,7 +327,7 @@ export default function NotificationsPage() {
                     <ExternalLink className="w-3.5 h-3.5" />
                     Open Page
                   </Link>
-                  {n.id !== "sys-welcome" && (
+                  {String(n.id) !== "sys-welcome" && (
                     <button
                       onClick={() => deleteNotification(n.id)}
                       className="p-1.5 hover:bg-red-50 rounded text-gray-400 hover:text-red-600 transition-colors border border-gray-200 bg-white cursor-pointer"

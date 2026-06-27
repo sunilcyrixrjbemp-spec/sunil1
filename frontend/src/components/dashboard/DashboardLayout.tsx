@@ -1,10 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { useNavigate, Outlet, useLocation, Link } from "react-router-dom";
 import { authService } from "../../services/authService";
-import { approvalService } from "../../services/approvalService";
-import { expenseService } from "../../services/expenseService";
-import { ticketService } from "../../services/ticketService";
-import { tokenPersistence } from "../../utils/persistence";
+import { notificationService, NotificationItem } from "../../services/notificationService";
 import brandLogo from "../../assets/images/brand.png";
 import { 
   Home, 
@@ -28,16 +25,6 @@ interface MenuItem {
   path: string;
   icon: React.ComponentType<any>;
   roles: string[];
-}
-
-interface NotificationItem {
-  id: string;
-  title: string;
-  description: string;
-  time: string;
-  type: "info" | "success" | "warning" | "error";
-  read: boolean;
-  link: string;
 }
 
 const MENU_ITEMS: MenuItem[] = [
@@ -106,140 +93,41 @@ export default function DashboardLayout() {
     }
   }, [navigate]);
 
-  const fetchNotifications = async (currentUser: any) => {
-    const list: NotificationItem[] = [];
+  const formatDateTime = (dateVal: any) => {
+    if (!dateVal) return "—";
     try {
-      const readNotifIds = JSON.parse(localStorage.getItem("read_notification_ids") || "[]");
-
-      const allowedWindows = currentUser.allowed_windows
-        ? currentUser.allowed_windows.split(",").map((w: string) => w.trim().toLowerCase())
-        : ["home", "profile", "help"];
-      const isApprover = currentUser.role === "Admin" || allowedWindows.includes("approval");
-
-      let pendings: any[] = [];
-      let expenses: any[] = [];
-      let tickets: any[] = [];
-
-      // Fetch notifications concurrently
-      const promises: Promise<any>[] = [];
-      if (isApprover) {
-        promises.push(approvalService.getPendingApprovals().then(res => pendings = res || []).catch(() => {}));
-      }
-      promises.push(expenseService.getExpenses().then(res => expenses = res || []).catch(() => {}));
-      
-      const hasHelpAccess = allowedWindows.includes("help") || currentUser.role === "Admin";
-      if (hasHelpAccess) {
-        promises.push(ticketService.getTickets().then(res => tickets = res || []).catch(() => {}));
-      }
-      
-      await Promise.all(promises);
-
-      // 1. Process Pending Approvals
-      pendings.forEach((p: any) => {
-        const id = `approval-${p.id}`;
-        list.push({
-          id: id,
-          title: "Pending Approval",
-          description: `Expense claim from ${p.employeeName} (${p.eCode}) for "${p.purpose || p.description}" of ₹${p.amount.toLocaleString()} is waiting for your review.`,
-          time: "Action Required",
-          type: "warning",
-          read: readNotifIds.includes(id),
-          link: "/approval-center"
-        });
-      });
-
-      // 2. Process own expenses status changes
-      expenses.slice(0, 5).forEach((e: any) => {
-        const id = `claim-${e.id}`;
-        if (e.status === "approved" || e.status === "rejected") {
-          list.push({
-            id: id,
-            title: `Claim ${e.status.toUpperCase()}`,
-            description: `Your claim of ₹${e.amount.toLocaleString()} for "${e.description || e.purpose}" has been ${e.status}.`,
-            time: "Recent Update",
-            type: e.status === "approved" ? "success" : "error",
-            read: readNotifIds.includes(id),
-            link: "/home"
-          });
-        } else if (e.status.startsWith("submitted")) {
-          list.push({
-            id: id,
-            title: "Claim Submitted",
-            description: `Your claim of ₹${e.amount.toLocaleString()} for "${e.description || e.purpose}" is successfully submitted and pending review.`,
-            time: "Submitted",
-            type: "info",
-            read: readNotifIds.includes(id) || true,
-            link: "/home"
-          });
-        }
-      });
-
-      // 3. Process Support Tickets alerts
-      tickets.forEach((t: any) => {
-        const isCreator = t.created_by_code === currentUser.user_id;
-        const isAssignee = t.assigned_to_name === currentUser.name;
-        
-        if (isCreator) {
-          if (t.status !== "Open" && t.status !== "Final Closed") {
-            const id = `ticket-status-${t.id}-${t.status}`;
-            list.push({
-              id: id,
-              title: `Ticket ${t.status}`,
-              description: `Your support ticket ${t.ticket_code} ("${t.concern_type}") has been updated to ${t.status}.`,
-              time: "Ticket Update",
-              type: t.status === "Closed" || t.status === "Resolved" ? "success" : "info",
-              read: readNotifIds.includes(id),
-              link: "/help-center"
-            });
-          }
-        }
-        
-        if (isAssignee) {
-          if (t.status === "Open" || t.status === "Updated") {
-            const id = `ticket-action-${t.id}-${t.status}`;
-            list.push({
-              id: id,
-              title: "Ticket Action Required",
-              description: `Support ticket ${t.ticket_code} ("${t.concern_type}") raised by ${t.created_by_name} is ${t.status} and assigned to you.`,
-              time: "Action Required",
-              type: "warning",
-              read: readNotifIds.includes(id),
-              link: "/help-center"
-            });
-          }
-        }
-      });
-    } catch (err) {
-      console.error("Failed to build notifications:", err);
+      const d = new Date(dateVal);
+      if (isNaN(d.getTime())) return "Just now";
+      const day = String(d.getDate()).padStart(2, "0");
+      const months = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+      const month = months[d.getMonth()];
+      const hours = String(d.getHours()).padStart(2, "0");
+      const minutes = String(d.getMinutes()).padStart(2, "0");
+      return `${day}-${month} ${hours}:${minutes}`;
+    } catch (_) {
+      return "—";
     }
-    
-    // Add default system welcome notification
-    const readNotifIds = JSON.parse(localStorage.getItem("read_notification_ids") || "[]");
-    list.push({
-      id: "sys-welcome",
-      title: "System Active",
-      description: `Welcome to Cyrix Healthcare Expense Management System.`,
-      time: "Now",
-      type: "info",
-      read: readNotifIds.includes("sys-welcome") || true,
-      link: "/home"
-    });
+  };
 
-    setNotifications(list);
-
-    // Trigger local push notification for unread alerts
+  const fetchNotifications = async (currentUser: any) => {
     try {
+      const list = await notificationService.getNotifications();
+      setNotifications(list.slice(0, 10)); // Display top 10 most recent in nav dropdown
+      localStorage.setItem(`notifications_${currentUser.user_id}`, JSON.stringify(list));
+
+      // Trigger local browser push notification for unread alerts (PWA features)
       if (typeof window !== "undefined" && "Notification" in window && Notification.permission === "granted") {
         const notifiedIds = JSON.parse(localStorage.getItem("pwa_notified_ids") || "[]");
         let hasNew = false;
         list.forEach(n => {
-          if (!n.read && n.id !== "sys-welcome" && !notifiedIds.includes(n.id)) {
+          const stringId = String(n.id);
+          if (!n.read && !notifiedIds.includes(stringId)) {
             new Notification(n.title, {
               body: n.description,
               icon: brandLogo,
-              tag: n.id
+              tag: stringId
             });
-            notifiedIds.push(n.id);
+            notifiedIds.push(stringId);
             hasNew = true;
           }
         });
@@ -247,29 +135,27 @@ export default function DashboardLayout() {
           localStorage.setItem("pwa_notified_ids", JSON.stringify(notifiedIds));
         }
       }
-    } catch (e) {
-      console.warn("Push notification block error:", e);
+    } catch (err) {
+      console.error("Failed to fetch notifications:", err);
     }
   };
 
-  const markAsRead = (id: string) => {
+  const markAsRead = async (id: number) => {
     setNotifications(prev => prev.map(n => n.id === id ? { ...n, read: true } : n));
-    const readNotifIds = JSON.parse(localStorage.getItem("read_notification_ids") || "[]");
-    if (!readNotifIds.includes(id)) {
-      readNotifIds.push(id);
-      tokenPersistence.saveReadNotificationIds(readNotifIds);
+    try {
+      await notificationService.markAsRead(id);
+    } catch (err) {
+      console.error("Failed to mark notification as read:", err);
     }
   };
 
-  const markAllAsRead = () => {
+  const markAllAsRead = async () => {
     setNotifications(prev => prev.map(n => ({ ...n, read: true })));
-    const readNotifIds = JSON.parse(localStorage.getItem("read_notification_ids") || "[]");
-    notifications.forEach(n => {
-      if (!readNotifIds.includes(n.id)) {
-        readNotifIds.push(n.id);
-      }
-    });
-    tokenPersistence.saveReadNotificationIds(readNotifIds);
+    try {
+      await notificationService.markAllAsRead();
+    } catch (err) {
+      console.error("Failed to mark all as read:", err);
+    }
   };
 
   if (!user) return null;
@@ -459,7 +345,7 @@ export default function DashboardLayout() {
                               }`}>
                                 {n.title}
                               </span>
-                              <span className="text-[9px] text-gray-400 font-medium shrink-0">{n.time}</span>
+                              <span className="text-[9px] text-gray-400 font-medium shrink-0">{formatDateTime(n.created_at)}</span>
                             </div>
                             <p className="text-gray-600 mt-1 leading-normal font-semibold">{n.description}</p>
                           </Link>

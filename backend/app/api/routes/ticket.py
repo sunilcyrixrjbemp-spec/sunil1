@@ -117,17 +117,19 @@ def create_ticket(
     db.commit()
     db.refresh(new_ticket)
 
-    # Push notification to the assigned person
+    # Database and Push notifications to the assigned person
     try:
-        send_push_to_user_by_name(
-            db,
-            user_name=assigned_name,
-            title=f"New Support Ticket — {ticket_code}",
-            body=f"{current_user.name} raised a {request.priority} priority {request.concern_type} concern.",
-            data={"ticket_id": str(new_ticket.id), "ticket_code": ticket_code, "type": "new_ticket"}
+        from app.utils.db_notifications import create_notification
+        create_notification(
+            db=db,
+            user_id=assigned_user.user_id,
+            title="📥 Ticket Assigned",
+            description=f"{current_user.name} raised a {request.priority} priority ticket {ticket_code} ({request.concern_type}) and assigned it to you.",
+            notification_type="warning",
+            link="/help-center"
         )
-    except Exception:
-        pass  # Non-critical — don't fail ticket creation if push fails
+    except Exception as notif_err:
+        logger.error(f"FCM/DB Notification error in create_ticket: {notif_err}")
 
     return new_ticket
 
@@ -173,29 +175,32 @@ def add_comment(
     db.commit()
     db.refresh(ticket)
 
-    # Push notification — notify the other party about the new comment
+    # Database and Push notifications
     try:
+        from app.utils.db_notifications import create_notification
         comment_preview = request.comment.strip()[:80] + ("..." if len(request.comment.strip()) > 80 else "")
         if is_creator:
-            # Creator commented → notify assignee
-            send_push_to_user_by_name(
-                db,
-                user_name=ticket.assigned_to_name,
-                title=f"Reply on Ticket {ticket.ticket_code}",
-                body=f"{current_user.name}: {comment_preview}",
-                data={"ticket_id": str(ticket.id), "ticket_code": ticket.ticket_code, "type": "comment"}
-            )
+            assignee = db.query(User).filter(User.name == ticket.assigned_to_name).first()
+            if assignee:
+                create_notification(
+                    db=db,
+                    user_id=assignee.user_id,
+                    title=f"Reply on Ticket {ticket.ticket_code}",
+                    description=f"{current_user.name} commented: {comment_preview}",
+                    notification_type="info",
+                    link="/help-center"
+                )
         elif is_assignee:
-            # Assignee commented → notify creator
-            send_push_to_user_by_code(
-                db,
-                user_code=ticket.created_by_code,
+            create_notification(
+                db=db,
+                user_id=ticket.created_by_code,
                 title=f"Update on Ticket {ticket.ticket_code}",
-                body=f"{current_user.name}: {comment_preview}",
-                data={"ticket_id": str(ticket.id), "ticket_code": ticket.ticket_code, "type": "comment"}
+                description=f"{current_user.name} commented: {comment_preview}",
+                notification_type="info",
+                link="/help-center"
             )
-    except Exception:
-        pass  # Non-critical
+    except Exception as notif_err:
+        logger.error(f"FCM/DB Notification error in add_comment: {notif_err}")
 
     return ticket
 
@@ -222,18 +227,20 @@ def close_ticket(
     db.commit()
     db.refresh(ticket)
 
-    # Push notification — notify ticket creator that it's been closed
+    # Database and Push notifications
     try:
-        if not is_creator:  # Only notify if someone else closed it
-            send_push_to_user_by_code(
-                db,
-                user_code=ticket.created_by_code,
-                title=f"Ticket {ticket.ticket_code} Closed",
-                body=f"Your support concern has been resolved and closed by {current_user.name}.",
-                data={"ticket_id": str(ticket.id), "ticket_code": ticket.ticket_code, "type": "closed"}
+        if not is_creator:
+            from app.utils.db_notifications import create_notification
+            create_notification(
+                db=db,
+                user_id=ticket.created_by_code,
+                title="✅ Support Ticket Closed",
+                description=f"Your ticket {ticket.ticket_code} has been resolved and closed by {current_user.name}.",
+                notification_type="success",
+                link="/help-center"
             )
-    except Exception:
-        pass
+    except Exception as notif_err:
+        logger.error(f"FCM/DB Notification error in close_ticket: {notif_err}")
 
     return ticket
 
@@ -264,6 +271,23 @@ def reopen_ticket(
     ticket.closed_at = None
     db.commit()
     db.refresh(ticket)
+
+    # Database and Push notifications
+    try:
+        assignee = db.query(User).filter(User.name == ticket.assigned_to_name).first()
+        if assignee:
+            from app.utils.db_notifications import create_notification
+            create_notification(
+                db=db,
+                user_id=assignee.user_id,
+                title="🔄 Support Ticket Re-opened",
+                description=f"Ticket {ticket.ticket_code} has been re-opened by {current_user.name}.",
+                notification_type="warning",
+                link="/help-center"
+            )
+    except Exception as notif_err:
+        logger.error(f"FCM/DB Notification error in reopen_ticket: {notif_err}")
+
     return ticket
 
 @router.post("/{ticket_id}/followup")

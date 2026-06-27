@@ -13,11 +13,12 @@ from .expense_itinerary import ExpenseItinerary
 from .expense_attachment import ExpenseAttachment
 from .limit_approval_request import LimitApprovalRequest
 from .ticket import SupportTicket
+from .notification import Notification
 
 __all__ = [
     "User", "Expense", "Approval", "Asset", "PasswordHistory", "LoginLog", "OTP", 
     "UserRole", "ApprovalHierarchy", "HierarchyRequester", "HierarchyApprover",
     "AllowanceMaster", "FacilityDetail", "ExpenseItinerary", "ExpenseAttachment",
-    "LimitApprovalRequest", "SupportTicket"
+    "LimitApprovalRequest", "SupportTicket", "Notification"
 ]
 
