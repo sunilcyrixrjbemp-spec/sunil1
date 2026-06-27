@@ -12,7 +12,7 @@ RUN apt-get update && apt-get install -y \
 COPY pyproject.toml .
 
 # Install dependencies using pip (supports pyproject.toml)
-RUN pip install --no-cache-dir .
+RUN pip install --no-cache-dir . uvicorn
 
 # Copy application
 COPY . .
