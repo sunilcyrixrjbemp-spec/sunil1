@@ -16,7 +16,8 @@ import {
   Settings,
   Menu,
   Bell,
-  Lock
+  Lock,
+  X
 } from "lucide-react";
 
 interface MenuItem {
@@ -48,10 +49,25 @@ const MENU_ITEMS: MenuItem[] = [
   { id: "profile", name: "Profile", path: "/profile", icon: User, roles: ["Admin", "Engineer", "Manager", "Division Manager", "Coordinator", "Accountant", "HR", "Project Head", "Travel Desk", "MIS", "VP"] },
 ];
 
+const MenuGridIcon = () => (
+  <svg className="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+    <rect x="3" y="3" width="4" height="4" />
+    <rect x="10" y="3" width="4" height="4" />
+    <rect x="17" y="3" width="4" height="4" />
+    <rect x="3" y="10" width="4" height="4" />
+    <rect x="10" y="10" width="4" height="4" />
+    <rect x="17" y="10" width="4" height="4" />
+    <rect x="3" y="17" width="4" height="4" />
+    <rect x="10" y="17" width="4" height="4" />
+    <rect x="17" y="17" width="4" height="4" />
+  </svg>
+);
+
 export default function DashboardLayout() {
   const navigate = useNavigate();
   const location = useLocation();
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(window.innerWidth < 1024);
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [user, setUser] = useState<any>(null);
   
   // Notification State
@@ -68,6 +84,14 @@ export default function DashboardLayout() {
     };
     window.addEventListener("resize", handleResize);
     return () => window.removeEventListener("resize", handleResize);
+  }, []);
+
+  useEffect(() => {
+    if (typeof window !== "undefined" && "Notification" in window) {
+      if (Notification.permission === "default") {
+        Notification.requestPermission();
+      }
+    }
   }, []);
 
   useEffect(() => {
@@ -151,6 +175,30 @@ export default function DashboardLayout() {
     });
 
     setNotifications(list);
+
+    // Trigger local push notification for unread alerts
+    try {
+      if (typeof window !== "undefined" && "Notification" in window && Notification.permission === "granted") {
+        const notifiedIds = JSON.parse(localStorage.getItem("pwa_notified_ids") || "[]");
+        let hasNew = false;
+        list.forEach(n => {
+          if (!n.read && n.id !== "sys-welcome" && !notifiedIds.includes(n.id)) {
+            new Notification(n.title, {
+              body: n.description,
+              icon: brandLogo,
+              tag: n.id
+            });
+            notifiedIds.push(n.id);
+            hasNew = true;
+          }
+        });
+        if (hasNew) {
+          localStorage.setItem("pwa_notified_ids", JSON.stringify(notifiedIds));
+        }
+      }
+    } catch (e) {
+      console.warn("Push notification block error:", e);
+    }
   };
 
   const markAsRead = (id: string) => {
@@ -306,7 +354,7 @@ export default function DashboardLayout() {
           <div className="flex items-center gap-3">
             <button
               onClick={() => setIsSidebarCollapsed(!isSidebarCollapsed)}
-              className="h-9 w-9 flex items-center justify-center rounded text-gray-500 hover:text-gray-800 hover:bg-gray-100 transition-colors"
+              className="hidden lg:flex h-9 w-9 items-center justify-center rounded text-gray-500 hover:text-gray-800 hover:bg-gray-100 transition-colors"
             >
               <Menu className="w-5 h-5" />
             </button>
@@ -426,7 +474,7 @@ export default function DashboardLayout() {
 
       {/* MOBILE BOTTOM NAVIGATION BAR */}
       <nav className="lg:hidden h-14 fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 flex items-center justify-around px-2 z-40 shadow-lg">
-        {allowedMenuItems.slice(0, 4).map((item) => {
+        {allowedMenuItems.slice(0, 3).map((item) => {
           const Icon = item.icon;
           const isActive = currentActiveItem?.id === item.id;
           return (
@@ -437,20 +485,109 @@ export default function DashboardLayout() {
                 isActive ? "text-blue-600" : "text-gray-500 hover:text-gray-800"
               }`}
             >
-              <Icon />
+              <Icon className="w-5 h-5" />
               <span className="text-[9px] font-semibold uppercase tracking-wider mt-1 truncate w-full text-center">{item.name}</span>
             </Link>
           );
         })}
-        {/* Logout */}
+        {/* Menu (9-dot Icon) */}
         <button
-          onClick={handleLogout}
-          className="flex flex-col items-center justify-center w-14 h-10 rounded text-gray-500 hover:text-red-600"
+          onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
+          className={`flex flex-col items-center justify-center w-14 h-10 rounded transition-all border-0 bg-transparent cursor-pointer ${
+            isMobileMenuOpen ? "text-blue-600" : "text-gray-500 hover:text-gray-800"
+          }`}
         >
-          <LogOut className="w-4 h-4" />
-          <span className="text-[9px] font-semibold uppercase tracking-wider mt-1">Logout</span>
+          <MenuGridIcon />
+          <span className="text-[9px] font-semibold uppercase tracking-wider mt-1">Menu</span>
         </button>
       </nav>
+
+      {/* MOBILE FULL NAVIGATION OVERLAY MODAL */}
+      {isMobileMenuOpen && (
+        <div className="fixed inset-0 bg-black/60 z-50 flex flex-col justify-end lg:hidden animate-fadeIn">
+          {/* Backdrop tap to close */}
+          <div className="absolute inset-0" onClick={() => setIsMobileMenuOpen(false)} />
+          
+          {/* Menu Card Content */}
+          <div className="relative bg-white rounded-t-2xl shadow-2xl w-full max-h-[80vh] flex flex-col z-50 overflow-hidden text-gray-800 animate-slideUp">
+            {/* Header */}
+            <div className="px-4 py-3 bg-gray-50 border-b border-gray-200 flex items-center justify-between shrink-0">
+              <span className="text-xs font-bold uppercase tracking-wider text-gray-500 flex items-center gap-1.5">
+                <MenuGridIcon /> Navigation Menu
+              </span>
+              <button 
+                onClick={() => setIsMobileMenuOpen(false)}
+                className="p-1 hover:bg-gray-200 rounded transition-colors text-gray-500 hover:text-gray-800 border-0 bg-transparent cursor-pointer"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            {/* Menu Items Grid */}
+            <div className="flex-1 overflow-y-auto p-5 pb-8">
+              <div className="grid grid-cols-3 gap-x-3 gap-y-4 text-center">
+                {allowedMenuItems.map((item) => {
+                  const Icon = item.icon;
+                  const isActive = currentActiveItem?.id === item.id;
+                  return (
+                    <Link
+                      key={item.id}
+                      to={item.path}
+                      onClick={() => setIsMobileMenuOpen(false)}
+                      className={`flex flex-col items-center justify-center p-3 rounded-lg border transition-all ${
+                        isActive 
+                          ? "bg-blue-50 border-blue-200 text-blue-700 font-bold" 
+                          : "bg-gray-50 border-gray-100 hover:bg-gray-100 text-gray-700"
+                      }`}
+                    >
+                      <div className={`p-2 rounded-full ${isActive ? "bg-blue-600 text-white" : "bg-white text-gray-500 border border-gray-100 shadow-sm"}`}>
+                        <Icon className="w-5 h-5" />
+                      </div>
+                      <span className="text-[10px] font-bold uppercase tracking-wider mt-2.5 leading-tight truncate w-full">
+                        {item.name}
+                      </span>
+                    </Link>
+                  );
+                })}
+                {/* Logout Button in Grid */}
+                <button
+                  type="button"
+                  onClick={() => {
+                    setIsMobileMenuOpen(false);
+                    handleLogout();
+                  }}
+                  className="flex flex-col items-center justify-center p-3 rounded-lg border bg-rose-50 border-rose-100 hover:bg-rose-100/50 text-rose-700 transition-all cursor-pointer"
+                >
+                  <div className="p-2 rounded-full bg-rose-600 text-white shadow-sm">
+                    <LogOut className="w-5 h-5" />
+                  </div>
+                  <span className="text-[10px] font-bold uppercase tracking-wider mt-2.5 leading-tight">
+                    Logout
+                  </span>
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Animation Styles */}
+      <style>{`
+        @keyframes fadeIn {
+          from { opacity: 0; }
+          to { opacity: 1; }
+        }
+        @keyframes slideUp {
+          from { transform: translateY(100%); }
+          to { transform: translateY(0); }
+        }
+        .animate-fadeIn {
+          animation: fadeIn 0.2s ease-out forwards;
+        }
+        .animate-slideUp {
+          animation: slideUp 0.3s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+        }
+      `}</style>
     </div>
   );
 }
