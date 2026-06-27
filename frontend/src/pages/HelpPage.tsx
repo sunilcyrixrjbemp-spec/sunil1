@@ -959,12 +959,22 @@ export default function HelpPage() {
 
               {/* Discussion logs */}
               <div className="space-y-2">
-                <h4 className="text-[10px] font-bold uppercase tracking-wider text-gray-400">Discussion Logs & Updates</h4>
+                <div className="flex justify-between items-center">
+                  <h4 className="text-[10px] font-bold uppercase tracking-wider text-gray-400">Discussion Logs & Updates</h4>
+                  <span className="text-[9px] font-bold text-gray-400 uppercase select-none">💬 Live Chat</span>
+                </div>
                 
-                <div className="border border-gray-255 rounded bg-gray-50/50 p-4 max-h-56 overflow-y-auto text-xs space-y-4">
-                  {!selectedTicket.comments ? (
-                    <div className="text-center py-5 text-gray-400 font-bold uppercase text-[9px] tracking-wider">
-                      No replies logged yet. Send a message to start conversation.
+                <div 
+                  className="rounded-lg p-4 min-h-[320px] max-h-[420px] overflow-y-auto flex flex-col gap-3 relative shadow-inner border border-gray-250"
+                  style={{
+                    backgroundColor: "#efeae2",
+                    backgroundImage: "radial-gradient(#dfdcd6 1px, transparent 1px)",
+                    backgroundSize: "16px 16px"
+                  }}
+                >
+                  {!selectedTicket.comments || !selectedTicket.comments.trim() ? (
+                    <div className="text-center my-auto py-10 text-gray-500 font-bold uppercase text-[9px] tracking-wider select-none bg-white/70 rounded p-4 mx-4 shadow-sm border border-gray-200">
+                      No replies logged yet. Type a message below to start the discussion thread.
                     </div>
                   ) : (
                     selectedTicket.comments.split("\n").map((cmt: string, cIdx: number) => {
@@ -982,31 +992,47 @@ export default function HelpPage() {
                         const rawTime = cmt.substring(openParenIdx + 2, closeParenIdx).trim();
                         content = cmt.substring(closeParenIdx + 3).trim();
                         
-                        // Parse backend time (DD-MMM-YYYY HH:MM:SS format) to localized browser string
                         try {
-                          const formattedLocal = formatDateTime(rawTime);
-                          dateTime = formattedLocal;
+                          dateTime = formatDateTime(rawTime);
                         } catch (e) {
                           dateTime = rawTime;
                         }
                       }
                       
-                      const isOwn = senderName.startsWith(currentUser?.name);
+                      const isSystem = senderName === "System" || cmt.startsWith("System:") || !cmt.includes("): ");
+                      if (isSystem) {
+                        return (
+                          <div key={cIdx} className="flex justify-center my-1">
+                            <span className="bg-white/90 border border-gray-200/60 text-gray-500 text-[9px] font-bold px-3 py-1 rounded-md uppercase tracking-wider shadow-2xs select-none">
+                              {content}
+                            </span>
+                          </div>
+                        );
+                      }
+
+                      const isOwn = senderName.toLowerCase() === currentUser?.name?.toLowerCase() || 
+                                    senderName.toLowerCase().startsWith(currentUser?.name?.toLowerCase().substring(0, 5));
 
                       return (
-                        <div key={cIdx} className={`flex flex-col space-y-1 ${isOwn ? "items-end" : "items-start"}`}>
-                          <div className="flex items-center gap-1.5 text-[9px] text-gray-455 font-bold uppercase select-none">
-                            <span className="truncate max-w-[120px]">{senderName}</span>
-                            <span>•</span>
-                            <span className="font-mono font-medium">{dateTime}</span>
-                          </div>
-                          
-                          <div className={`p-2.5 rounded-lg max-w-md ${
-                            isOwn 
-                              ? "bg-blue-600 text-white font-semibold rounded-tr-none shadow-sm" 
-                              : "bg-white border border-gray-200 text-gray-800 font-semibold rounded-tl-none shadow-xs"
-                          }`}>
-                            <p className="leading-relaxed whitespace-pre-wrap">{content}</p>
+                        <div key={cIdx} className={`flex w-full ${isOwn ? "justify-end" : "justify-start"}`}>
+                          <div 
+                            className={`px-3 py-2 rounded-lg max-w-[85%] sm:max-w-[70%] shadow-xs relative flex flex-col gap-0.5 ${
+                              isOwn 
+                                ? "bg-[#d9fdd3] text-gray-800 rounded-tr-none border border-[#c1e9bb]" 
+                                : "bg-white text-gray-800 rounded-tl-none border border-gray-200"
+                            }`}
+                          >
+                            {!isOwn && (
+                              <span className="font-extrabold text-[10px] text-green-600 block leading-none select-none">
+                                {senderName}
+                              </span>
+                            )}
+                            <p className="text-xs font-medium leading-relaxed whitespace-pre-wrap text-gray-850 break-words">
+                              {content}
+                            </p>
+                            <span className="text-[8px] text-gray-400 font-bold select-none text-right block leading-none mt-1">
+                              {dateTime} {isOwn && <span className="text-blue-500 ml-0.5">✓✓</span>}
+                            </span>
                           </div>
                         </div>
                       );
@@ -1014,33 +1040,34 @@ export default function HelpPage() {
                   )}
                 </div>
               </div>
-                        {/* Comment reply form */}
+
+              {/* Comment reply form */}
               {selectedTicket.status !== "Final Closed" && (
-                <div className="space-y-1.5">
+                <div className="space-y-1">
                   {typingUser && (
-                    <div className="text-[10px] text-gray-400 italic font-bold mb-1 flex items-center gap-1 animate-pulse">
+                    <div className="text-[10px] text-green-600 italic font-bold pl-2 flex items-center gap-1.5 animate-pulse select-none">
                       <span className="w-1.5 h-1.5 rounded-full bg-green-500 inline-block animate-ping"></span>
                       {typingUser} is typing...
                     </div>
                   )}
 
-                  <form onSubmit={handleSendCommentMessage} className="flex gap-2">
+                  <form onSubmit={handleSendCommentMessage} className="flex gap-2 items-center bg-gray-100 p-2 rounded-lg border border-gray-200">
                     <input
                       type="text"
-                      placeholder={selectedTicket.status === "Closed" ? "Ticket is closed. Reopen to chat..." : "Type reply message or update status..."}
+                      placeholder={selectedTicket.status === "Closed" ? "Ticket is closed. Reopen to chat..." : "Type reply message..."}
                       value={newComment}
                       onChange={(e) => handleInputChange(e.target.value)}
                       disabled={selectedTicket.status === "Closed" || commenting}
-                      className="flex-1 px-3 py-2 bg-white border border-gray-300 rounded text-xs text-gray-855 focus:outline-none focus:border-blue-500"
+                      className="flex-1 px-4 py-2 bg-white border border-gray-300 rounded-full text-xs text-gray-800 placeholder-gray-400 focus:outline-none focus:ring-1 focus:ring-green-500 focus:border-green-500 outline-none font-medium h-9"
                       required
                     />
                     <button
                       type="submit"
                       disabled={selectedTicket.status === "Closed" || commenting || !newComment.trim()}
-                      className="px-4 bg-blue-600 hover:bg-blue-700 disabled:bg-gray-250 disabled:text-gray-400 text-white rounded text-xs font-bold border-0 shadow-sm transition-colors cursor-pointer flex items-center justify-center gap-1.5 shrink-0"
+                      className="h-9 w-9 bg-green-600 hover:bg-green-700 disabled:bg-gray-300 disabled:text-gray-400 text-white rounded-full flex items-center justify-center shadow-md shrink-0 border-0 transition-colors cursor-pointer"
+                      title="Send message"
                     >
                       <Send className="w-3.5 h-3.5" />
-                      Send
                     </button>
                   </form>
                 </div>

@@ -145,12 +145,13 @@ def add_comment(
     if not ticket:
         raise HTTPException(status_code=404, detail="Ticket not found.")
 
-    # Check if the user is authorized (creator, assignee, or admin)
+    # Check if the user is authorized (creator, assignee, admin, or team supervisor)
     is_creator = ticket.created_by_code == current_user.user_id
     is_assignee = ticket.assigned_to_name == current_user.name
     is_admin = current_user.role == "Admin"
+    is_supervisor = current_user.role in ["Manager", "Coordinator", "Project Head", "VP", "Division Manager"]
     
-    if not (is_creator or is_assignee or is_admin):
+    if not (is_creator or is_assignee or is_admin or is_supervisor):
         raise HTTPException(status_code=403, detail="Not authorized to comment on this ticket.")
 
     # Check if ticket is closed past 36 hours

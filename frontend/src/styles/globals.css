@@ -63,6 +63,16 @@
   @apply w-full bg-white border border-gray-300 rounded px-3 py-2 text-xs text-gray-800 placeholder-gray-400 focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500/50 transition-all;
 }
 
+select.input-lte {
+  color-scheme: light !important;
+}
+
+select.input-lte option {
+  background-color: #ffffff !important;
+  color: #1f2937 !important;
+  font-weight: 500 !important;
+}
+
 .input-lte-icon {
   @apply w-full bg-white border border-gray-300 rounded pl-9 pr-3 py-2 text-xs text-gray-800 placeholder-gray-400 focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500/50 transition-all;
 }
