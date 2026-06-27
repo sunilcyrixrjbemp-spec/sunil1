@@ -19,7 +19,7 @@ jobs:
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: '20'
+          node-version: '22'
           cache: 'npm'
           cache-dependency-path: frontend/package-lock.json
 
@@ -48,15 +48,15 @@ jobs:
           VITE_APP_ENVIRONMENT: production
           VITE_FIREBASE_VAPID_KEY: ${{ secrets.VITE_FIREBASE_VAPID_KEY }}
 
-      # 7. Add Android platform (if not already added)
+      # 7. Add Android platform
       - name: Add Android platform
         working-directory: frontend
-        run: |
-          npx cap add android 2>/dev/null || echo "Android platform already exists"
+        run: npx cap add android
 
       # 8. Write google-services.json (from GitHub Secret)
       - name: Write google-services.json
         run: |
+          mkdir -p frontend/android/app
           echo '${{ secrets.GOOGLE_SERVICES_JSON }}' > frontend/android/app/google-services.json
 
       # 9. Sync Capacitor
