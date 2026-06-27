@@ -13,5 +13,5 @@ CLOUDFLARE_R2_BUCKET_NAME = "fieldops-uploads"
 
 [[d1_databases]]
 binding = "DB"
-database_name = "fieldops_db"
+database_name = "expense_management_db"
 database_id = "34e085d8-c078-4f2f-b240-9bf8f4cf9301"
