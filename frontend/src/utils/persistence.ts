@@ -7,46 +7,72 @@ const BACKUP_PATH = "CyrixField/session.json";
 // ─── File Backup Helpers (Android/iOS Documents folder) ──────────────────────
 const saveToBackupFile = async (accessToken: string, refreshToken: string, user: any) => {
   if (!Capacitor.isNativePlatform()) return;
+  const dataStr = JSON.stringify({ accessToken, refreshToken, user });
+  
+  // Write to Directory.Data (internal app storage - highly reliable, permission-free)
   try {
-    // Check/request permission
-    try {
-      const status = await Filesystem.checkPermissions();
-      if (status.publicStorage !== 'granted') {
-        await Filesystem.requestPermissions();
-      }
-    } catch (_) {}
-
     await Filesystem.writeFile({
       path: BACKUP_PATH,
-      data: JSON.stringify({ accessToken, refreshToken, user }),
-      directory: Directory.Documents,
+      data: dataStr,
+      directory: Directory.Data,
       encoding: Encoding.UTF8,
       recursive: true
     });
-    console.log("[Backup] Saved session to public Documents/CyrixField/session.json");
+    console.log("[Backup] Saved session to Directory.Data");
   } catch (e) {
-    console.warn("[Backup] Failed to save session file:", e);
+    console.warn("[Backup] Failed to save to Directory.Data:", e);
+  }
+
+  // Write to Directory.External (visible in Android/data/com.cyrix.field/files - permission-free)
+  try {
+    await Filesystem.writeFile({
+      path: BACKUP_PATH,
+      data: dataStr,
+      directory: Directory.External,
+      encoding: Encoding.UTF8,
+      recursive: true
+    });
+    console.log("[Backup] Saved session to Directory.External");
+  } catch (e) {
+    console.warn("[Backup] Failed to save to Directory.External:", e);
   }
 };
 
 const loadFromBackupFile = async (): Promise<{ accessToken: string, refreshToken: string, user: any } | null> => {
   if (!Capacitor.isNativePlatform()) return null;
+  
+  // Try Directory.Data first (internal, highly reliable)
   try {
     const result = await Filesystem.readFile({
       path: BACKUP_PATH,
-      directory: Directory.Documents,
+      directory: Directory.Data,
       encoding: Encoding.UTF8
     });
     if (result && typeof result.data === 'string') {
       const parsed = JSON.parse(result.data);
       if (parsed && parsed.accessToken && parsed.user) {
-        console.log("[Backup] Loaded session from public Documents/CyrixField/session.json");
+        console.log("[Backup] Restored session from Directory.Data");
         return parsed;
       }
     }
-  } catch (e) {
-    // File probably doesn't exist, which is fine
-  }
+  } catch (_) {}
+
+  // Try Directory.External second (visible in file manager)
+  try {
+    const result = await Filesystem.readFile({
+      path: BACKUP_PATH,
+      directory: Directory.External,
+      encoding: Encoding.UTF8
+    });
+    if (result && typeof result.data === 'string') {
+      const parsed = JSON.parse(result.data);
+      if (parsed && parsed.accessToken && parsed.user) {
+        console.log("[Backup] Restored session from Directory.External");
+        return parsed;
+      }
+    }
+  } catch (_) {}
+
   return null;
 };
 
@@ -55,12 +81,16 @@ const deleteBackupFile = async () => {
   try {
     await Filesystem.deleteFile({
       path: BACKUP_PATH,
-      directory: Directory.Documents
+      directory: Directory.Data
     });
-    console.log("[Backup] Deleted session file");
-  } catch (e) {
-    // Ignore error if file doesn't exist
-  }
+  } catch (_) {}
+  try {
+    await Filesystem.deleteFile({
+      path: BACKUP_PATH,
+      directory: Directory.External
+    });
+  } catch (_) {}
+  console.log("[Backup] Deleted session files");
 };
 
 // ─── In-memory cache (survives React re-renders, prevents flicker) ────────────
@@ -195,6 +225,25 @@ export const nativeConfig = {
     } catch (_) {
       localStorage.setItem(key, value);
     }
+
+    if (Capacitor.isNativePlatform()) {
+      try {
+        await Filesystem.writeFile({
+          path: `CyrixField/${key}.txt`,
+          data: value,
+          directory: Directory.Data,
+          encoding: Encoding.UTF8,
+          recursive: true
+        });
+        await Filesystem.writeFile({
+          path: `CyrixField/${key}.txt`,
+          data: value,
+          directory: Directory.External,
+          encoding: Encoding.UTF8,
+          recursive: true
+        });
+      } catch (_) {}
+    }
   },
   get: async (key: string): Promise<string | null> => {
     try {
@@ -204,6 +253,35 @@ export const nativeConfig = {
         return value;
       }
     } catch (_) {}
+
+    if (Capacitor.isNativePlatform()) {
+      try {
+        const result = await Filesystem.readFile({
+          path: `CyrixField/${key}.txt`,
+          directory: Directory.Data,
+          encoding: Encoding.UTF8
+        });
+        if (result && typeof result.data === 'string') {
+          localStorage.setItem(key, result.data);
+          try { await Preferences.set({ key, value: result.data }); } catch (_) {}
+          return result.data;
+        }
+      } catch (_) {}
+
+      try {
+        const result = await Filesystem.readFile({
+          path: `CyrixField/${key}.txt`,
+          directory: Directory.External,
+          encoding: Encoding.UTF8
+        });
+        if (result && typeof result.data === 'string') {
+          localStorage.setItem(key, result.data);
+          try { await Preferences.set({ key, value: result.data }); } catch (_) {}
+          return result.data;
+        }
+      } catch (_) {}
+    }
+
     return localStorage.getItem(key);
   },
   remove: async (key: string): Promise<void> => {
@@ -212,6 +290,21 @@ export const nativeConfig = {
       localStorage.removeItem(key);
     } catch (_) {
       localStorage.removeItem(key);
+    }
+
+    if (Capacitor.isNativePlatform()) {
+      try {
+        await Filesystem.deleteFile({
+          path: `CyrixField/${key}.txt`,
+          directory: Directory.Data
+        });
+      } catch (_) {}
+      try {
+        await Filesystem.deleteFile({
+          path: `CyrixField/${key}.txt`,
+          directory: Directory.External
+        });
+      } catch (_) {}
     }
   }
 };
