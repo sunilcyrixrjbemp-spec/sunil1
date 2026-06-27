@@ -1,0 +1,2 @@
+/api/* https://sunil1.sunilbishnoi.workers.dev/:splat 200
+/uploads/* https://sunil1.sunilbishnoi.workers.dev/uploads/:splat 200
