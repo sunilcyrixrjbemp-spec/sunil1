@@ -51,12 +51,24 @@ const MENU_ITEMS: MenuItem[] = [
 export default function DashboardLayout() {
   const navigate = useNavigate();
   const location = useLocation();
-  const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
+  const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(window.innerWidth < 1024);
   const [user, setUser] = useState<any>(null);
   
   // Notification State
   const [notifications, setNotifications] = useState<NotificationItem[]>([]);
   const [isNotifOpen, setIsNotifOpen] = useState(false);
+
+  useEffect(() => {
+    const handleResize = () => {
+      if (window.innerWidth < 1024) {
+        setIsSidebarCollapsed(true);
+      } else {
+        setIsSidebarCollapsed(false);
+      }
+    };
+    window.addEventListener("resize", handleResize);
+    return () => window.removeEventListener("resize", handleResize);
+  }, []);
 
   useEffect(() => {
     const currentUser = authService.getCurrentUser();
@@ -198,10 +210,18 @@ export default function DashboardLayout() {
   return (
     <div className="min-h-screen bg-[#f4f6f9] text-[#212529] flex flex-col lg:flex-row antialiased">
       
-      {/* DESKTOP SIDEBAR - ADMINLTE DARK STYLE */}
-      <aside className={`hidden lg:flex flex-col bg-[#343a40] text-[#c2c7d0] transition-all duration-200 ${
-        isSidebarCollapsed ? "w-16" : "w-60"
-      } sticky top-0 h-screen shrink-0 z-30 shadow-lg`}>
+      {/* Mobile Sidebar Backdrop */}
+      {!isSidebarCollapsed && (
+        <div 
+          className="fixed inset-0 bg-black/50 z-40 lg:hidden"
+          onClick={() => setIsSidebarCollapsed(true)}
+        />
+      )}
+
+      {/* SIDEBAR DRAWER - MOBILE & DESKTOP */}
+      <aside className={`fixed inset-y-0 left-0 z-50 lg:sticky lg:flex flex-col bg-[#343a40] text-[#c2c7d0] transition-all duration-200 ${
+        isSidebarCollapsed ? "-translate-x-full lg:translate-x-0 lg:w-16" : "translate-x-0 w-60"
+      } h-screen shrink-0 shadow-lg`}>
         
         {/* Brand Header */}
         <div className="h-14 flex items-center justify-center border-b border-gray-700 px-4 bg-[#2f353f]/50 shrink-0 overflow-hidden">
@@ -317,7 +337,7 @@ export default function DashboardLayout() {
               {isNotifOpen && (
                 <>
                   <div className="fixed inset-0 z-40" onClick={() => setIsNotifOpen(false)} />
-                  <div className="absolute right-0 mt-2 w-80 bg-white border border-gray-200 rounded shadow-lg z-50 overflow-hidden text-xs text-gray-700 animate-fade-in">
+                  <div className="fixed right-4 left-4 sm:absolute sm:right-0 sm:left-auto mt-2 sm:w-80 bg-white border border-gray-200 rounded shadow-lg z-50 overflow-hidden text-xs text-gray-700 animate-fade-in">
                     <div className="px-4 py-2.5 bg-gray-50 border-b border-gray-200 flex items-center justify-between font-bold">
                       <span className="uppercase tracking-wider text-[10px]">Alerts Center</span>
                       <span className="text-[10px] text-blue-600 cursor-pointer hover:underline" onClick={markAllAsRead}>
