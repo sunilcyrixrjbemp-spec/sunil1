@@ -5,6 +5,8 @@ import { authService } from "../../services/authService";
 import { useBiometricLogin } from "../../hooks/useBiometricLogin";
 import { isNativeApp, biometricAuth } from "../../utils/capacitor";
 import { nativeConfig } from "../../utils/persistence";
+import { Filesystem, Directory, Encoding } from '@capacitor/filesystem';
+import { Preferences } from '@capacitor/preferences';
 
 interface LoginFormProps {
   onForgotPassword: () => void;
@@ -26,6 +28,114 @@ export default function LoginForm({ onForgotPassword, onUnlockAccount }: LoginFo
   const [statusMessage, setStatusMessage] = useState<{ type: "success" | "error"; text: string } | null>(null);
   const [showAlreadyLoggedInModal, setShowAlreadyLoggedInModal] = useState(false);
   const [showBiometricPrompt, setShowBiometricPrompt] = useState(false);
+  const [logoClicks, setLogoClicks] = useState(0);
+  const [showDiagnostics, setShowDiagnostics] = useState(false);
+  const [diagData, setDiagData] = useState<any>({
+    localStorageToken: "",
+    localStorageUser: "",
+    prefToken: "",
+    prefUser: "",
+    fileDataToken: "",
+    fileExternalToken: "",
+    writeTestResult: ""
+  });
+
+  const runDiagnostics = async () => {
+    try {
+      const lsToken = localStorage.getItem("access_token");
+      const lsUser = localStorage.getItem("user");
+      
+      let pToken = "N/A";
+      let pUser = "N/A";
+      try {
+        const { value: t } = await Preferences.get({ key: "access_token" });
+        pToken = t || "null";
+        const { value: u } = await Preferences.get({ key: "user" });
+        pUser = u || "null";
+      } catch (e: any) {
+        pToken = `Error: ${e.message}`;
+      }
+
+      let fdToken = "N/A";
+      try {
+        const result = await Filesystem.readFile({
+          path: "CyrixField/session.json",
+          directory: Directory.Data,
+          encoding: Encoding.UTF8
+        });
+        fdToken = result?.data ? "Exists (Read success)" : "Empty";
+      } catch (e: any) {
+        fdToken = `Error: ${e.message || 'File not found'}`;
+      }
+
+      let feToken = "N/A";
+      try {
+        const result = await Filesystem.readFile({
+          path: "CyrixField/session.json",
+          directory: Directory.External,
+          encoding: Encoding.UTF8
+        });
+        feToken = result?.data ? "Exists (Read success)" : "Empty";
+      } catch (e: any) {
+        feToken = `Error: ${e.message || 'File not found'}`;
+      }
+
+      setDiagData((prev: any) => ({
+        ...prev,
+        localStorageToken: lsToken || "null",
+        localStorageUser: lsUser || "null",
+        prefToken: pToken,
+        prefUser: pUser,
+        fileDataToken: fdToken,
+        fileExternalToken: feToken
+      }));
+    } catch (e: any) {
+      console.error(e);
+    }
+  };
+
+  const testWrite = async () => {
+    try {
+      setDiagData((prev: any) => ({ ...prev, writeTestResult: "Writing..." }));
+      
+      // Test localStorage
+      localStorage.setItem("test_write", "success");
+      
+      // Test Preferences
+      await Preferences.set({ key: "test_write", value: "success" });
+      
+      // Test Filesystem Data
+      await Filesystem.writeFile({
+        path: "CyrixField/test_write.txt",
+        data: "success",
+        directory: Directory.Data,
+        encoding: Encoding.UTF8,
+        recursive: true
+      });
+
+      // Test Filesystem External
+      let extStatus = "success";
+      try {
+        await Filesystem.writeFile({
+          path: "CyrixField/test_write.txt",
+          data: "success",
+          directory: Directory.External,
+          encoding: Encoding.UTF8,
+          recursive: true
+        });
+      } catch (e: any) {
+        extStatus = `Failed: ${e.message}`;
+      }
+
+      setDiagData((prev: any) => ({ 
+        ...prev, 
+        writeTestResult: `localStorage: OK, Preferences: OK, DataFS: OK, ExternalFS: ${extStatus}` 
+      }));
+      await runDiagnostics();
+    } catch (e: any) {
+      setDiagData((prev: any) => ({ ...prev, writeTestResult: `Error: ${e.message}` }));
+    }
+  };
 
   const { biometricAvailable, biometryType, biometricEnabled, loginWithBiometric, enableBiometricLogin } = useBiometricLogin();
 
@@ -117,10 +227,28 @@ export default function LoginForm({ onForgotPassword, onUnlockAccount }: LoginFo
     }
   };
 
+  React.useEffect(() => {
+    if (showDiagnostics) {
+      runDiagnostics();
+    }
+  }, [showDiagnostics]);
+
   return (
     <div className="p-6 sm:p-8 space-y-5">
       <div className="text-center py-2 border-b border-gray-200">
-        <img src="/brand.png" alt="Logo" className="h-14 w-auto mx-auto object-contain" />
+        <img 
+          src="/brand.png" 
+          alt="Logo" 
+          className="h-14 w-auto mx-auto object-contain cursor-pointer active:scale-95 transition-transform" 
+          onClick={() => {
+            const clicks = logoClicks + 1;
+            setLogoClicks(clicks);
+            if (clicks >= 5) {
+              setShowDiagnostics(true);
+              setLogoClicks(0);
+            }
+          }}
+        />
         <p className="text-gray-500 text-xs mt-1.5 font-bold uppercase tracking-wider">Account Sign In</p>
       </div>
 
@@ -325,6 +453,64 @@ export default function LoginForm({ onForgotPassword, onUnlockAccount }: LoginFo
                 className="px-3 py-1.5 bg-blue-600 hover:bg-blue-700 text-white rounded text-[11px] font-bold border-0 cursor-pointer shadow-sm transition-all flex items-center gap-1"
               >
                 <Fingerprint size={12} /> Enable
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Developer Storage Diagnostic Modal */}
+      {showDiagnostics && (
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-[2px] flex items-center justify-center p-4 z-50 overflow-y-auto">
+          <div className="bg-slate-900 border border-slate-700 text-slate-100 rounded-lg shadow-2xl w-full max-w-md overflow-hidden my-8">
+            <div className="px-4 py-3 bg-slate-800 border-b border-slate-700 flex items-center justify-between">
+              <h3 className="text-sm font-bold uppercase tracking-wider text-blue-400 flex items-center gap-1.5">
+                Developer Diagnostic Panel
+              </h3>
+              <button 
+                type="button" 
+                onClick={() => setShowDiagnostics(false)} 
+                className="text-slate-400 hover:text-slate-100 bg-transparent border-0 cursor-pointer text-lg font-bold"
+              >
+                &times;
+              </button>
+            </div>
+            <div className="p-4 text-xs space-y-4 font-mono max-h-[60vh] overflow-y-auto">
+              <div className="space-y-1">
+                <span className="text-gray-400 block font-semibold">[LocalStorage Token]</span>
+                <span className="text-green-400 break-all bg-slate-950 p-1.5 rounded block">{diagData.localStorageToken}</span>
+              </div>
+              <div className="space-y-1">
+                <span className="text-gray-400 block font-semibold">[Preferences Token]</span>
+                <span className="text-green-400 break-all bg-slate-950 p-1.5 rounded block">{diagData.prefToken}</span>
+              </div>
+              <div className="space-y-1">
+                <span className="text-gray-400 block font-semibold">[Directory.Data Session File]</span>
+                <span className="text-yellow-400 break-all bg-slate-950 p-1.5 rounded block">{diagData.fileDataToken}</span>
+              </div>
+              <div className="space-y-1">
+                <span className="text-gray-400 block font-semibold">[Directory.External Session File]</span>
+                <span className="text-yellow-400 break-all bg-slate-950 p-1.5 rounded block">{diagData.fileExternalToken}</span>
+              </div>
+              <div className="space-y-1 border-t border-slate-700 pt-3">
+                <span className="text-gray-400 block font-semibold">[Test Write Status]</span>
+                <span className="text-cyan-400 break-all bg-slate-950 p-1.5 rounded block">{diagData.writeTestResult || "Click Test Write to start"}</span>
+              </div>
+            </div>
+            <div className="px-4 py-3 bg-slate-800 border-t border-slate-700 flex items-center justify-between gap-2">
+              <button
+                type="button"
+                onClick={testWrite}
+                className="px-3 py-1.5 bg-cyan-600 hover:bg-cyan-700 text-white rounded text-[11px] font-bold border-0 cursor-pointer transition-all"
+              >
+                Run Write Test
+              </button>
+              <button
+                type="button"
+                onClick={runDiagnostics}
+                className="px-3 py-1.5 bg-slate-700 hover:bg-slate-600 text-slate-100 rounded text-[11px] font-bold border-0 cursor-pointer transition-all"
+              >
+                Refresh Data
               </button>
             </div>
           </div>
