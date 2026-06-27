@@ -40,7 +40,8 @@ jobs:
         npm run build
         # Create Cloudflare Pages redirects file for transparent API proxying
         if [ -n "${{ secrets.VITE_API_BASE_URL }}" ]; then
-          echo "/api/* ${{ secrets.VITE_API_BASE_URL }}/:splat 200" > dist/_redirects
+          CLEAN_URL=$(echo "${{ secrets.VITE_API_BASE_URL }}" | sed 's/\/$//' | sed 's/\/api$//')
+          echo "/api/* $CLEAN_URL/api/:splat 200" > dist/_redirects
         fi
     
     - name: Deploy to Cloudflare Pages
