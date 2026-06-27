@@ -2,26 +2,35 @@ import random
 import string
 import hashlib
 import re
-import bcrypt
 from datetime import datetime, timedelta
 from typing import Optional, List, Dict, Any
 from jose import jwt
 from app.config.settings import settings
+from passlib.hash import bcrypt
 
 def verify_password(plain_password: str, hashed_password: str) -> bool:
-    """Verify plain password against bcrypt hashed password"""
+    """Verify plain password against hashed password (supports both pbkdf2 and bcrypt)"""
     try:
-        return bcrypt.checkpw(
-            plain_password.encode("utf-8"),
-            hashed_password.encode("utf-8")
-        )
+        if hashed_password.startswith("pbkdf2_sha256$"):
+            parts = hashed_password.split("$")
+            if len(parts) != 4:
+                return False
+            iterations = int(parts[1])
+            salt = parts[2]
+            key_hex = parts[3]
+            new_key = hashlib.pbkdf2_hmac("sha256", plain_password.encode("utf-8"), salt.encode("utf-8"), iterations)
+            return new_key.hex() == key_hex
+        
+        # Default fallback to passlib bcrypt
+        return bcrypt.verify(plain_password, hashed_password)
     except Exception:
         return False
 
 def get_password_hash(password: str) -> str:
-    """Hash password using bcrypt"""
-    salt = bcrypt.gensalt(rounds=10)
-    return bcrypt.hashpw(password.encode("utf-8"), salt).decode("utf-8")
+    """Hash password using PBKDF2 SHA256 (fully pure-python & fast on edge)"""
+    salt = "".join(random.choices(string.ascii_letters + string.digits, k=16))
+    key = hashlib.pbkdf2_hmac("sha256", password.encode("utf-8"), salt.encode("utf-8"), 100000)
+    return f"pbkdf2_sha256$100000${salt}${key.hex()}"
 
 def create_access_token(data: dict, expires_delta: Optional[timedelta] = None) -> str:
     to_encode = data.copy()
