@@ -48,16 +48,16 @@ jobs:
           VITE_APP_ENVIRONMENT: production
           VITE_FIREBASE_VAPID_KEY: ${{ secrets.VITE_FIREBASE_VAPID_KEY }}
 
-      # 7. Write google-services.json (from GitHub Secret)
-      - name: Write google-services.json
-        run: |
-          echo '${{ secrets.GOOGLE_SERVICES_JSON }}' > frontend/android/app/google-services.json
-
-      # 8. Add Android platform (if not already added)
+      # 7. Add Android platform (if not already added)
       - name: Add Android platform
         working-directory: frontend
         run: |
           npx cap add android 2>/dev/null || echo "Android platform already exists"
+
+      # 8. Write google-services.json (from GitHub Secret)
+      - name: Write google-services.json
+        run: |
+          echo '${{ secrets.GOOGLE_SERVICES_JSON }}' > frontend/android/app/google-services.json
 
       # 9. Sync Capacitor
       - name: Sync Capacitor to Android
