@@ -293,9 +293,16 @@ elif force_local or (not token and not account_id and not database_id and os.get
         echo=settings.DEBUG
     )
 else:
+    missing = []
+    if not token:
+        missing.append("CLOUDFLARE_API_TOKEN")
+    if not account_id:
+        missing.append("CLOUDFLARE_ACCOUNT_ID")
+    if not database_id:
+        missing.append("CLOUDFLARE_DATABASE_ID")
     raise RuntimeError(
-        "Cloudflare D1 Connection Error: Missing required credentials (token, account ID, or database ID). "
-        "Local SQLite database fallback is strictly disabled."
+        f"Cloudflare D1 Connection Error: Missing required credentials ({', '.join(missing)}). "
+        "Please add these environment variables in your Render Dashboard settings."
     )
 
 # Create session factory
