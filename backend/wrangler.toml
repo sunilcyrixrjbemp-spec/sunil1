@@ -1,4 +1,4 @@
-name = "fieldops-backend"
+name = "sunil1"
 main = "app/main.py"
 compatibility_date = "2024-03-18"
 compatibility_flags = ["python_workers"]
