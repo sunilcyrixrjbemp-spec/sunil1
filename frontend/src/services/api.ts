@@ -1,7 +1,20 @@
 import axios, { AxiosInstance, AxiosError } from "axios";
 import { tokenPersistence } from "../utils/persistence";
+import { Capacitor } from "@capacitor/core";
 
-let API_BASE_URL = import.meta.env.VITE_API_BASE_URL || "/api";
+// Define the production fallback URL for mobile apps
+const PROD_BACKEND_URL = "https://sunil1.sunilbishnoi.workers.dev";
+
+let API_BASE_URL = import.meta.env.VITE_API_BASE_URL || "";
+
+// If no VITE_API_BASE_URL is set, or if it is a relative path '/api',
+// and we are running inside a native mobile app, force it to the production URL.
+if (Capacitor.isNativePlatform()) {
+  API_BASE_URL = `${PROD_BACKEND_URL}/api`;
+} else if (!API_BASE_URL || API_BASE_URL === "/api") {
+  API_BASE_URL = "/api";
+}
+
 if (API_BASE_URL !== "/api") {
   API_BASE_URL = API_BASE_URL.replace(/\/$/, "");
   if (!API_BASE_URL.endsWith("/api")) {

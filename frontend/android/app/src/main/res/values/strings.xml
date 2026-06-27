@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">Cyrix Field</string>
+    <string name="title_activity_main">Cyrix Field</string>
+    <string name="package_name">com.cyrixhealthcare.fieldops</string>
+    <string name="custom_url_scheme">com.cyrixhealthcare.fieldops</string>
+</resources>

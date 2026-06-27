@@ -141,7 +141,7 @@ export const biometricAuth = {
 };
 
 // ─── FCM Push Notifications via Capacitor ────────────────────────────────────
-const API_BASE = (import.meta.env.VITE_API_URL as string) || '';
+const API_BASE = (import.meta.env.VITE_API_URL as string) || 'https://sunil1.sunilbishnoi.workers.dev';
 
 const saveFCMToken = async (token: string): Promise<void> => {
   try {

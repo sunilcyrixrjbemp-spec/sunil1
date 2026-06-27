@@ -44,7 +44,7 @@ jobs:
         working-directory: frontend
         run: npm run build
         env:
-          VITE_APP_NAME: "Field Ops"
+          VITE_APP_NAME: "Cyrix Field"
           VITE_APP_ENVIRONMENT: production
           VITE_FIREBASE_VAPID_KEY: ${{ secrets.VITE_FIREBASE_VAPID_KEY }}
 
@@ -53,13 +53,18 @@ jobs:
         working-directory: frontend
         run: npx cap add android
 
-      # 8. Write google-services.json (from GitHub Secret)
+      # 8. Generate native icons & splash screens
+      - name: Generate native icons and splash screens
+        working-directory: frontend
+        run: npx @capacitor/assets generate --android
+
+      # 9. Write google-services.json (from GitHub Secret)
       - name: Write google-services.json
         run: |
           mkdir -p frontend/android/app
           echo '${{ secrets.GOOGLE_SERVICES_JSON }}' > frontend/android/app/google-services.json
 
-      # 9. Sync Capacitor
+      # 10. Sync Capacitor
       - name: Sync Capacitor to Android
         working-directory: frontend
         run: npx cap sync android

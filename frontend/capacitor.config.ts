@@ -2,7 +2,7 @@ import type { CapacitorConfig } from '@capacitor/cli';
 
 const config: CapacitorConfig = {
   appId: 'com.cyrixhealthcare.fieldops',
-  appName: 'Field Ops',
+  appName: 'Cyrix Field',
   webDir: 'dist',
   server: {
     androidScheme: 'https',
