@@ -234,7 +234,7 @@ export default function ProfilePage() {
         
         {/* Left Column - Main Avatar / Card */}
         <div className="lg:col-span-1">
-          <div className="card-lte-primary p-6 text-center sticky top-20">
+          <div className="card-lte-primary p-6 text-center lg:sticky lg:top-20">
             {/* Circle avatar with 1 capitalized initial */}
             <div className="h-20 w-20 rounded-full bg-blue-100 text-blue-600 flex items-center justify-center font-bold text-2xl mx-auto border border-blue-200 shadow-sm uppercase">
               {user.name ? user.name.charAt(0).toUpperCase() : "U"}
@@ -271,34 +271,34 @@ export default function ProfilePage() {
           <div className="card-lte border-t-3 border-t-[#17a2b8] flex flex-col min-h-[500px]">
             
             {/* Header Tabs */}
-            <div className="border-b border-gray-200 bg-gray-50 flex flex-col sm:flex-row sm:items-stretch">
+            <div className="border-b border-gray-200 bg-gray-50 flex flex-row items-stretch">
               <button
                 onClick={() => {
                   setNotice(null);
                   handleTabChange("info");
                 }}
-                className={`flex-1 py-3 px-6 text-center sm:text-left text-xs font-bold uppercase tracking-wider transition-all flex items-center justify-center sm:justify-start gap-2 cursor-pointer ${
+                className={`flex-1 py-2.5 px-3 sm:py-3 sm:px-6 text-center text-[10px] sm:text-xs font-bold uppercase tracking-wider transition-all flex items-center justify-center gap-1.5 cursor-pointer ${
                   activeTab === "info"
-                    ? "bg-white text-blue-600 border-b-2 border-b-blue-600 sm:border-b-0 sm:border-l-2 sm:border-l-blue-600"
+                    ? "bg-white text-blue-600 border-b-2 border-b-blue-600"
                     : "text-gray-500 hover:text-gray-900 hover:bg-gray-100"
                 }`}
               >
-                <User className="w-4 h-4" />
-                Profile Information
+                <User className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
+                <span>Info</span>
               </button>
               <button
                 onClick={() => {
                   setPassNotice(null);
                   handleTabChange("password");
                 }}
-                className={`flex-1 py-3 px-6 text-center sm:text-left text-xs font-bold uppercase tracking-wider transition-all flex items-center justify-center sm:justify-start gap-2 border-t sm:border-t-0 sm:border-l border-gray-200 cursor-pointer ${
+                className={`flex-1 py-2.5 px-3 sm:py-3 sm:px-6 text-center text-[10px] sm:text-xs font-bold uppercase tracking-wider transition-all flex items-center justify-center gap-1.5 border-l border-gray-200 cursor-pointer ${
                   activeTab === "password"
-                    ? "bg-white text-blue-600 border-b-2 border-b-blue-600 sm:border-b-0 sm:border-l-2 sm:border-l-blue-600"
+                    ? "bg-white text-blue-600 border-b-2 border-b-blue-600"
                     : "text-gray-500 hover:text-gray-900 hover:bg-gray-100"
                 }`}
               >
-                <Lock className="w-4 h-4 text-blue-600" />
-                Security Settings
+                <Lock className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-blue-600" />
+                <span>Security</span>
               </button>
             </div>
 

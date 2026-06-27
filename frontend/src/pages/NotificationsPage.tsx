@@ -3,6 +3,7 @@ import { Link, useNavigate } from "react-router-dom";
 import { authService } from "../services/authService";
 import { expenseService } from "../services/expenseService";
 import { approvalService } from "../services/approvalService";
+import { ticketService } from "../services/ticketService";
 import toast from "react-hot-toast";
 import Loader from "../components/common/Loader";
 import { 
@@ -82,18 +83,21 @@ export default function NotificationsPage() {
 
       let pendings: any[] = [];
       let expenses: any[] = [];
+      let tickets: any[] = [];
 
       try {
+        const promises: Promise<any>[] = [];
         if (isApprover) {
-          const [pendingsRes, expensesRes] = await Promise.all([
-            approvalService.getPendingApprovals(),
-            expenseService.getExpenses()
-          ]);
-          pendings = pendingsRes || [];
-          expenses = expensesRes || [];
-        } else {
-          expenses = await expenseService.getExpenses();
+          promises.push(approvalService.getPendingApprovals().then(res => pendings = res || []).catch(() => {}));
         }
+        promises.push(expenseService.getExpenses().then(res => expenses = res || []).catch(() => {}));
+        
+        const hasHelpAccess = allowedWindows.includes("help") || currentUser.role === "Admin";
+        if (hasHelpAccess) {
+          promises.push(ticketService.getTickets().then(res => tickets = res || []).catch(() => {}));
+        }
+        
+        await Promise.all(promises);
       } catch (e) {
         console.error("Failed loading notifications concurrently", e);
       }
@@ -138,6 +142,44 @@ export default function NotificationsPage() {
             link: "/home",
             created_at: e.created_at || e.updated_at
           });
+        }
+      });
+
+      // Process Support Tickets alerts
+      tickets.forEach((t: any) => {
+        const isCreator = t.created_by_code === currentUser.user_id;
+        const isAssignee = t.assigned_to_name === currentUser.name;
+        
+        if (isCreator) {
+          if (t.status !== "Open" && t.status !== "Final Closed") {
+            const id = `ticket-status-${t.id}-${t.status}`;
+            list.push({
+              id: id,
+              title: `Ticket ${t.status}`,
+              description: `Your support ticket ${t.ticket_code} ("${t.concern_type}") has been updated to ${t.status}.`,
+              time: "Ticket Update",
+              type: t.status === "Closed" || t.status === "Resolved" ? "success" : "info",
+              read: readNotifIds.includes(id),
+              link: "/help-center",
+              created_at: t.updated_at
+            });
+          }
+        }
+        
+        if (isAssignee) {
+          if (t.status === "Open" || t.status === "Updated") {
+            const id = `ticket-action-${t.id}-${t.status}`;
+            list.push({
+              id: id,
+              title: "Ticket Action Required",
+              description: `Support ticket ${t.ticket_code} ("${t.concern_type}") raised by ${t.created_by_name} is ${t.status} and assigned to you.`,
+              time: "Action Required",
+              type: "warning",
+              read: readNotifIds.includes(id),
+              link: "/help-center",
+              created_at: t.updated_at
+            });
+          }
         }
       });
 

@@ -1137,13 +1137,16 @@ export default function ExpensePage() {
 
               {itineraries.map((leg, index) => {
                 const legNum = index + 1;
-                const isFirst = legNum === 1;
-                const distOpts = Object.keys(facilities).length > 0 ? Object.keys(facilities) : [
+                const rawDistOpts = Object.keys(facilities).length > 0 ? Object.keys(facilities) : [
                   "Ajmer", "Beawer", "Bhilwara", "Nagaur", "Tonk", "Bikaner", "Churu", "Ganganar", "Hanumangarh", 
                   "Barmer", "Balotra", "Jaisalmer", "Jalore", "Jodhpur", "Pali", "Phalodi", "Sirohi", 
                   "Banswara", "Chittorgarh", "Dungarpur", "Rajsamand", "Pratapgarh", "Udaipur"
                 ];
                 const hDist = user.district || user.home_district || "Jodhpur";
+                const distOpts = [...rawDistOpts];
+                if (hDist && hDist !== "All" && !distOpts.includes(hDist)) {
+                  distOpts.push(hDist);
+                }
 
                 return (
                   <div key={leg.leg} className="card-lte border-t-4 border-t-blue-600 bg-white animate-fadeIn text-xs mb-6 shadow-sm">

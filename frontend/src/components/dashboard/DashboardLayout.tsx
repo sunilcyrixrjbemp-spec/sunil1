@@ -3,6 +3,7 @@ import { useNavigate, Outlet, useLocation, Link } from "react-router-dom";
 import { authService } from "../../services/authService";
 import { approvalService } from "../../services/approvalService";
 import { expenseService } from "../../services/expenseService";
+import { ticketService } from "../../services/ticketService";
 import brandLogo from "../../assets/images/brand.png";
 import { 
   Home, 
@@ -109,31 +110,44 @@ export default function DashboardLayout() {
     try {
       const readNotifIds = JSON.parse(localStorage.getItem("read_notification_ids") || "[]");
 
-      // 1. If Manager/Approver: fetch pending approvals
       const allowedWindows = currentUser.allowed_windows
         ? currentUser.allowed_windows.split(",").map((w: string) => w.trim().toLowerCase())
         : ["home", "profile", "help"];
       const isApprover = currentUser.role === "Admin" || allowedWindows.includes("approval");
-      if (isApprover) {
-        const pendings = await approvalService.getPendingApprovals();
-        pendings.forEach((p: any) => {
-          const id = `approval-${p.id}`;
-          list.push({
-            id: id,
-            title: "Pending Approval",
-            description: `Expense claim from ${p.employeeName} (${p.eCode}) for "${p.purpose || p.description}" of ₹${p.amount.toLocaleString()} is waiting for your review.`,
-            time: "Action Required",
-            type: "warning",
-            read: readNotifIds.includes(id),
-            link: "/approval-center"
-          });
-        });
-      }
 
-      // 2. Fetch user's own expenses to check for status updates
-      const expenses = await expenseService.getExpenses();
-      // Only check the most recent 5 expenses, and do not make N+1 detailed API calls.
-      // Simply list the claims directly. Sub-details comments can be omitted or loaded on-demand.
+      let pendings: any[] = [];
+      let expenses: any[] = [];
+      let tickets: any[] = [];
+
+      // Fetch notifications concurrently
+      const promises: Promise<any>[] = [];
+      if (isApprover) {
+        promises.push(approvalService.getPendingApprovals().then(res => pendings = res || []).catch(() => {}));
+      }
+      promises.push(expenseService.getExpenses().then(res => expenses = res || []).catch(() => {}));
+      
+      const hasHelpAccess = allowedWindows.includes("help") || currentUser.role === "Admin";
+      if (hasHelpAccess) {
+        promises.push(ticketService.getTickets().then(res => tickets = res || []).catch(() => {}));
+      }
+      
+      await Promise.all(promises);
+
+      // 1. Process Pending Approvals
+      pendings.forEach((p: any) => {
+        const id = `approval-${p.id}`;
+        list.push({
+          id: id,
+          title: "Pending Approval",
+          description: `Expense claim from ${p.employeeName} (${p.eCode}) for "${p.purpose || p.description}" of ₹${p.amount.toLocaleString()} is waiting for your review.`,
+          time: "Action Required",
+          type: "warning",
+          read: readNotifIds.includes(id),
+          link: "/approval-center"
+        });
+      });
+
+      // 2. Process own expenses status changes
       expenses.slice(0, 5).forEach((e: any) => {
         const id = `claim-${e.id}`;
         if (e.status === "approved" || e.status === "rejected") {
@@ -156,6 +170,42 @@ export default function DashboardLayout() {
             read: readNotifIds.includes(id) || true,
             link: "/home"
           });
+        }
+      });
+
+      // 3. Process Support Tickets alerts
+      tickets.forEach((t: any) => {
+        const isCreator = t.created_by_code === currentUser.user_id;
+        const isAssignee = t.assigned_to_name === currentUser.name;
+        
+        if (isCreator) {
+          if (t.status !== "Open" && t.status !== "Final Closed") {
+            const id = `ticket-status-${t.id}-${t.status}`;
+            list.push({
+              id: id,
+              title: `Ticket ${t.status}`,
+              description: `Your support ticket ${t.ticket_code} ("${t.concern_type}") has been updated to ${t.status}.`,
+              time: "Ticket Update",
+              type: t.status === "Closed" || t.status === "Resolved" ? "success" : "info",
+              read: readNotifIds.includes(id),
+              link: "/help-center"
+            });
+          }
+        }
+        
+        if (isAssignee) {
+          if (t.status === "Open" || t.status === "Updated") {
+            const id = `ticket-action-${t.id}-${t.status}`;
+            list.push({
+              id: id,
+              title: "Ticket Action Required",
+              description: `Support ticket ${t.ticket_code} ("${t.concern_type}") raised by ${t.created_by_name} is ${t.status} and assigned to you.`,
+              time: "Action Required",
+              type: "warning",
+              read: readNotifIds.includes(id),
+              link: "/help-center"
+            });
+          }
         }
       });
     } catch (err) {
@@ -511,7 +561,11 @@ export default function DashboardLayout() {
           </div>
 
           {/* User Info Bar */}
-          <div className="p-4 bg-white border-b border-gray-150 shrink-0 flex items-center gap-3">
+          <Link 
+            to="/profile" 
+            onClick={() => setIsMobileMenuOpen(false)}
+            className="p-4 bg-white border-b border-gray-150 shrink-0 flex items-center gap-3 text-gray-800 hover:bg-gray-50 transition-colors no-underline block"
+          >
             <div className="h-10 w-10 rounded-full bg-blue-600 flex items-center justify-center text-white font-black text-sm shadow-sm select-none">
               {user?.name ? user.name.charAt(0).toUpperCase() : "U"}
             </div>
@@ -522,7 +576,7 @@ export default function DashboardLayout() {
             <div className="ml-auto bg-green-50 border border-green-200 rounded px-2 py-0.5">
               <span className="text-[9px] text-green-700 font-bold uppercase tracking-wide">{userRole}</span>
             </div>
-          </div>
+          </Link>
 
           {/* Menu Items Grid - centered vertically */}
           <div className="flex-1 overflow-y-auto flex items-center justify-center p-6">

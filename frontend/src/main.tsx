@@ -5,11 +5,13 @@ import "./styles/globals.css";
 import "./styles/animations.css";
 import { tokenPersistence } from "./utils/persistence";
 
-// Restore session from cookie fallback if localStorage was cleared (e.g. mobile WebView process kill)
-tokenPersistence.restore();
+const root = ReactDOM.createRoot(document.getElementById("root")!);
 
-ReactDOM.createRoot(document.getElementById("root")!).render(
-  <React.StrictMode>
-    <App />
-  </React.StrictMode>
-);
+// Restore session from cookie/IndexedDB fallbacks asynchronously before mounting the App
+tokenPersistence.restore().finally(() => {
+  root.render(
+    <React.StrictMode>
+      <App />
+    </React.StrictMode>
+  );
+});
