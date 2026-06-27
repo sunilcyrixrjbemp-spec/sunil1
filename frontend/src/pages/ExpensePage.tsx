@@ -101,7 +101,19 @@ export default function ExpensePage() {
     const currentUserId = (() => { try { const u = JSON.parse(localStorage.getItem("user") || "{}"); return u.user_id || "Admin"; } catch(e) { return "Admin"; } })().trim();
     const monthStr = new Date().toISOString().slice(0, 7);
     const cached = localStorage.getItem(`cache_month_limits_${currentUserId}_${monthStr}`);
-    const homeDistrict = cached ? (JSON.parse(cached).user?.home_district || "Jodhpur") : "Jodhpur";
+    let homeDistrict = "Jodhpur";
+    const userVal = localStorage.getItem("user");
+    if (userVal) {
+      try {
+        const u = JSON.parse(userVal);
+        homeDistrict = u.district || u.home_district || "Jodhpur";
+      } catch (e) {}
+    } else if (cached) {
+      try {
+        const parsed = JSON.parse(cached).user || {};
+        homeDistrict = parsed.district || parsed.home_district || "Jodhpur";
+      } catch (e) {}
+    }
     
     // We construct the default leg using the local helper
     const leg: ItineraryLeg = {
@@ -1887,8 +1899,8 @@ export default function ExpensePage() {
                 </div>
               )}
 
-              {/* Actions triggers (Desktop Only) */}
-              <div className="hidden lg:flex flex-col gap-2 pt-2 border-t border-gray-150">
+              {/* Actions triggers (Visible on Desktop, also acts as fallback in-flow triggers on Mobile) */}
+              <div className="flex flex-col gap-2 pt-2 border-t border-gray-150">
                 <button
                   type="submit"
                   disabled={isLimitExceeded || submitting}
@@ -1922,8 +1934,8 @@ export default function ExpensePage() {
         </div>
       </form>
 
-      {/* Mobile view bottom docked bar */}
-      <div className="lg:hidden fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 shadow-[0_-4px_10px_rgba(0,0,0,0.05)] p-3 z-40 flex items-center justify-between px-4">
+      {/* Mobile view bottom docked bar (positioned bottom-14 to sit exactly above the dashboard navigation bar, and z-30 to prevent overlay overlap issues) */}
+      <div className="lg:hidden fixed bottom-14 left-0 right-0 bg-white border-t border-gray-200 shadow-[0_-4px_10px_rgba(0,0,0,0.05)] p-3 z-30 flex items-center justify-between px-4">
         <div>
           <span className="text-[9px] uppercase font-bold text-gray-400 block tracking-wider leading-none mb-0.5">Total Amount</span>
           <span className="text-blue-700 font-extrabold text-sm font-mono">₹{totalAmt.toLocaleString()}</span>
@@ -1944,6 +1956,9 @@ export default function ExpensePage() {
             onClick={() => {
               if (!date) {
                 toast.error("Please select date first!");
+                return;
+              }
+              if (!validateClaim()) {
                 return;
               }
               setShowConfirmModal(true);
