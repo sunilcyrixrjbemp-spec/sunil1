@@ -1,6 +1,9 @@
 import { HashRouter as Router, Routes, Route, Navigate } from "react-router-dom";
 import { Toaster } from "react-hot-toast";
-import { tokenPersistence } from "./utils/persistence";
+import { tokenPersistence, nativeConfig } from "./utils/persistence";
+import { useState, useEffect, useCallback } from "react";
+import { isNativeApp, biometricAuth } from "./utils/capacitor";
+import { Fingerprint, Lock } from "lucide-react";
 import LoginPage from "./pages/LoginPage";
 import ProtectedRoute from "./components/auth/ProtectedRoute";
 import DashboardLayout from "./components/dashboard/DashboardLayout";
@@ -23,6 +26,106 @@ function AppInner() {
 }
 
 function App() {
+  const [isAppLocked, setIsAppLocked] = useState(false);
+
+  const triggerUnlock = useCallback(async () => {
+    try {
+      const type = await biometricAuth.getBiometryType();
+      const typeLabel = type === 'face' ? 'Face ID' : 'Fingerprint';
+      const result = await biometricAuth.authenticate(`Unlock Cyrix Field using ${typeLabel}`);
+      if (result.success) {
+        setIsAppLocked(false);
+      }
+    } catch (_) {}
+  }, []);
+
+  const checkAppLock = useCallback(async () => {
+    if (!isNativeApp()) return;
+    const isAuthenticated = tokenPersistence.isAuthenticated();
+    const biometricEnabled = (await nativeConfig.get('biometric_login_enabled')) === 'true';
+    
+    if (isAuthenticated && biometricEnabled) {
+      setIsAppLocked(true);
+      // Trigger authentication immediately
+      try {
+        const type = await biometricAuth.getBiometryType();
+        const typeLabel = type === 'face' ? 'Face ID' : 'Fingerprint';
+        const result = await biometricAuth.authenticate(`Unlock Cyrix Field using ${typeLabel}`);
+        if (result.success) {
+          setIsAppLocked(false);
+        }
+      } catch (_) {}
+    }
+  }, []);
+
+  useEffect(() => {
+    if (!isNativeApp()) return;
+    
+    // Check lock on startup
+    checkAppLock();
+    
+    let activeListener: any = null;
+    
+    // Load @capacitor/app dynamically
+    import('@capacitor/app').then(({ App: CapApp }) => {
+      activeListener = CapApp.addListener('appStateChange', ({ isActive }) => {
+        if (isActive) {
+          checkAppLock();
+        }
+      });
+    });
+    
+    return () => {
+      if (activeListener) {
+        activeListener.remove();
+      }
+    };
+  }, [checkAppLock]);
+
+  if (isAppLocked) {
+    return (
+      <div className="min-h-screen bg-slate-950 flex flex-col items-center justify-center p-6 text-slate-100 font-sans antialiased select-none">
+        <div className="w-full max-w-sm flex flex-col items-center space-y-8 text-center">
+          {/* Brand Logo Header */}
+          <div className="space-y-2">
+            <img src="/brand.png" alt="Cyrix Logo" className="h-16 w-auto object-contain mx-auto brightness-200" />
+            <h2 className="text-lg font-bold text-slate-300 tracking-wider">CYRIX FIELD</h2>
+          </div>
+
+          {/* Secure Lock Badge */}
+          <div className="relative">
+            <div className="w-24 h-24 rounded-full bg-slate-900 border-2 border-blue-500/20 flex items-center justify-center text-blue-500 shadow-lg shadow-blue-500/10">
+              <Lock className="w-10 h-10 animate-pulse" />
+            </div>
+            <div className="absolute -bottom-1 -right-1 w-8 h-8 rounded-full bg-blue-600 flex items-center justify-center text-white border-2 border-slate-950 shadow">
+              <Fingerprint className="w-4 h-4" />
+            </div>
+          </div>
+
+          {/* Locked Status Message */}
+          <div className="space-y-2">
+            <p className="text-sm font-semibold text-slate-300">App is Locked</p>
+            <p className="text-xs text-slate-500 max-w-xs mx-auto">
+              Please authenticate using your device's fingerprint or Face ID to access your workspace.
+            </p>
+          </div>
+
+          {/* Action Button */}
+          <div className="w-full pt-4">
+            <button
+              type="button"
+              onClick={triggerUnlock}
+              className="w-full h-11 flex items-center justify-center gap-2.5 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-bold text-xs shadow-md shadow-blue-600/20 active:scale-95 transition-all border-0 cursor-pointer"
+            >
+              <Fingerprint className="w-4 h-4" />
+              <span>Unlock App</span>
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <Router>
       <div className="min-h-screen bg-[#f4f6f9] text-[#212529] font-sans antialiased">

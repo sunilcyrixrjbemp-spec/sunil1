@@ -6,24 +6,15 @@ import {
   requestNotificationPermission,
   onForegroundMessage
 } from "../utils/firebase";
-
-const API_BASE = import.meta.env.VITE_API_URL || "";
+import api from "../services/api";
 
 /**
  * Save FCM token to backend so the server can send push notifications
  */
 const saveFCMToken = async (token: string) => {
   try {
-    const accessToken = localStorage.getItem("access_token");
-    if (!accessToken) return;
-    await fetch(`${API_BASE}/api/users/fcm-token`, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        "Authorization": `Bearer ${accessToken}`
-      },
-      body: JSON.stringify({ fcm_token: token })
-    });
+    await api.post("/users/fcm-token", { fcm_token: token });
+    console.log("FCM: Token saved to backend successfully via Axios");
   } catch (error) {
     // Silent fail — non-critical
     console.log("FCM: Failed to save token to backend", error);
