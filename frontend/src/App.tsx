@@ -17,6 +17,10 @@ import ProfilePage from "./pages/ProfilePage";
 import AdminPage from "./pages/AdminPage";
 import NotificationsPage from "./pages/NotificationsPage";
 import NotFoundPage from "./pages/NotFoundPage";
+import MISReportPage from "./pages/MISReportPage";
+import KPIDashboardPage from "./pages/KPIDashboardPage";
+import UploadDataPage from "./pages/UploadDataPage";
+import PenaltyReportPage from "./pages/PenaltyReportPage";
 import { useFCMNotifications } from "./hooks/useFCMNotifications";
 
 function AppInner() {
@@ -170,6 +174,10 @@ function App() {
               <Route path="/home" element={<HomePage />} />
               <Route path="/approval-center" element={<ApprovalPage />} />
               <Route path="/submit-expense" element={<ExpensePage />} />
+              <Route path="/mis-report" element={<MISReportPage />} />
+              <Route path="/kpi-dashboard" element={<KPIDashboardPage />} />
+              <Route path="/upload-data" element={<UploadDataPage />} />
+              <Route path="/penalty-report" element={<PenaltyReportPage />} />
               <Route path="/analysis" element={<AnalysisPage />} />
               <Route path="/month-report" element={<MonthSummaryPage />} />
               <Route path="/notifications" element={<NotificationsPage />} />

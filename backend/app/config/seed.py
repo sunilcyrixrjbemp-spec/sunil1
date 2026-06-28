@@ -63,7 +63,7 @@ def seed_admin_user(db: Session):
             designation="Admin",
             role="Admin",
             type="System",
-            allowed_windows="home,admin,approval,expense,analysis,report,help,profile"
+            allowed_windows="home,admin,approval,expense,analysis,report,help,profile,mis_report,kpi,upload_data,penalty_report"
         )
         db.add(admin)
         db.flush()  # Populates admin.id

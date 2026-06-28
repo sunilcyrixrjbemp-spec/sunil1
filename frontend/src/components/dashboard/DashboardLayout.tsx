@@ -16,7 +16,11 @@ import {
   Menu,
   Bell,
   Lock,
-  X
+  X,
+  FileSpreadsheet,
+  Gauge,
+  UploadCloud,
+  ShieldAlert
 } from "lucide-react";
 
 interface MenuItem {
@@ -32,6 +36,10 @@ const MENU_ITEMS: MenuItem[] = [
   { id: "admin", name: "Admin Panel", path: "/admin", icon: Settings, roles: ["Admin"] },
   { id: "approval", name: "Approval Center", path: "/approval-center", icon: CheckSquare, roles: ["Admin", "Manager", "Division Manager", "Coordinator", "Accountant", "HR", "Project Head", "VP"] },
   { id: "expense", name: "Submit Expense", path: "/submit-expense", icon: FilePlus, roles: ["Admin", "Engineer", "Manager", "Division Manager", "Coordinator", "Project Head", "Travel Desk", "VP"] },
+  { id: "mis_report", name: "MIS Report", path: "/mis-report", icon: FileSpreadsheet, roles: ["Admin", "Manager", "Division Manager", "MIS", "VP"] },
+  { id: "kpi", name: "KPI Dashboard", path: "/kpi-dashboard", icon: Gauge, roles: ["Admin", "Manager", "Division Manager", "Engineer", "Coordinator", "Project Head", "MIS", "VP"] },
+  { id: "upload_data", name: "Upload Data", path: "/upload-data", icon: UploadCloud, roles: ["Admin", "Coordinator", "MIS"] },
+  { id: "penalty_report", name: "Penalty Report", path: "/penalty-report", icon: ShieldAlert, roles: ["Admin", "Manager", "Division Manager", "Accountant", "MIS", "VP"] },
   { id: "analysis", name: "Analysis", path: "/analysis", icon: BarChart3, roles: ["Admin", "Manager", "Division Manager", "MIS", "VP"] },
   { id: "report", name: "Month Report", path: "/month-report", icon: Calendar, roles: ["Admin", "Manager", "Division Manager", "Accountant", "HR", "MIS", "VP"] },
   { id: "help", name: "Help Center", path: "/help-center", icon: HelpCircle, roles: ["Admin", "Engineer", "Manager", "Division Manager", "Coordinator", "Accountant", "HR", "Project Head", "Travel Desk", "MIS", "VP"] },

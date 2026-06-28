@@ -18,6 +18,10 @@ const ALL_WINDOWS = [
   { id: "expense", name: "Submit Expense" },
   { id: "analysis", name: "Analysis" },
   { id: "report", name: "Month Report" },
+  { id: "mis_report", name: "MIS Report" },
+  { id: "kpi", name: "KPI Dashboard" },
+  { id: "upload_data", name: "Upload Data" },
+  { id: "penalty_report", name: "Penalty Report" },
   { id: "help", name: "Help Center" },
   { id: "profile", name: "Profile" }
 ];
