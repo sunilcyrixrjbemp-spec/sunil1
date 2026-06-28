@@ -3,9 +3,7 @@ import { ArrowLeft, Unlock, CheckCircle2 } from "lucide-react";
 import { authService } from "../../services/authService";
 
 const PremiumSpinner = () => (
-  <div className="relative flex items-center justify-center w-4 h-4 shrink-0 mr-2">
-    <span className="absolute w-full h-full border-2 border-blue-500/30 border-t-blue-600 rounded-full animate-spin"></span>
-  </div>
+  <span className="spinner-lte mr-1.5"></span>
 );
 
 interface UnlockAccountProps {

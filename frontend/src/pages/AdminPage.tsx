@@ -6,9 +6,7 @@ import { Search, UploadCloud, Pencil, Trash2, Plus, LogOut } from "lucide-react"
 import Loader from "../components/common/Loader";
 
 const LteSpinner = () => (
-  <div className="relative flex items-center justify-center w-4 h-4 shrink-0 mr-2">
-    <span className="absolute w-full h-full border-2 border-blue-500/30 border-t-blue-600 rounded-full animate-spin"></span>
-  </div>
+  <span className="spinner-lte mr-1.5"></span>
 );
 
 const ALL_WINDOWS = [

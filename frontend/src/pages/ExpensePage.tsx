@@ -1107,7 +1107,8 @@ export default function ExpensePage() {
   const limitPillLabel = allowance.vehicle_type === "None" ? "Allowances" : `${allowance.vehicle_type} Limits`;
 
   return (
-    <div className="space-y-6 animate-fadeIn text-[#212529] pb-24 text-xs font-sans">
+    <>
+      <div className="space-y-6 animate-fadeIn text-[#212529] pb-24 text-xs font-sans">
       
       {/* Header Info */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between border-b border-gray-200 pb-3 gap-2">
@@ -2191,6 +2192,7 @@ export default function ExpensePage() {
           )}
         </div>
       </div>
+      </div>
 
       {/* ================= STEP 3 CONFIRMATION SUBMIT DIALOG ================= */}
       {showConfirmModal && (
@@ -2583,6 +2585,6 @@ export default function ExpensePage() {
         </div>
       )}
 
-    </div>
+    </>
   );
 }

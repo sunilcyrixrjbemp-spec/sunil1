@@ -397,7 +397,8 @@ export default function HomePage() {
   };
 
   return (
-    <div className="space-y-6 animate-fadeIn text-[#212529]">
+    <>
+      <div className="space-y-6 animate-fadeIn text-[#212529]">
       
       {/* Welcome Banner - AdminLTE card style with gradient border top */}
       <div className="bg-white border-t-4 border-t-blue-600 border-x border-b border-gray-200 rounded shadow-sm p-4 hover:shadow-md transition-shadow">
@@ -876,6 +877,7 @@ export default function HomePage() {
           />
         </div>
       </div>
+      </div>
 
       {/* ================= INTERACTIVE READ-ONLY CLAIM DETAILS POPUP MODAL ================= */}
       {showDetailsModal && selectedClaimId && (
@@ -1275,6 +1277,6 @@ export default function HomePage() {
         </div>
       )}
 
-    </div>
+    </>
   );
 }
