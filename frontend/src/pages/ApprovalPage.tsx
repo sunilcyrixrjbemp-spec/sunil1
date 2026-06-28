@@ -311,7 +311,8 @@ export default function ApprovalPage() {
   };
 
   return (
-    <div className="space-y-5 animate-fadeIn text-[#212529]">
+    <>
+      <div className="space-y-5 animate-fadeIn text-[#212529]">
       
       {/* Header Info */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
@@ -450,6 +451,7 @@ export default function ApprovalPage() {
             })}
           </div>
         )}
+      </div>
       </div>
 
       {/* ================= DETAIL SINGLE REVIEW AND EDIT MODAL ================= */}
@@ -883,6 +885,6 @@ export default function ApprovalPage() {
         </div>
       )}
 
-    </div>
+    </>
   );
 }

@@ -657,8 +657,9 @@ export default function AdminPage() {
   const cList = getEligibleCoordinators();
 
   return (
-    <div className="space-y-6 text-[#212529] animate-fadeIn">
-      {/* Header Info */}
+    <>
+      <div className="space-y-6 text-[#212529] animate-fadeIn">
+        {/* Header Info */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
           <h2 className="text-xl font-bold text-gray-800 uppercase tracking-wide">
@@ -925,6 +926,7 @@ export default function AdminPage() {
           )}
         </div>
       )}
+      </div>
 
       {/* ================= MODAL: CREATE SINGLE USER ================= */}
       {showSingleUserModal && (
@@ -1780,6 +1782,6 @@ export default function AdminPage() {
           </div>
         </div>
       )}
-    </div>
+    </>
   );
 }
