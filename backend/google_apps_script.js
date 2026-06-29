@@ -92,5 +92,8 @@ function doPost(e) {
 // Dummy function to easily trigger the Google Drive permission authorization popup
 function testAuthorize() {
   var root = DriveApp.getRootFolder();
-  Logger.log("Drive authorized successfully! Root folder name: " + root.getName());
+  // Create a temporary test file to force WRITE permissions scope detection
+  var file = root.createFile("temp_auth_test.txt", "This is a temporary authorization test file.");
+  file.setTrashed(true); // Move it to trash immediately
+  Logger.log("Drive authorized successfully with full read & write permissions!");
 }
