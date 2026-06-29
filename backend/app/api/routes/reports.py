@@ -31,8 +31,8 @@ def _bulk_insert(db, table_name: str, columns: list[str], records: list[dict]):
                 row_vals.append(f"'{escaped}'")
         val_rows.append("(" + ", ".join(row_vals) + ")")
         
-    # Batch execute in chunks of 500 to keep query sizes reasonable and super fast
-    chunk_size = 500
+    # Batch execute in chunks of 50 to keep query sizes under D1 SQLITE_TOOBIG limits
+    chunk_size = 50
     for i in range(0, len(val_rows), chunk_size):
         chunk = val_rows[i : i + chunk_size]
         sql = f"INSERT OR REPLACE INTO {table_name} ({col_str}) VALUES " + ", ".join(chunk)
