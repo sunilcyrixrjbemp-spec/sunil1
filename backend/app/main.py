@@ -88,4 +88,4 @@ app.include_router(notification.router, prefix="/api/notifications", tags=["noti
 
 @app.get("/api/health")
 def health_check():
-    return {"status": "ok", "message": "API is running"}
+    return {"status": "ok", "message": "API is running", "version": "v1.0.3-clean-pem"}
