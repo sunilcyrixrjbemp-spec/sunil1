@@ -456,8 +456,8 @@ export default function ApprovalPage() {
 
       {/* ================= DETAIL SINGLE REVIEW AND EDIT MODAL ================= */}
       {showDetailModal && selectedApproval && (
-        <div className="fixed inset-0 bg-black/60 flex items-center justify-center p-4 z-50 overflow-y-auto animate-fadeIn">
-          <div className="bg-white border border-gray-300 rounded shadow-xl w-full max-w-5xl max-h-[90vh] flex flex-col relative animate-scaleIn text-gray-800">
+        <div className="modal-lte-overlay">
+          <div className="modal-lte-content max-w-5xl max-h-[90vh] flex flex-col">
             
             {/* Modal Header */}
             <div className="px-5 py-4 border-b border-gray-200 bg-gray-50 flex items-center justify-between shrink-0">
@@ -788,8 +788,8 @@ export default function ApprovalPage() {
 
       {/* ================= BATCH ACTION CONFIRMATION MODAL ================= */}
       {showBulkModal && bulkActionType && (
-        <div className="fixed inset-0 bg-black/60 flex items-center justify-center p-4 z-50 animate-fadeIn">
-          <div className="bg-white border border-gray-300 rounded shadow-xl w-full max-w-md p-5 relative animate-scaleIn text-gray-800">
+        <div className="modal-lte-overlay">
+          <div className="modal-lte-content max-w-md">
             <h3 className="text-sm font-extrabold uppercase tracking-wider border-b border-gray-250 pb-3 text-gray-800 text-left">
               Confirm Bulk {bulkActionType === "approve" ? "Reimbursement Approval" : "Claims Rejection"}
             </h3>

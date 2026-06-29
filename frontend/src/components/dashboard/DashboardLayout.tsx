@@ -291,16 +291,16 @@ export default function DashboardLayout() {
                 key={item.id}
                 to={item.path}
                 title={isSidebarCollapsed ? item.name : undefined}
-                className={`flex items-center gap-3 px-3 py-2 rounded text-xs transition-colors group ${
+                className={`flex items-center gap-3 px-3 py-2.5 rounded-sm text-xs font-semibold uppercase tracking-wider transition-all duration-150 border-l-4 group ${
                   isActive
-                    ? "bg-blue-600 text-white font-bold"
-                    : "hover:bg-white/5 hover:text-white"
+                    ? "bg-[#007bff] text-white font-bold border-l-yellow-500 shadow-sm"
+                    : "border-l-transparent text-[#c2c7d0] hover:bg-white/5 hover:text-white"
                 }`}
               >
-                <div className={`${isActive ? "text-white" : "text-[#c2c7d0] group-hover:text-white"}`}>
-                  <Icon />
+                <div className={`${isActive ? "text-white" : "text-[#c2c7d0] group-hover:text-white"} shrink-0`}>
+                  <Icon className="w-4 h-4" />
                 </div>
-                {!isSidebarCollapsed && <span className="uppercase tracking-wider">{item.name}</span>}
+                {!isSidebarCollapsed && <span>{item.name}</span>}
               </Link>
             );
           })}

@@ -62,7 +62,7 @@ export default function MonthSummaryPage() {
         </h3>
 
         <div className="overflow-x-auto">
-          <table className="w-full text-left border-collapse text-xs text-gray-700">
+          <table className="table-lte">
             <thead>
               <tr className="border-b border-gray-200 text-[10px] uppercase font-bold tracking-wider text-gray-500 bg-gray-50">
                 <th className="py-2.5 px-3">Month / Year</th>

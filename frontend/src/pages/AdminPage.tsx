@@ -780,7 +780,7 @@ export default function AdminPage() {
                 No users found.
               </div>
             ) : (
-              <table className="w-full text-left border-collapse text-xs text-gray-700">
+              <table className="table-lte">
                 <thead>
                   <tr className="bg-gray-100 border-b border-gray-200 text-gray-700 font-bold uppercase tracking-wider text-[10px]">
                     <th className="py-3 px-4">Emp Code</th>
@@ -949,8 +949,8 @@ export default function AdminPage() {
 
       {/* ================= MODAL: CREATE SINGLE USER ================= */}
       {showSingleUserModal && (
-        <div className="fixed inset-0 bg-black/50 flex justify-center items-start p-4 py-8 z-[9999] overflow-y-auto animate-fadeIn">
-          <div className="bg-white border border-gray-300 rounded shadow-xl w-full max-w-4xl p-6 relative my-8 md:my-16 animate-scaleIn text-gray-800">
+        <div className="modal-lte-overlay z-[9999]">
+          <div className="modal-lte-content max-w-4xl p-6">
             <h3 className="text-sm font-bold uppercase tracking-wider border-b border-gray-200 pb-3 text-gray-800">
               Register New Employee
             </h3>
@@ -1237,8 +1237,8 @@ export default function AdminPage() {
 
       {/* ================= MODAL: EDIT USER DETAILS ================= */}
       {showEditUserModal && editingUser && (
-        <div className="fixed inset-0 bg-black/50 flex justify-center items-start p-4 py-8 z-[9999] overflow-y-auto animate-fadeIn">
-          <div className="bg-white border border-gray-300 rounded shadow-xl w-full max-w-4xl p-6 relative my-8 md:my-16 animate-scaleIn text-gray-800">
+        <div className="modal-lte-overlay z-[9999]">
+          <div className="modal-lte-content max-w-4xl p-6">
             <h3 className="text-sm font-bold uppercase tracking-wider border-b border-gray-200 pb-3 text-gray-800">
               Update Employee: <span className="text-blue-600 font-mono font-bold">{editingUser.user_id}</span>
             </h3>
@@ -1523,8 +1523,8 @@ export default function AdminPage() {
 
       {/* ================= MODAL: CSV BULK IMPORT ================= */}
       {showBulkUploadModal && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-[9999] overflow-y-auto animate-fadeIn">
-          <div className="bg-white border border-gray-300 rounded shadow-lg w-full max-w-2xl p-6 relative animate-scaleIn text-gray-800">
+        <div className="modal-lte-overlay z-[9999]">
+          <div className="modal-lte-content max-w-2xl p-6">
             <h3 className="text-sm font-bold uppercase tracking-wider border-b border-gray-200 pb-3 text-gray-800">
               Import Employees via CSV
             </h3>
@@ -1615,8 +1615,8 @@ export default function AdminPage() {
 
       {/* ================= MODAL: USER UPDATE ROLE MAPPING (HIERARCHY CONFIG) ================= */}
       {showHierarchyModal && (
-        <div className="fixed inset-0 bg-black/50 flex justify-center items-start p-4 py-8 z-[9999] overflow-y-auto animate-fadeIn">
-          <div className="bg-white border border-gray-300 rounded shadow-xl w-full max-w-3xl p-6 relative my-8 md:my-16 animate-scaleIn text-gray-800">
+        <div className="modal-lte-overlay z-[9999]">
+          <div className="modal-lte-content max-w-3xl p-6">
             <h3 className="text-base font-bold text-gray-850 tracking-wide border-b border-gray-200 pb-3 text-left">
               User Update Role Mapping
             </h3>
@@ -1715,7 +1715,7 @@ export default function AdminPage() {
 
                 {/* Table */}
                 <div className="border border-gray-300 rounded overflow-hidden shadow-sm">
-                  <table className="w-full text-left border-collapse text-xs text-gray-700">
+                  <table className="table-lte">
                     <thead>
                       <tr className="bg-gray-100 border-b border-gray-200 text-gray-700 font-bold uppercase tracking-wider text-[10px]">
                         <th className="py-2 px-3 w-12 text-center">Select</th>

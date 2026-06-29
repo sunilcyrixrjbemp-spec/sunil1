@@ -361,10 +361,10 @@ export default function HomePage() {
     const isCarAllowed = allowanceStats?.vehicleType?.toLowerCase() === "car";
 
     const items = [
-      { label: "Bike Travel", amount: bike, pct: Math.round((bike / total) * 100), colorStart: "#3b82f6", colorEnd: "#1d4ed8" },
-      { label: "Car Travel", amount: car, pct: Math.round((car / total) * 100), colorStart: "#10b981", colorEnd: "#047857" },
-      { label: "Auto Fare", amount: auto, pct: Math.round((auto / total) * 100), colorStart: "#f59e0b", colorEnd: "#b45309" },
-      { label: "Other / Hotels", amount: other, pct: Math.round((other / total) * 100), colorStart: "#ef4444", colorEnd: "#b91c1c" }
+      { label: "Bike Travel", amount: bike, pct: Math.round((bike / total) * 100), colorStart: "#007bff", colorEnd: "#0056b3" },
+      { label: "Car Travel", amount: car, pct: Math.round((car / total) * 100), colorStart: "#28a745", colorEnd: "#1e7e34" },
+      { label: "Auto Fare", amount: auto, pct: Math.round((auto / total) * 100), colorStart: "#ffc107", colorEnd: "#d39e00" },
+      { label: "Other / Hotels", amount: other, pct: Math.round((other / total) * 100), colorStart: "#dc3545", colorEnd: "#bd2130" }
     ];
 
     // Filter out Car Travel if not allowed
@@ -450,44 +450,44 @@ export default function HomePage() {
           {/* Card 1: Total Claimed */}
           <div 
             onClick={() => handleOpenStatsModal("Total Claimed", statsTotalClaims)}
-            className="bg-white border border-gray-300 rounded shadow-sm hover:shadow-md transition-all flex overflow-hidden cursor-pointer animate-fadeIn"
+            className="info-box-lte cursor-pointer animate-fadeIn"
           >
-            <div className="bg-blue-600 w-12 shrink-0 flex items-center justify-center text-white">
-              <FileSpreadsheet className="w-5 h-5" />
+            <div className="info-box-icon bg-[#007bff]">
+              <FileSpreadsheet className="w-6 h-6" />
             </div>
-            <div className="p-3 flex-1 min-w-0">
+            <div className="info-box-content">
               <span className="text-[9px] font-black uppercase tracking-wider text-gray-400 block">Total Claimed</span>
               <span className="text-base font-extrabold text-gray-800 font-mono block mt-0.5">₹{(totalAmount || 0).toLocaleString()}</span>
-              <span className="text-[9px] text-blue-600 font-bold uppercase block mt-1">{statsTotalClaims.length} Claims Filed</span>
+              <span className="text-[9px] text-[#007bff] font-bold uppercase block mt-1">{statsTotalClaims.length} Claims Filed</span>
             </div>
           </div>
 
           {/* Card 2: Approved */}
           <div 
             onClick={() => handleOpenStatsModal("Approved", statsApprovedClaims)}
-            className="bg-white border border-gray-300 rounded shadow-sm hover:shadow-md transition-all flex overflow-hidden cursor-pointer animate-fadeIn"
+            className="info-box-lte cursor-pointer animate-fadeIn"
           >
-            <div className="bg-green-600 w-12 shrink-0 flex items-center justify-center text-white">
-              <CheckCircle2 className="w-5 h-5" />
+            <div className="info-box-icon bg-[#28a745]">
+              <CheckCircle2 className="w-6 h-6" />
             </div>
-            <div className="p-3 flex-1 min-w-0">
+            <div className="info-box-content">
               <span className="text-[9px] font-black uppercase tracking-wider text-gray-400 block">Approved Claim</span>
-              <span className="text-base font-extrabold text-green-700 font-mono block mt-0.5">₹{(approvedAmount || 0).toLocaleString()}</span>
-              <span className="text-[9px] text-green-600 font-bold uppercase block mt-1">{statsApprovedClaims.length} Approved</span>
+              <span className="text-base font-extrabold text-[#28a745] font-mono block mt-0.5">₹{(approvedAmount || 0).toLocaleString()}</span>
+              <span className="text-[9px] text-[#28a745] font-bold uppercase block mt-1">{statsApprovedClaims.length} Approved</span>
             </div>
           </div>
 
           {/* Card 3: Pending */}
           <div 
             onClick={() => handleOpenStatsModal("Pending", statsPendingClaims)}
-            className="bg-white border border-gray-300 rounded shadow-sm hover:shadow-md transition-all flex overflow-hidden cursor-pointer animate-fadeIn"
+            className="info-box-lte cursor-pointer animate-fadeIn"
           >
-            <div className="bg-amber-500 w-12 shrink-0 flex items-center justify-center text-white">
-              <Clock className="w-5 h-5" />
+            <div className="info-box-icon bg-[#ffc107]">
+              <Clock className="w-6 h-6 text-white" />
             </div>
-            <div className="p-3 flex-1 min-w-0">
+            <div className="info-box-content">
               <span className="text-[9px] font-black uppercase tracking-wider text-gray-400 block">Pending Claims</span>
-              <span className="text-base font-extrabold text-amber-600 font-mono block mt-0.5">₹{(pendingAmount || 0).toLocaleString()}</span>
+              <span className="text-base font-extrabold text-[#ffc107] font-mono block mt-0.5">₹{(pendingAmount || 0).toLocaleString()}</span>
               <span className="text-[9px] text-amber-600 font-bold uppercase block mt-1">{statsPendingClaims.length} Pending Review</span>
             </div>
           </div>
@@ -495,15 +495,15 @@ export default function HomePage() {
           {/* Card 4: Rejected */}
           <div 
             onClick={() => handleOpenStatsModal("Rejected", statsRejectedClaims)}
-            className="bg-white border border-gray-300 rounded shadow-sm hover:shadow-md transition-all flex overflow-hidden cursor-pointer animate-fadeIn"
+            className="info-box-lte cursor-pointer animate-fadeIn"
           >
-            <div className="bg-red-600 w-12 shrink-0 flex items-center justify-center text-white">
-              <XCircle className="w-5 h-5" />
+            <div className="info-box-icon bg-[#dc3545]">
+              <XCircle className="w-6 h-6" />
             </div>
-            <div className="p-3 flex-1 min-w-0">
+            <div className="info-box-content">
               <span className="text-[9px] font-black uppercase tracking-wider text-gray-400 block">Rejected Claim</span>
-              <span className="text-base font-extrabold text-red-700 font-mono block mt-0.5">₹{(rejectedAmount || 0).toLocaleString()}</span>
-              <span className="text-[9px] text-red-600 font-bold uppercase block mt-1">{statsRejectedClaims.length} Rejected</span>
+              <span className="text-base font-extrabold text-[#dc3545] font-mono block mt-0.5">₹{(rejectedAmount || 0).toLocaleString()}</span>
+              <span className="text-[9px] text-[#dc3545] font-bold uppercase block mt-1">{statsRejectedClaims.length} Rejected</span>
             </div>
           </div>
         </div>
@@ -634,7 +634,7 @@ export default function HomePage() {
                     <p className="font-bold">No expense claims found for this month.</p>
                   </div>
                 ) : (
-                  <table className="w-full text-left border-collapse text-xs text-gray-700">
+                  <table className="table-lte">
                     <thead>
                       <tr className="border-b border-gray-200 text-[9px] uppercase font-bold tracking-wider text-gray-400 bg-gray-50/50">
                         <th className="py-2.5 px-3">Claim ID</th>
@@ -683,7 +683,7 @@ export default function HomePage() {
                     <p className="font-bold">No claims submitted by your team members yet.</p>
                   </div>
                 ) : (
-                  <table className="w-full text-left border-collapse text-xs text-gray-700">
+                  <table className="table-lte">
                     <thead>
                       <tr className="border-b border-gray-200 text-[9px] uppercase font-bold tracking-wider text-gray-400 bg-gray-50/50">
                         <th className="py-2.5 px-3">Employee</th>
@@ -895,8 +895,8 @@ export default function HomePage() {
 
       {/* ================= INTERACTIVE READ-ONLY CLAIM DETAILS POPUP MODAL ================= */}
       {showDetailsModal && selectedClaimId && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50 overflow-y-auto animate-fadeIn">
-          <div className="bg-white border border-gray-300 rounded shadow-xl w-full max-w-5xl max-h-[90vh] flex flex-col relative animate-scaleIn text-gray-800">
+        <div className="modal-lte-overlay">
+          <div className="modal-lte-content max-w-5xl max-h-[90vh] flex flex-col">
             
             {/* Modal Header */}
             <div className="px-4 py-3 bg-gray-100 border-b border-gray-200 flex items-center justify-between shrink-0">
@@ -961,7 +961,7 @@ export default function HomePage() {
                         <h4 className="text-[10px] font-bold uppercase text-gray-600 tracking-wider">Visit Legs Details</h4>
                       </div>
                       <div className="overflow-x-auto">
-                        <table className="w-full text-left border-collapse text-xs text-gray-700">
+                        <table className="table-lte">
                           <thead>
                             <tr className="border-b border-gray-200 text-[9px] uppercase font-bold tracking-wider text-gray-400 bg-gray-50">
                               <th className="py-2 px-3 text-center w-10">#</th>
@@ -1053,7 +1053,7 @@ export default function HomePage() {
                         <h4 className="text-[10px] font-bold uppercase text-gray-600 tracking-wider">Approval Review History</h4>
                       </div>
                       <div className="overflow-x-auto">
-                        <table className="w-full text-left border-collapse text-xs text-gray-700">
+                        <table className="table-lte">
                           <thead>
                             <tr className="border-b border-gray-200 text-[9px] uppercase font-bold tracking-wider text-gray-400 bg-gray-50">
                               <th className="py-2 px-3 w-12">Level</th>
@@ -1176,8 +1176,8 @@ export default function HomePage() {
 
       {/* ================= STATS CLAIMS POPUP MODAL ================= */}
       {showStatsModal && (
-        <div className="fixed inset-0 bg-black/60 flex items-center justify-center p-4 z-50 overflow-y-auto animate-fadeIn">
-          <div className="bg-white border border-gray-300 rounded shadow-xl w-full max-w-4xl max-h-[85vh] flex flex-col relative animate-scaleIn text-gray-800">
+        <div className="modal-lte-overlay">
+          <div className="modal-lte-content max-w-4xl max-h-[85vh] flex flex-col">
             
             {/* Modal Header */}
             <div className="px-5 py-4 border-b border-gray-200 bg-gray-50 flex items-center justify-between shrink-0">
@@ -1203,7 +1203,7 @@ export default function HomePage() {
                 </div>
               ) : (
                 <div className="overflow-x-auto">
-                  <table className="w-full text-left border-collapse text-xs text-gray-700">
+                  <table className="table-lte">
                     <thead>
                       <tr className="border-b border-gray-200 text-[9px] uppercase font-bold tracking-wider text-gray-400 bg-gray-50/50">
                         {activeTab === "team-claims" && <th className="py-2.5 px-3">Employee</th>}

@@ -2134,7 +2134,7 @@ export default function ExpensePage() {
               No submitted claims found.
             </div>
           ) : (
-            <table className="w-full text-left border-collapse text-xs text-gray-700">
+            <table className="table-lte">
               <thead>
                 <tr className="border-b border-gray-200 text-[9px] uppercase font-bold tracking-wider text-gray-400 bg-gray-50/50">
                   <th className="py-2.5 px-3">Claim ID</th>
@@ -2196,8 +2196,8 @@ export default function ExpensePage() {
 
       {/* ================= STEP 3 CONFIRMATION SUBMIT DIALOG ================= */}
       {showConfirmModal && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50 animate-fadeIn">
-          <div className="bg-white border border-gray-300 rounded shadow-xl w-full max-w-md p-5 relative animate-scaleIn text-gray-800">
+        <div className="modal-lte-overlay">
+          <div className="modal-lte-content max-w-md">
             <h3 className="text-sm font-extrabold uppercase tracking-wider border-b border-gray-200 pb-3 text-gray-800 text-left">
               Confirm Reimbursement Submission
             </h3>
@@ -2256,8 +2256,8 @@ export default function ExpensePage() {
 
       {/* ================= LIMIT APPROVAL DIALOG ================= */}
       {showApprovalModal && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50 animate-fadeIn">
-          <div className="bg-white border border-gray-300 rounded shadow-xl w-full max-w-md p-5 relative animate-scaleIn text-gray-800">
+        <div className="modal-lte-overlay">
+          <div className="modal-lte-content max-w-md">
             <h3 className="text-sm font-extrabold uppercase tracking-wider border-b border-gray-200 pb-3 text-red-600 text-left flex items-center gap-1.5">
               <AlertTriangle className="w-5 h-5 text-red-500" />
               Monthly Reimbursement Limit Exceeded
@@ -2310,8 +2310,8 @@ export default function ExpensePage() {
 
       {/* ================= DETAILS MODAL ================= */}
       {showDetailsModal && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50 overflow-y-auto animate-fadeIn">
-          <div className="bg-white border border-gray-300 rounded shadow-xl w-full max-w-5xl max-h-[90vh] flex flex-col relative animate-scaleIn text-gray-800">
+        <div className="modal-lte-overlay">
+          <div className="modal-lte-content max-w-5xl max-h-[90vh] flex flex-col">
             
             {/* Modal Header */}
             <div className="px-4 py-3 bg-gray-100 border-b border-gray-200 flex items-center justify-between shrink-0">
@@ -2376,7 +2376,7 @@ export default function ExpensePage() {
                         <h4 className="text-[10px] font-bold uppercase text-gray-600 tracking-wider">Visit Legs Details</h4>
                       </div>
                       <div className="overflow-x-auto">
-                        <table className="w-full text-left border-collapse text-xs text-gray-700">
+                        <table className="table-lte">
                           <thead>
                             <tr className="border-b border-gray-200 text-[9px] uppercase font-bold tracking-wider text-gray-400 bg-gray-50">
                               <th className="py-2 px-3 text-center w-10">#</th>
@@ -2468,7 +2468,7 @@ export default function ExpensePage() {
                         <h4 className="text-[10px] font-bold uppercase text-gray-600 tracking-wider">Approval Review History</h4>
                       </div>
                       <div className="overflow-x-auto">
-                        <table className="w-full text-left border-collapse text-xs text-gray-700">
+                        <table className="table-lte">
                           <thead>
                             <tr className="border-b border-gray-200 text-[9px] uppercase font-bold tracking-wider text-gray-400 bg-gray-50">
                               <th className="py-2 px-3 w-12">Level</th>
