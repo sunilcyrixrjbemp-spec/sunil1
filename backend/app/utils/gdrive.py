@@ -36,6 +36,8 @@ def get_drive_service():
             info = None
             try:
                 info = json.loads(service_account_json)
+                if info and "private_key" in info:
+                    info["private_key"] = info["private_key"].replace('\\n', '\n').replace('\\', '')
             except Exception as json_err:
                 errors.append(f"Standard JSON parse failed: {str(json_err)}")
                 # Regex fallback parser
@@ -47,8 +49,8 @@ def get_drive_service():
                     # Extract private key (supports multiline)
                     pk_match = re.search(r'"private_key":\s*"([^"]+)"', normalized, re.DOTALL)
                     if pk_match:
-                        # Clean up escaped backslashes and newlines
-                        pk_val = pk_match.group(1).replace('\\n', '\n').replace('\\\\', '\\')
+                        # Clean up escaped backslashes and newlines, and remove all remaining backslashes to ensure valid PEM format
+                        pk_val = pk_match.group(1).replace('\\n', '\n').replace('\\', '')
                         parsed_info["private_key"] = pk_val
                         
                     # Extract other string fields
