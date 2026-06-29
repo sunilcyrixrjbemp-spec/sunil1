@@ -38,22 +38,64 @@ def parse_client_timestamp(ts_str: str | None) -> datetime:
             return datetime.now()
 
 def save_upload_file(upload_file: UploadFile, exp_id: str, type_str: str) -> str:
-    """Saves uploaded file to Cloudflare R2 bucket (or local fallback) and returns the proxy path URL."""
+    """Saves uploaded file to Google Drive (with month-wise folders and fallback to R2/Local)."""
     if not upload_file or not upload_file.filename:
         return ""
         
-    import requests
     import logging
     logger = logging.getLogger(__name__)
 
     # Clean filename
     safe_name = upload_file.filename.replace(" ", "_")
     filename = f"{exp_id}_{type_str}_{int(time.time()*1000)}_{safe_name}"
-    key = f"images/{filename}"
     
-    # R2 Upload path
+    # 1. Try Google Drive Upload
+    try:
+        from app.config.database import SessionLocal
+        from app.models.expense import Expense
+        
+        month_name = "General"
+        year_val = 2026
+        expense_code = str(exp_id)
+        
+        # Retrieve expense details from DB
+        try:
+            db_session = SessionLocal()
+            expense = db_session.query(Expense).filter(Expense.id == int(exp_id)).first()
+            if expense:
+                month_name = expense.month or "General"
+                year_val = expense.year or 2026
+                expense_code = expense.expense_code or str(exp_id)
+            db_session.close()
+        except Exception as db_err:
+            logger.error(f"GDrive: DB lookup error: {str(db_err)}")
+            
+        # Clean expense code for file naming
+        clean_code = expense_code.replace("/", "-")
+        drive_filename = f"{clean_code}_{type_str}_{safe_name}"
+        
+        # Read file bytes
+        upload_file.file.seek(0)
+        file_bytes = upload_file.file.read()
+        
+        from app.utils.gdrive import upload_file_to_drive
+        file_id = upload_file_to_drive(
+            file_content=file_bytes,
+            filename=drive_filename,
+            mime_type=upload_file.content_type or "application/octet-stream",
+            month_name=month_name,
+            year=year_val
+        )
+        logger.info(f"Successfully uploaded file to Google Drive: {drive_filename} (ID: {file_id})")
+        return f"/api/upload/file/gdrive/{file_id}"
+    except Exception as drive_err:
+        logger.error(f"GDrive: Upload failed, falling back to R2/Local. Error: {str(drive_err)}")
+
+    # 2. R2 / Local Fallback (original code logic)
+    key = f"images/{filename}"
     if settings.CLOUDFLARE_API_TOKEN and settings.CLOUDFLARE_ACCOUNT_ID and settings.CLOUDFLARE_R2_BUCKET_NAME:
         try:
+            import requests
             upload_file.file.seek(0)
             file_content = upload_file.file.read()
             url = f"https://api.cloudflare.com/client/v4/accounts/{settings.CLOUDFLARE_ACCOUNT_ID}/r2/buckets/{settings.CLOUDFLARE_R2_BUCKET_NAME}/objects/{key}"

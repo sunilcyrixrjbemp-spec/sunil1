@@ -78,7 +78,19 @@ async def upload_document(file: UploadFile = File(...)):
 
 @router.get("/file/{filename:path}")
 async def serve_file(filename: str):
-    """Proxy route to serve files either from Cloudflare R2 bucket or local storage fallback."""
+    """Proxy route to serve files either from Google Drive, Cloudflare R2 bucket, or local storage fallback."""
+    # 0. Fetch from Google Drive if path starts with gdrive/
+    if filename.startswith("gdrive/"):
+        file_id = filename.replace("gdrive/", "")
+        try:
+            import io
+            from app.utils.gdrive import download_file_from_drive
+            file_bytes, mime_type = download_file_from_drive(file_id)
+            return StreamingResponse(io.BytesIO(file_bytes), media_type=mime_type)
+        except Exception as e:
+            logger.error(f"GDrive: Failed to download/serve file ID {file_id}: {str(e)}")
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"File not found in Google Drive: {str(e)}")
+
     clean_filename = os.path.basename(filename)
     subfolder = os.path.dirname(filename)
     
