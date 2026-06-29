@@ -60,16 +60,48 @@ def get_or_create_subfolder(service, parent_id: str, folder_name: str) -> str:
         raise e
 
 def upload_file_to_drive(file_content: bytes, filename: str, mime_type: str, month_name: str, year: int) -> str:
-    """Uploads file content to the corresponding month folder on Google Drive and returns the file ID."""
+    """Uploads file content to Google Drive (prioritizing Google Apps Script Web App, falling back to direct API)."""
+    import base64
+    import requests
+    from app.config.settings import settings
+    
+    # 1. Try using Google Apps Script Web App first (bypasses Service Account 0-byte quota limit)
+    if settings.GAS_WEB_APP_URL:
+        try:
+            folder_name = f"{month_name}_{year}".replace(" ", "_")
+            file_b64 = base64.b64encode(file_content).decode("utf-8")
+            
+            payload = {
+                "action": "upload_file",
+                "folderId": DRIVE_PARENT_FOLDER_ID,
+                "folderName": folder_name,
+                "filename": filename,
+                "fileBase64": file_b64,
+                "mimeType": mime_type
+            }
+            
+            response = requests.post(settings.GAS_WEB_APP_URL, json=payload, timeout=45)
+            if response.status_code == 200:
+                result = response.json()
+                if result.get("success"):
+                    logger.info(f"GDrive: Uploaded file via GAS Web App proxy: {filename} (ID: {result.get('fileId')})")
+                    return result.get("fileId")
+                else:
+                    logger.error(f"GDrive: GAS Web App returned failure: {result.get('error')}")
+            else:
+                logger.error(f"GDrive: GAS Web App returned status {response.status_code}: {response.text}")
+        except Exception as gas_err:
+            logger.error(f"GDrive: Failed to upload via GAS Web App: {str(gas_err)}")
+            
+    # 2. Fallback to direct Service Account client
+    logger.info("GDrive: Falling back to direct service account upload client...")
     service = get_drive_service()
     if not service:
         raise Exception("GDrive: Service client is not active.")
     
-    # 1. Ensure target folder name (e.g. June_2026) exists inside the parent folder
     folder_name = f"{month_name}_{year}".replace(" ", "_")
     folder_id = get_or_create_subfolder(service, DRIVE_PARENT_FOLDER_ID, folder_name)
     
-    # 2. Upload file
     file_metadata = {
         'name': filename,
         'parents': [folder_id]
