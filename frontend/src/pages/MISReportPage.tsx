@@ -15,15 +15,44 @@ import {
   X,
   ShieldCheck,
   Building,
-  Briefcase,
-  Calendar,
-  Layers3
+  Table,
+  BarChart2,
+  Activity
 } from "lucide-react";
 import toast from "react-hot-toast";
 import api from "../services/api";
 import Loader from "../components/common/Loader";
-import BarChart3D from "../components/common/BarChart3D";
-import PieChart3D from "../components/common/PieChart3D";
+
+// Register Chart.js components
+import {
+  Chart as ChartJS,
+  CategoryScale,
+  LinearScale,
+  BarElement,
+  PointElement,
+  LineElement,
+  ArcElement,
+  RadialLinearScale,
+  Title,
+  Tooltip,
+  Legend,
+  Filler
+} from 'chart.js';
+import { Bar, Doughnut, PolarArea, Pie, Line } from 'react-chartjs-2';
+
+ChartJS.register(
+  CategoryScale,
+  LinearScale,
+  BarElement,
+  PointElement,
+  LineElement,
+  ArcElement,
+  RadialLinearScale,
+  Title,
+  Tooltip,
+  Legend,
+  Filler
+);
 
 interface ChartItem {
   name: string;
@@ -188,66 +217,153 @@ export default function MISReportPage() {
 
   const stats = data?.summary;
   const breakdown = data?.breakdown;
+  const activity = data?.daily_activity;
   const options = data?.filter_options;
 
-  // Custom 3D Charts Mappers
-  const equipment3DData = breakdown?.equipment.map((e, idx) => ({
-    label: e.name.length > 12 ? e.name.slice(0, 10) + ".." : e.name,
-    amount: Math.round(e.penalty),
-    color: ['#dc3545', '#e83e8c', '#fd7e14', '#ffc107', '#28a745', '#17a2b8', '#007bff', '#6f42c1'][idx % 8]
-  })) || [];
+  // Chart 1: Daily Activity Logged vs Closed (Line Area Chart - AdminLTE style)
+  const dailyLoggedData = activity?.logged ? [...activity.logged].reverse() : [];
+  const dailyClosedData = activity?.closed ? [...activity.closed].reverse() : [];
+  
+  const dailyChartData = {
+    labels: dailyLoggedData.map(d => d.day.slice(5)),
+    datasets: [
+      {
+        fill: true,
+        label: 'Logged Calls',
+        data: dailyLoggedData.map(d => d.count),
+        backgroundColor: 'rgba(60,141,188,0.2)',
+        borderColor: 'rgba(60,141,188,1)',
+        pointBorderColor: '#3b8bba',
+        pointBackgroundColor: 'rgba(60,141,188,1)',
+        tension: 0.4
+      },
+      {
+        fill: true,
+        label: 'Closed Calls',
+        data: dailyLoggedData.map(d => {
+          const match = dailyClosedData.find(c => c.day === d.day);
+          return match ? match.count : 0;
+        }),
+        backgroundColor: 'rgba(40,167,69,0.15)',
+        borderColor: 'rgba(40,167,69,1)',
+        pointBorderColor: '#28a745',
+        pointBackgroundColor: 'rgba(40,167,69,1)',
+        tension: 0.4
+      }
+    ]
+  };
 
-  const district3DData = breakdown?.district.map((d, idx) => ({
-    label: d.name,
-    amount: Math.round(d.penalty),
-    color: ['#007bff', '#28a745', '#ffc107', '#dc3545', '#17a2b8', '#6f42c1', '#fd7e14', '#20c997'][idx % 8]
-  })) || [];
+  // Chart 2: Top Equipment Penalties (Horizontal Bar)
+  const equipmentChartData = {
+    labels: breakdown?.equipment.map(e => e.name.length > 20 ? e.name.slice(0, 18) + ".." : e.name) || [],
+    datasets: [
+      {
+        label: 'Total Penalty Amount (₹)',
+        data: breakdown?.equipment.map(e => e.penalty) || [],
+        backgroundColor: '#dc3545',
+        borderColor: '#b21f2d',
+        borderWidth: 1,
+        borderRadius: 2
+      }
+    ]
+  };
 
-  const coordinator3DData = breakdown?.coordinator.map((c, idx) => ({
-    label: c.name,
-    amount: Math.round(c.penalty),
-    color: ['#3b82f6', '#10b981', '#f59e0b', '#6366f1', '#ec4899', '#14b8a6', '#8b5cf6', '#f97316'][idx % 8]
-  })) || [];
+  // Chart 3: District / DI Penalties (Doughnut Chart)
+  const districtChartData = {
+    labels: breakdown?.district.map(d => d.name) || [],
+    datasets: [
+      {
+        data: breakdown?.district.map(d => d.penalty) || [],
+        backgroundColor: ['#007bff', '#28a745', '#ffc107', '#dc3545', '#17a2b8', '#6f42c1', '#fd7e14', '#20c997'],
+        borderWidth: 1
+      }
+    ]
+  };
 
-  const warranty3DData = breakdown?.warranty.map((w) => ({
-    label: w.status,
-    amount: Math.round(w.penalty),
-    color: w.status.toLowerCase().includes('under') ? '#10b981' : '#dc3545'
-  })) || [];
+  // Chart 4: Coordinator Penalties (Vertical Bar Chart)
+  const coordinatorChartData = {
+    labels: breakdown?.coordinator.map(c => c.name) || [],
+    datasets: [
+      {
+        label: 'Coordinator Penalty (₹)',
+        data: breakdown?.coordinator.map(c => c.penalty) || [],
+        backgroundColor: '#3c8dbc',
+        borderColor: '#245a75',
+        borderWidth: 1
+      }
+    ]
+  };
 
-  const hospType3DData = breakdown?.hospital_type.map((h, idx) => ({
-    label: h.type,
-    amount: Math.round(h.penalty),
-    color: ['#6f42c1', '#fd7e14', '#007bff', '#28a745', '#ffc107', '#17a2b8'][idx % 6]
-  })) || [];
+  // Chart 5: Hospital Type share (Pie Chart)
+  const hospTypeChartData = {
+    labels: breakdown?.hospital_type.map(h => h.type) || [],
+    datasets: [
+      {
+        data: breakdown?.hospital_type.map(h => h.penalty) || [],
+        backgroundColor: ['#6f42c1', '#fd7e14', '#007bff', '#28a745', '#ffc107', '#17a2b8'],
+        borderWidth: 1
+      }
+    ]
+  };
 
-  const hospital3DData = breakdown?.hospital.map((h, idx) => ({
-    label: h.name.length > 12 ? h.name.slice(0, 10) + ".." : h.name,
-    amount: Math.round(h.penalty),
-    color: ['#fd7e14', '#e83e8c', '#6f42c1', '#007bff', '#17a2b8', '#28a745', '#ffc107', '#dc3545'][idx % 8]
-  })) || [];
+  // Chart 6: Warranty share (Doughnut cutout)
+  const warrantyChartData = {
+    labels: breakdown?.warranty.map(w => w.status) || [],
+    datasets: [
+      {
+        data: breakdown?.warranty.map(w => w.penalty) || [],
+        backgroundColor: ['#28a745', '#dc3545'],
+        borderWidth: 1
+      }
+    ]
+  };
+
+  // Chart 7: Top Hospital Penalties (Bar Chart)
+  const hospitalChartData = {
+    labels: breakdown?.hospital.map(h => h.name.length > 15 ? h.name.slice(0, 12) + ".." : h.name) || [],
+    datasets: [
+      {
+        label: 'Hospital Penalty (₹)',
+        data: breakdown?.hospital.map(h => h.penalty) || [],
+        backgroundColor: '#fd7e14',
+        borderWidth: 1
+      }
+    ]
+  };
+
+  // Chart 8: Zone share (Polar Area)
+  const zoneChartData = {
+    labels: breakdown?.zone.map(z => z.name + " Zone") || [],
+    datasets: [
+      {
+        data: breakdown?.zone.map(z => z.penalty) || [],
+        backgroundColor: [
+          'rgba(255, 193, 7, 0.85)',
+          'rgba(23, 162, 184, 0.85)',
+          'rgba(40, 167, 69, 0.85)',
+          'rgba(220, 53, 69, 0.85)',
+          'rgba(0, 123, 255, 0.85)',
+          'rgba(111, 66, 193, 0.85)'
+        ]
+      }
+    ]
+  };
 
   return (
-    <div className="space-y-6 animate-fadeIn text-gray-800 font-sans">
+    <div className="space-y-6 text-slate-800 font-sans">
       
-      {/* Top Header Panel */}
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 bg-gradient-to-r from-slate-800 to-slate-900 text-white p-6 rounded-lg shadow-md border-b-4 border-b-[#28a745]">
-        <div className="space-y-1">
-          <div className="flex items-center gap-2">
-            <span className="p-1.5 bg-[#28a745]/20 text-[#28a745] rounded-md">
-              <Layers3 className="w-5 h-5" />
-            </span>
-            <h2 className="text-lg font-black uppercase tracking-wide flex items-center gap-2">
-              BEMMP Rajasthan MIS Control Center
-              {isUpdating && <RefreshCw className="w-4 h-4 text-[#28a745] animate-spin" />}
-            </h2>
-          </div>
-          <p className="text-slate-300 text-xs leading-relaxed max-w-xl">
-            Live 3D operational dashboard with cascading dependent filters mapping SLA delays, coordinator logs, and regional downtime calculations.
+      {/* Normal Page Header */}
+      <div className="pb-3 border-b border-slate-200 flex items-center justify-between">
+        <div>
+          <h1 className="text-xl font-semibold text-slate-800 flex items-center gap-2">
+            MIS Report Dashboard
+            {isUpdating && <RefreshCw className="w-4 h-4 text-blue-500 animate-spin" />}
+          </h1>
+          <p className="text-xs text-slate-500 mt-0.5">
+            Downtime SLA penalties, FTFR, zone allocations, and coordinator analytics metrics.
           </p>
         </div>
-        
-        <div className="flex items-center gap-2 self-start md:self-center">
+        <div className="flex items-center gap-2">
           <input 
             type="file" 
             ref={fileInputRef} 
@@ -258,15 +374,15 @@ export default function MISReportPage() {
           <button
             onClick={triggerFileSelect}
             disabled={syncing}
-            className="px-4 py-2.5 bg-[#28a745] hover:bg-[#218838] disabled:bg-slate-700 text-white text-xs font-bold uppercase tracking-wider rounded border-0 cursor-pointer flex items-center gap-1.5 shadow transition-all duration-150"
+            className="px-3 py-1.5 bg-[#28a745] hover:bg-[#218838] disabled:bg-slate-300 text-white text-xs font-bold uppercase rounded cursor-pointer flex items-center gap-1 shadow-sm transition-all"
           >
             <Upload className="w-3.5 h-3.5" />
-            {syncing ? "Syncing..." : "Sync Penalty Spreadsheet"}
+            {syncing ? "Syncing..." : "Sync Excel"}
           </button>
           <button
             onClick={fetchDashboardData}
-            className="p-2.5 bg-slate-700 hover:bg-slate-600 border border-slate-600 text-slate-200 rounded transition-all cursor-pointer flex items-center justify-center"
-            title="Reload metrics"
+            className="p-1.5 bg-white hover:bg-slate-100 border border-slate-300 text-slate-700 rounded transition-all cursor-pointer flex items-center justify-center"
+            title="Reload data"
           >
             <RefreshCw className="w-4 h-4" />
           </button>
@@ -275,15 +391,15 @@ export default function MISReportPage() {
 
       {/* Syncing Progress Box */}
       {syncing && (
-        <div className="bg-white border border-gray-200 border-l-4 border-l-[#28a745] rounded shadow-sm p-4 space-y-2">
+        <div className="bg-white border border-slate-200 border-l-4 border-l-[#28a745] rounded shadow-sm p-4 space-y-2">
           <div className="flex justify-between items-center text-xs">
-            <span className="font-bold text-gray-700 flex items-center gap-1.5 animate-pulse">
+            <span className="font-bold text-slate-700 flex items-center gap-1.5 animate-pulse">
               <Database className="w-4 h-4 text-[#28a745]" />
               {syncStatusText}
             </span>
-            <span className="font-bold text-gray-900">{syncProgress}%</span>
+            <span className="font-bold text-slate-950">{syncProgress}%</span>
           </div>
-          <div className="w-full bg-gray-100 rounded-full h-3 overflow-hidden">
+          <div className="w-full bg-slate-100 rounded-full h-3 overflow-hidden">
             <div 
               className="bg-[#28a745] h-full transition-all duration-300 rounded-full" 
               style={{ width: `${syncProgress}%` }}
@@ -292,277 +408,419 @@ export default function MISReportPage() {
         </div>
       )}
 
-      {/* Main Grid: Sidebar Filters & Dashboard View */}
-      <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
-        
-        {/* Left Side: Cascading Filters Sidebar */}
-        <div className="bg-white border border-gray-200 rounded-lg shadow-sm p-4 h-fit space-y-6">
-          <div className="flex items-center justify-between border-b border-gray-100 pb-3">
-            <h3 className="text-xs font-black uppercase tracking-wider text-slate-700 flex items-center gap-1.5">
-              <Filter className="w-4 h-4 text-blue-500" />
-              Cascading Filters
-            </h3>
-            {(selectedZone || selectedDistrict || selectedCoordinator || selectedMonth || selectedEquipment) && (
-              <button 
-                onClick={handleResetFilters}
-                className="text-[10px] font-black text-red-500 hover:text-red-700 flex items-center gap-1 uppercase transition-all bg-transparent border-0 cursor-pointer"
-              >
-                <X className="w-3.5 h-3.5" /> Clear
-              </button>
-            )}
-          </div>
-
-          <div className="space-y-4">
-            {/* Zone Filter */}
-            <div className="space-y-1">
-              <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wide flex items-center gap-1">
-                <MapPin className="w-3 h-3 text-slate-400" /> Zone
-              </label>
-              <select 
-                value={selectedZone} 
-                onChange={(e) => {
-                  setSelectedZone(e.target.value);
-                  setSelectedDistrict(""); // Reset dependent district
-                }}
-                className="w-full border border-gray-300 rounded px-2.5 py-2 text-xs text-gray-700 font-semibold focus:outline-none focus:border-blue-500 bg-white"
-              >
-                <option value="">All Zones ({options?.zones.length || 0})</option>
-                {options?.zones.map(z => <option key={z} value={z}>{z} Zone</option>)}
-              </select>
-            </div>
-
-            {/* District / DI Filter */}
-            <div className="space-y-1">
-              <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wide flex items-center gap-1">
-                <Building className="w-3 h-3 text-slate-400" /> District / DI
-              </label>
-              <select 
-                value={selectedDistrict} 
-                onChange={(e) => setSelectedDistrict(e.target.value)}
-                className="w-full border border-gray-300 rounded px-2.5 py-2 text-xs text-gray-700 font-semibold focus:outline-none focus:border-blue-500 bg-white"
-              >
-                <option value="">All Districts ({options?.districts.length || 0})</option>
-                {options?.districts.map(d => <option key={d} value={d}>{d}</option>)}
-              </select>
-            </div>
-
-            {/* Coordinator Filter */}
-            <div className="space-y-1">
-              <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wide flex items-center gap-1">
-                <UserCheck className="w-3 h-3 text-slate-400" /> Coordinator
-              </label>
-              <select 
-                value={selectedCoordinator} 
-                onChange={(e) => setSelectedCoordinator(e.target.value)}
-                className="w-full border border-gray-300 rounded px-2.5 py-2 text-xs text-gray-700 font-semibold focus:outline-none focus:border-blue-500 bg-white"
-              >
-                <option value="">All Coordinators ({options?.coordinators.length || 0})</option>
-                {options?.coordinators.map(c => <option key={c} value={c}>{c}</option>)}
-              </select>
-            </div>
-
-            {/* Month Filter */}
-            <div className="space-y-1">
-              <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wide flex items-center gap-1">
-                <Calendar className="w-3 h-3 text-slate-400" /> Billing Month
-              </label>
-              <select 
-                value={selectedMonth} 
-                onChange={(e) => setSelectedMonth(e.target.value)}
-                className="w-full border border-gray-300 rounded px-2.5 py-2 text-xs text-gray-700 font-semibold focus:outline-none focus:border-blue-500 bg-white"
-              >
-                <option value="">All Months ({options?.months.length || 0})</option>
-                {options?.months.map(m => <option key={m} value={m}>{m}</option>)}
-              </select>
-            </div>
-
-            {/* Equipment Filter */}
-            <div className="space-y-1">
-              <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wide flex items-center gap-1">
-                <Briefcase className="w-3 h-3 text-slate-400" /> Equipment
-              </label>
-              <select 
-                value={selectedEquipment} 
-                onChange={(e) => setSelectedEquipment(e.target.value)}
-                className="w-full border border-gray-300 rounded px-2.5 py-2 text-xs text-gray-700 font-semibold focus:outline-none focus:border-blue-500 bg-white"
-              >
-                <option value="">All Equipments ({options?.equipments.length || 0})</option>
-                {options?.equipments.map(eq => <option key={eq} value={eq}>{eq}</option>)}
-              </select>
-            </div>
-          </div>
-        </div>
-
-        {/* Right Side: KPI Cards & Custom 3D Visualizations */}
-        <div className="lg:col-span-3 space-y-6">
-          
-          {loading ? (
-            <div className="bg-white border border-gray-200 rounded-lg shadow-sm p-16">
-              <Loader message="Recalculating 3D business intelligence models..." />
-            </div>
-          ) : data?.success === false || !stats ? (
-            <div className="bg-white border border-gray-200 rounded-lg p-12 text-center space-y-4">
-              <AlertTriangle className="w-12 h-12 text-amber-500 mx-auto" />
-              <h3 className="text-sm font-bold uppercase text-gray-700 tracking-wider">No Matching Records Found</h3>
-              <p className="text-slate-500 text-xs max-w-md mx-auto leading-relaxed">
-                The current combination of dependent filters returned zero records. Please click **Clear Filters** on the sidebar to reset the layout.
-              </p>
-            </div>
-          ) : (
-            <>
-              {/* Premium KPI Metric Cards */}
-              <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4">
-                
-                {/* Metric 1: Total Penalty */}
-                <div className="bg-white border border-gray-200 border-l-4 border-l-red-500 rounded shadow-sm p-4 flex items-center gap-3">
-                  <span className="p-2.5 bg-red-50 text-red-500 rounded-full">
-                    <DollarSign className="w-5 h-5" />
-                  </span>
-                  <div>
-                    <span className="text-[10px] font-black text-slate-400 uppercase tracking-wider block">Net SLA Penalty</span>
-                    <span className="text-lg font-black text-slate-700 block mt-0.5">₹{stats.total_penalty.toLocaleString()}</span>
-                  </div>
-                </div>
-
-                {/* Metric 2: FTFR % */}
-                <div className="bg-white border border-gray-200 border-l-4 border-l-green-500 rounded shadow-sm p-4 flex items-center gap-3">
-                  <span className="p-2.5 bg-green-50 text-green-500 rounded-full">
-                    <TrendingUp className="w-5 h-5" />
-                  </span>
-                  <div>
-                    <span className="text-[10px] font-black text-slate-400 uppercase tracking-wider block">FTFR Percentage</span>
-                    <span className="text-lg font-black text-slate-700 block mt-0.5">{stats.ftfr_percentage}%</span>
-                  </div>
-                </div>
-
-                {/* Metric 3: Visit Penalty */}
-                <div className="bg-white border border-gray-200 border-l-4 border-l-blue-500 rounded shadow-sm p-4 flex items-center gap-3">
-                  <span className="p-2.5 bg-blue-50 text-blue-500 rounded-full">
-                    <Clock className="w-5 h-5" />
-                  </span>
-                  <div>
-                    <span className="text-[10px] font-black text-slate-400 uppercase tracking-wider block">Visit Penalty</span>
-                    <span className="text-lg font-black text-slate-700 block mt-0.5">₹{stats.total_attend_penalty.toLocaleString()}</span>
-                  </div>
-                </div>
-
-                {/* Metric 4: Resolution Ratio */}
-                <div className="bg-white border border-gray-200 border-l-4 border-l-amber-500 rounded shadow-sm p-4 flex items-center gap-3">
-                  <span className="p-2.5 bg-amber-50 text-amber-500 rounded-full">
-                    <UserCheck className="w-5 h-5" />
-                  </span>
-                  <div>
-                    <span className="text-[10px] font-black text-slate-400 uppercase tracking-wider block">Resolution Dispatch</span>
-                    <span className="text-lg font-black text-slate-700 block mt-0.5">{stats.closed_calls} / {stats.total_calls}</span>
-                  </div>
-                </div>
-
-              </div>
-
-              {/* Secondary Stats Strip Box */}
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 bg-slate-50 border border-gray-200 rounded-lg p-4 text-center">
-                <div>
-                  <span className="text-[10px] font-black text-slate-400 uppercase tracking-wider block">Average Downtime Duration</span>
-                  <span className="text-base font-black text-slate-700 block mt-1">{stats.avg_downtime_days} Days</span>
-                </div>
-                <div className="border-t sm:border-t-0 sm:border-l sm:border-r border-gray-200 py-3 sm:py-0">
-                  <span className="text-[10px] font-black text-slate-400 uppercase tracking-wider block">Per-Day Penalty Impact</span>
-                  <span className="text-base font-black text-slate-700 block mt-1">₹{stats.total_per_day_penalty.toLocaleString()}/day</span>
-                </div>
-                <div>
-                  <span className="text-[10px] font-black text-slate-400 uppercase tracking-wider block">Downtime Delay Penalty</span>
-                  <span className="text-base font-black text-slate-700 block mt-1">₹{stats.total_delay_penalty.toLocaleString()}</span>
-                </div>
-              </div>
-
-              {/* 3D Visualizations Grid */}
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                
-                {/* 3D Chart 1: Top Equipment Penalties */}
-                <div className="bg-white border border-gray-200 border-t-4 border-t-red-500 rounded-lg shadow-sm p-4 space-y-3">
-                  <h4 className="text-xs font-black uppercase text-slate-700 flex items-center gap-1.5 border-b border-gray-100 pb-2">
-                    <Layers className="w-4 h-4 text-red-500" />
-                    Top Equipment Penalties (3D Cylinder View)
-                  </h4>
-                  {equipment3DData.length > 0 ? (
-                    <BarChart3D data={equipment3DData} height={140} />
-                  ) : (
-                    <div className="text-center py-10 text-xs text-slate-400">No data available</div>
-                  )}
-                </div>
-
-                {/* 3D Chart 2: Top District Penalties */}
-                <div className="bg-white border border-gray-200 border-t-4 border-t-blue-500 rounded-lg shadow-sm p-4 space-y-3">
-                  <h4 className="text-xs font-black uppercase text-slate-700 flex items-center gap-1.5 border-b border-gray-100 pb-2">
-                    <MapPin className="w-4 h-4 text-blue-500" />
-                    Top District SLA Penalties (3D Isometric View)
-                  </h4>
-                  {district3DData.length > 0 ? (
-                    <PieChart3D data={district3DData} height={150} />
-                  ) : (
-                    <div className="text-center py-10 text-xs text-slate-400">No data available</div>
-                  )}
-                </div>
-
-                {/* 3D Chart 3: Top Coordinator Penalties */}
-                <div className="bg-white border border-gray-200 border-t-4 border-t-green-500 rounded-lg shadow-sm p-4 space-y-3">
-                  <h4 className="text-xs font-black uppercase text-slate-700 flex items-center gap-1.5 border-b border-gray-100 pb-2">
-                    <UserCheck className="w-4 h-4 text-green-500" />
-                    Top Coordinator Penalties (3D Cylinder View)
-                  </h4>
-                  {coordinator3DData.length > 0 ? (
-                    <BarChart3D data={coordinator3DData} height={140} />
-                  ) : (
-                    <div className="text-center py-10 text-xs text-slate-400">No data available</div>
-                  )}
-                </div>
-
-                {/* 3D Chart 4: Warranty Status Share */}
-                <div className="bg-white border border-gray-200 border-t-4 border-t-teal-500 rounded-lg shadow-sm p-4 space-y-3">
-                  <h4 className="text-xs font-black uppercase text-slate-700 flex items-center gap-1.5 border-b border-gray-100 pb-2">
-                    <ShieldCheck className="w-4 h-4 text-teal-500" />
-                    Warranty Status Share (3D Isometric View)
-                  </h4>
-                  {warranty3DData.length > 0 ? (
-                    <PieChart3D data={warranty3DData} height={150} />
-                  ) : (
-                    <div className="text-center py-10 text-xs text-slate-400">No data available</div>
-                  )}
-                </div>
-
-                {/* 3D Chart 5: Hospital Type Breakdown */}
-                <div className="bg-white border border-gray-200 border-t-4 border-t-purple-500 rounded-lg shadow-sm p-4 space-y-3">
-                  <h4 className="text-xs font-black uppercase text-slate-700 flex items-center gap-1.5 border-b border-gray-100 pb-2">
-                    <PieChart className="w-4 h-4 text-purple-500" />
-                    Hospital Type Penalties (3D Isometric View)
-                  </h4>
-                  {hospType3DData.length > 0 ? (
-                    <PieChart3D data={hospType3DData} height={150} />
-                  ) : (
-                    <div className="text-center py-10 text-xs text-slate-400">No data available</div>
-                  )}
-                </div>
-
-                {/* 3D Chart 6: Top Hospital Penalties */}
-                <div className="bg-white border border-gray-200 border-t-4 border-t-orange-500 rounded-lg shadow-sm p-4 space-y-3">
-                  <h4 className="text-xs font-black uppercase text-slate-700 flex items-center gap-1.5 border-b border-gray-100 pb-2">
-                    <Building className="w-4 h-4 text-orange-500" />
-                    Top Hospital Penalties (3D Cylinder View)
-                  </h4>
-                  {hospital3DData.length > 0 ? (
-                    <BarChart3D data={hospital3DData} height={140} />
-                  ) : (
-                    <div className="text-center py-10 text-xs text-slate-400">No data available</div>
-                  )}
-                </div>
-
-              </div>
-            </>
+      {/* Dynamic Filter Controls Card (AdminLTE styled Card Box) */}
+      <div className="bg-white border border-slate-200 border-t-4 border-t-blue-500 rounded shadow-sm">
+        <div className="px-4 py-2.5 border-b border-slate-150 flex items-center justify-between bg-slate-50/50">
+          <h3 className="text-xs font-bold text-slate-700 flex items-center gap-1.5">
+            <Filter className="w-4 h-4 text-blue-500" />
+            Filter Operations (Cascading Dropdowns)
+          </h3>
+          {(selectedZone || selectedDistrict || selectedCoordinator || selectedMonth || selectedEquipment) && (
+            <button 
+              onClick={handleResetFilters}
+              className="text-[10px] font-bold text-red-500 hover:text-red-700 flex items-center gap-1 uppercase transition-all bg-transparent border-0 cursor-pointer"
+            >
+              <X className="w-3.5 h-3.5" /> Clear Filters
+            </button>
           )}
-
         </div>
+        <div className="p-4 grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4">
+          {/* Zone Filter */}
+          <div>
+            <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wide block mb-1">Zone</label>
+            <select 
+              value={selectedZone} 
+              onChange={(e) => {
+                setSelectedZone(e.target.value);
+                setSelectedDistrict(""); // Reset dependent district
+              }}
+              className="w-full border border-slate-300 rounded px-2.5 py-1.5 text-xs text-slate-700 font-semibold focus:outline-none focus:border-blue-500 bg-white"
+            >
+              <option value="">All Zones ({options?.zones.length || 0})</option>
+              {options?.zones.map(z => <option key={z} value={z}>{z} Zone</option>)}
+            </select>
+          </div>
 
+          {/* District / DI Filter */}
+          <div>
+            <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wide block mb-1">District / DI</label>
+            <select 
+              value={selectedDistrict} 
+              onChange={(e) => setSelectedDistrict(e.target.value)}
+              className="w-full border border-slate-300 rounded px-2.5 py-1.5 text-xs text-slate-700 font-semibold focus:outline-none focus:border-blue-500 bg-white"
+            >
+              <option value="">All Districts ({options?.districts.length || 0})</option>
+              {options?.districts.map(d => <option key={d} value={d}>{d}</option>)}
+            </select>
+          </div>
+
+          {/* Coordinator Filter */}
+          <div>
+            <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wide block mb-1">Coordinator</label>
+            <select 
+              value={selectedCoordinator} 
+              onChange={(e) => setSelectedCoordinator(e.target.value)}
+              className="w-full border border-slate-300 rounded px-2.5 py-1.5 text-xs text-slate-700 font-semibold focus:outline-none focus:border-blue-500 bg-white"
+            >
+              <option value="">All Coordinators ({options?.coordinators.length || 0})</option>
+              {options?.coordinators.map(c => <option key={c} value={c}>{c}</option>)}
+            </select>
+          </div>
+
+          {/* Month Filter */}
+          <div>
+            <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wide block mb-1">Billing Month</label>
+            <select 
+              value={selectedMonth} 
+              onChange={(e) => setSelectedMonth(e.target.value)}
+              className="w-full border border-slate-300 rounded px-2.5 py-1.5 text-xs text-slate-700 font-semibold focus:outline-none focus:border-blue-500 bg-white"
+            >
+              <option value="">All Months ({options?.months.length || 0})</option>
+              {options?.months.map(m => <option key={m} value={m}>{m}</option>)}
+            </select>
+          </div>
+
+          {/* Equipment Filter */}
+          <div>
+            <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wide block mb-1">Equipment</label>
+            <select 
+              value={selectedEquipment} 
+              onChange={(e) => setSelectedEquipment(e.target.value)}
+              className="w-full border border-slate-300 rounded px-2.5 py-1.5 text-xs text-slate-700 font-semibold focus:outline-none focus:border-blue-500 bg-white"
+            >
+              <option value="">All Equipments ({options?.equipments.length || 0})</option>
+              {options?.equipments.map(eq => <option key={eq} value={eq}>{eq}</option>)}
+            </select>
+          </div>
+        </div>
       </div>
+
+      {loading ? (
+        <div className="p-16">
+          <Loader message="Recalculating business analytics matrices..." />
+        </div>
+      ) : data?.success === false || !stats ? (
+        <div className="bg-white border border-slate-200 border-t-4 border-t-red-500 p-12 text-center space-y-4 rounded shadow-sm">
+          <AlertTriangle className="w-12 h-12 text-amber-500 mx-auto" />
+          <h3 className="text-sm font-bold uppercase text-slate-700 tracking-wider">No Matching Records</h3>
+          <p className="text-slate-500 text-xs max-w-md mx-auto leading-relaxed">
+            No rows found matching the selected combination of filters. Please clear filters to reload statistics.
+          </p>
+        </div>
+      ) : (
+        <>
+          {/* AdminLTE Small Boxes (KPI Strip) */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+            
+            {/* Box 1: Net Penalty assessed (Red) */}
+            <div className="bg-[#dc3545] text-white rounded shadow-sm overflow-hidden flex flex-col justify-between relative group p-4 h-32">
+              <div>
+                <span className="text-2xl font-black block">₹{stats.total_penalty.toLocaleString()}</span>
+                <span className="text-xs uppercase tracking-wider block mt-1">Net SLA Penalty</span>
+              </div>
+              <div className="absolute right-4 top-4 text-white/10 group-hover:scale-110 transition-all duration-200 select-none">
+                <DollarSign className="w-16 h-16" />
+              </div>
+              <div className="text-[10px] text-white/80 border-t border-white/20 pt-2 block mt-2">
+                Visit + Downtime violation delay
+              </div>
+            </div>
+
+            {/* Box 2: FTFR Percentage (Green) */}
+            <div className="bg-[#28a745] text-white rounded shadow-sm overflow-hidden flex flex-col justify-between relative group p-4 h-32">
+              <div>
+                <span className="text-2xl font-black block">{stats.ftfr_percentage}%</span>
+                <span className="text-xs uppercase tracking-wider block mt-1">First Time Fix Rate</span>
+              </div>
+              <div className="absolute right-4 top-4 text-white/10 group-hover:scale-110 transition-all duration-200 select-none">
+                <TrendingUp className="w-16 h-16" />
+              </div>
+              <div className="text-[10px] text-white/80 border-t border-white/20 pt-2 block mt-2">
+                Resolved within 24 hours SLA limit
+              </div>
+            </div>
+
+            {/* Box 3: Visit Delay SLA (Blue) */}
+            <div className="bg-[#007bff] text-white rounded shadow-sm overflow-hidden flex flex-col justify-between relative group p-4 h-32">
+              <div>
+                <span className="text-2xl font-black block">₹{stats.total_attend_penalty.toLocaleString()}</span>
+                <span className="text-xs uppercase tracking-wider block mt-1">Visit Attend Penalty</span>
+              </div>
+              <div className="absolute right-4 top-4 text-white/10 group-hover:scale-110 transition-all duration-200 select-none">
+                <Clock className="w-16 h-16" />
+              </div>
+              <div className="text-[10px] text-white/80 border-t border-white/20 pt-2 block mt-2">
+                Initial visit SLA response delay
+              </div>
+            </div>
+
+            {/* Box 4: Closed / Active Calls (Yellow) */}
+            <div className="bg-[#ffc107] text-slate-800 rounded shadow-sm overflow-hidden flex flex-col justify-between relative group p-4 h-32">
+              <div>
+                <span className="text-2xl font-black block">{stats.closed_calls} / {stats.total_calls}</span>
+                <span className="text-xs uppercase tracking-wider block mt-1">Resolution Ratio</span>
+              </div>
+              <div className="absolute right-4 top-4 text-slate-800/10 group-hover:scale-110 transition-all duration-200 select-none">
+                <UserCheck className="w-16 h-16" />
+              </div>
+              <div className="text-[10px] text-slate-800/80 border-t border-slate-800/20 pt-2 block mt-2">
+                Total complaint resolution status
+              </div>
+            </div>
+
+          </div>
+
+          {/* Secondary Metrics Strip */}
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 bg-slate-50 border border-slate-200 rounded p-4 text-center">
+            <div>
+              <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">Average Downtime Duration</span>
+              <span className="text-lg font-extrabold text-slate-700 block mt-1">{stats.avg_downtime_days} Days</span>
+            </div>
+            <div className="border-t sm:border-t-0 sm:border-l sm:border-r border-slate-200 py-3 sm:py-0">
+              <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">Per-Day Penalty Impact</span>
+              <span className="text-lg font-extrabold text-slate-700 block mt-1">₹{stats.total_per_day_penalty.toLocaleString()}/day</span>
+            </div>
+            <div>
+              <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">Resolution Delay Penalty</span>
+              <span className="text-lg font-extrabold text-slate-700 block mt-1">₹{stats.total_delay_penalty.toLocaleString()}</span>
+            </div>
+          </div>
+
+          {/* Chart 1: Daily Logged vs Closed (Line Area Chart - AdminLTE Layout style) */}
+          <div className="bg-white border border-slate-200 rounded shadow-sm">
+            <div className="px-4 py-3 border-b border-slate-150 flex items-center gap-1.5 bg-slate-50/50">
+              <Activity className="w-4 h-4 text-blue-500" />
+              <h4 className="text-xs font-bold text-slate-700 uppercase tracking-wide">Daily Logged vs Closed Calls (Area Chart)</h4>
+            </div>
+            <div className="p-4 h-64 relative">
+              <Line 
+                data={dailyChartData} 
+                options={{
+                  responsive: true,
+                  maintainAspectRatio: false,
+                  scales: {
+                    x: { grid: { display: false } },
+                    y: { ticks: { precision: 0 } }
+                  },
+                  plugins: {
+                    legend: {
+                      position: 'top',
+                      labels: { boxWidth: 12, font: { size: 10, weight: 'bold' } }
+                    }
+                  }
+                }} 
+              />
+            </div>
+          </div>
+
+          {/* 3x3 Grid for All Breakdown charts (AdminLTE Card widgets style) */}
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            
+            {/* Chart 2: Top Equipment Penalties */}
+            <div className="bg-white border border-slate-200 rounded shadow-sm">
+              <div className="px-4 py-2.5 border-b border-slate-150 flex items-center gap-1.5 bg-slate-50/50">
+                <Layers className="w-4 h-4 text-red-500" />
+                <h4 className="text-xs font-bold text-slate-700 uppercase tracking-wide">Top Equipment Penalties</h4>
+              </div>
+              <div className="p-4 h-60 relative">
+                <Bar 
+                  data={equipmentChartData} 
+                  options={{
+                    indexAxis: 'y',
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    scales: {
+                      x: { grid: { display: false } },
+                      y: { grid: { display: false } }
+                    },
+                    plugins: {
+                      legend: { display: false }
+                    }
+                  }} 
+                />
+              </div>
+            </div>
+
+            {/* Chart 3: Top District (DI) Penalties */}
+            <div className="bg-white border border-slate-200 rounded shadow-sm">
+              <div className="px-4 py-2.5 border-b border-slate-150 flex items-center gap-1.5 bg-slate-50/50">
+                <MapPin className="w-4 h-4 text-[#28a745]" />
+                <h4 className="text-xs font-bold text-slate-700 uppercase tracking-wide">District (DI) Penalties</h4>
+              </div>
+              <div className="p-4 h-60 flex justify-center items-center relative">
+                <Doughnut 
+                  data={districtChartData} 
+                  options={{
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                      legend: {
+                        position: 'right',
+                        labels: { boxWidth: 10, font: { size: 9 } }
+                      }
+                    }
+                  }} 
+                />
+              </div>
+            </div>
+
+            {/* Chart 4: Top Coordinator Penalties */}
+            <div className="bg-white border border-slate-200 rounded shadow-sm">
+              <div className="px-4 py-2.5 border-b border-slate-150 flex items-center gap-1.5 bg-slate-50/50">
+                <UserCheck className="w-4 h-4 text-blue-500" />
+                <h4 className="text-xs font-bold text-slate-700 uppercase tracking-wide">Coordinator Penalties</h4>
+              </div>
+              <div className="p-4 h-60 relative">
+                <Bar 
+                  data={coordinatorChartData} 
+                  options={{
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    scales: {
+                      x: { grid: { display: false } },
+                      y: { grid: { display: false } }
+                    },
+                    plugins: {
+                      legend: { display: false }
+                    }
+                  }} 
+                />
+              </div>
+            </div>
+
+            {/* Chart 5: Hospital Type Share */}
+            <div className="bg-white border border-slate-200 rounded shadow-sm">
+              <div className="px-4 py-2.5 border-b border-slate-150 flex items-center gap-1.5 bg-slate-50/50">
+                <PieChart className="w-4 h-4 text-purple-500" />
+                <h4 className="text-xs font-bold text-slate-700 uppercase tracking-wide">Hospital Type Penalties</h4>
+              </div>
+              <div className="p-4 h-60 flex justify-center items-center relative">
+                <Pie 
+                  data={hospTypeChartData} 
+                  options={{
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                      legend: {
+                        position: 'right',
+                        labels: { boxWidth: 10, font: { size: 9 } }
+                      }
+                    }
+                  }} 
+                />
+              </div>
+            </div>
+
+            {/* Chart 6: Warranty Share */}
+            <div className="bg-white border border-slate-200 rounded shadow-sm">
+              <div className="px-4 py-2.5 border-b border-slate-150 flex items-center gap-1.5 bg-slate-50/50">
+                <ShieldCheck className="w-4 h-4 text-[#17a2b8]" />
+                <h4 className="text-xs font-bold text-slate-700 uppercase tracking-wide">Warranty Status share</h4>
+              </div>
+              <div className="p-4 h-60 flex justify-center items-center relative">
+                <Doughnut 
+                  data={warrantyChartData} 
+                  options={{
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                      legend: {
+                        position: 'right',
+                        labels: { boxWidth: 10, font: { size: 9 } }
+                      }
+                    }
+                  }} 
+                />
+              </div>
+            </div>
+
+            {/* Chart 7: Top Hospital Penalties */}
+            <div className="bg-white border border-slate-200 rounded shadow-sm">
+              <div className="px-4 py-2.5 border-b border-slate-150 flex items-center gap-1.5 bg-slate-50/50">
+                <Building className="w-4 h-4 text-orange-500" />
+                <h4 className="text-xs font-bold text-slate-700 uppercase tracking-wide">Top Hospital Penalties</h4>
+              </div>
+              <div className="p-4 h-60 relative">
+                <Bar 
+                  data={hospitalChartData} 
+                  options={{
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    scales: {
+                      x: { grid: { display: false } },
+                      y: { grid: { display: false } }
+                    },
+                    plugins: {
+                      legend: { display: false }
+                    }
+                  }} 
+                />
+              </div>
+            </div>
+
+            {/* Chart 8: Zone-wise Penalty Share */}
+            <div className="bg-white border border-slate-200 rounded shadow-sm md:col-span-2 lg:col-span-3">
+              <div className="px-4 py-2.5 border-b border-slate-150 flex items-center gap-1.5 bg-slate-50/50">
+                <BarChart2 className="w-4 h-4 text-[#ffc107]" />
+                <h4 className="text-xs font-bold text-slate-700 uppercase tracking-wide">Zone-wise Penalty Distribution</h4>
+              </div>
+              <div className="p-4 h-64 relative">
+                <PolarArea 
+                  data={zoneChartData} 
+                  options={{
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                      legend: {
+                        position: 'right',
+                        labels: { boxWidth: 10, font: { size: 9 } }
+                      }
+                    }
+                  }} 
+                />
+              </div>
+            </div>
+
+          </div>
+
+          {/* Interactive Detailed Analytics Table (AdminLTE Styled Table Card) */}
+          <div className="bg-white border border-slate-200 rounded shadow-sm overflow-hidden">
+            <div className="px-4 py-3 border-b border-slate-150 flex items-center gap-1.5 bg-slate-50/50">
+              <Table className="w-4 h-4 text-indigo-500" />
+              <h4 className="text-xs font-bold text-slate-700 uppercase tracking-wide">Top Regional SLA Penalty Details</h4>
+            </div>
+            <div className="overflow-x-auto">
+              <table className="w-full text-left text-xs border-collapse">
+                <thead>
+                  <tr className="bg-slate-100 border-b border-slate-200 text-slate-600 font-bold uppercase">
+                    <th className="px-4 py-3">District / DI Name</th>
+                    <th className="px-4 py-3 text-center">Assessed Penalties</th>
+                    <th className="px-4 py-3 text-center">Status</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-100">
+                  {breakdown?.district.map((d, idx) => (
+                    <tr key={idx} className="hover:bg-slate-50 transition-all">
+                      <td className="px-4 py-3 font-semibold text-slate-700 flex items-center gap-2">
+                        <span className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: ['#007bff', '#28a745', '#ffc107', '#dc3545', '#17a2b8', '#6f42c1', '#fd7e14', '#20c997'][idx % 8] }}></span>
+                        {d.name}
+                      </td>
+                      <td className="px-4 py-3 text-center font-bold text-slate-900">
+                        ₹{d.penalty.toLocaleString()}
+                      </td>
+                      <td className="px-4 py-3 text-center">
+                        <span className={`px-2 py-0.5 rounded-full text-[9px] font-bold ${d.penalty > 1000000 ? 'bg-red-50 text-red-500 border border-red-200' : 'bg-green-50 text-green-500 border border-green-200'}`}>
+                          {d.penalty > 1000000 ? 'High Penalty Load' : 'SLA Compliant'}
+                        </span>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </>
+      )}
 
     </div>
   );
