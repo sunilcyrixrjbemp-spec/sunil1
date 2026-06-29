@@ -1044,6 +1044,65 @@ def _is_warranty_expired(warranty_details: str) -> bool:
 
 
 
+@router.post("/upload-assets-chunk")
+async def upload_assets_chunk(
+    payload: dict,
+    db: Session = Depends(get_db)
+):
+    """
+    Accepts a JSON payload with pre-parsed asset inventory rows for chunked insertion.
+    Payload: {"rows": [...list of row dicts...], "clear_first": true/false}
+    """
+    try:
+        rows = payload.get("rows", [])
+        clear_first = payload.get("clear_first", False)
+
+        if clear_first:
+            db.execute(text(f"DROP TABLE IF EXISTS {ASSETS_INVENTORY_TABLE}"))
+            db.execute(text(ASSETS_INVENTORY_CREATE_SQL))
+            db.commit()
+
+        valid_rows = []
+        skipped = 0
+        for row in rows:
+            qr = str(row.get("qr_code", "")).strip()
+            if not qr or qr == "--":
+                skipped += 1
+                continue
+
+            row_dict = {}
+            for col in ASSETS_INVENTORY_COLUMNS:
+                row_dict[col] = str(row.get(col, "")).strip()
+            row_dict["qr_code"] = qr
+            valid_rows.append(row_dict)
+
+        if valid_rows:
+            _bulk_insert(db, ASSETS_INVENTORY_TABLE, ASSETS_INVENTORY_COLUMNS, valid_rows)
+
+        # Create indexes only on the first chunk or at the end
+        db.execute(text(f"CREATE INDEX IF NOT EXISTS idx_assets_inv_district ON {ASSETS_INVENTORY_TABLE}(district_name)"))
+        db.execute(text(f"CREATE INDEX IF NOT EXISTS idx_assets_inv_qr ON {ASSETS_INVENTORY_TABLE}(qr_code)"))
+        db.execute(text(f"CREATE INDEX IF NOT EXISTS idx_assets_inv_hospital ON {ASSETS_INVENTORY_TABLE}(hospital_name)"))
+        db.execute(text(f"CREATE INDEX IF NOT EXISTS idx_assets_inv_zone ON {ASSETS_INVENTORY_TABLE}(zone_name)"))
+        db.execute(text(f"CREATE INDEX IF NOT EXISTS idx_assets_inv_di ON {ASSETS_INVENTORY_TABLE}(di_name)"))
+        db.commit()
+
+        return {
+            "success": True,
+            "inserted": len(valid_rows),
+            "skipped": skipped,
+            "message": f"Successfully inserted {len(valid_rows)} rows"
+        }
+    except Exception as e:
+        logger.error(f"Error in upload_assets_chunk: {str(e)}")
+        return {
+            "success": False,
+            "inserted": 0,
+            "skipped": 0,
+            "message": f"Asset upload failed: {str(e)}"
+        }
+
+
 @router.post("/upload-assets-bulk")
 async def upload_assets_bulk(
     payload: dict,
@@ -1068,23 +1127,20 @@ async def upload_assets_bulk(
                 skipped += 1
                 continue
 
-            # Ensure all columns exist and normalize values
             row_dict = {}
             for col in ASSETS_INVENTORY_COLUMNS:
                 row_dict[col] = str(row.get(col, "")).strip()
             row_dict["qr_code"] = qr
             valid_rows.append(row_dict)
 
-        # Drop and recreate table (replace all data)
+        # Drop and recreate table
         db.execute(text(f"DROP TABLE IF EXISTS {ASSETS_INVENTORY_TABLE}"))
         db.execute(text(ASSETS_INVENTORY_CREATE_SQL))
         db.commit()
 
-        # Bulk insert ALL rows at once using the existing _bulk_insert
         if valid_rows:
             _bulk_insert(db, ASSETS_INVENTORY_TABLE, ASSETS_INVENTORY_COLUMNS, valid_rows)
 
-        # Create indexes after insert for speed
         db.execute(text(f"CREATE INDEX IF NOT EXISTS idx_assets_inv_district ON {ASSETS_INVENTORY_TABLE}(district_name)"))
         db.execute(text(f"CREATE INDEX IF NOT EXISTS idx_assets_inv_qr ON {ASSETS_INVENTORY_TABLE}(qr_code)"))
         db.execute(text(f"CREATE INDEX IF NOT EXISTS idx_assets_inv_hospital ON {ASSETS_INVENTORY_TABLE}(hospital_name)"))
@@ -1116,40 +1172,30 @@ async def upload_assets_csv(
     file: UploadFile = File(...),
     db: Session = Depends(get_db)
 ):
-    """
-    Accepts a raw CSV file upload, parses it server-side instantly, and bulk-inserts
-    all valid rows into the database in one shot. Rows with qr_code == '--' or
-    empty/whitespace-only qr_code are auto-skipped. Replaces all existing data.
-    """
     import time
     start_time = time.perf_counter()
     try:
-        # Read entire file content at once
         contents = await file.read()
-        # Try multiple encodings to handle various CSV file formats
         try:
             text_content = contents.decode("utf-8-sig")
         except UnicodeDecodeError:
             try:
                 text_content = contents.decode("utf-8", errors="replace")
             except UnicodeDecodeError:
-                text_content = contents.decode("latin-1")  # latin-1 never fails
+                text_content = contents.decode("latin-1")
 
-        # Detect delimiter: tab or comma
         first_line = text_content.split("\n", 1)[0]
         delimiter = "\t" if "\t" in first_line else ","
 
         reader = csv_module.reader(io_module.StringIO(text_content), delimiter=delimiter)
         rows_iter = iter(reader)
 
-        # Parse header row
         try:
             header_row = next(rows_iter)
         except StopIteration:
             return {"success": False, "inserted": 0, "skipped": 0, "message": "CSV file is empty."}
 
-        # Map header indices to column keys
-        col_map = []  # list of (csv_index, api_key)
+        col_map = []
         for idx, h in enumerate(header_row):
             normalized = h.strip().strip('"').lower().strip()
             api_key = CSV_HEADER_MAP.get(normalized)
@@ -1158,9 +1204,8 @@ async def upload_assets_csv(
 
         if not col_map:
             return {"success": False, "inserted": 0, "skipped": 0,
-                    "message": "Could not match any CSV headers to expected column names."}
+                    "message": "Could not match any CSV headers."}
 
-        # Parse all data rows
         valid_rows = []
         skipped = 0
         for parts in rows_iter:
@@ -1170,14 +1215,12 @@ async def upload_assets_csv(
             for csv_idx, api_key in col_map:
                 row[api_key] = parts[csv_idx].strip().strip('"') if csv_idx < len(parts) else ""
 
-            # Skip if QR code is '--' or empty/whitespace
             qr = row.get("qr_code", "").strip()
             if not qr or qr == "--":
                 skipped += 1
                 continue
             row["qr_code"] = qr
 
-            # Ensure all columns exist
             for col in ASSETS_INVENTORY_COLUMNS:
                 if col not in row:
                     row[col] = ""
@@ -1186,17 +1229,14 @@ async def upload_assets_csv(
 
         if not valid_rows:
             return {"success": False, "inserted": 0, "skipped": skipped,
-                    "message": f"No valid rows found. {skipped} rows skipped (invalid QR)."}
+                    "message": f"No valid rows found."}
 
-        # Drop and recreate table (replace all data)
         db.execute(text(f"DROP TABLE IF EXISTS {ASSETS_INVENTORY_TABLE}"))
         db.execute(text(ASSETS_INVENTORY_CREATE_SQL))
         db.commit()
 
-        # Bulk insert ALL rows at once using the existing _bulk_insert
         _bulk_insert(db, ASSETS_INVENTORY_TABLE, ASSETS_INVENTORY_COLUMNS, valid_rows)
 
-        # Create indexes after insert for speed
         db.execute(text(f"CREATE INDEX IF NOT EXISTS idx_assets_inv_district ON {ASSETS_INVENTORY_TABLE}(district_name)"))
         db.execute(text(f"CREATE INDEX IF NOT EXISTS idx_assets_inv_qr ON {ASSETS_INVENTORY_TABLE}(qr_code)"))
         db.execute(text(f"CREATE INDEX IF NOT EXISTS idx_assets_inv_hospital ON {ASSETS_INVENTORY_TABLE}(hospital_name)"))
@@ -1211,7 +1251,7 @@ async def upload_assets_csv(
             "inserted": len(valid_rows),
             "skipped": skipped,
             "elapsed_ms": round(elapsed_ms, 2),
-            "message": f"Inserted {len(valid_rows)} rows, skipped {skipped} (invalid QR) in {elapsed_ms:.1f}ms"
+            "message": f"Inserted {len(valid_rows)} rows in {elapsed_ms:.1f}ms"
         }
     except Exception as e:
         logger.error(f"Error in CSV asset upload: {str(e)}")
@@ -1229,6 +1269,7 @@ async def get_assets_inventory(
     hospital: str = None,
     zone: str = None,
     di: str = None,
+    month: str = None, # format: "YYYY-MM"
     equipment_status: str = None,
     search: str = None,
     page: int = 1,
@@ -1261,29 +1302,49 @@ async def get_assets_inventory(
             where_clauses.append(f"(equipment_name LIKE '%{safe_s}%' OR qr_code LIKE '%{safe_s}%' OR serial_no LIKE '%{safe_s}%' OR hospital_name LIKE '%{safe_s}%')")
 
         where_sql = " AND ".join(where_clauses) if where_clauses else "1=1"
-        offset = (page - 1) * page_size
 
-        count_row = db.execute(text(f"SELECT COUNT(*) FROM {ASSETS_INVENTORY_TABLE} WHERE {where_sql}")).fetchone()
-        total = count_row[0] if count_row else 0
-
+        # Fetch all matching rows and filter by month in Python
         rows = db.execute(text(
-            f"SELECT * FROM {ASSETS_INVENTORY_TABLE} WHERE {where_sql} ORDER BY id DESC LIMIT {page_size} OFFSET {offset}"
+            f"SELECT * FROM {ASSETS_INVENTORY_TABLE} WHERE {where_sql} ORDER BY id DESC"
         )).fetchall()
 
         columns = ASSETS_INVENTORY_COLUMNS + ["uploaded_at"]
+        
+        target_year = None
+        target_month = None
+        if month:
+            try:
+                parts = month.split("-")
+                target_year = int(parts[0])
+                target_month = int(parts[1])
+            except Exception:
+                pass
+
         assets = []
         for row in rows:
             row_dict = {}
             for i, col in enumerate(["id"] + columns):
                 row_dict[col] = row[i] if i < len(row) else None
+            
+            # Check month filter on moic_verified_date
+            if target_year is not None and target_month is not None:
+                moic_date_str = row_dict.get("moic_verified_date") or ""
+                moic_date = _parse_date_flexible(moic_date_str)
+                if not moic_date or moic_date.month != target_month or moic_date.year != target_year:
+                    continue
+
             assets.append(row_dict)
+
+        total = len(assets)
+        offset = (page - 1) * page_size
+        paginated_assets = assets[offset : offset + page_size]
 
         return {
             "success": True,
             "total": total,
             "page": page,
             "page_size": page_size,
-            "assets": assets
+            "assets": paginated_assets
         }
     except Exception as e:
         logger.error(f"Error fetching assets inventory: {str(e)}")
@@ -1292,7 +1353,7 @@ async def get_assets_inventory(
 
 @router.get("/assets-filters")
 async def get_assets_filters(db: Session = Depends(get_db)):
-    """Get distinct values for zone, district, DI name filters."""
+    """Get distinct values for zone, district, DI name, and months filters."""
     try:
         db.execute(text(ASSETS_INVENTORY_CREATE_SQL))
         db.commit()
@@ -1307,15 +1368,28 @@ async def get_assets_filters(db: Session = Depends(get_db)):
             f"SELECT DISTINCT di_name FROM {ASSETS_INVENTORY_TABLE} WHERE di_name IS NOT NULL AND di_name != '' ORDER BY di_name"
         )).fetchall()
 
+        # Dynamic verified months
+        dates_row = db.execute(text(
+            f"SELECT DISTINCT moic_verified_date FROM {ASSETS_INVENTORY_TABLE} WHERE moic_verified_date IS NOT NULL AND moic_verified_date != '' AND moic_verified_date != '--'"
+        )).fetchall()
+        
+        unique_months = set()
+        for r in dates_row:
+            dt = _parse_date_flexible(r[0])
+            if dt:
+                unique_months.add(dt.strftime("%Y-%m"))
+        sorted_months = sorted(list(unique_months), reverse=True)
+
         return {
             "success": True,
             "zones": [r[0] for r in zones],
             "districts": [r[0] for r in districts],
-            "di_names": [r[0] for r in di_names]
+            "di_names": [r[0] for r in di_names],
+            "months": sorted_months
         }
     except Exception as e:
         logger.error(f"Error fetching asset filters: {str(e)}")
-        return {"success": False, "zones": [], "districts": [], "di_names": []}
+        return {"success": False, "zones": [], "districts": [], "di_names": [], "months": []}
 
 
 @router.get("/assets-stats")
@@ -1323,14 +1397,14 @@ async def get_assets_stats(
     zone: str = None,
     district: str = None,
     di: str = None,
+    month: str = None, # format: "YYYY-MM"
     db: Session = Depends(get_db)
 ):
-    """Get comprehensive asset inventory statistics with billing calculations."""
+    """Get comprehensive asset inventory statistics with billing calculations and chart data."""
     try:
         db.execute(text(ASSETS_INVENTORY_CREATE_SQL))
         db.commit()
 
-        # Build WHERE clause for filters
         where_clauses = []
         if zone:
             safe_z = zone.replace("'", "''")
@@ -1343,10 +1417,22 @@ async def get_assets_stats(
             where_clauses.append(f"di_name = '{safe_di}'")
         where_sql = " AND ".join(where_clauses) if where_clauses else "1=1"
 
-        # Fetch all matching rows for computation
         rows = db.execute(text(
-            f"SELECT asset_value, moic_verified_date, warranty_details, installation_date FROM {ASSETS_INVENTORY_TABLE} WHERE {where_sql}"
+            f"SELECT asset_value, moic_verified_date, warranty_details, installation_date, equipment_status, equipment_type FROM {ASSETS_INVENTORY_TABLE} WHERE {where_sql}"
         )).fetchall()
+
+        now = dt_datetime.now()
+        if month:
+            try:
+                parts = month.split("-")
+                target_year = int(parts[0])
+                target_month = int(parts[1])
+            except Exception:
+                target_year = now.year
+                target_month = now.month
+        else:
+            target_year = now.year
+            target_month = now.month
 
         total_equipment = len(rows)
         verified_count = 0
@@ -1357,17 +1443,18 @@ async def get_assets_stats(
         verified_out_of_warranty_value = 0.0
         arrear_billing = 0.0
 
-        now = dt_datetime.now()
-        current_month = now.month
-        current_year = now.year
+        status_counts = {}
+        type_counts = {}
+        warranty_status = {"Under Warranty": 0, "Out of Warranty": 0}
 
         for row in rows:
             raw_val = row[0] or "0"
             moic_date_str = row[1] or ""
             warranty_str = row[2] or ""
             install_date_str = row[3] or ""
+            status_str = row[4] or "Unknown"
+            type_str = row[5] or "Other"
 
-            # Parse asset value
             try:
                 val = float(str(raw_val).replace(",", "").strip())
             except (ValueError, TypeError):
@@ -1375,41 +1462,43 @@ async def get_assets_stats(
 
             total_value += val
 
-            # Is verified? (MOIC verified date is not '--' and not empty)
-            is_verified = bool(moic_date_str.strip() and moic_date_str.strip() not in ("--", "NA", "N/A"))
+            # Charts helper
+            status_counts[status_str] = status_counts.get(status_str, 0) + 1
+            type_counts[type_str] = type_counts.get(type_str, 0) + 1
 
-            # Is warranty expired?
+            moic_date = _parse_date_flexible(moic_date_str)
+            is_verified = moic_date is not None
+
             warranty_expired = _is_warranty_expired(warranty_str)
+            if warranty_expired:
+                out_of_warranty_count += 1
+                warranty_status["Out of Warranty"] += 1
+            else:
+                under_warranty_count += 1
+                warranty_status["Under Warranty"] += 1
 
             if is_verified:
                 verified_count += 1
                 verified_value += val
+                if warranty_expired:
+                    verified_out_of_warranty_value += val
 
-            if warranty_expired:
-                out_of_warranty_count += 1
-            else:
-                under_warranty_count += 1
+            # Arrear billing: equipment verified in target month
+            if is_verified and moic_date.month == target_month and moic_date.year == target_year:
+                install_date = _parse_date_flexible(install_date_str)
+                if install_date and val > 0:
+                    monthly_rate = (val * 6.08 / 100) / 12
+                    months_diff = (target_year - install_date.year) * 12 + (target_month - install_date.month)
+                    if months_diff < 0:
+                        months_diff = 0
+                    arrear_billing += monthly_rate * months_diff
 
-            if is_verified and warranty_expired:
-                verified_out_of_warranty_value += val
-
-            # Arrear billing: equipment verified THIS month
-            if is_verified:
-                moic_date = _parse_date_flexible(moic_date_str)
-                if moic_date and moic_date.month == current_month and moic_date.year == current_year:
-                    install_date = _parse_date_flexible(install_date_str)
-                    if install_date and val > 0:
-                        # Monthly rate for this equipment
-                        monthly_rate = (val * 6.08 / 100) / 12
-                        # Months from installation date to today
-                        months_diff = (current_year - install_date.year) * 12 + (current_month - install_date.month)
-                        if months_diff < 0:
-                            months_diff = 0
-                        arrear_billing += monthly_rate * months_diff
-
-        # Monthly billing = (verified_out_of_warranty_value * 6.08 / 100) / 12
         monthly_value = (verified_out_of_warranty_value * 6.08 / 100) / 12
         total_billing = monthly_value + arrear_billing
+
+        top_types = sorted([{"name": k, "value": v} for k, v in type_counts.items()], key=lambda x: x["value"], reverse=True)[:5]
+        status_list = [{"name": k, "value": v} for k, v in status_counts.items()]
+        warranty_list = [{"name": k, "value": v} for k, v in warranty_status.items()]
 
         return {
             "success": True,
@@ -1422,7 +1511,12 @@ async def get_assets_stats(
             "verified_out_of_warranty_value": round(verified_out_of_warranty_value, 2),
             "monthly_value": round(monthly_value, 2),
             "arrear_billing": round(arrear_billing, 2),
-            "total_billing": round(total_billing, 2)
+            "total_billing": round(total_billing, 2),
+            "charts": {
+                "top_types": top_types,
+                "status_list": status_list,
+                "warranty_list": warranty_list
+            }
         }
     except Exception as e:
         logger.error(f"Error fetching assets stats: {str(e)}")
@@ -1430,6 +1524,7 @@ async def get_assets_stats(
             "success": False, "total_equipment": 0, "verified_equipment": 0,
             "under_warranty": 0, "out_of_warranty": 0, "total_value": 0,
             "verified_value": 0, "verified_out_of_warranty_value": 0,
-            "monthly_value": 0, "arrear_billing": 0, "total_billing": 0
+            "monthly_value": 0, "arrear_billing": 0, "total_billing": 0,
+            "charts": {"top_types": [], "status_list": [], "warranty_list": []}
         }
 

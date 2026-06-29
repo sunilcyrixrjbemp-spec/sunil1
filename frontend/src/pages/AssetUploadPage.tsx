@@ -20,10 +20,23 @@ import {
   Filter,
   Zap
 } from "lucide-react";
+import {
+  ResponsiveContainer,
+  PieChart,
+  Pie,
+  Cell,
+  BarChart,
+  Bar,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Tooltip,
+  Legend
+} from "recharts";
 import toast from "react-hot-toast";
 import api from "../services/api";
 
-// CSV column header names (in user-provided order) — now includes Equipment Type
+// CSV column header names (in user-provided order) — includes Equipment Type
 const CSV_HEADERS = [
   "District Name", "Hospital Name", "Department Name", "Group Name",
   "Equipment Name", "Model Name", "Serial No.", "Equipment Category",
@@ -38,6 +51,11 @@ interface AssetRow {
   [key: string]: string;
 }
 
+interface ChartItem {
+  name: string;
+  value: number;
+}
+
 interface AssetStats {
   total_equipment: number;
   verified_equipment: number;
@@ -49,14 +67,22 @@ interface AssetStats {
   monthly_value: number;
   arrear_billing: number;
   total_billing: number;
+  charts: {
+    top_types: ChartItem[];
+    status_list: ChartItem[];
+    warranty_list: ChartItem[];
+  };
 }
 
 const defaultStats: AssetStats = {
   total_equipment: 0, verified_equipment: 0, under_warranty: 0,
   out_of_warranty: 0, total_value: 0, verified_value: 0,
   verified_out_of_warranty_value: 0, monthly_value: 0,
-  arrear_billing: 0, total_billing: 0
+  arrear_billing: 0, total_billing: 0,
+  charts: { top_types: [], status_list: [], warranty_list: [] }
 };
+
+const CHART_COLORS = ["#4F46E5", "#10B981", "#0ea5e9", "#f59e0b", "#ec4899", "#8b5cf6"];
 
 const fmt = (n: number) => n >= 10000000 ? `${(n / 10000000).toFixed(2)} Cr` :
   n >= 100000 ? `${(n / 100000).toFixed(2)} L` :
@@ -64,10 +90,18 @@ const fmt = (n: number) => n >= 10000000 ? `${(n / 10000000).toFixed(2)} Cr` :
 
 const fmtRs = (n: number) => `₹${fmt(n)}`;
 
+const formatMonthLabel = (m: string) => {
+  const [year, month] = m.split("-");
+  const date = new Date(parseInt(year), parseInt(month) - 1, 1);
+  return date.toLocaleDateString("en-US", { month: "long", year: "numeric" });
+};
+
 export default function AssetUploadPage() {
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [isDragActive, setIsDragActive] = useState(false);
   const [uploading, setUploading] = useState(false);
+  const [uploadProgress, setUploadProgress] = useState(0);
+  const [uploadProgressDetail, setUploadProgressDetail] = useState("");
   const [parsedRows, setParsedRows] = useState<AssetRow[]>([]);
   const [skippedCount, setSkippedCount] = useState(0);
   const [uploadResult, setUploadResult] = useState<{inserted: number; skipped: number; elapsed_ms: number} | null>(null);
@@ -86,12 +120,14 @@ export default function AssetUploadPage() {
   const [filterZone, setFilterZone] = useState("");
   const [filterDistrict, setFilterDistrict] = useState("");
   const [filterDI, setFilterDI] = useState("");
+  const [filterMonth, setFilterMonth] = useState("");
   const [zones, setZones] = useState<string[]>([]);
   const [districts, setDistricts] = useState<string[]>([]);
   const [diNames, setDINames] = useState<string[]>([]);
+  const [months, setMonths] = useState<string[]>([]);
 
-  // Tab: "upload" | "inventory"
-  const [activeTab, setActiveTab] = useState<"upload" | "inventory">("upload");
+  // Tab: "upload" | "inventory" | "analytics"
+  const [activeTab, setActiveTab] = useState<"upload" | "inventory" | "analytics">("upload");
 
   useEffect(() => {
     fetchStats();
@@ -100,13 +136,13 @@ export default function AssetUploadPage() {
 
   useEffect(() => {
     fetchStats();
-  }, [filterZone, filterDistrict, filterDI]);
+  }, [filterZone, filterDistrict, filterDI, filterMonth]);
 
   useEffect(() => {
     if (activeTab === "inventory") {
       fetchAssets();
     }
-  }, [activeTab, currentPage, searchQuery, filterZone, filterDistrict, filterDI]);
+  }, [activeTab, currentPage, searchQuery, filterZone, filterDistrict, filterDI, filterMonth]);
 
   const fetchFilters = async () => {
     try {
@@ -115,6 +151,7 @@ export default function AssetUploadPage() {
         setZones(res.data.zones || []);
         setDistricts(res.data.districts || []);
         setDINames(res.data.di_names || []);
+        setMonths(res.data.months || []);
       }
     } catch (_) {}
   };
@@ -125,6 +162,7 @@ export default function AssetUploadPage() {
       if (filterZone) params.zone = filterZone;
       if (filterDistrict) params.district = filterDistrict;
       if (filterDI) params.di = filterDI;
+      if (filterMonth) params.month = filterMonth;
       const res = await api.get("/reports/assets-stats", { params });
       if (res.data.success) {
         setStats(res.data);
@@ -140,6 +178,7 @@ export default function AssetUploadPage() {
       if (filterZone) params.zone = filterZone;
       if (filterDistrict) params.district = filterDistrict;
       if (filterDI) params.di = filterDI;
+      if (filterMonth) params.month = filterMonth;
       const res = await api.get("/reports/assets-inventory", { params });
       if (res.data.success) {
         setAssets(res.data.assets);
@@ -253,7 +292,7 @@ export default function AssetUploadPage() {
     reader.readAsText(file);
   };
 
-  // ====== INSTANT Upload — send all parsed rows as one JSON request ======
+  // ====== CHUNKED JSON Upload to bypass proxy/body size limits and show real-time progress ======
   const handleUpload = async () => {
     if (parsedRows.length === 0) {
       toast.error("No valid rows to upload.");
@@ -261,35 +300,58 @@ export default function AssetUploadPage() {
     }
 
     setUploading(true);
+    setUploadProgress(0);
+    setUploadProgressDetail("Initializing...");
     setUploadResult(null);
 
-    try {
-      const res = await api.post("/reports/upload-assets-bulk", {
-        rows: parsedRows,
-        skipped_on_client: skippedCount
-      });
+    const CHUNK_SIZE = 500;
+    const totalRows = parsedRows.length;
+    let uploadedCount = 0;
+    let skippedCountServer = 0;
+    const startTime = performance.now();
 
-      if (res.data.success) {
-        setUploadResult({
-          inserted: res.data.inserted,
-          skipped: res.data.skipped + skippedCount,
-          elapsed_ms: res.data.elapsed_ms || 0
+    try {
+      for (let i = 0; i < totalRows; i += CHUNK_SIZE) {
+        const chunk = parsedRows.slice(i, i + CHUNK_SIZE);
+        const isFirst = i === 0;
+
+        setUploadProgressDetail(`Uploading rows ${i + 1} to ${Math.min(i + CHUNK_SIZE, totalRows)} of ${totalRows}...`);
+
+        const res = await api.post("/reports/upload-assets-chunk", {
+          rows: chunk,
+          clear_first: isFirst
         });
-        toast.success(`${res.data.inserted} assets imported in ${res.data.elapsed_ms}ms!`);
-        setSelectedFile(null);
-        setParsedRows([]);
-        setSkippedCount(0);
-        fetchStats();
-        fetchFilters();
-        if (activeTab === "inventory") fetchAssets();
-      } else {
-        throw new Error(res.data.message || "Upload failed");
+
+        if (res.data.success) {
+          uploadedCount += res.data.inserted;
+          skippedCountServer += res.data.skipped;
+          const pct = Math.round(((i + chunk.length) / totalRows) * 100);
+          setUploadProgress(pct);
+        } else {
+          throw new Error(res.data.message || "Chunk upload failed");
+        }
       }
+
+      const elapsed_ms = performance.now() - startTime;
+      setUploadResult({
+        inserted: uploadedCount,
+        skipped: skippedCountServer + skippedCount,
+        elapsed_ms: Math.round(elapsed_ms)
+      });
+      toast.success(`${uploadedCount} assets imported successfully!`);
+      setSelectedFile(null);
+      setParsedRows([]);
+      setSkippedCount(0);
+      fetchStats();
+      fetchFilters();
+      if (activeTab === "inventory") fetchAssets();
     } catch (err: any) {
       console.error(err);
-      toast.error(err.response?.data?.message || err.message || "Upload failed.");
+      toast.error(err.response?.data?.message || err.message || "Upload failed during transmission.");
     } finally {
       setUploading(false);
+      setUploadProgress(0);
+      setUploadProgressDetail("");
     }
   };
 
@@ -321,11 +383,12 @@ export default function AssetUploadPage() {
     setFilterZone("");
     setFilterDistrict("");
     setFilterDI("");
+    setFilterMonth("");
     setCurrentPage(1);
   };
 
   const totalPages = Math.ceil(totalAssets / pageSize);
-  const hasFilters = filterZone || filterDistrict || filterDI;
+  const hasFilters = filterZone || filterDistrict || filterDI || filterMonth;
 
   return (
     <div className="space-y-4 animate-fadeIn text-gray-800 font-sans">
@@ -371,6 +434,11 @@ export default function AssetUploadPage() {
             <option value="">All DI Names</option>
             {diNames.map(d => <option key={d} value={d}>{d}</option>)}
           </select>
+          <select value={filterMonth} onChange={e => { setFilterMonth(e.target.value); setCurrentPage(1); }}
+            className="text-[11px] font-semibold border border-gray-200 rounded px-2.5 py-1.5 bg-white focus:outline-none focus:border-indigo-400 min-w-[140px]">
+            <option value="">All Months</option>
+            {months.map(m => <option key={m} value={m}>{formatMonthLabel(m)}</option>)}
+          </select>
           {hasFilters && (
             <button onClick={clearFilters}
               className="text-[10px] font-bold text-red-500 hover:text-red-700 flex items-center gap-0.5 cursor-pointer bg-transparent border-0">
@@ -401,7 +469,7 @@ export default function AssetUploadPage() {
           { label: "Verified Equipment Value", value: fmtRs(stats.verified_value), icon: <CheckCircle className="w-4 h-4" />, bg: "bg-emerald-50 border-emerald-100 text-emerald-700" },
           { label: "Verified Out-of-Warranty Value", value: fmtRs(stats.verified_out_of_warranty_value), icon: <ShieldOff className="w-4 h-4" />, bg: "bg-orange-50 border-orange-100 text-orange-700" },
           { label: "Monthly Billing", value: fmtRs(stats.monthly_value), sub: "(Value × 6.08% ÷ 12)", icon: <Calendar className="w-4 h-4" />, bg: "bg-blue-50 border-blue-100 text-blue-700" },
-          { label: "Arrear Billing", value: fmtRs(stats.arrear_billing), sub: "This month verified", icon: <Receipt className="w-4 h-4" />, bg: "bg-rose-50 border-rose-100 text-rose-700" },
+          { label: "Arrear Billing", value: fmtRs(stats.arrear_billing), sub: "Verified in target month", icon: <Receipt className="w-4 h-4" />, bg: "bg-rose-50 border-rose-100 text-rose-700" },
           { label: "Total Billing Value", value: fmtRs(stats.total_billing), icon: <IndianRupee className="w-4 h-4" />, bg: "bg-violet-50 border-violet-100 text-violet-700" },
         ].map((s, i) => (
           <div key={i} className={`border rounded-lg p-2.5 ${s.bg}`}>
@@ -417,6 +485,7 @@ export default function AssetUploadPage() {
         {[
           { key: "upload" as const, label: "Upload Assets", icon: <UploadCloud className="w-3.5 h-3.5" /> },
           { key: "inventory" as const, label: "View Inventory", icon: <BarChart3 className="w-3.5 h-3.5" /> },
+          { key: "analytics" as const, label: "Analytics & Charts", icon: <BarChart3 className="w-3.5 h-3.5" /> },
         ].map(tab => (
           <button
             key={tab.key}
@@ -440,7 +509,7 @@ export default function AssetUploadPage() {
           <div className="lg:col-span-2 bg-white border border-gray-200 rounded-lg shadow-sm p-5 space-y-4">
             <h3 className="text-xs font-bold uppercase tracking-wider text-gray-400 flex items-center gap-1.5">
               <Zap className="w-3.5 h-3.5" />
-              Instant CSV Import
+              Import CSV File
             </h3>
 
             {/* Drag Zone */}
@@ -470,7 +539,7 @@ export default function AssetUploadPage() {
                     </span>
                   )}
                   <span className="text-[8px] bg-green-100 text-green-700 px-2 py-0.5 rounded uppercase font-black tracking-wider">
-                    Ready for instant import
+                    Ready for import
                   </span>
                 </>
               ) : (
@@ -479,11 +548,27 @@ export default function AssetUploadPage() {
                   <p className="text-xs font-bold text-gray-700">Drag & drop CSV file here</p>
                   <p className="text-[10px] text-gray-450">or click to browse local files</p>
                   <span className="text-[8px] bg-gray-100 text-gray-600 px-2 py-0.5 rounded uppercase font-bold tracking-wider">
-                    Instant server-side processing • No chunking
+                    Safe Upload • Sequential Chunks
                   </span>
                 </>
               )}
             </div>
+
+            {/* Upload Progress */}
+            {uploading && (
+              <div className="space-y-1.5 p-3 bg-indigo-50/30 border border-indigo-100 rounded-lg animate-pulse">
+                <div className="flex items-center justify-between text-[10px] font-bold text-indigo-700 uppercase tracking-wider">
+                  <span>{uploadProgressDetail}</span>
+                  <span className="font-mono">{uploadProgress}%</span>
+                </div>
+                <div className="w-full h-2 bg-gray-150 rounded-full overflow-hidden">
+                  <div
+                    className="h-full bg-gradient-to-r from-indigo-500 to-purple-500 rounded-full transition-all duration-300"
+                    style={{ width: `${uploadProgress}%` }}
+                  />
+                </div>
+              </div>
+            )}
 
             {/* Upload Result */}
             {uploadResult && (
@@ -502,13 +587,13 @@ export default function AssetUploadPage() {
             <div className="flex gap-2">
               <button
                 onClick={handleUpload}
-                disabled={uploading || !selectedFile}
+                disabled={uploading || parsedRows.length === 0}
                 className="flex-1 h-10 bg-indigo-600 hover:bg-indigo-700 disabled:bg-gray-200 disabled:text-gray-400 text-white rounded-lg font-extrabold text-xs flex items-center justify-center shadow-sm border-0 transition-colors cursor-pointer uppercase tracking-wider gap-1.5"
               >
                 {uploading ? (
-                  <><Loader2 className="w-3.5 h-3.5 animate-spin" /> Processing...</>
+                  <><Loader2 className="w-3.5 h-3.5 animate-spin" /> Uploading...</>
                 ) : (
-                  <><Zap className="w-3.5 h-3.5" /> Instant Upload {parsedRows.length > 0 ? `(${parsedRows.length})` : ""}</>
+                  <><Zap className="w-3.5 h-3.5" /> Upload {parsedRows.length > 0 ? `(${parsedRows.length} Rows)` : "Assets"}</>
                 )}
               </button>
               {selectedFile && !uploading && (
@@ -526,7 +611,7 @@ export default function AssetUploadPage() {
                 <li>Rows with QR Code = "<span className="font-mono font-bold">--</span>" are automatically skipped</li>
                 <li>Rows with empty or whitespace-only QR Code are skipped</li>
                 <li>Duplicate QR codes are overwritten (latest wins)</li>
-                <li>CSV file is processed server-side in one shot — no chunking</li>
+                <li>Sequential chunk uploads protect against network timeouts</li>
                 <li>Previous data is fully replaced on each import</li>
               </ul>
             </div>
@@ -697,6 +782,102 @@ export default function AssetUploadPage() {
               </button>
             </div>
           )}
+        </div>
+      )}
+
+      {/* ====== Analytics Tab ====== */}
+      {activeTab === "analytics" && (
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
+          {/* Chart 1: Status Breakdown */}
+          <div className="bg-white border border-gray-200 rounded-lg shadow-sm p-4 flex flex-col">
+            <h3 className="text-xs font-bold uppercase tracking-wider text-gray-400 mb-4 flex items-center gap-1">
+              <BarChart3 className="w-4 h-4 text-indigo-500" />
+              Equipment Status Distribution
+            </h3>
+            <div className="w-full h-64">
+              {stats.charts.status_list.length > 0 ? (
+                <ResponsiveContainer width="100%" height="100%">
+                  <PieChart>
+                    <Pie
+                      data={stats.charts.status_list}
+                      cx="50%"
+                      cy="50%"
+                      innerRadius={60}
+                      outerRadius={80}
+                      paddingAngle={3}
+                      dataKey="value"
+                    >
+                      {stats.charts.status_list.map((_, index) => (
+                        <Cell key={`cell-${index}`} fill={CHART_COLORS[index % CHART_COLORS.length]} />
+                      ))}
+                    </Pie>
+                    <Tooltip formatter={(value) => `${value} units`} />
+                    <Legend verticalAlign="bottom" height={36} iconType="circle" wrapperStyle={{ fontSize: "10px" }} />
+                  </PieChart>
+                </ResponsiveContainer>
+              ) : (
+                <div className="flex items-center justify-center h-full text-xs text-gray-400 font-bold">No Data Available</div>
+              )}
+            </div>
+          </div>
+
+          {/* Chart 2: Top Equipment Types */}
+          <div className="bg-white border border-gray-200 rounded-lg shadow-sm p-4 flex flex-col">
+            <h3 className="text-xs font-bold uppercase tracking-wider text-gray-400 mb-4 flex items-center gap-1">
+              <BarChart3 className="w-4 h-4 text-emerald-500" />
+              Top 5 Equipment Types
+            </h3>
+            <div className="w-full h-64">
+              {stats.charts.top_types.length > 0 ? (
+                <ResponsiveContainer width="100%" height="100%">
+                  <BarChart data={stats.charts.top_types} layout="vertical" margin={{ left: 10, right: 10, top: 10, bottom: 10 }}>
+                    <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
+                    <XAxis type="number" stroke="#9ca3af" fontSize={9} />
+                    <YAxis dataKey="name" type="category" stroke="#9ca3af" fontSize={8} width={80} />
+                    <Tooltip formatter={(value) => `${value} units`} />
+                    <Bar dataKey="value" fill="#10B981" radius={[0, 4, 4, 0]}>
+                      {stats.charts.top_types.map((_, index) => (
+                        <Cell key={`cell-${index}`} fill={CHART_COLORS[(index + 1) % CHART_COLORS.length]} />
+                      ))}
+                    </Bar>
+                  </BarChart>
+                </ResponsiveContainer>
+              ) : (
+                <div className="flex items-center justify-center h-full text-xs text-gray-400 font-bold">No Data Available</div>
+              )}
+            </div>
+          </div>
+
+          {/* Chart 3: Warranty Breakdown */}
+          <div className="bg-white border border-gray-200 rounded-lg shadow-sm p-4 flex flex-col">
+            <h3 className="text-xs font-bold uppercase tracking-wider text-gray-400 mb-4 flex items-center gap-1">
+              <BarChart3 className="w-4 h-4 text-sky-500" />
+              Warranty Status
+            </h3>
+            <div className="w-full h-64">
+              {stats.charts.warranty_list.some(w => w.value > 0) ? (
+                <ResponsiveContainer width="100%" height="100%">
+                  <PieChart>
+                    <Pie
+                      data={stats.charts.warranty_list}
+                      cx="50%"
+                      cy="50%"
+                      outerRadius={80}
+                      labelLine={false}
+                      dataKey="value"
+                      label={({ name, percent }) => `${name}: ${(percent * 100).toFixed(0)}%`}
+                    >
+                      <Cell fill="#10B981" />
+                      <Cell fill="#F59E0B" />
+                    </Pie>
+                    <Tooltip formatter={(value) => `${value} units`} />
+                  </PieChart>
+                </ResponsiveContainer>
+              ) : (
+                <div className="flex items-center justify-center h-full text-xs text-gray-400 font-bold">No Data Available</div>
+              )}
+            </div>
+          </div>
         </div>
       )}
 
