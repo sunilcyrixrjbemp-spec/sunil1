@@ -103,22 +103,128 @@ async def get_mis_dashboard_data(
 
         where_str = " AND ".join(where_clauses)
 
-        # 2. Query dynamic dropdown lists (always returned to populate dropdown filters)
-        districts_list = [r[0] for r in db.execute(text(
-            "SELECT DISTINCT district_name FROM rj_penalties WHERE district_name IS NOT NULL AND district_name != '' ORDER BY district_name"
-        )).fetchall()]
-        
-        coordinators_list = [r[0] for r in db.execute(text(
-            "SELECT DISTINCT coordinator_name FROM rj_penalties WHERE coordinator_name IS NOT NULL AND coordinator_name != '' ORDER BY coordinator_name"
-        )).fetchall()]
-        
-        months_list = [r[0] for r in db.execute(text(
-            "SELECT DISTINCT month_text FROM rj_penalties WHERE month_text IS NOT NULL AND month_text != '' ORDER BY month_text"
-        )).fetchall()]
-        
-        equipments_list = [r[0] for r in db.execute(text(
-            "SELECT DISTINCT equipment_name FROM rj_penalties WHERE equipment_name IS NOT NULL AND equipment_name != '' ORDER BY equipment_name"
-        )).fetchall()]
+        # 2. Query dynamic dependent dropdown lists based on active sibling filters
+        zone_sql_expr = """
+            CASE 
+                WHEN district_name IN ('Ajmer', 'Bhilwara', 'Nagaur', 'Tonk', 'Beawer', 'Kekri', 'Shahpura') THEN 'Ajmer'
+                WHEN district_name IN ('Jaipur', 'Alwar', 'Dausa', 'Jhunjhunu', 'Sikar', 'Dudu', 'Kotputli', 'Neem Ka Thana', 'Khairthal') THEN 'Jaipur'
+                WHEN district_name IN ('Jodhpur', 'Barmer', 'Jaisalmer', 'Jalore', 'Pali', 'Sirohi', 'Phalodi', 'Balotra', 'Sanchore') THEN 'Jodhpur'
+                WHEN district_name IN ('Bikaner', 'Churu', 'Hanumangarh', 'Sri Ganganagar', 'Ganganagar', 'Anupgarh') THEN 'Bikaner'
+                WHEN district_name IN ('Kota', 'Baran', 'Bundi', 'Jhalawar') THEN 'Kota'
+                WHEN district_name IN ('Udaipur', 'Banswara', 'Chittorgarh', 'Dungarpur', 'Rajsamand', 'Pratapgarh', 'Salumbar') THEN 'Udaipur'
+                ELSE 'Other'
+            END
+        """
+
+        # Districts dependent query
+        where_d = ["1=1"]
+        params_d = {}
+        if zone:
+            where_d.append(f"{zone_sql_expr} = :zone")
+            params_d["zone"] = zone
+        if coordinator:
+            where_d.append("coordinator_name = :coordinator")
+            params_d["coordinator"] = coordinator
+        if month:
+            where_d.append("month_text = :month")
+            params_d["month"] = month
+        if equipment:
+            where_d.append("equipment_name = :equipment")
+            params_d["equipment"] = equipment
+            
+        districts_list = [r[0] for r in db.execute(text(f"""
+            SELECT DISTINCT district_name FROM rj_penalties 
+            WHERE {" AND ".join(where_d)} AND district_name IS NOT NULL AND district_name != '' 
+            ORDER BY district_name
+        """), params_d).fetchall()]
+
+        # Coordinators dependent query
+        where_c = ["1=1"]
+        params_c = {}
+        if zone:
+            where_c.append(f"{zone_sql_expr} = :zone")
+            params_c["zone"] = zone
+        if district:
+            where_c.append("district_name = :district")
+            params_c["district"] = district
+        if month:
+            where_c.append("month_text = :month")
+            params_c["month"] = month
+        if equipment:
+            where_c.append("equipment_name = :equipment")
+            params_c["equipment"] = equipment
+            
+        coordinators_list = [r[0] for r in db.execute(text(f"""
+            SELECT DISTINCT coordinator_name FROM rj_penalties 
+            WHERE {" AND ".join(where_c)} AND coordinator_name IS NOT NULL AND coordinator_name != '' 
+            ORDER BY coordinator_name
+        """), params_c).fetchall()]
+
+        # Months dependent query
+        where_m = ["1=1"]
+        params_m = {}
+        if zone:
+            where_m.append(f"{zone_sql_expr} = :zone")
+            params_m["zone"] = zone
+        if district:
+            where_m.append("district_name = :district")
+            params_m["district"] = district
+        if coordinator:
+            where_m.append("coordinator_name = :coordinator")
+            params_m["coordinator"] = coordinator
+        if equipment:
+            where_m.append("equipment_name = :equipment")
+            params_m["equipment"] = equipment
+            
+        months_list = [r[0] for r in db.execute(text(f"""
+            SELECT DISTINCT month_text FROM rj_penalties 
+            WHERE {" AND ".join(where_m)} AND month_text IS NOT NULL AND month_text != '' 
+            ORDER BY month_text
+        """), params_m).fetchall()]
+
+        # Equipments dependent query
+        where_eq = ["1=1"]
+        params_eq = {}
+        if zone:
+            where_eq.append(f"{zone_sql_expr} = :zone")
+            params_eq["zone"] = zone
+        if district:
+            where_eq.append("district_name = :district")
+            params_eq["district"] = district
+        if coordinator:
+            where_eq.append("coordinator_name = :coordinator")
+            params_eq["coordinator"] = coordinator
+        if month:
+            where_eq.append("month_text = :month")
+            params_eq["month"] = month
+            
+        equipments_list = [r[0] for r in db.execute(text(f"""
+            SELECT DISTINCT equipment_name FROM rj_penalties 
+            WHERE {" AND ".join(where_eq)} AND equipment_name IS NOT NULL AND equipment_name != '' 
+            ORDER BY equipment_name
+        """), params_eq).fetchall()]
+
+        # Zones dependent query
+        where_z = ["1=1"]
+        params_z = {}
+        if district:
+            where_z.append("district_name = :district")
+            params_z["district"] = district
+        if coordinator:
+            where_z.append("coordinator_name = :coordinator")
+            params_z["coordinator"] = coordinator
+        if month:
+            where_z.append("month_text = :month")
+            params_z["month"] = month
+        if equipment:
+            where_z.append("equipment_name = :equipment")
+            params_z["equipment"] = equipment
+            
+        zones_list = [r[0] for r in db.execute(text(f"""
+            SELECT DISTINCT {zone_sql_expr} as zone_name FROM rj_penalties 
+            WHERE {" AND ".join(where_z)} AND district_name IS NOT NULL AND district_name != '' 
+            ORDER BY zone_name
+        """), params_z).fetchall()]
 
         # 3. Aggregated Total Metrics
         totals = db.execute(text(f"""
@@ -243,7 +349,7 @@ async def get_mis_dashboard_data(
             "filter_options": {
                 "districts": districts_list,
                 "coordinators": coordinators_list,
-                "zones": ["Ajmer", "Jaipur", "Jodhpur", "Bikaner", "Kota", "Udaipur", "Other"],
+                "zones": zones_list,
                 "months": months_list,
                 "equipments": equipments_list
             },
