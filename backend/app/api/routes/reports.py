@@ -920,3 +920,202 @@ async def create_indexes(db: Session = Depends(get_db)):
     except Exception as e:
         logger.error(f"Failed to create indexes: {str(e)}")
         return {"success": False, "message": str(e)}
+
+
+# ======================== Asset Inventory Upload ========================
+
+ASSETS_INVENTORY_TABLE = "assets_inventory"
+
+ASSETS_INVENTORY_CREATE_SQL = f"""CREATE TABLE IF NOT EXISTS {ASSETS_INVENTORY_TABLE} (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    district_name VARCHAR(200),
+    hospital_name VARCHAR(300),
+    department_name VARCHAR(300),
+    group_name VARCHAR(300),
+    equipment_name VARCHAR(300),
+    model_name VARCHAR(300),
+    serial_no VARCHAR(200),
+    equipment_category VARCHAR(200),
+    qr_code VARCHAR(200) UNIQUE,
+    stock_register_page_no VARCHAR(100),
+    received_date VARCHAR(100),
+    installation_date VARCHAR(100),
+    inventory_entry_date VARCHAR(100),
+    moic_verified_date VARCHAR(100),
+    po_date VARCHAR(100),
+    po_cost VARCHAR(100),
+    inventory_status VARCHAR(100),
+    equipment_status VARCHAR(100),
+    supplier VARCHAR(300),
+    warranty_details VARCHAR(300),
+    asset_value VARCHAR(100),
+    di_name VARCHAR(200),
+    dm_name VARCHAR(200),
+    coordinator_name VARCHAR(200),
+    zone_name VARCHAR(200),
+    hospital_type VARCHAR(100),
+    facility_type VARCHAR(100),
+    uploaded_at TEXT DEFAULT CURRENT_TIMESTAMP
+)"""
+
+ASSETS_INVENTORY_COLUMNS = [
+    "district_name", "hospital_name", "department_name", "group_name",
+    "equipment_name", "model_name", "serial_no", "equipment_category",
+    "qr_code", "stock_register_page_no", "received_date", "installation_date",
+    "inventory_entry_date", "moic_verified_date", "po_date", "po_cost",
+    "inventory_status", "equipment_status", "supplier", "warranty_details",
+    "asset_value", "di_name", "dm_name", "coordinator_name", "zone_name",
+    "hospital_type", "facility_type"
+]
+
+
+@router.post("/upload-assets-chunk")
+async def upload_assets_chunk(
+    payload: dict,
+    db: Session = Depends(get_db)
+):
+    """
+    Accepts a JSON payload with pre-parsed asset inventory rows for chunked insertion.
+    Payload: {"rows": [...list of row dicts...], "clear_first": true/false}
+    Rows with qr_code == '--' or empty/whitespace-only qr_code are auto-skipped.
+    """
+    try:
+        rows = payload.get("rows", [])
+        clear_first = payload.get("clear_first", False)
+
+        if clear_first:
+            db.execute(text(f"DROP TABLE IF EXISTS {ASSETS_INVENTORY_TABLE}"))
+            db.execute(text(ASSETS_INVENTORY_CREATE_SQL))
+            db.execute(text(f"CREATE INDEX IF NOT EXISTS idx_assets_inv_district ON {ASSETS_INVENTORY_TABLE}(district_name)"))
+            db.execute(text(f"CREATE INDEX IF NOT EXISTS idx_assets_inv_qr ON {ASSETS_INVENTORY_TABLE}(qr_code)"))
+            db.execute(text(f"CREATE INDEX IF NOT EXISTS idx_assets_inv_hospital ON {ASSETS_INVENTORY_TABLE}(hospital_name)"))
+            db.execute(text(f"CREATE INDEX IF NOT EXISTS idx_assets_inv_zone ON {ASSETS_INVENTORY_TABLE}(zone_name)"))
+            db.commit()
+
+        # Filter rows: skip if qr_code is '--' or empty/whitespace
+        valid_rows = []
+        skipped = 0
+        for row in rows:
+            qr = str(row.get("qr_code", "")).strip()
+            if not qr or qr == "--":
+                skipped += 1
+                continue
+            # Sanitize: assign cleaned qr_code back
+            row["qr_code"] = qr
+            valid_rows.append(row)
+
+        if valid_rows:
+            _bulk_insert(db, ASSETS_INVENTORY_TABLE, ASSETS_INVENTORY_COLUMNS, valid_rows)
+
+        return {
+            "success": True,
+            "inserted": len(valid_rows),
+            "skipped": skipped,
+            "message": f"Inserted {len(valid_rows)} rows, skipped {skipped} (invalid QR). clear_first={clear_first}"
+        }
+    except Exception as e:
+        logger.error(f"Error in assets chunk upload: {str(e)}")
+        return {
+            "success": False,
+            "inserted": 0,
+            "skipped": 0,
+            "message": f"Asset upload failed: {str(e)}"
+        }
+
+
+@router.get("/assets-inventory")
+async def get_assets_inventory(
+    district: str = None,
+    hospital: str = None,
+    zone: str = None,
+    equipment_status: str = None,
+    search: str = None,
+    page: int = 1,
+    page_size: int = 100,
+    db: Session = Depends(get_db)
+):
+    """Get paginated asset inventory with optional filters."""
+    try:
+        # Ensure table exists
+        db.execute(text(ASSETS_INVENTORY_CREATE_SQL))
+        db.commit()
+
+        where_clauses = []
+        if district:
+            safe_d = district.replace("'", "''")
+            where_clauses.append(f"district_name = '{safe_d}'")
+        if hospital:
+            safe_h = hospital.replace("'", "''")
+            where_clauses.append(f"hospital_name = '{safe_h}'")
+        if zone:
+            safe_z = zone.replace("'", "''")
+            where_clauses.append(f"zone_name = '{safe_z}'")
+        if equipment_status:
+            safe_es = equipment_status.replace("'", "''")
+            where_clauses.append(f"equipment_status = '{safe_es}'")
+        if search:
+            safe_s = search.replace("'", "''")
+            where_clauses.append(f"(equipment_name LIKE '%{safe_s}%' OR qr_code LIKE '%{safe_s}%' OR serial_no LIKE '%{safe_s}%' OR hospital_name LIKE '%{safe_s}%')")
+
+        where_sql = " AND ".join(where_clauses) if where_clauses else "1=1"
+        offset = (page - 1) * page_size
+
+        count_row = db.execute(text(f"SELECT COUNT(*) FROM {ASSETS_INVENTORY_TABLE} WHERE {where_sql}")).fetchone()
+        total = count_row[0] if count_row else 0
+
+        rows = db.execute(text(
+            f"SELECT * FROM {ASSETS_INVENTORY_TABLE} WHERE {where_sql} ORDER BY id DESC LIMIT {page_size} OFFSET {offset}"
+        )).fetchall()
+
+        columns = ASSETS_INVENTORY_COLUMNS + ["uploaded_at"]
+        assets = []
+        for row in rows:
+            row_dict = {}
+            for i, col in enumerate(["id"] + columns):
+                row_dict[col] = row[i] if i < len(row) else None
+            assets.append(row_dict)
+
+        return {
+            "success": True,
+            "total": total,
+            "page": page,
+            "page_size": page_size,
+            "assets": assets
+        }
+    except Exception as e:
+        logger.error(f"Error fetching assets inventory: {str(e)}")
+        return {"success": False, "total": 0, "assets": [], "message": str(e)}
+
+
+@router.get("/assets-stats")
+async def get_assets_stats(db: Session = Depends(get_db)):
+    """Get aggregated statistics for the assets inventory dashboard."""
+    try:
+        # Ensure table exists
+        db.execute(text(ASSETS_INVENTORY_CREATE_SQL))
+        db.commit()
+
+        total = db.execute(text(f"SELECT COUNT(*) FROM {ASSETS_INVENTORY_TABLE}")).fetchone()
+        total_count = total[0] if total else 0
+
+        districts = db.execute(text(f"SELECT COUNT(DISTINCT district_name) FROM {ASSETS_INVENTORY_TABLE}")).fetchone()
+        district_count = districts[0] if districts else 0
+
+        hospitals = db.execute(text(f"SELECT COUNT(DISTINCT hospital_name) FROM {ASSETS_INVENTORY_TABLE}")).fetchone()
+        hospital_count = hospitals[0] if hospitals else 0
+
+        functional = db.execute(text(
+            f"SELECT COUNT(*) FROM {ASSETS_INVENTORY_TABLE} WHERE equipment_status LIKE '%Functional%'"
+        )).fetchone()
+        functional_count = functional[0] if functional else 0
+
+        return {
+            "success": True,
+            "total_assets": total_count,
+            "total_districts": district_count,
+            "total_hospitals": hospital_count,
+            "functional_assets": functional_count
+        }
+    except Exception as e:
+        logger.error(f"Error fetching assets stats: {str(e)}")
+        return {"success": False, "total_assets": 0, "total_districts": 0, "total_hospitals": 0, "functional_assets": 0}

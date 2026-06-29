@@ -1,0 +1,666 @@
+import { useState, useRef, useEffect } from "react";
+import {
+  UploadCloud,
+  FileSpreadsheet,
+  Download,
+  Search,
+  CheckCircle,
+  Loader2,
+  Package,
+  Building2,
+  MapPin,
+  Wrench,
+  QrCode,
+  X,
+  ChevronLeft,
+  ChevronRight,
+  BarChart3
+} from "lucide-react";
+import toast from "react-hot-toast";
+import api from "../services/api";
+
+// CSV column header names (in user-provided order)
+const CSV_HEADERS = [
+  "District Name", "Hospital Name", "Department Name", "Group Name",
+  "Equipment Name", "Model Name", "Serial No.", "Equipment Category",
+  "QR Code", "Stock Register Page No.", "Recieved Date", "Installation date",
+  "Inventory Entry Date", "MOIC Verified Date", "PO Date", "PO Cost",
+  "Inventory Status", "Equipment Status", "Supplier", "Warranty Details",
+  "Asset Value", "DI Name", "DM Name", "Coordinator Name", "Zone Name",
+  "Hospital Type", "Facility Type"
+];
+
+// API column key mapping (matches backend ASSETS_INVENTORY_COLUMNS order)
+const API_KEYS = [
+  "district_name", "hospital_name", "department_name", "group_name",
+  "equipment_name", "model_name", "serial_no", "equipment_category",
+  "qr_code", "stock_register_page_no", "received_date", "installation_date",
+  "inventory_entry_date", "moic_verified_date", "po_date", "po_cost",
+  "inventory_status", "equipment_status", "supplier", "warranty_details",
+  "asset_value", "di_name", "dm_name", "coordinator_name", "zone_name",
+  "hospital_type", "facility_type"
+];
+
+interface AssetRow {
+  [key: string]: string;
+}
+
+interface AssetStats {
+  total_assets: number;
+  total_districts: number;
+  total_hospitals: number;
+  functional_assets: number;
+}
+
+export default function AssetUploadPage() {
+  const [selectedFile, setSelectedFile] = useState<File | null>(null);
+  const [isDragActive, setIsDragActive] = useState(false);
+  const [uploading, setUploading] = useState(false);
+  const [uploadProgress, setUploadProgress] = useState(0);
+  const [parsedRows, setParsedRows] = useState<AssetRow[]>([]);
+  const [skippedCount, setSkippedCount] = useState(0);
+  const [uploadResult, setUploadResult] = useState<{inserted: number; skipped: number} | null>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  // Search & pagination for existing assets
+  const [searchQuery, setSearchQuery] = useState("");
+  const [assets, setAssets] = useState<any[]>([]);
+  const [totalAssets, setTotalAssets] = useState(0);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [loadingAssets, setLoadingAssets] = useState(false);
+  const [stats, setStats] = useState<AssetStats>({ total_assets: 0, total_districts: 0, total_hospitals: 0, functional_assets: 0 });
+  const pageSize = 50;
+
+  // Tab: "upload" | "inventory"
+  const [activeTab, setActiveTab] = useState<"upload" | "inventory">("upload");
+
+  useEffect(() => {
+    fetchStats();
+  }, []);
+
+  useEffect(() => {
+    if (activeTab === "inventory") {
+      fetchAssets();
+    }
+  }, [activeTab, currentPage, searchQuery]);
+
+  const fetchStats = async () => {
+    try {
+      const res = await api.get("/reports/assets-stats");
+      if (res.data.success) {
+        setStats(res.data);
+      }
+    } catch (_) {}
+  };
+
+  const fetchAssets = async () => {
+    setLoadingAssets(true);
+    try {
+      const params: any = { page: currentPage, page_size: pageSize };
+      if (searchQuery.trim()) params.search = searchQuery.trim();
+      const res = await api.get("/reports/assets-inventory", { params });
+      if (res.data.success) {
+        setAssets(res.data.assets);
+        setTotalAssets(res.data.total);
+      }
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setLoadingAssets(false);
+    }
+  };
+
+  // ====== CSV Parser ======
+  const parseCSV = (text: string): AssetRow[] => {
+    const lines = text.split(/\r?\n/).filter(l => l.trim());
+    if (lines.length < 2) return [];
+
+    // Parse header line to figure out column order (tab or comma separated)
+    const delimiter = lines[0].includes("\t") ? "\t" : ",";
+    const headerLine = lines[0].split(delimiter).map(h => h.trim().replace(/^"|"$/g, ""));
+
+    // Map CSV header names to API keys
+    const colIndexMap: { csvIndex: number; apiKey: string }[] = [];
+    headerLine.forEach((header, csvIdx) => {
+      const normalizedHeader = header.toLowerCase().replace(/[.\s]+/g, " ").trim();
+      const matchIndex = CSV_HEADERS.findIndex(h =>
+        h.toLowerCase().replace(/[.\s]+/g, " ").trim() === normalizedHeader
+      );
+      if (matchIndex !== -1) {
+        colIndexMap.push({ csvIndex: csvIdx, apiKey: API_KEYS[matchIndex] });
+      }
+    });
+
+    const rows: AssetRow[] = [];
+    let skipped = 0;
+
+    for (let i = 1; i < lines.length; i++) {
+      const parts = lines[i].split(delimiter).map(v => v.trim().replace(/^"|"$/g, ""));
+      const row: AssetRow = {};
+      colIndexMap.forEach(({ csvIndex, apiKey }) => {
+        row[apiKey] = parts[csvIndex] || "";
+      });
+
+      // Skip if QR code is '--' or whitespace/empty
+      const qr = (row.qr_code || "").trim();
+      if (!qr || qr === "--") {
+        skipped++;
+        continue;
+      }
+      row.qr_code = qr;
+      rows.push(row);
+    }
+
+    setSkippedCount(skipped);
+    return rows;
+  };
+
+  // ====== File Handlers ======
+  const handleDrag = (e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    if (e.type === "dragenter" || e.type === "dragover") {
+      setIsDragActive(true);
+    } else if (e.type === "dragleave") {
+      setIsDragActive(false);
+    }
+  };
+
+  const handleDrop = (e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDragActive(false);
+
+    if (e.dataTransfer.files && e.dataTransfer.files[0]) {
+      processFile(e.dataTransfer.files[0]);
+    }
+  };
+
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.files && e.target.files[0]) {
+      processFile(e.target.files[0]);
+    }
+  };
+
+  const processFile = (file: File) => {
+    const ext = file.name.split(".").pop()?.toLowerCase();
+    if (ext !== "csv") {
+      toast.error("Only CSV files are supported. Please export your spreadsheet as CSV first.");
+      return;
+    }
+    setSelectedFile(file);
+    setUploadResult(null);
+
+    // Read and parse CSV
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      const text = e.target?.result as string;
+      const rows = parseCSV(text);
+      setParsedRows(rows);
+      if (rows.length > 0) {
+        toast.success(`Parsed ${rows.length} valid assets from CSV${skippedCount > 0 ? ` (${skippedCount} skipped - invalid QR)` : ""}`);
+      } else {
+        toast.error("No valid rows found in the CSV file. Check the column headers and QR Code values.");
+      }
+    };
+    reader.readAsText(file);
+  };
+
+  // ====== Upload to Server ======
+  const handleUpload = async () => {
+    if (parsedRows.length === 0) {
+      toast.error("No valid rows to upload.");
+      return;
+    }
+
+    setUploading(true);
+    setUploadProgress(0);
+    setUploadResult(null);
+
+    const CHUNK_SIZE = 100;
+    let totalInserted = 0;
+    let totalSkipped = 0;
+    const totalChunks = Math.ceil(parsedRows.length / CHUNK_SIZE);
+
+    try {
+      for (let i = 0; i < parsedRows.length; i += CHUNK_SIZE) {
+        const chunk = parsedRows.slice(i, i + CHUNK_SIZE);
+        const isFirst = i === 0;
+        const chunkNum = Math.floor(i / CHUNK_SIZE) + 1;
+
+        const res = await api.post("/reports/upload-assets-chunk", {
+          rows: chunk,
+          clear_first: isFirst
+        });
+
+        if (res.data.success) {
+          totalInserted += res.data.inserted;
+          totalSkipped += res.data.skipped;
+        } else {
+          throw new Error(res.data.message || "Chunk upload failed");
+        }
+
+        setUploadProgress(Math.round((chunkNum / totalChunks) * 100));
+      }
+
+      setUploadResult({ inserted: totalInserted, skipped: totalSkipped + skippedCount });
+      toast.success(`Upload complete! ${totalInserted} assets imported.`);
+      setSelectedFile(null);
+      setParsedRows([]);
+      fetchStats();
+      if (activeTab === "inventory") fetchAssets();
+    } catch (err: any) {
+      console.error(err);
+      toast.error(err.response?.data?.message || err.message || "Upload failed.");
+    } finally {
+      setUploading(false);
+      setUploadProgress(0);
+    }
+  };
+
+  // ====== Export sample CSV ======
+  const downloadSampleCSV = () => {
+    const header = CSV_HEADERS.join(",");
+    const sampleRow = [
+      "Bikaner", "Akkasar Phc Bikaner", "Other-Akkasar PHC",
+      "Cardio Vascular Surgery Equipment and Instrument", "Oxygen Concentrator",
+      "Model Not Available", "Ma21041060075", "Biomedical",
+      "(8004890615671) 40083265", "117", "17-May-2021", "21-May-2021",
+      "26-Feb-2022", "--", "--", "1", "New Inventory", "Functional Installed",
+      "Others", "17-May-2021 to 17-May-2022", "36000", "Abhilash A",
+      "Vinod Jain", "Sunil Vishnoi", "Bikaner", "PHC", "Others"
+    ].join(",");
+
+    const csvContent = `${header}\n${sampleRow}`;
+    const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = "asset_inventory_sample.csv";
+    a.click();
+    URL.revokeObjectURL(url);
+    toast.success("Sample CSV downloaded!");
+  };
+
+  const totalPages = Math.ceil(totalAssets / pageSize);
+
+  return (
+    <div className="space-y-5 animate-fadeIn text-gray-800 font-sans">
+
+      {/* Header */}
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+        <div>
+          <h2 className="text-xl font-black text-gray-800 uppercase tracking-wide flex items-center gap-2">
+            <Package className="w-5 h-5 text-indigo-600" />
+            Asset Inventory Manager
+          </h2>
+          <p className="text-gray-500 text-xs mt-0.5">
+            Import equipment assets via CSV and manage the complete inventory database.
+          </p>
+        </div>
+        <button
+          onClick={downloadSampleCSV}
+          className="inline-flex items-center gap-1.5 px-3.5 py-2 border border-gray-200 rounded text-xs font-bold text-gray-600 bg-white hover:bg-gray-50 cursor-pointer transition-colors shadow-sm"
+        >
+          <Download className="w-3.5 h-3.5" />
+          Download Sample CSV
+        </button>
+      </div>
+
+      {/* Stats Row */}
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+        {[
+          { label: "Total Assets", value: stats.total_assets, icon: <Package className="w-4 h-4" />, color: "text-indigo-600 bg-indigo-50 border-indigo-100" },
+          { label: "Districts", value: stats.total_districts, icon: <MapPin className="w-4 h-4" />, color: "text-emerald-600 bg-emerald-50 border-emerald-100" },
+          { label: "Hospitals", value: stats.total_hospitals, icon: <Building2 className="w-4 h-4" />, color: "text-blue-600 bg-blue-50 border-blue-100" },
+          { label: "Functional", value: stats.functional_assets, icon: <Wrench className="w-4 h-4" />, color: "text-amber-600 bg-amber-50 border-amber-100" },
+        ].map((stat, idx) => (
+          <div key={idx} className={`border rounded-lg p-3 flex items-center gap-3 ${stat.color}`}>
+            <div className={`w-9 h-9 rounded-lg flex items-center justify-center ${stat.color}`}>
+              {stat.icon}
+            </div>
+            <div>
+              <p className="text-[9px] uppercase tracking-wider font-bold opacity-70">{stat.label}</p>
+              <p className="text-lg font-black tabular-nums">{stat.value.toLocaleString()}</p>
+            </div>
+          </div>
+        ))}
+      </div>
+
+      {/* Tab Switcher */}
+      <div className="flex gap-0 border-b border-gray-200">
+        {[
+          { key: "upload" as const, label: "Upload Assets", icon: <UploadCloud className="w-3.5 h-3.5" /> },
+          { key: "inventory" as const, label: "View Inventory", icon: <BarChart3 className="w-3.5 h-3.5" /> },
+        ].map(tab => (
+          <button
+            key={tab.key}
+            onClick={() => { setActiveTab(tab.key); if (tab.key === "inventory") setCurrentPage(1); }}
+            className={`px-4 py-2.5 text-xs font-bold uppercase tracking-wider flex items-center gap-1.5 border-b-2 transition-colors cursor-pointer bg-transparent ${
+              activeTab === tab.key
+                ? "border-indigo-600 text-indigo-700"
+                : "border-transparent text-gray-400 hover:text-gray-600"
+            }`}
+          >
+            {tab.icon}
+            {tab.label}
+          </button>
+        ))}
+      </div>
+
+      {/* ====== Upload Tab ====== */}
+      {activeTab === "upload" && (
+        <div className="grid grid-cols-1 lg:grid-cols-5 gap-5">
+
+          {/* Left: Upload Form */}
+          <div className="lg:col-span-2 bg-white border border-gray-200 rounded-lg shadow-sm p-5 space-y-4">
+            <h3 className="text-xs font-bold uppercase tracking-wider text-gray-400 flex items-center gap-1.5">
+              <UploadCloud className="w-3.5 h-3.5" />
+              Import CSV File
+            </h3>
+
+            {/* Drag Zone */}
+            <div
+              onDragEnter={handleDrag}
+              onDragOver={handleDrag}
+              onDragLeave={handleDrag}
+              onDrop={handleDrop}
+              onClick={() => fileInputRef.current?.click()}
+              className={`border-2 border-dashed rounded-lg p-8 text-center cursor-pointer transition-all flex flex-col items-center justify-center gap-2.5 ${
+                isDragActive
+                  ? "border-indigo-500 bg-indigo-50/50"
+                  : selectedFile
+                  ? "border-green-500 bg-green-50/20"
+                  : "border-gray-300 hover:bg-gray-50 hover:border-gray-400"
+              }`}
+            >
+              <input
+                type="file"
+                ref={fileInputRef}
+                onChange={handleFileChange}
+                accept=".csv"
+                className="hidden"
+              />
+
+              {selectedFile ? (
+                <>
+                  <FileSpreadsheet className="w-12 h-12 text-green-600" />
+                  <p className="text-xs font-bold text-gray-800 break-all">{selectedFile.name}</p>
+                  <p className="text-[10px] text-gray-500">
+                    {(selectedFile.size / 1024).toFixed(1)} KB • {parsedRows.length} valid rows
+                  </p>
+                  {skippedCount > 0 && (
+                    <span className="text-[9px] bg-amber-50 text-amber-700 px-2 py-0.5 rounded border border-amber-200 font-bold uppercase">
+                      {skippedCount} rows skipped (invalid QR)
+                    </span>
+                  )}
+                  <span className="text-[8px] bg-green-100 text-green-700 px-2 py-0.5 rounded uppercase font-black tracking-wider">
+                    Ready for import
+                  </span>
+                </>
+              ) : (
+                <>
+                  <UploadCloud className="w-12 h-12 text-gray-400" />
+                  <p className="text-xs font-bold text-gray-700">Drag & drop CSV file here</p>
+                  <p className="text-[10px] text-gray-450">or click to browse local files</p>
+                  <span className="text-[8px] bg-gray-100 text-gray-600 px-2 py-0.5 rounded uppercase font-bold tracking-wider">
+                    Supports CSV only
+                  </span>
+                </>
+              )}
+            </div>
+
+            {/* Upload Progress */}
+            {uploading && (
+              <div className="space-y-1.5">
+                <div className="flex items-center justify-between text-[10px] font-bold text-gray-500 uppercase tracking-wider">
+                  <span>Uploading chunks...</span>
+                  <span className="font-mono">{uploadProgress}%</span>
+                </div>
+                <div className="w-full h-2 bg-gray-100 rounded-full overflow-hidden">
+                  <div
+                    className="h-full bg-gradient-to-r from-indigo-500 to-purple-500 rounded-full transition-all duration-300"
+                    style={{ width: `${uploadProgress}%` }}
+                  />
+                </div>
+              </div>
+            )}
+
+            {/* Upload Result */}
+            {uploadResult && (
+              <div className="flex items-start gap-2 p-3 bg-green-50 border border-green-200 rounded text-xs text-green-800">
+                <CheckCircle className="w-4 h-4 shrink-0 mt-0.5" />
+                <div>
+                  <p className="font-bold">Upload Successful</p>
+                  <p className="text-[10px] mt-0.5">
+                    {uploadResult.inserted} assets imported • {uploadResult.skipped} skipped (invalid/duplicate QR)
+                  </p>
+                </div>
+              </div>
+            )}
+
+            {/* Action buttons */}
+            <div className="flex gap-2">
+              <button
+                onClick={handleUpload}
+                disabled={uploading || parsedRows.length === 0}
+                className="flex-1 h-10 bg-indigo-600 hover:bg-indigo-700 disabled:bg-gray-200 disabled:text-gray-400 text-white rounded-lg font-extrabold text-xs flex items-center justify-center shadow-sm border-0 transition-colors cursor-pointer uppercase tracking-wider gap-1.5"
+              >
+                {uploading ? (
+                  <>
+                    <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                    Uploading...
+                  </>
+                ) : (
+                  <>
+                    <UploadCloud className="w-3.5 h-3.5" />
+                    Upload {parsedRows.length > 0 ? `${parsedRows.length} Assets` : "Assets"}
+                  </>
+                )}
+              </button>
+              {selectedFile && !uploading && (
+                <button
+                  onClick={() => { setSelectedFile(null); setParsedRows([]); setSkippedCount(0); setUploadResult(null); }}
+                  className="h-10 px-3 border border-gray-200 rounded-lg text-gray-500 hover:bg-gray-50 bg-white text-xs font-bold cursor-pointer transition-colors"
+                >
+                  <X className="w-4 h-4" />
+                </button>
+              )}
+            </div>
+
+            {/* Info Box */}
+            <div className="p-3 bg-gray-50 border border-gray-150 rounded text-[10px] text-gray-500 space-y-1">
+              <p className="font-bold text-gray-600 uppercase tracking-wider text-[9px]">Import Rules</p>
+              <ul className="list-disc list-inside space-y-0.5">
+                <li>Rows with QR Code = "<span className="font-mono font-bold">--</span>" are automatically skipped</li>
+                <li>Rows with empty or whitespace-only QR Code are skipped</li>
+                <li>Duplicate QR codes are overwritten (latest wins)</li>
+                <li>Previous data is replaced on each new upload</li>
+              </ul>
+            </div>
+          </div>
+
+          {/* Right: Preview Table */}
+          <div className="lg:col-span-3 bg-white border border-gray-200 rounded-lg shadow-sm overflow-hidden">
+            <div className="p-4 border-b border-gray-200 bg-gray-50 flex items-center justify-between">
+              <h3 className="text-xs font-bold uppercase tracking-wider text-gray-400 flex items-center gap-1.5">
+                <FileSpreadsheet className="w-3.5 h-3.5" />
+                CSV Preview {parsedRows.length > 0 && `(${parsedRows.length} rows)`}
+              </h3>
+              {parsedRows.length > 0 && (
+                <span className="text-[9px] font-bold text-indigo-600 uppercase flex items-center gap-1">
+                  <QrCode className="w-3 h-3" />
+                  {parsedRows.length} Valid QR Codes
+                </span>
+              )}
+            </div>
+
+            {parsedRows.length === 0 ? (
+              <div className="flex flex-col items-center justify-center py-16 text-center text-gray-400">
+                <FileSpreadsheet className="w-12 h-12 mb-3 opacity-30" />
+                <p className="text-xs font-bold">No CSV loaded yet</p>
+                <p className="text-[10px] mt-1">Upload a CSV file to preview asset data</p>
+              </div>
+            ) : (
+              <div className="overflow-x-auto max-h-[420px] overflow-y-auto">
+                <table className="w-full text-left text-[10px] border-collapse min-w-[800px]">
+                  <thead>
+                    <tr className="bg-gray-50 text-gray-500 font-bold uppercase border-b border-gray-200 text-[9px] tracking-wider sticky top-0 z-10">
+                      <th className="py-2 px-2.5">#</th>
+                      <th className="py-2 px-2.5">District</th>
+                      <th className="py-2 px-2.5">Hospital</th>
+                      <th className="py-2 px-2.5">Equipment</th>
+                      <th className="py-2 px-2.5">QR Code</th>
+                      <th className="py-2 px-2.5">Serial No</th>
+                      <th className="py-2 px-2.5">Status</th>
+                      <th className="py-2 px-2.5">Value</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-gray-100 font-medium">
+                    {parsedRows.slice(0, 200).map((row, idx) => (
+                      <tr key={idx} className="hover:bg-gray-50/50 transition-colors">
+                        <td className="py-1.5 px-2.5 text-gray-400 font-mono">{idx + 1}</td>
+                        <td className="py-1.5 px-2.5 text-gray-700 truncate max-w-[120px]" title={row.district_name}>{row.district_name}</td>
+                        <td className="py-1.5 px-2.5 text-gray-700 truncate max-w-[150px]" title={row.hospital_name}>{row.hospital_name}</td>
+                        <td className="py-1.5 px-2.5 text-gray-800 font-semibold truncate max-w-[150px]" title={row.equipment_name}>{row.equipment_name}</td>
+                        <td className="py-1.5 px-2.5 font-mono text-indigo-600 font-bold truncate max-w-[140px]" title={row.qr_code}>{row.qr_code}</td>
+                        <td className="py-1.5 px-2.5 text-gray-600 font-mono">{row.serial_no}</td>
+                        <td className="py-1.5 px-2.5">
+                          <span className={`inline-block px-1.5 py-0.5 rounded text-[8px] font-bold uppercase border ${
+                            (row.equipment_status || "").toLowerCase().includes("functional")
+                              ? "bg-green-50 border-green-200 text-green-700"
+                              : "bg-gray-100 border-gray-200 text-gray-600"
+                          }`}>
+                            {row.equipment_status || "N/A"}
+                          </span>
+                        </td>
+                        <td className="py-1.5 px-2.5 text-gray-700 font-mono">₹{row.asset_value || "0"}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+                {parsedRows.length > 200 && (
+                  <div className="p-2 text-center text-[10px] text-gray-400 font-bold bg-gray-50 border-t border-gray-200">
+                    Showing first 200 of {parsedRows.length} rows
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* ====== Inventory Tab ====== */}
+      {activeTab === "inventory" && (
+        <div className="bg-white border border-gray-200 rounded-lg shadow-sm overflow-hidden">
+
+          {/* Search Bar */}
+          <div className="p-4 border-b border-gray-200 bg-gray-50 flex flex-col sm:flex-row gap-3 items-center justify-between">
+            <div className="relative flex-1 max-w-md w-full">
+              <Search className="w-3.5 h-3.5 absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
+              <input
+                type="text"
+                placeholder="Search by equipment, QR code, serial no, hospital..."
+                value={searchQuery}
+                onChange={(e) => { setSearchQuery(e.target.value); setCurrentPage(1); }}
+                className="w-full pl-9 pr-3 py-2 border border-gray-200 rounded text-xs bg-white focus:outline-none focus:border-indigo-400 font-medium"
+              />
+            </div>
+            <div className="text-[10px] font-bold text-gray-500 uppercase tracking-wider">
+              {totalAssets.toLocaleString()} total assets
+            </div>
+          </div>
+
+          {/* Table */}
+          {loadingAssets ? (
+            <div className="flex items-center justify-center py-16 gap-2 text-gray-400">
+              <Loader2 className="w-5 h-5 animate-spin" />
+              <span className="text-xs font-bold uppercase tracking-wider">Loading inventory...</span>
+            </div>
+          ) : assets.length === 0 ? (
+            <div className="flex flex-col items-center justify-center py-16 text-center text-gray-400">
+              <Package className="w-12 h-12 mb-3 opacity-30" />
+              <p className="text-xs font-bold">No assets in inventory</p>
+              <p className="text-[10px] mt-1">Upload a CSV file to populate the database</p>
+            </div>
+          ) : (
+            <div className="overflow-x-auto">
+              <table className="w-full text-left text-[10px] border-collapse min-w-[1200px]">
+                <thead>
+                  <tr className="bg-gray-50 text-gray-500 font-bold uppercase border-b border-gray-200 text-[9px] tracking-wider sticky top-0 z-10">
+                    <th className="py-2.5 px-2.5">#</th>
+                    <th className="py-2.5 px-2.5">District</th>
+                    <th className="py-2.5 px-2.5">Hospital</th>
+                    <th className="py-2.5 px-2.5">Department</th>
+                    <th className="py-2.5 px-2.5">Equipment</th>
+                    <th className="py-2.5 px-2.5">Model</th>
+                    <th className="py-2.5 px-2.5">Serial No</th>
+                    <th className="py-2.5 px-2.5">QR Code</th>
+                    <th className="py-2.5 px-2.5">Category</th>
+                    <th className="py-2.5 px-2.5">Status</th>
+                    <th className="py-2.5 px-2.5">Value</th>
+                    <th className="py-2.5 px-2.5">DI Name</th>
+                    <th className="py-2.5 px-2.5">Zone</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-gray-100 font-medium">
+                  {assets.map((a, idx) => (
+                    <tr key={a.id || idx} className="hover:bg-gray-50/50 transition-colors">
+                      <td className="py-2 px-2.5 text-gray-400 font-mono">{(currentPage - 1) * pageSize + idx + 1}</td>
+                      <td className="py-2 px-2.5 text-gray-700 truncate max-w-[100px]" title={a.district_name}>{a.district_name}</td>
+                      <td className="py-2 px-2.5 text-gray-700 truncate max-w-[140px]" title={a.hospital_name}>{a.hospital_name}</td>
+                      <td className="py-2 px-2.5 text-gray-600 truncate max-w-[120px]" title={a.department_name}>{a.department_name}</td>
+                      <td className="py-2 px-2.5 text-gray-800 font-semibold truncate max-w-[140px]" title={a.equipment_name}>{a.equipment_name}</td>
+                      <td className="py-2 px-2.5 text-gray-600 truncate max-w-[100px]" title={a.model_name}>{a.model_name}</td>
+                      <td className="py-2 px-2.5 font-mono text-gray-600">{a.serial_no}</td>
+                      <td className="py-2 px-2.5 font-mono text-indigo-600 font-bold truncate max-w-[140px]" title={a.qr_code}>{a.qr_code}</td>
+                      <td className="py-2 px-2.5 text-gray-600">{a.equipment_category}</td>
+                      <td className="py-2 px-2.5">
+                        <span className={`inline-block px-1.5 py-0.5 rounded text-[8px] font-bold uppercase border ${
+                          (a.equipment_status || "").toLowerCase().includes("functional")
+                            ? "bg-green-50 border-green-200 text-green-700"
+                            : "bg-gray-100 border-gray-200 text-gray-600"
+                        }`}>
+                          {a.equipment_status || "N/A"}
+                        </span>
+                      </td>
+                      <td className="py-2 px-2.5 text-gray-700 font-mono">₹{a.asset_value || "0"}</td>
+                      <td className="py-2 px-2.5 text-gray-600 truncate max-w-[100px]">{a.di_name}</td>
+                      <td className="py-2 px-2.5 text-gray-600">{a.zone_name}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+
+          {/* Pagination */}
+          {totalPages > 1 && (
+            <div className="p-3 border-t border-gray-200 bg-gray-50 flex items-center justify-between">
+              <button
+                onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
+                disabled={currentPage <= 1}
+                className="px-3 py-1.5 text-xs font-bold border border-gray-200 rounded bg-white hover:bg-gray-50 cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed flex items-center gap-1 transition-colors"
+              >
+                <ChevronLeft className="w-3 h-3" />
+                Prev
+              </button>
+              <span className="text-[10px] font-bold text-gray-500 uppercase tracking-wider">
+                Page {currentPage} of {totalPages}
+              </span>
+              <button
+                onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
+                disabled={currentPage >= totalPages}
+                className="px-3 py-1.5 text-xs font-bold border border-gray-200 rounded bg-white hover:bg-gray-50 cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed flex items-center gap-1 transition-colors"
+              >
+                Next
+                <ChevronRight className="w-3 h-3" />
+              </button>
+            </div>
+          )}
+        </div>
+      )}
+
+    </div>
+  );
+}

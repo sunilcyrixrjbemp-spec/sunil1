@@ -20,6 +20,7 @@ import NotFoundPage from "./pages/NotFoundPage";
 import MISReportPage from "./pages/MISReportPage";
 import KPIDashboardPage from "./pages/KPIDashboardPage";
 import UploadDataPage from "./pages/UploadDataPage";
+import AssetUploadPage from "./pages/AssetUploadPage";
 import PenaltyReportPage from "./pages/PenaltyReportPage";
 import { useFCMNotifications } from "./hooks/useFCMNotifications";
 
@@ -177,6 +178,7 @@ function App() {
               <Route path="/mis-report" element={<MISReportPage />} />
               <Route path="/kpi-dashboard" element={<KPIDashboardPage />} />
               <Route path="/upload-data" element={<UploadDataPage />} />
+              <Route path="/asset-upload" element={<AssetUploadPage />} />
               <Route path="/penalty-report" element={<PenaltyReportPage />} />
               <Route path="/analysis" element={<AnalysisPage />} />
               <Route path="/month-report" element={<MonthSummaryPage />} />
