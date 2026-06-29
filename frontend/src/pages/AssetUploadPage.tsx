@@ -15,7 +15,7 @@ import {
   ShieldCheck,
   ShieldOff,
   IndianRupee,
-  CalendarCheck,
+  Calendar,
   Receipt,
   Filter,
   Zap
@@ -402,7 +402,7 @@ export default function AssetUploadPage() {
         {[
           { label: "Verified Equipment Value", value: fmtRs(stats.verified_value), icon: <CheckCircle className="w-4 h-4" />, bg: "bg-emerald-50 border-emerald-100 text-emerald-700" },
           { label: "Verified Out-of-Warranty Value", value: fmtRs(stats.verified_out_of_warranty_value), icon: <ShieldOff className="w-4 h-4" />, bg: "bg-orange-50 border-orange-100 text-orange-700" },
-          { label: "Monthly Billing", value: fmtRs(stats.monthly_value), sub: "(Value × 6.08% ÷ 12)", icon: <CalendarCheck className="w-4 h-4" />, bg: "bg-blue-50 border-blue-100 text-blue-700" },
+          { label: "Monthly Billing", value: fmtRs(stats.monthly_value), sub: "(Value × 6.08% ÷ 12)", icon: <Calendar className="w-4 h-4" />, bg: "bg-blue-50 border-blue-100 text-blue-700" },
           { label: "Arrear Billing", value: fmtRs(stats.arrear_billing), sub: "This month verified", icon: <Receipt className="w-4 h-4" />, bg: "bg-rose-50 border-rose-100 text-rose-700" },
           { label: "Total Billing Value", value: fmtRs(stats.total_billing), icon: <IndianRupee className="w-4 h-4" />, bg: "bg-violet-50 border-violet-100 text-violet-700" },
         ].map((s, i) => (

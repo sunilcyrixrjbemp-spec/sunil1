@@ -1058,7 +1058,14 @@ async def upload_assets_csv(
     try:
         # Read entire file content at once
         contents = await file.read()
-        text_content = contents.decode("utf-8-sig")  # Handle BOM
+        # Try multiple encodings to handle various CSV file formats
+        try:
+            text_content = contents.decode("utf-8-sig")
+        except UnicodeDecodeError:
+            try:
+                text_content = contents.decode("utf-8", errors="replace")
+            except UnicodeDecodeError:
+                text_content = contents.decode("latin-1")  # latin-1 never fails
 
         # Detect delimiter: tab or comma
         first_line = text_content.split("\n", 1)[0]
