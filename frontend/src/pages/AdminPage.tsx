@@ -34,16 +34,28 @@ export default function AdminPage() {
     localStorage.setItem("admin_active_tab", tab);
   };
   const [users, setUsers] = useState<any[]>(() => {
-    const cached = localStorage.getItem("cache_admin_users");
-    return cached ? JSON.parse(cached) : [];
+    try {
+      const cached = localStorage.getItem("cache_admin_users");
+      if (cached) {
+        const parsed = JSON.parse(cached);
+        if (Array.isArray(parsed)) return parsed;
+      }
+    } catch (_) {}
+    return [];
   });
   const [dropdowns, setDropdowns] = useState<any>(() => {
-    const cached = localStorage.getItem("cache_dropdowns");
-    return cached ? JSON.parse(cached) : null;
+    try {
+      const cached = localStorage.getItem("cache_dropdowns");
+      return cached ? JSON.parse(cached) : null;
+    } catch (_) {}
+    return null;
   });
   
   const [loading, setLoading] = useState(() => {
-    return !localStorage.getItem("cache_admin_users") || !localStorage.getItem("cache_dropdowns");
+    try {
+      return !localStorage.getItem("cache_admin_users") || !localStorage.getItem("cache_dropdowns");
+    } catch (_) {}
+    return true;
   });
   const [error, setError] = useState<string | null>(null);
   const [searchTerm, setSearchTerm] = useState("");
@@ -116,8 +128,14 @@ export default function AdminPage() {
 
   // Hierarchy Team Approvals state
   const [hierarchies, setHierarchies] = useState<ApprovalHierarchyResponse[]>(() => {
-    const cached = localStorage.getItem("cache_hierarchies");
-    return cached ? JSON.parse(cached) : [];
+    try {
+      const cached = localStorage.getItem("cache_hierarchies");
+      if (cached) {
+        const parsed = JSON.parse(cached);
+        if (Array.isArray(parsed)) return parsed;
+      }
+    } catch (_) {}
+    return [];
   });
   const [showHierarchyModal, setShowHierarchyModal] = useState(false);
   const [editingHierarchy, setEditingHierarchy] = useState<any>(null);
@@ -626,9 +644,12 @@ export default function AdminPage() {
     }
   };
 
+  const safeUsers = Array.isArray(users) ? users : [];
+  const safeHierarchies = Array.isArray(hierarchies) ? hierarchies : [];
+
   const getEligibleRequesters = () => {
-    return users.filter(u => {
-      const isAlreadyRequester = hierarchies.some(h => {
+    return safeUsers.filter(u => {
+      const isAlreadyRequester = safeHierarchies.some(h => {
         if (editingHierarchy && h.id === editingHierarchy.id) return false;
         return h.requesters.some(r => r.user_id === u.id);
       });
@@ -636,9 +657,9 @@ export default function AdminPage() {
     });
   };
 
-  const eligibleApprovers = users;
+  const eligibleApprovers = safeUsers;
 
-  const filteredUsers = users.filter(u => {
+  const filteredUsers = safeUsers.filter(u => {
     const term = searchTerm.toLowerCase().trim();
     if (!term) return true;
     return (
@@ -844,13 +865,13 @@ export default function AdminPage() {
             </button>
           </div>
 
-          {hierarchies.length === 0 ? (
+          {safeHierarchies.length === 0 ? (
             <div className="bg-white border border-gray-200 rounded p-8 text-center text-xs uppercase tracking-wider text-gray-500 font-semibold">
               No team hierarchy configurations created. Click "Create Team" to define one.
             </div>
           ) : (
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              {hierarchies.map((hq) => (
+              {safeHierarchies.map((hq) => (
                 <div key={hq.id} className="bg-white border border-gray-200 rounded shadow-sm overflow-hidden flex flex-col justify-between">
                   <div className="p-4 space-y-4">
                     
@@ -1631,7 +1652,7 @@ export default function AdminPage() {
                     </span>
                   ) : (
                     selectedRequesterIds.map((rid) => {
-                      const u = users.find(userObj => userObj.id === rid);
+                      const u = safeUsers.find(userObj => userObj.id === rid);
                       return (
                         <span 
                           key={rid} 
