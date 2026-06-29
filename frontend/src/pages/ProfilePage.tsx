@@ -60,6 +60,7 @@ export default function ProfilePage() {
   const [position, setPosition] = useState({ x: 0, y: 0 });
   const [isDragging, setIsDragging] = useState(false);
   const [dragStart, setDragStart] = useState({ x: 0, y: 0 });
+  const [imgNaturalSize, setImgNaturalSize] = useState({ width: 0, height: 0 });
   
   const compressImage = (file: File): Promise<File> => {
     return new Promise((resolve) => {
@@ -152,6 +153,34 @@ export default function ProfilePage() {
     });
   };
 
+  const handleImageLoad = (e: React.SyntheticEvent<HTMLImageElement>) => {
+    const img = e.currentTarget;
+    setImgNaturalSize({
+      width: img.naturalWidth,
+      height: img.naturalHeight
+    });
+  };
+
+  const getDisplaySize = () => {
+    if (!imgNaturalSize.width || !imgNaturalSize.height) {
+      return { width: 256, height: 256 };
+    }
+    const { width, height } = imgNaturalSize;
+    const aspect = width / height;
+    
+    if (aspect > 1) {
+      return {
+        width: 256 * aspect,
+        height: 256
+      };
+    } else {
+      return {
+        width: 256,
+        height: 256 / aspect
+      };
+    }
+  };
+
   const generateCroppedImage = (): Promise<File> => {
     return new Promise((resolve) => {
       const img = new Image();
@@ -172,8 +201,9 @@ export default function ProfilePage() {
         ctx.fillStyle = "#ffffff";
         ctx.fillRect(0, 0, cropSize, cropSize);
 
-        const drawHeight = cropSize * zoom;
-        const drawWidth = cropSize * (img.width / img.height) * zoom;
+        const displaySize = getDisplaySize();
+        const drawHeight = displaySize.height * ratio * zoom;
+        const drawWidth = displaySize.width * ratio * zoom;
 
         const drawX = (cropSize - drawWidth) / 2 + position.x * ratio;
         const drawY = (cropSize - drawHeight) / 2 + position.y * ratio;
@@ -1000,12 +1030,16 @@ export default function ProfilePage() {
                   <img 
                     src={previewSrc || ""} 
                     alt="Crop Preview" 
-                    className="max-w-none origin-center"
+                    className="origin-center"
+                    onLoad={handleImageLoad}
                     style={{
                       transform: `translate(${position.x}px, ${position.y}px) scale(${zoom})`,
                       transition: isDragging ? 'none' : 'transform 0.1s ease-out',
-                      maxHeight: '100%',
-                      objectFit: 'contain'
+                      width: `${getDisplaySize().width}px`,
+                      height: `${getDisplaySize().height}px`,
+                      maxWidth: 'none',
+                      maxHeight: 'none',
+                      display: 'block'
                     }}
                   />
                 </div>
