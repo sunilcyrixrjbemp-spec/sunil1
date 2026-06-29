@@ -148,7 +148,7 @@ select.input-lte option {
 
 /* Form Control styling */
 .form-control-lte {
-  @apply w-full bg-white border border-gray-300 rounded px-2.5 py-1.5 text-xs text-gray-800 focus:outline-none focus:border-[#007bff] focus:ring-2 focus:ring-[#007bff]/15 transition-all font-semibold shadow-xs;
+  @apply w-full bg-white border border-gray-300 rounded px-2.5 py-1.5 text-xs text-gray-800 focus:outline-none focus:border-[#007bff] focus:ring-2 focus:ring-[#007bff]/15 transition-all font-semibold shadow-sm;
 }
 
 /* Info Box layouts */
@@ -181,13 +181,14 @@ select.input-lte option {
   @apply transition-colors hover:bg-blue-50/15 cursor-pointer;
 }
 
-/* Modal styling */
 .modal-lte-overlay {
-  @apply fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50 overflow-y-auto animate-fadeIn;
+  @apply fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50 overflow-y-auto;
+  animation: fadeIn 0.2s ease-out;
 }
 
 .modal-lte-content {
-  @apply bg-white border border-gray-300 rounded shadow-xl w-full p-5 relative animate-scaleIn text-gray-800 flex flex-col;
+  @apply bg-white border border-gray-300 rounded shadow-xl w-full p-5 relative text-gray-800 flex flex-col;
+  animation: scaleIn 0.2s cubic-bezier(0.34, 1.56, 0.64, 1);
 }
 
 .modal-lte-header {
@@ -200,6 +201,16 @@ select.input-lte option {
 
 .modal-lte-footer {
   @apply border-t border-gray-200 pt-3 flex items-center justify-end gap-2 shrink-0;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes scaleIn {
+  from { transform: scale(0.95); opacity: 0; }
+  to { transform: scale(1); opacity: 1; }
 }
 
 

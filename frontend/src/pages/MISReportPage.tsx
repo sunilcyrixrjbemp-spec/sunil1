@@ -170,7 +170,7 @@ export default function MISReportPage() {
           </button>
           <button
             onClick={handleExport}
-            className="px-4 py-2 bg-[#28a745] hover:bg-[#218838] text-white text-xs font-bold uppercase tracking-wider rounded border-0 cursor-pointer flex items-center gap-1.5 shadow-xs transition-all"
+            className="px-4 py-2 bg-[#28a745] hover:bg-[#218838] text-white text-xs font-bold uppercase tracking-wider rounded border-0 cursor-pointer flex items-center gap-1.5 shadow-sm transition-all"
           >
             <Download className="w-3.5 h-3.5" />
             Export CSV Report
@@ -303,7 +303,7 @@ export default function MISReportPage() {
             placeholder="Search by Code, Employee Name, Title..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            className="w-full bg-white border border-gray-300 rounded pl-9 pr-3 py-2 text-xs text-gray-800 placeholder-gray-400 focus:outline-none focus:border-blue-500 outline-none font-semibold shadow-xs"
+            className="w-full bg-white border border-gray-300 rounded pl-9 pr-3 py-2 text-xs text-gray-800 placeholder-gray-400 focus:outline-none focus:border-blue-500 outline-none font-semibold shadow-sm"
           />
         </div>
 

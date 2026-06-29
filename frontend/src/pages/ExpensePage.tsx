@@ -1282,7 +1282,7 @@ export default function ExpensePage() {
                         <button
                           type="button"
                           onClick={() => removeItinerary(leg.leg)}
-                          className="text-red-650 hover:text-red-800 text-[10px] font-bold flex items-center gap-1 border-0 bg-transparent cursor-pointer"
+                          className="text-red-600 hover:text-red-800 text-[10px] font-bold flex items-center gap-1 border-0 bg-transparent cursor-pointer"
                         >
                           <Trash2 className="w-3.5 h-3.5" /> Remove Leg
                         </button>
@@ -1400,7 +1400,7 @@ export default function ExpensePage() {
                         {/* To Location block */}
                         <div className="p-4 bg-slate-50 border border-gray-200 rounded-md space-y-3 shadow-xs">
                           <div className="flex items-center gap-1.5 border-b border-gray-200 pb-1.5">
-                            <MapPin className="w-4 h-4 text-red-650 shrink-0" />
+                            <MapPin className="w-4 h-4 text-red-600 shrink-0" />
                             <span className="text-xs font-bold text-gray-700 uppercase tracking-wide">Destination Location (To)</span>
                           </div>
                           <div className="space-y-2.5">
@@ -1660,7 +1660,7 @@ export default function ExpensePage() {
                                   handleItineraryChange(leg.leg, "sub_amount", "0");
                                   removeLegFile(leg.leg, "sub_bill");
                                 }}
-                                className="text-red-650 hover:text-red-800 text-[10px] font-bold border-0 bg-transparent cursor-pointer"
+                                className="text-red-600 hover:text-red-800 text-[10px] font-bold border-0 bg-transparent cursor-pointer"
                               >
                                 Remove connection
                               </button>

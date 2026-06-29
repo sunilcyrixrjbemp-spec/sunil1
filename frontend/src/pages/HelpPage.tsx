@@ -712,7 +712,7 @@ export default function HelpPage() {
               <button
                 type="submit"
                 disabled={raising}
-                className="w-full h-9 rounded bg-green-650 hover:bg-green-700 disabled:bg-gray-200 disabled:text-gray-400 text-white font-extrabold text-xs flex items-center justify-center shadow-sm border-0 transition-colors cursor-pointer uppercase tracking-wider"
+                className="w-full h-9 rounded bg-[#28a745] hover:bg-[#218838] disabled:bg-gray-200 disabled:text-gray-400 text-white font-extrabold text-xs flex items-center justify-center shadow-sm border-0 transition-all cursor-pointer uppercase tracking-wider"
               >
                 {raising ? "Filing support request..." : "Raise Ticket"}
               </button>
@@ -849,7 +849,7 @@ export default function HelpPage() {
                             }`} />
                           </button>
                           
-                          <span className="font-mono font-bold text-blue-650 uppercase tracking-wider">{tkt.ticket_code}</span>
+                          <span className="font-mono font-bold text-blue-600 uppercase tracking-wider">{tkt.ticket_code}</span>
                           <span className="font-bold text-gray-300">•</span>
                           <span className="font-bold text-gray-600 uppercase bg-gray-100 border border-gray-200 px-1.5 py-0.5 rounded text-[8px]">{tkt.concern_type}</span>
                           <span className="font-bold text-gray-300">•</span>

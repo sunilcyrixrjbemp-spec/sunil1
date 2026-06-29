@@ -111,7 +111,7 @@ export default function PenaltyReportPage() {
       {/* Header section */}
       <div>
         <h2 className="text-xl font-black text-gray-800 uppercase tracking-wide flex items-center gap-2">
-          <ShieldAlert className="w-5 h-5 text-red-650" />
+          <ShieldAlert className="w-5 h-5 text-red-600" />
           Penalty Audit & Violation Report
         </h2>
         <p className="text-gray-500 text-xs mt-0.5">
@@ -126,7 +126,7 @@ export default function PenaltyReportPage() {
             <span className="text-[10px] font-bold text-gray-400 uppercase tracking-wider block">Net Penalty Assessed</span>
             <span className="text-xl font-extrabold text-red-600 block">₹{totalAssessedAmt.toLocaleString()}</span>
           </div>
-          <div className="p-3 bg-red-50 rounded text-red-650">
+          <div className="p-3 bg-red-50 rounded text-red-600">
             <AlertTriangle className="w-5 h-5" />
           </div>
         </div>
