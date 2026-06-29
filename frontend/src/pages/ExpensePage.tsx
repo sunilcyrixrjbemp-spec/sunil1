@@ -9,7 +9,6 @@ import {
   TrendingUp,
   Bookmark,
   Info,
-  Lock,
   MapPin,
   User,
   FileText,
