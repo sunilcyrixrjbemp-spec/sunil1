@@ -28,7 +28,7 @@ def _bulk_insert(db, table_name: str, columns: list[str], records: list[dict], m
                 row_ph.append(f":{pname}")
                 params[pname] = r[k]
             val_placeholders.append("(" + ", ".join(row_ph) + ")")
-        sql = f"INSERT INTO {table_name} ({col_str}) VALUES " + ", ".join(val_placeholders)
+        sql = f"INSERT OR REPLACE INTO {table_name} ({col_str}) VALUES " + ", ".join(val_placeholders)
         db.execute(text(sql), params)
     db.commit()
 
@@ -202,7 +202,7 @@ async def upload_excel_penalties(
             bar_code TEXT,
             equipment_name TEXT,
             equipment_model TEXT,
-            complaint_id TEXT,
+            complaint_id TEXT UNIQUE,
             complaint_raise_date TEXT,
             complaint_close_date TEXT,
             complaint_status TEXT,
@@ -245,8 +245,8 @@ async def upload_excel_penalties(
             is_ftfr INTEGER DEFAULT 0
         );
         """
+        db.execute(text("DROP TABLE IF EXISTS rj_penalties"))
         db.execute(text(create_table_sql))
-        db.execute(text("DELETE FROM rj_penalties"))
         db.commit()
 
         # Parse Excel from file stream
@@ -404,12 +404,13 @@ async def upload_penalties_chunk(
         clear_first = payload.get("clear_first", False)
         
         if clear_first:
-            # Create table if not exists, then clear
-            db.execute(text("""CREATE TABLE IF NOT EXISTS rj_penalties (
+            # Drop and create table with UNIQUE constraint
+            db.execute(text("DROP TABLE IF EXISTS rj_penalties"))
+            db.execute(text("""CREATE TABLE rj_penalties (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
                 sno VARCHAR(20), district_name VARCHAR(200), hospital_type VARCHAR(100),
                 hospital_name VARCHAR(255), bar_code VARCHAR(100), equipment_name VARCHAR(255),
-                equipment_model VARCHAR(200), complaint_id VARCHAR(100),
+                equipment_model VARCHAR(200), complaint_id VARCHAR(100) UNIQUE,
                 complaint_raise_date VARCHAR(100), complaint_close_date VARCHAR(100),
                 complaint_status VARCHAR(100), total_downtime FLOAT, estimated_cost FLOAT,
                 penalty_days FLOAT, complaint_final_close VARCHAR(100), attend_date VARCHAR(100),
@@ -427,7 +428,6 @@ async def upload_penalties_chunk(
                 close_month VARCHAR(100), eight_digit_code VARCHAR(100), open_days FLOAT,
                 is_ftfr INTEGER DEFAULT 0
             )"""))
-            db.execute(text("DELETE FROM rj_penalties"))
             db.commit()
         
         if rows:
@@ -444,6 +444,28 @@ async def upload_penalties_chunk(
             "success": False,
             "message": f"Chunk upload failed: {str(e)}"
         }
+
+@router.get("/existing-complaints")
+async def get_existing_complaints(db: Session = Depends(get_db)):
+    """
+    Returns a list of all existing complaint_id values in the rj_penalties table
+    to allow the client to filter duplicates before uploading.
+    """
+    try:
+        # Check if table exists
+        table_exists = db.execute(text(
+            "SELECT name FROM sqlite_master WHERE type='table' AND name='rj_penalties'"
+        )).fetchone()
+        
+        if not table_exists:
+            return {"success": True, "complaints": []}
+            
+        rows = db.execute(text("SELECT complaint_id FROM rj_penalties WHERE complaint_id IS NOT NULL AND complaint_id != ''")).fetchall()
+        complaints = [r[0] for r in rows]
+        return {"success": True, "complaints": complaints}
+    except Exception as e:
+        logger.error(f"Error fetching existing complaints: {str(e)}")
+        return {"success": False, "message": str(e), "complaints": []}
 
 @router.post("/upload-master-data")
 async def upload_excel_master_data(
