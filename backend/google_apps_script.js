@@ -88,3 +88,9 @@ function doPost(e) {
       .setMimeType(ContentService.MimeType.JSON);
   }
 }
+
+// Dummy function to easily trigger the Google Drive permission authorization popup
+function testAuthorize() {
+  var root = DriveApp.getRootFolder();
+  Logger.log("Drive authorized successfully! Root folder name: " + root.getName());
+}
