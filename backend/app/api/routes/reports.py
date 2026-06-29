@@ -45,18 +45,17 @@ async def get_monthly_report(month: str, db: Session = Depends(get_db)):
     return {"report": {}}
 
 @router.get("/mis-dashboard")
-async def get_mis_dashboard_data(db: Session = Depends(get_db)):
+async def get_mis_dashboard_data(
+    zone: str = None,
+    district: str = None,
+    coordinator: str = None,
+    month: str = None,
+    equipment: str = None,
+    db: Session = Depends(get_db)
+):
     """
-    Returns advanced aggregated MIS analytics from rj_penalties table:
-    - Daily logged calls
-    - Daily closed calls
-    - FTFR % (Closed within 24 hours)
-    - Equipment-wise penalty
-    - Per day penalty (Total sum of per_day_penalty)
-    - DI/District wise penalty
-    - Coordinator-wise penalty
-    - Zone-wise penalty (derived from users mapping or raw fields)
-    - Attend penalty (Total sum of attend_penalty)
+    Returns advanced operational analytics and BI intelligence from rj_penalties table.
+    Supports dynamic multi-dimensional filtering.
     """
     try:
         # Check if table exists
@@ -68,11 +67,61 @@ async def get_mis_dashboard_data(db: Session = Depends(get_db)):
             return {
                 "success": False,
                 "message": "Penalty database not seeded yet.",
-                "stats": {}
+                "summary": {}
             }
 
-        # 1. Total Metrics
-        totals = db.execute(text("""
+        # 1. Build dynamic WHERE clause based on filters
+        where_clauses = ["1=1"]
+        params = {}
+        
+        if district:
+            where_clauses.append("district_name = :district")
+            params["district"] = district
+        if coordinator:
+            where_clauses.append("coordinator_name = :coordinator")
+            params["coordinator"] = coordinator
+        if month:
+            where_clauses.append("month_text = :month")
+            params["month"] = month
+        if equipment:
+            where_clauses.append("equipment_name = :equipment")
+            params["equipment"] = equipment
+        if zone:
+            zone_sql = """
+                CASE 
+                    WHEN district_name IN ('Ajmer', 'Bhilwara', 'Nagaur', 'Tonk') THEN 'Ajmer'
+                    WHEN district_name IN ('Jaipur', 'Alwar', 'Dausa', 'Jhunjhunu', 'Sikar') THEN 'Jaipur'
+                    WHEN district_name IN ('Jodhpur', 'Barmer', 'Jaisalmer', 'Jalore', 'Pali', 'Sirohi') THEN 'Jodhpur'
+                    WHEN district_name IN ('Bikaner', 'Churu', 'Hanumangarh', 'Sri Ganganagar') THEN 'Bikaner'
+                    WHEN district_name IN ('Kota', 'Baran', 'Bundi', 'Jhalawar') THEN 'Kota'
+                    WHEN district_name IN ('Udaipur', 'Banswara', 'Chittorgarh', 'Dungarpur', 'Rajsamand') THEN 'Udaipur'
+                    ELSE 'Other'
+                END
+            """
+            where_clauses.append(f"{zone_sql} = :zone")
+            params["zone"] = zone
+
+        where_str = " AND ".join(where_clauses)
+
+        # 2. Query dynamic dropdown lists (always returned to populate dropdown filters)
+        districts_list = [r[0] for r in db.execute(text(
+            "SELECT DISTINCT district_name FROM rj_penalties WHERE district_name IS NOT NULL AND district_name != '' ORDER BY district_name"
+        )).fetchall()]
+        
+        coordinators_list = [r[0] for r in db.execute(text(
+            "SELECT DISTINCT coordinator_name FROM rj_penalties WHERE coordinator_name IS NOT NULL AND coordinator_name != '' ORDER BY coordinator_name"
+        )).fetchall()]
+        
+        months_list = [r[0] for r in db.execute(text(
+            "SELECT DISTINCT month_text FROM rj_penalties WHERE month_text IS NOT NULL AND month_text != '' ORDER BY month_text"
+        )).fetchall()]
+        
+        equipments_list = [r[0] for r in db.execute(text(
+            "SELECT DISTINCT equipment_name FROM rj_penalties WHERE equipment_name IS NOT NULL AND equipment_name != '' ORDER BY equipment_name"
+        )).fetchall()]
+
+        # 3. Aggregated Total Metrics
+        totals = db.execute(text(f"""
             SELECT 
                 COUNT(*) as total_calls,
                 SUM(CASE WHEN complaint_status = 'Final Closed' OR status = 'Closed' THEN 1 ELSE 0 END) as closed_calls,
@@ -80,9 +129,11 @@ async def get_mis_dashboard_data(db: Session = Depends(get_db)):
                 SUM(attend_penalty) as total_attend_penalty,
                 SUM(delay_penalty) as total_delay_penalty,
                 SUM(total_penalty) as total_penalty,
-                SUM(per_day_penalty) as total_per_day_penalty
+                SUM(per_day_penalty) as total_per_day_penalty,
+                AVG(total_downtime) as avg_downtime_days
             FROM rj_penalties
-        """)).fetchone()
+            WHERE {where_str}
+        """), params).fetchone()
         
         total_calls = totals[0] or 0
         closed_calls = totals[1] or 0
@@ -91,54 +142,54 @@ async def get_mis_dashboard_data(db: Session = Depends(get_db)):
         total_delay = totals[4] or 0.0
         total_net_penalty = totals[5] or 0.0
         total_per_day = totals[6] or 0.0
+        avg_downtime = totals[7] or 0.0
         
         ftfr_percentage = (ftfr_calls * 100.0 / closed_calls) if closed_calls > 0 else 0.0
 
-        # 2. Daily call activity (Last 15 days)
-        daily_logged = db.execute(text("""
+        # 4. Daily complaint activity (Logged vs Closed)
+        daily_logged = db.execute(text(f"""
             SELECT SUBSTR(complaint_raise_date, 1, 10) as day, COUNT(*) as count 
             FROM rj_penalties 
-            WHERE complaint_raise_date IS NOT NULL AND complaint_raise_date != ''
+            WHERE {where_str} AND complaint_raise_date IS NOT NULL AND complaint_raise_date != ''
             GROUP BY day ORDER BY day DESC LIMIT 15
-        """)).fetchall()
+        """), params).fetchall()
         
-        daily_closed = db.execute(text("""
+        daily_closed = db.execute(text(f"""
             SELECT SUBSTR(complaint_close_date, 1, 10) as day, COUNT(*) as count 
             FROM rj_penalties 
-            WHERE complaint_close_date IS NOT NULL AND complaint_close_date != ''
+            WHERE {where_str} AND complaint_close_date IS NOT NULL AND complaint_close_date != ''
             GROUP BY day ORDER BY day DESC LIMIT 15
-        """)).fetchall()
+        """), params).fetchall()
 
-        # 3. Equipment-wise Penalty (Top 8)
-        equip_penalty = db.execute(text("""
+        # 5. Top Equipment Penalties
+        equip_penalty = db.execute(text(f"""
             SELECT equipment_name, SUM(total_penalty) as total
             FROM rj_penalties
-            WHERE equipment_name IS NOT NULL AND equipment_name != ''
+            WHERE {where_str} AND equipment_name IS NOT NULL AND equipment_name != ''
             GROUP BY equipment_name
             ORDER BY total DESC LIMIT 8
-        """)).fetchall()
+        """), params).fetchall()
 
-        # 4. District / DI wise Penalty (Top 8)
-        district_penalty = db.execute(text("""
+        # 6. Top District Penalties
+        district_penalty = db.execute(text(f"""
             SELECT district_name, SUM(total_penalty) as total
             FROM rj_penalties
-            WHERE district_name IS NOT NULL AND district_name != ''
+            WHERE {where_str} AND district_name IS NOT NULL AND district_name != ''
             GROUP BY district_name
             ORDER BY total DESC LIMIT 8
-        """)).fetchall()
+        """), params).fetchall()
 
-        # 5. Coordinator-wise Penalty (Top 8)
-        coord_penalty = db.execute(text("""
+        # 7. Top Coordinator Penalties
+        coord_penalty = db.execute(text(f"""
             SELECT coordinator_name, SUM(total_penalty) as total
             FROM rj_penalties
-            WHERE coordinator_name IS NOT NULL AND coordinator_name != ''
+            WHERE {where_str} AND coordinator_name IS NOT NULL AND coordinator_name != ''
             GROUP BY coordinator_name
             ORDER BY total DESC LIMIT 8
-        """)).fetchall()
+        """), params).fetchall()
 
-        # 6. Zone-wise Penalty (Map from district to users or default fallback)
-        # Ajmer -> Ajmer, Jaipur -> Jaipur, Udaipur -> Udaipur, Jodhpur -> Jodhpur, Bikaner -> Bikaner, Kota -> Kota
-        zone_penalty = db.execute(text("""
+        # 8. Zone breakdown
+        zone_penalty = db.execute(text(f"""
             SELECT 
                 CASE 
                     WHEN district_name IN ('Ajmer', 'Bhilwara', 'Nagaur', 'Tonk') THEN 'Ajmer'
@@ -151,13 +202,51 @@ async def get_mis_dashboard_data(db: Session = Depends(get_db)):
                 END as zone_name,
                 SUM(total_penalty) as total
             FROM rj_penalties
-            WHERE district_name IS NOT NULL AND district_name != ''
+            WHERE {where_str} AND district_name IS NOT NULL AND district_name != ''
             GROUP BY zone_name
             ORDER BY total DESC
-        """)).fetchall()
+        """), params).fetchall()
+
+        # 9. Hospital-wise Penalty Breakdown (New)
+        hospital_penalty = db.execute(text(f"""
+            SELECT hospital_name, SUM(total_penalty) as total, COUNT(*) as count
+            FROM rj_penalties
+            WHERE {where_str} AND hospital_name IS NOT NULL AND hospital_name != ''
+            GROUP BY hospital_name
+            ORDER BY total DESC LIMIT 8
+        """), params).fetchall()
+
+        # 10. Under Warranty vs Out of Warranty Penalty Share (New)
+        warranty_share = db.execute(text(f"""
+            SELECT 
+                CASE 
+                    WHEN LOWER(is_under_warranty) LIKE '%yes%' OR is_under_warranty = '1' THEN 'Under Warranty'
+                    ELSE 'Out of Warranty'
+                END as warranty_status,
+                SUM(total_penalty) as total
+            FROM rj_penalties
+            WHERE {where_str}
+            GROUP BY warranty_status
+        """), params).fetchall()
+
+        # 11. Hospital Type Breakdown (New)
+        hosp_type_share = db.execute(text(f"""
+            SELECT hospital_type, SUM(total_penalty) as total
+            FROM rj_penalties
+            WHERE {where_str} AND hospital_type IS NOT NULL AND hospital_type != ''
+            GROUP BY hospital_type
+            ORDER BY total DESC
+        """), params).fetchall()
 
         return {
             "success": True,
+            "filter_options": {
+                "districts": districts_list,
+                "coordinators": coordinators_list,
+                "zones": ["Ajmer", "Jaipur", "Jodhpur", "Bikaner", "Kota", "Udaipur", "Other"],
+                "months": months_list,
+                "equipments": equipments_list
+            },
             "summary": {
                 "total_calls": total_calls,
                 "closed_calls": closed_calls,
@@ -165,7 +254,8 @@ async def get_mis_dashboard_data(db: Session = Depends(get_db)):
                 "total_attend_penalty": round(total_attend, 1),
                 "total_delay_penalty": round(total_delay, 1),
                 "total_penalty": round(total_net_penalty, 1),
-                "total_per_day_penalty": round(total_per_day, 1)
+                "total_per_day_penalty": round(total_per_day, 1),
+                "avg_downtime_days": round(avg_downtime, 1)
             },
             "daily_activity": {
                 "logged": [{"day": r[0], "count": r[1]} for r in daily_logged],
@@ -175,8 +265,17 @@ async def get_mis_dashboard_data(db: Session = Depends(get_db)):
                 "equipment": [{"name": r[0], "penalty": round(r[1], 1)} for r in equip_penalty],
                 "district": [{"name": r[0], "penalty": round(r[1], 1)} for r in district_penalty],
                 "coordinator": [{"name": r[0], "penalty": round(r[1], 1)} for r in coord_penalty],
-                "zone": [{"name": r[0], "penalty": round(r[1], 1)} for r in zone_penalty]
+                "zone": [{"name": r[0], "penalty": round(r[1], 1)} for r in zone_penalty],
+                "hospital": [{"name": r[0], "penalty": round(r[1], 1), "count": r[2]} for r in hospital_penalty],
+                "warranty": [{"status": r[0], "penalty": round(r[1], 1)} for r in warranty_share],
+                "hospital_type": [{"type": r[0], "penalty": round(r[1], 1)} for r in hosp_type_share]
             }
+        }
+    except Exception as e:
+        logger.error(f"Error fetching MIS dashboard metrics: {str(e)}")
+        return {
+            "success": False,
+            "message": f"Server query error: {str(e)}"
         }
     except Exception as e:
         logger.error(f"Error fetching MIS dashboard metrics: {str(e)}")
@@ -252,9 +351,13 @@ async def upload_excel_penalties(
             is_ftfr INTEGER DEFAULT 0
         );
         """
-        db.execute(text("DROP TABLE IF EXISTS rj_penalties"))
+        # Ensure table exists
         db.execute(text(create_table_sql))
         db.commit()
+        
+        # Fetch existing complaint IDs to skip duplicate inserts
+        existing_rows = db.execute(text("SELECT complaint_id FROM rj_penalties WHERE complaint_id IS NOT NULL AND complaint_id != ''")).fetchall()
+        existing_ids = {r[0] for r in existing_rows}
 
         # Parse Excel from file stream
         contents = await file.read()
@@ -307,6 +410,10 @@ async def upload_excel_penalties(
         
         for row in rows_iter:
             if row[0] is None:
+                continue
+                
+            complaint_id = str(row[7]).strip() if row[7] is not None else ""
+            if not complaint_id or complaint_id in existing_ids:
                 continue
                 
             raise_raw = row[8]

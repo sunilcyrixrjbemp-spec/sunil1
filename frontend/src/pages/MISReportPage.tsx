@@ -17,7 +17,7 @@ import {
 import toast from "react-hot-toast";
 import api from "../services/api";
 import Loader from "../components/common/Loader";
-import * as XLSX from "xlsx";
+
 
 // Register Chart.js components
 import {
@@ -109,192 +109,43 @@ export default function MISReportPage() {
     }
   };
 
-  const parseDateToIso = (val: any) => {
-    if (!val) return "";
-    if (val instanceof Date) {
-      const y = val.getFullYear();
-      const m = String(val.getMonth() + 1).padStart(2, '0');
-      const d = String(val.getDate()).padStart(2, '0');
-      const hh = String(val.getHours()).padStart(2, '0');
-      const mm = String(val.getMinutes()).padStart(2, '0');
-      const ss = String(val.getSeconds()).padStart(2, '0');
-      return `${y}-${m}-${d} ${hh}:${mm}:${ss}`;
-    }
-    return String(val).trim();
-  };
 
-  const safeFloat = (val: any) => {
-    try {
-      if (val === undefined || val === null) return 0.0;
-      const parsed = parseFloat(val);
-      return isNaN(parsed) ? 0.0 : parsed;
-    } catch {
-      return 0.0;
-    }
-  };
 
   const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
 
     setSyncing(true);
-    setSyncProgress(1);
-    setSyncStatusText("Fetching existing complaint IDs from remote database...");
+    setSyncProgress(25);
+    setSyncStatusText("Uploading Excel sheet to server...");
+    
+    const formData = new FormData();
+    formData.append("file", file);
+
+    const toastId = toast.loading("Processing upload & syncing penalty logs... This will take a few moments.");
     
     try {
-      // 1. Fetch all existing complaint_ids to perform 0.01ms client deduplication
-      const existingRes = await api.get("/reports/existing-complaints");
-      const existingSet = new Set<string>(existingRes.data.complaints || []);
+      setSyncProgress(50);
+      setSyncStatusText("Database is comparing and syncing new complaints...");
       
-      setSyncStatusText("Parsing Excel sheet locally in browser...");
-      setSyncProgress(5);
-
-      const reader = new FileReader();
-      reader.onload = async (evt) => {
-        try {
-          const ab = evt.target?.result;
-          if (!ab) throw new Error("Could not read file data.");
-          
-          const workbook = XLSX.read(ab, { type: 'array', cellDates: true });
-          
-          // Find Penalty File sheet
-          const sheetName = workbook.SheetNames.includes("Penalty File") ? "Penalty File" : workbook.SheetNames[0];
-          const sheet = workbook.Sheets[sheetName];
-          const rows: any[][] = XLSX.utils.sheet_to_json(sheet, { header: 1 });
-          
-          if (rows.length <= 1) {
-            toast.error("The selected sheet is empty or contains no records.");
-            setSyncing(false);
-            return;
-          }
-
-          setSyncStatusText("Mapping columns and filtering duplicates...");
-          setSyncProgress(10);
-
-          const parsedRows: any[] = [];
-          
-          // Row 0 is header, parse from Row 1 onwards
-          for (let i = 1; i < rows.length; i++) {
-            const row = rows[i];
-            if (!row || row[0] === undefined || row[0] === null) continue;
-            
-            const complaintId = row[7] ? String(row[7]).trim() : "";
-            if (!complaintId) continue;
-
-            const raiseRaw = row[8];
-            const closeRaw = row[9];
-            const complaintRaiseDate = parseDateToIso(raiseRaw);
-            const complaintCloseDate = parseDateToIso(closeRaw);
-
-            // Compute is_ftfr (close within 24h)
-            let is_ftfr = 0;
-            if (raiseRaw && closeRaw) {
-              const raiseDt = raiseRaw instanceof Date ? raiseRaw : new Date(String(raiseRaw));
-              const closeDt = closeRaw instanceof Date ? closeRaw : new Date(String(closeRaw));
-              if (!isNaN(raiseDt.getTime()) && !isNaN(closeDt.getTime())) {
-                const diffHours = (closeDt.getTime() - raiseDt.getTime()) / 3600000.0;
-                if (diffHours <= 24.0) {
-                  is_ftfr = 1;
-                }
-              }
-            }
-
-            parsedRows.push({
-              "sno": String(row[0]),
-              "district_name": row[1] ? String(row[1]).trim() : "",
-              "hospital_type": row[2] ? String(row[2]).trim() : "",
-              "hospital_name": row[3] ? String(row[3]).trim() : "",
-              "bar_code": row[4] ? String(row[4]).trim() : "",
-              "equipment_name": row[5] ? String(row[5]).trim() : "",
-              "equipment_model": row[6] ? String(row[6]).trim() : "",
-              "complaint_id": complaintId,
-              "complaint_raise_date": complaintRaiseDate,
-              "complaint_close_date": complaintCloseDate,
-              "complaint_status": row[10] ? String(row[10]).trim() : "",
-              "total_downtime": safeFloat(row[11]),
-              "estimated_cost": safeFloat(row[12]),
-              "penalty_days": safeFloat(row[13]),
-              "complaint_final_close": row[14] ? String(row[14]).trim() : "",
-              "attend_date": row[15] ? String(row[15]).trim() : "",
-              "attend_penalty": safeFloat(row[16]),
-              "delay_penalty": safeFloat(row[17]),
-              "total_penalty": safeFloat(row[18]),
-              "is_under_warranty": row[19] ? String(row[19]).trim() : "",
-              "service_provider_name": row[20] ? String(row[20]).trim() : "",
-              "status": row[21] ? String(row[21]).trim() : "",
-              "equipment_type": row[23] ? String(row[23]).trim() : "",
-              "asset_value": safeFloat(row[24]),
-              "complaint_logged_date": row[25] ? String(row[25]).trim() : "",
-              "call_attend_hour_diff": safeFloat(row[26]),
-              "attented_per_day": row[28] ? safeFloat(row[28]) : 0.0,
-              "penalty_start_date": row[29] ? String(row[29]).trim() : "",
-              "penalty_end_date": row[30] ? String(row[30]).trim() : "",
-              "penalty_down_days": row[31] ? safeFloat(row[31]) : 0.0,
-              "penalty_slab": row[32] ? safeFloat(row[32]) : 0.0,
-              "penalty": row[33] ? safeFloat(row[33]) : 0.0,
-              "per_day_penalty": row[34] ? safeFloat(row[34]) : 0.0,
-              "total_penalty_calc": row[35] ? safeFloat(row[35]) : 0.0,
-              "total_per_day": row[36] ? safeFloat(row[36]) : 0.0,
-              "month_text": row[41] ? String(row[41]).trim() : "",
-              "di_name": row[42] ? String(row[42]).trim() : "",
-              "open_date": row[43] ? String(row[43]).trim() : "",
-              "close_date": row[44] ? String(row[44]).trim() : "",
-              "attend_delay_minutes": row[45] ? safeFloat(row[45]) : 0.0,
-              "same_day_close": row[46] ? String(row[46]).trim() : "",
-              "standby": row[48] ? String(row[48]).trim() : "",
-              "coordinator_name": row[49] ? String(row[49]).trim() : "",
-              "final_close_month": row[50] ? String(row[50]).trim() : "",
-              "close_month": row[51] ? String(row[51]).trim() : "",
-              "eight_digit_code": row[52] ? String(row[52]).trim() : "",
-              "open_days": row[53] ? safeFloat(row[53]) : 0.0,
-              "is_ftfr": is_ftfr
-            });
-          }
-
-          // Client-side deduplication check against database Set
-          const newRows = parsedRows.filter(r => !existingSet.has(r.complaint_id));
-          
-          if (newRows.length === 0) {
-            toast.success("Database is already up to date! 0 new complaint logs detected.", { duration: 5000 });
-            setSyncing(false);
-            fetchDashboardData();
-            return;
-          }
-
-          setSyncStatusText(`Found ${newRows.length} new records. Streaming to database in batches...`);
-          setSyncProgress(15);
-
-          const chunkSize = 200;
-          const totalChunks = Math.ceil(newRows.length / chunkSize);
-          
-          for (let c = 0; c < totalChunks; c++) {
-            const batch = newRows.slice(c * chunkSize, (c + 1) * chunkSize);
-            const clearFirst = c === 0 && existingSet.size === 0; // only recreate table if syncing database from absolute scratch
-            
-            await api.post("/reports/upload-penalties-chunk", {
-              rows: batch,
-              clear_first: clearFirst
-            });
-            
-            const progress = Math.round(15 + (c + 1) * 85 / totalChunks);
-            setSyncProgress(progress);
-            setSyncStatusText(`Synced chunk ${c + 1} of ${totalChunks} (${Math.round((c + 1) * 100 / totalChunks)}% complete)...`);
-          }
-
-          toast.success(`Successfully uploaded and synced ${newRows.length} new complaints!`);
-          fetchDashboardData();
-        } catch (err: any) {
-          toast.error(`Error parsing data: ${err.message || err}`);
-        } finally {
-          setSyncing(false);
-          if (fileInputRef.current) fileInputRef.current.value = "";
+      const response = await api.post("/reports/upload-penalties", formData, {
+        headers: {
+          "Content-Type": "multipart/form-data"
         }
-      };
-
-      reader.readAsArrayBuffer(file);
+      });
+      
+      setSyncProgress(100);
+      if (response.data.success) {
+        toast.success(response.data.message || "Sync completed successfully!", { id: toastId });
+        fetchDashboardData();
+      } else {
+        toast.error(response.data.message || "Failed to sync spreadsheet.", { id: toastId });
+      }
     } catch (err: any) {
-      toast.error(`Sync preparation failed: ${err.message || err}`);
+      toast.error(err.response?.data?.detail || "Upload failed. Ensure the file matches the Penalty File structure.", { id: toastId });
+    } finally {
       setSyncing(false);
+      if (fileInputRef.current) fileInputRef.current.value = "";
     }
   };
 
