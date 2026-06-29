@@ -674,30 +674,38 @@ export default function ExpensePage() {
       return;
     }
     
-    // Validate file size (maximum 2MB)
-    if (file.size > 2 * 1024 * 1024) {
-      toast.error("File size cannot exceed 2MB!");
-      return;
-    }
-    // Show compressing toast for images > 50KB
-    const isPDF = file.type === "application/pdf";
-    let compressedFile = file;
-    if (!isPDF && file.size > 50 * 1024) {
-      const toastId = toast.loading(`Compressing image... (${Math.round(file.size / 1024)}KB)`);
-      try {
-        compressedFile = await compressImage(file);
-        toast.dismiss(toastId);
-        toast.success(`Compressed to ${Math.round(compressedFile.size / 1024)}KB ✓`, { duration: 2000 });
-      } catch {
-        toast.dismiss(toastId);
-        compressedFile = file;
+    let processedFile = file;
+    
+    if (isImage) {
+      // Compress images larger than 50KB to make sure they are well under 2MB
+      if (file.size > 50 * 1024) {
+        const toastId = toast.loading(`Compressing image... (${Math.round(file.size / 1024)}KB)`);
+        try {
+          processedFile = await compressImage(file);
+          toast.dismiss(toastId);
+          toast.success(`Compressed to ${Math.round(processedFile.size / 1024)}KB ✓`, { duration: 2000 });
+        } catch {
+          toast.dismiss(toastId);
+          processedFile = file;
+        }
       }
     }
+    
+    // Validate final size (maximum 2MB)
+    if (processedFile.size > 2 * 1024 * 1024) {
+      if (isPDF) {
+        toast.error("PDF file size cannot exceed 2MB!");
+      } else {
+        toast.error("Compressed image size still exceeds the 2MB limit. Please upload a smaller photo.");
+      }
+      return;
+    }
+    
     setFiles(prev => ({
       ...prev,
       [legNum]: {
         ...prev[legNum],
-        [key]: compressedFile
+        [key]: processedFile
       }
     }));
   };
@@ -1348,20 +1356,14 @@ export default function ExpensePage() {
                             <div>
                               <label className="label-lte">District <span className="text-red-500">*</span></label>
                               <div className="relative">
-                                {leg.travel_type === "In-District" && hDist !== "All" && (
-                                  <span className="absolute inset-y-0 right-0 flex items-center pr-3 pointer-events-none">
-                                    <Lock className="h-3.5 w-3.5 text-gray-400" />
-                                  </span>
-                                )}
                                 <select
                                   value={leg.district_from}
                                   required
-                                  disabled={leg.travel_type === "In-District" && hDist !== "All"}
                                   onChange={(e) => {
                                     handleItineraryChange(leg.leg, "district_from", e.target.value);
                                     handleItineraryChange(leg.leg, "from", ""); // reset location on district change
                                   }}
-                                  className="input-lte font-semibold disabled:bg-gray-100 disabled:text-gray-600 disabled:cursor-not-allowed pr-8 border-gray-305 shadow-inner"
+                                  className="input-lte font-semibold pr-8 border-gray-305 shadow-inner"
                                 >
                                   <option value="">Select District</option>
                                   {distOpts.map(d => <option key={d} value={d}>{d}</option>)}
@@ -1421,20 +1423,14 @@ export default function ExpensePage() {
                             <div>
                               <label className="label-lte">District <span className="text-red-500">*</span></label>
                               <div className="relative">
-                                {leg.travel_type === "In-District" && hDist !== "All" && (
-                                  <span className="absolute inset-y-0 right-0 flex items-center pr-3 pointer-events-none">
-                                    <Lock className="h-3.5 w-3.5 text-gray-400" />
-                                  </span>
-                                )}
                                 <select
                                   value={leg.district}
                                   required
-                                  disabled={leg.travel_type === "In-District" && hDist !== "All"}
                                   onChange={(e) => {
                                     handleItineraryChange(leg.leg, "district", e.target.value);
                                     handleItineraryChange(leg.leg, "to", ""); // reset location on district change
                                   }}
-                                  className="input-lte font-semibold disabled:bg-gray-100 disabled:text-gray-600 disabled:cursor-not-allowed pr-8 border-gray-305 shadow-inner"
+                                  className="input-lte font-semibold pr-8 border-gray-305 shadow-inner"
                                 >
                                   <option value="">Select District</option>
                                   {distOpts.map(d => <option key={d} value={d}>{d}</option>)}
