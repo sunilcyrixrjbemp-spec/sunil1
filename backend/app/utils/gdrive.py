@@ -33,15 +33,44 @@ def get_drive_service():
             
         service_account_json = os.getenv("FIREBASE_SERVICE_ACCOUNT_JSON")
         if service_account_json:
+            info = None
             try:
                 info = json.loads(service_account_json)
+            except Exception as json_err:
+                errors.append(f"Standard JSON parse failed: {str(json_err)}")
+                # Regex fallback parser
+                import re
+                try:
+                    parsed_info = {}
+                    normalized = service_account_json.replace('\r\n', '\n').replace('\r', '\n')
+                    
+                    # Extract private key (supports multiline)
+                    pk_match = re.search(r'"private_key":\s*"([^"]+)"', normalized, re.DOTALL)
+                    if pk_match:
+                        # Clean up escaped backslashes and newlines
+                        pk_val = pk_match.group(1).replace('\\n', '\n').replace('\\\\', '\\')
+                        parsed_info["private_key"] = pk_val
+                        
+                    # Extract other string fields
+                    fields = ["type", "project_id", "private_key_id", "client_email", "client_id", "auth_uri", "token_uri", "auth_provider_x509_cert_url", "client_x509_cert_url", "universe_domain"]
+                    for field in fields:
+                        match = re.search(rf'"{field}":\s*"([^"]+)"', normalized)
+                        if match:
+                            parsed_info[field] = match.group(1)
+                            
+                    if "private_key" in parsed_info and "client_email" in parsed_info:
+                        info = parsed_info
+                    else:
+                        errors.append(f"Regex parser failed: missing key/email. Found: {list(parsed_info.keys())}")
+                except Exception as regex_err:
+                    errors.append(f"Regex parser exception: {str(regex_err)}")
+            
+            if info:
                 creds = service_account.Credentials.from_service_account_info(
                     info, 
                     scopes=SCOPES
                 )
                 return build('drive', 'v3', credentials=creds, cache_discovery=False)
-            except Exception as e:
-                errors.append(f"Env var load error: {str(e)}")
         else:
             errors.append("Env var 'FIREBASE_SERVICE_ACCOUNT_JSON' is not set.")
             
