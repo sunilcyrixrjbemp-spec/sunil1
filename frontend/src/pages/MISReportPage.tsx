@@ -17,7 +17,10 @@ import {
   Building,
   Table,
   BarChart2,
-  Activity
+  Activity,
+  Calendar,
+  Briefcase,
+  AlertOctagon
 } from "lucide-react";
 import toast from "react-hot-toast";
 import api from "../services/api";
@@ -99,6 +102,8 @@ interface DashboardData {
     total_penalty: number;
     total_per_day_penalty: number;
     avg_downtime_days: number;
+    attend_breach_count: number;
+    delay_breach_count: number;
   };
   daily_activity?: {
     logged: ActivityItem[];
@@ -112,6 +117,8 @@ interface DashboardData {
     hospital: HospitalItem[];
     warranty: WarrantyItem[];
     hospital_type: HospTypeItem[];
+    vendor: ChartItem[];
+    monthly_trend: { month: string; penalty: number }[];
   };
 }
 
@@ -220,12 +227,25 @@ export default function MISReportPage() {
   const activity = data?.daily_activity;
   const options = data?.filter_options;
 
+  // Helper to format dates correctly on X-axis (extracts DD-MMM or DD-MM)
+  const formatLabelDate = (dateStr: string) => {
+    if (!dateStr) return "";
+    const parts = dateStr.split('-');
+    if (parts.length >= 3) {
+      if (parts[0].length === 4) {
+        return `${parts[2]}-${parts[1]}`;
+      }
+      return `${parts[0]}-${parts[1]}`;
+    }
+    return dateStr;
+  };
+
   // Chart 1: Daily Activity Logged vs Closed (Line Area Chart - AdminLTE style)
   const dailyLoggedData = activity?.logged ? [...activity.logged].reverse() : [];
   const dailyClosedData = activity?.closed ? [...activity.closed].reverse() : [];
   
   const dailyChartData = {
-    labels: dailyLoggedData.map(d => d.day.slice(5)),
+    labels: dailyLoggedData.map(d => formatLabelDate(d.day)),
     datasets: [
       {
         fill: true,
@@ -345,6 +365,38 @@ export default function MISReportPage() {
           'rgba(0, 123, 255, 0.85)',
           'rgba(111, 66, 193, 0.85)'
         ]
+      }
+    ]
+  };
+
+  // Chart 9: Monthly SLA Penalty Trend (Line Chart)
+  const monthlyTrendChartData = {
+    labels: breakdown?.monthly_trend.map(m => m.month) || [],
+    datasets: [
+      {
+        fill: true,
+        label: 'Monthly Penalty Total (₹)',
+        data: breakdown?.monthly_trend.map(m => m.penalty) || [],
+        backgroundColor: 'rgba(111, 66, 193, 0.15)',
+        borderColor: 'rgba(111, 66, 193, 1)',
+        pointBorderColor: '#6f42c1',
+        pointBackgroundColor: 'rgba(111, 66, 193, 1)',
+        tension: 0.3
+      }
+    ]
+  };
+
+  // Chart 10: Top Service Providers / Vendors (Horizontal Bar)
+  const vendorChartData = {
+    labels: breakdown?.vendor.map(v => v.name.length > 20 ? v.name.slice(0, 18) + ".." : v.name) || [],
+    datasets: [
+      {
+        label: 'Vendor Penalty Assessed (₹)',
+        data: breakdown?.vendor.map(v => v.penalty) || [],
+        backgroundColor: '#17a2b8',
+        borderColor: '#117a8b',
+        borderWidth: 1,
+        borderRadius: 2
       }
     ]
   };
@@ -570,20 +622,45 @@ export default function MISReportPage() {
 
           </div>
 
-          {/* Secondary Metrics Strip */}
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 bg-slate-50 border border-slate-200 rounded p-4 text-center">
-            <div>
-              <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">Average Downtime Duration</span>
-              <span className="text-lg font-extrabold text-slate-700 block mt-1">{stats.avg_downtime_days} Days</span>
+          {/* Actionable Secondary Metrics Strip (Completely Corrected & Improved) */}
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6 bg-slate-50 border border-slate-200 rounded-lg p-5">
+            
+            {/* Metric 1: Response Breaches */}
+            <div className="bg-white border border-slate-200 rounded p-4 shadow-sm flex items-center gap-3">
+              <span className="p-3 bg-orange-50 text-orange-500 rounded-lg">
+                <AlertOctagon className="w-5 h-5" />
+              </span>
+              <div>
+                <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">Response Breaches</span>
+                <span className="text-lg font-black text-slate-800 block mt-0.5">{stats.attend_breach_count.toLocaleString()} Calls</span>
+                <span className="text-[9px] font-bold text-orange-500 uppercase block mt-1">Breached response SLA</span>
+              </div>
             </div>
-            <div className="border-t sm:border-t-0 sm:border-l sm:border-r border-slate-200 py-3 sm:py-0">
-              <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">Per-Day Penalty Impact</span>
-              <span className="text-lg font-extrabold text-slate-700 block mt-1">₹{stats.total_per_day_penalty.toLocaleString()}/day</span>
+
+            {/* Metric 2: Resolution Breaches */}
+            <div className="bg-white border border-slate-200 rounded p-4 shadow-sm flex items-center gap-3">
+              <span className="p-3 bg-red-50 text-red-500 rounded-lg">
+                <AlertTriangle className="w-5 h-5" />
+              </span>
+              <div>
+                <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">Resolution Breaches</span>
+                <span className="text-lg font-black text-slate-800 block mt-0.5">{stats.delay_breach_count.toLocaleString()} Calls</span>
+                <span className="text-[9px] font-bold text-red-500 uppercase block mt-1">Breached resolution SLA</span>
+              </div>
             </div>
-            <div>
-              <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">Resolution Delay Penalty</span>
-              <span className="text-lg font-extrabold text-slate-700 block mt-1">₹{stats.total_delay_penalty.toLocaleString()}</span>
+
+            {/* Metric 3: Avg Resolution Downtime */}
+            <div className="bg-white border border-slate-200 rounded p-4 shadow-sm flex items-center gap-3">
+              <span className="p-3 bg-green-50 text-green-500 rounded-lg">
+                <Clock className="w-5 h-5" />
+              </span>
+              <div>
+                <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">Avg Resolution Speed</span>
+                <span className="text-lg font-black text-slate-800 block mt-0.5">{stats.avg_downtime_days} Days</span>
+                <span className="text-[9px] font-bold text-green-500 uppercase block mt-1">Downtime for closed calls</span>
+              </div>
             </div>
+
           </div>
 
           {/* Chart 1: Daily Logged vs Closed (Line Area Chart - AdminLTE Layout style) */}
@@ -613,7 +690,7 @@ export default function MISReportPage() {
             </div>
           </div>
 
-          {/* 3x3 Grid for All Breakdown charts (AdminLTE Card widgets style) */}
+          {/* 3x3 Grid for Breakdown charts */}
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             
             {/* Chart 2: Top Equipment Penalties */}
@@ -759,12 +836,12 @@ export default function MISReportPage() {
             </div>
 
             {/* Chart 8: Zone-wise Penalty Share */}
-            <div className="bg-white border border-slate-200 rounded shadow-sm md:col-span-2 lg:col-span-3">
+            <div className="bg-white border border-slate-200 rounded shadow-sm">
               <div className="px-4 py-2.5 border-b border-slate-150 flex items-center gap-1.5 bg-slate-50/50">
                 <BarChart2 className="w-4 h-4 text-[#ffc107]" />
-                <h4 className="text-xs font-bold text-slate-700 uppercase tracking-wide">Zone-wise Penalty Distribution</h4>
+                <h4 className="text-xs font-bold text-slate-700 uppercase tracking-wide">Zone-wise Penalties</h4>
               </div>
-              <div className="p-4 h-64 relative">
+              <div className="p-4 h-60 flex justify-center items-center relative">
                 <PolarArea 
                   data={zoneChartData} 
                   options={{
@@ -775,6 +852,55 @@ export default function MISReportPage() {
                         position: 'right',
                         labels: { boxWidth: 10, font: { size: 9 } }
                       }
+                    }
+                  }} 
+                />
+              </div>
+            </div>
+
+            {/* Chart 9: Monthly SLA Penalty Trend (NEW CHART) */}
+            <div className="bg-white border border-slate-200 rounded shadow-sm">
+              <div className="px-4 py-2.5 border-b border-slate-150 flex items-center gap-1.5 bg-slate-50/50">
+                <Calendar className="w-4 h-4 text-purple-500" />
+                <h4 className="text-xs font-bold text-slate-700 uppercase tracking-wide">Monthly Penalty Trend</h4>
+              </div>
+              <div className="p-4 h-60 relative">
+                <Line 
+                  data={monthlyTrendChartData} 
+                  options={{
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    scales: {
+                      x: { grid: { display: false } },
+                      y: { ticks: { precision: 0 } }
+                    },
+                    plugins: {
+                      legend: { display: false }
+                    }
+                  }} 
+                />
+              </div>
+            </div>
+
+            {/* Chart 10: Top Service Providers/Vendors (NEW CHART) */}
+            <div className="bg-white border border-slate-200 rounded shadow-sm">
+              <div className="px-4 py-2.5 border-b border-slate-150 flex items-center gap-1.5 bg-slate-50/50">
+                <Briefcase className="w-4 h-4 text-teal-500" />
+                <h4 className="text-xs font-bold text-slate-700 uppercase tracking-wide">Top Vendor Penalties</h4>
+              </div>
+              <div className="p-4 h-60 relative">
+                <Bar 
+                  data={vendorChartData} 
+                  options={{
+                    indexAxis: 'y',
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    scales: {
+                      x: { grid: { display: false } },
+                      y: { grid: { display: false } }
+                    },
+                    plugins: {
+                      legend: { display: false }
                     }
                   }} 
                 />
