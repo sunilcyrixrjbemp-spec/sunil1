@@ -7,19 +7,23 @@ import {
   CheckCircle,
   Loader2,
   Package,
-  Building2,
-  MapPin,
-  Wrench,
   QrCode,
   X,
   ChevronLeft,
   ChevronRight,
-  BarChart3
+  BarChart3,
+  ShieldCheck,
+  ShieldOff,
+  IndianRupee,
+  CalendarCheck,
+  Receipt,
+  Filter,
+  Zap
 } from "lucide-react";
 import toast from "react-hot-toast";
 import api from "../services/api";
 
-// CSV column header names (in user-provided order)
+// CSV column header names (in user-provided order) — now includes Equipment Type
 const CSV_HEADERS = [
   "District Name", "Hospital Name", "Department Name", "Group Name",
   "Equipment Name", "Model Name", "Serial No.", "Equipment Category",
@@ -27,18 +31,7 @@ const CSV_HEADERS = [
   "Inventory Entry Date", "MOIC Verified Date", "PO Date", "PO Cost",
   "Inventory Status", "Equipment Status", "Supplier", "Warranty Details",
   "Asset Value", "DI Name", "DM Name", "Coordinator Name", "Zone Name",
-  "Hospital Type", "Facility Type"
-];
-
-// API column key mapping (matches backend ASSETS_INVENTORY_COLUMNS order)
-const API_KEYS = [
-  "district_name", "hospital_name", "department_name", "group_name",
-  "equipment_name", "model_name", "serial_no", "equipment_category",
-  "qr_code", "stock_register_page_no", "received_date", "installation_date",
-  "inventory_entry_date", "moic_verified_date", "po_date", "po_cost",
-  "inventory_status", "equipment_status", "supplier", "warranty_details",
-  "asset_value", "di_name", "dm_name", "coordinator_name", "zone_name",
-  "hospital_type", "facility_type"
+  "Hospital Type", "Facility Type", "Equipment Type"
 ];
 
 interface AssetRow {
@@ -46,20 +39,38 @@ interface AssetRow {
 }
 
 interface AssetStats {
-  total_assets: number;
-  total_districts: number;
-  total_hospitals: number;
-  functional_assets: number;
+  total_equipment: number;
+  verified_equipment: number;
+  under_warranty: number;
+  out_of_warranty: number;
+  total_value: number;
+  verified_value: number;
+  verified_out_of_warranty_value: number;
+  monthly_value: number;
+  arrear_billing: number;
+  total_billing: number;
 }
+
+const defaultStats: AssetStats = {
+  total_equipment: 0, verified_equipment: 0, under_warranty: 0,
+  out_of_warranty: 0, total_value: 0, verified_value: 0,
+  verified_out_of_warranty_value: 0, monthly_value: 0,
+  arrear_billing: 0, total_billing: 0
+};
+
+const fmt = (n: number) => n >= 10000000 ? `${(n / 10000000).toFixed(2)} Cr` :
+  n >= 100000 ? `${(n / 100000).toFixed(2)} L` :
+  n >= 1000 ? `${(n / 1000).toFixed(1)}K` : n.toLocaleString("en-IN");
+
+const fmtRs = (n: number) => `₹${fmt(n)}`;
 
 export default function AssetUploadPage() {
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [isDragActive, setIsDragActive] = useState(false);
   const [uploading, setUploading] = useState(false);
-  const [uploadProgress, setUploadProgress] = useState(0);
   const [parsedRows, setParsedRows] = useState<AssetRow[]>([]);
   const [skippedCount, setSkippedCount] = useState(0);
-  const [uploadResult, setUploadResult] = useState<{inserted: number; skipped: number} | null>(null);
+  const [uploadResult, setUploadResult] = useState<{inserted: number; skipped: number; elapsed_ms: number} | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   // Search & pagination for existing assets
@@ -68,25 +79,53 @@ export default function AssetUploadPage() {
   const [totalAssets, setTotalAssets] = useState(0);
   const [currentPage, setCurrentPage] = useState(1);
   const [loadingAssets, setLoadingAssets] = useState(false);
-  const [stats, setStats] = useState<AssetStats>({ total_assets: 0, total_districts: 0, total_hospitals: 0, functional_assets: 0 });
+  const [stats, setStats] = useState<AssetStats>(defaultStats);
   const pageSize = 50;
+
+  // Filters
+  const [filterZone, setFilterZone] = useState("");
+  const [filterDistrict, setFilterDistrict] = useState("");
+  const [filterDI, setFilterDI] = useState("");
+  const [zones, setZones] = useState<string[]>([]);
+  const [districts, setDistricts] = useState<string[]>([]);
+  const [diNames, setDINames] = useState<string[]>([]);
 
   // Tab: "upload" | "inventory"
   const [activeTab, setActiveTab] = useState<"upload" | "inventory">("upload");
 
   useEffect(() => {
     fetchStats();
+    fetchFilters();
   }, []);
+
+  useEffect(() => {
+    fetchStats();
+  }, [filterZone, filterDistrict, filterDI]);
 
   useEffect(() => {
     if (activeTab === "inventory") {
       fetchAssets();
     }
-  }, [activeTab, currentPage, searchQuery]);
+  }, [activeTab, currentPage, searchQuery, filterZone, filterDistrict, filterDI]);
+
+  const fetchFilters = async () => {
+    try {
+      const res = await api.get("/reports/assets-filters");
+      if (res.data.success) {
+        setZones(res.data.zones || []);
+        setDistricts(res.data.districts || []);
+        setDINames(res.data.di_names || []);
+      }
+    } catch (_) {}
+  };
 
   const fetchStats = async () => {
     try {
-      const res = await api.get("/reports/assets-stats");
+      const params: any = {};
+      if (filterZone) params.zone = filterZone;
+      if (filterDistrict) params.district = filterDistrict;
+      if (filterDI) params.di = filterDI;
+      const res = await api.get("/reports/assets-stats", { params });
       if (res.data.success) {
         setStats(res.data);
       }
@@ -98,6 +137,9 @@ export default function AssetUploadPage() {
     try {
       const params: any = { page: currentPage, page_size: pageSize };
       if (searchQuery.trim()) params.search = searchQuery.trim();
+      if (filterZone) params.zone = filterZone;
+      if (filterDistrict) params.district = filterDistrict;
+      if (filterDI) params.di = filterDI;
       const res = await api.get("/reports/assets-inventory", { params });
       if (res.data.success) {
         setAssets(res.data.assets);
@@ -110,16 +152,24 @@ export default function AssetUploadPage() {
     }
   };
 
-  // ====== CSV Parser ======
-  const parseCSV = (text: string): AssetRow[] => {
+  // ====== CSV Parser (client-side preview only) ======
+  const parseCSVPreview = (text: string): AssetRow[] => {
     const lines = text.split(/\r?\n/).filter(l => l.trim());
     if (lines.length < 2) return [];
 
-    // Parse header line to figure out column order (tab or comma separated)
     const delimiter = lines[0].includes("\t") ? "\t" : ",";
     const headerLine = lines[0].split(delimiter).map(h => h.trim().replace(/^"|"$/g, ""));
 
-    // Map CSV header names to API keys
+    const API_KEYS = [
+      "district_name", "hospital_name", "department_name", "group_name",
+      "equipment_name", "model_name", "serial_no", "equipment_category",
+      "qr_code", "stock_register_page_no", "received_date", "installation_date",
+      "inventory_entry_date", "moic_verified_date", "po_date", "po_cost",
+      "inventory_status", "equipment_status", "supplier", "warranty_details",
+      "asset_value", "di_name", "dm_name", "coordinator_name", "zone_name",
+      "hospital_type", "facility_type", "equipment_type"
+    ];
+
     const colIndexMap: { csvIndex: number; apiKey: string }[] = [];
     headerLine.forEach((header, csvIdx) => {
       const normalizedHeader = header.toLowerCase().replace(/[.\s]+/g, " ").trim();
@@ -141,7 +191,6 @@ export default function AssetUploadPage() {
         row[apiKey] = parts[csvIndex] || "";
       });
 
-      // Skip if QR code is '--' or whitespace/empty
       const qr = (row.qr_code || "").trim();
       if (!qr || qr === "--") {
         skipped++;
@@ -170,7 +219,6 @@ export default function AssetUploadPage() {
     e.preventDefault();
     e.stopPropagation();
     setIsDragActive(false);
-
     if (e.dataTransfer.files && e.dataTransfer.files[0]) {
       processFile(e.dataTransfer.files[0]);
     }
@@ -185,76 +233,65 @@ export default function AssetUploadPage() {
   const processFile = (file: File) => {
     const ext = file.name.split(".").pop()?.toLowerCase();
     if (ext !== "csv") {
-      toast.error("Only CSV files are supported. Please export your spreadsheet as CSV first.");
+      toast.error("Only CSV files are supported.");
       return;
     }
     setSelectedFile(file);
     setUploadResult(null);
 
-    // Read and parse CSV
     const reader = new FileReader();
     reader.onload = (e) => {
       const text = e.target?.result as string;
-      const rows = parseCSV(text);
+      const rows = parseCSVPreview(text);
       setParsedRows(rows);
       if (rows.length > 0) {
-        toast.success(`Parsed ${rows.length} valid assets from CSV${skippedCount > 0 ? ` (${skippedCount} skipped - invalid QR)` : ""}`);
+        toast.success(`Parsed ${rows.length} valid assets from CSV`);
       } else {
-        toast.error("No valid rows found in the CSV file. Check the column headers and QR Code values.");
+        toast.error("No valid rows found. Check column headers and QR Code values.");
       }
     };
     reader.readAsText(file);
   };
 
-  // ====== Upload to Server ======
+  // ====== INSTANT Upload — send raw CSV file to backend ======
   const handleUpload = async () => {
-    if (parsedRows.length === 0) {
-      toast.error("No valid rows to upload.");
+    if (!selectedFile) {
+      toast.error("No file selected.");
       return;
     }
 
     setUploading(true);
-    setUploadProgress(0);
     setUploadResult(null);
 
-    const CHUNK_SIZE = 100;
-    let totalInserted = 0;
-    let totalSkipped = 0;
-    const totalChunks = Math.ceil(parsedRows.length / CHUNK_SIZE);
-
     try {
-      for (let i = 0; i < parsedRows.length; i += CHUNK_SIZE) {
-        const chunk = parsedRows.slice(i, i + CHUNK_SIZE);
-        const isFirst = i === 0;
-        const chunkNum = Math.floor(i / CHUNK_SIZE) + 1;
+      const formData = new FormData();
+      formData.append("file", selectedFile);
 
-        const res = await api.post("/reports/upload-assets-chunk", {
-          rows: chunk,
-          clear_first: isFirst
+      const res = await api.post("/reports/upload-assets-csv", formData, {
+        headers: { "Content-Type": "multipart/form-data" }
+      });
+
+      if (res.data.success) {
+        setUploadResult({
+          inserted: res.data.inserted,
+          skipped: res.data.skipped,
+          elapsed_ms: res.data.elapsed_ms || 0
         });
-
-        if (res.data.success) {
-          totalInserted += res.data.inserted;
-          totalSkipped += res.data.skipped;
-        } else {
-          throw new Error(res.data.message || "Chunk upload failed");
-        }
-
-        setUploadProgress(Math.round((chunkNum / totalChunks) * 100));
+        toast.success(`${res.data.inserted} assets imported in ${res.data.elapsed_ms}ms!`);
+        setSelectedFile(null);
+        setParsedRows([]);
+        setSkippedCount(0);
+        fetchStats();
+        fetchFilters();
+        if (activeTab === "inventory") fetchAssets();
+      } else {
+        throw new Error(res.data.message || "Upload failed");
       }
-
-      setUploadResult({ inserted: totalInserted, skipped: totalSkipped + skippedCount });
-      toast.success(`Upload complete! ${totalInserted} assets imported.`);
-      setSelectedFile(null);
-      setParsedRows([]);
-      fetchStats();
-      if (activeTab === "inventory") fetchAssets();
     } catch (err: any) {
       console.error(err);
       toast.error(err.response?.data?.message || err.message || "Upload failed.");
     } finally {
       setUploading(false);
-      setUploadProgress(0);
     }
   };
 
@@ -266,9 +303,9 @@ export default function AssetUploadPage() {
       "Cardio Vascular Surgery Equipment and Instrument", "Oxygen Concentrator",
       "Model Not Available", "Ma21041060075", "Biomedical",
       "(8004890615671) 40083265", "117", "17-May-2021", "21-May-2021",
-      "26-Feb-2022", "--", "--", "1", "New Inventory", "Functional Installed",
+      "26-Feb-2022", "15-Jun-2026", "--", "1", "New Inventory", "Functional Installed",
       "Others", "17-May-2021 to 17-May-2022", "36000", "Abhilash A",
-      "Vinod Jain", "Sunil Vishnoi", "Bikaner", "PHC", "Others"
+      "Vinod Jain", "Sunil Vishnoi", "Bikaner", "PHC", "Others", "Biomedical"
     ].join(",");
 
     const csvContent = `${header}\n${sampleRow}`;
@@ -282,10 +319,18 @@ export default function AssetUploadPage() {
     toast.success("Sample CSV downloaded!");
   };
 
+  const clearFilters = () => {
+    setFilterZone("");
+    setFilterDistrict("");
+    setFilterDI("");
+    setCurrentPage(1);
+  };
+
   const totalPages = Math.ceil(totalAssets / pageSize);
+  const hasFilters = filterZone || filterDistrict || filterDI;
 
   return (
-    <div className="space-y-5 animate-fadeIn text-gray-800 font-sans">
+    <div className="space-y-4 animate-fadeIn text-gray-800 font-sans">
 
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
@@ -295,7 +340,7 @@ export default function AssetUploadPage() {
             Asset Inventory Manager
           </h2>
           <p className="text-gray-500 text-xs mt-0.5">
-            Import equipment assets via CSV and manage the complete inventory database.
+            Import equipment assets via CSV and manage inventory with billing analytics.
           </p>
         </div>
         <button
@@ -307,22 +352,64 @@ export default function AssetUploadPage() {
         </button>
       </div>
 
-      {/* Stats Row */}
-      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+      {/* ===== Filters Row ===== */}
+      <div className="bg-white border border-gray-200 rounded-lg p-3 shadow-sm">
+        <div className="flex flex-wrap items-center gap-2.5">
+          <span className="text-[9px] font-bold text-gray-400 uppercase tracking-wider flex items-center gap-1">
+            <Filter className="w-3 h-3" /> Filters
+          </span>
+          <select value={filterZone} onChange={e => { setFilterZone(e.target.value); setCurrentPage(1); }}
+            className="text-[11px] font-semibold border border-gray-200 rounded px-2.5 py-1.5 bg-white focus:outline-none focus:border-indigo-400 min-w-[120px]">
+            <option value="">All Zones</option>
+            {zones.map(z => <option key={z} value={z}>{z}</option>)}
+          </select>
+          <select value={filterDistrict} onChange={e => { setFilterDistrict(e.target.value); setCurrentPage(1); }}
+            className="text-[11px] font-semibold border border-gray-200 rounded px-2.5 py-1.5 bg-white focus:outline-none focus:border-indigo-400 min-w-[120px]">
+            <option value="">All Districts</option>
+            {districts.map(d => <option key={d} value={d}>{d}</option>)}
+          </select>
+          <select value={filterDI} onChange={e => { setFilterDI(e.target.value); setCurrentPage(1); }}
+            className="text-[11px] font-semibold border border-gray-200 rounded px-2.5 py-1.5 bg-white focus:outline-none focus:border-indigo-400 min-w-[120px]">
+            <option value="">All DI Names</option>
+            {diNames.map(d => <option key={d} value={d}>{d}</option>)}
+          </select>
+          {hasFilters && (
+            <button onClick={clearFilters}
+              className="text-[10px] font-bold text-red-500 hover:text-red-700 flex items-center gap-0.5 cursor-pointer bg-transparent border-0">
+              <X className="w-3 h-3" /> Clear
+            </button>
+          )}
+        </div>
+      </div>
+
+      {/* ===== Stats Dashboard ===== */}
+      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-2.5">
         {[
-          { label: "Total Assets", value: stats.total_assets, icon: <Package className="w-4 h-4" />, color: "text-indigo-600 bg-indigo-50 border-indigo-100" },
-          { label: "Districts", value: stats.total_districts, icon: <MapPin className="w-4 h-4" />, color: "text-emerald-600 bg-emerald-50 border-emerald-100" },
-          { label: "Hospitals", value: stats.total_hospitals, icon: <Building2 className="w-4 h-4" />, color: "text-blue-600 bg-blue-50 border-blue-100" },
-          { label: "Functional", value: stats.functional_assets, icon: <Wrench className="w-4 h-4" />, color: "text-amber-600 bg-amber-50 border-amber-100" },
-        ].map((stat, idx) => (
-          <div key={idx} className={`border rounded-lg p-3 flex items-center gap-3 ${stat.color}`}>
-            <div className={`w-9 h-9 rounded-lg flex items-center justify-center ${stat.color}`}>
-              {stat.icon}
-            </div>
-            <div>
-              <p className="text-[9px] uppercase tracking-wider font-bold opacity-70">{stat.label}</p>
-              <p className="text-lg font-black tabular-nums">{stat.value.toLocaleString()}</p>
-            </div>
+          { label: "Total Equipment", value: stats.total_equipment.toLocaleString(), icon: <Package className="w-4 h-4" />, bg: "bg-indigo-50 border-indigo-100 text-indigo-700" },
+          { label: "Verified Equipment", value: stats.verified_equipment.toLocaleString(), icon: <ShieldCheck className="w-4 h-4" />, bg: "bg-emerald-50 border-emerald-100 text-emerald-700" },
+          { label: "Under Warranty", value: stats.under_warranty.toLocaleString(), icon: <ShieldCheck className="w-4 h-4" />, bg: "bg-sky-50 border-sky-100 text-sky-700" },
+          { label: "Out of Warranty", value: stats.out_of_warranty.toLocaleString(), icon: <ShieldOff className="w-4 h-4" />, bg: "bg-amber-50 border-amber-100 text-amber-700" },
+          { label: "Total Equipment Value", value: fmtRs(stats.total_value), icon: <IndianRupee className="w-4 h-4" />, bg: "bg-purple-50 border-purple-100 text-purple-700" },
+        ].map((s, i) => (
+          <div key={i} className={`border rounded-lg p-2.5 ${s.bg}`}>
+            <div className="flex items-center gap-1.5 mb-1 opacity-70">{s.icon}<span className="text-[8px] uppercase tracking-wider font-bold">{s.label}</span></div>
+            <p className="text-base font-black tabular-nums">{s.value}</p>
+          </div>
+        ))}
+      </div>
+
+      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-2.5">
+        {[
+          { label: "Verified Equipment Value", value: fmtRs(stats.verified_value), icon: <CheckCircle className="w-4 h-4" />, bg: "bg-emerald-50 border-emerald-100 text-emerald-700" },
+          { label: "Verified Out-of-Warranty Value", value: fmtRs(stats.verified_out_of_warranty_value), icon: <ShieldOff className="w-4 h-4" />, bg: "bg-orange-50 border-orange-100 text-orange-700" },
+          { label: "Monthly Billing", value: fmtRs(stats.monthly_value), sub: "(Value × 6.08% ÷ 12)", icon: <CalendarCheck className="w-4 h-4" />, bg: "bg-blue-50 border-blue-100 text-blue-700" },
+          { label: "Arrear Billing", value: fmtRs(stats.arrear_billing), sub: "This month verified", icon: <Receipt className="w-4 h-4" />, bg: "bg-rose-50 border-rose-100 text-rose-700" },
+          { label: "Total Billing Value", value: fmtRs(stats.total_billing), icon: <IndianRupee className="w-4 h-4" />, bg: "bg-violet-50 border-violet-100 text-violet-700" },
+        ].map((s, i) => (
+          <div key={i} className={`border rounded-lg p-2.5 ${s.bg}`}>
+            <div className="flex items-center gap-1.5 mb-1 opacity-70">{s.icon}<span className="text-[8px] uppercase tracking-wider font-bold">{s.label}</span></div>
+            <p className="text-base font-black tabular-nums">{s.value}</p>
+            {"sub" in s && s.sub && <p className="text-[8px] opacity-60 font-semibold mt-0.5">{s.sub}</p>}
           </div>
         ))}
       </div>
@@ -351,12 +438,11 @@ export default function AssetUploadPage() {
       {/* ====== Upload Tab ====== */}
       {activeTab === "upload" && (
         <div className="grid grid-cols-1 lg:grid-cols-5 gap-5">
-
           {/* Left: Upload Form */}
           <div className="lg:col-span-2 bg-white border border-gray-200 rounded-lg shadow-sm p-5 space-y-4">
             <h3 className="text-xs font-bold uppercase tracking-wider text-gray-400 flex items-center gap-1.5">
-              <UploadCloud className="w-3.5 h-3.5" />
-              Import CSV File
+              <Zap className="w-3.5 h-3.5" />
+              Instant CSV Import
             </h3>
 
             {/* Drag Zone */}
@@ -367,21 +453,12 @@ export default function AssetUploadPage() {
               onDrop={handleDrop}
               onClick={() => fileInputRef.current?.click()}
               className={`border-2 border-dashed rounded-lg p-8 text-center cursor-pointer transition-all flex flex-col items-center justify-center gap-2.5 ${
-                isDragActive
-                  ? "border-indigo-500 bg-indigo-50/50"
-                  : selectedFile
-                  ? "border-green-500 bg-green-50/20"
+                isDragActive ? "border-indigo-500 bg-indigo-50/50"
+                  : selectedFile ? "border-green-500 bg-green-50/20"
                   : "border-gray-300 hover:bg-gray-50 hover:border-gray-400"
               }`}
             >
-              <input
-                type="file"
-                ref={fileInputRef}
-                onChange={handleFileChange}
-                accept=".csv"
-                className="hidden"
-              />
-
+              <input type="file" ref={fileInputRef} onChange={handleFileChange} accept=".csv" className="hidden" />
               {selectedFile ? (
                 <>
                   <FileSpreadsheet className="w-12 h-12 text-green-600" />
@@ -395,7 +472,7 @@ export default function AssetUploadPage() {
                     </span>
                   )}
                   <span className="text-[8px] bg-green-100 text-green-700 px-2 py-0.5 rounded uppercase font-black tracking-wider">
-                    Ready for import
+                    Ready for instant import
                   </span>
                 </>
               ) : (
@@ -404,27 +481,11 @@ export default function AssetUploadPage() {
                   <p className="text-xs font-bold text-gray-700">Drag & drop CSV file here</p>
                   <p className="text-[10px] text-gray-450">or click to browse local files</p>
                   <span className="text-[8px] bg-gray-100 text-gray-600 px-2 py-0.5 rounded uppercase font-bold tracking-wider">
-                    Supports CSV only
+                    Instant server-side processing • No chunking
                   </span>
                 </>
               )}
             </div>
-
-            {/* Upload Progress */}
-            {uploading && (
-              <div className="space-y-1.5">
-                <div className="flex items-center justify-between text-[10px] font-bold text-gray-500 uppercase tracking-wider">
-                  <span>Uploading chunks...</span>
-                  <span className="font-mono">{uploadProgress}%</span>
-                </div>
-                <div className="w-full h-2 bg-gray-100 rounded-full overflow-hidden">
-                  <div
-                    className="h-full bg-gradient-to-r from-indigo-500 to-purple-500 rounded-full transition-all duration-300"
-                    style={{ width: `${uploadProgress}%` }}
-                  />
-                </div>
-              </div>
-            )}
 
             {/* Upload Result */}
             {uploadResult && (
@@ -433,7 +494,7 @@ export default function AssetUploadPage() {
                 <div>
                   <p className="font-bold">Upload Successful</p>
                   <p className="text-[10px] mt-0.5">
-                    {uploadResult.inserted} assets imported • {uploadResult.skipped} skipped (invalid/duplicate QR)
+                    {uploadResult.inserted} assets imported • {uploadResult.skipped} skipped • {uploadResult.elapsed_ms}ms
                   </p>
                 </div>
               </div>
@@ -443,28 +504,20 @@ export default function AssetUploadPage() {
             <div className="flex gap-2">
               <button
                 onClick={handleUpload}
-                disabled={uploading || parsedRows.length === 0}
+                disabled={uploading || !selectedFile}
                 className="flex-1 h-10 bg-indigo-600 hover:bg-indigo-700 disabled:bg-gray-200 disabled:text-gray-400 text-white rounded-lg font-extrabold text-xs flex items-center justify-center shadow-sm border-0 transition-colors cursor-pointer uppercase tracking-wider gap-1.5"
               >
                 {uploading ? (
-                  <>
-                    <Loader2 className="w-3.5 h-3.5 animate-spin" />
-                    Uploading...
-                  </>
+                  <><Loader2 className="w-3.5 h-3.5 animate-spin" /> Processing...</>
                 ) : (
-                  <>
-                    <UploadCloud className="w-3.5 h-3.5" />
-                    Upload {parsedRows.length > 0 ? `${parsedRows.length} Assets` : "Assets"}
-                  </>
+                  <><Zap className="w-3.5 h-3.5" /> Instant Upload {parsedRows.length > 0 ? `(${parsedRows.length})` : ""}</>
                 )}
               </button>
               {selectedFile && !uploading && (
                 <button
                   onClick={() => { setSelectedFile(null); setParsedRows([]); setSkippedCount(0); setUploadResult(null); }}
                   className="h-10 px-3 border border-gray-200 rounded-lg text-gray-500 hover:bg-gray-50 bg-white text-xs font-bold cursor-pointer transition-colors"
-                >
-                  <X className="w-4 h-4" />
-                </button>
+                ><X className="w-4 h-4" /></button>
               )}
             </div>
 
@@ -475,7 +528,8 @@ export default function AssetUploadPage() {
                 <li>Rows with QR Code = "<span className="font-mono font-bold">--</span>" are automatically skipped</li>
                 <li>Rows with empty or whitespace-only QR Code are skipped</li>
                 <li>Duplicate QR codes are overwritten (latest wins)</li>
-                <li>Previous data is replaced on each new upload</li>
+                <li>CSV file is processed server-side in one shot — no chunking</li>
+                <li>Previous data is fully replaced on each import</li>
               </ul>
             </div>
           </div>
@@ -503,38 +557,36 @@ export default function AssetUploadPage() {
               </div>
             ) : (
               <div className="overflow-x-auto max-h-[420px] overflow-y-auto">
-                <table className="w-full text-left text-[10px] border-collapse min-w-[800px]">
+                <table className="w-full text-left text-[10px] border-collapse min-w-[900px]">
                   <thead>
                     <tr className="bg-gray-50 text-gray-500 font-bold uppercase border-b border-gray-200 text-[9px] tracking-wider sticky top-0 z-10">
-                      <th className="py-2 px-2.5">#</th>
-                      <th className="py-2 px-2.5">District</th>
-                      <th className="py-2 px-2.5">Hospital</th>
-                      <th className="py-2 px-2.5">Equipment</th>
-                      <th className="py-2 px-2.5">QR Code</th>
-                      <th className="py-2 px-2.5">Serial No</th>
-                      <th className="py-2 px-2.5">Status</th>
-                      <th className="py-2 px-2.5">Value</th>
+                      <th className="py-2 px-2">#</th>
+                      <th className="py-2 px-2">District</th>
+                      <th className="py-2 px-2">Hospital</th>
+                      <th className="py-2 px-2">Equipment</th>
+                      <th className="py-2 px-2">Type</th>
+                      <th className="py-2 px-2">QR Code</th>
+                      <th className="py-2 px-2">Serial No</th>
+                      <th className="py-2 px-2">Status</th>
+                      <th className="py-2 px-2">Value</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-gray-100 font-medium">
                     {parsedRows.slice(0, 200).map((row, idx) => (
                       <tr key={idx} className="hover:bg-gray-50/50 transition-colors">
-                        <td className="py-1.5 px-2.5 text-gray-400 font-mono">{idx + 1}</td>
-                        <td className="py-1.5 px-2.5 text-gray-700 truncate max-w-[120px]" title={row.district_name}>{row.district_name}</td>
-                        <td className="py-1.5 px-2.5 text-gray-700 truncate max-w-[150px]" title={row.hospital_name}>{row.hospital_name}</td>
-                        <td className="py-1.5 px-2.5 text-gray-800 font-semibold truncate max-w-[150px]" title={row.equipment_name}>{row.equipment_name}</td>
-                        <td className="py-1.5 px-2.5 font-mono text-indigo-600 font-bold truncate max-w-[140px]" title={row.qr_code}>{row.qr_code}</td>
-                        <td className="py-1.5 px-2.5 text-gray-600 font-mono">{row.serial_no}</td>
-                        <td className="py-1.5 px-2.5">
+                        <td className="py-1.5 px-2 text-gray-400 font-mono">{idx + 1}</td>
+                        <td className="py-1.5 px-2 text-gray-700 truncate max-w-[100px]" title={row.district_name}>{row.district_name}</td>
+                        <td className="py-1.5 px-2 text-gray-700 truncate max-w-[130px]" title={row.hospital_name}>{row.hospital_name}</td>
+                        <td className="py-1.5 px-2 text-gray-800 font-semibold truncate max-w-[130px]" title={row.equipment_name}>{row.equipment_name}</td>
+                        <td className="py-1.5 px-2 text-gray-600 truncate max-w-[90px]" title={row.equipment_type}>{row.equipment_type || "-"}</td>
+                        <td className="py-1.5 px-2 font-mono text-indigo-600 font-bold truncate max-w-[130px]" title={row.qr_code}>{row.qr_code}</td>
+                        <td className="py-1.5 px-2 text-gray-600 font-mono">{row.serial_no}</td>
+                        <td className="py-1.5 px-2">
                           <span className={`inline-block px-1.5 py-0.5 rounded text-[8px] font-bold uppercase border ${
-                            (row.equipment_status || "").toLowerCase().includes("functional")
-                              ? "bg-green-50 border-green-200 text-green-700"
-                              : "bg-gray-100 border-gray-200 text-gray-600"
-                          }`}>
-                            {row.equipment_status || "N/A"}
-                          </span>
+                            (row.equipment_status || "").toLowerCase().includes("functional") ? "bg-green-50 border-green-200 text-green-700" : "bg-gray-100 border-gray-200 text-gray-600"
+                          }`}>{row.equipment_status || "N/A"}</span>
                         </td>
-                        <td className="py-1.5 px-2.5 text-gray-700 font-mono">₹{row.asset_value || "0"}</td>
+                        <td className="py-1.5 px-2 text-gray-700 font-mono">₹{row.asset_value || "0"}</td>
                       </tr>
                     ))}
                   </tbody>
@@ -553,7 +605,6 @@ export default function AssetUploadPage() {
       {/* ====== Inventory Tab ====== */}
       {activeTab === "inventory" && (
         <div className="bg-white border border-gray-200 rounded-lg shadow-sm overflow-hidden">
-
           {/* Search Bar */}
           <div className="p-4 border-b border-gray-200 bg-gray-50 flex flex-col sm:flex-row gap-3 items-center justify-between">
             <div className="relative flex-1 max-w-md w-full">
@@ -585,48 +636,46 @@ export default function AssetUploadPage() {
             </div>
           ) : (
             <div className="overflow-x-auto">
-              <table className="w-full text-left text-[10px] border-collapse min-w-[1200px]">
+              <table className="w-full text-left text-[10px] border-collapse min-w-[1400px]">
                 <thead>
                   <tr className="bg-gray-50 text-gray-500 font-bold uppercase border-b border-gray-200 text-[9px] tracking-wider sticky top-0 z-10">
-                    <th className="py-2.5 px-2.5">#</th>
-                    <th className="py-2.5 px-2.5">District</th>
-                    <th className="py-2.5 px-2.5">Hospital</th>
-                    <th className="py-2.5 px-2.5">Department</th>
-                    <th className="py-2.5 px-2.5">Equipment</th>
-                    <th className="py-2.5 px-2.5">Model</th>
-                    <th className="py-2.5 px-2.5">Serial No</th>
-                    <th className="py-2.5 px-2.5">QR Code</th>
-                    <th className="py-2.5 px-2.5">Category</th>
-                    <th className="py-2.5 px-2.5">Status</th>
-                    <th className="py-2.5 px-2.5">Value</th>
-                    <th className="py-2.5 px-2.5">DI Name</th>
-                    <th className="py-2.5 px-2.5">Zone</th>
+                    <th className="py-2.5 px-2">#</th>
+                    <th className="py-2.5 px-2">District</th>
+                    <th className="py-2.5 px-2">Hospital</th>
+                    <th className="py-2.5 px-2">Department</th>
+                    <th className="py-2.5 px-2">Equipment</th>
+                    <th className="py-2.5 px-2">Type</th>
+                    <th className="py-2.5 px-2">Model</th>
+                    <th className="py-2.5 px-2">Serial No</th>
+                    <th className="py-2.5 px-2">QR Code</th>
+                    <th className="py-2.5 px-2">Category</th>
+                    <th className="py-2.5 px-2">Status</th>
+                    <th className="py-2.5 px-2">Value</th>
+                    <th className="py-2.5 px-2">DI Name</th>
+                    <th className="py-2.5 px-2">Zone</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-gray-100 font-medium">
                   {assets.map((a, idx) => (
                     <tr key={a.id || idx} className="hover:bg-gray-50/50 transition-colors">
-                      <td className="py-2 px-2.5 text-gray-400 font-mono">{(currentPage - 1) * pageSize + idx + 1}</td>
-                      <td className="py-2 px-2.5 text-gray-700 truncate max-w-[100px]" title={a.district_name}>{a.district_name}</td>
-                      <td className="py-2 px-2.5 text-gray-700 truncate max-w-[140px]" title={a.hospital_name}>{a.hospital_name}</td>
-                      <td className="py-2 px-2.5 text-gray-600 truncate max-w-[120px]" title={a.department_name}>{a.department_name}</td>
-                      <td className="py-2 px-2.5 text-gray-800 font-semibold truncate max-w-[140px]" title={a.equipment_name}>{a.equipment_name}</td>
-                      <td className="py-2 px-2.5 text-gray-600 truncate max-w-[100px]" title={a.model_name}>{a.model_name}</td>
-                      <td className="py-2 px-2.5 font-mono text-gray-600">{a.serial_no}</td>
-                      <td className="py-2 px-2.5 font-mono text-indigo-600 font-bold truncate max-w-[140px]" title={a.qr_code}>{a.qr_code}</td>
-                      <td className="py-2 px-2.5 text-gray-600">{a.equipment_category}</td>
-                      <td className="py-2 px-2.5">
+                      <td className="py-2 px-2 text-gray-400 font-mono">{(currentPage - 1) * pageSize + idx + 1}</td>
+                      <td className="py-2 px-2 text-gray-700 truncate max-w-[90px]" title={a.district_name}>{a.district_name}</td>
+                      <td className="py-2 px-2 text-gray-700 truncate max-w-[120px]" title={a.hospital_name}>{a.hospital_name}</td>
+                      <td className="py-2 px-2 text-gray-600 truncate max-w-[100px]" title={a.department_name}>{a.department_name}</td>
+                      <td className="py-2 px-2 text-gray-800 font-semibold truncate max-w-[120px]" title={a.equipment_name}>{a.equipment_name}</td>
+                      <td className="py-2 px-2 text-gray-600 truncate max-w-[80px]" title={a.equipment_type}>{a.equipment_type || "-"}</td>
+                      <td className="py-2 px-2 text-gray-600 truncate max-w-[90px]" title={a.model_name}>{a.model_name}</td>
+                      <td className="py-2 px-2 font-mono text-gray-600">{a.serial_no}</td>
+                      <td className="py-2 px-2 font-mono text-indigo-600 font-bold truncate max-w-[120px]" title={a.qr_code}>{a.qr_code}</td>
+                      <td className="py-2 px-2 text-gray-600">{a.equipment_category}</td>
+                      <td className="py-2 px-2">
                         <span className={`inline-block px-1.5 py-0.5 rounded text-[8px] font-bold uppercase border ${
-                          (a.equipment_status || "").toLowerCase().includes("functional")
-                            ? "bg-green-50 border-green-200 text-green-700"
-                            : "bg-gray-100 border-gray-200 text-gray-600"
-                        }`}>
-                          {a.equipment_status || "N/A"}
-                        </span>
+                          (a.equipment_status || "").toLowerCase().includes("functional") ? "bg-green-50 border-green-200 text-green-700" : "bg-gray-100 border-gray-200 text-gray-600"
+                        }`}>{a.equipment_status || "N/A"}</span>
                       </td>
-                      <td className="py-2 px-2.5 text-gray-700 font-mono">₹{a.asset_value || "0"}</td>
-                      <td className="py-2 px-2.5 text-gray-600 truncate max-w-[100px]">{a.di_name}</td>
-                      <td className="py-2 px-2.5 text-gray-600">{a.zone_name}</td>
+                      <td className="py-2 px-2 text-gray-700 font-mono">₹{a.asset_value || "0"}</td>
+                      <td className="py-2 px-2 text-gray-600 truncate max-w-[90px]">{a.di_name}</td>
+                      <td className="py-2 px-2 text-gray-600">{a.zone_name}</td>
                     </tr>
                   ))}
                 </tbody>
@@ -637,24 +686,16 @@ export default function AssetUploadPage() {
           {/* Pagination */}
           {totalPages > 1 && (
             <div className="p-3 border-t border-gray-200 bg-gray-50 flex items-center justify-between">
-              <button
-                onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
-                disabled={currentPage <= 1}
-                className="px-3 py-1.5 text-xs font-bold border border-gray-200 rounded bg-white hover:bg-gray-50 cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed flex items-center gap-1 transition-colors"
-              >
-                <ChevronLeft className="w-3 h-3" />
-                Prev
+              <button onClick={() => setCurrentPage(p => Math.max(1, p - 1))} disabled={currentPage <= 1}
+                className="px-3 py-1.5 text-xs font-bold border border-gray-200 rounded bg-white hover:bg-gray-50 cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed flex items-center gap-1 transition-colors">
+                <ChevronLeft className="w-3 h-3" /> Prev
               </button>
               <span className="text-[10px] font-bold text-gray-500 uppercase tracking-wider">
                 Page {currentPage} of {totalPages}
               </span>
-              <button
-                onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
-                disabled={currentPage >= totalPages}
-                className="px-3 py-1.5 text-xs font-bold border border-gray-200 rounded bg-white hover:bg-gray-50 cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed flex items-center gap-1 transition-colors"
-              >
-                Next
-                <ChevronRight className="w-3 h-3" />
+              <button onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))} disabled={currentPage >= totalPages}
+                className="px-3 py-1.5 text-xs font-bold border border-gray-200 rounded bg-white hover:bg-gray-50 cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed flex items-center gap-1 transition-colors">
+                Next <ChevronRight className="w-3 h-3" />
               </button>
             </div>
           )}

@@ -924,6 +924,10 @@ async def create_indexes(db: Session = Depends(get_db)):
 
 # ======================== Asset Inventory Upload ========================
 
+import csv as csv_module
+import io as io_module
+from datetime import datetime as dt_datetime
+
 ASSETS_INVENTORY_TABLE = "assets_inventory"
 
 ASSETS_INVENTORY_CREATE_SQL = f"""CREATE TABLE IF NOT EXISTS {ASSETS_INVENTORY_TABLE} (
@@ -955,6 +959,7 @@ ASSETS_INVENTORY_CREATE_SQL = f"""CREATE TABLE IF NOT EXISTS {ASSETS_INVENTORY_T
     zone_name VARCHAR(200),
     hospital_type VARCHAR(100),
     facility_type VARCHAR(100),
+    equipment_type VARCHAR(200),
     uploaded_at TEXT DEFAULT CURRENT_TIMESTAMP
 )"""
 
@@ -965,56 +970,176 @@ ASSETS_INVENTORY_COLUMNS = [
     "inventory_entry_date", "moic_verified_date", "po_date", "po_cost",
     "inventory_status", "equipment_status", "supplier", "warranty_details",
     "asset_value", "di_name", "dm_name", "coordinator_name", "zone_name",
-    "hospital_type", "facility_type"
+    "hospital_type", "facility_type", "equipment_type"
 ]
 
+# Map CSV header names (lowercase, normalized) to API column keys
+CSV_HEADER_MAP = {
+    "district name": "district_name",
+    "hospital name": "hospital_name",
+    "department name": "department_name",
+    "group name": "group_name",
+    "equipment name": "equipment_name",
+    "model name": "model_name",
+    "serial no": "serial_no",
+    "serial no.": "serial_no",
+    "equipment category": "equipment_category",
+    "qr code": "qr_code",
+    "stock register page no": "stock_register_page_no",
+    "stock register page no.": "stock_register_page_no",
+    "recieved date": "received_date",
+    "received date": "received_date",
+    "installation date": "installation_date",
+    "inventory entry date": "inventory_entry_date",
+    "moic verified date": "moic_verified_date",
+    "po date": "po_date",
+    "po cost": "po_cost",
+    "inventory status": "inventory_status",
+    "equipment status": "equipment_status",
+    "supplier": "supplier",
+    "warranty details": "warranty_details",
+    "asset value": "asset_value",
+    "di name": "di_name",
+    "dm name": "dm_name",
+    "coordinator name": "coordinator_name",
+    "zone name": "zone_name",
+    "hospital type": "hospital_type",
+    "facility type": "facility_type",
+    "equipment type": "equipment_type",
+}
 
-@router.post("/upload-assets-chunk")
-async def upload_assets_chunk(
-    payload: dict,
+
+def _parse_date_flexible(date_str: str):
+    """Try parsing various date formats and return a datetime object or None."""
+    if not date_str or date_str.strip() in ("--", "", "NA", "N/A"):
+        return None
+    date_str = date_str.strip()
+    formats = [
+        "%d-%b-%Y",    # 17-May-2021
+        "%d-%B-%Y",    # 17-May-2021
+        "%Y-%m-%d",    # 2021-05-17
+        "%d/%m/%Y",    # 17/05/2021
+        "%m/%d/%Y",    # 05/17/2021
+        "%d-%m-%Y",    # 17-05-2021
+    ]
+    for fmt in formats:
+        try:
+            return dt_datetime.strptime(date_str, fmt)
+        except ValueError:
+            continue
+    return None
+
+
+def _is_warranty_expired(warranty_details: str) -> bool:
+    """Check if warranty has expired based on 'start to end' format."""
+    if not warranty_details or warranty_details.strip() in ("--", "", "NA", "N/A"):
+        return True  # No warranty info = out of warranty
+    parts = warranty_details.split(" to ")
+    if len(parts) < 2:
+        return True
+    end_date = _parse_date_flexible(parts[-1].strip())
+    if not end_date:
+        return True
+    return dt_datetime.now() > end_date
+
+
+@router.post("/upload-assets-csv")
+async def upload_assets_csv(
+    file: UploadFile = File(...),
     db: Session = Depends(get_db)
 ):
     """
-    Accepts a JSON payload with pre-parsed asset inventory rows for chunked insertion.
-    Payload: {"rows": [...list of row dicts...], "clear_first": true/false}
-    Rows with qr_code == '--' or empty/whitespace-only qr_code are auto-skipped.
+    Accepts a raw CSV file upload, parses it server-side instantly, and bulk-inserts
+    all valid rows into the database in one shot. Rows with qr_code == '--' or
+    empty/whitespace-only qr_code are auto-skipped. Replaces all existing data.
     """
+    import time
+    start_time = time.perf_counter()
     try:
-        rows = payload.get("rows", [])
-        clear_first = payload.get("clear_first", False)
+        # Read entire file content at once
+        contents = await file.read()
+        text_content = contents.decode("utf-8-sig")  # Handle BOM
 
-        if clear_first:
-            db.execute(text(f"DROP TABLE IF EXISTS {ASSETS_INVENTORY_TABLE}"))
-            db.execute(text(ASSETS_INVENTORY_CREATE_SQL))
-            db.execute(text(f"CREATE INDEX IF NOT EXISTS idx_assets_inv_district ON {ASSETS_INVENTORY_TABLE}(district_name)"))
-            db.execute(text(f"CREATE INDEX IF NOT EXISTS idx_assets_inv_qr ON {ASSETS_INVENTORY_TABLE}(qr_code)"))
-            db.execute(text(f"CREATE INDEX IF NOT EXISTS idx_assets_inv_hospital ON {ASSETS_INVENTORY_TABLE}(hospital_name)"))
-            db.execute(text(f"CREATE INDEX IF NOT EXISTS idx_assets_inv_zone ON {ASSETS_INVENTORY_TABLE}(zone_name)"))
-            db.commit()
+        # Detect delimiter: tab or comma
+        first_line = text_content.split("\n", 1)[0]
+        delimiter = "\t" if "\t" in first_line else ","
 
-        # Filter rows: skip if qr_code is '--' or empty/whitespace
+        reader = csv_module.reader(io_module.StringIO(text_content), delimiter=delimiter)
+        rows_iter = iter(reader)
+
+        # Parse header row
+        try:
+            header_row = next(rows_iter)
+        except StopIteration:
+            return {"success": False, "inserted": 0, "skipped": 0, "message": "CSV file is empty."}
+
+        # Map header indices to column keys
+        col_map = []  # list of (csv_index, api_key)
+        for idx, h in enumerate(header_row):
+            normalized = h.strip().strip('"').lower().strip()
+            api_key = CSV_HEADER_MAP.get(normalized)
+            if api_key:
+                col_map.append((idx, api_key))
+
+        if not col_map:
+            return {"success": False, "inserted": 0, "skipped": 0,
+                    "message": "Could not match any CSV headers to expected column names."}
+
+        # Parse all data rows
         valid_rows = []
         skipped = 0
-        for row in rows:
-            qr = str(row.get("qr_code", "")).strip()
+        for parts in rows_iter:
+            if not parts or not any(p.strip() for p in parts):
+                continue
+            row = {}
+            for csv_idx, api_key in col_map:
+                row[api_key] = parts[csv_idx].strip().strip('"') if csv_idx < len(parts) else ""
+
+            # Skip if QR code is '--' or empty/whitespace
+            qr = row.get("qr_code", "").strip()
             if not qr or qr == "--":
                 skipped += 1
                 continue
-            # Sanitize: assign cleaned qr_code back
             row["qr_code"] = qr
+
+            # Ensure all columns exist
+            for col in ASSETS_INVENTORY_COLUMNS:
+                if col not in row:
+                    row[col] = ""
+
             valid_rows.append(row)
 
-        if valid_rows:
-            _bulk_insert(db, ASSETS_INVENTORY_TABLE, ASSETS_INVENTORY_COLUMNS, valid_rows)
+        if not valid_rows:
+            return {"success": False, "inserted": 0, "skipped": skipped,
+                    "message": f"No valid rows found. {skipped} rows skipped (invalid QR)."}
+
+        # Drop and recreate table (replace all data)
+        db.execute(text(f"DROP TABLE IF EXISTS {ASSETS_INVENTORY_TABLE}"))
+        db.execute(text(ASSETS_INVENTORY_CREATE_SQL))
+        db.commit()
+
+        # Bulk insert ALL rows at once using the existing _bulk_insert
+        _bulk_insert(db, ASSETS_INVENTORY_TABLE, ASSETS_INVENTORY_COLUMNS, valid_rows)
+
+        # Create indexes after insert for speed
+        db.execute(text(f"CREATE INDEX IF NOT EXISTS idx_assets_inv_district ON {ASSETS_INVENTORY_TABLE}(district_name)"))
+        db.execute(text(f"CREATE INDEX IF NOT EXISTS idx_assets_inv_qr ON {ASSETS_INVENTORY_TABLE}(qr_code)"))
+        db.execute(text(f"CREATE INDEX IF NOT EXISTS idx_assets_inv_hospital ON {ASSETS_INVENTORY_TABLE}(hospital_name)"))
+        db.execute(text(f"CREATE INDEX IF NOT EXISTS idx_assets_inv_zone ON {ASSETS_INVENTORY_TABLE}(zone_name)"))
+        db.execute(text(f"CREATE INDEX IF NOT EXISTS idx_assets_inv_di ON {ASSETS_INVENTORY_TABLE}(di_name)"))
+        db.commit()
+
+        elapsed_ms = (time.perf_counter() - start_time) * 1000
 
         return {
             "success": True,
             "inserted": len(valid_rows),
             "skipped": skipped,
-            "message": f"Inserted {len(valid_rows)} rows, skipped {skipped} (invalid QR). clear_first={clear_first}"
+            "elapsed_ms": round(elapsed_ms, 2),
+            "message": f"Inserted {len(valid_rows)} rows, skipped {skipped} (invalid QR) in {elapsed_ms:.1f}ms"
         }
     except Exception as e:
-        logger.error(f"Error in assets chunk upload: {str(e)}")
+        logger.error(f"Error in CSV asset upload: {str(e)}")
         return {
             "success": False,
             "inserted": 0,
@@ -1028,6 +1153,7 @@ async def get_assets_inventory(
     district: str = None,
     hospital: str = None,
     zone: str = None,
+    di: str = None,
     equipment_status: str = None,
     search: str = None,
     page: int = 1,
@@ -1036,7 +1162,6 @@ async def get_assets_inventory(
 ):
     """Get paginated asset inventory with optional filters."""
     try:
-        # Ensure table exists
         db.execute(text(ASSETS_INVENTORY_CREATE_SQL))
         db.commit()
 
@@ -1050,6 +1175,9 @@ async def get_assets_inventory(
         if zone:
             safe_z = zone.replace("'", "''")
             where_clauses.append(f"zone_name = '{safe_z}'")
+        if di:
+            safe_di = di.replace("'", "''")
+            where_clauses.append(f"di_name = '{safe_di}'")
         if equipment_status:
             safe_es = equipment_status.replace("'", "''")
             where_clauses.append(f"equipment_status = '{safe_es}'")
@@ -1087,35 +1215,146 @@ async def get_assets_inventory(
         return {"success": False, "total": 0, "assets": [], "message": str(e)}
 
 
-@router.get("/assets-stats")
-async def get_assets_stats(db: Session = Depends(get_db)):
-    """Get aggregated statistics for the assets inventory dashboard."""
+@router.get("/assets-filters")
+async def get_assets_filters(db: Session = Depends(get_db)):
+    """Get distinct values for zone, district, DI name filters."""
     try:
-        # Ensure table exists
         db.execute(text(ASSETS_INVENTORY_CREATE_SQL))
         db.commit()
 
-        total = db.execute(text(f"SELECT COUNT(*) FROM {ASSETS_INVENTORY_TABLE}")).fetchone()
-        total_count = total[0] if total else 0
-
-        districts = db.execute(text(f"SELECT COUNT(DISTINCT district_name) FROM {ASSETS_INVENTORY_TABLE}")).fetchone()
-        district_count = districts[0] if districts else 0
-
-        hospitals = db.execute(text(f"SELECT COUNT(DISTINCT hospital_name) FROM {ASSETS_INVENTORY_TABLE}")).fetchone()
-        hospital_count = hospitals[0] if hospitals else 0
-
-        functional = db.execute(text(
-            f"SELECT COUNT(*) FROM {ASSETS_INVENTORY_TABLE} WHERE equipment_status LIKE '%Functional%'"
-        )).fetchone()
-        functional_count = functional[0] if functional else 0
+        zones = db.execute(text(
+            f"SELECT DISTINCT zone_name FROM {ASSETS_INVENTORY_TABLE} WHERE zone_name IS NOT NULL AND zone_name != '' ORDER BY zone_name"
+        )).fetchall()
+        districts = db.execute(text(
+            f"SELECT DISTINCT district_name FROM {ASSETS_INVENTORY_TABLE} WHERE district_name IS NOT NULL AND district_name != '' ORDER BY district_name"
+        )).fetchall()
+        di_names = db.execute(text(
+            f"SELECT DISTINCT di_name FROM {ASSETS_INVENTORY_TABLE} WHERE di_name IS NOT NULL AND di_name != '' ORDER BY di_name"
+        )).fetchall()
 
         return {
             "success": True,
-            "total_assets": total_count,
-            "total_districts": district_count,
-            "total_hospitals": hospital_count,
-            "functional_assets": functional_count
+            "zones": [r[0] for r in zones],
+            "districts": [r[0] for r in districts],
+            "di_names": [r[0] for r in di_names]
+        }
+    except Exception as e:
+        logger.error(f"Error fetching asset filters: {str(e)}")
+        return {"success": False, "zones": [], "districts": [], "di_names": []}
+
+
+@router.get("/assets-stats")
+async def get_assets_stats(
+    zone: str = None,
+    district: str = None,
+    di: str = None,
+    db: Session = Depends(get_db)
+):
+    """Get comprehensive asset inventory statistics with billing calculations."""
+    try:
+        db.execute(text(ASSETS_INVENTORY_CREATE_SQL))
+        db.commit()
+
+        # Build WHERE clause for filters
+        where_clauses = []
+        if zone:
+            safe_z = zone.replace("'", "''")
+            where_clauses.append(f"zone_name = '{safe_z}'")
+        if district:
+            safe_d = district.replace("'", "''")
+            where_clauses.append(f"district_name = '{safe_d}'")
+        if di:
+            safe_di = di.replace("'", "''")
+            where_clauses.append(f"di_name = '{safe_di}'")
+        where_sql = " AND ".join(where_clauses) if where_clauses else "1=1"
+
+        # Fetch all matching rows for computation
+        rows = db.execute(text(
+            f"SELECT asset_value, moic_verified_date, warranty_details, installation_date FROM {ASSETS_INVENTORY_TABLE} WHERE {where_sql}"
+        )).fetchall()
+
+        total_equipment = len(rows)
+        verified_count = 0
+        under_warranty_count = 0
+        out_of_warranty_count = 0
+        total_value = 0.0
+        verified_value = 0.0
+        verified_out_of_warranty_value = 0.0
+        arrear_billing = 0.0
+
+        now = dt_datetime.now()
+        current_month = now.month
+        current_year = now.year
+
+        for row in rows:
+            raw_val = row[0] or "0"
+            moic_date_str = row[1] or ""
+            warranty_str = row[2] or ""
+            install_date_str = row[3] or ""
+
+            # Parse asset value
+            try:
+                val = float(str(raw_val).replace(",", "").strip())
+            except (ValueError, TypeError):
+                val = 0.0
+
+            total_value += val
+
+            # Is verified? (MOIC verified date is not '--' and not empty)
+            is_verified = bool(moic_date_str.strip() and moic_date_str.strip() not in ("--", "NA", "N/A"))
+
+            # Is warranty expired?
+            warranty_expired = _is_warranty_expired(warranty_str)
+
+            if is_verified:
+                verified_count += 1
+                verified_value += val
+
+            if warranty_expired:
+                out_of_warranty_count += 1
+            else:
+                under_warranty_count += 1
+
+            if is_verified and warranty_expired:
+                verified_out_of_warranty_value += val
+
+            # Arrear billing: equipment verified THIS month
+            if is_verified:
+                moic_date = _parse_date_flexible(moic_date_str)
+                if moic_date and moic_date.month == current_month and moic_date.year == current_year:
+                    install_date = _parse_date_flexible(install_date_str)
+                    if install_date and val > 0:
+                        # Monthly rate for this equipment
+                        monthly_rate = (val * 6.08 / 100) / 12
+                        # Months from installation date to today
+                        months_diff = (current_year - install_date.year) * 12 + (current_month - install_date.month)
+                        if months_diff < 0:
+                            months_diff = 0
+                        arrear_billing += monthly_rate * months_diff
+
+        # Monthly billing = (verified_out_of_warranty_value * 6.08 / 100) / 12
+        monthly_value = (verified_out_of_warranty_value * 6.08 / 100) / 12
+        total_billing = monthly_value + arrear_billing
+
+        return {
+            "success": True,
+            "total_equipment": total_equipment,
+            "verified_equipment": verified_count,
+            "under_warranty": under_warranty_count,
+            "out_of_warranty": out_of_warranty_count,
+            "total_value": round(total_value, 2),
+            "verified_value": round(verified_value, 2),
+            "verified_out_of_warranty_value": round(verified_out_of_warranty_value, 2),
+            "monthly_value": round(monthly_value, 2),
+            "arrear_billing": round(arrear_billing, 2),
+            "total_billing": round(total_billing, 2)
         }
     except Exception as e:
         logger.error(f"Error fetching assets stats: {str(e)}")
-        return {"success": False, "total_assets": 0, "total_districts": 0, "total_hospitals": 0, "functional_assets": 0}
+        return {
+            "success": False, "total_equipment": 0, "verified_equipment": 0,
+            "under_warranty": 0, "out_of_warranty": 0, "total_value": 0,
+            "verified_value": 0, "verified_out_of_warranty_value": 0,
+            "monthly_value": 0, "arrear_billing": 0, "total_billing": 0
+        }
+
