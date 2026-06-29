@@ -10,7 +10,7 @@ logger = logging.getLogger(__name__)
 router = APIRouter()
 
 
-def _bulk_insert(db, table_name: str, columns: list[str], records: list[dict], max_params: int = 950):
+def _bulk_insert(db, table_name: str, columns: list[str], records: list[dict], max_params: int = 90):
     """Insert records in multi-row batches that stay under SQLite's 999-parameter limit.
     Works with D1's custom cursor (no executemany needed)."""
     if not records:
@@ -387,6 +387,62 @@ async def upload_excel_penalties(
         return {
             "success": False,
             "message": f"Failed to upload: {str(e)}"
+        }
+
+@router.post("/upload-penalties-chunk")
+async def upload_penalties_chunk(
+    payload: dict,
+    db: Session = Depends(get_db)
+):
+    """
+    Accepts a JSON payload with pre-parsed penalty rows for chunked insertion.
+    Payload: {"rows": [...list of row dicts...], "clear_first": true/false}
+    This endpoint enables the client to split 46k rows into many small requests.
+    """
+    try:
+        rows = payload.get("rows", [])
+        clear_first = payload.get("clear_first", False)
+        
+        if clear_first:
+            # Create table if not exists, then clear
+            db.execute(text("""CREATE TABLE IF NOT EXISTS rj_penalties (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                sno VARCHAR(20), district_name VARCHAR(200), hospital_type VARCHAR(100),
+                hospital_name VARCHAR(255), bar_code VARCHAR(100), equipment_name VARCHAR(255),
+                equipment_model VARCHAR(200), complaint_id VARCHAR(100),
+                complaint_raise_date VARCHAR(100), complaint_close_date VARCHAR(100),
+                complaint_status VARCHAR(100), total_downtime FLOAT, estimated_cost FLOAT,
+                penalty_days FLOAT, complaint_final_close VARCHAR(100), attend_date VARCHAR(100),
+                attend_penalty FLOAT, delay_penalty FLOAT, total_penalty FLOAT,
+                is_under_warranty VARCHAR(50), service_provider_name VARCHAR(200),
+                status VARCHAR(100), equipment_type VARCHAR(100), asset_value FLOAT,
+                complaint_logged_date VARCHAR(100), call_attend_hour_diff FLOAT,
+                attented_per_day FLOAT, penalty_start_date VARCHAR(100),
+                penalty_end_date VARCHAR(100), penalty_down_days FLOAT, penalty_slab FLOAT,
+                penalty FLOAT, per_day_penalty FLOAT, total_penalty_calc FLOAT,
+                total_per_day FLOAT, month_text VARCHAR(100), di_name VARCHAR(200),
+                open_date VARCHAR(100), close_date VARCHAR(100), attend_delay_minutes FLOAT,
+                same_day_close VARCHAR(50), standby VARCHAR(100),
+                coordinator_name VARCHAR(200), final_close_month VARCHAR(100),
+                close_month VARCHAR(100), eight_digit_code VARCHAR(100), open_days FLOAT,
+                is_ftfr INTEGER DEFAULT 0
+            )"""))
+            db.execute(text("DELETE FROM rj_penalties"))
+            db.commit()
+        
+        if rows:
+            columns = list(rows[0].keys())
+            _bulk_insert(db, "rj_penalties", columns, rows)
+        
+        return {
+            "success": True,
+            "message": f"Inserted {len(rows)} rows. clear_first={clear_first}"
+        }
+    except Exception as e:
+        logger.error(f"Error in penalties chunk upload: {str(e)}")
+        return {
+            "success": False,
+            "message": f"Chunk upload failed: {str(e)}"
         }
 
 @router.post("/upload-master-data")
