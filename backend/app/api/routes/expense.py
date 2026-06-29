@@ -881,8 +881,8 @@ async def get_team_expenses(
     
     # Query team members
     query_users = db.query(User)
-    if current_user.role == "Admin":
-        # Admin can see all expenses
+    if current_user.role in ["Admin", "MIS", "VP", "Accountant"]:
+        # Admin, MIS, VP, and Accountant can see all expenses
         team_users = query_users.all()
     else:
         # Pre-fetch direct reports upfront to avoid redundant DB checks
@@ -962,6 +962,7 @@ async def get_team_expenses(
             "expense_code": exp.expense_code,
             "submitter_name": submitter.name if submitter else "Unknown",
             "submitter_code": submitter.user_id if submitter else "N/A",
+            "submitter_designation": submitter.designation if submitter and submitter.designation else "Engineer",
             "month": exp.month,
             "year": exp.year,
             "amount": exp.amount,
@@ -972,6 +973,8 @@ async def get_team_expenses(
             "created_at": exp.created_at,
             "total_km": tot_km,
             "total_auto": tot_auto,
+            "da_amount": exp.da_amount,
+            "hotel_amount": exp.hotel_amount,
             "district": submitter.district if submitter and submitter.district else "Ganganar",
             "zone": submitter.zone if submitter and submitter.zone else "Bikaner"
         })
