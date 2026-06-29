@@ -1023,83 +1023,9 @@ CSV_HEADER_MAP = {
 }
 
 
-@router.get("/test-db-connection")
-async def test_db_connection():
-    """Diagnostic endpoint to test DB connection and return traceback on error."""
-    import traceback
-    from app.config.database import SessionLocal, token, account_id, database_id, force_local
-    
-    diag = {
-        "force_local": force_local,
-        "token_len": len(token) if token else 0,
-        "account_id": account_id,
-        "database_id": database_id
-    }
-    
-    try:
-        db = SessionLocal()
-        try:
-            res_ping = db.execute(text("SELECT 1")).fetchone()
-            
-            # Test Query 1: Aggregates
-            agg_sql = f"""
-            SELECT 
-                COUNT(*) as total_equipment,
-                SUM(is_verified) as verified_equipment,
-                SUM(CASE WHEN warranty_expired = 0 THEN 1 ELSE 0 END) as under_warranty,
-                SUM(warranty_expired) as out_of_warranty,
-                SUM(parsed_asset_value) as total_value,
-                SUM(CASE WHEN is_verified = 1 THEN parsed_asset_value ELSE 0 END) as verified_value,
-                SUM(CASE WHEN is_verified = 1 AND warranty_expired = 1 THEN parsed_asset_value ELSE 0 END) as verified_out_of_warranty_value
-            FROM {ASSETS_INVENTORY_TABLE}
-            WHERE 1=1
-            """
-            res_agg = db.execute(text(agg_sql)).fetchone()
-            
-            # Test Query 2: Arrears
-            arrear_sql = f"""
-            SELECT 
-                parsed_asset_value, install_year, install_month
-            FROM {ASSETS_INVENTORY_TABLE}
-            WHERE is_verified = 1 
-              AND moic_year = 2026 
-              AND moic_month = 6
-              AND 1=1
-            """
-            res_arrear = db.execute(text(arrear_sql)).fetchall()
-            
-            # Test Query 3: Status
-            status_sql = f"""
-            SELECT equipment_status, COUNT(*) 
-            FROM {ASSETS_INVENTORY_TABLE} 
-            WHERE 1=1 
-            GROUP BY equipment_status
-            """
-            res_status = db.execute(text(status_sql)).fetchall()
-            
-            return {
-                "success": True, 
-                "ping": str(res_ping), 
-                "agg": str(res_agg),
-                "arrear_count": len(res_arrear),
-                "status_count": len(res_status),
-                "message": "All queries executed successfully!",
-                "diagnostics": diag
-            }
-        finally:
-            db.close()
-    except Exception as e:
-        tb = traceback.format_exc()
-        return {
-            "success": False, 
-            "error": str(e), 
-            "traceback": tb,
-            "diagnostics": diag
-        }
-
-
 
 def _parse_date_flexible(date_str: str):
+
     """Try parsing various date formats and return a datetime object or None."""
     if not date_str or date_str.strip() in ("--", "", "NA", "N/A"):
         return None
