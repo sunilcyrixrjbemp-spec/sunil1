@@ -236,7 +236,9 @@ async def get_mis_dashboard_data(
                 SUM(delay_penalty) as total_delay_penalty,
                 SUM(total_penalty) as total_penalty,
                 SUM(per_day_penalty) as total_per_day_penalty,
-                AVG(total_downtime) as avg_downtime_days
+                AVG(CASE WHEN complaint_status = 'Final Closed' OR status = 'Closed' THEN total_downtime END) as avg_downtime_days,
+                SUM(CASE WHEN attend_penalty > 0 THEN 1 ELSE 0 END) as attend_breach_count,
+                SUM(CASE WHEN delay_penalty > 0 THEN 1 ELSE 0 END) as delay_breach_count
             FROM rj_penalties
             WHERE {where_str}
         """), params).fetchone()
@@ -249,6 +251,8 @@ async def get_mis_dashboard_data(
         total_net_penalty = totals[5] or 0.0
         total_per_day = totals[6] or 0.0
         avg_downtime = totals[7] or 0.0
+        attend_breach_count = totals[8] or 0
+        delay_breach_count = totals[9] or 0
         
         ftfr_percentage = (ftfr_calls * 100.0 / closed_calls) if closed_calls > 0 else 0.0
 
@@ -344,6 +348,24 @@ async def get_mis_dashboard_data(
             ORDER BY total DESC
         """), params).fetchall()
 
+        # 12. Top Service Providers Penalties (New)
+        vendor_penalty = db.execute(text(f"""
+            SELECT service_provider_name, SUM(total_penalty) as total
+            FROM rj_penalties
+            WHERE {where_str} AND service_provider_name IS NOT NULL AND service_provider_name != ''
+            GROUP BY service_provider_name
+            ORDER BY total DESC LIMIT 8
+        """), params).fetchall()
+
+        # 13. Monthly Penalty Trend (New)
+        monthly_trend = db.execute(text(f"""
+            SELECT month_text, SUM(total_penalty) as total
+            FROM rj_penalties
+            WHERE {where_str} AND month_text IS NOT NULL AND month_text != ''
+            GROUP BY month_text
+            ORDER BY MIN(id)
+        """), params).fetchall()
+
         return {
             "success": True,
             "filter_options": {
@@ -361,7 +383,9 @@ async def get_mis_dashboard_data(
                 "total_delay_penalty": round(total_delay, 1),
                 "total_penalty": round(total_net_penalty, 1),
                 "total_per_day_penalty": round(total_per_day, 1),
-                "avg_downtime_days": round(avg_downtime, 1)
+                "avg_downtime_days": round(avg_downtime, 1),
+                "attend_breach_count": attend_breach_count,
+                "delay_breach_count": delay_breach_count
             },
             "daily_activity": {
                 "logged": [{"day": r[0], "count": r[1]} for r in daily_logged],
@@ -374,7 +398,9 @@ async def get_mis_dashboard_data(
                 "zone": [{"name": r[0], "penalty": round(r[1], 1)} for r in zone_penalty],
                 "hospital": [{"name": r[0], "penalty": round(r[1], 1), "count": r[2]} for r in hospital_penalty],
                 "warranty": [{"status": r[0], "penalty": round(r[1], 1)} for r in warranty_share],
-                "hospital_type": [{"type": r[0], "penalty": round(r[1], 1)} for r in hosp_type_share]
+                "hospital_type": [{"type": r[0], "penalty": round(r[1], 1)} for r in hosp_type_share],
+                "vendor": [{"name": r[0], "penalty": round(r[1], 1)} for r in vendor_penalty],
+                "monthly_trend": [{"month": r[0], "penalty": round(r[1], 1)} for r in monthly_trend]
             }
         }
     except Exception as e:
