@@ -346,8 +346,8 @@ async def upload_excel_penalties(
             records.append(rec)
             row_count += 1
             
-            # Batch execute insert query to keep memory usage low
-            if len(records) >= 300:
+            # Batch execute insert query to keep memory usage low (stay under SQLite 999 parameter limit)
+            if len(records) >= 20:
                 columns = list(records[0].keys())
                 col_str = ", ".join(columns)
                 val_placeholders = []
@@ -494,21 +494,21 @@ async def upload_excel_master_data(
                         "facility_type": fac_type, "zone_name": zone_name
                     }
             
-            # Insert DI Name List
+            # Insert DI Name List (execute row-by-row because D1 driver doesn't support executemany)
             db.execute(text("DELETE FROM di_name_list"))
-            if di_list_rows:
+            for item in di_list_rows:
                 db.execute(text("""
                     INSERT INTO di_name_list (district_name, hospital_name, di_name, coordinator_name, zone_name)
                     VALUES (:district_name, :hospital_name, :di_name, :coordinator_name, :zone_name)
-                """), di_list_rows)
+                """), item)
             
-            # Insert Facility Details
+            # Insert Facility Details (execute row-by-row because D1 driver doesn't support executemany)
             db.execute(text("DELETE FROM facility_details"))
-            if facility_details_map:
+            for item in facility_details_map.values():
                 db.execute(text("""
                     INSERT INTO facility_details (facility_name, district_name, facility_incharge, dm_name, coordinator_name, facility_type, zone_name)
                     VALUES (:facility_name, :district_name, :facility_incharge, :dm_name, :coordinator_name, :facility_type, :zone_name)
-                """), list(facility_details_map.values()))
+                """), item)
             db.commit()
             
         # 2. Sync asset_value_master
@@ -532,11 +532,11 @@ async def upload_excel_master_data(
                     asset_rows.append({"equipment_name": equip_name, "rmsc_tender_cost": cost})
                     
             db.execute(text("DELETE FROM asset_value_master"))
-            if asset_rows:
+            for item in asset_rows:
                 db.execute(text("""
                     INSERT INTO asset_value_master (equipment_name, rmsc_tender_cost)
                     VALUES (:equipment_name, :rmsc_tender_cost)
-                """), asset_rows)
+                """), item)
             db.commit()
             
         # 3. Sync critical_equipment
@@ -557,11 +557,11 @@ async def upload_excel_master_data(
                     crit_rows.append({"equipment_name": equip_name, "classification": classification})
                     
             db.execute(text("DELETE FROM critical_equipment"))
-            if crit_rows:
+            for item in crit_rows:
                 db.execute(text("""
                     INSERT INTO critical_equipment (equipment_name, classification)
                     VALUES (:equipment_name, :classification)
-                """), crit_rows)
+                """), item)
             db.commit()
             
         # 4. Sync main_hospitals
@@ -583,11 +583,11 @@ async def upload_excel_master_data(
                     main_rows.append({"hospital_name": hosp_name, "hospital_type": hosp_type, "sla_category": sla_category})
                     
             db.execute(text("DELETE FROM main_hospitals"))
-            if main_rows:
+            for item in main_rows:
                 db.execute(text("""
                     INSERT INTO main_hospitals (hospital_name, hospital_type, sla_category)
                     VALUES (:hospital_name, :hospital_type, :sla_category)
-                """), main_rows)
+                """), item)
             db.commit()
             
         os.unlink(tmp_path)
