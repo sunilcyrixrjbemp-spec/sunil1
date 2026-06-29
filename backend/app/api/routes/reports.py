@@ -10,26 +10,33 @@ logger = logging.getLogger(__name__)
 router = APIRouter()
 
 
-def _bulk_insert(db, table_name: str, columns: list[str], records: list[dict], max_params: int = 90):
-    """Insert records in multi-row batches that stay under SQLite's 999-parameter limit.
-    Works with D1's custom cursor (no executemany needed)."""
+def _bulk_insert(db, table_name: str, columns: list[str], records: list[dict]):
+    """Insert records in multi-row batches using raw SQLite literals to avoid D1 parameter limits."""
     if not records:
         return
-    batch_size = max(1, max_params // len(columns))
     col_str = ", ".join(columns)
-    for i in range(0, len(records), batch_size):
-        batch = records[i : i + batch_size]
-        val_placeholders = []
-        params = {}
-        for r_idx, r in enumerate(batch):
-            row_ph = []
-            for k in columns:
-                pname = f"{k}_{r_idx}"
-                row_ph.append(f":{pname}")
-                params[pname] = r[k]
-            val_placeholders.append("(" + ", ".join(row_ph) + ")")
-        sql = f"INSERT OR REPLACE INTO {table_name} ({col_str}) VALUES " + ", ".join(val_placeholders)
-        db.execute(text(sql), params)
+    val_rows = []
+    for r in records:
+        row_vals = []
+        for k in columns:
+            val = r.get(k)
+            if val is None:
+                row_vals.append("NULL")
+            elif isinstance(val, (int, float)):
+                row_vals.append(str(val))
+            elif isinstance(val, bool):
+                row_vals.append("1" if val else "0")
+            else:
+                escaped = str(val).replace("'", "''")
+                row_vals.append(f"'{escaped}'")
+        val_rows.append("(" + ", ".join(row_vals) + ")")
+        
+    # Batch execute in chunks of 500 to keep query sizes reasonable and super fast
+    chunk_size = 500
+    for i in range(0, len(val_rows), chunk_size):
+        chunk = val_rows[i : i + chunk_size]
+        sql = f"INSERT OR REPLACE INTO {table_name} ({col_str}) VALUES " + ", ".join(chunk)
+        db.execute(text(sql))
     db.commit()
 
 @router.get("/monthly/{month}")
