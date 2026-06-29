@@ -82,7 +82,7 @@ const defaultStats: AssetStats = {
   charts: { top_types: [], status_list: [], warranty_list: [] }
 };
 
-const CHART_COLORS = ["#4F46E5", "#10B981", "#0ea5e9", "#f59e0b", "#ec4899", "#8b5cf6"];
+const CHART_COLORS = ["#3c8dbc", "#00a65a", "#f39c12", "#dd4b39", "#605ca8", "#00c0ef"];
 
 const fmt = (n: number) => n >= 10000000 ? `${(n / 10000000).toFixed(2)} Cr` :
   n >= 100000 ? `${(n / 100000).toFixed(2)} L` :
@@ -94,6 +94,26 @@ const formatMonthLabel = (m: string) => {
   const [year, month] = m.split("-");
   const date = new Date(parseInt(year), parseInt(month) - 1, 1);
   return date.toLocaleDateString("en-US", { month: "long", year: "numeric" });
+};
+
+// Robust quote-aware CSV line splitter to prevent column shifting when cells contain commas
+const parseCSVLine = (line: string, delimiter: string): string[] => {
+  const result: string[] = [];
+  let current = "";
+  let inQuotes = false;
+  for (let i = 0; i < line.length; i++) {
+    const char = line[i];
+    if (char === '"') {
+      inQuotes = !inQuotes;
+    } else if (char === delimiter && !inQuotes) {
+      result.push(current.trim());
+      current = "";
+    } else {
+      current += char;
+    }
+  }
+  result.push(current.trim());
+  return result;
 };
 
 export default function AssetUploadPage() {
@@ -121,9 +141,9 @@ export default function AssetUploadPage() {
   const [filterDistrict, setFilterDistrict] = useState("");
   const [filterDI, setFilterDI] = useState("");
   const [filterMonth, setFilterMonth] = useState("");
-  const [zones, setZones] = useState<string[]>([]);
-  const [districts, setDistricts] = useState<string[]>([]);
-  const [diNames, setDINames] = useState<string[]>([]);
+  
+  // Dependent combinations from backend
+  const [combinations, setCombinations] = useState<any[]>([]);
   const [months, setMonths] = useState<string[]>([]);
 
   // Tab: "upload" | "inventory" | "analytics"
@@ -148,9 +168,7 @@ export default function AssetUploadPage() {
     try {
       const res = await api.get("/reports/assets-filters");
       if (res.data.success) {
-        setZones(res.data.zones || []);
-        setDistricts(res.data.districts || []);
-        setDINames(res.data.di_names || []);
+        setCombinations(res.data.combinations || []);
         setMonths(res.data.months || []);
       }
     } catch (_) {}
@@ -191,13 +209,35 @@ export default function AssetUploadPage() {
     }
   };
 
+  // ====== Dependent filter choices computation ======
+  const availableZones = Array.from(new Set(combinations.map(c => c.zone).filter(Boolean))).sort();
+
+  const availableDistricts = Array.from(
+    new Set(
+      combinations
+        .filter(c => !filterZone || c.zone === filterZone)
+        .map(c => c.district)
+        .filter(Boolean)
+    )
+  ).sort();
+
+  const availableDIs = Array.from(
+    new Set(
+      combinations
+        .filter(c => !filterZone || c.zone === filterZone)
+        .filter(c => !filterDistrict || c.district === filterDistrict)
+        .map(c => c.di)
+        .filter(Boolean)
+    )
+  ).sort();
+
   // ====== CSV Parser (client-side preview only) ======
   const parseCSVPreview = (text: string): AssetRow[] => {
-    const lines = text.split(/\r?\n/).filter(l => l.trim());
+    const lines = text.split(/\r?\n/);
     if (lines.length < 2) return [];
 
     const delimiter = lines[0].includes("\t") ? "\t" : ",";
-    const headerLine = lines[0].split(delimiter).map(h => h.trim().replace(/^"|"$/g, ""));
+    const headerLine = parseCSVLine(lines[0], delimiter);
 
     const API_KEYS = [
       "district_name", "hospital_name", "department_name", "group_name",
@@ -224,7 +264,10 @@ export default function AssetUploadPage() {
     let skipped = 0;
 
     for (let i = 1; i < lines.length; i++) {
-      const parts = lines[i].split(delimiter).map(v => v.trim().replace(/^"|"$/g, ""));
+      const line = lines[i].trim();
+      if (!line) continue;
+
+      const parts = parseCSVLine(line, delimiter);
       const row: AssetRow = {};
       colIndexMap.forEach(({ csvIndex, apiKey }) => {
         row[apiKey] = parts[csvIndex] || "";
@@ -292,7 +335,7 @@ export default function AssetUploadPage() {
     reader.readAsText(file);
   };
 
-  // ====== CHUNKED JSON Upload to bypass proxy/body size limits and show real-time progress ======
+  // ====== CHUNKED JSON Upload (optimized with 5000 row chunks to complete in < 10 seconds) ======
   const handleUpload = async () => {
     if (parsedRows.length === 0) {
       toast.error("No valid rows to upload.");
@@ -304,7 +347,7 @@ export default function AssetUploadPage() {
     setUploadProgressDetail("Initializing...");
     setUploadResult(null);
 
-    const CHUNK_SIZE = 500;
+    const CHUNK_SIZE = 5000;
     const totalRows = parsedRows.length;
     let uploadedCount = 0;
     let skippedCountServer = 0;
@@ -338,7 +381,7 @@ export default function AssetUploadPage() {
         skipped: skippedCountServer + skippedCount,
         elapsed_ms: Math.round(elapsed_ms)
       });
-      toast.success(`${uploadedCount} assets imported successfully!`);
+      toast.success(`${uploadedCount} assets imported successfully in ${(elapsed_ms / 1000).toFixed(1)}s!`);
       setSelectedFile(null);
       setParsedRows([]);
       setSkippedCount(0);
@@ -413,26 +456,26 @@ export default function AssetUploadPage() {
         </button>
       </div>
 
-      {/* ===== Filters Row ===== */}
+      {/* ===== Filters Row (Dependent Dropdowns) ===== */}
       <div className="bg-white border border-gray-200 rounded-lg p-3 shadow-sm">
         <div className="flex flex-wrap items-center gap-2.5">
           <span className="text-[9px] font-bold text-gray-400 uppercase tracking-wider flex items-center gap-1">
             <Filter className="w-3 h-3" /> Filters
           </span>
-          <select value={filterZone} onChange={e => { setFilterZone(e.target.value); setCurrentPage(1); }}
+          <select value={filterZone} onChange={e => { setFilterZone(e.target.value); setFilterDistrict(""); setFilterDI(""); setCurrentPage(1); }}
             className="text-[11px] font-semibold border border-gray-200 rounded px-2.5 py-1.5 bg-white focus:outline-none focus:border-indigo-400 min-w-[120px]">
             <option value="">All Zones</option>
-            {zones.map(z => <option key={z} value={z}>{z}</option>)}
+            {availableZones.map(z => <option key={z} value={z}>{z}</option>)}
           </select>
-          <select value={filterDistrict} onChange={e => { setFilterDistrict(e.target.value); setCurrentPage(1); }}
+          <select value={filterDistrict} onChange={e => { setFilterDistrict(e.target.value); setFilterDI(""); setCurrentPage(1); }}
             className="text-[11px] font-semibold border border-gray-200 rounded px-2.5 py-1.5 bg-white focus:outline-none focus:border-indigo-400 min-w-[120px]">
             <option value="">All Districts</option>
-            {districts.map(d => <option key={d} value={d}>{d}</option>)}
+            {availableDistricts.map(d => <option key={d} value={d}>{d}</option>)}
           </select>
           <select value={filterDI} onChange={e => { setFilterDI(e.target.value); setCurrentPage(1); }}
             className="text-[11px] font-semibold border border-gray-200 rounded px-2.5 py-1.5 bg-white focus:outline-none focus:border-indigo-400 min-w-[120px]">
             <option value="">All DI Names</option>
-            {diNames.map(d => <option key={d} value={d}>{d}</option>)}
+            {availableDIs.map(d => <option key={d} value={d}>{d}</option>)}
           </select>
           <select value={filterMonth} onChange={e => { setFilterMonth(e.target.value); setCurrentPage(1); }}
             className="text-[11px] font-semibold border border-gray-200 rounded px-2.5 py-1.5 bg-white focus:outline-none focus:border-indigo-400 min-w-[140px]">
@@ -448,33 +491,33 @@ export default function AssetUploadPage() {
         </div>
       </div>
 
-      {/* ===== Stats Dashboard ===== */}
+      {/* ===== Stats Dashboard (AdminLTE Theme Grid) ===== */}
       <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-2.5">
         {[
-          { label: "Total Equipment", value: stats.total_equipment.toLocaleString(), icon: <Package className="w-4 h-4" />, bg: "bg-indigo-50 border-indigo-100 text-indigo-700" },
-          { label: "Verified Equipment", value: stats.verified_equipment.toLocaleString(), icon: <ShieldCheck className="w-4 h-4" />, bg: "bg-emerald-50 border-emerald-100 text-emerald-700" },
-          { label: "Under Warranty", value: stats.under_warranty.toLocaleString(), icon: <ShieldCheck className="w-4 h-4" />, bg: "bg-sky-50 border-sky-100 text-sky-700" },
-          { label: "Out of Warranty", value: stats.out_of_warranty.toLocaleString(), icon: <ShieldOff className="w-4 h-4" />, bg: "bg-amber-50 border-amber-100 text-amber-700" },
-          { label: "Total Equipment Value", value: fmtRs(stats.total_value), icon: <IndianRupee className="w-4 h-4" />, bg: "bg-purple-50 border-purple-100 text-purple-700" },
+          { label: "Total Equipment", value: stats.total_equipment.toLocaleString(), icon: <Package className="w-4 h-4" />, bg: "border-t-[3px] border-t-blue-500 bg-white border border-gray-200 text-gray-800" },
+          { label: "Verified Equipment", value: stats.verified_equipment.toLocaleString(), icon: <ShieldCheck className="w-4 h-4" />, bg: "border-t-[3px] border-t-green-500 bg-white border border-gray-200 text-gray-800" },
+          { label: "Under Warranty", value: stats.under_warranty.toLocaleString(), icon: <ShieldCheck className="w-4 h-4" />, bg: "border-t-[3px] border-t-teal-500 bg-white border border-gray-200 text-gray-800" },
+          { label: "Out of Warranty", value: stats.out_of_warranty.toLocaleString(), icon: <ShieldOff className="w-4 h-4" />, bg: "border-t-[3px] border-t-yellow-500 bg-white border border-gray-200 text-gray-800" },
+          { label: "Total Equipment Value", value: fmtRs(stats.total_value), icon: <IndianRupee className="w-4 h-4" />, bg: "border-t-[3px] border-t-purple-500 bg-white border border-gray-200 text-gray-800" },
         ].map((s, i) => (
-          <div key={i} className={`border rounded-lg p-2.5 ${s.bg}`}>
+          <div key={i} className={`rounded p-3 shadow-sm ${s.bg}`}>
             <div className="flex items-center gap-1.5 mb-1 opacity-70">{s.icon}<span className="text-[8px] uppercase tracking-wider font-bold">{s.label}</span></div>
-            <p className="text-base font-black tabular-nums">{s.value}</p>
+            <p className="text-lg font-black tabular-nums">{s.value}</p>
           </div>
         ))}
       </div>
 
       <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-2.5">
         {[
-          { label: "Verified Equipment Value", value: fmtRs(stats.verified_value), icon: <CheckCircle className="w-4 h-4" />, bg: "bg-emerald-50 border-emerald-100 text-emerald-700" },
-          { label: "Verified Out-of-Warranty Value", value: fmtRs(stats.verified_out_of_warranty_value), icon: <ShieldOff className="w-4 h-4" />, bg: "bg-orange-50 border-orange-100 text-orange-700" },
-          { label: "Monthly Billing", value: fmtRs(stats.monthly_value), sub: "(Value × 6.08% ÷ 12)", icon: <Calendar className="w-4 h-4" />, bg: "bg-blue-50 border-blue-100 text-blue-700" },
-          { label: "Arrear Billing", value: fmtRs(stats.arrear_billing), sub: "Verified in target month", icon: <Receipt className="w-4 h-4" />, bg: "bg-rose-50 border-rose-100 text-rose-700" },
-          { label: "Total Billing Value", value: fmtRs(stats.total_billing), icon: <IndianRupee className="w-4 h-4" />, bg: "bg-violet-50 border-violet-100 text-violet-700" },
+          { label: "Verified Equipment Value", value: fmtRs(stats.verified_value), icon: <CheckCircle className="w-4 h-4" />, bg: "border-t-[3px] border-t-green-500 bg-white border border-gray-200 text-gray-800" },
+          { label: "Verified Out-of-Warranty Value", value: fmtRs(stats.verified_out_of_warranty_value), icon: <ShieldOff className="w-4 h-4" />, bg: "border-t-[3px] border-t-orange-500 bg-white border border-gray-200 text-gray-800" },
+          { label: "Monthly Billing", value: fmtRs(stats.monthly_value), sub: "(Value × 6.08% ÷ 12)", icon: <Calendar className="w-4 h-4" />, bg: "border-t-[3px] border-t-blue-500 bg-white border border-gray-200 text-gray-800" },
+          { label: "Arrear Billing", value: fmtRs(stats.arrear_billing), sub: "Verified in target month", icon: <Receipt className="w-4 h-4" />, bg: "border-t-[3px] border-t-red-500 bg-white border border-gray-200 text-gray-800" },
+          { label: "Total Billing Value", value: fmtRs(stats.total_billing), icon: <IndianRupee className="w-4 h-4" />, bg: "border-t-[3px] border-t-indigo-500 bg-white border border-gray-200 text-gray-800" },
         ].map((s, i) => (
-          <div key={i} className={`border rounded-lg p-2.5 ${s.bg}`}>
+          <div key={i} className={`rounded p-3 shadow-sm ${s.bg}`}>
             <div className="flex items-center gap-1.5 mb-1 opacity-70">{s.icon}<span className="text-[8px] uppercase tracking-wider font-bold">{s.label}</span></div>
-            <p className="text-base font-black tabular-nums">{s.value}</p>
+            <p className="text-lg font-black tabular-nums">{s.value}</p>
             {"sub" in s && s.sub && <p className="text-[8px] opacity-60 font-semibold mt-0.5">{s.sub}</p>}
           </div>
         ))}
@@ -506,7 +549,7 @@ export default function AssetUploadPage() {
       {activeTab === "upload" && (
         <div className="grid grid-cols-1 lg:grid-cols-5 gap-5">
           {/* Left: Upload Form */}
-          <div className="lg:col-span-2 bg-white border border-gray-200 rounded-lg shadow-sm p-5 space-y-4">
+          <div className="lg:col-span-2 bg-white border border-gray-200 border-t-[3px] border-t-indigo-600 rounded shadow-sm p-4 space-y-4">
             <h3 className="text-xs font-bold uppercase tracking-wider text-gray-400 flex items-center gap-1.5">
               <Zap className="w-3.5 h-3.5" />
               Import CSV File
@@ -546,9 +589,9 @@ export default function AssetUploadPage() {
                 <>
                   <UploadCloud className="w-12 h-12 text-gray-400" />
                   <p className="text-xs font-bold text-gray-700">Drag & drop CSV file here</p>
-                  <p className="text-[10px] text-gray-450">or click to browse local files</p>
+                  <p className="text-[10px] text-gray-455">or click to browse local files</p>
                   <span className="text-[8px] bg-gray-100 text-gray-600 px-2 py-0.5 rounded uppercase font-bold tracking-wider">
-                    Safe Upload • Sequential Chunks
+                    Safe Upload • Chunks of 5000 rows
                   </span>
                 </>
               )}
@@ -687,7 +730,7 @@ export default function AssetUploadPage() {
 
       {/* ====== Inventory Tab ====== */}
       {activeTab === "inventory" && (
-        <div className="bg-white border border-gray-200 rounded-lg shadow-sm overflow-hidden">
+        <div className="bg-white border border-gray-200 border-t-[3px] border-t-indigo-600 rounded shadow-sm overflow-hidden">
           {/* Search Bar */}
           <div className="p-4 border-b border-gray-200 bg-gray-50 flex flex-col sm:flex-row gap-3 items-center justify-between">
             <div className="relative flex-1 max-w-md w-full">
@@ -785,16 +828,18 @@ export default function AssetUploadPage() {
         </div>
       )}
 
-      {/* ====== Analytics Tab ====== */}
+      {/* ====== Analytics Tab (AdminLTE Bootstrap Theme Grid) ====== */}
       {activeTab === "analytics" && (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
           {/* Chart 1: Status Breakdown */}
-          <div className="bg-white border border-gray-200 rounded-lg shadow-sm p-4 flex flex-col">
-            <h3 className="text-xs font-bold uppercase tracking-wider text-gray-400 mb-4 flex items-center gap-1">
-              <BarChart3 className="w-4 h-4 text-indigo-500" />
-              Equipment Status Distribution
-            </h3>
-            <div className="w-full h-64">
+          <div className="bg-white border border-gray-200 border-t-[3px] border-t-primary rounded shadow-sm flex flex-col">
+            <div className="p-3 border-b border-gray-150 flex items-center justify-between bg-gray-50/50">
+              <h3 className="text-xs font-bold uppercase tracking-wider text-gray-600 flex items-center gap-1.5">
+                <BarChart3 className="w-4 h-4 text-indigo-500" />
+                Equipment Status Distribution
+              </h3>
+            </div>
+            <div className="w-full h-64 p-4">
               {stats.charts.status_list.length > 0 ? (
                 <ResponsiveContainer width="100%" height="100%">
                   <PieChart>
@@ -822,12 +867,14 @@ export default function AssetUploadPage() {
           </div>
 
           {/* Chart 2: Top Equipment Types */}
-          <div className="bg-white border border-gray-200 rounded-lg shadow-sm p-4 flex flex-col">
-            <h3 className="text-xs font-bold uppercase tracking-wider text-gray-400 mb-4 flex items-center gap-1">
-              <BarChart3 className="w-4 h-4 text-emerald-500" />
-              Top 5 Equipment Types
-            </h3>
-            <div className="w-full h-64">
+          <div className="bg-white border border-gray-200 border-t-[3px] border-t-success rounded shadow-sm flex flex-col">
+            <div className="p-3 border-b border-gray-150 flex items-center justify-between bg-gray-50/50">
+              <h3 className="text-xs font-bold uppercase tracking-wider text-gray-600 flex items-center gap-1.5">
+                <BarChart3 className="w-4 h-4 text-emerald-500" />
+                Top 5 Equipment Types
+              </h3>
+            </div>
+            <div className="w-full h-64 p-4">
               {stats.charts.top_types.length > 0 ? (
                 <ResponsiveContainer width="100%" height="100%">
                   <BarChart data={stats.charts.top_types} layout="vertical" margin={{ left: 10, right: 10, top: 10, bottom: 10 }}>
@@ -835,7 +882,7 @@ export default function AssetUploadPage() {
                     <XAxis type="number" stroke="#9ca3af" fontSize={9} />
                     <YAxis dataKey="name" type="category" stroke="#9ca3af" fontSize={8} width={80} />
                     <Tooltip formatter={(value) => `${value} units`} />
-                    <Bar dataKey="value" fill="#10B981" radius={[0, 4, 4, 0]}>
+                    <Bar dataKey="value" fill="#3c8dbc" radius={[0, 4, 4, 0]}>
                       {stats.charts.top_types.map((_, index) => (
                         <Cell key={`cell-${index}`} fill={CHART_COLORS[(index + 1) % CHART_COLORS.length]} />
                       ))}
@@ -849,12 +896,14 @@ export default function AssetUploadPage() {
           </div>
 
           {/* Chart 3: Warranty Breakdown */}
-          <div className="bg-white border border-gray-200 rounded-lg shadow-sm p-4 flex flex-col">
-            <h3 className="text-xs font-bold uppercase tracking-wider text-gray-400 mb-4 flex items-center gap-1">
-              <BarChart3 className="w-4 h-4 text-sky-500" />
-              Warranty Status
-            </h3>
-            <div className="w-full h-64">
+          <div className="bg-white border border-gray-200 border-t-[3px] border-t-warning rounded shadow-sm flex flex-col">
+            <div className="p-3 border-b border-gray-150 flex items-center justify-between bg-gray-50/50">
+              <h3 className="text-xs font-bold uppercase tracking-wider text-gray-600 flex items-center gap-1.5">
+                <BarChart3 className="w-4 h-4 text-orange-500" />
+                Warranty Status Breakdown
+              </h3>
+            </div>
+            <div className="w-full h-64 p-4">
               {stats.charts.warranty_list.some(w => w.value > 0) ? (
                 <ResponsiveContainer width="100%" height="100%">
                   <PieChart>
@@ -867,8 +916,8 @@ export default function AssetUploadPage() {
                       dataKey="value"
                       label={({ name, percent }) => `${name}: ${(percent * 100).toFixed(0)}%`}
                     >
-                      <Cell fill="#10B981" />
-                      <Cell fill="#F59E0B" />
+                      <Cell fill="#00a65a" />
+                      <Cell fill="#f39c12" />
                     </Pie>
                     <Tooltip formatter={(value) => `${value} units`} />
                   </PieChart>
