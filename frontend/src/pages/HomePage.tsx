@@ -302,11 +302,21 @@ export default function HomePage() {
 
   // Unique employee list for dropdown filter
   const uniqueEmployees = Array.from(
-    new Map(safeTeamExpenses.map(e => e && [e.submitter_code, e.submitter_name])).entries()
-  ).map(([code, name]) => ({ code, name }));
+    new Map(
+      safeTeamExpenses
+        .filter((e): e is any => !!e && !!e.submitter_code && !!e.submitter_name)
+        .map(e => [e.submitter_code, e.submitter_name])
+    ).entries()
+  ).map(([code, name]) => ({ code: String(code), name: String(name) }));
 
   // Unique categories/modes for dropdown filter
-  const uniqueModes = Array.from(new Set(safeTeamExpenses.map(e => e && e.category).filter(Boolean)));
+  const uniqueModes = Array.from(
+    new Set(
+      safeTeamExpenses
+        .filter((e): e is any => !!e && !!e.category)
+        .map(e => String(e.category))
+    )
+  );
 
   // Filter personal claims to match currently selected selectMonth (YYYY-MM format)
   const getFilteredPersonalExpenses = () => {
