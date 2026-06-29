@@ -29,6 +29,7 @@ class UserResponse(BaseModel):
     role: str
     type: Optional[str] = None
     allowed_windows: Optional[str] = None
+    profile_pic_url: Optional[str] = None
     created_at: datetime
     updated_at: datetime
 
@@ -77,6 +78,7 @@ class RefreshTokenRequest(BaseModel):
 class ProfileUpdateRequest(BaseModel):
     mobile_number: Optional[str] = None
     mail_id: Optional[str] = None
+    profile_pic_url: Optional[str] = None
 
 class ChangePasswordRequest(BaseModel):
     old_password: str

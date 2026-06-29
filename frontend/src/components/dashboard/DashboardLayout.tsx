@@ -115,6 +115,17 @@ export default function DashboardLayout() {
     }
   }, [navigate]);
 
+  useEffect(() => {
+    const handleStorageChange = () => {
+      const freshUser = authService.getCurrentUser();
+      if (freshUser) {
+        setUser(freshUser);
+      }
+    };
+    window.addEventListener("storage", handleStorageChange);
+    return () => window.removeEventListener("storage", handleStorageChange);
+  }, []);
+
   const formatDateTime = (dateVal: any) => {
     if (!dateVal) return "—";
     try {
@@ -261,8 +272,19 @@ export default function DashboardLayout() {
         {/* User Profile Info */}
         <div className="p-3.5 border-b border-gray-700 shrink-0">
           <div className={`flex items-center gap-3 ${isSidebarCollapsed ? "justify-center" : ""}`}>
-            <div className="h-8 w-8 rounded-full bg-blue-600/20 border border-blue-500/30 flex items-center justify-center text-blue-400 font-bold text-xs shrink-0">
-              {user.name ? user.name.charAt(0).toUpperCase() : "U"}
+            <div className="h-8 w-8 rounded-full bg-blue-600/20 border border-blue-500/30 flex items-center justify-center text-blue-400 font-bold text-xs shrink-0 overflow-hidden">
+              {user.profile_pic_url ? (
+                <img 
+                  src={user.profile_pic_url} 
+                  alt="Avatar" 
+                  className="h-full w-full object-cover" 
+                  onError={(e) => {
+                    (e.target as HTMLImageElement).style.display = 'none';
+                  }}
+                />
+              ) : (
+                user.name ? user.name.charAt(0).toUpperCase() : "U"
+              )}
             </div>
             {!isSidebarCollapsed && (
               <div className="min-w-0 flex-1">
@@ -499,8 +521,19 @@ export default function DashboardLayout() {
             onClick={() => setIsMobileMenuOpen(false)}
             className="p-4 bg-white border-b border-gray-150 shrink-0 flex items-center gap-3 text-gray-800 hover:bg-gray-50 transition-colors no-underline block"
           >
-            <div className="h-10 w-10 rounded-full bg-blue-600 flex items-center justify-center text-white font-black text-sm shadow-sm select-none">
-              {user?.name ? user.name.charAt(0).toUpperCase() : "U"}
+            <div className="h-10 w-10 rounded-full bg-blue-600 flex items-center justify-center text-white font-black text-sm shadow-sm select-none overflow-hidden">
+              {user?.profile_pic_url ? (
+                <img 
+                  src={user.profile_pic_url} 
+                  alt="Avatar" 
+                  className="h-full w-full object-cover" 
+                  onError={(e) => {
+                    (e.target as HTMLImageElement).style.display = 'none';
+                  }}
+                />
+              ) : (
+                user?.name ? user.name.charAt(0).toUpperCase() : "U"
+              )}
             </div>
             <div>
               <p className="text-xs font-bold text-gray-800 leading-tight">{user?.name || "Employee"}</p>

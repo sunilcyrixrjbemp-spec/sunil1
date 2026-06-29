@@ -154,6 +154,52 @@ def upload_file_to_drive(file_content: bytes, filename: str, mime_type: str, mon
     file = service.files().create(body=file_metadata, media_body=media, fields='id').execute()
     return file.get('id')
 
+def upload_profile_pic_to_drive(file_content: bytes, filename: str, mime_type: str) -> str:
+    """Uploads profile picture to Google Drive 'Profile_Pictures' subfolder (prioritizing GAS, falling back to direct API)."""
+    import base64
+    import requests
+    from app.config.settings import settings
+    
+    # 1. Try using Google Apps Script Web App first (bypasses Service Account 0-byte quota limit)
+    if settings.GAS_WEB_APP_URL:
+        try:
+            file_b64 = base64.b64encode(file_content).decode("utf-8")
+            payload = {
+                "action": "upload_file",
+                "folderId": DRIVE_PARENT_FOLDER_ID,
+                "folderName": "Profile_Pictures",
+                "filename": filename,
+                "fileBase64": file_b64,
+                "mimeType": mime_type
+            }
+            response = requests.post(settings.GAS_WEB_APP_URL, json=payload, timeout=45)
+            if response.status_code == 200:
+                result = response.json()
+                if result.get("success"):
+                    logger.info(f"GDrive: Uploaded profile pic via GAS Web App proxy: {filename} (ID: {result.get('fileId')})")
+                    return result.get("fileId")
+                else:
+                    logger.error(f"GDrive: GAS Web App profile pic upload returned failure: {result.get('error')}")
+            else:
+                logger.error(f"GDrive: GAS Web App profile pic upload returned status {response.status_code}: {response.text}")
+        except Exception as gas_err:
+            logger.error(f"GDrive: Failed to upload profile pic via GAS Web App: {str(gas_err)}")
+            
+    # 2. Fallback to direct Service Account client
+    logger.info("GDrive: Falling back to direct service account upload client for profile pic...")
+    service = get_drive_service()
+    if not service:
+        raise Exception("GDrive: Service client is not active.")
+        
+    folder_id = get_or_create_subfolder(service, DRIVE_PARENT_FOLDER_ID, "Profile_Pictures")
+    file_metadata = {
+        'name': filename,
+        'parents': [folder_id]
+    }
+    media = MediaIoBaseUpload(io.BytesIO(file_content), mimetype=mime_type, resumable=True)
+    file = service.files().create(body=file_metadata, media_body=media, fields='id').execute()
+    return file.get('id')
+
 def download_file_from_drive(file_id: str) -> tuple[bytes, str]:
     """Downloads a file's raw content and MIME type from Google Drive."""
     service = get_drive_service()

@@ -30,6 +30,7 @@ class User(Base):
     allowed_windows = Column(String(500), default="home,approval,expense,analysis,report,help,profile,mis_report,kpi,upload_data,penalty_report")
     active_session_id = Column(String(255), nullable=True)
     fcm_token = Column(String(500), nullable=True)  # Firebase Cloud Messaging token for push notifications
+    profile_pic_url = Column(String(500), nullable=True)
     created_at = Column(DateTime, server_default=func.now())
     updated_at = Column(DateTime, server_default=func.now(), onupdate=func.now())
     

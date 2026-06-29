@@ -1,6 +1,7 @@
+import os
 import re
 import logging
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, status, File, UploadFile
 from sqlalchemy.orm import Session
 from sqlalchemy import desc
 from pydantic import BaseModel
@@ -155,3 +156,68 @@ async def change_password(
     
     logger.info(f"User {db_user.user_id} successfully changed password.")
     return {"status": "success", "message": "Password has been updated successfully."}
+
+@router.post("/profile/photo", response_model=UserResponse)
+async def upload_profile_photo(
+    file: UploadFile = File(...),
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    """Upload user profile photo to Google Drive and update profile_pic_url"""
+    # 1. Validate file format (strictly JPG, JPEG, PNG - no PDFs for profile picture)
+    ext = os.path.splitext(file.filename)[1].lower()
+    if ext not in [".jpg", ".jpeg", ".png"]:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Only JPG, JPEG, and PNG files are allowed for profile pictures."
+        )
+        
+    # 2. Validate file size (max 2MB)
+    from app.config.settings import settings
+    file.file.seek(0, 2)
+    size = file.file.tell()
+    file.file.seek(0)
+    if size > settings.MAX_UPLOAD_SIZE:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"File size exceeds the limit of {settings.MAX_UPLOAD_SIZE / (1024 * 1024):.0f}MB."
+        )
+        
+    # 3. Read bytes and upload to Google Drive
+    try:
+        file_bytes = file.file.read()
+        
+        # Safe filename
+        safe_name = os.path.basename(file.filename).replace(" ", "_")
+        drive_filename = f"profile_{current_user.user_id}_{safe_name}"
+        
+        from app.utils.gdrive import upload_profile_pic_to_drive
+        file_id = upload_profile_pic_to_drive(
+            file_content=file_bytes,
+            filename=drive_filename,
+            mime_type=file.content_type or "image/jpeg"
+        )
+        
+        profile_url = f"/api/upload/file/gdrive/{file_id}"
+        
+        # 4. Update in Database
+        db_user = db.query(User).filter(User.id == current_user.id).first()
+        if not db_user:
+            raise HTTPException(status_code=404, detail="User not found")
+            
+        db_user.profile_pic_url = profile_url
+        db.commit()
+        
+        # Clear auth cache so the updated user details reflect instantly everywhere
+        from app.utils import cache
+        cache.delete(f"auth_user:{db_user.user_id}")
+        db.refresh(db_user)
+        
+        logger.info(f"User {db_user.user_id} updated profile picture: {profile_url}")
+        return auth_service.resolve_user_hierarchy_names(db_user, db)
+    except Exception as err:
+        logger.error(f"Failed to upload profile photo: {str(err)}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to upload profile photo to Google Drive: {str(err)}"
+        )

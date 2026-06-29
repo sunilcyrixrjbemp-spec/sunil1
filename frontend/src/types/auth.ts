@@ -51,6 +51,7 @@ export interface DropdownData {
 export interface ProfileUpdateRequest {
   mobile_number: string;
   mail_id: string;
+  profile_pic_url?: string;
 }
 
 export interface ChangePasswordRequest {

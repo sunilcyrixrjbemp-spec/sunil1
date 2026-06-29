@@ -17,7 +17,9 @@ import {
   Navigation, 
   MapPin, 
   Eye, 
-  EyeOff 
+  EyeOff,
+  Camera,
+  Loader2
 } from "lucide-react";
 
 const LteSpinner = () => (
@@ -44,11 +46,111 @@ const DetailRow = ({ label, value, icon }: DetailRowProps) => (
 
 export default function ProfilePage() {
   const [user, setUser] = useState<any>(null);
+  const [photoLoading, setPhotoLoading] = useState(false);
+  
+  const compressImage = (file: File): Promise<File> => {
+    return new Promise((resolve) => {
+      const TARGET_SIZE = 200 * 1024; // 200 KB
+      const img = new Image();
+      const objectUrl = URL.createObjectURL(file);
+      img.onload = () => {
+        URL.revokeObjectURL(objectUrl);
+        const canvas = document.createElement("canvas");
+        let { width, height } = img;
+        const maxDim = 1200; // Profile pictures don't need to be huge
+        if (width > maxDim || height > maxDim) {
+          if (width > height) {
+            height = Math.round((height * maxDim) / width);
+            width = maxDim;
+          } else {
+            width = Math.round((width * maxDim) / height);
+            height = maxDim;
+          }
+        }
+        canvas.width = width;
+        canvas.height = height;
+        const ctx = canvas.getContext("2d");
+        if (!ctx) { resolve(file); return; }
+        ctx.drawImage(img, 0, 0, width, height);
+
+        let lo = 0.1, hi = 0.95, quality = 0.75;
+        let bestBlob: Blob | null = null;
+        const tryQuality = (q: number, done: (blob: Blob) => void) => {
+          canvas.toBlob((blob) => {
+            if (blob) done(blob);
+            else resolve(file);
+          }, "image/jpeg", q);
+        };
+        const iterate = (pass: number, lo: number, hi: number) => {
+          quality = (lo + hi) / 2;
+          tryQuality(quality, (blob) => {
+            bestBlob = blob;
+            if (pass >= 5 || Math.abs(blob.size - TARGET_SIZE) < 4096) {
+              const compressedFile = new File([bestBlob!], file.name.replace(/\.[^.]+$/, ".jpg"), {
+                type: "image/jpeg",
+                lastModified: Date.now()
+              });
+              resolve(compressedFile);
+            } else if (blob.size > TARGET_SIZE) {
+              iterate(pass + 1, lo, quality);
+            } else {
+              iterate(pass + 1, quality, hi);
+            }
+          });
+        };
+        iterate(0, lo, hi);
+      };
+      img.onerror = () => { URL.revokeObjectURL(objectUrl); resolve(file); };
+      img.src = objectUrl;
+    });
+  };
+
+  const handlePhotoChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = e.target.files;
+    if (!files || files.length === 0) return;
+    const file = files[0];
+    
+    const ext = file.name.substring(file.name.lastIndexOf(".")).toLowerCase();
+    if (![".jpg", ".jpeg", ".png"].includes(ext)) {
+      setNotice({ type: "error", text: "Only JPG, JPEG, and PNG images are allowed." });
+      return;
+    }
+    
+    setPhotoLoading(true);
+    setNotice(null);
+    try {
+      const compressed = await compressImage(file);
+      
+      if (compressed.size > 2 * 1024 * 1024) {
+        setNotice({ type: "error", text: "Compressed image file size must be less than 2MB." });
+        setPhotoLoading(false);
+        return;
+      }
+      
+      const updatedUser = await authService.updateProfilePhoto(compressed);
+      localStorage.setItem("user", JSON.stringify(updatedUser));
+      setUser(updatedUser);
+      
+      // Dispatch a storage event so layout sidebar hears it and re-renders
+      window.dispatchEvent(new Event("storage"));
+      
+      setNotice({ type: "success", text: "Profile picture updated successfully!" });
+      setTimeout(() => setNotice(null), 3000);
+    } catch (err: any) {
+      setNotice({
+        type: "error",
+        text: err.response?.data?.detail || "Failed to upload profile picture."
+      });
+    } finally {
+      setPhotoLoading(false);
+      e.target.value = "";
+    }
+  };
   
   // Tab control: "info" | "password" - persisted on refresh
   const [activeTab, setActiveTab] = useState<"info" | "password">((() => {
     return (localStorage.getItem("profile_active_tab") as "info" | "password") || "info";
-  }));
+  })());
 
   const handleTabChange = (tab: "info" | "password") => {
     setActiveTab(tab);
@@ -233,9 +335,42 @@ export default function ProfilePage() {
         {/* Left Column - Main Avatar / Card */}
         <div className="lg:col-span-1">
           <div className="card-lte-primary p-6 text-center lg:sticky lg:top-20">
-            {/* Circle avatar with 1 capitalized initial */}
-            <div className="h-20 w-20 rounded-full bg-blue-100 text-blue-600 flex items-center justify-center font-bold text-2xl mx-auto border border-blue-200 shadow-sm uppercase">
-              {user.name ? user.name.charAt(0).toUpperCase() : "U"}
+            {/* Circle avatar with interactive upload */}
+            <div className="relative h-24 w-24 mx-auto group mb-4">
+              <label htmlFor="profile-photo-input" className="cursor-pointer block relative h-full w-full rounded-full overflow-hidden border-2 border-blue-100 shadow-md select-none group-hover:border-blue-400 transition-all">
+                {photoLoading ? (
+                  <div className="absolute inset-0 bg-black/40 flex items-center justify-center text-white z-10">
+                    <Loader2 className="w-6 h-6 animate-spin" />
+                  </div>
+                ) : (
+                  <div className="absolute inset-0 bg-black/0 group-hover:bg-black/40 flex flex-col items-center justify-center text-white opacity-0 group-hover:opacity-100 transition-all z-10">
+                    <Camera className="w-5 h-5 mb-0.5" />
+                    <span className="text-[8px] font-bold uppercase tracking-wider">Change</span>
+                  </div>
+                )}
+                {user && user.profile_pic_url ? (
+                  <img 
+                    src={user.profile_pic_url} 
+                    alt="Avatar" 
+                    className="h-full w-full object-cover"
+                    onError={(e) => {
+                      (e.target as HTMLImageElement).style.display = 'none';
+                    }}
+                  />
+                ) : (
+                  <div className="h-full w-full bg-blue-100 text-blue-600 flex items-center justify-center font-black text-3xl uppercase">
+                    {user && user.name ? user.name.charAt(0).toUpperCase() : "U"}
+                  </div>
+                )}
+              </label>
+              <input 
+                type="file" 
+                id="profile-photo-input" 
+                accept="image/jpeg,image/png,image/jpg" 
+                onChange={handlePhotoChange} 
+                className="hidden" 
+                disabled={photoLoading}
+              />
             </div>
             
             <h3 className="text-base font-bold text-gray-800 mt-4 leading-tight">{user.name || "Employee"}</h3>

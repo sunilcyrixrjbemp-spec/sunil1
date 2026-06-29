@@ -133,6 +133,26 @@ export const authService = {
     return response.data;
   },
 
+  updateProfilePhoto: async (file: File): Promise<any> => {
+    const formData = new FormData();
+    formData.append("file", file);
+    const response = await api.post("/users/profile/photo", formData, {
+      headers: {
+        "Content-Type": "multipart/form-data"
+      }
+    });
+    const accessToken = localStorage.getItem("access_token")
+      || document.cookie.split("; ").find(r => r.startsWith("fallback_access_token="))?.split("=")[1]?.replace(/%[0-9A-F]{2}/gi, c => decodeURIComponent(c))
+      || "";
+    const refreshToken = localStorage.getItem("refresh_token")
+      || document.cookie.split("; ").find(r => r.startsWith("fallback_refresh_token="))?.split("=")[1]?.replace(/%[0-9A-F]{2}/gi, c => decodeURIComponent(c))
+      || "";
+    if (accessToken) {
+      tokenPersistence.save(accessToken, refreshToken, response.data);
+    }
+    return response.data;
+  },
+
   changePassword: async (data: ChangePasswordRequest): Promise<any> => {
     const response = await api.post("/users/change-password", data);
     return response.data;

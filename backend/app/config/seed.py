@@ -154,6 +154,19 @@ def run_schema_updates(db: Session):
         else:
             logger.warning(f"Error checking/adding active_session_id: {str(e)}")
 
+    # Add profile_pic_url column to users table
+    try:
+        db.execute(text("ALTER TABLE users ADD COLUMN profile_pic_url VARCHAR(500)"))
+        db.commit()
+        logger.info("Added column profile_pic_url to users table.")
+    except Exception as e:
+        db.rollback()
+        err_str = str(e).lower()
+        if "duplicate column name" in err_str or "already exists" in err_str:
+            logger.info("Column profile_pic_url already exists in users table.")
+        else:
+            logger.warning(f"Error checking/adding profile_pic_url: {str(e)}")
+
     # Add needs_followup column to support_tickets table
     try:
         db.execute(text("ALTER TABLE support_tickets ADD COLUMN needs_followup BOOLEAN DEFAULT 0"))
