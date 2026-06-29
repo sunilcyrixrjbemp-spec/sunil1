@@ -9,6 +9,29 @@ import logging
 logger = logging.getLogger(__name__)
 router = APIRouter()
 
+
+def _bulk_insert(db, table_name: str, columns: list[str], records: list[dict], max_params: int = 950):
+    """Insert records in multi-row batches that stay under SQLite's 999-parameter limit.
+    Works with D1's custom cursor (no executemany needed)."""
+    if not records:
+        return
+    batch_size = max(1, max_params // len(columns))
+    col_str = ", ".join(columns)
+    for i in range(0, len(records), batch_size):
+        batch = records[i : i + batch_size]
+        val_placeholders = []
+        params = {}
+        for r_idx, r in enumerate(batch):
+            row_ph = []
+            for k in columns:
+                pname = f"{k}_{r_idx}"
+                row_ph.append(f":{pname}")
+                params[pname] = r[k]
+            val_placeholders.append("(" + ", ".join(row_ph) + ")")
+        sql = f"INSERT INTO {table_name} ({col_str}) VALUES " + ", ".join(val_placeholders)
+        db.execute(text(sql), params)
+    db.commit()
+
 @router.get("/monthly/{month}")
 async def get_monthly_report(month: str, db: Session = Depends(get_db)):
     """Get monthly report"""
@@ -346,39 +369,13 @@ async def upload_excel_penalties(
             records.append(rec)
             row_count += 1
             
-            # Batch execute insert query to keep memory usage low (stay under SQLite 999 parameter limit)
-            if len(records) >= 20:
-                columns = list(records[0].keys())
-                col_str = ", ".join(columns)
-                val_placeholders = []
-                params = {}
-                for r_idx, r in enumerate(records):
-                    row_placeholders = []
-                    for k in columns:
-                        param_name = f"{k}_{r_idx}"
-                        row_placeholders.append(f":{param_name}")
-                        params[param_name] = r[k]
-                    val_placeholders.append("(" + ", ".join(row_placeholders) + ")")
-                insert_sql = f"INSERT INTO rj_penalties ({col_str}) VALUES " + ", ".join(val_placeholders)
-                db.execute(text(insert_sql), params)
-                db.commit()
+            # Flush every 500 records to keep memory low
+            if len(records) >= 500:
+                _bulk_insert(db, "rj_penalties", list(records[0].keys()), records)
                 records = []
                 
         if records:
-            columns = list(records[0].keys())
-            col_str = ", ".join(columns)
-            val_placeholders = []
-            params = {}
-            for r_idx, r in enumerate(records):
-                row_placeholders = []
-                for k in columns:
-                    param_name = f"{k}_{r_idx}"
-                    row_placeholders.append(f":{param_name}")
-                    params[param_name] = r[k]
-                val_placeholders.append("(" + ", ".join(row_placeholders) + ")")
-            insert_sql = f"INSERT INTO rj_penalties ({col_str}) VALUES " + ", ".join(val_placeholders)
-            db.execute(text(insert_sql), params)
-            db.commit()
+            _bulk_insert(db, "rj_penalties", list(records[0].keys()), records)
             
         os.unlink(tmp_path)
         return {
@@ -494,22 +491,17 @@ async def upload_excel_master_data(
                         "facility_type": fac_type, "zone_name": zone_name
                     }
             
-            # Insert DI Name List (execute row-by-row because D1 driver doesn't support executemany)
+            # Insert DI Name List (batched multi-row inserts)
             db.execute(text("DELETE FROM di_name_list"))
-            for item in di_list_rows:
-                db.execute(text("""
-                    INSERT INTO di_name_list (district_name, hospital_name, di_name, coordinator_name, zone_name)
-                    VALUES (:district_name, :hospital_name, :di_name, :coordinator_name, :zone_name)
-                """), item)
+            _bulk_insert(db, "di_name_list",
+                         ["district_name", "hospital_name", "di_name", "coordinator_name", "zone_name"],
+                         di_list_rows)
             
-            # Insert Facility Details (execute row-by-row because D1 driver doesn't support executemany)
+            # Insert Facility Details (batched multi-row inserts)
             db.execute(text("DELETE FROM facility_details"))
-            for item in facility_details_map.values():
-                db.execute(text("""
-                    INSERT INTO facility_details (facility_name, district_name, facility_incharge, dm_name, coordinator_name, facility_type, zone_name)
-                    VALUES (:facility_name, :district_name, :facility_incharge, :dm_name, :coordinator_name, :facility_type, :zone_name)
-                """), item)
-            db.commit()
+            _bulk_insert(db, "facility_details",
+                         ["facility_name", "district_name", "facility_incharge", "dm_name", "coordinator_name", "facility_type", "zone_name"],
+                         list(facility_details_map.values()))
             
         # 2. Sync asset_value_master
         if 'Asset Value' in wb.sheetnames:
@@ -532,12 +524,7 @@ async def upload_excel_master_data(
                     asset_rows.append({"equipment_name": equip_name, "rmsc_tender_cost": cost})
                     
             db.execute(text("DELETE FROM asset_value_master"))
-            for item in asset_rows:
-                db.execute(text("""
-                    INSERT INTO asset_value_master (equipment_name, rmsc_tender_cost)
-                    VALUES (:equipment_name, :rmsc_tender_cost)
-                """), item)
-            db.commit()
+            _bulk_insert(db, "asset_value_master", ["equipment_name", "rmsc_tender_cost"], asset_rows)
             
         # 3. Sync critical_equipment
         if 'Critical Equipment' in wb.sheetnames:
@@ -557,12 +544,7 @@ async def upload_excel_master_data(
                     crit_rows.append({"equipment_name": equip_name, "classification": classification})
                     
             db.execute(text("DELETE FROM critical_equipment"))
-            for item in crit_rows:
-                db.execute(text("""
-                    INSERT INTO critical_equipment (equipment_name, classification)
-                    VALUES (:equipment_name, :classification)
-                """), item)
-            db.commit()
+            _bulk_insert(db, "critical_equipment", ["equipment_name", "classification"], crit_rows)
             
         # 4. Sync main_hospitals
         if 'Main Hospital' in wb.sheetnames:
@@ -583,12 +565,7 @@ async def upload_excel_master_data(
                     main_rows.append({"hospital_name": hosp_name, "hospital_type": hosp_type, "sla_category": sla_category})
                     
             db.execute(text("DELETE FROM main_hospitals"))
-            for item in main_rows:
-                db.execute(text("""
-                    INSERT INTO main_hospitals (hospital_name, hospital_type, sla_category)
-                    VALUES (:hospital_name, :hospital_type, :sla_category)
-                """), item)
-            db.commit()
+            _bulk_insert(db, "main_hospitals", ["hospital_name", "hospital_type", "sla_category"], main_rows)
             
         os.unlink(tmp_path)
         return {
