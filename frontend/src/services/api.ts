@@ -3,17 +3,21 @@ import { tokenPersistence } from "../utils/persistence";
 import { Capacitor } from "@capacitor/core";
 import { Preferences } from "@capacitor/preferences";
 
-// Define the production fallback URL for mobile apps
+// Define the production fallback URL for mobile and web apps
 const PROD_BACKEND_URL = "https://expense-backend-zio8.onrender.com";
 
 let API_BASE_URL = import.meta.env.VITE_API_BASE_URL || "";
 
-// If no VITE_API_BASE_URL is set, or if it is a relative path '/api',
-// and we are running inside a native mobile app, force it to the production URL.
-if (Capacitor.isNativePlatform()) {
-  API_BASE_URL = `${PROD_BACKEND_URL}/api`;
-} else if (!API_BASE_URL || API_BASE_URL === "/api") {
-  API_BASE_URL = "/api";
+// If no VITE_API_BASE_URL is set, determine it dynamically based on environment
+if (!API_BASE_URL) {
+  if (Capacitor.isNativePlatform()) {
+    API_BASE_URL = `${PROD_BACKEND_URL}/api`;
+  } else if (import.meta.env.DEV) {
+    API_BASE_URL = "http://localhost:8000/api";
+  } else {
+    // Production web deployment fallback (direct calling to wake up and fetch data)
+    API_BASE_URL = `${PROD_BACKEND_URL}/api`;
+  }
 }
 
 if (API_BASE_URL !== "/api") {
