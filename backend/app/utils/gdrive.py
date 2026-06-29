@@ -10,7 +10,9 @@ logger = logging.getLogger(__name__)
 
 # Main Google Drive Folder ID
 DRIVE_PARENT_FOLDER_ID = "1oiX3ZTlnMQ9RYn8uXhLx2mrmzz_K98Nu"
-SERVICE_ACCOUNT_PATH = "firebase-service-account.json"
+# Resolve absolute path to firebase-service-account.json
+BASE_DIR = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+SERVICE_ACCOUNT_PATH = os.path.join(BASE_DIR, "firebase-service-account.json")
 SCOPES = ['https://www.googleapis.com/auth/drive', 'https://www.googleapis.com/auth/drive.file']
 
 def get_drive_service():
