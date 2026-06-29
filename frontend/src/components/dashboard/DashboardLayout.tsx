@@ -66,6 +66,8 @@ export default function DashboardLayout() {
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(window.innerWidth < 1024);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [user, setUser] = useState<any>(null);
+  const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
+  const [avatarError, setAvatarError] = useState(false);
   
   // Notification State (loads instantly from cache for maximum speed)
   const [notifications, setNotifications] = useState<NotificationItem[]>(() => {
@@ -125,6 +127,42 @@ export default function DashboardLayout() {
     window.addEventListener("storage", handleStorageChange);
     return () => window.removeEventListener("storage", handleStorageChange);
   }, []);
+
+  useEffect(() => {
+    if (!user || !user.profile_pic_url) {
+      setAvatarUrl(null);
+      setAvatarError(false);
+      return;
+    }
+    
+    setAvatarError(false);
+    const cacheKey = `cached_avatar_${user.user_id || user.id || 'default'}`;
+    const cached = localStorage.getItem(cacheKey);
+    if (cached) {
+      setAvatarUrl(cached);
+    } else {
+      setAvatarUrl(user.profile_pic_url);
+    }
+    
+    const preloadImage = async () => {
+      try {
+        const res = await fetch(user.profile_pic_url);
+        if (res.ok) {
+          const blob = await res.blob();
+          const reader = new FileReader();
+          reader.onloadend = () => {
+            const base64 = reader.result as string;
+            localStorage.setItem(cacheKey, base64);
+            setAvatarUrl(base64);
+          };
+          reader.readAsDataURL(blob);
+        }
+      } catch (err) {
+        // Ignore background caching errors
+      }
+    };
+    preloadImage();
+  }, [user?.profile_pic_url, user?.user_id, user?.id]);
 
   const formatDateTime = (dateVal: any) => {
     if (!dateVal) return "—";
@@ -273,14 +311,12 @@ export default function DashboardLayout() {
         <div className="p-3.5 border-b border-gray-700 shrink-0">
           <div className={`flex items-center gap-3 ${isSidebarCollapsed ? "justify-center" : ""}`}>
             <div className="h-8 w-8 rounded-full bg-blue-600/20 border border-blue-500/30 flex items-center justify-center text-blue-400 font-bold text-xs shrink-0 overflow-hidden">
-              {user.profile_pic_url ? (
+              {avatarUrl && !avatarError ? (
                 <img 
-                  src={user.profile_pic_url} 
+                  src={avatarUrl} 
                   alt="Avatar" 
                   className="h-full w-full object-cover" 
-                  onError={(e) => {
-                    (e.target as HTMLImageElement).style.display = 'none';
-                  }}
+                  onError={() => setAvatarError(true)}
                 />
               ) : (
                 user.name ? user.name.charAt(0).toUpperCase() : "U"
@@ -522,14 +558,12 @@ export default function DashboardLayout() {
             className="p-4 bg-white border-b border-gray-150 shrink-0 flex items-center gap-3 text-gray-800 hover:bg-gray-50 transition-colors no-underline block"
           >
             <div className="h-10 w-10 rounded-full bg-blue-600 flex items-center justify-center text-white font-black text-sm shadow-sm select-none overflow-hidden">
-              {user?.profile_pic_url ? (
+              {avatarUrl && !avatarError ? (
                 <img 
-                  src={user.profile_pic_url} 
+                  src={avatarUrl} 
                   alt="Avatar" 
                   className="h-full w-full object-cover" 
-                  onError={(e) => {
-                    (e.target as HTMLImageElement).style.display = 'none';
-                  }}
+                  onError={() => setAvatarError(true)}
                 />
               ) : (
                 user?.name ? user.name.charAt(0).toUpperCase() : "U"

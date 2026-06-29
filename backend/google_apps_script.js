@@ -51,10 +51,34 @@ function doPost(e) {
       var fileBytes = Utilities.base64Decode(fileBase64);
       var blob = Utilities.newBlob(fileBytes, mimeType, filename);
       var file = subFolder.createFile(blob);
+      try {
+        file.setSharing(DriveApp.Access.ANYONE_WITH_LINK, DriveApp.Permission.VIEW);
+      } catch (sharingErr) {
+        // Ignore if sharing policy restricts it
+      }
       
       return ContentService.createTextOutput(JSON.stringify({ 
         success: true, 
         fileId: file.getId() 
+      })).setMimeType(ContentService.MimeType.JSON);
+    }
+    
+    // ACTION: DOWNLOAD FILE FROM GOOGLE DRIVE
+    if (action === "download_file") {
+      var fileId = data.fileId;
+      if (!fileId) {
+        return ContentService.createTextOutput(JSON.stringify({ 
+          success: false, 
+          error: "Missing fileId" 
+        })).setMimeType(ContentService.MimeType.JSON);
+      }
+      var file = DriveApp.getFileById(fileId);
+      var blob = file.getBlob();
+      var base64 = Utilities.base64Encode(blob.getBytes());
+      return ContentService.createTextOutput(JSON.stringify({
+        success: true,
+        fileBase64: base64,
+        mimeType: blob.getContentType()
       })).setMimeType(ContentService.MimeType.JSON);
     }
     

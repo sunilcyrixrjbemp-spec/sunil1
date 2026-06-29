@@ -47,6 +47,8 @@ const DetailRow = ({ label, value, icon }: DetailRowProps) => (
 export default function ProfilePage() {
   const [user, setUser] = useState<any>(null);
   const [photoLoading, setPhotoLoading] = useState(false);
+  const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
+  const [avatarError, setAvatarError] = useState(false);
   
   const compressImage = (file: File): Promise<File> => {
     return new Promise((resolve) => {
@@ -131,8 +133,18 @@ export default function ProfilePage() {
       localStorage.setItem("user", JSON.stringify(updatedUser));
       setUser(updatedUser);
       
-      // Dispatch a storage event so layout sidebar hears it and re-renders
-      window.dispatchEvent(new Event("storage"));
+      // Update local storage avatar cache immediately with the compressed local image
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        const base64 = reader.result as string;
+        const cacheKey = `cached_avatar_${updatedUser.user_id || updatedUser.id || 'default'}`;
+        localStorage.setItem(cacheKey, base64);
+        setAvatarUrl(base64);
+        setAvatarError(false);
+        // Dispatch event so layout catches it
+        window.dispatchEvent(new Event("storage"));
+      };
+      reader.readAsDataURL(compressed);
       
       setNotice({ type: "success", text: "Profile picture updated successfully!" });
       setTimeout(() => setNotice(null), 3000);
@@ -197,6 +209,42 @@ export default function ProfilePage() {
         console.error("Failed to sync profile:", err);
       });
   }, []);
+
+  useEffect(() => {
+    if (!user || !user.profile_pic_url) {
+      setAvatarUrl(null);
+      setAvatarError(false);
+      return;
+    }
+    
+    setAvatarError(false);
+    const cacheKey = `cached_avatar_${user.user_id || user.id || 'default'}`;
+    const cached = localStorage.getItem(cacheKey);
+    if (cached) {
+      setAvatarUrl(cached);
+    } else {
+      setAvatarUrl(user.profile_pic_url);
+    }
+    
+    const preloadImage = async () => {
+      try {
+        const res = await fetch(user.profile_pic_url);
+        if (res.ok) {
+          const blob = await res.blob();
+          const reader = new FileReader();
+          reader.onloadend = () => {
+            const base64 = reader.result as string;
+            localStorage.setItem(cacheKey, base64);
+            setAvatarUrl(base64);
+          };
+          reader.readAsDataURL(blob);
+        }
+      } catch (err) {
+        // Ignore background caching errors
+      }
+    };
+    preloadImage();
+  }, [user?.profile_pic_url, user?.user_id, user?.id]);
 
   const handleSaveEmail = async () => {
     if (!tempEmail.trim()) {
@@ -348,14 +396,12 @@ export default function ProfilePage() {
                     <span className="text-[8px] font-bold uppercase tracking-wider">Change</span>
                   </div>
                 )}
-                {user && user.profile_pic_url ? (
+                {avatarUrl && !avatarError ? (
                   <img 
-                    src={user.profile_pic_url} 
+                    src={avatarUrl} 
                     alt="Avatar" 
                     className="h-full w-full object-cover"
-                    onError={(e) => {
-                      (e.target as HTMLImageElement).style.display = 'none';
-                    }}
+                    onError={() => setAvatarError(true)}
                   />
                 ) : (
                   <div className="h-full w-full bg-blue-100 text-blue-600 flex items-center justify-center font-black text-3xl uppercase">

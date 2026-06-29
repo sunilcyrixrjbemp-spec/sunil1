@@ -201,21 +201,53 @@ def upload_profile_pic_to_drive(file_content: bytes, filename: str, mime_type: s
     return file.get('id')
 
 def download_file_from_drive(file_id: str) -> tuple[bytes, str]:
-    """Downloads a file's raw content and MIME type from Google Drive."""
+    """Downloads a file's raw content and MIME type from Google Drive (prioritizing direct API, falling back to GAS)."""
+    import base64
+    import requests
+    from app.config.settings import settings
+    
+    # 1. Try direct Service Account API first
     service = get_drive_service()
-    if not service:
-        raise Exception("GDrive: Service client is not active.")
-    
-    # Get metadata for MIME Type
-    metadata = service.files().get(fileId=file_id, fields='mimeType').execute()
-    mime_type = metadata.get('mimeType', 'application/octet-stream')
-    
-    # Download content
-    request = service.files().get_media(fileId=file_id)
-    file_stream = io.BytesIO()
-    downloader = MediaIoBaseDownload(file_stream, request)
-    done = False
-    while done is False:
-        status, done = downloader.next_chunk()
-    
-    return file_stream.getvalue(), mime_type
+    if service:
+        try:
+            # Get metadata for MIME Type
+            metadata = service.files().get(fileId=file_id, fields='mimeType').execute()
+            mime_type = metadata.get('mimeType', 'application/octet-stream')
+            
+            # Download content
+            request = service.files().get_media(fileId=file_id)
+            file_stream = io.BytesIO()
+            downloader = MediaIoBaseDownload(file_stream, request)
+            done = False
+            while done is False:
+                status, done = downloader.next_chunk()
+            
+            return file_stream.getvalue(), mime_type
+        except Exception as api_err:
+            logger.warning(f"GDrive: Direct API download failed for ID {file_id}: {str(api_err)}")
+            
+    # 2. Fallback to Google Apps Script Web App
+    if settings.GAS_WEB_APP_URL:
+        try:
+            logger.info(f"GDrive: Falling back to GAS Web App to download file ID {file_id}")
+            payload = {
+                "action": "download_file",
+                "fileId": file_id
+            }
+            response = requests.post(settings.GAS_WEB_APP_URL, json=payload, timeout=45)
+            if response.status_code == 200:
+                result = response.json()
+                if result.get("success"):
+                    file_b64 = result.get("fileBase64")
+                    mime_type = result.get("mimeType", "application/octet-stream")
+                    file_bytes = base64.b64decode(file_b64)
+                    return file_bytes, mime_type
+                else:
+                    raise Exception(f"GAS returned error: {result.get('error')}")
+            else:
+                raise Exception(f"GAS returned status code {response.status_code}")
+        except Exception as gas_err:
+            logger.error(f"GDrive: GAS Web App download failed: {str(gas_err)}")
+            raise Exception(f"GDrive download failed. Direct: Service client inactive. GAS: {str(gas_err)}")
+            
+    raise Exception("GDrive: Service client is not active and GAS_WEB_APP_URL is not configured.")
