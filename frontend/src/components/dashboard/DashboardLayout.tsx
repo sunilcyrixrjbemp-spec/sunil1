@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { useNavigate, Outlet, useLocation, Link } from "react-router-dom";
 import { authService } from "../../services/authService";
+import api from "../../services/api";
 import { notificationService, NotificationItem } from "../../services/notificationService";
 import brandLogo from "../../assets/images/brand.png";
 import { 
@@ -141,22 +142,24 @@ export default function DashboardLayout() {
     if (cached) {
       setAvatarUrl(cached);
     } else {
-      setAvatarUrl(user.profile_pic_url);
+      setAvatarUrl(authService.getAbsoluteImageUrl(user.profile_pic_url));
     }
     
     const preloadImage = async () => {
       try {
-        const res = await fetch(user.profile_pic_url);
-        if (res.ok) {
-          const blob = await res.blob();
-          const reader = new FileReader();
-          reader.onloadend = () => {
-            const base64 = reader.result as string;
-            localStorage.setItem(cacheKey, base64);
-            setAvatarUrl(base64);
-          };
-          reader.readAsDataURL(blob);
-        }
+        const absoluteUrl = authService.getAbsoluteImageUrl(user.profile_pic_url);
+        if (!absoluteUrl) return;
+        
+        const path = absoluteUrl.replace(api.defaults.baseURL || "", "");
+        const res = await api.get(path, { responseType: 'blob' });
+        const blob = res.data;
+        const reader = new FileReader();
+        reader.onloadend = () => {
+          const base64 = reader.result as string;
+          localStorage.setItem(cacheKey, base64);
+          setAvatarUrl(base64);
+        };
+        reader.readAsDataURL(blob);
       } catch (err) {
         // Ignore background caching errors
       }
@@ -319,12 +322,12 @@ export default function DashboardLayout() {
                   onError={() => setAvatarError(true)}
                 />
               ) : (
-                user.name ? user.name.charAt(0).toUpperCase() : "U"
+                user?.name ? user.name.charAt(0).toUpperCase() : "U"
               )}
             </div>
             {!isSidebarCollapsed && (
               <div className="min-w-0 flex-1">
-                <p className="text-xs font-semibold text-white truncate">{user.name || "Employee"}</p>
+                <p className="text-xs font-semibold text-white truncate">{user?.name || "Employee"}</p>
                 <div className="flex items-center gap-1.5 mt-0.5">
                   <span className="h-1.5 w-1.5 rounded-full bg-green-500"></span>
                   <span className="text-[10px] text-gray-400 font-semibold uppercase tracking-wide">{userRole}</span>

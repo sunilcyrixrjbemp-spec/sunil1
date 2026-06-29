@@ -251,3 +251,44 @@ def download_file_from_drive(file_id: str) -> tuple[bytes, str]:
             raise Exception(f"GDrive download failed. Direct: Service client inactive. GAS: {str(gas_err)}")
             
     raise Exception("GDrive: Service client is not active and GAS_WEB_APP_URL is not configured.")
+
+def delete_file_from_drive(file_id: str) -> bool:
+    """Deletes a file from Google Drive (marking as trashed), prioritizing GAS, falling back to direct API."""
+    import requests
+    from app.config.settings import settings
+    
+    # 1. Try using Google Apps Script Web App first
+    if settings.GAS_WEB_APP_URL:
+        try:
+            payload = {
+                "action": "delete_file",
+                "fileId": file_id
+            }
+            response = requests.post(settings.GAS_WEB_APP_URL, json=payload, timeout=20)
+            if response.status_code == 200:
+                result = response.json()
+                if result.get("success"):
+                    logger.info(f"GDrive: Deleted old file via GAS Web App proxy (ID: {file_id})")
+                    return True
+                else:
+                    logger.error(f"GDrive: GAS Web App file deletion returned failure: {result.get('error')}")
+            else:
+                logger.error(f"GDrive: GAS Web App file deletion returned status {response.status_code}: {response.text}")
+        except Exception as gas_err:
+            logger.error(f"GDrive: Failed to delete file via GAS Web App: {str(gas_err)}")
+            
+    # 2. Fallback to direct Service Account client
+    logger.info("GDrive: Falling back to direct service account client for deletion...")
+    service = get_drive_service()
+    if not service:
+        logger.warning("GDrive: Service client is not active. Cannot delete old file.")
+        return False
+        
+    try:
+        service.files().delete(fileId=file_id).execute()
+        logger.info(f"GDrive: Deleted old file via direct API (ID: {file_id})")
+        return True
+    except Exception as err:
+        logger.error(f"GDrive: Failed to delete file via direct API: {str(err)}")
+        return False
+

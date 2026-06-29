@@ -156,5 +156,19 @@ export const authService = {
   changePassword: async (data: ChangePasswordRequest): Promise<any> => {
     const response = await api.post("/users/change-password", data);
     return response.data;
+  },
+
+  getAbsoluteImageUrl: (url: string | null): string | null => {
+    if (!url) return null;
+    if (url.startsWith("http://") || url.startsWith("https://") || url.startsWith("data:")) {
+      return url;
+    }
+    let baseUrl = import.meta.env.VITE_API_BASE_URL || "";
+    if (!baseUrl) {
+      baseUrl = "https://expense-backend-zio8.onrender.com/api";
+    }
+    const host = baseUrl.replace(/\/api\/?$/, "").replace(/\/$/, "");
+    const relative = url.startsWith("/") ? url : `/${url}`;
+    return `${host}${relative}`;
   }
 };

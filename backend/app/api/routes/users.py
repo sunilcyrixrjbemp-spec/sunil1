@@ -204,7 +204,16 @@ async def upload_profile_photo(
         db_user = db.query(User).filter(User.id == current_user.id).first()
         if not db_user:
             raise HTTPException(status_code=404, detail="User not found")
-            
+        # Delete old profile pic from Google Drive if it exists
+        if db_user.profile_pic_url and "/api/upload/file/gdrive/" in db_user.profile_pic_url:
+            try:
+                old_file_id = db_user.profile_pic_url.split("/gdrive/")[-1]
+                if old_file_id:
+                    from app.utils.gdrive import delete_file_from_drive
+                    delete_file_from_drive(old_file_id)
+            except Exception as del_err:
+                logger.warning(f"Failed to delete old profile photo {db_user.profile_pic_url}: {str(del_err)}")
+
         db_user.profile_pic_url = profile_url
         db.commit()
         

@@ -82,6 +82,29 @@ function doPost(e) {
       })).setMimeType(ContentService.MimeType.JSON);
     }
     
+    // ACTION: DELETE FILE FROM GOOGLE DRIVE
+    if (action === "delete_file") {
+      var fileId = data.fileId;
+      if (!fileId) {
+        return ContentService.createTextOutput(JSON.stringify({ 
+          success: false, 
+          error: "Missing fileId" 
+        })).setMimeType(ContentService.MimeType.JSON);
+      }
+      try {
+        var file = DriveApp.getFileById(fileId);
+        file.setTrashed(true);
+        return ContentService.createTextOutput(JSON.stringify({
+          success: true
+        })).setMimeType(ContentService.MimeType.JSON);
+      } catch (err) {
+        return ContentService.createTextOutput(JSON.stringify({
+          success: false,
+          error: err.toString()
+        })).setMimeType(ContentService.MimeType.JSON);
+      }
+    }
+    
     // ACTION: EMAIL FORWARDER (DEFAULT)
     var to = data.to;
     var subject = data.subject || "Verification Code - Expense Management";

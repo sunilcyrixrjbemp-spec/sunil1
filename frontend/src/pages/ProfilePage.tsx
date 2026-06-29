@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from "react";
 import { authService } from "../services/authService";
+import api from "../services/api";
 import { 
   Pencil, 
   Check, 
@@ -223,22 +224,24 @@ export default function ProfilePage() {
     if (cached) {
       setAvatarUrl(cached);
     } else {
-      setAvatarUrl(user.profile_pic_url);
+      setAvatarUrl(authService.getAbsoluteImageUrl(user.profile_pic_url));
     }
     
     const preloadImage = async () => {
       try {
-        const res = await fetch(user.profile_pic_url);
-        if (res.ok) {
-          const blob = await res.blob();
-          const reader = new FileReader();
-          reader.onloadend = () => {
-            const base64 = reader.result as string;
-            localStorage.setItem(cacheKey, base64);
-            setAvatarUrl(base64);
-          };
-          reader.readAsDataURL(blob);
-        }
+        const absoluteUrl = authService.getAbsoluteImageUrl(user.profile_pic_url);
+        if (!absoluteUrl) return;
+        
+        const path = absoluteUrl.replace(api.defaults.baseURL || "", "");
+        const res = await api.get(path, { responseType: 'blob' });
+        const blob = res.data;
+        const reader = new FileReader();
+        reader.onloadend = () => {
+          const base64 = reader.result as string;
+          localStorage.setItem(cacheKey, base64);
+          setAvatarUrl(base64);
+        };
+        reader.readAsDataURL(blob);
       } catch (err) {
         // Ignore background caching errors
       }
