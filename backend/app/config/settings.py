@@ -12,8 +12,8 @@ class Settings(BaseSettings):
     API_TITLE: str = "Field Operations API"
     API_VERSION: str = "1.0.0"
     UPLOAD_DIR: str = "./uploads"
-    MAX_UPLOAD_SIZE: int = 10 * 1024 * 1024
-    ALLOWED_EXTENSIONS: List[str] = ["jpg", "jpeg", "png", "pdf", "xlsx", "csv"]
+    MAX_UPLOAD_SIZE: int = 2 * 1024 * 1024
+    ALLOWED_EXTENSIONS: List[str] = ["jpg", "jpeg", "png", "pdf"]
     EMAIL_FROM: str = "noreply@fieldops.com"
     SMTP_SERVER: Optional[str] = None
     SMTP_PORT: Optional[int] = None

@@ -665,6 +665,20 @@ export default function ExpensePage() {
       setFiles(prev => ({ ...prev, [legNum]: { ...prev[legNum], [key]: null } }));
       return;
     }
+    
+    // Validate file type (image or PDF only)
+    const isImage = file.type.startsWith("image/");
+    const isPDF = file.type === "application/pdf" || file.name.toLowerCase().endsWith(".pdf");
+    if (!isImage && !isPDF) {
+      toast.error("Only image (JPG, PNG, etc.) and PDF files are allowed!");
+      return;
+    }
+    
+    // Validate file size (maximum 2MB)
+    if (file.size > 2 * 1024 * 1024) {
+      toast.error("File size cannot exceed 2MB!");
+      return;
+    }
     // Show compressing toast for images > 50KB
     const isPDF = file.type === "application/pdf";
     let compressedFile = file;

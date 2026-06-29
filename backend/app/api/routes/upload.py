@@ -62,11 +62,22 @@ def save_uploaded_file(file: UploadFile, subfolder: str) -> str:
 async def upload_image(file: UploadFile = File(...)):
     """Upload receipts/images for reimbursement proof"""
     ext = os.path.splitext(file.filename)[1].lower()
-    if ext not in [".jpg", ".jpeg", ".png", ".gif", ".pdf"]:
+    if ext not in [".jpg", ".jpeg", ".png", ".pdf"]:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Only JPG, PNG, GIF images or PDF documents are allowed for receipts."
+            detail="Only JPG, JPEG, PNG, and PDF files are allowed for receipts."
         )
+        
+    # Validate file size
+    file.file.seek(0, 2)
+    size = file.file.tell()
+    file.file.seek(0)
+    if size > settings.MAX_UPLOAD_SIZE:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"File size exceeds the limit of {settings.MAX_UPLOAD_SIZE / (1024 * 1024):.0f}MB."
+        )
+        
     url = save_uploaded_file(file, "images")
     return {"filename": file.filename, "url": url}
 
@@ -84,8 +95,40 @@ async def serve_file(filename: str):
         file_id = filename.replace("gdrive/", "")
         try:
             import io
+            import tempfile
+            from fastapi.responses import FileResponse
             from app.utils.gdrive import download_file_from_drive
+            
+            # Setup local cache folder
+            cache_dir = os.path.join(tempfile.gettempdir(), "gdrive_cache")
+            os.makedirs(cache_dir, exist_ok=True)
+            
+            cache_path = os.path.join(cache_dir, file_id)
+            mime_path = cache_path + ".mime"
+            
+            # Serve from local cache if it exists to make click-preview super fast
+            if os.path.exists(cache_path) and os.path.exists(mime_path):
+                try:
+                    with open(mime_path, "r", encoding="utf-8") as f:
+                        mime_type = f.read().strip()
+                    logger.info(f"GDrive Cache: Serving file ID {file_id} from local cache.")
+                    return FileResponse(cache_path, media_type=mime_type)
+                except Exception as cache_err:
+                    logger.warning(f"GDrive Cache: Failed to read cache for ID {file_id}: {str(cache_err)}")
+            
+            # Otherwise, download from Google Drive (first-time fetch)
             file_bytes, mime_type = download_file_from_drive(file_id)
+            
+            # Save downloaded file in the local cache folder
+            try:
+                with open(cache_path, "wb") as f:
+                    f.write(file_bytes)
+                with open(mime_path, "w", encoding="utf-8") as f:
+                    f.write(mime_type)
+                logger.info(f"GDrive Cache: Saved file ID {file_id} in local cache.")
+            except Exception as cache_write_err:
+                logger.warning(f"GDrive Cache: Failed to write cache for ID {file_id}: {str(cache_write_err)}")
+                
             return StreamingResponse(io.BytesIO(file_bytes), media_type=mime_type)
         except Exception as e:
             logger.error(f"GDrive: Failed to download/serve file ID {file_id}: {str(e)}")
