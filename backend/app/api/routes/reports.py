@@ -1020,6 +1020,19 @@ def _clear_assets_cache():
     FILTERS_CACHE = None
 
 
+@router.get("/test-db-connection")
+async def test_db_connection(db: Session = Depends(get_db)):
+    """Diagnostic endpoint to test DB connection and return traceback on error."""
+    import traceback
+    try:
+        res = db.execute(text("SELECT 1")).fetchone()
+        return {"success": True, "result": str(res), "message": "Database connection is healthy!"}
+    except Exception as e:
+        tb = traceback.format_exc()
+        return {"success": False, "error": str(e), "traceback": tb}
+
+
+
 def _parse_date_flexible(date_str: str):
     """Try parsing various date formats and return a datetime object or None."""
     if not date_str or date_str.strip() in ("--", "", "NA", "N/A"):
