@@ -115,6 +115,8 @@ interface DashboardData {
 export default function MISReportPage() {
   const [data, setData] = useState<DashboardData | null>(null);
   const [loading, setLoading] = useState(true);
+  const [isInitialLoad, setIsInitialLoad] = useState(true);
+  const [isUpdating, setIsUpdating] = useState(false);
   const [syncing, setSyncing] = useState(false);
   const [syncProgress, setSyncProgress] = useState(0);
   const [syncStatusText, setSyncStatusText] = useState("");
@@ -132,7 +134,11 @@ export default function MISReportPage() {
   }, [selectedZone, selectedDistrict, selectedCoordinator, selectedMonth, selectedEquipment]);
 
   const fetchDashboardData = async () => {
-    setLoading(true);
+    if (isInitialLoad) {
+      setLoading(true);
+    } else {
+      setIsUpdating(true);
+    }
     try {
       const queryParams = new URLSearchParams();
       if (selectedZone) queryParams.append("zone", selectedZone);
@@ -150,6 +156,8 @@ export default function MISReportPage() {
       toast.error("Failed to retrieve live MIS analytics.");
     } finally {
       setLoading(false);
+      setIsUpdating(false);
+      setIsInitialLoad(false);
     }
   };
 
@@ -362,6 +370,7 @@ export default function MISReportPage() {
           <h2 className="text-xl font-black text-gray-800 uppercase tracking-wide flex items-center gap-2">
             <FileSpreadsheet className="w-5 h-5 text-[#28a745]" />
             Rajasthan BEMMP Penalty Analytics Dashboard
+            {isUpdating && <RefreshCw className="w-4 h-4 text-blue-500 animate-spin" />}
           </h2>
           <p className="text-gray-500 text-xs mt-0.5">
             Real-time tracking of SLA downtime penalties, FTFR%, logged calls, and resource performance metrics.
