@@ -297,17 +297,21 @@ export default function HomePage() {
     }
   };
 
+  const safeMyExpenses = Array.isArray(myExpenses) ? myExpenses : [];
+  const safeTeamExpenses = Array.isArray(teamExpenses) ? teamExpenses : [];
+
   // Unique employee list for dropdown filter
   const uniqueEmployees = Array.from(
-    new Map(teamExpenses.map(e => [e.submitter_code, e.submitter_name])).entries()
+    new Map(safeTeamExpenses.map(e => e && [e.submitter_code, e.submitter_name])).entries()
   ).map(([code, name]) => ({ code, name }));
 
   // Unique categories/modes for dropdown filter
-  const uniqueModes = Array.from(new Set(teamExpenses.map(e => e.category).filter(Boolean)));
+  const uniqueModes = Array.from(new Set(safeTeamExpenses.map(e => e && e.category).filter(Boolean)));
 
   // Filter personal claims to match currently selected selectMonth (YYYY-MM format)
   const getFilteredPersonalExpenses = () => {
-    return myExpenses.filter(exp => {
+    return safeMyExpenses.filter(exp => {
+      if (!exp) return false;
       const rawDate = exp.itinerary || exp.date;
       return rawDate && rawDate.startsWith(selectMonth);
     });
@@ -316,7 +320,7 @@ export default function HomePage() {
   const filteredPersonalExpenses = getFilteredPersonalExpenses();
 
   const getFilteredTeamExpenses = () => {
-    return teamExpenses.filter(exp => {
+    return safeTeamExpenses.filter(exp => {
       const rawDate = exp.date || exp.itinerary;
       if (rawDate && !rawDate.startsWith(selectMonth)) return false;
       if (filterEmployee !== "all" && exp.submitter_code !== filterEmployee) return false;
@@ -663,7 +667,7 @@ export default function HomePage() {
               {activeTab === "team-claims" && (
                 loadingTeamExpenses ? (
                   <Loader message="Loading team claims..." />
-                ) : teamExpenses.length === 0 ? (
+                ) : safeTeamExpenses.length === 0 ? (
                   <div className="py-16 text-center text-gray-400 text-xs">
                     <Users className="w-8 h-8 mx-auto mb-2 text-gray-300" />
                     <p className="font-bold">No claims submitted by your team members yet.</p>
@@ -730,7 +734,7 @@ export default function HomePage() {
                   Personal Mode Breakdown
                 </h3>
               </div>
-              {myExpenses.length === 0 ? (
+              {safeMyExpenses.length === 0 ? (
                 <div className="py-8 text-center text-gray-400 text-[10px] font-semibold uppercase tracking-wider">
                   No claims to analyze
                 </div>
@@ -871,7 +875,7 @@ export default function HomePage() {
 
           {/* Expense Calendar Tracker Section */}
           <ExpenseCalendar 
-            expenses={activeTab === "my-claims" ? myExpenses : filteredTeamExpenses} 
+            expenses={activeTab === "my-claims" ? safeMyExpenses : filteredTeamExpenses} 
             isTeamView={activeTab !== "my-claims"}
             selectMonth={selectMonth}
           />
