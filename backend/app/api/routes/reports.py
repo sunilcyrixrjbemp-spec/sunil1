@@ -1021,15 +1021,39 @@ def _clear_assets_cache():
 
 
 @router.get("/test-db-connection")
-async def test_db_connection(db: Session = Depends(get_db)):
+async def test_db_connection():
     """Diagnostic endpoint to test DB connection and return traceback on error."""
     import traceback
+    from app.config.database import SessionLocal, token, account_id, database_id, force_local
+    
+    diag = {
+        "force_local": force_local,
+        "token_len": len(token) if token else 0,
+        "account_id": account_id,
+        "database_id": database_id
+    }
+    
     try:
-        res = db.execute(text("SELECT 1")).fetchone()
-        return {"success": True, "result": str(res), "message": "Database connection is healthy!"}
+        db = SessionLocal()
+        try:
+            res = db.execute(text("SELECT 1")).fetchone()
+            return {
+                "success": True, 
+                "result": str(res), 
+                "message": "Database connection is healthy!",
+                "diagnostics": diag
+            }
+        finally:
+            db.close()
     except Exception as e:
         tb = traceback.format_exc()
-        return {"success": False, "error": str(e), "traceback": tb}
+        return {
+            "success": False, 
+            "error": str(e), 
+            "traceback": tb,
+            "diagnostics": diag
+        }
+
 
 
 
