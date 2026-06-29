@@ -187,7 +187,7 @@ export default function ProfilePage() {
       img.onload = () => {
         const canvas = document.createElement("canvas");
         const cropSize = 500;
-        const viewportSize = 256; // Viewport size matching w-64 h-64 in pixels
+        const viewportSize = 192; // Viewport size matching the circular mask diameter (r=96 => 192px)
         const ratio = cropSize / viewportSize;
 
         canvas.width = cropSize;
