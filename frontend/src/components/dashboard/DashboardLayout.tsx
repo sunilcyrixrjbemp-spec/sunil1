@@ -277,7 +277,7 @@ export default function DashboardLayout() {
         </div>
 
         {/* Sidebar Nav Links */}
-        <nav className="flex-1 px-2 py-4 space-y-1 overflow-y-auto">
+        <nav className="flex-1 px-2 py-4 space-y-1 overflow-y-auto no-scrollbar">
           {!isSidebarCollapsed && (
             <span className="px-3 py-2 text-[10px] font-bold text-gray-500 uppercase tracking-widest block">
               Menu Navigation
