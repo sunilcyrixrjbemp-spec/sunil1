@@ -20,7 +20,8 @@ import {
   Eye, 
   EyeOff,
   Camera,
-  Loader2
+  Loader2,
+  Trash2
 } from "lucide-react";
 
 const LteSpinner = () => (
@@ -50,6 +51,15 @@ export default function ProfilePage() {
   const [photoLoading, setPhotoLoading] = useState(false);
   const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
   const [avatarError, setAvatarError] = useState(false);
+
+  // States for Profile Crop and Zoom Modal
+  const [selectedPhotoFile, setSelectedPhotoFile] = useState<File | null>(null);
+  const [previewSrc, setPreviewSrc] = useState<string | null>(null);
+  const [showCropModal, setShowCropModal] = useState(false);
+  const [zoom, setZoom] = useState(1);
+  const [position, setPosition] = useState({ x: 0, y: 0 });
+  const [isDragging, setIsDragging] = useState(false);
+  const [dragStart, setDragStart] = useState({ x: 0, y: 0 });
   
   const compressImage = (file: File): Promise<File> => {
     return new Promise((resolve) => {
@@ -108,21 +118,90 @@ export default function ProfilePage() {
     });
   };
 
-  const handlePhotoChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const files = e.target.files;
-    if (!files || files.length === 0) return;
-    const file = files[0];
-    
-    const ext = file.name.substring(file.name.lastIndexOf(".")).toLowerCase();
-    if (![".jpg", ".jpeg", ".png"].includes(ext)) {
-      setNotice({ type: "error", text: "Only JPG, JPEG, and PNG images are allowed." });
-      return;
-    }
-    
+  const handleMouseDown = (e: React.MouseEvent) => {
+    setIsDragging(true);
+    setDragStart({ x: e.clientX - position.x, y: e.clientY - position.y });
+  };
+
+  const handleMouseMove = (e: React.MouseEvent) => {
+    if (!isDragging) return;
+    setPosition({
+      x: e.clientX - dragStart.x,
+      y: e.clientY - dragStart.y
+    });
+  };
+
+  const handleMouseUp = () => {
+    setIsDragging(false);
+  };
+
+  const handleTouchStart = (e: React.TouchEvent) => {
+    if (e.touches.length !== 1) return;
+    setIsDragging(true);
+    setDragStart({
+      x: e.touches[0].clientX - position.x,
+      y: e.touches[0].clientY - position.y
+    });
+  };
+
+  const handleTouchMove = (e: React.TouchEvent) => {
+    if (!isDragging || e.touches.length !== 1) return;
+    setPosition({
+      x: e.touches[0].clientX - dragStart.x,
+      y: e.touches[0].clientY - dragStart.y
+    });
+  };
+
+  const generateCroppedImage = (): Promise<File> => {
+    return new Promise((resolve) => {
+      const img = new Image();
+      img.onload = () => {
+        const canvas = document.createElement("canvas");
+        const cropSize = 500;
+        canvas.width = cropSize;
+        canvas.height = cropSize;
+        const ctx = canvas.getContext("2d");
+        if (!ctx) {
+          resolve(selectedPhotoFile!);
+          return;
+        }
+
+        ctx.fillStyle = "#ffffff";
+        ctx.fillRect(0, 0, cropSize, cropSize);
+
+        let drawWidth = img.width;
+        let drawHeight = img.height;
+        const scale = Math.max(cropSize / img.width, cropSize / img.height) * zoom;
+        drawWidth *= scale;
+        drawHeight *= scale;
+
+        const drawX = (cropSize - drawWidth) / 2 + position.x * scale;
+        const drawY = (cropSize - drawHeight) / 2 + position.y * scale;
+
+        ctx.drawImage(img, drawX, drawY, drawWidth, drawHeight);
+
+        canvas.toBlob((blob) => {
+          if (blob) {
+            const croppedFile = new File([blob], selectedPhotoFile!.name.replace(/\.[^.]+$/, ".jpg"), {
+              type: "image/jpeg",
+              lastModified: Date.now()
+            });
+            resolve(croppedFile);
+          } else {
+            resolve(selectedPhotoFile!);
+          }
+        }, "image/jpeg", 0.8);
+      };
+      img.src = previewSrc!;
+    });
+  };
+
+  const handleUploadCropped = async () => {
     setPhotoLoading(true);
     setNotice(null);
     try {
-      const compressed = await compressImage(file);
+      const cropped = await generateCroppedImage();
+      const compressed = await compressImage(cropped);
       
       if (compressed.size > 2 * 1024 * 1024) {
         setNotice({ type: "error", text: "Compressed image file size must be less than 2MB." });
@@ -134,7 +213,6 @@ export default function ProfilePage() {
       localStorage.setItem("user", JSON.stringify(updatedUser));
       setUser(updatedUser);
       
-      // Update local storage avatar cache immediately with the compressed local image
       const reader = new FileReader();
       reader.onloadend = () => {
         const base64 = reader.result as string;
@@ -142,22 +220,76 @@ export default function ProfilePage() {
         localStorage.setItem(cacheKey, base64);
         setAvatarUrl(base64);
         setAvatarError(false);
-        // Dispatch event so layout catches it
         window.dispatchEvent(new Event("storage"));
       };
       reader.readAsDataURL(compressed);
       
       setNotice({ type: "success", text: "Profile picture updated successfully!" });
+      setShowCropModal(false);
+      setSelectedPhotoFile(null);
+      setPreviewSrc(null);
       setTimeout(() => setNotice(null), 3000);
     } catch (err: any) {
-      setNotice({
-        type: "error",
-        text: err.response?.data?.detail || "Failed to upload profile picture."
-      });
+      console.error(err);
+      setNotice({ type: "error", text: err.response?.data?.detail || "Failed to upload cropped photo to Google Drive." });
     } finally {
       setPhotoLoading(false);
-      e.target.value = "";
     }
+  };
+
+  const handleRemovePhoto = async () => {
+    if (!window.confirm("Are you sure you want to remove your profile picture?")) return;
+    
+    setPhotoLoading(true);
+    setNotice(null);
+    try {
+      const updatedUser = await authService.deleteProfilePhoto();
+      localStorage.setItem("user", JSON.stringify(updatedUser));
+      setUser(updatedUser);
+      
+      const cacheKey = `cached_avatar_${updatedUser.user_id || updatedUser.id || 'default'}`;
+      localStorage.removeItem(cacheKey);
+      setAvatarUrl(null);
+      setAvatarError(false);
+      
+      window.dispatchEvent(new Event("storage"));
+      
+      setNotice({ type: "success", text: "Profile picture removed successfully!" });
+      setTimeout(() => setNotice(null), 3000);
+    } catch (err: any) {
+      console.error(err);
+      setNotice({ type: "error", text: err.response?.data?.detail || "Failed to remove profile photo." });
+    } finally {
+      setPhotoLoading(false);
+    }
+  };
+
+  const handlePhotoChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = e.target.files;
+    if (!files || files.length === 0) return;
+    const file = files[0];
+    
+    const ext = file.name.substring(file.name.lastIndexOf(".")).toLowerCase();
+    if (![".jpg", ".jpeg", ".png"].includes(ext)) {
+      setNotice({ type: "error", text: "Only JPG, JPEG, and PNG images are allowed." });
+      return;
+    }
+    
+    if (file.size > 10 * 1024 * 1024) {
+      setNotice({ type: "error", text: "Selected file is too large. Please choose an image smaller than 10MB." });
+      return;
+    }
+
+    const reader = new FileReader();
+    reader.onload = () => {
+      setPreviewSrc(reader.result as string);
+      setSelectedPhotoFile(file);
+      setZoom(1);
+      setPosition({ x: 0, y: 0 });
+      setShowCropModal(true);
+      e.target.value = "";
+    };
+    reader.readAsDataURL(file);
   };
   
   // Tab control: "info" | "password" - persisted on refresh
@@ -421,6 +553,18 @@ export default function ProfilePage() {
                 disabled={photoLoading}
               />
             </div>
+
+            {avatarUrl && !avatarError && (
+              <button
+                type="button"
+                onClick={handleRemovePhoto}
+                className="mt-1 text-[10px] text-red-500 hover:text-red-700 bg-transparent border-0 cursor-pointer font-bold uppercase tracking-wider flex items-center gap-1 mx-auto hover:underline"
+                disabled={photoLoading}
+              >
+                <Trash2 className="w-3 h-3" />
+                <span>Remove Photo</span>
+              </button>
+            )}
             
             <h3 className="text-base font-bold text-gray-800 mt-4 leading-tight">{user.name || "Employee"}</h3>
             <p className="text-[10px] text-blue-600 font-bold uppercase tracking-widest mt-1">{user.designation || "Staff Member"}</p>
@@ -819,6 +963,115 @@ export default function ProfilePage() {
         </div>
 
       </div>
+
+      {showCropModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm animate-fadeIn">
+          <div className="bg-white rounded-lg shadow-xl w-full max-w-md overflow-hidden border border-gray-150 mx-4 animate-scaleIn">
+            <div className="p-4 border-b border-gray-200 flex items-center justify-between bg-gray-50">
+              <h3 className="text-sm font-bold text-gray-800 uppercase tracking-wide">Adjust Profile Photo</h3>
+              <button 
+                type="button" 
+                onClick={() => { setShowCropModal(false); setSelectedPhotoFile(null); setPreviewSrc(null); }} 
+                className="text-gray-400 hover:text-gray-600 bg-transparent border-0 cursor-pointer p-1"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <div className="p-6 flex flex-col items-center">
+              <p className="text-[10px] text-gray-500 font-semibold mb-4 uppercase tracking-wider text-center">
+                Drag to position • Slide to Zoom
+              </p>
+
+              <div 
+                className="relative w-64 h-64 bg-slate-100 rounded-lg overflow-hidden border border-gray-200 cursor-move select-none shadow-inner"
+                onMouseDown={handleMouseDown}
+                onMouseMove={handleMouseMove}
+                onMouseUp={handleMouseUp}
+                onMouseLeave={handleMouseUp}
+                onTouchStart={handleTouchStart}
+                onTouchMove={handleTouchMove}
+                onTouchEnd={handleMouseUp}
+              >
+                <div 
+                  className="absolute inset-0 flex items-center justify-center"
+                  style={{ pointerEvents: 'none' }}
+                >
+                  <img 
+                    src={previewSrc || ""} 
+                    alt="Crop Preview" 
+                    className="max-w-none origin-center"
+                    style={{
+                      transform: `translate(${position.x}px, ${position.y}px) scale(${zoom})`,
+                      transition: isDragging ? 'none' : 'transform 0.1s ease-out',
+                      maxHeight: '100%',
+                      objectFit: 'contain'
+                    }}
+                  />
+                </div>
+
+                <div className="absolute inset-0 pointer-events-none flex items-center justify-center">
+                  <svg className="w-full h-full">
+                    <defs>
+                      <mask id="circle-mask">
+                        <rect x="0" y="0" width="100%" height="100%" fill="white" />
+                        <circle cx="50%" cy="50%" r="96" fill="black" />
+                      </mask>
+                    </defs>
+                    <rect x="0" y="0" width="100%" height="100%" fill="black" fillOpacity="0.5" mask="url(#circle-mask)" />
+                    <circle cx="50%" cy="50%" r="96" fill="none" stroke="#3b82f6" strokeWidth="2.5" strokeDasharray="4 2" />
+                  </svg>
+                </div>
+              </div>
+
+              <div className="w-full max-w-xs mt-6 space-y-2">
+                <div className="flex items-center justify-between text-[11px] text-gray-500 font-bold uppercase tracking-wider">
+                  <span>Zoom</span>
+                  <span className="font-mono">{zoom.toFixed(1)}x</span>
+                </div>
+                <input 
+                  type="range" 
+                  min="1" 
+                  max="3" 
+                  step="0.05"
+                  value={zoom}
+                  onChange={(e) => setZoom(parseFloat(e.target.value))}
+                  className="w-full h-1.5 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-blue-600"
+                />
+              </div>
+            </div>
+
+            <div className="p-4 bg-gray-50 border-t border-gray-200 flex items-center justify-end gap-2.5">
+              <button
+                type="button"
+                onClick={() => { setShowCropModal(false); setSelectedPhotoFile(null); setPreviewSrc(null); }}
+                className="px-4 py-2 border border-gray-200 hover:bg-gray-100 text-gray-700 font-bold text-xs rounded transition-colors bg-white cursor-pointer"
+                disabled={photoLoading}
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={handleUploadCropped}
+                className="px-5 py-2 bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs rounded transition-colors shadow-sm cursor-pointer border-0 active:scale-95 flex items-center gap-1.5"
+                disabled={photoLoading}
+              >
+                {photoLoading ? (
+                  <>
+                    <span className="spinner-lte"></span>
+                    <span>Uploading...</span>
+                  </>
+                ) : (
+                  <>
+                    <Check className="w-4 h-4" />
+                    <span>Confirm & Upload</span>
+                  </>
+                )}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

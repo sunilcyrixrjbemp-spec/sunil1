@@ -158,6 +158,20 @@ export const authService = {
     return response.data;
   },
 
+  deleteProfilePhoto: async (): Promise<any> => {
+    const response = await api.delete("/users/profile/photo");
+    const accessToken = localStorage.getItem("access_token")
+      || document.cookie.split("; ").find(r => r.startsWith("fallback_access_token="))?.split("=")[1]?.replace(/%[0-9A-F]{2}/gi, c => decodeURIComponent(c))
+      || "";
+    const refreshToken = localStorage.getItem("refresh_token")
+      || document.cookie.split("; ").find(r => r.startsWith("fallback_refresh_token="))?.split("=")[1]?.replace(/%[0-9A-F]{2}/gi, c => decodeURIComponent(c))
+      || "";
+    if (accessToken) {
+      tokenPersistence.save(accessToken, refreshToken, response.data);
+    }
+    return response.data;
+  },
+
   getAbsoluteImageUrl: (url: string | null): string | null => {
     if (!url) return null;
     if (url.startsWith("http://") || url.startsWith("https://") || url.startsWith("data:")) {

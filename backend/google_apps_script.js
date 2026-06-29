@@ -46,6 +46,24 @@ function doPost(e) {
       } else {
         subFolder = parentFolder.createFolder(folderName);
       }
+      // 2.5 Clean up any existing profile pictures for this user to avoid duplicates
+      if (folderName === "Profile_Pictures") {
+        try {
+          var nameParts = filename.split("_");
+          if (nameParts.length >= 2) {
+            var userPrefix = nameParts[0] + "_" + nameParts[1] + "_"; // e.g. "profile_E1704_"
+            var existingFiles = subFolder.getFiles();
+            while (existingFiles.hasNext()) {
+              var existingFile = existingFiles.next();
+              if (existingFile.getName().indexOf(userPrefix) === 0) {
+                existingFile.setTrashed(true);
+              }
+            }
+          }
+        } catch (cleanupErr) {
+          // Ignore cleanup errors to ensure upload still succeeds
+        }
+      }
       
       // 3. Decode base64 and create file
       var fileBytes = Utilities.base64Decode(fileBase64);

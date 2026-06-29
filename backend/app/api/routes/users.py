@@ -230,3 +230,35 @@ async def upload_profile_photo(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"Failed to upload profile photo to Google Drive: {str(err)}"
         )
+
+@router.delete("/profile/photo", response_model=UserResponse)
+async def delete_profile_photo(
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    """Delete user profile photo from Google Drive and set profile_pic_url to None"""
+    db_user = db.query(User).filter(User.id == current_user.id).first()
+    if not db_user:
+        raise HTTPException(status_code=404, detail="User not found")
+        
+    if db_user.profile_pic_url:
+        # Delete file from Google Drive
+        if "/api/upload/file/gdrive/" in db_user.profile_pic_url:
+            try:
+                file_id = db_user.profile_pic_url.split("/gdrive/")[-1]
+                if file_id:
+                    from app.utils.gdrive import delete_file_from_drive
+                    delete_file_from_drive(file_id)
+            except Exception as del_err:
+                logger.warning(f"Failed to delete profile photo file {db_user.profile_pic_url} from Drive: {str(del_err)}")
+                
+        db_user.profile_pic_url = None
+        db.commit()
+        
+        # Clear auth cache
+        from app.utils import cache
+        cache.delete(f"auth_user:{db_user.user_id}")
+        db.refresh(db_user)
+        
+    logger.info(f"User {db_user.user_id} removed profile picture.")
+    return auth_service.resolve_user_hierarchy_names(db_user, db)

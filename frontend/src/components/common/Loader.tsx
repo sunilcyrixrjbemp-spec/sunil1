@@ -1,10 +1,38 @@
 
+import { useState, useEffect } from "react";
+
 interface LoaderProps {
   message?: string;
   fullPage?: boolean;
 }
 
 export default function Loader({ message = "Processing...", fullPage = false }: LoaderProps) {
+  const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
+
+  useEffect(() => {
+    try {
+      const userStr = localStorage.getItem("user");
+      if (userStr) {
+        const user = JSON.parse(userStr);
+        if (user) {
+          const cacheKey = `cached_avatar_${user.user_id || user.id || 'default'}`;
+          const cached = localStorage.getItem(cacheKey);
+          if (cached) {
+            setAvatarUrl(cached);
+          } else if (user.profile_pic_url) {
+            let baseUrl = import.meta.env.VITE_API_BASE_URL || "";
+            if (!baseUrl) {
+              baseUrl = "https://expense-backend-zio8.onrender.com/api";
+            }
+            const host = baseUrl.replace(/\/api\/?$/, "").replace(/\/$/, "");
+            const relative = user.profile_pic_url.startsWith("/") ? user.profile_pic_url : `/${user.profile_pic_url}`;
+            setAvatarUrl(`${host}${relative}`);
+          }
+        }
+      }
+    } catch (_) {}
+  }, []);
+
   const loaderStyle = `
     @keyframes pulseGradient {
       0% { background-position: 0% 50%; }
@@ -44,9 +72,13 @@ export default function Loader({ message = "Processing...", fullPage = false }: 
       <div className="relative flex items-center justify-center w-24 h-24 mb-4">
         {/* Outer rotating fancy gradient border */}
         <div className="absolute inset-0 rounded-full spinner-ring"></div>
-        {/* Inner core with Cyrix logo */}
+        {/* Inner core with Cyrix logo or User Avatar */}
         <div className="w-16 h-16 rounded-full bg-white flex items-center justify-center border border-slate-100 shadow-inner overflow-hidden">
-          <img src="/brand.png" alt="Cyrix" className="w-10 h-10 object-contain" />
+          {avatarUrl ? (
+            <img src={avatarUrl} alt="User Avatar" className="w-full h-full object-cover" />
+          ) : (
+            <img src="/brand.png" alt="Cyrix" className="w-10 h-10 object-contain" />
+          )}
         </div>
       </div>
 
