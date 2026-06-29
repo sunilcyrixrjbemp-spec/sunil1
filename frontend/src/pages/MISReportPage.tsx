@@ -12,12 +12,15 @@ import {
   Layers,
   AlertTriangle,
   UserCheck,
-  Database
+  Database,
+  Filter,
+  X,
+  ShieldCheck,
+  Building
 } from "lucide-react";
 import toast from "react-hot-toast";
 import api from "../services/api";
 import Loader from "../components/common/Loader";
-
 
 // Register Chart.js components
 import {
@@ -33,7 +36,7 @@ import {
   Tooltip,
   Legend
 } from 'chart.js';
-import { Bar, Doughnut, PolarArea } from 'react-chartjs-2';
+import { Bar, Doughnut, PolarArea, Pie } from 'react-chartjs-2';
 
 ChartJS.register(
   CategoryScale,
@@ -53,6 +56,22 @@ interface ChartItem {
   penalty: number;
 }
 
+interface HospitalItem {
+  name: string;
+  penalty: number;
+  count: number;
+}
+
+interface WarrantyItem {
+  status: string;
+  penalty: number;
+}
+
+interface HospTypeItem {
+  type: string;
+  penalty: number;
+}
+
 interface ActivityItem {
   day: string;
   count: number;
@@ -61,6 +80,13 @@ interface ActivityItem {
 interface DashboardData {
   success: boolean;
   message?: string;
+  filter_options?: {
+    districts: string[];
+    coordinators: string[];
+    zones: string[];
+    months: string[];
+    equipments: string[];
+  };
   summary?: {
     total_calls: number;
     closed_calls: number;
@@ -69,6 +95,7 @@ interface DashboardData {
     total_delay_penalty: number;
     total_penalty: number;
     total_per_day_penalty: number;
+    avg_downtime_days: number;
   };
   daily_activity?: {
     logged: ActivityItem[];
@@ -79,6 +106,9 @@ interface DashboardData {
     district: ChartItem[];
     coordinator: ChartItem[];
     zone: ChartItem[];
+    hospital: HospitalItem[];
+    warranty: WarrantyItem[];
+    hospital_type: HospTypeItem[];
   };
 }
 
@@ -90,14 +120,28 @@ export default function MISReportPage() {
   const [syncStatusText, setSyncStatusText] = useState("");
   const fileInputRef = useRef<HTMLInputElement>(null);
 
+  // Filters State
+  const [selectedZone, setSelectedZone] = useState("");
+  const [selectedDistrict, setSelectedDistrict] = useState("");
+  const [selectedCoordinator, setSelectedCoordinator] = useState("");
+  const [selectedMonth, setSelectedMonth] = useState("");
+  const [selectedEquipment, setSelectedEquipment] = useState("");
+
   useEffect(() => {
     fetchDashboardData();
-  }, []);
+  }, [selectedZone, selectedDistrict, selectedCoordinator, selectedMonth, selectedEquipment]);
 
   const fetchDashboardData = async () => {
     setLoading(true);
     try {
-      const response = await api.get("/reports/mis-dashboard");
+      const queryParams = new URLSearchParams();
+      if (selectedZone) queryParams.append("zone", selectedZone);
+      if (selectedDistrict) queryParams.append("district", selectedDistrict);
+      if (selectedCoordinator) queryParams.append("coordinator", selectedCoordinator);
+      if (selectedMonth) queryParams.append("month", selectedMonth);
+      if (selectedEquipment) queryParams.append("equipment", selectedEquipment);
+
+      const response = await api.get(`/reports/mis-dashboard?${queryParams.toString()}`);
       setData(response.data);
       if (response.data.success === false) {
         toast.error(response.data.message || "Failed to load dashboard statistics.");
@@ -109,7 +153,14 @@ export default function MISReportPage() {
     }
   };
 
-
+  const handleResetFilters = () => {
+    setSelectedZone("");
+    setSelectedDistrict("");
+    setSelectedCoordinator("");
+    setSelectedMonth("");
+    setSelectedEquipment("");
+    toast.success("Filters cleared successfully.");
+  };
 
   const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -156,6 +207,7 @@ export default function MISReportPage() {
   const stats = data?.summary;
   const breakdown = data?.breakdown;
   const activity = data?.daily_activity;
+  const options = data?.filter_options;
 
   // Chart 1: Daily Activity Config
   const dailyLoggedData = activity?.logged ? [...activity.logged].reverse() : [];
@@ -249,7 +301,7 @@ export default function MISReportPage() {
     ]
   };
 
-  // Chart 6: FTFR Radial Gauge simulation
+  // Chart 6: FTFR Radial Gauge
   const ftfrGaugeChartData = {
     labels: ['FTFR %', 'Remaining'],
     datasets: [
@@ -257,6 +309,46 @@ export default function MISReportPage() {
         data: [stats?.ftfr_percentage || 0, 100 - (stats?.ftfr_percentage || 0)],
         backgroundColor: ['#28a745', '#e9ecef'],
         borderWidth: 0,
+      }
+    ]
+  };
+
+  // Chart 7: Warranty Status Penalty breakdown (New - Pie)
+  const warrantyChartData = {
+    labels: breakdown?.warranty.map(w => w.status) || [],
+    datasets: [
+      {
+        data: breakdown?.warranty.map(w => w.penalty) || [],
+        backgroundColor: ['#17a2b8', '#dc3545'],
+        hoverOffset: 4
+      }
+    ]
+  };
+
+  // Chart 8: Top Hospital Penalties (New - Vertical Bar)
+  const hospitalChartData = {
+    labels: breakdown?.hospital.map(h => h.name.length > 20 ? h.name.slice(0, 17) + "..." : h.name) || [],
+    datasets: [
+      {
+        label: 'Hospital Penalty (₹)',
+        data: breakdown?.hospital.map(h => h.penalty) || [],
+        backgroundColor: 'rgba(253, 126, 20, 0.85)',
+        borderColor: '#fd7e14',
+        borderWidth: 1,
+        borderRadius: 4,
+      }
+    ]
+  };
+
+  // Chart 9: Hospital Type breakdown (New - Doughnut)
+  const hospTypeChartData = {
+    labels: breakdown?.hospital_type.map(h => h.type) || [],
+    datasets: [
+      {
+        data: breakdown?.hospital_type.map(h => h.penalty) || [],
+        backgroundColor: [
+          '#6f42c1', '#fd7e14', '#007bff', '#28a745', '#ffc107', '#17a2b8'
+        ]
       }
     ]
   };
@@ -320,16 +412,101 @@ export default function MISReportPage() {
         </div>
       )}
 
+      {/* Multi-Dimensional Filter Box */}
+      <div className="bg-white border border-gray-200 border-t-4 border-t-blue-500 rounded shadow-sm p-4">
+        <div className="flex items-center justify-between border-b border-gray-100 pb-3 mb-4">
+          <h3 className="text-xs font-bold uppercase tracking-wider text-gray-700 flex items-center gap-1.5">
+            <Filter className="w-4 h-4 text-blue-500" />
+            Operational Dashboard Filter Engine
+          </h3>
+          {(selectedZone || selectedDistrict || selectedCoordinator || selectedMonth || selectedEquipment) && (
+            <button 
+              onClick={handleResetFilters}
+              className="text-[10px] font-bold text-red-500 hover:text-red-700 flex items-center gap-1 uppercase transition-all bg-transparent border-0 cursor-pointer"
+            >
+              <X className="w-3.5 h-3.5" /> Clear Filters
+            </button>
+          )}
+        </div>
+        
+        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4">
+          {/* Zone Filter */}
+          <div>
+            <label className="text-[9px] font-bold text-gray-400 uppercase tracking-wide block mb-1">Zone</label>
+            <select 
+              value={selectedZone} 
+              onChange={(e) => setSelectedZone(e.target.value)}
+              className="w-full border border-gray-300 rounded px-2.5 py-1.5 text-xs text-gray-700 font-semibold focus:outline-none focus:border-blue-500 bg-white"
+            >
+              <option value="">All Zones</option>
+              {options?.zones.map(z => <option key={z} value={z}>{z} Zone</option>)}
+            </select>
+          </div>
+
+          {/* District Filter */}
+          <div>
+            <label className="text-[9px] font-bold text-gray-400 uppercase tracking-wide block mb-1">District / DI</label>
+            <select 
+              value={selectedDistrict} 
+              onChange={(e) => setSelectedDistrict(e.target.value)}
+              className="w-full border border-gray-300 rounded px-2.5 py-1.5 text-xs text-gray-700 font-semibold focus:outline-none focus:border-blue-500 bg-white"
+            >
+              <option value="">All Districts</option>
+              {options?.districts.map(d => <option key={d} value={d}>{d}</option>)}
+            </select>
+          </div>
+
+          {/* Coordinator Filter */}
+          <div>
+            <label className="text-[9px] font-bold text-gray-400 uppercase tracking-wide block mb-1">Coordinator</label>
+            <select 
+              value={selectedCoordinator} 
+              onChange={(e) => setSelectedCoordinator(e.target.value)}
+              className="w-full border border-gray-300 rounded px-2.5 py-1.5 text-xs text-gray-700 font-semibold focus:outline-none focus:border-blue-500 bg-white"
+            >
+              <option value="">All Coordinators</option>
+              {options?.coordinators.map(c => <option key={c} value={c}>{c}</option>)}
+            </select>
+          </div>
+
+          {/* Month Filter */}
+          <div>
+            <label className="text-[9px] font-bold text-gray-400 uppercase tracking-wide block mb-1">Billing Month</label>
+            <select 
+              value={selectedMonth} 
+              onChange={(e) => setSelectedMonth(e.target.value)}
+              className="w-full border border-gray-300 rounded px-2.5 py-1.5 text-xs text-gray-700 font-semibold focus:outline-none focus:border-blue-500 bg-white"
+            >
+              <option value="">All Months</option>
+              {options?.months.map(m => <option key={m} value={m}>{m}</option>)}
+            </select>
+          </div>
+
+          {/* Equipment Filter */}
+          <div>
+            <label className="text-[9px] font-bold text-gray-400 uppercase tracking-wide block mb-1">Equipment</label>
+            <select 
+              value={selectedEquipment} 
+              onChange={(e) => setSelectedEquipment(e.target.value)}
+              className="w-full border border-gray-300 rounded px-2.5 py-1.5 text-xs text-gray-700 font-semibold focus:outline-none focus:border-blue-500 bg-white"
+            >
+              <option value="">All Equipments</option>
+              {options?.equipments.map(eq => <option key={eq} value={eq}>{eq}</option>)}
+            </select>
+          </div>
+        </div>
+      </div>
+
       {loading ? (
         <div className="p-16">
-          <Loader message="Loading live operational metrics..." />
+          <Loader message="Recalculating business analytics matrices..." />
         </div>
       ) : data?.success === false || !stats ? (
         <div className="card-lte-primary p-12 text-center space-y-4">
           <AlertTriangle className="w-12 h-12 text-amber-500 mx-auto" />
-          <h3 className="text-sm font-bold uppercase text-gray-700 tracking-wider">No Penalty Data Loaded</h3>
+          <h3 className="text-sm font-bold uppercase text-gray-700 tracking-wider">No Filter Matches</h3>
           <p className="text-gray-500 text-xs max-w-md mx-auto leading-relaxed">
-            Database table is empty. Please click the <strong>Sync Penalty Excel</strong> button to upload the Rajasthan Penalty sheet and automatically populate the database.
+            No rows found matching the selected combination of filters. Please click **Clear Filters** to restore dashboard analytics.
           </p>
         </div>
       ) : (
@@ -385,6 +562,22 @@ export default function MISReportPage() {
             </div>
           </div>
 
+          {/* Secondary Stats Strip Box */}
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 bg-gray-50 border border-gray-200 rounded p-4 text-center">
+            <div>
+              <span className="text-[10px] font-black text-gray-400 uppercase tracking-wider block">Average Downtime Duration</span>
+              <span className="text-lg font-black text-gray-700 block mt-1">{stats.avg_downtime_days} Days</span>
+            </div>
+            <div className="border-t sm:border-t-0 sm:border-l sm:border-r border-gray-200 py-3 sm:py-0">
+              <span className="text-[10px] font-black text-gray-400 uppercase tracking-wider block">Per-Day Penalty Impact</span>
+              <span className="text-lg font-black text-gray-700 block mt-1">₹{stats.total_per_day_penalty.toLocaleString()}/day</span>
+            </div>
+            <div>
+              <span className="text-[10px] font-black text-gray-400 uppercase tracking-wider block">Resolution Delay Penalty</span>
+              <span className="text-lg font-black text-gray-700 block mt-1">₹{stats.total_delay_penalty.toLocaleString()}</span>
+            </div>
+          </div>
+
           {/* Daily Activity Chart Card */}
           <div className="bg-white border border-gray-200 border-t-4 border-t-[#007bff] rounded shadow-sm p-4 space-y-4">
             <div className="border-b border-gray-200 pb-2 flex items-center justify-between">
@@ -415,14 +608,14 @@ export default function MISReportPage() {
             </div>
           </div>
 
-          {/* Breakdown cards grid */}
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          {/* 3x3 Grid for All Breakdown charts */}
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             
             {/* Equipment-wise Breakdown */}
             <div className="bg-white border border-gray-200 border-t-4 border-t-[#dc3545] rounded shadow-sm p-4 space-y-4">
               <div className="border-b border-gray-200 pb-2 flex items-center gap-1.5">
                 <Layers className="w-4 h-4 text-[#dc3545]" />
-                <h4 className="text-xs font-bold text-gray-800 uppercase tracking-wide">Top 8 Equipment Penalties</h4>
+                <h4 className="text-xs font-bold text-gray-800 uppercase tracking-wide">Top Equipment Penalties</h4>
               </div>
               <div className="h-60 relative">
                 <Bar 
@@ -447,7 +640,7 @@ export default function MISReportPage() {
             <div className="bg-white border border-gray-200 border-t-4 border-t-[#28a745] rounded shadow-sm p-4 space-y-4">
               <div className="border-b border-gray-200 pb-2 flex items-center gap-1.5">
                 <MapPin className="w-4 h-4 text-[#28a745]" />
-                <h4 className="text-xs font-bold text-gray-800 uppercase tracking-wide">Top 8 District (DI) Penalties</h4>
+                <h4 className="text-xs font-bold text-gray-800 uppercase tracking-wide">Top District (DI) Penalties</h4>
               </div>
               <div className="h-60 flex justify-center items-center relative">
                 <Doughnut 
@@ -470,7 +663,7 @@ export default function MISReportPage() {
             <div className="bg-white border border-gray-200 border-t-4 border-t-[#007bff] rounded shadow-sm p-4 space-y-4">
               <div className="border-b border-gray-200 pb-2 flex items-center gap-1.5">
                 <UserCheck className="w-4 h-4 text-[#007bff]" />
-                <h4 className="text-xs font-bold text-gray-800 uppercase tracking-wide">Top 8 Coordinator Penalties</h4>
+                <h4 className="text-xs font-bold text-gray-800 uppercase tracking-wide">Top Coordinator Penalties</h4>
               </div>
               <div className="h-60 relative">
                 <Bar 
@@ -490,13 +683,83 @@ export default function MISReportPage() {
               </div>
             </div>
 
-            {/* Zone-wise Breakdown & FTFR Gauge */}
-            <div className="bg-white border border-gray-200 border-t-4 border-t-[#ffc107] rounded shadow-sm p-4 space-y-4">
+            {/* Hospital-wise Breakdown (New) */}
+            <div className="bg-white border border-gray-200 border-t-4 border-t-orange-500 rounded shadow-sm p-4 space-y-4">
+              <div className="border-b border-gray-200 pb-2 flex items-center gap-1.5">
+                <Building className="w-4 h-4 text-orange-500" />
+                <h4 className="text-xs font-bold text-gray-800 uppercase tracking-wide">Top Hospital Penalties</h4>
+              </div>
+              <div className="h-60 relative">
+                <Bar 
+                  data={hospitalChartData} 
+                  options={{
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    scales: {
+                      x: { grid: { display: false } },
+                      y: { grid: { display: false } }
+                    },
+                    plugins: {
+                      legend: { display: false }
+                    }
+                  }} 
+                />
+              </div>
+            </div>
+
+            {/* Warranty Status share (New) */}
+            <div className="bg-white border border-gray-200 border-t-4 border-t-info-500 rounded shadow-sm p-4 space-y-4">
+              <div className="border-b border-gray-200 pb-2 flex items-center gap-1.5">
+                <ShieldCheck className="w-4 h-4 text-[#17a2b8]" />
+                <h4 className="text-xs font-bold text-gray-800 uppercase tracking-wide">Warranty Status Penalty Share</h4>
+              </div>
+              <div className="h-60 flex justify-center items-center relative">
+                <Pie 
+                  data={warrantyChartData} 
+                  options={{
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                      legend: {
+                        position: 'right',
+                        labels: { boxWidth: 10, font: { size: 9 } }
+                      }
+                    }
+                  }} 
+                />
+              </div>
+            </div>
+
+            {/* Hospital Type share (New) */}
+            <div className="bg-white border border-gray-200 border-t-4 border-t-purple-500 rounded shadow-sm p-4 space-y-4">
+              <div className="border-b border-gray-200 pb-2 flex items-center gap-1.5">
+                <PieChart className="w-4 h-4 text-purple-500" />
+                <h4 className="text-xs font-bold text-gray-800 uppercase tracking-wide">Hospital Type Penalties</h4>
+              </div>
+              <div className="h-60 flex justify-center items-center relative">
+                <Doughnut 
+                  data={hospTypeChartData} 
+                  options={{
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                      legend: {
+                        position: 'right',
+                        labels: { boxWidth: 10, font: { size: 9 } }
+                      }
+                    }
+                  }} 
+                />
+              </div>
+            </div>
+
+            {/* Zone breakdown & FTFR Gauge */}
+            <div className="bg-white border border-gray-200 border-t-4 border-t-[#ffc107] rounded shadow-sm p-4 space-y-4 md:col-span-2 lg:col-span-3">
               <div className="border-b border-gray-200 pb-2 flex items-center gap-1.5">
                 <PieChart className="w-4 h-4 text-[#ffc107]" />
                 <h4 className="text-xs font-bold text-gray-800 uppercase tracking-wide">Zone breakdown & Resolution Rates</h4>
               </div>
-              <div className="grid grid-cols-2 gap-4 h-60">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6 h-64">
                 <div className="relative h-full">
                   <span className="text-[10px] font-bold text-gray-500 uppercase tracking-wider block text-center mb-1">Zone Penalty Share</span>
                   <PolarArea 
@@ -505,7 +768,7 @@ export default function MISReportPage() {
                       responsive: true,
                       maintainAspectRatio: false,
                       plugins: {
-                        legend: { display: false }
+                        legend: { position: 'right', labels: { boxWidth: 10, font: { size: 9 } } }
                       }
                     }} 
                   />
