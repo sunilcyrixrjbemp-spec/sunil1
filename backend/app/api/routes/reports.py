@@ -89,12 +89,12 @@ async def get_mis_dashboard_data(
         if zone:
             zone_sql = """
                 CASE 
-                    WHEN district_name IN ('Ajmer', 'Bhilwara', 'Nagaur', 'Tonk') THEN 'Ajmer'
-                    WHEN district_name IN ('Jaipur', 'Alwar', 'Dausa', 'Jhunjhunu', 'Sikar') THEN 'Jaipur'
-                    WHEN district_name IN ('Jodhpur', 'Barmer', 'Jaisalmer', 'Jalore', 'Pali', 'Sirohi') THEN 'Jodhpur'
-                    WHEN district_name IN ('Bikaner', 'Churu', 'Hanumangarh', 'Sri Ganganagar') THEN 'Bikaner'
+                    WHEN district_name IN ('Ajmer', 'Bhilwara', 'Nagaur', 'Tonk', 'Beawer', 'Kekri', 'Shahpura') THEN 'Ajmer'
+                    WHEN district_name IN ('Jaipur', 'Alwar', 'Dausa', 'Jhunjhunu', 'Sikar', 'Dudu', 'Kotputli', 'Neem Ka Thana', 'Khairthal') THEN 'Jaipur'
+                    WHEN district_name IN ('Jodhpur', 'Barmer', 'Jaisalmer', 'Jalore', 'Pali', 'Sirohi', 'Phalodi', 'Balotra', 'Sanchore') THEN 'Jodhpur'
+                    WHEN district_name IN ('Bikaner', 'Churu', 'Hanumangarh', 'Sri Ganganagar', 'Ganganagar', 'Anupgarh') THEN 'Bikaner'
                     WHEN district_name IN ('Kota', 'Baran', 'Bundi', 'Jhalawar') THEN 'Kota'
-                    WHEN district_name IN ('Udaipur', 'Banswara', 'Chittorgarh', 'Dungarpur', 'Rajsamand') THEN 'Udaipur'
+                    WHEN district_name IN ('Udaipur', 'Banswara', 'Chittorgarh', 'Dungarpur', 'Rajsamand', 'Pratapgarh', 'Salumbar') THEN 'Udaipur'
                     ELSE 'Other'
                 END
             """
@@ -192,12 +192,12 @@ async def get_mis_dashboard_data(
         zone_penalty = db.execute(text(f"""
             SELECT 
                 CASE 
-                    WHEN district_name IN ('Ajmer', 'Bhilwara', 'Nagaur', 'Tonk') THEN 'Ajmer'
-                    WHEN district_name IN ('Jaipur', 'Alwar', 'Dausa', 'Jhunjhunu', 'Sikar') THEN 'Jaipur'
-                    WHEN district_name IN ('Jodhpur', 'Barmer', 'Jaisalmer', 'Jalore', 'Pali', 'Sirohi') THEN 'Jodhpur'
-                    WHEN district_name IN ('Bikaner', 'Churu', 'Hanumangarh', 'Sri Ganganagar') THEN 'Bikaner'
+                    WHEN district_name IN ('Ajmer', 'Bhilwara', 'Nagaur', 'Tonk', 'Beawer', 'Kekri', 'Shahpura') THEN 'Ajmer'
+                    WHEN district_name IN ('Jaipur', 'Alwar', 'Dausa', 'Jhunjhunu', 'Sikar', 'Dudu', 'Kotputli', 'Neem Ka Thana', 'Khairthal') THEN 'Jaipur'
+                    WHEN district_name IN ('Jodhpur', 'Barmer', 'Jaisalmer', 'Jalore', 'Pali', 'Sirohi', 'Phalodi', 'Balotra', 'Sanchore') THEN 'Jodhpur'
+                    WHEN district_name IN ('Bikaner', 'Churu', 'Hanumangarh', 'Sri Ganganagar', 'Ganganagar', 'Anupgarh') THEN 'Bikaner'
                     WHEN district_name IN ('Kota', 'Baran', 'Bundi', 'Jhalawar') THEN 'Kota'
-                    WHEN district_name IN ('Udaipur', 'Banswara', 'Chittorgarh', 'Dungarpur', 'Rajsamand') THEN 'Udaipur'
+                    WHEN district_name IN ('Udaipur', 'Banswara', 'Chittorgarh', 'Dungarpur', 'Rajsamand', 'Pratapgarh', 'Salumbar') THEN 'Udaipur'
                     ELSE 'Other'
                 END as zone_name,
                 SUM(total_penalty) as total
@@ -351,8 +351,12 @@ async def upload_excel_penalties(
             is_ftfr INTEGER DEFAULT 0
         );
         """
-        # Ensure table exists
+        # Ensure table and indexes exist
         db.execute(text(create_table_sql))
+        db.execute(text("CREATE INDEX IF NOT EXISTS idx_rj_penalties_district ON rj_penalties(district_name)"))
+        db.execute(text("CREATE INDEX IF NOT EXISTS idx_rj_penalties_coordinator ON rj_penalties(coordinator_name)"))
+        db.execute(text("CREATE INDEX IF NOT EXISTS idx_rj_penalties_equipment ON rj_penalties(equipment_name)"))
+        db.execute(text("CREATE INDEX IF NOT EXISTS idx_rj_penalties_month ON rj_penalties(month_text)"))
         db.commit()
         
         # Fetch existing complaint IDs to skip duplicate inserts
@@ -770,3 +774,17 @@ async def upload_excel_master_data(
             "success": False,
             "message": f"Failed to upload master data: {str(e)}"
         }
+
+@router.post("/create-indexes")
+async def create_indexes(db: Session = Depends(get_db)):
+    """Creates indexes on rj_penalties table to optimize filtering queries."""
+    try:
+        db.execute(text("CREATE INDEX IF NOT EXISTS idx_rj_penalties_district ON rj_penalties(district_name)"))
+        db.execute(text("CREATE INDEX IF NOT EXISTS idx_rj_penalties_coordinator ON rj_penalties(coordinator_name)"))
+        db.execute(text("CREATE INDEX IF NOT EXISTS idx_rj_penalties_equipment ON rj_penalties(equipment_name)"))
+        db.execute(text("CREATE INDEX IF NOT EXISTS idx_rj_penalties_month ON rj_penalties(month_text)"))
+        db.commit()
+        return {"success": True, "message": "Indexes created successfully on production D1 database."}
+    except Exception as e:
+        logger.error(f"Failed to create indexes: {str(e)}")
+        return {"success": False, "message": str(e)}
