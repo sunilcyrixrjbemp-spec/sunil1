@@ -158,6 +158,9 @@ export default function ProfilePage() {
       img.onload = () => {
         const canvas = document.createElement("canvas");
         const cropSize = 500;
+        const viewportSize = 256; // Viewport size matching w-64 h-64 in pixels
+        const ratio = cropSize / viewportSize;
+
         canvas.width = cropSize;
         canvas.height = cropSize;
         const ctx = canvas.getContext("2d");
@@ -169,14 +172,11 @@ export default function ProfilePage() {
         ctx.fillStyle = "#ffffff";
         ctx.fillRect(0, 0, cropSize, cropSize);
 
-        let drawWidth = img.width;
-        let drawHeight = img.height;
-        const scale = Math.max(cropSize / img.width, cropSize / img.height) * zoom;
-        drawWidth *= scale;
-        drawHeight *= scale;
+        const drawHeight = cropSize * zoom;
+        const drawWidth = cropSize * (img.width / img.height) * zoom;
 
-        const drawX = (cropSize - drawWidth) / 2 + position.x * scale;
-        const drawY = (cropSize - drawHeight) / 2 + position.y * scale;
+        const drawX = (cropSize - drawWidth) / 2 + position.x * ratio;
+        const drawY = (cropSize - drawHeight) / 2 + position.y * ratio;
 
         ctx.drawImage(img, drawX, drawY, drawWidth, drawHeight);
 
@@ -190,7 +190,7 @@ export default function ProfilePage() {
           } else {
             resolve(selectedPhotoFile!);
           }
-        }, "image/jpeg", 0.8);
+        }, "image/jpeg", 0.85);
       };
       img.src = previewSrc!;
     });
