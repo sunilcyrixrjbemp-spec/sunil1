@@ -201,10 +201,16 @@ export default function DashboardLayout() {
 
   const userRole = user.role || "Engineer";
 
-  // Parse allowed_windows from DB configuration
-  const allowedWindows = user.allowed_windows
-    ? user.allowed_windows.split(",").map((w: string) => w.trim().toLowerCase())
-    : ["home", "profile", "help"];
+  let allowedWindows: string[] = ["home", "profile", "help"];
+  try {
+    if (user && user.allowed_windows) {
+      if (Array.isArray(user.allowed_windows)) {
+        allowedWindows = user.allowed_windows.map((w: any) => String(w).trim().toLowerCase());
+      } else if (typeof user.allowed_windows === "string") {
+        allowedWindows = user.allowed_windows.split(",").map((w: string) => w.trim().toLowerCase());
+      }
+    }
+  } catch (_) {}
 
   // Check if user has permission for menu items based on allowed_windows (and bypass for Admin)
   const allowedMenuItems = MENU_ITEMS.filter((item) => {
