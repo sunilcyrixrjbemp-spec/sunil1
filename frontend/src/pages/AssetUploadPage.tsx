@@ -253,10 +253,10 @@ export default function AssetUploadPage() {
     reader.readAsText(file);
   };
 
-  // ====== INSTANT Upload — send raw CSV file to backend ======
+  // ====== INSTANT Upload — send all parsed rows as one JSON request ======
   const handleUpload = async () => {
-    if (!selectedFile) {
-      toast.error("No file selected.");
+    if (parsedRows.length === 0) {
+      toast.error("No valid rows to upload.");
       return;
     }
 
@@ -264,17 +264,15 @@ export default function AssetUploadPage() {
     setUploadResult(null);
 
     try {
-      const formData = new FormData();
-      formData.append("file", selectedFile);
-
-      const res = await api.post("/reports/upload-assets-csv", formData, {
-        headers: { "Content-Type": "multipart/form-data" }
+      const res = await api.post("/reports/upload-assets-bulk", {
+        rows: parsedRows,
+        skipped_on_client: skippedCount
       });
 
       if (res.data.success) {
         setUploadResult({
           inserted: res.data.inserted,
-          skipped: res.data.skipped,
+          skipped: res.data.skipped + skippedCount,
           elapsed_ms: res.data.elapsed_ms || 0
         });
         toast.success(`${res.data.inserted} assets imported in ${res.data.elapsed_ms}ms!`);

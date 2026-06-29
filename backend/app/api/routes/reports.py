@@ -1043,6 +1043,74 @@ def _is_warranty_expired(warranty_details: str) -> bool:
     return dt_datetime.now() > end_date
 
 
+
+@router.post("/upload-assets-bulk")
+async def upload_assets_bulk(
+    payload: dict,
+    db: Session = Depends(get_db)
+):
+    """
+    Accepts a JSON payload with pre-parsed asset inventory rows from the frontend.
+    Payload: {"rows": [...], "skipped_on_client": 0}
+    Replaces all existing data.
+    """
+    import time
+    start_time = time.perf_counter()
+    try:
+        rows = payload.get("rows", [])
+        skipped_on_client = payload.get("skipped_on_client", 0)
+
+        valid_rows = []
+        skipped = 0
+        for row in rows:
+            qr = str(row.get("qr_code", "")).strip()
+            if not qr or qr == "--":
+                skipped += 1
+                continue
+
+            # Ensure all columns exist and normalize values
+            row_dict = {}
+            for col in ASSETS_INVENTORY_COLUMNS:
+                row_dict[col] = str(row.get(col, "")).strip()
+            row_dict["qr_code"] = qr
+            valid_rows.append(row_dict)
+
+        # Drop and recreate table (replace all data)
+        db.execute(text(f"DROP TABLE IF EXISTS {ASSETS_INVENTORY_TABLE}"))
+        db.execute(text(ASSETS_INVENTORY_CREATE_SQL))
+        db.commit()
+
+        # Bulk insert ALL rows at once using the existing _bulk_insert
+        if valid_rows:
+            _bulk_insert(db, ASSETS_INVENTORY_TABLE, ASSETS_INVENTORY_COLUMNS, valid_rows)
+
+        # Create indexes after insert for speed
+        db.execute(text(f"CREATE INDEX IF NOT EXISTS idx_assets_inv_district ON {ASSETS_INVENTORY_TABLE}(district_name)"))
+        db.execute(text(f"CREATE INDEX IF NOT EXISTS idx_assets_inv_qr ON {ASSETS_INVENTORY_TABLE}(qr_code)"))
+        db.execute(text(f"CREATE INDEX IF NOT EXISTS idx_assets_inv_hospital ON {ASSETS_INVENTORY_TABLE}(hospital_name)"))
+        db.execute(text(f"CREATE INDEX IF NOT EXISTS idx_assets_inv_zone ON {ASSETS_INVENTORY_TABLE}(zone_name)"))
+        db.execute(text(f"CREATE INDEX IF NOT EXISTS idx_assets_inv_di ON {ASSETS_INVENTORY_TABLE}(di_name)"))
+        db.commit()
+
+        elapsed_ms = (time.perf_counter() - start_time) * 1000
+
+        return {
+            "success": True,
+            "inserted": len(valid_rows),
+            "skipped": skipped,
+            "elapsed_ms": round(elapsed_ms, 2),
+            "message": f"Successfully inserted {len(valid_rows)} rows in {elapsed_ms:.1f}ms"
+        }
+    except Exception as e:
+        logger.error(f"Error in JSON asset upload: {str(e)}")
+        return {
+            "success": False,
+            "inserted": 0,
+            "skipped": 0,
+            "message": f"Asset upload failed: {str(e)}"
+        }
+
+
 @router.post("/upload-assets-csv")
 async def upload_assets_csv(
     file: UploadFile = File(...),
