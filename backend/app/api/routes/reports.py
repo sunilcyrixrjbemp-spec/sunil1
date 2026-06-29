@@ -930,6 +930,7 @@ from datetime import datetime as dt_datetime
 
 ASSETS_INVENTORY_TABLE = "assets_inventory"
 
+# Table schema containing standard fields plus pre-parsed optimization columns
 ASSETS_INVENTORY_CREATE_SQL = f"""CREATE TABLE IF NOT EXISTS {ASSETS_INVENTORY_TABLE} (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     district_name VARCHAR(200),
@@ -960,9 +961,20 @@ ASSETS_INVENTORY_CREATE_SQL = f"""CREATE TABLE IF NOT EXISTS {ASSETS_INVENTORY_T
     hospital_type VARCHAR(100),
     facility_type VARCHAR(100),
     equipment_type VARCHAR(200),
+    
+    -- Parsed columns for direct SQL query optimization
+    is_verified INTEGER DEFAULT 0,
+    warranty_expired INTEGER DEFAULT 1,
+    parsed_asset_value REAL DEFAULT 0.0,
+    moic_year INTEGER,
+    moic_month INTEGER,
+    install_year INTEGER,
+    install_month INTEGER,
+    
     uploaded_at TEXT DEFAULT CURRENT_TIMESTAMP
 )"""
 
+# 28 standard fields + 7 parsed helper fields
 ASSETS_INVENTORY_COLUMNS = [
     "district_name", "hospital_name", "department_name", "group_name",
     "equipment_name", "model_name", "serial_no", "equipment_category",
@@ -970,10 +982,12 @@ ASSETS_INVENTORY_COLUMNS = [
     "inventory_entry_date", "moic_verified_date", "po_date", "po_cost",
     "inventory_status", "equipment_status", "supplier", "warranty_details",
     "asset_value", "di_name", "dm_name", "coordinator_name", "zone_name",
-    "hospital_type", "facility_type", "equipment_type"
+    "hospital_type", "facility_type", "equipment_type",
+    
+    "is_verified", "warranty_expired", "parsed_asset_value",
+    "moic_year", "moic_month", "install_year", "install_month"
 ]
 
-# Map CSV header names (lowercase, normalized) to API column keys
 CSV_HEADER_MAP = {
     "district name": "district_name",
     "hospital name": "hospital_name",
@@ -1007,17 +1021,6 @@ CSV_HEADER_MAP = {
     "facility type": "facility_type",
     "equipment type": "equipment_type",
 }
-
-# In-memory caches to reduce database reads to almost zero (protect Cloudflare D1 free-tier limits)
-ASSETS_CACHE = None
-STATS_CACHE = {}
-FILTERS_CACHE = None
-
-def _clear_assets_cache():
-    global ASSETS_CACHE, STATS_CACHE, FILTERS_CACHE
-    ASSETS_CACHE = None
-    STATS_CACHE.clear()
-    FILTERS_CACHE = None
 
 
 @router.get("/test-db-connection")
@@ -1055,8 +1058,6 @@ async def test_db_connection():
         }
 
 
-
-
 def _parse_date_flexible(date_str: str):
     """Try parsing various date formats and return a datetime object or None."""
     if not date_str or date_str.strip() in ("--", "", "NA", "N/A"):
@@ -1091,15 +1092,61 @@ def _is_warranty_expired(warranty_details: str) -> bool:
     return dt_datetime.now() > end_date
 
 
+def _prepare_row(row: dict) -> dict:
+    """Process a raw row dictionary, copies all 28 keys, and computes the 7 parsed optimization fields."""
+    row_dict = {}
+    
+    # 1. Copy first 28 standard fields (or empty string if missing)
+    for col in ASSETS_INVENTORY_COLUMNS[:28]:
+        row_dict[col] = str(row.get(col, "")).strip()
+        
+    qr = str(row.get("qr_code", "")).strip()
+    row_dict["qr_code"] = qr
+    
+    # 2. Parse asset value
+    raw_val = row_dict["asset_value"]
+    try:
+        val = float(str(raw_val).replace(",", "").strip())
+    except Exception:
+        val = 0.0
+    row_dict["parsed_asset_value"] = val
+    
+    # 3. Parse MOIC Verified Date & is_verified
+    moic_date_str = row_dict["moic_verified_date"]
+    moic_date = _parse_date_flexible(moic_date_str)
+    if moic_date:
+        row_dict["is_verified"] = 1
+        row_dict["moic_year"] = moic_date.year
+        row_dict["moic_month"] = moic_date.month
+    else:
+        row_dict["is_verified"] = 0
+        row_dict["moic_year"] = None
+        row_dict["moic_month"] = None
+        
+    # 4. Parse Installation Date
+    install_date_str = row_dict["installation_date"]
+    install_date = _parse_date_flexible(install_date_str)
+    if install_date:
+        row_dict["install_year"] = install_date.year
+        row_dict["install_month"] = install_date.month
+    else:
+        row_dict["install_year"] = None
+        row_dict["install_month"] = None
+        
+    # 5. Parse Warranty Details
+    warranty_str = row_dict["warranty_details"]
+    warranty_expired = _is_warranty_expired(warranty_str)
+    row_dict["warranty_expired"] = 1 if warranty_expired else 0
+    
+    return row_dict
+
+
 @router.post("/upload-assets-chunk")
 async def upload_assets_chunk(
     payload: dict,
     db: Session = Depends(get_db)
 ):
-    """
-    Accepts a JSON payload with pre-parsed asset inventory rows for chunked insertion.
-    Payload: {"rows": [...list of row dicts...], "clear_first": true/false}
-    """
+    """Accepts a JSON payload with pre-parsed asset inventory rows for chunked insertion."""
     try:
         rows = payload.get("rows", [])
         clear_first = payload.get("clear_first", False)
@@ -1108,8 +1155,6 @@ async def upload_assets_chunk(
             db.execute(text(f"DROP TABLE IF EXISTS {ASSETS_INVENTORY_TABLE}"))
             db.execute(text(ASSETS_INVENTORY_CREATE_SQL))
             db.commit()
-            # Clear caches globally
-            _clear_assets_cache()
 
         valid_rows = []
         skipped = 0
@@ -1119,17 +1164,11 @@ async def upload_assets_chunk(
                 skipped += 1
                 continue
 
-            row_dict = {}
-            for col in ASSETS_INVENTORY_COLUMNS:
-                row_dict[col] = str(row.get(col, "")).strip()
-            row_dict["qr_code"] = qr
-            valid_rows.append(row_dict)
+            prepared = _prepare_row(row)
+            valid_rows.append(prepared)
 
         if valid_rows:
             _bulk_insert(db, ASSETS_INVENTORY_TABLE, ASSETS_INVENTORY_COLUMNS, valid_rows)
-            # Invalidate cache so it reloads on next read
-            global ASSETS_CACHE
-            ASSETS_CACHE = None
 
         db.execute(text(f"CREATE INDEX IF NOT EXISTS idx_assets_inv_district ON {ASSETS_INVENTORY_TABLE}(district_name)"))
         db.execute(text(f"CREATE INDEX IF NOT EXISTS idx_assets_inv_qr ON {ASSETS_INVENTORY_TABLE}(qr_code)"))
@@ -1159,11 +1198,7 @@ async def upload_assets_bulk(
     payload: dict,
     db: Session = Depends(get_db)
 ):
-    """
-    Accepts a JSON payload with pre-parsed asset inventory rows from the frontend.
-    Payload: {"rows": [...], "skipped_on_client": 0}
-    Replaces all existing data.
-    """
+    """Accepts a JSON payload with pre-parsed asset inventory rows from the frontend and replaces all data."""
     import time
     start_time = time.perf_counter()
     try:
@@ -1178,17 +1213,13 @@ async def upload_assets_bulk(
                 skipped += 1
                 continue
 
-            row_dict = {}
-            for col in ASSETS_INVENTORY_COLUMNS:
-                row_dict[col] = str(row.get(col, "")).strip()
-            row_dict["qr_code"] = qr
-            valid_rows.append(row_dict)
+            prepared = _prepare_row(row)
+            valid_rows.append(prepared)
 
         # Drop and recreate table
         db.execute(text(f"DROP TABLE IF EXISTS {ASSETS_INVENTORY_TABLE}"))
         db.execute(text(ASSETS_INVENTORY_CREATE_SQL))
         db.commit()
-        _clear_assets_cache()
 
         if valid_rows:
             _bulk_insert(db, ASSETS_INVENTORY_TABLE, ASSETS_INVENTORY_COLUMNS, valid_rows)
@@ -1224,6 +1255,7 @@ async def upload_assets_csv(
     file: UploadFile = File(...),
     db: Session = Depends(get_db)
 ):
+    """Processes asset inventory import directly from a file upload."""
     import time
     start_time = time.perf_counter()
     try:
@@ -1273,20 +1305,17 @@ async def upload_assets_csv(
                 continue
             row["qr_code"] = qr
 
-            for col in ASSETS_INVENTORY_COLUMNS:
-                if col not in row:
-                    row[col] = ""
-
-            valid_rows.append(row)
+            # Map the parsed helper attributes
+            prepared = _prepare_row(row)
+            valid_rows.append(prepared)
 
         if not valid_rows:
             return {"success": False, "inserted": 0, "skipped": skipped,
-                    "message": f"No valid rows found."}
+                    "message": "No valid rows found."}
 
         db.execute(text(f"DROP TABLE IF EXISTS {ASSETS_INVENTORY_TABLE}"))
         db.execute(text(ASSETS_INVENTORY_CREATE_SQL))
         db.commit()
-        _clear_assets_cache()
 
         _bulk_insert(db, ASSETS_INVENTORY_TABLE, ASSETS_INVENTORY_COLUMNS, valid_rows)
 
@@ -1329,75 +1358,83 @@ async def get_assets_inventory(
     page_size: int = 100,
     db: Session = Depends(get_db)
 ):
-    """Get paginated asset inventory with optional filters served entirely from memory cache."""
+    """Get paginated asset inventory with optional filters served directly using optimized SQLite queries."""
     try:
-        global ASSETS_CACHE
-        if ASSETS_CACHE is None:
+        # Check if table schema has is_verified columns
+        try:
+            db.execute(text(f"SELECT is_verified FROM {ASSETS_INVENTORY_TABLE} LIMIT 1")).fetchone()
+        except Exception:
+            db.execute(text(f"DROP TABLE IF EXISTS {ASSETS_INVENTORY_TABLE}"))
             db.execute(text(ASSETS_INVENTORY_CREATE_SQL))
             db.commit()
-            rows = db.execute(text(f"SELECT * FROM {ASSETS_INVENTORY_TABLE} ORDER BY id DESC")).fetchall()
-            columns = ASSETS_INVENTORY_COLUMNS + ["uploaded_at"]
-            ASSETS_CACHE = []
-            for r in rows:
-                row_dict = {}
-                for i, col in enumerate(["id"] + columns):
-                    row_dict[col] = r[i] if i < len(r) else None
-                ASSETS_CACHE.append(row_dict)
 
-        # Filter in memory
-        target_year = None
-        target_month = None
+        where_clauses = []
+        params = {}
+
+        if district:
+            where_clauses.append("district_name = :district")
+            params["district"] = district
+        if hospital:
+            where_clauses.append("hospital_name = :hospital")
+            params["hospital"] = hospital
+        if zone:
+            where_clauses.append("zone_name = :zone")
+            params["zone"] = zone
+        if di:
+            where_clauses.append("di_name = :di")
+            params["di"] = di
+        if equipment_status:
+            where_clauses.append("equipment_status = :equipment_status")
+            params["equipment_status"] = equipment_status
+
         if month:
             try:
                 parts = month.split("-")
                 target_year = int(parts[0])
                 target_month = int(parts[1])
+                where_clauses.append("is_verified = 1 AND moic_year = :target_year AND moic_month = :target_month")
+                params["target_year"] = target_year
+                params["target_month"] = target_month
             except Exception:
                 pass
 
-        search_lower = search.lower().strip() if search else None
+        if search:
+            search_pattern = f"%{search.strip()}%"
+            where_clauses.append(
+                "(equipment_name LIKE :search OR qr_code LIKE :search OR serial_no LIKE :search OR hospital_name LIKE :search)"
+            )
+            params["search"] = search_pattern
 
-        filtered_assets = []
-        for row in ASSETS_CACHE:
-            if district and row.get("district_name") != district:
-                continue
-            if hospital and row.get("hospital_name") != hospital:
-                continue
-            if zone and row.get("zone_name") != zone:
-                continue
-            if di and row.get("di_name") != di:
-                continue
-            if equipment_status and row.get("equipment_status") != equipment_status:
-                continue
+        where_sql = " AND ".join(where_clauses) if where_clauses else "1=1"
 
-            # Month filter (on verification date)
-            if target_year is not None and target_month is not None:
-                moic_date_str = row.get("moic_verified_date") or ""
-                moic_date = _parse_date_flexible(moic_date_str)
-                if not moic_date or moic_date.month != target_month or moic_date.year != target_year:
-                    continue
+        # 1. Total row count query
+        count_sql = f"SELECT COUNT(*) FROM {ASSETS_INVENTORY_TABLE} WHERE {where_sql}"
+        total = db.execute(text(count_sql), params).scalar() or 0
 
-            # Search filter
-            if search_lower:
-                eq_name = (row.get("equipment_name") or "").lower()
-                qr = (row.get("qr_code") or "").lower()
-                sno = (row.get("serial_no") or "").lower()
-                hosp = (row.get("hospital_name") or "").lower()
-                if search_lower not in eq_name and search_lower not in qr and search_lower not in sno and search_lower not in hosp:
-                    continue
-
-            filtered_assets.append(row)
-
-        total = len(filtered_assets)
+        # 2. Paginated data query
         offset = (page - 1) * page_size
-        paginated_assets = filtered_assets[offset : offset + page_size]
+        data_sql = f"""
+        SELECT * FROM {ASSETS_INVENTORY_TABLE} 
+        WHERE {where_sql} 
+        ORDER BY id DESC 
+        LIMIT :limit OFFSET :offset
+        """
+        rows = db.execute(text(data_sql), {**params, "limit": page_size, "offset": offset}).fetchall()
+
+        columns = ["id"] + ASSETS_INVENTORY_COLUMNS + ["uploaded_at"]
+        assets = []
+        for r in rows:
+            row_dict = {}
+            for i, col in enumerate(columns):
+                row_dict[col] = r[i] if i < len(r) else None
+            assets.append(row_dict)
 
         return {
             "success": True,
             "total": total,
             "page": page,
             "page_size": page_size,
-            "assets": paginated_assets
+            "assets": assets
         }
     except Exception as e:
         logger.error(f"Error fetching assets inventory: {str(e)}")
@@ -1406,65 +1443,65 @@ async def get_assets_inventory(
 
 @router.get("/assets-filters")
 async def get_assets_filters(db: Session = Depends(get_db)):
-    """Get distinct filter lists and raw combinations for dependent dropdowns from memory cache."""
+    """Get distinct filter lists and combinations for dependent dropdowns from D1."""
     try:
-        global ASSETS_CACHE
-        if ASSETS_CACHE is None:
+        try:
+            db.execute(text(f"SELECT is_verified FROM {ASSETS_INVENTORY_TABLE} LIMIT 1")).fetchone()
+        except Exception:
+            db.execute(text(f"DROP TABLE IF EXISTS {ASSETS_INVENTORY_TABLE}"))
             db.execute(text(ASSETS_INVENTORY_CREATE_SQL))
             db.commit()
-            rows = db.execute(text(f"SELECT * FROM {ASSETS_INVENTORY_TABLE} ORDER BY id DESC")).fetchall()
-            columns = ASSETS_INVENTORY_COLUMNS + ["uploaded_at"]
-            ASSETS_CACHE = []
-            for r in rows:
-                row_dict = {}
-                for i, col in enumerate(["id"] + columns):
-                    row_dict[col] = r[i] if i < len(r) else None
-                ASSETS_CACHE.append(row_dict)
 
-        # Build clean zones list (exclude people names or '--')
+        comb_sql = f"""
+        SELECT DISTINCT zone_name, district_name, di_name 
+        FROM {ASSETS_INVENTORY_TABLE} 
+        WHERE zone_name IS NOT NULL AND zone_name != ''
+        """
+        comb_rows = db.execute(text(comb_sql)).fetchall()
+
         valid_rajasthan_zones = {"Ajmer", "Bikaner", "Jaipur", "Jodhpur", "Kota", "Udaipur", "Bharatpur"}
+        combinations = []
         zones_set = set()
         districts_set = set()
         di_names_set = set()
-        unique_months = set()
-        combinations = []
-        seen_combos = set()
 
-        for row in ASSETS_CACHE:
-            z = (row.get("zone_name") or "").strip()
-            d = (row.get("district_name") or "").strip()
-            di = (row.get("di_name") or "").strip()
-            moic_str = row.get("moic_verified_date")
+        for z, d, di in comb_rows:
+            z_clean = str(z or "").strip()
+            matched_zone = None
+            for rz in valid_rajasthan_zones:
+                if rz.lower() in z_clean.lower():
+                    matched_zone = rz
+                    break
 
-            # Validate Zone Name to contain only actual zone names
-            if z and z in valid_rajasthan_zones:
-                zones_set.add(z)
-                if d:
-                    districts_set.add(d)
-                if di:
-                    di_names_set.add(di)
-                
-                # Build dependent combos
-                combo = (z, d, di)
-                if combo not in seen_combos:
-                    seen_combos.add(combo)
-                    combinations.append({"zone": z, "district": d, "di": di})
+            if matched_zone:
+                zones_set.add(matched_zone)
+                districts_set.add(str(d or "").strip())
+                di_names_set.add(str(di or "").strip())
+                combinations.append({
+                    "zone": matched_zone,
+                    "district": str(d or "").strip(),
+                    "di": str(di or "").strip()
+                })
 
-            if moic_str:
-                dt = _parse_date_flexible(moic_str)
-                if dt:
-                    unique_months.add(dt.strftime("%Y-%m"))
+        month_sql = f"""
+        SELECT DISTINCT moic_year, moic_month 
+        FROM {ASSETS_INVENTORY_TABLE} 
+        WHERE is_verified = 1 AND moic_year IS NOT NULL AND moic_month IS NOT NULL
+        ORDER BY moic_year DESC, moic_month DESC
+        """
+        month_rows = db.execute(text(month_sql)).fetchall()
+        months = [f"{r[0]}-{str(r[1]).zfill(2)}" for r in month_rows]
 
         return {
             "success": True,
             "zones": sorted(list(zones_set)),
             "districts": sorted(list(districts_set)),
             "di_names": sorted(list(di_names_set)),
-            "months": sorted(list(unique_months), reverse=True),
+            "months": months,
             "combinations": combinations
         }
     except Exception as e:
-        logger.error(f"Error fetching asset filters: {str(e)}")
+        logger.error(f"Error fetching assets filters: {str(e)}")
         return {"success": False, "zones": [], "districts": [], "di_names": [], "months": [], "combinations": []}
 
 
@@ -1476,27 +1513,54 @@ async def get_assets_stats(
     month: str = None, # format: "YYYY-MM"
     db: Session = Depends(get_db)
 ):
-    """Get statistics and chart breakdowns with instant in-memory computation (0 D1 DB reads)."""
+    """Get MIS dashboard summary metrics and chart items computed directly via SQL aggregation (0 RAM / Timeout risk)."""
     try:
-        global ASSETS_CACHE
-        if ASSETS_CACHE is None:
+        try:
+            db.execute(text(f"SELECT is_verified FROM {ASSETS_INVENTORY_TABLE} LIMIT 1")).fetchone()
+        except Exception:
+            db.execute(text(f"DROP TABLE IF EXISTS {ASSETS_INVENTORY_TABLE}"))
             db.execute(text(ASSETS_INVENTORY_CREATE_SQL))
             db.commit()
-            rows = db.execute(text(f"SELECT * FROM {ASSETS_INVENTORY_TABLE} ORDER BY id DESC")).fetchall()
-            columns = ASSETS_INVENTORY_COLUMNS + ["uploaded_at"]
-            ASSETS_CACHE = []
-            for r in rows:
-                row_dict = {}
-                for i, col in enumerate(["id"] + columns):
-                    row_dict[col] = r[i] if i < len(r) else None
-                ASSETS_CACHE.append(row_dict)
 
-        # Check filter stats cache
-        cache_key = (zone or "", district or "", di or "", month or "")
-        global STATS_CACHE
-        if cache_key in STATS_CACHE:
-            return STATS_CACHE[cache_key]
+        where_clauses = []
+        params = {}
 
+        if zone:
+            where_clauses.append("zone_name = :zone")
+            params["zone"] = zone
+        if district:
+            where_clauses.append("district_name = :district")
+            params["district"] = district
+        if di:
+            where_clauses.append("di_name = :di")
+            params["di"] = di
+
+        where_sql = " AND ".join(where_clauses) if where_clauses else "1=1"
+
+        # 1. SQL Aggregations
+        agg_sql = f"""
+        SELECT 
+            COUNT(*) as total_equipment,
+            SUM(is_verified) as verified_equipment,
+            SUM(CASE WHEN warranty_expired = 0 THEN 1 ELSE 0 END) as under_warranty,
+            SUM(warranty_expired) as out_of_warranty,
+            SUM(parsed_asset_value) as total_value,
+            SUM(CASE WHEN is_verified = 1 THEN parsed_asset_value ELSE 0 END) as verified_value,
+            SUM(CASE WHEN is_verified = 1 AND warranty_expired = 1 THEN parsed_asset_value ELSE 0 END) as verified_out_of_warranty_value
+        FROM {ASSETS_INVENTORY_TABLE}
+        WHERE {where_sql}
+        """
+        agg_res = db.execute(text(agg_sql), params).fetchone()
+
+        total_equipment = agg_res[0] or 0
+        verified_count = agg_res[1] or 0
+        under_warranty_count = agg_res[2] or 0
+        out_of_warranty_count = agg_res[3] or 0
+        total_value = agg_res[4] or 0.0
+        verified_value = agg_res[5] or 0.0
+        verified_out_of_warranty_value = agg_res[6] or 0.0
+
+        # 2. Arrear billing calculation
         now = dt_datetime.now()
         if month:
             try:
@@ -1510,84 +1574,67 @@ async def get_assets_stats(
             target_year = now.year
             target_month = now.month
 
-        total_equipment = 0
-        verified_count = 0
-        under_warranty_count = 0
-        out_of_warranty_count = 0
-        total_value = 0.0
-        verified_value = 0.0
-        verified_out_of_warranty_value = 0.0
+        # Calculate elapsed months for verified devices in the target month
+        arrear_sql = f"""
+        SELECT 
+            parsed_asset_value, install_year, install_month
+        FROM {ASSETS_INVENTORY_TABLE}
+        WHERE is_verified = 1 
+          AND moic_year = :target_year 
+          AND moic_month = :target_month
+          AND {where_sql}
+        """
+        arrear_rows = db.execute(text(arrear_sql), {**params, "target_year": target_year, "target_month": target_month}).fetchall()
         arrear_billing = 0.0
-
-        status_counts = {}
-        type_counts = {}
-        warranty_status = {"Under Warranty": 0, "Out of Warranty": 0}
-
-        for row in ASSETS_CACHE:
-            # Apply filters
-            if zone and row.get("zone_name") != zone:
-                continue
-            if district and row.get("district_name") != district:
-                continue
-            if di and row.get("di_name") != di:
-                continue
-
-            total_equipment += 1
-
-            raw_val = row.get("asset_value") or "0"
-            moic_date_str = row.get("moic_verified_date") or ""
-            warranty_str = row.get("warranty_details") or ""
-            install_date_str = row.get("installation_date") or ""
-            status_str = row.get("equipment_status") or "Unknown"
-            type_str = row.get("equipment_type") or "Other"
-
-            try:
-                val = float(str(raw_val).replace(",", "").strip())
-            except (ValueError, TypeError):
-                val = 0.0
-
-            total_value += val
-
-            # Charts helper
-            status_counts[status_str] = status_counts.get(status_str, 0) + 1
-            type_counts[type_str] = type_counts.get(type_str, 0) + 1
-
-            moic_date = _parse_date_flexible(moic_date_str)
-            is_verified = moic_date is not None
-
-            warranty_expired = _is_warranty_expired(warranty_str)
-            if warranty_expired:
-                out_of_warranty_count += 1
-                warranty_status["Out of Warranty"] += 1
-            else:
-                under_warranty_count += 1
-                warranty_status["Under Warranty"] += 1
-
-            if is_verified:
-                verified_count += 1
-                verified_value += val
-                if warranty_expired:
-                    verified_out_of_warranty_value += val
-
-            # Arrear billing: equipment verified in target month
-            if is_verified and moic_date.month == target_month and moic_date.year == target_year:
-                install_date = _parse_date_flexible(install_date_str)
-                if install_date and val > 0:
-                    monthly_rate = (val * 6.08 / 100) / 12
-                    # months from installation to today (target month)
-                    months_diff = (target_year - install_date.year) * 12 + (target_month - install_date.month)
-                    if months_diff < 0:
-                        months_diff = 0
+        for r_val, i_yr, i_mo in arrear_rows:
+            if r_val and i_yr and i_mo:
+                monthly_rate = (r_val * 6.08 / 100) / 12
+                months_diff = (target_year - i_yr) * 12 + (target_month - i_mo)
+                if months_diff > 0:
                     arrear_billing += monthly_rate * months_diff
 
         monthly_value = (verified_out_of_warranty_value * 6.08 / 100) / 12
         total_billing = monthly_value + arrear_billing
 
-        top_types = sorted([{"name": k, "value": v} for k, v in type_counts.items()], key=lambda x: x["value"], reverse=True)[:5]
-        status_list = [{"name": k, "value": v} for k, v in status_counts.items()]
-        warranty_list = [{"name": k, "value": v} for k, v in warranty_status.items()]
+        # 3. Chart 1: Status Distribution
+        status_sql = f"""
+        SELECT equipment_status, COUNT(*) 
+        FROM {ASSETS_INVENTORY_TABLE} 
+        WHERE {where_sql} 
+        GROUP BY equipment_status
+        """
+        status_rows = db.execute(text(status_sql), params).fetchall()
+        status_list = [{"name": r[0] or "Unknown", "value": r[1]} for r in status_rows]
 
-        result = {
+        # 4. Chart 2: Top 5 Types
+        type_sql = f"""
+        SELECT equipment_type, COUNT(*) as cnt 
+        FROM {ASSETS_INVENTORY_TABLE} 
+        WHERE {where_sql} 
+        GROUP BY equipment_type 
+        ORDER BY cnt DESC 
+        LIMIT 5
+        """
+        type_rows = db.execute(text(type_sql), params).fetchall()
+        top_types = [{"name": r[0] or "Other", "value": r[1]} for r in type_rows]
+
+        # 5. Chart 3: Warranty Breakdown
+        warranty_sql = f"""
+        SELECT warranty_expired, COUNT(*) 
+        FROM {ASSETS_INVENTORY_TABLE} 
+        WHERE {where_sql} 
+        GROUP BY warranty_expired
+        """
+        warranty_rows = db.execute(text(warranty_sql), params).fetchall()
+        warranty_dict = {0: 0, 1: 0}
+        for r in warranty_rows:
+            warranty_dict[int(r[0] or 0)] = r[1]
+        warranty_list = [
+            {"name": "Under Warranty", "value": warranty_dict[0]},
+            {"name": "Out of Warranty", "value": warranty_dict[1]}
+        ]
+
+        return {
             "success": True,
             "total_equipment": total_equipment,
             "verified_equipment": verified_count,
@@ -1605,9 +1652,6 @@ async def get_assets_stats(
                 "warranty_list": warranty_list
             }
         }
-
-        STATS_CACHE[cache_key] = result
-        return result
     except Exception as e:
         logger.error(f"Error fetching assets stats: {str(e)}")
         return {
@@ -1617,5 +1661,6 @@ async def get_assets_stats(
             "monthly_value": 0, "arrear_billing": 0, "total_billing": 0,
             "charts": {"top_types": [], "status_list": [], "warranty_list": []}
         }
+
 
 
