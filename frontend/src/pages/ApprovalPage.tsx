@@ -388,67 +388,100 @@ export default function ApprovalPage() {
             <p className="font-bold uppercase tracking-wider text-gray-600">Great! All pending claims have been processed.</p>
           </div>
         ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-            {pendingApprovals.map((req) => {
-              const isChecked = selectedIds.includes(req.expense_id);
-              return (
-                <div 
-                  key={req.id} 
-                  className={`p-4 bg-white border rounded shadow-sm hover:shadow transition-shadow flex flex-col justify-between space-y-4 relative ${
-                    isChecked ? "border-blue-500 bg-blue-50/5" : "border-gray-250"
-                  }`}
-                >
-                  {/* Select Checkbox Indicator */}
-                  <button
-                    onClick={() => toggleSelectClaim(req.expense_id)}
-                    className="absolute top-4 right-4 bg-transparent border-0 p-0 text-gray-400 hover:text-blue-600 cursor-pointer shrink-0"
-                  >
-                    {isChecked ? (
-                      <CheckSquare className="w-5 h-5 text-blue-600" />
-                    ) : (
-                      <Square className="w-5 h-5 text-gray-300" />
-                    )}
-                  </button>
+          <div className="overflow-x-auto border border-gray-250 rounded shadow-sm bg-white">
+            <table className="w-full text-left border-collapse text-xs">
+              <thead>
+                <tr className="bg-gray-50 border-b border-gray-250 text-gray-500 font-bold uppercase tracking-wider text-[10px]">
+                  <th className="px-4 py-3 w-12 text-center">Select</th>
+                  <th className="px-4 py-3">Employee Details</th>
+                  <th className="px-4 py-3">Claim ID</th>
+                  <th className="px-4 py-3">Category</th>
+                  <th className="px-4 py-3 text-center">Date / Month</th>
+                  <th className="px-4 py-3">Purpose</th>
+                  <th className="px-4 py-3 text-right">Total Amount</th>
+                  <th className="px-4 py-3 text-center">Actions</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-gray-150">
+                {pendingApprovals.map((req) => {
+                  const isChecked = selectedIds.includes(req.expense_id);
+                  return (
+                    <tr 
+                      key={req.id} 
+                      onClick={() => handleOpenDetails(req)}
+                      className={`hover:bg-slate-50 transition-colors cursor-pointer ${
+                        isChecked ? "bg-blue-50/20" : ""
+                      }`}
+                    >
+                      {/* Checkbox column */}
+                      <td 
+                        className="px-4 py-3.5 text-center" 
+                        onClick={(e) => { e.stopPropagation(); toggleSelectClaim(req.expense_id); }}
+                      >
+                        <button className="bg-transparent border-0 p-0 text-gray-400 hover:text-blue-600 cursor-pointer">
+                          {isChecked ? (
+                            <CheckSquare className="w-4.5 h-4.5 text-blue-600" />
+                          ) : (
+                            <Square className="w-4.5 h-4.5 text-gray-300" />
+                          )}
+                        </button>
+                      </td>
 
-                  <div className="space-y-3">
-                    <div className="flex items-start">
-                      <div className="flex items-center gap-2.5">
-                        <div className="h-8 w-8 rounded-full bg-blue-600/10 border border-blue-500/20 text-blue-600 flex items-center justify-center font-bold text-xs uppercase shadow-sm">
-                          {req.employeeName ? req.employeeName.charAt(0) : "U"}
+                      {/* Employee details column */}
+                      <td className="px-4 py-3.5">
+                        <div className="flex items-center gap-2">
+                          <div className="h-7 w-7 rounded-full bg-blue-600/10 border border-blue-500/20 text-blue-600 flex items-center justify-center font-bold text-xs uppercase shadow-sm">
+                            {req.employeeName ? req.employeeName.charAt(0) : "U"}
+                          </div>
+                          <div>
+                            <div className="font-bold text-gray-800 leading-tight">{req.employeeName}</div>
+                            <div className="text-[9px] text-blue-600 font-mono font-bold mt-0.5">{req.eCode}</div>
+                          </div>
                         </div>
-                        <div className="pr-6">
-                          <h4 className="text-xs font-bold text-gray-800 leading-tight truncate max-w-[120px]" title={req.employeeName}>{req.employeeName}</h4>
-                          <p className="text-[9px] text-blue-600 tracking-wider font-mono font-bold leading-none mt-1">{req.eCode}</p>
-                        </div>
-                      </div>
-                    </div>
+                      </td>
 
-                    <div className="border-t border-b border-gray-100 py-3 space-y-2">
-                      <div className="flex justify-between text-[10px]">
-                        <span className="text-gray-500 font-bold uppercase">Purpose:</span>
-                        <span className="font-bold text-gray-800 truncate max-w-[160px]" title={req.purpose}>{req.purpose}</span>
-                      </div>
-                      <div className="flex justify-between text-[10px]">
-                        <span className="text-gray-500 font-bold uppercase">Itinerary:</span>
-                        <span className="font-bold text-gray-700">{req.itinerariesCount} leg(s) ({req.date})</span>
-                      </div>
-                      <div className="flex justify-between items-center pt-1">
-                        <span className="text-[9px] text-blue-600 bg-blue-50 border border-blue-200 px-2 py-0.5 rounded font-bold uppercase tracking-wider">{req.category}</span>
-                        <span className="text-sm font-extrabold text-gray-900">₹{(Number(req.amount) || 0).toLocaleString()}</span>
-                      </div>
-                    </div>
-                  </div>
+                      {/* Claim Code column */}
+                      <td className="px-4 py-3.5 font-bold text-gray-700 font-mono">
+                        {req.expense_code}
+                      </td>
 
-                  <button
-                    onClick={() => handleOpenDetails(req)}
-                    className="btn-lte-primary w-full py-2 flex items-center justify-center gap-1.5"
-                  >
-                    <Eye className="w-3.5 h-3.5" />
-                    Review & Edit Leg Details
-                  </button>
-                </div>
-              );
-            })}
+                      {/* Category column */}
+                      <td className="px-4 py-3.5">
+                        <span className="text-[9px] text-blue-600 bg-blue-50 border border-blue-200 px-2 py-0.5 rounded font-bold uppercase tracking-wider">
+                          {req.category}
+                        </span>
+                      </td>
+
+                      {/* Date column */}
+                      <td className="px-4 py-3.5 text-center text-gray-600 font-medium">
+                        {req.date}
+                      </td>
+
+                      {/* Purpose column */}
+                      <td className="px-4 py-3.5 text-gray-600 font-semibold max-w-[200px] truncate" title={req.purpose}>
+                        {req.purpose}
+                      </td>
+
+                      {/* Amount column */}
+                      <td className="px-4 py-3.5 text-right font-extrabold text-gray-900 text-sm">
+                        ₹{(Number(req.amount) || 0).toLocaleString()}
+                      </td>
+
+                      {/* Review details eye button column */}
+                      <td className="px-4 py-3.5 text-center" onClick={(e) => e.stopPropagation()}>
+                        <button
+                          onClick={() => handleOpenDetails(req)}
+                          className="btn-lte-primary px-3 py-1.5 flex items-center justify-center gap-1 mx-auto"
+                        >
+                          <Eye className="w-3.5 h-3.5" />
+                          <span>Review</span>
+                        </button>
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
           </div>
         )}
       </div>
