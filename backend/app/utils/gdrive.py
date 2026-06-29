@@ -17,27 +17,38 @@ SCOPES = ['https://www.googleapis.com/auth/drive', 'https://www.googleapis.com/a
 
 def get_drive_service():
     """Initializes Google Drive service using Firebase Service Account credentials."""
+    errors = []
     try:
         if os.path.exists(SERVICE_ACCOUNT_PATH):
-            creds = service_account.Credentials.from_service_account_file(
-                SERVICE_ACCOUNT_PATH, 
-                scopes=SCOPES
-            )
+            try:
+                creds = service_account.Credentials.from_service_account_file(
+                    SERVICE_ACCOUNT_PATH, 
+                    scopes=SCOPES
+                )
+                return build('drive', 'v3', credentials=creds, cache_discovery=False)
+            except Exception as e:
+                errors.append(f"File load error: {str(e)}")
         else:
-            service_account_json = os.getenv("FIREBASE_SERVICE_ACCOUNT_JSON")
-            if service_account_json:
+            errors.append(f"Path '{SERVICE_ACCOUNT_PATH}' does not exist.")
+            
+        service_account_json = os.getenv("FIREBASE_SERVICE_ACCOUNT_JSON")
+        if service_account_json:
+            try:
                 info = json.loads(service_account_json)
                 creds = service_account.Credentials.from_service_account_info(
                     info, 
                     scopes=SCOPES
                 )
-            else:
-                logger.error("GDrive: No service account credentials found.")
-                return None
-        return build('drive', 'v3', credentials=creds, cache_discovery=False)
+                return build('drive', 'v3', credentials=creds, cache_discovery=False)
+            except Exception as e:
+                errors.append(f"Env var load error: {str(e)}")
+        else:
+            errors.append("Env var 'FIREBASE_SERVICE_ACCOUNT_JSON' is not set.")
+            
+        raise Exception(f"GDrive init failures: {'; '.join(errors)}")
     except Exception as e:
         logger.error(f"GDrive: Failed to initialize Google Drive service client: {str(e)}")
-        return None
+        raise e
 
 def get_or_create_subfolder(service, parent_id: str, folder_name: str) -> str:
     """Finds or creates a subfolder by name inside a parent folder on Google Drive."""
