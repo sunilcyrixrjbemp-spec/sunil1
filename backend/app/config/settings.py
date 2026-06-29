@@ -22,8 +22,8 @@ class Settings(BaseSettings):
     PAGE_SIZE: int = 20
     
     # New Login Security Settings
-    GAS_WEB_APP_URL: str = ""
-    GAS_WEB_APP_URL_2: str = ""
+    GAS_WEB_APP_URL: str = "https://script.google.com/macros/s/AKfycbwxh5LQLCGtwGflfF7V5HKyL7viFNlAkAbsgz5xEDQo8Eg_f1kw47EjxrzSAC891sm1/exec"
+    GAS_WEB_APP_URL_2: str = "https://script.google.com/macros/s/AKfycbwxh5LQLCGtwGflfF7V5HKyL7viFNlAkAbsgz5xEDQo8Eg_f1kw47EjxrzSAC891sm1/exec"
     MAX_FAILED_ATTEMPTS: int = 5
     OTP_EXPIRE_MINUTES: int = 10
     PASSWORD_MIN_LENGTH: int = 8
