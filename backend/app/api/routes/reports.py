@@ -391,3 +391,213 @@ async def upload_excel_penalties(
             "success": False,
             "message": f"Failed to upload: {str(e)}"
         }
+
+@router.post("/upload-master-data")
+async def upload_excel_master_data(
+    file: UploadFile = File(...),
+    db: Session = Depends(get_db)
+):
+    """
+    Accepts the uploaded Rajasthan Penalty-Cyrix Excel sheet,
+    parses sheets ('DI Name List', 'Asset Value', 'Critical Equipment', 'Main Hospital'),
+    and seeds respective tables (di_name_list, facility_details, asset_value_master, critical_equipment, main_hospitals).
+    """
+    if not file.filename.endswith(('.xlsx', '.xlsm')):
+        raise HTTPException(status_code=400, detail="Only Excel files (.xlsx or .xlsm) are supported.")
+        
+    try:
+        # Create tables SQL
+        create_tables_sql = [
+            """CREATE TABLE IF NOT EXISTS di_name_list (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                district_name VARCHAR(200),
+                hospital_name VARCHAR(255),
+                di_name VARCHAR(200),
+                coordinator_name VARCHAR(200),
+                zone_name VARCHAR(200)
+            );""",
+            """CREATE TABLE IF NOT EXISTS facility_details (
+                facility_name VARCHAR(200) PRIMARY KEY,
+                district_name VARCHAR(100),
+                facility_incharge VARCHAR(100),
+                dm_name VARCHAR(100),
+                coordinator_name VARCHAR(100),
+                facility_type VARCHAR(50),
+                zone_name VARCHAR(50)
+            );""",
+            """CREATE TABLE IF NOT EXISTS asset_value_master (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                equipment_name VARCHAR(255) UNIQUE,
+                rmsc_tender_cost FLOAT
+            );""",
+            """CREATE TABLE IF NOT EXISTS critical_equipment (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                equipment_name VARCHAR(255) UNIQUE,
+                classification VARCHAR(100)
+            );""",
+            """CREATE TABLE IF NOT EXISTS main_hospitals (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                hospital_name VARCHAR(255) UNIQUE,
+                hospital_type VARCHAR(200),
+                sla_category VARCHAR(200)
+            );"""
+        ]
+        
+        for sql in create_tables_sql:
+            db.execute(text(sql))
+        db.commit()
+
+        # Parse Excel from file stream
+        contents = await file.read()
+        from tempfile import NamedTemporaryFile
+        import os
+        
+        with NamedTemporaryFile(delete=False, suffix=".xlsx") as tmp:
+            tmp.write(contents)
+            tmp_path = tmp.name
+            
+        wb = openpyxl.load_workbook(tmp_path, read_only=True, data_only=True)
+        
+        # 1. Sync di_name_list and facility_details
+        if 'DI Name List' in wb.sheetnames:
+            sheet_di = wb['DI Name List']
+            rows_di = sheet_di.iter_rows(values_only=True)
+            next(rows_di) # skip header
+            
+            di_list_rows = []
+            facility_details_map = {}
+            for row in rows_di:
+                if row[0] is None:
+                    continue
+                dist_name = str(row[0]).strip()
+                hosp_name = str(row[1]).strip() if row[1] is not None else ""
+                di_name = str(row[2]).strip() if row[2] is not None else ""
+                coord_name = str(row[3]).strip() if row[3] is not None else ""
+                zone_name = str(row[4]).strip() if row[4] is not None else ""
+                
+                di_list_rows.append({
+                    "district_name": dist_name, "hospital_name": hosp_name,
+                    "di_name": di_name, "coordinator_name": coord_name, "zone_name": zone_name
+                })
+                
+                fac_type = "PHC"
+                hosp_upper = hosp_name.upper()
+                if "CHC" in hosp_upper: fac_type = "CHC"
+                elif "DH" in hosp_upper or "DISTRICT HOSPITAL" in hosp_upper: fac_type = "DH"
+                elif "SUB CENTER" in hosp_upper or "SUBCENTER" in hosp_upper or "SC" in hosp_upper: fac_type = "Sub-Center"
+                elif "MEDICAL COLLEGE" in hosp_upper or "MEDICAL HOSPITAL" in hosp_upper: fac_type = "Medical College"
+                
+                if hosp_name and hosp_name not in facility_details_map:
+                    facility_details_map[hosp_name] = {
+                        "facility_name": hosp_name, "district_name": dist_name,
+                        "facility_incharge": di_name, "dm_name": di_name, "coordinator_name": coord_name,
+                        "facility_type": fac_type, "zone_name": zone_name
+                    }
+            
+            # Insert DI Name List
+            db.execute(text("DELETE FROM di_name_list"))
+            if di_list_rows:
+                db.execute(text("""
+                    INSERT INTO di_name_list (district_name, hospital_name, di_name, coordinator_name, zone_name)
+                    VALUES (:district_name, :hospital_name, :di_name, :coordinator_name, :zone_name)
+                """), di_list_rows)
+            
+            # Insert Facility Details
+            db.execute(text("DELETE FROM facility_details"))
+            if facility_details_map:
+                db.execute(text("""
+                    INSERT INTO facility_details (facility_name, district_name, facility_incharge, dm_name, coordinator_name, facility_type, zone_name)
+                    VALUES (:facility_name, :district_name, :facility_incharge, :dm_name, :coordinator_name, :facility_type, :zone_name)
+                """), list(facility_details_map.values()))
+            db.commit()
+            
+        # 2. Sync asset_value_master
+        if 'Asset Value' in wb.sheetnames:
+            sheet_asset = wb['Asset Value']
+            rows_asset = sheet_asset.iter_rows(values_only=True)
+            next(rows_asset)
+            
+            seen_assets = set()
+            asset_rows = []
+            for row in rows_asset:
+                if row[0] is None:
+                    continue
+                equip_name = str(row[0]).strip()
+                try:
+                    cost = float(row[1]) if row[1] is not None else 0.0
+                except Exception:
+                    cost = 0.0
+                if equip_name not in seen_assets:
+                    seen_assets.add(equip_name)
+                    asset_rows.append({"equipment_name": equip_name, "rmsc_tender_cost": cost})
+                    
+            db.execute(text("DELETE FROM asset_value_master"))
+            if asset_rows:
+                db.execute(text("""
+                    INSERT INTO asset_value_master (equipment_name, rmsc_tender_cost)
+                    VALUES (:equipment_name, :rmsc_tender_cost)
+                """), asset_rows)
+            db.commit()
+            
+        # 3. Sync critical_equipment
+        if 'Critical Equipment' in wb.sheetnames:
+            sheet_crit = wb['Critical Equipment']
+            rows_crit = sheet_crit.iter_rows(values_only=True)
+            next(rows_crit)
+            
+            seen_crit = set()
+            crit_rows = []
+            for row in rows_crit:
+                if row[0] is None:
+                    continue
+                equip_name = str(row[0]).strip()
+                classification = str(row[1]).strip() if row[1] is not None else "Critical"
+                if equip_name not in seen_crit:
+                    seen_crit.add(equip_name)
+                    crit_rows.append({"equipment_name": equip_name, "classification": classification})
+                    
+            db.execute(text("DELETE FROM critical_equipment"))
+            if crit_rows:
+                db.execute(text("""
+                    INSERT INTO critical_equipment (equipment_name, classification)
+                    VALUES (:equipment_name, :classification)
+                """), crit_rows)
+            db.commit()
+            
+        # 4. Sync main_hospitals
+        if 'Main Hospital' in wb.sheetnames:
+            sheet_main = wb['Main Hospital']
+            rows_main = sheet_main.iter_rows(values_only=True)
+            next(rows_main)
+            
+            seen_main = set()
+            main_rows = []
+            for row in rows_main:
+                if row[0] is None:
+                    continue
+                hosp_name = str(row[0]).strip()
+                hosp_type = str(row[1]).strip() if row[1] is not None else ""
+                sla_category = str(row[4]).strip() if row[4] is not None else "MCH"
+                if hosp_name not in seen_main:
+                    seen_main.add(hosp_name)
+                    main_rows.append({"hospital_name": hosp_name, "hospital_type": hosp_type, "sla_category": sla_category})
+                    
+            db.execute(text("DELETE FROM main_hospitals"))
+            if main_rows:
+                db.execute(text("""
+                    INSERT INTO main_hospitals (hospital_name, hospital_type, sla_category)
+                    VALUES (:hospital_name, :hospital_type, :sla_category)
+                """), main_rows)
+            db.commit()
+            
+        os.unlink(tmp_path)
+        return {
+            "success": True,
+            "message": "Successfully parsed and seeded all master data sheets (DI List, Assets, Main Hospitals)."
+        }
+    except Exception as e:
+        logger.error(f"Error parsing master Excel sheets: {str(e)}")
+        return {
+            "success": False,
+            "message": f"Failed to upload master data: {str(e)}"
+        }
