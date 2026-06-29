@@ -18,10 +18,18 @@ export default function NotificationsPage() {
   const navigate = useNavigate();
   const [user, setUser] = useState<any>(null);
   const [notifications, setNotifications] = useState<NotificationItem[]>(() => {
-    const currentUser = JSON.parse(localStorage.getItem("user") || "null");
-    if (!currentUser) return [];
-    const cached = localStorage.getItem(`notifications_${currentUser.user_id}`);
-    return cached ? JSON.parse(cached) : [];
+    try {
+      const currentUser = JSON.parse(localStorage.getItem("user") || "null");
+      if (!currentUser) return [];
+      const cached = localStorage.getItem(`notifications_${currentUser.user_id}`);
+      if (cached) {
+        const parsed = JSON.parse(cached);
+        if (Array.isArray(parsed)) {
+          return parsed;
+        }
+      }
+    } catch (_) {}
+    return [];
   });
   const [loading, setLoading] = useState(() => {
     const currentUser = JSON.parse(localStorage.getItem("user") || "null");
@@ -61,10 +69,16 @@ export default function NotificationsPage() {
     }
     try {
       const list = await notificationService.getNotifications();
-      setNotifications(list);
-      localStorage.setItem(cacheKey, JSON.stringify(list));
+      if (Array.isArray(list)) {
+        setNotifications(list);
+        localStorage.setItem(cacheKey, JSON.stringify(list));
+      } else {
+        console.warn("getNotifications did not return an array:", list);
+        setNotifications([]);
+      }
     } catch (err) {
       toast.error("Failed to load notifications.");
+      setNotifications([]);
     } finally {
       setLoading(false);
     }
@@ -116,7 +130,8 @@ export default function NotificationsPage() {
 
   // Filter & Search Logic
   const getFilteredNotifications = () => {
-    return notifications.filter(n => {
+    const safeNotifs = Array.isArray(notifications) ? notifications : [];
+    return safeNotifs.filter(n => {
       // 1. Search Query
       if (searchQuery) {
         const query = searchQuery.toLowerCase();
@@ -182,7 +197,7 @@ export default function NotificationsPage() {
           </button>
           <button
             onClick={markAllAsRead}
-            disabled={notifications.every(n => n.read)}
+            disabled={!Array.isArray(notifications) || notifications.every(n => n && n.read)}
             className="px-3 py-1.5 bg-blue-600 hover:bg-blue-700 disabled:bg-gray-200 disabled:text-gray-400 disabled:border-transparent text-white text-xs font-bold uppercase tracking-wider rounded border-0 cursor-pointer transition-colors"
           >
             Mark all read

@@ -73,7 +73,12 @@ export default function DashboardLayout() {
       const currentUser = JSON.parse(localStorage.getItem("user") || "null");
       if (currentUser) {
         const cached = localStorage.getItem(`notifications_${currentUser.user_id}`);
-        return cached ? JSON.parse(cached).slice(0, 10) : [];
+        if (cached) {
+          const parsed = JSON.parse(cached);
+          if (Array.isArray(parsed)) {
+            return parsed.slice(0, 10);
+          }
+        }
       }
     } catch (_) {}
     return [];
@@ -129,31 +134,48 @@ export default function DashboardLayout() {
   const fetchNotifications = async (currentUser: any) => {
     try {
       const list = await notificationService.getNotifications();
-      setNotifications(list.slice(0, 10)); // Display top 10 most recent in nav dropdown
-      localStorage.setItem(`notifications_${currentUser.user_id}`, JSON.stringify(list));
+      if (Array.isArray(list)) {
+        setNotifications(list.slice(0, 10)); // Display top 10 most recent in nav dropdown
+        localStorage.setItem(`notifications_${currentUser.user_id}`, JSON.stringify(list));
 
-      // Trigger local browser push notification for unread alerts (PWA features)
-      if (typeof window !== "undefined" && "Notification" in window && Notification.permission === "granted") {
-        const notifiedIds = JSON.parse(localStorage.getItem("pwa_notified_ids") || "[]");
-        let hasNew = false;
-        list.forEach(n => {
-          const stringId = String(n.id);
-          if (!n.read && !notifiedIds.includes(stringId)) {
-            new Notification(n.title, {
-              body: n.description,
-              icon: brandLogo,
-              tag: stringId
-            });
-            notifiedIds.push(stringId);
-            hasNew = true;
+        // Trigger local browser push notification for unread alerts (PWA features)
+        if (typeof window !== "undefined" && "Notification" in window && Notification.permission === "granted") {
+          let notifiedIds = [];
+          try {
+            const notifiedIdsString = localStorage.getItem("pwa_notified_ids");
+            if (notifiedIdsString) {
+              const parsedNotified = JSON.parse(notifiedIdsString);
+              if (Array.isArray(parsedNotified)) {
+                notifiedIds = parsedNotified;
+              }
+            }
+          } catch (_) {}
+
+          let hasNew = false;
+          list.forEach(n => {
+            if (!n) return;
+            const stringId = String(n.id);
+            if (!n.read && !notifiedIds.includes(stringId)) {
+              new Notification(n.title || "Notification", {
+                body: n.description || "",
+                icon: brandLogo,
+                tag: stringId
+              });
+              notifiedIds.push(stringId);
+              hasNew = true;
+            }
+          });
+          if (hasNew) {
+            localStorage.setItem("pwa_notified_ids", JSON.stringify(notifiedIds));
           }
-        });
-        if (hasNew) {
-          localStorage.setItem("pwa_notified_ids", JSON.stringify(notifiedIds));
         }
+      } else {
+        console.warn("getNotifications did not return an array:", list);
+        setNotifications([]);
       }
     } catch (err) {
       console.error("Failed to fetch notifications:", err);
+      setNotifications([]);
     }
   };
 
@@ -207,7 +229,8 @@ export default function DashboardLayout() {
     userRole === "Admin" || 
     ["home", "profile", "help"].includes(currentActiveItem.id.toLowerCase()) ||
     allowedWindows.includes(currentActiveItem.id.toLowerCase());
-  const unreadCount = notifications.filter(n => !n.read).length;
+  const safeNotifications = Array.isArray(notifications) ? notifications : [];
+  const unreadCount = safeNotifications.filter(n => n && !n.read).length;
 
   return (
     <div className="min-h-screen bg-[#f4f6f9] text-[#212529] flex flex-col lg:flex-row antialiased">
@@ -339,12 +362,12 @@ export default function DashboardLayout() {
                       </span>
                     </div>
                     <div className="divide-y divide-gray-100 max-h-64 overflow-y-auto">
-                      {notifications.length === 0 ? (
+                      {safeNotifications.length === 0 ? (
                         <div className="p-4 text-center text-gray-400 font-semibold uppercase tracking-wider text-[10px]">
                           No notifications
                         </div>
                       ) : (
-                        notifications.map((n) => (
+                        safeNotifications.map((n) => (
                           <Link
                             key={n.id}
                             to={n.link}
