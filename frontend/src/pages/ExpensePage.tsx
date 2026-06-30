@@ -154,9 +154,9 @@ export default function ExpensePage() {
       pms_asset_details: null,
       pms_frequency: "3 month",
       asset_tagging_equipment: "",
-      asset_tagging_quantity: "0",
-      mobilise_asset_count: "0",
-      calibration_count: "0",
+      asset_tagging_quantity: "",
+      mobilise_asset_count: "",
+      calibration_count: "",
       activity_other_desc: "",
       calls_list: [],
       pms_list: [],
@@ -233,9 +233,9 @@ export default function ExpensePage() {
       pms_asset_details: null,
       pms_frequency: "3 month",
       asset_tagging_equipment: "",
-      asset_tagging_quantity: "0",
-      mobilise_asset_count: "0",
-      calibration_count: "0",
+      asset_tagging_quantity: "",
+      mobilise_asset_count: "",
+      calibration_count: "",
       activity_other_desc: "",
       calls_list: [],
       pms_list: [],
@@ -911,7 +911,7 @@ export default function ExpensePage() {
         ...l,
         assets_list: [...currentList, { equipment_name: eq, quantity: qty }],
         asset_tagging_equipment: "",
-        asset_tagging_quantity: "0"
+        asset_tagging_quantity: ""
       };
     }));
   };
@@ -1440,7 +1440,7 @@ export default function ExpensePage() {
               ...l,
               assets_list: [...currentList, { equipment_name: l.asset_tagging_equipment, quantity: qty.toString() }],
               asset_tagging_equipment: "",
-              asset_tagging_quantity: "0"
+              asset_tagging_quantity: ""
             };
           }
         }
@@ -3001,10 +3001,10 @@ export default function ExpensePage() {
                                   <div className="flex gap-1.5">
                                     <input
                                       type="number"
-                                      min="1"
-                                      value={leg.asset_tagging_quantity || "0"}
+                                      value={leg.asset_tagging_quantity || ""}
                                       onChange={(e) => handleItineraryChange(leg.leg, "asset_tagging_quantity", e.target.value)}
                                       className="input-lte font-semibold"
+                                      placeholder="Qty"
                                     />
                                     <button
                                       type="button"
@@ -3069,9 +3069,10 @@ export default function ExpensePage() {
                                   <input
                                     type="number"
                                     min="0"
-                                    value={leg.mobilise_asset_count || "0"}
+                                    value={leg.mobilise_asset_count || ""}
                                     onChange={(e) => handleItineraryChange(leg.leg, "mobilise_asset_count", e.target.value)}
                                     className="input-lte font-semibold"
+                                    placeholder="0"
                                   />
                                 </div>
                               </div>
@@ -3090,9 +3091,10 @@ export default function ExpensePage() {
                                   <input
                                     type="number"
                                     min="0"
-                                    value={leg.calibration_count || "0"}
+                                    value={leg.calibration_count || ""}
                                     onChange={(e) => handleItineraryChange(leg.leg, "calibration_count", e.target.value)}
                                     className="input-lte font-semibold"
+                                    placeholder="0"
                                   />
                                 </div>
                               </div>
