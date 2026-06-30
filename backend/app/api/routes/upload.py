@@ -2,7 +2,7 @@ import os
 import shutil
 import logging
 import requests
-from fastapi import APIRouter, File, UploadFile, HTTPException, status
+from fastapi import APIRouter, File, UploadFile, HTTPException, status, Response
 from fastapi.responses import StreamingResponse, FileResponse
 from app.config.settings import settings
 
@@ -152,7 +152,7 @@ async def serve_file(filename: str):
             except Exception as cache_write_err:
                 logger.warning(f"GDrive Cache: Failed to write cache for ID {file_id}: {str(cache_write_err)}")
                 
-            return StreamingResponse(io.BytesIO(file_bytes), media_type=mime_type)
+            return Response(content=file_bytes, media_type=mime_type)
         except Exception as e:
             logger.error(f"GDrive: Failed to download/serve file ID {file_id}: {str(e)}")
             raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"File not found in Google Drive: {str(e)}")
