@@ -59,12 +59,6 @@ function fmtDate(d: string): string {
     return `${dd}-${mm}-${yy}`;
   } catch { return d; }
 }
-function getISTNow(): string {
-  return new Date().toLocaleString("en-IN", {
-    timeZone: "Asia/Kolkata", day: "2-digit", month: "short",
-    year: "numeric", hour: "2-digit", minute: "2-digit", hour12: false,
-  });
-}
 
 // ─── PDF — EXACT CYRIX EXCEL FORMAT ──────────────────────────────────────────
 
