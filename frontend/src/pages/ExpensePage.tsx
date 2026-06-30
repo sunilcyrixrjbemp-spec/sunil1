@@ -54,12 +54,14 @@ interface ItineraryLeg {
   calls_type?: string;
   calls_status?: string;
   calls_photo_url?: string;
+  calls_photo_name?: string;
   calls_photo_loading?: boolean;
   pms_barcode?: string;
   pms_verified?: boolean;
   pms_asset_details?: any;
   pms_frequency?: string;
   pms_photo_url?: string;
+  pms_photo_name?: string;
   pms_photo_loading?: boolean;
   asset_tagging_equipment?: string;
   asset_tagging_quantity?: string;
