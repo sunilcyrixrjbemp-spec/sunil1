@@ -14,11 +14,18 @@ from .expense_attachment import ExpenseAttachment
 from .limit_approval_request import LimitApprovalRequest
 from .ticket import SupportTicket
 from .notification import Notification
+from .expense_breakdown_call import ExpenseBreakdownCall
+from .expense_pms_call import ExpensePmsCall
+from .expense_asset_tagging import ExpenseAssetTagging
+from .expense_asset_mobilise import ExpenseAssetMobilise
+from .expense_calibration import ExpenseCalibration
 
 __all__ = [
     "User", "Expense", "Approval", "Asset", "PasswordHistory", "LoginLog", "OTP", 
     "UserRole", "ApprovalHierarchy", "HierarchyRequester", "HierarchyApprover",
     "AllowanceMaster", "FacilityDetail", "ExpenseItinerary", "ExpenseAttachment",
-    "LimitApprovalRequest", "SupportTicket", "Notification"
+    "LimitApprovalRequest", "SupportTicket", "Notification",
+    "ExpenseBreakdownCall", "ExpensePmsCall", "ExpenseAssetTagging", 
+    "ExpenseAssetMobilise", "ExpenseCalibration"
 ]
 
