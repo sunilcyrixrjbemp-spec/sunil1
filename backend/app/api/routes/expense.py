@@ -1621,178 +1621,6 @@ async def get_asset_value_master(
         for r in results
     ]
 
-@router.get("/{expense_id}")
-async def get_expense_details(
-    expense_id: str,
-    db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user)
-):
-    """Retrieves full details of a specific claim, including itineraries, attachments, and approvals."""
-    # Look up expense by PK ID or generated expense_code
-    query = db.query(Expense)
-    if expense_id.isdigit():
-        expense = query.filter((Expense.id == int(expense_id)) | (Expense.expense_code == expense_id)).first()
-    else:
-        expense = query.filter(Expense.expense_code == expense_id).first()
-
-    if not expense:
-        raise HTTPException(status_code=404, detail="Expense claim not found.")
-
-    # Permissions check: Submit user or assigned approver or Admin
-    approvals = db.query(Approval).filter(Approval.expense_id == expense.id).order_by(Approval.level_number).all()
-    
-    # Pre-fetch all approver users in a single batch query (avoids N+1)
-    approver_ids = list(set(a.approver_id for a in approvals))
-    approver_users = {u.id: u for u in db.query(User).filter(User.id.in_(approver_ids)).all()} if approver_ids else {}
-    
-    approvals_list = []
-    is_approver = False
-    
-    for a in approvals:
-        if a.approver_id == current_user.id:
-            is_approver = True
-        approver_user = approver_users.get(a.approver_id)
-        approvals_list.append({
-            "id": a.id,
-            "level_number": a.level_number,
-            "approver_name": approver_user.name if approver_user else f"Approver ID {a.approver_id}",
-            "approver_code": approver_user.user_id if approver_user else "",
-            "approver_role": approver_user.role if approver_user else "",
-            "status": a.status,
-            "comments": a.comments,
-            "updated_at": a.updated_at
-        })
-
-    if expense.user_id != current_user.id and current_user.role != "Admin" and not is_approver:
-        raise HTTPException(status_code=403, detail="Access denied to view this expense claim.")
-
-    submitter = db.query(User).filter(User.id == expense.user_id).first()
-    
-    # Load itineraries
-    itineraries = db.query(ExpenseItinerary).filter(
-        ExpenseItinerary.exp_id == expense.expense_code
-    ).order_by(ExpenseItinerary.leg_number).all()
-
-    # Load attachments
-    attachments = db.query(ExpenseAttachment).filter(ExpenseAttachment.exp_id == expense.expense_code).all()
-
-    # Load edit logs history
-    from app.models.expense_edit_log import ExpenseEditLog
-    edit_logs = db.query(ExpenseEditLog).filter(ExpenseEditLog.expense_id == expense.id).order_by(ExpenseEditLog.created_at.desc()).all()
-    edit_history_list = [
-        {
-            "id": el.id,
-            "editor_name": el.editor_name,
-            "editor_role": el.editor_role,
-            "leg_number": el.leg_number,
-            "field_name": el.field_name,
-            "old_value": el.old_value,
-            "new_value": el.new_value,
-            "comment": el.comment,
-            "created_at": el.created_at
-        } for el in edit_logs
-    ]
-
-    return {
-        "id": expense.id,
-        "expense_code": expense.expense_code,
-        "user_id": expense.user_id,
-        "submitter_name": submitter.name if submitter else "",
-        "submitter_code": submitter.user_id if submitter else "",
-        "month": expense.month,
-        "year": expense.year,
-        "amount": expense.amount,
-        "status": expense.status,
-        "category": expense.travel_mode,
-        "date": expense.itinerary,
-        "purpose": expense.description,
-        
-        # Original master totals
-        "original_amount": expense.original_amount or expense.amount,
-        "original_da_amount": expense.original_da_amount or expense.da_amount,
-        "original_hotel_amount": expense.original_hotel_amount or expense.hotel_amount,
-        "original_other_expense_amount": expense.original_other_expense_amount or expense.other_expense_amount,
-        "original_local_purchase_amount": expense.original_local_purchase_amount or expense.local_purchase_amount,
-
-        "attachments": [a.file_url for a in attachments],
-        "attachments_detailed": [
-            {
-                "file_url": a.file_url,
-                "itinerary_id": a.itinerary_id,
-                "bill_type": a.bill_type
-            } for a in attachments
-        ],
-        "itineraries": [
-            {
-                "leg": i.leg_number,
-                "from_district": i.from_district,
-                "to_district": i.to_district,
-                "from": i.from_location,
-                "to": i.to_location,
-                "mode": i.travel_mode,
-                "km": i.distance_km,
-                "amount": i.travel_amount,
-                "sub_mode": i.sub_mode,
-                "sub_amount": i.sub_amount,
-                "da": i.da_amount,
-                "hotel": i.hotel_amount,
-                "local_purchase": i.local_purchase,
-                "oth_desc": i.other_desc,
-                "oth_amount": i.other_amount,
-                "ws_assigned": i.calls_assigned,
-                "ws_closed": i.calls_completed,
-                "ws_pms": i.pms_count,
-                "ws_asset": i.asset_tagging,
-                "calibration_count": i.calibration_count,
-                "mobilise_count": i.mobilise_count,
-                "visit_purpose": i.visit_purpose,
-                "activity_details": i.activity_details,
-                
-                # Original leg values
-                "original_km": i.original_distance_km or i.distance_km,
-                "original_amount": i.original_travel_amount or i.travel_amount,
-                "original_sub_amount": i.original_sub_amount or i.sub_amount,
-                "original_da": i.original_da_amount or i.da_amount,
-                "original_hotel": i.original_hotel_amount or i.hotel_amount,
-                "original_oth_amount": i.original_other_amount or i.other_amount,
-                "original_local_purchase": i.original_local_purchase or i.local_purchase
-            } for i in itineraries
-        ],
-        "created_at": expense.created_at,
-        "updated_at": expense.updated_at,
-        "approvals": approvals_list,
-        "edit_history": edit_history_list
-    }
-
-@router.delete("/{expense_id}")
-async def delete_expense(
-    expense_id: int,
-    db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user)
-):
-    """Deletes an expense claim and clean up itineraries and approval steps."""
-    expense = db.query(Expense).filter(Expense.id == expense_id).first()
-    if not expense:
-        raise HTTPException(status_code=404, detail="Expense claim not found.")
-        
-    if expense.user_id != current_user.id:
-        raise HTTPException(status_code=403, detail="Cannot delete someone else's claim.")
-        
-    if expense.status not in ["draft", "submitted"]:
-        raise HTTPException(status_code=400, detail="Cannot delete a claim that has already been reviewed.")
-        
-    # Delete dependent tables
-    db.query(ExpenseItinerary).filter(ExpenseItinerary.exp_id == expense.expense_code).delete()
-    db.query(ExpenseAttachment).filter(ExpenseAttachment.exp_id == expense.expense_code).delete()
-    db.query(Approval).filter(Approval.expense_id == expense.id).delete()
-    
-    db.delete(expense)
-    db.commit()
-    from app.utils import cache
-    cache.clear_user_and_managers_cache(db, current_user.user_id)
-    return {"status": "success", "message": "Expense claim deleted successfully."}
-
-
 from pydantic import BaseModel
 
 class EngineerAdvanceUpsertSchema(BaseModel):
@@ -2042,6 +1870,180 @@ async def get_consolidated_report(
         })
 
     return {"success": True, "data": report_rows}
+
+@router.get("/{expense_id}")
+async def get_expense_details(
+    expense_id: str,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    """Retrieves full details of a specific claim, including itineraries, attachments, and approvals."""
+    # Look up expense by PK ID or generated expense_code
+    query = db.query(Expense)
+    if expense_id.isdigit():
+        expense = query.filter((Expense.id == int(expense_id)) | (Expense.expense_code == expense_id)).first()
+    else:
+        expense = query.filter(Expense.expense_code == expense_id).first()
+
+    if not expense:
+        raise HTTPException(status_code=404, detail="Expense claim not found.")
+
+    # Permissions check: Submit user or assigned approver or Admin
+    approvals = db.query(Approval).filter(Approval.expense_id == expense.id).order_by(Approval.level_number).all()
+    
+    # Pre-fetch all approver users in a single batch query (avoids N+1)
+    approver_ids = list(set(a.approver_id for a in approvals))
+    approver_users = {u.id: u for u in db.query(User).filter(User.id.in_(approver_ids)).all()} if approver_ids else {}
+    
+    approvals_list = []
+    is_approver = False
+    
+    for a in approvals:
+        if a.approver_id == current_user.id:
+            is_approver = True
+        approver_user = approver_users.get(a.approver_id)
+        approvals_list.append({
+            "id": a.id,
+            "level_number": a.level_number,
+            "approver_name": approver_user.name if approver_user else f"Approver ID {a.approver_id}",
+            "approver_code": approver_user.user_id if approver_user else "",
+            "approver_role": approver_user.role if approver_user else "",
+            "status": a.status,
+            "comments": a.comments,
+            "updated_at": a.updated_at
+        })
+
+    if expense.user_id != current_user.id and current_user.role != "Admin" and not is_approver:
+        raise HTTPException(status_code=403, detail="Access denied to view this expense claim.")
+
+    submitter = db.query(User).filter(User.id == expense.user_id).first()
+    
+    # Load itineraries
+    itineraries = db.query(ExpenseItinerary).filter(
+        ExpenseItinerary.exp_id == expense.expense_code
+    ).order_by(ExpenseItinerary.leg_number).all()
+
+    # Load attachments
+    attachments = db.query(ExpenseAttachment).filter(ExpenseAttachment.exp_id == expense.expense_code).all()
+
+    # Load edit logs history
+    from app.models.expense_edit_log import ExpenseEditLog
+    edit_logs = db.query(ExpenseEditLog).filter(ExpenseEditLog.expense_id == expense.id).order_by(ExpenseEditLog.created_at.desc()).all()
+    edit_history_list = [
+        {
+            "id": el.id,
+            "editor_name": el.editor_name,
+            "editor_role": el.editor_role,
+            "leg_number": el.leg_number,
+            "field_name": el.field_name,
+            "old_value": el.old_value,
+            "new_value": el.new_value,
+            "comment": el.comment,
+            "created_at": el.created_at
+        } for el in edit_logs
+    ]
+
+    return {
+        "id": expense.id,
+        "expense_code": expense.expense_code,
+        "user_id": expense.user_id,
+        "submitter_name": submitter.name if submitter else "",
+        "submitter_code": submitter.user_id if submitter else "",
+        "month": expense.month,
+        "year": expense.year,
+        "amount": expense.amount,
+        "status": expense.status,
+        "category": expense.travel_mode,
+        "date": expense.itinerary,
+        "purpose": expense.description,
+        
+        # Original master totals
+        "original_amount": expense.original_amount or expense.amount,
+        "original_da_amount": expense.original_da_amount or expense.da_amount,
+        "original_hotel_amount": expense.original_hotel_amount or expense.hotel_amount,
+        "original_other_expense_amount": expense.original_other_expense_amount or expense.other_expense_amount,
+        "original_local_purchase_amount": expense.original_local_purchase_amount or expense.local_purchase_amount,
+
+        "attachments": [a.file_url for a in attachments],
+        "attachments_detailed": [
+            {
+                "file_url": a.file_url,
+                "itinerary_id": a.itinerary_id,
+                "bill_type": a.bill_type
+            } for a in attachments
+        ],
+        "itineraries": [
+            {
+                "leg": i.leg_number,
+                "from_district": i.from_district,
+                "to_district": i.to_district,
+                "from": i.from_location,
+                "to": i.to_location,
+                "mode": i.travel_mode,
+                "km": i.distance_km,
+                "amount": i.travel_amount,
+                "sub_mode": i.sub_mode,
+                "sub_amount": i.sub_amount,
+                "da": i.da_amount,
+                "hotel": i.hotel_amount,
+                "local_purchase": i.local_purchase,
+                "oth_desc": i.other_desc,
+                "oth_amount": i.other_amount,
+                "ws_assigned": i.calls_assigned,
+                "ws_closed": i.calls_completed,
+                "ws_pms": i.pms_count,
+                "ws_asset": i.asset_tagging,
+                "calibration_count": i.calibration_count,
+                "mobilise_count": i.mobilise_count,
+                "visit_purpose": i.visit_purpose,
+                "activity_details": i.activity_details,
+                
+                # Original leg values
+                "original_km": i.original_distance_km or i.distance_km,
+                "original_amount": i.original_travel_amount or i.travel_amount,
+                "original_sub_amount": i.original_sub_amount or i.sub_amount,
+                "original_da": i.original_da_amount or i.da_amount,
+                "original_hotel": i.original_hotel_amount or i.hotel_amount,
+                "original_oth_amount": i.original_other_amount or i.other_amount,
+                "original_local_purchase": i.original_local_purchase or i.local_purchase
+            } for i in itineraries
+        ],
+        "created_at": expense.created_at,
+        "updated_at": expense.updated_at,
+        "approvals": approvals_list,
+        "edit_history": edit_history_list
+    }
+
+@router.delete("/{expense_id}")
+async def delete_expense(
+    expense_id: int,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    """Deletes an expense claim and clean up itineraries and approval steps."""
+    expense = db.query(Expense).filter(Expense.id == expense_id).first()
+    if not expense:
+        raise HTTPException(status_code=404, detail="Expense claim not found.")
+        
+    if expense.user_id != current_user.id:
+        raise HTTPException(status_code=403, detail="Cannot delete someone else's claim.")
+        
+    if expense.status not in ["draft", "submitted"]:
+        raise HTTPException(status_code=400, detail="Cannot delete a claim that has already been reviewed.")
+        
+    # Delete dependent tables
+    db.query(ExpenseItinerary).filter(ExpenseItinerary.exp_id == expense.expense_code).delete()
+    db.query(ExpenseAttachment).filter(ExpenseAttachment.exp_id == expense.expense_code).delete()
+    db.query(Approval).filter(Approval.expense_id == expense.id).delete()
+    
+    db.delete(expense)
+    db.commit()
+    from app.utils import cache
+    cache.clear_user_and_managers_cache(db, current_user.user_id)
+    return {"status": "success", "message": "Expense claim deleted successfully."}
+
+
+
 
 
 
