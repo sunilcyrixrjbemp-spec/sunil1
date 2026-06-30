@@ -571,8 +571,8 @@ export default function ExpensePage() {
             sub_km: (leg.sub_km || 0).toString(),
             sub_amount: (leg.sub_amount || 0).toString(),
             da: (leg.da || 0).toString(),
-            hotel: (leg.hotel || 0).toString(),
-            local_purchase: (leg.local_purchase || 0).toString(),
+            hotel: leg.hotel && parseFloat(leg.hotel) !== 0 ? leg.hotel.toString() : "",
+            local_purchase: leg.local_purchase && parseFloat(leg.local_purchase) !== 0 ? leg.local_purchase.toString() : "",
             oth_desc: leg.oth_desc || "",
             oth_amount: (leg.oth_amount || 0).toString(),
             ws_assigned: (leg.ws_assigned || 0).toString(),
@@ -2542,7 +2542,7 @@ export default function ExpensePage() {
                               type="number"
                               min="0"
                               step="any"
-                              value={leg.local_purchase || "0"}
+                              value={leg.local_purchase}
                               onChange={(e) => handleItineraryChange(leg.leg, "local_purchase", e.target.value)}
                               className="input-lte font-bold"
                             />

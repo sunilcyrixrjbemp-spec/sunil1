@@ -7,9 +7,6 @@ import {
   IndianRupee, MapPin, Search, Filter, FileText, Loader2, Printer,
 } from "lucide-react";
 
-// @ts-ignore
-import html2pdf from "html2pdf.js";
-
 // ─── Helpers ────────────────────────────────────────────────────────────────
 
 const getAbsoluteUrl = (path: string) => {
@@ -496,56 +493,24 @@ export default function MonthSummaryPage() {
   const generateSinglePDF = async (row: any, advance: number) => {
     const key = `${row.user_id}-${row.month}-${row.year}`;
     setPdfLoadingId(key);
-    const tid = toast.loading(`Generating PDF for ${row.name}...`);
+    const tid = toast.loading(`Fetching data for ${row.name}…`);
     try {
       const res = await expenseService.getEngineerMonthClaims(row.user_id, row.month, row.year);
       const user = res.user || row;
       const claims = res.claims || [];
       const attachments = res.attachments || [];
-      if (claims.length === 0) {
-        toast.dismiss(tid);
-        toast.error("No approved claim data found");
-        return;
-      }
+      if (claims.length === 0) { toast.dismiss(tid); toast.error("No approved claim data found"); return; }
       const html = buildExcelPrintHTML(user, claims, attachments, advance);
-
-      // Write to hidden iframe to load styles correctly
-      const iframe = document.createElement("iframe");
-      iframe.style.position = "absolute";
-      iframe.style.width = "0px";
-      iframe.style.height = "0px";
-      iframe.style.border = "none";
-      document.body.appendChild(iframe);
-
-      const doc = iframe.contentWindow?.document || iframe.contentDocument;
-      if (doc) {
-        doc.open();
-        doc.write(html);
-        doc.close();
-
-        // Let styles and images inside iframe load
-        await new Promise(resolve => setTimeout(resolve, 650));
-
-        const element = doc.body;
-        const options = {
-          margin: [10, 10, 10, 10],
-          filename: `Reimbursement_Report_${row.name.replace(/\s+/g, "_")}_${row.month}_${row.year}.pdf`,
-          image: { type: "jpeg", quality: 0.98 },
-          html2canvas: { scale: 2, useCORS: true, logging: false },
-          jsPDF: { unit: "mm", format: "a4", orientation: "landscape" },
-          pagebreak: { mode: ["avoid-all", "css", "legacy"] }
-        };
-
-        await html2pdf().from(element).set(options).save();
-        toast.dismiss(tid);
-        toast.success(`PDF downloaded — ${row.name}`);
-      } else {
-        throw new Error("Could not construct iframe context");
-      }
-      document.body.removeChild(iframe);
+      const win = window.open("", "_blank", "width=1400,height=900");
+      if (!win) { toast.dismiss(tid); toast.error("Allow popups to download PDF"); return; }
+      win.document.write(html);
+      win.document.close();
+      win.onload = () => setTimeout(() => win.print(), 600);
+      toast.dismiss(tid);
+      toast.success(`PDF ready — ${row.name} (${row.month} ${row.year})`);
     } catch (err: any) {
       toast.dismiss(tid);
-      toast.error(err?.message || "PDF download failed");
+      toast.error(err?.response?.data?.detail || "PDF generation failed");
     } finally {
       setPdfLoadingId(null);
     }

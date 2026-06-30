@@ -455,7 +455,7 @@ export default function HomePage() {
             if (isReviewer) {
               return (
                 <Link
-                  to="/approval"
+                  to="/approval-center"
                   className="flex items-center gap-2 bg-green-600 hover:bg-green-700 text-white text-xs font-bold px-3.5 py-2 rounded no-underline shadow-sm transition-all duration-200"
                 >
                   <ShieldCheck className="w-4 h-4" />
@@ -471,7 +471,7 @@ export default function HomePage() {
             if (user?.role === "Admin" || allowed.includes("consolidated_report")) {
               return (
                 <Link
-                  to="/consolidated_report"
+                  to="/consolidated-report"
                   className="flex items-center gap-2 bg-cyan-600 hover:bg-cyan-700 text-white text-xs font-bold px-3.5 py-2 rounded no-underline shadow-sm transition-all duration-200"
                 >
                   <FileSpreadsheet className="w-4 h-4" />
