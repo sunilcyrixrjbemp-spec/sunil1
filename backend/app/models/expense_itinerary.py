@@ -28,3 +28,4 @@ class ExpenseItinerary(Base):
     pms_count = Column(Integer, default=0)
     asset_tagging = Column(Integer, default=0)
     visit_purpose = Column(Text, nullable=True)
+    activity_details = Column(Text, nullable=True)

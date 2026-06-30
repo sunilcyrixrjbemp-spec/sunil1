@@ -45,6 +45,22 @@ interface ItineraryLeg {
   show_sub_leg?: boolean;
   from_custom?: boolean;
   to_custom?: boolean;
+  activity_details?: string;
+  selected_activities?: string[];
+  calls_barcode?: string;
+  calls_verified?: boolean;
+  calls_asset_details?: any;
+  calls_type?: string;
+  calls_status?: string;
+  pms_barcode?: string;
+  pms_verified?: boolean;
+  pms_asset_details?: any;
+  pms_frequency?: string;
+  asset_tagging_equipment?: string;
+  asset_tagging_quantity?: string;
+  mobilise_asset_count?: string;
+  calibration_count?: string;
+  activity_other_desc?: string;
 }
 
 interface LegFiles {
@@ -69,31 +85,55 @@ export default function ExpensePage() {
   const [date, setDate] = useState("");
 
   // Init default helpers
-  const createDefaultLeg = (num: number): ItineraryLeg => ({
-    leg: num,
-    travel_type: "In-District",
-    district_from: "",
-    district: "",
-    from: "",
-    to: "",
-    mode: "",
-    km: "0",
-    amount: "0",
-    sub_mode: "",
-    sub_km: "0",
-    sub_amount: "0",
-    da: "0",
-    hotel: "0",
-    local_purchase: "0",
-    oth_desc: "",
-    oth_amount: "0",
-    ws_assigned: "0",
-    ws_closed: "0",
-    ws_pms: "0",
-    ws_asset: "0",
-    visit_purpose: "",
-    show_sub_leg: false
-  });
+  const createDefaultLeg = (num: number): ItineraryLeg => {
+    const isCalib = (() => {
+      try {
+        const u = JSON.parse(localStorage.getItem("user") || "{}");
+        return (u.designation || "").toLowerCase().includes("calibration");
+      } catch (e) { return false; }
+    })();
+    return {
+      leg: num,
+      travel_type: "In-District",
+      district_from: "",
+      district: "",
+      from: "",
+      to: "",
+      mode: "",
+      km: "0",
+      amount: "0",
+      sub_mode: "",
+      sub_km: "0",
+      sub_amount: "0",
+      da: "0",
+      hotel: "0",
+      local_purchase: "0",
+      oth_desc: "",
+      oth_amount: "0",
+      ws_assigned: "0",
+      ws_closed: "0",
+      ws_pms: "0",
+      ws_asset: "0",
+      visit_purpose: "",
+      show_sub_leg: false,
+      activity_details: "",
+      selected_activities: isCalib ? ["Calibration"] : [],
+      calls_barcode: "",
+      calls_verified: false,
+      calls_asset_details: null,
+      calls_type: "Support Call",
+      calls_status: "Attend Close",
+      pms_barcode: "",
+      pms_verified: false,
+      pms_asset_details: null,
+      pms_frequency: "3 month",
+      asset_tagging_equipment: "",
+      asset_tagging_quantity: "0",
+      mobilise_asset_count: "0",
+      calibration_count: "0",
+      activity_other_desc: ""
+    };
+  };
 
   const createDefaultFiles = (): LegFiles => ({
     main_bill: null,
@@ -122,7 +162,12 @@ export default function ExpensePage() {
       } catch (e) {}
     }
     
-    // We construct the default leg using the local helper
+    const isCalib = (() => {
+      try {
+        const u = JSON.parse(localStorage.getItem("user") || "{}");
+        return (u.designation || "").toLowerCase().includes("calibration");
+      } catch (e) { return false; }
+    })();
     const leg: ItineraryLeg = {
       leg: 1,
       travel_type: "In-District",
@@ -146,7 +191,23 @@ export default function ExpensePage() {
       ws_pms: "0",
       ws_asset: "0",
       visit_purpose: "",
-      show_sub_leg: false
+      show_sub_leg: false,
+      activity_details: "",
+      selected_activities: isCalib ? ["Calibration"] : [],
+      calls_barcode: "",
+      calls_verified: false,
+      calls_asset_details: null,
+      calls_type: "Support Call",
+      calls_status: "Attend Close",
+      pms_barcode: "",
+      pms_verified: false,
+      pms_asset_details: null,
+      pms_frequency: "3 month",
+      asset_tagging_equipment: "",
+      asset_tagging_quantity: "0",
+      mobilise_asset_count: "0",
+      calibration_count: "0",
+      activity_other_desc: ""
     };
     return [leg];
   });
@@ -282,6 +343,7 @@ export default function ExpensePage() {
   const [showDetailsModal, setShowDetailsModal] = useState(false);
   const [detailsLoading, setDetailsLoading] = useState(false);
   const [deletedAttachments, setDeletedAttachments] = useState<{leg: number; type: string}[]>([]);
+  const [assetValueMaster, setAssetValueMaster] = useState<{equipment_name: string; rmsc_tender_cost: number}[]>([]);
 
   // Image Preview Lightbox
   const [lightboxImage, setLightboxImage] = useState<string | null>(null);
@@ -320,6 +382,16 @@ export default function ExpensePage() {
     setupDateRules();
     fetchClaims();
 
+    const fetchAssetMaster = async () => {
+      try {
+        const data = await expenseService.getAssetValueMaster();
+        setAssetValueMaster(data || []);
+      } catch (e) {
+        console.error("Error loading asset value master list", e);
+      }
+    };
+    fetchAssetMaster();
+
     // Check for edit parameter in query string
     const params = new URLSearchParams(window.location.search);
     const editId = params.get("edit");
@@ -341,31 +413,62 @@ export default function ExpensePage() {
         setExistingAttachmentsDetailed(data.attachments_detailed || []);
         setDeletedAttachments([]);
 
-        const mappedIti = data.itineraries.map((leg: any) => ({
-          leg: leg.leg,
-          travel_type: leg.from_district === leg.to_district ? "In-District" : "Outdoor",
-          district_from: leg.from_district,
-          district: leg.to_district,
-          from: leg.from || "",
-          to: leg.to || "",
-          mode: leg.mode || "",
-          km: (leg.km || 0).toString(),
-          amount: (leg.amount || 0).toString(),
-          sub_mode: leg.sub_mode || "",
-          sub_km: (leg.sub_km || 0).toString(),
-          sub_amount: (leg.sub_amount || 0).toString(),
-          da: (leg.da || 0).toString(),
-          hotel: (leg.hotel || 0).toString(),
-          local_purchase: (leg.local_purchase || 0).toString(),
-          oth_desc: leg.oth_desc || "",
-          oth_amount: (leg.oth_amount || 0).toString(),
-          ws_assigned: (leg.ws_assigned || 0).toString(),
-          ws_closed: (leg.ws_closed || 0).toString(),
-          ws_pms: (leg.ws_pms || 0).toString(),
-          ws_asset: (leg.ws_asset || 0).toString(),
-          visit_purpose: leg.visit_purpose || "",
-          show_sub_leg: !!leg.sub_mode
-        }));
+        const mappedIti = data.itineraries.map((leg: any) => {
+          let activityObj: any = {};
+          try {
+            if (leg.activity_details) {
+              activityObj = JSON.parse(leg.activity_details);
+            }
+          } catch (e) {
+            console.error("Error parsing activity_details", e);
+          }
+
+          const isCalib = (user?.designation || "").toLowerCase().includes("calibration");
+
+          return {
+            leg: leg.leg,
+            travel_type: leg.from_district === leg.to_district ? "In-District" : "Outdoor",
+            district_from: leg.from_district,
+            district: leg.to_district,
+            from: leg.from || "",
+            to: leg.to || "",
+            mode: leg.mode || "",
+            km: (leg.km || 0).toString(),
+            amount: (leg.amount || 0).toString(),
+            sub_mode: leg.sub_mode || "",
+            sub_km: (leg.sub_km || 0).toString(),
+            sub_amount: (leg.sub_amount || 0).toString(),
+            da: (leg.da || 0).toString(),
+            hotel: (leg.hotel || 0).toString(),
+            local_purchase: (leg.local_purchase || 0).toString(),
+            oth_desc: leg.oth_desc || "",
+            oth_amount: (leg.oth_amount || 0).toString(),
+            ws_assigned: (leg.ws_assigned || 0).toString(),
+            ws_closed: (leg.ws_closed || 0).toString(),
+            ws_pms: (leg.ws_pms || 0).toString(),
+            ws_asset: (leg.ws_asset || 0).toString(),
+            visit_purpose: leg.visit_purpose || "",
+            show_sub_leg: !!leg.sub_mode,
+
+            // Activity fields
+            activity_details: leg.activity_details || "",
+            selected_activities: activityObj.selected_activities || (isCalib ? ["Calibration"] : []),
+            calls_barcode: activityObj.calls_barcode || "",
+            calls_verified: !!activityObj.calls_verified,
+            calls_asset_details: activityObj.calls_asset_details || null,
+            calls_type: activityObj.calls_type || "Support Call",
+            calls_status: activityObj.calls_status || "Attend Close",
+            pms_barcode: activityObj.pms_barcode || "",
+            pms_verified: !!activityObj.pms_verified,
+            pms_asset_details: activityObj.pms_asset_details || null,
+            pms_frequency: activityObj.pms_frequency || "3 month",
+            asset_tagging_equipment: activityObj.asset_tagging_equipment || "",
+            asset_tagging_quantity: activityObj.asset_tagging_quantity || "0",
+            mobilise_asset_count: activityObj.mobilise_asset_count || "0",
+            calibration_count: activityObj.calibration_count || "0",
+            activity_other_desc: activityObj.activity_other_desc || ""
+          };
+        });
         setItineraries(mappedIti);
 
         const initialFiles: Record<number, LegFiles> = {};
@@ -559,6 +662,77 @@ export default function ExpensePage() {
 
     setItineraries(filteredIti);
     setFiles(newFiles);
+  };
+
+  const verifyLegBarcode = async (legNum: number, activityType: "Calls" | "PMS") => {
+    const leg = itineraries.find(l => l.leg === legNum);
+    if (!leg) return;
+    
+    const barcode = activityType === "Calls" ? leg.calls_barcode : leg.pms_barcode;
+    if (!barcode || barcode.length !== 8) {
+      toast.error("Barcode must be exactly 8 digits.");
+      return;
+    }
+
+    try {
+      const res = await expenseService.verifyBarcode(barcode);
+      if (res.success && res.data) {
+        const hospitalName = res.data.hospital_name;
+        // Check matching with From/To
+        const fromMatch = (leg.from || "").toLowerCase().trim() === hospitalName.toLowerCase().trim();
+        const toMatch = (leg.to || "").toLowerCase().trim() === hospitalName.toLowerCase().trim();
+        
+        if (!fromMatch && !toMatch) {
+          toast.error(`Verification Failed: This barcode belongs to "${hospitalName}", which does not match either the Starting Location (From) or Destination Location (To) facility of this leg!`);
+          
+          setItineraries(prev => prev.map(l => {
+            if (l.leg !== legNum) return l;
+            return activityType === "Calls" ? {
+              ...l,
+              calls_verified: false,
+              calls_asset_details: null
+            } : {
+              ...l,
+              pms_verified: false,
+              pms_asset_details: null
+            };
+          }));
+          return;
+        }
+
+        // Successfully matched!
+        toast.success("Barcode verified successfully!");
+        setItineraries(prev => prev.map(l => {
+          if (l.leg !== legNum) return l;
+          return activityType === "Calls" ? {
+            ...l,
+            calls_verified: true,
+            calls_asset_details: res.data
+          } : {
+            ...l,
+            pms_verified: true,
+            pms_asset_details: res.data
+          };
+        }));
+      } else {
+        toast.error(res.message || "Barcode not found in assets inventory.");
+        setItineraries(prev => prev.map(l => {
+          if (l.leg !== legNum) return l;
+          return activityType === "Calls" ? {
+            ...l,
+            calls_verified: false,
+            calls_asset_details: null
+          } : {
+            ...l,
+            pms_verified: false,
+            pms_asset_details: null
+          };
+        }));
+      }
+    } catch (e) {
+      console.error("Barcode verification error", e);
+      toast.error("Error during barcode verification.");
+    }
   };
 
   const handleItineraryChange = (legNum: number, field: keyof ItineraryLeg, value: any) => {
@@ -980,6 +1154,70 @@ export default function ExpensePage() {
         }
       }
 
+      // Dynamic activities validations
+      const acts = leg.selected_activities || [];
+      if (acts.length === 0) {
+        toast.error(`Leg ${legNum}: Please select at least one activity (Calls, PMS, Asset Tagging, etc.)`);
+        return false;
+      }
+      
+      if (acts.includes("Calls")) {
+        if (!leg.calls_barcode || leg.calls_barcode.length !== 8) {
+          toast.error(`Leg ${legNum}: Calls activity requires an 8-digit verified barcode.`);
+          return false;
+        }
+        if (!leg.calls_verified) {
+          toast.error(`Leg ${legNum}: Please verify the barcode for Calls.`);
+          return false;
+        }
+      }
+
+      if (acts.includes("PMS")) {
+        if (!leg.pms_barcode || leg.pms_barcode.length !== 8) {
+          toast.error(`Leg ${legNum}: PMS activity requires an 8-digit verified barcode.`);
+          return false;
+        }
+        if (!leg.pms_verified) {
+          toast.error(`Leg ${legNum}: Please verify the barcode for PMS.`);
+          return false;
+        }
+      }
+
+      if (acts.includes("Asset Tagging")) {
+        if (!leg.asset_tagging_equipment) {
+          toast.error(`Leg ${legNum}: Please select an equipment for Asset Tagging.`);
+          return false;
+        }
+        const qty = parseInt(leg.asset_tagging_quantity || "0") || 0;
+        if (qty <= 0) {
+          toast.error(`Leg ${legNum}: Please enter a valid quantity for Asset Tagging.`);
+          return false;
+        }
+      }
+
+      if (acts.includes("Mobilise Asset Update")) {
+        const qty = parseInt(leg.mobilise_asset_count || "0") || 0;
+        if (qty <= 0) {
+          toast.error(`Leg ${legNum}: Please enter a valid quantity for Mobilise Asset Update.`);
+          return false;
+        }
+      }
+
+      if (acts.includes("Calibration")) {
+        const qty = parseInt(leg.calibration_count || "0") || 0;
+        if (qty <= 0) {
+          toast.error(`Leg ${legNum}: Please enter a valid quantity for Calibration.`);
+          return false;
+        }
+      }
+
+      if (acts.includes("Other")) {
+        if (!leg.activity_other_desc || !leg.activity_other_desc.trim()) {
+          toast.error(`Leg ${legNum}: Please enter description for Other activity.`);
+          return false;
+        }
+      }
+
       if (!leg.visit_purpose.trim()) {
         toast.error(`Leg ${legNum}: Please enter the purpose of this visit.`);
         return false;
@@ -1018,6 +1256,32 @@ export default function ExpensePage() {
 
       const itinerariesData = itineraries.map((leg, index) => {
         const legNum = index + 1;
+        const acts = leg.selected_activities || [];
+        
+        // Compute CRM work metrics based on selections
+        const ws_assigned = acts.includes("Calls") ? 1 : 0;
+        const ws_closed = (acts.includes("Calls") && (leg.calls_status === "Attend Close" || leg.calls_status === "Attend & Close")) ? 1 : 0;
+        const ws_pms = acts.includes("PMS") ? 1 : 0;
+        const ws_asset = acts.includes("Asset Tagging") ? (parseInt(leg.asset_tagging_quantity || "0") || 0) : 0;
+
+        const detailsObj = {
+          selected_activities: acts,
+          calls_barcode: leg.calls_barcode || "",
+          calls_verified: !!leg.calls_verified,
+          calls_asset_details: leg.calls_asset_details || null,
+          calls_type: leg.calls_type || "Support Call",
+          calls_status: leg.calls_status || "Attend Close",
+          pms_barcode: leg.pms_barcode || "",
+          pms_verified: !!leg.pms_verified,
+          pms_asset_details: leg.pms_asset_details || null,
+          pms_frequency: leg.pms_frequency || "3 month",
+          asset_tagging_equipment: leg.asset_tagging_equipment || "",
+          asset_tagging_quantity: leg.asset_tagging_quantity || "0",
+          mobilise_asset_count: leg.mobilise_asset_count || "0",
+          calibration_count: leg.calibration_count || "0",
+          activity_other_desc: leg.activity_other_desc || ""
+        };
+
         return {
           leg: legNum,
           travel_type: leg.travel_type,
@@ -1035,11 +1299,12 @@ export default function ExpensePage() {
           local_purchase: legNum === 1 ? leg.local_purchase : "0",
           oth_desc: leg.oth_desc,
           oth_amount: leg.oth_amount,
-          ws_assigned: leg.ws_assigned,
-          ws_closed: leg.ws_closed,
-          ws_pms: leg.ws_pms,
-          ws_asset: leg.ws_asset,
-          visit_purpose: leg.visit_purpose
+          ws_assigned: ws_assigned.toString(),
+          ws_closed: ws_closed.toString(),
+          ws_pms: ws_pms.toString(),
+          ws_asset: ws_asset.toString(),
+          visit_purpose: leg.visit_purpose,
+          activity_details: JSON.stringify(detailsObj)
         };
       });
 
@@ -1980,7 +2245,8 @@ export default function ExpensePage() {
                             step="any"
                             value={leg.oth_amount}
                             onChange={(e) => handleItineraryChange(leg.leg, "oth_amount", e.target.value)}
-                            className="input-lte font-bold"
+                            disabled={!leg.oth_desc.trim()}
+                            className={`input-lte font-bold ${!leg.oth_desc.trim() ? "bg-gray-100 text-gray-400 cursor-not-allowed" : ""}`}
                           />
                         </div>
                         <div className="sm:col-span-3 border-t border-gray-100 pt-2 flex items-center justify-between">
@@ -2022,47 +2288,355 @@ export default function ExpensePage() {
                         </div>
                       </div>
 
-                      {/* Work Metrics section */}
-                      <div className="border-t border-gray-150 pt-4 grid grid-cols-2 sm:grid-cols-4 gap-4">
+                      {/* Visit Activities & Tasks Section */}
+                      <div className="border-t border-gray-150 pt-4 flex flex-col gap-4">
                         <div>
-                          <label className="label-lte" title="Work assignments logged in CRM">Calls Assigned</label>
-                          <input
-                            type="number"
-                            min="0"
-                            value={leg.ws_assigned}
-                            onChange={(e) => handleItineraryChange(leg.leg, "ws_assigned", e.target.value)}
-                            className="input-lte font-mono"
-                          />
+                          <label className="label-lte font-bold block mb-2 text-gray-700">Visit Activities / Tasks</label>
+                          <div className="flex flex-wrap gap-x-6 gap-y-2 bg-gray-50/50 p-2.5 rounded border border-gray-150">
+                            {/* We check if calibration user or regular */}
+                            {(() => {
+                              const isCalib = (user?.designation || "").toLowerCase().includes("calibration");
+                              if (isCalib) {
+                                return (
+                                  <label className="flex items-center gap-2 text-xs font-bold text-gray-700 cursor-pointer">
+                                    <input
+                                      type="checkbox"
+                                      checked={true}
+                                      disabled={true}
+                                      className="rounded text-blue-600 focus:ring-blue-500 w-4 h-4"
+                                    />
+                                    <span>Calibration</span>
+                                  </label>
+                                );
+                              }
+                              
+                              // Else, normal engineer options
+                              const options = [
+                                { label: "Calls", val: "Calls" },
+                                { label: "PMS", val: "PMS" },
+                                { label: "Asset Tagging", val: "Asset Tagging" },
+                                { label: "Mobilise Asset Update", val: "Mobilise Asset Update" },
+                                { label: "Other", val: "Other" }
+                              ];
+                              
+                              return options.map(opt => {
+                                const checked = (leg.selected_activities || []).includes(opt.val);
+                                return (
+                                  <label key={opt.val} className="flex items-center gap-2 text-xs font-semibold text-gray-700 cursor-pointer hover:text-blue-600 transition-colors">
+                                    <input
+                                      type="checkbox"
+                                      checked={checked}
+                                      onChange={(e) => {
+                                        const current = leg.selected_activities || [];
+                                        let next: string[];
+                                        if (e.target.checked) {
+                                          next = [...current, opt.val];
+                                        } else {
+                                          next = current.filter(x => x !== opt.val);
+                                        }
+                                        handleItineraryChange(leg.leg, "selected_activities", next);
+                                      }}
+                                      className="rounded text-blue-600 focus:ring-blue-500 w-4 h-4 cursor-pointer"
+                                    />
+                                    <span>{opt.label}</span>
+                                  </label>
+                                );
+                              });
+                            })()}
+                          </div>
                         </div>
-                        <div>
-                          <label className="label-lte" title="Customer tasks successfully closed">Calls Completed</label>
-                          <input
-                            type="number"
-                            min="0"
-                            value={leg.ws_closed}
-                            onChange={(e) => handleItineraryChange(leg.leg, "ws_closed", e.target.value)}
-                            className="input-lte font-mono"
-                          />
-                        </div>
-                        <div>
-                          <label className="label-lte" title="Planned maintenance runs">PMS Done</label>
-                          <input
-                            type="number"
-                            min="0"
-                            value={leg.ws_pms}
-                            onChange={(e) => handleItineraryChange(leg.leg, "ws_pms", e.target.value)}
-                            className="input-lte font-mono"
-                          />
-                        </div>
-                        <div>
-                          <label className="label-lte" title="Asset tags completed">Asset Tagging</label>
-                          <input
-                            type="number"
-                            min="0"
-                            value={leg.ws_asset}
-                            onChange={(e) => handleItineraryChange(leg.leg, "ws_asset", e.target.value)}
-                            className="input-lte font-mono"
-                          />
+
+                        {/* Sub-forms for active selections */}
+                        <div className="grid grid-cols-1 gap-4">
+                          {/* Calls Sub-Form */}
+                          {(leg.selected_activities || []).includes("Calls") && (
+                            <div className="bg-blue-50/20 border border-blue-150 rounded p-3 flex flex-col gap-3">
+                              <div className="flex items-center justify-between border-b border-blue-100 pb-1.5">
+                                <span className="text-[11px] font-bold text-blue-700 uppercase tracking-wide">Support Calls Log</span>
+                              </div>
+                              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 items-end">
+                                <div>
+                                  <label className="label-lte">8-Digit Barcode (QR Code)</label>
+                                  <input
+                                    type="text"
+                                    maxLength={8}
+                                    value={leg.calls_barcode || ""}
+                                    placeholder="Enter 8 digits"
+                                    onChange={(e) => {
+                                      const cleaned = e.target.value.replace(/\D/g, "");
+                                      handleItineraryChange(leg.leg, "calls_barcode", cleaned);
+                                      // If changed, reset verification
+                                      handleItineraryChange(leg.leg, "calls_verified", false);
+                                      handleItineraryChange(leg.leg, "calls_asset_details", null);
+                                    }}
+                                    className="input-lte font-mono"
+                                  />
+                                </div>
+                                <div>
+                                  <button
+                                    type="button"
+                                    onClick={() => verifyLegBarcode(leg.leg, "Calls")}
+                                    disabled={!leg.calls_barcode || leg.calls_barcode.length !== 8}
+                                    className="w-full btn-lte py-2 text-xs uppercase font-extrabold tracking-wider disabled:bg-gray-100 disabled:text-gray-400 disabled:border-gray-200 disabled:cursor-not-allowed cursor-pointer bg-blue-600 hover:bg-blue-750 text-white border-0"
+                                  >
+                                    Verify
+                                  </button>
+                                </div>
+                                <div className="grid grid-cols-2 gap-2">
+                                  <div>
+                                    <label className="label-lte">Call Type</label>
+                                    <select
+                                      value={leg.calls_type || "Support Call"}
+                                      onChange={(e) => handleItineraryChange(leg.leg, "calls_type", e.target.value)}
+                                      className="input-lte text-xs font-semibold py-1.5 px-2 bg-white"
+                                    >
+                                      <option value="Support Call">Support Call</option>
+                                      <option value="Online Call">Online Call</option>
+                                    </select>
+                                  </div>
+                                  <div>
+                                    <label className="label-lte">Call Status</label>
+                                    <select
+                                      value={leg.calls_status || "Attend Close"}
+                                      onChange={(e) => handleItineraryChange(leg.leg, "calls_status", e.target.value)}
+                                      className="input-lte text-xs font-semibold py-1.5 px-2 bg-white"
+                                    >
+                                      <option value="Attend Close">Attend Close</option>
+                                      <option value="Attend & Close">Attend & Close</option>
+                                    </select>
+                                  </div>
+                                </div>
+                              </div>
+                              
+                              {/* Verified Details Card */}
+                              {leg.calls_verified && leg.calls_asset_details && (
+                                <div className="mt-2 bg-white border border-green-200 rounded p-2.5 text-[11px] grid grid-cols-2 sm:grid-cols-3 gap-2">
+                                  <div>
+                                    <span className="text-gray-400 block uppercase text-[9px] font-bold">District</span>
+                                    <span className="text-gray-800 font-semibold">{leg.calls_asset_details.district_name}</span>
+                                  </div>
+                                  <div>
+                                    <span className="text-gray-400 block uppercase text-[9px] font-bold">Hospital Facility</span>
+                                    <span className="text-gray-800 font-semibold">{leg.calls_asset_details.hospital_name}</span>
+                                  </div>
+                                  <div>
+                                    <span className="text-gray-400 block uppercase text-[9px] font-bold">Equipment</span>
+                                    <span className="text-gray-800 font-semibold">{leg.calls_asset_details.equipment_name}</span>
+                                  </div>
+                                  <div>
+                                    <span className="text-gray-400 block uppercase text-[9px] font-bold">Model</span>
+                                    <span className="text-gray-800 font-semibold">{leg.calls_asset_details.model_name}</span>
+                                  </div>
+                                  <div>
+                                    <span className="text-gray-400 block uppercase text-[9px] font-bold">Full QR Code</span>
+                                    <span className="text-gray-800 font-mono font-semibold">{leg.calls_asset_details.qr_code}</span>
+                                  </div>
+                                  <div>
+                                    <span className="text-gray-400 block uppercase text-[9px] font-bold">Inventory Status</span>
+                                    <span className="text-green-700 font-bold">✓ {leg.calls_asset_details.inventory_status}</span>
+                                  </div>
+                                </div>
+                              )}
+                            </div>
+                          )}
+
+                          {/* PMS Sub-Form */}
+                          {(leg.selected_activities || []).includes("PMS") && (
+                            <div className="bg-amber-50/20 border border-amber-150 rounded p-3 flex flex-col gap-3">
+                              <div className="flex items-center justify-between border-b border-amber-100 pb-1.5">
+                                <span className="text-[11px] font-bold text-amber-700 uppercase tracking-wide">Planned Maintenance Services (PMS)</span>
+                              </div>
+                              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 items-end">
+                                <div>
+                                  <label className="label-lte">8-Digit Barcode (QR Code)</label>
+                                  <input
+                                    type="text"
+                                    maxLength={8}
+                                    value={leg.pms_barcode || ""}
+                                    placeholder="Enter 8 digits"
+                                    onChange={(e) => {
+                                      const cleaned = e.target.value.replace(/\D/g, "");
+                                      handleItineraryChange(leg.leg, "pms_barcode", cleaned);
+                                      // If changed, reset verification
+                                      handleItineraryChange(leg.leg, "pms_verified", false);
+                                      handleItineraryChange(leg.leg, "pms_asset_details", null);
+                                    }}
+                                    className="input-lte font-mono"
+                                  />
+                                </div>
+                                <div>
+                                  <button
+                                    type="button"
+                                    onClick={() => verifyLegBarcode(leg.leg, "PMS")}
+                                    disabled={!leg.pms_barcode || leg.pms_barcode.length !== 8}
+                                    className="w-full btn-lte py-2 text-xs uppercase font-extrabold tracking-wider disabled:bg-gray-100 disabled:text-gray-400 disabled:border-gray-200 disabled:cursor-not-allowed cursor-pointer bg-amber-600 hover:bg-amber-700 text-white border-0"
+                                  >
+                                    Verify
+                                  </button>
+                                </div>
+                                <div>
+                                  <label className="label-lte">PMS Frequency Period</label>
+                                  <select
+                                    value={leg.pms_frequency || "3 month"}
+                                    onChange={(e) => handleItineraryChange(leg.leg, "pms_frequency", e.target.value)}
+                                    className="input-lte text-xs font-semibold py-1.5 px-2 bg-white"
+                                  >
+                                    <option value="3 month">3 month</option>
+                                    <option value="6 month">6 month</option>
+                                    <option value="12 month">12 month</option>
+                                  </select>
+                                </div>
+                              </div>
+                              
+                              {/* Verified Details Card */}
+                              {leg.pms_verified && leg.pms_asset_details && (
+                                <div className="mt-2 bg-white border border-green-200 rounded p-2.5 text-[11px] grid grid-cols-2 sm:grid-cols-3 gap-2">
+                                  <div>
+                                    <span className="text-gray-400 block uppercase text-[9px] font-bold">District</span>
+                                    <span className="text-gray-800 font-semibold">{leg.pms_asset_details.district_name}</span>
+                                  </div>
+                                  <div>
+                                    <span className="text-gray-400 block uppercase text-[9px] font-bold">Hospital Facility</span>
+                                    <span className="text-gray-800 font-semibold">{leg.pms_asset_details.hospital_name}</span>
+                                  </div>
+                                  <div>
+                                    <span className="text-gray-400 block uppercase text-[9px] font-bold">Equipment</span>
+                                    <span className="text-gray-800 font-semibold">{leg.pms_asset_details.equipment_name}</span>
+                                  </div>
+                                  <div>
+                                    <span className="text-gray-400 block uppercase text-[9px] font-bold">Model</span>
+                                    <span className="text-gray-800 font-semibold">{leg.pms_asset_details.model_name}</span>
+                                  </div>
+                                  <div>
+                                    <span className="text-gray-400 block uppercase text-[9px] font-bold">Full QR Code</span>
+                                    <span className="text-gray-800 font-mono font-semibold">{leg.pms_asset_details.qr_code}</span>
+                                  </div>
+                                  <div>
+                                    <span className="text-gray-400 block uppercase text-[9px] font-bold">Inventory Status</span>
+                                    <span className="text-green-700 font-bold">✓ {leg.pms_asset_details.inventory_status}</span>
+                                  </div>
+                                </div>
+                              )}
+                            </div>
+                          )}
+
+                          {/* Asset Tagging Sub-Form */}
+                          {(leg.selected_activities || []).includes("Asset Tagging") && (
+                            <div className="bg-emerald-50/20 border border-emerald-150 rounded p-3 flex flex-col gap-3">
+                              <div className="flex items-center justify-between border-b border-emerald-100 pb-1.5">
+                                <span className="text-[11px] font-bold text-emerald-700 uppercase tracking-wide">Asset Tagging Tasks</span>
+                              </div>
+                              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 items-end">
+                                <div className="sm:col-span-2">
+                                  <label className="label-lte">Select Equipment Name</label>
+                                  <select
+                                    value={leg.asset_tagging_equipment || ""}
+                                    onChange={(e) => handleItineraryChange(leg.leg, "asset_tagging_equipment", e.target.value)}
+                                    className="input-lte text-xs font-semibold py-1.5 px-2 bg-white"
+                                  >
+                                    <option value="">-- Choose Equipment --</option>
+                                    {assetValueMaster.map((eq, i) => (
+                                      <option key={i} value={eq.equipment_name}>
+                                        {eq.equipment_name}
+                                      </option>
+                                    ))}
+                                  </select>
+                                </div>
+                                <div>
+                                  <label className="label-lte">Quantity Tagged</label>
+                                  <input
+                                    type="number"
+                                    min="0"
+                                    value={leg.asset_tagging_quantity || "0"}
+                                    onChange={(e) => handleItineraryChange(leg.leg, "asset_tagging_quantity", e.target.value)}
+                                    className="input-lte font-semibold"
+                                  />
+                                </div>
+                              </div>
+
+                              {/* Calculated Cost Block: Visible to DI (District In-charge) and Admin, Hidden for Engineer */}
+                              {(() => {
+                                const selectedEq = assetValueMaster.find(eq => eq.equipment_name === leg.asset_tagging_equipment);
+                                const costPerUnit = selectedEq ? (selectedEq.rmsc_tender_cost || 0) : 0;
+                                const qty = parseInt(leg.asset_tagging_quantity || "0") || 0;
+                                const totalCost = qty * costPerUnit;
+
+                                const isEngineer = (user.designation || "").toLowerCase().trim() === "engineer" || 
+                                                   (user.role || "").toLowerCase().trim() === "engineer";
+
+                                if (!isEngineer && totalCost > 0) {
+                                  return (
+                                    <div className="mt-1.5 bg-emerald-50 border border-emerald-150 px-2 py-1.5 rounded text-[10px] text-emerald-800 font-extrabold uppercase flex justify-between">
+                                      <span>Tender Rate: ₹{costPerUnit.toLocaleString()} / unit</span>
+                                      <span>Total Cost Value: ₹{totalCost.toLocaleString()}</span>
+                                    </div>
+                                  );
+                                }
+                                return null;
+                              })()}
+                            </div>
+                          )}
+
+                          {/* Mobilise Asset Update Sub-Form */}
+                          {(leg.selected_activities || []).includes("Mobilise Asset Update") && (
+                            <div className="bg-indigo-50/20 border border-indigo-150 rounded p-3 flex flex-col gap-3">
+                              <div className="flex items-center justify-between border-b border-indigo-100 pb-1.5">
+                                <span className="text-[11px] font-bold text-indigo-700 uppercase tracking-wide">Mobilise Asset Update</span>
+                              </div>
+                              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 items-end">
+                                <div>
+                                  <label className="label-lte">Mobilise Count (Qty)</label>
+                                  <input
+                                    type="number"
+                                    min="0"
+                                    value={leg.mobilise_asset_count || "0"}
+                                    onChange={(e) => handleItineraryChange(leg.leg, "mobilise_asset_count", e.target.value)}
+                                    className="input-lte font-semibold"
+                                  />
+                                </div>
+                              </div>
+                            </div>
+                          )}
+
+                          {/* Calibration Sub-Form */}
+                          {((leg.selected_activities || []).includes("Calibration") || (user?.designation || "").toLowerCase().includes("calibration")) && (
+                            <div className="bg-purple-50/20 border border-purple-150 rounded p-3 flex flex-col gap-3">
+                              <div className="flex items-center justify-between border-b border-purple-100 pb-1.5">
+                                <span className="text-[11px] font-bold text-purple-700 uppercase tracking-wide">Calibration Tasks</span>
+                              </div>
+                              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 items-end">
+                                <div>
+                                  <label className="label-lte">Calibration Count (Qty)</label>
+                                  <input
+                                    type="number"
+                                    min="0"
+                                    value={leg.calibration_count || "0"}
+                                    onChange={(e) => handleItineraryChange(leg.leg, "calibration_count", e.target.value)}
+                                    className="input-lte font-semibold"
+                                  />
+                                </div>
+                              </div>
+                            </div>
+                          )}
+
+                          {/* Other Task Sub-Form */}
+                          {(leg.selected_activities || []).includes("Other") && (
+                            <div className="bg-gray-50 border border-gray-150 rounded p-3 flex flex-col gap-3">
+                              <div className="flex items-center justify-between border-b border-gray-205 pb-1.5">
+                                <span className="text-[11px] font-bold text-gray-700 uppercase tracking-wide">Other Activity Description</span>
+                              </div>
+                              <div>
+                                <label className="label-lte">State details of work done</label>
+                                <textarea
+                                  value={leg.activity_other_desc || ""}
+                                  onChange={(e) => handleItineraryChange(leg.leg, "activity_other_desc", e.target.value)}
+                                  placeholder="Describe the miscellaneous work performed..."
+                                  rows={2}
+                                  className="input-lte text-xs font-semibold py-1.5 px-2 bg-white w-full"
+                                />
+                              </div>
+                            </div>
+                          )}
                         </div>
                       </div>
 

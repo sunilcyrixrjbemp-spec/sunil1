@@ -43,5 +43,15 @@ export const expenseService = {
   deleteExpense: async (expenseId: number): Promise<any> => {
     const response = await api.delete(`/expense/${expenseId}`);
     return response.data;
+  },
+
+  verifyBarcode: async (barcode: string): Promise<any> => {
+    const response = await api.get(`/expense/verify-barcode?barcode=${barcode}`);
+    return response.data;
+  },
+
+  getAssetValueMaster: async (): Promise<any[]> => {
+    const response = await api.get("/expense/asset-value-master");
+    return response.data;
   }
 };

@@ -1,6 +1,6 @@
 from fastapi import APIRouter, Depends, HTTPException, status, Request, Form, UploadFile, File
 from sqlalchemy.orm import Session
-from sqlalchemy import func, case
+from sqlalchemy import func, case, text
 from typing import List, Optional
 import json
 import os
@@ -733,13 +733,15 @@ async def submit_expense(
             sub_amount=float(iti.get("sub_amount") or 0.0),
             da_amount=float(iti.get("da") or 0.0),
             hotel_amount=float(iti.get("hotel") or 0.0),
+            local_purchase=float(iti.get("local_purchase") or 0.0),
             other_desc=iti.get("oth_desc"),
             other_amount=float(iti.get("oth_amount") or 0.0),
             calls_assigned=int(iti.get("ws_assigned") or 0),
             calls_completed=int(iti.get("ws_closed") or 0),
             pms_count=int(iti.get("ws_pms") or 0),
             asset_tagging=int(iti.get("ws_asset") or 0),
-            visit_purpose=iti.get("visit_purpose")
+            visit_purpose=iti.get("visit_purpose"),
+            activity_details=iti.get("activity_details")
         )
         db.add(leg_item)
 
@@ -1058,6 +1060,49 @@ async def get_team_expenses(
         
     return result
 
+@router.get("/verify-barcode")
+async def verify_barcode(
+    barcode: str,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    if len(barcode) != 8:
+        raise HTTPException(status_code=400, detail="Barcode must be exactly 8 digits.")
+    
+    # Query assets_inventory matching right-most 8 characters of qr_code
+    sql = text("""
+        SELECT district_name, hospital_name, equipment_name, model_name, qr_code, inventory_status 
+        FROM assets_inventory 
+        WHERE substr(qr_code, -8) = :barcode
+    """)
+    result = db.execute(sql, {"barcode": barcode}).fetchone()
+    if not result:
+        return {"success": False, "message": "Barcode not found in assets inventory."}
+    
+    return {
+        "success": True,
+        "data": {
+            "district_name": result[0],
+            "hospital_name": result[1],
+            "equipment_name": result[2],
+            "model_name": result[3],
+            "qr_code": result[4],
+            "inventory_status": result[5]
+        }
+    }
+
+@router.get("/asset-value-master")
+async def get_asset_value_master(
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    sql = text("SELECT equipment_name, rmsc_tender_cost FROM asset_value_master")
+    results = db.execute(sql).fetchall()
+    return [
+        {"equipment_name": r[0], "rmsc_tender_cost": r[1]}
+        for r in results
+    ]
+
 @router.get("/{expense_id}")
 async def get_expense_details(
     expense_id: str,
@@ -1155,7 +1200,8 @@ async def get_expense_details(
                 "ws_closed": i.calls_completed,
                 "ws_pms": i.pms_count,
                 "ws_asset": i.asset_tagging,
-                "visit_purpose": i.visit_purpose
+                "visit_purpose": i.visit_purpose,
+                "activity_details": i.activity_details
             } for i in itineraries
         ],
         "created_at": expense.created_at,
@@ -1190,3 +1236,4 @@ async def delete_expense(
     from app.utils import cache
     cache.clear_user_and_managers_cache(db, current_user.user_id)
     return {"status": "success", "message": "Expense claim deleted successfully."}
+
