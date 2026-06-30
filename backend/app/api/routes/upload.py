@@ -185,3 +185,38 @@ async def serve_file(filename: str):
         return FileResponse(fallback_path)
         
     raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="File not found")
+
+@router.get("/debug-expense/{expense_id}")
+async def debug_expense(expense_id: str):
+    try:
+        from app.config.database import SessionLocal
+        from app.api.routes.expense import get_expense_details
+        from app.models.expense import Expense
+        from app.models.user import User
+        
+        db = SessionLocal()
+        try:
+            # Find the expense
+            if expense_id.isdigit():
+                expense = db.query(Expense).filter((Expense.id == int(expense_id)) | (Expense.expense_code == expense_id)).first()
+            else:
+                expense = db.query(Expense).filter(Expense.expense_code == expense_id).first()
+                
+            if not expense:
+                return {"error": "Expense not found"}
+                
+            # Get the user who submitted it
+            user = db.query(User).filter(User.id == expense.user_id).first()
+            if not user:
+                return {"error": "User not found"}
+            
+            # Call get_expense_details
+            data = await get_expense_details(expense_id=expense_id, db=db, current_user=user)
+            return {"success": True, "data": data}
+        finally:
+            db.close()
+    except Exception as e:
+        import traceback
+        tb = traceback.format_exc()
+        return {"success": False, "error": str(e), "traceback": tb}
+
