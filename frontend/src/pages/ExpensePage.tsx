@@ -61,6 +61,23 @@ interface ItineraryLeg {
   mobilise_asset_count?: string;
   calibration_count?: string;
   activity_other_desc?: string;
+  calls_list?: Array<{
+    barcode: string;
+    verified: boolean;
+    type: string;
+    status: string;
+    asset_details: any;
+  }>;
+  pms_list?: Array<{
+    barcode: string;
+    verified: boolean;
+    frequency: string;
+    asset_details: any;
+  }>;
+  assets_list?: Array<{
+    equipment_name: string;
+    quantity: string;
+  }>;
 }
 
 interface LegFiles {
@@ -82,7 +99,7 @@ export default function ExpensePage() {
   const currentUserId = (() => { try { const u = JSON.parse(localStorage.getItem("user") || "{}"); return u.user_id || "Admin"; } catch(e) { return "Admin"; } })().trim();
 
   // Date State
-  const [date, setDate] = useState("");
+  const [date, setDate] = useState(() => new Date().toLocaleDateString('sv'));
 
   // Init default helpers
   const createDefaultLeg = (num: number): ItineraryLeg => {
@@ -122,7 +139,7 @@ export default function ExpensePage() {
       calls_verified: false,
       calls_asset_details: null,
       calls_type: "Support Call",
-      calls_status: "Attend Close",
+      calls_status: "Attend",
       pms_barcode: "",
       pms_verified: false,
       pms_asset_details: null,
@@ -131,7 +148,10 @@ export default function ExpensePage() {
       asset_tagging_quantity: "0",
       mobilise_asset_count: "0",
       calibration_count: "0",
-      activity_other_desc: ""
+      activity_other_desc: "",
+      calls_list: [],
+      pms_list: [],
+      assets_list: []
     };
   };
 
@@ -198,7 +218,7 @@ export default function ExpensePage() {
       calls_verified: false,
       calls_asset_details: null,
       calls_type: "Support Call",
-      calls_status: "Attend Close",
+      calls_status: "Attend",
       pms_barcode: "",
       pms_verified: false,
       pms_asset_details: null,
@@ -207,7 +227,10 @@ export default function ExpensePage() {
       asset_tagging_quantity: "0",
       mobilise_asset_count: "0",
       calibration_count: "0",
-      activity_other_desc: ""
+      activity_other_desc: "",
+      calls_list: [],
+      pms_list: [],
+      assets_list: []
     };
     return [leg];
   });
@@ -457,7 +480,7 @@ export default function ExpensePage() {
             calls_verified: !!activityObj.calls_verified,
             calls_asset_details: activityObj.calls_asset_details || null,
             calls_type: activityObj.calls_type || "Support Call",
-            calls_status: activityObj.calls_status || "Attend Close",
+            calls_status: activityObj.calls_status || "Attend",
             pms_barcode: activityObj.pms_barcode || "",
             pms_verified: !!activityObj.pms_verified,
             pms_asset_details: activityObj.pms_asset_details || null,
@@ -466,7 +489,10 @@ export default function ExpensePage() {
             asset_tagging_quantity: activityObj.asset_tagging_quantity || "0",
             mobilise_asset_count: activityObj.mobilise_asset_count || "0",
             calibration_count: activityObj.calibration_count || "0",
-            activity_other_desc: activityObj.activity_other_desc || ""
+            activity_other_desc: activityObj.activity_other_desc || "",
+            calls_list: activityObj.calls_list || [],
+            pms_list: activityObj.pms_list || [],
+            assets_list: activityObj.assets_list || []
           };
         });
         setItineraries(mappedIti);
@@ -674,6 +700,12 @@ export default function ExpensePage() {
       return;
     }
 
+    const currentList = activityType === "Calls" ? (leg.calls_list || []) : (leg.pms_list || []);
+    if (currentList.some(item => item.barcode === barcode)) {
+      toast.error("This barcode has already been added to this leg.");
+      return;
+    }
+
     try {
       const res = await expenseService.verifyBarcode(barcode);
       if (res.success && res.data) {
@@ -684,19 +716,6 @@ export default function ExpensePage() {
         
         if (!fromMatch && !toMatch) {
           toast.error(`Verification Failed: This barcode belongs to "${hospitalName}", which does not match either the Starting Location (From) or Destination Location (To) facility of this leg!`);
-          
-          setItineraries(prev => prev.map(l => {
-            if (l.leg !== legNum) return l;
-            return activityType === "Calls" ? {
-              ...l,
-              calls_verified: false,
-              calls_asset_details: null
-            } : {
-              ...l,
-              pms_verified: false,
-              pms_asset_details: null
-            };
-          }));
           return;
         }
 
@@ -704,35 +723,100 @@ export default function ExpensePage() {
         toast.success("Barcode verified successfully!");
         setItineraries(prev => prev.map(l => {
           if (l.leg !== legNum) return l;
-          return activityType === "Calls" ? {
-            ...l,
-            calls_verified: true,
-            calls_asset_details: res.data
-          } : {
-            ...l,
-            pms_verified: true,
-            pms_asset_details: res.data
-          };
+          if (activityType === "Calls") {
+            const newItem = {
+              barcode: barcode,
+              verified: true,
+              type: l.calls_type || "Support Call",
+              status: l.calls_status || "Attend",
+              asset_details: res.data
+            };
+            return {
+              ...l,
+              calls_list: [...(l.calls_list || []), newItem],
+              calls_barcode: "",
+              calls_verified: false,
+              calls_asset_details: null
+            };
+          } else {
+            const newItem = {
+              barcode: barcode,
+              verified: true,
+              frequency: l.pms_frequency || "3 month",
+              asset_details: res.data
+            };
+            return {
+              ...l,
+              pms_list: [...(l.pms_list || []), newItem],
+              pms_barcode: "",
+              pms_verified: false,
+              pms_asset_details: null
+            };
+          }
         }));
       } else {
         toast.error(res.message || "Barcode not found in assets inventory.");
-        setItineraries(prev => prev.map(l => {
-          if (l.leg !== legNum) return l;
-          return activityType === "Calls" ? {
-            ...l,
-            calls_verified: false,
-            calls_asset_details: null
-          } : {
-            ...l,
-            pms_verified: false,
-            pms_asset_details: null
-          };
-        }));
       }
     } catch (e) {
       console.error("Barcode verification error", e);
       toast.error("Error during barcode verification.");
     }
+  };
+
+  const removeBarcode = (legNum: number, activityType: "Calls" | "PMS", index: number) => {
+    setItineraries(prev => prev.map(l => {
+      if (l.leg !== legNum) return l;
+      if (activityType === "Calls") {
+        return {
+          ...l,
+          calls_list: (l.calls_list || []).filter((_, idx) => idx !== index)
+        };
+      } else {
+        return {
+          ...l,
+          pms_list: (l.pms_list || []).filter((_, idx) => idx !== index)
+        };
+      }
+    }));
+  };
+
+  const addAssetTag = (legNum: number) => {
+    setItineraries(prev => prev.map(l => {
+      if (l.leg !== legNum) return l;
+      const eq = l.asset_tagging_equipment;
+      const qty = l.asset_tagging_quantity || "0";
+      if (!eq) {
+        toast.error("Please select an equipment first.");
+        return l;
+      }
+      if (parseInt(qty) <= 0) {
+        toast.error("Please enter a valid quantity greater than 0.");
+        return l;
+      }
+      
+      const currentList = l.assets_list || [];
+      if (currentList.some(item => item.equipment_name === eq)) {
+        toast.error("This equipment has already been added to this leg.");
+        return l;
+      }
+
+      return {
+        ...l,
+        assets_list: [...currentList, { equipment_name: eq, quantity: qty }],
+        asset_tagging_equipment: "",
+        asset_tagging_quantity: "0"
+      };
+    }));
+  };
+
+  const removeAssetTag = (legNum: number, index: number) => {
+    setItineraries(prev => prev.map(l => {
+      if (l.leg !== legNum) return l;
+      return {
+        ...l,
+        assets_list: (l.assets_list || []).filter((_, idx) => idx !== index)
+      };
+    }));
   };
 
   const handleItineraryChange = (legNum: number, field: keyof ItineraryLeg, value: any) => {
@@ -1003,6 +1087,31 @@ export default function ExpensePage() {
 
   const { totalKm, totalAmt, totalAuto, totalDA, totalHotel, totalOther, totalLocalPurchase, totalBikeCarKm, totalBikeCarAmt } = calculateTotals();
 
+  // Compute aggregate visit metrics across all itineraries
+  const totalCallsAttended = itineraries.reduce((sum, leg) => {
+    return sum + (leg.calls_list || []).filter(c => c.status === "Attend" || c.status === "Attend & Close").length;
+  }, 0);
+
+  const totalCallsClosed = itineraries.reduce((sum, leg) => {
+    return sum + (leg.calls_list || []).filter(c => c.status === "Close" || c.status === "Attend & Close").length;
+  }, 0);
+
+  const totalPmsDone = itineraries.reduce((sum, leg) => {
+    return sum + (leg.pms_list || []).length;
+  }, 0);
+
+  const totalAssetsTagged = itineraries.reduce((sum, leg) => {
+    return sum + (leg.assets_list || []).reduce((s, item) => s + (parseInt(item.quantity || "0") || 0), 0);
+  }, 0);
+
+  const totalMobiliseAsset = itineraries.reduce((sum, leg) => {
+    return sum + (parseInt(leg.mobilise_asset_count || "0") || 0);
+  }, 0);
+
+  const totalCalibration = itineraries.reduce((sum, leg) => {
+    return sum + (parseInt(leg.calibration_count || "0") || 0);
+  }, 0);
+
   const checkLimitsExceeded = () => {
     const maxKmAllowed = (allowance.max_km_per_month || 2000) + approvedKm;
     const maxAutoAllowed = (allowance.max_auto_per_month || 1000) + approvedAuto;
@@ -1162,35 +1271,22 @@ export default function ExpensePage() {
       }
       
       if (acts.includes("Calls")) {
-        if (!leg.calls_barcode || leg.calls_barcode.length !== 8) {
-          toast.error(`Leg ${legNum}: Calls activity requires an 8-digit verified barcode.`);
-          return false;
-        }
-        if (!leg.calls_verified) {
-          toast.error(`Leg ${legNum}: Please verify the barcode for Calls.`);
+        if ((leg.calls_list || []).length === 0) {
+          toast.error(`Leg ${legNum}: Please add and verify at least one barcode for Calls.`);
           return false;
         }
       }
 
       if (acts.includes("PMS")) {
-        if (!leg.pms_barcode || leg.pms_barcode.length !== 8) {
-          toast.error(`Leg ${legNum}: PMS activity requires an 8-digit verified barcode.`);
-          return false;
-        }
-        if (!leg.pms_verified) {
-          toast.error(`Leg ${legNum}: Please verify the barcode for PMS.`);
+        if ((leg.pms_list || []).length === 0) {
+          toast.error(`Leg ${legNum}: Please add and verify at least one barcode for PMS.`);
           return false;
         }
       }
 
       if (acts.includes("Asset Tagging")) {
-        if (!leg.asset_tagging_equipment) {
-          toast.error(`Leg ${legNum}: Please select an equipment for Asset Tagging.`);
-          return false;
-        }
-        const qty = parseInt(leg.asset_tagging_quantity || "0") || 0;
-        if (qty <= 0) {
-          toast.error(`Leg ${legNum}: Please enter a valid quantity for Asset Tagging.`);
+        if ((leg.assets_list || []).length === 0) {
+          toast.error(`Leg ${legNum}: Please add at least one tagged equipment and quantity.`);
           return false;
         }
       }
@@ -1216,11 +1312,6 @@ export default function ExpensePage() {
           toast.error(`Leg ${legNum}: Please enter description for Other activity.`);
           return false;
         }
-      }
-
-      if (!leg.visit_purpose.trim()) {
-        toast.error(`Leg ${legNum}: Please enter the purpose of this visit.`);
-        return false;
       }
     }
 
@@ -1258,11 +1349,15 @@ export default function ExpensePage() {
         const legNum = index + 1;
         const acts = leg.selected_activities || [];
         
-        // Compute CRM work metrics based on selections
-        const ws_assigned = acts.includes("Calls") ? 1 : 0;
-        const ws_closed = (acts.includes("Calls") && (leg.calls_status === "Attend Close" || leg.calls_status === "Attend & Close")) ? 1 : 0;
-        const ws_pms = acts.includes("PMS") ? 1 : 0;
-        const ws_asset = acts.includes("Asset Tagging") ? (parseInt(leg.asset_tagging_quantity || "0") || 0) : 0;
+        const callsList = leg.calls_list || [];
+        const pmsList = leg.pms_list || [];
+        const assetsList = leg.assets_list || [];
+
+        // Compute CRM work metrics based on list entries
+        const ws_assigned = acts.includes("Calls") ? callsList.length : 0;
+        const ws_closed = acts.includes("Calls") ? callsList.filter(c => c.status === "Close" || c.status === "Attend & Close").length : 0;
+        const ws_pms = acts.includes("PMS") ? pmsList.length : 0;
+        const ws_asset = acts.includes("Asset Tagging") ? assetsList.reduce((sum, item) => sum + (parseInt(item.quantity || "0") || 0), 0) : 0;
 
         const detailsObj = {
           selected_activities: acts,
@@ -1270,7 +1365,7 @@ export default function ExpensePage() {
           calls_verified: !!leg.calls_verified,
           calls_asset_details: leg.calls_asset_details || null,
           calls_type: leg.calls_type || "Support Call",
-          calls_status: leg.calls_status || "Attend Close",
+          calls_status: leg.calls_status || "Attend",
           pms_barcode: leg.pms_barcode || "",
           pms_verified: !!leg.pms_verified,
           pms_asset_details: leg.pms_asset_details || null,
@@ -1279,7 +1374,10 @@ export default function ExpensePage() {
           asset_tagging_quantity: leg.asset_tagging_quantity || "0",
           mobilise_asset_count: leg.mobilise_asset_count || "0",
           calibration_count: leg.calibration_count || "0",
-          activity_other_desc: leg.activity_other_desc || ""
+          activity_other_desc: leg.activity_other_desc || "",
+          calls_list: callsList,
+          pms_list: pmsList,
+          assets_list: assetsList
         };
 
         return {
@@ -1303,7 +1401,7 @@ export default function ExpensePage() {
           ws_closed: ws_closed.toString(),
           ws_pms: ws_pms.toString(),
           ws_asset: ws_asset.toString(),
-          visit_purpose: leg.visit_purpose,
+          visit_purpose: "",
           activity_details: JSON.stringify(detailsObj)
         };
       });
@@ -2310,7 +2408,7 @@ export default function ExpensePage() {
                                 );
                               }
                               
-                              // Else, normal engineer options
+                              // Else, normal engineer options (excluding Calibration)
                               const options = [
                                 { label: "Calls", val: "Calls" },
                                 { label: "PMS", val: "PMS" },
@@ -2354,87 +2452,107 @@ export default function ExpensePage() {
                               <div className="flex items-center justify-between border-b border-blue-100 pb-1.5">
                                 <span className="text-[11px] font-bold text-blue-700 uppercase tracking-wide">Support Calls Log</span>
                               </div>
-                              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 items-end">
-                                <div>
-                                  <label className="label-lte">8-Digit Barcode (QR Code)</label>
-                                  <input
-                                    type="text"
-                                    maxLength={8}
-                                    value={leg.calls_barcode || ""}
-                                    placeholder="Enter 8 digits"
-                                    onChange={(e) => {
-                                      const cleaned = e.target.value.replace(/\D/g, "");
-                                      handleItineraryChange(leg.leg, "calls_barcode", cleaned);
-                                      // If changed, reset verification
-                                      handleItineraryChange(leg.leg, "calls_verified", false);
-                                      handleItineraryChange(leg.leg, "calls_asset_details", null);
-                                    }}
-                                    className="input-lte font-mono"
-                                  />
+                              <div className="grid grid-cols-1 sm:grid-cols-12 gap-3 items-end bg-gray-50/50 p-2.5 rounded border border-gray-200">
+                                <div className="sm:col-span-4">
+                                  <label className="label-lte font-bold">8-Digit Barcode (QR Code)</label>
+                                  <div className="flex gap-1.5">
+                                    <input
+                                      type="text"
+                                      maxLength={8}
+                                      value={leg.calls_barcode || ""}
+                                      placeholder="Enter 8 digits"
+                                      onChange={(e) => {
+                                        const cleaned = e.target.value.replace(/\D/g, "");
+                                        handleItineraryChange(leg.leg, "calls_barcode", cleaned);
+                                      }}
+                                      className="input-lte font-mono"
+                                    />
+                                    <button
+                                      type="button"
+                                      onClick={() => verifyLegBarcode(leg.leg, "Calls")}
+                                      disabled={!leg.calls_barcode || leg.calls_barcode.length !== 8}
+                                      className="btn-lte p-2 bg-blue-600 hover:bg-blue-700 text-white rounded border-0 cursor-pointer flex items-center justify-center disabled:bg-gray-200 disabled:text-gray-400 disabled:cursor-not-allowed"
+                                      title="Verify and Add Barcode"
+                                    >
+                                      <Plus className="w-4 h-4" />
+                                    </button>
+                                  </div>
                                 </div>
-                                <div>
-                                  <button
-                                    type="button"
-                                    onClick={() => verifyLegBarcode(leg.leg, "Calls")}
-                                    disabled={!leg.calls_barcode || leg.calls_barcode.length !== 8}
-                                    className="w-full btn-lte py-2 text-xs uppercase font-extrabold tracking-wider disabled:bg-gray-100 disabled:text-gray-400 disabled:border-gray-200 disabled:cursor-not-allowed cursor-pointer bg-blue-600 hover:bg-blue-750 text-white border-0"
+                                <div className="sm:col-span-4">
+                                  <label className="label-lte font-bold">Call Type</label>
+                                  <select
+                                    value={leg.calls_type || "Support Call"}
+                                    onChange={(e) => handleItineraryChange(leg.leg, "calls_type", e.target.value)}
+                                    className="input-lte text-xs font-semibold py-1.5 px-2 bg-white"
                                   >
-                                    Verify
-                                  </button>
+                                    <option value="Support Call">Support Call</option>
+                                    <option value="Online Call">Online Call</option>
+                                  </select>
                                 </div>
-                                <div className="grid grid-cols-2 gap-2">
-                                  <div>
-                                    <label className="label-lte">Call Type</label>
-                                    <select
-                                      value={leg.calls_type || "Support Call"}
-                                      onChange={(e) => handleItineraryChange(leg.leg, "calls_type", e.target.value)}
-                                      className="input-lte text-xs font-semibold py-1.5 px-2 bg-white"
-                                    >
-                                      <option value="Support Call">Support Call</option>
-                                      <option value="Online Call">Online Call</option>
-                                    </select>
-                                  </div>
-                                  <div>
-                                    <label className="label-lte">Call Status</label>
-                                    <select
-                                      value={leg.calls_status || "Attend Close"}
-                                      onChange={(e) => handleItineraryChange(leg.leg, "calls_status", e.target.value)}
-                                      className="input-lte text-xs font-semibold py-1.5 px-2 bg-white"
-                                    >
-                                      <option value="Attend Close">Attend Close</option>
-                                      <option value="Attend & Close">Attend & Close</option>
-                                    </select>
-                                  </div>
+                                <div className="sm:col-span-4">
+                                  <label className="label-lte font-bold">Call Status</label>
+                                  <select
+                                    value={leg.calls_status || "Attend"}
+                                    onChange={(e) => handleItineraryChange(leg.leg, "calls_status", e.target.value)}
+                                    className="input-lte text-xs font-semibold py-1.5 px-2 bg-white"
+                                  >
+                                    <option value="Attend">Attend</option>
+                                    <option value="Close">Close</option>
+                                    <option value="Attend & Close">Attend & Close</option>
+                                  </select>
                                 </div>
                               </div>
-                              
-                              {/* Verified Details Card */}
-                              {leg.calls_verified && leg.calls_asset_details && (
-                                <div className="mt-2 bg-white border border-green-200 rounded p-2.5 text-[11px] grid grid-cols-2 sm:grid-cols-3 gap-2">
-                                  <div>
-                                    <span className="text-gray-400 block uppercase text-[9px] font-bold">District</span>
-                                    <span className="text-gray-800 font-semibold">{leg.calls_asset_details.district_name}</span>
-                                  </div>
-                                  <div>
-                                    <span className="text-gray-400 block uppercase text-[9px] font-bold">Hospital Facility</span>
-                                    <span className="text-gray-800 font-semibold">{leg.calls_asset_details.hospital_name}</span>
-                                  </div>
-                                  <div>
-                                    <span className="text-gray-400 block uppercase text-[9px] font-bold">Equipment</span>
-                                    <span className="text-gray-800 font-semibold">{leg.calls_asset_details.equipment_name}</span>
-                                  </div>
-                                  <div>
-                                    <span className="text-gray-400 block uppercase text-[9px] font-bold">Model</span>
-                                    <span className="text-gray-800 font-semibold">{leg.calls_asset_details.model_name}</span>
-                                  </div>
-                                  <div>
-                                    <span className="text-gray-400 block uppercase text-[9px] font-bold">Full QR Code</span>
-                                    <span className="text-gray-800 font-mono font-semibold">{leg.calls_asset_details.qr_code}</span>
-                                  </div>
-                                  <div>
-                                    <span className="text-gray-400 block uppercase text-[9px] font-bold">Inventory Status</span>
-                                    <span className="text-green-700 font-bold">✓ {leg.calls_asset_details.inventory_status}</span>
-                                  </div>
+
+                              {/* Added Barcodes Table */}
+                              {(leg.calls_list || []).length > 0 && (
+                                <div className="border border-gray-200 rounded overflow-hidden mt-2 bg-white">
+                                  <table className="table-lte text-xs w-full text-left border-collapse">
+                                    <thead>
+                                      <tr className="bg-gray-100 border-b border-gray-200 text-gray-700 font-bold uppercase text-[9px] tracking-wider">
+                                        <th className="py-1.5 px-2 text-left">Barcode</th>
+                                        <th className="py-1.5 px-2 text-left">Type</th>
+                                        <th className="py-1.5 px-2 text-left">Status</th>
+                                        <th className="py-1.5 px-2 text-left">Asset Details</th>
+                                        <th className="py-1.5 px-2 text-center w-12">Action</th>
+                                      </tr>
+                                    </thead>
+                                    <tbody className="divide-y divide-gray-100">
+                                      {(leg.calls_list || []).map((item, idx) => (
+                                        <tr key={idx} className="hover:bg-gray-50">
+                                          <td className="py-1.5 px-2 font-mono font-bold text-gray-800">{item.barcode}</td>
+                                          <td className="py-1.5 px-2 font-semibold text-gray-600">{item.type}</td>
+                                          <td className="py-1.5 px-2">
+                                            <span className={`px-1.5 py-0.5 rounded font-bold text-[8px] uppercase ${
+                                              item.status === "Close" ? "bg-green-50 text-green-700 border border-green-200" :
+                                              item.status === "Attend & Close" ? "bg-blue-50 text-blue-700 border border-blue-200" :
+                                              "bg-amber-50 text-amber-700 border border-amber-200"
+                                            }`}>
+                                              {item.status}
+                                            </span>
+                                          </td>
+                                          <td className="py-1.5 px-2 text-[10px] text-gray-500">
+                                            {item.asset_details ? (
+                                              <span>
+                                                <strong>{item.asset_details.equipment_name}</strong> ({item.asset_details.model_name}) at <em>{item.asset_details.hospital_name}</em>
+                                              </span>
+                                            ) : (
+                                              <span className="text-red-500 font-bold">Unverified</span>
+                                            )}
+                                          </td>
+                                          <td className="py-1.5 px-2 text-center">
+                                            <button
+                                              type="button"
+                                              onClick={() => removeBarcode(leg.leg, "Calls", idx)}
+                                              className="p-1 text-rose-600 hover:bg-rose-50 rounded border-0 bg-transparent cursor-pointer"
+                                              title="Remove Call entry"
+                                            >
+                                              <Trash2 className="w-3.5 h-3.5" />
+                                            </button>
+                                          </td>
+                                        </tr>
+                                      ))}
+                                    </tbody>
+                                  </table>
                                 </div>
                               )}
                             </div>
@@ -2446,36 +2564,34 @@ export default function ExpensePage() {
                               <div className="flex items-center justify-between border-b border-amber-100 pb-1.5">
                                 <span className="text-[11px] font-bold text-amber-700 uppercase tracking-wide">Planned Maintenance Services (PMS)</span>
                               </div>
-                              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 items-end">
-                                <div>
-                                  <label className="label-lte">8-Digit Barcode (QR Code)</label>
-                                  <input
-                                    type="text"
-                                    maxLength={8}
-                                    value={leg.pms_barcode || ""}
-                                    placeholder="Enter 8 digits"
-                                    onChange={(e) => {
-                                      const cleaned = e.target.value.replace(/\D/g, "");
-                                      handleItineraryChange(leg.leg, "pms_barcode", cleaned);
-                                      // If changed, reset verification
-                                      handleItineraryChange(leg.leg, "pms_verified", false);
-                                      handleItineraryChange(leg.leg, "pms_asset_details", null);
-                                    }}
-                                    className="input-lte font-mono"
-                                  />
+                              <div className="grid grid-cols-1 sm:grid-cols-12 gap-3 items-end bg-gray-50/50 p-2.5 rounded border border-gray-200">
+                                <div className="sm:col-span-6">
+                                  <label className="label-lte font-bold">8-Digit Barcode (QR Code)</label>
+                                  <div className="flex gap-1.5">
+                                    <input
+                                      type="text"
+                                      maxLength={8}
+                                      value={leg.pms_barcode || ""}
+                                      placeholder="Enter 8 digits"
+                                      onChange={(e) => {
+                                        const cleaned = e.target.value.replace(/\D/g, "");
+                                        handleItineraryChange(leg.leg, "pms_barcode", cleaned);
+                                      }}
+                                      className="input-lte font-mono"
+                                    />
+                                    <button
+                                      type="button"
+                                      onClick={() => verifyLegBarcode(leg.leg, "PMS")}
+                                      disabled={!leg.pms_barcode || leg.pms_barcode.length !== 8}
+                                      className="btn-lte p-2 bg-amber-600 hover:bg-amber-700 text-white rounded border-0 cursor-pointer flex items-center justify-center disabled:bg-gray-200 disabled:text-gray-400 disabled:cursor-not-allowed"
+                                      title="Verify and Add Barcode"
+                                    >
+                                      <Plus className="w-4 h-4" />
+                                    </button>
+                                  </div>
                                 </div>
-                                <div>
-                                  <button
-                                    type="button"
-                                    onClick={() => verifyLegBarcode(leg.leg, "PMS")}
-                                    disabled={!leg.pms_barcode || leg.pms_barcode.length !== 8}
-                                    className="w-full btn-lte py-2 text-xs uppercase font-extrabold tracking-wider disabled:bg-gray-100 disabled:text-gray-400 disabled:border-gray-200 disabled:cursor-not-allowed cursor-pointer bg-amber-600 hover:bg-amber-700 text-white border-0"
-                                  >
-                                    Verify
-                                  </button>
-                                </div>
-                                <div>
-                                  <label className="label-lte">PMS Frequency Period</label>
+                                <div className="sm:col-span-6">
+                                  <label className="label-lte font-bold">PMS Frequency Period</label>
                                   <select
                                     value={leg.pms_frequency || "3 month"}
                                     onChange={(e) => handleItineraryChange(leg.leg, "pms_frequency", e.target.value)}
@@ -2487,34 +2603,47 @@ export default function ExpensePage() {
                                   </select>
                                 </div>
                               </div>
-                              
-                              {/* Verified Details Card */}
-                              {leg.pms_verified && leg.pms_asset_details && (
-                                <div className="mt-2 bg-white border border-green-200 rounded p-2.5 text-[11px] grid grid-cols-2 sm:grid-cols-3 gap-2">
-                                  <div>
-                                    <span className="text-gray-400 block uppercase text-[9px] font-bold">District</span>
-                                    <span className="text-gray-800 font-semibold">{leg.pms_asset_details.district_name}</span>
-                                  </div>
-                                  <div>
-                                    <span className="text-gray-400 block uppercase text-[9px] font-bold">Hospital Facility</span>
-                                    <span className="text-gray-800 font-semibold">{leg.pms_asset_details.hospital_name}</span>
-                                  </div>
-                                  <div>
-                                    <span className="text-gray-400 block uppercase text-[9px] font-bold">Equipment</span>
-                                    <span className="text-gray-800 font-semibold">{leg.pms_asset_details.equipment_name}</span>
-                                  </div>
-                                  <div>
-                                    <span className="text-gray-400 block uppercase text-[9px] font-bold">Model</span>
-                                    <span className="text-gray-800 font-semibold">{leg.pms_asset_details.model_name}</span>
-                                  </div>
-                                  <div>
-                                    <span className="text-gray-400 block uppercase text-[9px] font-bold">Full QR Code</span>
-                                    <span className="text-gray-800 font-mono font-semibold">{leg.pms_asset_details.qr_code}</span>
-                                  </div>
-                                  <div>
-                                    <span className="text-gray-400 block uppercase text-[9px] font-bold">Inventory Status</span>
-                                    <span className="text-green-700 font-bold">✓ {leg.pms_asset_details.inventory_status}</span>
-                                  </div>
+
+                              {/* Added PMS Barcodes Table */}
+                              {(leg.pms_list || []).length > 0 && (
+                                <div className="border border-gray-200 rounded overflow-hidden mt-2 bg-white">
+                                  <table className="table-lte text-xs w-full text-left border-collapse">
+                                    <thead>
+                                      <tr className="bg-gray-100 border-b border-gray-200 text-gray-700 font-bold uppercase text-[9px] tracking-wider">
+                                        <th className="py-1.5 px-2 text-left">Barcode</th>
+                                        <th className="py-1.5 px-2 text-left">Frequency</th>
+                                        <th className="py-1.5 px-2 text-left">Asset Details</th>
+                                        <th className="py-1.5 px-2 text-center w-12">Action</th>
+                                      </tr>
+                                    </thead>
+                                    <tbody className="divide-y divide-gray-100">
+                                      {(leg.pms_list || []).map((item, idx) => (
+                                        <tr key={idx} className="hover:bg-gray-50">
+                                          <td className="py-1.5 px-2 font-mono font-bold text-gray-800">{item.barcode}</td>
+                                          <td className="py-1.5 px-2 font-semibold text-gray-600">{item.frequency}</td>
+                                          <td className="py-1.5 px-2 text-[10px] text-gray-500">
+                                            {item.asset_details ? (
+                                              <span>
+                                                <strong>{item.asset_details.equipment_name}</strong> ({item.asset_details.model_name}) at <em>{item.asset_details.hospital_name}</em>
+                                              </span>
+                                            ) : (
+                                              <span className="text-red-500 font-bold">Unverified</span>
+                                            )}
+                                          </td>
+                                          <td className="py-1.5 px-2 text-center">
+                                            <button
+                                              type="button"
+                                              onClick={() => removeBarcode(leg.leg, "PMS", idx)}
+                                              className="p-1 text-rose-600 hover:bg-rose-50 rounded border-0 bg-transparent cursor-pointer"
+                                              title="Remove PMS entry"
+                                            >
+                                              <Trash2 className="w-3.5 h-3.5" />
+                                            </button>
+                                          </td>
+                                        </tr>
+                                      ))}
+                                    </tbody>
+                                  </table>
                                 </div>
                               )}
                             </div>
@@ -2526,9 +2655,9 @@ export default function ExpensePage() {
                               <div className="flex items-center justify-between border-b border-emerald-100 pb-1.5">
                                 <span className="text-[11px] font-bold text-emerald-700 uppercase tracking-wide">Asset Tagging Tasks</span>
                               </div>
-                              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 items-end">
-                                <div className="sm:col-span-2">
-                                  <label className="label-lte">Select Equipment Name</label>
+                              <div className="grid grid-cols-1 sm:grid-cols-12 gap-3 items-end bg-gray-50/50 p-2.5 rounded border border-gray-200">
+                                <div className="sm:col-span-8">
+                                  <label className="label-lte font-bold">Select Equipment Name</label>
                                   <select
                                     value={leg.asset_tagging_equipment || ""}
                                     onChange={(e) => handleItineraryChange(leg.leg, "asset_tagging_equipment", e.target.value)}
@@ -2542,38 +2671,87 @@ export default function ExpensePage() {
                                     ))}
                                   </select>
                                 </div>
-                                <div>
-                                  <label className="label-lte">Quantity Tagged</label>
-                                  <input
-                                    type="number"
-                                    min="0"
-                                    value={leg.asset_tagging_quantity || "0"}
-                                    onChange={(e) => handleItineraryChange(leg.leg, "asset_tagging_quantity", e.target.value)}
-                                    className="input-lte font-semibold"
-                                  />
+                                <div className="sm:col-span-4">
+                                  <label className="label-lte font-bold">Quantity Tagged</label>
+                                  <div className="flex gap-1.5">
+                                    <input
+                                      type="number"
+                                      min="1"
+                                      value={leg.asset_tagging_quantity || "0"}
+                                      onChange={(e) => handleItineraryChange(leg.leg, "asset_tagging_quantity", e.target.value)}
+                                      className="input-lte font-semibold"
+                                    />
+                                    <button
+                                      type="button"
+                                      onClick={() => addAssetTag(leg.leg)}
+                                      disabled={!leg.asset_tagging_equipment || parseInt(leg.asset_tagging_quantity || "0") <= 0}
+                                      className="btn-lte p-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded border-0 cursor-pointer flex items-center justify-center disabled:bg-gray-200 disabled:text-gray-400 disabled:cursor-not-allowed"
+                                      title="Add Equipment Tag"
+                                    >
+                                      <Plus className="w-4 h-4" />
+                                    </button>
+                                  </div>
                                 </div>
                               </div>
 
-                              {/* Calculated Cost Block: Visible to DI (District In-charge) and Admin, Hidden for Engineer */}
-                              {(() => {
-                                const selectedEq = assetValueMaster.find(eq => eq.equipment_name === leg.asset_tagging_equipment);
-                                const costPerUnit = selectedEq ? (selectedEq.rmsc_tender_cost || 0) : 0;
-                                const qty = parseInt(leg.asset_tagging_quantity || "0") || 0;
-                                const totalCost = qty * costPerUnit;
+                              {/* Added Assets Table */}
+                              {(leg.assets_list || []).length > 0 && (
+                                <div className="border border-gray-200 rounded overflow-hidden mt-2 bg-white">
+                                  <table className="table-lte text-xs w-full text-left border-collapse">
+                                    <thead>
+                                      <tr className="bg-gray-100 border-b border-gray-200 text-gray-700 font-bold uppercase text-[9px] tracking-wider">
+                                        <th className="py-1.5 px-2 text-left">Equipment Name</th>
+                                        <th className="py-1.5 px-2 text-center w-24">Quantity</th>
+                                        {(() => {
+                                          const isEngineer = (user.designation || "").toLowerCase().trim() === "engineer" || 
+                                                             (user.role || "").toLowerCase().trim() === "engineer";
+                                          return !isEngineer ? (
+                                            <>
+                                              <th className="py-1.5 px-2 text-right w-32">Tender Rate</th>
+                                              <th className="py-1.5 px-2 text-right w-32">Total Cost</th>
+                                            </>
+                                          ) : null;
+                                        })()}
+                                        <th className="py-1.5 px-2 text-center w-12">Action</th>
+                                      </tr>
+                                    </thead>
+                                    <tbody className="divide-y divide-gray-100">
+                                      {(leg.assets_list || []).map((item, idx) => {
+                                        const selectedEq = assetValueMaster.find(eq => eq.equipment_name === item.equipment_name);
+                                        const costPerUnit = selectedEq ? (selectedEq.rmsc_tender_cost || 0) : 0;
+                                        const qty = parseInt(item.quantity || "0") || 0;
+                                        const totalCost = qty * costPerUnit;
 
-                                const isEngineer = (user.designation || "").toLowerCase().trim() === "engineer" || 
-                                                   (user.role || "").toLowerCase().trim() === "engineer";
+                                        const isEngineer = (user.designation || "").toLowerCase().trim() === "engineer" || 
+                                                           (user.role || "").toLowerCase().trim() === "engineer";
 
-                                if (!isEngineer && totalCost > 0) {
-                                  return (
-                                    <div className="mt-1.5 bg-emerald-50 border border-emerald-150 px-2 py-1.5 rounded text-[10px] text-emerald-800 font-extrabold uppercase flex justify-between">
-                                      <span>Tender Rate: ₹{costPerUnit.toLocaleString()} / unit</span>
-                                      <span>Total Cost Value: ₹{totalCost.toLocaleString()}</span>
-                                    </div>
-                                  );
-                                }
-                                return null;
-                              })()}
+                                        return (
+                                          <tr key={idx} className="hover:bg-gray-50">
+                                            <td className="py-1.5 px-2 font-bold text-gray-800">{item.equipment_name}</td>
+                                            <td className="py-1.5 px-2 text-center font-semibold text-gray-600">{qty}</td>
+                                            {!isEngineer && (
+                                              <>
+                                                <td className="py-1.5 px-2 text-right font-mono text-gray-600">₹{costPerUnit.toLocaleString()}</td>
+                                                <td className="py-1.5 px-2 text-right font-mono font-bold text-emerald-700">₹{totalCost.toLocaleString()}</td>
+                                              </>
+                                            )}
+                                            <td className="py-1.5 px-2 text-center">
+                                              <button
+                                                type="button"
+                                                onClick={() => removeAssetTag(leg.leg, idx)}
+                                                className="p-1 text-rose-600 hover:bg-rose-50 rounded border-0 bg-transparent cursor-pointer"
+                                                title="Remove equipment entry"
+                                              >
+                                                <Trash2 className="w-3.5 h-3.5" />
+                                              </button>
+                                            </td>
+                                          </tr>
+                                        );
+                                      })}
+                                    </tbody>
+                                  </table>
+                                </div>
+                              )}
                             </div>
                           )}
 
@@ -2638,19 +2816,6 @@ export default function ExpensePage() {
                             </div>
                           )}
                         </div>
-                      </div>
-
-                      {/* Visit Purpose */}
-                      <div className="border-t border-gray-150 pt-4">
-                        <label className="label-lte">Purpose of Leg Visit <span className="text-red-500">*</span></label>
-                        <input
-                          type="text"
-                          required
-                          value={leg.visit_purpose}
-                          placeholder="State purpose: e.g. Biomedical machine calibration at Govt Hospital..."
-                          onChange={(e) => handleItineraryChange(leg.leg, "visit_purpose", e.target.value)}
-                          className="input-lte font-semibold"
-                        />
                       </div>
 
                     </div>
@@ -2765,6 +2930,38 @@ export default function ExpensePage() {
             >
               Cancel
             </button>
+          </div>
+        </div>
+
+        {/* Visit Activities Metrics Summary Panel */}
+        <div className="bg-slate-50 border border-gray-250 border-t-4 border-t-blue-600 rounded shadow-sm p-4 flex flex-wrap items-center gap-6 mt-4 w-full text-xs font-semibold">
+          <div className="flex items-center gap-1.5 border-r border-gray-200 pr-4 md:pr-6">
+            <Bookmark className="w-4 h-4 text-blue-600" />
+            <span className="text-xs font-extrabold uppercase text-gray-700 tracking-wide">Tasks Summary</span>
+          </div>
+          <div>
+            <span className="text-gray-400 uppercase text-[9px] block mb-0.5">CALLS ATTENDED</span>
+            <span className="text-gray-800 font-mono font-bold text-sm">{totalCallsAttended}</span>
+          </div>
+          <div>
+            <span className="text-gray-400 uppercase text-[9px] block mb-0.5">CALLS CLOSED</span>
+            <span className="text-gray-800 font-mono font-bold text-sm text-green-700">{totalCallsClosed}</span>
+          </div>
+          <div>
+            <span className="text-gray-400 uppercase text-[9px] block mb-0.5">PMS DONE</span>
+            <span className="text-gray-800 font-mono font-bold text-sm text-amber-700">{totalPmsDone}</span>
+          </div>
+          <div>
+            <span className="text-gray-400 uppercase text-[9px] block mb-0.5">ASSETS TAGGED</span>
+            <span className="text-gray-800 font-mono font-bold text-sm text-emerald-700">{totalAssetsTagged}</span>
+          </div>
+          <div>
+            <span className="text-gray-400 uppercase text-[9px] block mb-0.5">MOBILISE ASSETS</span>
+            <span className="text-gray-800 font-mono font-bold text-sm text-indigo-700">{totalMobiliseAsset}</span>
+          </div>
+          <div>
+            <span className="text-gray-400 uppercase text-[9px] block mb-0.5">CALIBRATIONS</span>
+            <span className="text-gray-800 font-mono font-bold text-sm text-purple-700">{totalCalibration}</span>
           </div>
         </div>
 
@@ -3048,29 +3245,204 @@ export default function ExpensePage() {
                               const hotelCost = leg.hotel || 0;
                               const otherCost = leg.oth_amount || 0;
                               const legTotal = travelCost + subCost + daCost + hotelCost + otherCost;
+
+                              let actDetails: any = null;
+                              try {
+                                if (leg.activity_details) {
+                                  actDetails = typeof leg.activity_details === "string" ? JSON.parse(leg.activity_details) : leg.activity_details;
+                                }
+                              } catch (e) {
+                                console.error("Error parsing activity details", e);
+                              }
+
+                              const callsList = actDetails?.calls_list || [];
+                              const pmsList = actDetails?.pms_list || [];
+                              const assetsList = actDetails?.assets_list || [];
+                              const selectedActs = actDetails?.selected_activities || leg.selected_activities || [];
+                              const mobiliseCount = parseInt(actDetails?.mobilise_asset_count || leg.mobilise_asset_count || "0") || 0;
+                              const calibrationCount = parseInt(actDetails?.calibration_count || leg.calibration_count || "0") || 0;
+                              const activityOtherDesc = actDetails?.activity_other_desc || leg.activity_other_desc || "";
+
+                              const hasActivities = selectedActs.length > 0 || callsList.length > 0 || pmsList.length > 0 || assetsList.length > 0;
+
                               return (
-                                <tr key={idx} className="hover:bg-gray-50 transition-colors">
-                                  <td className="py-2.5 px-3 text-center font-bold text-gray-400">{leg.leg}</td>
-                                  <td className="py-2.5 px-3">
-                                    <span className="font-bold text-gray-800">{leg.from_district === leg.to_district ? leg.to_district : `${leg.from_district} → ${leg.to_district}`}</span>
-                                    <span className="text-[10px] text-gray-400 block">{leg.from || "Start"} → {leg.to || "End"}</span>
-                                  </td>
-                                  <td className="py-2.5 px-3">
-                                    <span className="text-[9px] font-bold uppercase bg-blue-50 text-blue-700 px-1.5 py-0.5 rounded border border-blue-100">{leg.mode}</span>
-                                    {leg.sub_mode && <span className="text-[9px] font-bold uppercase bg-purple-50 text-purple-700 px-1.5 py-0.5 rounded border border-purple-100 ml-1">+{leg.sub_mode}</span>}
-                                  </td>
-                                  <td className="py-2.5 px-3 text-right font-mono font-semibold text-gray-600">{leg.km || 0} KM</td>
-                                  <td className="py-2.5 px-3 text-right font-mono font-semibold">₹{daCost.toLocaleString()}</td>
-                                  <td className="py-2.5 px-3 text-right font-mono font-semibold">₹{hotelCost.toLocaleString()}</td>
-                                  <td className="py-2.5 px-3">
-                                    <span className="font-mono font-bold">₹{otherCost.toLocaleString()}</span>
-                                    {leg.oth_desc && <span className="text-[9px] text-gray-400 block truncate max-w-[100px]" title={leg.oth_desc}>{leg.oth_desc}</span>}
-                                  </td>
-                                  <td className="py-2.5 px-3 text-[10px] text-gray-500">
-                                    <span>W:{leg.ws_assigned||0}</span> <span className="text-green-600">D:{leg.ws_closed||0}</span> <span>P:{leg.ws_pms||0}</span> <span>A:{leg.ws_asset||0}</span>
-                                  </td>
-                                  <td className="py-2.5 px-3 text-right font-bold font-mono text-gray-900">₹{legTotal.toLocaleString()}</td>
-                                </tr>
+                                <React.Fragment key={idx}>
+                                  <tr className="hover:bg-gray-50 transition-colors">
+                                    <td className="py-2.5 px-3 text-center font-bold text-gray-400">{leg.leg}</td>
+                                    <td className="py-2.5 px-3">
+                                      <span className="font-bold text-gray-800">{leg.from_district === leg.to_district ? leg.to_district : `${leg.from_district} → ${leg.to_district}`}</span>
+                                      <span className="text-[10px] text-gray-400 block">{leg.from || "Start"} → {leg.to || "End"}</span>
+                                    </td>
+                                    <td className="py-2.5 px-3">
+                                      <span className="text-[9px] font-bold uppercase bg-blue-50 text-blue-700 px-1.5 py-0.5 rounded border border-blue-100">{leg.mode}</span>
+                                      {leg.sub_mode && <span className="text-[9px] font-bold uppercase bg-purple-50 text-purple-700 px-1.5 py-0.5 rounded border border-purple-100 ml-1">+{leg.sub_mode}</span>}
+                                    </td>
+                                    <td className="py-2.5 px-3 text-right font-mono font-semibold text-gray-600">{leg.km || 0} KM</td>
+                                    <td className="py-2.5 px-3 text-right font-mono font-semibold">₹{daCost.toLocaleString()}</td>
+                                    <td className="py-2.5 px-3 text-right font-mono font-semibold">₹{hotelCost.toLocaleString()}</td>
+                                    <td className="py-2.5 px-3">
+                                      <span className="font-mono font-bold">₹{otherCost.toLocaleString()}</span>
+                                      {leg.oth_desc && <span className="text-[9px] text-gray-400 block truncate max-w-[100px]" title={leg.oth_desc}>{leg.oth_desc}</span>}
+                                    </td>
+                                    <td className="py-2.5 px-3 text-[10px] text-gray-500">
+                                      <span>W:{leg.ws_assigned||0}</span> <span className="text-green-600">D:{leg.ws_closed||0}</span> <span>P:{leg.ws_pms||0}</span> <span>A:{leg.ws_asset||0}</span>
+                                    </td>
+                                    <td className="py-2.5 px-3 text-right font-bold font-mono text-gray-900">₹{legTotal.toLocaleString()}</td>
+                                  </tr>
+                                  
+                                  {hasActivities && (
+                                    <tr className="bg-slate-50/50">
+                                      <td colSpan={9} className="py-2.5 px-4 border-t border-gray-150">
+                                        <div className="flex flex-col gap-2.5">
+                                          <div className="flex flex-wrap gap-2">
+                                            <span className="text-[9px] font-bold text-gray-500 uppercase mr-2 mt-0.5">Activities:</span>
+                                            {selectedActs.map((act: string, actIdx: number) => (
+                                              <span key={actIdx} className="px-1.5 py-0.5 rounded bg-gray-100 border border-gray-200 text-[8px] font-bold text-gray-700 uppercase">
+                                                {act}
+                                              </span>
+                                            ))}
+                                          </div>
+
+                                          {/* Sub-table for Calls */}
+                                          {selectedActs.includes("Calls") && callsList.length > 0 && (
+                                            <div className="border border-blue-100 rounded overflow-hidden bg-white max-w-3xl">
+                                              <div className="px-2 py-1 bg-blue-50/50 border-b border-blue-100 text-[9px] font-bold text-blue-700 uppercase">Support Calls Logs</div>
+                                              <table className="min-w-full divide-y divide-gray-100 text-[10px]">
+                                                <thead className="bg-gray-50 text-[8px] text-gray-400 font-bold uppercase">
+                                                  <tr>
+                                                    <th className="py-1 px-2 text-left">Barcode</th>
+                                                    <th className="py-1 px-2 text-left">Type</th>
+                                                    <th className="py-1 px-2 text-left">Status</th>
+                                                    <th className="py-1 px-2 text-left">Asset / Equipment Details</th>
+                                                  </tr>
+                                                </thead>
+                                                <tbody className="divide-y divide-gray-100">
+                                                  {callsList.map((c: any, cIdx: number) => (
+                                                    <tr key={cIdx}>
+                                                      <td className="py-1 px-2 font-mono font-bold text-gray-700">{c.barcode}</td>
+                                                      <td className="py-1 px-2 text-gray-600">{c.type || "Support Call"}</td>
+                                                      <td className="py-1 px-2">
+                                                        <span className="px-1.5 py-0.5 rounded font-extrabold text-[7px] uppercase bg-blue-50 text-blue-700 border border-blue-100">
+                                                          {c.status || "Attend"}
+                                                        </span>
+                                                      </td>
+                                                      <td className="py-1 px-2 text-gray-500">
+                                                        {c.asset_details ? (
+                                                          <span>{c.asset_details.equipment_name} ({c.asset_details.model_name}) @ {c.asset_details.hospital_name}</span>
+                                                        ) : "—"}
+                                                      </td>
+                                                    </tr>
+                                                  ))}
+                                                </tbody>
+                                              </table>
+                                            </div>
+                                          )}
+
+                                          {/* Sub-table for PMS */}
+                                          {selectedActs.includes("PMS") && pmsList.length > 0 && (
+                                            <div className="border border-amber-100 rounded overflow-hidden bg-white max-w-3xl">
+                                              <div className="px-2 py-1 bg-amber-50/50 border-b border-amber-100 text-[9px] font-bold text-amber-700 uppercase">PMS Service Logs</div>
+                                              <table className="min-w-full divide-y divide-gray-100 text-[10px]">
+                                                <thead className="bg-gray-50 text-[8px] text-gray-400 font-bold uppercase">
+                                                  <tr>
+                                                    <th className="py-1 px-2 text-left">Barcode</th>
+                                                    <th className="py-1 px-2 text-left">Frequency</th>
+                                                    <th className="py-1 px-2 text-left">Asset / Equipment Details</th>
+                                                  </tr>
+                                                </thead>
+                                                <tbody className="divide-y divide-gray-100">
+                                                  {pmsList.map((p: any, pIdx: number) => (
+                                                    <tr key={pIdx}>
+                                                      <td className="py-1 px-2 font-mono font-bold text-gray-700">{p.barcode}</td>
+                                                      <td className="py-1 px-2 text-gray-600">{p.frequency || "3 month"}</td>
+                                                      <td className="py-1 px-2 text-gray-500">
+                                                        {p.asset_details ? (
+                                                          <span>{p.asset_details.equipment_name} ({p.asset_details.model_name}) @ {p.asset_details.hospital_name}</span>
+                                                        ) : "—"}
+                                                      </td>
+                                                    </tr>
+                                                  ))}
+                                                </tbody>
+                                              </table>
+                                            </div>
+                                          )}
+
+                                          {/* Sub-table for Asset Tagging */}
+                                          {selectedActs.includes("Asset Tagging") && assetsList.length > 0 && (
+                                            <div className="border border-emerald-100 rounded overflow-hidden bg-white max-w-3xl">
+                                              <div className="px-2 py-1 bg-emerald-50/50 border-b border-emerald-100 text-[9px] font-bold text-emerald-700 uppercase">Asset Tagging Records</div>
+                                              <table className="min-w-full divide-y divide-gray-100 text-[10px]">
+                                                <thead className="bg-gray-50 text-[8px] text-gray-400 font-bold uppercase">
+                                                  <tr>
+                                                    <th className="py-1 px-2 text-left">Equipment Name</th>
+                                                    <th className="py-1 px-2 text-center w-20">Quantity</th>
+                                                    {(() => {
+                                                      const isEngineer = (user.designation || "").toLowerCase().trim() === "engineer" || 
+                                                                         (user.role || "").toLowerCase().trim() === "engineer";
+                                                      return !isEngineer ? (
+                                                        <>
+                                                          <th className="py-1 px-2 text-right w-28">Tender Rate</th>
+                                                          <th className="py-1 px-2 text-right w-28">Total Cost</th>
+                                                        </>
+                                                      ) : null;
+                                                    })()}
+                                                  </tr>
+                                                </thead>
+                                                <tbody className="divide-y divide-gray-100">
+                                                  {assetsList.map((a: any, aIdx: number) => {
+                                                    const selectedEq = assetValueMaster.find(eq => eq.equipment_name === a.equipment_name);
+                                                    const costPerUnit = selectedEq ? (selectedEq.rmsc_tender_cost || 0) : 0;
+                                                    const qty = parseInt(a.quantity || "0") || 0;
+                                                    const totalCost = qty * costPerUnit;
+                                                    
+                                                    const isEngineer = (user.designation || "").toLowerCase().trim() === "engineer" || 
+                                                                       (user.role || "").toLowerCase().trim() === "engineer";
+                                                                       
+                                                    return (
+                                                      <tr key={aIdx}>
+                                                        <td className="py-1 px-2 font-semibold text-gray-700">{a.equipment_name}</td>
+                                                        <td className="py-1 px-2 text-center text-gray-600">{qty}</td>
+                                                        {!isEngineer && (
+                                                          <>
+                                                            <td className="py-1 px-2 text-right text-gray-500">₹{costPerUnit.toLocaleString()}</td>
+                                                            <td className="py-1 px-2 text-right font-bold text-emerald-700">₹{totalCost.toLocaleString()}</td>
+                                                          </>
+                                                        )}
+                                                      </tr>
+                                                    );
+                                                  })}
+                                                </tbody>
+                                              </table>
+                                            </div>
+                                          )}
+
+                                          {/* Quantities for Mobilise, Calibration or Other */}
+                                          <div className="flex flex-wrap gap-4 text-[10px] text-gray-600 bg-white p-2 rounded border border-gray-100 max-w-3xl">
+                                            {selectedActs.includes("Mobilise Asset Update") && (
+                                              <div>
+                                                <span className="font-bold text-gray-400 uppercase text-[8px] block">Mobilise Qty</span>
+                                                <span className="font-bold text-indigo-700">{mobiliseCount} units</span>
+                                              </div>
+                                            )}
+                                            {selectedActs.includes("Calibration") && (
+                                              <div>
+                                                <span className="font-bold text-gray-400 uppercase text-[8px] block">Calibration Qty</span>
+                                                <span className="font-bold text-purple-700">{calibrationCount} units</span>
+                                              </div>
+                                            )}
+                                            {selectedActs.includes("Other") && activityOtherDesc && (
+                                              <div className="flex-1">
+                                                <span className="font-bold text-gray-400 uppercase text-[8px] block">Other Activity Description</span>
+                                                <span className="italic text-gray-700">{activityOtherDesc}</span>
+                                              </div>
+                                            )}
+                                          </div>
+
+                                        </div>
+                                      </td>
+                                    </tr>
+                                  )}
+                                </React.Fragment>
                               );
                             })}
                           </tbody>
