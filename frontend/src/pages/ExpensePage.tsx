@@ -14,7 +14,8 @@ import {
   FileText,
   DollarSign,
   Navigation,
-  X
+  X,
+  ChevronDown
 } from "lucide-react";
 
 interface ItineraryLeg {
@@ -228,6 +229,23 @@ export default function ExpensePage() {
     return new Date().toISOString().slice(0, 7);
   });
 
+  const [activeDropdown, setActiveDropdown] = useState<{ leg: number; field: "from" | "to" } | null>(null);
+
+  const getFacilitiesForDistrict = (districtName: string): string[] => {
+    if (!districtName || !facilities) return [];
+    let cleanName = districtName.trim().toLowerCase();
+    
+    // Normalize common naming mismatches
+    if (cleanName === "ganganar") {
+      cleanName = "ganganagar";
+    }
+    
+    const matchingKey = Object.keys(facilities).find(
+      k => k.trim().toLowerCase() === cleanName
+    );
+    return matchingKey ? facilities[matchingKey] : [];
+  };
+
   // UI status flags
   const [initLoading, setInitLoading] = useState(() => {
     const currentUserId = (() => { try { const u = JSON.parse(localStorage.getItem("user") || "{}"); return u.user_id || "Admin"; } catch(e) { return "Admin"; } })().trim();
@@ -413,20 +431,43 @@ export default function ExpensePage() {
 
       // Populate initial leg default values
       setItineraries(prev => {
-        return prev.map(leg => {
+        const hDist = (normalizedUser.district || "Jodhpur").trim();
+        const updated = prev.map(leg => {
+          let updatedLeg = { ...leg };
           if (leg.travel_type === "In-District") {
-            return {
-              ...leg,
-              district_from: normalizedUser.district || "Jodhpur",
-              district: normalizedUser.district || "Jodhpur"
-            };
+            updatedLeg.district_from = hDist === "All" ? "Jodhpur" : hDist;
+            updatedLeg.district = hDist === "All" ? "Jodhpur" : hDist;
           } else {
-            return {
-              ...leg,
-              district_from: leg.district_from || normalizedUser.district || "Jodhpur"
-            };
+            updatedLeg.district_from = leg.district_from || (hDist === "All" ? "Jodhpur" : hDist);
           }
+          return updatedLeg;
         });
+
+        // Calculate DA for Leg 1
+        const leg1 = updated.find(l => l.leg === 1);
+        if (leg1) {
+          const hotelAmt = parseFloat(leg1.hotel) || 0;
+          const hasOutDistrictLeg = updated.some(l => {
+            if (l.travel_type === "Outdoor") return true;
+            if (l.district && l.district.trim() !== hDist) return true;
+            return false;
+          });
+
+          const allowanceObj = data.allowance || {};
+          if (hotelAmt > 0) {
+            leg1.da = (allowanceObj.daily_hotel || 350).toString();
+          } else if (hasOutDistrictLeg) {
+            leg1.da = (allowanceObj.daily_out_district || 400).toString();
+          } else {
+            const hasAnyDistrict = updated.some(l => l.district);
+            if (!hasAnyDistrict) {
+              leg1.da = "0";
+            } else {
+              leg1.da = (allowanceObj.daily_in_district || 250).toString();
+            }
+          }
+        }
+        return updated;
       });
     };
 
@@ -482,8 +523,8 @@ export default function ExpensePage() {
   };
 
   const addItinerary = () => {
-    if (itineraries.length >= 6) {
-      toast.error("You can add a maximum of 6 visits.");
+    if (itineraries.length >= 10) {
+      toast.error("You can add a maximum of 10 visits.");
       return;
     }
     const nextLeg = itineraries.length + 1;
@@ -575,14 +616,16 @@ export default function ExpensePage() {
       if (leg1) {
         if (field !== "da") {
           const hotelAmt = parseFloat(leg1.hotel) || 0;
-          if (hasOutDistrictLeg) {
-            leg1.da = (hotelAmt > 0 ? (allowance.daily_out_state || 600) : (allowance.daily_out_district || 400)).toString();
+          if (hotelAmt > 0) {
+            leg1.da = (allowance.daily_hotel || 350).toString();
+          } else if (hasOutDistrictLeg) {
+            leg1.da = (allowance.daily_out_district || 400).toString();
           } else {
             const hasAnyDistrict = updatedLegs.some(l => l.district);
             if (!hasAnyDistrict) {
               leg1.da = "0";
             } else {
-              leg1.da = (hotelAmt > 0 ? (allowance.daily_hotel || 350) : (allowance.daily_in_district || 250)).toString();
+              leg1.da = (allowance.daily_in_district || 250).toString();
             }
           }
         }
@@ -1271,14 +1314,14 @@ export default function ExpensePage() {
             <div className="space-y-4">
               <div className="flex items-center justify-between">
                 <h3 className="text-xs font-bold text-gray-650 uppercase tracking-wider">Travel & Visit Legs</h3>
-                <span className="text-[10px] text-gray-400 font-bold uppercase">(Legs: {itineraries.length} / 6)</span>
+                <span className="text-[10px] text-gray-400 font-bold uppercase">(Legs: {itineraries.length} / 10)</span>
               </div>
 
               {itineraries.map((leg, index) => {
                 const legNum = index + 1;
                 const isFirst = legNum === 1;
                 const rawDistOpts = Object.keys(facilities).length > 0 ? Object.keys(facilities) : [
-                  "Ajmer", "Beawer", "Bhilwara", "Nagaur", "Tonk", "Bikaner", "Churu", "Ganganar", "Hanumangarh", 
+                  "Ajmer", "Beawer", "Bhilwara", "Nagaur", "Tonk", "Bikaner", "Churu", "Ganganagar", "Hanumangarh", 
                   "Barmer", "Balotra", "Jaisalmer", "Jalore", "Jodhpur", "Pali", "Phalodi", "Sirohi", 
                   "Banswara", "Chittorgarh", "Dungarpur", "Rajsamand", "Pratapgarh", "Udaipur"
                 ];
@@ -1358,11 +1401,12 @@ export default function ExpensePage() {
                                 <select
                                   value={leg.district_from}
                                   required
+                                  disabled={leg.travel_type === "In-District"}
                                   onChange={(e) => {
                                     handleItineraryChange(leg.leg, "district_from", e.target.value);
                                     handleItineraryChange(leg.leg, "from", ""); // reset location on district change
                                   }}
-                                  className="input-lte font-semibold pr-8 border-gray-305 shadow-inner"
+                                  className="input-lte font-semibold pr-8 border-gray-305 shadow-inner disabled:bg-gray-100 disabled:text-gray-500"
                                 >
                                   <option value="">Select District</option>
                                   {distOpts.map(d => <option key={d} value={d}>{d}</option>)}
@@ -1371,43 +1415,54 @@ export default function ExpensePage() {
                             </div>
 
                             <div>
-                              <div className="flex justify-between items-center mb-1">
-                                <label className="label-lte mb-0">Facility / Location Name <span className="text-red-500">*</span></label>
-                                {leg.district_from && (facilities[leg.district_from] || []).length > 0 && (
-                                  <button
-                                    type="button"
-                                    onClick={() => {
-                                      handleItineraryChange(leg.leg, "from_custom", !leg.from_custom);
-                                      handleItineraryChange(leg.leg, "from", "");
-                                    }}
-                                    className="text-[9px] font-bold text-blue-600 hover:text-blue-800 border-0 bg-transparent cursor-pointer uppercase tracking-wider"
-                                  >
-                                    {leg.from_custom ? "📋 Select from list" : "✍️ Type Custom"}
-                                  </button>
-                                )}
-                              </div>
-                              {leg.district_from && (facilities[leg.district_from] || []).length > 0 && !leg.from_custom ? (
-                                <select
-                                  required
-                                  value={leg.from}
-                                  onChange={(e) => handleItineraryChange(leg.leg, "from", e.target.value)}
-                                  className="input-lte font-semibold border-gray-305"
-                                >
-                                  <option value="">-- Select Hospital / Location --</option>
-                                  {(facilities[leg.district_from] || []).map((f: string, fIdx: number) => (
-                                    <option key={fIdx} value={f}>{f}</option>
-                                  ))}
-                                </select>
-                              ) : (
+                              <label className="label-lte mb-1.5">Facility / Location Name <span className="text-red-500">*</span></label>
+                              <div className="relative">
                                 <input
                                   type="text"
                                   required
                                   value={leg.from}
-                                  placeholder="Enter facility or location..."
+                                  placeholder="Enter or select facility..."
+                                  onFocus={() => setActiveDropdown({ leg: leg.leg, field: "from" })}
+                                  onBlur={() => {
+                                    setTimeout(() => {
+                                      setActiveDropdown(prev => (prev?.leg === leg.leg && prev?.field === "from" ? null : prev));
+                                    }, 200);
+                                  }}
                                   onChange={(e) => handleItineraryChange(leg.leg, "from", e.target.value)}
-                                  className="input-lte font-semibold border-gray-305"
+                                  className="input-lte font-semibold border-gray-305 pr-8"
                                 />
-                              )}
+                                <div className="absolute right-2.5 top-1/2 -translate-y-1/2 pointer-events-none text-gray-400">
+                                  <ChevronDown className="w-4 h-4" />
+                                </div>
+                                {activeDropdown?.leg === leg.leg && activeDropdown?.field === "from" && (
+                                  <div className="absolute top-full left-0 right-0 z-50 mt-1 bg-white border border-gray-200 rounded-md shadow-lg max-h-[144px] overflow-y-auto divide-y divide-gray-100">
+                                    {(() => {
+                                      const list = getFacilitiesForDistrict(leg.district_from).filter(f =>
+                                        f.toLowerCase().includes((leg.from || "").toLowerCase())
+                                      );
+                                      if (list.length === 0) {
+                                        return (
+                                          <div className="p-2.5 text-xs text-gray-400 italic bg-gray-50">
+                                            No matching facilities found
+                                          </div>
+                                        );
+                                      }
+                                      return list.map((f: string, fIdx: number) => (
+                                        <div
+                                          key={fIdx}
+                                          onMouseDown={() => {
+                                            handleItineraryChange(leg.leg, "from", f);
+                                            setActiveDropdown(null);
+                                          }}
+                                          className="p-2.5 text-xs font-semibold text-gray-700 hover:bg-blue-50 hover:text-blue-700 transition-colors cursor-pointer"
+                                        >
+                                          {f}
+                                        </div>
+                                      ));
+                                    })()}
+                                  </div>
+                                )}
+                              </div>
                             </div>
                           </div>
                         </div>
@@ -1425,11 +1480,12 @@ export default function ExpensePage() {
                                 <select
                                   value={leg.district}
                                   required
+                                  disabled={leg.travel_type === "In-District"}
                                   onChange={(e) => {
                                     handleItineraryChange(leg.leg, "district", e.target.value);
                                     handleItineraryChange(leg.leg, "to", ""); // reset location on district change
                                   }}
-                                  className="input-lte font-semibold pr-8 border-gray-305 shadow-inner"
+                                  className="input-lte font-semibold pr-8 border-gray-305 shadow-inner disabled:bg-gray-100 disabled:text-gray-500"
                                 >
                                   <option value="">Select District</option>
                                   {distOpts.map(d => <option key={d} value={d}>{d}</option>)}
@@ -1438,43 +1494,54 @@ export default function ExpensePage() {
                             </div>
 
                             <div>
-                              <div className="flex justify-between items-center mb-1">
-                                <label className="label-lte mb-0">Facility / Location Name <span className="text-red-500">*</span></label>
-                                {leg.district && (facilities[leg.district] || []).length > 0 && (
-                                  <button
-                                    type="button"
-                                    onClick={() => {
-                                      handleItineraryChange(leg.leg, "to_custom", !leg.to_custom);
-                                      handleItineraryChange(leg.leg, "to", "");
-                                    }}
-                                    className="text-[9px] font-bold text-blue-600 hover:text-blue-800 border-0 bg-transparent cursor-pointer uppercase tracking-wider"
-                                  >
-                                    {leg.to_custom ? "📋 Select from list" : "✍️ Type Custom"}
-                                  </button>
-                                )}
-                              </div>
-                              {leg.district && (facilities[leg.district] || []).length > 0 && !leg.to_custom ? (
-                                <select
-                                  required
-                                  value={leg.to}
-                                  onChange={(e) => handleItineraryChange(leg.leg, "to", e.target.value)}
-                                  className="input-lte font-semibold border-gray-305"
-                                >
-                                  <option value="">-- Select Hospital / Location --</option>
-                                  {(facilities[leg.district] || []).map((f: string, fIdx: number) => (
-                                    <option key={fIdx} value={f}>{f}</option>
-                                  ))}
-                                </select>
-                              ) : (
+                              <label className="label-lte mb-1.5">Facility / Location Name <span className="text-red-500">*</span></label>
+                              <div className="relative">
                                 <input
                                   type="text"
                                   required
                                   value={leg.to}
-                                  placeholder="Enter facility or location..."
+                                  placeholder="Enter or select facility..."
+                                  onFocus={() => setActiveDropdown({ leg: leg.leg, field: "to" })}
+                                  onBlur={() => {
+                                    setTimeout(() => {
+                                      setActiveDropdown(prev => (prev?.leg === leg.leg && prev?.field === "to" ? null : prev));
+                                    }, 200);
+                                  }}
                                   onChange={(e) => handleItineraryChange(leg.leg, "to", e.target.value)}
-                                  className="input-lte font-semibold border-gray-305"
+                                  className="input-lte font-semibold border-gray-305 pr-8"
                                 />
-                              )}
+                                <div className="absolute right-2.5 top-1/2 -translate-y-1/2 pointer-events-none text-gray-400">
+                                  <ChevronDown className="w-4 h-4" />
+                                </div>
+                                {activeDropdown?.leg === leg.leg && activeDropdown?.field === "to" && (
+                                  <div className="absolute top-full left-0 right-0 z-50 mt-1 bg-white border border-gray-200 rounded-md shadow-lg max-h-[144px] overflow-y-auto divide-y divide-gray-100">
+                                    {(() => {
+                                      const list = getFacilitiesForDistrict(leg.district).filter(f =>
+                                        f.toLowerCase().includes((leg.to || "").toLowerCase())
+                                      );
+                                      if (list.length === 0) {
+                                        return (
+                                          <div className="p-2.5 text-xs text-gray-400 italic bg-gray-50">
+                                            No matching facilities found
+                                          </div>
+                                        );
+                                      }
+                                      return list.map((f: string, fIdx: number) => (
+                                        <div
+                                          key={fIdx}
+                                          onMouseDown={() => {
+                                            handleItineraryChange(leg.leg, "to", f);
+                                            setActiveDropdown(null);
+                                          }}
+                                          className="p-2.5 text-xs font-semibold text-gray-700 hover:bg-blue-50 hover:text-blue-700 transition-colors cursor-pointer"
+                                        >
+                                          {f}
+                                        </div>
+                                      ));
+                                    })()}
+                                  </div>
+                                )}
+                              </div>
                             </div>
                           </div>
                         </div>

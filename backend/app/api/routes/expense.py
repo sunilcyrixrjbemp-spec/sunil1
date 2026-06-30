@@ -235,12 +235,18 @@ async def init_expense(
     if not allowance_dict:
         allowance = db.query(AllowanceMaster).filter(AllowanceMaster.grade == user.grade).first()
         if allowance:
+            hotel_limit = max(
+                allowance.hotel_in_state_s or 0,
+                allowance.hotel_in_state_d or 0,
+                allowance.hotel_out_state_s or 0,
+                allowance.hotel_out_state_d or 0
+            )
             allowance_dict = {
                 "daily_in_district": allowance.daily_in_district,
                 "daily_out_district": allowance.daily_out_district,
                 "daily_hotel": allowance.daily_hotel,
                 "daily_out_state": allowance.daily_out_state,
-                "hotel_in_state_s": allowance.hotel_in_state_s,
+                "hotel_in_state_s": hotel_limit if hotel_limit > 0 else 1500,
                 "max_km_per_month": allowance.max_km_per_month,
                 "rate_bike": allowance.rate_per_km if allowance.vehicle_type == "Bike" else 4.5,
                 "rate_car": allowance.rate_per_km if allowance.vehicle_type == "Car" else 9.0,

@@ -1,7 +1,7 @@
 export const ZONE_DISTRICTS: Record<string, string[]> = {
   "All": ["All"],
   "Ajmer": ["Ajmer", "Beawer", "Bhilwara", "Nagaur", "Tonk"],
-  "Bikaner": ["Bikaner", "Churu", "Ganganar", "Hanumangarh"],
+  "Bikaner": ["Bikaner", "Churu", "Ganganagar", "Hanumangarh"],
   "Jodhpur": ["Barmer", "Balotra", "Jaisalmer", "Jalore", "Jodhpur", "Pali", "Phalodi", "Sirohi"],
   "Udaipur": ["Banswara", "Chittorgarh", "Dungarpur", "Rajsamand", "Pratapgarh", "Udaipur"]
 };

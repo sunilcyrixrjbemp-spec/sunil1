@@ -160,7 +160,7 @@ export default function AnalysisPage() {
     const engineers = new Set<string>();
     
     monthlyList.forEach(e => {
-      const dist = e.district || e.submitter_district || e.home_district || "Ganganar";
+      const dist = e.district || e.submitter_district || e.home_district || "Ganganagar";
       const name = e.submitter_name || "Self";
       districts.add(dist);
       engineers.add(name);
@@ -206,7 +206,7 @@ export default function AnalysisPage() {
     if (viewMode === "team") {
       if (selectedDistrict !== "all") {
         list = list.filter(e => {
-          const dist = e.district || e.submitter_district || e.home_district || "Ganganar";
+          const dist = e.district || e.submitter_district || e.home_district || "Ganganagar";
           return dist.toLowerCase() === selectedDistrict.toLowerCase();
         });
       }
@@ -264,9 +264,9 @@ export default function AnalysisPage() {
     const map: Record<string, number> = {};
     activeExpenses.forEach(e => {
       // Robust mapping: check e.district first (live backend serialized field), then submitter_district, home_district, or logged-in user district
-      let dist = e.district || e.submitter_district || e.home_district || user?.district || "Ganganar";
+      let dist = e.district || e.submitter_district || e.home_district || user?.district || "Ganganagar";
       if (dist.toLowerCase() === "all" || !dist) {
-        dist = "Ganganar";
+        dist = "Ganganagar";
       }
       map[dist] = (map[dist] || 0) + (e.amount || 0);
     });
