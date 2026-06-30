@@ -210,34 +210,53 @@ export default function ConsolidatedReportPage() {
       </div>
 
       {/* Info Boxes */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4">
-        <div className="bg-white border-t-3 border-blue-500 shadow-sm rounded-sm p-4.5 flex items-center justify-between border border-gray-200 hover:-translate-y-1 hover:shadow-md transition-all duration-300">
-          <div>
-            <span className="text-[10px] text-gray-400 font-bold uppercase tracking-wider block">Total Claims</span>
-            <span className="text-2xl font-bold text-gray-800 font-mono tracking-tight">{data.length}</span>
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+        {/* Card 1: Total Claims */}
+        <div className="info-box-lte animate-fadeIn">
+          <div className="info-box-icon bg-[#007bff]">
+            <Users className="w-6 h-6" />
           </div>
-          <div className="text-blue-600 bg-blue-50/80 p-3 rounded-sm"><Users className="w-6 h-6" /></div>
+          <div className="info-box-content">
+            <span className="text-[9px] font-black uppercase tracking-wider text-gray-400 block">Total Claims</span>
+            <span className="text-base font-extrabold text-gray-800 font-mono block mt-0.5">{data.length}</span>
+            <span className="text-[9px] text-[#007bff] font-bold uppercase block mt-1">Engineers Listed</span>
+          </div>
         </div>
-        <div className="bg-white border-t-3 border-yellow-500 shadow-sm rounded-sm p-4.5 flex items-center justify-between border border-gray-200 hover:-translate-y-1 hover:shadow-md transition-all duration-300">
-          <div>
-            <span className="text-[10px] text-gray-400 font-bold uppercase tracking-wider block">Claimed Amount</span>
-            <span className="text-2xl font-bold text-gray-800 font-mono tracking-tight">{fmt(totalClaimed)}</span>
+
+        {/* Card 2: Claimed Amount */}
+        <div className="info-box-lte animate-fadeIn">
+          <div className="info-box-icon bg-[#ffc107]">
+            <IndianRupee className="w-6 h-6 text-white" />
           </div>
-          <div className="text-yellow-600 bg-yellow-50/80 p-3 rounded-sm"><IndianRupee className="w-6 h-6" /></div>
+          <div className="info-box-content">
+            <span className="text-[9px] font-black uppercase tracking-wider text-gray-400 block">Claimed Amount</span>
+            <span className="text-base font-extrabold text-gray-800 font-mono block mt-0.5">{fmt(totalClaimed)}</span>
+            <span className="text-[9px] text-amber-600 font-bold uppercase block mt-1">Before Deductions</span>
+          </div>
         </div>
-        <div className="bg-white border-t-3 border-red-500 shadow-sm rounded-sm p-4.5 flex items-center justify-between border border-gray-200 hover:-translate-y-1 hover:shadow-md transition-all duration-300">
-          <div>
-            <span className="text-[10px] text-gray-400 font-bold uppercase tracking-wider block">Total Advances</span>
-            <span className="text-2xl font-bold text-gray-800 font-mono tracking-tight">{fmt(totalAdvances)}</span>
+
+        {/* Card 3: Total Advances */}
+        <div className="info-box-lte animate-fadeIn">
+          <div className="info-box-icon bg-[#dc3545]">
+            <ShieldAlert className="w-6 h-6" />
           </div>
-          <div className="text-red-600 bg-red-50/80 p-3 rounded-sm"><ShieldAlert className="w-6 h-6" /></div>
+          <div className="info-box-content">
+            <span className="text-[9px] font-black uppercase tracking-wider text-gray-400 block">Total Advances</span>
+            <span className="text-base font-extrabold text-[#dc3545] font-mono block mt-0.5">{fmt(totalAdvances)}</span>
+            <span className="text-[9px] text-[#dc3545] font-bold uppercase block mt-1">Paid in Advance</span>
+          </div>
         </div>
-        <div className="bg-white border-t-3 border-green-500 shadow-sm rounded-sm p-4.5 flex items-center justify-between border border-gray-200 hover:-translate-y-1 hover:shadow-md transition-all duration-300">
-          <div>
-            <span className="text-[10px] text-gray-400 font-bold uppercase tracking-wider block">Net Payable</span>
-            <span className="text-2xl font-bold text-gray-800 font-mono tracking-tight">{fmt(totalNet)}</span>
+
+        {/* Card 4: Net Payable */}
+        <div className="info-box-lte animate-fadeIn">
+          <div className="info-box-icon bg-[#28a745]">
+            <CheckCircle2 className="w-6 h-6" />
           </div>
-          <div className="text-green-600 bg-green-50/80 p-3 rounded-sm"><CheckCircle2 className="w-6 h-6" /></div>
+          <div className="info-box-content">
+            <span className="text-[9px] font-black uppercase tracking-wider text-gray-400 block">Net Payable</span>
+            <span className="text-base font-extrabold text-[#28a745] font-mono block mt-0.5">{fmt(totalNet)}</span>
+            <span className="text-[9px] text-[#28a745] font-bold uppercase block mt-1">Net Reimbursement</span>
+          </div>
         </div>
       </div>
 

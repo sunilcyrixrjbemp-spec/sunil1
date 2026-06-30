@@ -384,7 +384,7 @@ export default function DashboardLayout() {
       </aside>
 
       {/* MAIN CONTAINER WORKSPACE */}
-      <div className="flex-1 flex flex-col min-h-screen">
+      <div className="flex-1 flex flex-col min-h-screen min-w-0">
         
         {/* TOP NAVBAR - ADMINLTE WHITE NAVBAR */}
         <header className="h-14 bg-white border-b border-gray-200 flex items-center justify-between px-4 sticky top-0 z-40 shrink-0 shadow-sm">
