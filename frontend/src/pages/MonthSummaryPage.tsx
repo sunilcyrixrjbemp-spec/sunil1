@@ -4,7 +4,7 @@ import { expenseService } from "../services/expenseService";
 import api from "../services/api";
 import {
   Calendar, Download, RefreshCw, Users, CheckCircle,
-  IndianRupee, MapPin, Search, Filter, FileText, Loader2,
+  IndianRupee, MapPin, Search, Filter, FileText, Loader2, Printer,
 } from "lucide-react";
 
 // ─── Helpers ────────────────────────────────────────────────────────────────
@@ -435,6 +435,172 @@ export default function MonthSummaryPage() {
   const totalAmount = filtered.reduce((s, r) => s + (r.total_amount || 0), 0);
   const totalKM = filtered.reduce((s, r) => s + (r.total_km || 0), 0);
 
+  const [selectedKeys, setSelectedKeys] = useState<string[]>([]);
+
+  const handleSelectAll = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.checked) {
+      setSelectedKeys(filtered.map(r => `${r.user_id}-${r.month}-${r.year}`));
+    } else {
+      setSelectedKeys([]);
+    }
+  };
+
+  const handleSelectRow = (key: string, checked: boolean) => {
+    if (checked) {
+      setSelectedKeys(prev => [...prev, key]);
+    } else {
+      setSelectedKeys(prev => prev.filter(k => k !== key));
+    }
+  };
+
+  const handleBulkPrintCombined = async () => {
+    if (selectedKeys.length === 0) return;
+    const tid = toast.loading(`Preparing combined print sheet for ${selectedKeys.length} engineers…`);
+    try {
+      const advStr = window.prompt(`Enter Default Advance Amount (₹) for all (optional):`, "0");
+      if (advStr === null) { toast.dismiss(tid); return; }
+      const advance = parseFloat(advStr) || 0;
+
+      const promises = selectedKeys.map(async (key) => {
+        const row = data.find(r => `${r.user_id}-${r.month}-${r.year}` === key);
+        if (!row) return null;
+        try {
+          const res = await expenseService.getEngineerMonthClaims(row.user_id, row.month, row.year);
+          return { row, res };
+        } catch {
+          return null;
+        }
+      });
+
+      const fetched = (await Promise.all(promises)).filter(x => x !== null) as { row: any; res: any }[];
+      toast.dismiss(tid);
+
+      if (fetched.length === 0) {
+        toast.error("Failed to load claims for selected engineers");
+        return;
+      }
+
+      let combinedBody = "";
+      let combinedStyles = "";
+      let first = true;
+
+      for (const item of fetched) {
+        const user = item.res.user || item.row;
+        const claims = item.res.claims || [];
+        const attachments = item.res.attachments || [];
+        if (claims.length === 0) continue;
+
+        const html = buildExcelPrintHTML(user, claims, attachments, advance);
+        
+        const parser = new DOMParser();
+        const doc = parser.parseFromString(html, "text/html");
+        const bodyContent = doc.querySelector(".wrap")?.innerHTML || "";
+        const styleContent = doc.querySelector("style")?.innerHTML || "";
+        
+        if (first) {
+          combinedStyles = styleContent;
+          first = false;
+        }
+
+        combinedBody += `
+          <div class="wrap" style="page-break-after: always; min-height: 100vh; box-sizing: border-box; padding: 4mm;">
+            ${bodyContent}
+          </div>
+        `;
+      }
+
+      if (!combinedBody) {
+        toast.error("No valid claim data found to print");
+        return;
+      }
+
+      const combinedHTML = `<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Bulk Expense Reimbursement Sheet</title>
+  <style>
+    ${combinedStyles}
+    @media print {
+      .wrap {
+        page-break-after: always!important;
+        break-after: page!important;
+      }
+    }
+  </style>
+</head>
+<body>
+  ${combinedBody}
+</body>
+</html>`;
+
+      const win = window.open("", "_blank", "width=1400,height=900");
+      if (!win) { toast.error("Allow popups to print"); return; }
+      win.document.write(combinedHTML);
+      win.document.close();
+      win.onload = () => setTimeout(() => win.print(), 800);
+      toast.success(`Print preview loaded for ${fetched.length} claims`);
+    } catch (err) {
+      toast.dismiss(tid);
+      toast.error("Bulk print generation failed");
+    }
+  };
+
+  const handleBulkDownloadIndividual = async () => {
+    if (selectedKeys.length === 0) return;
+    const tid = toast.loading(`Downloading individual HTMLs for ${selectedKeys.length} engineers…`);
+    try {
+      const advStr = window.prompt(`Enter Default Advance Amount (₹) for all (optional):`, "0");
+      if (advStr === null) { toast.dismiss(tid); return; }
+      const advance = parseFloat(advStr) || 0;
+
+      const promises = selectedKeys.map(async (key) => {
+        const row = data.find(r => `${r.user_id}-${r.month}-${r.year}` === key);
+        if (!row) return null;
+        try {
+          const res = await expenseService.getEngineerMonthClaims(row.user_id, row.month, row.year);
+          return { row, res };
+        } catch {
+          return null;
+        }
+      });
+
+      const fetched = (await Promise.all(promises)).filter(x => x !== null) as { row: any; res: any }[];
+      toast.dismiss(tid);
+
+      if (fetched.length === 0) {
+        toast.error("Failed to load claims for selected engineers");
+        return;
+      }
+
+      fetched.forEach((item, index) => {
+        setTimeout(() => {
+          const user = item.res.user || item.row;
+          const claims = item.res.claims || [];
+          const attachments = item.res.attachments || [];
+          if (claims.length === 0) return;
+
+          const html = buildExcelPrintHTML(user, claims, attachments, advance);
+          const blob = new Blob([html], { type: "text/html" });
+          const url = URL.createObjectURL(blob);
+          const a = document.createElement("a");
+          a.href = url;
+          const safeName = (user.name || "Engineer").replace(/[^a-zA-Z0-9]/g, "_");
+          const safeMonth = (user.month || "Month").replace(/[^a-zA-Z0-9]/g, "_");
+          a.download = `${safeName}_${user.e_code || user.user_id}_${safeMonth}_${user.year}.html`;
+          document.body.appendChild(a);
+          a.click();
+          document.body.removeChild(a);
+          URL.revokeObjectURL(url);
+        }, index * 350);
+      });
+
+      toast.success(`Started downloading ${fetched.length} files successfully!`);
+    } catch (err) {
+      toast.dismiss(tid);
+      toast.error("Bulk download failed");
+    }
+  };
 
   return (
     <div className="space-y-4 animate-fadeIn font-sans pb-10">
@@ -564,11 +730,28 @@ export default function MonthSummaryPage() {
               <span className="text-blue-600 font-mono">({filtered.length} row(s))</span>
             </span>
           </div>
-          <div className="relative">
-            <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-gray-400" />
-            <input type="text" value={search} onChange={(e) => setSearch(e.target.value)}
-              placeholder="Quick search..."
-              className="pl-8 pr-2.5 py-1 border border-gray-300 rounded text-xs font-medium text-gray-700 focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 w-44" />
+          <div className="flex items-center gap-3">
+            {selectedKeys.length > 0 && (
+              <div className="flex items-center gap-2 bg-blue-50 border border-blue-200 px-3 py-1 rounded-sm animate-fadeIn">
+                <span className="text-[10px] font-bold text-blue-700 uppercase tracking-wider">
+                  {selectedKeys.length} Selected
+                </span>
+                <button onClick={handleBulkPrintCombined}
+                  className="flex items-center gap-1 px-2.5 py-1 rounded bg-blue-600 hover:bg-blue-700 text-white text-[10px] font-bold shadow-sm cursor-pointer transition-all">
+                  <Printer className="w-3 h-3" /> Print Combined
+                </button>
+                <button onClick={handleBulkDownloadIndividual}
+                  className="flex items-center gap-1 px-2.5 py-1 rounded bg-green-600 hover:bg-green-700 text-white text-[10px] font-bold shadow-sm cursor-pointer transition-all">
+                  <Download className="w-3 h-3" /> Download HTMLs
+                </button>
+              </div>
+            )}
+            <div className="relative">
+              <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-gray-400" />
+              <input type="text" value={search} onChange={(e) => setSearch(e.target.value)}
+                placeholder="Quick search..."
+                className="pl-8 pr-2.5 py-1 border border-gray-300 rounded text-xs font-medium text-gray-700 focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 w-44" />
+            </div>
           </div>
         </div>
 
@@ -588,6 +771,12 @@ export default function MonthSummaryPage() {
             <table className="w-full text-left table-auto min-w-[1050px] border-collapse">
               <thead>
                 <tr className="bg-gray-50 border-b border-gray-200 text-[10px] uppercase font-bold tracking-wider text-gray-600 font-sans">
+                  <th className="py-2.5 px-3 border-r border-gray-200 text-center w-10">
+                    <input type="checkbox"
+                      checked={filtered.length > 0 && selectedKeys.length === filtered.length}
+                      onChange={handleSelectAll}
+                      className="cursor-pointer rounded" />
+                  </th>
                   <th className="py-2.5 px-3 border-r border-gray-200">#</th>
                   <th className="py-2.5 px-3 border-r border-gray-200">Engineer Details</th>
                   <th className="py-2.5 px-3 border-r border-gray-200">E-Code</th>
@@ -610,6 +799,12 @@ export default function MonthSummaryPage() {
                   const isLoading = pdfLoadingId === key;
                   return (
                     <tr key={key} className="hover:bg-blue-50/20 transition-colors border-b border-gray-150">
+                      <td className="py-3 px-3 border-r border-gray-150 text-center w-10">
+                        <input type="checkbox"
+                          checked={selectedKeys.includes(key)}
+                          onChange={(e) => handleSelectRow(key, e.target.checked)}
+                          className="cursor-pointer rounded" />
+                      </td>
                       <td className="py-3 px-3 text-gray-400 font-mono font-bold border-r border-gray-150">{idx + 1}</td>
                       <td className="py-3 px-3 border-r border-gray-150 font-sans">
                         <div className="font-bold text-gray-800">{row.name}</div>
@@ -657,6 +852,7 @@ export default function MonthSummaryPage() {
               {filtered.length > 1 && (
                 <tfoot>
                   <tr className="bg-yellow-50/50 border-t-2 border-yellow-200 text-xs font-bold text-gray-800">
+                    <td className="border-r border-gray-150" />
                     <td colSpan={6} className="py-3 px-3 border-r border-gray-150 uppercase tracking-wider text-gray-600 font-sans">
                       Grand Total Summary
                     </td>
