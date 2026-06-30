@@ -207,9 +207,9 @@ def download_file_from_drive(file_id: str) -> tuple[bytes, str]:
     from app.config.settings import settings
     
     # 1. Try direct Service Account API first
-    service = get_drive_service()
-    if service:
-        try:
+    try:
+        service = get_drive_service()
+        if service:
             # Get metadata for MIME Type
             metadata = service.files().get(fileId=file_id, fields='mimeType').execute()
             mime_type = metadata.get('mimeType', 'application/octet-stream')
@@ -223,8 +223,8 @@ def download_file_from_drive(file_id: str) -> tuple[bytes, str]:
                 status, done = downloader.next_chunk()
             
             return file_stream.getvalue(), mime_type
-        except Exception as api_err:
-            logger.warning(f"GDrive: Direct API download failed for ID {file_id}: {str(api_err)}")
+    except Exception as api_err:
+        logger.warning(f"GDrive: Direct API download failed or client init failed for ID {file_id}. Falling back to GAS. Error: {str(api_err)}")
             
     # 2. Fallback to Google Apps Script Web App
     if settings.GAS_WEB_APP_URL:
@@ -248,9 +248,9 @@ def download_file_from_drive(file_id: str) -> tuple[bytes, str]:
                 raise Exception(f"GAS returned status code {response.status_code}")
         except Exception as gas_err:
             logger.error(f"GDrive: GAS Web App download failed: {str(gas_err)}")
-            raise Exception(f"GDrive download failed. Direct: Service client inactive. GAS: {str(gas_err)}")
+            raise Exception(f"GDrive download failed. Direct: Service client failed. GAS: {str(gas_err)}")
             
-    raise Exception("GDrive: Service client is not active and GAS_WEB_APP_URL is not configured.")
+    raise Exception("GDrive: Service client is not active/failed and GAS_WEB_APP_URL is not configured.")
 
 def delete_file_from_drive(file_id: str) -> bool:
     """Deletes a file from Google Drive (marking as trashed), prioritizing GAS, falling back to direct API."""

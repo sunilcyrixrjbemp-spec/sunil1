@@ -3969,11 +3969,19 @@ export default function ExpensePage() {
                 </button>
               </div>
             </div>
-            <img 
-              src={lightboxImage} 
-              alt="Receipt Invoice Lightbox" 
-              className="max-w-full max-h-[70vh] border border-gray-200 object-contain"
-            />
+            {lightboxImage?.toLowerCase().includes(".pdf") || lightboxImage?.toLowerCase().includes("pdf") ? (
+              <iframe 
+                src={lightboxImage} 
+                title="Receipt PDF Preview"
+                className="w-[85vw] h-[65vh] max-w-4xl border border-gray-200"
+              />
+            ) : (
+              <img 
+                src={lightboxImage} 
+                alt="Receipt Invoice Lightbox" 
+                className="max-w-full max-h-[70vh] border border-gray-200 object-contain"
+              />
+            )}
           </div>
         </div>
       )}
