@@ -68,9 +68,7 @@ function getISTNow(): string {
 
 // ─── PDF — EXACT CYRIX EXCEL FORMAT ──────────────────────────────────────────
 
-function buildExcelPrintHTML(user: any, claims: any[], attachments: string[] = []): string {
-  const now = getISTNow();
-
+function buildExcelPrintHTML(user: any, claims: any[], attachments: string[] = [], advance: number = 0): string {
   // Flatten: one row per leg
   const allLegs: { date: string; expCode: string; leg: any }[] = [];
   for (const claim of claims) {
@@ -87,11 +85,7 @@ function buildExcelPrintHTML(user: any, claims: any[], attachments: string[] = [
   const gLocal  = allLegs.reduce((s, r) => s + (r.leg.local_purchase || 0), 0);
   const gHotel  = allLegs.reduce((s, r) => s + (r.leg.hotel_amount || 0), 0);
   const gOther  = allLegs.reduce((s, r) => s + (r.leg.other_amount || 0), 0);
-  const gKM     = allLegs.reduce((s, r) => s + (r.leg.distance_km || 0), 0);
   const gTotal  = gTA + gBikeCar + gAuto + gDA + gLocal + gHotel + gOther;
-  const gPMS    = allLegs.reduce((s, r) => s + (r.leg.pms_count || 0), 0);
-  const gCallsA = allLegs.reduce((s, r) => s + (r.leg.calls_assigned || 0), 0);
-  const gCallsC = allLegs.reduce((s, r) => s + (r.leg.calls_completed || 0), 0);
 
   // ── mode abbreviation ──
   const modeAbbr = (m: string) => {
@@ -218,9 +212,8 @@ function buildExcelPrintHTML(user: any, claims: any[], attachments: string[] = [
         <img src="${window.location.origin}/brand.png" style="height:28px; max-width:100%; object-fit:contain; background:#fff; padding:2px; border-radius:2px;" alt="Logo" />
       </td>
       <td class="main-hdr">CYRIX &mdash; EXPENSES REIMBURSEMENT FORM</td>
-      <td style="background:#1a237e!important;color:#fff!important;border:2px solid #0d1557;padding:4px 8px;font-size:8pt;font-weight:bold;text-align:center;line-height:1.45;vertical-align:middle;">
+      <td style="background:#1a237e!important;color:#fff!important;border:2px solid #0d1557;padding:4px 8px;font-size:8pt;font-weight:bold;text-align:center;vertical-align:middle;">
         <div>Month-Year: ${user.month.toUpperCase().substring(0,3)} ${user.year}</div>
-        <div style="color:#fff9c4;font-size:7pt;margin-top:2px;font-weight:bold;">Form No: CYKL01 V2023</div>
       </td>
     </tr>
   </table>
@@ -302,13 +295,15 @@ function buildExcelPrintHTML(user: any, claims: any[], attachments: string[] = [
         <td colspan="13" style="border: 1.5px solid #000!important; background:#fff!important; font-weight:900; text-align:center; padding:5px 6px; font-size:8pt; text-transform:uppercase;">
           ADVANCES
         </td>
-        <td style="border: 1.5px solid #000!important; background:#fff!important; font-weight:950; text-align:center; font-size:8.5pt!important;"></td>
+        <td style="border: 1.5px solid #000!important; background:#fff!important; font-weight:950; text-align:center; font-size:8.5pt!important;">
+          ${advance > 0 ? Math.round(advance) : ""}
+        </td>
         <td colspan="4" style="border: 1.5px solid #000!important; background:#fff!important;"></td>
       </tr>
       <!-- NET PAYABLE ROW -->
       <tr>
         <td class="net-lbl" colspan="13">NET PAYABLE</td>
-        <td class="net-val" style="font-weight:950; font-size:8.5pt!important;">${Math.round(gTotal)}</td>
+        <td class="net-val" style="font-weight:950; font-size:8.5pt!important;">${Math.round(gTotal - advance)}</td>
         <td colspan="4" style="border: 1.5px solid #000!important; background:#fff!important;"></td>
       </tr>
     </tfoot>
@@ -316,7 +311,7 @@ function buildExcelPrintHTML(user: any, claims: any[], attachments: string[] = [
 
   <!-- ══ AMOUNT IN WORDS ══ -->
   <div class="awords-box">
-    Amount in words (including all pages): <strong>${amountWords(gTotal).toUpperCase()}</strong>
+    Amount in words (including all pages): <strong>${amountWords(gTotal - advance).toUpperCase()}</strong>
   </div>
 
   <!-- ══ REMARKS ══ -->
@@ -407,6 +402,10 @@ export default function MonthSummaryPage() {
   };
 
   const handlePDF = async (row: any) => {
+    const advStr = window.prompt(`Enter Advance Amount (₹) for ${row.name} (optional):`, "0");
+    if (advStr === null) return;
+    const advance = parseFloat(advStr) || 0;
+
     const key = `${row.user_id}-${row.month}-${row.year}`;
     setPdfLoadingId(key);
     const tid = toast.loading(`Fetching data for ${row.name}…`);
@@ -417,7 +416,7 @@ export default function MonthSummaryPage() {
       const claims = res.claims || [];
       const attachments = res.attachments || [];
       if (claims.length === 0) { toast.error("No approved claim data found"); return; }
-      const html = buildExcelPrintHTML(user, claims, attachments);
+      const html = buildExcelPrintHTML(user, claims, attachments, advance);
       const win = window.open("", "_blank", "width=1400,height=900");
       if (!win) { toast.error("Allow popups to download PDF"); return; }
       win.document.write(html);
