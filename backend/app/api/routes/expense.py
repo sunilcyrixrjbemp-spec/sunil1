@@ -23,20 +23,64 @@ from app.config.settings import settings
 
 router = APIRouter()
 
-@router.get("/debug-inspect-hierarchy")
-def debug_inspect_hierarchy(db: Session = Depends(get_db)):
-    from sqlalchemy import text
+@router.get("/debug-test-submit")
+async def debug_test_submit(db: Session = Depends(get_db)):
+    from app.models.user import User
+    from unittest.mock import MagicMock
+    import json
+    
     try:
-        requesters = db.execute(text("SELECT * FROM hierarchy_requesters;")).fetchall()
-        approvers = db.execute(text("SELECT * FROM hierarchy_approvers;")).fetchall()
-        users = db.execute(text("SELECT id, user_id, name, role FROM users;")).fetchall()
-        return {
-            "requesters": [dict(zip(["id", "hierarchy_id", "user_id"], r)) for r in requesters],
-            "approvers": [dict(zip(["id", "hierarchy_id", "approver_id", "level_number"], a)) for a in approvers],
-            "users": [dict(zip(["id", "user_id", "name", "role"], u)) for u in users]
-        }
+        user = db.query(User).filter(User.user_id == "E1704").first()
+        if not user:
+            return {"error": "User E1704 not found"}
+            
+        request = MagicMock()
+        
+        itineraries_payload = [
+            {
+                "leg": 1,
+                "mode": "Bike",
+                "km": 100.0,
+                "amount": 450.0,
+                "da": 150.0,
+                "hotel": 0.0,
+                "local_purchase": 0.0,
+                "oth_desc": "",
+                "oth_amount": 0.0,
+                "ws_assigned": "3",
+                "ws_closed": "1",
+                "ws_pms": "2",
+                "ws_asset": "3",
+                "selected_activities": ["Calls", "PMS", "Asset Tagging"],
+                "calls_list": [
+                    {"barcode": "12345678", "type": "Support Call", "status": "Attend"},
+                    {"barcode": "23456789", "type": "Online Call", "status": "Close"},
+                    {"barcode": "34567890", "type": "Support Call", "status": "Attend & Close"}
+                ],
+                "pms_list": [
+                    {"barcode": "45678901", "frequency": "3 month"},
+                    {"barcode": "56789012", "frequency": "6 month"}
+                ],
+                "assets_list": [
+                    {"equipment_name": "Automated Perimetry", "quantity": "2"},
+                    {"equipment_name": "Radio frequency ablation Generator machine", "quantity": "1"}
+                ]
+            }
+        ]
+
+        async def mock_form():
+            return {
+                "exp_date": "2026-06-30",
+                "total_amount": "600.0",
+                "itineraries": json.dumps(itineraries_payload)
+            }
+        
+        request.form = mock_form
+        res = await submit_expense(request, db=db, current_user=user)
+        return {"status": "success", "result": res}
     except Exception as e:
-        return {"error": str(e)}
+        import traceback
+        return {"status": "error", "message": str(e), "traceback": traceback.format_exc()}
 
 
 def parse_client_timestamp(ts_str: str | None) -> datetime:
