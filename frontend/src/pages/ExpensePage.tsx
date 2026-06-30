@@ -866,8 +866,8 @@ export default function ExpensePage() {
         setItineraries(prev => prev.map(l => {
           if (l.leg !== legNum) return l;
           return activityType === "Calls"
-            ? { ...l, calls_photo_url: data.url, calls_photo_loading: false }
-            : { ...l, pms_photo_url: data.url, pms_photo_loading: false };
+            ? { ...l, calls_photo_url: data.url, calls_photo_name: file.name, calls_photo_loading: false }
+            : { ...l, pms_photo_url: data.url, pms_photo_name: file.name, pms_photo_loading: false };
         }));
         toast.success("Photo uploaded successfully.");
       } else {
@@ -2611,23 +2611,33 @@ export default function ExpensePage() {
                                 <div className="sm:col-span-3">
                                    <label className="label-lte font-bold">Photo (Optional)</label>
                                    {leg.calls_photo_url ? (
-                                     <div className="flex items-center justify-between bg-blue-50 border border-blue-200 px-2 py-1 rounded text-[10px]">
-                                       <span className="font-semibold text-blue-700 truncate max-w-[80px]">✓ Photo Uploaded</span>
-                                       <div className="flex gap-1.5">
+                                     <div className="flex items-center justify-between bg-blue-50 border border-blue-200 px-3 py-1.5 rounded text-xs">
+                                       <span className="font-semibold text-blue-700 truncate max-w-[100px]">{leg.calls_photo_name || "photo.jpg"}</span>
+                                       <div className="flex gap-2">
                                          <button 
                                            type="button" 
                                            onClick={() => {
                                              const fullUrl = `${import.meta.env.VITE_API_URL || "https://expense-backend-zio8.onrender.com"}${leg.calls_photo_url}`;
                                              setLightboxImage(fullUrl);
                                            }} 
-                                           className="text-blue-600 hover:underline border-0 bg-transparent font-bold cursor-pointer text-[10px]"
+                                           className="text-blue-600 hover:underline border-0 bg-transparent font-bold cursor-pointer"
                                          >
                                            Preview
                                          </button>
+                                         <a 
+                                           href={`${import.meta.env.VITE_API_URL || "https://expense-backend-zio8.onrender.com"}${leg.calls_photo_url}`} 
+                                           download={leg.calls_photo_name || "download"} 
+                                           className="text-green-600 hover:underline font-bold"
+                                         >
+                                           Download
+                                         </a>
                                          <button 
                                            type="button" 
-                                           onClick={() => handleItineraryChange(leg.leg, "calls_photo_url", "")} 
-                                           className="text-rose-600 hover:underline border-0 bg-transparent font-bold cursor-pointer text-[10px]"
+                                           onClick={() => {
+                                             handleItineraryChange(leg.leg, "calls_photo_url", "");
+                                             handleItineraryChange(leg.leg, "calls_photo_name", "");
+                                           }} 
+                                           className="text-rose-600 hover:underline border-0 bg-transparent font-bold cursor-pointer"
                                          >
                                            Delete
                                          </button>
@@ -2644,7 +2654,7 @@ export default function ExpensePage() {
                                              uploadActivityPhoto(leg.leg, "Calls", file);
                                            }
                                          }}
-                                         className="input-lte text-[10px] py-1 px-1 bg-white"
+                                         className="text-xs file:mr-4 file:py-1.5 file:px-3 file:rounded file:border file:border-gray-350 file:text-[10px] file:font-bold file:uppercase file:bg-white file:text-gray-700 hover:file:bg-gray-50 cursor-pointer w-full"
                                        />
                                        {leg.calls_photo_loading && <span className="text-[9px] text-blue-600 font-semibold block animate-pulse mt-0.5">Uploading...</span>}
                                      </div>
@@ -2808,23 +2818,33 @@ export default function ExpensePage() {
                                 <div className="sm:col-span-3">
                                   <label className="label-lte font-bold">Photo (Optional)</label>
                                   {leg.pms_photo_url ? (
-                                    <div className="flex items-center justify-between bg-blue-50 border border-blue-200 px-2 py-1 rounded text-[10px]">
-                                      <span className="font-semibold text-blue-700 truncate max-w-[80px]">✓ Photo Uploaded</span>
-                                      <div className="flex gap-1.5">
+                                    <div className="flex items-center justify-between bg-blue-50 border border-blue-200 px-3 py-1.5 rounded text-xs">
+                                      <span className="font-semibold text-blue-700 truncate max-w-[100px]">{leg.pms_photo_name || "photo.jpg"}</span>
+                                      <div className="flex gap-2">
                                         <button 
                                           type="button" 
                                           onClick={() => {
                                             const fullUrl = `${import.meta.env.VITE_API_URL || "https://expense-backend-zio8.onrender.com"}${leg.pms_photo_url}`;
                                             setLightboxImage(fullUrl);
                                           }} 
-                                          className="text-blue-600 hover:underline border-0 bg-transparent font-bold cursor-pointer text-[10px]"
+                                          className="text-blue-600 hover:underline border-0 bg-transparent font-bold cursor-pointer"
                                         >
                                           Preview
                                         </button>
+                                        <a 
+                                          href={`${import.meta.env.VITE_API_URL || "https://expense-backend-zio8.onrender.com"}${leg.pms_photo_url}`} 
+                                          download={leg.pms_photo_name || "download"} 
+                                          className="text-green-600 hover:underline font-bold"
+                                        >
+                                          Download
+                                        </a>
                                         <button 
                                           type="button" 
-                                          onClick={() => handleItineraryChange(leg.leg, "pms_photo_url", "")} 
-                                          className="text-rose-600 hover:underline border-0 bg-transparent font-bold cursor-pointer text-[10px]"
+                                          onClick={() => {
+                                            handleItineraryChange(leg.leg, "pms_photo_url", "");
+                                            handleItineraryChange(leg.leg, "pms_photo_name", "");
+                                          }} 
+                                          className="text-rose-600 hover:underline border-0 bg-transparent font-bold cursor-pointer"
                                         >
                                           Delete
                                         </button>
@@ -2841,7 +2861,7 @@ export default function ExpensePage() {
                                             uploadActivityPhoto(leg.leg, "PMS", file);
                                           }
                                         }}
-                                        className="input-lte text-[10px] py-1 px-1 bg-white"
+                                        className="text-xs file:mr-4 file:py-1.5 file:px-3 file:rounded file:border file:border-gray-350 file:text-[10px] file:font-bold file:uppercase file:bg-white file:text-gray-700 hover:file:bg-gray-50 cursor-pointer w-full"
                                       />
                                       {leg.pms_photo_loading && <span className="text-[9px] text-blue-600 font-semibold block animate-pulse mt-0.5">Uploading...</span>}
                                     </div>
