@@ -194,23 +194,15 @@ function buildExcelPrintHTML(user: any, claims: any[], attachments: string[] = [
     .col-h2{background:#1e88e5!important;color:#fff!important;font-size:6.5pt!important;
       font-weight:800!important;text-align:center!important;padding:4px 2px!important;
       border:1.5px solid #1565c0!important;line-height:1.2;vertical-align:middle;}
-    .tot-lbl{${totalC}text-align:left;}
-    .tot-num{${totalC}text-align:right;}
-    .tot-grand{${totalC}background:#d4edda!important;color:#155724!important;font-size:9pt!important;}
-    .awords{background:#e3f2fd!important;color:#1a237e!important;font-size:7.5pt!important;
-      font-weight:700!important;font-style:italic;border:1px solid #90caf9!important;padding:5px 8px!important;}
-    .net-row td{background:#c8e6c9!important;color:#1b5e20!important;font-size:9pt!important;
-      font-weight:900!important;border:2px solid #388e3c!important;padding:6px 8px!important;}
-    .approved-bar td{background:#1a237e!important;color:#fff!important;font-size:8.5pt!important;
-      font-weight:900!important;text-align:center;padding:6px!important;border:2px solid #0d1557!important;letter-spacing:0.5px;}
-    .sig-hdr td{background:#1565c0!important;color:#fff!important;font-weight:800!important;
-      font-size:7.5pt!important;text-align:center;padding:5px!important;border:1.5px solid #0d47a1!important;}
-    .sig-body td{text-align:center;vertical-align:top;padding:8px 5px!important;height:85px;
-      background:#fafafa!important;border:1.5px solid #888!important;}
-    .sig-title{font-size:7pt;font-weight:900;color:#1565c0;display:block;margin-bottom:30px;}
-    .sig-line{border-top:1.5px solid #333;margin:0 6px;}
-    .sig-name{font-size:7pt;font-weight:800;margin-top:3px;display:block;}
-    .sig-info{font-size:6pt;color:#555;display:block;margin-top:2px;}
+    .tot-lbl{border:1px solid #000!important;padding:4px 5px;font-size:7.5pt;font-weight:950;color:#000;background:#fff3cd!important;vertical-align:middle;}
+    .tot-num{border:1px solid #000!important;padding:4px 5px;font-size:7.5pt;font-weight:950;color:#000;background:#fff3cd!important;vertical-align:middle;text-align:right;}
+    .net-lbl{border:1.5px solid #000!important;padding:5px 6px;font-size:8pt;font-weight:900;color:#000;background:#dcdcdc!important;text-align:center;text-transform:uppercase;}
+    .net-val{border:1.5px solid #000!important;padding:5px 6px;font-size:8.5pt;font-weight:950;color:#000;background:#fff!important;text-align:center;}
+    .awords-box{border:1.5px solid #000!important;border-top:none!important;padding:6px 8px;font-size:7.5pt;font-weight:500;color:#000;background:#fff!important;}
+    .remarks-box{border:1.5px solid #000!important;border-top:none!important;padding:5px 8px;font-size:7.5pt;font-weight:bold;color:#000;background:#fff!important;}
+    .sig-tbl{border:1.5px solid #000!important;border-top:none!important;}
+    .sig-lbl{border-right:1.5px solid #000;padding:5px 6px;font-size:7.5pt;font-weight:500;color:#000;background:#fff!important;height:32px;vertical-align:top;}
+    .sig-val{border-right:1.5px solid #000;padding:5px 6px;font-size:7.5pt;font-weight:500;color:#000;background:#fff!important;height:32px;vertical-align:bottom;}
     @page{size:A4 landscape;margin:6mm 7mm;}
     @media print{body{margin:0;padding:0;}}
   </style>
@@ -218,13 +210,9 @@ function buildExcelPrintHTML(user: any, claims: any[], attachments: string[] = [
 <body>
 <div class="wrap">
 
-  <!-- ══ ROW 1: Company Title + Month + Form No ══ -->
   <table style="margin-bottom:0;">
     <colgroup>
-      <col style="width:8%;">
-      <col style="width:67%;">
-      <col style="width:13%;">
-      <col style="width:12%;">
+      <col style="width:8%;"><col style="width:67%;"><col style="width:13%;"><col style="width:12%;">
     </colgroup>
     <tr>
       <td style="background:#1a237e!important;border:2px solid #0d1557;padding:4px 6px;text-align:center;">
@@ -237,15 +225,9 @@ function buildExcelPrintHTML(user: any, claims: any[], attachments: string[] = [
     </tr>
   </table>
 
-  <!-- ══ ROW 2: Employee Info (Image 2 clean white style) ══ -->
   <table class="info-tbl">
     <colgroup>
-      <col style="width:6%;"><col style="width:23%;">
-      <col style="width:7%;"><col style="width:10%;">
-      <col style="width:8%;"><col style="width:10%;">
-      <col style="width:12%;"><col style="width:12%;">
-      <col style="width:6%;"><col style="width:6%;">
-      <col style="width:7%;"><col style="width:11%;">
+      <col style="width:6%;"><col style="width:23%;"><col style="width:7%;"><col style="width:10%;"><col style="width:8%;"><col style="width:10%;"><col style="width:12%;"><col style="width:12%;"><col style="width:6%;"><col style="width:6%;"><col style="width:7%;"><col style="width:11%;">
     </colgroup>
     <tr>
       <td class="info-lbl">NAME :</td>
@@ -263,34 +245,11 @@ function buildExcelPrintHTML(user: any, claims: any[], attachments: string[] = [
     </tr>
   </table>
 
-  <!-- ══ DATA TABLE ══ -->
-  <!-- Columns (18 total):
-       Date | From | To | Worked Dist | Mode | KM |
-       TA(Train/Bus only) | Auto | DA | Local Spare | Hotel |
-       Other Desc | Other Amt | Total | Remarks | Barcode/Asset | PMS | Calls -->
-  <table style="margin-bottom:0; border-top: none;">
+  <table style="margin-bottom:0; border-top: none; border-bottom: none;">
     <colgroup>
-      <col style="width:4.5%;"><!-- Date -->
-      <col style="width:6.5%;"><!-- From -->
-      <col style="width:6.5%;"><!-- To -->
-      <col style="width:5%;">  <!-- Worked Dist -->
-      <col style="width:3.5%;"><!-- Mode -->
-      <col style="width:3.5%;"><!-- KM -->
-      <col style="width:4.5%;"><!-- TA (Train/Bus only) -->
-      <col style="width:3.5%;"><!-- Auto -->
-      <col style="width:3.5%;"><!-- DA -->
-      <col style="width:5%;">  <!-- Local Spare -->
-      <col style="width:3.5%;"><!-- Hotel -->
-      <col style="width:7.5%;"><!-- Other Desc -->
-      <col style="width:4%;">  <!-- Other Amt -->
-      <col style="width:4.5%;"><!-- Total -->
-      <col style="width:8%;">  <!-- Remarks -->
-      <col style="width:7%;">  <!-- Barcode/Asset -->
-      <col style="width:3.5%;"><!-- PMS -->
-      <col style="width:4%;">  <!-- Calls -->
+      <col style="width:4.5%;"><col style="width:6.5%;"><col style="width:6.5%;"><col style="width:5%;"><col style="width:3.5%;"><col style="width:3.5%;"><col style="width:4.5%;"><col style="width:3.5%;"><col style="width:3.5%;"><col style="width:5%;"><col style="width:3.5%;"><col style="width:7.5%;"><col style="width:4%;"><col style="width:4.5%;"><col style="width:8%;"><col style="width:7%;"><col style="width:3.5%;"><col style="width:4%;">
     </colgroup>
     <thead>
-      <!-- Header Row 1 -->
       <tr>
         <th class="col-h1" rowspan="2">Date<br>(DD-MM-YY)</th>
         <th class="col-h1" colspan="2">Locations</th>
@@ -309,7 +268,6 @@ function buildExcelPrintHTML(user: any, claims: any[], attachments: string[] = [
         <th class="col-h1" rowspan="2">PMS</th>
         <th class="col-h1" rowspan="2">Calls<br>(Done/Assign)</th>
       </tr>
-      <!-- Header Row 2 (sub-headers) -->
       <tr>
         <th class="col-h2">From</th>
         <th class="col-h2">To</th>
@@ -322,89 +280,56 @@ function buildExcelPrintHTML(user: any, claims: any[], attachments: string[] = [
     </tbody>
     <tfoot>
       <tr>
-        <td class="tot-lbl" colspan="6" style="text-align:left;">
+        <td class="tot-lbl" colspan="6" style="text-align:left; border: 1px solid #b0c4de!important;">
           TOTAL &nbsp;(${claims.length} days &nbsp;·&nbsp; ${allLegs.length} legs &nbsp;·&nbsp; ${gKM.toFixed(1)} KM)
         </td>
-        <td class="tot-num">${gTA > 0 ? gTA.toFixed(2) : "—"}</td>
-        <td class="tot-num">${gAuto > 0 ? gAuto.toFixed(2) : "—"}</td>
-        <td class="tot-num">${gDA > 0 ? gDA.toFixed(2) : "—"}</td>
-        <td class="tot-num">${gLocal > 0 ? gLocal.toFixed(2) : "—"}</td>
-        <td class="tot-num">${gHotel > 0 ? gHotel.toFixed(2) : "—"}</td>
-        <td class="tot-lbl" style="text-align:center;font-size:6.5pt!">Other Total</td>
-        <td class="tot-num">${gOther > 0 ? gOther.toFixed(2) : "—"}</td>
-        <td class="tot-grand" style="font-size:9pt!important;text-align:right;">₹${gTotal.toFixed(2)}</td>
-        <td class="tot-lbl" style="text-align:center;font-size:6pt!important;">Generated:<br>${now}</td>
-        <td class="tot-lbl" style="font-size:6.5pt!"></td>
-        <td class="tot-num" style="text-align:center;">${gPMS > 0 ? gPMS : ""}</td>
-        <td class="tot-num" style="text-align:center;">${gCallsC > 0 ? `${gCallsC}/${gCallsA}` : ""}</td>
+        <td class="tot-num" style="border: 1px solid #b0c4de!important;">${gTA > 0 ? gTA.toFixed(2) : ""}</td>
+        <td class="tot-num" style="border: 1px solid #b0c4de!important;">${gAuto > 0 ? gAuto.toFixed(2) : ""}</td>
+        <td class="tot-num" style="border: 1px solid #b0c4de!important;">${gDA > 0 ? gDA.toFixed(2) : ""}</td>
+        <td class="tot-num" style="border: 1px solid #b0c4de!important;">${gLocal > 0 ? gLocal.toFixed(2) : ""}</td>
+        <td class="tot-num" style="border: 1px solid #b0c4de!important;">${gHotel > 0 ? gHotel.toFixed(2) : ""}</td>
+        <td class="tot-lbl" style="text-align:center;font-size:6.5pt!; border: 1px solid #b0c4de!important;">Other Total</td>
+        <td class="tot-num" style="border: 1px solid #b0c4de!important;">${gOther > 0 ? gOther.toFixed(2) : ""}</td>
+        <td class="tot-num" style="background:#fff3cd!important; font-weight:950; text-align:right; border: 1px solid #b0c4de!important;">${gTotal.toFixed(2)}</td>
+        <td class="tot-lbl" style="text-align:center;font-size:6pt!important; border: 1px solid #b0c4de!important;">Generated:<br>${now}</td>
+        <td class="tot-lbl" style="font-size:6.5pt!; border: 1px solid #b0c4de!important;"></td>
+        <td class="tot-num" style="text-align:center; border: 1px solid #b0c4de!important;">${gPMS > 0 ? gPMS : ""}</td>
+        <td class="tot-num" style="text-align:center; border: 1px solid #b0c4de!important;">${gCallsC > 0 ? `${gCallsC}/${gCallsA}` : ""}</td>
+      </tr>
+      <tr>
+        <td class="net-lbl" colspan="13">NET PAYABLE</td>
+        <td class="net-val" style="font-weight:950; font-size:8.5pt!important;">${Math.round(gTotal)}</td>
+        <td colspan="4" style="border: 1.5px solid #000!important; background:#fff!important;"></td>
       </tr>
     </tfoot>
   </table>
 
   <!-- ══ AMOUNT IN WORDS ══ -->
-  <table style="margin-bottom:2px;">
-    <tr>
-      <td class="awords" colspan="18">
-        <strong>Amount in Words:</strong> &nbsp; ${amountWords(gTotal)}
-      </td>
-    </tr>
-  </table>
+  <div class="awords-box">
+    Amount in words (including all pages): <strong>${amountWords(gTotal).toUpperCase()}</strong>
+  </div>
 
-  <!-- ══ NET PAYABLE ══ -->
-  <table class="net-row" style="margin-bottom:4px;">
-    <tr>
-      <td colspan="12" style="text-align:left;">
-        NET PAYABLE AMOUNT &nbsp;&mdash;&nbsp; ${user.month} ${user.year} &nbsp;&mdash;&nbsp; ${user.name} &nbsp;(${user.e_code})
-      </td>
-      <td colspan="3" style="text-align:right;font-size:12pt!important;">₹ ${gTotal.toFixed(2)}</td>
-      <td colspan="3" style="text-align:center;font-size:7pt!important;color:#1b5e20!important;">
-        Printed: ${now}
-      </td>
-    </tr>
-  </table>
+  <!-- ══ REMARKS ══ -->
+  <div class="remarks-box">
+    REMARKS: APPROVED
+  </div>
 
-  <!-- ══ APPROVED BANNER ══ -->
-  <table class="approved-bar" style="margin-bottom:6px;">
+  <!-- ══ SIGNATURES GRID (Image 3 simple style) ══ -->
+  <table class="sig-tbl">
+    <colgroup>
+      <col style="width:25%;"><col style="width:25%;"><col style="width:25%;"><col style="width:25%;">
+    </colgroup>
     <tr>
-      <td colspan="18">
-        ✓ &nbsp; APPROVED &nbsp;—&nbsp; All ${claims.length} expense claim(s) for ${user.month} ${user.year} have been verified and approved by the designated authority. &nbsp;|&nbsp; Total KM Travelled: ${gKM.toFixed(1)} km
-      </td>
+      <td class="sig-lbl">Claimed By: <strong>${user.name}</strong></td>
+      <td class="sig-lbl">Approved By:</td>
+      <td class="sig-lbl">Checked By: (Verifier)</td>
+      <td class="sig-lbl" style="border-right:none;">Accounted By: (Accounts)</td>
     </tr>
-  </table>
-
-  <!-- ══ SIGNATURES ══ -->
-  <table>
-    <tr class="sig-hdr">
-      <td style="width:25%">CLAIMED BY (Employee)</td>
-      <td style="width:25%">APPROVED BY (Manager / L1)</td>
-      <td style="width:25%">CHECKED BY (Finance)</td>
-      <td style="width:25%">ACCOUNTED BY</td>
-    </tr>
-    <tr class="sig-body">
-      <td>
-        <span class="sig-title">Employee Signature</span>
-        <div class="sig-line"></div>
-        <span class="sig-name">${user.name}</span>
-        <span class="sig-info">${user.e_code} &nbsp;|&nbsp; ${user.district}</span>
-      </td>
-      <td>
-        <span class="sig-title">Manager / L1 Approver</span>
-        <div class="sig-line"></div>
-        <span class="sig-name">${user.manager || "Authorised Signatory"}</span>
-        <span class="sig-info">Approving Manager</span>
-      </td>
-      <td>
-        <span class="sig-title">Finance / Accounts Check</span>
-        <div class="sig-line"></div>
-        <span class="sig-name">Finance Dept.</span>
-        <span class="sig-info">Date: _______________</span>
-      </td>
-      <td>
-        <span class="sig-title">Accounts Entry</span>
-        <div class="sig-line"></div>
-        <span class="sig-name">Amit Rawat</span>
-        <span class="sig-info">Accounts Department</span>
-      </td>
+    <tr>
+      <td class="sig-val">Date: ${new Date().toLocaleDateString("en-IN", {timeZone: "Asia/Kolkata"})}</td>
+      <td class="sig-val">Date:</td>
+      <td class="sig-val">Date:</td>
+      <td class="sig-val" style="border-right:none;">Date:</td>
     </tr>
   </table>
 
@@ -413,6 +338,7 @@ function buildExcelPrintHTML(user: any, claims: any[], attachments: string[] = [
 
 </div>
 </body>
+</html>`;
 }
 
 // ─── Main Page Component ──────────────────────────────────────────────────────
