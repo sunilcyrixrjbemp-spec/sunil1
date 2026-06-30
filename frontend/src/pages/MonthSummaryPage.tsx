@@ -7,6 +7,9 @@ import {
   IndianRupee, MapPin, Search, Filter, FileText, Loader2, Printer,
 } from "lucide-react";
 
+// @ts-ignore
+import html2pdf from "html2pdf.js";
+
 // ─── Helpers ────────────────────────────────────────────────────────────────
 
 const getAbsoluteUrl = (path: string) => {
@@ -411,29 +414,6 @@ function buildExcelPrintHTML(user: any, claims: any[], attachments: string[] = [
 </html>`;
 }
 
-const loadHtml2Pdf = (): Promise<any> => {
-  return new Promise((resolve, reject) => {
-    if ((window as any).html2pdf) {
-      resolve((window as any).html2pdf);
-      return;
-    }
-    const script = document.createElement("script");
-    script.src = "https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js";
-    script.integrity = "sha512-GsLlZN/3F2ErC5IfS5Q+984a1tYDXbTyiGtYyPy15SGILGyJDReURy9vdd+Dja5W5/FOcmiFS5lWnUuxokUQNw==";
-    script.crossOrigin = "anonymous";
-    script.referrerPolicy = "no-referrer";
-    script.onload = () => {
-      if ((window as any).html2pdf) {
-        resolve((window as any).html2pdf);
-      } else {
-        reject(new Error("html2pdf failed to load"));
-      }
-    };
-    script.onerror = () => reject(new Error("Failed to load html2pdf script"));
-    document.body.appendChild(script);
-  });
-};
-
 // ─── Main Page Component ──────────────────────────────────────────────────────
 
 export default function MonthSummaryPage() {
@@ -528,9 +508,6 @@ export default function MonthSummaryPage() {
         return;
       }
       const html = buildExcelPrintHTML(user, claims, attachments, advance);
-
-      // Load html2pdf dynamically
-      const html2pdf = await loadHtml2Pdf();
 
       // Write to hidden iframe to load styles correctly
       const iframe = document.createElement("iframe");
