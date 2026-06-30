@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import React, { useEffect, useState } from "react";
 import toast from "react-hot-toast";
 import { approvalService } from "../services/approvalService";
 import { expenseService } from "../services/expenseService";
@@ -51,10 +51,21 @@ export default function ApprovalPage() {
 
   // In-app Lightbox state
   const [lightboxImage, setLightboxImage] = useState<string | null>(null);
+  const [assetValueMaster, setAssetValueMaster] = useState<any[]>([]);
 
   useEffect(() => {
     fetchPendingApprovals();
+    loadAssetValueMaster();
   }, []);
+
+  const loadAssetValueMaster = async () => {
+    try {
+      const res = await expenseService.getAssetValueMaster();
+      setAssetValueMaster(res || []);
+    } catch (e) {
+      console.error("Failed to load asset value master in approvals page", e);
+    }
+  };
 
   const fetchPendingApprovals = async () => {
     setSelectedIds([]);
@@ -554,6 +565,25 @@ export default function ApprovalPage() {
                         const subModified = leg.sub_amount !== (originalLeg.sub_amount || 0);
                         const hotelModified = leg.hotel_amount !== (originalLeg.hotel || 0);
                         const otherModified = leg.other_amount !== (originalLeg.oth_amount || 0);
+
+                        let actDetails: any = null;
+                        try {
+                          if (originalLeg.activity_details) {
+                            actDetails = typeof originalLeg.activity_details === "string" ? JSON.parse(originalLeg.activity_details) : originalLeg.activity_details;
+                          }
+                        } catch (e) {
+                          console.error("Error parsing activity details", e);
+                        }
+
+                        const callsList = actDetails?.calls_list || [];
+                        const pmsList = actDetails?.pms_list || [];
+                        const assetsList = actDetails?.assets_list || [];
+                        const selectedActs = actDetails?.selected_activities || originalLeg.selected_activities || [];
+                        const mobiliseCount = parseInt(actDetails?.mobilise_asset_count || originalLeg.mobilise_asset_count || "0") || 0;
+                        const calibrationCount = parseInt(actDetails?.calibration_count || originalLeg.calibration_count || "0") || 0;
+                        const activityOtherDesc = actDetails?.activity_other_desc || originalLeg.activity_other_desc || "";
+
+                        const hasActivities = selectedActs.length > 0 || callsList.length > 0 || pmsList.length > 0 || assetsList.length > 0;
                         
                         return (
                           <div key={index} className="border border-gray-250 bg-white rounded shadow-sm overflow-hidden text-xs">
@@ -578,7 +608,7 @@ export default function ApprovalPage() {
                               <div className="lg:col-span-4 grid grid-cols-2 gap-3 bg-gray-50 p-3 border border-gray-200 rounded">
                                 <div>
                                   <span className="text-[9px] text-gray-400 font-bold uppercase tracking-wider block">Visit Purpose</span>
-                                  <span className="font-semibold text-gray-700 leading-tight">{leg.visit_purpose || "Field visit"}</span>
+                                  <span className="font-semibold text-gray-700 leading-tight">{leg.visit_purpose || originalLeg.visit_purpose || "Field visit"}</span>
                                 </div>
                                 <div>
                                   <span className="text-[9px] text-gray-400 font-bold uppercase tracking-wider block">DA Allowance</span>
@@ -621,7 +651,7 @@ export default function ApprovalPage() {
                                       className={`input-lte pl-6 pr-2 py-1.5 text-xs font-bold ${travelModified ? "border-amber-450 bg-amber-50/10" : ""}`}
                                     />
                                   </div>
-                                  <span className="text-[9px] text-gray-405 block font-semibold">Original: ₹{originalLeg.amount || 0}</span>
+                                  <span className="text-[9px] text-gray-455 block font-semibold">Original: ₹{originalLeg.amount || 0}</span>
                                 </div>
 
                                 {/* Sub Amount */}
@@ -640,7 +670,7 @@ export default function ApprovalPage() {
                                       disabled={!leg.sub_mode}
                                     />
                                   </div>
-                                  <span className="text-[9px] text-gray-405 block font-semibold">Original: ₹{originalLeg.sub_amount || 0}</span>
+                                  <span className="text-[9px] text-gray-455 block font-semibold">Original: ₹{originalLeg.sub_amount || 0}</span>
                                 </div>
 
                                 {/* Hotel stay amount */}
@@ -658,7 +688,7 @@ export default function ApprovalPage() {
                                       className={`input-lte pl-6 pr-2 py-1.5 text-xs font-bold ${hotelModified ? "border-amber-450 bg-amber-50/10" : ""}`}
                                     />
                                   </div>
-                                  <span className="text-[9px] text-gray-405 block font-semibold">Original: ₹{originalLeg.hotel || 0}</span>
+                                  <span className="text-[9px] text-gray-455 block font-semibold">Original: ₹{originalLeg.hotel || 0}</span>
                                 </div>
 
                                 {/* Local purchase / other amount */}
@@ -680,10 +710,159 @@ export default function ApprovalPage() {
                                     Orig: ₹{originalLeg.oth_amount || 0} ({leg.oth_desc || "Other"})
                                   </span>
                                 </div>
-
                               </div>
 
                             </div>
+
+                            {/* New Detailed Activities section */}
+                            {hasActivities && (
+                              <div className="border-t border-gray-150 p-4 bg-slate-50/50 flex flex-col gap-2.5 text-left">
+                                <div className="flex flex-wrap gap-2">
+                                  <span className="text-[9px] font-bold text-gray-500 uppercase mr-2 mt-0.5">Activities / Tasks:</span>
+                                  {selectedActs.map((act: string, actIdx: number) => (
+                                    <span key={actIdx} className="px-1.5 py-0.5 rounded bg-gray-200 border border-gray-300 text-[8px] font-bold text-gray-700 uppercase">
+                                      {act}
+                                    </span>
+                                  ))}
+                                </div>
+
+                                {/* Sub-table for Calls */}
+                                {selectedActs.includes("Calls") && callsList.length > 0 && (
+                                  <div className="border border-blue-100 rounded overflow-hidden bg-white max-w-4xl">
+                                    <div className="px-2 py-1 bg-blue-50/50 border-b border-blue-100 text-[9px] font-bold text-blue-700 uppercase">Support Calls Logs</div>
+                                    <table className="min-w-full divide-y divide-gray-100 text-[10px] text-left">
+                                      <thead className="bg-gray-50 text-[8px] text-gray-400 font-bold uppercase">
+                                        <tr>
+                                          <th className="py-1 px-2 text-left">District Name</th>
+                                          <th className="py-1 px-2 text-left">Hospital Name</th>
+                                          <th className="py-1 px-2 text-left">Equipment Name</th>
+                                          <th className="py-1 px-2 text-left">Model</th>
+                                          <th className="py-1 px-2 text-left font-mono">Bar Code</th>
+                                          <th className="py-1 px-2 text-left">Inventory Status</th>
+                                          <th className="py-1 px-2 text-left">Call Type</th>
+                                          <th className="py-1 px-2 text-left">Call Status</th>
+                                        </tr>
+                                      </thead>
+                                      <tbody className="divide-y divide-gray-100">
+                                        {callsList.map((c: any, cIdx: number) => (
+                                          <tr key={cIdx}>
+                                            <td className="py-1 px-2 text-gray-700">{c.asset_details?.district_name || "—"}</td>
+                                            <td className="py-1 px-2 text-gray-700">{c.asset_details?.hospital_name || "—"}</td>
+                                            <td className="py-1 px-2 text-gray-855 font-bold">{c.asset_details?.equipment_name || "—"}</td>
+                                            <td className="py-1 px-2 text-gray-700">{c.asset_details?.model_name || "—"}</td>
+                                            <td className="py-1 px-2 font-mono font-bold text-gray-700">{c.barcode}</td>
+                                            <td className="py-1 px-2">
+                                              <span className="px-1 py-0.2 rounded font-extrabold text-[7px] uppercase bg-green-50 text-green-700 border border-green-200">
+                                                {c.asset_details?.inventory_status || "Active"}
+                                              </span>
+                                            </td>
+                                            <td className="py-1 px-2 text-gray-650">{c.type || "Support Call"}</td>
+                                            <td className="py-1 px-2">
+                                              <span className="px-1 py-0.2 rounded font-extrabold text-[7px] uppercase bg-blue-50 text-blue-700 border border-blue-100">
+                                                {c.status || "Attend"}
+                                              </span>
+                                            </td>
+                                          </tr>
+                                        ))}
+                                      </tbody>
+                                    </table>
+                                  </div>
+                                )}
+
+                                {/* Sub-table for PMS */}
+                                {selectedActs.includes("PMS") && pmsList.length > 0 && (
+                                  <div className="border border-amber-100 rounded overflow-hidden bg-white max-w-4xl">
+                                    <div className="px-2 py-1 bg-amber-50/50 border-b border-amber-100 text-[9px] font-bold text-amber-700 uppercase">PMS Service Logs</div>
+                                    <table className="min-w-full divide-y divide-gray-100 text-[10px] text-left">
+                                      <thead className="bg-gray-50 text-[8px] text-gray-400 font-bold uppercase">
+                                        <tr>
+                                          <th className="py-1 px-2 text-left">District Name</th>
+                                          <th className="py-1 px-2 text-left">Hospital Name</th>
+                                          <th className="py-1 px-2 text-left">Equipment Name</th>
+                                          <th className="py-1 px-2 text-left">Model</th>
+                                          <th className="py-1 px-2 text-left font-mono">Bar Code</th>
+                                          <th className="py-1 px-2 text-left">Inventory Status</th>
+                                          <th className="py-1 px-2 text-left">PMS Frequency Period</th>
+                                        </tr>
+                                      </thead>
+                                      <tbody className="divide-y divide-gray-100">
+                                        {pmsList.map((p: any, pIdx: number) => (
+                                          <tr key={pIdx}>
+                                            <td className="py-1 px-2 text-gray-700">{p.asset_details?.district_name || "—"}</td>
+                                            <td className="py-1 px-2 text-gray-700">{p.asset_details?.hospital_name || "—"}</td>
+                                            <td className="py-1 px-2 text-gray-855 font-bold">{p.asset_details?.equipment_name || "—"}</td>
+                                            <td className="py-1 px-2 text-gray-700">{p.asset_details?.model_name || "—"}</td>
+                                            <td className="py-1 px-2 font-mono font-bold text-gray-700">{p.barcode}</td>
+                                            <td className="py-1 px-2">
+                                              <span className="px-1 py-0.2 rounded font-extrabold text-[7px] uppercase bg-green-50 text-green-700 border border-green-200">
+                                                {p.asset_details?.inventory_status || "Active"}
+                                              </span>
+                                            </td>
+                                            <td className="py-1 px-2 text-gray-650">{p.frequency || "3 month"}</td>
+                                          </tr>
+                                        ))}
+                                      </tbody>
+                                    </table>
+                                  </div>
+                                )}
+
+                                {/* Sub-table for Asset Tagging (Visible to approvers!) */}
+                                {selectedActs.includes("Asset Tagging") && assetsList.length > 0 && (
+                                  <div className="border border-emerald-100 rounded overflow-hidden bg-white max-w-4xl">
+                                    <div className="px-2 py-1 bg-emerald-50/50 border-b border-emerald-100 text-[9px] font-bold text-emerald-700 uppercase">Asset Tagging Records</div>
+                                    <table className="min-w-full divide-y divide-gray-100 text-[10px] text-left">
+                                      <thead className="bg-gray-50 text-[8px] text-gray-400 font-bold uppercase">
+                                        <tr>
+                                          <th className="py-1 px-2 text-left">Equipment Name</th>
+                                          <th className="py-1 px-2 text-center w-20">Quantity</th>
+                                          <th className="py-1 px-2 text-right w-28">Tender Rate</th>
+                                          <th className="py-1 px-2 text-right w-28">Total Cost</th>
+                                        </tr>
+                                      </thead>
+                                      <tbody className="divide-y divide-gray-100">
+                                        {assetsList.map((a: any, aIdx: number) => {
+                                          const selectedEq = assetValueMaster.find(eq => eq.equipment_name === a.equipment_name);
+                                          const costPerUnit = selectedEq ? (selectedEq.rmsc_tender_cost || 0) : 0;
+                                          const qty = parseInt(a.quantity || "0") || 0;
+                                          const totalCost = qty * costPerUnit;
+                                          return (
+                                            <tr key={aIdx}>
+                                              <td className="py-1 px-2 font-semibold text-gray-700">{a.equipment_name}</td>
+                                              <td className="py-1 px-2 text-center text-gray-600">{qty}</td>
+                                              <td className="py-1 px-2 text-right text-gray-500">₹{costPerUnit.toLocaleString()}</td>
+                                              <td className="py-1 px-2 text-right font-bold text-emerald-700">₹{totalCost.toLocaleString()}</td>
+                                            </tr>
+                                          );
+                                        })}
+                                      </tbody>
+                                    </table>
+                                  </div>
+                                )}
+
+                                {/* Quantities for Mobilise, Calibration or Other */}
+                                <div className="flex flex-wrap gap-4 text-[10px] text-gray-600 bg-white p-2 rounded border border-gray-100 max-w-4xl">
+                                  {selectedActs.includes("Mobilise Asset Update") && (
+                                    <div>
+                                      <span className="font-bold text-gray-400 uppercase text-[8px] block">Mobilise Qty</span>
+                                      <span className="font-bold text-indigo-700">{mobiliseCount} units</span>
+                                    </div>
+                                  )}
+                                  {selectedActs.includes("Calibration") && (
+                                    <div>
+                                      <span className="font-bold text-gray-400 uppercase text-[8px] block">Calibration Qty</span>
+                                      <span className="font-bold text-purple-700">{calibrationCount} units</span>
+                                    </div>
+                                  )}
+                                  {selectedActs.includes("Other") && activityOtherDesc && (
+                                    <div className="flex-1">
+                                      <span className="font-bold text-gray-400 uppercase text-[8px] block">Other Activity Description</span>
+                                      <span className="italic text-gray-700">{activityOtherDesc}</span>
+                                    </div>
+                                  )}
+                                </div>
+                              </div>
+                            )}
+
                           </div>
                         );
                       })}

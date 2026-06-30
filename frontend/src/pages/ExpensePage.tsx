@@ -720,37 +720,20 @@ export default function ExpensePage() {
         }
 
         // Successfully matched!
-        toast.success("Barcode verified successfully!");
+        toast.success("Barcode verified successfully! You can now click '+' to add it.");
         setItineraries(prev => prev.map(l => {
           if (l.leg !== legNum) return l;
           if (activityType === "Calls") {
-            const newItem = {
-              barcode: barcode,
-              verified: true,
-              type: l.calls_type || "Support Call",
-              status: l.calls_status || "Attend",
-              asset_details: res.data
-            };
             return {
               ...l,
-              calls_list: [...(l.calls_list || []), newItem],
-              calls_barcode: "",
-              calls_verified: false,
-              calls_asset_details: null
+              calls_verified: true,
+              calls_asset_details: res.data
             };
           } else {
-            const newItem = {
-              barcode: barcode,
-              verified: true,
-              frequency: l.pms_frequency || "3 month",
-              asset_details: res.data
-            };
             return {
               ...l,
-              pms_list: [...(l.pms_list || []), newItem],
-              pms_barcode: "",
-              pms_verified: false,
-              pms_asset_details: null
+              pms_verified: true,
+              pms_asset_details: res.data
             };
           }
         }));
@@ -761,6 +744,50 @@ export default function ExpensePage() {
       console.error("Barcode verification error", e);
       toast.error("Error during barcode verification.");
     }
+  };
+
+  const addVerifiedBarcode = (legNum: number, activityType: "Calls" | "PMS") => {
+    setItineraries(prev => prev.map(l => {
+      if (l.leg !== legNum) return l;
+      if (activityType === "Calls") {
+        if (!l.calls_verified || !l.calls_asset_details) {
+          toast.error("Please verify the barcode first.");
+          return l;
+        }
+        const newItem = {
+          barcode: l.calls_barcode,
+          verified: true,
+          type: l.calls_type || "Support Call",
+          status: l.calls_status || "Attend",
+          asset_details: l.calls_asset_details
+        };
+        return {
+          ...l,
+          calls_list: [...(l.calls_list || []), newItem],
+          calls_barcode: "",
+          calls_verified: false,
+          calls_asset_details: null
+        };
+      } else {
+        if (!l.pms_verified || !l.pms_asset_details) {
+          toast.error("Please verify the barcode first.");
+          return l;
+        }
+        const newItem = {
+          barcode: l.pms_barcode,
+          verified: true,
+          frequency: l.pms_frequency || "3 month",
+          asset_details: l.pms_asset_details
+        };
+        return {
+          ...l,
+          pms_list: [...(l.pms_list || []), newItem],
+          pms_barcode: "",
+          pms_verified: false,
+          pms_asset_details: null
+        };
+      }
+    }));
   };
 
   const removeBarcode = (legNum: number, activityType: "Calls" | "PMS", index: number) => {
@@ -1401,7 +1428,7 @@ export default function ExpensePage() {
           ws_closed: ws_closed.toString(),
           ws_pms: ws_pms.toString(),
           ws_asset: ws_asset.toString(),
-          visit_purpose: "",
+          visit_purpose: acts.length > 0 ? `Activities: ${acts.join(", ")}` : "Field visit",
           activity_details: JSON.stringify(detailsObj)
         };
       });
@@ -2414,6 +2441,7 @@ export default function ExpensePage() {
                                 { label: "PMS", val: "PMS" },
                                 { label: "Asset Tagging", val: "Asset Tagging" },
                                 { label: "Mobilise Asset Update", val: "Mobilise Asset Update" },
+                                { label: "Calibration", val: "Calibration" },
                                 { label: "Other", val: "Other" }
                               ];
                               
@@ -2453,9 +2481,9 @@ export default function ExpensePage() {
                                 <span className="text-[11px] font-bold text-blue-700 uppercase tracking-wide">Support Calls Log</span>
                               </div>
                               <div className="grid grid-cols-1 sm:grid-cols-12 gap-3 items-end bg-gray-50/50 p-2.5 rounded border border-gray-200">
-                                <div className="sm:col-span-4">
+                                <div className="sm:col-span-6">
                                   <label className="label-lte font-bold">8-Digit Barcode (QR Code)</label>
-                                  <div className="flex gap-1.5">
+                                  <div className="flex gap-1.5 items-center">
                                     <input
                                       type="text"
                                       maxLength={8}
@@ -2464,6 +2492,8 @@ export default function ExpensePage() {
                                       onChange={(e) => {
                                         const cleaned = e.target.value.replace(/\D/g, "");
                                         handleItineraryChange(leg.leg, "calls_barcode", cleaned);
+                                        handleItineraryChange(leg.leg, "calls_verified", false);
+                                        handleItineraryChange(leg.leg, "calls_asset_details", null);
                                       }}
                                       className="input-lte font-mono"
                                     />
@@ -2471,14 +2501,22 @@ export default function ExpensePage() {
                                       type="button"
                                       onClick={() => verifyLegBarcode(leg.leg, "Calls")}
                                       disabled={!leg.calls_barcode || leg.calls_barcode.length !== 8}
-                                      className="btn-lte p-2 bg-blue-600 hover:bg-blue-700 text-white rounded border-0 cursor-pointer flex items-center justify-center disabled:bg-gray-200 disabled:text-gray-400 disabled:cursor-not-allowed"
-                                      title="Verify and Add Barcode"
+                                      className="btn-lte px-3 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded border-0 cursor-pointer disabled:bg-gray-200 disabled:text-gray-400 disabled:cursor-not-allowed text-xs font-bold shrink-0"
+                                    >
+                                      Verify
+                                    </button>
+                                    <button
+                                      type="button"
+                                      onClick={() => addVerifiedBarcode(leg.leg, "Calls")}
+                                      disabled={!leg.calls_verified}
+                                      className="btn-lte p-2 bg-green-600 hover:bg-green-700 text-white rounded border-0 cursor-pointer disabled:bg-gray-200 disabled:text-gray-400 disabled:cursor-not-allowed shrink-0 flex items-center justify-center"
+                                      title="Add Verified Entry"
                                     >
                                       <Plus className="w-4 h-4" />
                                     </button>
                                   </div>
                                 </div>
-                                <div className="sm:col-span-4">
+                                <div className="sm:col-span-3">
                                   <label className="label-lte font-bold">Call Type</label>
                                   <select
                                     value={leg.calls_type || "Support Call"}
@@ -2489,7 +2527,7 @@ export default function ExpensePage() {
                                     <option value="Online Call">Online Call</option>
                                   </select>
                                 </div>
-                                <div className="sm:col-span-4">
+                                <div className="sm:col-span-3">
                                   <label className="label-lte font-bold">Call Status</label>
                                   <select
                                     value={leg.calls_status || "Attend"}
@@ -2503,24 +2541,47 @@ export default function ExpensePage() {
                                 </div>
                               </div>
 
+                              {/* Verified Preview Info */}
+                              {leg.calls_verified && leg.calls_asset_details && (
+                                <div className="bg-green-50 border border-green-200 text-green-800 text-[10px] p-2 rounded flex flex-wrap gap-x-4">
+                                  <span><strong>Verified Asset:</strong> {leg.calls_asset_details.equipment_name} ({leg.calls_asset_details.model_name})</span>
+                                  <span><strong>Hospital:</strong> {leg.calls_asset_details.hospital_name}</span>
+                                  <span><strong>District:</strong> {leg.calls_asset_details.district_name}</span>
+                                  <span><strong>Status:</strong> {leg.calls_asset_details.inventory_status}</span>
+                                </div>
+                              )}
+
                               {/* Added Barcodes Table */}
                               {(leg.calls_list || []).length > 0 && (
                                 <div className="border border-gray-200 rounded overflow-hidden mt-2 bg-white">
                                   <table className="table-lte text-xs w-full text-left border-collapse">
                                     <thead>
                                       <tr className="bg-gray-100 border-b border-gray-200 text-gray-700 font-bold uppercase text-[9px] tracking-wider">
-                                        <th className="py-1.5 px-2 text-left">Barcode</th>
-                                        <th className="py-1.5 px-2 text-left">Type</th>
-                                        <th className="py-1.5 px-2 text-left">Status</th>
-                                        <th className="py-1.5 px-2 text-left">Asset Details</th>
+                                        <th className="py-1.5 px-2 text-left">District Name</th>
+                                        <th className="py-1.5 px-2 text-left">Hospital Name</th>
+                                        <th className="py-1.5 px-2 text-left">Equipment Name</th>
+                                        <th className="py-1.5 px-2 text-left">Model</th>
+                                        <th className="py-1.5 px-2 text-left font-mono">Bar Code</th>
+                                        <th className="py-1.5 px-2 text-left">Inventory Status</th>
+                                        <th className="py-1.5 px-2 text-left">Call Type</th>
+                                        <th className="py-1.5 px-2 text-left">Call Status</th>
                                         <th className="py-1.5 px-2 text-center w-12">Action</th>
                                       </tr>
                                     </thead>
                                     <tbody className="divide-y divide-gray-100">
                                       {(leg.calls_list || []).map((item, idx) => (
                                         <tr key={idx} className="hover:bg-gray-50">
+                                          <td className="py-1.5 px-2 text-[10px] text-gray-700">{item.asset_details?.district_name || "—"}</td>
+                                          <td className="py-1.5 px-2 text-[10px] text-gray-700">{item.asset_details?.hospital_name || "—"}</td>
+                                          <td className="py-1.5 px-2 text-[10px] text-gray-700 font-bold">{item.asset_details?.equipment_name || "—"}</td>
+                                          <td className="py-1.5 px-2 text-[10px] text-gray-700">{item.asset_details?.model_name || "—"}</td>
                                           <td className="py-1.5 px-2 font-mono font-bold text-gray-800">{item.barcode}</td>
-                                          <td className="py-1.5 px-2 font-semibold text-gray-600">{item.type}</td>
+                                          <td className="py-1.5 px-2">
+                                            <span className="px-1.5 py-0.5 rounded font-bold text-[8px] uppercase bg-green-50 text-green-700 border border-green-200">
+                                              {item.asset_details?.inventory_status || "Active"}
+                                            </span>
+                                          </td>
+                                          <td className="py-1.5 px-2 text-[10px] text-gray-600 font-semibold">{item.type}</td>
                                           <td className="py-1.5 px-2">
                                             <span className={`px-1.5 py-0.5 rounded font-bold text-[8px] uppercase ${
                                               item.status === "Close" ? "bg-green-50 text-green-700 border border-green-200" :
@@ -2529,15 +2590,6 @@ export default function ExpensePage() {
                                             }`}>
                                               {item.status}
                                             </span>
-                                          </td>
-                                          <td className="py-1.5 px-2 text-[10px] text-gray-500">
-                                            {item.asset_details ? (
-                                              <span>
-                                                <strong>{item.asset_details.equipment_name}</strong> ({item.asset_details.model_name}) at <em>{item.asset_details.hospital_name}</em>
-                                              </span>
-                                            ) : (
-                                              <span className="text-red-500 font-bold">Unverified</span>
-                                            )}
                                           </td>
                                           <td className="py-1.5 px-2 text-center">
                                             <button
@@ -2567,7 +2619,7 @@ export default function ExpensePage() {
                               <div className="grid grid-cols-1 sm:grid-cols-12 gap-3 items-end bg-gray-50/50 p-2.5 rounded border border-gray-200">
                                 <div className="sm:col-span-6">
                                   <label className="label-lte font-bold">8-Digit Barcode (QR Code)</label>
-                                  <div className="flex gap-1.5">
+                                  <div className="flex gap-1.5 items-center">
                                     <input
                                       type="text"
                                       maxLength={8}
@@ -2576,6 +2628,8 @@ export default function ExpensePage() {
                                       onChange={(e) => {
                                         const cleaned = e.target.value.replace(/\D/g, "");
                                         handleItineraryChange(leg.leg, "pms_barcode", cleaned);
+                                        handleItineraryChange(leg.leg, "pms_verified", false);
+                                        handleItineraryChange(leg.leg, "pms_asset_details", null);
                                       }}
                                       className="input-lte font-mono"
                                     />
@@ -2583,8 +2637,16 @@ export default function ExpensePage() {
                                       type="button"
                                       onClick={() => verifyLegBarcode(leg.leg, "PMS")}
                                       disabled={!leg.pms_barcode || leg.pms_barcode.length !== 8}
-                                      className="btn-lte p-2 bg-amber-600 hover:bg-amber-700 text-white rounded border-0 cursor-pointer flex items-center justify-center disabled:bg-gray-200 disabled:text-gray-400 disabled:cursor-not-allowed"
-                                      title="Verify and Add Barcode"
+                                      className="btn-lte px-3 py-2 bg-amber-600 hover:bg-amber-700 text-white rounded border-0 cursor-pointer disabled:bg-gray-200 disabled:text-gray-400 disabled:cursor-not-allowed text-xs font-bold shrink-0"
+                                    >
+                                      Verify
+                                    </button>
+                                    <button
+                                      type="button"
+                                      onClick={() => addVerifiedBarcode(leg.leg, "PMS")}
+                                      disabled={!leg.pms_verified}
+                                      className="btn-lte p-2 bg-green-600 hover:bg-green-700 text-white rounded border-0 cursor-pointer disabled:bg-gray-200 disabled:text-gray-400 disabled:cursor-not-allowed shrink-0 flex items-center justify-center"
+                                      title="Add Verified Entry"
                                     >
                                       <Plus className="w-4 h-4" />
                                     </button>
@@ -2604,32 +2666,46 @@ export default function ExpensePage() {
                                 </div>
                               </div>
 
+                              {/* Verified Preview Info */}
+                              {leg.pms_verified && leg.pms_asset_details && (
+                                <div className="bg-green-50 border border-green-200 text-green-800 text-[10px] p-2 rounded flex flex-wrap gap-x-4">
+                                  <span><strong>Verified Asset:</strong> {leg.pms_asset_details.equipment_name} ({leg.pms_asset_details.model_name})</span>
+                                  <span><strong>Hospital:</strong> {leg.pms_asset_details.hospital_name}</span>
+                                  <span><strong>District:</strong> {leg.pms_asset_details.district_name}</span>
+                                  <span><strong>Status:</strong> {leg.pms_asset_details.inventory_status}</span>
+                                </div>
+                              )}
+
                               {/* Added PMS Barcodes Table */}
                               {(leg.pms_list || []).length > 0 && (
                                 <div className="border border-gray-200 rounded overflow-hidden mt-2 bg-white">
                                   <table className="table-lte text-xs w-full text-left border-collapse">
                                     <thead>
                                       <tr className="bg-gray-100 border-b border-gray-200 text-gray-700 font-bold uppercase text-[9px] tracking-wider">
-                                        <th className="py-1.5 px-2 text-left">Barcode</th>
-                                        <th className="py-1.5 px-2 text-left">Frequency</th>
-                                        <th className="py-1.5 px-2 text-left">Asset Details</th>
+                                        <th className="py-1.5 px-2 text-left">District Name</th>
+                                        <th className="py-1.5 px-2 text-left">Hospital Name</th>
+                                        <th className="py-1.5 px-2 text-left">Equipment Name</th>
+                                        <th className="py-1.5 px-2 text-left">Model</th>
+                                        <th className="py-1.5 px-2 text-left font-mono">Bar Code</th>
+                                        <th className="py-1.5 px-2 text-left">Inventory Status</th>
+                                        <th className="py-1.5 px-2 text-left">PMS Frequency Period</th>
                                         <th className="py-1.5 px-2 text-center w-12">Action</th>
                                       </tr>
                                     </thead>
                                     <tbody className="divide-y divide-gray-100">
                                       {(leg.pms_list || []).map((item, idx) => (
                                         <tr key={idx} className="hover:bg-gray-50">
+                                          <td className="py-1.5 px-2 text-[10px] text-gray-700">{item.asset_details?.district_name || "—"}</td>
+                                          <td className="py-1.5 px-2 text-[10px] text-gray-700">{item.asset_details?.hospital_name || "—"}</td>
+                                          <td className="py-1.5 px-2 text-[10px] text-gray-700 font-bold">{item.asset_details?.equipment_name || "—"}</td>
+                                          <td className="py-1.5 px-2 text-[10px] text-gray-700">{item.asset_details?.model_name || "—"}</td>
                                           <td className="py-1.5 px-2 font-mono font-bold text-gray-800">{item.barcode}</td>
-                                          <td className="py-1.5 px-2 font-semibold text-gray-600">{item.frequency}</td>
-                                          <td className="py-1.5 px-2 text-[10px] text-gray-500">
-                                            {item.asset_details ? (
-                                              <span>
-                                                <strong>{item.asset_details.equipment_name}</strong> ({item.asset_details.model_name}) at <em>{item.asset_details.hospital_name}</em>
-                                              </span>
-                                            ) : (
-                                              <span className="text-red-500 font-bold">Unverified</span>
-                                            )}
+                                          <td className="py-1.5 px-2">
+                                            <span className="px-1.5 py-0.5 rounded font-bold text-[8px] uppercase bg-green-50 text-green-700 border border-green-200">
+                                              {item.asset_details?.inventory_status || "Active"}
+                                            </span>
                                           </td>
+                                          <td className="py-1.5 px-2 text-[10px] text-gray-600 font-semibold">{item.frequency}</td>
                                           <td className="py-1.5 px-2 text-center">
                                             <button
                                               type="button"
@@ -2690,11 +2766,7 @@ export default function ExpensePage() {
                                     >
                                       <Plus className="w-4 h-4" />
                                     </button>
-                                  </div>
-                                </div>
-                              </div>
-
-                              {/* Added Assets Table */}
+                                                        {/* Added Assets Table */}
                               {(leg.assets_list || []).length > 0 && (
                                 <div className="border border-gray-200 rounded overflow-hidden mt-2 bg-white">
                                   <table className="table-lte text-xs w-full text-left border-collapse">
@@ -2702,39 +2774,16 @@ export default function ExpensePage() {
                                       <tr className="bg-gray-100 border-b border-gray-200 text-gray-700 font-bold uppercase text-[9px] tracking-wider">
                                         <th className="py-1.5 px-2 text-left">Equipment Name</th>
                                         <th className="py-1.5 px-2 text-center w-24">Quantity</th>
-                                        {(() => {
-                                          const isEngineer = (user.designation || "").toLowerCase().trim() === "engineer" || 
-                                                             (user.role || "").toLowerCase().trim() === "engineer";
-                                          return !isEngineer ? (
-                                            <>
-                                              <th className="py-1.5 px-2 text-right w-32">Tender Rate</th>
-                                              <th className="py-1.5 px-2 text-right w-32">Total Cost</th>
-                                            </>
-                                          ) : null;
-                                        })()}
                                         <th className="py-1.5 px-2 text-center w-12">Action</th>
                                       </tr>
                                     </thead>
                                     <tbody className="divide-y divide-gray-100">
                                       {(leg.assets_list || []).map((item, idx) => {
-                                        const selectedEq = assetValueMaster.find(eq => eq.equipment_name === item.equipment_name);
-                                        const costPerUnit = selectedEq ? (selectedEq.rmsc_tender_cost || 0) : 0;
                                         const qty = parseInt(item.quantity || "0") || 0;
-                                        const totalCost = qty * costPerUnit;
-
-                                        const isEngineer = (user.designation || "").toLowerCase().trim() === "engineer" || 
-                                                           (user.role || "").toLowerCase().trim() === "engineer";
-
                                         return (
                                           <tr key={idx} className="hover:bg-gray-50">
                                             <td className="py-1.5 px-2 font-bold text-gray-800">{item.equipment_name}</td>
                                             <td className="py-1.5 px-2 text-center font-semibold text-gray-600">{qty}</td>
-                                            {!isEngineer && (
-                                              <>
-                                                <td className="py-1.5 px-2 text-right font-mono text-gray-600">₹{costPerUnit.toLocaleString()}</td>
-                                                <td className="py-1.5 px-2 text-right font-mono font-bold text-emerald-700">₹{totalCost.toLocaleString()}</td>
-                                              </>
-                                            )}
                                             <td className="py-1.5 px-2 text-center">
                                               <button
                                                 type="button"
@@ -3299,37 +3348,41 @@ export default function ExpensePage() {
                                             {selectedActs.map((act: string, actIdx: number) => (
                                               <span key={actIdx} className="px-1.5 py-0.5 rounded bg-gray-100 border border-gray-200 text-[8px] font-bold text-gray-700 uppercase">
                                                 {act}
-                                              </span>
-                                            ))}
-                                          </div>
-
-                                          {/* Sub-table for Calls */}
+                                                          {/* Sub-table for Calls */}
                                           {selectedActs.includes("Calls") && callsList.length > 0 && (
-                                            <div className="border border-blue-100 rounded overflow-hidden bg-white max-w-3xl">
+                                            <div className="border border-blue-100 rounded overflow-hidden bg-white max-w-4xl">
                                               <div className="px-2 py-1 bg-blue-50/50 border-b border-blue-100 text-[9px] font-bold text-blue-700 uppercase">Support Calls Logs</div>
-                                              <table className="min-w-full divide-y divide-gray-100 text-[10px]">
+                                              <table className="min-w-full divide-y divide-gray-100 text-[10px] text-left">
                                                 <thead className="bg-gray-50 text-[8px] text-gray-400 font-bold uppercase">
                                                   <tr>
-                                                    <th className="py-1 px-2 text-left">Barcode</th>
-                                                    <th className="py-1 px-2 text-left">Type</th>
-                                                    <th className="py-1 px-2 text-left">Status</th>
-                                                    <th className="py-1 px-2 text-left">Asset / Equipment Details</th>
+                                                    <th className="py-1 px-2 text-left">District Name</th>
+                                                    <th className="py-1 px-2 text-left">Hospital Name</th>
+                                                    <th className="py-1 px-2 text-left">Equipment Name</th>
+                                                    <th className="py-1 px-2 text-left">Model</th>
+                                                    <th className="py-1 px-2 text-left font-mono">Bar Code</th>
+                                                    <th className="py-1 px-2 text-left">Inventory Status</th>
+                                                    <th className="py-1 px-2 text-left">Call Type</th>
+                                                    <th className="py-1 px-2 text-left">Call Status</th>
                                                   </tr>
                                                 </thead>
                                                 <tbody className="divide-y divide-gray-100">
                                                   {callsList.map((c: any, cIdx: number) => (
                                                     <tr key={cIdx}>
+                                                      <td className="py-1 px-2 text-gray-700">{c.asset_details?.district_name || "—"}</td>
+                                                      <td className="py-1 px-2 text-gray-700">{c.asset_details?.hospital_name || "—"}</td>
+                                                      <td className="py-1 px-2 text-gray-805 font-bold">{c.asset_details?.equipment_name || "—"}</td>
+                                                      <td className="py-1 px-2 text-gray-700">{c.asset_details?.model_name || "—"}</td>
                                                       <td className="py-1 px-2 font-mono font-bold text-gray-700">{c.barcode}</td>
-                                                      <td className="py-1 px-2 text-gray-600">{c.type || "Support Call"}</td>
                                                       <td className="py-1 px-2">
-                                                        <span className="px-1.5 py-0.5 rounded font-extrabold text-[7px] uppercase bg-blue-50 text-blue-700 border border-blue-100">
-                                                          {c.status || "Attend"}
+                                                        <span className="px-1 py-0.2 rounded font-extrabold text-[7px] uppercase bg-green-50 text-green-700 border border-green-200">
+                                                          {c.asset_details?.inventory_status || "Active"}
                                                         </span>
                                                       </td>
-                                                      <td className="py-1 px-2 text-gray-500">
-                                                        {c.asset_details ? (
-                                                          <span>{c.asset_details.equipment_name} ({c.asset_details.model_name}) @ {c.asset_details.hospital_name}</span>
-                                                        ) : "—"}
+                                                      <td className="py-1 px-2 text-gray-650">{c.type || "Support Call"}</td>
+                                                      <td className="py-1 px-2">
+                                                        <span className="px-1 py-0.2 rounded font-extrabold text-[7px] uppercase bg-blue-50 text-blue-700 border border-blue-100">
+                                                          {c.status || "Attend"}
+                                                        </span>
                                                       </td>
                                                     </tr>
                                                   ))}
@@ -3340,26 +3393,34 @@ export default function ExpensePage() {
 
                                           {/* Sub-table for PMS */}
                                           {selectedActs.includes("PMS") && pmsList.length > 0 && (
-                                            <div className="border border-amber-100 rounded overflow-hidden bg-white max-w-3xl">
+                                            <div className="border border-amber-100 rounded overflow-hidden bg-white max-w-4xl">
                                               <div className="px-2 py-1 bg-amber-50/50 border-b border-amber-100 text-[9px] font-bold text-amber-700 uppercase">PMS Service Logs</div>
-                                              <table className="min-w-full divide-y divide-gray-100 text-[10px]">
+                                              <table className="min-w-full divide-y divide-gray-100 text-[10px] text-left">
                                                 <thead className="bg-gray-50 text-[8px] text-gray-400 font-bold uppercase">
                                                   <tr>
-                                                    <th className="py-1 px-2 text-left">Barcode</th>
-                                                    <th className="py-1 px-2 text-left">Frequency</th>
-                                                    <th className="py-1 px-2 text-left">Asset / Equipment Details</th>
+                                                    <th className="py-1 px-2 text-left">District Name</th>
+                                                    <th className="py-1 px-2 text-left">Hospital Name</th>
+                                                    <th className="py-1 px-2 text-left">Equipment Name</th>
+                                                    <th className="py-1 px-2 text-left">Model</th>
+                                                    <th className="py-1 px-2 text-left font-mono">Bar Code</th>
+                                                    <th className="py-1 px-2 text-left">Inventory Status</th>
+                                                    <th className="py-1 px-2 text-left">PMS Frequency Period</th>
                                                   </tr>
                                                 </thead>
                                                 <tbody className="divide-y divide-gray-100">
                                                   {pmsList.map((p: any, pIdx: number) => (
                                                     <tr key={pIdx}>
+                                                      <td className="py-1 px-2 text-gray-700">{p.asset_details?.district_name || "—"}</td>
+                                                      <td className="py-1 px-2 text-gray-700">{p.asset_details?.hospital_name || "—"}</td>
+                                                      <td className="py-1 px-2 text-gray-805 font-bold">{p.asset_details?.equipment_name || "—"}</td>
+                                                      <td className="py-1 px-2 text-gray-700">{p.asset_details?.model_name || "—"}</td>
                                                       <td className="py-1 px-2 font-mono font-bold text-gray-700">{p.barcode}</td>
-                                                      <td className="py-1 px-2 text-gray-600">{p.frequency || "3 month"}</td>
-                                                      <td className="py-1 px-2 text-gray-500">
-                                                        {p.asset_details ? (
-                                                          <span>{p.asset_details.equipment_name} ({p.asset_details.model_name}) @ {p.asset_details.hospital_name}</span>
-                                                        ) : "—"}
+                                                      <td className="py-1 px-2">
+                                                        <span className="px-1 py-0.2 rounded font-extrabold text-[7px] uppercase bg-green-50 text-green-700 border border-green-200">
+                                                          {p.asset_details?.inventory_status || "Active"}
+                                                        </span>
                                                       </td>
+                                                      <td className="py-1 px-2 text-gray-650">{p.frequency || "3 month"}</td>
                                                     </tr>
                                                   ))}
                                                 </tbody>
@@ -3369,9 +3430,9 @@ export default function ExpensePage() {
 
                                           {/* Sub-table for Asset Tagging */}
                                           {selectedActs.includes("Asset Tagging") && assetsList.length > 0 && (
-                                            <div className="border border-emerald-100 rounded overflow-hidden bg-white max-w-3xl">
+                                            <div className="border border-emerald-100 rounded overflow-hidden bg-white max-w-4xl">
                                               <div className="px-2 py-1 bg-emerald-50/50 border-b border-emerald-100 text-[9px] font-bold text-emerald-700 uppercase">Asset Tagging Records</div>
-                                              <table className="min-w-full divide-y divide-gray-100 text-[10px]">
+                                              <table className="min-w-full divide-y divide-gray-100 text-[10px] text-left">
                                                 <thead className="bg-gray-50 text-[8px] text-gray-400 font-bold uppercase">
                                                   <tr>
                                                     <th className="py-1 px-2 text-left">Equipment Name</th>
@@ -3379,7 +3440,9 @@ export default function ExpensePage() {
                                                     {(() => {
                                                       const isEngineer = (user.designation || "").toLowerCase().trim() === "engineer" || 
                                                                          (user.role || "").toLowerCase().trim() === "engineer";
-                                                      return !isEngineer ? (
+                                                      const isSubmitter = (selectedClaim.user_id === user.id) || (selectedClaim.submitter_code === user.user_id);
+                                                      const hideCost = isEngineer || isSubmitter;
+                                                      return !hideCost ? (
                                                         <>
                                                           <th className="py-1 px-2 text-right w-28">Tender Rate</th>
                                                           <th className="py-1 px-2 text-right w-28">Total Cost</th>
@@ -3397,12 +3460,14 @@ export default function ExpensePage() {
                                                     
                                                     const isEngineer = (user.designation || "").toLowerCase().trim() === "engineer" || 
                                                                        (user.role || "").toLowerCase().trim() === "engineer";
+                                                    const isSubmitter = (selectedClaim.user_id === user.id) || (selectedClaim.submitter_code === user.user_id);
+                                                    const hideCost = isEngineer || isSubmitter;
                                                                        
                                                     return (
                                                       <tr key={aIdx}>
                                                         <td className="py-1 px-2 font-semibold text-gray-700">{a.equipment_name}</td>
                                                         <td className="py-1 px-2 text-center text-gray-600">{qty}</td>
-                                                        {!isEngineer && (
+                                                        {!hideCost && (
                                                           <>
                                                             <td className="py-1 px-2 text-right text-gray-500">₹{costPerUnit.toLocaleString()}</td>
                                                             <td className="py-1 px-2 text-right font-bold text-emerald-700">₹{totalCost.toLocaleString()}</td>
