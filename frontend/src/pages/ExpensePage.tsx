@@ -1278,10 +1278,9 @@ export default function ExpensePage() {
 
       {/* Main Form container supporting dual layout */}
       <form onSubmit={handleFormSubmit} className="space-y-6">
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
+        <div className="space-y-6">
           
-          {/* Left Column (8 cols): Date Selection & Journey visit legs */}
-          <div className="lg:col-span-8 space-y-6">
+          <div className="space-y-6">
             
             {/* Date Selection card */}
             <div className="card-lte-primary bg-white shadow-sm">
@@ -1999,63 +1998,6 @@ export default function ExpensePage() {
               <Plus className="w-4 h-4 animate-bounce" /> Add Itinerary leg visit
             </button>
 
-          </div>
-
-          {/* Right Column (4 cols): User Info Stats & Totals Summary Panel (Desktop Only) */}
-          <div className="lg:col-span-4 space-y-6 sticky top-20">
-            
-            {/* Desktop User Allowance & Limits Card */}
-            <div className="hidden lg:block bg-white border border-gray-250 border-t-4 border-t-blue-600 rounded shadow-sm p-4 space-y-4 text-xs font-semibold">
-              <h3 className="text-xs font-bold uppercase text-gray-700 tracking-wide border-b border-gray-150 pb-2">
-                Monthly Limits & Allowances
-              </h3>
-              <div className="grid grid-cols-2 gap-3 text-[11px] pb-3 border-b border-gray-150">
-                <div>
-                  <span className="text-[9px] uppercase font-bold text-gray-400 block tracking-wider leading-none mb-0.5">Employee Name</span>
-                  <span className="text-gray-800 block truncate">{user.name || "—"}</span>
-                </div>
-                <div>
-                  <span className="text-[9px] uppercase font-bold text-gray-400 block tracking-wider leading-none mb-0.5">Employee ID</span>
-                  <span className="font-mono text-gray-800 block">{user.e_code || "—"}</span>
-                </div>
-                <div>
-                  <span className="text-[9px] uppercase font-bold text-gray-400 block tracking-wider leading-none mb-0.5">Grade Level</span>
-                  <span className="text-gray-800 block">{user.grade || "—"}</span>
-                </div>
-                <div>
-                  <span className="text-[9px] uppercase font-bold text-gray-400 block tracking-wider leading-none mb-0.5">Home District</span>
-                  <span className="text-gray-800 block">{user.district || "—"}</span>
-                </div>
-              </div>
-              <div className="space-y-3 pt-1">
-                <div>
-                  <div className="flex justify-between items-center text-[10px] mb-1">
-                    <span className="font-bold text-gray-500 uppercase">{limitPillLabel}</span>
-                    <span className="font-extrabold text-blue-700">{allowance.current_month_km || 0} / {((allowance.max_km_per_month || 2000) + approvedKm)} KM</span>
-                  </div>
-                  <div className="w-full bg-gray-200 rounded-full h-1 overflow-hidden">
-                    <div 
-                      className="bg-blue-600 h-1 rounded-full transition-all duration-300"
-                      style={{ width: `${getProgressPercentage(allowance.current_month_km || 0, ((allowance.max_km_per_month || 2000) + approvedKm))}%` }}
-                    ></div>
-                  </div>
-                </div>
-                <div>
-                  <div className="flex justify-between items-center text-[10px] mb-1">
-                    <span className="font-bold text-gray-500 uppercase">Monthly Auto Cap</span>
-                    <span className="font-extrabold text-amber-700">₹{(allowance.current_month_auto || 0).toLocaleString()} / ₹{(1000 + approvedAuto).toLocaleString()}</span>
-                  </div>
-                  <div className="w-full bg-gray-200 rounded-full h-1 overflow-hidden">
-                    <div 
-                      className="bg-amber-500 h-1 rounded-full transition-all duration-300"
-                      style={{ width: `${getProgressPercentage(allowance.current_month_auto || 0, (1000 + approvedAuto))}%` }}
-                    ></div>
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            {/* Claims Totals & Submissions block */}
           </div>
 
         </div>
