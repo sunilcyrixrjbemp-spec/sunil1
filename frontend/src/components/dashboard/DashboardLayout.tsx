@@ -479,7 +479,7 @@ export default function DashboardLayout() {
         </header>
 
         {/* MAIN AREA WORKSPACE */}
-        <main className="flex-1 p-4 pb-16 lg:pb-4 overflow-y-auto">
+        <main className="flex-1 p-4 pb-16 lg:pb-4 overflow-y-auto min-w-0 overflow-x-hidden w-full">
           {hasAccess ? (
             <Outlet />
           ) : (
