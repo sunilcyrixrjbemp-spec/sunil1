@@ -186,7 +186,7 @@ async def serve_file(filename: str):
         
     raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="File not found")
 
-@router.get("/debug-expense/{expense_id}")
+@router.get("/debug-expense/{expense_id:path}")
 async def debug_expense(expense_id: str):
     try:
         from app.config.database import SessionLocal
