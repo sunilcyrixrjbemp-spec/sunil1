@@ -21,6 +21,23 @@ import {
   Loader2
 } from "lucide-react";
 
+const formatDateTime = (dateVal: any) => {
+  if (!dateVal) return "—";
+  try {
+    const d = new Date(dateVal);
+    if (isNaN(d.getTime())) return "Just now";
+    const day = String(d.getDate()).padStart(2, "0");
+    const months = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+    const month = months[d.getMonth()];
+    const hours = String(d.getHours()).padStart(2, "0");
+    const minutes = String(d.getMinutes()).padStart(2, "0");
+    const seconds = String(d.getSeconds()).padStart(2, "0");
+    return `${day}-${month}-${d.getFullYear()} ${hours}:${minutes}:${seconds}`;
+  } catch (_) {
+    return "—";
+  }
+};
+
 export default function ApprovalPage() {
   const [pendingApprovals, setPendingApprovals] = useState<any[]>(() => {
     const cached = localStorage.getItem("cache_pending_approvals");
@@ -29,8 +46,8 @@ export default function ApprovalPage() {
   const [loading, setLoading] = useState(() => {
     return !localStorage.getItem("cache_pending_approvals");
   });
+  const [approvalsPage, setApprovalsPage] = useState(1);
   
-  // Selected single claim details
   const [selectedApproval, setSelectedApproval] = useState<any>(null);
   const [expenseDetails, setExpenseDetails] = useState<any>(null);
   const [loadingDetails, setLoadingDetails] = useState(false);
@@ -121,6 +138,7 @@ export default function ApprovalPage() {
             sub_amount: leg.sub_amount || 0,
             da: leg.da || 0,
             hotel_amount: leg.hotel || 0,
+            local_purchase: leg.local_purchase || 0,
             oth_desc: leg.oth_desc,
             other_amount: leg.oth_amount || 0,
             visit_purpose: leg.visit_purpose,
@@ -169,17 +187,28 @@ export default function ApprovalPage() {
     const numericValue = parseFloat(value) || 0;
     setEditedLegs(prev => {
       const updated = [...prev];
-      updated[index] = {
-        ...updated[index],
-        [field]: numericValue
-      };
+      const leg = updated[index];
+      if (field === "km") {
+        const originalLeg = expenseDetails?.itineraries?.[index] || {};
+        const rate = (originalLeg.km && originalLeg.km > 0) ? ((originalLeg.amount || 0) / originalLeg.km) : 4.5;
+        updated[index] = {
+          ...leg,
+          km: numericValue,
+          travel_amount: parseFloat((numericValue * rate).toFixed(2))
+        };
+      } else {
+        updated[index] = {
+          ...leg,
+          [field]: numericValue
+        };
+      }
       return updated;
     });
   };
 
   const calculateAdjustedTotal = () => {
     return editedLegs.reduce((sum, leg) => {
-      return sum + leg.travel_amount + leg.sub_amount + leg.da + leg.hotel_amount + leg.other_amount;
+      return sum + leg.travel_amount + leg.sub_amount + leg.da + leg.hotel_amount + leg.other_amount + (leg.local_purchase || 0);
     }, 0);
   };
 
@@ -199,7 +228,10 @@ export default function ApprovalPage() {
         travel_amount: leg.travel_amount,
         sub_amount: leg.sub_amount,
         hotel_amount: leg.hotel_amount,
-        other_amount: leg.other_amount
+        other_amount: leg.other_amount,
+        distance_km: leg.km,
+        da_amount: leg.da,
+        local_purchase: leg.local_purchase
       }));
 
       if (type === "approve") {
@@ -309,7 +341,8 @@ export default function ApprovalPage() {
         leg.travel_amount !== (original.amount || 0) ||
         leg.sub_amount !== (original.sub_amount || 0) ||
         leg.hotel_amount !== (original.hotel || 0) ||
-        leg.other_amount !== (original.oth_amount || 0)
+        leg.other_amount !== (original.oth_amount || 0) ||
+        leg.local_purchase !== (original.local_purchase || 0)
       );
     });
   };
@@ -414,7 +447,7 @@ export default function ApprovalPage() {
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-150">
-                {pendingApprovals.map((req) => {
+                {pendingApprovals.slice((approvalsPage - 1) * 25, approvalsPage * 25).map((req) => {
                   const isChecked = selectedIds.includes(req.expense_id);
                   return (
                     <tr 
@@ -493,6 +526,30 @@ export default function ApprovalPage() {
                 })}
               </tbody>
             </table>
+            
+            {pendingApprovals.length > 25 && (
+              <div className="px-5 py-3 border-t border-gray-200 bg-slate-50 flex items-center justify-between text-xs text-gray-500">
+                <span>Showing {((approvalsPage - 1) * 25) + 1} to {Math.min(approvalsPage * 25, pendingApprovals.length)} of {pendingApprovals.length} items</span>
+                <div className="flex gap-2">
+                  <button
+                    type="button"
+                    disabled={approvalsPage === 1}
+                    onClick={() => setApprovalsPage(p => Math.max(p - 1, 1))}
+                    className="px-3 py-1 border border-gray-300 rounded bg-white text-gray-700 font-bold hover:bg-gray-50 disabled:opacity-50 disabled:hover:bg-white active:scale-95 transition-all cursor-pointer"
+                  >
+                    Prev
+                  </button>
+                  <button
+                    type="button"
+                    disabled={approvalsPage >= Math.ceil(pendingApprovals.length / 25)}
+                    onClick={() => setApprovalsPage(p => Math.min(p + 1, Math.ceil(pendingApprovals.length / 25)))}
+                    className="px-3 py-1 border border-gray-300 rounded bg-white text-gray-700 font-bold hover:bg-gray-50 disabled:opacity-50 disabled:hover:bg-white active:scale-95 transition-all cursor-pointer"
+                  >
+                    Next
+                  </button>
+                </div>
+              </div>
+            )}
           </div>
         )}
       </div>
@@ -635,24 +692,42 @@ export default function ApprovalPage() {
                               </div>
 
                               {/* Middle: Editable Amounts */}
-                              <div className="lg:col-span-8 grid grid-cols-1 sm:grid-cols-4 gap-4">
-                                {/* Travel Amount */}
-                                <div className="space-y-1">
-                                  <label className="text-[9px] font-bold text-gray-500 uppercase tracking-wider block flex justify-between">
-                                    <span>Travel Amount</span>
-                                    {travelModified && <span className="text-[9px] text-amber-600 font-extrabold uppercase animate-pulse">Adjusted</span>}
-                                  </label>
-                                  <div className="relative">
-                                    <span className="absolute left-2.5 top-2 text-gray-400 font-bold">₹</span>
-                                    <input
-                                      type="number"
-                                      value={leg.travel_amount}
-                                      onChange={(e) => handleLegAmountChange(index, "travel_amount", e.target.value)}
-                                      className={`input-lte pl-6 pr-2 py-1.5 text-xs font-bold ${travelModified ? "border-amber-450 bg-amber-50/10" : ""}`}
-                                    />
+                              <div className="lg:col-span-8 grid grid-cols-1 sm:grid-cols-5 gap-3">
+                                {/* Distance KM / Travel Amount based on mode */}
+                                {["Bike", "Car"].includes(leg.mode) ? (
+                                  <div className="space-y-1">
+                                    <label className="text-[9px] font-bold text-gray-500 uppercase tracking-wider block flex justify-between">
+                                      <span>Distance (KM)</span>
+                                      {leg.km !== (originalLeg.km || 0) && <span className="text-[9px] text-amber-600 font-extrabold uppercase animate-pulse">Adjusted</span>}
+                                    </label>
+                                    <div className="relative">
+                                      <input
+                                        type="number"
+                                        value={leg.km}
+                                        onChange={(e) => handleLegAmountChange(index, "km", e.target.value)}
+                                        className={`input-lte px-2 py-1.5 text-xs font-bold ${leg.km !== (originalLeg.km || 0) ? "border-amber-450 bg-amber-50/10" : ""}`}
+                                      />
+                                    </div>
+                                    <span className="text-[9px] text-gray-500 block font-semibold">Amt: ₹{leg.travel_amount} (Orig: {originalLeg.km || 0} KM)</span>
                                   </div>
-                                  <span className="text-[9px] text-gray-455 block font-semibold">Original: ₹{originalLeg.amount || 0}</span>
-                                </div>
+                                ) : (
+                                  <div className="space-y-1">
+                                    <label className="text-[9px] font-bold text-gray-500 uppercase tracking-wider block flex justify-between">
+                                      <span>Travel Amount</span>
+                                      {travelModified && <span className="text-[9px] text-amber-600 font-extrabold uppercase animate-pulse">Adjusted</span>}
+                                    </label>
+                                    <div className="relative">
+                                      <span className="absolute left-2.5 top-2 text-gray-400 font-bold">₹</span>
+                                      <input
+                                        type="number"
+                                        value={leg.travel_amount}
+                                        onChange={(e) => handleLegAmountChange(index, "travel_amount", e.target.value)}
+                                        className={`input-lte pl-6 pr-2 py-1.5 text-xs font-bold ${travelModified ? "border-amber-450 bg-amber-50/10" : ""}`}
+                                      />
+                                    </div>
+                                    <span className="text-[9px] text-gray-455 block font-semibold">Original: ₹{originalLeg.amount || 0}</span>
+                                  </div>
+                                )}
 
                                 {/* Sub Amount */}
                                 <div className="space-y-1">
@@ -691,10 +766,28 @@ export default function ApprovalPage() {
                                   <span className="text-[9px] text-gray-455 block font-semibold">Original: ₹{originalLeg.hotel || 0}</span>
                                 </div>
 
-                                {/* Local purchase / other amount */}
+                                {/* Local purchase */}
                                 <div className="space-y-1">
                                   <label className="text-[9px] font-bold text-gray-500 uppercase tracking-wider block flex justify-between">
-                                    <span>Local purchase</span>
+                                    <span>Local Purchase</span>
+                                    {lpModified && <span className="text-[9px] text-amber-600 font-extrabold uppercase animate-pulse">Adjusted</span>}
+                                  </label>
+                                  <div className="relative">
+                                    <span className="absolute left-2.5 top-2 text-gray-400 font-bold">₹</span>
+                                    <input
+                                      type="number"
+                                      value={leg.local_purchase}
+                                      onChange={(e) => handleLegAmountChange(index, "local_purchase", e.target.value)}
+                                      className={`input-lte pl-6 pr-2 py-1.5 text-xs font-bold ${lpModified ? "border-amber-450 bg-amber-50/10" : ""}`}
+                                    />
+                                  </div>
+                                  <span className="text-[9px] text-gray-455 block font-semibold">Original: ₹{originalLeg.local_purchase || 0}</span>
+                                </div>
+
+                                {/* Other / Misc amount */}
+                                <div className="space-y-1">
+                                  <label className="text-[9px] font-bold text-gray-500 uppercase tracking-wider block flex justify-between">
+                                    <span>Other / Misc</span>
                                     {otherModified && <span className="text-[9px] text-amber-600 font-extrabold uppercase animate-pulse">Adjusted</span>}
                                   </label>
                                   <div className="relative">
@@ -982,6 +1075,54 @@ export default function ApprovalPage() {
                       className="input-lte resize-none"
                     />
                   </div>
+
+                  {/* Adjustment & Edit Log History inside Approval Review Details modal */}
+                  {expenseDetails.edit_history && expenseDetails.edit_history.length > 0 && (
+                    <div className="border border-amber-200 rounded overflow-hidden mt-4 text-left">
+                      <div className="px-3 py-2 bg-amber-50/50 border-b border-amber-200">
+                        <h4 className="text-[10px] font-bold uppercase text-amber-800 tracking-wider">Adjustment & Edit Log History</h4>
+                      </div>
+                      <div className="overflow-x-auto">
+                        <table className="w-full text-left border-collapse text-[10px]">
+                          <thead>
+                            <tr className="border-b border-amber-200 uppercase font-bold tracking-wider text-amber-700 bg-amber-50/20">
+                              <th className="py-2 px-3 w-12">Leg</th>
+                              <th className="py-2 px-3">Field Edited</th>
+                              <th className="py-2 px-3">Original Value</th>
+                              <th className="py-2 px-3">Updated Value</th>
+                              <th className="py-2 px-3">Reason / Remark</th>
+                              <th className="py-2 px-3">Edited By</th>
+                              <th className="py-2 px-3 text-right">Date</th>
+                            </tr>
+                          </thead>
+                          <tbody className="divide-y divide-amber-100 bg-white">
+                            {expenseDetails.edit_history.map((log: any, logIdx: number) => {
+                              const cleanField = log.field_name === "travel_amount" ? "Travel Amount"
+                                : log.field_name === "sub_amount" ? "Local Conveyance"
+                                : log.field_name === "hotel_amount" ? "Hotel stay"
+                                : log.field_name === "other_amount" ? "Local purchase"
+                                : log.field_name === "distance_km" ? "Distance KM"
+                                : log.field_name === "da_amount" ? "DA Amount"
+                                : log.field_name;
+                              return (
+                                <tr key={logIdx} className="hover:bg-amber-50/10 text-slate-700">
+                                  <td className="py-2 px-3 font-mono font-bold text-gray-500">Leg #{log.leg_number}</td>
+                                  <td className="py-2 px-3 font-semibold text-gray-800">{cleanField}</td>
+                                  <td className="py-2 px-3 font-mono text-gray-500">{log.field_name === "distance_km" ? `${log.old_value} KM` : `₹${parseFloat(log.old_value || "0").toLocaleString()}`}</td>
+                                  <td className="py-2 px-3 font-mono font-bold text-blue-600">{log.field_name === "distance_km" ? `${log.new_value} KM` : `₹${parseFloat(log.new_value || "0").toLocaleString()}`}</td>
+                                  <td className="py-2 px-3 italic text-gray-600 max-w-[150px] truncate" title={log.comment}>{log.comment || "—"}</td>
+                                  <td className="py-2 px-3 font-semibold text-slate-800">
+                                    {log.editor_name} <span className="text-[8px] text-amber-600 font-bold block">{log.editor_role}</span>
+                                  </td>
+                                  <td className="py-2 px-3 text-right text-gray-500 font-mono text-[9px]">{formatDateTime(log.created_at)}</td>
+                                </tr>
+                              );
+                            })}
+                          </tbody>
+                        </table>
+                      </div>
+                    </div>
+                  )}
                 </>
               ) : (
                 <div className="py-20 text-center text-gray-400">

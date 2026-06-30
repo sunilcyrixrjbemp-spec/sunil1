@@ -496,6 +496,8 @@ async def submit_expense(
     total_completed = 0
     total_pms = 0
     total_asset = 0
+    total_calibration = 0
+    total_mobilise = 0
 
     incoming_km = 0.0
     incoming_auto = 0.0
@@ -509,6 +511,8 @@ async def submit_expense(
         total_completed += int(iti.get("ws_closed") or 0)
         total_pms += int(iti.get("ws_pms") or 0)
         total_asset += int(iti.get("ws_asset") or 0)
+        total_calibration += int(iti.get("calibration_count") or 0)
+        total_mobilise += int(iti.get("mobilise_asset_count") or 0)
 
         mode = iti.get("mode")
         if mode in ["Bike", "Car"]:
@@ -696,6 +700,16 @@ async def submit_expense(
         expense.calls_completed = total_completed
         expense.pms_count = total_pms
         expense.asset_tagging = total_asset
+        expense.calibration_count = total_calibration
+        expense.mobilise_count = total_mobilise
+        
+        # Populate original values on submission/update
+        expense.original_amount = total_amount
+        expense.original_da_amount = total_da
+        expense.original_hotel_amount = total_hotel
+        expense.original_other_expense_amount = total_other
+        expense.original_local_purchase_amount = total_local_purchase
+
         if client_timestamp:
             expense.updated_at = parse_client_timestamp(client_timestamp)
     else:
@@ -717,7 +731,16 @@ async def submit_expense(
             calls_assigned=total_assigned,
             calls_completed=total_completed,
             pms_count=total_pms,
-            asset_tagging=total_asset
+            asset_tagging=total_asset,
+            calibration_count=total_calibration,
+            mobilise_count=total_mobilise,
+            
+            # Populate original values on submission
+            original_amount=total_amount,
+            original_da_amount=total_da,
+            original_hotel_amount=total_hotel,
+            original_other_expense_amount=total_other,
+            original_local_purchase_amount=total_local_purchase
         )
         if client_timestamp:
             client_dt = parse_client_timestamp(client_timestamp)
@@ -759,8 +782,19 @@ async def submit_expense(
             calls_completed=int(iti.get("ws_closed") or 0),
             pms_count=int(iti.get("ws_pms") or 0),
             asset_tagging=int(iti.get("ws_asset") or 0),
+            calibration_count=int(iti.get("calibration_count") or 0),
+            mobilise_count=int(iti.get("mobilise_asset_count") or 0),
             visit_purpose=iti.get("visit_purpose"),
-            activity_details=iti.get("activity_details") if isinstance(iti.get("activity_details"), str) else json.dumps(iti.get("activity_details")) if iti.get("activity_details") else None
+            activity_details=iti.get("activity_details") if isinstance(iti.get("activity_details"), str) else json.dumps(iti.get("activity_details")) if iti.get("activity_details") else None,
+            
+            # Populate original leg values
+            original_distance_km=float(iti.get("km") or 0.0),
+            original_travel_amount=float(iti.get("amount") or 0.0),
+            original_sub_amount=float(iti.get("sub_amount") or 0.0),
+            original_da_amount=float(iti.get("da") or 0.0),
+            original_hotel_amount=float(iti.get("hotel") or 0.0),
+            original_other_amount=float(iti.get("oth_amount") or 0.0),
+            original_local_purchase=float(iti.get("local_purchase") or 0.0)
         )
         db.add(leg_item)
         
@@ -1044,6 +1078,10 @@ async def get_expenses(
         tot_km = sum(l.distance_km or 0.0 for l in legs if l.travel_mode in ["Bike", "Car"])
         tot_auto = sum(l.travel_amount or 0.0 for l in legs if l.travel_mode == "Auto") + \
                    sum(l.sub_amount or 0.0 for l in legs if l.sub_mode == "Auto")
+        
+        bike_amount = sum(l.travel_amount or 0.0 for l in legs if l.travel_mode == "Bike")
+        car_amount = sum(l.travel_amount or 0.0 for l in legs if l.travel_mode == "Car")
+        
         result.append({
             "id": exp.id,
             "expense_code": exp.expense_code,
@@ -1056,9 +1094,10 @@ async def get_expenses(
             "itinerary": exp.itinerary,
             "description": exp.description,
             "attachments": exp.attachments,
-            "da_amount": exp.da_amount,
-            "hotel_amount": exp.hotel_amount,
-            "other_expense_amount": exp.other_expense_amount,
+            "da_amount": exp.da_amount or 0.0,
+            "hotel_amount": exp.hotel_amount or 0.0,
+            "other_expense_amount": exp.other_expense_amount or 0.0,
+            "local_purchase_amount": exp.local_purchase_amount or 0.0,
             "calls_assigned": exp.calls_assigned,
             "calls_completed": exp.calls_completed,
             "pms_count": exp.pms_count,
@@ -1067,6 +1106,9 @@ async def get_expenses(
             "updated_at": exp.updated_at,
             "total_km": tot_km,
             "total_auto": tot_auto,
+            "bike_amount": bike_amount,
+            "car_amount": car_amount,
+            "auto_amount": tot_auto,
             "district": sub_obj.district if sub_obj and sub_obj.district else "Ganganar",
             "zone": sub_obj.zone if sub_obj and sub_obj.zone else "Bikaner"
         })
@@ -1165,6 +1207,9 @@ async def get_team_expenses(
         tot_auto = sum(l.travel_amount or 0.0 for l in legs if l.travel_mode == "Auto") + \
                    sum(l.sub_amount or 0.0 for l in legs if l.sub_mode == "Auto")
         
+        bike_amount = sum(l.travel_amount or 0.0 for l in legs if l.travel_mode == "Bike")
+        car_amount = sum(l.travel_amount or 0.0 for l in legs if l.travel_mode == "Car")
+        
         result.append({
             "id": exp.id,
             "expense_code": exp.expense_code,
@@ -1181,8 +1226,13 @@ async def get_team_expenses(
             "created_at": exp.created_at,
             "total_km": tot_km,
             "total_auto": tot_auto,
-            "da_amount": exp.da_amount,
-            "hotel_amount": exp.hotel_amount,
+            "bike_amount": bike_amount,
+            "car_amount": car_amount,
+            "auto_amount": tot_auto,
+            "da_amount": exp.da_amount or 0.0,
+            "hotel_amount": exp.hotel_amount or 0.0,
+            "other_expense_amount": exp.other_expense_amount or 0.0,
+            "local_purchase_amount": exp.local_purchase_amount or 0.0,
             "district": submitter.district if submitter and submitter.district else "Ganganar",
             "zone": submitter.zone if submitter and submitter.zone else "Bikaner"
         })
@@ -1287,6 +1337,23 @@ async def get_expense_details(
     # Load attachments
     attachments = db.query(ExpenseAttachment).filter(ExpenseAttachment.exp_id == expense.expense_code).all()
 
+    # Load edit logs history
+    from app.models.expense_edit_log import ExpenseEditLog
+    edit_logs = db.query(ExpenseEditLog).filter(ExpenseEditLog.expense_id == expense.id).order_by(ExpenseEditLog.created_at.desc()).all()
+    edit_history_list = [
+        {
+            "id": el.id,
+            "editor_name": el.editor_name,
+            "editor_role": el.editor_role,
+            "leg_number": el.leg_number,
+            "field_name": el.field_name,
+            "old_value": el.old_value,
+            "new_value": el.new_value,
+            "comment": el.comment,
+            "created_at": el.created_at
+        } for el in edit_logs
+    ]
+
     return {
         "id": expense.id,
         "expense_code": expense.expense_code,
@@ -1300,6 +1367,14 @@ async def get_expense_details(
         "category": expense.travel_mode,
         "date": expense.itinerary,
         "purpose": expense.description,
+        
+        # Original master totals
+        "original_amount": expense.original_amount or expense.amount,
+        "original_da_amount": expense.original_da_amount or expense.da_amount,
+        "original_hotel_amount": expense.original_hotel_amount or expense.hotel_amount,
+        "original_other_expense_amount": expense.original_other_expense_amount or expense.other_expense_amount,
+        "original_local_purchase_amount": expense.original_local_purchase_amount or expense.local_purchase_amount,
+
         "attachments": [a.file_url for a in attachments],
         "attachments_detailed": [
             {
@@ -1329,13 +1404,25 @@ async def get_expense_details(
                 "ws_closed": i.calls_completed,
                 "ws_pms": i.pms_count,
                 "ws_asset": i.asset_tagging,
+                "calibration_count": i.calibration_count,
+                "mobilise_count": i.mobilise_count,
                 "visit_purpose": i.visit_purpose,
-                "activity_details": i.activity_details
+                "activity_details": i.activity_details,
+                
+                # Original leg values
+                "original_km": i.original_distance_km or i.distance_km,
+                "original_amount": i.original_travel_amount or i.travel_amount,
+                "original_sub_amount": i.original_sub_amount or i.sub_amount,
+                "original_da": i.original_da_amount or i.da_amount,
+                "original_hotel": i.original_hotel_amount or i.hotel_amount,
+                "original_oth_amount": i.original_other_amount or i.other_amount,
+                "original_local_purchase": i.original_local_purchase or i.local_purchase
             } for i in itineraries
         ],
         "created_at": expense.created_at,
         "updated_at": expense.updated_at,
-        "approvals": approvals_list
+        "approvals": approvals_list,
+        "edit_history": edit_history_list
     }
 
 @router.delete("/{expense_id}")

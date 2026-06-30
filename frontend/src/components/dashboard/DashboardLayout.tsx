@@ -179,7 +179,7 @@ export default function DashboardLayout() {
       const month = months[d.getMonth()];
       const hours = String(d.getHours()).padStart(2, "0");
       const minutes = String(d.getMinutes()).padStart(2, "0");
-      return `${day}-${month} ${hours}:${minutes}`;
+      return `${day}-${month}-${d.getFullYear()} ${hours}:${minutes}:${String(d.getSeconds()).padStart(2, "0")}`;
     } catch (_) {
       return "—";
     }

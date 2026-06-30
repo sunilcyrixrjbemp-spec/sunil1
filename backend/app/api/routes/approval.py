@@ -30,6 +30,77 @@ def parse_client_timestamp(ts_str: str | None) -> datetime:
         except Exception:
             return datetime.now()
 
+def apply_itinerary_edits_and_log(db: Session, expense: Expense, itinerary_edits: List, current_user: User, comments: str):
+    from app.models.expense_itinerary import ExpenseItinerary
+    from app.models.expense_edit_log import ExpenseEditLog
+    
+    for edit in itinerary_edits:
+        leg = db.query(ExpenseItinerary).filter(
+            ExpenseItinerary.exp_id == expense.expense_code,
+            ExpenseItinerary.leg_number == edit.leg_number
+        ).first()
+        if leg:
+            fields_to_check = [
+                ("travel_amount", edit.travel_amount),
+                ("sub_amount", edit.sub_amount),
+                ("hotel_amount", edit.hotel_amount),
+                ("other_amount", edit.other_amount),
+                ("distance_km", edit.distance_km),
+                ("da_amount", edit.da_amount),
+                ("local_purchase", edit.local_purchase)
+            ]
+            for field, new_val in fields_to_check:
+                if new_val is not None:
+                    old_val = getattr(leg, field) or 0.0
+                    try:
+                        # Float comparisons
+                        if round(float(old_val), 2) != round(float(new_val), 2):
+                            log_rec = ExpenseEditLog(
+                                expense_id=expense.id,
+                                editor_id=current_user.id,
+                                editor_name=current_user.name,
+                                editor_role=current_user.role,
+                                leg_number=leg.leg_number,
+                                field_name=field,
+                                old_value=str(old_val),
+                                new_value=str(new_val),
+                                comment=comments or "Adjusted during approval"
+                            )
+                            db.add(log_rec)
+                            setattr(leg, field, new_val)
+                    except Exception:
+                        # Fallback for non-numeric field changes
+                        if str(old_val) != str(new_val):
+                            log_rec = ExpenseEditLog(
+                                expense_id=expense.id,
+                                editor_id=current_user.id,
+                                editor_name=current_user.name,
+                                editor_role=current_user.role,
+                                leg_number=leg.leg_number,
+                                field_name=field,
+                                old_value=str(old_val),
+                                new_value=str(new_val),
+                                comment=comments or "Adjusted during approval"
+                            )
+                            db.add(log_rec)
+                            setattr(leg, field, new_val)
+    db.flush()
+
+    # Recalculate totals including local purchase
+    legs = db.query(ExpenseItinerary).filter(ExpenseItinerary.exp_id == expense.expense_code).all()
+    total_da = sum(l.da_amount or 0.0 for l in legs)
+    total_hotel = sum(l.hotel_amount or 0.0 for l in legs)
+    total_other = sum(l.other_amount or 0.0 for l in legs)
+    total_travel = sum(l.travel_amount or 0.0 for l in legs)
+    total_sub = sum(l.sub_amount or 0.0 for l in legs)
+    total_lp = sum(l.local_purchase or 0.0 for l in legs)
+
+    expense.da_amount = total_da
+    expense.hotel_amount = total_hotel
+    expense.other_expense_amount = total_other
+    expense.local_purchase_amount = total_lp
+    expense.amount = total_travel + total_sub + total_da + total_hotel + total_other + total_lp
+
 @router.get("/", response_model=List[ApprovalResponse])
 async def get_pending_approvals(
     db: Session = Depends(get_db),
@@ -119,34 +190,7 @@ async def approve_expense(
 
     # Save itinerary updates if present
     if request.itinerary_edits:
-        for edit in request.itinerary_edits:
-            leg = db.query(ExpenseItinerary).filter(
-                ExpenseItinerary.exp_id == expense.expense_code,
-                ExpenseItinerary.leg_number == edit.leg_number
-            ).first()
-            if leg:
-                if edit.travel_amount is not None:
-                    leg.travel_amount = edit.travel_amount
-                if edit.sub_amount is not None:
-                    leg.sub_amount = edit.sub_amount
-                if edit.hotel_amount is not None:
-                    leg.hotel_amount = edit.hotel_amount
-                if edit.other_amount is not None:
-                    leg.other_amount = edit.other_amount
-        db.flush()
-
-        # Recalculate totals
-        legs = db.query(ExpenseItinerary).filter(ExpenseItinerary.exp_id == expense.expense_code).all()
-        total_da = sum(l.da_amount or 0.0 for l in legs)
-        total_hotel = sum(l.hotel_amount or 0.0 for l in legs)
-        total_other = sum(l.other_amount or 0.0 for l in legs)
-        total_travel = sum(l.travel_amount or 0.0 for l in legs)
-        total_sub = sum(l.sub_amount or 0.0 for l in legs)
-
-        expense.da_amount = total_da
-        expense.hotel_amount = total_hotel
-        expense.other_expense_amount = total_other
-        expense.amount = total_travel + total_sub + total_da + total_hotel + total_other
+        apply_itinerary_edits_and_log(db, expense, request.itinerary_edits, current_user, request.comments)
 
     # Update active approval
     active_approval.status = "approved"
@@ -263,34 +307,7 @@ async def reject_expense(
 
     # Save itinerary updates if present (in case they want to reject with updated values)
     if request.itinerary_edits:
-        for edit in request.itinerary_edits:
-            leg = db.query(ExpenseItinerary).filter(
-                ExpenseItinerary.exp_id == expense.expense_code,
-                ExpenseItinerary.leg_number == edit.leg_number
-            ).first()
-            if leg:
-                if edit.travel_amount is not None:
-                    leg.travel_amount = edit.travel_amount
-                if edit.sub_amount is not None:
-                    leg.sub_amount = edit.sub_amount
-                if edit.hotel_amount is not None:
-                    leg.hotel_amount = edit.hotel_amount
-                if edit.other_amount is not None:
-                    leg.other_amount = edit.other_amount
-        db.flush()
-
-        # Recalculate totals
-        legs = db.query(ExpenseItinerary).filter(ExpenseItinerary.exp_id == expense.expense_code).all()
-        total_da = sum(l.da_amount or 0.0 for l in legs)
-        total_hotel = sum(l.hotel_amount or 0.0 for l in legs)
-        total_other = sum(l.other_amount or 0.0 for l in legs)
-        total_travel = sum(l.travel_amount or 0.0 for l in legs)
-        total_sub = sum(l.sub_amount or 0.0 for l in legs)
-
-        expense.da_amount = total_da
-        expense.hotel_amount = total_hotel
-        expense.other_expense_amount = total_other
-        expense.amount = total_travel + total_sub + total_da + total_hotel + total_other
+        apply_itinerary_edits_and_log(db, expense, request.itinerary_edits, current_user, request.comments)
 
     # Update active approval to rejected
     active_approval.status = "rejected"

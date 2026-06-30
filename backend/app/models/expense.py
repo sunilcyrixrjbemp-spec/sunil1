@@ -26,6 +26,15 @@ class Expense(Base):
     calls_completed = Column(Integer, default=0)
     pms_count = Column(Integer, default=0)
     asset_tagging = Column(Integer, default=0)
+    calibration_count = Column(Integer, default=0)
+    mobilise_count = Column(Integer, default=0)
+    
+    # Preserve original submitted amounts
+    original_amount = Column(Float, default=0.0)
+    original_da_amount = Column(Float, default=0.0)
+    original_hotel_amount = Column(Float, default=0.0)
+    original_other_expense_amount = Column(Float, default=0.0)
+    original_local_purchase_amount = Column(Float, default=0.0)
     
     created_at = Column(DateTime, server_default=func.now())
     updated_at = Column(DateTime, server_default=func.now(), onupdate=func.now())

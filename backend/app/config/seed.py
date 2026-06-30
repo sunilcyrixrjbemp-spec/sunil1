@@ -126,6 +126,15 @@ def run_schema_updates(db: Session):
         ("calls_completed", "INTEGER DEFAULT 0"),
         ("pms_count", "INTEGER DEFAULT 0"),
         ("asset_tagging", "INTEGER DEFAULT 0"),
+        ("calibration_count", "INTEGER DEFAULT 0"),
+        ("mobilise_count", "INTEGER DEFAULT 0"),
+        
+        # New original totals columns
+        ("original_amount", "FLOAT DEFAULT 0.0"),
+        ("original_da_amount", "FLOAT DEFAULT 0.0"),
+        ("original_hotel_amount", "FLOAT DEFAULT 0.0"),
+        ("original_other_expense_amount", "FLOAT DEFAULT 0.0"),
+        ("original_local_purchase_amount", "FLOAT DEFAULT 0.0"),
     ]
     
     for col_name, col_type in columns_to_add:
@@ -140,6 +149,31 @@ def run_schema_updates(db: Session):
                 logger.info(f"Column {col_name} already exists in expenses table.")
             else:
                 logger.warning(f"Error checking/adding column {col_name}: {str(e)}")
+
+    # Add columns to expense_itineraries
+    itinerary_cols = [
+        ("original_distance_km", "FLOAT DEFAULT 0.0"),
+        ("original_travel_amount", "FLOAT DEFAULT 0.0"),
+        ("original_sub_amount", "FLOAT DEFAULT 0.0"),
+        ("original_da_amount", "FLOAT DEFAULT 0.0"),
+        ("original_hotel_amount", "FLOAT DEFAULT 0.0"),
+        ("original_other_amount", "FLOAT DEFAULT 0.0"),
+        ("original_local_purchase", "FLOAT DEFAULT 0.0"),
+        ("calibration_count", "INTEGER DEFAULT 0"),
+        ("mobilise_count", "INTEGER DEFAULT 0"),
+    ]
+    for col_name, col_type in itinerary_cols:
+        try:
+            db.execute(text(f"ALTER TABLE expense_itineraries ADD COLUMN {col_name} {col_type}"))
+            db.commit()
+            logger.info(f"Added column {col_name} to expense_itineraries table.")
+        except Exception as e:
+            db.rollback()
+            err_str = str(e).lower()
+            if "duplicate column name" in err_str or "already exists" in err_str:
+                logger.info(f"Column {col_name} already exists in expense_itineraries table.")
+            else:
+                logger.warning(f"Error checking/adding column {col_name} to expense_itineraries: {str(e)}")
 
     # Add active_session_id column to users table
     try:

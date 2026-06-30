@@ -359,8 +359,8 @@ export default function ExpensePage() {
     const currentUserId = (() => { try { const u = JSON.parse(localStorage.getItem("user") || "{}"); return u.user_id || "Admin"; } catch(e) { return "Admin"; } })().trim();
     return !localStorage.getItem(`cache_my_expenses_${currentUserId}`);
   });
+  const [myClaimsPage, setMyClaimsPage] = useState(1);
   
-  // Modals state
   const [showConfirmModal, setShowConfirmModal] = useState(false);
   const [showApprovalModal, setShowApprovalModal] = useState(false);
   const [exceededType, setExceededType] = useState<"KM" | "AUTO">("KM");
@@ -819,6 +819,13 @@ export default function ExpensePage() {
   };
 
   const uploadActivityPhoto = async (legNum: number, activityType: "Calls" | "PMS", file: File) => {
+    // Validate file type
+    const isImage = file.type.startsWith("image/");
+    if (!isImage) {
+      toast.error("Only image files are allowed for Call/PMS photos!");
+      return;
+    }
+
     setItineraries(prev => prev.map(l => {
       if (l.leg !== legNum) return l;
       return activityType === "Calls" 
@@ -827,7 +834,34 @@ export default function ExpensePage() {
     }));
 
     try {
-      const data = await uploadService.uploadReceipt(file);
+      let processedFile = file;
+      
+      // Compress image if larger than 50KB
+      if (file.size > 50 * 1024) {
+        const toastId = toast.loading(`Compressing photo... (${Math.round(file.size / 1024)}KB)`);
+        try {
+          processedFile = await compressImage(file);
+          toast.dismiss(toastId);
+          toast.success(`Compressed to ${Math.round(processedFile.size / 1024)}KB ✓`, { duration: 2000 });
+        } catch {
+          toast.dismiss(toastId);
+          processedFile = file;
+        }
+      }
+
+      // Validate final size (maximum 2MB)
+      if (processedFile.size > 2 * 1024 * 1024) {
+        toast.error("Photo size exceeds the 2MB limit. Please upload a smaller photo.");
+        setItineraries(prev => prev.map(l => {
+          if (l.leg !== legNum) return l;
+          return activityType === "Calls"
+            ? { ...l, calls_photo_loading: false }
+            : { ...l, pms_photo_loading: false };
+        }));
+        return;
+      }
+
+      const data = await uploadService.uploadReceipt(processedFile);
       if (data && data.url) {
         setItineraries(prev => prev.map(l => {
           if (l.leg !== legNum) return l;
@@ -3180,7 +3214,7 @@ export default function ExpensePage() {
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-100">
-                {claims.map((exp) => (
+                {claims.slice((myClaimsPage - 1) * 25, myClaimsPage * 25).map((exp) => (
                   <tr 
                     key={exp.id} 
                     onClick={() => handleViewDetails(exp.id)}
@@ -3192,7 +3226,7 @@ export default function ExpensePage() {
                     <td className="py-3 px-3 text-slate-500">{exp.travel_mode}</td>
                     <td className="py-3 px-3 font-bold text-slate-900">₹{exp.amount.toLocaleString()}</td>
                     <td className="py-3 px-3">
-                      <span className={`inline-flex items-center px-2 py-0.5 rounded border text-[9px] font-bold uppercase tracking-wider ${getStatusBadgeClass(exp.status)}`}>
+                       <span className={`inline-flex items-center px-2 py-0.5 rounded border text-[9px] font-bold uppercase tracking-wider ${getStatusBadgeClass(exp.status)}`}>
                         {getStatusLabel(exp.status)}
                       </span>
                     </td>
@@ -3223,6 +3257,31 @@ export default function ExpensePage() {
               </tbody>
             </table>
           )}
+        </div>
+
+        {claims.length > 25 && (
+          <div className="px-5 py-3.5 border-t border-gray-200 bg-slate-50 flex items-center justify-between text-xs text-gray-500">
+            <span>Showing {((myClaimsPage - 1) * 25) + 1} to {Math.min(myClaimsPage * 25, claims.length)} of {claims.length} entries</span>
+            <div className="flex gap-2">
+              <button
+                type="button"
+                disabled={myClaimsPage === 1}
+                onClick={() => setMyClaimsPage(p => Math.max(p - 1, 1))}
+                className="px-3 py-1 border border-gray-300 rounded bg-white text-gray-700 font-bold hover:bg-gray-50 disabled:opacity-50 disabled:hover:bg-white active:scale-95 transition-all cursor-pointer"
+              >
+                Prev
+              </button>
+              <button
+                type="button"
+                disabled={myClaimsPage >= Math.ceil(claims.length / 25)}
+                onClick={() => setMyClaimsPage(p => Math.min(p + 1, Math.ceil(claims.length / 25)))}
+                className="px-3 py-1 border border-gray-300 rounded bg-white text-gray-700 font-bold hover:bg-gray-50 disabled:opacity-50 disabled:hover:bg-white active:scale-95 transition-all cursor-pointer"
+              >
+                Next
+              </button>
+            </div>
+          </div>
+        )}
         </div>
       </div>
       </div>
@@ -3418,7 +3477,8 @@ export default function ExpensePage() {
                               <th className="py-2 px-3 text-right">KM</th>
                               <th className="py-2 px-3 text-right">DA</th>
                               <th className="py-2 px-3 text-right">Hotel</th>
-                              <th className="py-2 px-3">Other</th>
+                              <th className="py-2 px-3 text-right">Local Purchase</th>
+                              <th className="py-2 px-3">Other / Misc</th>
                               <th className="py-2 px-3">Metrics</th>
                               <th className="py-2 px-3 text-right font-bold">Total</th>
                             </tr>
@@ -3429,8 +3489,9 @@ export default function ExpensePage() {
                               const subCost = leg.sub_amount || 0;
                               const daCost = leg.da || 0;
                               const hotelCost = leg.hotel || 0;
+                              const lpCost = leg.local_purchase || 0;
                               const otherCost = leg.oth_amount || 0;
-                              const legTotal = travelCost + subCost + daCost + hotelCost + otherCost;
+                              const legTotal = travelCost + subCost + daCost + hotelCost + lpCost + otherCost;
 
                               let actDetails: any = null;
                               try {
@@ -3466,6 +3527,7 @@ export default function ExpensePage() {
                                     <td className="py-2.5 px-3 text-right font-mono font-semibold text-gray-600">{leg.km || 0} KM</td>
                                     <td className="py-2.5 px-3 text-right font-mono font-semibold">₹{daCost.toLocaleString()}</td>
                                     <td className="py-2.5 px-3 text-right font-mono font-semibold">₹{hotelCost.toLocaleString()}</td>
+                                    <td className="py-2.5 px-3 text-right font-mono font-semibold">₹{lpCost.toLocaleString()}</td>
                                     <td className="py-2.5 px-3">
                                       <span className="font-mono font-bold">₹{otherCost.toLocaleString()}</span>
                                       {leg.oth_desc && <span className="text-[9px] text-gray-400 block truncate max-w-[100px]" title={leg.oth_desc}>{leg.oth_desc}</span>}
@@ -3728,6 +3790,54 @@ export default function ExpensePage() {
                                   <td className="py-2.5 px-3 text-right text-gray-500 font-mono text-[10px]">
                                     {app.status !== "waiting" && app.status !== "pending" && app.status !== "cancelled" ? formatDateTime(app.updated_at) : "—"}
                                   </td>
+                                </tr>
+                              );
+                            })}
+                          </tbody>
+                        </table>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Detailed Edit Logs & Change History */}
+                  {selectedClaim.edit_history && selectedClaim.edit_history.length > 0 && (
+                    <div className="border border-amber-200 rounded overflow-hidden mt-4">
+                      <div className="px-3 py-2 bg-amber-50/50 border-b border-amber-200">
+                        <h4 className="text-[10px] font-bold uppercase text-amber-800 tracking-wider">Adjustment & Edit Log History</h4>
+                      </div>
+                      <div className="overflow-x-auto">
+                        <table className="table-lte">
+                          <thead>
+                            <tr className="border-b border-amber-200 text-[9px] uppercase font-bold tracking-wider text-amber-700 bg-amber-50/20">
+                              <th className="py-2 px-3 w-12">Leg</th>
+                              <th className="py-2 px-3">Field Edited</th>
+                              <th className="py-2 px-3">Original Value</th>
+                              <th className="py-2 px-3">Updated Value</th>
+                              <th className="py-2 px-3">Reason / Remark</th>
+                              <th className="py-2 px-3">Edited By</th>
+                              <th className="py-2 px-3 text-right">Date</th>
+                            </tr>
+                          </thead>
+                          <tbody className="divide-y divide-amber-100">
+                            {selectedClaim.edit_history.map((log: any, logIdx: number) => {
+                              const cleanField = log.field_name === "travel_amount" ? "Travel Amount"
+                                : log.field_name === "sub_amount" ? "Local Conveyance"
+                                : log.field_name === "hotel_amount" ? "Hotel stay"
+                                : log.field_name === "other_amount" ? "Local purchase"
+                                : log.field_name === "distance_km" ? "Distance KM"
+                                : log.field_name === "da_amount" ? "DA Amount"
+                                : log.field_name;
+                              return (
+                                <tr key={logIdx} className="hover:bg-amber-50/10 text-slate-700 bg-white">
+                                  <td className="py-2.5 px-3 font-mono font-bold text-gray-500">Leg #{log.leg_number}</td>
+                                  <td className="py-2.5 px-3 font-semibold text-gray-800">{cleanField}</td>
+                                  <td className="py-2.5 px-3 font-mono text-gray-500">{log.field_name === "distance_km" ? `${log.old_value} KM` : `₹${parseFloat(log.old_value || "0").toLocaleString()}`}</td>
+                                  <td className="py-2.5 px-3 font-mono font-bold text-blue-600">{log.field_name === "distance_km" ? `${log.new_value} KM` : `₹${parseFloat(log.new_value || "0").toLocaleString()}`}</td>
+                                  <td className="py-2.5 px-3 italic text-gray-600 max-w-[200px] truncate" title={log.comment}>{log.comment || "—"}</td>
+                                  <td className="py-2.5 px-3 font-semibold text-slate-800">
+                                    {log.editor_name} <span className="text-[8px] text-amber-600 font-bold block">{log.editor_role}</span>
+                                  </td>
+                                  <td className="py-2.5 px-3 text-right text-gray-500 font-mono text-[10px]">{formatDateTime(log.created_at)}</td>
                                 </tr>
                               );
                             })}

@@ -8,6 +8,9 @@ class ItineraryLegEdit(BaseModel):
     sub_amount: Optional[float] = None
     hotel_amount: Optional[float] = None
     other_amount: Optional[float] = None
+    distance_km: Optional[float] = None
+    da_amount: Optional[float] = None
+    local_purchase: Optional[float] = None
 
 class ApprovalActionRequest(BaseModel):
     comments: Optional[str] = ""

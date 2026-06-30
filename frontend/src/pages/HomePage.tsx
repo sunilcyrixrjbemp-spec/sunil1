@@ -349,22 +349,28 @@ export default function HomePage() {
   );
 
   const getPersonalChartData = () => {
-    let bike = 0, car = 0, auto = 0, other = 0;
+    let bike = 0, car = 0, auto = 0, da = 0, hotel = 0, lp = 0, other = 0;
     filteredPersonalExpenses.forEach(e => {
-      const mode = e.travel_mode || e.category || "";
-      if (mode === "Bike") bike += e.amount;
-      else if (mode === "Car") car += e.amount;
-      else if (mode === "Auto") auto += e.amount;
-      else other += e.amount;
+      bike += e.bike_amount || 0;
+      car += e.car_amount || 0;
+      auto += e.auto_amount || 0;
+      da += e.da_amount || 0;
+      hotel += e.hotel_amount || 0;
+      lp += e.local_purchase_amount || 0;
+      other += e.other_expense_amount || 0;
     });
-    const total = bike + car + auto + other || 1;
+
+    const total = bike + car + auto + da + hotel + lp + other || 1;
     const isCarAllowed = allowanceStats?.vehicleType?.toLowerCase() === "car";
 
     const items = [
       { label: "Bike Travel", amount: bike, pct: Math.round((bike / total) * 100), colorStart: "#007bff", colorEnd: "#0056b3" },
       { label: "Car Travel", amount: car, pct: Math.round((car / total) * 100), colorStart: "#28a745", colorEnd: "#1e7e34" },
       { label: "Auto Fare", amount: auto, pct: Math.round((auto / total) * 100), colorStart: "#ffc107", colorEnd: "#d39e00" },
-      { label: "Other / Hotels", amount: other, pct: Math.round((other / total) * 100), colorStart: "#dc3545", colorEnd: "#bd2130" }
+      { label: "Daily Allowance (DA)", amount: da, pct: Math.round((da / total) * 100), colorStart: "#20c997", colorEnd: "#17a2b8" },
+      { label: "Hotel Stay", amount: hotel, pct: Math.round((hotel / total) * 100), colorStart: "#6f42c1", colorEnd: "#520dc2" },
+      { label: "Local Purchase", amount: lp, pct: Math.round((lp / total) * 100), colorStart: "#e83e8c", colorEnd: "#d63384" },
+      { label: "Other / Misc", amount: other, pct: Math.round((other / total) * 100), colorStart: "#dc3545", colorEnd: "#bd2130" }
     ];
 
     // Filter out Car Travel if not allowed
@@ -970,7 +976,8 @@ export default function HomePage() {
                               <th className="py-2 px-3 text-right">KM</th>
                               <th className="py-2 px-3 text-right">DA</th>
                               <th className="py-2 px-3 text-right">Hotel</th>
-                              <th className="py-2 px-3">Other</th>
+                              <th className="py-2 px-3 text-right">Local Purchase</th>
+                              <th className="py-2 px-3">Other / Misc</th>
                               <th className="py-2 px-3">Metrics</th>
                               <th className="py-2 px-3 text-right font-bold">Total</th>
                             </tr>
@@ -981,8 +988,9 @@ export default function HomePage() {
                               const subCost = leg.sub_amount || 0;
                               const daCost = leg.da || 0;
                               const hotelCost = leg.hotel || 0;
+                              const lpCost = leg.local_purchase || 0;
                               const otherCost = leg.oth_amount || 0;
-                              const legTotal = travelCost + subCost + daCost + hotelCost + otherCost;
+                              const legTotal = travelCost + subCost + daCost + hotelCost + lpCost + otherCost;
 
                               let actDetails: any = null;
                               try {
@@ -1008,7 +1016,7 @@ export default function HomePage() {
                                   <tr className="hover:bg-gray-50 transition-colors">
                                     <td className="py-2.5 px-3 text-center font-bold text-gray-400">{leg.leg}</td>
                                     <td className="py-2.5 px-3">
-                                      <span className="font-bold text-gray-800">{leg.from_district === leg.to_district ? leg.to_district : `${leg.from_district} → ${leg.to_district}`}</span>
+                                      <span className="font-bold text-gray-850">{leg.from_district === leg.to_district ? leg.to_district : `${leg.from_district} → ${leg.to_district}`}</span>
                                       <span className="text-[10px] text-gray-400 block">{leg.from || "Start"} → {leg.to || "End"}</span>
                                     </td>
                                     <td className="py-2.5 px-3">
@@ -1018,6 +1026,7 @@ export default function HomePage() {
                                     <td className="py-2.5 px-3 text-right font-mono font-semibold text-gray-600">{leg.km || 0} KM</td>
                                     <td className="py-2.5 px-3 text-right font-mono font-semibold">₹{daCost.toLocaleString()}</td>
                                     <td className="py-2.5 px-3 text-right font-mono font-semibold">₹{hotelCost.toLocaleString()}</td>
+                                    <td className="py-2.5 px-3 text-right font-mono font-semibold">₹{lpCost.toLocaleString()}</td>
                                     <td className="py-2.5 px-3">
                                       <span className="font-mono font-bold">₹{otherCost.toLocaleString()}</span>
                                       {leg.oth_desc && <span className="text-[9px] text-gray-400 block truncate max-w-[100px]" title={leg.oth_desc}>{leg.oth_desc}</span>}
@@ -1282,6 +1291,54 @@ export default function HomePage() {
                                   <td className="py-2.5 px-3 text-right text-gray-500 font-mono text-[10px]">
                                     {app.status !== "waiting" && app.status !== "pending" && app.status !== "cancelled" ? formatDateTime(app.updated_at) : "—"}
                                   </td>
+                                </tr>
+                              );
+                            })}
+                          </tbody>
+                        </table>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Detailed Edit Logs & Change History */}
+                  {claimDetails.edit_history && claimDetails.edit_history.length > 0 && (
+                    <div className="border border-amber-200 rounded overflow-hidden mt-4 text-left">
+                      <div className="px-3 py-2 bg-amber-50/50 border-b border-amber-200">
+                        <h4 className="text-[10px] font-bold uppercase text-amber-800 tracking-wider">Adjustment & Edit Log History</h4>
+                      </div>
+                      <div className="overflow-x-auto">
+                        <table className="table-lte">
+                          <thead>
+                            <tr className="border-b border-amber-200 text-[9px] uppercase font-bold tracking-wider text-amber-700 bg-amber-50/20">
+                              <th className="py-2 px-3 w-12">Leg</th>
+                              <th className="py-2 px-3">Field Edited</th>
+                              <th className="py-2 px-3">Original Value</th>
+                              <th className="py-2 px-3">Updated Value</th>
+                              <th className="py-2 px-3">Reason / Remark</th>
+                              <th className="py-2 px-3">Edited By</th>
+                              <th className="py-2 px-3 text-right">Date</th>
+                            </tr>
+                          </thead>
+                          <tbody className="divide-y divide-amber-100">
+                            {claimDetails.edit_history.map((log: any, logIdx: number) => {
+                              const cleanField = log.field_name === "travel_amount" ? "Travel Amount"
+                                : log.field_name === "sub_amount" ? "Local Conveyance"
+                                : log.field_name === "hotel_amount" ? "Hotel stay"
+                                : log.field_name === "other_amount" ? "Local purchase"
+                                : log.field_name === "distance_km" ? "Distance KM"
+                                : log.field_name === "da_amount" ? "DA Amount"
+                                : log.field_name;
+                              return (
+                                <tr key={logIdx} className="hover:bg-amber-50/10 text-slate-700 bg-white">
+                                  <td className="py-2.5 px-3 font-mono font-bold text-gray-500">Leg #{log.leg_number}</td>
+                                  <td className="py-2.5 px-3 font-semibold text-gray-800">{cleanField}</td>
+                                  <td className="py-2.5 px-3 font-mono text-gray-500">{log.field_name === "distance_km" ? `${log.old_value} KM` : `₹${parseFloat(log.old_value || "0").toLocaleString()}`}</td>
+                                  <td className="py-2.5 px-3 font-mono font-bold text-blue-600">{log.field_name === "distance_km" ? `${log.new_value} KM` : `₹${parseFloat(log.new_value || "0").toLocaleString()}`}</td>
+                                  <td className="py-2.5 px-3 italic text-gray-600 max-w-[200px] truncate" title={log.comment}>{log.comment || "—"}</td>
+                                  <td className="py-2.5 px-3 font-semibold text-slate-800">
+                                    {log.editor_name} <span className="text-[8px] text-amber-600 font-bold block">{log.editor_role}</span>
+                                  </td>
+                                  <td className="py-2.5 px-3 text-right text-gray-500 font-mono text-[10px]">{formatDateTime(log.created_at)}</td>
                                 </tr>
                               );
                             })}
