@@ -23,22 +23,6 @@ from app.config.settings import settings
 
 router = APIRouter()
 
-@router.get("/debug-recreate-tables")
-def debug_recreate_tables(db: Session = Depends(get_db)):
-    from sqlalchemy import text
-    tables = ["approvals", "expense_attachments", "expense_itineraries", "expenses"]
-    for t in tables:
-        try:
-            db.execute(text(f"DROP TABLE IF EXISTS {t}"))
-            db.commit()
-        except Exception as e:
-            db.rollback()
-            return {"status": "error", "message": f"Failed to drop {t}: {str(e)}"}
-            
-    from app.config.database import Base, engine
-    import app.models
-    Base.metadata.create_all(bind=engine)
-    return {"status": "success", "message": "Production tables recreated successfully."}
 
 def parse_client_timestamp(ts_str: str | None) -> datetime:
     if not ts_str:
