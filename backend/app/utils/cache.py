@@ -79,7 +79,7 @@ def clear_user_and_managers_cache(db, user_id_val):
     for mgr in [user.manager, user.zonal_manager, user.coordinator]:
         if mgr and mgr.strip():
             mgr_clean = mgr.strip()
-            mgr_user = db.query(User.user_id).filter(
+            mgr_user = db.query(User).filter(
                 (User.user_id == mgr_clean) | (User.name == mgr_clean) | (User.e_code == mgr_clean)
             ).first()
             if mgr_user:
@@ -89,11 +89,11 @@ def clear_user_and_managers_cache(db, user_id_val):
     req_map = db.query(HierarchyRequester.hierarchy_id).filter(HierarchyRequester.user_id == user.id).first()
     if req_map:
         h_id = req_map.hierarchy_id
-        approvers = db.query(User.user_id).join(
+        approvers = db.query(User).join(
             HierarchyApprover, User.id == HierarchyApprover.approver_id
         ).filter(HierarchyApprover.hierarchy_id == h_id).all()
-        for app in approvers:
-            affected_ids.add(app.user_id)
+        for app_usr in approvers:
+            affected_ids.add(app_usr.user_id)
             
     # Clear specific keys in cache
     keys_to_clear = []
