@@ -452,7 +452,7 @@ export default function MonthSummaryPage() {
     userCode: string;
     month: string;
     year: number;
-    row: any;
+    row?: any;
     onSave: (amount: number) => Promise<void>;
   } | null>(null);
   const [advanceAmountInput, setAdvanceAmountInput] = useState("0");
