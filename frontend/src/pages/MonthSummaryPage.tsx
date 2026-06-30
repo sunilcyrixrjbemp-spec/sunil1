@@ -475,6 +475,18 @@ export default function MonthSummaryPage() {
     }
   };
 
+  const handleApplyFilters = () => {
+    const f = { month: filterMonth, year: filterYear, district: filterDistrict, engineer: filterEngineer };
+    setAppliedFilters(f);
+    fetchData(f);
+  };
+
+  const handleClear = () => {
+    const f = { month: "", year: 0, district: "", engineer: "" };
+    setFilterMonth(""); setFilterYear(0); setFilterDistrict(""); setFilterEngineer(""); setSearch("");
+    setAppliedFilters(f); fetchData(f);
+  };
+
   const generateSinglePDF = async (row: any, advance: number) => {
     const key = `${row.user_id}-${row.month}-${row.year}`;
     setPdfLoadingId(key);
@@ -544,6 +556,38 @@ export default function MonthSummaryPage() {
         }
       });
       setShowAdvanceModal(true);
+    }
+  };
+
+  const filtered = data.filter((r) => {
+    if (!search) return true;
+    const q = search.toLowerCase();
+    return (r.name || "").toLowerCase().includes(q) ||
+      (r.e_code || "").toLowerCase().includes(q) ||
+      (r.district || "").toLowerCase().includes(q) ||
+      (r.month || "").toLowerCase().includes(q);
+  });
+
+  const totalEngineers = filtered.length;
+  const totalClaims = filtered.reduce((s, r) => s + (r.claims_count || 0), 0);
+  const totalAmount = filtered.reduce((s, r) => s + (r.total_amount || 0), 0);
+  const totalKM = filtered.reduce((s, r) => s + (r.total_km || 0), 0);
+
+  const [selectedKeys, setSelectedKeys] = useState<string[]>([]);
+
+  const handleSelectAll = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.checked) {
+      setSelectedKeys(filtered.map(r => `${r.user_id}-${r.month}-${r.year}`));
+    } else {
+      setSelectedKeys([]);
+    }
+  };
+
+  const handleSelectRow = (key: string, checked: boolean) => {
+    if (checked) {
+      setSelectedKeys(prev => [...prev, key]);
+    } else {
+      setSelectedKeys(prev => prev.filter(k => k !== key));
     }
   };
 
