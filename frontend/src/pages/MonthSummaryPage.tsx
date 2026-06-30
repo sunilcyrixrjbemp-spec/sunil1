@@ -211,16 +211,17 @@ function buildExcelPrintHTML(user: any, claims: any[], attachments: string[] = [
 
   <table style="margin-bottom:0;">
     <colgroup>
-      <col style="width:8%;"><col style="width:67%;"><col style="width:13%;"><col style="width:12%;">
+      <col style="width:8%;"><col style="width:67%;"><col style="width:25%;">
     </colgroup>
     <tr>
-      <td style="background:#1a237e!important;border:2px solid #0d1557;padding:4px 6px;text-align:center;">
-        <img src="https://cyrixhealthcare.com/favicon.ico" onerror="this.style.display='none'" style="height:30px;" alt="">
-        <div style="color:#fff;font-size:7pt;font-weight:800;margin-top:2px;">CYRIX</div>
+      <td style="background:#1a237e!important;border:2px solid #0d1557;padding:4px 6px;text-align:center;vertical-align:middle;">
+        <img src="${window.location.origin}/brand.png" style="height:28px; max-width:100%; object-fit:contain; background:#fff; padding:2px; border-radius:2px;" alt="Logo" />
       </td>
       <td class="main-hdr">CYRIX &mdash; EXPENSES REIMBURSEMENT FORM</td>
-      <td class="month-hdr">Month-Year: ${user.month.toUpperCase().substring(0,3)} ${user.year}</td>
-      <td class="form-no">Form No: CYKL01 V2023</td>
+      <td style="background:#1a237e!important;color:#fff!important;border:2px solid #0d1557;padding:4px 8px;font-size:8pt;font-weight:bold;text-align:center;line-height:1.45;vertical-align:middle;">
+        <div>Month-Year: ${user.month.toUpperCase().substring(0,3)} ${user.year}</div>
+        <div style="color:#fff9c4;font-size:7pt;margin-top:2px;font-weight:bold;">Form No: CYKL01 V2023</div>
+      </td>
     </tr>
   </table>
 
