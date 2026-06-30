@@ -176,8 +176,8 @@ function buildExcelPrintHTML(user: any, claims: any[], attachments: string[] = [
       <td style="${c}text-align:right;font-weight:800;background:#e8f5e9!important;">${rowTotal > 0 ? rowTotal.toFixed(2) : ""}</td>
       <td style="${c}font-size:6.5pt;">${getFormattedPurpose(l)}</td>
       <td style="${c}font-size:6pt;font-family:monospace;">${l.barcode_ticket || ""}</td>
-      <td style="${c}text-align:center;">${pmsCalibCount > 0 ? pmsCalibCount : ""}</td>
-      <td style="${c}text-align:center;">${(l.calls_completed || 0) > 0 ? `${l.calls_completed}/${l.calls_assigned || 0}` : ""}</td>
+      <td style="${c}text-align:center;">${pmsCalibCount}</td>
+      <td style="${c}text-align:center;">${l.calls_completed || 0}/${l.calls_assigned || 0}</td>
     </tr>`;
   }).join("\n");
 
@@ -333,8 +333,8 @@ function buildExcelPrintHTML(user: any, claims: any[], attachments: string[] = [
         <td class="tot-lbl" style="border: 1.5px solid #000!important; font-size:6.5pt!important; text-align:center; font-weight:bold; background:#fff3cd!important;">
           ${gAssetQty > 0 ? `Qty: ${gAssetQty} | ₹${gAssetVal.toLocaleString('en-IN', { maximumFractionDigits: 0 })}` : ""}
         </td>
-        <td class="tot-num" style="border: 1.5px solid #000!important; text-align:center; font-weight:bold; background:#fff3cd!important;">${gPMSCalib > 0 ? gPMSCalib : ""}</td>
-        <td class="tot-num" style="border: 1.5px solid #000!important; text-align:center; font-weight:bold; background:#fff3cd!important;">${gCallsC > 0 ? `${gCallsC}/${gCallsA}` : ""}</td>
+        <td class="tot-num" style="border: 1.5px solid #000!important; text-align:center; font-weight:bold; background:#fff3cd!important;">${gPMSCalib}</td>
+        <td class="tot-num" style="border: 1.5px solid #000!important; text-align:center; font-weight:bold; background:#fff3cd!important;">${gCallsC}/${gCallsA}</td>
       </tr>
       <!-- ADVANCES ROW -->
       <tr>
