@@ -23,28 +23,6 @@ from app.config.settings import settings
 
 router = APIRouter()
 
-@router.get("/debug-drop-obsolete-tables")
-def debug_drop_obsolete_tables(db: Session = Depends(get_db)):
-    from sqlalchemy import text
-    tables = [
-        "expense_breakdown_calls",
-        "expense_pms_calls",
-        "expense_asset_taggings",
-        "expense_asset_mobilises",
-        "expense_calibrations"
-    ]
-    dropped = []
-    errors = []
-    for t in tables:
-        try:
-            db.execute(text(f"DROP TABLE IF EXISTS {t}"))
-            db.commit()
-            dropped.append(t)
-        except Exception as e:
-            db.rollback()
-            errors.append(f"{t}: {str(e)}")
-            
-    return {"status": "success", "dropped": dropped, "errors": errors}
 
 
 
