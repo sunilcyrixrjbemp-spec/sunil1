@@ -137,6 +137,16 @@ function buildExcelPrintHTML(user: any, claims: any[], attachments: string[] = [
     return parts.join(", ");
   };
 
+  const getActivityOtherDesc = (l: any) => {
+    if (!l.activity_details) return "";
+    try {
+      const details = typeof l.activity_details === 'string' ? JSON.parse(l.activity_details) : l.activity_details;
+      return details.activity_other_desc || "";
+    } catch (e) {
+      return "";
+    }
+  };
+
   // ── mode abbreviation ──
   const modeAbbr = (m: string) => {
     if (!m) return "";
@@ -171,7 +181,7 @@ function buildExcelPrintHTML(user: any, claims: any[], attachments: string[] = [
       <td style="${c}text-align:right;">${l.da_amount > 0 ? l.da_amount.toFixed(2) : ""}</td>
       <td style="${c}text-align:right;">${l.local_purchase > 0 ? l.local_purchase.toFixed(2) : ""}</td>
       <td style="${c}text-align:right;">${l.hotel_amount > 0 ? l.hotel_amount.toFixed(2) : ""}</td>
-      <td style="${c}font-size:6.5pt;">${l.other_desc || ""}</td>
+      <td style="${c}font-size:6.5pt;">${getActivityOtherDesc(l)}</td>
       <td style="${c}text-align:right;">${l.other_amount > 0 ? l.other_amount.toFixed(2) : ""}</td>
       <td style="${c}text-align:right;font-weight:800;background:#e8f5e9!important;">${rowTotal > 0 ? rowTotal.toFixed(2) : ""}</td>
       <td style="${c}font-size:6.5pt;">${getFormattedPurpose(l)}</td>
