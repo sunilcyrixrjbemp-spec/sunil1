@@ -94,10 +94,12 @@ function buildExcelPrintHTML(user: any, claims: any[], attachments: string[] = [
   const getFormattedPurpose = (l: any) => {
     const parts: string[] = [];
     let acts: string[] = [];
+    let actOtherDesc = "";
     if (l.activity_details) {
       try {
         const details = typeof l.activity_details === 'string' ? JSON.parse(l.activity_details) : l.activity_details;
         acts = details.selected_activities || [];
+        actOtherDesc = details.activity_other_desc || "";
       } catch (e) {}
     }
     
@@ -127,8 +129,8 @@ function buildExcelPrintHTML(user: any, claims: any[], attachments: string[] = [
       }
     });
 
-    if (l.other_desc && l.other_desc.trim()) {
-      parts.push(l.other_desc.trim());
+    if (actOtherDesc && actOtherDesc.trim()) {
+      parts.push(actOtherDesc.trim());
     }
 
     if (parts.length === 0) {
@@ -138,13 +140,7 @@ function buildExcelPrintHTML(user: any, claims: any[], attachments: string[] = [
   };
 
   const getActivityOtherDesc = (l: any) => {
-    if (!l.activity_details) return "";
-    try {
-      const details = typeof l.activity_details === 'string' ? JSON.parse(l.activity_details) : l.activity_details;
-      return details.activity_other_desc || "";
-    } catch (e) {
-      return "";
-    }
+    return l.other_desc || "";
   };
 
   // ── mode abbreviation ──
