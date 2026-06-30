@@ -755,7 +755,7 @@ export default function ExpensePage() {
           return l;
         }
         const newItem = {
-          barcode: l.calls_barcode,
+          barcode: l.calls_barcode || "",
           verified: true,
           type: l.calls_type || "Support Call",
           status: l.calls_status || "Attend",
@@ -774,7 +774,7 @@ export default function ExpensePage() {
           return l;
         }
         const newItem = {
-          barcode: l.pms_barcode,
+          barcode: l.pms_barcode || "",
           verified: true,
           frequency: l.pms_frequency || "3 month",
           asset_details: l.pms_asset_details
