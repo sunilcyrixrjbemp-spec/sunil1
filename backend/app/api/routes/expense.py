@@ -23,8 +23,201 @@ from app.config.settings import settings
 
 router = APIRouter()
 
-
-
+@router.get("/debug-diagnose-and-fix")
+def debug_diagnose_and_fix():
+    """Diagnose all expense tables, drop and recreate with correct schema."""
+    from app.config.database import engine
+    from sqlalchemy import text
+    
+    results = {"tables_before": [], "dropped": [], "created": [], "test_inserts": [], "errors": []}
+    
+    with engine.connect() as conn:
+        # 1. List existing tables
+        try:
+            rows = conn.execute(text("SELECT name FROM sqlite_master WHERE type='table' ORDER BY name"))
+            results["tables_before"] = [r[0] for r in rows.fetchall()]
+        except Exception as e:
+            results["errors"].append(f"list tables: {str(e)}")
+        
+        # 2. Drop all expense-related tables
+        tables_to_drop = [
+            "expense_breakdown_calls", "expense_pms_calls", "expense_asset_taggings",
+            "expense_asset_mobilises", "expense_calibrations",
+            "expense_attachments", "expense_itineraries", "approvals", "expenses"
+        ]
+        for tbl in tables_to_drop:
+            try:
+                conn.execute(text(f"DROP TABLE IF EXISTS {tbl}"))
+                results["dropped"].append(tbl)
+            except Exception as e:
+                results["errors"].append(f"drop {tbl}: {str(e)}")
+        
+        # 3. Create all tables with explicit SQL (NO foreign keys for D1 compatibility)
+        create_sqls = {
+            "expenses": """CREATE TABLE IF NOT EXISTS expenses (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                user_id INTEGER,
+                expense_code VARCHAR(100) UNIQUE,
+                month VARCHAR(50),
+                year INTEGER,
+                amount FLOAT,
+                status VARCHAR(50) DEFAULT 'draft',
+                travel_mode VARCHAR(100),
+                itinerary TEXT,
+                description TEXT,
+                attachments TEXT,
+                da_amount FLOAT DEFAULT 0.0,
+                hotel_amount FLOAT DEFAULT 0.0,
+                other_expense_amount FLOAT DEFAULT 0.0,
+                local_purchase_amount FLOAT DEFAULT 0.0,
+                calls_assigned INTEGER DEFAULT 0,
+                calls_completed INTEGER DEFAULT 0,
+                pms_count INTEGER DEFAULT 0,
+                asset_tagging INTEGER DEFAULT 0,
+                created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+                updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+            )""",
+            "expense_itineraries": """CREATE TABLE IF NOT EXISTS expense_itineraries (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                itinerary_id VARCHAR(100) NOT NULL UNIQUE,
+                exp_id VARCHAR(100) NOT NULL,
+                leg_number INTEGER NOT NULL,
+                from_district VARCHAR(100),
+                to_district VARCHAR(100),
+                from_location VARCHAR(200),
+                to_location VARCHAR(200),
+                travel_mode VARCHAR(50),
+                distance_km FLOAT DEFAULT 0.0,
+                travel_amount FLOAT DEFAULT 0.0,
+                sub_mode VARCHAR(50),
+                sub_km FLOAT DEFAULT 0.0,
+                sub_amount FLOAT DEFAULT 0.0,
+                da_amount FLOAT DEFAULT 0.0,
+                hotel_amount FLOAT DEFAULT 0.0,
+                other_desc TEXT,
+                other_amount FLOAT DEFAULT 0.0,
+                local_purchase FLOAT DEFAULT 0.0,
+                calls_assigned INTEGER DEFAULT 0,
+                calls_completed INTEGER DEFAULT 0,
+                pms_count INTEGER DEFAULT 0,
+                asset_tagging INTEGER DEFAULT 0,
+                visit_purpose TEXT,
+                activity_details TEXT
+            )""",
+            "expense_attachments": """CREATE TABLE IF NOT EXISTS expense_attachments (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                exp_id VARCHAR(100) NOT NULL,
+                itinerary_id VARCHAR(100),
+                bill_type VARCHAR(50) NOT NULL,
+                file_url TEXT NOT NULL
+            )""",
+            "approvals": """CREATE TABLE IF NOT EXISTS approvals (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                expense_id INTEGER,
+                approver_id INTEGER,
+                level_number INTEGER DEFAULT 1,
+                status VARCHAR(50),
+                comments TEXT,
+                created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+                updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+            )""",
+            "expense_breakdown_calls": """CREATE TABLE IF NOT EXISTS expense_breakdown_calls (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                itinerary_id VARCHAR(100) NOT NULL,
+                barcode VARCHAR(100),
+                call_type VARCHAR(100),
+                call_status VARCHAR(100),
+                district_name VARCHAR(100),
+                hospital_name VARCHAR(200),
+                equipment_name VARCHAR(200),
+                model_name VARCHAR(200),
+                inventory_status VARCHAR(100),
+                photo_url VARCHAR(500)
+            )""",
+            "expense_pms_calls": """CREATE TABLE IF NOT EXISTS expense_pms_calls (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                itinerary_id VARCHAR(100) NOT NULL,
+                barcode VARCHAR(100),
+                pms_frequency VARCHAR(100),
+                district_name VARCHAR(100),
+                hospital_name VARCHAR(200),
+                equipment_name VARCHAR(200),
+                model_name VARCHAR(200),
+                inventory_status VARCHAR(100),
+                photo_url VARCHAR(500)
+            )""",
+            "expense_asset_taggings": """CREATE TABLE IF NOT EXISTS expense_asset_taggings (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                itinerary_id VARCHAR(100) NOT NULL,
+                equipment_name VARCHAR(200),
+                quantity INTEGER DEFAULT 0
+            )""",
+            "expense_asset_mobilises": """CREATE TABLE IF NOT EXISTS expense_asset_mobilises (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                itinerary_id VARCHAR(100) NOT NULL,
+                quantity INTEGER DEFAULT 0
+            )""",
+            "expense_calibrations": """CREATE TABLE IF NOT EXISTS expense_calibrations (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                itinerary_id VARCHAR(100) NOT NULL,
+                quantity INTEGER DEFAULT 0
+            )"""
+        }
+        
+        for tbl, sql in create_sqls.items():
+            try:
+                conn.execute(text(sql))
+                results["created"].append(tbl)
+            except Exception as e:
+                results["errors"].append(f"create {tbl}: {str(e)}")
+        
+        # 4. Verify with test inserts
+        test_ops = [
+            ("expenses", "INSERT INTO expenses (user_id, expense_code, month, year, amount, status) VALUES (1, 'TEST-DIAG', 'June', 2025, 100.0, 'draft')", []),
+            ("expense_itineraries", "INSERT INTO expense_itineraries (itinerary_id, exp_id, leg_number, from_district, to_district, from_location, to_location, travel_mode, distance_km, travel_amount, da_amount, calls_assigned, calls_completed, pms_count, asset_tagging, activity_details) VALUES ('TEST-DIAG-1', 'TEST-DIAG', 1, 'Jodhpur', 'Jaipur', 'Office', 'Hospital', 'Bike', 50.0, 200.0, 100.0, 5, 3, 2, 1, '{}')", []),
+            ("expense_attachments", "INSERT INTO expense_attachments (exp_id, itinerary_id, bill_type, file_url) VALUES ('TEST-DIAG', 'TEST-DIAG-1', 'Bike', '/test.jpg')", []),
+            ("approvals", "INSERT INTO approvals (expense_id, approver_id, level_number, status) VALUES (1, 1, 1, 'pending')", []),
+            ("expense_breakdown_calls", "INSERT INTO expense_breakdown_calls (itinerary_id, barcode, call_type, call_status, district_name, hospital_name, equipment_name, model_name, inventory_status) VALUES ('TEST-DIAG-1', '12345678', 'Support Call', 'Attend', 'Jodhpur', 'Test Hospital', 'X-Ray', 'Model X', 'Active')", []),
+            ("expense_pms_calls", "INSERT INTO expense_pms_calls (itinerary_id, barcode, pms_frequency, district_name, hospital_name, equipment_name) VALUES ('TEST-DIAG-1', '12345678', '3 month', 'Jodhpur', 'Test Hospital', 'X-Ray')", []),
+            ("expense_asset_taggings", "INSERT INTO expense_asset_taggings (itinerary_id, equipment_name, quantity) VALUES ('TEST-DIAG-1', 'X-Ray Machine', 5)", []),
+            ("expense_asset_mobilises", "INSERT INTO expense_asset_mobilises (itinerary_id, quantity) VALUES ('TEST-DIAG-1', 3)", []),
+            ("expense_calibrations", "INSERT INTO expense_calibrations (itinerary_id, quantity) VALUES ('TEST-DIAG-1', 2)", []),
+        ]
+        
+        for tbl, sql, params in test_ops:
+            try:
+                conn.execute(text(sql))
+                results["test_inserts"].append(f"{tbl}: OK")
+            except Exception as e:
+                results["test_inserts"].append(f"{tbl}: FAILED - {str(e)}")
+                results["errors"].append(f"test insert {tbl}: {str(e)}")
+        
+        # 5. Cleanup test data
+        cleanup_sqls = [
+            "DELETE FROM expense_calibrations WHERE itinerary_id = 'TEST-DIAG-1'",
+            "DELETE FROM expense_asset_mobilises WHERE itinerary_id = 'TEST-DIAG-1'",
+            "DELETE FROM expense_asset_taggings WHERE itinerary_id = 'TEST-DIAG-1'",
+            "DELETE FROM expense_pms_calls WHERE itinerary_id = 'TEST-DIAG-1'",
+            "DELETE FROM expense_breakdown_calls WHERE itinerary_id = 'TEST-DIAG-1'",
+            "DELETE FROM approvals WHERE expense_id = 1",
+            "DELETE FROM expense_attachments WHERE exp_id = 'TEST-DIAG'",
+            "DELETE FROM expense_itineraries WHERE itinerary_id = 'TEST-DIAG-1'",
+            "DELETE FROM expenses WHERE expense_code = 'TEST-DIAG'",
+        ]
+        for sql in cleanup_sqls:
+            try:
+                conn.execute(text(sql))
+            except Exception:
+                pass
+        
+        # 6. Final table list
+        try:
+            rows = conn.execute(text("SELECT name FROM sqlite_master WHERE type='table' ORDER BY name"))
+            results["tables_after"] = [r[0] for r in rows.fetchall()]
+        except Exception as e:
+            results["errors"].append(f"list tables after: {str(e)}")
+    
+    return results
 
 
 
@@ -763,15 +956,31 @@ async def submit_expense(
             pms_count=int(iti.get("ws_pms") or 0),
             asset_tagging=int(iti.get("ws_asset") or 0),
             visit_purpose=iti.get("visit_purpose"),
-            activity_details=iti.get("activity_details")
+            activity_details=iti.get("activity_details") if isinstance(iti.get("activity_details"), str) else json.dumps(iti.get("activity_details")) if iti.get("activity_details") else None
         )
         db.add(leg_item)
+        
+        # Flush itinerary immediately to catch DB errors per-leg
+        try:
+            db.flush()
+        except Exception as flush_err:
+            logger.error(f"FLUSH ERROR for itinerary leg {leg_num}: {str(flush_err)}")
+            raise HTTPException(status_code=500, detail=f"Database error saving itinerary leg {leg_num}: {str(flush_err)}")
 
         # Save activities breakdown into structured tables
-        act_details_str = iti.get("activity_details")
-        if act_details_str:
+        raw_act = iti.get("activity_details")
+        # Handle both string and dict forms of activity_details
+        act_details = None
+        if raw_act:
+            if isinstance(raw_act, str):
+                try:
+                    act_details = json.loads(raw_act)
+                except Exception:
+                    act_details = None
+            elif isinstance(raw_act, dict):
+                act_details = raw_act
+        if act_details:
             try:
-                act_details = json.loads(act_details_str)
                 selected_acts = act_details.get("selected_activities") or []
                 
                 from app.models.expense_breakdown_call import ExpenseBreakdownCall
@@ -844,8 +1053,11 @@ async def submit_expense(
                             quantity=qty
                         )
                         db.add(cal_rec)
+                
+                # Flush breakdown records to catch errors immediately
+                db.flush()
             except Exception as e:
-                logger.error(f"Error parsing and saving activity details breakdown: {str(e)}")
+                logger.error(f"Error saving activity details breakdown for leg {leg_num}: {str(e)}")
 
         # Main receipt image
         main_file = form_data.get(f"main_bill_{leg_num}")

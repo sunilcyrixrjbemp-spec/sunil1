@@ -3,6 +3,7 @@ import { useNavigate } from "react-router-dom";
 import toast from "react-hot-toast";
 import Loader from "../components/common/Loader";
 import { expenseService } from "../services/expenseService";
+import { uploadService } from "../services/uploadService";
 import { 
   Trash2, Pencil, Plus, Calendar, 
   AlertTriangle, Check, Loader2,
@@ -826,25 +827,7 @@ export default function ExpensePage() {
     }));
 
     try {
-      const formData = new FormData();
-      formData.append("file", file);
-      
-      const API_BASE = import.meta.env.VITE_API_URL || "https://expense-backend-zio8.onrender.com";
-      const token = localStorage.getItem("token");
-      
-      const response = await fetch(`${API_BASE}/api/upload/image`, {
-        method: "POST",
-        headers: {
-          "Authorization": token ? `Bearer ${token}` : ""
-        },
-        body: formData
-      });
-      
-      if (!response.ok) {
-        throw new Error("Failed to upload image.");
-      }
-      
-      const data = await response.json();
+      const data = await uploadService.uploadReceipt(file);
       if (data && data.url) {
         setItineraries(prev => prev.map(l => {
           if (l.leg !== legNum) return l;
