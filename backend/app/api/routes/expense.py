@@ -22,13 +22,6 @@ from app.models.limit_approval_request import LimitApprovalRequest
 from app.config.settings import settings
 
 
-@router.get("/debug-create-other-table")
-def debug_create_other_table():
-    from app.config.database import Base, engine
-    import app.models
-    Base.metadata.create_all(bind=engine)
-    return {"status": "success", "message": "Other activities table created successfully."}
-
 
 def parse_client_timestamp(ts_str: str | None) -> datetime:
     if not ts_str:
