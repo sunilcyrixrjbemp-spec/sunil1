@@ -21,7 +21,14 @@ from app.models.expense_attachment import ExpenseAttachment
 from app.models.limit_approval_request import LimitApprovalRequest
 from app.config.settings import settings
 
-router = APIRouter()
+
+@router.get("/debug-create-other-table")
+def debug_create_other_table():
+    from app.config.database import Base, engine
+    import app.models
+    Base.metadata.create_all(bind=engine)
+    return {"status": "success", "message": "Other activities table created successfully."}
+
 
 def parse_client_timestamp(ts_str: str | None) -> datetime:
     if not ts_str:
@@ -448,12 +455,14 @@ async def submit_expense(
             from app.models.expense_asset_tagging import ExpenseAssetTagging
             from app.models.expense_asset_mobilise import ExpenseAssetMobilise
             from app.models.expense_calibration import ExpenseCalibration
+            from app.models.expense_other_activity import ExpenseOtherActivity
             
             db.query(ExpenseBreakdownCall).filter(ExpenseBreakdownCall.itinerary_id.in_(old_iti_ids)).delete(synchronize_session=False)
             db.query(ExpensePmsCall).filter(ExpensePmsCall.itinerary_id.in_(old_iti_ids)).delete(synchronize_session=False)
             db.query(ExpenseAssetTagging).filter(ExpenseAssetTagging.itinerary_id.in_(old_iti_ids)).delete(synchronize_session=False)
             db.query(ExpenseAssetMobilise).filter(ExpenseAssetMobilise.itinerary_id.in_(old_iti_ids)).delete(synchronize_session=False)
             db.query(ExpenseCalibration).filter(ExpenseCalibration.itinerary_id.in_(old_iti_ids)).delete(synchronize_session=False)
+            db.query(ExpenseOtherActivity).filter(ExpenseOtherActivity.itinerary_id.in_(old_iti_ids)).delete(synchronize_session=False)
 
         db.query(ExpenseItinerary).filter(ExpenseItinerary.exp_id == existing_expense.expense_code).delete()
         db.query(ExpenseAttachment).filter(ExpenseAttachment.exp_id == existing_expense.expense_code).delete()
@@ -855,6 +864,17 @@ async def submit_expense(
                             quantity=qty
                         )
                         db.add(cal_rec)
+
+                # 6. Other Activity
+                if "Other" in selected_acts:
+                    other_desc = act_details.get("activity_other_desc")
+                    if other_desc and other_desc.strip():
+                        from app.models.expense_other_activity import ExpenseOtherActivity
+                        other_rec = ExpenseOtherActivity(
+                            itinerary_id=iti_id,
+                            description=other_desc.strip()
+                        )
+                        db.add(other_rec)
                 
                 # Flush breakdown records to catch errors immediately
                 db.flush()
