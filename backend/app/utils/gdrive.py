@@ -8,8 +8,8 @@ from googleapiclient.http import MediaIoBaseUpload, MediaIoBaseDownload
 
 logger = logging.getLogger(__name__)
 
-# Main Google Drive Folder ID
-DRIVE_PARENT_FOLDER_ID = "1oiX3ZTlnMQ9RYn8uXhLx2mrmzz_K98Nu"
+# Main Google Drive Folder ID (can be overridden by environment variable)
+DRIVE_PARENT_FOLDER_ID = os.getenv("GDRIVE_FOLDER_ID", "1oiX3ZTlnMQ9RYn8uXhLx2mrmzz_K98Nu")
 # Resolve absolute path to firebase-service-account.json
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 SERVICE_ACCOUNT_PATH = os.path.join(BASE_DIR, "firebase-service-account.json")

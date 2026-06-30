@@ -28,15 +28,29 @@ function doPost(e) {
       var fileBase64 = data.fileBase64;   // File content as base64 string
       var mimeType = data.mimeType || "application/octet-stream";
       
-      if (!folderId || !folderName || !filename || !fileBase64) {
+      if (!folderName || !filename || !fileBase64) {
         return ContentService.createTextOutput(JSON.stringify({ 
           success: false, 
-          error: "Missing required parameters for file upload" 
+          error: "Missing required parameters for file upload (folderName, filename, fileBase64)" 
         })).setMimeType(ContentService.MimeType.JSON);
       }
       
-      // 1. Get parent folder
-      var parentFolder = DriveApp.getFolderById(folderId);
+      // 1. Get parent folder (with safe fallback)
+      var parentFolder;
+      try {
+        if (!folderId) {
+          throw new Error("No folderId provided");
+        }
+        parentFolder = DriveApp.getFolderById(folderId);
+      } catch (err) {
+        var root = DriveApp.getRootFolder();
+        var folders = root.getFoldersByName("Expense_Uploads");
+        if (folders.hasNext()) {
+          parentFolder = folders.next();
+        } else {
+          parentFolder = root.createFolder("Expense_Uploads");
+        }
+      }
       
       // 2. Get or create subfolder (month-wise)
       var folders = parentFolder.getFoldersByName(folderName);
