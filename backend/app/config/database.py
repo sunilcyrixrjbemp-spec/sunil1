@@ -343,3 +343,23 @@ def get_db():
         yield db
     finally:
         db.close()
+
+# Global event listeners to enforce IST for created_at and updated_at on all models
+from sqlalchemy import event
+from sqlalchemy.orm import Mapper
+from datetime import datetime, timedelta, timezone
+
+def get_ist_now():
+    return (datetime.now(timezone.utc) + timedelta(hours=5, minutes=30)).replace(tzinfo=None)
+
+@event.listens_for(Mapper, "before_insert")
+def set_created_at(mapper, connection, target):
+    if hasattr(target, "created_at"):
+        target.created_at = get_ist_now()
+    if hasattr(target, "updated_at"):
+        target.updated_at = get_ist_now()
+
+@event.listens_for(Mapper, "before_update")
+def set_updated_at(mapper, connection, target):
+    if hasattr(target, "updated_at"):
+        target.updated_at = get_ist_now()

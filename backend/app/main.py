@@ -1,3 +1,11 @@
+import os
+import time
+
+# Enforce Indian Standard Time (IST) globally
+os.environ["TZ"] = "Asia/Kolkata"
+if hasattr(time, "tzset"):
+    time.tzset()
+
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
