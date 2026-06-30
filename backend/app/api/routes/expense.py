@@ -1227,9 +1227,30 @@ async def get_engineer_month_claims(
         }}
 
     expense_codes = [e.expense_code for e in expenses if e.expense_code]
+    
+    # Fetch asset value master into a dictionary: equipment_name -> tender_cost
+    asset_costs = {}
+    try:
+        sql = text("SELECT equipment_name, rmsc_tender_cost FROM asset_value_master")
+        results = db.execute(sql).fetchall()
+        asset_costs = {r[0].strip().lower(): float(r[1] or 0.0) for r in results if r[0]}
+    except Exception:
+        pass
+
+    # Query all asset taggings for these legs in batch
     all_legs = db.query(ExpenseItinerary).filter(
         ExpenseItinerary.exp_id.in_(expense_codes)
     ).order_by(ExpenseItinerary.exp_id, ExpenseItinerary.leg_number).all()
+    
+    iti_ids = [l.itinerary_id for l in all_legs]
+    from app.models.expense_asset_tagging import ExpenseAssetTagging
+    taggings = db.query(ExpenseAssetTagging).filter(
+        ExpenseAssetTagging.itinerary_id.in_(iti_ids)
+    ).all()
+    taggings_by_iti: dict = {}
+    for t in taggings:
+        taggings_by_iti.setdefault(t.itinerary_id, []).append(t)
+
     legs_by_code: dict = {}
     for leg in all_legs:
         legs_by_code.setdefault(leg.exp_id, []).append(leg)
@@ -1248,6 +1269,7 @@ async def get_engineer_month_claims(
             car_km = leg.distance_km if leg.travel_mode == "Car" else 0.0
             bike_amt = leg.travel_amount if leg.travel_mode == "Bike" else 0.0
             car_amt = leg.travel_amount if leg.travel_mode == "Car" else 0.0
+            
             # Extract barcodes from activity_details
             barcodes = []
             raw_act = leg.activity_details
@@ -1263,7 +1285,22 @@ async def get_engineer_month_claims(
                                 barcodes.append(item.get("barcode"))
                 except Exception:
                     pass
+
+            # Calculate total asset tagging qty and value
+            leg_tags = taggings_by_iti.get(leg.itinerary_id, [])
+            total_tag_qty = sum(t.quantity or 0 for t in leg_tags)
+            total_tag_val = sum((t.quantity or 0) * asset_costs.get((t.equipment_name or "").strip().lower(), 0.0) for t in leg_tags)
+
+            tag_info = ""
+            if total_tag_qty > 0:
+                tag_info = f"Qty: {total_tag_qty}, Val: ₹{total_tag_val:.2f}"
+            
             barcode_ticket_str = ", ".join(barcodes) if barcodes else ""
+            if tag_info:
+                if barcode_ticket_str:
+                    barcode_ticket_str += f" | {tag_info}"
+                else:
+                    barcode_ticket_str = tag_info
 
             leg_data.append({
                 "leg_number": leg.leg_number,
@@ -1286,17 +1323,13 @@ async def get_engineer_month_claims(
                 "calls_completed": leg.calls_completed or 0,
                 "pms_count": leg.pms_count or 0,
                 "worked_district": leg.to_district or leg.from_district or "",
-                # TA = travel amount for Train/Bus modes; for Bike/Car it's bike_amount/car_amount
                 "ta_amount": (leg.travel_amount or 0.0) if leg.travel_mode in ["Train", "Bus"] else 0.0,
                 "sub_mode": leg.sub_mode or "",
                 "sub_amount": leg.sub_amount or 0.0,
                 "barcode_ticket": barcode_ticket_str,
+                "asset_tagging_qty": total_tag_qty,
+                "asset_tagging_val": total_tag_val,
             })
-        leg_total = sum(
-            (l["bike_amount"] + l["car_amount"] + l["auto_amount"] +
-             l["da_amount"] + l["hotel_amount"] + l["local_purchase"] + l["other_amount"])
-            for l in leg_data
-        )
         claims.append({
             "expense_code": exp.expense_code,
             "date": exp.itinerary,
@@ -1312,9 +1345,14 @@ async def get_engineer_month_claims(
     attachments_list = db.query(ExpenseAttachment).filter(
         ExpenseAttachment.exp_id.in_(expense_codes)
     ).all()
-    # Filter out anything that contains call or pms just in case, though they are in separate tables
+    
+    expense_date_map = {e.expense_code: e.itinerary for e in expenses if e.expense_code}
     valid_attachments = [
-        a.file_url for a in attachments_list
+        {
+            "file_url": a.file_url,
+            "date": expense_date_map.get(a.exp_id, "")
+        }
+        for a in attachments_list
         if a.file_url and not any(x in (a.bill_type or "").lower() for x in ["pms", "call"])
     ]
 

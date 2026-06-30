@@ -81,6 +81,12 @@ function buildExcelPrintHTML(user: any, claims: any[], attachments: string[] = [
   const gOther  = allLegs.reduce((s, r) => s + (r.leg.other_amount || 0), 0);
   const gTotal  = gTA + gBikeCar + gAuto + gDA + gLocal + gHotel + gOther;
 
+  const gPMS = allLegs.reduce((s, r) => s + (r.leg.pms_count || 0), 0);
+  const gCallsA = allLegs.reduce((s, r) => s + (r.leg.calls_assigned || 0), 0);
+  const gCallsC = allLegs.reduce((s, r) => s + (r.leg.calls_completed || 0), 0);
+  const gAssetQty = allLegs.reduce((s, r) => s + (r.leg.asset_tagging_qty || 0), 0);
+  const gAssetVal = allLegs.reduce((s, r) => s + (r.leg.asset_tagging_val || 0), 0);
+
   // ── mode abbreviation ──
   const modeAbbr = (m: string) => {
     if (!m) return "";
@@ -92,14 +98,9 @@ function buildExcelPrintHTML(user: any, claims: any[], attachments: string[] = [
   };
 
   // ── Data rows — 18 columns ──
-  // Col order: Date | From | To | Worked District | Mode | KM |
-  //            TA(Train/Bus only) | Auto | DA | Local Spare | Hotel |
-  //            Other Desc | Other Amt | Total | Remarks | Barcode | PMS | Calls
   const dataRows = allLegs.map((r, i) => {
     const l = r.leg;
-    // TA column = ONLY train/bus ticket amount
     const taCol   = l.ta_amount || 0;
-    // Bike/Car amounts included in Total but no separate column
     const bikeCarAmt = (l.bike_amount || 0) + (l.car_amount || 0);
     const rowTotal = taCol + bikeCarAmt + (l.auto_amount || 0) + (l.da_amount || 0)
                    + (l.local_purchase || 0) + (l.hotel_amount || 0) + (l.other_amount || 0);
@@ -128,30 +129,23 @@ function buildExcelPrintHTML(user: any, claims: any[], attachments: string[] = [
     </tr>`;
   }).join("\n");
 
-
-  // Attached receipts HTML block
+  // Attached receipts HTML block — each on its own page
   let attachmentsSection = "";
   if (attachments && attachments.length > 0) {
-    attachmentsSection = `
-      <div style="page-break-before: always; margin-top: 30px; padding-top: 10px;">
-        <h3 style="font-size: 11pt; font-weight: 800; color: #1a237e; border-bottom: 2px solid #1a237e; padding-bottom: 5px; margin-bottom: 15px; text-transform: uppercase;">
-          Attached Expense Receipts / Bills
-        </h3>
-        <div style="display: flex; flex-direction: column; gap: 30px; align-items: center; justify-content: center; width: 100%;">
-          ${attachments.map((url, index) => {
-            const absoluteUrl = getAbsoluteUrl(url);
-            return `
-              <div style="width: 100%; max-width: 800px; border: 1px solid #b0c4de; padding: 10px; background: #fff; text-align: center; page-break-inside: avoid; border-radius: 4px; box-shadow: 0 1px 3px rgba(0,0,0,0.1);">
-                <div style="font-size: 8.5pt; font-weight: bold; color: #1a237e; text-align: left; border-bottom: 1px solid #eee; padding-bottom: 6px; margin-bottom: 10px;">
-                  Receipt #${index + 1}
-                </div>
-                <img src="${absoluteUrl}" style="max-width: 100%; max-height: 230mm; object-fit: contain; border-radius: 2px;" alt="Receipt ${index + 1}" />
-              </div>
-            `;
-          }).join("\n")}
+    attachmentsSection = attachments.map((att: any, index) => {
+      const absoluteUrl = getAbsoluteUrl(att.file_url);
+      const dateStr = att.date ? fmtDate(att.date) : `Receipt #${index + 1}`;
+      return `
+        <div style="page-break-before: always; width: 100%; height: 100%; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 10mm; box-sizing: border-box;">
+          <div style="width: 100%; border: 1.5px solid #000; padding: 10px; background: #fff; text-align: center; border-radius: 4px;">
+            <div style="font-size: 10pt; font-weight: bold; color: #000; text-align: left; border-bottom: 1.5px solid #000; padding-bottom: 6px; margin-bottom: 15px; text-transform: uppercase; font-family:'Arial',sans-serif;">
+              BILL ATTACHMENT &mdash; DATE: ${dateStr}
+            </div>
+            <img src="${absoluteUrl}" style="max-width: 100%; max-height: 230mm; object-fit: contain; border: 1px solid #ccc;" alt="Attachment ${dateStr}" />
+          </div>
         </div>
-      </div>
-    `;
+      `;
+    }).join("\n");
   }
 
   return `<!DOCTYPE html>
@@ -267,22 +261,24 @@ function buildExcelPrintHTML(user: any, claims: any[], attachments: string[] = [
     </tbody>
     <tfoot>
       <!-- TOTAL EXPENSE CLAIMED row -->
-      <tr>
-        <td class="tot-lbl" colspan="6" style="text-align:center; border: 1px solid #b0c4de!important; text-transform:uppercase;">
+      <tr style="background:#fff3cd!important;">
+        <td class="tot-lbl" colspan="6" style="text-align:center; border: 1.5px solid #000!important; text-transform:uppercase; background:#fff3cd!important;">
           TOTAL EXPENSE CLAIMED
         </td>
-        <td class="tot-num" style="border: 1px solid #b0c4de!important;">${gTA > 0 ? gTA.toFixed(2) : ""}</td>
-        <td class="tot-num" style="border: 1px solid #b0c4de!important;">${gAuto > 0 ? gAuto.toFixed(2) : ""}</td>
-        <td class="tot-num" style="border: 1px solid #b0c4de!important;">${gDA > 0 ? gDA.toFixed(2) : ""}</td>
-        <td class="tot-num" style="border: 1px solid #b0c4de!important;">${gLocal > 0 ? gLocal.toFixed(2) : ""}</td>
-        <td class="tot-num" style="border: 1px solid #b0c4de!important;">${gHotel > 0 ? gHotel.toFixed(2) : ""}</td>
-        <td class="tot-lbl" style="text-align:center;font-size:6.5pt!; border: 1px solid #b0c4de!important;">Other Total</td>
-        <td class="tot-num" style="border: 1px solid #b0c4de!important;">${gOther > 0 ? gOther.toFixed(2) : ""}</td>
-        <td class="tot-num" style="background:#fff3cd!important; font-weight:950; text-align:right; border: 1px solid #b0c4de!important;">${gTotal.toFixed(2)}</td>
-        <td style="border: 1px solid #b0c4de!important;"></td>
-        <td style="border: 1px solid #b0c4de!important;"></td>
-        <td style="border: 1px solid #b0c4de!important;"></td>
-        <td style="border: 1px solid #b0c4de!important;"></td>
+        <td class="tot-num" style="border: 1.5px solid #000!important; background:#fff3cd!important;">${gTA > 0 ? gTA.toFixed(2) : ""}</td>
+        <td class="tot-num" style="border: 1.5px solid #000!important; background:#fff3cd!important;">${gAuto > 0 ? gAuto.toFixed(2) : ""}</td>
+        <td class="tot-num" style="border: 1.5px solid #000!important; background:#fff3cd!important;">${gDA > 0 ? gDA.toFixed(2) : ""}</td>
+        <td class="tot-num" style="border: 1.5px solid #000!important; background:#fff3cd!important;">${gLocal > 0 ? gLocal.toFixed(2) : ""}</td>
+        <td class="tot-num" style="border: 1.5px solid #000!important; background:#fff3cd!important;">${gHotel > 0 ? gHotel.toFixed(2) : ""}</td>
+        <td class="tot-lbl" style="text-align:center; font-size:6.5pt; border: 1.5px solid #000!important; background:#fff3cd!important;">Other Total</td>
+        <td class="tot-num" style="border: 1.5px solid #000!important; background:#fff3cd!important;">${gOther > 0 ? gOther.toFixed(2) : ""}</td>
+        <td class="tot-num" style="background:#fff3cd!important; font-weight:950; text-align:right; border: 1.5px solid #000!important;">${gTotal.toFixed(2)}</td>
+        <td class="tot-lbl" style="border: 1.5px solid #000!important; background:#fff3cd!important;"></td>
+        <td class="tot-lbl" style="border: 1.5px solid #000!important; font-size:6.5pt!important; text-align:center; font-weight:bold; background:#fff3cd!important;">
+          ${gAssetQty > 0 ? `Qty: ${gAssetQty}, Val: ₹${gAssetVal.toFixed(2)}` : ""}
+        </td>
+        <td class="tot-num" style="border: 1.5px solid #000!important; text-align:center; font-weight:bold; background:#fff3cd!important;">${gPMS > 0 ? gPMS : ""}</td>
+        <td class="tot-num" style="border: 1.5px solid #000!important; text-align:center; font-weight:bold; background:#fff3cd!important;">${gCallsC > 0 ? `${gCallsC}/${gCallsA}` : ""}</td>
       </tr>
       <!-- ADVANCES ROW -->
       <tr>
@@ -295,10 +291,10 @@ function buildExcelPrintHTML(user: any, claims: any[], attachments: string[] = [
         <td colspan="4" style="border: 1.5px solid #000!important; background:#fff!important;"></td>
       </tr>
       <!-- NET PAYABLE ROW -->
-      <tr>
-        <td class="net-lbl" colspan="13">NET PAYABLE</td>
-        <td class="net-val" style="font-weight:950; font-size:8.5pt!important;">${Math.round(gTotal - advance)}</td>
-        <td colspan="4" style="border: 1.5px solid #000!important; background:#fff!important;"></td>
+      <tr style="background:#dcdcdc!important;">
+        <td class="net-lbl" colspan="13" style="border: 1.5px solid #000!important; background:#dcdcdc!important;">NET PAYABLE</td>
+        <td class="net-val" style="font-weight:950; font-size:8.5pt!important; border: 1.5px solid #000!important; background:#dcdcdc!important;">${Math.round(gTotal - advance)}</td>
+        <td colspan="4" style="border: 1.5px solid #000!important; background:#dcdcdc!important;"></td>
       </tr>
     </tfoot>
   </table>
