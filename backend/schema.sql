@@ -170,3 +170,18 @@ CREATE TABLE IF NOT EXISTS hierarchy_approvers (
     FOREIGN KEY(hierarchy_id) REFERENCES approval_hierarchies(id) ON DELETE CASCADE,
     FOREIGN KEY(approver_id) REFERENCES users(id) ON DELETE CASCADE
 );
+
+-- 11. Engineer Advances Table
+CREATE TABLE IF NOT EXISTS engineer_advances (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    user_id TEXT NOT NULL,
+    month TEXT NOT NULL,
+    year INTEGER NOT NULL,
+    advance_amount REAL DEFAULT 0.0,
+    created_by TEXT,
+    created_at TEXT DEFAULT CURRENT_TIMESTAMP,
+    updated_at TEXT DEFAULT CURRENT_TIMESTAMP,
+    UNIQUE(user_id, month, year)
+);
+CREATE INDEX IF NOT EXISTS idx_engineer_advances_user ON engineer_advances(user_id);
+

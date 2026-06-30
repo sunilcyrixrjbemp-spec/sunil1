@@ -418,6 +418,29 @@ export default function MonthSummaryPage() {
   const [pdfLoadingId, setPdfLoadingId] = useState<string | null>(null);
   const [search, setSearch] = useState("");
 
+  // Modal states
+  const [showAdvanceModal, setShowAdvanceModal] = useState(false);
+  const [advanceModalConfig, setAdvanceModalConfig] = useState<{
+    title: string;
+    description: string;
+    initialValue: number;
+    userCode: string;
+    month: string;
+    year: number;
+    onSave: (amount: number) => Promise<void>;
+  } | null>(null);
+  const [advanceAmountInput, setAdvanceAmountInput] = useState("0");
+
+  const currentUser = (() => {
+    try {
+      return JSON.parse(localStorage.getItem("user") || "{}");
+    } catch {
+      return {};
+    }
+  })();
+  const roleLower = (currentUser.role || "").toLowerCase().trim();
+  const isAllowedAdvance = ["coordinator", "accountant", "travel desk", "admin", "superadmin"].includes(roleLower);
+
   const currentDate = new Date();
   const [filterMonth, setFilterMonth] = useState<string>(MONTHS[currentDate.getMonth() + 1]);
   const [filterYear, setFilterYear] = useState<number>(currentDate.getFullYear());
@@ -452,23 +475,7 @@ export default function MonthSummaryPage() {
     }
   };
 
-  const handleApplyFilters = () => {
-    const f = { month: filterMonth, year: filterYear, district: filterDistrict, engineer: filterEngineer };
-    setAppliedFilters(f);
-    fetchData(f);
-  };
-
-  const handleClear = () => {
-    const f = { month: "", year: 0, district: "", engineer: "" };
-    setFilterMonth(""); setFilterYear(0); setFilterDistrict(""); setFilterEngineer(""); setSearch("");
-    setAppliedFilters(f); fetchData(f);
-  };
-
-  const handlePDF = async (row: any) => {
-    const advStr = window.prompt(`Enter Advance Amount (₹) for ${row.name} (optional):`, "0");
-    if (advStr === null) return;
-    const advance = parseFloat(advStr) || 0;
-
+  const generateSinglePDF = async (row: any, advance: number) => {
     const key = `${row.user_id}-${row.month}-${row.year}`;
     setPdfLoadingId(key);
     const tid = toast.loading(`Fetching data for ${row.name}…`);
@@ -494,100 +501,91 @@ export default function MonthSummaryPage() {
     }
   };
 
-  const filtered = data.filter((r) => {
-    if (!search) return true;
-    const q = search.toLowerCase();
-    return (r.name || "").toLowerCase().includes(q) ||
-      (r.e_code || "").toLowerCase().includes(q) ||
-      (r.district || "").toLowerCase().includes(q) ||
-      (r.month || "").toLowerCase().includes(q);
-  });
-
-  const totalEngineers = filtered.length;
-  const totalClaims = filtered.reduce((s, r) => s + (r.claims_count || 0), 0);
-  const totalAmount = filtered.reduce((s, r) => s + (r.total_amount || 0), 0);
-  const totalKM = filtered.reduce((s, r) => s + (r.total_km || 0), 0);
-
-  const [selectedKeys, setSelectedKeys] = useState<string[]>([]);
-
-  const handleSelectAll = (e: React.ChangeEvent<HTMLInputElement>) => {
-    if (e.target.checked) {
-      setSelectedKeys(filtered.map(r => `${r.user_id}-${r.month}-${r.year}`));
-    } else {
-      setSelectedKeys([]);
-    }
-  };
-
-  const handleSelectRow = (key: string, checked: boolean) => {
-    if (checked) {
-      setSelectedKeys(prev => [...prev, key]);
-    } else {
-      setSelectedKeys(prev => prev.filter(k => k !== key));
-    }
-  };
-
-  const handleBulkPrintCombined = async () => {
-    if (selectedKeys.length === 0) return;
-    const tid = toast.loading(`Preparing combined print sheet for ${selectedKeys.length} engineers…`);
+  const handlePDF = async (row: any) => {
+    const key = `${row.user_id}-${row.month}-${row.year}`;
+    setPdfLoadingId(key);
+    const tid = toast.loading("Checking advance details...");
+    
+    let savedAdvance = 0;
     try {
-      const advStr = window.prompt(`Enter Default Advance Amount (₹) for all (optional):`, "0");
-      if (advStr === null) { toast.dismiss(tid); return; }
-      const advance = parseFloat(advStr) || 0;
+      const resAdv = await expenseService.getEngineerAdvance(row.user_id, row.month, row.year);
+      if (resAdv && resAdv.success) {
+        savedAdvance = resAdv.advance_amount || 0;
+      }
+    } catch (e) {
+      console.error(e);
+    } finally {
+      toast.dismiss(tid);
+      setPdfLoadingId(null);
+    }
 
-      const promises = selectedKeys.map(async (key) => {
-        const row = data.find(r => `${r.user_id}-${r.month}-${r.year}` === key);
-        if (!row) return null;
-        try {
-          const res = await expenseService.getEngineerMonthClaims(row.user_id, row.month, row.year);
-          return { row, res };
-        } catch {
-          return null;
+    if (savedAdvance > 0 || !isAllowedAdvance) {
+      await generateSinglePDF(row, savedAdvance);
+    } else {
+      setAdvanceAmountInput("0");
+      setAdvanceModalConfig({
+        title: "Set Monthly Advance",
+        description: `Enter Advance Amount (₹) for ${row.name} for ${row.month} ${row.year}. This will be saved to the database and won't prompt again.`,
+        initialValue: 0,
+        userCode: row.user_id,
+        month: row.month,
+        year: row.year,
+        onSave: async (amount: number) => {
+          const saveTid = toast.loading("Saving advance amount...");
+          try {
+            await expenseService.saveEngineerAdvance(row.user_id, row.month, row.year, amount);
+            toast.success("Advance saved to database");
+          } catch (err: any) {
+            toast.error(err?.response?.data?.detail || "Failed to save advance");
+          } finally {
+            toast.dismiss(saveTid);
+          }
+          await generateSinglePDF(row, amount);
         }
       });
+      setShowAdvanceModal(true);
+    }
+  };
 
-      const fetched = (await Promise.all(promises)).filter(x => x !== null) as { row: any; res: any }[];
-      toast.dismiss(tid);
+  const generateBulkPrintCombined = (fetched: any[], advancesMap: Record<string, number>) => {
+    let combinedBody = "";
+    let combinedStyles = "";
+    let first = true;
 
-      if (fetched.length === 0) {
-        toast.error("Failed to load claims for selected engineers");
-        return;
+    for (const item of fetched) {
+      const user = item.res.user || item.row;
+      const claims = item.res.claims || [];
+      const attachments = item.res.attachments || [];
+      if (claims.length === 0) continue;
+
+      const key = `${item.row.user_id}-${item.row.month}-${item.row.year}`;
+      const advance = advancesMap[key] || 0;
+
+      const html = buildExcelPrintHTML(user, claims, attachments, advance);
+      
+      const parser = new DOMParser();
+      const doc = parser.parseFromString(html, "text/html");
+      const bodyContent = doc.querySelector(".wrap")?.innerHTML || "";
+      const styleContent = doc.querySelector("style")?.innerHTML || "";
+      
+      if (first) {
+        combinedStyles = styleContent;
+        first = false;
       }
 
-      let combinedBody = "";
-      let combinedStyles = "";
-      let first = true;
+      combinedBody += `
+        <div class="wrap" style="page-break-after: always; min-height: 100vh; box-sizing: border-box; padding: 4mm;">
+          ${bodyContent}
+        </div>
+      `;
+    }
 
-      for (const item of fetched) {
-        const user = item.res.user || item.row;
-        const claims = item.res.claims || [];
-        const attachments = item.res.attachments || [];
-        if (claims.length === 0) continue;
+    if (!combinedBody) {
+      toast.error("No valid claim data found to print");
+      return;
+    }
 
-        const html = buildExcelPrintHTML(user, claims, attachments, advance);
-        
-        const parser = new DOMParser();
-        const doc = parser.parseFromString(html, "text/html");
-        const bodyContent = doc.querySelector(".wrap")?.innerHTML || "";
-        const styleContent = doc.querySelector("style")?.innerHTML || "";
-        
-        if (first) {
-          combinedStyles = styleContent;
-          first = false;
-        }
-
-        combinedBody += `
-          <div class="wrap" style="page-break-after: always; min-height: 100vh; box-sizing: border-box; padding: 4mm;">
-            ${bodyContent}
-          </div>
-        `;
-      }
-
-      if (!combinedBody) {
-        toast.error("No valid claim data found to print");
-        return;
-      }
-
-      const combinedHTML = `<!DOCTYPE html>
+    const combinedHTML = `<!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="UTF-8">
@@ -607,38 +605,42 @@ export default function MonthSummaryPage() {
 </body>
 </html>`;
 
-      const win = window.open("", "_blank", "width=1400,height=900");
-      if (!win) { toast.error("Allow popups to print"); return; }
-      win.document.write(combinedHTML);
-      win.document.close();
-      win.onload = () => setTimeout(() => win.print(), 800);
-      toast.success(`Print preview loaded for ${fetched.length} claims`);
-    } catch (err) {
-      toast.dismiss(tid);
-      toast.error("Bulk print generation failed");
-    }
+    const win = window.open("", "_blank", "width=1400,height=900");
+    if (!win) { toast.error("Allow popups to print"); return; }
+    win.document.write(combinedHTML);
+    win.document.close();
+    win.onload = () => setTimeout(() => win.print(), 800);
+    toast.success(`Print preview loaded for ${fetched.length} claims`);
   };
 
-  const handleBulkDownloadIndividual = async () => {
+  const handleBulkPrintCombined = async () => {
     if (selectedKeys.length === 0) return;
-    const tid = toast.loading(`Downloading individual HTMLs for ${selectedKeys.length} engineers…`);
+    const tid = toast.loading(`Checking advance details and fetching data…`);
     try {
-      const advStr = window.prompt(`Enter Default Advance Amount (₹) for all (optional):`, "0");
-      if (advStr === null) { toast.dismiss(tid); return; }
-      const advance = parseFloat(advStr) || 0;
+      const fetched: any[] = [];
+      const advancesMap: Record<string, number> = {};
+      const keysWithNoAdvance: any[] = [];
 
       const promises = selectedKeys.map(async (key) => {
         const row = data.find(r => `${r.user_id}-${r.month}-${r.year}` === key);
-        if (!row) return null;
+        if (!row) return;
         try {
-          const res = await expenseService.getEngineerMonthClaims(row.user_id, row.month, row.year);
-          return { row, res };
-        } catch {
-          return null;
+          const [claimRes, advRes] = await Promise.all([
+            expenseService.getEngineerMonthClaims(row.user_id, row.month, row.year),
+            expenseService.getEngineerAdvance(row.user_id, row.month, row.year)
+          ]);
+          fetched.push({ row, res: claimRes });
+          const amt = advRes?.advance_amount || 0;
+          advancesMap[key] = amt;
+          if (amt === 0) {
+            keysWithNoAdvance.push({ row, key });
+          }
+        } catch (e) {
+          console.error(e);
         }
       });
 
-      const fetched = (await Promise.all(promises)).filter(x => x !== null) as { row: any; res: any }[];
+      await Promise.all(promises);
       toast.dismiss(tid);
 
       if (fetched.length === 0) {
@@ -646,29 +648,141 @@ export default function MonthSummaryPage() {
         return;
       }
 
-      fetched.forEach((item, index) => {
-        setTimeout(() => {
-          const user = item.res.user || item.row;
-          const claims = item.res.claims || [];
-          const attachments = item.res.attachments || [];
-          if (claims.length === 0) return;
+      if (keysWithNoAdvance.length > 0 && isAllowedAdvance) {
+        setAdvanceAmountInput("0");
+        setAdvanceModalConfig({
+          title: "Set Default Advance",
+          description: `You selected ${selectedKeys.length} claims, and ${keysWithNoAdvance.length} of them have no saved advance. Enter a default advance (₹) to save in the database for these ${keysWithNoAdvance.length} engineers:`,
+          initialValue: 0,
+          userCode: "BULK",
+          month: "",
+          year: 0,
+          onSave: async (amount: number) => {
+            const saveTid = toast.loading("Saving advances...");
+            try {
+              const savePromises = keysWithNoAdvance.map(item => 
+                expenseService.saveEngineerAdvance(item.row.user_id, item.row.month, item.row.year, amount)
+              );
+              await Promise.all(savePromises);
+              keysWithNoAdvance.forEach(item => {
+                advancesMap[item.key] = amount;
+              });
+              toast.success("Advances saved successfully");
+            } catch (err) {
+              console.error(err);
+              toast.error("Failed to save default advances");
+            } finally {
+              toast.dismiss(saveTid);
+            }
+            generateBulkPrintCombined(fetched, advancesMap);
+          }
+        });
+        setShowAdvanceModal(true);
+      } else {
+        generateBulkPrintCombined(fetched, advancesMap);
+      }
+    } catch (err) {
+      toast.dismiss(tid);
+      toast.error("Bulk print generation failed");
+    }
+  };
 
-          const html = buildExcelPrintHTML(user, claims, attachments, advance);
-          const blob = new Blob([html], { type: "text/html" });
-          const url = URL.createObjectURL(blob);
-          const a = document.createElement("a");
-          a.href = url;
-          const safeName = (user.name || "Engineer").replace(/[^a-zA-Z0-9]/g, "_");
-          const safeMonth = (user.month || "Month").replace(/[^a-zA-Z0-9]/g, "_");
-          a.download = `${safeName}_${user.e_code || user.user_id}_${safeMonth}_${user.year}.html`;
-          document.body.appendChild(a);
-          a.click();
-          document.body.removeChild(a);
-          URL.revokeObjectURL(url);
-        }, index * 350);
+  const generateBulkDownloadIndividual = (fetched: any[], advancesMap: Record<string, number>) => {
+    fetched.forEach((item, index) => {
+      setTimeout(() => {
+        const user = item.res.user || item.row;
+        const claims = item.res.claims || [];
+        const attachments = item.res.attachments || [];
+        if (claims.length === 0) return;
+
+        const key = `${item.row.user_id}-${item.row.month}-${item.row.year}`;
+        const advance = advancesMap[key] || 0;
+
+        const html = buildExcelPrintHTML(user, claims, attachments, advance);
+        const blob = new Blob([html], { type: "text/html" });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement("a");
+        a.href = url;
+        const safeName = (user.name || "Engineer").replace(/[^a-zA-Z0-9]/g, "_");
+        const safeMonth = (user.month || "Month").replace(/[^a-zA-Z0-9]/g, "_");
+        a.download = `${safeName}_${user.e_code || user.user_id}_${safeMonth}_${user.year}.html`;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+      }, index * 350);
+    });
+    toast.success(`Started downloading ${fetched.length} files successfully!`);
+  };
+
+  const handleBulkDownloadIndividual = async () => {
+    if (selectedKeys.length === 0) return;
+    const tid = toast.loading(`Checking advance details and fetching data…`);
+    try {
+      const fetched: any[] = [];
+      const advancesMap: Record<string, number> = {};
+      const keysWithNoAdvance: any[] = [];
+
+      const promises = selectedKeys.map(async (key) => {
+        const row = data.find(r => `${r.user_id}-${r.month}-${r.year}` === key);
+        if (!row) return;
+        try {
+          const [claimRes, advRes] = await Promise.all([
+            expenseService.getEngineerMonthClaims(row.user_id, row.month, row.year),
+            expenseService.getEngineerAdvance(row.user_id, row.month, row.year)
+          ]);
+          fetched.push({ row, res: claimRes });
+          const amt = advRes?.advance_amount || 0;
+          advancesMap[key] = amt;
+          if (amt === 0) {
+            keysWithNoAdvance.push({ row, key });
+          }
+        } catch (e) {
+          console.error(e);
+        }
       });
 
-      toast.success(`Started downloading ${fetched.length} files successfully!`);
+      await Promise.all(promises);
+      toast.dismiss(tid);
+
+      if (fetched.length === 0) {
+        toast.error("Failed to load claims for selected engineers");
+        return;
+      }
+
+      if (keysWithNoAdvance.length > 0 && isAllowedAdvance) {
+        setAdvanceAmountInput("0");
+        setAdvanceModalConfig({
+          title: "Set Default Advance",
+          description: `You selected ${selectedKeys.length} claims, and ${keysWithNoAdvance.length} of them have no saved advance. Enter a default advance (₹) to save in the database for these ${keysWithNoAdvance.length} engineers:`,
+          initialValue: 0,
+          userCode: "BULK",
+          month: "",
+          year: 0,
+          onSave: async (amount: number) => {
+            const saveTid = toast.loading("Saving advances...");
+            try {
+              const savePromises = keysWithNoAdvance.map(item => 
+                expenseService.saveEngineerAdvance(item.row.user_id, item.row.month, item.row.year, amount)
+              );
+              await Promise.all(savePromises);
+              keysWithNoAdvance.forEach(item => {
+                advancesMap[item.key] = amount;
+              });
+              toast.success("Advances saved successfully");
+            } catch (err) {
+              console.error(err);
+              toast.error("Failed to save default advances");
+            } finally {
+              toast.dismiss(saveTid);
+            }
+            generateBulkDownloadIndividual(fetched, advancesMap);
+          }
+        });
+        setShowAdvanceModal(true);
+      } else {
+        generateBulkDownloadIndividual(fetched, advancesMap);
+      }
     } catch (err) {
       toast.dismiss(tid);
       toast.error("Bulk download failed");
@@ -946,6 +1060,65 @@ export default function MonthSummaryPage() {
           )}
         </div>
       </div>
+
+      {showAdvanceModal && advanceModalConfig && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-xs">
+          <div className="bg-white rounded-lg shadow-xl w-full max-w-sm mx-4 overflow-hidden border border-gray-200 animate-scaleUp">
+            {/* Modal Header */}
+            <div className="bg-[#1e3a8a] text-white px-4 py-3 flex justify-between items-center">
+              <h3 className="text-sm font-bold tracking-wide uppercase m-0 flex items-center gap-2">
+                <CheckCircle className="w-4 h-4 text-green-400" /> {advanceModalConfig.title}
+              </h3>
+              <button 
+                onClick={() => setShowAdvanceModal(false)}
+                className="text-white/80 hover:text-white font-bold text-lg leading-none cursor-pointer border-0 bg-transparent"
+              >
+                &times;
+              </button>
+            </div>
+            {/* Modal Body */}
+            <div className="p-5 flex flex-col gap-4">
+              <p className="text-xs font-semibold text-gray-600 leading-relaxed">
+                {advanceModalConfig.description}
+              </p>
+              <div>
+                <label className="block text-[11px] font-bold text-gray-500 uppercase tracking-wider mb-1">
+                  Advance Amount (₹)
+                </label>
+                <input
+                  type="number"
+                  value={advanceAmountInput}
+                  onChange={(e) => setAdvanceAmountInput(e.target.value)}
+                  className="w-full border border-gray-300 rounded px-3 py-2 text-sm font-bold focus:outline-none focus:ring-1 focus:ring-blue-500"
+                  placeholder="0"
+                  min="0"
+                />
+              </div>
+            </div>
+            {/* Modal Footer */}
+            <div className="bg-gray-50 px-4 py-3 flex justify-end gap-2 border-t border-gray-150">
+              <button
+                type="button"
+                onClick={() => setShowAdvanceModal(false)}
+                className="px-4 py-2 bg-gray-200 text-gray-700 rounded text-xs font-bold hover:bg-gray-300 cursor-pointer"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={async () => {
+                  const amount = parseFloat(advanceAmountInput) || 0;
+                  setShowAdvanceModal(false);
+                  await advanceModalConfig.onSave(amount);
+                }}
+                className="px-4 py-2 bg-blue-600 text-white rounded text-xs font-bold hover:bg-blue-700 cursor-pointer"
+              >
+                Save & Proceed
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

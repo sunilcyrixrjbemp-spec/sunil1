@@ -1792,3 +1792,72 @@ async def delete_expense(
     cache.clear_user_and_managers_cache(db, current_user.user_id)
     return {"status": "success", "message": "Expense claim deleted successfully."}
 
+
+from pydantic import BaseModel
+
+class EngineerAdvanceUpsertSchema(BaseModel):
+    user_code: str
+    month: str
+    year: int
+    advance_amount: float
+
+@router.get("/engineer-advance")
+async def get_engineer_advance(
+    user_code: str,
+    month: str,
+    year: int,
+    db: Session = Depends(get_db)
+):
+    from app.models.engineer_advance import EngineerAdvance
+    adv = db.query(EngineerAdvance).filter(
+        EngineerAdvance.user_id == user_code,
+        EngineerAdvance.month == month,
+        EngineerAdvance.year == year
+    ).first()
+    
+    return {
+        "success": True,
+        "advance_amount": adv.advance_amount if adv else 0.0
+    }
+
+@router.post("/engineer-advance")
+async def upsert_engineer_advance(
+    req: EngineerAdvanceUpsertSchema,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    role_lower = current_user.role.lower().strip() if current_user.role else ""
+    if role_lower not in ["coordinator", "accountant", "travel desk", "admin", "superadmin"]:
+        raise HTTPException(
+            status_code=403, 
+            detail="Only coordinators, accountants, travel desks, and admins can set advance amounts."
+        )
+        
+    from app.models.engineer_advance import EngineerAdvance
+    adv = db.query(EngineerAdvance).filter(
+        EngineerAdvance.user_id == req.user_code,
+        EngineerAdvance.month == req.month,
+        EngineerAdvance.year == req.year
+    ).first()
+    
+    if adv:
+        adv.advance_amount = req.advance_amount
+        adv.created_by = current_user.user_id
+    else:
+        adv = EngineerAdvance(
+            user_id=req.user_code,
+            month=req.month,
+            year=req.year,
+            advance_amount=req.advance_amount,
+            created_by=current_user.user_id
+        )
+        db.add(adv)
+        
+    db.commit()
+    return {
+        "success": True,
+        "message": "Advance amount saved successfully",
+        "advance_amount": req.advance_amount
+    }
+
+

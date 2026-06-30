@@ -70,5 +70,22 @@ export const expenseService = {
       `/expense/engineer-month-claims?user_code=${encodeURIComponent(userCode)}&month=${encodeURIComponent(month)}&year=${year}`
     );
     return response.data;
+  },
+
+  getEngineerAdvance: async (userCode: string, month: string, year: number): Promise<any> => {
+    const response = await api.get(
+      `/expense/engineer-advance?user_code=${encodeURIComponent(userCode)}&month=${encodeURIComponent(month)}&year=${year}`
+    );
+    return response.data;
+  },
+
+  saveEngineerAdvance: async (userCode: string, month: string, year: number, amount: number): Promise<any> => {
+    const response = await api.post("/expense/engineer-advance", {
+      user_code: userCode,
+      month: month,
+      year: year,
+      advance_amount: amount
+    });
+    return response.data;
   }
 };

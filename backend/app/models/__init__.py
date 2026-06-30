@@ -21,6 +21,7 @@ from .expense_asset_mobilise import ExpenseAssetMobilise
 from .expense_calibration import ExpenseCalibration
 from .expense_other_activity import ExpenseOtherActivity
 from .expense_edit_log import ExpenseEditLog
+from .engineer_advance import EngineerAdvance
 
 __all__ = [
     "User", "Expense", "Approval", "Asset", "PasswordHistory", "LoginLog", "OTP", 
@@ -29,6 +30,6 @@ __all__ = [
     "LimitApprovalRequest", "SupportTicket", "Notification",
     "ExpenseBreakdownCall", "ExpensePmsCall", "ExpenseAssetTagging", 
     "ExpenseAssetMobilise", "ExpenseCalibration", "ExpenseOtherActivity",
-    "ExpenseEditLog"
+    "ExpenseEditLog", "EngineerAdvance"
 ]
 
