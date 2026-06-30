@@ -82,10 +82,60 @@ function buildExcelPrintHTML(user: any, claims: any[], attachments: string[] = [
   const gTotal  = gTA + gBikeCar + gAuto + gDA + gLocal + gHotel + gOther;
 
   const gPMS = allLegs.reduce((s, r) => s + (r.leg.pms_count || 0), 0);
+  const gCalibration = allLegs.reduce((s, r) => s + (r.leg.calibration_count || 0), 0);
+  const gPMSCalib = gPMS + gCalibration;
+  
   const gCallsA = allLegs.reduce((s, r) => s + (r.leg.calls_assigned || 0), 0);
   const gCallsC = allLegs.reduce((s, r) => s + (r.leg.calls_completed || 0), 0);
   const gAssetQty = allLegs.reduce((s, r) => s + (r.leg.asset_tagging_qty || 0), 0);
   const gAssetVal = allLegs.reduce((s, r) => s + (r.leg.asset_tagging_val || 0), 0);
+
+  // ── visit purpose formatter ──
+  const getFormattedPurpose = (l: any) => {
+    const parts: string[] = [];
+    let acts: string[] = [];
+    if (l.activity_details) {
+      try {
+        const details = typeof l.activity_details === 'string' ? JSON.parse(l.activity_details) : l.activity_details;
+        acts = details.selected_activities || [];
+      } catch (e) {}
+    }
+    
+    if (acts.length === 0 && l.visit_purpose) {
+      let clean = l.visit_purpose;
+      if (clean.startsWith("Activities: ")) {
+        clean = clean.replace("Activities: ", "");
+      }
+      acts = clean.split(",").map((s: string) => s.trim());
+    }
+
+    acts.forEach((act: string) => {
+      if (act === "Calls") {
+        parts.push("Breakdown Call");
+      } else if (act === "PMS") {
+        parts.push("PMS");
+      } else if (act === "Asset Tagging") {
+        parts.push("Asset Tagging");
+      } else if (act === "Mobilise Asset Update") {
+        parts.push("Asset Verification");
+      } else if (act === "Calibration") {
+        parts.push("Calibration");
+      } else if (act === "Other") {
+        // Skip literal "Other"
+      } else if (act && act !== "Field visit") {
+        parts.push(act);
+      }
+    });
+
+    if (l.other_desc && l.other_desc.trim()) {
+      parts.push(l.other_desc.trim());
+    }
+
+    if (parts.length === 0) {
+      return l.visit_purpose && !l.visit_purpose.startsWith("Activities:") ? l.visit_purpose : "Field visit";
+    }
+    return parts.join(", ");
+  };
 
   // ── mode abbreviation ──
   const modeAbbr = (m: string) => {
@@ -106,6 +156,8 @@ function buildExcelPrintHTML(user: any, claims: any[], attachments: string[] = [
                    + (l.local_purchase || 0) + (l.hotel_amount || 0) + (l.other_amount || 0);
     const bg = i % 2 === 0 ? "#ffffff" : "#f0f7ff";
     const c = `border:1px solid #b0c4de;padding:3px 4px;font-size:7pt;font-weight:500;color:#000;vertical-align:middle;word-wrap:break-word;`;
+    
+    const pmsCalibCount = (l.pms_count || 0) + (l.calibration_count || 0);
 
     return `<tr style="background:${bg}!important;">
       <td style="${c}text-align:center;">${fmtDate(r.date)}</td>
@@ -122,9 +174,9 @@ function buildExcelPrintHTML(user: any, claims: any[], attachments: string[] = [
       <td style="${c}font-size:6.5pt;">${l.other_desc || ""}</td>
       <td style="${c}text-align:right;">${l.other_amount > 0 ? l.other_amount.toFixed(2) : ""}</td>
       <td style="${c}text-align:right;font-weight:800;background:#e8f5e9!important;">${rowTotal > 0 ? rowTotal.toFixed(2) : ""}</td>
-      <td style="${c}font-size:6.5pt;">${l.visit_purpose || ""}</td>
+      <td style="${c}font-size:6.5pt;">${getFormattedPurpose(l)}</td>
       <td style="${c}font-size:6pt;font-family:monospace;">${l.barcode_ticket || ""}</td>
-      <td style="${c}text-align:center;">${(l.pms_count || 0) > 0 ? l.pms_count : ""}</td>
+      <td style="${c}text-align:center;">${pmsCalibCount > 0 ? pmsCalibCount : ""}</td>
       <td style="${c}text-align:center;">${(l.calls_completed || 0) > 0 ? `${l.calls_completed}/${l.calls_assigned || 0}` : ""}</td>
     </tr>`;
   }).join("\n");
@@ -136,12 +188,12 @@ function buildExcelPrintHTML(user: any, claims: any[], attachments: string[] = [
       const absoluteUrl = getAbsoluteUrl(att.file_url);
       const dateStr = att.date ? fmtDate(att.date) : `Receipt #${index + 1}`;
       return `
-        <div style="page-break-before: always; width: 100%; height: 100%; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 10mm; box-sizing: border-box;">
-          <div style="width: 100%; border: 1.5px solid #000; padding: 10px; background: #fff; text-align: center; border-radius: 4px;">
+        <div class="attachment-page" style="page-break-before: always; width: 100%; height: 100vh; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 5mm; box-sizing: border-box; overflow: hidden;">
+          <div style="width: 100%; max-width: 950px; border: 1.5px solid #000; padding: 10px; background: #fff; text-align: center; border-radius: 4px; box-sizing: border-box;">
             <div style="font-size: 10pt; font-weight: bold; color: #000; text-align: left; border-bottom: 1.5px solid #000; padding-bottom: 6px; margin-bottom: 15px; text-transform: uppercase; font-family:'Arial',sans-serif;">
               BILL ATTACHMENT &mdash; DATE: ${dateStr}
             </div>
-            <img src="${absoluteUrl}" style="max-width: 100%; max-height: 230mm; object-fit: contain; border: 1px solid #ccc;" alt="Attachment ${dateStr}" />
+            <img src="${absoluteUrl}" style="max-width: 100%; max-height: 180mm; object-fit: contain; border: 1px solid #ccc;" alt="Attachment ${dateStr}" />
           </div>
         </div>
       `;
@@ -185,7 +237,11 @@ function buildExcelPrintHTML(user: any, claims: any[], attachments: string[] = [
     .sig-lbl{border-right:1.5px solid #000;padding:5px 6px;font-size:7.5pt;font-weight:500;color:#000;background:#fff!important;height:32px;vertical-align:top;}
     .sig-val{border-right:1.5px solid #000;padding:5px 6px;font-size:7.5pt;font-weight:500;color:#000;background:#fff!important;height:32px;vertical-align:bottom;}
     @page{size:A4 landscape;margin:6mm 7mm;}
-    @media print{body{margin:0;padding:0;}}
+    @media print{
+      body{margin:0;padding:0;}
+      .wrap{page-break-after:always;page-break-inside:avoid;}
+      .attachment-page{page-break-before:always!important;break-before:page!important;height:100vh!important;page-break-inside:avoid!important;break-inside:avoid!important;overflow:hidden!important;}
+    }
   </style>
 </head>
 <body>
@@ -193,11 +249,11 @@ function buildExcelPrintHTML(user: any, claims: any[], attachments: string[] = [
 
   <table style="margin-bottom:0;">
     <colgroup>
-      <col style="width:8%;"><col style="width:67%;"><col style="width:25%;">
+      <col style="width:10%;"><col style="width:65%;"><col style="width:25%;">
     </colgroup>
     <tr>
-      <td style="background:#1a237e!important;border:2px solid #0d1557;padding:4px 6px;text-align:center;vertical-align:middle;">
-        <img src="${window.location.origin}/brand.png" style="height:28px; max-width:100%; object-fit:contain; background:#fff; padding:2px; border-radius:2px;" alt="Logo" />
+      <td style="background:#fff!important;border:2px solid #0d1557;padding:0;text-align:center;vertical-align:middle;height:32px;overflow:hidden;">
+        <img src="${window.location.origin}/brand.png" style="height:100%; max-height:32px; width:100%; object-fit:contain; display:block; margin:0 auto;" alt="Logo" />
       </td>
       <td class="main-hdr">CYRIX &mdash; EXPENSES REIMBURSEMENT FORM</td>
       <td style="background:#1a237e!important;color:#fff!important;border:2px solid #0d1557;padding:4px 8px;font-size:8pt;font-weight:bold;text-align:center;vertical-align:middle;">
@@ -246,7 +302,7 @@ function buildExcelPrintHTML(user: any, claims: any[], attachments: string[] = [
         <th class="col-h1" rowspan="2">Total</th>
         <th class="col-h1" rowspan="2">Remarks /<br>Purpose</th>
         <th class="col-h1" rowspan="2">Barcode/<br>Asset No. and<br>Ticket No./MPT ID</th>
-        <th class="col-h1" rowspan="2">PMS</th>
+        <th class="col-h1" rowspan="2">PMS/<br>Calibration</th>
         <th class="col-h1" rowspan="2">Calls<br>(Done/Assign)</th>
       </tr>
       <tr>
@@ -275,9 +331,9 @@ function buildExcelPrintHTML(user: any, claims: any[], attachments: string[] = [
         <td class="tot-num" style="background:#fff3cd!important; font-weight:950; text-align:right; border: 1.5px solid #000!important;">${gTotal.toFixed(2)}</td>
         <td class="tot-lbl" style="border: 1.5px solid #000!important; background:#fff3cd!important;"></td>
         <td class="tot-lbl" style="border: 1.5px solid #000!important; font-size:6.5pt!important; text-align:center; font-weight:bold; background:#fff3cd!important;">
-          ${gAssetQty > 0 ? `Qty: ${gAssetQty}, Val: ₹${gAssetVal.toFixed(2)}` : ""}
+          ${gAssetQty > 0 ? `Qty: ${gAssetQty} | ₹${gAssetVal.toLocaleString('en-IN', { maximumFractionDigits: 0 })}` : ""}
         </td>
-        <td class="tot-num" style="border: 1.5px solid #000!important; text-align:center; font-weight:bold; background:#fff3cd!important;">${gPMS > 0 ? gPMS : ""}</td>
+        <td class="tot-num" style="border: 1.5px solid #000!important; text-align:center; font-weight:bold; background:#fff3cd!important;">${gPMSCalib > 0 ? gPMSCalib : ""}</td>
         <td class="tot-num" style="border: 1.5px solid #000!important; text-align:center; font-weight:bold; background:#fff3cd!important;">${gCallsC > 0 ? `${gCallsC}/${gCallsA}` : ""}</td>
       </tr>
       <!-- ADVANCES ROW -->

@@ -1293,7 +1293,7 @@ async def get_engineer_month_claims(
 
             tag_info = ""
             if total_tag_qty > 0:
-                tag_info = f"Qty: {total_tag_qty}, Val: ₹{total_tag_val:.2f}"
+                tag_info = f"Qty: {total_tag_qty} | ₹{total_tag_val:,.0f}"
             
             barcode_ticket_str = ", ".join(barcodes) if barcodes else ""
             if tag_info:
@@ -1329,6 +1329,8 @@ async def get_engineer_month_claims(
                 "barcode_ticket": barcode_ticket_str,
                 "asset_tagging_qty": total_tag_qty,
                 "asset_tagging_val": total_tag_val,
+                "calibration_count": leg.calibration_count or 0,
+                "activity_details": leg.activity_details or "",
             })
         claims.append({
             "expense_code": exp.expense_code,
