@@ -22,6 +22,7 @@ class ExpenseItinerary(Base):
     hotel_amount = Column(Float, default=0.0)
     other_desc = Column(Text, nullable=True)
     other_amount = Column(Float, default=0.0)
+    local_purchase = Column(Float, default=0.0)
     calls_assigned = Column(Integer, default=0)
     calls_completed = Column(Integer, default=0)
     pms_count = Column(Integer, default=0)

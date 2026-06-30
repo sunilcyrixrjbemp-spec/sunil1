@@ -21,6 +21,7 @@ class Expense(Base):
     da_amount = Column(Float, default=0.0)
     hotel_amount = Column(Float, default=0.0)
     other_expense_amount = Column(Float, default=0.0)
+    local_purchase_amount = Column(Float, default=0.0)
     calls_assigned = Column(Integer, default=0)
     calls_completed = Column(Integer, default=0)
     pms_count = Column(Integer, default=0)

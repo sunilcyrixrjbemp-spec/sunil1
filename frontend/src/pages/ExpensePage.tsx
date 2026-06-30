@@ -14,7 +14,10 @@ import {
   FileText,
   DollarSign,
   Navigation,
-  X
+  X,
+  Bike,
+  Car,
+  Bus
 } from "lucide-react";
 
 interface ItineraryLeg {
@@ -32,6 +35,7 @@ interface ItineraryLeg {
   sub_amount: string;
   da: string; // Leg 1 only
   hotel: string; // Leg 1 only
+  local_purchase: string; // Leg 1 only
   oth_desc: string;
   oth_amount: string;
   ws_assigned: string;
@@ -50,6 +54,7 @@ interface LegFiles {
   comm_mail: File | null;
   oth_bill: File | null;
   hotel_bill?: File | null; // Leg 1 only
+  local_purchase_bill?: File | null; // Leg 1 only
 }
 
 export default function ExpensePage() {
@@ -80,6 +85,7 @@ export default function ExpensePage() {
     sub_amount: "0",
     da: "0",
     hotel: "0",
+    local_purchase: "0",
     oth_desc: "",
     oth_amount: "0",
     ws_assigned: "0",
@@ -95,7 +101,8 @@ export default function ExpensePage() {
     sub_bill: null,
     comm_mail: null,
     oth_bill: null,
-    hotel_bill: null
+    hotel_bill: null,
+    local_purchase_bill: null
   });
 
   const [itineraries, setItineraries] = useState<ItineraryLeg[]>(() => {
@@ -132,6 +139,7 @@ export default function ExpensePage() {
       sub_amount: "0",
       da: "0",
       hotel: "0",
+      local_purchase: "0",
       oth_desc: "",
       oth_amount: "0",
       ws_assigned: "0",
@@ -349,6 +357,7 @@ export default function ExpensePage() {
           sub_amount: (leg.sub_amount || 0).toString(),
           da: (leg.da || 0).toString(),
           hotel: (leg.hotel || 0).toString(),
+          local_purchase: (leg.local_purchase || 0).toString(),
           oth_desc: leg.oth_desc || "",
           oth_amount: (leg.oth_amount || 0).toString(),
           ws_assigned: (leg.ws_assigned || 0).toString(),
@@ -769,6 +778,9 @@ export default function ExpensePage() {
     let totalDAVal = 0;
     let totalHotelVal = 0;
     let totalOtherVal = 0;
+    let totalLocalPurchaseVal = 0;
+    let totalBikeCarKmVal = 0;
+    let totalBikeCarAmtVal = 0;
 
     itineraries.forEach((leg, index) => {
       const legNum = index + 1;
@@ -779,6 +791,8 @@ export default function ExpensePage() {
 
       if (leg.mode === "Bike" || leg.mode === "Car") {
         totalKmVal += legKm;
+        totalBikeCarKmVal += legKm;
+        totalBikeCarAmtVal += legAmt;
       }
       if (leg.mode === "Auto") {
         totalAutoVal += legAmt;
@@ -793,16 +807,28 @@ export default function ExpensePage() {
       if (legNum === 1) {
         const daAmt = parseFloat(leg.da) || 0;
         const hotelAmt = parseFloat(leg.hotel) || 0;
-        totalAmtVal += daAmt + hotelAmt;
+        const lpAmt = parseFloat(leg.local_purchase) || 0;
+        totalAmtVal += daAmt + hotelAmt + lpAmt;
         totalDAVal += daAmt;
         totalHotelVal += hotelAmt;
+        totalLocalPurchaseVal += lpAmt;
       }
     });
 
-    return { totalKm: totalKmVal, totalAmt: totalAmtVal, totalAuto: totalAutoVal, totalDA: totalDAVal, totalHotel: totalHotelVal, totalOther: totalOtherVal };
+    return { 
+      totalKm: totalKmVal, 
+      totalAmt: totalAmtVal, 
+      totalAuto: totalAutoVal, 
+      totalDA: totalDAVal, 
+      totalHotel: totalHotelVal, 
+      totalOther: totalOtherVal,
+      totalLocalPurchase: totalLocalPurchaseVal,
+      totalBikeCarKm: totalBikeCarKmVal,
+      totalBikeCarAmt: totalBikeCarAmtVal
+    };
   };
 
-  const { totalKm, totalAmt, totalAuto, totalDA, totalHotel, totalOther } = calculateTotals();
+  const { totalKm, totalAmt, totalAuto, totalDA, totalHotel, totalOther, totalLocalPurchase, totalBikeCarKm, totalBikeCarAmt } = calculateTotals();
 
   const checkLimitsExceeded = () => {
     const maxKmAllowed = (allowance.max_km_per_month || 2000) + approvedKm;
@@ -931,6 +957,14 @@ export default function ExpensePage() {
           toast.error("Please upload your hotel stay receipt.");
           return false;
         }
+
+        const lpAmt = parseFloat(leg.local_purchase) || 0;
+        const lpBill = files[1]?.local_purchase_bill;
+        const hasLpAttachment = lpBill || hasExistingFile(1, "Local_Purchase");
+        if (lpAmt >= 300 && !hasLpAttachment) {
+          toast.error("Please upload a receipt for local purchase since the amount is ₹300 or more.");
+          return false;
+        }
       }
 
       if (leg.oth_desc.trim()) {
@@ -999,6 +1033,7 @@ export default function ExpensePage() {
           sub_amount: leg.sub_amount,
           da: legNum === 1 ? leg.da : "0",
           hotel: legNum === 1 ? leg.hotel : "0",
+          local_purchase: legNum === 1 ? leg.local_purchase : "0",
           oth_desc: leg.oth_desc,
           oth_amount: leg.oth_amount,
           ws_assigned: leg.ws_assigned,
@@ -1021,6 +1056,7 @@ export default function ExpensePage() {
           if (legFiles.comm_mail) formData.append(`comm_mail_${legNum}`, legFiles.comm_mail);
           if (legFiles.oth_bill) formData.append(`oth_bill_${legNum}`, legFiles.oth_bill);
           if (legNum === 1 && legFiles.hotel_bill) formData.append("hotel_bill_1", legFiles.hotel_bill);
+          if (legNum === 1 && legFiles.local_purchase_bill) formData.append("local_purchase_bill_1", legFiles.local_purchase_bill);
         }
       });
       formData.append("deleted_attachments", JSON.stringify(deletedAttachments));
@@ -1231,8 +1267,14 @@ export default function ExpensePage() {
         {/* Monthly Distance Limit Card */}
         <div className="bg-white border border-gray-200 rounded shadow-sm p-3.5 flex flex-col justify-between min-h-[70px]">
           <div className="flex items-center">
-            <div className="p-2.5 rounded bg-blue-50 text-blue-600 mr-3 shrink-0">
-              <Navigation className="w-4 h-4" />
+            <div className="p-2.5 bg-blue-50 text-blue-600 rounded-md">
+              {allowance.vehicle_type === "Car" ? (
+                <Car className="w-5 h-5" />
+              ) : allowance.vehicle_type === "Bike" ? (
+                <Bike className="w-5 h-5" />
+              ) : (
+                <Navigation className="w-5 h-5" />
+              )}
             </div>
             <div className="min-w-0 flex-1">
               <span className="text-[10px] uppercase font-bold text-gray-400 block tracking-wider leading-none mb-1">
@@ -1254,8 +1296,8 @@ export default function ExpensePage() {
         {/* Monthly Auto Cap Card */}
         <div className="bg-white border border-gray-200 rounded shadow-sm p-3.5 flex flex-col justify-between min-h-[70px]">
           <div className="flex items-center">
-            <div className="p-2.5 rounded bg-amber-50 text-amber-600 mr-3 shrink-0">
-              <DollarSign className="w-4 h-4" />
+            <div className="p-2.5 bg-amber-50 text-amber-600 rounded-md">
+              <Bus className="w-5 h-5" />
             </div>
             <div className="min-w-0 flex-1">
               <span className="text-[10px] uppercase font-bold text-gray-400 block tracking-wider leading-none mb-1">
@@ -1861,6 +1903,61 @@ export default function ExpensePage() {
                               </div>
                             )}
                           </div>
+
+                          <div>
+                            <label className="label-lte">Local Purchase (₹)</label>
+                            <input
+                              type="number"
+                              min="0"
+                              step="any"
+                              value={leg.local_purchase || "0"}
+                              onChange={(e) => handleItineraryChange(leg.leg, "local_purchase", e.target.value)}
+                              className="input-lte font-bold"
+                            />
+                          </div>
+
+                          <div>
+                            <label className="label-lte">
+                              Local Purchase Bill {parseFloat(leg.local_purchase) >= 300 && <span className="text-red-500">*</span>}
+                            </label>
+                            {!files[leg.leg]?.local_purchase_bill && !hasExistingFile(leg.leg, "Local_Purchase") ? (
+                              <input
+                                type="file"
+                                accept="image/*,application/pdf,.pdf"
+                                onChange={(e) => handleLegFileChange(leg.leg, "local_purchase_bill", e.target.files ? e.target.files[0] : null)}
+                                className="text-xs file:mr-4 file:py-1 file:px-2 file:rounded file:border-0 file:text-[9px] file:font-bold file:uppercase file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100 cursor-pointer w-full mt-1.5"
+                              />
+                            ) : files[leg.leg]?.local_purchase_bill ? (
+                              <div className="flex items-center justify-between bg-blue-50 border border-blue-200 px-2 py-1 rounded text-[10px] mt-1.5">
+                                <span className="font-semibold text-blue-700 truncate max-w-[100px]">{files[leg.leg]?.local_purchase_bill?.name}</span>
+                                <div className="flex gap-1.5">
+                                  <button type="button" onClick={() => files[leg.leg]?.local_purchase_bill && setLightboxImage(URL.createObjectURL(files[leg.leg].local_purchase_bill!))} className="text-blue-600 hover:underline border-0 bg-transparent font-bold cursor-pointer">Preview</button>
+                                  <a href={files[leg.leg]?.local_purchase_bill ? URL.createObjectURL(files[leg.leg].local_purchase_bill!) : ""} download={files[leg.leg]?.local_purchase_bill?.name || "download"} className="text-green-600 hover:underline font-bold">Download</a>
+                                  <button type="button" onClick={() => removeLegFile(leg.leg, "local_purchase_bill")} className="text-rose-600 hover:underline border-0 bg-transparent font-bold cursor-pointer">Delete</button>
+                                </div>
+                              </div>
+                            ) : (
+                              <div className="flex items-center justify-between bg-green-50 border border-green-200 px-2 py-1 rounded text-[10px] mt-1.5">
+                                <span className="font-semibold text-green-700">✓ Retained</span>
+                                <div className="flex gap-1.5">
+                                  {getExistingFileUrl(leg.leg, "Local_Purchase") && (
+                                    <>
+                                      <button type="button" onClick={() => setLightboxImage(getExistingFileUrl(leg.leg, "Local_Purchase") || "")} className="text-blue-600 hover:underline border-0 bg-transparent font-bold cursor-pointer">Preview</button>
+                                      <a href={getExistingFileUrl(leg.leg, "Local_Purchase") || ""} download={`local_purchase_bill_${leg.leg}.png`} className="text-green-600 hover:underline font-bold">Download</a>
+                                    </>
+                                  )}
+                                  <button 
+                                    type="button" 
+                                    onClick={() => setDeletedAttachments(prev => [...prev, { leg: leg.leg, type: "Local_Purchase" }])} 
+                                    className="text-rose-600 hover:underline border-0 bg-transparent font-bold cursor-pointer"
+                                  >
+                                    Delete
+                                  </button>
+                                </div>
+                              </div>
+                            )}
+                          </div>
+
                         </div>
                       )}
 
@@ -2013,14 +2110,48 @@ export default function ExpensePage() {
               <span className="text-gray-400 uppercase text-[9px] block mb-0.5">TRAVEL DATE</span>
               <span className="text-gray-800">{date || "No date selected"}</span>
             </div>
-            <div>
-              <span className="text-gray-400 uppercase text-[9px] block mb-0.5">DISTANCE</span>
-              <span className="text-gray-800 font-mono">{totalKm.toFixed(1)} KM</span>
-            </div>
-            <div>
-              <span className="text-gray-400 uppercase text-[9px] block mb-0.5">AUTO COST</span>
-              <span className="text-gray-800 font-mono">₹{totalAuto.toLocaleString()}</span>
-            </div>
+            {totalBikeCarKm > 0 && (
+              <div>
+                <span className="text-gray-400 uppercase text-[9px] block mb-0.5">BIKE / CAR</span>
+                <span className="text-gray-800 font-mono">{totalBikeCarKm.toFixed(1)} KM (₹{totalBikeCarAmt.toLocaleString()})</span>
+              </div>
+            )}
+            {totalAuto > 0 && (
+              <div>
+                <span className="text-gray-400 uppercase text-[9px] block mb-0.5">AUTO COST</span>
+                <span className="text-gray-800 font-mono">₹{totalAuto.toLocaleString()}</span>
+              </div>
+            )}
+            {totalDA > 0 && (
+              <div>
+                <span className="text-gray-400 uppercase text-[9px] block mb-0.5">DA</span>
+                <span className="text-gray-800 font-mono">₹{totalDA.toLocaleString()}</span>
+              </div>
+            )}
+            {totalHotel > 0 && (
+              <div>
+                <span className="text-gray-400 uppercase text-[9px] block mb-0.5">HOTEL</span>
+                <span className="text-gray-800 font-mono">₹{totalHotel.toLocaleString()}</span>
+              </div>
+            )}
+            {totalLocalPurchase > 0 && (
+              <div>
+                <span className="text-gray-400 uppercase text-[9px] block mb-0.5">LOCAL PURCHASE</span>
+                <span className="text-gray-800 font-mono">₹{totalLocalPurchase.toLocaleString()}</span>
+              </div>
+            )}
+            {totalOther > 0 && (
+              <div>
+                <span className="text-gray-400 uppercase text-[9px] block mb-0.5">OTHER</span>
+                <span className="text-gray-800 font-mono">₹{totalOther.toLocaleString()}</span>
+              </div>
+            )}
+            {totalBikeCarKm === 0 && totalAuto === 0 && (
+              <div>
+                <span className="text-gray-400 uppercase text-[9px] block mb-0.5">DISTANCE</span>
+                <span className="text-gray-800 font-mono">0.0 KM</span>
+              </div>
+            )}
             <div className="border-l border-gray-200 pl-4 md:pl-6">
               <span className="text-gray-900 font-black uppercase text-[10px] block mb-0.5">TOTAL AMOUNT</span>
               <span className="text-blue-700 font-black font-mono text-sm">₹{totalAmt.toLocaleString()}</span>

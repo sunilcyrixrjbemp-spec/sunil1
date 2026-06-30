@@ -472,6 +472,7 @@ async def submit_expense(
     total_da = 0.0
     total_hotel = 0.0
     total_other = 0.0
+    total_local_purchase = 0.0
     total_assigned = 0
     total_completed = 0
     total_pms = 0
@@ -484,6 +485,7 @@ async def submit_expense(
         total_da += float(iti.get("da") or 0.0)
         total_hotel += float(iti.get("hotel") or 0.0)
         total_other += float(iti.get("oth_amount") or 0.0)
+        total_local_purchase += float(iti.get("local_purchase") or 0.0)
         total_assigned += int(iti.get("ws_assigned") or 0)
         total_completed += int(iti.get("ws_closed") or 0)
         total_pms += int(iti.get("ws_pms") or 0)
@@ -623,6 +625,17 @@ async def submit_expense(
                     detail=f"Leg {leg_num}: Daily Allowance (₹{da_amount}) exceeds the maximum limit (₹{max_da})."
                 )
 
+        # 5. Local Purchase validation
+        local_purchase = float(iti.get("local_purchase") or 0.0)
+        if local_purchase >= 300:
+            has_lp_file = form_data.get(f"local_purchase_bill_{leg_num}") is not None
+            has_old_lp = old_att_map.get((leg_num, "Local_Purchase")) is not None
+            if not (has_lp_file or has_old_lp):
+                raise HTTPException(
+                    status_code=400,
+                    detail=f"Leg {leg_num}: Local purchase amount is ₹{local_purchase}, which is ₹300 or above. A bill attachment is required."
+                )
+
     # RJ-MM/YY-XXXXXX sequence generation or reuse edited one
     if existing_expense:
         final_exp_id = existing_expense.expense_code
@@ -659,6 +672,7 @@ async def submit_expense(
         expense.da_amount = total_da
         expense.hotel_amount = total_hotel
         expense.other_expense_amount = total_other
+        expense.local_purchase_amount = total_local_purchase
         expense.calls_assigned = total_assigned
         expense.calls_completed = total_completed
         expense.pms_count = total_pms
@@ -680,6 +694,7 @@ async def submit_expense(
             da_amount=total_da,
             hotel_amount=total_hotel,
             other_expense_amount=total_other,
+            local_purchase_amount=total_local_purchase,
             calls_assigned=total_assigned,
             calls_completed=total_completed,
             pms_count=total_pms,
@@ -798,6 +813,20 @@ async def submit_expense(
             old_url = old_att_map.get((leg_num, "Other_Expense"))
             if old_url:
                 att = ExpenseAttachment(exp_id=final_exp_id, itinerary_id=iti_id, bill_type="Other_Expense", file_url=old_url)
+                db.add(att)
+                attachments_list.append(old_url)
+
+        # Local Purchase receipt image
+        lp_file = form_data.get(f"local_purchase_bill_{leg_num}")
+        if lp_file and hasattr(lp_file, "filename") and lp_file.filename:
+            url_path = save_upload_file(lp_file, final_exp_id, "Local_Purchase")
+            att = ExpenseAttachment(exp_id=final_exp_id, itinerary_id=iti_id, bill_type="Local_Purchase", file_url=url_path)
+            db.add(att)
+            attachments_list.append(url_path)
+        else:
+            old_url = old_att_map.get((leg_num, "Local_Purchase"))
+            if old_url:
+                att = ExpenseAttachment(exp_id=final_exp_id, itinerary_id=iti_id, bill_type="Local_Purchase", file_url=old_url)
                 db.add(att)
                 attachments_list.append(old_url)
 
@@ -1119,6 +1148,7 @@ async def get_expense_details(
                 "sub_amount": i.sub_amount,
                 "da": i.da_amount,
                 "hotel": i.hotel_amount,
+                "local_purchase": i.local_purchase,
                 "oth_desc": i.other_desc,
                 "oth_amount": i.other_amount,
                 "ws_assigned": i.calls_assigned,
