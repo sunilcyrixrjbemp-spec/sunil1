@@ -1,0 +1,385 @@
+import React, { useState, useEffect } from "react";
+import { 
+  FileSpreadsheet, Calendar, Search, RefreshCw, 
+  Download, Users, IndianRupee, ShieldAlert, CheckCircle2 
+} from "lucide-react";
+import { Link } from "react-router-dom";
+import toast from "react-hot-toast";
+import expenseService from "../services/expenseService";
+
+const MONTHS = [
+  "", "January", "February", "March", "April", "May", "June",
+  "July", "August", "September", "October", "November", "December"
+];
+
+export default function ConsolidatedReportPage() {
+  const currentDate = new Date();
+  const [month, setMonth] = useState<string>(MONTHS[currentDate.getMonth() + 1]);
+  const [year, setYear] = useState<number>(currentDate.getFullYear());
+  const [loading, setLoading] = useState(false);
+  const [data, setData] = useState<any[]>([]);
+
+  useEffect(() => {
+    fetchReport();
+  }, []);
+
+  const fetchReport = async () => {
+    setLoading(true);
+    const tid = toast.loading("Fetching consolidated report data...");
+    try {
+      const res = await expenseService.getConsolidatedReport(month, year);
+      toast.dismiss(tid);
+      if (res && res.success) {
+        setData(res.data || []);
+        toast.success(`Loaded ${res.data?.length || 0} consolidated records!`);
+      } else {
+        toast.error("Failed to load report data");
+      }
+    } catch (err: any) {
+      toast.dismiss(tid);
+      toast.error(err?.response?.data?.detail || "Failed to fetch report data");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const downloadExcel = () => {
+    if (data.length === 0) {
+      toast.error("No data available to download");
+      return;
+    }
+
+    // Build XML Spreadsheet format (Excel compatible) with styles
+    let rowsHtml = "";
+    
+    // Total counters
+    let totTravel = 0, totDA = 0, totSpare = 0, totCourier = 0;
+    let totBoarding = 0, totPrinting = 0, totAll = 0, totAdvance = 0, totNet = 0, totClaimed = 0;
+
+    data.forEach((r) => {
+      totTravel += r.travel_expense;
+      totDA += r.da_allowance;
+      totSpare += r.spare_purchase;
+      totCourier += r.courier_charges;
+      totBoarding += r.boarding_lodging;
+      totPrinting += r.printing_stationery;
+      totAll += r.total;
+      totAdvance += r.advance;
+      totNet += r.net_payable;
+      totClaimed += r.claimed_amount;
+
+      rowsHtml += `
+        <tr>
+          <td>${r.zone}</td>
+          <td>${r.ee_code}</td>
+          <td>${r.grade}</td>
+          <td>${r.cc}</td>
+          <td>${r.ee_name}</td>
+          <td>${r.doj}</td>
+          <td style="text-align:right;">${r.travel_expense > 0 ? r.travel_expense.toFixed(2) : "0.00"}</td>
+          <td style="text-align:right;">${r.da_allowance > 0 ? r.da_allowance.toFixed(2) : "0.00"}</td>
+          <td style="text-align:right;">${r.spare_purchase > 0 ? r.spare_purchase.toFixed(2) : "0.00"}</td>
+          <td style="text-align:right;">${r.courier_charges > 0 ? r.courier_charges.toFixed(2) : "0.00"}</td>
+          <td style="text-align:right;">${r.boarding_lodging > 0 ? r.boarding_lodging.toFixed(2) : "0.00"}</td>
+          <td style="text-align:right;">${r.printing_stationery > 0 ? r.printing_stationery.toFixed(2) : "0.00"}</td>
+          <td style="text-align:right;">0.00</td>
+          <td style="text-align:right;">0.00</td>
+          <td style="text-align:right; font-weight:bold;">${r.total.toFixed(2)}</td>
+          <td style="text-align:right; color:red;">${r.advance > 0 ? r.advance.toFixed(2) : "0.00"}</td>
+          <td style="text-align:right; font-weight:bold; color:green;">${r.net_payable.toFixed(2)}</td>
+          <td></td>
+          <td>${r.deduction_reason}</td>
+          <td></td>
+          <td style="text-align:right;">${r.claimed_amount.toFixed(2)}</td>
+        </tr>
+      `;
+    });
+
+    // Summary row
+    rowsHtml += `
+      <tr style="background-color:#fff3cd; font-weight:bold; border-top:2px solid #000;">
+        <td colspan="6" style="text-align:center;">GRAND TOTAL</td>
+        <td style="text-align:right;">${totTravel.toFixed(2)}</td>
+        <td style="text-align:right;">${totDA.toFixed(2)}</td>
+        <td style="text-align:right;">${totSpare.toFixed(2)}</td>
+        <td style="text-align:right;">${totCourier.toFixed(2)}</td>
+        <td style="text-align:right;">${totBoarding.toFixed(2)}</td>
+        <td style="text-align:right;">${totPrinting.toFixed(2)}</td>
+        <td style="text-align:right;">0.00</td>
+        <td style="text-align:right;">0.00</td>
+        <td style="text-align:right;">${totAll.toFixed(2)}</td>
+        <td style="text-align:right;">${totAdvance.toFixed(2)}</td>
+        <td style="text-align:right;">${totNet.toFixed(2)}</td>
+        <td></td>
+        <td></td>
+        <td></td>
+        <td style="text-align:right;">${totClaimed.toFixed(2)}</td>
+      </tr>
+    `;
+
+    const html = `
+      <html xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:x="urn:schemas-microsoft-com:office:excel" xmlns="http://www.w3.org/TR/REC-html40">
+      <head>
+        <meta charset="utf-8">
+        <style>
+          table { border-collapse: collapse; }
+          th { background-color: #1e3a8a; color: white; font-weight: bold; border: 1px solid #000; padding: 5px; }
+          td { border: 1px solid #000; padding: 4px; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; font-size: 10pt; }
+        </style>
+      </head>
+      <body>
+        <table>
+          <thead>
+            <tr>
+              <th>Zone</th>
+              <th>EE Code</th>
+              <th>Grade</th>
+              <th>CC</th>
+              <th>EE Name</th>
+              <th>DOJ</th>
+              <th>5314101 - Exp Travelling Expense</th>
+              <th>5314102 - Exp Dearness Allowances</th>
+              <th>5314108 - Exp Spare Purchase Cost - Non GST</th>
+              <th>5314103 - Exp Courier Charges</th>
+              <th>5314104 - Exp Boarding & Lodging</th>
+              <th>5314105 - Exp Printing & Stationery</th>
+              <th>5314106 - Exp Miscellaneous Expenses</th>
+              <th>5314107 - Exp Fuel Expenses</th>
+              <th>Total</th>
+              <th>ADVANCE</th>
+              <th>Net Payable</th>
+              <th>GST Bills</th>
+              <th>Reason for deduction</th>
+              <th>Remarks</th>
+              <th>Team member claimed amount</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${rowsHtml}
+          </tbody>
+        </table>
+      </body>
+      </html>
+    `;
+
+    const blob = new Blob([html], { type: "application/vnd.ms-excel" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `Consolidated_Report_${month}_${year}.xls`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+    toast.success("Excel sheet downloaded successfully!");
+  };
+
+  const fmt = (v: number) => `₹${v.toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+
+  const totalClaimed = data.reduce((s, r) => s + r.claimed_amount, 0);
+  const totalAdvances = data.reduce((s, r) => s + r.advance, 0);
+  const totalNet = data.reduce((s, r) => s + r.net_payable, 0);
+
+  return (
+    <div className="space-y-4 animate-fadeIn font-sans pb-10">
+      {/* AdminLTE Content Header */}
+      <div className="flex items-center justify-between border-b border-gray-250 pb-3 mb-4 bg-gray-50/20 px-1">
+        <div>
+          <h1 className="text-xl font-bold text-[#333] flex items-center gap-2 tracking-tight">
+            <FileSpreadsheet className="w-5.5 h-5.5 text-green-600" />
+            Consolidated Monthly Report
+            <span className="text-xs font-normal text-gray-500 hidden sm:inline-block ml-1">Excel & Accounting</span>
+          </h1>
+        </div>
+        <div className="text-[11px] font-semibold text-[#666] flex items-center gap-1.5">
+          <Link to="/home" className="text-blue-600 hover:underline">Home</Link>
+          <span className="text-gray-400">/</span>
+          <span className="text-[#888]">Consolidated Report</span>
+        </div>
+      </div>
+
+      {/* Info Boxes */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4">
+        <div className="bg-white border-t-3 border-blue-500 shadow-sm rounded-sm p-3 flex items-center justify-between border border-gray-200">
+          <div>
+            <span className="text-[10px] text-gray-400 font-bold uppercase tracking-wider block">Total Claims</span>
+            <span className="text-xl font-bold text-gray-800 font-mono">{data.length}</span>
+          </div>
+          <div className="text-blue-600 bg-blue-50/60 p-2.5 rounded-sm"><Users className="w-5.5 h-5.5" /></div>
+        </div>
+        <div className="bg-white border-t-3 border-yellow-500 shadow-sm rounded-sm p-3 flex items-center justify-between border border-gray-200">
+          <div>
+            <span className="text-[10px] text-gray-400 font-bold uppercase tracking-wider block">Claimed Amount</span>
+            <span className="text-xl font-bold text-gray-800 font-mono">{fmt(totalClaimed)}</span>
+          </div>
+          <div className="text-yellow-600 bg-yellow-50/60 p-2.5 rounded-sm"><IndianRupee className="w-5.5 h-5.5" /></div>
+        </div>
+        <div className="bg-white border-t-3 border-red-500 shadow-sm rounded-sm p-3 flex items-center justify-between border border-gray-200">
+          <div>
+            <span className="text-[10px] text-gray-400 font-bold uppercase tracking-wider block">Advances</span>
+            <span className="text-xl font-bold text-gray-800 font-mono">{fmt(totalAdvances)}</span>
+          </div>
+          <div className="text-red-600 bg-red-50/60 p-2.5 rounded-sm"><ShieldAlert className="w-5.5 h-5.5" /></div>
+        </div>
+        <div className="bg-white border-t-3 border-green-500 shadow-sm rounded-sm p-3 flex items-center justify-between border border-gray-200">
+          <div>
+            <span className="text-[10px] text-gray-400 font-bold uppercase tracking-wider block">Net Payable</span>
+            <span className="text-xl font-bold text-gray-800 font-mono">{fmt(totalNet)}</span>
+          </div>
+          <div className="text-green-600 bg-green-50/60 p-2.5 rounded-sm"><CheckCircle2 className="w-5.5 h-5.5" /></div>
+        </div>
+      </div>
+
+      {/* Filter Card */}
+      <div className="card border-t-3 border-primary bg-white shadow-sm border border-gray-200 rounded-sm">
+        <div className="card-header border-b border-gray-150 px-4 py-2.5 flex items-center justify-between bg-gray-50/40">
+          <h3 className="card-title text-xs font-bold text-gray-700 uppercase tracking-wider flex items-center gap-1.5">
+            <Calendar className="w-4 h-4 text-blue-600" />
+            Select Billing Period
+          </h3>
+          <button 
+            onClick={fetchReport} 
+            disabled={loading}
+            className="flex items-center gap-1.5 px-2.5 py-1 rounded bg-white hover:bg-gray-100 border border-gray-300 text-gray-700 text-[10px] font-bold transition-all cursor-pointer disabled:opacity-60"
+          >
+            <RefreshCw className={`w-3 h-3 ${loading ? "animate-spin" : ""}`} /> Refresh
+          </button>
+        </div>
+        <div className="card-body p-4">
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-4">
+            <div>
+              <label className="block text-[10px] font-bold text-gray-500 uppercase tracking-wider mb-1">Select Month</label>
+              <select value={month} onChange={(e) => setMonth(e.target.value)}
+                className="w-full border border-gray-300 rounded px-2.5 py-1.5 text-xs font-semibold text-gray-700 focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 cursor-pointer">
+                {MONTHS.slice(1).map((m) => <option key={m} value={m}>{m}</option>)}
+              </select>
+            </div>
+            <div>
+              <label className="block text-[10px] font-bold text-gray-500 uppercase tracking-wider mb-1">Select Year</label>
+              <select value={year} onChange={(e) => setYear(parseInt(e.target.value))}
+                className="w-full border border-gray-300 rounded px-2.5 py-1.5 text-xs font-semibold text-gray-700 focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 cursor-pointer">
+                {[2024, 2025, 2026, 2027].map((y) => <option key={y} value={y}>{y}</option>)}
+              </select>
+            </div>
+            <div className="flex items-end">
+              <button 
+                onClick={fetchReport} 
+                disabled={loading}
+                className="w-full flex items-center justify-center gap-1.5 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold rounded-sm shadow-sm transition-colors disabled:opacity-60 cursor-pointer"
+              >
+                <Search className="w-3.5 h-3.5" /> Fetch Consolidated Data
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Report Table Card */}
+      <div className="card border-t-3 border-green-500 bg-white shadow-sm border border-gray-200 rounded-sm">
+        <div className="card-header border-b border-gray-150 px-4 py-3 flex items-center justify-between bg-gray-50/40">
+          <div className="flex items-center gap-2">
+            <FileSpreadsheet className="w-4 h-4 text-green-600 flex-shrink-0" />
+            <span className="text-xs font-bold text-gray-700 uppercase tracking-wider">
+              {month} {year} Summary Grid
+            </span>
+          </div>
+          <button 
+            onClick={downloadExcel} 
+            disabled={data.length === 0}
+            className="flex items-center gap-1 px-3 py-1.5 rounded bg-green-600 hover:bg-green-700 text-white text-xs font-bold shadow-sm transition-all cursor-pointer disabled:opacity-60"
+          >
+            <Download className="w-3.5 h-3.5" /> Export Consolidated Excel
+          </button>
+        </div>
+        <div className="card-body p-0 overflow-x-auto">
+          {loading ? (
+            <div className="flex items-center justify-center py-12 gap-2 text-gray-400 font-semibold text-xs">
+              <RefreshCw className="w-5 h-5 animate-spin text-blue-600" /> Loading report data...
+            </div>
+          ) : data.length === 0 ? (
+            <div className="text-center py-12 text-gray-400 font-medium italic text-xs">
+              No approved claims found for this month/year.
+            </div>
+          ) : (
+            <table className="w-full text-[11px] border-collapse min-w-[1600px]">
+              <thead>
+                <tr className="bg-gray-100 text-gray-700 font-bold uppercase tracking-wider text-left border-b border-gray-200">
+                  <th className="py-2.5 px-3 border-r border-gray-200 text-center font-bold">Zone</th>
+                  <th className="py-2.5 px-3 border-r border-gray-200 text-center font-bold">EE Code</th>
+                  <th className="py-2.5 px-3 border-r border-gray-200 text-center font-bold">Grade</th>
+                  <th className="py-2.5 px-3 border-r border-gray-200 text-center font-bold">CC</th>
+                  <th className="py-2.5 px-3 border-r border-gray-200 text-left font-bold">EE Name</th>
+                  <th className="py-2.5 px-3 border-r border-gray-200 text-center font-bold">DOJ</th>
+                  <th className="py-2.5 px-3 border-r border-gray-200 text-right font-bold">Travel Exp</th>
+                  <th className="py-2.5 px-3 border-r border-gray-200 text-right font-bold">DA</th>
+                  <th className="py-2.5 px-3 border-r border-gray-200 text-right font-bold">Spare Cost</th>
+                  <th className="py-2.5 px-3 border-r border-gray-200 text-right font-bold">Courier</th>
+                  <th className="py-2.5 px-3 border-r border-gray-200 text-right font-bold">Hotel</th>
+                  <th className="py-2.5 px-3 border-r border-gray-200 text-right font-bold">Print/Stat</th>
+                  <th className="py-2.5 px-3 border-r border-gray-200 text-right font-bold">Misc</th>
+                  <th className="py-2.5 px-3 border-r border-gray-200 text-right font-bold">Fuel</th>
+                  <th className="py-2.5 px-3 border-r border-gray-200 text-right font-bold bg-gray-50">Total</th>
+                  <th className="py-2.5 px-3 border-r border-gray-200 text-right font-bold text-red-700 bg-red-50/10">Advance</th>
+                  <th className="py-2.5 px-3 border-r border-gray-200 text-right font-bold text-green-700 bg-green-50/10">Net Payable</th>
+                  <th className="py-2.5 px-3 border-r border-gray-200 text-left font-bold">GST Bills</th>
+                  <th className="py-2.5 px-3 border-r border-gray-200 text-left font-bold max-w-[200px] truncate">Deduction Reason</th>
+                  <th className="py-2.5 px-3 border-r border-gray-200 text-left font-bold">Remarks</th>
+                  <th className="py-2.5 px-3 text-right font-bold">Claimed Amt</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-gray-150">
+                {data.map((r, idx) => (
+                  <tr key={idx} className="hover:bg-gray-50/60 transition-colors text-gray-700">
+                    <td className="py-2.5 px-3 text-center font-semibold border-r border-gray-150">{r.zone || "—"}</td>
+                    <td className="py-2.5 px-3 text-center border-r border-gray-150 font-mono font-bold text-blue-700 bg-blue-50/20">{r.ee_code}</td>
+                    <td className="py-2.5 px-3 text-center font-medium border-r border-gray-150">{r.grade || "—"}</td>
+                    <td className="py-2.5 px-3 text-center font-medium border-r border-gray-150">{r.cc || "—"}</td>
+                    <td className="py-2.5 px-3 font-semibold border-r border-gray-150">{r.ee_name}</td>
+                    <td className="py-2.5 px-3 text-center font-mono border-r border-gray-150">{r.doj || "—"}</td>
+                    <td className="py-2.5 px-3 text-right border-r border-gray-150 font-mono">{r.travel_expense > 0 ? fmt(r.travel_expense) : "—"}</td>
+                    <td className="py-2.5 px-3 text-right border-r border-gray-150 font-mono">{r.da_allowance > 0 ? fmt(r.da_allowance) : "—"}</td>
+                    <td className="py-2.5 px-3 text-right border-r border-gray-150 font-mono">{r.spare_purchase > 0 ? fmt(r.spare_purchase) : "—"}</td>
+                    <td className="py-2.5 px-3 text-right border-r border-gray-150 font-mono">{r.courier_charges > 0 ? fmt(r.courier_charges) : "—"}</td>
+                    <td className="py-2.5 px-3 text-right border-r border-gray-150 font-mono">{r.boarding_lodging > 0 ? fmt(r.boarding_lodging) : "—"}</td>
+                    <td className="py-2.5 px-3 text-right border-r border-gray-150 font-mono">{r.printing_stationery > 0 ? fmt(r.printing_stationery) : "—"}</td>
+                    <td className="py-2.5 px-3 text-right border-r border-gray-150 font-mono">—</td>
+                    <td className="py-2.5 px-3 text-right border-r border-gray-150 font-mono">—</td>
+                    <td className="py-2.5 px-3 text-right border-r border-gray-150 font-mono font-bold bg-gray-50">{fmt(r.total)}</td>
+                    <td className="py-2.5 px-3 text-right border-r border-gray-150 font-mono font-bold text-red-700 bg-red-50/10">{r.advance > 0 ? fmt(r.advance) : "—"}</td>
+                    <td className="py-2.5 px-3 text-right border-r border-gray-150 font-mono font-bold text-green-700 bg-green-50/10">{fmt(r.net_payable)}</td>
+                    <td className="py-2.5 px-3 border-r border-gray-150">—</td>
+                    <td className="py-2.5 px-3 border-r border-gray-150 max-w-[200px] truncate" title={r.deduction_reason}>{r.deduction_reason || "—"}</td>
+                    <td className="py-2.5 px-3 border-r border-gray-150">—</td>
+                    <td className="py-2.5 px-3 text-right font-mono font-semibold">{fmt(r.claimed_amount)}</td>
+                  </tr>
+                ))}
+              </tbody>
+              <tfoot>
+                <tr className="bg-yellow-50/50 border-t-2 border-yellow-250 text-[11px] font-bold text-gray-800">
+                  <td colSpan={6} className="py-2.5 px-3 border-r border-gray-150 text-center uppercase tracking-wider text-gray-600 font-sans">
+                    Grand Total
+                  </td>
+                  <td className="py-2.5 px-3 text-right border-r border-gray-150 font-mono">{fmt(data.reduce((s, r) => s + r.travel_expense, 0))}</td>
+                  <td className="py-2.5 px-3 text-right border-r border-gray-150 font-mono">{fmt(data.reduce((s, r) => s + r.da_allowance, 0))}</td>
+                  <td className="py-2.5 px-3 text-right border-r border-gray-150 font-mono">{fmt(data.reduce((s, r) => s + r.spare_purchase, 0))}</td>
+                  <td className="py-2.5 px-3 text-right border-r border-gray-150 font-mono">{fmt(data.reduce((s, r) => s + r.courier_charges, 0))}</td>
+                  <td className="py-2.5 px-3 text-right border-r border-gray-150 font-mono">{fmt(data.reduce((s, r) => s + r.boarding_lodging, 0))}</td>
+                  <td className="py-2.5 px-3 text-right border-r border-gray-150 font-mono">{fmt(data.reduce((s, r) => s + r.printing_stationery, 0))}</td>
+                  <td className="py-2.5 px-3 text-right border-r border-gray-150 font-mono">—</td>
+                  <td className="py-2.5 px-3 text-right border-r border-gray-150 font-mono">—</td>
+                  <td className="py-2.5 px-3 text-right border-r border-gray-150 font-mono bg-gray-50">{fmt(data.reduce((s, r) => s + r.total, 0))}</td>
+                  <td className="py-2.5 px-3 text-right border-r border-gray-150 font-mono text-red-700 bg-red-50/10">{fmt(totalAdvances)}</td>
+                  <td className="py-2.5 px-3 text-right border-r border-gray-150 font-mono text-green-700 bg-green-50/10">{fmt(totalNet)}</td>
+                  <td className="border-r border-gray-150" />
+                  <td className="border-r border-gray-150" />
+                  <td className="border-r border-gray-150" />
+                  <td className="text-right font-mono">{fmt(totalClaimed)}</td>
+                </tr>
+              </tfoot>
+            </table>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}

@@ -12,6 +12,7 @@ import ApprovalPage from "./pages/ApprovalPage";
 import ExpensePage from "./pages/ExpensePage";
 import AnalysisPage from "./pages/AnalysisPage";
 import MonthSummaryPage from "./pages/MonthSummaryPage";
+import ConsolidatedReportPage from "./pages/ConsolidatedReportPage";
 import HelpPage from "./pages/HelpPage";
 import ProfilePage from "./pages/ProfilePage";
 import AdminPage from "./pages/AdminPage";
@@ -182,6 +183,7 @@ function App() {
               <Route path="/penalty-report" element={<PenaltyReportPage />} />
               <Route path="/analysis" element={<AnalysisPage />} />
               <Route path="/month-report" element={<MonthSummaryPage />} />
+              <Route path="/consolidated-report" element={<ConsolidatedReportPage />} />
               <Route path="/notifications" element={<NotificationsPage />} />
               <Route path="/help-center" element={<HelpPage />} />
               <Route path="/profile" element={<ProfilePage />} />

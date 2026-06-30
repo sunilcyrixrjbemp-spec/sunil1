@@ -87,5 +87,10 @@ export const expenseService = {
       advance_amount: amount
     });
     return response.data;
+  },
+
+  getConsolidatedReport: async (month: string, year: number): Promise<any> => {
+    const response = await api.get(`/expense/consolidated-report?month=${encodeURIComponent(month)}&year=${year}`);
+    return response.data;
   }
 };

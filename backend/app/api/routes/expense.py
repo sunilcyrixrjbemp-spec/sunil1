@@ -1861,4 +1861,187 @@ async def upsert_engineer_advance(
         "advance_amount": req.advance_amount
     }
 
+@router.get("/consolidated-report")
+async def get_consolidated_report(
+    month: str,
+    year: int,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    # Role checking
+    role_lower = current_user.role.lower().strip() if current_user.role else ""
+    if role_lower not in ["coordinator", "accountant", "travel desk", "admin", "superadmin", "mis", "hr", "vp"]:
+        raise HTTPException(
+            status_code=403,
+            detail="You do not have permission to view consolidated reports."
+        )
+
+    # 1. Query all users (to map user details)
+    users = db.query(User).all()
+    user_map = {u.id: u for u in users}
+    user_by_code = {u.user_id: u for u in users}
+
+    # 2. Query all approved expenses for the given month and year
+    expenses = db.query(Expense).filter(
+        Expense.month == month,
+        Expense.year == year,
+        Expense.status == "approved"
+    ).all()
+
+    if not expenses:
+        return {"success": True, "data": []}
+
+    expense_ids = [e.id for e in expenses]
+    expense_codes = [e.expense_code for e in expenses if e.expense_code]
+
+    # 3. Query all itineraries for these expenses
+    legs = db.query(ExpenseItinerary).filter(
+        ExpenseItinerary.exp_id.in_(expense_codes)
+    ).all()
+
+    legs_by_code = {}
+    for leg in legs:
+        legs_by_code.setdefault(leg.exp_id, []).append(leg)
+
+    # 4. Query all advances for these users in this month/year
+    from app.models.engineer_advance import EngineerAdvance
+    advances = db.query(EngineerAdvance).filter(
+        EngineerAdvance.month == month,
+        EngineerAdvance.year == year
+    ).all()
+    advances_map = {adv.user_id: adv.advance_amount for adv in advances}
+
+    # 5. Query all edit logs for these expenses
+    from app.models.expense_edit_log import ExpenseEditLog
+    edit_logs = db.query(ExpenseEditLog).filter(
+        ExpenseEditLog.expense_id.in_(expense_ids)
+    ).all()
+
+    comments_by_expense = {}
+    for log in edit_logs:
+        if log.comment and log.comment.strip():
+            comments_by_expense.setdefault(log.expense_id, []).append(log.comment.strip())
+
+    # 6. Group expenses by user
+    expenses_by_user = {}
+    for exp in expenses:
+        # Find the user object (exp.user_id is user.id in users table)
+        usr = user_map.get(exp.user_id)
+        if not usr:
+            continue
+        expenses_by_user.setdefault(usr.user_id, []).append(exp)
+
+    # 7. Compile report rows
+    report_rows = []
+    for user_code, user_exps in expenses_by_user.items():
+        usr = user_by_code.get(user_code)
+        if not usr:
+            continue
+
+        # Initialize sums
+        travel_expense = 0.0
+        da_allowance = 0.0
+        spare_purchase = 0.0
+        courier_charges = 0.0
+        boarding_lodging = 0.0
+        printing_stationery = 0.0
+        claimed_amount = 0.0
+
+        all_comments = []
+
+        for exp in user_exps:
+            claimed_amount += (exp.original_amount or exp.amount or 0.0)
+            
+            # Fetch comments for this expense
+            exp_comments = comments_by_expense.get(exp.id, [])
+            all_comments.extend(exp_comments)
+
+            exp_legs = legs_by_code.get(exp.expense_code, [])
+            for leg in exp_legs:
+                # Travel Modes calculation:
+                # Bike: KM * 4.5
+                # Car: KM * 9.0
+                # Auto: travel_amount if mode Auto, plus sub_amount if sub_mode Auto
+                # Train/Bus: travel_amount if mode Train/Bus
+                mode = (leg.travel_mode or "").strip().lower()
+                sub_mode = (leg.sub_mode or "").strip().lower()
+
+                km_part = 0.0
+                if mode == "bike":
+                    km_part = (leg.distance_km or 0.0) * 4.5
+                elif mode == "car":
+                    km_part = (leg.distance_km or 0.0) * 9.0
+
+                auto_part = 0.0
+                if mode == "auto":
+                    auto_part += (leg.travel_amount or 0.0)
+                if sub_mode == "auto":
+                    auto_part += (leg.sub_amount or 0.0)
+
+                ta_part = 0.0
+                if mode in ["train", "bus"]:
+                    ta_part += (leg.travel_amount or 0.0)
+
+                travel_expense += (km_part + auto_part + ta_part)
+
+                # DA
+                da_allowance += (leg.da_amount or 0.0)
+
+                # Local spare purchase
+                spare_purchase += (leg.local_purchase or 0.0)
+
+                # Hotel (Boarding & Lodging)
+                boarding_lodging += (leg.hotel_amount or 0.0)
+
+                # Courier & Printing/Stationery categorization from other_amount
+                oth_desc = (leg.other_desc or "").strip().lower()
+                oth_amt = (leg.other_amount or 0.0)
+                if oth_amt > 0:
+                    if "courier" in oth_desc or "courrier" in oth_desc:
+                        courier_charges += oth_amt
+                    elif any(k in oth_desc for k in ["print", "stationery", "photocopy", "photo copy", "xerox", "copy"]):
+                        printing_stationery += oth_amt
+                    else:
+                        printing_stationery += oth_amt
+
+        # Advance
+        user_advance = advances_map.get(usr.user_id, 0.0)
+
+        # Total columns sum
+        row_total = (travel_expense + da_allowance + spare_purchase + 
+                     courier_charges + boarding_lodging + printing_stationery)
+
+        # Net payable
+        net_payable = row_total - user_advance
+
+        # Unique comments
+        deduction_reason = "; ".join(list(set(all_comments)))
+
+        report_rows.append({
+            "zone": usr.zone or "",
+            "ee_code": usr.e_code or usr.user_id,
+            "grade": usr.grade or "",
+            "cc": usr.district or "",
+            "ee_name": usr.name,
+            "doj": usr.date_of_joining or "",
+            "travel_expense": round(travel_expense, 2),
+            "da_allowance": round(da_allowance, 2),
+            "spare_purchase": round(spare_purchase, 2),
+            "courier_charges": round(courier_charges, 2),
+            "boarding_lodging": round(boarding_lodging, 2),
+            "printing_stationery": round(printing_stationery, 2),
+            "misc_expenses": 0.0,
+            "fuel_expenses": 0.0,
+            "total": round(row_total, 2),
+            "advance": round(user_advance, 2),
+            "net_payable": round(net_payable, 2),
+            "gst_bills": "",
+            "deduction_reason": deduction_reason,
+            "remarks": "",
+            "claimed_amount": round(claimed_amount, 2)
+        })
+
+    return {"success": True, "data": report_rows}
+
+
 
