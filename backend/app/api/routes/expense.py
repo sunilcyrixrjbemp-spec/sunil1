@@ -1768,6 +1768,10 @@ async def get_consolidated_report(
 
         # Initialize sums
         travel_expense = 0.0
+        bike_km = 0.0
+        car_km = 0.0
+        auto_amount = 0.0
+        train_bus_amount = 0.0
         da_allowance = 0.0
         spare_purchase = 0.0
         courier_charges = 0.0
@@ -1797,18 +1801,23 @@ async def get_consolidated_report(
                 km_part = 0.0
                 if mode == "bike":
                     km_part = (leg.distance_km or 0.0) * 4.5
+                    bike_km += (leg.distance_km or 0.0)
                 elif mode == "car":
                     km_part = (leg.distance_km or 0.0) * 9.0
+                    car_km += (leg.distance_km or 0.0)
 
                 auto_part = 0.0
                 if mode == "auto":
                     auto_part += (leg.travel_amount or 0.0)
+                    auto_amount += (leg.travel_amount or 0.0)
                 if sub_mode == "auto":
                     auto_part += (leg.sub_amount or 0.0)
+                    auto_amount += (leg.sub_amount or 0.0)
 
                 ta_part = 0.0
                 if mode in ["train", "bus"]:
                     ta_part += (leg.travel_amount or 0.0)
+                    train_bus_amount += (leg.travel_amount or 0.0)
 
                 travel_expense += (km_part + auto_part + ta_part)
 
@@ -1853,6 +1862,10 @@ async def get_consolidated_report(
             "ee_name": usr.name,
             "doj": usr.date_of_joining or "",
             "travel_expense": round(travel_expense, 2),
+            "bike_km": round(bike_km, 2),
+            "car_km": round(car_km, 2),
+            "auto_amount": round(auto_amount, 2),
+            "train_bus_amount": round(train_bus_amount, 2),
             "da_allowance": round(da_allowance, 2),
             "spare_purchase": round(spare_purchase, 2),
             "courier_charges": round(courier_charges, 2),

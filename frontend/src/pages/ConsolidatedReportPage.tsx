@@ -52,21 +52,18 @@ export default function ConsolidatedReportPage() {
     // Build XML Spreadsheet format (Excel compatible) with styles
     let rowsHtml = "";
     
-    // Total counters
-    let totTravel = 0, totDA = 0, totSpare = 0, totCourier = 0;
-    let totBoarding = 0, totPrinting = 0, totAll = 0, totAdvance = 0, totNet = 0, totClaimed = 0;
-
-    data.forEach((r) => {
-      totTravel += r.travel_expense;
-      totDA += r.da_allowance;
-      totSpare += r.spare_purchase;
-      totCourier += r.courier_charges;
-      totBoarding += r.boarding_lodging;
-      totPrinting += r.printing_stationery;
-      totAll += r.total;
-      totAdvance += r.advance;
-      totNet += r.net_payable;
-      totClaimed += r.claimed_amount;
+    data.forEach((r, idx) => {
+      // Row index in Excel sheet starts at 2 (since row 1 is headers)
+      const R = idx + 2;
+      
+      // Travelling Expense formula
+      const travelFormula = `=(${r.bike_km || 0}*4.5)+(${r.car_km || 0}*9)+${r.auto_amount || 0}+${r.train_bus_amount || 0}`;
+      
+      // Total formula (Sum columns G to N)
+      const totalFormula = `=SUM(G${R}:N${R})`;
+      
+      // Net Payable formula (Total column O minus Advance column P)
+      const netPayableFormula = `=O${R}-P${R}`;
 
       rowsHtml += `
         <tr>
@@ -76,7 +73,7 @@ export default function ConsolidatedReportPage() {
           <td>${r.cc}</td>
           <td>${r.ee_name}</td>
           <td>${r.doj}</td>
-          <td style="text-align:right;">${r.travel_expense > 0 ? r.travel_expense.toFixed(2) : "0.00"}</td>
+          <td style="text-align:right;">${travelFormula}</td>
           <td style="text-align:right;">${r.da_allowance > 0 ? r.da_allowance.toFixed(2) : "0.00"}</td>
           <td style="text-align:right;">${r.spare_purchase > 0 ? r.spare_purchase.toFixed(2) : "0.00"}</td>
           <td style="text-align:right;">${r.courier_charges > 0 ? r.courier_charges.toFixed(2) : "0.00"}</td>
@@ -84,9 +81,9 @@ export default function ConsolidatedReportPage() {
           <td style="text-align:right;">${r.printing_stationery > 0 ? r.printing_stationery.toFixed(2) : "0.00"}</td>
           <td style="text-align:right;">0.00</td>
           <td style="text-align:right;">0.00</td>
-          <td style="text-align:right; font-weight:bold;">${r.total.toFixed(2)}</td>
+          <td style="text-align:right; font-weight:bold;">${totalFormula}</td>
           <td style="text-align:right; color:red;">${r.advance > 0 ? r.advance.toFixed(2) : "0.00"}</td>
-          <td style="text-align:right; font-weight:bold; color:green;">${r.net_payable.toFixed(2)}</td>
+          <td style="text-align:right; font-weight:bold; color:green;">${netPayableFormula}</td>
           <td></td>
           <td>${r.deduction_reason}</td>
           <td></td>
@@ -97,23 +94,23 @@ export default function ConsolidatedReportPage() {
 
     // Summary row
     rowsHtml += `
-      <tr style="background-color:#fff3cd; font-weight:bold; border-top:2px solid #000;">
-        <td colspan="6" style="text-align:center;">GRAND TOTAL</td>
-        <td style="text-align:right;">${totTravel.toFixed(2)}</td>
-        <td style="text-align:right;">${totDA.toFixed(2)}</td>
-        <td style="text-align:right;">${totSpare.toFixed(2)}</td>
-        <td style="text-align:right;">${totCourier.toFixed(2)}</td>
-        <td style="text-align:right;">${totBoarding.toFixed(2)}</td>
-        <td style="text-align:right;">${totPrinting.toFixed(2)}</td>
+      <tr style="background-color:#e8f5e9; font-weight:bold; border-top:2px solid #1b5e20;">
+        <td colspan="6" style="text-align:center; font-family:'Aptos', sans-serif;">GRAND TOTAL</td>
+        <td style="text-align:right;">=SUM(G2:G${data.length + 1})</td>
+        <td style="text-align:right;">=SUM(H2:H${data.length + 1})</td>
+        <td style="text-align:right;">=SUM(I2:I${data.length + 1})</td>
+        <td style="text-align:right;">=SUM(J2:J${data.length + 1})</td>
+        <td style="text-align:right;">=SUM(K2:K${data.length + 1})</td>
+        <td style="text-align:right;">=SUM(L2:L${data.length + 1})</td>
         <td style="text-align:right;">0.00</td>
         <td style="text-align:right;">0.00</td>
-        <td style="text-align:right;">${totAll.toFixed(2)}</td>
-        <td style="text-align:right;">${totAdvance.toFixed(2)}</td>
-        <td style="text-align:right;">${totNet.toFixed(2)}</td>
+        <td style="text-align:right;">=SUM(O2:O${data.length + 1})</td>
+        <td style="text-align:right;">=SUM(P2:P${data.length + 1})</td>
+        <td style="text-align:right;">=SUM(Q2:Q${data.length + 1})</td>
         <td></td>
         <td></td>
         <td></td>
-        <td style="text-align:right;">${totClaimed.toFixed(2)}</td>
+        <td style="text-align:right;">=SUM(U2:U${data.length + 1})</td>
       </tr>
     `;
 
@@ -123,8 +120,22 @@ export default function ConsolidatedReportPage() {
         <meta charset="utf-8">
         <style>
           table { border-collapse: collapse; }
-          th { background-color: #1e3a8a; color: white; font-weight: bold; border: 1px solid #000; padding: 5px; }
-          td { border: 1px solid #000; padding: 4px; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; font-size: 10pt; }
+          th { 
+            background-color: #1b5e20; 
+            color: #a5d6a7; 
+            font-weight: bold; 
+            border: 1px solid #1b5e20; 
+            padding: 6px 8px; 
+            font-family: 'Aptos', 'Segoe UI', sans-serif; 
+            font-size: 11pt; 
+            text-align: center;
+          }
+          td { 
+            border: 1px solid #c8e6c9; 
+            padding: 5px 6px; 
+            font-family: 'Aptos', 'Segoe UI', sans-serif; 
+            font-size: 10pt; 
+          }
         </style>
       </head>
       <body>
@@ -181,52 +192,52 @@ export default function ConsolidatedReportPage() {
   const totalNet = data.reduce((s, r) => s + r.net_payable, 0);
 
   return (
-    <div className="space-y-4 animate-fadeIn font-sans pb-10">
+    <div className="w-full mx-auto px-1 sm:px-2 lg:px-4 space-y-6 animate-fadeIn font-sans pb-12">
       {/* AdminLTE Content Header */}
-      <div className="flex items-center justify-between border-b border-gray-250 pb-3 mb-4 bg-gray-50/20 px-1">
+      <div className="flex items-center justify-between border-b border-gray-200 pb-3 mb-4 bg-gray-50/10 px-1">
         <div>
-          <h1 className="text-xl font-bold text-[#333] flex items-center gap-2 tracking-tight">
-            <FileSpreadsheet className="w-5.5 h-5.5 text-green-600" />
+          <h1 className="text-xl font-bold text-[#212529] flex items-center gap-2 tracking-tight">
+            <FileSpreadsheet className="w-5.5 h-5.5 text-green-700" />
             Consolidated Monthly Report
-            <span className="text-xs font-normal text-gray-500 hidden sm:inline-block ml-1">Excel & Accounting</span>
+            <span className="text-xs font-normal text-gray-500 hidden sm:inline-block ml-1">Excel Export & Reconciliation</span>
           </h1>
         </div>
-        <div className="text-[11px] font-semibold text-[#666] flex items-center gap-1.5">
-          <Link to="/home" className="text-blue-600 hover:underline">Home</Link>
+        <div className="text-[11px] font-semibold text-[#6c757d] flex items-center gap-1.5">
+          <Link to="/home" className="text-[#007bff] hover:underline">Home</Link>
           <span className="text-gray-400">/</span>
-          <span className="text-[#888]">Consolidated Report</span>
+          <span className="text-[#6c757d]">Consolidated Report</span>
         </div>
       </div>
 
       {/* Info Boxes */}
       <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4">
-        <div className="bg-white border-t-3 border-blue-500 shadow-sm rounded-sm p-3 flex items-center justify-between border border-gray-200">
+        <div className="bg-white border-t-3 border-blue-500 shadow-sm rounded-sm p-4.5 flex items-center justify-between border border-gray-200 hover:-translate-y-1 hover:shadow-md transition-all duration-300">
           <div>
             <span className="text-[10px] text-gray-400 font-bold uppercase tracking-wider block">Total Claims</span>
-            <span className="text-xl font-bold text-gray-800 font-mono">{data.length}</span>
+            <span className="text-2xl font-bold text-gray-800 font-mono tracking-tight">{data.length}</span>
           </div>
-          <div className="text-blue-600 bg-blue-50/60 p-2.5 rounded-sm"><Users className="w-5.5 h-5.5" /></div>
+          <div className="text-blue-600 bg-blue-50/80 p-3 rounded-sm"><Users className="w-6 h-6" /></div>
         </div>
-        <div className="bg-white border-t-3 border-yellow-500 shadow-sm rounded-sm p-3 flex items-center justify-between border border-gray-200">
+        <div className="bg-white border-t-3 border-yellow-500 shadow-sm rounded-sm p-4.5 flex items-center justify-between border border-gray-200 hover:-translate-y-1 hover:shadow-md transition-all duration-300">
           <div>
             <span className="text-[10px] text-gray-400 font-bold uppercase tracking-wider block">Claimed Amount</span>
-            <span className="text-xl font-bold text-gray-800 font-mono">{fmt(totalClaimed)}</span>
+            <span className="text-2xl font-bold text-gray-800 font-mono tracking-tight">{fmt(totalClaimed)}</span>
           </div>
-          <div className="text-yellow-600 bg-yellow-50/60 p-2.5 rounded-sm"><IndianRupee className="w-5.5 h-5.5" /></div>
+          <div className="text-yellow-600 bg-yellow-50/80 p-3 rounded-sm"><IndianRupee className="w-6 h-6" /></div>
         </div>
-        <div className="bg-white border-t-3 border-red-500 shadow-sm rounded-sm p-3 flex items-center justify-between border border-gray-200">
+        <div className="bg-white border-t-3 border-red-500 shadow-sm rounded-sm p-4.5 flex items-center justify-between border border-gray-200 hover:-translate-y-1 hover:shadow-md transition-all duration-300">
           <div>
-            <span className="text-[10px] text-gray-400 font-bold uppercase tracking-wider block">Advances</span>
-            <span className="text-xl font-bold text-gray-800 font-mono">{fmt(totalAdvances)}</span>
+            <span className="text-[10px] text-gray-400 font-bold uppercase tracking-wider block">Total Advances</span>
+            <span className="text-2xl font-bold text-gray-800 font-mono tracking-tight">{fmt(totalAdvances)}</span>
           </div>
-          <div className="text-red-600 bg-red-50/60 p-2.5 rounded-sm"><ShieldAlert className="w-5.5 h-5.5" /></div>
+          <div className="text-red-600 bg-red-50/80 p-3 rounded-sm"><ShieldAlert className="w-6 h-6" /></div>
         </div>
-        <div className="bg-white border-t-3 border-green-500 shadow-sm rounded-sm p-3 flex items-center justify-between border border-gray-200">
+        <div className="bg-white border-t-3 border-green-500 shadow-sm rounded-sm p-4.5 flex items-center justify-between border border-gray-200 hover:-translate-y-1 hover:shadow-md transition-all duration-300">
           <div>
             <span className="text-[10px] text-gray-400 font-bold uppercase tracking-wider block">Net Payable</span>
-            <span className="text-xl font-bold text-gray-800 font-mono">{fmt(totalNet)}</span>
+            <span className="text-2xl font-bold text-gray-800 font-mono tracking-tight">{fmt(totalNet)}</span>
           </div>
-          <div className="text-green-600 bg-green-50/60 p-2.5 rounded-sm"><CheckCircle2 className="w-5.5 h-5.5" /></div>
+          <div className="text-green-600 bg-green-50/80 p-3 rounded-sm"><CheckCircle2 className="w-6 h-6" /></div>
         </div>
       </div>
 
