@@ -2766,7 +2766,11 @@ export default function ExpensePage() {
                                     >
                                       <Plus className="w-4 h-4" />
                                     </button>
-                                                        {/* Added Assets Table */}
+                                  </div>
+                                </div>
+                              </div>
+
+                              {/* Added Assets Table */}
                               {(leg.assets_list || []).length > 0 && (
                                 <div className="border border-gray-200 rounded overflow-hidden mt-2 bg-white">
                                   <table className="table-lte text-xs w-full text-left border-collapse">
@@ -3348,7 +3352,11 @@ export default function ExpensePage() {
                                             {selectedActs.map((act: string, actIdx: number) => (
                                               <span key={actIdx} className="px-1.5 py-0.5 rounded bg-gray-100 border border-gray-200 text-[8px] font-bold text-gray-700 uppercase">
                                                 {act}
-                                                          {/* Sub-table for Calls */}
+                                              </span>
+                                            ))}
+                                          </div>
+
+                                          {/* Sub-table for Calls */}
                                           {selectedActs.includes("Calls") && callsList.length > 0 && (
                                             <div className="border border-blue-100 rounded overflow-hidden bg-white max-w-4xl">
                                               <div className="px-2 py-1 bg-blue-50/50 border-b border-blue-100 text-[9px] font-bold text-blue-700 uppercase">Support Calls Logs</div>
