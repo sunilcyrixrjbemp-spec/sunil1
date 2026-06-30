@@ -52,10 +52,14 @@ interface ItineraryLeg {
   calls_asset_details?: any;
   calls_type?: string;
   calls_status?: string;
+  calls_photo_url?: string;
+  calls_photo_loading?: boolean;
   pms_barcode?: string;
   pms_verified?: boolean;
   pms_asset_details?: any;
   pms_frequency?: string;
+  pms_photo_url?: string;
+  pms_photo_loading?: boolean;
   asset_tagging_equipment?: string;
   asset_tagging_quantity?: string;
   mobilise_asset_count?: string;
@@ -67,12 +71,14 @@ interface ItineraryLeg {
     type: string;
     status: string;
     asset_details: any;
+    photo_url?: string;
   }>;
   pms_list?: Array<{
     barcode: string;
     verified: boolean;
     frequency: string;
     asset_details: any;
+    photo_url?: string;
   }>;
   assets_list?: Array<{
     equipment_name: string;
@@ -759,14 +765,16 @@ export default function ExpensePage() {
           verified: true,
           type: l.calls_type || "Support Call",
           status: l.calls_status || "Attend",
-          asset_details: l.calls_asset_details
+          asset_details: l.calls_asset_details,
+          photo_url: l.calls_photo_url || ""
         };
         return {
           ...l,
           calls_list: [...(l.calls_list || []), newItem],
           calls_barcode: "",
           calls_verified: false,
-          calls_asset_details: null
+          calls_asset_details: null,
+          calls_photo_url: ""
         };
       } else {
         if (!l.pms_verified || !l.pms_asset_details) {
@@ -777,14 +785,16 @@ export default function ExpensePage() {
           barcode: l.pms_barcode || "",
           verified: true,
           frequency: l.pms_frequency || "3 month",
-          asset_details: l.pms_asset_details
+          asset_details: l.pms_asset_details,
+          photo_url: l.pms_photo_url || ""
         };
         return {
           ...l,
           pms_list: [...(l.pms_list || []), newItem],
           pms_barcode: "",
           pms_verified: false,
-          pms_asset_details: null
+          pms_asset_details: null,
+          pms_photo_url: ""
         };
       }
     }));
@@ -805,6 +815,57 @@ export default function ExpensePage() {
         };
       }
     }));
+  };
+
+  const uploadActivityPhoto = async (legNum: number, activityType: "Calls" | "PMS", file: File) => {
+    setItineraries(prev => prev.map(l => {
+      if (l.leg !== legNum) return l;
+      return activityType === "Calls" 
+        ? { ...l, calls_photo_loading: true }
+        : { ...l, pms_photo_loading: true };
+    }));
+
+    try {
+      const formData = new FormData();
+      formData.append("file", file);
+      
+      const API_BASE = import.meta.env.VITE_API_URL || "https://expense-backend-zio8.onrender.com";
+      const token = localStorage.getItem("token");
+      
+      const response = await fetch(`${API_BASE}/api/upload/image`, {
+        method: "POST",
+        headers: {
+          "Authorization": token ? `Bearer ${token}` : ""
+        },
+        body: formData
+      });
+      
+      if (!response.ok) {
+        throw new Error("Failed to upload image.");
+      }
+      
+      const data = await response.json();
+      if (data && data.url) {
+        setItineraries(prev => prev.map(l => {
+          if (l.leg !== legNum) return l;
+          return activityType === "Calls"
+            ? { ...l, calls_photo_url: data.url, calls_photo_loading: false }
+            : { ...l, pms_photo_url: data.url, pms_photo_loading: false };
+        }));
+        toast.success("Photo uploaded successfully.");
+      } else {
+        throw new Error("Invalid response from server.");
+      }
+    } catch (e) {
+      console.error("Photo upload error", e);
+      toast.error("Failed to upload photo.");
+      setItineraries(prev => prev.map(l => {
+        if (l.leg !== legNum) return l;
+        return activityType === "Calls"
+          ? { ...l, calls_photo_loading: false }
+          : { ...l, pms_photo_loading: false };
+      }));
+    }
   };
 
   const addAssetTag = (legNum: number) => {
@@ -2504,7 +2565,7 @@ export default function ExpensePage() {
                                 <span className="text-[11px] font-bold text-blue-700 uppercase tracking-wide">Support Calls Log</span>
                               </div>
                               <div className="grid grid-cols-1 sm:grid-cols-12 gap-3 items-end bg-gray-50/50 p-2.5 rounded border border-gray-200">
-                                <div className="sm:col-span-5">
+                                <div className="sm:col-span-4">
                                   <label className="label-lte font-bold">8-Digit Barcode (QR Code)</label>
                                   <div className="flex gap-1.5 items-center">
                                     <input
@@ -2531,6 +2592,22 @@ export default function ExpensePage() {
                                   </div>
                                 </div>
                                 <div className="sm:col-span-3">
+                                  <label className="label-lte font-bold">Photo (Optional)</label>
+                                  <input
+                                    type="file"
+                                    accept="image/*"
+                                    onChange={(e) => {
+                                      const file = e.target.files?.[0];
+                                      if (file) {
+                                        uploadActivityPhoto(leg.leg, "Calls", file);
+                                      }
+                                    }}
+                                    className="input-lte text-[10px] py-1 px-1 bg-white"
+                                  />
+                                  {leg.calls_photo_loading && <span className="text-[9px] text-blue-600 font-semibold block animate-pulse mt-0.5">Uploading...</span>}
+                                  {leg.calls_photo_url && <span className="text-[9px] text-green-600 font-bold block mt-0.5">✓ Uploaded</span>}
+                                </div>
+                                <div className="sm:col-span-2">
                                   <label className="label-lte font-bold">Call Type</label>
                                   <select
                                     value={leg.calls_type || "Support Call"}
@@ -2541,7 +2618,7 @@ export default function ExpensePage() {
                                     <option value="Online Call">Online Call</option>
                                   </select>
                                 </div>
-                                <div className="sm:col-span-3">
+                                <div className="sm:col-span-2">
                                   <label className="label-lte font-bold">Call Status</label>
                                   <select
                                     value={leg.calls_status || "Attend"}
@@ -2590,6 +2667,7 @@ export default function ExpensePage() {
                                         <th className="py-1.5 px-2 text-left">Inventory Status</th>
                                         <th className="py-1.5 px-2 text-left">Call Type</th>
                                         <th className="py-1.5 px-2 text-left">Call Status</th>
+                                        <th className="py-1.5 px-2 text-center w-12">Photo</th>
                                         <th className="py-1.5 px-2 text-center w-12">Action</th>
                                       </tr>
                                     </thead>
@@ -2617,6 +2695,20 @@ export default function ExpensePage() {
                                             </span>
                                           </td>
                                           <td className="py-1.5 px-2 text-center">
+                                            {item.photo_url ? (
+                                              <a
+                                                href={`${import.meta.env.VITE_API_URL || "https://expense-backend-zio8.onrender.com"}${item.photo_url}`}
+                                                target="_blank"
+                                                rel="noreferrer"
+                                                className="text-xs text-blue-600 font-bold hover:underline"
+                                              >
+                                                View
+                                              </a>
+                                            ) : (
+                                              <span className="text-[10px] text-gray-400">—</span>
+                                            )}
+                                          </td>
+                                          <td className="py-1.5 px-2 text-center">
                                             <button
                                               type="button"
                                               onClick={() => removeBarcode(leg.leg, "Calls", idx)}
@@ -2642,7 +2734,7 @@ export default function ExpensePage() {
                                 <span className="text-[11px] font-bold text-amber-700 uppercase tracking-wide">Planned Maintenance Services (PMS)</span>
                               </div>
                               <div className="grid grid-cols-1 sm:grid-cols-12 gap-3 items-end bg-gray-50/50 p-2.5 rounded border border-gray-200">
-                                <div className="sm:col-span-6">
+                                <div className="sm:col-span-4">
                                   <label className="label-lte font-bold">8-Digit Barcode (QR Code)</label>
                                   <div className="flex gap-1.5 items-center">
                                     <input
@@ -2668,7 +2760,23 @@ export default function ExpensePage() {
                                     </button>
                                   </div>
                                 </div>
-                                <div className="sm:col-span-5">
+                                <div className="sm:col-span-3">
+                                  <label className="label-lte font-bold">Photo (Optional)</label>
+                                  <input
+                                    type="file"
+                                    accept="image/*"
+                                    onChange={(e) => {
+                                      const file = e.target.files?.[0];
+                                      if (file) {
+                                        uploadActivityPhoto(leg.leg, "PMS", file);
+                                      }
+                                    }}
+                                    className="input-lte text-[10px] py-1 px-1 bg-white"
+                                  />
+                                  {leg.pms_photo_loading && <span className="text-[9px] text-blue-600 font-semibold block animate-pulse mt-0.5">Uploading...</span>}
+                                  {leg.pms_photo_url && <span className="text-[9px] text-green-600 font-bold block mt-0.5">✓ Uploaded</span>}
+                                </div>
+                                <div className="sm:col-span-4">
                                   <label className="label-lte font-bold">PMS Frequency Period</label>
                                   <select
                                     value={leg.pms_frequency || "3 month"}
@@ -2716,6 +2824,7 @@ export default function ExpensePage() {
                                         <th className="py-1.5 px-2 text-left font-mono">Bar Code</th>
                                         <th className="py-1.5 px-2 text-left">Inventory Status</th>
                                         <th className="py-1.5 px-2 text-left">PMS Frequency Period</th>
+                                        <th className="py-1.5 px-2 text-center w-12">Photo</th>
                                         <th className="py-1.5 px-2 text-center w-12">Action</th>
                                       </tr>
                                     </thead>
@@ -2733,6 +2842,20 @@ export default function ExpensePage() {
                                             </span>
                                           </td>
                                           <td className="py-1.5 px-2 text-[10px] text-gray-600 font-semibold">{item.frequency}</td>
+                                          <td className="py-1.5 px-2 text-center">
+                                            {item.photo_url ? (
+                                              <a
+                                                href={`${import.meta.env.VITE_API_URL || "https://expense-backend-zio8.onrender.com"}${item.photo_url}`}
+                                                target="_blank"
+                                                rel="noreferrer"
+                                                className="text-xs text-blue-600 font-bold hover:underline"
+                                              >
+                                                View
+                                              </a>
+                                            ) : (
+                                              <span className="text-[10px] text-gray-400">—</span>
+                                            )}
+                                          </td>
                                           <td className="py-1.5 px-2 text-center">
                                             <button
                                               type="button"

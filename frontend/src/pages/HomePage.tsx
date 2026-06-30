@@ -1056,6 +1056,7 @@ export default function HomePage() {
                                                     <th className="py-1 px-2 text-left">Inventory Status</th>
                                                     <th className="py-1 px-2 text-left">Call Type</th>
                                                     <th className="py-1 px-2 text-left">Call Status</th>
+                                                    <th className="py-1 px-2 text-center w-12">Photo</th>
                                                   </tr>
                                                 </thead>
                                                 <tbody className="divide-y divide-gray-100">
@@ -1076,6 +1077,20 @@ export default function HomePage() {
                                                         <span className="px-1 py-0.2 rounded font-extrabold text-[7px] uppercase bg-blue-50 text-blue-700 border border-blue-100">
                                                           {c.status || "Attend"}
                                                         </span>
+                                                      </td>
+                                                      <td className="py-1 px-2 text-center">
+                                                        {c.photo_url ? (
+                                                          <a
+                                                            href={`${import.meta.env.VITE_API_URL || "https://expense-backend-zio8.onrender.com"}${c.photo_url}`}
+                                                            target="_blank"
+                                                            rel="noreferrer"
+                                                            className="text-xs text-blue-600 font-bold hover:underline"
+                                                          >
+                                                            View
+                                                          </a>
+                                                        ) : (
+                                                          <span className="text-[10px] text-gray-400">—</span>
+                                                        )}
                                                       </td>
                                                     </tr>
                                                   ))}
@@ -1098,6 +1113,7 @@ export default function HomePage() {
                                                     <th className="py-1 px-2 text-left font-mono">Bar Code</th>
                                                     <th className="py-1 px-2 text-left">Inventory Status</th>
                                                     <th className="py-1 px-2 text-left">PMS Frequency Period</th>
+                                                    <th className="py-1 px-2 text-center w-12">Photo</th>
                                                   </tr>
                                                 </thead>
                                                 <tbody className="divide-y divide-gray-100">
@@ -1114,6 +1130,20 @@ export default function HomePage() {
                                                         </span>
                                                       </td>
                                                       <td className="py-1 px-2 text-gray-650">{p.frequency || "3 month"}</td>
+                                                      <td className="py-1 px-2 text-center">
+                                                        {p.photo_url ? (
+                                                          <a
+                                                            href={`${import.meta.env.VITE_API_URL || "https://expense-backend-zio8.onrender.com"}${p.photo_url}`}
+                                                            target="_blank"
+                                                            rel="noreferrer"
+                                                            className="text-xs text-blue-600 font-bold hover:underline"
+                                                          >
+                                                            View
+                                                          </a>
+                                                        ) : (
+                                                          <span className="text-[10px] text-gray-400">—</span>
+                                                        )}
+                                                      </td>
                                                     </tr>
                                                   ))}
                                                 </tbody>
