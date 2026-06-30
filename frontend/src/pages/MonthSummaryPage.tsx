@@ -1,12 +1,21 @@
 import { useEffect, useState, useRef } from "react";
 import toast from "react-hot-toast";
 import { expenseService } from "../services/expenseService";
+import api from "../services/api";
 import {
   Calendar, Download, RefreshCw, Users, CheckCircle,
   IndianRupee, MapPin, Search, Filter, FileText, Loader2,
 } from "lucide-react";
 
 // ─── Helpers ────────────────────────────────────────────────────────────────
+
+const getAbsoluteUrl = (path: string) => {
+  if (!path) return "";
+  if (path.startsWith("http://") || path.startsWith("https://")) return path;
+  const baseURL = api.defaults.baseURL || "";
+  const host = baseURL.replace(/\/api$/, "");
+  return `${host}/${path.replace(/^\//, "")}`;
+};
 
 const MONTHS = [
   "", "January", "February", "March", "April", "May", "June",
@@ -59,7 +68,7 @@ function getISTNow(): string {
 
 // ─── PDF — EXACT CYRIX EXCEL FORMAT ──────────────────────────────────────────
 
-function buildExcelPrintHTML(user: any, claims: any[]): string {
+function buildExcelPrintHTML(user: any, claims: any[], attachments: string[] = []): string {
   const now = getISTNow();
 
   // Flatten: one row per leg
@@ -133,6 +142,31 @@ function buildExcelPrintHTML(user: any, claims: any[]): string {
 
   const totalC = `border:1.5px solid #8B6914;padding:4px 5px;font-size:7.5pt;font-weight:900;color:#5d4007;background:#fff3cd!important;vertical-align:middle;`;
 
+  // Attached receipts HTML block
+  let attachmentsSection = "";
+  if (attachments && attachments.length > 0) {
+    attachmentsSection = `
+      <div style="page-break-before: always; margin-top: 30px; padding-top: 10px;">
+        <h3 style="font-size: 11pt; font-weight: 800; color: #1a237e; border-bottom: 2px solid #1a237e; padding-bottom: 5px; margin-bottom: 15px; text-transform: uppercase;">
+          Attached Expense Receipts / Bills
+        </h3>
+        <div style="display: flex; flex-direction: column; gap: 30px; align-items: center; justify-content: center; width: 100%;">
+          ${attachments.map((url, index) => {
+            const absoluteUrl = getAbsoluteUrl(url);
+            return `
+              <div style="width: 100%; max-width: 800px; border: 1px solid #b0c4de; padding: 10px; background: #fff; text-align: center; page-break-inside: avoid; border-radius: 4px; box-shadow: 0 1px 3px rgba(0,0,0,0.1);">
+                <div style="font-size: 8.5pt; font-weight: bold; color: #1a237e; text-align: left; border-bottom: 1px solid #eee; padding-bottom: 6px; margin-bottom: 10px;">
+                  Receipt #${index + 1}
+                </div>
+                <img src="${absoluteUrl}" style="max-width: 100%; max-height: 230mm; object-fit: contain; border-radius: 2px;" alt="Receipt ${index + 1}" />
+              </div>
+            `;
+          }).join("\n")}
+        </div>
+      </div>
+    `;
+  }
+
   return `<!DOCTYPE html>
 <html lang="en">
 <head>
@@ -151,10 +185,9 @@ function buildExcelPrintHTML(user: any, claims: any[]): string {
       font-weight:800!important;text-align:right;padding:5px 10px!important;border:2px solid #0d1557!important;white-space:nowrap;}
     .form-no{background:#1a237e!important;color:#fff9c4!important;font-size:8pt!important;
       font-weight:800!important;text-align:right;padding:5px 10px!important;border:2px solid #0d1557!important;white-space:nowrap;}
-    .info-lbl{background:#fff9c4!important;color:#3e2723!important;font-size:8pt!important;
-      font-weight:800!important;padding:5px 8px!important;border:1.5px solid #c8a200!important;white-space:nowrap;}
-    .info-val{background:#fffde7!important;color:#1a237e!important;font-size:8.5pt!important;
-      font-weight:900!important;padding:5px 8px!important;border:1.5px solid #c8a200!important;}
+    .info-tbl{margin-bottom:0; border: 1.5px solid #000; border-top: none;}
+    .info-lbl{font-weight:bold; background:#fff!important; color:#000; border-right:1px solid #000; font-size:7.5pt; font-family:'Arial',sans-serif; text-align:left; padding:4px 6px; text-transform:uppercase; white-space:nowrap;}
+    .info-val{background:#fff!important; color:#000; border-right:1px solid #000; font-size:7.5pt; font-family:'Arial',sans-serif; text-align:left; padding:4px 6px; font-weight:800; color:#1a237e;}
     .col-h1{background:#1565c0!important;color:#fff!important;font-size:7pt!important;
       font-weight:800!important;text-align:center!important;padding:5px 2px!important;
       border:1.5px solid #0d47a1!important;line-height:1.25;vertical-align:middle;}
@@ -204,36 +237,29 @@ function buildExcelPrintHTML(user: any, claims: any[]): string {
     </tr>
   </table>
 
-  <!-- ══ ROW 2: Employee Info ══ -->
-  <table style="margin-bottom:0;">
+  <!-- ══ ROW 2: Employee Info (Image 2 clean white style) ══ -->
+  <table class="info-tbl">
     <colgroup>
-      <col style="width:5%;"><col style="width:14%;"><col style="width:7%;"><col style="width:8%;">
-      <col style="width:8%;"><col style="width:15%;"><col style="width:9%;"><col style="width:9%;">
-      <col style="width:7%;"><col style="width:7%;"><col style="width:7%;"><col style="width:4%;">
+      <col style="width:6%;"><col style="width:23%;">
+      <col style="width:7%;"><col style="width:10%;">
+      <col style="width:8%;"><col style="width:10%;">
+      <col style="width:12%;"><col style="width:12%;">
+      <col style="width:6%;"><col style="width:6%;">
+      <col style="width:7%;"><col style="width:11%;">
     </colgroup>
     <tr>
       <td class="info-lbl">NAME :</td>
-      <td class="info-val" colspan="2">${user.name}</td>
+      <td class="info-val">${user.name}</td>
       <td class="info-lbl">EECode:</td>
       <td class="info-val">${user.e_code}</td>
       <td class="info-lbl">PROJECT:</td>
-      <td class="info-val" colspan="2">${(user.type || user.zone || "RAJASTHAN").toUpperCase()}</td>
+      <td class="info-val">RJBEMP</td>
       <td class="info-lbl">BASE LOCATION:</td>
       <td class="info-val">${(user.district || "").toUpperCase()}</td>
       <td class="info-lbl">GRADE:</td>
       <td class="info-val">${user.grade || "—"}</td>
-    </tr>
-    <tr>
-      <td class="info-lbl">DESIGNATION:</td>
-      <td class="info-val" colspan="2">${user.designation}</td>
-      <td class="info-lbl">ZONE:</td>
-      <td class="info-val">${(user.zone || "").toUpperCase()}</td>
-      <td class="info-lbl">MANAGER:</td>
-      <td class="info-val" colspan="2">${user.manager || "—"}</td>
       <td class="info-lbl">MOBILE:</td>
-      <td class="info-val">${user.mobile || "—"}</td>
-      <td class="info-lbl">MONTH:</td>
-      <td class="info-val">${user.month} ${user.year}</td>
+      <td class="info-val" style="border-right:none;">${user.mobile || "—"}</td>
     </tr>
   </table>
 
@@ -242,7 +268,7 @@ function buildExcelPrintHTML(user: any, claims: any[]): string {
        Date | From | To | Worked Dist | Mode | KM |
        TA(Train/Bus only) | Auto | DA | Local Spare | Hotel |
        Other Desc | Other Amt | Total | Remarks | Barcode/Asset | PMS | Calls -->
-  <table style="margin-bottom:0;">
+  <table style="margin-bottom:0; border-top: none;">
     <colgroup>
       <col style="width:4.5%;"><!-- Date -->
       <col style="width:6.5%;"><!-- From -->
@@ -382,9 +408,11 @@ function buildExcelPrintHTML(user: any, claims: any[]): string {
     </tr>
   </table>
 
+  <!-- ══ ATTACHED RECEIPTS SECTION ══ -->
+  ${attachmentsSection}
+
 </div>
 </body>
-</html>`;
 }
 
 // ─── Main Page Component ──────────────────────────────────────────────────────
@@ -451,8 +479,9 @@ export default function MonthSummaryPage() {
       toast.dismiss(tid);
       const user = res.user || row;
       const claims = res.claims || [];
+      const attachments = res.attachments || [];
       if (claims.length === 0) { toast.error("No approved claim data found"); return; }
-      const html = buildExcelPrintHTML(user, claims);
+      const html = buildExcelPrintHTML(user, claims, attachments);
       const win = window.open("", "_blank", "width=1400,height=900");
       if (!win) { toast.error("Allow popups to download PDF"); return; }
       win.document.write(html);
@@ -489,181 +518,217 @@ export default function MonthSummaryPage() {
   ];
 
   return (
-    <div className="space-y-5 animate-fadeIn">
-      {/* Header */}
-      <div className="flex items-start justify-between gap-3 flex-wrap">
+    <div className="space-y-4 animate-fadeIn font-sans pb-10">
+      {/* AdminLTE Content Header */}
+      <div className="flex items-center justify-between border-b border-gray-250 pb-3 mb-4 bg-gray-50/20 px-1">
         <div>
-          <h2 className="text-xl font-bold text-gray-800 uppercase tracking-wide">Month Summary</h2>
-          <p className="text-gray-500 text-xs mt-1">
-            Engineer-wise approved expenses — click <span className="font-bold text-red-600">PDF</span> to generate the Cyrix Reimbursement Form (CYKL01 V2023).
-          </p>
+          <h1 className="text-xl font-bold text-[#333] flex items-center gap-2 tracking-tight">
+            <Users className="w-5.5 h-5.5 text-blue-600" />
+            Month Summary
+            <span className="text-xs font-normal text-gray-500 hidden sm:inline-block ml-1">Reports &amp; Billing</span>
+          </h1>
         </div>
-        <button onClick={() => fetchData(appliedFilters)} disabled={loading}
-          className="flex items-center gap-2 px-3 py-2 rounded-lg border border-gray-200 bg-white text-gray-600 text-xs font-semibold hover:bg-gray-50 transition-colors disabled:opacity-50 cursor-pointer">
-          <RefreshCw className={`w-3.5 h-3.5 ${loading ? "animate-spin" : ""}`} /> Refresh
-        </button>
-      </div>
-
-      {/* Filters */}
-      <div className="bg-white border border-gray-200 rounded-xl p-4 shadow-sm">
-        <div className="flex items-center gap-2 mb-3">
-          <Filter className="w-4 h-4 text-blue-600" />
-          <span className="text-xs font-bold text-gray-600 uppercase tracking-wide">Filters</span>
-        </div>
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-3">
-          <div>
-            <label className="block text-[10px] font-bold text-gray-400 uppercase tracking-wide mb-1">Month</label>
-            <select value={filterMonth} onChange={(e) => setFilterMonth(e.target.value)}
-              className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm font-medium text-gray-700 focus:outline-none focus:border-blue-500 cursor-pointer">
-              <option value="">All Months</option>
-              {MONTHS.slice(1).map((m) => <option key={m} value={m}>{m}</option>)}
-            </select>
-          </div>
-          <div>
-            <label className="block text-[10px] font-bold text-gray-400 uppercase tracking-wide mb-1">Year</label>
-            <select value={filterYear || ""} onChange={(e) => setFilterYear(e.target.value ? parseInt(e.target.value) : 0)}
-              className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm font-medium text-gray-700 focus:outline-none focus:border-blue-500 cursor-pointer">
-              <option value="">All Years</option>
-              {[2024, 2025, 2026, 2027].map((y) => <option key={y} value={y}>{y}</option>)}
-            </select>
-          </div>
-          <div>
-            <label className="block text-[10px] font-bold text-gray-400 uppercase tracking-wide mb-1">District</label>
-            <select value={filterDistrict} onChange={(e) => setFilterDistrict(e.target.value)}
-              className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm font-medium text-gray-700 focus:outline-none focus:border-blue-500 cursor-pointer">
-              <option value="">All Districts</option>
-              {districts.map((d) => <option key={d} value={d}>{d}</option>)}
-            </select>
-          </div>
-          <div>
-            <label className="block text-[10px] font-bold text-gray-400 uppercase tracking-wide mb-1">Engineer / E-Code</label>
-            <input type="text" value={filterEngineer} onChange={(e) => setFilterEngineer(e.target.value)}
-              onKeyDown={(e) => e.key === "Enter" && handleApplyFilters()}
-              placeholder="Search name or code..."
-              className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm font-medium text-gray-700 focus:outline-none focus:border-blue-500" />
-          </div>
-        </div>
-        <div className="flex gap-2">
-          <button onClick={handleApplyFilters} disabled={loading}
-            className="flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold rounded-lg transition-colors disabled:opacity-60 cursor-pointer">
-            <Search className="w-3.5 h-3.5" /> Apply Filters
-          </button>
-          <button onClick={handleClear}
-            className="px-4 py-2 border border-gray-200 bg-white text-gray-600 text-xs font-semibold rounded-lg hover:bg-gray-50 transition-colors cursor-pointer">
-            Clear
-          </button>
+        <div className="text-[11px] font-semibold text-[#666] flex items-center gap-1.5">
+          <span className="text-blue-600 cursor-pointer hover:underline">Home</span>
+          <span className="text-gray-400">/</span>
+          <span className="text-blue-600 cursor-pointer hover:underline">Reports</span>
+          <span className="text-gray-400">/</span>
+          <span className="text-[#888]">Month Summary</span>
         </div>
       </div>
 
-      {/* Stats */}
-      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-        {statCards.map((s, i) => (
-          <div key={i} className="bg-white border border-gray-200 rounded-xl p-4 shadow-sm flex items-center gap-3">
-            <div className={`w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0 ${s.color}`}>{s.icon}</div>
+      {/* AdminLTE Info Boxes (Stats) */}
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+        {/* Box 1 */}
+        <div className="bg-white border-t-3 border-blue-500 shadow-sm rounded-sm p-3 flex items-center justify-between border border-gray-200">
+          <div>
+            <span className="text-[10px] text-gray-400 font-bold uppercase tracking-wider block">Engineers</span>
+            <span className="text-xl font-bold text-gray-800 font-mono">{totalEngineers}</span>
+          </div>
+          <div className="text-blue-600 bg-blue-50/60 p-2.5 rounded-sm"><Users className="w-5.5 h-5.5" /></div>
+        </div>
+        {/* Box 2 */}
+        <div className="bg-white border-t-3 border-green-500 shadow-sm rounded-sm p-3 flex items-center justify-between border border-gray-200">
+          <div>
+            <span className="text-[10px] text-gray-400 font-bold uppercase tracking-wider block">Approved Claims</span>
+            <span className="text-xl font-bold text-gray-800 font-mono">{totalClaims}</span>
+          </div>
+          <div className="text-green-600 bg-green-50/60 p-2.5 rounded-sm"><CheckCircle className="w-5.5 h-5.5" /></div>
+        </div>
+        {/* Box 3 */}
+        <div className="bg-white border-t-3 border-yellow-500 shadow-sm rounded-sm p-3 flex items-center justify-between border border-gray-200">
+          <div>
+            <span className="text-[10px] text-gray-400 font-bold uppercase tracking-wider block">Total Amount</span>
+            <span className="text-xl font-bold text-gray-800 font-mono">{fmt(totalAmount)}</span>
+          </div>
+          <div className="text-yellow-600 bg-yellow-50/60 p-2.5 rounded-sm"><IndianRupee className="w-5.5 h-5.5" /></div>
+        </div>
+        {/* Box 4 */}
+        <div className="bg-white border-t-3 border-purple-500 shadow-sm rounded-sm p-3 flex items-center justify-between border border-gray-200">
+          <div>
+            <span className="text-[10px] text-gray-400 font-bold uppercase tracking-wider block">Total distance</span>
+            <span className="text-xl font-bold text-gray-800 font-mono">{fmtN(totalKM)} km</span>
+          </div>
+          <div className="text-purple-600 bg-purple-50/60 p-2.5 rounded-sm"><MapPin className="w-5.5 h-5.5" /></div>
+        </div>
+      </div>
+
+      {/* AdminLTE Card: Filters */}
+      <div className="card border-t-3 border-primary bg-white shadow-sm border border-gray-200 rounded-sm">
+        <div className="card-header border-b border-gray-150 px-4 py-2.5 flex items-center justify-between bg-gray-50/40">
+          <h3 className="card-title text-xs font-bold text-gray-700 uppercase tracking-wider flex items-center gap-1.5">
+            <Filter className="w-4 h-4 text-blue-600" />
+            Filter Month Report
+          </h3>
+          <button onClick={() => fetchData(appliedFilters)} disabled={loading}
+            className="flex items-center gap-1.5 px-2.5 py-1 rounded bg-white hover:bg-gray-100 border border-gray-300 text-gray-700 text-[10px] font-bold transition-all cursor-pointer disabled:opacity-60">
+            <RefreshCw className={`w-3 h-3 ${loading ? "animate-spin" : ""}`} /> Refresh
+          </button>
+        </div>
+        <div className="card-body p-4">
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 mb-4">
             <div>
-              <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wide">{s.label}</p>
-              <p className="text-lg font-bold text-gray-800 leading-tight">{s.value}</p>
+              <label className="block text-[10px] font-bold text-gray-500 uppercase tracking-wider mb-1">Select Month</label>
+              <select value={filterMonth} onChange={(e) => setFilterMonth(e.target.value)}
+                className="w-full border border-gray-300 rounded px-2.5 py-1.5 text-xs font-semibold text-gray-700 focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 cursor-pointer">
+                <option value="">All Months</option>
+                {MONTHS.slice(1).map((m) => <option key={m} value={m}>{m}</option>)}
+              </select>
+            </div>
+            <div>
+              <label className="block text-[10px] font-bold text-gray-500 uppercase tracking-wider mb-1">Select Year</label>
+              <select value={filterYear || ""} onChange={(e) => setFilterYear(e.target.value ? parseInt(e.target.value) : 0)}
+                className="w-full border border-gray-300 rounded px-2.5 py-1.5 text-xs font-semibold text-gray-700 focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 cursor-pointer">
+                <option value="">All Years</option>
+                {[2024, 2025, 2026, 2027].map((y) => <option key={y} value={y}>{y}</option>)}
+              </select>
+            </div>
+            <div>
+              <label className="block text-[10px] font-bold text-gray-500 uppercase tracking-wider mb-1">District Location</label>
+              <select value={filterDistrict} onChange={(e) => setFilterDistrict(e.target.value)}
+                className="w-full border border-gray-300 rounded px-2.5 py-1.5 text-xs font-semibold text-gray-700 focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 cursor-pointer">
+                <option value="">All Districts</option>
+                {districts.map((d) => <option key={d} value={d}>{d}</option>)}
+              </select>
+            </div>
+            <div>
+              <label className="block text-[10px] font-bold text-gray-500 uppercase tracking-wider mb-1">Engineer / E-Code</label>
+              <input type="text" value={filterEngineer} onChange={(e) => setFilterEngineer(e.target.value)}
+                onKeyDown={(e) => e.key === "Enter" && handleApplyFilters()}
+                placeholder="Type name or code..."
+                className="w-full border border-gray-300 rounded px-2.5 py-1.5 text-xs font-medium text-gray-700 focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500" />
             </div>
           </div>
-        ))}
+          <div className="flex gap-2 border-t border-gray-100 pt-3.5">
+            <button onClick={handleApplyFilters} disabled={loading}
+              className="flex items-center gap-1.5 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold rounded-sm shadow-sm transition-colors disabled:opacity-60 cursor-pointer">
+              <Search className="w-3.5 h-3.5" /> Search Summary
+            </button>
+            <button onClick={handleClear}
+              className="px-4 py-2 border border-gray-300 bg-white text-gray-700 text-xs font-semibold rounded-sm hover:bg-gray-100 transition-colors cursor-pointer">
+              Reset Filters
+            </button>
+          </div>
+        </div>
       </div>
 
-      {/* Table */}
-      <div className="bg-white border border-gray-200 rounded-xl shadow-sm overflow-hidden">
-        <div className="p-4 border-b border-gray-100 flex items-center gap-3 flex-wrap">
-          <div className="flex items-center gap-2 flex-1 min-w-[200px]">
+      {/* AdminLTE Card: Data Table */}
+      <div className="card border-t-3 border-blue-500 bg-white shadow-sm border border-gray-200 rounded-sm">
+        <div className="card-header border-b border-gray-150 px-4 py-3 flex items-center justify-between bg-gray-50/40">
+          <div className="flex items-center gap-2">
             <Calendar className="w-4 h-4 text-blue-600 flex-shrink-0" />
-            <span className="text-xs font-bold text-gray-600 uppercase tracking-wide">
+            <span className="text-xs font-bold text-gray-700 uppercase tracking-wider">
               {appliedFilters.month && appliedFilters.year
                 ? `${appliedFilters.month} ${appliedFilters.year}`
                 : appliedFilters.month || (appliedFilters.year ? String(appliedFilters.year) : "All Months")}
-              {" · "}<span className="text-blue-600">{filtered.length} engineer(s)</span>
+              {" Summary "}
+              <span className="text-blue-600 font-mono">({filtered.length} row(s))</span>
             </span>
           </div>
           <div className="relative">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-gray-400" />
+            <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-gray-400" />
             <input type="text" value={search} onChange={(e) => setSearch(e.target.value)}
-              placeholder="Search in results..."
-              className="pl-8 pr-3 py-2 border border-gray-200 rounded-lg text-xs font-medium text-gray-700 focus:outline-none focus:border-blue-500 w-52" />
+              placeholder="Quick search..."
+              className="pl-8 pr-2.5 py-1 border border-gray-300 rounded text-xs font-medium text-gray-700 focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 w-44" />
           </div>
         </div>
 
         <div className="overflow-x-auto">
           {loading ? (
-            <div className="flex items-center justify-center py-20 gap-3 text-gray-400">
+            <div className="flex items-center justify-center py-20 gap-3 text-gray-450">
               <Loader2 className="w-5 h-5 animate-spin" />
-              <span className="text-sm font-medium">Loading data...</span>
+              <span className="text-xs font-bold uppercase tracking-wider">Loading summary records...</span>
             </div>
           ) : filtered.length === 0 ? (
             <div className="text-center py-20">
-              <FileText className="w-10 h-10 text-gray-200 mx-auto mb-3" />
-              <p className="text-gray-400 font-semibold text-sm">No approved expenses found</p>
-              <p className="text-gray-300 text-xs mt-1">Try adjusting filters or check if claims are approved</p>
+              <FileText className="w-10 h-10 text-gray-250 mx-auto mb-3" />
+              <p className="text-gray-500 font-bold text-xs uppercase tracking-wider">No matching summary records found</p>
+              <p className="text-gray-450 text-[11px] mt-1">Make sure filters are correct and claims have been approved.</p>
             </div>
           ) : (
-            <table className="w-full text-left table-auto min-w-[1050px]">
+            <table className="w-full text-left table-auto min-w-[1050px] border-collapse">
               <thead>
-                <tr className="bg-gray-50 border-b border-gray-100 text-[10px] uppercase font-bold tracking-wider text-gray-500">
-                  <th className="py-3 px-3">#</th>
-                  <th className="py-3 px-3">Employee</th>
-                  <th className="py-3 px-3">E-Code</th>
-                  <th className="py-3 px-3">Grade</th>
-                  <th className="py-3 px-3">District</th>
-                  <th className="py-3 px-3">Month</th>
-                  <th className="py-3 px-3">Claims</th>
-                  <th className="py-3 px-3">DA</th>
-                  <th className="py-3 px-3">Bike/Car TA</th>
-                  <th className="py-3 px-3">Auto</th>
-                  <th className="py-3 px-3">Hotel</th>
-                  <th className="py-3 px-3">KM</th>
-                  <th className="py-3 px-3 text-green-700">Total</th>
-                  <th className="py-3 px-3 text-right">PDF</th>
+                <tr className="bg-gray-50 border-b border-gray-200 text-[10px] uppercase font-bold tracking-wider text-gray-600 font-sans">
+                  <th className="py-2.5 px-3 border-r border-gray-200">#</th>
+                  <th className="py-2.5 px-3 border-r border-gray-200">Engineer Details</th>
+                  <th className="py-2.5 px-3 border-r border-gray-200">E-Code</th>
+                  <th className="py-2.5 px-3 border-r border-gray-200">Grade</th>
+                  <th className="py-2.5 px-3 border-r border-gray-200">Base District</th>
+                  <th className="py-2.5 px-3 border-r border-gray-200">Claim Period</th>
+                  <th className="py-2.5 px-3 border-r border-gray-200 text-center">Days</th>
+                  <th className="py-2.5 px-3 border-r border-gray-200 text-right">DA (₹)</th>
+                  <th className="py-2.5 px-3 border-r border-gray-200 text-right">Bike/Car (₹)</th>
+                  <th className="py-2.5 px-3 border-r border-gray-200 text-right">Auto (₹)</th>
+                  <th className="py-2.5 px-3 border-r border-gray-200 text-right">Hotel (₹)</th>
+                  <th className="py-2.5 px-3 border-r border-gray-200 text-center">Total KM</th>
+                  <th className="py-2.5 px-3 border-r border-gray-200 text-right text-green-700 bg-green-50/20 font-bold">Approved Total (₹)</th>
+                  <th className="py-2.5 px-3 text-center">Export</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-gray-50">
+              <tbody className="divide-y divide-gray-200 text-xs">
                 {filtered.map((row, idx) => {
                   const key = `${row.user_id}-${row.month}-${row.year}`;
                   const isLoading = pdfLoadingId === key;
                   return (
-                    <tr key={key} className="hover:bg-blue-50/40 transition-colors">
-                      <td className="py-3 px-3 text-gray-400 text-xs font-bold">{idx + 1}</td>
-                      <td className="py-3 px-3">
-                        <div className="font-bold text-gray-800 text-sm">{row.name}</div>
-                        <div className="text-[10px] text-gray-400">{row.designation}</div>
+                    <tr key={key} className="hover:bg-blue-50/20 transition-colors border-b border-gray-150">
+                      <td className="py-3 px-3 text-gray-400 font-mono font-bold border-r border-gray-150">{idx + 1}</td>
+                      <td className="py-3 px-3 border-r border-gray-150 font-sans">
+                        <div className="font-bold text-gray-800">{row.name}</div>
+                        <div className="text-[10px] text-gray-500 font-semibold uppercase">{row.designation}</div>
                       </td>
-                      <td className="py-3 px-3">
-                        <span className="text-xs font-mono font-bold text-blue-700 bg-blue-50 px-2 py-0.5 rounded border border-blue-100">{row.e_code}</span>
+                      <td className="py-3 px-3 border-r border-gray-150">
+                        <span className="text-[10px] font-mono font-bold text-blue-700 bg-blue-50/50 px-2 py-0.5 rounded border border-blue-100">{row.e_code}</span>
                       </td>
-                      <td className="py-3 px-3 text-xs font-semibold text-gray-600">{row.grade || "—"}</td>
-                      <td className="py-3 px-3 text-xs font-semibold text-gray-600">{row.district || "—"}</td>
-                      <td className="py-3 px-3">
-                        <span className="text-xs font-bold text-indigo-700 bg-indigo-50 px-2 py-0.5 rounded border border-indigo-100">{row.month} {row.year}</span>
+                      <td className="py-3 px-3 text-gray-700 font-semibold border-r border-gray-150">{row.grade || "—"}</td>
+                      <td className="py-3 px-3 text-gray-700 font-semibold border-r border-gray-150">{row.district || "—"}</td>
+                      <td className="py-3 px-3 border-r border-gray-150">
+                        <span className="text-[10px] font-bold text-indigo-700 bg-indigo-50/50 px-2 py-0.5 rounded border border-indigo-100">{row.month} {row.year}</span>
                       </td>
-                      <td className="py-3 px-3 text-xs font-bold text-gray-700">{row.claims_count}</td>
-                      <td className="py-3 px-3 text-xs font-semibold text-gray-600">
+                      <td className="py-3 px-3 text-center font-bold text-gray-700 border-r border-gray-150">{row.claims_count}</td>
+                      <td className="py-3 px-3 text-right font-semibold text-gray-650 border-r border-gray-150">
                         {row.da_amount > 0 ? fmt(row.da_amount) : <span className="text-gray-300">—</span>}
                       </td>
-                      <td className="py-3 px-3 text-xs font-semibold text-gray-600">
+                      <td className="py-3 px-3 text-right font-semibold text-gray-650 border-r border-gray-150">
                         {(row.bike_amount + row.car_amount) > 0 ? fmt(row.bike_amount + row.car_amount) : <span className="text-gray-300">—</span>}
                       </td>
-                      <td className="py-3 px-3 text-xs font-semibold text-gray-600">
+                      <td className="py-3 px-3 text-right font-semibold text-gray-650 border-r border-gray-150">
                         {row.auto_amount > 0 ? fmt(row.auto_amount) : <span className="text-gray-300">—</span>}
                       </td>
-                      <td className="py-3 px-3 text-xs font-semibold text-gray-600">
+                      <td className="py-3 px-3 text-right font-semibold text-gray-650 border-r border-gray-150">
                         {row.hotel_amount > 0 ? fmt(row.hotel_amount) : <span className="text-gray-300">—</span>}
                       </td>
-                      <td className="py-3 px-3 text-xs font-semibold text-gray-600">
-                        {row.total_km > 0 ? <>{fmtN(row.total_km)} km</> : <span className="text-gray-300">—</span>}
+                      <td className="py-3 px-3 text-center font-mono font-bold text-gray-700 border-r border-gray-150">
+                        {row.total_km > 0 ? `${fmtN(row.total_km)} km` : <span className="text-gray-300">—</span>}
                       </td>
-                      <td className="py-3 px-3">
-                        <span className="text-sm font-bold text-green-700">{fmt(row.total_amount)}</span>
+                      <td className="py-3 px-3 text-right font-bold text-green-700 bg-green-50/10 border-r border-gray-150">
+                        {fmt(row.total_amount)}
                       </td>
-                      <td className="py-3 px-3 text-right">
+                      <td className="py-3 px-3 text-center">
                         <button onClick={() => handlePDF(row)} disabled={isLoading}
-                          className="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-red-50 hover:bg-red-500 text-red-600 hover:text-white border border-red-200 hover:border-red-500 text-[11px] font-bold transition-all cursor-pointer disabled:opacity-60"
-                          title={`Generate CYKL01 form for ${row.name}`}>
+                          className="inline-flex items-center gap-1 px-2 py-1 rounded bg-red-600 hover:bg-red-700 text-white text-[10px] font-bold shadow-sm transition-all cursor-pointer disabled:opacity-60"
+                          title={`Download Reimbursement PDF Form CYKL01 for ${row.name}`}>
                           {isLoading ? <Loader2 className="w-3 h-3 animate-spin" /> : <Download className="w-3 h-3" />}
-                          {isLoading ? "…" : "PDF"}
+                          {isLoading ? "..." : "Form PDF"}
                         </button>
                       </td>
                     </tr>
@@ -672,17 +737,19 @@ export default function MonthSummaryPage() {
               </tbody>
               {filtered.length > 1 && (
                 <tfoot>
-                  <tr className="bg-amber-50 border-t-2 border-amber-200">
-                    <td colSpan={6} className="py-3 px-3 text-xs font-bold text-amber-800 uppercase tracking-wide">
-                      Grand Total ({filtered.length} Engineers)
+                  <tr className="bg-yellow-50/50 border-t-2 border-yellow-200 text-xs font-bold text-gray-800">
+                    <td colSpan={6} className="py-3 px-3 border-r border-gray-150 uppercase tracking-wider text-gray-600 font-sans">
+                      Grand Total Summary
                     </td>
-                    <td className="py-3 px-3 text-xs font-bold text-amber-800">{totalClaims}</td>
-                    <td className="py-3 px-3 text-xs font-bold text-amber-700">{fmt(filtered.reduce((s, r) => s + r.da_amount, 0))}</td>
-                    <td className="py-3 px-3 text-xs font-bold text-amber-700">{fmt(filtered.reduce((s, r) => s + r.bike_amount + r.car_amount, 0))}</td>
-                    <td className="py-3 px-3 text-xs font-bold text-amber-700">{fmt(filtered.reduce((s, r) => s + r.auto_amount, 0))}</td>
-                    <td className="py-3 px-3 text-xs font-bold text-amber-700">{fmt(filtered.reduce((s, r) => s + r.hotel_amount, 0))}</td>
-                    <td className="py-3 px-3 text-xs font-bold text-amber-700">{fmtN(totalKM)} km</td>
-                    <td className="py-3 px-3"><span className="text-sm font-bold text-green-700">{fmt(totalAmount)}</span></td>
+                    <td className="py-3 px-3 text-center border-r border-gray-150 font-mono">{totalClaims}</td>
+                    <td className="py-3 px-3 text-right border-r border-gray-150 font-mono">{fmt(filtered.reduce((s, r) => s + r.da_amount, 0))}</td>
+                    <td className="py-3 px-3 text-right border-r border-gray-150 font-mono">{fmt(filtered.reduce((s, r) => s + r.bike_amount + r.car_amount, 0))}</td>
+                    <td className="py-3 px-3 text-right border-r border-gray-150 font-mono">{fmt(filtered.reduce((s, r) => s + r.auto_amount, 0))}</td>
+                    <td className="py-3 px-3 text-right border-r border-gray-150 font-mono">{fmt(filtered.reduce((s, r) => s + r.hotel_amount, 0))}</td>
+                    <td className="py-3 px-3 text-center border-r border-gray-150 font-mono">{fmtN(totalKM)} km</td>
+                    <td className="py-3 px-3 text-right text-green-700 bg-green-50/20 font-bold border-r border-gray-150 font-mono">
+                      {fmt(totalAmount)}
+                    </td>
                     <td />
                   </tr>
                 </tfoot>

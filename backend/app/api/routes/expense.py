@@ -1308,6 +1308,16 @@ async def get_engineer_month_claims(
             "legs": leg_data,
         })
 
+    # Query all attachments for these expenses (excluding PMS/calls since those aren't in this table)
+    attachments_list = db.query(ExpenseAttachment).filter(
+        ExpenseAttachment.exp_id.in_(expense_codes)
+    ).all()
+    # Filter out anything that contains call or pms just in case, though they are in separate tables
+    valid_attachments = [
+        a.file_url for a in attachments_list
+        if a.file_url and not any(x in (a.bill_type or "").lower() for x in ["pms", "call"])
+    ]
+
     return {
         "success": True,
         "user": {
@@ -1324,7 +1334,8 @@ async def get_engineer_month_claims(
             "month": month,
             "year": year
         },
-        "claims": claims
+        "claims": claims,
+        "attachments": valid_attachments
     }
 
 
