@@ -19,7 +19,9 @@ const ALL_WINDOWS = [
   { id: "mis_report", name: "MIS Report" },
   { id: "kpi", name: "KPI Dashboard" },
   { id: "upload_data", name: "Upload Data" },
+  { id: "asset_upload", name: "Asset Inventory" },
   { id: "penalty_report", name: "Penalty Report" },
+  { id: "consolidated_report", name: "Consolidated Report" },
   { id: "help", name: "Help Center" },
   { id: "profile", name: "Profile" }
 ];

@@ -1696,9 +1696,12 @@ async def get_consolidated_report(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user)
 ):
-    # Role checking
+    # Role or Allowed Windows checking
     role_lower = current_user.role.lower().strip() if current_user.role else ""
-    if role_lower not in ["coordinator", "accountant", "travel desk", "admin", "superadmin", "mis", "hr", "vp"]:
+    allowed_wins = [w.strip().lower() for w in (current_user.allowed_windows or "").split(",") if w.strip()]
+    
+    if (role_lower not in ["coordinator", "accountant", "travel desk", "admin", "superadmin", "mis", "hr", "vp"]
+        and "consolidated_report" not in allowed_wins):
         raise HTTPException(
             status_code=403,
             detail="You do not have permission to view consolidated reports."
