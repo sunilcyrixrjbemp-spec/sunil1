@@ -1369,6 +1369,7 @@ async def get_engineer_month_claims(
             "district": target_user.district or "",
             "zone": target_user.zone or "",
             "manager": target_user.manager or "",
+            "coordinator": target_user.coordinator or "",
             "mobile": target_user.mobile_number or "",
             "type": target_user.type or (target_user.zone or ""),
             "month": month,

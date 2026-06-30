@@ -378,15 +378,15 @@ function buildExcelPrintHTML(user: any, claims: any[], attachments: string[] = [
     </colgroup>
     <tr>
       <td class="sig-lbl">Claimed By: <strong>${user.name}</strong></td>
-      <td class="sig-lbl">Approved By:</td>
-      <td class="sig-lbl">Checked By: (Verifier)</td>
-      <td class="sig-lbl" style="border-right:none;">Accounted By: (Accounts)</td>
+      <td class="sig-lbl">Approved By:<br><strong>${user.manager || ""}</strong></td>
+      <td class="sig-lbl">Checked By: (Verifier)<br><strong>${user.coordinator || ""}</strong></td>
+      <td class="sig-lbl" style="border-right:none;">Accounted By: (Accounts)<br><strong>Amit Rawat</strong></td>
     </tr>
     <tr>
       <td class="sig-val">Date: ${new Date().toLocaleDateString("en-IN", {timeZone: "Asia/Kolkata"})}</td>
-      <td class="sig-val">Date:</td>
-      <td class="sig-val">Date:</td>
-      <td class="sig-val" style="border-right:none;">Date:</td>
+      <td class="sig-val">Date: ${new Date().toLocaleDateString("en-IN", {timeZone: "Asia/Kolkata"})}</td>
+      <td class="sig-val">Date: ${new Date().toLocaleDateString("en-IN", {timeZone: "Asia/Kolkata"})}</td>
+      <td class="sig-val" style="border-right:none;">Date: ${new Date().toLocaleDateString("en-IN", {timeZone: "Asia/Kolkata"})}</td>
     </tr>
   </table>
 
