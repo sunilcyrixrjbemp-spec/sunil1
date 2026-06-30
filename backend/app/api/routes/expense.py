@@ -1267,6 +1267,11 @@ async def get_engineer_month_claims(
                 "visit_purpose": leg.visit_purpose or "",
                 "calls_assigned": leg.calls_assigned or 0,
                 "calls_completed": leg.calls_completed or 0,
+                "worked_district": leg.to_district or leg.from_district or "",
+                # TA = travel amount for Train/Bus modes; for Bike/Car it's bike_amount/car_amount
+                "ta_amount": (leg.travel_amount or 0.0) if leg.travel_mode in ["Train", "Bus"] else 0.0,
+                "sub_mode": leg.sub_mode or "",
+                "sub_amount": leg.sub_amount or 0.0,
             })
         leg_total = sum(
             (l["bike_amount"] + l["car_amount"] + l["auto_amount"] +
@@ -1288,12 +1293,15 @@ async def get_engineer_month_claims(
         "success": True,
         "user": {
             "name": target_user.name,
+            "user_id": target_user.user_id,
             "e_code": target_user.e_code or target_user.user_id,
             "grade": target_user.grade or "",
             "designation": target_user.designation or "Engineer",
             "district": target_user.district or "",
             "zone": target_user.zone or "",
             "manager": target_user.manager or "",
+            "mobile": target_user.mobile_number or "",
+            "type": target_user.type or (target_user.zone or ""),
             "month": month,
             "year": year
         },
