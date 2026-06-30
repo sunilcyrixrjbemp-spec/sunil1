@@ -79,6 +79,7 @@ function buildExcelPrintHTML(user: any, claims: any[], attachments: string[] = [
   const gLocal  = allLegs.reduce((s, r) => s + (r.leg.local_purchase || 0), 0);
   const gHotel  = allLegs.reduce((s, r) => s + (r.leg.hotel_amount || 0), 0);
   const gOther  = allLegs.reduce((s, r) => s + (r.leg.other_amount || 0), 0);
+  const gKM     = allLegs.reduce((s, r) => s + (r.leg.distance_km || 0), 0);
   const gTotal  = gTA + gBikeCar + gAuto + gDA + gLocal + gHotel + gOther;
 
   const gPMS = allLegs.reduce((s, r) => s + (r.leg.pms_count || 0), 0);
@@ -335,9 +336,10 @@ function buildExcelPrintHTML(user: any, claims: any[], attachments: string[] = [
     <tfoot>
       <!-- TOTAL EXPENSE CLAIMED row -->
       <tr style="background:#fff3cd!important;">
-        <td class="tot-lbl" colspan="6" style="text-align:center; border: 1.5px solid #000!important; text-transform:uppercase; background:#fff3cd!important;">
+        <td class="tot-lbl" colspan="5" style="text-align:center; border: 1.5px solid #000!important; text-transform:uppercase; background:#fff3cd!important;">
           TOTAL EXPENSE CLAIMED
         </td>
+        <td class="tot-num" style="border: 1.5px solid #000!important; background:#fff3cd!important; text-align:center;">${gKM > 0 ? gKM.toFixed(1) : ""}</td>
         <td class="tot-num" style="border: 1.5px solid #000!important; background:#fff3cd!important;">${gTA > 0 ? gTA.toFixed(2) : ""}</td>
         <td class="tot-num" style="border: 1.5px solid #000!important; background:#fff3cd!important;">${gAuto > 0 ? gAuto.toFixed(2) : ""}</td>
         <td class="tot-num" style="border: 1.5px solid #000!important; background:#fff3cd!important;">${gDA > 0 ? gDA.toFixed(2) : ""}</td>
