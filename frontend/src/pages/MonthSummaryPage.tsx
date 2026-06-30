@@ -140,7 +140,6 @@ function buildExcelPrintHTML(user: any, claims: any[], attachments: string[] = [
     </tr>`;
   }).join("\n");
 
-  const totalC = `border:1.5px solid #8B6914;padding:4px 5px;font-size:7.5pt;font-weight:900;color:#5d4007;background:#fff3cd!important;vertical-align:middle;`;
 
   // Attached receipts HTML block
   let attachmentsSection = "";
@@ -436,12 +435,6 @@ export default function MonthSummaryPage() {
   const totalAmount = filtered.reduce((s, r) => s + (r.total_amount || 0), 0);
   const totalKM = filtered.reduce((s, r) => s + (r.total_km || 0), 0);
 
-  const statCards = [
-    { label: "Engineers", value: totalEngineers, icon: <Users className="w-5 h-5" />, color: "bg-blue-50 text-blue-600" },
-    { label: "Approved Claims", value: totalClaims, icon: <CheckCircle className="w-5 h-5" />, color: "bg-green-50 text-green-600" },
-    { label: "Total Amount", value: fmt(totalAmount), icon: <IndianRupee className="w-5 h-5" />, color: "bg-amber-50 text-amber-600" },
-    { label: "Total KM", value: fmtN(totalKM) + " km", icon: <MapPin className="w-5 h-5" />, color: "bg-purple-50 text-purple-600" },
-  ];
 
   return (
     <div className="space-y-4 animate-fadeIn font-sans pb-10">
