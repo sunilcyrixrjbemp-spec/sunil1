@@ -227,6 +227,45 @@ export default function AnalysisPage() {
   const minDateStr = `${selectedYear}-${monthStr}-01`;
   const maxDateStr = `${selectedYear}-${monthStr}-${String(lastDay).padStart(2, "0")}`;
 
+  // Activity aggregates
+  const activityStats = useMemo(() => {
+    let callsAssigned = 0;
+    let callsCompleted = 0;
+    let pmsCount = 0;
+    let calibrationCount = 0;
+    let assetTaggingCount = 0;
+    let mobiliseCount = 0;
+
+    activeExpenses.forEach(e => {
+      callsAssigned += Number(e.calls_assigned || 0);
+      callsCompleted += Number(e.calls_completed || 0);
+      pmsCount += Number(e.pms_count || 0);
+      calibrationCount += Number(e.calibration_count || 0);
+      assetTaggingCount += Number(e.asset_tagging || 0);
+      mobiliseCount += Number(e.mobilise_asset_count || 0);
+    });
+
+    return {
+      callsAssigned,
+      callsCompleted,
+      pmsCount,
+      calibrationCount,
+      assetTaggingCount,
+      mobiliseCount
+    };
+  }, [activeExpenses]);
+
+  const activityChartData = useMemo(() => {
+    return [
+      { name: "Calls Assigned", count: activityStats.callsAssigned },
+      { name: "Calls Done", count: activityStats.callsCompleted },
+      { name: "PMS Done", count: activityStats.pmsCount },
+      { name: "Calibration Done", count: activityStats.calibrationCount },
+      { name: "Asset Tagging", count: activityStats.assetTaggingCount },
+      { name: "Asset Mobilised", count: activityStats.mobiliseCount }
+    ];
+  }, [activityStats]);
+
   // ============= DATA GROUPINGS =============
 
   const totalAmount = activeExpenses.reduce((s, e) => s + (e.amount || 0), 0);
@@ -492,25 +531,34 @@ export default function AnalysisPage() {
       </div>
 
       {/* Summary Stats */}
-      <div className="grid grid-cols-1 sm:grid-cols-4 gap-4">
-        <div className="bg-white border border-gray-200 border-t-4 border-t-blue-600 rounded p-4">
-          <p className="text-[10px] font-bold text-gray-500 uppercase tracking-wider">Total Claims</p>
-          <h4 className="text-2xl font-bold text-gray-900 mt-1">{count}</h4>
+      <div className="grid grid-cols-1 sm:grid-cols-7 gap-3">
+        <div className="bg-white border border-gray-200 border-t-4 border-t-blue-600 rounded p-3 text-center sm:text-left">
+          <p className="text-[9px] font-black text-gray-450 uppercase tracking-wider">Total Claims</p>
+          <h4 className="text-xl font-extrabold text-gray-900 mt-0.5">{count}</h4>
         </div>
-        <div className="bg-white border border-gray-200 border-t-4 border-t-green-600 rounded p-4">
-          <p className="text-[10px] font-bold text-gray-500 uppercase tracking-wider">Total Amount</p>
-          <h4 className="text-2xl font-bold text-gray-900 font-mono mt-1">₹{totalAmount.toLocaleString()}</h4>
+        <div className="bg-white border border-gray-200 border-t-4 border-t-green-600 rounded p-3 text-center sm:text-left">
+          <p className="text-[9px] font-black text-gray-455 uppercase tracking-wider">Total Amount</p>
+          <h4 className="text-xl font-extrabold text-gray-900 font-mono mt-0.5">₹{totalAmount.toLocaleString()}</h4>
         </div>
-        <div className="bg-white border border-gray-200 border-t-4 border-t-amber-500 rounded p-4">
-          <p className="text-[10px] font-bold text-gray-500 uppercase tracking-wider">Average Claim</p>
-          <h4 className="text-2xl font-bold text-gray-900 font-mono mt-1">₹{avgValue.toLocaleString()}</h4>
+        <div className="bg-white border border-gray-200 border-t-4 border-t-amber-500 rounded p-3 text-center sm:text-left">
+          <p className="text-[9px] font-black text-gray-450 uppercase tracking-wider">Average Claim</p>
+          <h4 className="text-xl font-extrabold text-gray-900 font-mono mt-0.5">₹{avgValue.toLocaleString()}</h4>
         </div>
-        <div className="bg-white border border-gray-200 border-t-4 border-t-purple-600 rounded p-4">
-          <p className="text-[10px] font-bold text-gray-500 uppercase tracking-wider">Viewing</p>
-          <h4 className="text-lg font-bold text-gray-900 mt-1">{viewMode === "team" ? "Team Data" : "My Data"}</h4>
-          <p className="text-[10px] text-gray-400">
-            {startDate || endDate ? `${startDate || "..."} to ${endDate || "..."}` : `${months[selectedMonth]} ${selectedYear}`}
-          </p>
+        <div className="bg-white border border-gray-200 border-t-4 border-t-indigo-500 rounded p-3 text-center sm:text-left">
+          <p className="text-[9px] font-black text-gray-450 uppercase tracking-wider">Calls Done / Assigned</p>
+          <h4 className="text-xl font-extrabold text-gray-900 mt-0.5">{activityStats.callsCompleted} / {activityStats.callsAssigned}</h4>
+        </div>
+        <div className="bg-white border border-gray-200 border-t-4 border-t-emerald-500 rounded p-3 text-center sm:text-left">
+          <p className="text-[9px] font-black text-gray-450 uppercase tracking-wider">PMS Completed</p>
+          <h4 className="text-xl font-extrabold text-gray-900 mt-0.5">{activityStats.pmsCount}</h4>
+        </div>
+        <div className="bg-white border border-gray-200 border-t-4 border-t-cyan-500 rounded p-3 text-center sm:text-left">
+          <p className="text-[9px] font-black text-gray-450 uppercase tracking-wider">Tag & Calib Done</p>
+          <h4 className="text-xl font-extrabold text-gray-900 mt-0.5">{activityStats.assetTaggingCount + activityStats.calibrationCount}</h4>
+        </div>
+        <div className="bg-white border border-gray-200 border-t-4 border-t-purple-600 rounded p-3 text-center sm:text-left">
+          <p className="text-[9px] font-black text-gray-450 uppercase tracking-wider">Scope</p>
+          <h4 className="text-sm font-extrabold text-gray-900 truncate mt-1">{viewMode === "team" ? "Team" : "My Data"}</h4>
         </div>
       </div>
 
@@ -714,6 +762,43 @@ export default function AnalysisPage() {
                 </ResponsiveContainer>
               ) : (
                 <div className="flex items-center justify-center h-full text-gray-400 text-xs">No category data</div>
+              )}
+            </div>
+          </div>
+
+          {/* Chart 7: Operations Activity Metrics */}
+          <div className="bg-white border border-gray-200 rounded shadow-sm lg:col-span-2">
+            <div className="px-4 py-3 border-b border-gray-200 bg-gray-50 flex items-center justify-between">
+              <div>
+                <h3 className="text-xs font-bold text-gray-700 uppercase tracking-wider">
+                  Operations Activity Metrics
+                </h3>
+                <p className="text-[10px] text-gray-400 mt-0.5">Calls, PMS, calibrations, and asset tagging totals</p>
+              </div>
+              <span className="bg-blue-50 text-blue-700 border border-blue-200 text-[10px] font-bold px-2 py-0.5 rounded">
+                Operational KPIs
+              </span>
+            </div>
+            <div className="p-4" style={{ height: 320 }}>
+              {activityChartData.some(d => d.count > 0) ? (
+                <ResponsiveContainer width="100%" height="100%">
+                  <BarChart data={activityChartData} margin={{ bottom: 15, top: 10 }}>
+                    <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
+                    <XAxis dataKey="name" tick={{ fontSize: 10, fontWeight: "bold" }} />
+                    <YAxis tick={{ fontSize: 10 }} allowDecimals={false} />
+                    <Tooltip formatter={(value) => [value, "Count"]} />
+                    <Bar dataKey="count" radius={[4, 4, 0, 0]} maxBarSize={60}>
+                      {activityChartData.map((_, idx) => {
+                        const colors = ["#007bff", "#28a745", "#17a2b8", "#ffc107", "#6f42c1", "#e83e8c"];
+                        return <Cell key={idx} fill={colors[idx % colors.length]} />;
+                      })}
+                    </Bar>
+                  </BarChart>
+                </ResponsiveContainer>
+              ) : (
+                <div className="flex items-center justify-center h-full text-gray-400 text-xs font-bold">
+                  No operational activities recorded in this selection
+                </div>
               )}
             </div>
           </div>

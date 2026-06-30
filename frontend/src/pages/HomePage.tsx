@@ -434,6 +434,82 @@ export default function HomePage() {
         </div>
       </div>
 
+      {/* ⚡ Quick Actions Navigation Bar */}
+      <div className="bg-white border-t-4 border-t-blue-500 rounded shadow-xs p-3 mb-4">
+        <h4 className="text-[10px] font-black uppercase text-gray-500 tracking-wider mb-2.5 flex items-center gap-1.5">
+          <Compass className="w-4 h-4 text-blue-600" />
+          Quick Actions Shortcuts
+        </h4>
+        <div className="flex flex-wrap gap-2.5">
+          <Link
+            to="/expense"
+            className="flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold px-3.5 py-2 rounded no-underline shadow-sm transition-all duration-200"
+          >
+            <Plus className="w-4 h-4" />
+            Submit New Expense
+          </Link>
+          
+          {(() => {
+            const allowed = (user?.allowed_windows || "").toLowerCase();
+            const isReviewer = user?.role === "Admin" || allowed.includes("approval");
+            if (isReviewer) {
+              return (
+                <Link
+                  to="/approval"
+                  className="flex items-center gap-2 bg-green-600 hover:bg-green-700 text-white text-xs font-bold px-3.5 py-2 rounded no-underline shadow-sm transition-all duration-200"
+                >
+                  <ShieldCheck className="w-4 h-4" />
+                  Approval Center
+                </Link>
+              );
+            }
+            return null;
+          })()}
+
+          {(() => {
+            const allowed = (user?.allowed_windows || "").toLowerCase();
+            if (user?.role === "Admin" || allowed.includes("consolidated_report")) {
+              return (
+                <Link
+                  to="/consolidated_report"
+                  className="flex items-center gap-2 bg-cyan-600 hover:bg-cyan-700 text-white text-xs font-bold px-3.5 py-2 rounded no-underline shadow-sm transition-all duration-200"
+                >
+                  <FileSpreadsheet className="w-4 h-4" />
+                  Consolidated Report
+                </Link>
+              );
+            }
+            return null;
+          })()}
+
+          {(() => {
+            const allowed = (user?.allowed_windows || "").toLowerCase();
+            if (user?.role === "Admin" || allowed.includes("analysis")) {
+              return (
+                <Link
+                  to="/analysis"
+                  className="flex items-center gap-2 bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold px-3.5 py-2 rounded no-underline shadow-sm transition-all duration-200"
+                >
+                  <BarChart3 className="w-4 h-4" />
+                  Analysis Dashboard
+                </Link>
+              );
+            }
+            return null;
+          })()}
+
+          {user?.role === "Admin" && (
+            <Link
+              to="/admin"
+              className="flex items-center gap-2 bg-gray-800 hover:bg-gray-900 text-white text-xs font-bold px-3.5 py-2 rounded no-underline shadow-sm transition-all duration-200"
+            >
+              <Users className="w-4 h-4" />
+              Admin Panel
+            </Link>
+          )}
+        </div>
+      </div>
+
       {/* Navigation Quick Cards replaced by Stats Cards */}
       <div className="space-y-3">
         <div className="flex items-center justify-between">
