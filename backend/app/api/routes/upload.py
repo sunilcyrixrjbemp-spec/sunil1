@@ -15,7 +15,7 @@ UPLOAD_DIR = os.path.join(BASE_DIR, "app", "static", "uploads")
 os.makedirs(UPLOAD_DIR, exist_ok=True)
 
 def save_uploaded_file(file: UploadFile, subfolder: str) -> str:
-    """Save upload file to Cloudflare R2 bucket or local disk fallback and return local proxy path"""
+    """Save upload file to Google Drive, with fallbacks to Cloudflare R2 bucket or local disk"""
     # Clean filename
     filename = os.path.basename(file.filename)
     name, ext = os.path.splitext(filename)
@@ -23,7 +23,30 @@ def save_uploaded_file(file: UploadFile, subfolder: str) -> str:
     safe_name = f"{name.replace(' ', '_')}_{timestamp}{ext}"
     key = f"{subfolder}/{safe_name}"
     
-    # R2 Upload path
+    # 1. Try Google Drive Upload First
+    try:
+        from datetime import datetime
+        now = datetime.now()
+        month_name = now.strftime("%B")
+        year_val = now.year
+        
+        file.file.seek(0)
+        file_bytes = file.file.read()
+        
+        from app.utils.gdrive import upload_file_to_drive
+        file_id = upload_file_to_drive(
+            file_content=file_bytes,
+            filename=safe_name,
+            mime_type=file.content_type or "application/octet-stream",
+            month_name=month_name,
+            year=year_val
+        )
+        logger.info(f"Successfully uploaded {safe_name} to Google Drive (ID: {file_id})")
+        return f"/api/upload/file/gdrive/{file_id}"
+    except Exception as drive_err:
+        logger.error(f"GDrive: Upload failed in save_uploaded_file, falling back to R2/Local. Error: {str(drive_err)}")
+
+    # 2. R2 Upload path fallback
     if settings.CLOUDFLARE_API_TOKEN and settings.CLOUDFLARE_ACCOUNT_ID and settings.CLOUDFLARE_R2_BUCKET_NAME:
         try:
             # Read file content
@@ -43,7 +66,7 @@ def save_uploaded_file(file: UploadFile, subfolder: str) -> str:
         except Exception as e:
             logger.error(f"Failed to upload {key} to R2: {str(e)}")
             
-    # Local fallback path
+    # 3. Local fallback path
     try:
         target_dir = os.path.join(UPLOAD_DIR, subfolder)
         os.makedirs(target_dir, exist_ok=True)
