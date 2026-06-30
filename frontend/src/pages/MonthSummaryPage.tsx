@@ -279,9 +279,10 @@ function buildExcelPrintHTML(user: any, claims: any[], attachments: string[] = [
       ${dataRows || `<tr><td colspan="18" style="text-align:center;padding:14px;color:#888;font-style:italic;font-size:8pt;">No expense leg data found for this period.</td></tr>`}
     </tbody>
     <tfoot>
+      <!-- TOTAL EXPENSE CLAIMED row -->
       <tr>
-        <td class="tot-lbl" colspan="6" style="text-align:left; border: 1px solid #b0c4de!important;">
-          TOTAL &nbsp;(${claims.length} days &nbsp;·&nbsp; ${allLegs.length} legs &nbsp;·&nbsp; ${gKM.toFixed(1)} KM)
+        <td class="tot-lbl" colspan="6" style="text-align:center; border: 1px solid #b0c4de!important; text-transform:uppercase;">
+          TOTAL EXPENSE CLAIMED
         </td>
         <td class="tot-num" style="border: 1px solid #b0c4de!important;">${gTA > 0 ? gTA.toFixed(2) : ""}</td>
         <td class="tot-num" style="border: 1px solid #b0c4de!important;">${gAuto > 0 ? gAuto.toFixed(2) : ""}</td>
@@ -291,11 +292,20 @@ function buildExcelPrintHTML(user: any, claims: any[], attachments: string[] = [
         <td class="tot-lbl" style="text-align:center;font-size:6.5pt!; border: 1px solid #b0c4de!important;">Other Total</td>
         <td class="tot-num" style="border: 1px solid #b0c4de!important;">${gOther > 0 ? gOther.toFixed(2) : ""}</td>
         <td class="tot-num" style="background:#fff3cd!important; font-weight:950; text-align:right; border: 1px solid #b0c4de!important;">${gTotal.toFixed(2)}</td>
-        <td class="tot-lbl" style="text-align:center;font-size:6pt!important; border: 1px solid #b0c4de!important;">Generated:<br>${now}</td>
-        <td class="tot-lbl" style="font-size:6.5pt!; border: 1px solid #b0c4de!important;"></td>
-        <td class="tot-num" style="text-align:center; border: 1px solid #b0c4de!important;">${gPMS > 0 ? gPMS : ""}</td>
-        <td class="tot-num" style="text-align:center; border: 1px solid #b0c4de!important;">${gCallsC > 0 ? `${gCallsC}/${gCallsA}` : ""}</td>
+        <td style="border: 1px solid #b0c4de!important;"></td>
+        <td style="border: 1px solid #b0c4de!important;"></td>
+        <td style="border: 1px solid #b0c4de!important;"></td>
+        <td style="border: 1px solid #b0c4de!important;"></td>
       </tr>
+      <!-- ADVANCES ROW -->
+      <tr>
+        <td colspan="13" style="border: 1.5px solid #000!important; background:#fff!important; font-weight:900; text-align:center; padding:5px 6px; font-size:8pt; text-transform:uppercase;">
+          ADVANCES
+        </td>
+        <td style="border: 1.5px solid #000!important; background:#fff!important; font-weight:950; text-align:center; font-size:8.5pt!important;"></td>
+        <td colspan="4" style="border: 1.5px solid #000!important; background:#fff!important;"></td>
+      </tr>
+      <!-- NET PAYABLE ROW -->
       <tr>
         <td class="net-lbl" colspan="13">NET PAYABLE</td>
         <td class="net-val" style="font-weight:950; font-size:8.5pt!important;">${Math.round(gTotal)}</td>
