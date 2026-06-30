@@ -1171,14 +1171,15 @@ export default function ExpensePage() {
     }
   }, [isLimitExceeded, limitType, excess]);
 
-  const validateClaim = () => {
+  const validateClaim = (customItineraries?: ItineraryLeg[]) => {
+    const listToValidate = customItineraries || itineraries;
     if (!date) {
       toast.error("Please choose a travel date first.");
       return false;
     }
 
-    for (let idx = 0; idx < itineraries.length; idx++) {
-      const leg = itineraries[idx];
+    for (let idx = 0; idx < listToValidate.length; idx++) {
+      const leg = listToValidate[idx];
       const legNum = idx + 1;
 
       if (!leg.from.trim()) {
@@ -1347,7 +1348,29 @@ export default function ExpensePage() {
 
   const handleFormSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!validateClaim()) return;
+
+    // Auto-add any unadded asset tagging equipment selection to the list
+    const processedItineraries = itineraries.map(l => {
+      if (l.selected_activities?.includes("Asset Tagging") && l.asset_tagging_equipment) {
+        const qty = parseInt(l.asset_tagging_quantity || "0") || 0;
+        if (qty > 0) {
+          const currentList = l.assets_list || [];
+          if (!currentList.some(item => item.equipment_name === l.asset_tagging_equipment)) {
+            return {
+              ...l,
+              assets_list: [...currentList, { equipment_name: l.asset_tagging_equipment, quantity: qty.toString() }],
+              asset_tagging_equipment: "",
+              asset_tagging_quantity: "0"
+            };
+          }
+        }
+      }
+      return l;
+    });
+
+    setItineraries(processedItineraries);
+
+    if (!validateClaim(processedItineraries)) return;
     setShowConfirmModal(true);
   };
 
@@ -2481,7 +2504,7 @@ export default function ExpensePage() {
                                 <span className="text-[11px] font-bold text-blue-700 uppercase tracking-wide">Support Calls Log</span>
                               </div>
                               <div className="grid grid-cols-1 sm:grid-cols-12 gap-3 items-end bg-gray-50/50 p-2.5 rounded border border-gray-200">
-                                <div className="sm:col-span-6">
+                                <div className="sm:col-span-5">
                                   <label className="label-lte font-bold">8-Digit Barcode (QR Code)</label>
                                   <div className="flex gap-1.5 items-center">
                                     <input
@@ -2504,15 +2527,6 @@ export default function ExpensePage() {
                                       className="btn-lte px-3 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded border-0 cursor-pointer disabled:bg-gray-200 disabled:text-gray-400 disabled:cursor-not-allowed text-xs font-bold shrink-0"
                                     >
                                       Verify
-                                    </button>
-                                    <button
-                                      type="button"
-                                      onClick={() => addVerifiedBarcode(leg.leg, "Calls")}
-                                      disabled={!leg.calls_verified}
-                                      className="btn-lte p-2 bg-green-600 hover:bg-green-700 text-white rounded border-0 cursor-pointer disabled:bg-gray-200 disabled:text-gray-400 disabled:cursor-not-allowed shrink-0 flex items-center justify-center"
-                                      title="Add Verified Entry"
-                                    >
-                                      <Plus className="w-4 h-4" />
                                     </button>
                                   </div>
                                 </div>
@@ -2538,6 +2552,17 @@ export default function ExpensePage() {
                                     <option value="Close">Close</option>
                                     <option value="Attend & Close">Attend & Close</option>
                                   </select>
+                                </div>
+                                <div className="sm:col-span-1 flex justify-center">
+                                  <button
+                                    type="button"
+                                    onClick={() => addVerifiedBarcode(leg.leg, "Calls")}
+                                    disabled={!leg.calls_verified}
+                                    className="btn-lte w-full py-2 bg-green-600 hover:bg-green-700 text-white rounded border-0 cursor-pointer disabled:bg-gray-200 disabled:text-gray-400 disabled:cursor-not-allowed flex items-center justify-center shrink-0"
+                                    title="Add Verified Entry"
+                                  >
+                                    <Plus className="w-4 h-4" />
+                                  </button>
                                 </div>
                               </div>
 
@@ -2641,18 +2666,9 @@ export default function ExpensePage() {
                                     >
                                       Verify
                                     </button>
-                                    <button
-                                      type="button"
-                                      onClick={() => addVerifiedBarcode(leg.leg, "PMS")}
-                                      disabled={!leg.pms_verified}
-                                      className="btn-lte p-2 bg-green-600 hover:bg-green-700 text-white rounded border-0 cursor-pointer disabled:bg-gray-200 disabled:text-gray-400 disabled:cursor-not-allowed shrink-0 flex items-center justify-center"
-                                      title="Add Verified Entry"
-                                    >
-                                      <Plus className="w-4 h-4" />
-                                    </button>
                                   </div>
                                 </div>
-                                <div className="sm:col-span-6">
+                                <div className="sm:col-span-5">
                                   <label className="label-lte font-bold">PMS Frequency Period</label>
                                   <select
                                     value={leg.pms_frequency || "3 month"}
@@ -2663,6 +2679,17 @@ export default function ExpensePage() {
                                     <option value="6 month">6 month</option>
                                     <option value="12 month">12 month</option>
                                   </select>
+                                </div>
+                                <div className="sm:col-span-1 flex justify-center">
+                                  <button
+                                    type="button"
+                                    onClick={() => addVerifiedBarcode(leg.leg, "PMS")}
+                                    disabled={!leg.pms_verified}
+                                    className="btn-lte w-full py-2 bg-green-600 hover:bg-green-700 text-white rounded border-0 cursor-pointer disabled:bg-gray-200 disabled:text-gray-400 disabled:cursor-not-allowed flex items-center justify-center shrink-0"
+                                    title="Add Verified Entry"
+                                  >
+                                    <Plus className="w-4 h-4" />
+                                  </button>
                                 </div>
                               </div>
 
