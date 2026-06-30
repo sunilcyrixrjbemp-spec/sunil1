@@ -14,8 +14,7 @@ import {
   FileText,
   DollarSign,
   Navigation,
-  X,
-  ChevronDown
+  X
 } from "lucide-react";
 
 interface ItineraryLeg {
@@ -229,7 +228,6 @@ export default function ExpensePage() {
     return new Date().toISOString().slice(0, 7);
   });
 
-  const [activeDropdown, setActiveDropdown] = useState<{ leg: number; field: "from" | "to" } | null>(null);
 
   const getFacilitiesForDistrict = (districtName: string): string[] => {
     if (!districtName || !facilities) return [];
