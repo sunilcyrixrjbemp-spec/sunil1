@@ -2056,121 +2056,73 @@ export default function ExpensePage() {
             </div>
 
             {/* Claims Totals & Submissions block */}
-            <div className="bg-white border border-gray-250 border-t-4 border-t-green-600 rounded shadow-sm p-4 space-y-4 text-xs font-semibold">
-              <h3 className="text-xs font-extrabold uppercase text-gray-700 tracking-wide border-b border-gray-150 pb-2 flex items-center gap-1.5">
-                <TrendingUp className="w-4 h-4 text-green-600" />
-                Claim Summary
-              </h3>
-
-              <div className="space-y-3 font-semibold text-[11px]">
-                <div className="flex justify-between items-center">
-                  <span className="text-gray-400 uppercase text-[9px]">TRAVEL DATE</span>
-                  <span className="text-gray-800">{date || "No date selected"}</span>
-                </div>
-                <div className="flex justify-between items-center">
-                  <span className="text-gray-400 uppercase text-[9px]">DISTANCE</span>
-                  <span className="text-gray-800 font-mono">{totalKm.toFixed(1)} KM</span>
-                </div>
-                <div className="flex justify-between items-center">
-                  <span className="text-gray-400 uppercase text-[9px]">AUTO COST</span>
-                  <span className="text-gray-800 font-mono">₹{totalAuto.toLocaleString()}</span>
-                </div>
-                <div className="flex justify-between items-center pt-2 border-t border-gray-150 text-xs">
-                  <span className="text-gray-900 font-black uppercase text-[10px]">TOTAL AMOUNT</span>
-                  <span className="text-blue-700 font-black font-mono text-sm">₹{totalAmt.toLocaleString()}</span>
-                </div>
-              </div>
-
-              {/* Warnings and Limit Extension panel */}
-              {isLimitExceeded && (
-                <div className="p-3 bg-red-50 border border-red-200 text-red-800 rounded space-y-1.5 text-[10px] mt-2">
-                  <div className="flex items-start gap-1 font-bold leading-tight">
-                    <AlertTriangle className="w-3.5 h-3.5 text-red-600 shrink-0" />
-                    <span>Monthly Cap Exceeded</span>
-                  </div>
-                  <p className="leading-relaxed font-medium">
-                    You have exceeded your monthly limit by <strong>{excess.toFixed(1)} {limitType === "KM" ? "KM" : "₹"}</strong>. Please request a limit extension increase from your manager.
-                  </p>
-                  <button
-                    type="button"
-                    onClick={() => setShowApprovalModal(true)}
-                    className="btn-lte-warning py-1 px-3 w-full rounded text-[9px] font-extrabold uppercase shrink-0 cursor-pointer"
-                  >
-                    Request Limit Extension
-                  </button>
-                </div>
-              )}
-
-              {/* Actions triggers (Desktop Only - Mobile uses fixed bottom bar below) */}
-              <div className="hidden lg:flex flex-col gap-2 pt-2 border-t border-gray-150">
-                <button
-                  type="submit"
-                  disabled={isLimitExceeded || submitting}
-                  className="btn-lte-success py-2 w-full font-bold uppercase tracking-wider flex items-center justify-center gap-1.5 border-0 cursor-pointer"
-                >
-                  {submitting ? (
-                    <>
-                      <Loader2 className="w-4 h-4 animate-spin" />
-                      <span>Submitting...</span>
-                    </>
-                  ) : (
-                    <>
-                      <Check className="w-4 h-4" />
-                      <span>{editExpenseId ? "Update Claim" : "Submit Claim"}</span>
-                    </>
-                  )}
-                </button>
-                <button
-                  type="button"
-                  onClick={() => navigate("/home")}
-                  className="btn-lte-outline py-2 w-full font-bold uppercase tracking-wider text-center cursor-pointer"
-                >
-                  Cancel &amp; Go Home
-                </button>
-              </div>
-
-            </div>
-
           </div>
 
         </div>
-      </form>
 
-      {/* Mobile view bottom docked bar (positioned bottom-14 to sit exactly above the dashboard navigation bar, and z-30 to prevent overlay overlap issues) */}
-      <div className="lg:hidden fixed bottom-14 left-0 right-0 bg-white border-t border-gray-200 shadow-[0_-4px_10px_rgba(0,0,0,0.05)] p-3 z-30 flex items-center justify-between px-4">
-        <div>
-          <span className="text-[9px] uppercase font-bold text-gray-400 block tracking-wider leading-none mb-0.5">Total Amount</span>
-          <span className="text-blue-700 font-extrabold text-sm font-mono">₹{totalAmt.toLocaleString()}</span>
-        </div>
-        <div className="flex gap-2">
-          {isLimitExceeded && (
+        {/* Claims Totals & Submissions bar (Full width under the grid) */}
+        <div className="bg-white border border-gray-250 border-t-4 border-t-green-600 rounded shadow-sm p-4 flex flex-col md:flex-row md:items-center md:justify-between gap-4 text-xs font-semibold mt-6 w-full">
+          <div className="flex flex-wrap items-center gap-4 md:gap-6 text-[11px]">
+            <div className="flex items-center gap-1.5 border-r border-gray-200 pr-4 md:pr-6">
+              <TrendingUp className="w-4 h-4 text-green-600" />
+              <span className="text-xs font-extrabold uppercase text-gray-700 tracking-wide">Claim Summary</span>
+            </div>
+            <div>
+              <span className="text-gray-400 uppercase text-[9px] block mb-0.5">TRAVEL DATE</span>
+              <span className="text-gray-800">{date || "No date selected"}</span>
+            </div>
+            <div>
+              <span className="text-gray-400 uppercase text-[9px] block mb-0.5">DISTANCE</span>
+              <span className="text-gray-800 font-mono">{totalKm.toFixed(1)} KM</span>
+            </div>
+            <div>
+              <span className="text-gray-400 uppercase text-[9px] block mb-0.5">AUTO COST</span>
+              <span className="text-gray-800 font-mono">₹{totalAuto.toLocaleString()}</span>
+            </div>
+            <div className="border-l border-gray-200 pl-4 md:pl-6">
+              <span className="text-gray-900 font-black uppercase text-[10px] block mb-0.5">TOTAL AMOUNT</span>
+              <span className="text-blue-700 font-black font-mono text-sm">₹{totalAmt.toLocaleString()}</span>
+            </div>
+          </div>
+
+          <div className="flex items-center gap-2 shrink-0">
+            {isLimitExceeded && (
+              <button
+                type="button"
+                onClick={() => setShowApprovalModal(true)}
+                className="btn-lte-warning py-1.5 px-3 rounded text-[10px] font-extrabold uppercase cursor-pointer"
+              >
+                Extend Limit
+              </button>
+            )}
+            <button
+              type="submit"
+              disabled={isLimitExceeded || submitting}
+              className="btn-lte-success py-2 px-6 font-bold uppercase tracking-wider flex items-center justify-center gap-1.5 border-0 cursor-pointer text-xs"
+            >
+              {submitting ? (
+                <>
+                  <Loader2 className="w-4 h-4 animate-spin" />
+                  <span>Submitting...</span>
+                </>
+              ) : (
+                <>
+                  <Check className="w-4 h-4" />
+                  <span>{editExpenseId ? "Update Claim" : "Submit Claim"}</span>
+                </>
+              )}
+            </button>
             <button
               type="button"
-              onClick={() => setShowApprovalModal(true)}
-              className="btn-lte-warning py-1.5 px-3 rounded text-[10px] font-extrabold uppercase shrink-0 cursor-pointer"
+              onClick={() => navigate("/home")}
+              className="btn-lte-outline py-2 px-4 font-bold uppercase tracking-wider text-center cursor-pointer text-xs"
             >
-              Extend
+              Cancel
             </button>
-          )}
-          <button
-            type="button"
-            disabled={isLimitExceeded || submitting}
-            onClick={() => {
-              if (!date) {
-                toast.error("Please select date first!");
-                return;
-              }
-              if (!validateClaim()) {
-                return;
-              }
-              setShowConfirmModal(true);
-            }}
-            className="btn-lte-success py-1.5 px-5 font-bold uppercase tracking-wider text-xs border-0 cursor-pointer"
-          >
-            {submitting ? "Submitting..." : editExpenseId ? "Update" : "Submit"}
-          </button>
+          </div>
         </div>
-      </div>
+
+      </form>
 
       {/* Full Width Bottom Section: Recent Submissions table */}
       <div className="bg-white border border-gray-250 rounded shadow-sm overflow-hidden flex flex-col mt-6">
