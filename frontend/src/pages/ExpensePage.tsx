@@ -2584,7 +2584,7 @@ export default function ExpensePage() {
                                 <span className="text-[11px] font-bold text-blue-700 uppercase tracking-wide">Support Calls Log</span>
                               </div>
                               <div className="grid grid-cols-1 sm:grid-cols-12 gap-3 items-end bg-gray-50/50 p-2.5 rounded border border-gray-200">
-                                <div className="sm:col-span-4">
+                                <div className="sm:col-span-5">
                                   <label className="label-lte font-bold">8-Digit Barcode (QR Code)</label>
                                   <div className="flex gap-1.5 items-center">
                                     <input
@@ -2611,58 +2611,6 @@ export default function ExpensePage() {
                                   </div>
                                 </div>
                                 <div className="sm:col-span-3">
-                                   <label className="label-lte font-bold">Photo (Optional)</label>
-                                   {leg.calls_photo_url ? (
-                                     <div className="flex items-center justify-between bg-blue-50 border border-blue-200 px-3 py-1.5 rounded text-xs">
-                                       <span className="font-semibold text-blue-700 truncate max-w-[100px]">{leg.calls_photo_name || "photo.jpg"}</span>
-                                       <div className="flex gap-2">
-                                         <button 
-                                           type="button" 
-                                           onClick={() => {
-                                             const fullUrl = `${import.meta.env.VITE_API_URL || "https://expense-backend-zio8.onrender.com"}${leg.calls_photo_url}`;
-                                             setLightboxImage(fullUrl);
-                                           }} 
-                                           className="text-blue-600 hover:underline border-0 bg-transparent font-bold cursor-pointer"
-                                         >
-                                           Preview
-                                         </button>
-                                         <a 
-                                           href={`${import.meta.env.VITE_API_URL || "https://expense-backend-zio8.onrender.com"}${leg.calls_photo_url}`} 
-                                           download={leg.calls_photo_name || "download"} 
-                                           className="text-green-600 hover:underline font-bold"
-                                         >
-                                           Download
-                                         </a>
-                                         <button 
-                                           type="button" 
-                                           onClick={() => {
-                                             handleItineraryChange(leg.leg, "calls_photo_url", "");
-                                             handleItineraryChange(leg.leg, "calls_photo_name", "");
-                                           }} 
-                                           className="text-rose-600 hover:underline border-0 bg-transparent font-bold cursor-pointer"
-                                         >
-                                           Delete
-                                         </button>
-                                       </div>
-                                     </div>
-                                   ) : (
-                                     <div className="relative">
-                                       <input
-                                         type="file"
-                                         accept="image/*"
-                                         onChange={(e) => {
-                                           const file = e.target.files?.[0];
-                                           if (file) {
-                                             uploadActivityPhoto(leg.leg, "Calls", file);
-                                           }
-                                         }}
-                                         className="text-xs file:mr-4 file:py-1.5 file:px-3 file:rounded file:border file:border-gray-350 file:text-[10px] file:font-bold file:uppercase file:bg-white file:text-gray-700 hover:file:bg-gray-50 cursor-pointer w-full"
-                                       />
-                                       {leg.calls_photo_loading && <span className="text-[9px] text-blue-600 font-semibold block animate-pulse mt-0.5">Uploading...</span>}
-                                     </div>
-                                   )}
-                                 </div>
-                                <div className="sm:col-span-2">
                                   <label className="label-lte font-bold">Call Type</label>
                                   <select
                                     value={leg.calls_type || "Support Call"}
@@ -2673,7 +2621,7 @@ export default function ExpensePage() {
                                     <option value="Online Call">Online Call</option>
                                   </select>
                                 </div>
-                                <div className="sm:col-span-2">
+                                <div className="sm:col-span-3">
                                   <label className="label-lte font-bold">Call Status</label>
                                   <select
                                     value={leg.calls_status || "Attend"}
@@ -2695,6 +2643,60 @@ export default function ExpensePage() {
                                   >
                                     <Plus className="w-4 h-4" />
                                   </button>
+                                </div>
+                                
+                                {/* Photo Upload Row - Spans Full Width */}
+                                <div className="sm:col-span-12 pt-2 border-t border-gray-150">
+                                  <label className="label-lte font-bold">Photo (Optional)</label>
+                                  {leg.calls_photo_url ? (
+                                    <div className="flex items-center justify-between bg-blue-50 border border-blue-200 px-3 py-1.5 rounded text-xs">
+                                      <span className="font-semibold text-blue-700 truncate max-w-[200px]">{leg.calls_photo_name || "photo.jpg"}</span>
+                                      <div className="flex gap-2">
+                                        <button 
+                                          type="button" 
+                                          onClick={() => {
+                                            const fullUrl = `${import.meta.env.VITE_API_URL || "https://expense-backend-zio8.onrender.com"}${leg.calls_photo_url}`;
+                                            setLightboxImage(fullUrl);
+                                          }} 
+                                          className="text-blue-600 hover:underline border-0 bg-transparent font-bold cursor-pointer"
+                                        >
+                                          Preview
+                                        </button>
+                                        <a 
+                                          href={`${import.meta.env.VITE_API_URL || "https://expense-backend-zio8.onrender.com"}${leg.calls_photo_url}`} 
+                                          download={leg.calls_photo_name || "download"} 
+                                          className="text-green-600 hover:underline font-bold"
+                                        >
+                                          Download
+                                        </a>
+                                        <button 
+                                          type="button" 
+                                          onClick={() => {
+                                            handleItineraryChange(leg.leg, "calls_photo_url", "");
+                                            handleItineraryChange(leg.leg, "calls_photo_name", "");
+                                          }} 
+                                          className="text-rose-600 hover:underline border-0 bg-transparent font-bold cursor-pointer"
+                                        >
+                                          Delete
+                                        </button>
+                                      </div>
+                                    </div>
+                                  ) : (
+                                    <div className="relative">
+                                      <input
+                                        type="file"
+                                        accept="image/*"
+                                        onChange={(e) => {
+                                          const file = e.target.files?.[0];
+                                          if (file) {
+                                            uploadActivityPhoto(leg.leg, "Calls", file);
+                                          }
+                                        }}
+                                        className="text-xs file:mr-4 file:py-1.5 file:px-3 file:rounded file:border file:border-gray-350 file:text-[10px] file:font-bold file:uppercase file:bg-white file:text-gray-700 hover:file:bg-gray-50 cursor-pointer w-full"
+                                      />
+                                      {leg.calls_photo_loading && <span className="text-[9px] text-blue-600 font-semibold block animate-pulse mt-0.5">Uploading...</span>}
+                                    </div>
+                                  )}
                                 </div>
                               </div>
 
@@ -2791,7 +2793,7 @@ export default function ExpensePage() {
                                 <span className="text-[11px] font-bold text-amber-700 uppercase tracking-wide">Planned Maintenance Services (PMS)</span>
                               </div>
                               <div className="grid grid-cols-1 sm:grid-cols-12 gap-3 items-end bg-gray-50/50 p-2.5 rounded border border-gray-200">
-                                <div className="sm:col-span-4">
+                                <div className="sm:col-span-6">
                                   <label className="label-lte font-bold">8-Digit Barcode (QR Code)</label>
                                   <div className="flex gap-1.5 items-center">
                                     <input
@@ -2817,11 +2819,36 @@ export default function ExpensePage() {
                                     </button>
                                   </div>
                                 </div>
-                                <div className="sm:col-span-3">
+                                <div className="sm:col-span-5">
+                                  <label className="label-lte font-bold">PMS Frequency Period</label>
+                                  <select
+                                    value={leg.pms_frequency || "3 month"}
+                                    onChange={(e) => handleItineraryChange(leg.leg, "pms_frequency", e.target.value)}
+                                    className="input-lte text-xs font-semibold py-1.5 px-2 bg-white"
+                                  >
+                                    <option value="3 month">3 month</option>
+                                    <option value="6 month">6 month</option>
+                                    <option value="12 month">12 month</option>
+                                  </select>
+                                </div>
+                                <div className="sm:col-span-1 flex justify-center">
+                                  <button
+                                    type="button"
+                                    onClick={() => addVerifiedBarcode(leg.leg, "PMS")}
+                                    disabled={!leg.pms_verified}
+                                    className="btn-lte w-full py-2 bg-green-600 hover:bg-green-700 text-white rounded border-0 cursor-pointer disabled:bg-gray-200 disabled:text-gray-400 disabled:cursor-not-allowed flex items-center justify-center shrink-0"
+                                    title="Add Verified Entry"
+                                  >
+                                    <Plus className="w-4 h-4" />
+                                  </button>
+                                </div>
+                                
+                                {/* Photo Upload Row - Spans Full Width */}
+                                <div className="sm:col-span-12 pt-2 border-t border-gray-150">
                                   <label className="label-lte font-bold">Photo (Optional)</label>
                                   {leg.pms_photo_url ? (
                                     <div className="flex items-center justify-between bg-blue-50 border border-blue-200 px-3 py-1.5 rounded text-xs">
-                                      <span className="font-semibold text-blue-700 truncate max-w-[100px]">{leg.pms_photo_name || "photo.jpg"}</span>
+                                      <span className="font-semibold text-blue-700 truncate max-w-[200px]">{leg.pms_photo_name || "photo.jpg"}</span>
                                       <div className="flex gap-2">
                                         <button 
                                           type="button" 
@@ -2868,29 +2895,6 @@ export default function ExpensePage() {
                                       {leg.pms_photo_loading && <span className="text-[9px] text-blue-600 font-semibold block animate-pulse mt-0.5">Uploading...</span>}
                                     </div>
                                   )}
-                                </div>
-                                <div className="sm:col-span-4">
-                                  <label className="label-lte font-bold">PMS Frequency Period</label>
-                                  <select
-                                    value={leg.pms_frequency || "3 month"}
-                                    onChange={(e) => handleItineraryChange(leg.leg, "pms_frequency", e.target.value)}
-                                    className="input-lte text-xs font-semibold py-1.5 px-2 bg-white"
-                                  >
-                                    <option value="3 month">3 month</option>
-                                    <option value="6 month">6 month</option>
-                                    <option value="12 month">12 month</option>
-                                  </select>
-                                </div>
-                                <div className="sm:col-span-1 flex justify-center">
-                                  <button
-                                    type="button"
-                                    onClick={() => addVerifiedBarcode(leg.leg, "PMS")}
-                                    disabled={!leg.pms_verified}
-                                    className="btn-lte w-full py-2 bg-green-600 hover:bg-green-700 text-white rounded border-0 cursor-pointer disabled:bg-gray-200 disabled:text-gray-400 disabled:cursor-not-allowed flex items-center justify-center shrink-0"
-                                    title="Add Verified Entry"
-                                  >
-                                    <Plus className="w-4 h-4" />
-                                  </button>
                                 </div>
                               </div>
 
