@@ -53,5 +53,15 @@ export const expenseService = {
   getAssetValueMaster: async (): Promise<any[]> => {
     const response = await api.get("/expense/asset-value-master");
     return response.data;
+  },
+
+  getMonthSummary: async (params?: { month?: string; year?: number; district?: string; engineer?: string }): Promise<any> => {
+    const qp = new URLSearchParams();
+    if (params?.month) qp.set("month", params.month);
+    if (params?.year) qp.set("year", String(params.year));
+    if (params?.district) qp.set("district", params.district);
+    if (params?.engineer) qp.set("engineer", params.engineer);
+    const response = await api.get(`/expense/month-summary${qp.toString() ? "?" + qp.toString() : ""}`);
+    return response.data;
   }
 };

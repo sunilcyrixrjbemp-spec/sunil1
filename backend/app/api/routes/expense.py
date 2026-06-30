@@ -1040,6 +1040,135 @@ async def submit_expense(
         "exp_id": final_exp_id
     }
 
+@router.get("/month-summary")
+async def get_month_summary(
+    month: Optional[str] = None,
+    year: Optional[int] = None,
+    district: Optional[str] = None,
+    engineer: Optional[str] = None,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    """Engineer-wise approved expense summary grouped by month/year. Used for Month Summary report page."""
+    # Role-based scoping: Admin/Superadmin/Accounts see all; Managers/Coordinators see team
+    role = current_user.role or ""
+    name_clean = current_user.name.strip()
+    uid_clean = current_user.user_id.strip()
+
+    if role in ["Admin", "Superadmin", "MIS", "Accounts"]:
+        scope_users = db.query(User).all()
+    else:
+        scope_users = db.query(User).filter(
+            (func.lower(User.manager) == func.lower(name_clean)) |
+            (func.lower(User.manager) == func.lower(uid_clean)) |
+            (func.lower(User.coordinator) == func.lower(name_clean)) |
+            (func.lower(User.coordinator) == func.lower(uid_clean)) |
+            (func.lower(User.zonal_manager) == func.lower(name_clean)) |
+            (func.lower(User.zonal_manager) == func.lower(uid_clean))
+        ).all()
+
+    if not scope_users:
+        return {"success": True, "data": [], "districts": []}
+
+    scope_user_ids = [u.id for u in scope_users]
+    user_map = {u.id: u for u in scope_users}
+
+    # Query approved expenses (fully approved = status "approved")
+    q = db.query(Expense).filter(
+        Expense.user_id.in_(scope_user_ids),
+        Expense.status == "approved"
+    )
+    if month:
+        q = q.filter(Expense.month == month)
+    if year:
+        q = q.filter(Expense.year == year)
+    expenses = q.all()
+
+    if not expenses:
+        districts = sorted({u.district for u in scope_users if u.district})
+        return {"success": True, "data": [], "districts": list(districts)}
+
+    # Pre-fetch itineraries for distance/travel computations
+    expense_codes = [e.expense_code for e in expenses if e.expense_code]
+    all_legs = db.query(ExpenseItinerary).filter(ExpenseItinerary.exp_id.in_(expense_codes)).all()
+    legs_by_code: dict = {}
+    for leg in all_legs:
+        legs_by_code.setdefault(leg.exp_id, []).append(leg)
+
+    # Group by (user_id, month, year)
+    from collections import defaultdict
+    groups: dict = defaultdict(list)
+    for exp in expenses:
+        groups[(exp.user_id, exp.month, exp.year)].append(exp)
+
+    rows = []
+    for (uid, mon, yr), exps in groups.items():
+        user = user_map.get(uid)
+        if not user:
+            continue
+        # Apply engineer filter
+        if engineer:
+            eng_lower = engineer.lower()
+            if eng_lower not in (user.name or "").lower() and eng_lower not in (user.e_code or "").lower() and eng_lower not in (user.user_id or "").lower():
+                continue
+        # Apply district filter
+        if district and (user.district or "") != district:
+            continue
+
+        total_amount = sum(e.amount or 0.0 for e in exps)
+        total_da = sum(e.da_amount or 0.0 for e in exps)
+        total_hotel = sum(e.hotel_amount or 0.0 for e in exps)
+        total_other = sum(e.other_expense_amount or 0.0 for e in exps)
+        total_local = sum(e.local_purchase_amount or 0.0 for e in exps)
+
+        total_km = 0.0
+        total_bike_amount = 0.0
+        total_car_amount = 0.0
+        total_auto_amount = 0.0
+        for exp in exps:
+            legs = legs_by_code.get(exp.expense_code, [])
+            total_km += sum(l.distance_km or 0.0 for l in legs if l.travel_mode in ["Bike", "Car"])
+            total_bike_amount += sum(l.travel_amount or 0.0 for l in legs if l.travel_mode == "Bike")
+            total_car_amount += sum(l.travel_amount or 0.0 for l in legs if l.travel_mode == "Car")
+            total_auto_amount += (
+                sum(l.travel_amount or 0.0 for l in legs if l.travel_mode == "Auto") +
+                sum(l.sub_amount or 0.0 for l in legs if l.sub_mode == "Auto")
+            )
+
+        rows.append({
+            "user_id": user.user_id,
+            "e_code": user.e_code or user.user_id,
+            "name": user.name,
+            "designation": user.designation or "Engineer",
+            "grade": user.grade or "",
+            "district": user.district or "",
+            "zone": user.zone or "",
+            "manager": user.manager or "",
+            "month": mon,
+            "year": yr,
+            "claims_count": len(exps),
+            "total_amount": round(total_amount, 2),
+            "da_amount": round(total_da, 2),
+            "hotel_amount": round(total_hotel, 2),
+            "bike_amount": round(total_bike_amount, 2),
+            "car_amount": round(total_car_amount, 2),
+            "auto_amount": round(total_auto_amount, 2),
+            "other_amount": round(total_other, 2),
+            "local_purchase_amount": round(total_local, 2),
+            "total_km": round(total_km, 2),
+            "expense_codes": [e.expense_code for e in exps if e.expense_code],
+            "expense_ids": [e.id for e in exps],
+        })
+
+    # Sort: year desc, month asc, name asc
+    month_order = {"January":1,"February":2,"March":3,"April":4,"May":5,"June":6,
+                   "July":7,"August":8,"September":9,"October":10,"November":11,"December":12}
+    rows.sort(key=lambda r: (-r["year"], month_order.get(r["month"], 0), r["name"]))
+
+    districts = sorted({u.district for u in scope_users if u.district})
+    return {"success": True, "data": rows, "districts": list(districts)}
+
+
 @router.get("/")
 async def get_expenses(
     db: Session = Depends(get_db),
