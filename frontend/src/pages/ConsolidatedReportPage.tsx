@@ -1,11 +1,11 @@
-import React, { useState, useEffect } from "react";
+import { useState, useEffect } from "react";
 import { 
   FileSpreadsheet, Calendar, Search, RefreshCw, 
   Download, Users, IndianRupee, ShieldAlert, CheckCircle2 
 } from "lucide-react";
 import { Link } from "react-router-dom";
 import toast from "react-hot-toast";
-import expenseService from "../services/expenseService";
+import { expenseService } from "../services/expenseService";
 
 const MONTHS = [
   "", "January", "February", "March", "April", "May", "June",
