@@ -521,10 +521,12 @@ export default function MonthSummaryPage() {
     const tid = toast.loading("Checking advance details...");
     
     let savedAdvance = 0;
+    let exists = false;
     try {
       const resAdv = await expenseService.getEngineerAdvance(row.user_id, row.month, row.year);
       if (resAdv && resAdv.success) {
         savedAdvance = resAdv.advance_amount || 0;
+        exists = !!resAdv.exists;
       }
     } catch (e) {
       console.error(e);
@@ -533,7 +535,7 @@ export default function MonthSummaryPage() {
       setPdfLoadingId(null);
     }
 
-    if (savedAdvance > 0 || !isAllowedAdvance) {
+    if (exists || !isAllowedAdvance) {
       await generateSinglePDF(row, savedAdvance);
     } else {
       setAdvanceAmountInput("0");
@@ -677,8 +679,9 @@ export default function MonthSummaryPage() {
           ]);
           fetched.push({ row, res: claimRes });
           const amt = advRes?.advance_amount || 0;
+          const exists = !!advRes?.exists;
           advancesMap[key] = amt;
-          if (amt === 0) {
+          if (!exists) {
             keysWithNoAdvance.push({ row, key });
           }
         } catch (e) {
@@ -779,8 +782,9 @@ export default function MonthSummaryPage() {
           ]);
           fetched.push({ row, res: claimRes });
           const amt = advRes?.advance_amount || 0;
+          const exists = !!advRes?.exists;
           advancesMap[key] = amt;
-          if (amt === 0) {
+          if (!exists) {
             keysWithNoAdvance.push({ row, key });
           }
         } catch (e) {

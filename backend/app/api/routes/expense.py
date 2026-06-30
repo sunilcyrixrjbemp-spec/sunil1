@@ -1817,6 +1817,7 @@ async def get_engineer_advance(
     
     return {
         "success": True,
+        "exists": adv is not None,
         "advance_amount": adv.advance_amount if adv else 0.0
     }
 
