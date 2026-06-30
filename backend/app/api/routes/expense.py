@@ -1248,6 +1248,23 @@ async def get_engineer_month_claims(
             car_km = leg.distance_km if leg.travel_mode == "Car" else 0.0
             bike_amt = leg.travel_amount if leg.travel_mode == "Bike" else 0.0
             car_amt = leg.travel_amount if leg.travel_mode == "Car" else 0.0
+            # Extract barcodes from activity_details
+            barcodes = []
+            raw_act = leg.activity_details
+            if raw_act:
+                try:
+                    act_details = json.loads(raw_act) if isinstance(raw_act, str) else raw_act
+                    if isinstance(act_details, dict):
+                        for item in (act_details.get("calls_list") or []):
+                            if item.get("barcode"):
+                                barcodes.append(item.get("barcode"))
+                        for item in (act_details.get("pms_list") or []):
+                            if item.get("barcode") and item.get("barcode") not in barcodes:
+                                barcodes.append(item.get("barcode"))
+                except Exception:
+                    pass
+            barcode_ticket_str = ", ".join(barcodes) if barcodes else ""
+
             leg_data.append({
                 "leg_number": leg.leg_number,
                 "from_location": leg.from_location or leg.from_district or "—",
@@ -1267,11 +1284,13 @@ async def get_engineer_month_claims(
                 "visit_purpose": leg.visit_purpose or "",
                 "calls_assigned": leg.calls_assigned or 0,
                 "calls_completed": leg.calls_completed or 0,
+                "pms_count": leg.pms_count or 0,
                 "worked_district": leg.to_district or leg.from_district or "",
                 # TA = travel amount for Train/Bus modes; for Bike/Car it's bike_amount/car_amount
                 "ta_amount": (leg.travel_amount or 0.0) if leg.travel_mode in ["Train", "Bus"] else 0.0,
                 "sub_mode": leg.sub_mode or "",
                 "sub_amount": leg.sub_amount or 0.0,
+                "barcode_ticket": barcode_ticket_str,
             })
         leg_total = sum(
             (l["bike_amount"] + l["car_amount"] + l["auto_amount"] +

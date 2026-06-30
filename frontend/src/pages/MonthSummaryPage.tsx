@@ -70,17 +70,21 @@ function buildExcelPrintHTML(user: any, claims: any[]): string {
     }
   }
 
-  // Grand totals
-  const gTA     = allLegs.reduce((s, r) => s + (r.leg.ta_amount || 0) + (r.leg.bike_amount || 0) + (r.leg.car_amount || 0), 0);
+  // Grand totals — TA only Train/Bus; bike/car goes into Total but not TA column
+  const gTA     = allLegs.reduce((s, r) => s + (r.leg.ta_amount || 0), 0);          // Train/Bus only
+  const gBikeCar= allLegs.reduce((s, r) => s + (r.leg.bike_amount || 0) + (r.leg.car_amount || 0), 0);
   const gAuto   = allLegs.reduce((s, r) => s + (r.leg.auto_amount || 0), 0);
   const gDA     = allLegs.reduce((s, r) => s + (r.leg.da_amount || 0), 0);
   const gLocal  = allLegs.reduce((s, r) => s + (r.leg.local_purchase || 0), 0);
   const gHotel  = allLegs.reduce((s, r) => s + (r.leg.hotel_amount || 0), 0);
   const gOther  = allLegs.reduce((s, r) => s + (r.leg.other_amount || 0), 0);
   const gKM     = allLegs.reduce((s, r) => s + (r.leg.distance_km || 0), 0);
-  const gTotal  = gTA + gAuto + gDA + gLocal + gHotel + gOther;
+  const gTotal  = gTA + gBikeCar + gAuto + gDA + gLocal + gHotel + gOther;
+  const gPMS    = allLegs.reduce((s, r) => s + (r.leg.pms_count || 0), 0);
+  const gCallsA = allLegs.reduce((s, r) => s + (r.leg.calls_assigned || 0), 0);
+  const gCallsC = allLegs.reduce((s, r) => s + (r.leg.calls_completed || 0), 0);
 
-  // ── mode abbreviation helper ──
+  // ── mode abbreviation ──
   const modeAbbr = (m: string) => {
     if (!m) return "";
     const map: Record<string, string> = {
@@ -90,19 +94,18 @@ function buildExcelPrintHTML(user: any, claims: any[]): string {
     return map[m] || m;
   };
 
-  // ── Travel amount column: TA for Train/Bus, Bike/Car amount for others ──
-  const travelAmt = (leg: any) => {
-    if (leg.ta_amount > 0) return leg.ta_amount;     // Train / Bus
-    if (leg.bike_amount > 0) return leg.bike_amount; // Bike
-    if (leg.car_amount > 0) return leg.car_amount;   // Car
-    return 0;
-  };
-
-  // ── Data rows ──
+  // ── Data rows — 18 columns ──
+  // Col order: Date | From | To | Worked District | Mode | KM |
+  //            TA(Train/Bus only) | Auto | DA | Local Spare | Hotel |
+  //            Other Desc | Other Amt | Total | Remarks | Barcode | PMS | Calls
   const dataRows = allLegs.map((r, i) => {
     const l = r.leg;
-    const ta = travelAmt(l);
-    const rowTotal = (l.da_amount || 0) + ta + (l.auto_amount || 0) + (l.hotel_amount || 0) + (l.local_purchase || 0) + (l.other_amount || 0);
+    // TA column = ONLY train/bus ticket amount
+    const taCol   = l.ta_amount || 0;
+    // Bike/Car amounts included in Total but no separate column
+    const bikeCarAmt = (l.bike_amount || 0) + (l.car_amount || 0);
+    const rowTotal = taCol + bikeCarAmt + (l.auto_amount || 0) + (l.da_amount || 0)
+                   + (l.local_purchase || 0) + (l.hotel_amount || 0) + (l.other_amount || 0);
     const bg = i % 2 === 0 ? "#ffffff" : "#f0f7ff";
     const c = `border:1px solid #b0c4de;padding:3px 4px;font-size:7pt;font-weight:500;color:#000;vertical-align:middle;word-wrap:break-word;`;
 
@@ -113,7 +116,7 @@ function buildExcelPrintHTML(user: any, claims: any[]): string {
       <td style="${c}text-align:center;">${l.worked_district || ""}</td>
       <td style="${c}text-align:center;font-weight:700;">${modeAbbr(l.travel_mode)}</td>
       <td style="${c}text-align:center;">${l.distance_km > 0 ? l.distance_km.toFixed(1) : ""}</td>
-      <td style="${c}text-align:right;">${ta > 0 ? ta.toFixed(2) : ""}</td>
+      <td style="${c}text-align:right;">${taCol > 0 ? taCol.toFixed(2) : ""}</td>
       <td style="${c}text-align:right;">${l.auto_amount > 0 ? l.auto_amount.toFixed(2) : ""}</td>
       <td style="${c}text-align:right;">${l.da_amount > 0 ? l.da_amount.toFixed(2) : ""}</td>
       <td style="${c}text-align:right;">${l.local_purchase > 0 ? l.local_purchase.toFixed(2) : ""}</td>
@@ -122,9 +125,9 @@ function buildExcelPrintHTML(user: any, claims: any[]): string {
       <td style="${c}text-align:right;">${l.other_amount > 0 ? l.other_amount.toFixed(2) : ""}</td>
       <td style="${c}text-align:right;font-weight:800;background:#e8f5e9!important;">${rowTotal > 0 ? rowTotal.toFixed(2) : ""}</td>
       <td style="${c}font-size:6.5pt;">${l.visit_purpose || ""}</td>
-      <td style="${c}font-size:6.5pt;"></td>
-      <td style="${c}text-align:center;">${l.calls_completed > 0 ? l.calls_completed : ""}</td>
-      <td style="${c}font-size:6.5pt;"></td>
+      <td style="${c}font-size:6pt;font-family:monospace;">${l.barcode_ticket || ""}</td>
+      <td style="${c}text-align:center;">${(l.pms_count || 0) > 0 ? l.pms_count : ""}</td>
+      <td style="${c}text-align:center;">${(l.calls_completed || 0) > 0 ? `${l.calls_completed}/${l.calls_assigned || 0}` : ""}</td>
     </tr>`;
   }).join("\n");
 
@@ -235,15 +238,19 @@ function buildExcelPrintHTML(user: any, claims: any[]): string {
   </table>
 
   <!-- ══ DATA TABLE ══ -->
+  <!-- Columns (18 total):
+       Date | From | To | Worked Dist | Mode | KM |
+       TA(Train/Bus only) | Auto | DA | Local Spare | Hotel |
+       Other Desc | Other Amt | Total | Remarks | Barcode/Asset | PMS | Calls -->
   <table style="margin-bottom:0;">
     <colgroup>
       <col style="width:4.5%;"><!-- Date -->
       <col style="width:6.5%;"><!-- From -->
       <col style="width:6.5%;"><!-- To -->
-      <col style="width:5.5%;"><!-- Worked Dist -->
-      <col style="width:4%;">  <!-- Mode -->
+      <col style="width:5%;">  <!-- Worked Dist -->
+      <col style="width:3.5%;"><!-- Mode -->
       <col style="width:3.5%;"><!-- KM -->
-      <col style="width:4.5%;"><!-- TA -->
+      <col style="width:4.5%;"><!-- TA (Train/Bus only) -->
       <col style="width:3.5%;"><!-- Auto -->
       <col style="width:3.5%;"><!-- DA -->
       <col style="width:5%;">  <!-- Local Spare -->
@@ -251,10 +258,10 @@ function buildExcelPrintHTML(user: any, claims: any[]): string {
       <col style="width:7.5%;"><!-- Other Desc -->
       <col style="width:4%;">  <!-- Other Amt -->
       <col style="width:4.5%;"><!-- Total -->
-      <col style="width:7.5%;"><!-- Purpose -->
+      <col style="width:8%;">  <!-- Remarks -->
       <col style="width:7%;">  <!-- Barcode/Asset -->
-      <col style="width:4.5%;"><!-- Svc Rpt -->
-      <col style="width:5%;">  <!-- Remarks -->
+      <col style="width:3.5%;"><!-- PMS -->
+      <col style="width:4%;">  <!-- Calls -->
     </colgroup>
     <thead>
       <!-- Header Row 1 -->
@@ -264,17 +271,17 @@ function buildExcelPrintHTML(user: any, claims: any[]): string {
         <th class="col-h1" rowspan="2">Worked<br>District</th>
         <th class="col-h1" rowspan="2">Mode of<br>Trans.<br>(T/B/Bi/C)</th>
         <th class="col-h1" rowspan="2">Distance<br>in (KM)</th>
-        <th class="col-h1" rowspan="2">TA (if mode<br>is Train(T)/<br>Bus(B)/Bike(Bi))</th>
+        <th class="col-h1" rowspan="2">TA (if mode<br>is Train(T)/<br>Bus(B))</th>
         <th class="col-h1" rowspan="2">Auto<br>fare</th>
         <th class="col-h1" rowspan="2">D.A.</th>
         <th class="col-h1" rowspan="2">Local Spare<br>Purch. Rate</th>
         <th class="col-h1" rowspan="2">Hotel</th>
         <th class="col-h1" colspan="2">Other Expenses</th>
         <th class="col-h1" rowspan="2">Total</th>
-        <th class="col-h1" rowspan="2">Purpose of<br>Visit</th>
+        <th class="col-h1" rowspan="2">Remarks /<br>Purpose</th>
         <th class="col-h1" rowspan="2">Barcode/<br>Asset No. and<br>Ticket No./MPT ID</th>
-        <th class="col-h1" rowspan="2">Service<br>Rpt. No.</th>
-        <th class="col-h1" rowspan="2">Remarks</th>
+        <th class="col-h1" rowspan="2">PMS</th>
+        <th class="col-h1" rowspan="2">Calls<br>(Done/Assign)</th>
       </tr>
       <!-- Header Row 2 (sub-headers) -->
       <tr>
@@ -290,17 +297,20 @@ function buildExcelPrintHTML(user: any, claims: any[]): string {
     <tfoot>
       <tr>
         <td class="tot-lbl" colspan="6" style="text-align:left;">
-          TOTAL &nbsp;(${claims.length} claim days &nbsp;·&nbsp; ${allLegs.length} legs &nbsp;·&nbsp; ${gKM.toFixed(1)} KM)
+          TOTAL &nbsp;(${claims.length} days &nbsp;·&nbsp; ${allLegs.length} legs &nbsp;·&nbsp; ${gKM.toFixed(1)} KM)
         </td>
-        <td class="tot-num">${gTA > 0 ? gTA.toFixed(2) : ""}</td>
-        <td class="tot-num">${gAuto > 0 ? gAuto.toFixed(2) : ""}</td>
-        <td class="tot-num">${gDA > 0 ? gDA.toFixed(2) : ""}</td>
-        <td class="tot-num">${gLocal > 0 ? gLocal.toFixed(2) : ""}</td>
-        <td class="tot-num">${gHotel > 0 ? gHotel.toFixed(2) : ""}</td>
-        <td class="tot-lbl" style="text-align:center;">Total Other</td>
-        <td class="tot-num">${gOther > 0 ? gOther.toFixed(2) : ""}</td>
+        <td class="tot-num">${gTA > 0 ? gTA.toFixed(2) : "—"}</td>
+        <td class="tot-num">${gAuto > 0 ? gAuto.toFixed(2) : "—"}</td>
+        <td class="tot-num">${gDA > 0 ? gDA.toFixed(2) : "—"}</td>
+        <td class="tot-num">${gLocal > 0 ? gLocal.toFixed(2) : "—"}</td>
+        <td class="tot-num">${gHotel > 0 ? gHotel.toFixed(2) : "—"}</td>
+        <td class="tot-lbl" style="text-align:center;font-size:6.5pt!">Other Total</td>
+        <td class="tot-num">${gOther > 0 ? gOther.toFixed(2) : "—"}</td>
         <td class="tot-grand" style="font-size:9pt!important;text-align:right;">₹${gTotal.toFixed(2)}</td>
-        <td class="tot-lbl" colspan="4" style="text-align:left;">KM: ${gKM.toFixed(1)} &nbsp;|&nbsp; Generated: ${now}</td>
+        <td class="tot-lbl" style="text-align:center;font-size:6pt!important;">Generated:<br>${now}</td>
+        <td class="tot-lbl" style="font-size:6.5pt!"></td>
+        <td class="tot-num" style="text-align:center;">${gPMS > 0 ? gPMS : ""}</td>
+        <td class="tot-num" style="text-align:center;">${gCallsC > 0 ? `${gCallsC}/${gCallsA}` : ""}</td>
       </tr>
     </tfoot>
   </table>
