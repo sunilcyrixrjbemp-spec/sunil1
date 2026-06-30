@@ -112,20 +112,26 @@ function buildExcelPrintHTML(user: any, claims: any[], attachments: string[] = [
     }
 
     acts.forEach((act: string) => {
-      if (act === "Calls") {
+      const actClean = act.trim();
+      // Filter out any activity name that matches the monetary other_desc
+      if (l.other_desc && actClean === l.other_desc.trim()) {
+        return;
+      }
+
+      if (actClean === "Calls" || actClean === "Breakdown Call") {
         parts.push("Breakdown Call");
-      } else if (act === "PMS") {
+      } else if (actClean === "PMS") {
         parts.push("PMS");
-      } else if (act === "Asset Tagging") {
+      } else if (actClean === "Asset Tagging") {
         parts.push("Asset Tagging");
-      } else if (act === "Mobilise Asset Update") {
+      } else if (actClean === "Mobilise Asset Update" || actClean === "Asset Verification") {
         parts.push("Asset Verification");
-      } else if (act === "Calibration") {
+      } else if (actClean === "Calibration") {
         parts.push("Calibration");
-      } else if (act === "Other") {
+      } else if (actClean === "Other") {
         // Skip literal "Other"
-      } else if (act && act !== "Field visit") {
-        parts.push(act);
+      } else if (actClean && actClean !== "Field visit") {
+        parts.push(actClean);
       }
     });
 
@@ -134,7 +140,11 @@ function buildExcelPrintHTML(user: any, claims: any[], attachments: string[] = [
     }
 
     if (parts.length === 0) {
-      return l.visit_purpose && !l.visit_purpose.startsWith("Activities:") ? l.visit_purpose : "Field visit";
+      const cleanPurpose = l.visit_purpose && !l.visit_purpose.startsWith("Activities:") ? l.visit_purpose : "Field visit";
+      if (l.other_desc && cleanPurpose.trim() === l.other_desc.trim()) {
+        return "Field visit";
+      }
+      return cleanPurpose;
     }
     return parts.join(", ");
   };
@@ -161,7 +171,7 @@ function buildExcelPrintHTML(user: any, claims: any[], attachments: string[] = [
     const rowTotal = taCol + bikeCarAmt + (l.auto_amount || 0) + (l.da_amount || 0)
                    + (l.local_purchase || 0) + (l.hotel_amount || 0) + (l.other_amount || 0);
     const bg = i % 2 === 0 ? "#ffffff" : "#f0f7ff";
-    const c = `border:1px solid #b0c4de;padding:3px 4px;font-size:7pt;font-weight:500;color:#000;vertical-align:middle;word-wrap:break-word;`;
+    const c = `border:1px solid #000!important;padding:3.5px 4px;font-size:7pt;font-weight:500;color:#000;vertical-align:middle;word-wrap:break-word;`;
     
     const pmsCalibCount = (l.pms_count || 0) + (l.calibration_count || 0);
 
@@ -213,35 +223,36 @@ function buildExcelPrintHTML(user: any, claims: any[], attachments: string[] = [
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Expense Form — ${user.name} — ${user.month} ${user.year}</title>
   <style>
+    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap');
     *{-webkit-print-color-adjust:exact!important;print-color-adjust:exact!important;box-sizing:border-box;margin:0;padding:0;}
-    body{font-family:'Arial',sans-serif;color:#000;background:#fff;font-size:8pt;}
+    body{font-family:'Inter',sans-serif;color:#000;background:#fff;font-size:7.5pt;}
     .wrap{width:100%;padding:4mm;background:#fff;}
     table{width:100%;border-collapse:collapse;table-layout:fixed;}
-    th,td{border:1px solid #b0c4de;padding:3px 4px;vertical-align:middle;word-wrap:break-word;overflow-wrap:break-word;}
-    .main-hdr{background:#1a237e!important;color:#fff!important;text-align:center;font-size:14pt!important;
-      font-weight:900!important;letter-spacing:1.5px;padding:8px!important;border:2px solid #0d1557!important;}
-    .month-hdr{background:#1a237e!important;color:#e3f2fd!important;font-size:8pt!important;
-      font-weight:800!important;text-align:right;padding:5px 10px!important;border:2px solid #0d1557!important;white-space:nowrap;}
-    .form-no{background:#1a237e!important;color:#fff9c4!important;font-size:8pt!important;
-      font-weight:800!important;text-align:right;padding:5px 10px!important;border:2px solid #0d1557!important;white-space:nowrap;}
-    .info-tbl{margin-bottom:0; border: 1.5px solid #000; border-top: none;}
-    .info-lbl{font-weight:bold; background:#fff!important; color:#000; border-right:1px solid #000; font-size:7.5pt; font-family:'Arial',sans-serif; text-align:left; padding:4px 6px; text-transform:uppercase; white-space:nowrap;}
-    .info-val{background:#fff!important; color:#000; border-right:1px solid #000; font-size:7.5pt; font-family:'Arial',sans-serif; text-align:left; padding:4px 6px; font-weight:800; color:#1a237e;}
-    .col-h1{background:#1565c0!important;color:#fff!important;font-size:7pt!important;
-      font-weight:800!important;text-align:center!important;padding:5px 2px!important;
-      border:1.5px solid #0d47a1!important;line-height:1.25;vertical-align:middle;}
-    .col-h2{background:#1e88e5!important;color:#fff!important;font-size:6.5pt!important;
-      font-weight:800!important;text-align:center!important;padding:4px 2px!important;
-      border:1.5px solid #1565c0!important;line-height:1.2;vertical-align:middle;}
-    .tot-lbl{border:1px solid #000!important;padding:4px 5px;font-size:7.5pt;font-weight:950;color:#000;background:#fff3cd!important;vertical-align:middle;}
-    .tot-num{border:1px solid #000!important;padding:4px 5px;font-size:7.5pt;font-weight:950;color:#000;background:#fff3cd!important;vertical-align:middle;text-align:right;}
-    .net-lbl{border:1.5px solid #000!important;padding:5px 6px;font-size:8pt;font-weight:900;color:#000;background:#dcdcdc!important;text-align:center;text-transform:uppercase;}
-    .net-val{border:1.5px solid #000!important;padding:5px 6px;font-size:8.5pt;font-weight:950;color:#000;background:#fff!important;text-align:center;}
-    .awords-box{border:1.5px solid #000!important;border-top:none!important;padding:6px 8px;font-size:7.5pt;font-weight:500;color:#000;background:#fff!important;}
-    .remarks-box{border:1.5px solid #000!important;border-top:none!important;padding:5px 8px;font-size:7.5pt;font-weight:bold;color:#000;background:#fff!important;}
-    .sig-tbl{border:1.5px solid #000!important;border-top:none!important;}
-    .sig-lbl{border-right:1.5px solid #000;padding:5px 6px;font-size:7.5pt;font-weight:500;color:#000;background:#fff!important;height:32px;vertical-align:top;}
-    .sig-val{border-right:1.5px solid #000;padding:5px 6px;font-size:7.5pt;font-weight:500;color:#000;background:#fff!important;height:32px;vertical-align:bottom;}
+    th,td{border:1px solid #000!important;padding:3.5px 4px;vertical-align:middle;word-wrap:break-word;overflow-wrap:break-word;}
+    .main-hdr{background:#1e3a8a!important;color:#fff!important;text-align:center;font-size:13pt!important;
+      font-weight:800!important;letter-spacing:1px;padding:6px!important;border:1px solid #000!important;}
+    .month-hdr{background:#1e3a8a!important;color:#eff6ff!important;font-size:7.5pt!important;
+      font-weight:700!important;text-align:right;padding:4px 8px!important;border:1px solid #000!important;white-space:nowrap;}
+    .form-no{background:#1e3a8a!important;color:#fef08a!important;font-size:7.5pt!important;
+      font-weight:700!important;text-align:right;padding:4px 8px!important;border:1px solid #000!important;white-space:nowrap;}
+    .info-tbl{margin-bottom:0; border:1px solid #000!important; border-top: none!important;}
+    .info-lbl{font-weight:700; background:#fff!important; color:#000; border-right:1px solid #000!important; font-size:7pt; text-align:left; padding:4px 6px; text-transform:uppercase; white-space:nowrap;}
+    .info-val{background:#fff!important; color:#1e3a8a!important; border-right:1px solid #000!important; font-size:7pt; text-align:left; padding:4px 6px; font-weight:800;}
+    .col-h1{background:#1d4ed8!important;color:#fff!important;font-size:7pt!important;
+      font-weight:700!important;text-align:center!important;padding:4.5px 2px!important;
+      border:1px solid #000!important;line-height:1.2;vertical-align:middle;}
+    .col-h2{background:#3b82f6!important;color:#fff!important;font-size:6.5pt!important;
+      font-weight:700!important;text-align:center!important;padding:3.5px 2px!important;
+      border:1px solid #000!important;line-height:1.15;vertical-align:middle;}
+    .tot-lbl{border:1px solid #000!important;padding:4px 5px;font-size:7pt;font-weight:800;color:#000;background:#fef3c7!important;vertical-align:middle;}
+    .tot-num{border:1px solid #000!important;padding:4px 5px;font-size:7pt;font-weight:800;color:#000;background:#fef3c7!important;vertical-align:middle;text-align:right;}
+    .net-lbl{border:1px solid #000!important;padding:5px 6px;font-size:7.5pt;font-weight:800;color:#000;background:#e5e7eb!important;text-align:center;text-transform:uppercase;}
+    .net-val{border:1px solid #000!important;padding:5px 6px;font-size:8pt;font-weight:900;color:#000;background:#fff!important;text-align:center;}
+    .awords-box{border:1px solid #000!important;border-top:none!important;padding:5px 8px;font-size:7pt;font-weight:500;color:#000;background:#fff!important;}
+    .remarks-box{border:1px solid #000!important;border-top:none!important;padding:4px 8px;font-size:7pt;font-weight:700;color:#000;background:#fff!important;}
+    .sig-tbl{border:1px solid #000!important;border-top:none!important;}
+    .sig-lbl{border-right:1px solid #000!important;padding:4px 6px;font-size:7pt;font-weight:500;color:#000;background:#fff!important;height:32px;vertical-align:top;}
+    .sig-val{border-right:1px solid #000!important;padding:4px 6px;font-size:7pt;font-weight:500;color:#000;background:#fff!important;height:32px;vertical-align:bottom;}
     @page{size:A4 landscape;margin:6mm 7mm;}
     @media print{
       body{margin:0;padding:0;}
