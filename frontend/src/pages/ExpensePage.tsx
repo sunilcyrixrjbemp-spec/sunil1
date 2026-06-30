@@ -12,7 +12,6 @@ import {
   MapPin,
   User,
   FileText,
-  DollarSign,
   Navigation,
   X,
   Bike,
