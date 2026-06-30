@@ -2609,21 +2609,47 @@ export default function ExpensePage() {
                                   </div>
                                 </div>
                                 <div className="sm:col-span-3">
-                                  <label className="label-lte font-bold">Photo (Optional)</label>
-                                  <input
-                                    type="file"
-                                    accept="image/*"
-                                    onChange={(e) => {
-                                      const file = e.target.files?.[0];
-                                      if (file) {
-                                        uploadActivityPhoto(leg.leg, "Calls", file);
-                                      }
-                                    }}
-                                    className="input-lte text-[10px] py-1 px-1 bg-white"
-                                  />
-                                  {leg.calls_photo_loading && <span className="text-[9px] text-blue-600 font-semibold block animate-pulse mt-0.5">Uploading...</span>}
-                                  {leg.calls_photo_url && <span className="text-[9px] text-green-600 font-bold block mt-0.5">✓ Uploaded</span>}
-                                </div>
+                                   <label className="label-lte font-bold">Photo (Optional)</label>
+                                   {leg.calls_photo_url ? (
+                                     <div className="flex items-center justify-between bg-blue-50 border border-blue-200 px-2 py-1 rounded text-[10px]">
+                                       <span className="font-semibold text-blue-700 truncate max-w-[80px]">✓ Photo Uploaded</span>
+                                       <div className="flex gap-1.5">
+                                         <button 
+                                           type="button" 
+                                           onClick={() => {
+                                             const fullUrl = `${import.meta.env.VITE_API_URL || "https://expense-backend-zio8.onrender.com"}${leg.calls_photo_url}`;
+                                             setLightboxImage(fullUrl);
+                                           }} 
+                                           className="text-blue-600 hover:underline border-0 bg-transparent font-bold cursor-pointer text-[10px]"
+                                         >
+                                           Preview
+                                         </button>
+                                         <button 
+                                           type="button" 
+                                           onClick={() => handleItineraryChange(leg.leg, "calls_photo_url", "")} 
+                                           className="text-rose-600 hover:underline border-0 bg-transparent font-bold cursor-pointer text-[10px]"
+                                         >
+                                           Delete
+                                         </button>
+                                       </div>
+                                     </div>
+                                   ) : (
+                                     <div className="relative">
+                                       <input
+                                         type="file"
+                                         accept="image/*"
+                                         onChange={(e) => {
+                                           const file = e.target.files?.[0];
+                                           if (file) {
+                                             uploadActivityPhoto(leg.leg, "Calls", file);
+                                           }
+                                         }}
+                                         className="input-lte text-[10px] py-1 px-1 bg-white"
+                                       />
+                                       {leg.calls_photo_loading && <span className="text-[9px] text-blue-600 font-semibold block animate-pulse mt-0.5">Uploading...</span>}
+                                     </div>
+                                   )}
+                                 </div>
                                 <div className="sm:col-span-2">
                                   <label className="label-lte font-bold">Call Type</label>
                                   <select
@@ -2713,14 +2739,16 @@ export default function ExpensePage() {
                                           </td>
                                           <td className="py-1.5 px-2 text-center">
                                             {item.photo_url ? (
-                                              <a
-                                                href={`${import.meta.env.VITE_API_URL || "https://expense-backend-zio8.onrender.com"}${item.photo_url}`}
-                                                target="_blank"
-                                                rel="noreferrer"
-                                                className="text-xs text-blue-600 font-bold hover:underline"
+                                              <button
+                                                type="button"
+                                                onClick={() => {
+                                                  const fullUrl = `${import.meta.env.VITE_API_URL || "https://expense-backend-zio8.onrender.com"}${item.photo_url}`;
+                                                  setLightboxImage(fullUrl);
+                                                }}
+                                                className="text-xs text-blue-600 font-bold hover:underline border-0 bg-transparent cursor-pointer"
                                               >
-                                                View
-                                              </a>
+                                                Preview
+                                              </button>
                                             ) : (
                                               <span className="text-[10px] text-gray-400">—</span>
                                             )}
@@ -2779,19 +2807,45 @@ export default function ExpensePage() {
                                 </div>
                                 <div className="sm:col-span-3">
                                   <label className="label-lte font-bold">Photo (Optional)</label>
-                                  <input
-                                    type="file"
-                                    accept="image/*"
-                                    onChange={(e) => {
-                                      const file = e.target.files?.[0];
-                                      if (file) {
-                                        uploadActivityPhoto(leg.leg, "PMS", file);
-                                      }
-                                    }}
-                                    className="input-lte text-[10px] py-1 px-1 bg-white"
-                                  />
-                                  {leg.pms_photo_loading && <span className="text-[9px] text-blue-600 font-semibold block animate-pulse mt-0.5">Uploading...</span>}
-                                  {leg.pms_photo_url && <span className="text-[9px] text-green-600 font-bold block mt-0.5">✓ Uploaded</span>}
+                                  {leg.pms_photo_url ? (
+                                    <div className="flex items-center justify-between bg-blue-50 border border-blue-200 px-2 py-1 rounded text-[10px]">
+                                      <span className="font-semibold text-blue-700 truncate max-w-[80px]">✓ Photo Uploaded</span>
+                                      <div className="flex gap-1.5">
+                                        <button 
+                                          type="button" 
+                                          onClick={() => {
+                                            const fullUrl = `${import.meta.env.VITE_API_URL || "https://expense-backend-zio8.onrender.com"}${leg.pms_photo_url}`;
+                                            setLightboxImage(fullUrl);
+                                          }} 
+                                          className="text-blue-600 hover:underline border-0 bg-transparent font-bold cursor-pointer text-[10px]"
+                                        >
+                                          Preview
+                                        </button>
+                                        <button 
+                                          type="button" 
+                                          onClick={() => handleItineraryChange(leg.leg, "pms_photo_url", "")} 
+                                          className="text-rose-600 hover:underline border-0 bg-transparent font-bold cursor-pointer text-[10px]"
+                                        >
+                                          Delete
+                                        </button>
+                                      </div>
+                                    </div>
+                                  ) : (
+                                    <div className="relative">
+                                      <input
+                                        type="file"
+                                        accept="image/*"
+                                        onChange={(e) => {
+                                          const file = e.target.files?.[0];
+                                          if (file) {
+                                            uploadActivityPhoto(leg.leg, "PMS", file);
+                                          }
+                                        }}
+                                        className="input-lte text-[10px] py-1 px-1 bg-white"
+                                      />
+                                      {leg.pms_photo_loading && <span className="text-[9px] text-blue-600 font-semibold block animate-pulse mt-0.5">Uploading...</span>}
+                                    </div>
+                                  )}
                                 </div>
                                 <div className="sm:col-span-4">
                                   <label className="label-lte font-bold">PMS Frequency Period</label>
@@ -2861,14 +2915,16 @@ export default function ExpensePage() {
                                           <td className="py-1.5 px-2 text-[10px] text-gray-600 font-semibold">{item.frequency}</td>
                                           <td className="py-1.5 px-2 text-center">
                                             {item.photo_url ? (
-                                              <a
-                                                href={`${import.meta.env.VITE_API_URL || "https://expense-backend-zio8.onrender.com"}${item.photo_url}`}
-                                                target="_blank"
-                                                rel="noreferrer"
-                                                className="text-xs text-blue-600 font-bold hover:underline"
+                                              <button
+                                                type="button"
+                                                onClick={() => {
+                                                  const fullUrl = `${import.meta.env.VITE_API_URL || "https://expense-backend-zio8.onrender.com"}${item.photo_url}`;
+                                                  setLightboxImage(fullUrl);
+                                                }}
+                                                className="text-xs text-blue-600 font-bold hover:underline border-0 bg-transparent cursor-pointer"
                                               >
-                                                View
-                                              </a>
+                                                Preview
+                                              </button>
                                             ) : (
                                               <span className="text-[10px] text-gray-400">—</span>
                                             )}
