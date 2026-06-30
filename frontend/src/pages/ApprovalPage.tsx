@@ -621,6 +621,7 @@ export default function ApprovalPage() {
                         const travelModified = leg.travel_amount !== (originalLeg.amount || 0);
                         const subModified = leg.sub_amount !== (originalLeg.sub_amount || 0);
                         const hotelModified = leg.hotel_amount !== (originalLeg.hotel || 0);
+                        const lpModified = leg.local_purchase !== (originalLeg.local_purchase || 0);
                         const otherModified = leg.other_amount !== (originalLeg.oth_amount || 0);
 
                         let actDetails: any = null;
