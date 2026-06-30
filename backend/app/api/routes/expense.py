@@ -442,6 +442,23 @@ async def submit_expense(
                     old_att_map[(leg_num, a.bill_type)] = a.file_url
             except Exception:
                 pass
+        # Get old itinerary IDs and clear breakdown records manually to avoid orphans
+        old_iti_ids = [r[0] for r in db.query(ExpenseItinerary.itinerary_id).filter(
+            ExpenseItinerary.exp_id == existing_expense.expense_code
+        ).all()]
+        if old_iti_ids:
+            from app.models.expense_breakdown_call import ExpenseBreakdownCall
+            from app.models.expense_pms_call import ExpensePmsCall
+            from app.models.expense_asset_tagging import ExpenseAssetTagging
+            from app.models.expense_asset_mobilise import ExpenseAssetMobilise
+            from app.models.expense_calibration import ExpenseCalibration
+            
+            db.query(ExpenseBreakdownCall).filter(ExpenseBreakdownCall.itinerary_id.in_(old_iti_ids)).delete(synchronize_session=False)
+            db.query(ExpensePmsCall).filter(ExpensePmsCall.itinerary_id.in_(old_iti_ids)).delete(synchronize_session=False)
+            db.query(ExpenseAssetTagging).filter(ExpenseAssetTagging.itinerary_id.in_(old_iti_ids)).delete(synchronize_session=False)
+            db.query(ExpenseAssetMobilise).filter(ExpenseAssetMobilise.itinerary_id.in_(old_iti_ids)).delete(synchronize_session=False)
+            db.query(ExpenseCalibration).filter(ExpenseCalibration.itinerary_id.in_(old_iti_ids)).delete(synchronize_session=False)
+
         db.query(ExpenseItinerary).filter(ExpenseItinerary.exp_id == existing_expense.expense_code).delete()
         db.query(ExpenseAttachment).filter(ExpenseAttachment.exp_id == existing_expense.expense_code).delete()
         db.query(Approval).filter(Approval.expense_id == existing_expense.id).delete()
@@ -748,6 +765,86 @@ async def submit_expense(
             activity_details=iti.get("activity_details")
         )
         db.add(leg_item)
+
+        # Save activities breakdown into structured tables
+        act_details_str = iti.get("activity_details")
+        if act_details_str:
+            try:
+                act_details = json.loads(act_details_str)
+                selected_acts = act_details.get("selected_activities") or []
+                
+                from app.models.expense_breakdown_call import ExpenseBreakdownCall
+                from app.models.expense_pms_call import ExpensePmsCall
+                from app.models.expense_asset_tagging import ExpenseAssetTagging
+                from app.models.expense_asset_mobilise import ExpenseAssetMobilise
+                from app.models.expense_calibration import ExpenseCalibration
+
+                # 1. Calls list
+                if "Calls" in selected_acts:
+                    for call in act_details.get("calls_list") or []:
+                        asset = call.get("asset_details") or {}
+                        call_rec = ExpenseBreakdownCall(
+                            itinerary_id=iti_id,
+                            barcode=call.get("barcode"),
+                            call_type=call.get("type"),
+                            call_status=call.get("status"),
+                            district_name=asset.get("district_name"),
+                            hospital_name=asset.get("hospital_name"),
+                            equipment_name=asset.get("equipment_name"),
+                            model_name=asset.get("model_name"),
+                            inventory_status=asset.get("inventory_status"),
+                            photo_url=call.get("photo_url")
+                        )
+                        db.add(call_rec)
+                        
+                # 2. PMS list
+                if "PMS" in selected_acts:
+                    for pms in act_details.get("pms_list") or []:
+                        asset = pms.get("asset_details") or {}
+                        pms_rec = ExpensePmsCall(
+                            itinerary_id=iti_id,
+                            barcode=pms.get("barcode"),
+                            pms_frequency=pms.get("frequency"),
+                            district_name=asset.get("district_name"),
+                            hospital_name=asset.get("hospital_name"),
+                            equipment_name=asset.get("equipment_name"),
+                            model_name=asset.get("model_name"),
+                            inventory_status=asset.get("inventory_status"),
+                            photo_url=pms.get("photo_url")
+                        )
+                        db.add(pms_rec)
+                        
+                # 3. Asset Tagging list
+                if "Asset Tagging" in selected_acts:
+                    for asset in act_details.get("assets_list") or []:
+                        tag_rec = ExpenseAssetTagging(
+                            itinerary_id=iti_id,
+                            equipment_name=asset.get("equipment_name"),
+                            quantity=int(asset.get("quantity") or 0)
+                        )
+                        db.add(tag_rec)
+                        
+                # 4. Mobilise Asset Update
+                if "Mobilise Asset Update" in selected_acts:
+                    qty = int(act_details.get("mobilise_asset_count") or 0)
+                    if qty > 0:
+                        mob_rec = ExpenseAssetMobilise(
+                            itinerary_id=iti_id,
+                            quantity=qty
+                        )
+                        db.add(mob_rec)
+                        
+                # 5. Calibration
+                if "Calibration" in selected_acts:
+                    qty = int(act_details.get("calibration_count") or 0)
+                    if qty > 0:
+                        cal_rec = ExpenseCalibration(
+                            itinerary_id=iti_id,
+                            quantity=qty
+                        )
+                        db.add(cal_rec)
+            except Exception as e:
+                logger.error(f"Error parsing and saving activity details breakdown: {str(e)}")
 
         # Main receipt image
         main_file = form_data.get(f"main_bill_{leg_num}")
