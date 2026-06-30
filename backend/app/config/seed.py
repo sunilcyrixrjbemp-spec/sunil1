@@ -214,6 +214,27 @@ def run_schema_updates(db: Session):
         else:
             logger.warning(f"Error checking/adding needs_followup: {str(e)}")
 
+    # Add editor_id and other missing columns to expense_edit_logs table
+    edit_log_cols = [
+        ("editor_id", "INTEGER DEFAULT 0"),
+        ("editor_name", "VARCHAR(100)"),
+        ("editor_role", "VARCHAR(50)"),
+        ("leg_number", "INTEGER"),
+        ("comment", "TEXT"),
+    ]
+    for col_name, col_type in edit_log_cols:
+        try:
+            db.execute(text(f"ALTER TABLE expense_edit_logs ADD COLUMN {col_name} {col_type}"))
+            db.commit()
+            logger.info(f"Added column {col_name} to expense_edit_logs table.")
+        except Exception as e:
+            db.rollback()
+            err_str = str(e).lower()
+            if "duplicate column name" in err_str or "already exists" in err_str:
+                logger.info(f"Column {col_name} already exists in expense_edit_logs table.")
+            else:
+                logger.warning(f"Error checking/adding column {col_name} to expense_edit_logs: {str(e)}")
+
     # Add performance optimization indexes for SQLite and Cloudflare D1
     indexes_to_create = [
         ("idx_users_manager", "users(manager)"),
