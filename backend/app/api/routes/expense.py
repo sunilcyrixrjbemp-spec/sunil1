@@ -23,12 +23,18 @@ from app.config.settings import settings
 
 router = APIRouter()
 
-@router.get("/list-tables")
-def list_tables(db: Session = Depends(get_db)):
+@router.get("/debug-inspect-hierarchy")
+def debug_inspect_hierarchy(db: Session = Depends(get_db)):
     from sqlalchemy import text
     try:
-        res = db.execute(text("SELECT name FROM sqlite_master WHERE type='table';")).fetchall()
-        return {"tables": [r[0] for r in res]}
+        requesters = db.execute(text("SELECT * FROM hierarchy_requesters;")).fetchall()
+        approvers = db.execute(text("SELECT * FROM hierarchy_approvers;")).fetchall()
+        users = db.execute(text("SELECT id, user_id, name, role FROM users;")).fetchall()
+        return {
+            "requesters": [dict(zip(["id", "hierarchy_id", "user_id"], r)) for r in requesters],
+            "approvers": [dict(zip(["id", "hierarchy_id", "approver_id", "level_number"], a)) for a in approvers],
+            "users": [dict(zip(["id", "user_id", "name", "role"], u)) for u in users]
+        }
     except Exception as e:
         return {"error": str(e)}
 
