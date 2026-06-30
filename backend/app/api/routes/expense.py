@@ -1169,6 +1169,138 @@ async def get_month_summary(
     return {"success": True, "data": rows, "districts": list(districts)}
 
 
+@router.get("/engineer-month-claims")
+async def get_engineer_month_claims(
+    user_code: str,
+    month: str,
+    year: int,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    """Returns all individual approved expense claims (with per-leg itinerary detail) for a specific engineer
+    in a given month/year. Used for detailed PDF generation on the Month Summary page."""
+    # Resolve the target engineer
+    target_user = db.query(User).filter(
+        (User.user_id == user_code) | (User.e_code == user_code)
+    ).first()
+    if not target_user:
+        raise HTTPException(status_code=404, detail="Engineer not found")
+
+    # Scope check: Admin/Superadmin/Accounts can access any; others must manage the engineer
+    role = current_user.role or ""
+    if role not in ["Admin", "Superadmin", "MIS", "Accounts"]:
+        name_c = current_user.name.strip().lower()
+        uid_c = current_user.user_id.strip().lower()
+        mgr = (target_user.manager or "").strip().lower()
+        coord = (target_user.coordinator or "").strip().lower()
+        zm = (target_user.zonal_manager or "").strip().lower()
+        is_manager = name_c in (mgr, zm, coord) or uid_c in (mgr, zm, coord)
+        # Also check hierarchy
+        is_hierarchy = db.query(HierarchyApprover).join(
+            HierarchyRequester,
+            HierarchyApprover.hierarchy_id == HierarchyRequester.hierarchy_id
+        ).filter(
+            HierarchyApprover.approver_id == current_user.id,
+            HierarchyRequester.user_id == target_user.id
+        ).first() is not None
+        if not is_manager and not is_hierarchy:
+            raise HTTPException(status_code=403, detail="Access denied")
+
+    # Fetch approved expenses
+    expenses = db.query(Expense).filter(
+        Expense.user_id == target_user.id,
+        Expense.month == month,
+        Expense.year == year,
+        Expense.status == "approved"
+    ).order_by(Expense.itinerary).all()
+
+    if not expenses:
+        return {"success": True, "claims": [], "user": {
+            "name": target_user.name,
+            "e_code": target_user.e_code or target_user.user_id,
+            "grade": target_user.grade or "",
+            "designation": target_user.designation or "Engineer",
+            "district": target_user.district or "",
+            "zone": target_user.zone or "",
+            "manager": target_user.manager or "",
+            "month": month, "year": year
+        }}
+
+    expense_codes = [e.expense_code for e in expenses if e.expense_code]
+    all_legs = db.query(ExpenseItinerary).filter(
+        ExpenseItinerary.exp_id.in_(expense_codes)
+    ).order_by(ExpenseItinerary.exp_id, ExpenseItinerary.leg_number).all()
+    legs_by_code: dict = {}
+    for leg in all_legs:
+        legs_by_code.setdefault(leg.exp_id, []).append(leg)
+
+    claims = []
+    for exp in expenses:
+        legs = legs_by_code.get(exp.expense_code, [])
+        leg_data = []
+        for leg in legs:
+            auto_amt = 0.0
+            if leg.travel_mode == "Auto":
+                auto_amt = leg.travel_amount or 0.0
+            if leg.sub_mode == "Auto":
+                auto_amt += leg.sub_amount or 0.0
+            bike_km = leg.distance_km if leg.travel_mode == "Bike" else 0.0
+            car_km = leg.distance_km if leg.travel_mode == "Car" else 0.0
+            bike_amt = leg.travel_amount if leg.travel_mode == "Bike" else 0.0
+            car_amt = leg.travel_amount if leg.travel_mode == "Car" else 0.0
+            leg_data.append({
+                "leg_number": leg.leg_number,
+                "from_location": leg.from_location or leg.from_district or "—",
+                "to_location": leg.to_location or leg.to_district or "—",
+                "travel_mode": leg.travel_mode or "—",
+                "distance_km": leg.distance_km or 0.0,
+                "bike_km": bike_km,
+                "car_km": car_km,
+                "bike_amount": bike_amt or 0.0,
+                "car_amount": car_amt or 0.0,
+                "auto_amount": auto_amt,
+                "da_amount": leg.da_amount or 0.0,
+                "hotel_amount": leg.hotel_amount or 0.0,
+                "local_purchase": leg.local_purchase or 0.0,
+                "other_amount": leg.other_amount or 0.0,
+                "other_desc": leg.other_desc or "",
+                "visit_purpose": leg.visit_purpose or "",
+                "calls_assigned": leg.calls_assigned or 0,
+                "calls_completed": leg.calls_completed or 0,
+            })
+        leg_total = sum(
+            (l["bike_amount"] + l["car_amount"] + l["auto_amount"] +
+             l["da_amount"] + l["hotel_amount"] + l["local_purchase"] + l["other_amount"])
+            for l in leg_data
+        )
+        claims.append({
+            "expense_code": exp.expense_code,
+            "date": exp.itinerary,
+            "amount": exp.amount or 0.0,
+            "da_amount": exp.da_amount or 0.0,
+            "hotel_amount": exp.hotel_amount or 0.0,
+            "other_amount": exp.other_expense_amount or 0.0,
+            "local_purchase_amount": exp.local_purchase_amount or 0.0,
+            "legs": leg_data,
+        })
+
+    return {
+        "success": True,
+        "user": {
+            "name": target_user.name,
+            "e_code": target_user.e_code or target_user.user_id,
+            "grade": target_user.grade or "",
+            "designation": target_user.designation or "Engineer",
+            "district": target_user.district or "",
+            "zone": target_user.zone or "",
+            "manager": target_user.manager or "",
+            "month": month,
+            "year": year
+        },
+        "claims": claims
+    }
+
+
 @router.get("/")
 async def get_expenses(
     db: Session = Depends(get_db),

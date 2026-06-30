@@ -63,5 +63,12 @@ export const expenseService = {
     if (params?.engineer) qp.set("engineer", params.engineer);
     const response = await api.get(`/expense/month-summary${qp.toString() ? "?" + qp.toString() : ""}`);
     return response.data;
+  },
+
+  getEngineerMonthClaims: async (userCode: string, month: string, year: number): Promise<any> => {
+    const response = await api.get(
+      `/expense/engineer-month-claims?user_code=${encodeURIComponent(userCode)}&month=${encodeURIComponent(month)}&year=${year}`
+    );
+    return response.data;
   }
 };
