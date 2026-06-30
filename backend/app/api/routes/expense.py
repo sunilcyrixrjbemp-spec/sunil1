@@ -23,12 +23,6 @@ from app.config.settings import settings
 
 router = APIRouter()
 
-@router.get("/debug-create-all-tables")
-def debug_create_all_tables():
-    from app.config.database import Base, engine
-    import app.models
-    Base.metadata.create_all(bind=engine)
-    return {"status": "success", "message": "All tables created successfully."}
 
 
 
