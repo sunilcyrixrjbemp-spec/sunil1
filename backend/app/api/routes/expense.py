@@ -23,6 +23,15 @@ from app.config.settings import settings
 
 router = APIRouter()
 
+@router.get("/list-tables")
+def list_tables(db: Session = Depends(get_db)):
+    from sqlalchemy import text
+    try:
+        res = db.execute(text("SELECT name FROM sqlite_master WHERE type='table';")).fetchall()
+        return {"tables": [r[0] for r in res]}
+    except Exception as e:
+        return {"error": str(e)}
+
 
 def parse_client_timestamp(ts_str: str | None) -> datetime:
     if not ts_str:
