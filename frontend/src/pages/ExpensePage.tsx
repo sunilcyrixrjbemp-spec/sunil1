@@ -1415,54 +1415,43 @@ export default function ExpensePage() {
                             </div>
 
                             <div>
-                              <label className="label-lte mb-1.5">Facility / Location Name <span className="text-red-500">*</span></label>
-                              <div className="relative">
+                              <div className="flex justify-between items-center mb-1">
+                                <label className="label-lte mb-0">Facility / Location Name <span className="text-red-500">*</span></label>
+                                {leg.district_from && getFacilitiesForDistrict(leg.district_from).length > 0 && (
+                                  <button
+                                    type="button"
+                                    onClick={() => {
+                                      handleItineraryChange(leg.leg, "from_custom", !leg.from_custom);
+                                      handleItineraryChange(leg.leg, "from", "");
+                                    }}
+                                    className="text-[9px] font-bold text-blue-600 hover:text-blue-800 border-0 bg-transparent cursor-pointer uppercase tracking-wider"
+                                  >
+                                    {leg.from_custom ? "📋 Select from list" : "✍️ Type Custom"}
+                                  </button>
+                                )}
+                              </div>
+                              {leg.district_from && getFacilitiesForDistrict(leg.district_from).length > 0 && !leg.from_custom ? (
+                                <select
+                                  required
+                                  value={leg.from}
+                                  onChange={(e) => handleItineraryChange(leg.leg, "from", e.target.value)}
+                                  className="input-lte font-semibold border-gray-305"
+                                >
+                                  <option value="">-- Select Hospital / Location --</option>
+                                  {getFacilitiesForDistrict(leg.district_from).map((f: string, fIdx: number) => (
+                                    <option key={fIdx} value={f}>{f}</option>
+                                  ))}
+                                </select>
+                              ) : (
                                 <input
                                   type="text"
                                   required
                                   value={leg.from}
-                                  placeholder="Enter or select facility..."
-                                  onFocus={() => setActiveDropdown({ leg: leg.leg, field: "from" })}
-                                  onBlur={() => {
-                                    setTimeout(() => {
-                                      setActiveDropdown(prev => (prev?.leg === leg.leg && prev?.field === "from" ? null : prev));
-                                    }, 200);
-                                  }}
+                                  placeholder="Enter facility or location..."
                                   onChange={(e) => handleItineraryChange(leg.leg, "from", e.target.value)}
-                                  className="input-lte font-semibold border-gray-305 pr-8"
+                                  className="input-lte font-semibold border-gray-305"
                                 />
-                                <div className="absolute right-2.5 top-1/2 -translate-y-1/2 pointer-events-none text-gray-400">
-                                  <ChevronDown className="w-4 h-4" />
-                                </div>
-                                {activeDropdown?.leg === leg.leg && activeDropdown?.field === "from" && (
-                                  <div className="absolute top-full left-0 right-0 z-50 mt-1 bg-white border border-gray-200 rounded-md shadow-lg max-h-[144px] overflow-y-auto divide-y divide-gray-100">
-                                    {(() => {
-                                      const list = getFacilitiesForDistrict(leg.district_from).filter(f =>
-                                        f.toLowerCase().includes((leg.from || "").toLowerCase())
-                                      );
-                                      if (list.length === 0) {
-                                        return (
-                                          <div className="p-2.5 text-xs text-gray-400 italic bg-gray-50">
-                                            No matching facilities found
-                                          </div>
-                                        );
-                                      }
-                                      return list.map((f: string, fIdx: number) => (
-                                        <div
-                                          key={fIdx}
-                                          onMouseDown={() => {
-                                            handleItineraryChange(leg.leg, "from", f);
-                                            setActiveDropdown(null);
-                                          }}
-                                          className="p-2.5 text-xs font-semibold text-gray-700 hover:bg-blue-50 hover:text-blue-700 transition-colors cursor-pointer"
-                                        >
-                                          {f}
-                                        </div>
-                                      ));
-                                    })()}
-                                  </div>
-                                )}
-                              </div>
+                              )}
                             </div>
                           </div>
                         </div>
@@ -1494,54 +1483,43 @@ export default function ExpensePage() {
                             </div>
 
                             <div>
-                              <label className="label-lte mb-1.5">Facility / Location Name <span className="text-red-500">*</span></label>
-                              <div className="relative">
+                              <div className="flex justify-between items-center mb-1">
+                                <label className="label-lte mb-0">Facility / Location Name <span className="text-red-500">*</span></label>
+                                {leg.district && getFacilitiesForDistrict(leg.district).length > 0 && (
+                                  <button
+                                    type="button"
+                                    onClick={() => {
+                                      handleItineraryChange(leg.leg, "to_custom", !leg.to_custom);
+                                      handleItineraryChange(leg.leg, "to", "");
+                                    }}
+                                    className="text-[9px] font-bold text-blue-600 hover:text-blue-800 border-0 bg-transparent cursor-pointer uppercase tracking-wider"
+                                  >
+                                    {leg.to_custom ? "📋 Select from list" : "✍️ Type Custom"}
+                                  </button>
+                                )}
+                              </div>
+                              {leg.district && getFacilitiesForDistrict(leg.district).length > 0 && !leg.to_custom ? (
+                                <select
+                                  required
+                                  value={leg.to}
+                                  onChange={(e) => handleItineraryChange(leg.leg, "to", e.target.value)}
+                                  className="input-lte font-semibold border-gray-305"
+                                >
+                                  <option value="">-- Select Hospital / Location --</option>
+                                  {getFacilitiesForDistrict(leg.district).map((f: string, fIdx: number) => (
+                                    <option key={fIdx} value={f}>{f}</option>
+                                  ))}
+                                </select>
+                              ) : (
                                 <input
                                   type="text"
                                   required
                                   value={leg.to}
-                                  placeholder="Enter or select facility..."
-                                  onFocus={() => setActiveDropdown({ leg: leg.leg, field: "to" })}
-                                  onBlur={() => {
-                                    setTimeout(() => {
-                                      setActiveDropdown(prev => (prev?.leg === leg.leg && prev?.field === "to" ? null : prev));
-                                    }, 200);
-                                  }}
+                                  placeholder="Enter facility or location..."
                                   onChange={(e) => handleItineraryChange(leg.leg, "to", e.target.value)}
-                                  className="input-lte font-semibold border-gray-305 pr-8"
+                                  className="input-lte font-semibold border-gray-305"
                                 />
-                                <div className="absolute right-2.5 top-1/2 -translate-y-1/2 pointer-events-none text-gray-400">
-                                  <ChevronDown className="w-4 h-4" />
-                                </div>
-                                {activeDropdown?.leg === leg.leg && activeDropdown?.field === "to" && (
-                                  <div className="absolute top-full left-0 right-0 z-50 mt-1 bg-white border border-gray-200 rounded-md shadow-lg max-h-[144px] overflow-y-auto divide-y divide-gray-100">
-                                    {(() => {
-                                      const list = getFacilitiesForDistrict(leg.district).filter(f =>
-                                        f.toLowerCase().includes((leg.to || "").toLowerCase())
-                                      );
-                                      if (list.length === 0) {
-                                        return (
-                                          <div className="p-2.5 text-xs text-gray-400 italic bg-gray-50">
-                                            No matching facilities found
-                                          </div>
-                                        );
-                                      }
-                                      return list.map((f: string, fIdx: number) => (
-                                        <div
-                                          key={fIdx}
-                                          onMouseDown={() => {
-                                            handleItineraryChange(leg.leg, "to", f);
-                                            setActiveDropdown(null);
-                                          }}
-                                          className="p-2.5 text-xs font-semibold text-gray-700 hover:bg-blue-50 hover:text-blue-700 transition-colors cursor-pointer"
-                                        >
-                                          {f}
-                                        </div>
-                                      ));
-                                    })()}
-                                  </div>
-                                )}
-                              </div>
+                              )}
                             </div>
                           </div>
                         </div>
@@ -1828,8 +1806,8 @@ export default function ExpensePage() {
                               min="0"
                               step="any"
                               value={leg.da}
-                              onChange={(e) => handleItineraryChange(leg.leg, "da", e.target.value)}
-                              className="input-lte font-bold"
+                              readOnly
+                              className="input-lte font-bold bg-gray-100 text-gray-500 cursor-not-allowed"
                             />
                           </div>
 
