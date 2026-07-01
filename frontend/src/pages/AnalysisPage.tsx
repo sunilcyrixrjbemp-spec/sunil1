@@ -10,6 +10,8 @@ import { authService } from "../services/authService";
 import Loader from "../components/common/Loader";
 
 
+const GALLERY_COLORS = ["#2f5bb7", "#2b7d50", "#d28b2a", "#854aa5", "#d83b01", "#00a2ad", "#e81123"];
+
 const months = [
   "January", "February", "March", "April", "May", "June",
   "July", "August", "September", "October", "November", "December"
@@ -639,18 +641,11 @@ export default function AnalysisPage() {
               {userWiseData.length > 0 ? (
                 <ResponsiveContainer width="100%" height="100%">
                   <BarChart data={userWiseData} layout="vertical" margin={{ left: 10, right: 20 }}>
-                    <defs>
-                      <linearGradient id="cylinderHorizontal" x1="0" y1="0" x2="0" y2="1">
-                        <stop offset="0%" stopColor="#4f46e5" />
-                        <stop offset="50%" stopColor="#c7d2fe" />
-                        <stop offset="100%" stopColor="#4338ca" />
-                      </linearGradient>
-                    </defs>
                     <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
                     <XAxis type="number" tick={{ fontSize: 10 }} tickFormatter={(v) => `₹${(v / 1000).toFixed(0)}k`} />
                     <YAxis type="category" dataKey="name" tick={{ fontSize: 10 }} width={90} />
                     <Tooltip content={<CustomTooltip />} />
-                    <Bar dataKey="amount" fill="url(#cylinderHorizontal)" radius={[0, 4, 4, 0]} maxBarSize={16} />
+                    <Bar dataKey="amount" fill="#854aa5" radius={[0, 4, 4, 0]} maxBarSize={16} />
                   </BarChart>
                 </ResponsiveContainer>
               ) : (
@@ -671,17 +666,6 @@ export default function AnalysisPage() {
               {statusWiseData.length > 0 ? (
                 <ResponsiveContainer width="100%" height="100%">
                   <PieChart margin={{ top: 15, right: 15, bottom: 15, left: 15 }}>
-                    <defs>
-                      <linearGradient id="statusApproved" x1="0" y1="0" x2="1" y2="1">
-                        <stop offset="0%" stopColor="#a7f3d0" /><stop offset="100%" stopColor="#10b981" />
-                      </linearGradient>
-                      <linearGradient id="statusPending" x1="0" y1="0" x2="1" y2="1">
-                        <stop offset="0%" stopColor="#fef08a" /><stop offset="100%" stopColor="#d97706" />
-                      </linearGradient>
-                      <linearGradient id="statusRejected" x1="0" y1="0" x2="1" y2="1">
-                        <stop offset="0%" stopColor="#fecdd3" /><stop offset="100%" stopColor="#ef4444" />
-                      </linearGradient>
-                    </defs>
                     <Pie
                       data={statusWiseData}
                       cx="50%"
@@ -690,11 +674,13 @@ export default function AnalysisPage() {
                       outerRadius={isMobile ? 55 : 75}
                       paddingAngle={3}
                       dataKey="value"
+                      stroke="#ffffff"
+                      strokeWidth={3}
                       label={isMobile ? undefined : ({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}
                       labelLine={!isMobile}
                     >
                       {statusWiseData.map((_, i) => (
-                        <Cell key={i} fill={i === 0 ? "url(#statusApproved)" : i === 1 ? "url(#statusPending)" : "url(#statusRejected)"} />
+                        <Cell key={i} fill={i === 0 ? "#2b7d50" : i === 1 ? "#d28b2a" : "#d83b01"} />
                       ))}
                     </Pie>
                     <Tooltip formatter={(v: number) => `₹${v.toLocaleString()}`} />
@@ -719,18 +705,11 @@ export default function AnalysisPage() {
               {districtWiseData.length > 0 ? (
                 <ResponsiveContainer width="100%" height="100%">
                   <BarChart data={districtWiseData} margin={{ bottom: 5 }}>
-                    <defs>
-                      <linearGradient id="cylinderBlue" x1="0" y1="0" x2="1" y2="0">
-                        <stop offset="0%" stopColor="#1e3a8a" />
-                        <stop offset="50%" stopColor="#60a5fa" />
-                        <stop offset="100%" stopColor="#1d4ed8" />
-                      </linearGradient>
-                    </defs>
                     <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
                     <XAxis dataKey="name" tick={{ fontSize: 10 }} />
                     <YAxis tick={{ fontSize: 10 }} tickFormatter={(v) => `₹${(v / 1000).toFixed(0)}k`} />
                     <Tooltip content={<CustomTooltip />} />
-                    <Bar dataKey="amount" fill="url(#cylinderBlue)" radius={[4, 4, 0, 0]} maxBarSize={30} />
+                    <Bar dataKey="amount" fill="#2f5bb7" radius={[4, 4, 0, 0]} maxBarSize={30} />
                   </BarChart>
                 </ResponsiveContainer>
               ) : (
@@ -782,23 +761,6 @@ export default function AnalysisPage() {
               {zoneWiseData.length > 0 ? (
                 <ResponsiveContainer width="100%" height="100%">
                   <PieChart margin={{ top: 15, right: 15, bottom: 15, left: 15 }}>
-                    <defs>
-                      <linearGradient id="zoneGrad0" x1="0" y1="0" x2="1" y2="1">
-                        <stop offset="0%" stopColor="#c7d2fe" /><stop offset="100%" stopColor="#4f46e5" />
-                      </linearGradient>
-                      <linearGradient id="zoneGrad1" x1="0" y1="0" x2="1" y2="1">
-                        <stop offset="0%" stopColor="#a7f3d0" /><stop offset="100%" stopColor="#047857" />
-                      </linearGradient>
-                      <linearGradient id="zoneGrad2" x1="0" y1="0" x2="1" y2="1">
-                        <stop offset="0%" stopColor="#fde047" /><stop offset="100%" stopColor="#ca8a04" />
-                      </linearGradient>
-                      <linearGradient id="zoneGrad3" x1="0" y1="0" x2="1" y2="1">
-                        <stop offset="0%" stopColor="#93c5fd" /><stop offset="100%" stopColor="#1d4ed8" />
-                      </linearGradient>
-                      <linearGradient id="zoneGrad4" x1="0" y1="0" x2="1" y2="1">
-                        <stop offset="0%" stopColor="#fbcfe8" /><stop offset="100%" stopColor="#be185d" />
-                      </linearGradient>
-                    </defs>
                     <Pie
                       data={zoneWiseData}
                       cx="50%"
@@ -807,11 +769,13 @@ export default function AnalysisPage() {
                       outerRadius={isMobile ? 55 : 75}
                       paddingAngle={3}
                       dataKey="value"
+                      stroke="#ffffff"
+                      strokeWidth={3}
                       label={isMobile ? undefined : ({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}
                       labelLine={!isMobile}
                     >
                       {zoneWiseData.map((_, i) => (
-                        <Cell key={i} fill={`url(#zoneGrad${i % 5})`} />
+                        <Cell key={i} fill={GALLERY_COLORS[i % GALLERY_COLORS.length]} />
                       ))}
                     </Pie>
                     <Tooltip formatter={(v: number) => `₹${v.toLocaleString()}`} />
@@ -836,18 +800,11 @@ export default function AnalysisPage() {
               {categoryData.length > 0 ? (
                 <ResponsiveContainer width="100%" height="100%">
                   <BarChart data={categoryData} margin={{ bottom: 5 }}>
-                    <defs>
-                      <linearGradient id="cylinderTeal" x1="0" y1="0" x2="1" y2="0">
-                        <stop offset="0%" stopColor="#0f766e" />
-                        <stop offset="50%" stopColor="#2dd4bf" />
-                        <stop offset="100%" stopColor="#14b8a6" />
-                      </linearGradient>
-                    </defs>
                     <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
                     <XAxis dataKey="name" tick={{ fontSize: 10 }} />
                     <YAxis tick={{ fontSize: 10 }} tickFormatter={(v) => `₹${(v / 1000).toFixed(0)}k`} />
                     <Tooltip content={<CustomTooltip />} />
-                    <Bar dataKey="amount" fill="url(#cylinderTeal)" radius={[4, 4, 0, 0]} maxBarSize={30} />
+                    <Bar dataKey="amount" fill="#00a2ad" radius={[4, 4, 0, 0]} maxBarSize={30} />
                   </BarChart>
                 </ResponsiveContainer>
               ) : (
@@ -873,33 +830,13 @@ export default function AnalysisPage() {
               {activityChartData.some(d => d.count > 0) ? (
                 <ResponsiveContainer width="100%" height="100%">
                   <BarChart data={activityChartData} margin={{ bottom: 15, top: 10 }}>
-                    <defs>
-                      <linearGradient id="opCylinder0" x1="0" y1="0" x2="1" y2="0">
-                        <stop offset="0%" stopColor="#1e3a8a" /><stop offset="50%" stopColor="#3b82f6" /><stop offset="100%" stopColor="#1d4ed8" />
-                      </linearGradient>
-                      <linearGradient id="opCylinder1" x1="0" y1="0" x2="1" y2="0">
-                        <stop offset="0%" stopColor="#064e3b" /><stop offset="50%" stopColor="#10b981" /><stop offset="100%" stopColor="#047857" />
-                      </linearGradient>
-                      <linearGradient id="opCylinder2" x1="0" y1="0" x2="1" y2="0">
-                        <stop offset="0%" stopColor="#115e59" /><stop offset="50%" stopColor="#14b8a6" /><stop offset="100%" stopColor="#0f766e" />
-                      </linearGradient>
-                      <linearGradient id="opCylinder3" x1="0" y1="0" x2="1" y2="0">
-                        <stop offset="0%" stopColor="#78350f" /><stop offset="50%" stopColor="#fbbf24" /><stop offset="100%" stopColor="#d97706" />
-                      </linearGradient>
-                      <linearGradient id="opCylinder4" x1="0" y1="0" x2="1" y2="0">
-                        <stop offset="0%" stopColor="#4c1d95" /><stop offset="50%" stopColor="#a78bfa" /><stop offset="100%" stopColor="#6d28d9" />
-                      </linearGradient>
-                      <linearGradient id="opCylinder5" x1="0" y1="0" x2="1" y2="0">
-                        <stop offset="0%" stopColor="#831843" /><stop offset="50%" stopColor="#f472b6" /><stop offset="100%" stopColor="#db2777" />
-                      </linearGradient>
-                    </defs>
                     <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
                     <XAxis dataKey="name" tick={{ fontSize: 10, fontWeight: "bold" }} />
                     <YAxis tick={{ fontSize: 10 }} allowDecimals={false} />
                     <Tooltip formatter={(value) => [value, "Count"]} />
                     <Bar dataKey="count" radius={[4, 4, 0, 0]} maxBarSize={60}>
                       {activityChartData.map((_, idx) => (
-                        <Cell key={idx} fill={`url(#opCylinder${idx % 6})`} />
+                        <Cell key={idx} fill={GALLERY_COLORS[idx % GALLERY_COLORS.length]} />
                       ))}
                     </Bar>
                   </BarChart>

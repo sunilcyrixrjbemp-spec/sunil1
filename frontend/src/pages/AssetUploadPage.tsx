@@ -84,6 +84,8 @@ const defaultStats: AssetStats = {
 };
 
 
+const GALLERY_COLORS = ["#2f5bb7", "#2b7d50", "#d28b2a", "#854aa5", "#d83b01", "#00a2ad", "#e81123"];
+
 const fmt = (n: number) => n >= 10000000 ? `${(n / 10000000).toFixed(2)} Cr` :
   n >= 100000 ? `${(n / 100000).toFixed(2)} L` :
   n >= 1000 ? `${(n / 1000).toFixed(1)}K` : n.toLocaleString("en-IN");
@@ -859,23 +861,6 @@ export default function AssetUploadPage() {
               {stats.charts.status_list.length > 0 ? (
                 <ResponsiveContainer width="100%" height="100%">
                   <PieChart>
-                    <defs>
-                      <linearGradient id="assetStatusGrad0" x1="0" y1="0" x2="1" y2="1">
-                        <stop offset="0%" stopColor="#93c5fd" /><stop offset="100%" stopColor="#1d4ed8" />
-                      </linearGradient>
-                      <linearGradient id="assetStatusGrad1" x1="0" y1="0" x2="1" y2="1">
-                        <stop offset="0%" stopColor="#a7f3d0" /><stop offset="100%" stopColor="#047857" />
-                      </linearGradient>
-                      <linearGradient id="assetStatusGrad2" x1="0" y1="0" x2="1" y2="1">
-                        <stop offset="0%" stopColor="#fef08a" /><stop offset="100%" stopColor="#ca8a04" />
-                      </linearGradient>
-                      <linearGradient id="assetStatusGrad3" x1="0" y1="0" x2="1" y2="1">
-                        <stop offset="0%" stopColor="#fecdd3" /><stop offset="100%" stopColor="#e11d48" />
-                      </linearGradient>
-                      <linearGradient id="assetStatusGrad4" x1="0" y1="0" x2="1" y2="1">
-                        <stop offset="0%" stopColor="#ddd6fe" /><stop offset="100%" stopColor="#6d28d9" />
-                      </linearGradient>
-                    </defs>
                     <Pie
                       data={stats.charts.status_list}
                       cx="50%"
@@ -884,9 +869,11 @@ export default function AssetUploadPage() {
                       outerRadius={isMobile ? 55 : 80}
                       paddingAngle={3}
                       dataKey="value"
+                      stroke="#ffffff"
+                      strokeWidth={3}
                     >
                       {stats.charts.status_list.map((_, index) => (
-                        <Cell key={`cell-${index}`} fill={`url(#assetStatusGrad${index % 5})`} />
+                        <Cell key={`cell-${index}`} fill={GALLERY_COLORS[index % GALLERY_COLORS.length]} />
                       ))}
                     </Pie>
                     <Tooltip formatter={(value) => `${value} units`} />
@@ -911,18 +898,11 @@ export default function AssetUploadPage() {
               {stats.charts.top_types.length > 0 ? (
                 <ResponsiveContainer width="100%" height="100%">
                   <BarChart data={stats.charts.top_types} layout="vertical" margin={{ left: 10, right: 10, top: 10, bottom: 10 }}>
-                    <defs>
-                      <linearGradient id="cylinderEmerald" x1="0" y1="0" x2="0" y2="1">
-                        <stop offset="0%" stopColor="#064e3b" />
-                        <stop offset="50%" stopColor="#34d399" />
-                        <stop offset="100%" stopColor="#059669" />
-                      </linearGradient>
-                    </defs>
                     <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
                     <XAxis type="number" stroke="#9ca3af" fontSize={9} />
                     <YAxis dataKey="name" type="category" stroke="#9ca3af" fontSize={8} width={80} />
                     <Tooltip formatter={(value) => `${value} units`} />
-                    <Bar dataKey="value" fill="url(#cylinderEmerald)" radius={[0, 4, 4, 0]} maxBarSize={16} />
+                    <Bar dataKey="value" fill="#2b7d50" radius={[0, 4, 4, 0]} maxBarSize={16} />
                   </BarChart>
                 </ResponsiveContainer>
               ) : (
@@ -943,14 +923,6 @@ export default function AssetUploadPage() {
               {stats.charts.warranty_list.some(w => w.value > 0) ? (
                 <ResponsiveContainer width="100%" height="100%">
                   <PieChart>
-                    <defs>
-                      <linearGradient id="warrantyGrad0" x1="0" y1="0" x2="1" y2="1">
-                        <stop offset="0%" stopColor="#a7f3d0" /><stop offset="100%" stopColor="#059669" />
-                      </linearGradient>
-                      <linearGradient id="warrantyGrad1" x1="0" y1="0" x2="1" y2="1">
-                        <stop offset="0%" stopColor="#fde047" /><stop offset="100%" stopColor="#d97706" />
-                      </linearGradient>
-                    </defs>
                     <Pie
                       data={stats.charts.warranty_list}
                       cx="50%"
@@ -958,10 +930,12 @@ export default function AssetUploadPage() {
                       outerRadius={isMobile ? 55 : 80}
                       labelLine={!isMobile}
                       dataKey="value"
+                      stroke="#ffffff"
+                      strokeWidth={3}
                       label={isMobile ? undefined : ({ name, percent }) => `${name}: ${(percent * 100).toFixed(0)}%`}
                     >
-                      <Cell fill="url(#warrantyGrad0)" />
-                      <Cell fill="url(#warrantyGrad1)" />
+                      <Cell fill="#2b7d50" />
+                      <Cell fill="#d28b2a" />
                     </Pie>
                     <Tooltip formatter={(value) => `${value} units`} />
                     <Legend verticalAlign="bottom" height={36} iconType="circle" wrapperStyle={{ fontSize: isMobile ? "9px" : "10px" }} />

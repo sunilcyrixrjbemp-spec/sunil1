@@ -251,10 +251,10 @@ export default function MISReportPage() {
         fill: true,
         label: 'Logged Calls',
         data: dailyLoggedData.map(d => d.count),
-        backgroundColor: 'rgba(60,141,188,0.2)',
-        borderColor: 'rgba(60,141,188,1)',
-        pointBorderColor: '#3b8bba',
-        pointBackgroundColor: 'rgba(60,141,188,1)',
+        backgroundColor: 'rgba(47, 91, 183, 0.15)',
+        borderColor: '#2f5bb7',
+        pointBorderColor: '#2f5bb7',
+        pointBackgroundColor: '#2f5bb7',
         tension: 0.4
       },
       {
@@ -264,10 +264,10 @@ export default function MISReportPage() {
           const match = dailyClosedData.find(c => c.day === d.day);
           return match ? match.count : 0;
         }),
-        backgroundColor: 'rgba(40,167,69,0.15)',
-        borderColor: 'rgba(40,167,69,1)',
-        pointBorderColor: '#28a745',
-        pointBackgroundColor: 'rgba(40,167,69,1)',
+        backgroundColor: 'rgba(43, 125, 80, 0.15)',
+        borderColor: '#2b7d50',
+        pointBorderColor: '#2b7d50',
+        pointBackgroundColor: '#2b7d50',
         tension: 0.4
       }
     ]
@@ -280,10 +280,10 @@ export default function MISReportPage() {
       {
         label: 'Total Penalty Amount (₹)',
         data: breakdown?.equipment.map(e => e.penalty) || [],
-        backgroundColor: '#dc3545',
-        borderColor: '#b21f2d',
+        backgroundColor: '#d83b01',
+        borderColor: '#d83b01',
         borderWidth: 1,
-        borderRadius: 2
+        borderRadius: 4
       }
     ]
   };
@@ -294,8 +294,9 @@ export default function MISReportPage() {
     datasets: [
       {
         data: breakdown?.district.map(d => d.penalty) || [],
-        backgroundColor: ['#007bff', '#28a745', '#ffc107', '#dc3545', '#17a2b8', '#6f42c1', '#fd7e14', '#20c997'],
-        borderWidth: 1
+        backgroundColor: ['#2f5bb7', '#2b7d50', '#d28b2a', '#854aa5', '#d83b01', '#00a2ad', '#e81123'],
+        borderColor: '#ffffff',
+        borderWidth: 3
       }
     ]
   };
@@ -307,9 +308,10 @@ export default function MISReportPage() {
       {
         label: 'Coordinator Penalty (₹)',
         data: breakdown?.coordinator.map(c => c.penalty) || [],
-        backgroundColor: '#3c8dbc',
-        borderColor: '#245a75',
-        borderWidth: 1
+        backgroundColor: '#2f5bb7',
+        borderColor: '#2f5bb7',
+        borderWidth: 1,
+        borderRadius: 4
       }
     ]
   };
@@ -320,8 +322,9 @@ export default function MISReportPage() {
     datasets: [
       {
         data: breakdown?.hospital_type.map(h => h.penalty) || [],
-        backgroundColor: ['#6f42c1', '#fd7e14', '#007bff', '#28a745', '#ffc107', '#17a2b8'],
-        borderWidth: 1
+        backgroundColor: ['#2f5bb7', '#2b7d50', '#d28b2a', '#854aa5', '#d83b01', '#00a2ad'],
+        borderColor: '#ffffff',
+        borderWidth: 3
       }
     ]
   };
@@ -332,8 +335,9 @@ export default function MISReportPage() {
     datasets: [
       {
         data: breakdown?.warranty.map(w => w.penalty) || [],
-        backgroundColor: ['#28a745', '#dc3545'],
-        borderWidth: 1
+        backgroundColor: ['#2b7d50', '#d83b01'],
+        borderColor: '#ffffff',
+        borderWidth: 3
       }
     ]
   };
@@ -345,8 +349,10 @@ export default function MISReportPage() {
       {
         label: 'Hospital Penalty (₹)',
         data: breakdown?.hospital.map(h => h.penalty) || [],
-        backgroundColor: '#fd7e14',
-        borderWidth: 1
+        backgroundColor: '#d28b2a',
+        borderColor: '#d28b2a',
+        borderWidth: 1,
+        borderRadius: 4
       }
     ]
   };

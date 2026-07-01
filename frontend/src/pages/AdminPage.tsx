@@ -23,6 +23,8 @@ const getErrorMessage = (err: any, fallback: string): string => {
   return typeof detail === "object" ? JSON.stringify(detail) : String(detail);
 };
 
+const GALLERY_COLORS = ["#2f5bb7", "#2b7d50", "#d28b2a", "#854aa5", "#d83b01", "#00a2ad", "#e81123"];
+
 const ALL_WINDOWS = [
   { id: "home", name: "Home" },
   { id: "admin", name: "Admin Panel" },
@@ -1167,9 +1169,9 @@ export default function AdminPage() {
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            {/* Zone-wise Chart (3D Donut style) */}
+            {/* Zone-wise Chart (Donut style) */}
             <div className="bg-white border border-gray-200 rounded shadow-sm">
-              <div className="border-b border-gray-200 px-4 py-3 bg-[#007bff] text-white flex items-center justify-between rounded-t">
+              <div className="border-b border-gray-200 px-4 py-3 bg-[#2f5bb7] text-white flex items-center justify-between rounded-t">
                 <h4 className="text-xs font-bold uppercase tracking-wider">
                   Zone-wise Distribution
                 </h4>
@@ -1177,23 +1179,6 @@ export default function AdminPage() {
               <div className="p-4" style={{ height: "290px" }}>
                 <ResponsiveContainer width="100%" height="100%">
                   <PieChart>
-                    <defs>
-                      <linearGradient id="pieGrad0" x1="0" y1="0" x2="1" y2="1">
-                        <stop offset="0%" stopColor="#93c5fd" /><stop offset="100%" stopColor="#1d4ed8" />
-                      </linearGradient>
-                      <linearGradient id="pieGrad1" x1="0" y1="0" x2="1" y2="1">
-                        <stop offset="0%" stopColor="#a7f3d0" /><stop offset="100%" stopColor="#047857" />
-                      </linearGradient>
-                      <linearGradient id="pieGrad2" x1="0" y1="0" x2="1" y2="1">
-                        <stop offset="0%" stopColor="#ddd6fe" /><stop offset="100%" stopColor="#6d28d9" />
-                      </linearGradient>
-                      <linearGradient id="pieGrad3" x1="0" y1="0" x2="1" y2="1">
-                        <stop offset="0%" stopColor="#fed7aa" /><stop offset="100%" stopColor="#c2410c" />
-                      </linearGradient>
-                      <linearGradient id="pieGrad4" x1="0" y1="0" x2="1" y2="1">
-                        <stop offset="0%" stopColor="#fbcfe8" /><stop offset="100%" stopColor="#be185d" />
-                      </linearGradient>
-                    </defs>
                     <Pie
                       data={getZoneData().slice(0, 5)}
                       dataKey="value"
@@ -1203,11 +1188,13 @@ export default function AdminPage() {
                       innerRadius={45}
                       outerRadius={75}
                       paddingAngle={3}
+                      stroke="#ffffff"
+                      strokeWidth={3}
                       label={({ name, percent }) => `${name} (${(percent * 100).toFixed(0)}%)`}
                       labelLine={false}
                     >
                       {getZoneData().slice(0, 5).map((_, index) => (
-                        <Cell key={`cell-${index}`} fill={`url(#pieGrad${index % 5})`} />
+                        <Cell key={`cell-${index}`} fill={GALLERY_COLORS[index % GALLERY_COLORS.length]} />
                       ))}
                     </Pie>
                     <Tooltip formatter={(value) => [`${value} Employees`, 'Count']} />
@@ -1216,9 +1203,9 @@ export default function AdminPage() {
               </div>
             </div>
 
-            {/* District-wise Chart (3D cylindrical bars) */}
+            {/* District-wise Chart (Bar style) */}
             <div className="bg-white border border-gray-200 rounded shadow-sm">
-              <div className="border-b border-gray-200 px-4 py-3 bg-[#28a745] text-white flex items-center justify-between rounded-t">
+              <div className="border-b border-gray-200 px-4 py-3 bg-[#2b7d50] text-white flex items-center justify-between rounded-t">
                 <h4 className="text-xs font-bold uppercase tracking-wider">
                   District-wise Distribution
                 </h4>
@@ -1226,26 +1213,19 @@ export default function AdminPage() {
               <div className="p-4" style={{ height: "290px" }}>
                 <ResponsiveContainer width="100%" height="100%">
                   <BarChart data={getDistrictData().slice(0, 6)}>
-                    <defs>
-                      <linearGradient id="cylinderBlue" x1="0" y1="0" x2="1" y2="0">
-                        <stop offset="0%" stopColor="#1e3a8a" />
-                        <stop offset="50%" stopColor="#60a5fa" />
-                        <stop offset="100%" stopColor="#1d4ed8" />
-                      </linearGradient>
-                    </defs>
                     <CartesianGrid strokeDasharray="3 3" vertical={false} />
                     <XAxis dataKey="name" tick={{ fontSize: 9, fontWeight: 'bold' }} />
                     <YAxis tick={{ fontSize: 9 }} allowDecimals={false} />
                     <Tooltip formatter={(value) => [`${value} Employees`, 'Count']} />
-                    <Bar dataKey="value" fill="url(#cylinderBlue)" radius={[6, 6, 0, 0]} maxBarSize={40} />
+                    <Bar dataKey="value" fill="#2f5bb7" radius={[4, 4, 0, 0]} maxBarSize={40} />
                   </BarChart>
                 </ResponsiveContainer>
               </div>
             </div>
 
-            {/* Manager-wise Chart (Horizontal 3D cylinders) */}
+            {/* Manager-wise Chart (Horizontal Bar style) */}
             <div className="bg-white border border-gray-200 rounded shadow-sm">
-              <div className="border-b border-gray-200 px-4 py-3 bg-[#6f42c1] text-white flex items-center justify-between rounded-t">
+              <div className="border-b border-gray-200 px-4 py-3 bg-[#854aa5] text-white flex items-center justify-between rounded-t">
                 <h4 className="text-xs font-bold uppercase tracking-wider">
                   Manager-wise Distribution
                 </h4>
@@ -1253,26 +1233,19 @@ export default function AdminPage() {
               <div className="p-4" style={{ height: "290px" }}>
                 <ResponsiveContainer width="100%" height="100%">
                   <BarChart data={getManagerData().slice(0, 6)} layout="vertical">
-                    <defs>
-                      <linearGradient id="cylinderPurple" x1="0" y1="0" x2="0" y2="1">
-                        <stop offset="0%" stopColor="#4c1d95" />
-                        <stop offset="50%" stopColor="#a78bfa" />
-                        <stop offset="100%" stopColor="#6d28d9" />
-                      </linearGradient>
-                    </defs>
                     <CartesianGrid strokeDasharray="3 3" horizontal={false} />
                     <XAxis type="number" tick={{ fontSize: 9 }} allowDecimals={false} />
                     <YAxis dataKey="name" type="category" tick={{ fontSize: 9, fontWeight: 'bold' }} width={85} />
                     <Tooltip formatter={(value) => [`${value} Employees`, 'Count']} />
-                    <Bar dataKey="value" fill="url(#cylinderPurple)" radius={[0, 6, 6, 0]} maxBarSize={22} />
+                    <Bar dataKey="value" fill="#854aa5" radius={[0, 4, 4, 0]} maxBarSize={22} />
                   </BarChart>
                 </ResponsiveContainer>
               </div>
             </div>
 
-            {/* Designation-wise Chart (3D Pie style) */}
+            {/* Designation-wise Chart (Pie style) */}
             <div className="bg-white border border-gray-200 rounded shadow-sm">
-              <div className="border-b border-gray-200 px-4 py-3 bg-[#17a2b8] text-white flex items-center justify-between rounded-t">
+              <div className="border-b border-gray-200 px-4 py-3 bg-[#d28b2a] text-white flex items-center justify-between rounded-t">
                 <h4 className="text-xs font-bold uppercase tracking-wider">
                   Designation-wise Distribution
                 </h4>
@@ -1280,23 +1253,6 @@ export default function AdminPage() {
               <div className="p-4" style={{ height: "290px" }}>
                 <ResponsiveContainer width="100%" height="100%">
                   <PieChart>
-                    <defs>
-                      <linearGradient id="desgGrad0" x1="0" y1="0" x2="1" y2="1">
-                        <stop offset="0%" stopColor="#a5f3fc" /><stop offset="100%" stopColor="#0891b2" />
-                      </linearGradient>
-                      <linearGradient id="desgGrad1" x1="0" y1="0" x2="1" y2="1">
-                        <stop offset="0%" stopColor="#fef08a" /><stop offset="100%" stopColor="#ca8a04" />
-                      </linearGradient>
-                      <linearGradient id="desgGrad2" x1="0" y1="0" x2="1" y2="1">
-                        <stop offset="0%" stopColor="#fecdd3" /><stop offset="100%" stopColor="#e11d48" />
-                      </linearGradient>
-                      <linearGradient id="desgGrad3" x1="0" y1="0" x2="1" y2="1">
-                        <stop offset="0%" stopColor="#c7d2fe" /><stop offset="100%" stopColor="#4f46e5" />
-                      </linearGradient>
-                      <linearGradient id="desgGrad4" x1="0" y1="0" x2="1" y2="1">
-                        <stop offset="0%" stopColor="#e2e8f0" /><stop offset="100%" stopColor="#475569" />
-                      </linearGradient>
-                    </defs>
                     <Pie
                       data={getDesignationData().slice(0, 5)}
                       dataKey="value"
@@ -1304,11 +1260,13 @@ export default function AdminPage() {
                       cx="50%"
                       cy="50%"
                       outerRadius={75}
+                      stroke="#ffffff"
+                      strokeWidth={3}
                       label={({ name, percent }) => `${name} (${(percent * 100).toFixed(0)}%)`}
                       labelLine={false}
                     >
                       {getDesignationData().slice(0, 5).map((_, index) => (
-                        <Cell key={`cell-${index}`} fill={`url(#desgGrad${index % 5})`} />
+                        <Cell key={`cell-${index}`} fill={GALLERY_COLORS[index % GALLERY_COLORS.length]} />
                       ))}
                     </Pie>
                     <Tooltip formatter={(value) => [`${value} Employees`, 'Count']} />
