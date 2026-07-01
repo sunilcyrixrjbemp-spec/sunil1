@@ -1,5 +1,5 @@
 import { useEffect, useState, useMemo } from "react";
-import { BarChart3, Filter, Users, User as UserIcon, X } from "lucide-react";
+import { BarChart3, Filter, Users, User as UserIcon, X, IndianRupee, Phone, ShieldCheck, CheckSquare, TrendingUp, Activity, FileSpreadsheet } from "lucide-react";
 import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
   PieChart, Pie, Cell, Legend,
@@ -538,34 +538,82 @@ export default function AnalysisPage() {
       </div>
 
       {/* Summary Stats */}
-      <div className="grid grid-cols-1 sm:grid-cols-7 gap-3">
-        <div className="bg-white border border-gray-200 border-t-4 border-t-blue-600 rounded p-3 text-center sm:text-left">
-          <p className="text-[9px] font-black text-gray-450 uppercase tracking-wider">Total Claims</p>
-          <h4 className="text-xl font-extrabold text-gray-900 mt-0.5">{count}</h4>
+      <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-7 gap-3">
+        {/* Card 1: Total Claims */}
+        <div className="info-box-lte animate-fadeIn min-h-[64px]">
+          <div className="info-box-icon bg-[#007bff] w-10">
+            <FileSpreadsheet className="w-5 h-5 text-white" />
+          </div>
+          <div className="info-box-content p-2">
+            <span className="text-[8px] font-black uppercase tracking-wider text-gray-400 block mb-0.5">Total Claims</span>
+            <span className="text-sm font-extrabold text-gray-800 font-mono block leading-none mt-0.5">{count}</span>
+          </div>
         </div>
-        <div className="bg-white border border-gray-200 border-t-4 border-t-green-600 rounded p-3 text-center sm:text-left">
-          <p className="text-[9px] font-black text-gray-455 uppercase tracking-wider">Total Amount</p>
-          <h4 className="text-xl font-extrabold text-gray-900 font-mono mt-0.5">₹{totalAmount.toLocaleString()}</h4>
+
+        {/* Card 2: Total Amount */}
+        <div className="info-box-lte animate-fadeIn min-h-[64px]">
+          <div className="info-box-icon bg-[#28a745] w-10">
+            <IndianRupee className="w-5 h-5 text-white" />
+          </div>
+          <div className="info-box-content p-2">
+            <span className="text-[8px] font-black uppercase tracking-wider text-gray-400 block mb-0.5">Total Amount</span>
+            <span className="text-sm font-extrabold text-[#28a745] font-mono block leading-none mt-0.5">₹{totalAmount.toLocaleString()}</span>
+          </div>
         </div>
-        <div className="bg-white border border-gray-200 border-t-4 border-t-amber-500 rounded p-3 text-center sm:text-left">
-          <p className="text-[9px] font-black text-gray-450 uppercase tracking-wider">Average Claim</p>
-          <h4 className="text-xl font-extrabold text-gray-900 font-mono mt-0.5">₹{avgValue.toLocaleString()}</h4>
+
+        {/* Card 3: Average Claim */}
+        <div className="info-box-lte animate-fadeIn min-h-[64px]">
+          <div className="info-box-icon bg-[#ffc107] w-10">
+            <TrendingUp className="w-5 h-5 text-white" />
+          </div>
+          <div className="info-box-content p-2">
+            <span className="text-[8px] font-black uppercase tracking-wider text-gray-400 block mb-0.5">Average Claim</span>
+            <span className="text-sm font-extrabold text-amber-600 font-mono block leading-none mt-0.5">₹{avgValue.toLocaleString()}</span>
+          </div>
         </div>
-        <div className="bg-white border border-gray-200 border-t-4 border-t-indigo-500 rounded p-3 text-center sm:text-left">
-          <p className="text-[9px] font-black text-gray-450 uppercase tracking-wider">Calls Done / Assigned</p>
-          <h4 className="text-xl font-extrabold text-gray-900 mt-0.5">{activityStats.callsCompleted} / {activityStats.callsAssigned}</h4>
+
+        {/* Card 4: Calls Done / Assigned */}
+        <div className="info-box-lte animate-fadeIn min-h-[64px]">
+          <div className="info-box-icon bg-[#605ca8] w-10">
+            <Phone className="w-5 h-5 text-white" />
+          </div>
+          <div className="info-box-content p-2">
+            <span className="text-[8px] font-black uppercase tracking-wider text-gray-400 block mb-0.5">Calls Done / Assigned</span>
+            <span className="text-sm font-extrabold text-[#605ca8] font-mono block leading-none mt-0.5">{activityStats.callsCompleted} / {activityStats.callsAssigned}</span>
+          </div>
         </div>
-        <div className="bg-white border border-gray-200 border-t-4 border-t-emerald-500 rounded p-3 text-center sm:text-left">
-          <p className="text-[9px] font-black text-gray-450 uppercase tracking-wider">PMS Completed</p>
-          <h4 className="text-xl font-extrabold text-gray-900 mt-0.5">{activityStats.pmsCount}</h4>
+
+        {/* Card 5: PMS Completed */}
+        <div className="info-box-lte animate-fadeIn min-h-[64px]">
+          <div className="info-box-icon bg-[#20c997] w-10">
+            <ShieldCheck className="w-5 h-5 text-white" />
+          </div>
+          <div className="info-box-content p-2">
+            <span className="text-[8px] font-black uppercase tracking-wider text-gray-400 block mb-0.5">PMS Completed</span>
+            <span className="text-sm font-extrabold text-[#20c997] font-mono block leading-none mt-0.5">{activityStats.pmsCount}</span>
+          </div>
         </div>
-        <div className="bg-white border border-gray-200 border-t-4 border-t-cyan-500 rounded p-3 text-center sm:text-left">
-          <p className="text-[9px] font-black text-gray-450 uppercase tracking-wider">Tag & Calib Done</p>
-          <h4 className="text-xl font-extrabold text-gray-900 mt-0.5">{activityStats.assetTaggingCount + activityStats.calibrationCount}</h4>
+
+        {/* Card 6: Tag & Calib Done */}
+        <div className="info-box-lte animate-fadeIn min-h-[64px]">
+          <div className="info-box-icon bg-[#17a2b8] w-10">
+            <Activity className="w-5 h-5 text-white" />
+          </div>
+          <div className="info-box-content p-2">
+            <span className="text-[8px] font-black uppercase tracking-wider text-gray-400 block mb-0.5">Tag & Calib Done</span>
+            <span className="text-sm font-extrabold text-[#17a2b8] font-mono block leading-none mt-0.5">{activityStats.assetTaggingCount + activityStats.calibrationCount}</span>
+          </div>
         </div>
-        <div className="bg-white border border-gray-200 border-t-4 border-t-purple-600 rounded p-3 text-center sm:text-left">
-          <p className="text-[9px] font-black text-gray-450 uppercase tracking-wider">Scope</p>
-          <h4 className="text-sm font-extrabold text-gray-900 truncate mt-1">{viewMode === "team" ? "Team" : "My Data"}</h4>
+
+        {/* Card 7: Scope */}
+        <div className="info-box-lte animate-fadeIn min-h-[64px]">
+          <div className="info-box-icon bg-[#6f42c1] w-10">
+            {viewMode === "team" ? <Users className="w-5 h-5 text-white" /> : <UserIcon className="w-5 h-5 text-white" />}
+          </div>
+          <div className="info-box-content p-2">
+            <span className="text-[8px] font-black uppercase tracking-wider text-gray-400 block mb-0.5">Scope</span>
+            <span className="text-xs font-bold text-[#6f42c1] block truncate leading-none mt-0.5" title={viewMode === "team" ? "Team" : "My Data"}>{viewMode === "team" ? "Team" : "My Data"}</span>
+          </div>
         </div>
       </div>
 
