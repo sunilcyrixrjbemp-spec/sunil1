@@ -206,3 +206,15 @@ class ApprovalHierarchyCreateRequest(BaseModel):
     requester_ids: List[int]
     approvers: List[Dict[str, int]] # e.g. [{"level_number": 1, "approver_id": 4}]
 
+class BulkHierarchyRow(BaseModel):
+    hierarchy_name: str
+    requester_e_codes: Optional[str] = ""
+    level_1_approver: Optional[str] = ""
+    level_2_approver: Optional[str] = ""
+    level_3_approver: Optional[str] = ""
+    level_4_approver: Optional[str] = ""
+    level_5_approver: Optional[str] = ""
+
+class BulkHierarchyImportRequest(BaseModel):
+    rows: List[BulkHierarchyRow]
+

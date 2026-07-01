@@ -2,7 +2,7 @@ import React, { useEffect, useState, useRef } from "react";
 import toast from "react-hot-toast";
 import { adminService, UserCreatePayload, UserEditPayload, ApprovalHierarchyResponse } from "../services/adminService";
 import { authService } from "../services/authService";
-import { Search, UploadCloud, Pencil, Trash2, Plus, LogOut } from "lucide-react";
+import { Search, UploadCloud, Pencil, Trash2, Plus, LogOut, Download } from "lucide-react";
 import Loader from "../components/common/Loader";
 
 const LteSpinner = () => (
@@ -81,6 +81,12 @@ export default function AdminPage() {
   const [showSingleUserModal, setShowSingleUserModal] = useState(false);
   const [showEditUserModal, setShowEditUserModal] = useState(false);
   const [showBulkUploadModal, setShowBulkUploadModal] = useState(false);
+
+  // Bulk Hierarchy Import Form state
+  const [showBulkHierarchyModal, setShowBulkHierarchyModal] = useState(false);
+  const [hierarchyCsvText, setHierarchyCsvText] = useState("");
+  const [bulkHierarchyLoading, setBulkHierarchyLoading] = useState(false);
+  const [bulkHierarchyResult, setBulkHierarchyResult] = useState<any>(null);
 
   // Single User Create Form state
   const [eCode, setECode] = useState("");
@@ -541,6 +547,94 @@ export default function AdminPage() {
     }
   };
 
+  const handleExportHierarchies = async () => {
+    try {
+      const blob = await adminService.exportHierarchies();
+      const url = window.URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.href = url;
+      link.setAttribute("download", "team_hierarchies.csv");
+      document.body.appendChild(link);
+      link.click();
+      link.parentNode?.removeChild(link);
+      toast.success("Team hierarchies exported successfully!");
+    } catch (err: any) {
+      toast.error("Failed to export hierarchies: " + getErrorMessage(err, "Network error"));
+    }
+  };
+
+  const handleBulkHierarchySubmit = async () => {
+    if (!hierarchyCsvText.trim()) {
+      toast.error("CSV text cannot be empty");
+      return;
+    }
+    setBulkHierarchyLoading(true);
+    setBulkHierarchyResult(null);
+
+    try {
+      const lines = hierarchyCsvText.split("\n");
+      if (lines.length <= 1) {
+        toast.error("CSV must contain at least a header row and one data row");
+        setBulkHierarchyLoading(false);
+        return;
+      }
+
+      const headers = lines[0].split(",").map(h => h.trim().toLowerCase());
+      const rows: any[] = [];
+      const validationErrors: string[] = [];
+
+      for (let i = 1; i < lines.length; i++) {
+        const line = lines[i].trim();
+        if (!line) continue;
+
+        const parts = line.split(",").map(p => p.trim());
+        const record: any = {};
+        headers.forEach((header, index) => {
+          record[header] = parts[index] || "";
+        });
+
+        if (!record.hierarchy_name) {
+          validationErrors.push(`Row ${i + 1}: Missing 'hierarchy_name'`);
+          continue;
+        }
+
+        rows.push({
+          hierarchy_name: record.hierarchy_name,
+          requester_e_codes: record.requester_e_codes || "",
+          level_1_approver: record.level_1_approver || "",
+          level_2_approver: record.level_2_approver || "",
+          level_3_approver: record.level_3_approver || "",
+          level_4_approver: record.level_4_approver || "",
+          level_5_approver: record.level_5_approver || ""
+        });
+      }
+
+      if (validationErrors.length > 0) {
+        setBulkHierarchyResult({
+          error: "Validation failed.",
+          rowErrors: validationErrors
+        });
+        setBulkHierarchyLoading(false);
+        return;
+      }
+
+      const response = await adminService.bulkImportHierarchies(rows);
+      toast.success(response.message || "Team hierarchies imported successfully!");
+      setHierarchyCsvText("");
+      setShowBulkHierarchyModal(false);
+      
+      const freshHierarchies = await adminService.getHierarchies();
+      setHierarchies(freshHierarchies);
+    } catch (err: any) {
+      const errMsg = getErrorMessage(err, "Failed to import hierarchies");
+      setBulkHierarchyResult({
+        error: errMsg
+      });
+    } finally {
+      setBulkHierarchyLoading(false);
+    }
+  };
+
   const handleToggleWindow = (id: string, isEdit: boolean = false) => {
     if (isEdit) {
       if (editAllowedWindows.includes(id)) {
@@ -951,12 +1045,34 @@ export default function AdminPage() {
               <h3 className="text-sm font-bold text-gray-800 uppercase tracking-wide">Team Hierarchy Mappings</h3>
               <p className="text-gray-500 text-xs mt-1">Add approval groups with named requesters and level-by-level approvers flow.</p>
             </div>
-            <button
-              onClick={() => handleOpenHierarchyModal()}
-              className="btn-lte-primary uppercase tracking-wider font-bold"
-            >
-              + Create Team
-            </button>
+            <div className="flex gap-2">
+              <button
+                onClick={handleExportHierarchies}
+                className="btn-lte-outline uppercase tracking-wider font-bold flex items-center gap-1.5"
+                title="Export all team hierarchies to CSV"
+              >
+                <Download className="w-3.5 h-3.5 text-blue-600" />
+                Export CSV
+              </button>
+              <button
+                onClick={() => {
+                  setHierarchyCsvText("");
+                  setBulkHierarchyResult(null);
+                  setShowBulkHierarchyModal(true);
+                }}
+                className="btn-lte-outline uppercase tracking-wider font-bold flex items-center gap-1.5"
+                title="Import team hierarchies from CSV"
+              >
+                <UploadCloud className="w-3.5 h-3.5 text-blue-600" />
+                Import CSV
+              </button>
+              <button
+                onClick={() => handleOpenHierarchyModal()}
+                className="btn-lte-primary uppercase tracking-wider font-bold"
+              >
+                + Create Team
+              </button>
+            </div>
           </div>
 
           {safeHierarchies.length === 0 ? (
@@ -1699,6 +1815,110 @@ export default function AdminPage() {
                   className="btn-lte-primary disabled:opacity-50"
                 >
                   {bulkLoading && <LteSpinner />}
+                  <span>Start Import</span>
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ================= MODAL: CSV BULK HIERARCHY IMPORT ================= */}
+      {showBulkHierarchyModal && (
+        <div className="modal-lte-overlay z-[9999]">
+          <div className="modal-lte-content max-w-2xl p-6">
+            <h3 className="text-sm font-bold uppercase tracking-wider border-b border-gray-200 pb-3 text-gray-800 text-left">
+              Import Team Hierarchies via CSV
+            </h3>
+
+            <div className="space-y-4 mt-4 text-left">
+              <div className="text-xs text-gray-500 space-y-1">
+                <p>Upload a comma-separated values (.csv) file containing team hierarchy details.</p>
+                <p className="font-bold text-blue-600 uppercase tracking-wider text-[9px]">
+                  Required Headers: hierarchy_name, requester_e_codes, level_1_approver, level_2_approver, level_3_approver, level_4_approver, level_5_approver
+                </p>
+                <p className="text-[10px] text-gray-500 font-semibold mt-1">
+                  Note: Multiple requester employee codes can be separated by commas (e.g. &quot;E001,E002,E003&quot;). Approver fields accept a single employee code.
+                </p>
+              </div>
+
+              {/* Upload Input */}
+              <div className="p-4 border-2 border-dashed border-gray-300 bg-gray-50 rounded text-center">
+                <input
+                  type="file"
+                  accept=".csv"
+                  onChange={(e) => {
+                    const file = e.target.files?.[0];
+                    if (file) {
+                      const reader = new FileReader();
+                      reader.onload = (event) => {
+                        setHierarchyCsvText(event.target?.result as string || "");
+                      };
+                      reader.readAsText(file);
+                    }
+                  }}
+                  className="hidden"
+                  id="hierarchy-file-upload"
+                />
+                <label
+                  htmlFor="hierarchy-file-upload"
+                  className="cursor-pointer inline-flex items-center gap-1.5 px-4 py-2 bg-white hover:bg-gray-100 border border-gray-300 rounded font-semibold text-xs text-gray-700 shadow-sm transition-all"
+                >
+                  <UploadCloud className="w-4 h-4 text-blue-600" />
+                  <span>Choose CSV File</span>
+                </label>
+              </div>
+
+              {/* Raw CSV Text Area */}
+              <div className="space-y-1">
+                <label className="text-[11px] font-bold uppercase tracking-wider text-gray-600">
+                  Or Paste Raw CSV Data:
+                </label>
+                <textarea
+                  value={hierarchyCsvText}
+                  onChange={(e) => setHierarchyCsvText(e.target.value)}
+                  placeholder="hierarchy_name,requester_e_codes,level_1_approver,level_2_approver,level_3_approver,level_4_approver,level_5_approver&#10;Team Rajasthan,E001,E100,E200,E300,,&#10;Team Jodhpur,E002,E100,E200,,,"
+                  rows={6}
+                  className="w-full text-xs font-mono p-3 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500 resize-y"
+                />
+              </div>
+
+              {/* Bulk Results Summary */}
+              {bulkHierarchyResult && (
+                <div className={`p-4 rounded border text-xs font-semibold max-h-48 overflow-y-auto ${
+                  bulkHierarchyResult.error 
+                    ? "bg-red-50 border-red-200 text-red-700" 
+                    : "bg-green-50 border-green-200 text-green-700"
+                }`}>
+                  {bulkHierarchyResult.error && <p className="text-red-600 font-bold mb-1">{bulkHierarchyResult.error}</p>}
+                  {bulkHierarchyResult.rowErrors?.map((err: string, i: number) => (
+                    <div key={i} className="text-red-500 font-mono text-[10px] mt-0.5">{err}</div>
+                  ))}
+                  {bulkHierarchyResult.errors?.map((err: string, i: number) => (
+                    <div key={i} className="text-red-500 font-mono text-[10px] mt-0.5">{err}</div>
+                  ))}
+                  {!bulkHierarchyResult.error && !bulkHierarchyResult.errors && (
+                    <p className="text-green-600 font-bold">Successfully imported and updated all team hierarchies!</p>
+                  )}
+                </div>
+              )}
+
+              {/* Footer Actions */}
+              <div className="flex justify-end gap-3 pt-4 border-t border-gray-200 mt-6">
+                <button
+                  type="button"
+                  onClick={() => setShowBulkHierarchyModal(false)}
+                  className="btn-lte-secondary"
+                >
+                  Close
+                </button>
+                <button
+                  type="button"
+                  onClick={handleBulkHierarchySubmit}
+                  disabled={bulkHierarchyLoading || !hierarchyCsvText}
+                  className="btn-lte-primary disabled:opacity-50"
+                >
+                  {bulkHierarchyLoading && <LteSpinner />}
                   <span>Start Import</span>
                 </button>
               </div>

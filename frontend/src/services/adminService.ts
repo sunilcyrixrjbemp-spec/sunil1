@@ -121,5 +121,15 @@ export const adminService = {
   logoutSingleUser: async (userCode: string): Promise<any> => {
     const response = await api.post(`/admin/logout-user/${userCode}`);
     return response.data;
+  },
+
+  exportHierarchies: async (): Promise<any> => {
+    const response = await api.get("/admin/hierarchies/export", { responseType: "blob" });
+    return response.data;
+  },
+
+  bulkImportHierarchies: async (data: any[]): Promise<any> => {
+    const response = await api.post("/admin/hierarchies/bulk", { rows: data });
+    return response.data;
   }
 };
