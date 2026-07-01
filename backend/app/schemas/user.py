@@ -1,4 +1,4 @@
-from pydantic import BaseModel, ConfigDict
+from pydantic import BaseModel, ConfigDict, field_validator
 from typing import Optional, List, Dict
 from datetime import date, datetime
 
@@ -105,6 +105,31 @@ class UserCreateRequest(BaseModel):
     e_upkaran_id: str
     allowed_windows: Optional[str] = "home,approval,expense,analysis,report,help,profile"
 
+    @field_validator("date_of_joining", "date_of_birth", mode="before")
+    @classmethod
+    def parse_dates(cls, v):
+        if not v:
+            return None
+        if isinstance(v, (date, datetime)):
+            return v
+        if isinstance(v, str):
+            v_clean = v.strip()
+            if not v_clean:
+                return None
+            formats = [
+                "%Y-%m-%d",
+                "%d-%m-%Y",
+                "%d/%m/%Y",
+                "%Y/%m/%d",
+            ]
+            for fmt in formats:
+                try:
+                    return datetime.strptime(v_clean, fmt).date()
+                except ValueError:
+                    continue
+            raise ValueError(f"Invalid date format: '{v}'. Expected YYYY-MM-DD, DD-MM-YYYY, or DD/MM/YYYY.")
+        return v
+
 class UserEditRequest(BaseModel):
     name: Optional[str] = None
     role: Optional[str] = None
@@ -123,6 +148,31 @@ class UserEditRequest(BaseModel):
     date_of_joining: Optional[date] = None
     date_of_birth: Optional[date] = None
     e_upkaran_id: Optional[str] = None
+
+    @field_validator("date_of_joining", "date_of_birth", mode="before")
+    @classmethod
+    def parse_dates(cls, v):
+        if not v:
+            return None
+        if isinstance(v, (date, datetime)):
+            return v
+        if isinstance(v, str):
+            v_clean = v.strip()
+            if not v_clean:
+                return None
+            formats = [
+                "%Y-%m-%d",
+                "%d-%m-%Y",
+                "%d/%m/%Y",
+                "%Y/%m/%d",
+            ]
+            for fmt in formats:
+                try:
+                    return datetime.strptime(v_clean, fmt).date()
+                except ValueError:
+                    continue
+            raise ValueError(f"Invalid date format: '{v}'. Expected YYYY-MM-DD, DD-MM-YYYY, or DD/MM/YYYY.")
+        return v
 
 class HierarchyApproverSchema(BaseModel):
     id: Optional[int] = None

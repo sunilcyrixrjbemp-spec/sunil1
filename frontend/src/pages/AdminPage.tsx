@@ -9,6 +9,19 @@ const LteSpinner = () => (
   <span className="spinner-lte mr-1.5"></span>
 );
 
+const getErrorMessage = (err: any, fallback: string): string => {
+  const detail = err.response?.data?.detail;
+  if (!detail) return fallback;
+  if (typeof detail === "string") return detail;
+  if (Array.isArray(detail)) {
+    return detail.map(d => {
+      if (typeof d === "string") return d;
+      return `${d.loc?.join(".") || "error"}: ${d.msg || JSON.stringify(d)}`;
+    }).join(", ");
+  }
+  return typeof detail === "object" ? JSON.stringify(detail) : String(detail);
+};
+
 const ALL_WINDOWS = [
   { id: "home", name: "Home" },
   { id: "admin", name: "Admin Panel" },
@@ -195,7 +208,7 @@ export default function AdminPage() {
       localStorage.setItem("cache_hierarchies", JSON.stringify(hqs));
     } catch (err: any) {
       if (!cachedUsers) {
-        setError(err.response?.data?.detail || "Failed to retrieve configuration details from database.");
+        setError(getErrorMessage(err, "Failed to retrieve configuration details from database."));
       }
     } finally {
       setLoading(false);
@@ -292,7 +305,7 @@ export default function AdminPage() {
       
       await fetchInitialData();
     } catch (err: any) {
-      setSingleUserError(err.response?.data?.detail || "Failed to create user. Verify code is unique.");
+      setSingleUserError(getErrorMessage(err, "Failed to create user. Verify code is unique."));
     } finally {
       setSingleUserLoading(false);
     }
@@ -388,7 +401,7 @@ export default function AdminPage() {
       setEditingUser(null);
       await fetchInitialData();
     } catch (err: any) {
-      setEditUserError(err.response?.data?.detail || "Failed to update user details.");
+      setEditUserError(getErrorMessage(err, "Failed to update user details."));
     } finally {
       setEditUserLoading(false);
     }
@@ -502,7 +515,7 @@ export default function AdminPage() {
       toast.success(`Successfully uploaded ${res.created_count} users!`);
       await fetchInitialData();
     } catch (err: any) {
-      setBulkResult({ error: err.response?.data?.detail || "Bulk import failed. Please check CSV formatting." });
+      setBulkResult({ error: getErrorMessage(err, "Bulk import failed. Please check CSV formatting.") });
     } finally {
       setBulkLoading(false);
     }
@@ -629,7 +642,7 @@ export default function AdminPage() {
       setEditingHierarchy(null);
       await fetchInitialData();
     } catch (err: any) {
-      setHierarchyError(err.response?.data?.detail || "Failed to save hierarchy team mappings.");
+      setHierarchyError(getErrorMessage(err, "Failed to save hierarchy team mappings."));
     } finally {
       setHierarchyLoading(false);
     }
@@ -642,7 +655,7 @@ export default function AdminPage() {
       toast.success("Hierarchy deleted successfully.");
       await fetchInitialData();
     } catch (err: any) {
-      toast.error(err.response?.data?.detail || "Failed to delete hierarchy.");
+      toast.error(getErrorMessage(err, "Failed to delete hierarchy."));
     }
   };
 
