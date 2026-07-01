@@ -375,25 +375,48 @@ export default function ExpensePage() {
     const currentUserId = (() => { try { const u = JSON.parse(localStorage.getItem("user") || "{}"); return u.user_id || "Admin"; } catch(e) { return "Admin"; } })().trim();
     const monthStr = new Date().toISOString().slice(0, 7);
     const cached = localStorage.getItem(`cache_month_limits_${currentUserId}_${monthStr}`);
-    return cached ? JSON.parse(cached).allowance : {};
+    if (cached) {
+      try {
+        const parsed = JSON.parse(cached);
+        return parsed.allowance || {};
+      } catch (e) {}
+    }
+    return {};
   });
   const [facilities, setFacilities] = useState<Record<string, string[]>>(() => {
     const currentUserId = (() => { try { const u = JSON.parse(localStorage.getItem("user") || "{}"); return u.user_id || "Admin"; } catch(e) { return "Admin"; } })().trim();
     const monthStr = new Date().toISOString().slice(0, 7);
     const cached = localStorage.getItem(`cache_month_limits_${currentUserId}_${monthStr}`);
-    return cached ? JSON.parse(cached).facilities : {};
+    if (cached) {
+      try {
+        const parsed = JSON.parse(cached);
+        return parsed.facilities || {};
+      } catch (e) {}
+    }
+    return {};
   });
   const [submittedDates, setSubmittedDates] = useState<string[]>(() => {
     const currentUserId = (() => { try { const u = JSON.parse(localStorage.getItem("user") || "{}"); return u.user_id || "Admin"; } catch(e) { return "Admin"; } })().trim();
     const monthStr = new Date().toISOString().slice(0, 7);
     const cached = localStorage.getItem(`cache_month_limits_${currentUserId}_${monthStr}`);
-    return cached ? (JSON.parse(cached).submitted_dates || []) : [];
+    if (cached) {
+      try {
+        const parsed = JSON.parse(cached);
+        return parsed.submitted_dates || [];
+      } catch (e) {}
+    }
+    return [];
   });
   const [nextExpId, setNextExpId] = useState(() => {
     const currentUserId = (() => { try { const u = JSON.parse(localStorage.getItem("user") || "{}"); return u.user_id || "Admin"; } catch(e) { return "Admin"; } })().trim();
     const monthStr = new Date().toISOString().slice(0, 7);
     const cached = localStorage.getItem(`cache_month_limits_${currentUserId}_${monthStr}`);
-    if (cached) return JSON.parse(cached).next_exp_id;
+    if (cached) {
+      try {
+        const parsed = JSON.parse(cached);
+        if (parsed.next_exp_id) return parsed.next_exp_id;
+      } catch (e) {}
+    }
     const mm = new Date().toISOString().slice(5, 7);
     const yy = new Date().toISOString().slice(2, 4);
     return `RJ-${mm}/${yy}-PENDING`;
@@ -404,25 +427,49 @@ export default function ExpensePage() {
     const currentUserId = (() => { try { const u = JSON.parse(localStorage.getItem("user") || "{}"); return u.user_id || "Admin"; } catch(e) { return "Admin"; } })().trim();
     const monthStr = new Date().toISOString().slice(0, 7);
     const cached = localStorage.getItem(`cache_month_limits_${currentUserId}_${monthStr}`);
-    return cached ? (JSON.parse(cached).approved_km || 0) : 0;
+    if (cached) {
+      try {
+        const parsed = JSON.parse(cached);
+        return parsed.approved_km || 0;
+      } catch (e) {}
+    }
+    return 0;
   });
   const [approvedAuto, setApprovedAuto] = useState(() => {
     const currentUserId = (() => { try { const u = JSON.parse(localStorage.getItem("user") || "{}"); return u.user_id || "Admin"; } catch(e) { return "Admin"; } })().trim();
     const monthStr = new Date().toISOString().slice(0, 7);
     const cached = localStorage.getItem(`cache_month_limits_${currentUserId}_${monthStr}`);
-    return cached ? (JSON.parse(cached).approved_auto || 0) : 0;
+    if (cached) {
+      try {
+        const parsed = JSON.parse(cached);
+        return parsed.approved_auto || 0;
+      } catch (e) {}
+    }
+    return 0;
   });
   const [_existingKmReq, setExistingKmReq] = useState<any>(() => {
     const currentUserId = (() => { try { const u = JSON.parse(localStorage.getItem("user") || "{}"); return u.user_id || "Admin"; } catch(e) { return "Admin"; } })().trim();
     const monthStr = new Date().toISOString().slice(0, 7);
     const cached = localStorage.getItem(`cache_month_limits_${currentUserId}_${monthStr}`);
-    return cached ? JSON.parse(cached).existing_km_req : null;
+    if (cached) {
+      try {
+        const parsed = JSON.parse(cached);
+        return parsed.existing_km_req;
+      } catch (e) {}
+    }
+    return null;
   });
   const [_existingAutoReq, setExistingAutoReq] = useState<any>(() => {
     const currentUserId = (() => { try { const u = JSON.parse(localStorage.getItem("user") || "{}"); return u.user_id || "Admin"; } catch(e) { return "Admin"; } })().trim();
     const monthStr = new Date().toISOString().slice(0, 7);
     const cached = localStorage.getItem(`cache_month_limits_${currentUserId}_${monthStr}`);
-    return cached ? JSON.parse(cached).existing_auto_req : null;
+    if (cached) {
+      try {
+        const parsed = JSON.parse(cached);
+        return parsed.existing_auto_req;
+      } catch (e) {}
+    }
+    return null;
   });
   const [loadedMonth, setLoadedMonth] = useState(() => {
     return new Date().toISOString().slice(0, 7);

@@ -6,7 +6,7 @@ class Expense(Base):
     __tablename__ = "expenses"
     
     id = Column(Integer, primary_key=True, index=True)
-    user_id = Column(Integer, ForeignKey("users.id"))
+    user_id = Column(Integer, ForeignKey("users.id"), index=True)
     expense_code = Column(String(100), unique=True, index=True, nullable=True) # RJ-MM/YY-XXXXXX format
     month = Column(String(50))
     year = Column(Integer)

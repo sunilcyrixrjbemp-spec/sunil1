@@ -34,7 +34,7 @@ def get_client_ip(request: Request) -> str:
     return "127.0.0.1"
 
 @router.post("/login", response_model=TokenResponse)
-async def login(request: Request, credentials: UserLogin, db: Session = Depends(get_db)):
+async def login(request: Request, credentials: UserLogin, background_tasks: BackgroundTasks, db: Session = Depends(get_db)):
     ip_address = get_client_ip(request)
     user_agent = request.headers.get("user-agent", "Unknown")
     auth_data = auth_service.authenticate_user(
@@ -43,8 +43,19 @@ async def login(request: Request, credentials: UserLogin, db: Session = Depends(
         db=db,
         ip_address=ip_address,
         user_agent=user_agent,
-        force=credentials.force
+        force=credentials.force,
+        background_tasks=background_tasks
     )
+    
+    # Pre-fetch bootstrap data so that the frontend gets ALL data instantly upon login click!
+    user = db.query(User).filter(User.user_id == credentials.user_id).first()
+    if user:
+        try:
+            auth_data["bootstrap_data"] = await get_bootstrap_data_helper(user, db)
+        except Exception as e:
+            bootstrap_logger.error(f"Failed to pre-fetch bootstrap data during login: {e}")
+            auth_data["bootstrap_data"] = None
+
     return auth_data
 
 @router.post("/forgot-password", response_model=OTPResponse)

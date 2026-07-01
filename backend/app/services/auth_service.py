@@ -27,13 +27,13 @@ from app.services.email_service import email_service
 logger = logging.getLogger(__name__)
 
 class AuthService:
-    def authenticate_user(self, user_id: str, password: str, db: Session, ip_address: str, user_agent: str, force: bool = False) -> Dict[str, Any]:
+    def authenticate_user(self, user_id: str, password: str, db: Session, ip_address: str, user_agent: str, force: bool = False, background_tasks = None) -> Dict[str, Any]:
         # 1. Find user
         user = db.query(User).filter(User.user_id == user_id).first()
         
         if not user:
             # We log failed attempt for non-existent users without incrementing a specific counter
-            self._log_login(db, user_id, ip_address, user_agent, "failed")
+            self._log_login(db, user_id, ip_address, user_agent, "failed", background_tasks=background_tasks)
             raise HTTPException(
                 status_code=status.HTTP_401_UNAUTHORIZED,
                 detail="Invalid User ID or Password"
@@ -41,14 +41,14 @@ class AuthService:
 
         # 2. Check user status
         if user.user_status == "disabled":
-            self._log_login(db, user_id, ip_address, user_agent, "failed")
+            self._log_login(db, user_id, ip_address, user_agent, "failed", background_tasks=background_tasks)
             raise HTTPException(
                 status_code=status.HTTP_403_FORBIDDEN,
                 detail="Your account is disabled. Please contact the administrator."
             )
             
         if user.user_status == "locked":
-            self._log_login(db, user_id, ip_address, user_agent, "locked")
+            self._log_login(db, user_id, ip_address, user_agent, "locked", background_tasks=background_tasks)
             raise HTTPException(
                 status_code=status.HTTP_403_FORBIDDEN,
                 detail="Your account is locked due to multiple failed login attempts. Please use the Unlock Account option."
@@ -66,13 +66,13 @@ class AuthService:
             if user.failed_attempt >= settings.MAX_FAILED_ATTEMPTS:
                 user.user_status = "locked"
                 db.commit()
-                self._log_login(db, user_id, ip_address, user_agent, "locked")
+                self._log_login(db, user_id, ip_address, user_agent, "locked", background_tasks=background_tasks)
                 raise HTTPException(
                     status_code=status.HTTP_403_FORBIDDEN,
                     detail="Your account has been locked due to 5 failed login attempts. Please unlock it using your registered details."
                 )
             
-            self._log_login(db, user_id, ip_address, user_agent, "failed")
+            self._log_login(db, user_id, ip_address, user_agent, "failed", background_tasks=background_tasks)
             attempts_left = settings.MAX_FAILED_ATTEMPTS - user.failed_attempt
             raise HTTPException(
                 status_code=status.HTTP_401_UNAUTHORIZED,
@@ -93,7 +93,7 @@ class AuthService:
         user.failed_attempt = 0
         db.commit()
         
-        self._log_login(db, user_id, ip_address, user_agent, "success")
+        self._log_login(db, user_id, ip_address, user_agent, "success", background_tasks=background_tasks)
         
         # Create tokens with sid (session ID) payload
         access_token = create_access_token(data={"sub": user.user_id, "sid": session_id})
@@ -436,7 +436,11 @@ class AuthService:
             logger.error(f"Error resolving user hierarchy names: {str(e)}")
         return user
 
-    def _log_login(self, db: Session, user_id: str, ip_address: str, user_agent: str, status: str):
+    def _log_login(self, db: Session, user_id: str, ip_address: str, user_agent: str, status: str, background_tasks = None):
+        if background_tasks:
+            background_tasks.add_task(self._log_login_bg_worker, user_id, ip_address, user_agent, status)
+            return
+
         try:
             log = LoginLog(
                 user_id=user_id,
@@ -449,6 +453,24 @@ class AuthService:
         except Exception as e:
             logger.error(f"Error logging login: {str(e)}")
             db.rollback()
+
+    def _log_login_bg_worker(self, user_id: str, ip_address: str, user_agent: str, status: str):
+        from app.config.database import SessionLocal
+        db = SessionLocal()
+        try:
+            log = LoginLog(
+                user_id=user_id,
+                ip_address=ip_address,
+                user_agent=user_agent,
+                login_status=status
+            )
+            db.add(log)
+            db.commit()
+        except Exception as e:
+            logger.error(f"Error in background login logging: {str(e)}")
+            db.rollback()
+        finally:
+            db.close()
 
     def _mask_email(self, email: str) -> str:
         try:

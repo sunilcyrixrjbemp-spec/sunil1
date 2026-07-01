@@ -13,9 +13,22 @@ import { tokenPersistence } from "../utils/persistence";
 export const authService = {
   login: async (credentials: LoginCredentials): Promise<AuthResponse> => {
     const response = await api.post("/auth/login", credentials);
-    const { access_token, refresh_token, user } = response.data;
+    const { access_token, refresh_token, user, bootstrap_data } = response.data;
     tokenPersistence.save(access_token, refresh_token, user);
     
+    // Save bootstrap data to cache immediately if present!
+    if (bootstrap_data) {
+      const user_id = user.user_id;
+      const monthStr = new Date().toISOString().slice(0, 7);
+      localStorage.setItem("cache_dropdowns", JSON.stringify(bootstrap_data.dropdowns || {}));
+      localStorage.setItem(`cache_month_limits_${user_id}_${monthStr}`, JSON.stringify(bootstrap_data.expense_init || {}));
+      localStorage.setItem(`cache_my_expenses_${user_id}`, JSON.stringify(bootstrap_data.my_expenses || []));
+      localStorage.setItem(`cache_allowance_stats_${user_id}`, JSON.stringify(bootstrap_data.allowance_stats || {}));
+      localStorage.setItem(`cache_team_expenses_${user_id}`, JSON.stringify(bootstrap_data.team_expenses || []));
+      localStorage.setItem(`cache_approvals_count_${user_id}`, (bootstrap_data.pending_approvals_count || 0).toString());
+      localStorage.setItem("cache_pending_approvals", JSON.stringify(bootstrap_data.pending_approvals || []));
+    }
+
     // Sync FCM Push Token to backend
     import("../utils/capacitor").then(({ syncFCMToken }) => {
       syncFCMToken();

@@ -6,7 +6,7 @@ class ExpenseItinerary(Base):
     
     id = Column(Integer, primary_key=True, index=True, autoincrement=True)
     itinerary_id = Column(String(100), unique=True, index=True, nullable=False)  # format: {exp_id}-{leg_number}
-    exp_id = Column(String(100), nullable=False) # Store the text exp_id generated RJ-MM/YY-XXXXXX
+    exp_id = Column(String(100), nullable=False, index=True) # Store the text exp_id generated RJ-MM/YY-XXXXXX
     leg_number = Column(Integer, nullable=False)
     from_district = Column(String(100), nullable=True)
     to_district = Column(String(100), nullable=True)
