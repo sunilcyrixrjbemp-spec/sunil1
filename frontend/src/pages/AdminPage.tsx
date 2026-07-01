@@ -74,6 +74,8 @@ export default function AdminPage() {
   });
   const [error, setError] = useState<string | null>(null);
   const [searchTerm, setSearchTerm] = useState("");
+  const [currentPage, setCurrentPage] = useState(1);
+  const ITEMS_PER_PAGE = 25;
 
   // Modals visibility
   const [showSingleUserModal, setShowSingleUserModal] = useState(false);
@@ -167,6 +169,20 @@ export default function AdminPage() {
   useEffect(() => {
     fetchInitialData();
   }, []);
+
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [searchTerm]);
+
+  useEffect(() => {
+    if (role === "Engineer") {
+      setAllowedWindows(["home", "expense", "help", "profile"]);
+    } else if (role === "Manager") {
+      setAllowedWindows(["home", "approval", "expense", "help", "profile"]);
+    } else {
+      setAllowedWindows(["home", "approval", "expense", "analysis", "report", "help", "profile"]);
+    }
+  }, [role]);
 
   const fetchInitialData = async () => {
     const cachedUsers = localStorage.getItem("cache_admin_users");
@@ -495,7 +511,11 @@ export default function AdminPage() {
           date_of_joining: record.date_of_joining,
           date_of_birth: record.date_of_birth,
           e_upkaran_id: record.e_upkaran_id,
-          allowed_windows: "home,approval,expense,analysis,report,help,profile"
+          allowed_windows: record.role?.trim().toLowerCase() === "engineer"
+            ? "home,expense,help,profile"
+            : record.role?.trim().toLowerCase() === "manager"
+            ? "home,approval,expense,help,profile"
+            : "home,approval,expense,analysis,report,help,profile"
         });
       }
     }
@@ -686,6 +706,11 @@ export default function AdminPage() {
     );
   });
 
+  const totalPages = Math.ceil(filteredUsers.length / ITEMS_PER_PAGE);
+  const startIndex = (currentPage - 1) * ITEMS_PER_PAGE;
+  const endIndex = startIndex + ITEMS_PER_PAGE;
+  const paginatedUsers = filteredUsers.slice(startIndex, endIndex);
+
   const mList = getEligibleManagers();
   const zmList = getEligibleZonalManagers();
   const cList = getEligibleCoordinators();
@@ -809,7 +834,7 @@ export default function AdminPage() {
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-gray-200">
-                  {filteredUsers.map((u) => (
+                  {paginatedUsers.map((u) => (
                     <tr key={u.id} className="hover:bg-gray-50 transition-colors">
                       <td className="py-3 px-4 font-mono font-bold text-blue-600">{u.e_code || "-"}</td>
                       <td className="py-3 px-4 font-semibold text-gray-800">{u.name}</td>
@@ -861,7 +886,60 @@ export default function AdminPage() {
                   ))}
                 </tbody>
               </table>
-            )}
+
+              {/* Pagination Controls */}
+              {totalPages > 1 && (
+                <div className="flex items-center justify-between border-t border-gray-200 bg-white px-4 py-3 sm:px-6 mt-4">
+                  <div className="flex flex-1 justify-between sm:hidden">
+                    <button
+                      onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
+                      disabled={currentPage === 1}
+                      className="relative inline-flex items-center rounded-md border border-gray-300 bg-white px-4 py-2 text-xs font-medium text-gray-700 hover:bg-gray-50 disabled:opacity-50 border-0 cursor-pointer"
+                    >
+                      Previous
+                    </button>
+                    <button
+                      onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))}
+                      disabled={currentPage === totalPages}
+                      className="relative ml-3 inline-flex items-center rounded-md border border-gray-300 bg-white px-4 py-2 text-xs font-medium text-gray-700 hover:bg-gray-50 disabled:opacity-50 border-0 cursor-pointer"
+                    >
+                      Next
+                    </button>
+                  </div>
+                  <div className="hidden sm:flex sm:flex-1 sm:items-center sm:justify-between">
+                    <div>
+                      <p className="text-xs text-gray-700">
+                        Showing <span className="font-semibold">{startIndex + 1}</span> to{" "}
+                        <span className="font-semibold">{Math.min(endIndex, filteredUsers.length)}</span> of{" "}
+                        <span className="font-semibold">{filteredUsers.length}</span> employees
+                      </p>
+                    </div>
+                    <div>
+                      <nav className="isolate inline-flex -space-x-px rounded-md shadow-sm" aria-label="Pagination">
+                        <button
+                          onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
+                          disabled={currentPage === 1}
+                          className="relative inline-flex items-center rounded-l-md border border-gray-300 bg-white px-2 py-2 text-xs font-medium text-gray-500 hover:bg-gray-50 disabled:opacity-50 cursor-pointer border-0"
+                        >
+                          Previous
+                        </button>
+                        <span className="relative inline-flex items-center border border-gray-300 bg-white px-4 py-2 text-xs font-semibold text-gray-700">
+                          Page {currentPage} of {totalPages}
+                        </span>
+                        <button
+                          onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))}
+                          disabled={currentPage === totalPages}
+                          className="relative inline-flex items-center rounded-r-md border border-gray-300 bg-white px-2 py-2 text-xs font-medium text-gray-500 hover:bg-gray-50 disabled:opacity-50 cursor-pointer border-0"
+                        >
+                          Next
+                        </button>
+                      </nav>
+                    </div>
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
           </div>
         </div>
       ) : (

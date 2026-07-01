@@ -78,7 +78,11 @@ async def create_user(
         date_of_joining=request.date_of_joining,
         date_of_birth=request.date_of_birth,
         e_upkaran_id=request.e_upkaran_id.strip() if request.e_upkaran_id else None,
-        allowed_windows=request.allowed_windows or "home,approval,expense,analysis,report,help,profile"
+        allowed_windows=request.allowed_windows or (
+            "home,expense,help,profile" if request.role.strip().lower() == "engineer"
+            else "home,approval,expense,help,profile" if request.role.strip().lower() == "manager"
+            else "home,approval,expense,analysis,report,help,profile"
+        )
     )
     db.add(user)
     db.flush()
@@ -232,7 +236,11 @@ async def bulk_create_users(
                 date_of_joining=item.date_of_joining,
                 date_of_birth=item.date_of_birth,
                 e_upkaran_id=item.e_upkaran_id.strip() if item.e_upkaran_id else None,
-                allowed_windows=item.allowed_windows or "home,approval,expense,analysis,report,help,profile"
+                allowed_windows=item.allowed_windows or (
+                    "home,expense,help,profile" if item.role.strip().lower() == "engineer"
+                    else "home,approval,expense,help,profile" if item.role.strip().lower() == "manager"
+                    else "home,approval,expense,analysis,report,help,profile"
+                )
             )
             db.add(user)
             db.flush()
