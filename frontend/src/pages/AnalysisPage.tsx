@@ -1,5 +1,5 @@
 import { useEffect, useState, useMemo } from "react";
-import { BarChart3, Filter, Users, User as UserIcon, X, IndianRupee, Phone, ShieldCheck, CheckSquare, TrendingUp, Activity, FileSpreadsheet } from "lucide-react";
+import { BarChart3, Filter, Users, User as UserIcon, X, IndianRupee, Phone, ShieldCheck, TrendingUp, Activity, FileSpreadsheet } from "lucide-react";
 import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
   PieChart, Pie, Cell, Legend,
