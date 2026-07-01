@@ -1,0 +1,105 @@
+name: Build iOS App
+
+on:
+  push:
+    branches: [ main, master ]
+  workflow_dispatch:  # Manual trigger button on GitHub
+
+jobs:
+  build-ios:
+    name: Build iOS App
+    runs-on: macos-14
+
+    steps:
+      # 1. Checkout code
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      # 2. Setup Node.js
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: 'npm'
+          cache-dependency-path: frontend/package-lock.json
+
+      # 3. Install frontend dependencies
+      - name: Install frontend dependencies
+        working-directory: frontend
+        run: npm ci
+
+      # 4. Build React/Vite app
+      - name: Build web app
+        working-directory: frontend
+        run: npm run build
+        env:
+          VITE_APP_NAME: "Cyrix Field"
+          VITE_APP_ENVIRONMENT: production
+          VITE_FIREBASE_VAPID_KEY: ${{ secrets.VITE_FIREBASE_VAPID_KEY }}
+
+      # 5. Add iOS platform
+      - name: Add iOS platform
+        working-directory: frontend
+        run: |
+          if [ ! -d "ios" ]; then
+            npx cap add ios
+          else
+            echo "iOS platform already exists, skipping add."
+          fi
+
+      # 6. Generate native icons & splash screens
+      - name: Generate native icons and splash screens
+        working-directory: frontend
+        run: npx @capacitor/assets generate --ios || echo "Skip asset generation if package not installed"
+
+      # 7. Write GoogleService-Info.plist (from GitHub Secret if configured)
+      - name: Write GoogleService-Info.plist
+        run: |
+          mkdir -p frontend/ios/App/App
+          echo '${{ secrets.GOOGLE_SERVICES_PLIST }}' > frontend/ios/App/App/GoogleService-Info.plist
+
+      # 8. Sync Capacitor
+      - name: Sync Capacitor to iOS
+        working-directory: frontend
+        run: npx cap sync ios
+
+      # 9. Pod Install
+      - name: Pod Install
+        working-directory: frontend/ios/App
+        run: pod install
+
+      # 10. Build Xcode Workspace (Unsigned Debug build)
+      - name: Build Xcode Workspace
+        working-directory: frontend/ios/App
+        run: |
+          xcodebuild -workspace App.xcworkspace \
+                     -scheme App \
+                     -sdk iphoneos \
+                     -configuration Debug \
+                     -derivedDataPath build \
+                     CODE_SIGN_STATUS=unsigned \
+                     CODE_SIGNING_ALLOWED=NO \
+                     CODE_SIGNING_REQUIRED=NO \
+                     clean build
+
+      # 11. Package App Bundle into IPA
+      - name: Package IPA
+        working-directory: frontend/ios/App
+        run: |
+          mkdir -p build/Payload
+          cp -R build/Build/Products/Debug-iphoneos/App.app build/Payload/
+          cd build && zip -r app-debug.ipa Payload
+
+      # 12. Upload IPA as downloadable artifact
+      - name: Upload IPA artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: FieldOps-iOS-App
+          path: frontend/ios/App/build/app-debug.ipa
+          retention-days: 30
+
+      # 13. Show build info
+      - name: Show IPA info
+        run: |
+          echo "✅ iOS IPA built successfully!"
+          ls -lh frontend/ios/App/build/app-debug.ipa
