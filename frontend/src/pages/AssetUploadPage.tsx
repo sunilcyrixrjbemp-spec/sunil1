@@ -499,33 +499,43 @@ export default function AssetUploadPage() {
       </div>
 
       {/* ===== Stats Dashboard (AdminLTE Theme Grid) ===== */}
-      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-2.5">
+      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-4">
         {[
-          { label: "Total Equipment", value: stats.total_equipment.toLocaleString(), icon: <Package className="w-4 h-4" />, bg: "border-t-[3px] border-t-blue-500 bg-white border border-gray-200 text-gray-800" },
-          { label: "Verified Equipment", value: stats.verified_equipment.toLocaleString(), icon: <ShieldCheck className="w-4 h-4" />, bg: "border-t-[3px] border-t-green-500 bg-white border border-gray-200 text-gray-800" },
-          { label: "Under Warranty", value: stats.under_warranty.toLocaleString(), icon: <ShieldCheck className="w-4 h-4" />, bg: "border-t-[3px] border-t-teal-500 bg-white border border-gray-200 text-gray-800" },
-          { label: "Out of Warranty", value: stats.out_of_warranty.toLocaleString(), icon: <ShieldOff className="w-4 h-4" />, bg: "border-t-[3px] border-t-yellow-500 bg-white border border-gray-200 text-gray-800" },
-          { label: "Total Equipment Value", value: fmtRs(stats.total_value), icon: <IndianRupee className="w-4 h-4" />, bg: "border-t-[3px] border-t-purple-500 bg-white border border-gray-200 text-gray-800" },
+          { label: "Total Equipment", value: stats.total_equipment.toLocaleString(), icon: <Package className="w-5 h-5 text-white" />, bgColor: "bg-[#007bff]", textColor: "text-gray-800" },
+          { label: "Verified Equipment", value: stats.verified_equipment.toLocaleString(), icon: <ShieldCheck className="w-5 h-5 text-white" />, bgColor: "bg-[#28a745]", textColor: "text-[#28a745]" },
+          { label: "Under Warranty", value: stats.under_warranty.toLocaleString(), icon: <ShieldCheck className="w-5 h-5 text-white" />, bgColor: "bg-[#17a2b8]", textColor: "text-[#17a2b8]" },
+          { label: "Out of Warranty", value: stats.out_of_warranty.toLocaleString(), icon: <ShieldOff className="w-5 h-5 text-white" />, bgColor: "bg-[#ffc107]", textColor: "text-amber-600" },
+          { label: "Total Equipment Value", value: fmtRs(stats.total_value), icon: <IndianRupee className="w-5 h-5 text-white" />, bgColor: "bg-[#605ca8]", textColor: "text-[#605ca8]" },
         ].map((s, i) => (
-          <div key={i} className={`rounded p-3 shadow-sm ${s.bg}`}>
-            <div className="flex items-center gap-1.5 mb-1 opacity-70">{s.icon}<span className="text-[8px] uppercase tracking-wider font-bold">{s.label}</span></div>
-            <p className="text-lg font-black tabular-nums">{s.value}</p>
+          <div key={i} className="info-box-lte animate-fadeIn">
+            <div className={`info-box-icon ${s.bgColor} w-12`}>
+              {s.icon}
+            </div>
+            <div className="info-box-content p-2">
+              <span className="text-[8px] font-black uppercase tracking-wider text-gray-400 block">{s.label}</span>
+              <span className={`text-sm font-extrabold ${s.textColor} font-mono block mt-0.5`}>{s.value}</span>
+            </div>
           </div>
         ))}
       </div>
 
-      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-2.5">
+      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-4 mt-4">
         {[
-          { label: "Verified Equipment Value", value: fmtRs(stats.verified_value), icon: <CheckCircle className="w-4 h-4" />, bg: "border-t-[3px] border-t-green-500 bg-white border border-gray-200 text-gray-800" },
-          { label: "Verified Out-of-Warranty Value", value: fmtRs(stats.verified_out_of_warranty_value), icon: <ShieldOff className="w-4 h-4" />, bg: "border-t-[3px] border-t-orange-500 bg-white border border-gray-200 text-gray-800" },
-          { label: "Monthly Billing", value: fmtRs(stats.monthly_value), sub: "(Value × 6.08% ÷ 12)", icon: <Calendar className="w-4 h-4" />, bg: "border-t-[3px] border-t-blue-500 bg-white border border-gray-200 text-gray-800" },
-          { label: "Arrear Billing", value: fmtRs(stats.arrear_billing), sub: "Verified in target month", icon: <Receipt className="w-4 h-4" />, bg: "border-t-[3px] border-t-red-500 bg-white border border-gray-200 text-gray-800" },
-          { label: "Total Billing Value", value: fmtRs(stats.total_billing), icon: <IndianRupee className="w-4 h-4" />, bg: "border-t-[3px] border-t-indigo-500 bg-white border border-gray-200 text-gray-800" },
+          { label: "Verified Value", value: fmtRs(stats.verified_value), icon: <CheckCircle className="w-5 h-5 text-white" />, bgColor: "bg-[#28a745]", textColor: "text-[#28a745]" },
+          { label: "Verified OOW Value", value: fmtRs(stats.verified_out_of_warranty_value), icon: <ShieldOff className="w-5 h-5 text-white" />, bgColor: "bg-[#fd7e14]", textColor: "text-orange-600" },
+          { label: "Monthly Billing", value: fmtRs(stats.monthly_value), sub: "(Value × 6.08% ÷ 12)", icon: <Calendar className="w-5 h-5 text-white" />, bgColor: "bg-[#007bff]", textColor: "text-gray-800" },
+          { label: "Arrear Billing", value: fmtRs(stats.arrear_billing), sub: "Verified in target month", icon: <Receipt className="w-5 h-5 text-white" />, bgColor: "bg-[#dc3545]", textColor: "text-[#dc3545]" },
+          { label: "Total Billing Value", value: fmtRs(stats.total_billing), icon: <IndianRupee className="w-5 h-5 text-white" />, bgColor: "bg-[#6f42c1]", textColor: "text-[#6f42c1]" },
         ].map((s, i) => (
-          <div key={i} className={`rounded p-3 shadow-sm ${s.bg}`}>
-            <div className="flex items-center gap-1.5 mb-1 opacity-70">{s.icon}<span className="text-[8px] uppercase tracking-wider font-bold">{s.label}</span></div>
-            <p className="text-lg font-black tabular-nums">{s.value}</p>
-            {"sub" in s && s.sub && <p className="text-[8px] opacity-60 font-semibold mt-0.5">{s.sub}</p>}
+          <div key={i} className="info-box-lte animate-fadeIn">
+            <div className={`info-box-icon ${s.bgColor} w-12`}>
+              {s.icon}
+            </div>
+            <div className="info-box-content p-2">
+              <span className="text-[8px] font-black uppercase tracking-wider text-gray-400 block">{s.label}</span>
+              <span className={`text-sm font-extrabold ${s.textColor} font-mono block mt-0.5`}>{s.value}</span>
+              {"sub" in s && s.sub && <span className="text-[7px] text-gray-400 font-semibold block mt-0.5 leading-none">{s.sub}</span>}
+            </div>
           </div>
         ))}
       </div>

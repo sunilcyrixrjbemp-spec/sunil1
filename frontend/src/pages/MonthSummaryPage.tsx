@@ -861,38 +861,50 @@ export default function MonthSummaryPage() {
       </div>
 
       {/* AdminLTE Info Boxes (Stats) */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         {/* Box 1 */}
-        <div className="bg-white border-t-3 border-blue-500 shadow-sm rounded-sm p-3 flex items-center justify-between border border-gray-200">
-          <div>
-            <span className="text-[10px] text-gray-400 font-bold uppercase tracking-wider block">Engineers</span>
-            <span className="text-xl font-bold text-gray-800 font-mono">{totalEngineers}</span>
+        <div className="info-box-lte animate-fadeIn">
+          <div className="info-box-icon bg-[#007bff]">
+            <Users className="w-6 h-6" />
           </div>
-          <div className="text-blue-600 bg-blue-50/60 p-2.5 rounded-sm"><Users className="w-5.5 h-5.5" /></div>
+          <div className="info-box-content">
+            <span className="text-[9px] font-black uppercase tracking-wider text-gray-400 block mb-0.5">Engineers</span>
+            <span className="text-base font-extrabold text-gray-800 font-mono block mt-0.5">{totalEngineers}</span>
+            <span className="text-[9px] text-[#007bff] font-bold uppercase block mt-1">Active Staff</span>
+          </div>
         </div>
         {/* Box 2 */}
-        <div className="bg-white border-t-3 border-green-500 shadow-sm rounded-sm p-3 flex items-center justify-between border border-gray-200">
-          <div>
-            <span className="text-[10px] text-gray-400 font-bold uppercase tracking-wider block">Approved Claims</span>
-            <span className="text-xl font-bold text-gray-800 font-mono">{totalClaims}</span>
+        <div className="info-box-lte animate-fadeIn">
+          <div className="info-box-icon bg-[#28a745]">
+            <CheckCircle className="w-6 h-6" />
           </div>
-          <div className="text-green-600 bg-green-50/60 p-2.5 rounded-sm"><CheckCircle className="w-5.5 h-5.5" /></div>
+          <div className="info-box-content">
+            <span className="text-[9px] font-black uppercase tracking-wider text-gray-400 block mb-0.5">Approved Claims</span>
+            <span className="text-base font-extrabold text-[#28a745] font-mono block mt-0.5">{totalClaims}</span>
+            <span className="text-[9px] text-[#28a745] font-bold uppercase block mt-1">Processed</span>
+          </div>
         </div>
         {/* Box 3 */}
-        <div className="bg-white border-t-3 border-yellow-500 shadow-sm rounded-sm p-3 flex items-center justify-between border border-gray-200">
-          <div>
-            <span className="text-[10px] text-gray-400 font-bold uppercase tracking-wider block">Total Amount</span>
-            <span className="text-xl font-bold text-gray-800 font-mono">{fmt(totalAmount)}</span>
+        <div className="info-box-lte animate-fadeIn">
+          <div className="info-box-icon bg-[#ffc107]">
+            <IndianRupee className="w-6 h-6 text-white" />
           </div>
-          <div className="text-yellow-600 bg-yellow-50/60 p-2.5 rounded-sm"><IndianRupee className="w-5.5 h-5.5" /></div>
+          <div className="info-box-content">
+            <span className="text-[9px] font-black uppercase tracking-wider text-gray-400 block mb-0.5">Total Amount</span>
+            <span className="text-base font-extrabold text-[#ffc107] font-mono block mt-0.5">{fmt(totalAmount)}</span>
+            <span className="text-[9px] text-amber-600 font-bold uppercase block mt-1">Disbursed</span>
+          </div>
         </div>
         {/* Box 4 */}
-        <div className="bg-white border-t-3 border-purple-500 shadow-sm rounded-sm p-3 flex items-center justify-between border border-gray-200">
-          <div>
-            <span className="text-[10px] text-gray-400 font-bold uppercase tracking-wider block">Total distance</span>
-            <span className="text-xl font-bold text-gray-800 font-mono">{fmtN(totalKM)} km</span>
+        <div className="info-box-lte animate-fadeIn">
+          <div className="info-box-icon bg-[#605ca8]">
+            <MapPin className="w-6 h-6" />
           </div>
-          <div className="text-purple-600 bg-purple-50/60 p-2.5 rounded-sm"><MapPin className="w-5.5 h-5.5" /></div>
+          <div className="info-box-content">
+            <span className="text-[9px] font-black uppercase tracking-wider text-gray-400 block mb-0.5">Total Distance</span>
+            <span className="text-base font-extrabold text-[#605ca8] font-mono block mt-0.5">{fmtN(totalKM)} km</span>
+            <span className="text-[9px] text-[#605ca8] font-bold uppercase block mt-1">Travelled</span>
+          </div>
         </div>
       </div>
 

@@ -1950,12 +1950,12 @@ export default function ExpensePage() {
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         
         {/* Profile Card */}
-        <div className="bg-white border border-gray-200 rounded shadow-sm p-3.5 flex items-center">
-          <div className="p-3 rounded bg-blue-50 text-blue-600 mr-3 shrink-0">
-            <User className="w-5 h-5" />
+        <div className="info-box-lte animate-fadeIn">
+          <div className="info-box-icon bg-[#007bff]">
+            <User className="w-6 h-6" />
           </div>
-          <div className="min-w-0">
-            <span className="text-[10px] uppercase font-bold text-gray-400 block tracking-wider leading-none mb-1">
+          <div className="info-box-content">
+            <span className="text-[9px] font-black uppercase tracking-wider text-gray-400 block mb-0.5">
               Employee Profile
             </span>
             <span className="text-xs font-bold text-gray-800 block truncate" title={user.name || "—"}>
@@ -1968,72 +1968,68 @@ export default function ExpensePage() {
         </div>
 
         {/* Assigned Home District Card */}
-        <div className="bg-white border border-gray-200 rounded shadow-sm p-3.5 flex items-center">
-          <div className="p-3 rounded bg-green-50 text-green-600 mr-3 shrink-0">
-            <MapPin className="w-5 h-5" />
+        <div className="info-box-lte animate-fadeIn">
+          <div className="info-box-icon bg-[#28a745]">
+            <MapPin className="w-6 h-6" />
           </div>
-          <div className="min-w-0">
-            <span className="text-[10px] uppercase font-bold text-gray-400 block tracking-wider leading-none mb-1">
+          <div className="info-box-content">
+            <span className="text-[9px] font-black uppercase tracking-wider text-gray-400 block mb-0.5">
               Assigned District
             </span>
-            <span className="text-xs font-bold text-gray-800 block">
+            <span className="text-xs font-bold text-gray-800 block truncate">
               {user.district || "—"}
             </span>
-            <span className="text-[10px] text-gray-500 block mt-0.5">
+            <span className="text-[10px] text-[#28a745] font-semibold block mt-0.5">
               In-District travel boundary
             </span>
           </div>
         </div>
 
         {/* Monthly Distance Limit Card */}
-        <div className="bg-white border border-gray-200 rounded shadow-sm p-3.5 flex flex-col justify-between min-h-[70px]">
-          <div className="flex items-center">
-            <div className="p-2.5 bg-blue-50 text-blue-600 rounded-md">
-              {allowance.vehicle_type === "Car" ? (
-                <Car className="w-5 h-5" />
-              ) : allowance.vehicle_type === "Bike" ? (
-                <Bike className="w-5 h-5" />
-              ) : (
-                <Navigation className="w-5 h-5" />
-              )}
-            </div>
-            <div className="min-w-0 flex-1">
-              <span className="text-[10px] uppercase font-bold text-gray-400 block tracking-wider leading-none mb-1">
-                {limitPillLabel}
-              </span>
-              <span className="text-xs font-bold text-gray-800 block">
-                {allowance.current_month_km || 0} / {((allowance.max_km_per_month || 2000) + approvedKm)} KM
-              </span>
-            </div>
+        <div className="info-box-lte animate-fadeIn">
+          <div className="info-box-icon bg-[#17a2b8]">
+            {allowance.vehicle_type === "Car" ? (
+              <Car className="w-6 h-6" />
+            ) : allowance.vehicle_type === "Bike" ? (
+              <Bike className="w-6 h-6" />
+            ) : (
+              <Navigation className="w-6 h-6" />
+            )}
           </div>
-          <div className="w-full bg-gray-200 rounded-full h-1 mt-2.5 overflow-hidden">
-            <div 
-              className="bg-blue-600 h-1 rounded-full transition-all duration-300"
-              style={{ width: `${getProgressPercentage(allowance.current_month_km || 0, ((allowance.max_km_per_month || 2000) + approvedKm))}%` }}
-            ></div>
+          <div className="info-box-content">
+            <span className="text-[9px] font-black uppercase tracking-wider text-gray-400 block mb-0.5">
+              {limitPillLabel}
+            </span>
+            <span className="text-xs font-bold text-gray-800 block font-mono">
+              {allowance.current_month_km || 0} / {((allowance.max_km_per_month || 2000) + approvedKm)} KM
+            </span>
+            <div className="w-full bg-gray-200 rounded-full h-1 mt-1.5 overflow-hidden">
+              <div 
+                className="bg-[#17a2b8] h-1 rounded-full transition-all duration-300"
+                style={{ width: `${getProgressPercentage(allowance.current_month_km || 0, ((allowance.max_km_per_month || 2000) + approvedKm))}%` }}
+              ></div>
+            </div>
           </div>
         </div>
 
         {/* Monthly Auto Cap Card */}
-        <div className="bg-white border border-gray-200 rounded shadow-sm p-3.5 flex flex-col justify-between min-h-[70px]">
-          <div className="flex items-center">
-            <div className="p-2.5 bg-amber-50 text-amber-600 rounded-md">
-              <Bus className="w-5 h-5" />
-            </div>
-            <div className="min-w-0 flex-1">
-              <span className="text-[10px] uppercase font-bold text-gray-400 block tracking-wider leading-none mb-1">
-                Monthly Auto Cap
-              </span>
-              <span className="text-xs font-bold text-gray-850 block">
-                ₹{(allowance.current_month_auto || 0).toLocaleString()} / ₹{(1000 + approvedAuto).toLocaleString()}
-              </span>
-            </div>
+        <div className="info-box-lte animate-fadeIn">
+          <div className="info-box-icon bg-[#ffc107]">
+            <Bus className="w-6 h-6 text-white" />
           </div>
-          <div className="w-full bg-gray-200 rounded-full h-1 mt-2.5 overflow-hidden">
-            <div 
-              className="bg-amber-500 h-1 rounded-full transition-all duration-300"
-              style={{ width: `${getProgressPercentage(allowance.current_month_auto || 0, (1000 + approvedAuto))}%` }}
-            ></div>
+          <div className="info-box-content">
+            <span className="text-[9px] font-black uppercase tracking-wider text-gray-400 block mb-0.5">
+              Monthly Auto Cap
+            </span>
+            <span className="text-xs font-bold text-gray-850 block font-mono">
+              ₹{(allowance.current_month_auto || 0).toLocaleString()} / ₹{(1000 + approvedAuto).toLocaleString()}
+            </span>
+            <div className="w-full bg-gray-200 rounded-full h-1 mt-1.5 overflow-hidden">
+              <div 
+                className="bg-amber-500 h-1 rounded-full transition-all duration-300"
+                style={{ width: `${getProgressPercentage(allowance.current_month_auto || 0, (1000 + approvedAuto))}%` }}
+              ></div>
+            </div>
           </div>
         </div>
 
