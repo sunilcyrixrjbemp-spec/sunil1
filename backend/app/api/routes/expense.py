@@ -256,10 +256,10 @@ async def init_expense(
         allowance = db.query(AllowanceMaster).filter(AllowanceMaster.grade == user.grade).first()
         if allowance:
             allowance_dict = {
-                "daily_in_district": allowance.daily_in_district or 250,
-                "daily_out_district": allowance.daily_out_district or 400,
-                "daily_hotel": allowance.daily_hotel or 350,
-                "daily_out_state": allowance.daily_out_state or 600,
+                "daily_in_district": allowance.daily_in_district or 150,
+                "daily_out_district": allowance.daily_out_district or 200,
+                "daily_hotel": allowance.daily_hotel or 300,
+                "daily_out_state": allowance.daily_out_state or 400,
                 "hotel_in_state_s": allowance.hotel_in_state_s if (allowance.hotel_in_state_s and allowance.hotel_in_state_s > 0) else 1000,
                 "max_km_per_month": allowance.max_km_per_month or 2000,
                 "rate_bike": allowance.rate_per_km if allowance.vehicle_type == "Bike" else 4.5,
@@ -268,10 +268,10 @@ async def init_expense(
             }
         else:
             allowance_dict = {
-                "daily_in_district": 250,
-                "daily_out_district": 400,
-                "daily_hotel": 350,
-                "daily_out_state": 600,
+                "daily_in_district": 150,
+                "daily_out_district": 200,
+                "daily_hotel": 300,
+                "daily_out_state": 400,
                 "hotel_in_state_s": 1000,
                 "max_km_per_month": 2000,
                 "rate_bike": 4.5,
@@ -601,10 +601,10 @@ async def submit_expense(
     allowed_vehicle = allowance.vehicle_type if allowance else "Bike"
     rate_bike = allowance.rate_per_km if (allowance and allowance.vehicle_type == "Bike") else 4.5
     rate_car = allowance.rate_per_km if (allowance and allowance.vehicle_type == "Car") else 9.0
-    daily_in = allowance.daily_in_district if allowance else 250
-    daily_out = allowance.daily_out_district if allowance else 400
-    daily_hotel = allowance.daily_hotel if allowance else 350
-    daily_out_state = allowance.daily_out_state if allowance else 600
+    daily_in = allowance.daily_in_district if (allowance and allowance.daily_in_district and allowance.daily_in_district > 0) else 150
+    daily_out = allowance.daily_out_district if (allowance and allowance.daily_out_district and allowance.daily_out_district > 0) else 200
+    daily_hotel = allowance.daily_hotel if (allowance and allowance.daily_hotel and allowance.daily_hotel > 0) else 300
+    daily_out_state = allowance.daily_out_state if (allowance and allowance.daily_out_state and allowance.daily_out_state > 0) else 400
     hotel_limit = allowance.hotel_in_state_s if (allowance and allowance.hotel_in_state_s and allowance.hotel_in_state_s > 0) else 1000
 
     hDist = (current_user.district or "Jodhpur").strip()
