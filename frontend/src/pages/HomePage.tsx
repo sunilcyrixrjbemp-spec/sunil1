@@ -542,10 +542,10 @@ export default function HomePage() {
             className="info-box-lte cursor-pointer animate-fadeIn"
           >
             <div className="info-box-icon bg-[#007bff]">
-              <FileSpreadsheet className="w-6 h-6" />
+              <FileSpreadsheet className="w-5 h-5 text-white" />
             </div>
             <div className="info-box-content">
-              <span className="text-[9px] font-black uppercase tracking-wider text-gray-400 block">Total Claimed</span>
+              <span className="text-[9px] font-bold uppercase tracking-wider text-gray-400 block">Total Claimed</span>
               <span className="text-base font-extrabold text-gray-800 font-mono block mt-0.5">₹{(totalAmount || 0).toLocaleString()}</span>
               <span className="text-[9px] text-[#007bff] font-bold uppercase block mt-1">{statsTotalClaims.length} Claims Filed</span>
             </div>
@@ -557,11 +557,11 @@ export default function HomePage() {
             className="info-box-lte cursor-pointer animate-fadeIn"
           >
             <div className="info-box-icon bg-[#28a745]">
-              <CheckCircle2 className="w-6 h-6" />
+              <CheckCircle2 className="w-5 h-5 text-white" />
             </div>
             <div className="info-box-content">
-              <span className="text-[9px] font-black uppercase tracking-wider text-gray-400 block">Approved Claim</span>
-              <span className="text-base font-extrabold text-[#28a745] font-mono block mt-0.5">₹{(approvedAmount || 0).toLocaleString()}</span>
+              <span className="text-[9px] font-bold uppercase tracking-wider text-gray-400 block">Approved Claim</span>
+              <span className="text-base font-extrabold text-gray-800 font-mono block mt-0.5">₹{(approvedAmount || 0).toLocaleString()}</span>
               <span className="text-[9px] text-[#28a745] font-bold uppercase block mt-1">{statsApprovedClaims.length} Approved</span>
             </div>
           </div>
@@ -572,11 +572,11 @@ export default function HomePage() {
             className="info-box-lte cursor-pointer animate-fadeIn"
           >
             <div className="info-box-icon bg-[#ffc107]">
-              <Clock className="w-6 h-6 text-white" />
+              <Clock className="w-5 h-5 text-white" />
             </div>
             <div className="info-box-content">
-              <span className="text-[9px] font-black uppercase tracking-wider text-gray-400 block">Pending Claims</span>
-              <span className="text-base font-extrabold text-[#ffc107] font-mono block mt-0.5">₹{(pendingAmount || 0).toLocaleString()}</span>
+              <span className="text-[9px] font-bold uppercase tracking-wider text-gray-400 block">Pending Claims</span>
+              <span className="text-base font-extrabold text-gray-800 font-mono block mt-0.5">₹{(pendingAmount || 0).toLocaleString()}</span>
               <span className="text-[9px] text-amber-600 font-bold uppercase block mt-1">{statsPendingClaims.length} Pending Review</span>
             </div>
           </div>
@@ -587,11 +587,11 @@ export default function HomePage() {
             className="info-box-lte cursor-pointer animate-fadeIn"
           >
             <div className="info-box-icon bg-[#dc3545]">
-              <XCircle className="w-6 h-6" />
+              <XCircle className="w-5 h-5 text-white" />
             </div>
             <div className="info-box-content">
-              <span className="text-[9px] font-black uppercase tracking-wider text-gray-400 block">Rejected Claim</span>
-              <span className="text-base font-extrabold text-[#dc3545] font-mono block mt-0.5">₹{(rejectedAmount || 0).toLocaleString()}</span>
+              <span className="text-[9px] font-bold uppercase tracking-wider text-gray-400 block">Rejected Claim</span>
+              <span className="text-base font-extrabold text-gray-800 font-mono block mt-0.5">₹{(rejectedAmount || 0).toLocaleString()}</span>
               <span className="text-[9px] text-[#dc3545] font-bold uppercase block mt-1">{statsRejectedClaims.length} Rejected</span>
             </div>
           </div>

@@ -1943,25 +1943,21 @@ export default function ExpensePage() {
           <span className="bg-blue-600 text-white font-extrabold py-1 px-3 rounded text-[11px] font-mono shadow-sm">
             {nextExpId}
           </span>
-        </div>
-      </div>
-
-      {/* 4 Info-Box Widgets (Unified Mobile/Desktop) */}
+              {/* 4 Info-Box Widgets (Unified Mobile/Desktop) */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-        
         {/* Profile Card */}
         <div className="info-box-lte animate-fadeIn">
           <div className="info-box-icon bg-[#007bff]">
-            <User className="w-6 h-6" />
+            <User className="w-5 h-5 text-white" />
           </div>
           <div className="info-box-content">
-            <span className="text-[9px] font-black uppercase tracking-wider text-gray-400 block mb-0.5">
+            <span className="text-[9px] font-bold uppercase tracking-wider text-gray-400 block mb-0.5">
               Employee Profile
             </span>
             <span className="text-xs font-bold text-gray-800 block truncate" title={user.name || "—"}>
               {user.name || "—"}
             </span>
-            <span className="text-[10px] text-gray-500 block truncate font-mono mt-0.5">
+            <span className="text-[10px] text-gray-505 block truncate font-mono mt-0.5">
               Code: {user.e_code || "—"} | Grade: {user.grade || "—"}
             </span>
           </div>
@@ -1970,10 +1966,10 @@ export default function ExpensePage() {
         {/* Assigned Home District Card */}
         <div className="info-box-lte animate-fadeIn">
           <div className="info-box-icon bg-[#28a745]">
-            <MapPin className="w-6 h-6" />
+            <MapPin className="w-5 h-5 text-white" />
           </div>
           <div className="info-box-content">
-            <span className="text-[9px] font-black uppercase tracking-wider text-gray-400 block mb-0.5">
+            <span className="text-[9px] font-bold uppercase tracking-wider text-gray-400 block mb-0.5">
               Assigned District
             </span>
             <span className="text-xs font-bold text-gray-800 block truncate">
@@ -1989,15 +1985,15 @@ export default function ExpensePage() {
         <div className="info-box-lte animate-fadeIn">
           <div className="info-box-icon bg-[#17a2b8]">
             {allowance.vehicle_type === "Car" ? (
-              <Car className="w-6 h-6" />
+              <Car className="w-5 h-5 text-white" />
             ) : allowance.vehicle_type === "Bike" ? (
-              <Bike className="w-6 h-6" />
+              <Bike className="w-5 h-5 text-white" />
             ) : (
-              <Navigation className="w-6 h-6" />
+              <Navigation className="w-5 h-5 text-white" />
             )}
           </div>
           <div className="info-box-content">
-            <span className="text-[9px] font-black uppercase tracking-wider text-gray-400 block mb-0.5">
+            <span className="text-[9px] font-bold uppercase tracking-wider text-gray-400 block mb-0.5">
               {limitPillLabel}
             </span>
             <span className="text-xs font-bold text-gray-800 block font-mono">
@@ -2015,13 +2011,13 @@ export default function ExpensePage() {
         {/* Monthly Auto Cap Card */}
         <div className="info-box-lte animate-fadeIn">
           <div className="info-box-icon bg-[#ffc107]">
-            <Bus className="w-6 h-6 text-white" />
+            <Bus className="w-5 h-5 text-white" />
           </div>
           <div className="info-box-content">
-            <span className="text-[9px] font-black uppercase tracking-wider text-gray-400 block mb-0.5">
+            <span className="text-[9px] font-bold uppercase tracking-wider text-gray-400 block mb-0.5">
               Monthly Auto Cap
             </span>
-            <span className="text-xs font-bold text-gray-850 block font-mono">
+            <span className="text-xs font-bold text-gray-800 block font-mono">
               ₹{(allowance.current_month_auto || 0).toLocaleString()} / ₹{(1000 + approvedAuto).toLocaleString()}
             </span>
             <div className="w-full bg-gray-200 rounded-full h-1 mt-1.5 overflow-hidden">
@@ -2032,7 +2028,6 @@ export default function ExpensePage() {
             </div>
           </div>
         </div>
-
       </div>
 
       {/* Main Form container supporting dual layout */}

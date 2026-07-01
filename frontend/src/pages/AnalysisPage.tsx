@@ -540,79 +540,79 @@ export default function AnalysisPage() {
       {/* Summary Stats */}
       <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-7 gap-3">
         {/* Card 1: Total Claims */}
-        <div className="info-box-lte animate-fadeIn min-h-[64px]">
-          <div className="info-box-icon bg-[#007bff] w-10">
+        <div className="info-box-lte animate-fadeIn">
+          <div className="info-box-icon bg-[#007bff]">
             <FileSpreadsheet className="w-5 h-5 text-white" />
           </div>
-          <div className="info-box-content p-2">
-            <span className="text-[8px] font-black uppercase tracking-wider text-gray-400 block mb-0.5">Total Claims</span>
-            <span className="text-sm font-extrabold text-gray-800 font-mono block leading-none mt-0.5">{count}</span>
+          <div className="info-box-content">
+            <span className="text-[9px] font-bold uppercase tracking-wider text-gray-400 block">Total Claims</span>
+            <span className="text-base font-extrabold text-gray-800 font-mono block mt-0.5">{count}</span>
           </div>
         </div>
 
         {/* Card 2: Total Amount */}
-        <div className="info-box-lte animate-fadeIn min-h-[64px]">
-          <div className="info-box-icon bg-[#28a745] w-10">
+        <div className="info-box-lte animate-fadeIn">
+          <div className="info-box-icon bg-[#28a745]">
             <IndianRupee className="w-5 h-5 text-white" />
           </div>
-          <div className="info-box-content p-2">
-            <span className="text-[8px] font-black uppercase tracking-wider text-gray-400 block mb-0.5">Total Amount</span>
-            <span className="text-sm font-extrabold text-[#28a745] font-mono block leading-none mt-0.5">₹{totalAmount.toLocaleString()}</span>
+          <div className="info-box-content">
+            <span className="text-[9px] font-bold uppercase tracking-wider text-gray-400 block">Total Amount</span>
+            <span className="text-base font-extrabold text-gray-800 font-mono block mt-0.5">₹{totalAmount.toLocaleString()}</span>
           </div>
         </div>
 
         {/* Card 3: Average Claim */}
-        <div className="info-box-lte animate-fadeIn min-h-[64px]">
-          <div className="info-box-icon bg-[#ffc107] w-10">
+        <div className="info-box-lte animate-fadeIn">
+          <div className="info-box-icon bg-[#ffc107]">
             <TrendingUp className="w-5 h-5 text-white" />
           </div>
-          <div className="info-box-content p-2">
-            <span className="text-[8px] font-black uppercase tracking-wider text-gray-400 block mb-0.5">Average Claim</span>
-            <span className="text-sm font-extrabold text-amber-600 font-mono block leading-none mt-0.5">₹{avgValue.toLocaleString()}</span>
+          <div className="info-box-content">
+            <span className="text-[9px] font-bold uppercase tracking-wider text-gray-400 block">Average Claim</span>
+            <span className="text-base font-extrabold text-gray-800 font-mono block mt-0.5">₹{avgValue.toLocaleString()}</span>
           </div>
         </div>
 
         {/* Card 4: Calls Done / Assigned */}
-        <div className="info-box-lte animate-fadeIn min-h-[64px]">
-          <div className="info-box-icon bg-[#605ca8] w-10">
+        <div className="info-box-lte animate-fadeIn">
+          <div className="info-box-icon bg-[#605ca8]">
             <Phone className="w-5 h-5 text-white" />
           </div>
-          <div className="info-box-content p-2">
-            <span className="text-[8px] font-black uppercase tracking-wider text-gray-400 block mb-0.5">Calls Done / Assigned</span>
-            <span className="text-sm font-extrabold text-[#605ca8] font-mono block leading-none mt-0.5">{activityStats.callsCompleted} / {activityStats.callsAssigned}</span>
+          <div className="info-box-content">
+            <span className="text-[9px] font-bold uppercase tracking-wider text-gray-400 block">Calls Done / Assigned</span>
+            <span className="text-base font-extrabold text-gray-800 font-mono block mt-0.5">{activityStats.callsCompleted} / {activityStats.callsAssigned}</span>
           </div>
         </div>
 
         {/* Card 5: PMS Completed */}
-        <div className="info-box-lte animate-fadeIn min-h-[64px]">
-          <div className="info-box-icon bg-[#20c997] w-10">
+        <div className="info-box-lte animate-fadeIn">
+          <div className="info-box-icon bg-[#20c997]">
             <ShieldCheck className="w-5 h-5 text-white" />
           </div>
-          <div className="info-box-content p-2">
-            <span className="text-[8px] font-black uppercase tracking-wider text-gray-400 block mb-0.5">PMS Completed</span>
-            <span className="text-sm font-extrabold text-[#20c997] font-mono block leading-none mt-0.5">{activityStats.pmsCount}</span>
+          <div className="info-box-content">
+            <span className="text-[9px] font-bold uppercase tracking-wider text-gray-400 block">PMS Completed</span>
+            <span className="text-base font-extrabold text-gray-800 font-mono block mt-0.5">{activityStats.pmsCount}</span>
           </div>
         </div>
 
         {/* Card 6: Tag & Calib Done */}
-        <div className="info-box-lte animate-fadeIn min-h-[64px]">
-          <div className="info-box-icon bg-[#17a2b8] w-10">
+        <div className="info-box-lte animate-fadeIn">
+          <div className="info-box-icon bg-[#17a2b8]">
             <Activity className="w-5 h-5 text-white" />
           </div>
-          <div className="info-box-content p-2">
-            <span className="text-[8px] font-black uppercase tracking-wider text-gray-400 block mb-0.5">Tag & Calib Done</span>
-            <span className="text-sm font-extrabold text-[#17a2b8] font-mono block leading-none mt-0.5">{activityStats.assetTaggingCount + activityStats.calibrationCount}</span>
+          <div className="info-box-content">
+            <span className="text-[9px] font-bold uppercase tracking-wider text-gray-400 block">Tag & Calib Done</span>
+            <span className="text-base font-extrabold text-gray-800 font-mono block mt-0.5">{activityStats.assetTaggingCount + activityStats.calibrationCount}</span>
           </div>
         </div>
 
         {/* Card 7: Scope */}
-        <div className="info-box-lte animate-fadeIn min-h-[64px]">
-          <div className="info-box-icon bg-[#6f42c1] w-10">
+        <div className="info-box-lte animate-fadeIn">
+          <div className="info-box-icon bg-[#6f42c1]">
             {viewMode === "team" ? <Users className="w-5 h-5 text-white" /> : <UserIcon className="w-5 h-5 text-white" />}
           </div>
-          <div className="info-box-content p-2">
-            <span className="text-[8px] font-black uppercase tracking-wider text-gray-400 block mb-0.5">Scope</span>
-            <span className="text-xs font-bold text-[#6f42c1] block truncate leading-none mt-0.5" title={viewMode === "team" ? "Team" : "My Data"}>{viewMode === "team" ? "Team" : "My Data"}</span>
+          <div className="info-box-content">
+            <span className="text-[9px] font-bold uppercase tracking-wider text-gray-400 block">Scope</span>
+            <span className="text-xs font-bold text-gray-800 block truncate mt-0.5" title={viewMode === "team" ? "Team" : "My Data"}>{viewMode === "team" ? "Team" : "My Data"}</span>
           </div>
         </div>
       </div>

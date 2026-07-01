@@ -162,15 +162,15 @@ select.input-lte option {
 
 /* Info Box layouts */
 .info-box-lte {
-  @apply bg-white border border-gray-200 rounded shadow-sm flex items-stretch overflow-hidden min-h-[72px] hover:shadow-md transition-shadow;
+  @apply bg-white border border-gray-200 rounded shadow-sm flex items-stretch overflow-hidden min-h-[64px] hover:shadow-md transition-shadow;
 }
 
 .info-box-icon {
-  @apply flex items-center justify-center w-16 text-white text-lg shrink-0;
+  @apply flex items-center justify-center w-12 text-white text-base shrink-0;
 }
 
 .info-box-content {
-  @apply flex flex-col justify-center p-3 flex-1 min-w-0;
+  @apply flex flex-col justify-center p-2.5 flex-1 min-w-0;
 }
 
 /* Table styling */

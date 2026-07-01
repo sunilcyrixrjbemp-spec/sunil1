@@ -502,19 +502,19 @@ export default function AssetUploadPage() {
       {/* ===== Stats Dashboard (AdminLTE Theme Grid) ===== */}
       <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-4">
         {[
-          { label: "Total Equipment", value: stats.total_equipment.toLocaleString(), icon: <Package className="w-5 h-5 text-white" />, bgColor: "bg-[#007bff]", textColor: "text-gray-800" },
-          { label: "Verified Equipment", value: stats.verified_equipment.toLocaleString(), icon: <ShieldCheck className="w-5 h-5 text-white" />, bgColor: "bg-[#28a745]", textColor: "text-[#28a745]" },
-          { label: "Under Warranty", value: stats.under_warranty.toLocaleString(), icon: <ShieldCheck className="w-5 h-5 text-white" />, bgColor: "bg-[#17a2b8]", textColor: "text-[#17a2b8]" },
-          { label: "Out of Warranty", value: stats.out_of_warranty.toLocaleString(), icon: <ShieldOff className="w-5 h-5 text-white" />, bgColor: "bg-[#ffc107]", textColor: "text-amber-600" },
-          { label: "Total Equipment Value", value: fmtRs(stats.total_value), icon: <IndianRupee className="w-5 h-5 text-white" />, bgColor: "bg-[#605ca8]", textColor: "text-[#605ca8]" },
+          { label: "Total Equipment", value: stats.total_equipment.toLocaleString(), icon: <Package className="w-5 h-5 text-white" />, bgColor: "bg-[#007bff]" },
+          { label: "Verified Equipment", value: stats.verified_equipment.toLocaleString(), icon: <ShieldCheck className="w-5 h-5 text-white" />, bgColor: "bg-[#28a745]" },
+          { label: "Under Warranty", value: stats.under_warranty.toLocaleString(), icon: <ShieldCheck className="w-5 h-5 text-white" />, bgColor: "bg-[#17a2b8]" },
+          { label: "Out of Warranty", value: stats.out_of_warranty.toLocaleString(), icon: <ShieldOff className="w-5 h-5 text-white" />, bgColor: "bg-[#ffc107]" },
+          { label: "Total Equipment Value", value: fmtRs(stats.total_value), icon: <IndianRupee className="w-5 h-5 text-white" />, bgColor: "bg-[#605ca8]" },
         ].map((s, i) => (
           <div key={i} className="info-box-lte animate-fadeIn">
-            <div className={`info-box-icon ${s.bgColor} w-12`}>
+            <div className={`info-box-icon ${s.bgColor}`}>
               {s.icon}
             </div>
-            <div className="info-box-content p-2">
-              <span className="text-[8px] font-black uppercase tracking-wider text-gray-400 block">{s.label}</span>
-              <span className={`text-sm font-extrabold ${s.textColor} font-mono block mt-0.5`}>{s.value}</span>
+            <div className="info-box-content">
+              <span className="text-[9px] font-bold uppercase tracking-wider text-gray-400 block">{s.label}</span>
+              <span className="text-base font-extrabold text-gray-800 font-mono block mt-0.5">{s.value}</span>
             </div>
           </div>
         ))}
@@ -522,20 +522,20 @@ export default function AssetUploadPage() {
 
       <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-4 mt-4">
         {[
-          { label: "Verified Value", value: fmtRs(stats.verified_value), icon: <CheckCircle className="w-5 h-5 text-white" />, bgColor: "bg-[#28a745]", textColor: "text-[#28a745]" },
-          { label: "Verified OOW Value", value: fmtRs(stats.verified_out_of_warranty_value), icon: <ShieldOff className="w-5 h-5 text-white" />, bgColor: "bg-[#fd7e14]", textColor: "text-orange-600" },
-          { label: "Monthly Billing", value: fmtRs(stats.monthly_value), sub: "(Value × 6.08% ÷ 12)", icon: <Calendar className="w-5 h-5 text-white" />, bgColor: "bg-[#007bff]", textColor: "text-gray-800" },
-          { label: "Arrear Billing", value: fmtRs(stats.arrear_billing), sub: "Verified in target month", icon: <Receipt className="w-5 h-5 text-white" />, bgColor: "bg-[#dc3545]", textColor: "text-[#dc3545]" },
-          { label: "Total Billing Value", value: fmtRs(stats.total_billing), icon: <IndianRupee className="w-5 h-5 text-white" />, bgColor: "bg-[#6f42c1]", textColor: "text-[#6f42c1]" },
+          { label: "Verified Value", value: fmtRs(stats.verified_value), icon: <CheckCircle className="w-5 h-5 text-white" />, bgColor: "bg-[#28a745]" },
+          { label: "Verified OOW Value", value: fmtRs(stats.verified_out_of_warranty_value), icon: <ShieldOff className="w-5 h-5 text-white" />, bgColor: "bg-[#fd7e14]" },
+          { label: "Monthly Billing", value: fmtRs(stats.monthly_value), sub: "(Value × 6.08% ÷ 12)", icon: <Calendar className="w-5 h-5 text-white" />, bgColor: "bg-[#007bff]" },
+          { label: "Arrear Billing", value: fmtRs(stats.arrear_billing), sub: "Verified in target month", icon: <Receipt className="w-5 h-5 text-white" />, bgColor: "bg-[#dc3545]" },
+          { label: "Total Billing Value", value: fmtRs(stats.total_billing), icon: <IndianRupee className="w-5 h-5 text-white" />, bgColor: "bg-[#6f42c1]" },
         ].map((s, i) => (
           <div key={i} className="info-box-lte animate-fadeIn">
-            <div className={`info-box-icon ${s.bgColor} w-12`}>
+            <div className={`info-box-icon ${s.bgColor}`}>
               {s.icon}
             </div>
-            <div className="info-box-content p-2">
-              <span className="text-[8px] font-black uppercase tracking-wider text-gray-400 block">{s.label}</span>
-              <span className={`text-sm font-extrabold ${s.textColor} font-mono block mt-0.5`}>{s.value}</span>
-              {"sub" in s && s.sub && <span className="text-[7px] text-gray-400 font-semibold block mt-0.5 leading-none">{s.sub}</span>}
+            <div className="info-box-content">
+              <span className="text-[9px] font-bold uppercase tracking-wider text-gray-400 block">{s.label}</span>
+              <span className="text-base font-extrabold text-gray-800 font-mono block mt-0.5">{s.value}</span>
+              {"sub" in s && s.sub && <span className="text-[7px] text-gray-450 font-semibold block mt-0.5 leading-none">{s.sub}</span>}
             </div>
           </div>
         ))}

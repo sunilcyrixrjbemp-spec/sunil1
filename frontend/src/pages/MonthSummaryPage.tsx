@@ -866,10 +866,10 @@ export default function MonthSummaryPage() {
         {/* Box 1 */}
         <div className="info-box-lte animate-fadeIn">
           <div className="info-box-icon bg-[#007bff]">
-            <Users className="w-6 h-6" />
+            <Users className="w-5 h-5 text-white" />
           </div>
           <div className="info-box-content">
-            <span className="text-[9px] font-black uppercase tracking-wider text-gray-400 block mb-0.5">Engineers</span>
+            <span className="text-[9px] font-bold uppercase tracking-wider text-gray-400 block">Engineers</span>
             <span className="text-base font-extrabold text-gray-800 font-mono block mt-0.5">{totalEngineers}</span>
             <span className="text-[9px] text-[#007bff] font-bold uppercase block mt-1">Active Staff</span>
           </div>
@@ -877,33 +877,33 @@ export default function MonthSummaryPage() {
         {/* Box 2 */}
         <div className="info-box-lte animate-fadeIn">
           <div className="info-box-icon bg-[#28a745]">
-            <CheckCircle className="w-6 h-6" />
+            <CheckCircle className="w-5 h-5 text-white" />
           </div>
           <div className="info-box-content">
-            <span className="text-[9px] font-black uppercase tracking-wider text-gray-400 block mb-0.5">Approved Claims</span>
-            <span className="text-base font-extrabold text-[#28a745] font-mono block mt-0.5">{totalClaims}</span>
+            <span className="text-[9px] font-bold uppercase tracking-wider text-gray-400 block">Approved Claims</span>
+            <span className="text-base font-extrabold text-gray-800 font-mono block mt-0.5">{totalClaims}</span>
             <span className="text-[9px] text-[#28a745] font-bold uppercase block mt-1">Processed</span>
           </div>
         </div>
         {/* Box 3 */}
         <div className="info-box-lte animate-fadeIn">
           <div className="info-box-icon bg-[#ffc107]">
-            <IndianRupee className="w-6 h-6 text-white" />
+            <IndianRupee className="w-5 h-5 text-white" />
           </div>
           <div className="info-box-content">
-            <span className="text-[9px] font-black uppercase tracking-wider text-gray-400 block mb-0.5">Total Amount</span>
-            <span className="text-base font-extrabold text-[#ffc107] font-mono block mt-0.5">{fmt(totalAmount)}</span>
+            <span className="text-[9px] font-bold uppercase tracking-wider text-gray-400 block">Total Amount</span>
+            <span className="text-base font-extrabold text-gray-800 font-mono block mt-0.5">{fmt(totalAmount)}</span>
             <span className="text-[9px] text-amber-600 font-bold uppercase block mt-1">Disbursed</span>
           </div>
         </div>
         {/* Box 4 */}
         <div className="info-box-lte animate-fadeIn">
           <div className="info-box-icon bg-[#605ca8]">
-            <MapPin className="w-6 h-6" />
+            <MapPin className="w-5 h-5 text-white" />
           </div>
           <div className="info-box-content">
-            <span className="text-[9px] font-black uppercase tracking-wider text-gray-400 block mb-0.5">Total Distance</span>
-            <span className="text-base font-extrabold text-[#605ca8] font-mono block mt-0.5">{fmtN(totalKM)} km</span>
+            <span className="text-[9px] font-bold uppercase tracking-wider text-gray-400 block">Total Distance</span>
+            <span className="text-base font-extrabold text-gray-800 font-mono block mt-0.5">{fmtN(totalKM)} km</span>
             <span className="text-[9px] text-[#605ca8] font-bold uppercase block mt-1">Travelled</span>
           </div>
         </div>

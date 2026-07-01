@@ -214,10 +214,10 @@ export default function ConsolidatedReportPage() {
         {/* Card 1: Total Claims */}
         <div className="info-box-lte animate-fadeIn">
           <div className="info-box-icon bg-[#007bff]">
-            <Users className="w-6 h-6" />
+            <Users className="w-5 h-5 text-white" />
           </div>
           <div className="info-box-content">
-            <span className="text-[9px] font-black uppercase tracking-wider text-gray-400 block">Total Claims</span>
+            <span className="text-[9px] font-bold uppercase tracking-wider text-gray-400 block">Total Claims</span>
             <span className="text-base font-extrabold text-gray-800 font-mono block mt-0.5">{data.length}</span>
             <span className="text-[9px] text-[#007bff] font-bold uppercase block mt-1">Engineers Listed</span>
           </div>
@@ -226,10 +226,10 @@ export default function ConsolidatedReportPage() {
         {/* Card 2: Claimed Amount */}
         <div className="info-box-lte animate-fadeIn">
           <div className="info-box-icon bg-[#ffc107]">
-            <IndianRupee className="w-6 h-6 text-white" />
+            <IndianRupee className="w-5 h-5 text-white" />
           </div>
           <div className="info-box-content">
-            <span className="text-[9px] font-black uppercase tracking-wider text-gray-400 block">Claimed Amount</span>
+            <span className="text-[9px] font-bold uppercase tracking-wider text-gray-400 block">Claimed Amount</span>
             <span className="text-base font-extrabold text-gray-800 font-mono block mt-0.5">{fmt(totalClaimed)}</span>
             <span className="text-[9px] text-amber-600 font-bold uppercase block mt-1">Before Deductions</span>
           </div>
@@ -238,11 +238,11 @@ export default function ConsolidatedReportPage() {
         {/* Card 3: Total Advances */}
         <div className="info-box-lte animate-fadeIn">
           <div className="info-box-icon bg-[#dc3545]">
-            <ShieldAlert className="w-6 h-6" />
+            <ShieldAlert className="w-5 h-5 text-white" />
           </div>
           <div className="info-box-content">
-            <span className="text-[9px] font-black uppercase tracking-wider text-gray-400 block">Total Advances</span>
-            <span className="text-base font-extrabold text-[#dc3545] font-mono block mt-0.5">{fmt(totalAdvances)}</span>
+            <span className="text-[9px] font-bold uppercase tracking-wider text-gray-400 block">Total Advances</span>
+            <span className="text-base font-extrabold text-gray-800 font-mono block mt-0.5">{fmt(totalAdvances)}</span>
             <span className="text-[9px] text-[#dc3545] font-bold uppercase block mt-1">Paid in Advance</span>
           </div>
         </div>
@@ -250,11 +250,11 @@ export default function ConsolidatedReportPage() {
         {/* Card 4: Net Payable */}
         <div className="info-box-lte animate-fadeIn">
           <div className="info-box-icon bg-[#28a745]">
-            <CheckCircle2 className="w-6 h-6" />
+            <CheckCircle2 className="w-5 h-5 text-white" />
           </div>
           <div className="info-box-content">
-            <span className="text-[9px] font-black uppercase tracking-wider text-gray-400 block">Net Payable</span>
-            <span className="text-base font-extrabold text-[#28a745] font-mono block mt-0.5">{fmt(totalNet)}</span>
+            <span className="text-[9px] font-bold uppercase tracking-wider text-gray-400 block">Net Payable</span>
+            <span className="text-base font-extrabold text-gray-800 font-mono block mt-0.5">{fmt(totalNet)}</span>
             <span className="text-[9px] text-[#28a745] font-bold uppercase block mt-1">Net Reimbursement</span>
           </div>
         </div>
