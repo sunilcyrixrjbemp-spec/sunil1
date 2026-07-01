@@ -262,6 +262,23 @@ def run_schema_updates(db: Session):
             db.rollback()
             logger.warning(f"Error creating index {idx_name}: {str(e)}")
 
+    # Align existing user role permissions with default allowed_windows
+    try:
+        from app.models.user import User
+        db.query(User).filter(User.role.ilike("engineer")).update(
+            {User.allowed_windows: "home,expense,help,profile"}, 
+            synchronize_session=False
+        )
+        db.query(User).filter(User.role.ilike("manager")).update(
+            {User.allowed_windows: "home,approval,expense,help,profile"}, 
+            synchronize_session=False
+        )
+        db.commit()
+        logger.info("Aligned existing user role permissions with default allowed_windows.")
+    except Exception as e:
+        db.rollback()
+        logger.warning(f"Error migrating existing user permissions: {str(e)}")
+
 def seed_allowance_master(db: Session):
     """Seed default grade allowances if allowance_master is empty"""
     from app.models.allowance_master import AllowanceMaster

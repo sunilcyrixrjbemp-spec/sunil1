@@ -446,6 +446,163 @@ async def get_hierarchies(db: Session = Depends(get_db), admin: User = Depends(v
     cache.set("admin_hierarchies_list", serialized)
     return result
 
+@router.get("/hierarchies/export")
+async def export_hierarchies_csv(
+    db: Session = Depends(get_db),
+    admin: User = Depends(verify_admin)
+):
+    """Export all team hierarchies to a CSV file structure"""
+    import csv
+    import io
+    from fastapi.responses import StreamingResponse
+
+    output = io.StringIO()
+    writer = csv.writer(output)
+    
+    # Headers
+    writer.writerow([
+        "hierarchy_name", 
+        "requester_e_codes", 
+        "level_1_approver", 
+        "level_2_approver", 
+        "level_3_approver", 
+        "level_4_approver", 
+        "level_5_approver"
+    ])
+    
+    hierarchies = db.query(ApprovalHierarchy).all()
+    for h in hierarchies:
+        # Requesters
+        req_codes = []
+        for r in h.requesters:
+            if r.user:
+                req_codes.append(r.user.e_code or r.user.user_id)
+        
+        # Approvers (levels 1-5)
+        lvl_apps = ["", "", "", "", ""]
+        for a in h.approvers:
+            if a.approver and 1 <= a.level_number <= 5:
+                lvl_apps[a.level_number - 1] = a.approver.e_code or a.approver.user_id
+                
+        writer.writerow([
+            h.name,
+            ",".join(req_codes),
+            lvl_apps[0],
+            lvl_apps[1],
+            lvl_apps[2],
+            lvl_apps[3],
+            lvl_apps[4]
+        ])
+        
+    output.seek(0)
+    response = StreamingResponse(output, media_type="text/csv")
+    response.headers["Content-Disposition"] = "attachment; filename=team_hierarchies.csv"
+    return response
+
+@router.post("/hierarchies/bulk")
+async def bulk_import_hierarchies(
+    request: BulkHierarchyImportRequest,
+    db: Session = Depends(get_db),
+    admin: User = Depends(verify_admin)
+):
+    """Bulk import team hierarchies via JSON payload (parsed CSV)"""
+    errors = []
+    
+    # Validate all rows first
+    for index, row in enumerate(request.rows):
+        h_name = row.hierarchy_name.strip()
+        if not h_name:
+            errors.append(f"Row {index + 1}: Hierarchy name is empty")
+            continue
+            
+        # Parse requesters
+        req_codes = [c.strip() for c in row.requester_e_codes.split(",") if c.strip()]
+        for code in req_codes:
+            u = db.query(User).filter(
+                (User.e_code.ilike(code)) |
+                (User.user_id.ilike(code)) |
+                (User.name.ilike(code))
+            ).first()
+            if not u:
+                errors.append(f"Row {index + 1}: Requester '{code}' not found in database")
+                
+        # Parse level approvers
+        for lvl in range(1, 6):
+            app_code = getattr(row, f"level_{lvl}_approver", "")
+            if app_code and app_code.strip():
+                app_code_clean = app_code.strip()
+                u = db.query(User).filter(
+                    (User.e_code.ilike(app_code_clean)) |
+                    (User.user_id.ilike(app_code_clean)) |
+                    (User.name.ilike(app_code_clean))
+                ).first()
+                if not u:
+                    errors.append(f"Row {index + 1}: Level {lvl} Approver '{app_code_clean}' not found in database")
+                    
+    if errors:
+        raise HTTPException(
+            status_code=400,
+            detail={"errors": errors}
+        )
+        
+    # If no validation errors, proceed to update/create
+    try:
+        from app.utils import cache
+        
+        for row in request.rows:
+            h_name = row.hierarchy_name.strip()
+            # Find existing hierarchy by name
+            h = db.query(ApprovalHierarchy).filter(ApprovalHierarchy.name.ilike(h_name)).first()
+            if not h:
+                h = ApprovalHierarchy(name=h_name)
+                db.add(h)
+                db.flush()
+            else:
+                # Clear existing relationships
+                db.query(HierarchyRequester).filter(HierarchyRequester.hierarchy_id == h.id).delete()
+                db.query(HierarchyApprover).filter(HierarchyApprover.hierarchy_id == h.id).delete()
+                db.flush()
+                
+            # Add requesters
+            req_codes = [c.strip() for c in row.requester_e_codes.split(",") if c.strip()]
+            for code in req_codes:
+                u = db.query(User).filter(
+                    (User.e_code.ilike(code)) |
+                    (User.user_id.ilike(code)) |
+                    (User.name.ilike(code))
+                ).first()
+                if u:
+                    # Remove from other hierarchies
+                    db.query(HierarchyRequester).filter(HierarchyRequester.user_id == u.id).delete()
+                    db.flush()
+                    db.add(HierarchyRequester(hierarchy_id=h.id, user_id=u.id))
+                    
+            # Add approvers
+            for lvl in range(1, 6):
+                app_code = getattr(row, f"level_{lvl}_approver", "")
+                if app_code and app_code.strip():
+                    app_code_clean = app_code.strip()
+                    u = db.query(User).filter(
+                        (User.e_code.ilike(app_code_clean)) |
+                        (User.user_id.ilike(app_code_clean)) |
+                        (User.name.ilike(app_code_clean))
+                    ).first()
+                    if u:
+                        db.add(HierarchyApprover(
+                            hierarchy_id=h.id,
+                            level_number=lvl,
+                            approver_id=u.id
+                        ))
+                        
+        db.commit()
+        cache.delete("admin_hierarchies_list")
+        cache.clear_all_transactional_caches()
+    except Exception as e:
+        db.rollback()
+        raise HTTPException(status_code=500, detail=f"Database transaction error: {str(e)}")
+        
+    return {"status": "success", "message": "All team hierarchies successfully imported/updated."}
+
 @router.get("/hierarchies/{hierarchy_id}", response_model=ApprovalHierarchyResponse)
 async def get_hierarchy(hierarchy_id: int, db: Session = Depends(get_db), admin: User = Depends(verify_admin)):
     """Get a single hierarchy by ID"""
@@ -603,162 +760,7 @@ async def delete_hierarchy(hierarchy_id: int, db: Session = Depends(get_db), adm
     
     return {"status": "success", "message": "Hierarchy successfully deleted."}
 
-@router.get("/hierarchies/export")
-async def export_hierarchies_csv(
-    db: Session = Depends(get_db),
-    admin: User = Depends(verify_admin)
-):
-    """Export all team hierarchies to a CSV file structure"""
-    import csv
-    import io
-    from fastapi.responses import StreamingResponse
 
-    output = io.StringIO()
-    writer = csv.writer(output)
-    
-    # Headers
-    writer.writerow([
-        "hierarchy_name", 
-        "requester_e_codes", 
-        "level_1_approver", 
-        "level_2_approver", 
-        "level_3_approver", 
-        "level_4_approver", 
-        "level_5_approver"
-    ])
-    
-    hierarchies = db.query(ApprovalHierarchy).all()
-    for h in hierarchies:
-        # Requesters
-        req_codes = []
-        for r in h.requesters:
-            if r.user:
-                req_codes.append(r.user.e_code or r.user.user_id)
-        
-        # Approvers (levels 1-5)
-        lvl_apps = ["", "", "", "", ""]
-        for a in h.approvers:
-            if a.approver and 1 <= a.level_number <= 5:
-                lvl_apps[a.level_number - 1] = a.approver.e_code or a.approver.user_id
-                
-        writer.writerow([
-            h.name,
-            ",".join(req_codes),
-            lvl_apps[0],
-            lvl_apps[1],
-            lvl_apps[2],
-            lvl_apps[3],
-            lvl_apps[4]
-        ])
-        
-    output.seek(0)
-    response = StreamingResponse(output, media_type="text/csv")
-    response.headers["Content-Disposition"] = "attachment; filename=team_hierarchies.csv"
-    return response
-
-@router.post("/hierarchies/bulk")
-async def bulk_import_hierarchies(
-    request: BulkHierarchyImportRequest,
-    db: Session = Depends(get_db),
-    admin: User = Depends(verify_admin)
-):
-    """Bulk import team hierarchies via JSON payload (parsed CSV)"""
-    errors = []
-    
-    # Validate all rows first
-    for index, row in enumerate(request.rows):
-        h_name = row.hierarchy_name.strip()
-        if not h_name:
-            errors.append(f"Row {index + 1}: Hierarchy name is empty")
-            continue
-            
-        # Parse requesters
-        req_codes = [c.strip() for c in row.requester_e_codes.split(",") if c.strip()]
-        for code in req_codes:
-            u = db.query(User).filter(
-                (User.e_code.ilike(code)) |
-                (User.user_id.ilike(code)) |
-                (User.name.ilike(code))
-            ).first()
-            if not u:
-                errors.append(f"Row {index + 1}: Requester '{code}' not found in database")
-                
-        # Parse level approvers
-        for lvl in range(1, 6):
-            app_code = getattr(row, f"level_{lvl}_approver", "")
-            if app_code and app_code.strip():
-                app_code_clean = app_code.strip()
-                u = db.query(User).filter(
-                    (User.e_code.ilike(app_code_clean)) |
-                    (User.user_id.ilike(app_code_clean)) |
-                    (User.name.ilike(app_code_clean))
-                ).first()
-                if not u:
-                    errors.append(f"Row {index + 1}: Level {lvl} Approver '{app_code_clean}' not found in database")
-                    
-    if errors:
-        raise HTTPException(
-            status_code=400,
-            detail={"errors": errors}
-        )
-        
-    # If no validation errors, proceed to update/create
-    try:
-        from app.utils import cache
-        
-        for row in request.rows:
-            h_name = row.hierarchy_name.strip()
-            # Find existing hierarchy by name
-            h = db.query(ApprovalHierarchy).filter(ApprovalHierarchy.name.ilike(h_name)).first()
-            if not h:
-                h = ApprovalHierarchy(name=h_name)
-                db.add(h)
-                db.flush()
-            else:
-                # Clear existing relationships
-                db.query(HierarchyRequester).filter(HierarchyRequester.hierarchy_id == h.id).delete()
-                db.query(HierarchyApprover).filter(HierarchyApprover.hierarchy_id == h.id).delete()
-                db.flush()
-                
-            # Add requesters
-            req_codes = [c.strip() for c in row.requester_e_codes.split(",") if c.strip()]
-            for code in req_codes:
-                u = db.query(User).filter(
-                    (User.e_code.ilike(code)) |
-                    (User.user_id.ilike(code)) |
-                    (User.name.ilike(code))
-                ).first()
-                if u:
-                    # Remove from other hierarchies
-                    db.query(HierarchyRequester).filter(HierarchyRequester.user_id == u.id).delete()
-                    db.flush()
-                    db.add(HierarchyRequester(hierarchy_id=h.id, user_id=u.id))
-                    
-            # Add approvers
-            for lvl in range(1, 6):
-                app_code = getattr(row, f"level_{lvl}_approver", "")
-                if app_code and app_code.strip():
-                    app_code_clean = app_code.strip()
-                    u = db.query(User).filter(
-                        (User.e_code.ilike(app_code_clean)) |
-                        (User.user_id.ilike(app_code_clean)) |
-                        (User.name.ilike(app_code_clean))
-                    ).first()
-                    if u:
-                        db.add(HierarchyApprover(
-                            hierarchy_id=h.id,
-                            level_number=lvl,
-                            approver_id=u.id
-                        ))
-                        
-        db.commit()
-        cache.delete("admin_hierarchies_list")
-        cache.clear_all_transactional_caches()
-    except Exception as e:
-        db.rollback()
-        raise HTTPException(status_code=500, detail=f"Database transaction error: {str(e)}")
-        
-    return {"status": "success", "message": "All team hierarchies successfully imported/updated."}
 
 @router.get("/assets")
 async def get_assets(db: Session = Depends(get_db), admin: User = Depends(verify_admin)):
