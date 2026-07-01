@@ -613,6 +613,16 @@ async def submit_expense(
     daily_out_state = allowance.daily_out_state if allowance else 600
     hotel_limit = allowance.hotel_in_state_s if allowance else 1500
 
+    hDist = (current_user.district or "Jodhpur").strip()
+    has_out_district = False
+    for iti in itineraries:
+        t_type = iti.get("travel_type")
+        dest_dist = iti.get("district")
+        if t_type == "Outdoor":
+            has_out_district = True
+        elif dest_dist and dest_dist.strip() != hDist:
+            has_out_district = True
+
     for idx, iti in enumerate(itineraries):
         leg_num = int(iti.get("leg") or (idx + 1))
         mode = iti.get("mode")
@@ -654,13 +664,12 @@ async def submit_expense(
 
         # 4. Daily Allowance (DA) validation
         if leg_num == 1:
-            hDist = current_user.district or "Jodhpur"
             if not to_dist:
                 max_da = 0.0
-            elif to_dist == hDist:
-                max_da = daily_hotel if hotel_amount > 0 else daily_in
-            else:
+            elif has_out_district:
                 max_da = daily_out_state if hotel_amount > 0 else daily_out
+            else:
+                max_da = daily_hotel if hotel_amount > 0 else daily_in
 
             if da_amount > (max_da + 1.0):
                 raise HTTPException(

@@ -767,7 +767,11 @@ export default function ExpensePage() {
 
           const allowanceObj = data.allowance || {};
           if (hotelAmt > 0) {
-            leg1.da = (allowanceObj.daily_hotel || 350).toString();
+            if (hasOutDistrictLeg) {
+              leg1.da = (allowanceObj.daily_out_state || 600).toString();
+            } else {
+              leg1.da = (allowanceObj.daily_hotel || 350).toString();
+            }
           } else if (hasOutDistrictLeg) {
             leg1.da = (allowanceObj.daily_out_district || 400).toString();
           } else {
@@ -1159,7 +1163,11 @@ export default function ExpensePage() {
         if (field !== "da") {
           const hotelAmt = parseFloat(leg1.hotel) || 0;
           if (hotelAmt > 0) {
-            leg1.da = (allowance.daily_hotel || 350).toString();
+            if (hasOutDistrictLeg) {
+              leg1.da = (allowance.daily_out_state || 600).toString();
+            } else {
+              leg1.da = (allowance.daily_hotel || 350).toString();
+            }
           } else if (hasOutDistrictLeg) {
             leg1.da = (allowance.daily_out_district || 400).toString();
           } else {
