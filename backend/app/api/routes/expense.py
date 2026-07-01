@@ -1449,7 +1449,29 @@ async def get_expenses(
             "car_amount": car_amount,
             "auto_amount": tot_auto,
             "district": sub_obj.district if sub_obj and sub_obj.district else "Ganganar",
-            "zone": sub_obj.zone if sub_obj and sub_obj.zone else "Bikaner"
+            "zone": sub_obj.zone if sub_obj and sub_obj.zone else "Bikaner",
+            "legs": [
+                {
+                    "leg": l.leg_number,
+                    "from_district": l.from_district,
+                    "to_district": l.to_district,
+                    "from": l.from_location or "",
+                    "to": l.to_location or "",
+                    "mode": l.travel_mode,
+                    "km": l.distance_km,
+                    "amount": l.travel_amount,
+                    "sub_mode": l.sub_mode,
+                    "sub_amount": l.sub_amount,
+                    "da": l.da_amount,
+                    "hotel": l.hotel_amount,
+                    "local_purchase": l.local_purchase,
+                    "other_desc": l.other_desc or "",
+                    "other_amount": l.other_amount,
+                    "visit_purpose": l.visit_purpose or "",
+                    "activity_details": l.activity_details or ""
+                }
+                for l in legs
+            ]
         })
     return result
 

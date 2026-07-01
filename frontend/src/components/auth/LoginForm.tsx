@@ -154,6 +154,24 @@ export default function LoginForm({ onForgotPassword, onUnlockAccount }: LoginFo
     }
   };
 
+  const triggerBackgroundBootstrap = (userId: string) => {
+    const monthStr = new Date().toISOString().slice(0, 7);
+    authService.bootstrap().then((bd) => {
+      if (bd) {
+        localStorage.setItem("cache_dropdowns", JSON.stringify(bd.dropdowns));
+        localStorage.setItem(`cache_month_limits_${userId}_${monthStr}`, JSON.stringify(bd.expense_init));
+        localStorage.setItem(`cache_my_expenses_${userId}`, JSON.stringify(bd.my_expenses));
+        localStorage.setItem(`cache_allowance_stats_${userId}`, JSON.stringify(bd.allowance_stats));
+        localStorage.setItem(`cache_team_expenses_${userId}`, JSON.stringify(bd.team_expenses));
+        localStorage.setItem(`cache_approvals_count_${userId}`, (bd.pending_approvals_count || 0).toString());
+        localStorage.setItem("cache_pending_approvals", JSON.stringify(bd.pending_approvals || []));
+        window.dispatchEvent(new Event("bootstrap_updated"));
+      }
+    }).catch((err) => {
+      console.warn("Background bootstrap failed", err);
+    });
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setStatusMessage(null);
@@ -167,6 +185,7 @@ export default function LoginForm({ onForgotPassword, onUnlockAccount }: LoginFo
     try {
       const response = await authService.login({ user_id: userId, password });
       saveBootstrapData(response);
+      triggerBackgroundBootstrap(response.user.user_id);
       
       // If running as native app, check if biometric login is available but not enabled yet
       if (isNativeApp()) {
@@ -202,6 +221,7 @@ export default function LoginForm({ onForgotPassword, onUnlockAccount }: LoginFo
     try {
       const response = await authService.login({ user_id: userId, password, force: true });
       saveBootstrapData(response);
+      triggerBackgroundBootstrap(response.user.user_id);
       
       // Check biometric for force login as well
       if (isNativeApp()) {

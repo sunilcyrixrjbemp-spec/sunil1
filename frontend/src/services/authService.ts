@@ -24,8 +24,18 @@ export const authService = {
     return response.data;
   },
 
-  logout: () => {
+  logout: async () => {
+    try {
+      await api.post("/auth/logout");
+    } catch (e) {
+      console.warn("Backend logout failed", e);
+    }
     tokenPersistence.clear();
+  },
+
+  bootstrap: async (): Promise<any> => {
+    const response = await api.get("/auth/bootstrap");
+    return response.data;
   },
 
   forgotPassword: async (user_id: string, date_of_birth: string): Promise<OTPResponse> => {

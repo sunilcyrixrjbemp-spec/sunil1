@@ -45,10 +45,6 @@ async def login(request: Request, credentials: UserLogin, db: Session = Depends(
         user_agent=user_agent,
         force=credentials.force
     )
-    user_obj = db.query(User).filter(User.user_id == credentials.user_id).first()
-    if user_obj:
-        bootstrap = await get_bootstrap_data_helper(user_obj, db)
-        auth_data["bootstrap_data"] = bootstrap
     return auth_data
 
 @router.post("/forgot-password", response_model=OTPResponse)
@@ -97,6 +93,25 @@ async def unlock_verify_otp(request: VerifyOTPRequest, db: Session = Depends(get
         otp=request.otp,
         db=db
     )
+
+@router.post("/logout")
+async def logout(request: Request, db: Session = Depends(get_db)):
+    auth_header = request.headers.get("Authorization")
+    if auth_header and auth_header.startswith("Bearer "):
+        token = auth_header.split(" ")[1]
+        try:
+            payload = jwt.decode(token, settings.SECRET_KEY, algorithms=[settings.ALGORITHM])
+            user_id = payload.get("sub")
+            if user_id:
+                user = db.query(User).filter(User.user_id == user_id).first()
+                if user:
+                    user.active_session_id = None
+                    db.commit()
+        except Exception:
+            pass
+    return {"success": True, "message": "Logged out successfully"}
+
+
 
 @router.post("/refresh")
 async def refresh_token(request: RefreshTokenRequest, db: Session = Depends(get_db)):

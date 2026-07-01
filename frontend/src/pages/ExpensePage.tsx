@@ -486,6 +486,16 @@ export default function ExpensePage() {
   const [existingAttachmentsDetailed, setExistingAttachmentsDetailed] = useState<any[]>([]);
   const [minDate, setMinDate] = useState("");
   const [maxDate, setMaxDate] = useState("");
+  const [originalExpenseDate, setOriginalExpenseDate] = useState<string | null>(null);
+
+  // My Claims advanced search & filters
+  const [claimsSearch, setClaimsSearch] = useState("");
+  const [claimsStatusFilter, setClaimsStatusFilter] = useState("all");
+  const [claimsMonthFilter, setClaimsMonthFilter] = useState(() => {
+    const months = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
+    return months[new Date().getMonth()];
+  });
+  const [activeClaimsTab, setActiveClaimsTab] = useState<"sheets" | "legs">("sheets");
 
   const hasExistingFile = (legNum: number, billType: string) => {
     if (!editExpenseId) return false;
@@ -539,6 +549,7 @@ export default function ExpensePage() {
       const data = await expenseService.getExpenseDetails(editId);
       if (data) {
         setDate(data.date);
+        setOriginalExpenseDate(data.date);
         setupDateRules(data.date);
         setNextExpId(data.expense_code);
         setExistingAttachments(data.attachments || []);
@@ -773,9 +784,12 @@ export default function ExpensePage() {
   };
 
   const checkExistingExpense = () => {
+    if (editExpenseId && date === originalExpenseDate) {
+      return; // Permitted to keep the original date in edit mode
+    }
     if (submittedDates.includes(date)) {
       toast.error("An expense claim for this date has already been submitted.");
-      setDate("");
+      setDate(editExpenseId ? (originalExpenseDate || "") : "");
     }
   };
 
@@ -1742,6 +1756,59 @@ export default function ExpensePage() {
     } finally {
       setDetailsLoading(false);
     }
+  };
+
+  const getUniqueMonths = () => {
+    const uniqueMap = new Map<string, string>();
+    claims.forEach(c => {
+      if (c.month) {
+        uniqueMap.set(c.month, c.month);
+      }
+    });
+    return Array.from(uniqueMap.values());
+  };
+
+  const getFilteredClaims = () => {
+    return claims.filter(c => {
+      // 1. Month filter
+      if (claimsMonthFilter !== "all" && c.month !== claimsMonthFilter) {
+        return false;
+      }
+      // 2. Status filter
+      if (claimsStatusFilter !== "all" && c.status.toLowerCase() !== claimsStatusFilter.toLowerCase()) {
+        return false;
+      }
+      // 3. Search query
+      if (claimsSearch.trim()) {
+        const q = claimsSearch.toLowerCase();
+        const codeMatch = c.expense_code?.toLowerCase().includes(q);
+        const descMatch = c.description?.toLowerCase().includes(q);
+        const modeMatch = c.travel_mode?.toLowerCase().includes(q);
+        const itineraryMatch = c.itinerary?.toLowerCase().includes(q);
+        const amtMatch = c.amount?.toString().includes(q);
+        if (!codeMatch && !descMatch && !modeMatch && !itineraryMatch && !amtMatch) {
+          return false;
+        }
+      }
+      return true;
+    });
+  };
+
+  const getFilteredLegs = () => {
+    const filteredClaims = getFilteredClaims();
+    const legsList: any[] = [];
+    filteredClaims.forEach(c => {
+      const claimLegs = c.legs || [];
+      claimLegs.forEach((l: any) => {
+        legsList.push({
+          parentCode: c.expense_code,
+          parentDate: c.itinerary,
+          parentStatus: c.status,
+          ...l
+        });
+      });
+    });
+    return legsList;
   };
 
   const handleEditFromModal = (claimId: number | string) => {
@@ -3462,100 +3529,234 @@ export default function ExpensePage() {
 
       </form>
 
-      {/* Full Width Bottom Section: Recent Submissions table */}
+      {/* Full Width Bottom Section: Recent Submissions table with Tabs and Filters */}
       <div className="bg-white border border-gray-250 rounded shadow-sm overflow-hidden flex flex-col mt-6">
-        <div className="px-5 py-3.5 border-b border-gray-200 bg-slate-50">
-          <h3 className="text-xs font-bold text-gray-700 uppercase tracking-wide">My Claims</h3>
+        {/* Header with Windows Selector */}
+        <div className="px-5 py-3.5 border-b border-gray-200 bg-slate-50 flex flex-wrap items-center justify-between gap-3">
+          <h3 className="text-xs font-bold text-gray-700 uppercase tracking-wide">My Claims Dashboard</h3>
+          <div className="flex bg-gray-150 p-0.5 rounded-lg border border-gray-200">
+            <button
+              type="button"
+              onClick={() => { setActiveClaimsTab("sheets"); setMyClaimsPage(1); }}
+              className={`px-3 py-1 text-[10px] font-bold uppercase rounded cursor-pointer transition-all ${activeClaimsTab === "sheets" ? "bg-green-600 text-white shadow-sm" : "text-gray-500 hover:text-gray-800"}`}
+            >
+              Expense Sheets View
+            </button>
+            <button
+              type="button"
+              onClick={() => { setActiveClaimsTab("legs"); setMyClaimsPage(1); }}
+              className={`px-3 py-1 text-[10px] font-bold uppercase rounded cursor-pointer transition-all ${activeClaimsTab === "legs" ? "bg-green-600 text-white shadow-sm" : "text-gray-500 hover:text-gray-800"}`}
+            >
+              Legs Details View
+            </button>
+          </div>
         </div>
 
+        {/* Search & Advanced Filters */}
+        <div className="p-4 border-b border-gray-150 bg-slate-50/50 flex flex-wrap items-center gap-3">
+          <div className="flex-1 min-w-[200px]">
+            <input
+              type="text"
+              placeholder="Search by Code, Purpose, Mode, Amount..."
+              value={claimsSearch}
+              onChange={(e) => { setClaimsSearch(e.target.value); setMyClaimsPage(1); }}
+              className="input-lte text-xs py-1.5 font-semibold placeholder:text-gray-400"
+            />
+          </div>
+          <div className="w-40">
+            <select
+              value={claimsMonthFilter}
+              onChange={(e) => { setClaimsMonthFilter(e.target.value); setMyClaimsPage(1); }}
+              className="input-lte text-xs py-1.5 font-semibold cursor-pointer"
+            >
+              <option value="all">All Months</option>
+              {getUniqueMonths().map(m => (
+                <option key={m} value={m}>{m}</option>
+              ))}
+            </select>
+          </div>
+          <div className="w-40">
+            <select
+              value={claimsStatusFilter}
+              onChange={(e) => { setClaimsStatusFilter(e.target.value); setMyClaimsPage(1); }}
+              className="input-lte text-xs py-1.5 font-semibold cursor-pointer"
+            >
+              <option value="all">All Statuses</option>
+              <option value="draft">Draft</option>
+              <option value="submitted">Submitted</option>
+              <option value="approved">Approved</option>
+              <option value="rejected">Rejected</option>
+            </select>
+          </div>
+        </div>
+
+        {/* Table Content */}
         <div className="overflow-x-auto p-4">
           {claimsLoading ? (
-            <Loader message="Loading claims list..." />
-          ) : claims.length === 0 ? (
-            <div className="py-12 text-center text-gray-400 text-xs font-semibold">
-              No submitted claims found.
-            </div>
+            <Loader message="Loading claims data..." />
           ) : (
-            <table className="table-lte">
-              <thead>
-                <tr className="border-b border-gray-200 text-[9px] uppercase font-bold tracking-wider text-gray-400 bg-gray-50/50">
-                  <th className="py-2.5 px-3">Claim ID</th>
-                  <th className="py-2.5 px-3">Date</th>
-                  <th className="py-2.5 px-3">Purpose</th>
-                  <th className="py-2.5 px-3">Travel Mode</th>
-                  <th className="py-2.5 px-3">Amount</th>
-                  <th className="py-2.5 px-3">Status</th>
-                  <th className="py-2.5 px-3 text-right">Actions</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-gray-100">
-                {claims.slice((myClaimsPage - 1) * 25, myClaimsPage * 25).map((exp) => (
-                  <tr 
-                    key={exp.id} 
-                    onClick={() => handleViewDetails(exp.id)}
-                    className="hover:bg-slate-50 cursor-pointer transition-colors"
-                  >
-                    <td className="py-3 px-3 font-semibold font-mono text-blue-600 uppercase">{exp.expense_code}</td>
-                    <td className="py-3 px-3 text-slate-500">{exp.itinerary}</td>
-                    <td className="py-3 px-3 font-semibold text-slate-800 truncate max-w-[200px]" title={exp.description}>{exp.description}</td>
-                    <td className="py-3 px-3 text-slate-500">{exp.travel_mode}</td>
-                    <td className="py-3 px-3 font-bold text-slate-900">₹{exp.amount.toLocaleString()}</td>
-                    <td className="py-3 px-3">
-                       <span className={`inline-flex items-center px-2 py-0.5 rounded border text-[9px] font-bold uppercase tracking-wider ${getStatusBadgeClass(exp.status)}`}>
-                        {getStatusLabel(exp.status)}
-                      </span>
-                    </td>
-                    <td className="py-3 px-3 text-right">
-                      <div className="flex items-center justify-end gap-1">
-                        {(exp.status === "draft" || exp.status === "submitted") && (
-                          <>
-                            <button
-                              onClick={(e) => { e.stopPropagation(); handleEditFromModal(exp.id); }}
-                              className="p-1.5 text-amber-600 hover:text-amber-800 rounded-lg hover:bg-amber-50 border border-transparent hover:border-amber-200 cursor-pointer transition-all active:scale-95"
-                              title="Edit Claim"
-                            >
-                              <Pencil className="w-3.5 h-3.5" />
-                            </button>
-                            <button
-                              onClick={(e) => { e.stopPropagation(); handleDeleteClaim(exp.id); }}
-                              className="p-1.5 text-rose-600 hover:text-rose-800 rounded-lg hover:bg-rose-50 border border-transparent hover:border-rose-200 cursor-pointer transition-all active:scale-95"
-                              title="Delete Claim Draft"
-                            >
-                              <Trash2 className="w-3.5 h-3.5" />
-                            </button>
-                          </>
-                        )}
-                      </div>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
+            (() => {
+              const filteredClaims = getFilteredClaims();
+              const filteredLegs = getFilteredLegs();
+              const itemsList = activeClaimsTab === "sheets" ? filteredClaims : filteredLegs;
+              const totalItems = itemsList.length;
+              const totalPages = Math.ceil(totalItems / 10) || 1;
+              const slicedItems = itemsList.slice((myClaimsPage - 1) * 10, myClaimsPage * 10);
+
+              if (totalItems === 0) {
+                return (
+                  <div className="py-12 text-center text-gray-400 text-xs font-semibold">
+                    No matching records found.
+                  </div>
+                );
+              }
+
+              if (activeClaimsTab === "sheets") {
+                return (
+                  <table className="table-lte">
+                    <thead>
+                      <tr className="border-b border-gray-200 text-[9px] uppercase font-bold tracking-wider text-gray-400 bg-gray-50/50">
+                        <th className="py-2.5 px-3">Claim ID</th>
+                        <th className="py-2.5 px-3">Date</th>
+                        <th className="py-2.5 px-3">Purpose</th>
+                        <th className="py-2.5 px-3">Travel Mode</th>
+                        <th className="py-2.5 px-3">Amount</th>
+                        <th className="py-2.5 px-3">Status</th>
+                        <th className="py-2.5 px-3 text-right">Actions</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-gray-100">
+                      {slicedItems.map((exp: any) => (
+                        <tr
+                          key={exp.id}
+                          onClick={() => handleViewDetails(exp.id)}
+                          className="hover:bg-slate-50 cursor-pointer transition-colors"
+                        >
+                          <td className="py-3 px-3 font-semibold font-mono text-blue-600 uppercase">{exp.expense_code}</td>
+                          <td className="py-3 px-3 text-slate-500">{exp.itinerary}</td>
+                          <td className="py-3 px-3 font-semibold text-slate-800 truncate max-w-[200px]" title={exp.description}>{exp.description}</td>
+                          <td className="py-3 px-3 text-slate-500">{exp.travel_mode}</td>
+                          <td className="py-3 px-3 font-bold text-slate-900">₹{exp.amount.toLocaleString()}</td>
+                          <td className="py-3 px-3">
+                            <span className={`inline-flex items-center px-2 py-0.5 rounded border text-[9px] font-bold uppercase tracking-wider ${getStatusBadgeClass(exp.status)}`}>
+                              {getStatusLabel(exp.status)}
+                            </span>
+                          </td>
+                          <td className="py-3 px-3 text-right" onClick={(e) => e.stopPropagation()}>
+                            <div className="flex items-center justify-end gap-1">
+                              {(exp.status === "draft" || exp.status === "submitted") && (
+                                <>
+                                  <button
+                                    onClick={() => handleEditFromModal(exp.id)}
+                                    className="p-1.5 text-amber-600 hover:text-amber-800 rounded-lg hover:bg-amber-50 border border-transparent hover:border-amber-200 cursor-pointer transition-all active:scale-95"
+                                    title="Edit Claim"
+                                  >
+                                    <Pencil className="w-3.5 h-3.5" />
+                                  </button>
+                                  <button
+                                    onClick={() => handleDeleteClaim(exp.id)}
+                                    className="p-1.5 text-rose-600 hover:text-rose-800 rounded-lg hover:bg-rose-50 border border-transparent hover:border-rose-200 cursor-pointer transition-all active:scale-95"
+                                    title="Delete Claim Draft"
+                                  >
+                                    <Trash2 className="w-3.5 h-3.5" />
+                                  </button>
+                                </>
+                              )}
+                            </div>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                );
+              } else {
+                return (
+                  <table className="table-lte">
+                    <thead>
+                      <tr className="border-b border-gray-200 text-[9px] uppercase font-bold tracking-wider text-gray-400 bg-gray-50/50">
+                        <th className="py-2.5 px-3">Parent ID</th>
+                        <th className="py-2.5 px-3">Travel Date</th>
+                        <th className="py-2.5 px-3 text-center">Leg</th>
+                        <th className="py-2.5 px-3">Route</th>
+                        <th className="py-2.5 px-3">Mode</th>
+                        <th className="py-2.5 px-3 text-right">KM</th>
+                        <th className="py-2.5 px-3 text-right">Fare</th>
+                        <th className="py-2.5 px-3 text-right">DA</th>
+                        <th className="py-2.5 px-3 text-right">Hotel</th>
+                        <th className="py-2.5 px-3 text-right">Local Purchase</th>
+                        <th className="py-2.5 px-3 text-right">Other</th>
+                        <th className="py-2.5 px-3">Purpose</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-gray-100">
+                      {slicedItems.map((leg: any, idx: number) => {
+                        const hasSub = leg.sub_mode && (parseFloat(leg.sub_amount) || 0) > 0;
+                        return (
+                          <tr key={idx} className="hover:bg-slate-50 transition-colors">
+                            <td className="py-3 px-3 font-semibold font-mono text-blue-600 uppercase">{leg.parentCode}</td>
+                            <td className="py-3 px-3 text-slate-500">{leg.parentDate}</td>
+                            <td className="py-3 px-3 text-center font-bold text-gray-400">{leg.leg}</td>
+                            <td className="py-3 px-3">
+                              <span className="font-bold text-gray-800">{leg.from_district === leg.to_district ? leg.to_district : `${leg.from_district} → ${leg.to_district}`}</span>
+                              <span className="text-[9px] text-gray-400 block">{leg.from || "Start"} → {leg.to || "End"}</span>
+                            </td>
+                            <td className="py-3 px-3">
+                              <span className="text-[9px] font-bold uppercase bg-blue-50 text-blue-700 px-1.5 py-0.5 rounded border border-blue-100">{leg.mode || "Other"}</span>
+                              {hasSub && <span className="text-[9px] font-bold uppercase bg-purple-50 text-purple-700 px-1.5 py-0.5 rounded border border-purple-100 ml-1">+{leg.sub_mode}</span>}
+                            </td>
+                            <td className="py-3 px-3 text-right font-mono font-semibold text-gray-600">{leg.km || 0} KM</td>
+                            <td className="py-3 px-3 text-right font-mono font-semibold text-gray-900">₹{(parseFloat(leg.amount) || 0).toLocaleString()}</td>
+                            <td className="py-3 px-3 text-right font-mono font-semibold text-gray-900">₹{(parseFloat(leg.da) || 0).toLocaleString()}</td>
+                            <td className="py-3 px-3 text-right font-mono font-semibold text-gray-900">₹{(parseFloat(leg.hotel) || 0).toLocaleString()}</td>
+                            <td className="py-3 px-3 text-right font-mono font-semibold text-gray-900">₹{(parseFloat(leg.local_purchase) || 0).toLocaleString()}</td>
+                            <td className="py-3 px-3 text-right font-mono font-semibold text-gray-900">₹{(parseFloat(leg.other_amount) || 0).toLocaleString()}</td>
+                            <td className="py-3 px-3 text-slate-600 max-w-[150px] truncate" title={leg.visit_purpose}>{leg.visit_purpose || "Field visit"}</td>
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                  </table>
+                );
+              }
+            })()
           )}
         </div>
 
-        {claims.length > 25 && (
-          <div className="px-5 py-3.5 border-t border-gray-200 bg-slate-50 flex items-center justify-between text-xs text-gray-500">
-            <span>Showing {((myClaimsPage - 1) * 25) + 1} to {Math.min(myClaimsPage * 25, claims.length)} of {claims.length} entries</span>
-            <div className="flex gap-2">
-              <button
-                type="button"
-                disabled={myClaimsPage === 1}
-                onClick={() => setMyClaimsPage(p => Math.max(p - 1, 1))}
-                className="px-3 py-1 border border-gray-300 rounded bg-white text-gray-700 font-bold hover:bg-gray-50 disabled:opacity-50 disabled:hover:bg-white active:scale-95 transition-all cursor-pointer"
-              >
-                Prev
-              </button>
-              <button
-                type="button"
-                disabled={myClaimsPage >= Math.ceil(claims.length / 25)}
-                onClick={() => setMyClaimsPage(p => Math.min(p + 1, Math.ceil(claims.length / 25)))}
-                className="px-3 py-1 border border-gray-300 rounded bg-white text-gray-700 font-bold hover:bg-gray-50 disabled:opacity-50 disabled:hover:bg-white active:scale-95 transition-all cursor-pointer"
-              >
-                Next
-              </button>
-            </div>
-          </div>
+        {/* Pagination controls */}
+        {!claimsLoading && (
+          (() => {
+            const filteredClaims = getFilteredClaims();
+            const filteredLegs = getFilteredLegs();
+            const itemsList = activeClaimsTab === "sheets" ? filteredClaims : filteredLegs;
+            const totalItems = itemsList.length;
+            const totalPages = Math.ceil(totalItems / 10) || 1;
+
+            if (totalItems <= 10) return null;
+
+            return (
+              <div className="px-5 py-3.5 border-t border-gray-200 bg-slate-50 flex items-center justify-between text-xs text-gray-500">
+                <span>Showing {((myClaimsPage - 1) * 10) + 1} to {Math.min(myClaimsPage * 10, totalItems)} of {totalItems} entries</span>
+                <div className="flex gap-2">
+                  <button
+                    type="button"
+                    disabled={myClaimsPage === 1}
+                    onClick={() => setMyClaimsPage(p => Math.max(p - 1, 1))}
+                    className="px-3 py-1 border border-gray-300 rounded bg-white text-gray-700 font-bold hover:bg-gray-50 disabled:opacity-50 disabled:hover:bg-white active:scale-95 transition-all cursor-pointer"
+                  >
+                    Prev
+                  </button>
+                  <button
+                    type="button"
+                    disabled={myClaimsPage >= totalPages}
+                    onClick={() => setMyClaimsPage(p => Math.min(p + 1, totalPages))}
+                    className="px-3 py-1 border border-gray-300 rounded bg-white text-gray-700 font-bold hover:bg-gray-50 disabled:opacity-50 disabled:hover:bg-white active:scale-95 transition-all cursor-pointer"
+                  >
+                    Next
+                  </button>
+                </div>
+              </div>
+            );
+          })()
         )}
       </div>
       </div>
