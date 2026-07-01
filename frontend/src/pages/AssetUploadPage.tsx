@@ -35,6 +35,7 @@ import {
 } from "recharts";
 import toast from "react-hot-toast";
 import api from "../services/api";
+import Loader from "../components/common/Loader";
 
 // CSV column header names (in user-provided order) — includes Equipment Type
 const CSV_HEADERS = [
@@ -767,9 +768,8 @@ export default function AssetUploadPage() {
 
           {/* Table */}
           {loadingAssets ? (
-            <div className="flex items-center justify-center py-16 gap-2 text-gray-400">
-              <Loader2 className="w-5 h-5 animate-spin" />
-              <span className="text-xs font-bold uppercase tracking-wider">Loading inventory...</span>
+            <div className="py-8">
+              <Loader message="Loading inventory..." />
             </div>
           ) : assets.length === 0 ? (
             <div className="flex flex-col items-center justify-center py-16 text-center text-gray-400">
