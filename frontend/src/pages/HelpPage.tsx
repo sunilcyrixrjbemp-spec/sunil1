@@ -15,7 +15,17 @@ import toast from "react-hot-toast";
 import { ticketService, TicketCreatePayload } from "../services/ticketService";
 import { expenseService } from "../services/expenseService";
 import Loader from "../components/common/Loader";
-import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from "recharts";
+import { Bar } from 'react-chartjs-2';
+import {
+  Chart as ChartJS,
+  CategoryScale,
+  LinearScale,
+  BarElement,
+  Tooltip as ChartTooltip,
+  Legend as ChartLegend
+} from 'chart.js';
+
+ChartJS.register(CategoryScale, LinearScale, BarElement, ChartTooltip, ChartLegend);
 
 // Helper to format date strings to user-friendly local browser dates
 function formatDateTime(dateVal: any) {
@@ -546,48 +556,96 @@ export default function HelpPage() {
         {/* Bar Chart 1: Category */}
         <div className="bg-white border border-gray-200 border-t-4 border-t-blue-600 rounded shadow-sm p-4">
           <span className="text-[10px] font-bold text-gray-500 uppercase tracking-wider block border-b border-gray-100 pb-1.5 mb-2">Concerns by Category</span>
-          <div style={{ height: 160 }}>
-            <ResponsiveContainer width="100%" height="100%">
-              <BarChart data={analytics.categoryChart.map(c => ({ name: c.label, count: c.amount, color: c.color }))} layout="vertical" margin={{ left: 5, right: 10, top: 5, bottom: 5 }}>
-                <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
-                <XAxis type="number" tick={{ fontSize: isMobile ? 8 : 9 }} allowDecimals={false} />
-                <YAxis type="category" dataKey="name" tick={{ fontSize: isMobile ? 8 : 9 }} width={isMobile ? 55 : 90} />
-                <Tooltip formatter={(v: number) => [v, "Count"]} />
-                <Bar dataKey="count" fill="#2f5bb7" radius={[0, 4, 4, 0]} maxBarSize={16} />
-              </BarChart>
-            </ResponsiveContainer>
+          <div style={{ height: 160 }} className="relative flex justify-center items-center">
+            <Bar
+              data={{
+                labels: analytics.categoryChart.map(c => c.label),
+                datasets: [
+                  {
+                    label: 'Concerns',
+                    data: analytics.categoryChart.map(c => c.amount),
+                    backgroundColor: '#2f5bb7',
+                    borderRadius: 4
+                  }
+                ]
+              }}
+              options={{
+                indexAxis: 'y' as const,
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                  legend: { display: false }
+                },
+                scales: {
+                  x: { ticks: { font: { size: 9 } }, grid: { display: false } },
+                  y: { ticks: { font: { size: 9 } }, grid: { display: false } }
+                }
+              }}
+            />
           </div>
         </div>
 
         {/* Bar Chart 2: Priority */}
         <div className="bg-white border border-gray-200 border-t-4 border-t-indigo-600 rounded shadow-sm p-4">
           <span className="text-[10px] font-bold text-gray-500 uppercase tracking-wider block border-b border-gray-100 pb-1.5 mb-2">Concerns by Priority</span>
-          <div style={{ height: 160 }}>
-            <ResponsiveContainer width="100%" height="100%">
-              <BarChart data={analytics.priorityChart.map(c => ({ name: c.label, count: c.amount, color: c.color }))} layout="vertical" margin={{ left: 5, right: 10, top: 5, bottom: 5 }}>
-                <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
-                <XAxis type="number" tick={{ fontSize: isMobile ? 8 : 9 }} allowDecimals={false} />
-                <YAxis type="category" dataKey="name" tick={{ fontSize: isMobile ? 8 : 9 }} width={isMobile ? 55 : 80} />
-                <Tooltip formatter={(v: number) => [v, "Count"]} />
-                <Bar dataKey="count" fill="#854aa5" radius={[0, 4, 4, 0]} maxBarSize={16} />
-              </BarChart>
-            </ResponsiveContainer>
+          <div style={{ height: 160 }} className="relative flex justify-center items-center">
+            <Bar
+              data={{
+                labels: analytics.priorityChart.map(c => c.label),
+                datasets: [
+                  {
+                    label: 'Concerns',
+                    data: analytics.priorityChart.map(c => c.amount),
+                    backgroundColor: '#854aa5',
+                    borderRadius: 4
+                  }
+                ]
+              }}
+              options={{
+                indexAxis: 'y' as const,
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                  legend: { display: false }
+                },
+                scales: {
+                  x: { ticks: { font: { size: 9 } }, grid: { display: false } },
+                  y: { ticks: { font: { size: 9 } }, grid: { display: false } }
+                }
+              }}
+            />
           </div>
         </div>
 
         {/* Bar Chart 3: Status */}
         <div className="bg-white border border-gray-200 border-t-4 border-t-amber-500 rounded shadow-sm p-4">
           <span className="text-[10px] font-bold text-gray-500 uppercase tracking-wider block border-b border-gray-100 pb-1.5 mb-2">Concerns by Status</span>
-          <div style={{ height: 160 }}>
-            <ResponsiveContainer width="100%" height="100%">
-              <BarChart data={analytics.statusChart.map(c => ({ name: c.label, count: c.amount, color: c.color }))} layout="vertical" margin={{ left: 5, right: 10, top: 5, bottom: 5 }}>
-                <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
-                <XAxis type="number" tick={{ fontSize: isMobile ? 8 : 9 }} allowDecimals={false} />
-                <YAxis type="category" dataKey="name" tick={{ fontSize: isMobile ? 8 : 9 }} width={isMobile ? 55 : 95} />
-                <Tooltip formatter={(v: number) => [v, "Count"]} />
-                <Bar dataKey="count" fill="#d28b2a" radius={[0, 4, 4, 0]} maxBarSize={16} />
-              </BarChart>
-            </ResponsiveContainer>
+          <div style={{ height: 160 }} className="relative flex justify-center items-center">
+            <Bar
+              data={{
+                labels: analytics.statusChart.map(c => c.label),
+                datasets: [
+                  {
+                    label: 'Concerns',
+                    data: analytics.statusChart.map(c => c.amount),
+                    backgroundColor: '#d28b2a',
+                    borderRadius: 4
+                  }
+                ]
+              }}
+              options={{
+                indexAxis: 'y' as const,
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                  legend: { display: false }
+                },
+                scales: {
+                  x: { ticks: { font: { size: 9 } }, grid: { display: false } },
+                  y: { ticks: { font: { size: 9 } }, grid: { display: false } }
+                }
+              }}
+            />
           </div>
         </div>
 

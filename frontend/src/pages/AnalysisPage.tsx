@@ -1,10 +1,20 @@
 import { useEffect, useState, useMemo } from "react";
 import { BarChart3, Filter, Users, User as UserIcon, X, IndianRupee, Phone, ShieldCheck, TrendingUp, Activity, FileSpreadsheet } from "lucide-react";
+import { Bar, Doughnut, Line, Pie } from 'react-chartjs-2';
 import {
-  BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
-  PieChart, Pie, Cell, Legend,
-  AreaChart, Area
-} from "recharts";
+  Chart as ChartJS,
+  CategoryScale,
+  LinearScale,
+  BarElement,
+  PointElement,
+  LineElement,
+  ArcElement,
+  Tooltip as ChartTooltip,
+  Legend as ChartLegend,
+  Filler
+} from 'chart.js';
+
+ChartJS.register(CategoryScale, LinearScale, BarElement, PointElement, LineElement, ArcElement, ChartTooltip, ChartLegend, Filler);
 import { expenseService } from "../services/expenseService";
 import { authService } from "../services/authService";
 import Loader from "../components/common/Loader";
@@ -639,15 +649,33 @@ export default function AnalysisPage() {
             </div>
             <div className="p-4" style={{ height: 280 }}>
               {userWiseData.length > 0 ? (
-                <ResponsiveContainer width="100%" height="100%">
-                  <BarChart data={userWiseData} layout="vertical" margin={{ left: 10, right: 20 }}>
-                    <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
-                    <XAxis type="number" tick={{ fontSize: 10 }} tickFormatter={(v) => `₹${(v / 1000).toFixed(0)}k`} />
-                    <YAxis type="category" dataKey="name" tick={{ fontSize: 10 }} width={90} />
-                    <Tooltip content={<CustomTooltip />} />
-                    <Bar dataKey="amount" fill="#854aa5" radius={[0, 4, 4, 0]} maxBarSize={16} />
-                  </BarChart>
-                </ResponsiveContainer>
+                <div style={{ height: 280 }} className="relative flex justify-center items-center">
+                  <Bar
+                    data={{
+                      labels: userWiseData.map(u => u.name),
+                      datasets: [
+                        {
+                          label: 'Expenditure (₹)',
+                          data: userWiseData.map(u => u.amount),
+                          backgroundColor: '#854aa5',
+                          borderRadius: 4
+                        }
+                      ]
+                    }}
+                    options={{
+                      indexAxis: 'y' as const,
+                      responsive: true,
+                      maintainAspectRatio: false,
+                      plugins: {
+                        legend: { display: false }
+                      },
+                      scales: {
+                        x: { ticks: { font: { size: 9 } }, grid: { display: false } },
+                        y: { ticks: { font: { size: 9 } }, grid: { display: false } }
+                      }
+                    }}
+                  />
+                </div>
               ) : (
                 <div className="flex items-center justify-center h-full text-gray-400 text-xs">No user data</div>
               )}
@@ -664,29 +692,36 @@ export default function AnalysisPage() {
             </div>
             <div className="p-4" style={{ height: 280 }}>
               {statusWiseData.length > 0 ? (
-                <ResponsiveContainer width="100%" height="100%">
-                  <PieChart margin={{ top: 15, right: 15, bottom: 15, left: 15 }}>
-                    <Pie
-                      data={statusWiseData}
-                      cx="50%"
-                      cy="50%"
-                      innerRadius={isMobile ? 35 : 45}
-                      outerRadius={isMobile ? 55 : 75}
-                      paddingAngle={3}
-                      dataKey="value"
-                      stroke="#ffffff"
-                      strokeWidth={3}
-                      label={isMobile ? undefined : ({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}
-                      labelLine={!isMobile}
-                    >
-                      {statusWiseData.map((_, i) => (
-                        <Cell key={i} fill={i === 0 ? "#2b7d50" : i === 1 ? "#d28b2a" : "#d83b01"} />
-                      ))}
-                    </Pie>
-                    <Tooltip formatter={(v: number) => `₹${v.toLocaleString()}`} />
-                    <Legend wrapperStyle={{ fontSize: isMobile ? 9 : 11 }} />
-                  </PieChart>
-                </ResponsiveContainer>
+                <div style={{ height: 280 }} className="relative flex justify-center items-center">
+                  <Doughnut
+                    data={{
+                      labels: statusWiseData.map(s => s.name),
+                      datasets: [
+                        {
+                          data: statusWiseData.map(s => s.value),
+                          backgroundColor: ['#2b7d50', '#d28b2a', '#d83b01'],
+                          borderColor: '#ffffff',
+                          borderWidth: 2
+                        }
+                      ]
+                    }}
+                    options={{
+                      responsive: true,
+                      maintainAspectRatio: false,
+                      plugins: {
+                        legend: {
+                          position: 'bottom' as const,
+                          labels: {
+                            boxWidth: 8,
+                            padding: 6,
+                            font: { size: 9, weight: 'bold' }
+                          }
+                        }
+                      },
+                      cutout: '60%'
+                    }}
+                  />
+                </div>
               ) : (
                 <div className="flex items-center justify-center h-full text-gray-400 text-xs">No status data</div>
               )}
@@ -703,15 +738,32 @@ export default function AnalysisPage() {
             </div>
             <div className="p-4" style={{ height: 280 }}>
               {districtWiseData.length > 0 ? (
-                <ResponsiveContainer width="100%" height="100%">
-                  <BarChart data={districtWiseData} margin={{ bottom: 5 }}>
-                    <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
-                    <XAxis dataKey="name" tick={{ fontSize: 10 }} />
-                    <YAxis tick={{ fontSize: 10 }} tickFormatter={(v) => `₹${(v / 1000).toFixed(0)}k`} />
-                    <Tooltip content={<CustomTooltip />} />
-                    <Bar dataKey="amount" fill="#2f5bb7" radius={[4, 4, 0, 0]} maxBarSize={30} />
-                  </BarChart>
-                </ResponsiveContainer>
+                <div style={{ height: 280 }} className="relative flex justify-center items-center">
+                  <Bar
+                    data={{
+                      labels: districtWiseData.map(d => d.name),
+                      datasets: [
+                        {
+                          label: 'Expenditure (₹)',
+                          data: districtWiseData.map(d => d.amount),
+                          backgroundColor: '#2f5bb7',
+                          borderRadius: 4
+                        }
+                      ]
+                    }}
+                    options={{
+                      responsive: true,
+                      maintainAspectRatio: false,
+                      plugins: {
+                        legend: { display: false }
+                      },
+                      scales: {
+                        x: { ticks: { font: { size: 9 } }, grid: { display: false } },
+                        y: { ticks: { font: { size: 9 } }, grid: { display: false } }
+                      }
+                    }}
+                  />
+                </div>
               ) : (
                 <div className="flex items-center justify-center h-full text-gray-400 text-xs">No district data</div>
               )}
@@ -728,21 +780,35 @@ export default function AnalysisPage() {
             </div>
             <div className="p-4" style={{ height: 280 }}>
               {last5DaysData.length > 0 ? (
-                <ResponsiveContainer width="100%" height="100%">
-                  <AreaChart data={last5DaysData}>
-                    <defs>
-                      <linearGradient id="colorAmount" x1="0" y1="0" x2="0" y2="1">
-                        <stop offset="5%" stopColor="#007bff" stopOpacity={0.3} />
-                        <stop offset="95%" stopColor="#007bff" stopOpacity={0.02} />
-                      </linearGradient>
-                    </defs>
-                    <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
-                    <XAxis dataKey="date" tick={{ fontSize: 10 }} />
-                    <YAxis tick={{ fontSize: 10 }} tickFormatter={(v) => `₹${(v / 1000).toFixed(0)}k`} />
-                    <Tooltip content={<CustomTooltip />} />
-                    <Area type="monotone" dataKey="amount" stroke="#007bff" strokeWidth={2} fill="url(#colorAmount)" />
-                  </AreaChart>
-                </ResponsiveContainer>
+                <div style={{ height: 280 }} className="relative flex justify-center items-center">
+                  <Line
+                    data={{
+                      labels: last5DaysData.map(d => d.date),
+                      datasets: [
+                        {
+                          label: 'Spending (₹)',
+                          data: last5DaysData.map(d => d.amount),
+                          borderColor: '#007bff',
+                          backgroundColor: 'rgba(0, 123, 255, 0.08)',
+                          fill: true,
+                          tension: 0.3,
+                          borderWidth: 2
+                        }
+                      ]
+                    }}
+                    options={{
+                      responsive: true,
+                      maintainAspectRatio: false,
+                      plugins: {
+                        legend: { display: false }
+                      },
+                      scales: {
+                        x: { ticks: { font: { size: 9 } }, grid: { display: false } },
+                        y: { ticks: { font: { size: 9 } }, grid: { display: false } }
+                      }
+                    }}
+                  />
+                </div>
               ) : (
                 <div className="flex items-center justify-center h-full text-gray-400 text-xs">No date data</div>
               )}
@@ -759,29 +825,36 @@ export default function AnalysisPage() {
             </div>
             <div className="p-4" style={{ height: 280 }}>
               {zoneWiseData.length > 0 ? (
-                <ResponsiveContainer width="100%" height="100%">
-                  <PieChart margin={{ top: 15, right: 15, bottom: 15, left: 15 }}>
-                    <Pie
-                      data={zoneWiseData}
-                      cx="50%"
-                      cy="50%"
-                      innerRadius={isMobile ? 35 : 45}
-                      outerRadius={isMobile ? 55 : 75}
-                      paddingAngle={3}
-                      dataKey="value"
-                      stroke="#ffffff"
-                      strokeWidth={3}
-                      label={isMobile ? undefined : ({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}
-                      labelLine={!isMobile}
-                    >
-                      {zoneWiseData.map((_, i) => (
-                        <Cell key={i} fill={GALLERY_COLORS[i % GALLERY_COLORS.length]} />
-                      ))}
-                    </Pie>
-                    <Tooltip formatter={(v: number) => `₹${v.toLocaleString()}`} />
-                    <Legend wrapperStyle={{ fontSize: isMobile ? 9 : 11 }} />
-                  </PieChart>
-                </ResponsiveContainer>
+                <div style={{ height: 280 }} className="relative flex justify-center items-center">
+                  <Doughnut
+                    data={{
+                      labels: zoneWiseData.map(z => z.name),
+                      datasets: [
+                        {
+                          data: zoneWiseData.map(z => z.value),
+                          backgroundColor: GALLERY_COLORS.slice(0, zoneWiseData.length),
+                          borderColor: '#ffffff',
+                          borderWidth: 2
+                        }
+                      ]
+                    }}
+                    options={{
+                      responsive: true,
+                      maintainAspectRatio: false,
+                      plugins: {
+                        legend: {
+                          position: 'bottom' as const,
+                          labels: {
+                            boxWidth: 8,
+                            padding: 6,
+                            font: { size: 9, weight: 'bold' }
+                          }
+                        }
+                      },
+                      cutout: '60%'
+                    }}
+                  />
+                </div>
               ) : (
                 <div className="flex items-center justify-center h-full text-gray-400 text-xs">No zone data</div>
               )}
@@ -798,15 +871,32 @@ export default function AnalysisPage() {
             </div>
             <div className="p-4" style={{ height: 280 }}>
               {categoryData.length > 0 ? (
-                <ResponsiveContainer width="100%" height="100%">
-                  <BarChart data={categoryData} margin={{ bottom: 5 }}>
-                    <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
-                    <XAxis dataKey="name" tick={{ fontSize: 10 }} />
-                    <YAxis tick={{ fontSize: 10 }} tickFormatter={(v) => `₹${(v / 1000).toFixed(0)}k`} />
-                    <Tooltip content={<CustomTooltip />} />
-                    <Bar dataKey="amount" fill="#00a2ad" radius={[4, 4, 0, 0]} maxBarSize={30} />
-                  </BarChart>
-                </ResponsiveContainer>
+                <div style={{ height: 280 }} className="relative flex justify-center items-center">
+                  <Bar
+                    data={{
+                      labels: categoryData.map(c => c.name),
+                      datasets: [
+                        {
+                          label: 'Expenditure (₹)',
+                          data: categoryData.map(c => c.amount),
+                          backgroundColor: '#00a2ad',
+                          borderRadius: 4
+                        }
+                      ]
+                    }}
+                    options={{
+                      responsive: true,
+                      maintainAspectRatio: false,
+                      plugins: {
+                        legend: { display: false }
+                      },
+                      scales: {
+                        x: { ticks: { font: { size: 9 } }, grid: { display: false } },
+                        y: { ticks: { font: { size: 9 } }, grid: { display: false } }
+                      }
+                    }}
+                  />
+                </div>
               ) : (
                 <div className="flex items-center justify-center h-full text-gray-400 text-xs">No category data</div>
               )}
@@ -828,19 +918,32 @@ export default function AnalysisPage() {
             </div>
             <div className="p-4" style={{ height: 320 }}>
               {activityChartData.some(d => d.count > 0) ? (
-                <ResponsiveContainer width="100%" height="100%">
-                  <BarChart data={activityChartData} margin={{ bottom: 15, top: 10 }}>
-                    <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
-                    <XAxis dataKey="name" tick={{ fontSize: 10, fontWeight: "bold" }} />
-                    <YAxis tick={{ fontSize: 10 }} allowDecimals={false} />
-                    <Tooltip formatter={(value) => [value, "Count"]} />
-                    <Bar dataKey="count" radius={[4, 4, 0, 0]} maxBarSize={60}>
-                      {activityChartData.map((_, idx) => (
-                        <Cell key={idx} fill={GALLERY_COLORS[idx % GALLERY_COLORS.length]} />
-                      ))}
-                    </Bar>
-                  </BarChart>
-                </ResponsiveContainer>
+                <div style={{ height: 320 }} className="relative flex justify-center items-center">
+                  <Bar
+                    data={{
+                      labels: activityChartData.map(a => a.name),
+                      datasets: [
+                        {
+                          label: 'Activities',
+                          data: activityChartData.map(a => a.count),
+                          backgroundColor: GALLERY_COLORS.slice(0, activityChartData.length),
+                          borderRadius: 4
+                        }
+                      ]
+                    }}
+                    options={{
+                      responsive: true,
+                      maintainAspectRatio: false,
+                      plugins: {
+                        legend: { display: false }
+                      },
+                      scales: {
+                        x: { ticks: { font: { size: 9 } }, grid: { display: false } },
+                        y: { ticks: { font: { size: 9 } }, grid: { display: false } }
+                      }
+                    }}
+                  />
+                </div>
               ) : (
                 <div className="flex items-center justify-center h-full text-gray-400 text-xs font-bold">
                   No operational activities recorded in this selection

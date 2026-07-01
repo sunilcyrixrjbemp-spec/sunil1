@@ -20,19 +20,18 @@ import {
   Filter,
   Zap
 } from "lucide-react";
+import { Doughnut, Bar, Pie } from 'react-chartjs-2';
 import {
-  ResponsiveContainer,
-  PieChart,
-  Pie,
-  Cell,
-  BarChart,
-  Bar,
-  XAxis,
-  YAxis,
-  CartesianGrid,
-  Tooltip,
-  Legend
-} from "recharts";
+  Chart as ChartJS,
+  CategoryScale,
+  LinearScale,
+  BarElement,
+  ArcElement,
+  Tooltip as ChartTooltip,
+  Legend as ChartLegend
+} from 'chart.js';
+
+ChartJS.register(CategoryScale, LinearScale, BarElement, ArcElement, ChartTooltip, ChartLegend);
 import toast from "react-hot-toast";
 import api from "../services/api";
 import Loader from "../components/common/Loader";
@@ -859,27 +858,36 @@ export default function AssetUploadPage() {
             </div>
             <div className="w-full h-64 p-4">
               {stats.charts.status_list.length > 0 ? (
-                <ResponsiveContainer width="100%" height="100%">
-                  <PieChart>
-                    <Pie
-                      data={stats.charts.status_list}
-                      cx="50%"
-                      cy="50%"
-                      innerRadius={isMobile ? 35 : 60}
-                      outerRadius={isMobile ? 55 : 80}
-                      paddingAngle={3}
-                      dataKey="value"
-                      stroke="#ffffff"
-                      strokeWidth={3}
-                    >
-                      {stats.charts.status_list.map((_, index) => (
-                        <Cell key={`cell-${index}`} fill={GALLERY_COLORS[index % GALLERY_COLORS.length]} />
-                      ))}
-                    </Pie>
-                    <Tooltip formatter={(value) => `${value} units`} />
-                    <Legend verticalAlign="bottom" height={36} iconType="circle" wrapperStyle={{ fontSize: isMobile ? "9px" : "10px" }} />
-                  </PieChart>
-                </ResponsiveContainer>
+                <div style={{ height: 180 }} className="relative flex justify-center items-center">
+                  <Doughnut
+                    data={{
+                      labels: stats.charts.status_list.map(s => s.name),
+                      datasets: [
+                        {
+                          data: stats.charts.status_list.map(s => s.value),
+                          backgroundColor: GALLERY_COLORS.slice(0, stats.charts.status_list.length),
+                          borderColor: '#ffffff',
+                          borderWidth: 2
+                        }
+                      ]
+                    }}
+                    options={{
+                      responsive: true,
+                      maintainAspectRatio: false,
+                      plugins: {
+                        legend: {
+                          position: 'bottom' as const,
+                          labels: {
+                            boxWidth: 8,
+                            padding: 6,
+                            font: { size: 9, weight: 'bold' }
+                          }
+                        }
+                      },
+                      cutout: '60%'
+                    }}
+                  />
+                </div>
               ) : (
                 <div className="flex items-center justify-center h-full text-xs text-gray-400 font-bold">No Data Available</div>
               )}
@@ -896,15 +904,33 @@ export default function AssetUploadPage() {
             </div>
             <div className="w-full h-64 p-4">
               {stats.charts.top_types.length > 0 ? (
-                <ResponsiveContainer width="100%" height="100%">
-                  <BarChart data={stats.charts.top_types} layout="vertical" margin={{ left: 10, right: 10, top: 10, bottom: 10 }}>
-                    <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
-                    <XAxis type="number" stroke="#9ca3af" fontSize={9} />
-                    <YAxis dataKey="name" type="category" stroke="#9ca3af" fontSize={8} width={80} />
-                    <Tooltip formatter={(value) => `${value} units`} />
-                    <Bar dataKey="value" fill="#2b7d50" radius={[0, 4, 4, 0]} maxBarSize={16} />
-                  </BarChart>
-                </ResponsiveContainer>
+                <div style={{ height: 180 }} className="relative flex justify-center items-center">
+                  <Bar
+                    data={{
+                      labels: stats.charts.top_types.map(t => t.name),
+                      datasets: [
+                        {
+                          label: 'Units',
+                          data: stats.charts.top_types.map(t => t.value),
+                          backgroundColor: '#2b7d50',
+                          borderRadius: 4
+                        }
+                      ]
+                    }}
+                    options={{
+                      indexAxis: 'y' as const,
+                      responsive: true,
+                      maintainAspectRatio: false,
+                      plugins: {
+                        legend: { display: false }
+                      },
+                      scales: {
+                        x: { ticks: { font: { size: 8 } }, grid: { display: false } },
+                        y: { ticks: { font: { size: 8 } }, grid: { display: false } }
+                      }
+                    }}
+                  />
+                </div>
               ) : (
                 <div className="flex items-center justify-center h-full text-xs text-gray-400 font-bold">No Data Available</div>
               )}
@@ -921,26 +947,35 @@ export default function AssetUploadPage() {
             </div>
             <div className="w-full h-64 p-4">
               {stats.charts.warranty_list.some(w => w.value > 0) ? (
-                <ResponsiveContainer width="100%" height="100%">
-                  <PieChart>
-                    <Pie
-                      data={stats.charts.warranty_list}
-                      cx="50%"
-                      cy="50%"
-                      outerRadius={isMobile ? 55 : 80}
-                      labelLine={!isMobile}
-                      dataKey="value"
-                      stroke="#ffffff"
-                      strokeWidth={3}
-                      label={isMobile ? undefined : ({ name, percent }) => `${name}: ${(percent * 100).toFixed(0)}%`}
-                    >
-                      <Cell fill="#2b7d50" />
-                      <Cell fill="#d28b2a" />
-                    </Pie>
-                    <Tooltip formatter={(value) => `${value} units`} />
-                    <Legend verticalAlign="bottom" height={36} iconType="circle" wrapperStyle={{ fontSize: isMobile ? "9px" : "10px" }} />
-                  </PieChart>
-                </ResponsiveContainer>
+                <div style={{ height: 180 }} className="relative flex justify-center items-center">
+                  <Pie
+                    data={{
+                      labels: stats.charts.warranty_list.map(w => w.name),
+                      datasets: [
+                        {
+                          data: stats.charts.warranty_list.map(w => w.value),
+                          backgroundColor: ['#2b7d50', '#d28b2a'],
+                          borderColor: '#ffffff',
+                          borderWidth: 2
+                        }
+                      ]
+                    }}
+                    options={{
+                      responsive: true,
+                      maintainAspectRatio: false,
+                      plugins: {
+                        legend: {
+                          position: 'bottom' as const,
+                          labels: {
+                            boxWidth: 8,
+                            padding: 6,
+                            font: { size: 9, weight: 'bold' }
+                          }
+                        }
+                      }
+                    }}
+                  />
+                </div>
               ) : (
                 <div className="flex items-center justify-center h-full text-xs text-gray-400 font-bold">No Data Available</div>
               )}
