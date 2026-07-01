@@ -1943,7 +1943,10 @@ export default function ExpensePage() {
           <span className="bg-blue-600 text-white font-extrabold py-1 px-3 rounded text-[11px] font-mono shadow-sm">
             {nextExpId}
           </span>
-              {/* 4 Info-Box Widgets (Unified Mobile/Desktop) */}
+        </div>
+      </div>
+
+      {/* 4 Info-Box Widgets (Unified Mobile/Desktop) */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         {/* Profile Card */}
         <div className="info-box-lte animate-fadeIn">
