@@ -1113,10 +1113,10 @@ async def get_month_summary(
     scope_user_ids = [u.id for u in scope_users]
     user_map = {u.id: u for u in scope_users}
 
-    # Query approved expenses (fully approved = status "approved")
+    # Query non-draft expenses
     q = db.query(Expense).filter(
         Expense.user_id.in_(scope_user_ids),
-        Expense.status == "approved"
+        Expense.status != "draft"
     )
     if month:
         q = q.filter(Expense.month == month)
@@ -1155,17 +1155,29 @@ async def get_month_summary(
         if district and (user.district or "") != district:
             continue
 
-        total_amount = sum(e.amount or 0.0 for e in exps)
-        total_da = sum(e.da_amount or 0.0 for e in exps)
-        total_hotel = sum(e.hotel_amount or 0.0 for e in exps)
-        total_other = sum(e.other_expense_amount or 0.0 for e in exps)
-        total_local = sum(e.local_purchase_amount or 0.0 for e in exps)
+        # Claimed, Approved, Rejected totals
+        total_claimed = sum((e.original_amount or e.amount or 0.0) for e in exps)
+        total_approved = sum((e.amount or 0.0) for e in exps if e.status == "approved")
+        total_rejected = sum((e.amount or 0.0) for e in exps if e.status == "rejected")
+        
+        # Breakdown sums from approved claims only
+        approved_exps = [e for e in exps if e.status == "approved"]
+        total_da = sum(e.da_amount or 0.0 for e in approved_exps)
+        total_hotel = sum(e.hotel_amount or 0.0 for e in approved_exps)
+        total_other = sum(e.other_expense_amount or 0.0 for e in approved_exps)
+        total_local = sum(e.local_purchase_amount or 0.0 for e in approved_exps)
+
+        # Activity stats
+        total_calls_assigned = sum(e.calls_assigned or 0 for e in exps)
+        total_calls_completed = sum(e.calls_completed or 0 for e in exps)
+        total_pms = sum(e.pms_count or 0 for e in exps)
+        total_asset_tagging = sum(e.asset_tagging or 0 for e in exps)
 
         total_km = 0.0
         total_bike_amount = 0.0
         total_car_amount = 0.0
         total_auto_amount = 0.0
-        for exp in exps:
+        for exp in approved_exps:
             legs = legs_by_code.get(exp.expense_code, [])
             total_km += sum(l.distance_km or 0.0 for l in legs if l.travel_mode in ["Bike", "Car"])
             total_bike_amount += sum(l.travel_amount or 0.0 for l in legs if l.travel_mode == "Bike")
@@ -1187,7 +1199,12 @@ async def get_month_summary(
             "month": mon,
             "year": yr,
             "claims_count": len(exps),
-            "total_amount": round(total_amount, 2),
+            "approved_claims_count": len(approved_exps),
+            "rejected_claims_count": len([e for e in exps if e.status == "rejected"]),
+            "pending_claims_count": len([e for e in exps if e.status not in ["approved", "rejected"]]),
+            "total_amount": round(total_approved, 2), # Approved Total
+            "claimed_amount": round(total_claimed, 2),
+            "rejected_amount": round(total_rejected, 2),
             "da_amount": round(total_da, 2),
             "hotel_amount": round(total_hotel, 2),
             "bike_amount": round(total_bike_amount, 2),
@@ -1196,6 +1213,10 @@ async def get_month_summary(
             "other_amount": round(total_other, 2),
             "local_purchase_amount": round(total_local, 2),
             "total_km": round(total_km, 2),
+            "calls_assigned": total_calls_assigned,
+            "calls_completed": total_calls_completed,
+            "pms_count": total_pms,
+            "asset_tagging_count": total_asset_tagging,
             "expense_codes": [e.expense_code for e in exps if e.expense_code],
             "expense_ids": [e.id for e in exps],
         })
@@ -1360,8 +1381,16 @@ async def get_engineer_month_claims(
                 "other_desc": leg.other_desc or "",
                 "visit_purpose": leg.visit_purpose or "",
                 "calls_assigned": leg.calls_assigned or 0,
+                "ws_assigned": leg.calls_assigned or 0,
                 "calls_completed": leg.calls_completed or 0,
+                "ws_closed": leg.calls_completed or 0,
                 "pms_count": leg.pms_count or 0,
+                "ws_pms": leg.pms_count or 0,
+                "ws_asset": leg.asset_tagging or 0,
+                "asset_tagging": leg.asset_tagging or 0,
+                "calibration_count": leg.calibration_count or 0,
+                "mobilise_count": leg.mobilise_count or 0,
+                "mobilise_asset_count": leg.mobilise_count or 0,
                 "worked_district": leg.to_district or leg.from_district or "",
                 "ta_amount": (leg.travel_amount or 0.0) if leg.travel_mode in ["Train", "Bus"] else 0.0,
                 "sub_mode": leg.sub_mode or "",
@@ -1369,7 +1398,6 @@ async def get_engineer_month_claims(
                 "barcode_ticket": barcode_ticket_str,
                 "asset_tagging_qty": total_tag_qty,
                 "asset_tagging_val": total_tag_val,
-                "calibration_count": leg.calibration_count or 0,
                 "activity_details": leg.activity_details or "",
             })
         claims.append({
@@ -1577,7 +1605,7 @@ async def get_team_expenses(
     if not team_users:
         return []
         
-    team_user_ids = [u.id for u in team_users]
+    team_user_ids = [u.id for u in team_users if u.id != current_user.id]
     submitters_by_id = {u.id: u for u in team_users}
     
     # Retrieve all expenses for team members
@@ -2068,11 +2096,16 @@ async def get_expense_details(
                 "oth_desc": i.other_desc,
                 "oth_amount": i.other_amount,
                 "ws_assigned": i.calls_assigned,
+                "calls_assigned": i.calls_assigned,
                 "ws_closed": i.calls_completed,
+                "calls_completed": i.calls_completed,
                 "ws_pms": i.pms_count,
+                "pms_count": i.pms_count,
                 "ws_asset": i.asset_tagging,
+                "asset_tagging": i.asset_tagging,
                 "calibration_count": i.calibration_count,
                 "mobilise_count": i.mobilise_count,
+                "mobilise_asset_count": i.mobilise_count,
                 "visit_purpose": i.visit_purpose,
                 "activity_details": i.activity_details,
                 

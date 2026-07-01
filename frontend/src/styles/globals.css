@@ -222,4 +222,16 @@ select.input-lte option {
   to { transform: scale(1); opacity: 1; }
 }
 
+/* Recharts touch focus highlight ring fix for mobile devices */
+svg, path, g, sector, .recharts-pie-sector, .recharts-sector, .recharts-pie, .recharts-wrapper {
+  outline: none !important;
+  box-shadow: none !important;
+  -webkit-tap-highlight-color: transparent !important;
+}
+
+*:focus {
+  outline: none !important;
+  -webkit-tap-highlight-color: transparent !important;
+}
+
 

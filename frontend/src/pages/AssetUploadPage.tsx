@@ -117,6 +117,13 @@ const parseCSVLine = (line: string, delimiter: string): string[] => {
 };
 
 export default function AssetUploadPage() {
+  const [isMobile, setIsMobile] = useState(window.innerWidth < 768);
+  useEffect(() => {
+    const handleResize = () => setIsMobile(window.innerWidth < 768);
+    window.addEventListener("resize", handleResize);
+    return () => window.removeEventListener("resize", handleResize);
+  }, []);
+
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [isDragActive, setIsDragActive] = useState(false);
   const [uploading, setUploading] = useState(false);
@@ -847,8 +854,8 @@ export default function AssetUploadPage() {
                       data={stats.charts.status_list}
                       cx="50%"
                       cy="50%"
-                      innerRadius={60}
-                      outerRadius={80}
+                      innerRadius={isMobile ? 35 : 60}
+                      outerRadius={isMobile ? 55 : 80}
                       paddingAngle={3}
                       dataKey="value"
                     >
@@ -857,7 +864,7 @@ export default function AssetUploadPage() {
                       ))}
                     </Pie>
                     <Tooltip formatter={(value) => `${value} units`} />
-                    <Legend verticalAlign="bottom" height={36} iconType="circle" wrapperStyle={{ fontSize: "10px" }} />
+                    <Legend verticalAlign="bottom" height={36} iconType="circle" wrapperStyle={{ fontSize: isMobile ? "9px" : "10px" }} />
                   </PieChart>
                 </ResponsiveContainer>
               ) : (
@@ -911,15 +918,16 @@ export default function AssetUploadPage() {
                       data={stats.charts.warranty_list}
                       cx="50%"
                       cy="50%"
-                      outerRadius={80}
-                      labelLine={false}
+                      outerRadius={isMobile ? 55 : 80}
+                      labelLine={!isMobile}
                       dataKey="value"
-                      label={({ name, percent }) => `${name}: ${(percent * 100).toFixed(0)}%`}
+                      label={isMobile ? undefined : ({ name, percent }) => `${name}: ${(percent * 100).toFixed(0)}%`}
                     >
                       <Cell fill="#00a65a" />
                       <Cell fill="#f39c12" />
                     </Pie>
                     <Tooltip formatter={(value) => `${value} units`} />
+                    <Legend verticalAlign="bottom" height={36} iconType="circle" wrapperStyle={{ fontSize: isMobile ? "9px" : "10px" }} />
                   </PieChart>
                 </ResponsiveContainer>
               ) : (

@@ -1705,6 +1705,8 @@ export default function ExpensePage() {
           ws_closed: ws_closed.toString(),
           ws_pms: ws_pms.toString(),
           ws_asset: ws_asset.toString(),
+          calibration_count: (leg.calibration_count || 0).toString(),
+          mobilise_asset_count: (leg.mobilise_asset_count || 0).toString(),
           visit_purpose: acts.length > 0 ? `Activities: ${acts.join(", ")}` : "Field visit",
           activity_details: JSON.stringify(detailsObj)
         };

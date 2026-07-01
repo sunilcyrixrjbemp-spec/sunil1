@@ -13,8 +13,12 @@ export const useAuth = () => {
     }
   };
 
-  const logout = () => {
-    authService.logout();
+  const logout = async () => {
+    try {
+      await authService.logout();
+    } catch (e) {
+      console.warn("Logout error:", e);
+    }
     navigate("/login");
   };
 

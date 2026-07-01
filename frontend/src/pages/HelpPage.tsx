@@ -68,6 +68,13 @@ function formatDuration(totalHours: number) {
 }
 
 export default function HelpPage() {
+  const [isMobile, setIsMobile] = useState(window.innerWidth < 768);
+  useEffect(() => {
+    const handleResize = () => setIsMobile(window.innerWidth < 768);
+    window.addEventListener("resize", handleResize);
+    return () => window.removeEventListener("resize", handleResize);
+  }, []);
+
   // Auth User
   const [currentUser] = useState<any>(() => {
     return JSON.parse(localStorage.getItem("user") || "null");
@@ -543,8 +550,8 @@ export default function HelpPage() {
             <ResponsiveContainer width="100%" height="100%">
               <BarChart data={analytics.categoryChart.map(c => ({ name: c.label, count: c.amount, color: c.color }))} layout="vertical" margin={{ left: 5, right: 10, top: 5, bottom: 5 }}>
                 <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
-                <XAxis type="number" tick={{ fontSize: 9 }} allowDecimals={false} />
-                <YAxis type="category" dataKey="name" tick={{ fontSize: 9 }} width={90} />
+                <XAxis type="number" tick={{ fontSize: isMobile ? 8 : 9 }} allowDecimals={false} />
+                <YAxis type="category" dataKey="name" tick={{ fontSize: isMobile ? 8 : 9 }} width={isMobile ? 55 : 90} />
                 <Tooltip formatter={(v: number) => [v, "Count"]} />
                 <Bar dataKey="count" fill="#3b82f6" radius={[0, 3, 3, 0]} />
               </BarChart>
@@ -559,8 +566,8 @@ export default function HelpPage() {
             <ResponsiveContainer width="100%" height="100%">
               <BarChart data={analytics.priorityChart.map(c => ({ name: c.label, count: c.amount, color: c.color }))} layout="vertical" margin={{ left: 5, right: 10, top: 5, bottom: 5 }}>
                 <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
-                <XAxis type="number" tick={{ fontSize: 9 }} allowDecimals={false} />
-                <YAxis type="category" dataKey="name" tick={{ fontSize: 9 }} width={80} />
+                <XAxis type="number" tick={{ fontSize: isMobile ? 8 : 9 }} allowDecimals={false} />
+                <YAxis type="category" dataKey="name" tick={{ fontSize: isMobile ? 8 : 9 }} width={isMobile ? 55 : 80} />
                 <Tooltip formatter={(v: number) => [v, "Count"]} />
                 <Bar dataKey="count" fill="#6366f1" radius={[0, 3, 3, 0]} />
               </BarChart>
@@ -575,8 +582,8 @@ export default function HelpPage() {
             <ResponsiveContainer width="100%" height="100%">
               <BarChart data={analytics.statusChart.map(c => ({ name: c.label, count: c.amount, color: c.color }))} layout="vertical" margin={{ left: 5, right: 10, top: 5, bottom: 5 }}>
                 <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
-                <XAxis type="number" tick={{ fontSize: 9 }} allowDecimals={false} />
-                <YAxis type="category" dataKey="name" tick={{ fontSize: 9 }} width={95} />
+                <XAxis type="number" tick={{ fontSize: isMobile ? 8 : 9 }} allowDecimals={false} />
+                <YAxis type="category" dataKey="name" tick={{ fontSize: isMobile ? 8 : 9 }} width={isMobile ? 55 : 95} />
                 <Tooltip formatter={(v: number) => [v, "Count"]} />
                 <Bar dataKey="count" fill="#eab308" radius={[0, 3, 3, 0]} />
               </BarChart>

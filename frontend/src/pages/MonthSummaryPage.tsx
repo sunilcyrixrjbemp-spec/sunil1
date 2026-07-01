@@ -1018,16 +1018,14 @@ export default function MonthSummaryPage() {
                   <th className="py-2.5 px-3 border-r border-gray-200">#</th>
                   <th className="py-2.5 px-3 border-r border-gray-200">Engineer Details</th>
                   <th className="py-2.5 px-3 border-r border-gray-200">E-Code</th>
-                  <th className="py-2.5 px-3 border-r border-gray-200">Grade</th>
                   <th className="py-2.5 px-3 border-r border-gray-200">Base District</th>
-                  <th className="py-2.5 px-3 border-r border-gray-200">Claim Period</th>
-                  <th className="py-2.5 px-3 border-r border-gray-200 text-center">Days</th>
-                  <th className="py-2.5 px-3 border-r border-gray-200 text-right">DA (₹)</th>
-                  <th className="py-2.5 px-3 border-r border-gray-200 text-right">Bike/Car (₹)</th>
-                  <th className="py-2.5 px-3 border-r border-gray-200 text-right">Auto (₹)</th>
-                  <th className="py-2.5 px-3 border-r border-gray-200 text-right">Hotel (₹)</th>
-                  <th className="py-2.5 px-3 border-r border-gray-200 text-center">Total KM</th>
-                  <th className="py-2.5 px-3 border-r border-gray-200 text-right text-green-700 bg-green-50/20 font-bold">Approved Total (₹)</th>
+                  <th className="py-2.5 px-3 border-r border-gray-200 text-right">Claimed (₹)</th>
+                  <th className="py-2.5 px-3 border-r border-gray-200 text-right text-green-700 bg-green-50/10">Approved (₹)</th>
+                  <th className="py-2.5 px-3 border-r border-gray-200 text-right text-rose-700 bg-rose-50/10">Rejected (₹)</th>
+                  <th className="py-2.5 px-3 border-r border-gray-200 text-center text-blue-700">Calls (Comp/Assg)</th>
+                  <th className="py-2.5 px-3 border-r border-gray-200 text-center text-indigo-700">PMS Count</th>
+                  <th className="py-2.5 px-3 border-r border-gray-200 text-center text-amber-700">Asset Tagging</th>
+                  <th className="py-2.5 px-3 border-r border-gray-200 text-center">Month</th>
                   <th className="py-2.5 px-3 text-center">Export</th>
                 </tr>
               </thead>
@@ -1051,29 +1049,27 @@ export default function MonthSummaryPage() {
                       <td className="py-3 px-3 border-r border-gray-150">
                         <span className="text-[10px] font-mono font-bold text-blue-700 bg-blue-50/50 px-2 py-0.5 rounded border border-blue-100">{row.e_code}</span>
                       </td>
-                      <td className="py-3 px-3 text-gray-700 font-semibold border-r border-gray-150">{row.grade || "—"}</td>
                       <td className="py-3 px-3 text-gray-700 font-semibold border-r border-gray-150">{row.district || "—"}</td>
-                      <td className="py-3 px-3 border-r border-gray-150">
-                        <span className="text-[10px] font-bold text-indigo-700 bg-indigo-50/50 px-2 py-0.5 rounded border border-indigo-100">{row.month} {row.year}</span>
+                      <td className="py-3 px-3 text-right font-bold text-blue-650 border-r border-gray-150">
+                        {fmt(row.claimed_amount)}
                       </td>
-                      <td className="py-3 px-3 text-center font-bold text-gray-700 border-r border-gray-150">{row.claims_count}</td>
-                      <td className="py-3 px-3 text-right font-semibold text-gray-650 border-r border-gray-150">
-                        {row.da_amount > 0 ? fmt(row.da_amount) : <span className="text-gray-300">—</span>}
-                      </td>
-                      <td className="py-3 px-3 text-right font-semibold text-gray-650 border-r border-gray-150">
-                        {(row.bike_amount + row.car_amount) > 0 ? fmt(row.bike_amount + row.car_amount) : <span className="text-gray-300">—</span>}
-                      </td>
-                      <td className="py-3 px-3 text-right font-semibold text-gray-650 border-r border-gray-150">
-                        {row.auto_amount > 0 ? fmt(row.auto_amount) : <span className="text-gray-300">—</span>}
-                      </td>
-                      <td className="py-3 px-3 text-right font-semibold text-gray-650 border-r border-gray-150">
-                        {row.hotel_amount > 0 ? fmt(row.hotel_amount) : <span className="text-gray-300">—</span>}
-                      </td>
-                      <td className="py-3 px-3 text-center font-mono font-bold text-gray-700 border-r border-gray-150">
-                        {row.total_km > 0 ? `${fmtN(row.total_km)} km` : <span className="text-gray-300">—</span>}
-                      </td>
-                      <td className="py-3 px-3 text-right font-bold text-green-700 bg-green-50/10 border-r border-gray-150">
+                      <td className="py-3 px-3 text-right font-bold text-green-700 bg-green-50/20 border-r border-gray-150">
                         {fmt(row.total_amount)}
+                      </td>
+                      <td className="py-3 px-3 text-right font-bold text-rose-700 bg-rose-50/10 border-r border-gray-150">
+                        {row.rejected_amount > 0 ? fmt(row.rejected_amount) : <span className="text-gray-300">—</span>}
+                      </td>
+                      <td className="py-3 px-3 text-center font-semibold text-gray-700 border-r border-gray-150">
+                        {row.calls_assigned > 0 ? `${row.calls_completed}/${row.calls_assigned}` : <span className="text-gray-300">—</span>}
+                      </td>
+                      <td className="py-3 px-3 text-center font-semibold text-gray-700 border-r border-gray-150">
+                        {row.pms_count || <span className="text-gray-300">—</span>}
+                      </td>
+                      <td className="py-3 px-3 text-center font-semibold text-gray-700 border-r border-gray-150">
+                        {row.asset_tagging_count || <span className="text-gray-300">—</span>}
+                      </td>
+                      <td className="py-3 px-3 border-r border-gray-150 text-center">
+                        <span className="text-[10px] font-bold text-indigo-700 bg-indigo-50/50 px-2 py-0.5 rounded border border-indigo-100">{row.month} {row.year}</span>
                       </td>
                       <td className="py-3 px-3 text-center">
                         <button onClick={() => handlePDF(row)} disabled={isLoading}

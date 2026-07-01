@@ -274,8 +274,12 @@ export default function DashboardLayout() {
     return allowedWindows.includes(item.id.toLowerCase());
   });
 
-  const handleLogout = () => {
-    authService.logout();
+  const handleLogout = async () => {
+    try {
+      await authService.logout();
+    } catch (e) {
+      console.warn("Logout error:", e);
+    }
     navigate("/login");
   };
 

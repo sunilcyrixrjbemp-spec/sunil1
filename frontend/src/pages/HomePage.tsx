@@ -26,6 +26,13 @@ import {
 } from "lucide-react";
 
 export default function HomePage() {
+  const [isMobile, setIsMobile] = useState(window.innerWidth < 768);
+  useEffect(() => {
+    const handleResize = () => setIsMobile(window.innerWidth < 768);
+    window.addEventListener("resize", handleResize);
+    return () => window.removeEventListener("resize", handleResize);
+  }, []);
+
   const navigate = useNavigate();
   const [user, setUser] = useState<any>(() => {
     return JSON.parse(localStorage.getItem("user") || "null");
@@ -836,7 +843,9 @@ export default function HomePage() {
                     <PieChart>
                       <Pie
                         data={getPersonalChartData().map(c => ({ name: c.label, value: c.amount }))}
-                        cx="50%" cy="50%" innerRadius={35} outerRadius={65}
+                        cx="50%" cy="50%"
+                        innerRadius={isMobile ? 25 : 35}
+                        outerRadius={isMobile ? 50 : 65}
                         paddingAngle={3} dataKey="value"
                       >
                         {getPersonalChartData().map((c, i) => (
@@ -844,7 +853,7 @@ export default function HomePage() {
                         ))}
                       </Pie>
                       <Tooltip formatter={(v: number) => `₹${v.toLocaleString()}`} />
-                      <Legend wrapperStyle={{ fontSize: 10 }} />
+                      <Legend wrapperStyle={{ fontSize: isMobile ? 8 : 10 }} />
                     </PieChart>
                   </ResponsiveContainer>
                 </div>
@@ -946,7 +955,9 @@ export default function HomePage() {
                           <PieChart>
                             <Pie
                               data={chartData.map(c => ({ name: c.name, value: c.amount }))}
-                              cx="50%" cy="50%" innerRadius={35} outerRadius={65}
+                              cx="50%" cy="50%"
+                              innerRadius={isMobile ? 25 : 35}
+                              outerRadius={isMobile ? 50 : 65}
                               paddingAngle={3} dataKey="value"
                             >
                               {chartData.map((_, i) => (
@@ -954,7 +965,7 @@ export default function HomePage() {
                               ))}
                             </Pie>
                             <Tooltip formatter={(v: number) => `₹${v.toLocaleString()}`} />
-                            <Legend wrapperStyle={{ fontSize: 10 }} />
+                            <Legend wrapperStyle={{ fontSize: isMobile ? 8 : 10 }} />
                           </PieChart>
                         </ResponsiveContainer>
                       </div>

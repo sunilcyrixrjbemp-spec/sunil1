@@ -18,6 +18,13 @@ const months = [
 ];
 
 export default function AnalysisPage() {
+  const [isMobile, setIsMobile] = useState(window.innerWidth < 768);
+  useEffect(() => {
+    const handleResize = () => setIsMobile(window.innerWidth < 768);
+    window.addEventListener("resize", handleResize);
+    return () => window.removeEventListener("resize", handleResize);
+  }, []);
+
   const [myExpenses, setMyExpenses] = useState<any[]>(() => {
     const currentUser = authService.getCurrentUser();
     if (!currentUser) return [];
@@ -619,19 +626,19 @@ export default function AnalysisPage() {
                       data={statusWiseData}
                       cx="50%"
                       cy="50%"
-                      innerRadius={45}
-                      outerRadius={75}
+                      innerRadius={isMobile ? 35 : 45}
+                      outerRadius={isMobile ? 55 : 75}
                       paddingAngle={3}
                       dataKey="value"
-                      label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}
-                      labelLine={true}
+                      label={isMobile ? undefined : ({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}
+                      labelLine={!isMobile}
                     >
                       {statusWiseData.map((_, i) => (
                         <Cell key={i} fill={i === 0 ? "#28a745" : i === 1 ? "#ffc107" : "#dc3545"} />
                       ))}
                     </Pie>
                     <Tooltip formatter={(v: number) => `₹${v.toLocaleString()}`} />
-                    <Legend wrapperStyle={{ fontSize: 11 }} />
+                    <Legend wrapperStyle={{ fontSize: isMobile ? 9 : 11 }} />
                   </PieChart>
                 </ResponsiveContainer>
               ) : (
@@ -716,19 +723,19 @@ export default function AnalysisPage() {
                       data={zoneWiseData}
                       cx="50%"
                       cy="50%"
-                      innerRadius={45}
-                      outerRadius={75}
+                      innerRadius={isMobile ? 35 : 45}
+                      outerRadius={isMobile ? 55 : 75}
                       paddingAngle={3}
                       dataKey="value"
-                      label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}
-                      labelLine={true}
+                      label={isMobile ? undefined : ({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}
+                      labelLine={!isMobile}
                     >
                       {zoneWiseData.map((_, i) => (
                         <Cell key={i} fill={COLORS[(i + 4) % COLORS.length]} />
                       ))}
                     </Pie>
                     <Tooltip formatter={(v: number) => `₹${v.toLocaleString()}`} />
-                    <Legend wrapperStyle={{ fontSize: 11 }} />
+                    <Legend wrapperStyle={{ fontSize: isMobile ? 9 : 11 }} />
                   </PieChart>
                 </ResponsiveContainer>
               ) : (
