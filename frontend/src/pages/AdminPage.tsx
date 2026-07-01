@@ -4,7 +4,7 @@ import { adminService, UserCreatePayload, UserEditPayload, ApprovalHierarchyResp
 import { authService } from "../services/authService";
 import { Search, UploadCloud, Pencil, Trash2, Plus, LogOut, Download } from "lucide-react";
 import Loader from "../components/common/Loader";
-import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from "recharts";
+import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell } from "recharts";
 
 const LteSpinner = () => (
   <span className="spinner-lte mr-1.5"></span>
@@ -76,6 +76,8 @@ export default function AdminPage() {
   const [error, setError] = useState<string | null>(null);
   const [searchTerm, setSearchTerm] = useState("");
   const [currentPage, setCurrentPage] = useState(1);
+  const [chartRoleFilter, setChartRoleFilter] = useState<string>("all");
+  const [chartZoneFilter, setChartZoneFilter] = useState<string>("all");
   const ITEMS_PER_PAGE = 25;
 
   // Modals visibility
@@ -820,10 +822,19 @@ export default function AdminPage() {
   const endIndex = startIndex + ITEMS_PER_PAGE;
   const paginatedUsers = filteredUsers.slice(startIndex, endIndex);
 
+  // Helper to filter users for charts
+  const getFilteredUsersForCharts = () => {
+    return safeUsers.filter(u => {
+      if (chartRoleFilter !== "all" && u.role?.toLowerCase() !== chartRoleFilter.toLowerCase()) return false;
+      if (chartZoneFilter !== "all" && u.zone?.toLowerCase() !== chartZoneFilter.toLowerCase()) return false;
+      return true;
+    });
+  };
+
   // 1. Calculate District-wise distribution
   const getDistrictData = () => {
     const counts: Record<string, number> = {};
-    safeUsers.forEach(u => {
+    getFilteredUsersForCharts().forEach(u => {
       const dist = u.district?.trim() || "N/A";
       counts[dist] = (counts[dist] || 0) + 1;
     });
@@ -835,7 +846,7 @@ export default function AdminPage() {
   // 2. Calculate Designation-wise distribution
   const getDesignationData = () => {
     const counts: Record<string, number> = {};
-    safeUsers.forEach(u => {
+    getFilteredUsersForCharts().forEach(u => {
       const desg = u.designation?.trim() || "N/A";
       counts[desg] = (counts[desg] || 0) + 1;
     });
@@ -847,7 +858,7 @@ export default function AdminPage() {
   // 3. Calculate Zone-wise distribution
   const getZoneData = () => {
     const counts: Record<string, number> = {};
-    safeUsers.forEach(u => {
+    getFilteredUsersForCharts().forEach(u => {
       const zone = u.zone?.trim() || "N/A";
       counts[zone] = (counts[zone] || 0) + 1;
     });
@@ -859,7 +870,7 @@ export default function AdminPage() {
   // 4. Calculate Manager-wise distribution
   const getManagerData = () => {
     const counts: Record<string, number> = {};
-    safeUsers.forEach(u => {
+    getFilteredUsersForCharts().forEach(u => {
       const mng = u.manager?.trim() || "N/A";
       counts[mng] = (counts[mng] || 0) + 1;
     });
@@ -1114,89 +1125,194 @@ export default function AdminPage() {
       ) : activeTab === "analytics" ? (
         /* ================= ANALYTICS DASHBOARD TAB ================= */
         <div className="space-y-6 animate-fadeIn">
-          {/* Top Info Header */}
-          <div className="bg-white border border-gray-200 rounded p-4 shadow-sm">
-            <h3 className="text-sm font-bold text-gray-800 uppercase tracking-wide">System Distribution Charts</h3>
-            <p className="text-gray-500 text-xs mt-1">Real-time charts showing distribution of users by Zone, District, Manager, and Designation in AdminLTE Bootstrap style.</p>
+          {/* Filters Bar */}
+          <div className="bg-white border border-gray-200 rounded p-4 shadow-sm flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+            <div>
+              <h3 className="text-sm font-bold text-gray-800 uppercase tracking-wide">Dashboard Charts & Analytics</h3>
+              <p className="text-gray-500 text-xs mt-1">Interactive 3D Cylinder & Pie charts with custom data filtering.</p>
+            </div>
+            
+            <div className="flex flex-wrap gap-3">
+              {/* Role Filter */}
+              <div className="flex items-center gap-2">
+                <label className="text-xs font-bold text-gray-600">Role:</label>
+                <select
+                  value={chartRoleFilter}
+                  onChange={(e) => setChartRoleFilter(e.target.value)}
+                  className="px-2 py-1 text-xs border border-gray-300 rounded bg-white font-semibold text-gray-700 outline-none focus:border-blue-500 cursor-pointer"
+                >
+                  <option value="all">All Roles</option>
+                  <option value="engineer">Engineer</option>
+                  <option value="manager">Manager</option>
+                  <option value="admin">Admin</option>
+                  <option value="coordinator">Coordinator</option>
+                </select>
+              </div>
+
+              {/* Zone Filter */}
+              <div className="flex items-center gap-2">
+                <label className="text-xs font-bold text-gray-600">Zone:</label>
+                <select
+                  value={chartZoneFilter}
+                  onChange={(e) => setChartZoneFilter(e.target.value)}
+                  className="px-2 py-1 text-xs border border-gray-300 rounded bg-white font-semibold text-gray-700 outline-none focus:border-blue-500 cursor-pointer"
+                >
+                  <option value="all">All Zones</option>
+                  {Array.from(new Set(safeUsers.map(u => u.zone?.trim()).filter(Boolean))).map(zone => (
+                    <option key={zone} value={zone}>{zone}</option>
+                  ))}
+                </select>
+              </div>
+            </div>
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            {/* Zone-wise Chart */}
+            {/* Zone-wise Chart (3D Donut style) */}
             <div className="bg-white border border-gray-200 rounded shadow-sm">
               <div className="border-b border-gray-200 px-4 py-3 bg-[#007bff] text-white flex items-center justify-between rounded-t">
                 <h4 className="text-xs font-bold uppercase tracking-wider">
                   Zone-wise Distribution
                 </h4>
               </div>
-              <div className="p-4" style={{ height: "280px" }}>
+              <div className="p-4" style={{ height: "290px" }}>
                 <ResponsiveContainer width="100%" height="100%">
-                  <BarChart data={getZoneData().slice(0, 8)}>
-                    <CartesianGrid strokeDasharray="3 3" vertical={false} />
-                    <XAxis dataKey="name" tick={{ fontSize: 9 }} />
-                    <YAxis tick={{ fontSize: 9 }} allowDecimals={false} />
-                    <Tooltip contentStyle={{ fontSize: 10 }} />
-                    <Bar dataKey="value" fill="#007bff" radius={[4, 4, 0, 0]} />
-                  </BarChart>
+                  <PieChart>
+                    <defs>
+                      <linearGradient id="pieGrad0" x1="0" y1="0" x2="1" y2="1">
+                        <stop offset="0%" stopColor="#93c5fd" /><stop offset="100%" stopColor="#1d4ed8" />
+                      </linearGradient>
+                      <linearGradient id="pieGrad1" x1="0" y1="0" x2="1" y2="1">
+                        <stop offset="0%" stopColor="#a7f3d0" /><stop offset="100%" stopColor="#047857" />
+                      </linearGradient>
+                      <linearGradient id="pieGrad2" x1="0" y1="0" x2="1" y2="1">
+                        <stop offset="0%" stopColor="#ddd6fe" /><stop offset="100%" stopColor="#6d28d9" />
+                      </linearGradient>
+                      <linearGradient id="pieGrad3" x1="0" y1="0" x2="1" y2="1">
+                        <stop offset="0%" stopColor="#fed7aa" /><stop offset="100%" stopColor="#c2410c" />
+                      </linearGradient>
+                      <linearGradient id="pieGrad4" x1="0" y1="0" x2="1" y2="1">
+                        <stop offset="0%" stopColor="#fbcfe8" /><stop offset="100%" stopColor="#be185d" />
+                      </linearGradient>
+                    </defs>
+                    <Pie
+                      data={getZoneData().slice(0, 5)}
+                      dataKey="value"
+                      nameKey="name"
+                      cx="50%"
+                      cy="50%"
+                      innerRadius={45}
+                      outerRadius={75}
+                      paddingAngle={3}
+                      label={({ name, percent }) => `${name} (${(percent * 100).toFixed(0)}%)`}
+                      labelLine={false}
+                    >
+                      {getZoneData().slice(0, 5).map((entry, index) => (
+                        <Cell key={`cell-${index}`} fill={`url(#pieGrad${index % 5})`} />
+                      ))}
+                    </Pie>
+                    <Tooltip formatter={(value) => [`${value} Employees`, 'Count']} />
+                  </PieChart>
                 </ResponsiveContainer>
               </div>
             </div>
 
-            {/* District-wise Chart */}
+            {/* District-wise Chart (3D cylindrical bars) */}
             <div className="bg-white border border-gray-200 rounded shadow-sm">
               <div className="border-b border-gray-200 px-4 py-3 bg-[#28a745] text-white flex items-center justify-between rounded-t">
                 <h4 className="text-xs font-bold uppercase tracking-wider">
                   District-wise Distribution
                 </h4>
               </div>
-              <div className="p-4" style={{ height: "280px" }}>
+              <div className="p-4" style={{ height: "290px" }}>
                 <ResponsiveContainer width="100%" height="100%">
-                  <BarChart data={getDistrictData().slice(0, 8)}>
+                  <BarChart data={getDistrictData().slice(0, 6)}>
+                    <defs>
+                      <linearGradient id="cylinderBlue" x1="0" y1="0" x2="1" y2="0">
+                        <stop offset="0%" stopColor="#1e3a8a" />
+                        <stop offset="50%" stopColor="#60a5fa" />
+                        <stop offset="100%" stopColor="#1d4ed8" />
+                      </linearGradient>
+                    </defs>
                     <CartesianGrid strokeDasharray="3 3" vertical={false} />
-                    <XAxis dataKey="name" tick={{ fontSize: 9 }} />
+                    <XAxis dataKey="name" tick={{ fontSize: 9, fontWeight: 'bold' }} />
                     <YAxis tick={{ fontSize: 9 }} allowDecimals={false} />
-                    <Tooltip contentStyle={{ fontSize: 10 }} />
-                    <Bar dataKey="value" fill="#28a745" radius={[4, 4, 0, 0]} />
+                    <Tooltip formatter={(value) => [`${value} Employees`, 'Count']} />
+                    <Bar dataKey="value" fill="url(#cylinderBlue)" radius={[6, 6, 0, 0]} maxBarSize={40} />
                   </BarChart>
                 </ResponsiveContainer>
               </div>
             </div>
 
-            {/* Manager-wise Chart */}
+            {/* Manager-wise Chart (Horizontal 3D cylinders) */}
             <div className="bg-white border border-gray-200 rounded shadow-sm">
               <div className="border-b border-gray-200 px-4 py-3 bg-[#6f42c1] text-white flex items-center justify-between rounded-t">
                 <h4 className="text-xs font-bold uppercase tracking-wider">
                   Manager-wise Distribution
                 </h4>
               </div>
-              <div className="p-4" style={{ height: "280px" }}>
+              <div className="p-4" style={{ height: "290px" }}>
                 <ResponsiveContainer width="100%" height="100%">
-                  <BarChart data={getManagerData().slice(0, 8)}>
-                    <CartesianGrid strokeDasharray="3 3" vertical={false} />
-                    <XAxis dataKey="name" tick={{ fontSize: 9 }} />
-                    <YAxis tick={{ fontSize: 9 }} allowDecimals={false} />
-                    <Tooltip contentStyle={{ fontSize: 10 }} />
-                    <Bar dataKey="value" fill="#6f42c1" radius={[4, 4, 0, 0]} />
+                  <BarChart data={getManagerData().slice(0, 6)} layout="vertical">
+                    <defs>
+                      <linearGradient id="cylinderPurple" x1="0" y1="0" x2="0" y2="1">
+                        <stop offset="0%" stopColor="#4c1d95" />
+                        <stop offset="50%" stopColor="#a78bfa" />
+                        <stop offset="100%" stopColor="#6d28d9" />
+                      </linearGradient>
+                    </defs>
+                    <CartesianGrid strokeDasharray="3 3" horizontal={false} />
+                    <XAxis type="number" tick={{ fontSize: 9 }} allowDecimals={false} />
+                    <YAxis dataKey="name" type="category" tick={{ fontSize: 9, fontWeight: 'bold' }} width={85} />
+                    <Tooltip formatter={(value) => [`${value} Employees`, 'Count']} />
+                    <Bar dataKey="value" fill="url(#cylinderPurple)" radius={[0, 6, 6, 0]} maxBarSize={22} />
                   </BarChart>
                 </ResponsiveContainer>
               </div>
             </div>
 
-            {/* Designation-wise Chart */}
+            {/* Designation-wise Chart (3D Pie style) */}
             <div className="bg-white border border-gray-200 rounded shadow-sm">
               <div className="border-b border-gray-200 px-4 py-3 bg-[#17a2b8] text-white flex items-center justify-between rounded-t">
                 <h4 className="text-xs font-bold uppercase tracking-wider">
                   Designation-wise Distribution
                 </h4>
               </div>
-              <div className="p-4" style={{ height: "280px" }}>
+              <div className="p-4" style={{ height: "290px" }}>
                 <ResponsiveContainer width="100%" height="100%">
-                  <BarChart data={getDesignationData().slice(0, 8)}>
-                    <CartesianGrid strokeDasharray="3 3" vertical={false} />
-                    <XAxis dataKey="name" tick={{ fontSize: 9 }} />
-                    <YAxis tick={{ fontSize: 9 }} allowDecimals={false} />
-                    <Tooltip contentStyle={{ fontSize: 10 }} />
-                    <Bar dataKey="value" fill="#17a2b8" radius={[4, 4, 0, 0]} />
-                  </BarChart>
+                  <PieChart>
+                    <defs>
+                      <linearGradient id="desgGrad0" x1="0" y1="0" x2="1" y2="1">
+                        <stop offset="0%" stopColor="#a5f3fc" /><stop offset="100%" stopColor="#0891b2" />
+                      </linearGradient>
+                      <linearGradient id="desgGrad1" x1="0" y1="0" x2="1" y2="1">
+                        <stop offset="0%" stopColor="#fef08a" /><stop offset="100%" stopColor="#ca8a04" />
+                      </linearGradient>
+                      <linearGradient id="desgGrad2" x1="0" y1="0" x2="1" y2="1">
+                        <stop offset="0%" stopColor="#fecdd3" /><stop offset="100%" stopColor="#e11d48" />
+                      </linearGradient>
+                      <linearGradient id="desgGrad3" x1="0" y1="0" x2="1" y2="1">
+                        <stop offset="0%" stopColor="#c7d2fe" /><stop offset="100%" stopColor="#4f46e5" />
+                      </linearGradient>
+                      <linearGradient id="desgGrad4" x1="0" y1="0" x2="1" y2="1">
+                        <stop offset="0%" stopColor="#e2e8f0" /><stop offset="100%" stopColor="#475569" />
+                      </linearGradient>
+                    </defs>
+                    <Pie
+                      data={getDesignationData().slice(0, 5)}
+                      dataKey="value"
+                      nameKey="name"
+                      cx="50%"
+                      cy="50%"
+                      outerRadius={75}
+                      label={({ name, percent }) => `${name} (${(percent * 100).toFixed(0)}%)`}
+                      labelLine={false}
+                    >
+                      {getDesignationData().slice(0, 5).map((entry, index) => (
+                        <Cell key={`cell-${index}`} fill={`url(#desgGrad${index % 5})`} />
+                      ))}
+                    </Pie>
+                    <Tooltip formatter={(value) => [`${value} Employees`, 'Count']} />
+                  </PieChart>
                 </ResponsiveContainer>
               </div>
             </div>
@@ -1245,7 +1361,7 @@ export default function AdminPage() {
               No team hierarchy configurations created. Click "Create Team" to define one.
             </div>
           ) : (
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div className="grid grid-cols-1 gap-6">
               {safeHierarchies.map((hq) => (
                 <div key={hq.id} className="bg-white border border-gray-200 rounded shadow-sm overflow-hidden flex flex-col justify-between">
                   <div className="p-4 space-y-4">
@@ -1292,22 +1408,31 @@ export default function AdminPage() {
                       </div>
                     </div>
 
-                    {/* Approvers Pipeline (Horizontal Single Line) */}
-                    <div className="space-y-1 pt-1">
-                      <span className="text-[9px] font-bold text-gray-500 uppercase tracking-wider block">Approver Levels ({hq.approvers.length})</span>
-                      <div className="flex flex-nowrap items-center gap-2 p-2 bg-gray-50 border border-gray-200 rounded overflow-x-auto whitespace-nowrap scrollbar-thin">
+                    {/* Approvers Pipeline - Premium Horizontal Flow */}
+                    <div className="space-y-2 pt-2 border-t border-gray-100">
+                      <span className="text-[10px] font-bold text-gray-500 uppercase tracking-wider block">Approval Sequence ({hq.approvers.length} Levels)</span>
+                      <div className="flex flex-wrap md:flex-nowrap items-center gap-3 p-3 bg-gray-50 border border-gray-200 rounded-lg overflow-x-auto scrollbar-thin">
                         {hq.approvers.length === 0 ? (
-                          <span className="text-[10px] text-gray-400 uppercase tracking-wider font-semibold">No approvers mapped</span>
+                          <span className="text-xs text-gray-400 uppercase tracking-wider font-semibold">No approvers mapped</span>
                         ) : (
                           hq.approvers.map((a, idx) => (
                             <React.Fragment key={a.id}>
-                              {idx > 0 && <span className="text-gray-400 text-xs font-bold shrink-0">→</span>}
-                              <div className="flex items-center gap-1.5 bg-blue-50 border border-blue-200 rounded px-2 py-1 shrink-0">
-                                <span className="h-4 w-4 rounded-full bg-blue-600 text-white flex items-center justify-center text-[9px] font-bold">
-                                  {idx + 1}
+                              {idx > 0 && (
+                                <div className="hidden md:flex items-center text-gray-400 font-bold px-1 text-base shrink-0 select-none">
+                                  →
+                                </div>
+                              )}
+                              <div className="flex items-center gap-3 bg-white border border-gray-200 rounded-lg p-2.5 shadow-xs shrink-0 border-l-4 border-l-blue-600 min-w-[200px]">
+                                <span className="h-6 w-6 rounded-full bg-blue-100 text-blue-700 flex items-center justify-center text-xs font-black shadow-inner">
+                                  L{a.level_number}
                                 </span>
-                                <div className="text-[10px] font-semibold text-gray-800">
-                                  {a.approver_name} <span className="text-[9px] text-gray-500 font-mono">({a.approver_code})</span>
+                                <div className="space-y-0.5">
+                                  <div className="text-xs font-bold text-gray-800 leading-tight">
+                                    {a.approver_name}
+                                  </div>
+                                  <div className="text-[9px] text-gray-500 font-bold uppercase tracking-wider leading-none">
+                                    {a.approver_role} <span className="font-mono font-normal">({a.approver_code})</span>
+                                  </div>
                                 </div>
                               </div>
                             </React.Fragment>
@@ -1328,12 +1453,13 @@ export default function AdminPage() {
       {/* ================= MODAL: CREATE SINGLE USER ================= */}
       {showSingleUserModal && (
         <div className="modal-lte-overlay z-[9999]">
-          <div className="modal-lte-content max-w-4xl p-6">
+          <div className="modal-lte-content max-w-4xl p-6 max-h-[90vh] flex flex-col">
             <h3 className="text-sm font-bold uppercase tracking-wider border-b border-gray-200 pb-3 text-gray-800">
               Register New Employee
             </h3>
             
-            <form onSubmit={handleCreateSingleUser} className="space-y-4 mt-4">
+            <form onSubmit={handleCreateSingleUser} className="flex-1 flex flex-col overflow-hidden mt-4 space-y-4">
+              <div className="flex-1 overflow-y-auto space-y-4 pr-2 scrollbar-thin">
               {singleUserError && (
                 <div className="p-3 border border-red-200 bg-red-50 text-red-700 font-semibold text-xs rounded">
                   {singleUserError}
@@ -1589,10 +1715,11 @@ export default function AdminPage() {
                   ))}
                 </div>
               </div>
+            </div>
 
-              {/* Action Buttons */}
-              <div className="flex justify-end gap-3 pt-4 border-t border-gray-200">
-                <button
+            {/* Action Buttons */}
+            <div className="flex justify-end gap-3 pt-4 border-t border-gray-200">
+              <button
                   type="button"
                   onClick={() => setShowSingleUserModal(false)}
                   className="btn-lte-secondary"
@@ -1616,12 +1743,13 @@ export default function AdminPage() {
       {/* ================= MODAL: EDIT USER DETAILS ================= */}
       {showEditUserModal && editingUser && (
         <div className="modal-lte-overlay z-[9999]">
-          <div className="modal-lte-content max-w-4xl p-6">
+          <div className="modal-lte-content max-w-4xl p-6 max-h-[90vh] flex flex-col">
             <h3 className="text-sm font-bold uppercase tracking-wider border-b border-gray-200 pb-3 text-gray-800">
               Update Employee: <span className="text-blue-600 font-mono font-bold">{editingUser.user_id}</span>
             </h3>
             
-            <form onSubmit={handleUpdateUserSubmit} className="space-y-4 mt-4">
+            <form onSubmit={handleUpdateUserSubmit} className="flex-1 flex flex-col overflow-hidden mt-4 space-y-4">
+              <div className="flex-1 overflow-y-auto space-y-4 pr-2 scrollbar-thin">
               {editUserError && (
                 <div className="p-3 border border-red-200 bg-red-50 text-red-700 font-semibold text-xs rounded">
                   {editUserError}
@@ -1872,10 +2000,11 @@ export default function AdminPage() {
                   ))}
                 </div>
               </div>
+            </div>
 
-              {/* Action Buttons */}
-              <div className="flex justify-end gap-3 pt-4 border-t border-gray-200">
-                <button
+            {/* Action Buttons */}
+            <div className="flex justify-end gap-3 pt-4 border-t border-gray-200">
+              <button
                   type="button"
                   onClick={() => {
                     setShowEditUserModal(false);
