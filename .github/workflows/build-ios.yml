@@ -70,11 +70,11 @@ jobs:
 
 
 
-      # 10. Build Xcode Workspace (Unsigned Debug build)
-      - name: Build Xcode Workspace
+      # 10. Build Xcode Project (Unsigned Debug build)
+      - name: Build Xcode Project
         working-directory: frontend/ios/App
         run: |
-          xcodebuild -workspace App.xcworkspace \
+          xcodebuild -project App.xcodeproj \
                      -scheme App \
                      -sdk iphoneos \
                      -configuration Debug \
