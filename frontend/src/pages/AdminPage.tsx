@@ -934,128 +934,148 @@ export default function AdminPage() {
                 >
                   Bulk CSV Import
                 </button>
+                <button
+                  onClick={handleForceLogoutAll}
+                  className="px-3 py-1.5 bg-red-600 hover:bg-red-700 text-white rounded text-xs font-bold uppercase tracking-wider transition-colors flex items-center gap-1.5 border-0 cursor-pointer"
+                  title="Log out all active users from their current devices"
+                >
+                  <LogOut className="w-3.5 h-3.5" />
+                  Force Logout All
+                </button>
               </div>
             </div>
 
             {/* Table Container */}
             <div className="overflow-x-auto">
-              <table className="w-full text-left border-collapse text-xs">
-                <thead>
-                  <tr className="bg-gray-100 border-b border-gray-200 text-gray-700 font-bold uppercase tracking-wider text-[10px]">
-                    <th className="py-3 px-4">Emp Code</th>
-                    <th className="py-3 px-4">Full Name</th>
-                    <th className="py-3 px-4">Designation</th>
-                    <th className="py-3 px-4">Role</th>
-                    <th className="py-3 px-4">Mobile / Email</th>
-                    <th className="py-3 px-4">District / Zone</th>
-                    <th className="py-3 px-4">Status</th>
-                    <th className="py-3 px-4 text-right">Actions</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-gray-200">
-                  {paginatedUsers.map((u) => (
-                    <tr key={u.id} className="hover:bg-gray-50 transition-colors">
-                      <td className="py-3 px-4 font-mono font-bold text-blue-600">{u.e_code || "-"}</td>
-                      <td className="py-3 px-4 font-semibold text-gray-800">{u.name}</td>
-                      <td className="py-3 px-4 text-gray-600">{u.designation || "-"}</td>
-                      <td className="py-3 px-4">
-                        <span className="px-2 py-0.5 rounded text-[9px] font-bold uppercase bg-gray-100 border border-gray-200 text-gray-600">
-                          {u.role}
-                        </span>
-                      </td>
-                      <td className="py-3 px-4 space-y-0.5">
-                        <div className="font-semibold text-gray-800">{u.mobile_number || "-"}</div>
-                        <div className="text-gray-500 text-[10px]">{u.mail_id || "-"}</div>
-                      </td>
-                      <td className="py-3 px-4 space-y-0.5">
-                        <div className="font-semibold text-gray-800">{u.district || "-"}</div>
-                        <div className="text-gray-500 text-[10px] uppercase tracking-wider">{u.zone || "-"}</div>
-                      </td>
-                      <td className="py-3 px-4">
-                        <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded text-[9px] font-bold uppercase border ${
-                          u.user_status === "active"
-                            ? "bg-green-50 border-green-200 text-green-700"
-                            : u.user_status === "locked"
-                            ? "bg-amber-50 border-amber-200 text-amber-700"
-                            : "bg-red-50 border-red-200 text-red-700"
-                        }`}>
-                          <span className={`h-1.5 w-1.5 rounded-full ${
-                            u.user_status === "active" ? "bg-green-500" : u.user_status === "locked" ? "bg-amber-500" : "bg-red-500"
-                          }`}></span>
-                          {u.user_status}
-                        </span>
-                      </td>
-                      <td className="py-3 px-4 text-right flex items-center justify-end gap-1.5">
-                        <button
-                          onClick={() => handleOpenEditUserModal(u)}
-                          className="px-2 py-1 bg-white hover:bg-gray-100 border border-gray-300 rounded text-gray-700 transition-all cursor-pointer"
-                          title="Edit User Config"
-                        >
-                          <Pencil className="w-3.5 h-3.5" />
-                        </button>
-                        <button
-                          onClick={() => handleForceLogoutSingle(u.user_id, u.name)}
-                          className="px-2 py-1 bg-rose-50 hover:bg-rose-100 border border-rose-200 text-rose-600 rounded transition-all cursor-pointer"
-                          title="Force Logout Session"
-                        >
-                          <LogOut className="w-3.5 h-3.5" />
-                        </button>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
+              {loading ? (
+                <div className="py-12 flex flex-col items-center justify-center">
+                  <Loader message="Loading employees..." />
+                </div>
+              ) : filteredUsers.length === 0 ? (
+                <div className="py-12 text-center text-xs uppercase tracking-wider text-gray-500 font-semibold">
+                  No users found.
+                </div>
+              ) : (
+                <>
+                  <table className="w-full text-left border-collapse text-xs">
+                    <thead>
+                      <tr className="bg-gray-100 border-b border-gray-200 text-gray-700 font-bold uppercase tracking-wider text-[10px]">
+                        <th className="py-3 px-4">Emp Code</th>
+                        <th className="py-3 px-4">Full Name</th>
+                        <th className="py-3 px-4">Designation</th>
+                        <th className="py-3 px-4">Role</th>
+                        <th className="py-3 px-4">Mobile / Email</th>
+                        <th className="py-3 px-4">District / Zone</th>
+                        <th className="py-3 px-4">Status</th>
+                        <th className="py-3 px-4 text-right">Actions</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-gray-200">
+                      {paginatedUsers.map((u) => (
+                        <tr key={u.id} className="hover:bg-gray-50 transition-colors">
+                          <td className="py-3 px-4 font-mono font-bold text-blue-600">{u.e_code || "-"}</td>
+                          <td className="py-3 px-4 font-semibold text-gray-800">{u.name}</td>
+                          <td className="py-3 px-4 text-gray-600">{u.designation || "-"}</td>
+                          <td className="py-3 px-4">
+                            <span className="px-2 py-0.5 rounded text-[9px] font-bold uppercase bg-gray-100 border border-gray-200 text-gray-600">
+                              {u.role}
+                            </span>
+                          </td>
+                          <td className="py-3 px-4 space-y-0.5">
+                            <div className="font-semibold text-gray-800">{u.mobile_number || "-"}</div>
+                            <div className="text-gray-500 text-[10px]">{u.mail_id || "-"}</div>
+                          </td>
+                          <td className="py-3 px-4 space-y-0.5">
+                            <div className="font-semibold text-gray-800">{u.district || "-"}</div>
+                            <div className="text-gray-500 text-[10px] uppercase tracking-wider">{u.zone || "-"}</div>
+                          </td>
+                          <td className="py-3 px-4">
+                            <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded text-[9px] font-bold uppercase border ${
+                              u.user_status === "active"
+                                ? "bg-green-50 border-green-200 text-green-700"
+                                : u.user_status === "locked"
+                                ? "bg-amber-50 border-amber-200 text-amber-700"
+                                : "bg-red-50 border-red-200 text-red-700"
+                            }`}>
+                              <span className={`h-1.5 w-1.5 rounded-full ${
+                                u.user_status === "active" ? "bg-green-500" : u.user_status === "locked" ? "bg-amber-500" : "bg-red-500"
+                              }`}></span>
+                              {u.user_status}
+                            </span>
+                          </td>
+                          <td className="py-3 px-4 text-right flex items-center justify-end gap-1.5">
+                            <button
+                              onClick={() => handleOpenEditUserModal(u)}
+                              className="px-2 py-1 bg-white hover:bg-gray-100 border border-gray-300 rounded text-gray-700 transition-all cursor-pointer"
+                              title="Edit User Config"
+                            >
+                              <Pencil className="w-3.5 h-3.5" />
+                            </button>
+                            <button
+                              onClick={() => handleForceLogoutSingle(u.user_id, u.name)}
+                              className="px-2 py-1 bg-rose-50 hover:bg-rose-100 border border-rose-200 text-rose-600 rounded transition-all cursor-pointer"
+                              title="Force Logout Session"
+                            >
+                              <LogOut className="w-3.5 h-3.5" />
+                            </button>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
 
-              {/* Pagination Controls */}
-              {totalPages > 1 && (
-                <div className="flex items-center justify-between border-t border-gray-200 bg-white px-4 py-3 sm:px-6 mt-4">
-                  <div className="flex flex-1 justify-between sm:hidden">
-                    <button
-                      onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
-                      disabled={currentPage === 1}
-                      className="relative inline-flex items-center rounded-md border border-gray-300 bg-white px-4 py-2 text-xs font-semibold text-gray-700 hover:bg-gray-50 disabled:opacity-50 cursor-pointer shadow-sm"
-                    >
-                      Previous
-                    </button>
-                    <button
-                      onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))}
-                      disabled={currentPage === totalPages}
-                      className="relative ml-3 inline-flex items-center rounded-md border border-gray-300 bg-white px-4 py-2 text-xs font-semibold text-gray-700 hover:bg-gray-50 disabled:opacity-50 cursor-pointer shadow-sm"
-                    >
-                      Next
-                    </button>
-                  </div>
-                  <div className="hidden sm:flex sm:flex-1 sm:items-center sm:justify-between">
-                    <div>
-                      <p className="text-xs text-gray-700">
-                        Showing <span className="font-semibold">{startIndex + 1}</span> to{" "}
-                        <span className="font-semibold">{Math.min(endIndex, filteredUsers.length)}</span> of{" "}
-                        <span className="font-semibold">{filteredUsers.length}</span> employees
-                      </p>
-                    </div>
-                    <div>
-                      <nav className="isolate inline-flex -space-x-px rounded-md shadow-sm" aria-label="Pagination">
+                  {/* Pagination Controls */}
+                  {totalPages > 1 && (
+                    <div className="flex items-center justify-between border-t border-gray-200 bg-white px-4 py-3 sm:px-6 mt-4">
+                      <div className="flex flex-1 justify-between sm:hidden">
                         <button
                           onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
                           disabled={currentPage === 1}
-                          className="relative inline-flex items-center rounded-l-md border border-gray-300 bg-white px-3 py-2 text-xs font-semibold text-gray-600 hover:bg-gray-50 disabled:opacity-50 cursor-pointer transition-colors shadow-sm"
+                          className="relative inline-flex items-center rounded-md border border-gray-300 bg-white px-4 py-2 text-xs font-semibold text-gray-700 hover:bg-gray-50 disabled:opacity-50 cursor-pointer shadow-sm"
                         >
                           Previous
                         </button>
-                        <span className="relative inline-flex items-center border-t border-b border-gray-300 bg-gray-50 px-4 py-2 text-xs font-bold text-gray-700 font-mono">
-                          {currentPage} / {totalPages}
-                        </span>
                         <button
                           onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))}
                           disabled={currentPage === totalPages}
-                          className="relative inline-flex items-center rounded-r-md border border-gray-300 bg-white px-3 py-2 text-xs font-semibold text-gray-600 hover:bg-gray-50 disabled:opacity-50 cursor-pointer transition-colors shadow-sm"
+                          className="relative ml-3 inline-flex items-center rounded-md border border-gray-300 bg-white px-4 py-2 text-xs font-semibold text-gray-700 hover:bg-gray-50 disabled:opacity-50 cursor-pointer shadow-sm"
                         >
                           Next
                         </button>
-                      </nav>
+                      </div>
+                      <div className="hidden sm:flex sm:flex-1 sm:items-center sm:justify-between">
+                        <div>
+                          <p className="text-xs text-gray-700">
+                            Showing <span className="font-semibold">{startIndex + 1}</span> to{" "}
+                            <span className="font-semibold">{Math.min(endIndex, filteredUsers.length)}</span> of{" "}
+                            <span className="font-semibold">{filteredUsers.length}</span> employees
+                          </p>
+                        </div>
+                        <div>
+                          <nav className="isolate inline-flex -space-x-px rounded-md shadow-sm" aria-label="Pagination">
+                            <button
+                              onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
+                              disabled={currentPage === 1}
+                              className="relative inline-flex items-center rounded-l-md border border-gray-300 bg-white px-3 py-2 text-xs font-semibold text-gray-600 hover:bg-gray-50 disabled:opacity-50 cursor-pointer transition-colors shadow-sm"
+                            >
+                              Previous
+                            </button>
+                            <span className="relative inline-flex items-center border-t border-b border-gray-300 bg-gray-50 px-4 py-2 text-xs font-bold text-gray-700 font-mono">
+                              {currentPage} / {totalPages}
+                            </span>
+                            <button
+                              onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))}
+                              disabled={currentPage === totalPages}
+                              className="relative inline-flex items-center rounded-r-md border border-gray-300 bg-white px-3 py-2 text-xs font-semibold text-gray-600 hover:bg-gray-50 disabled:opacity-50 cursor-pointer transition-colors shadow-sm"
+                            >
+                              Next
+                            </button>
+                          </nav>
+                        </div>
+                      </div>
                     </div>
-                  </div>
-                </div>
+                  )}
+                </>
               )}
             </div>
           </div>
