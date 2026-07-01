@@ -67,8 +67,8 @@ def get_cf_session():
     if _cf_session is None:
         _cf_session = requests.Session()
         adapter = requests.adapters.HTTPAdapter(
-            pool_connections=20,
-            pool_maxsize=20,
+            pool_connections=150,
+            pool_maxsize=250,
             max_retries=3
         )
         _cf_session.mount("https://", adapter)

@@ -658,31 +658,12 @@ async def submit_expense(
                     detail=f"Leg {leg_num}: Local purchase amount is ₹{local_purchase}, which is ₹300 or above. A bill attachment is required."
                 )
 
-    # RJ-MM/YY-XXXXXX sequence generation or reuse edited one
-    if existing_expense:
-        final_exp_id = existing_expense.expense_code
-    else:
-        month_prefix = dt.strftime("%m/%y")
-        matching_rows = db.query(Expense.expense_code).filter(Expense.expense_code.like(f"RJ-{month_prefix}-%")).all()
-        max_seq = 0
-        for r in matching_rows:
-            parts = r[0].split("-")
-            if len(parts) == 3:
-                try:
-                    num = int(parts[2])
-                    if num > max_seq:
-                        max_seq = num
-                except ValueError:
-                    pass
-                    
-        seq_num = max_seq + 1
-        final_exp_id = f"RJ-{month_prefix}-{str(seq_num).zfill(6)}"
-
-    # Create or update Expense master record
     major_mode = itineraries[0].get("mode") if itineraries else "Other"
     first_purpose = itineraries[0].get("visit_purpose") or "Field visit"
 
+    # RJ-MM/YY-XXXXXX sequence generation or reuse edited one
     if existing_expense:
+        final_exp_id = existing_expense.expense_code
         expense = existing_expense
         expense.month = month_name
         expense.year = year_val
@@ -711,43 +692,81 @@ async def submit_expense(
 
         if client_timestamp:
             expense.updated_at = parse_client_timestamp(client_timestamp)
+        db.flush()
     else:
-        expense = Expense(
-            user_id=current_user.id,
-            expense_code=final_exp_id,
-            month=month_name,
-            year=year_val,
-            amount=total_amount,
-            status="approved" if len(approvers) == 0 else "submitted",
-            travel_mode=major_mode,
-            itinerary=exp_date,  # date string YYYY-MM-DD
-            description=first_purpose,
-            attachments="[]",
-            da_amount=total_da,
-            hotel_amount=total_hotel,
-            other_expense_amount=total_other,
-            local_purchase_amount=total_local_purchase,
-            calls_assigned=total_assigned,
-            calls_completed=total_completed,
-            pms_count=total_pms,
-            asset_tagging=total_asset,
-            calibration_count=total_calibration,
-            mobilise_count=total_mobilise,
-            
-            # Populate original values on submission
-            original_amount=total_amount,
-            original_da_amount=total_da,
-            original_hotel_amount=total_hotel,
-            original_other_expense_amount=total_other,
-            original_local_purchase_amount=total_local_purchase
-        )
-        if client_timestamp:
-            client_dt = parse_client_timestamp(client_timestamp)
-            expense.created_at = client_dt
-            expense.updated_at = client_dt
-        db.add(expense)
+        # Retry loop to solve concurrency conflicts on new sequence generation
+        max_attempts = 15
+        attempt = 0
+        inserted_master = False
+        final_exp_id = None
         
-    db.flush()
+        while not inserted_master and attempt < max_attempts:
+            month_prefix = dt.strftime("%m/%y")
+            matching_rows = db.query(Expense.expense_code).filter(Expense.expense_code.like(f"RJ-{month_prefix}-%")).all()
+            max_seq = 0
+            for r in matching_rows:
+                parts = r[0].split("-")
+                if len(parts) == 3:
+                    try:
+                        num = int(parts[2])
+                        if num > max_seq:
+                            max_seq = num
+                    except ValueError:
+                        pass
+            
+            seq_num = max_seq + 1
+            final_exp_id = f"RJ-{month_prefix}-{str(seq_num).zfill(6)}"
+            
+            # Start nested transaction (Savepoint)
+            db.begin_nested()
+            try:
+                expense = Expense(
+                    user_id=current_user.id,
+                    expense_code=final_exp_id,
+                    month=month_name,
+                    year=year_val,
+                    amount=total_amount,
+                    status="approved" if len(approvers) == 0 else "submitted",
+                    travel_mode=major_mode,
+                    itinerary=exp_date,  # date string YYYY-MM-DD
+                    description=first_purpose,
+                    attachments="[]",
+                    da_amount=total_da,
+                    hotel_amount=total_hotel,
+                    other_expense_amount=total_other,
+                    local_purchase_amount=total_local_purchase,
+                    calls_assigned=total_assigned,
+                    calls_completed=total_completed,
+                    pms_count=total_pms,
+                    asset_tagging=total_asset,
+                    calibration_count=total_calibration,
+                    mobilise_count=total_mobilise,
+                    
+                    # Populate original values on submission
+                    original_amount=total_amount,
+                    original_da_amount=total_da,
+                    original_hotel_amount=total_hotel,
+                    original_other_expense_amount=total_other,
+                    original_local_purchase_amount=total_local_purchase
+                )
+                if client_timestamp:
+                    client_dt = parse_client_timestamp(client_timestamp)
+                    expense.created_at = client_dt
+                    expense.updated_at = client_dt
+                
+                db.add(expense)
+                db.flush()  # Forces unique constraint verification in database
+                inserted_master = True
+            except Exception as e:
+                db.rollback()  # Rollback only the savepoint sub-transaction
+                attempt += 1
+                logger.warning(f"Concurrency warning: expense_code {final_exp_id} already exists. Retrying with next sequence (attempt {attempt}/{max_attempts})")
+                if attempt >= max_attempts:
+                    logger.error(f"Failed to generate unique expense code after {max_attempts} attempts: {str(e)}")
+                    raise HTTPException(
+                        status_code=500,
+                        detail="Concurrency conflict: Could not generate unique expense code. Please submit again."
+                    )
 
     # Process and save itinerary legs and uploaded files
     attachments_list = []
