@@ -820,7 +820,8 @@ export default function AdminPage() {
                 No users found.
               </div>
             ) : (
-              <table className="table-lte">
+              <div>
+                <table className="table-lte">
                 <thead>
                   <tr className="bg-gray-100 border-b border-gray-200 text-gray-700 font-bold uppercase tracking-wider text-[10px]">
                     <th className="py-3 px-4">Emp Code</th>
