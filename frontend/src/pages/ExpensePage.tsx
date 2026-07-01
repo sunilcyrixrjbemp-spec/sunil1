@@ -445,12 +445,7 @@ export default function ExpensePage() {
   };
 
   // UI status flags
-  const [initLoading, setInitLoading] = useState(() => {
-    const currentUserId = (() => { try { const u = JSON.parse(localStorage.getItem("user") || "{}"); return u.user_id || "Admin"; } catch(e) { return "Admin"; } })().trim();
-    const monthStr = new Date().toISOString().slice(0, 7);
-    const cacheKey = `cache_month_limits_${currentUserId}_${monthStr}`;
-    return !localStorage.getItem(cacheKey);
-  });
+  const [initLoading, setInitLoading] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [claims, setClaims] = useState<any[]>(() => {
     const currentUserId = (() => { try { const u = JSON.parse(localStorage.getItem("user") || "{}"); return u.user_id || "Admin"; } catch(e) { return "Admin"; } })().trim();
@@ -669,7 +664,9 @@ export default function ExpensePage() {
   useEffect(() => {
     if (date) {
       const monthStr = date.slice(0, 7);
-      if (monthStr !== loadedMonth) {
+      const cacheKey = `cache_month_limits_${currentUserId}_${monthStr}`;
+      const hasCache = localStorage.getItem(cacheKey) !== null;
+      if (monthStr !== loadedMonth || !hasCache) {
         fetchMonthLimits(monthStr, itineraries.length === 1 && !itineraries[0].from);
       }
     }

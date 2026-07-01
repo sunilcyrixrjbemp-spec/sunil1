@@ -176,15 +176,36 @@ async def init_expense(
     # 3. Facilities mapping by district
     facilities = cache.get("facilities_mapped")
     if not facilities:
-        facilities = {}
-        facilities_list = db.query(FacilityDetail).all()
-        for f in facilities_list:
-            d_name = f.district_name
-            f_name = f.facility_name
-            if d_name not in facilities:
-                facilities[d_name] = []
-            facilities[d_name].append(f_name)
-        cache.set("facilities_mapped", facilities)
+        import json
+        import os
+        local_cache_path = os.path.join(os.path.dirname(__file__), "..", "..", "facilities_mapped.json")
+        if os.path.exists(local_cache_path):
+            try:
+                with open(local_cache_path, "r", encoding="utf-8") as f:
+                    facilities = json.load(f)
+                cache.set("facilities_mapped", facilities)
+                logger.info("Loaded facilities mapping from local file cache.")
+            except Exception as cache_err:
+                logger.warning(f"Failed to read local facilities file cache: {str(cache_err)}")
+                
+        if not facilities:
+            facilities = {}
+            facilities_list = db.query(FacilityDetail).all()
+            for f in facilities_list:
+                d_name = f.district_name
+                f_name = f.facility_name
+                if d_name not in facilities:
+                    facilities[d_name] = []
+                facilities[d_name].append(f_name)
+            cache.set("facilities_mapped", facilities)
+            
+            # Write to local file cache so subsequent cold starts are instant!
+            try:
+                with open(local_cache_path, "w", encoding="utf-8") as f:
+                    json.dump(facilities, f, ensure_ascii=False)
+                logger.info("Saved facilities mapping to local file cache.")
+            except Exception as cache_err:
+                logger.warning(f"Failed to write local facilities file cache: {str(cache_err)}")
 
     # 4. Dates this user has already submitted expenses for this month
     submitted_expenses = db.query(Expense.itinerary).filter(
