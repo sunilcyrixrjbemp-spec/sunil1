@@ -4,6 +4,7 @@ import { adminService, UserCreatePayload, UserEditPayload, ApprovalHierarchyResp
 import { authService } from "../services/authService";
 import { Search, UploadCloud, Pencil, Trash2, Plus, LogOut, Download } from "lucide-react";
 import Loader from "../components/common/Loader";
+import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from "recharts";
 
 const LteSpinner = () => (
   <span className="spinner-lte mr-1.5"></span>
@@ -490,10 +491,24 @@ export default function AdminPage() {
         "mail_id", "type", "date_of_joining", "date_of_birth", "e_upkaran_id"
       ];
 
+      const userExists = safeUsers.some(u => 
+        (u.e_code && u.e_code.trim().toLowerCase() === record.e_code?.trim().toLowerCase()) || 
+        (u.user_id && u.user_id.trim().toLowerCase() === record.e_code?.trim().toLowerCase())
+      );
+
       let isRowValid = true;
-      for (const key of compulsoryKeys) {
-        if (!record[key] || record[key].trim() === "") {
-          missingFieldsErrors.push(`Row ${i + 1}: Missing mandatory column '${key}'`);
+      if (!userExists) {
+        // Enforce compulsory keys for new users
+        for (const key of compulsoryKeys) {
+          if (!record[key] || record[key].trim() === "") {
+            missingFieldsErrors.push(`Row ${i + 1}: Missing mandatory column '${key}' for new user creation`);
+            isRowValid = false;
+          }
+        }
+      } else {
+        // For existing users, only e_code is mandatory
+        if (!record.e_code || record.e_code.trim() === "") {
+          missingFieldsErrors.push(`Row ${i + 1}: Missing Employee Code`);
           isRowValid = false;
         }
       }
@@ -805,6 +820,30 @@ export default function AdminPage() {
   const endIndex = startIndex + ITEMS_PER_PAGE;
   const paginatedUsers = filteredUsers.slice(startIndex, endIndex);
 
+  // 1. Calculate District-wise distribution
+  const getDistrictData = () => {
+    const counts: Record<string, number> = {};
+    safeUsers.forEach(u => {
+      const dist = u.district?.trim() || "N/A";
+      counts[dist] = (counts[dist] || 0) + 1;
+    });
+    return Object.entries(counts)
+      .map(([name, value]) => ({ name, value }))
+      .sort((a, b) => b.value - a.value);
+  };
+
+  // 2. Calculate Designation-wise distribution
+  const getDesignationData = () => {
+    const counts: Record<string, number> = {};
+    safeUsers.forEach(u => {
+      const desg = u.designation?.trim() || "N/A";
+      counts[desg] = (counts[desg] || 0) + 1;
+    });
+    return Object.entries(counts)
+      .map(([name, value]) => ({ name, value }))
+      .sort((a, b) => b.value - a.value);
+  };
+
   const mList = getEligibleManagers();
   const zmList = getEligibleZonalManagers();
   const cList = getEligibleCoordinators();
@@ -821,24 +860,24 @@ export default function AdminPage() {
           <p className="text-gray-500 text-xs mt-1">Configure screen permissions, assign hierarchy approval level mappings, and manage users.</p>
         </div>
 
-        {/* Tab Selection */}
-        <div className="flex bg-gray-200 border border-gray-300 rounded p-1 shrink-0">
+        {/* Tab Selection - Premium Segmented Control */}
+        <div className="flex bg-gray-100 border border-gray-200 rounded-lg p-1 shrink-0 shadow-sm">
           <button
             onClick={() => handleTabChange("users")}
-            className={`px-4 py-1.5 text-xs font-bold uppercase tracking-wider rounded transition-all cursor-pointer ${
+            className={`px-4 py-1.5 text-xs font-extrabold uppercase tracking-wider rounded-md transition-all cursor-pointer border-0 ${
               activeTab === "users"
-                ? "bg-[#007bff] text-white shadow-sm"
-                : "text-gray-700 hover:text-gray-900"
+                ? "bg-white text-blue-600 shadow-sm"
+                : "bg-transparent text-gray-500 hover:text-gray-800"
             }`}
           >
             Users List
           </button>
           <button
             onClick={() => handleTabChange("approvals")}
-            className={`px-4 py-1.5 text-xs font-bold uppercase tracking-wider rounded transition-all cursor-pointer ${
+            className={`px-4 py-1.5 text-xs font-extrabold uppercase tracking-wider rounded-md transition-all cursor-pointer border-0 ${
               activeTab === "approvals"
-                ? "bg-[#007bff] text-white shadow-sm"
-                : "text-gray-700 hover:text-gray-900"
+                ? "bg-white text-blue-600 shadow-sm"
+                : "bg-transparent text-gray-500 hover:text-gray-800"
             }`}
           >
             Role Mappings
@@ -854,68 +893,53 @@ export default function AdminPage() {
 
       {activeTab === "users" ? (
         /* ================= USERS LIST TAB ================= */
-        <div className="card-lte-primary">
-          {/* Filters & Actions Bar */}
-          <div className="p-4 border-b border-gray-200 bg-gray-50 flex flex-col md:flex-row md:items-center justify-between gap-4">
-            
-            {/* Search Input */}
-            <div className="relative flex-1 max-w-md">
-              <span className="absolute inset-y-0 left-0 pl-3 flex items-center text-gray-400 pointer-events-none">
-                <Search className="w-4 h-4" />
-              </span>
-              <input
-                type="text"
-                placeholder="Search by Employee Code, Name, Role..."
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                className="input-lte-icon"
-              />
-            </div>
-
-            {/* User Controls */}
-            <div className="flex flex-wrap gap-2 shrink-0">
-              <button
-                onClick={() => {
-                  setSingleUserError(null);
-                  setShowSingleUserModal(true);
-                }}
-                className="btn-lte-primary uppercase tracking-wider font-bold"
-              >
-                + Single User
-              </button>
-              <button
-                onClick={() => {
-                  setCsvText("");
-                  setBulkResult(null);
-                  setShowBulkUploadModal(true);
-                }}
-                className="btn-lte-outline uppercase tracking-wider font-bold"
-              >
-                <UploadCloud className="w-3.5 h-3.5 mr-1 text-blue-600" />
-                CSV Import
-              </button>
-              <button
-                onClick={handleForceLogoutAll}
-                className="px-3 py-1.5 bg-red-600 hover:bg-red-700 text-white rounded text-xs font-bold uppercase tracking-wider transition-colors flex items-center gap-1 border-0 cursor-pointer"
-                title="Log out all active users from their current devices"
-              >
-                <LogOut className="w-3.5 h-3.5" />
-                Force Logout All
-              </button>
-            </div>
-          </div>
-
-          {/* Table Container */}
-          <div className="overflow-x-auto">
-            {loading ? (
-              <Loader message="Loading configurations..." />
-            ) : filteredUsers.length === 0 ? (
-              <div className="py-12 text-center text-xs uppercase tracking-wider text-gray-500 font-semibold">
-                No users found.
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 items-start">
+          {/* Left: Table and Actions */}
+          <div className="lg:col-span-2 card-lte-primary">
+            {/* Filters & Actions Bar */}
+            <div className="p-4 border-b border-gray-200 bg-gray-50 flex flex-col md:flex-row md:items-center justify-between gap-4">
+              
+              {/* Search Input */}
+              <div className="relative flex-1 max-w-md">
+                <span className="absolute inset-y-0 left-0 pl-3 flex items-center text-gray-400 pointer-events-none">
+                  <Search className="w-4 h-4" />
+                </span>
+                <input
+                  type="text"
+                  placeholder="Search by Employee Code, Name, Role..."
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  className="input-lte-icon"
+                />
               </div>
-            ) : (
-              <div>
-                <table className="table-lte">
+
+              {/* User Controls */}
+              <div className="flex flex-wrap gap-2 shrink-0">
+                <button
+                  onClick={() => {
+                    setSingleUserError(null);
+                    setShowSingleUserModal(true);
+                  }}
+                  className="btn-lte-primary uppercase tracking-wider font-bold"
+                >
+                  + Single User
+                </button>
+                <button
+                  onClick={() => {
+                    setCsvText("");
+                    setBulkResult(null);
+                    setShowBulkUploadModal(true);
+                  }}
+                  className="btn-lte-outline uppercase tracking-wider font-bold"
+                >
+                  Bulk CSV Import
+                </button>
+              </div>
+            </div>
+
+            {/* Table Container */}
+            <div className="overflow-x-auto">
+              <table className="w-full text-left border-collapse text-xs">
                 <thead>
                   <tr className="bg-gray-100 border-b border-gray-200 text-gray-700 font-bold uppercase tracking-wider text-[10px]">
                     <th className="py-3 px-4">Emp Code</th>
@@ -989,14 +1013,14 @@ export default function AdminPage() {
                     <button
                       onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
                       disabled={currentPage === 1}
-                      className="relative inline-flex items-center rounded-md border border-gray-300 bg-white px-4 py-2 text-xs font-medium text-gray-700 hover:bg-gray-50 disabled:opacity-50 border-0 cursor-pointer"
+                      className="relative inline-flex items-center rounded-md border border-gray-300 bg-white px-4 py-2 text-xs font-semibold text-gray-700 hover:bg-gray-50 disabled:opacity-50 cursor-pointer shadow-sm"
                     >
                       Previous
                     </button>
                     <button
                       onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))}
                       disabled={currentPage === totalPages}
-                      className="relative ml-3 inline-flex items-center rounded-md border border-gray-300 bg-white px-4 py-2 text-xs font-medium text-gray-700 hover:bg-gray-50 disabled:opacity-50 border-0 cursor-pointer"
+                      className="relative ml-3 inline-flex items-center rounded-md border border-gray-300 bg-white px-4 py-2 text-xs font-semibold text-gray-700 hover:bg-gray-50 disabled:opacity-50 cursor-pointer shadow-sm"
                     >
                       Next
                     </button>
@@ -1014,17 +1038,17 @@ export default function AdminPage() {
                         <button
                           onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
                           disabled={currentPage === 1}
-                          className="relative inline-flex items-center rounded-l-md border border-gray-300 bg-white px-2 py-2 text-xs font-medium text-gray-500 hover:bg-gray-50 disabled:opacity-50 cursor-pointer border-0"
+                          className="relative inline-flex items-center rounded-l-md border border-gray-300 bg-white px-3 py-2 text-xs font-semibold text-gray-600 hover:bg-gray-50 disabled:opacity-50 cursor-pointer transition-colors shadow-sm"
                         >
                           Previous
                         </button>
-                        <span className="relative inline-flex items-center border border-gray-300 bg-white px-4 py-2 text-xs font-semibold text-gray-700">
-                          Page {currentPage} of {totalPages}
+                        <span className="relative inline-flex items-center border-t border-b border-gray-300 bg-gray-50 px-4 py-2 text-xs font-bold text-gray-700 font-mono">
+                          {currentPage} / {totalPages}
                         </span>
                         <button
                           onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))}
                           disabled={currentPage === totalPages}
-                          className="relative inline-flex items-center rounded-r-md border border-gray-300 bg-white px-2 py-2 text-xs font-medium text-gray-500 hover:bg-gray-50 disabled:opacity-50 cursor-pointer border-0"
+                          className="relative inline-flex items-center rounded-r-md border border-gray-300 bg-white px-3 py-2 text-xs font-semibold text-gray-600 hover:bg-gray-50 disabled:opacity-50 cursor-pointer transition-colors shadow-sm"
                         >
                           Next
                         </button>
@@ -1034,7 +1058,49 @@ export default function AdminPage() {
                 </div>
               )}
             </div>
-          )}
+          </div>
+
+          {/* Right: Charts Column (AdminLTE Bootstrap Style) */}
+          <div className="space-y-6">
+            {/* District Chart Card */}
+            <div className="bg-white border border-gray-200 rounded shadow-sm">
+              <div className="border-b border-gray-200 px-4 py-3 bg-gray-50 flex items-center justify-between">
+                <h4 className="text-xs font-bold uppercase tracking-wider text-gray-700">
+                  District-wise Employees
+                </h4>
+              </div>
+              <div className="p-4" style={{ height: "240px" }}>
+                <ResponsiveContainer width="100%" height="100%">
+                  <BarChart data={getDistrictData().slice(0, 5)}>
+                    <CartesianGrid strokeDasharray="3 3" vertical={false} />
+                    <XAxis dataKey="name" tick={{ fontSize: 9 }} />
+                    <YAxis tick={{ fontSize: 9 }} allowDecimals={false} />
+                    <Tooltip contentStyle={{ fontSize: 10 }} />
+                    <Bar dataKey="value" fill="#3b82f6" radius={[4, 4, 0, 0]} />
+                  </BarChart>
+                </ResponsiveContainer>
+              </div>
+            </div>
+
+            {/* Designation Chart Card */}
+            <div className="bg-white border border-gray-200 rounded shadow-sm">
+              <div className="border-b border-gray-200 px-4 py-3 bg-gray-50 flex items-center justify-between">
+                <h4 className="text-xs font-bold uppercase tracking-wider text-gray-700">
+                  Designation-wise Employees
+                </h4>
+              </div>
+              <div className="p-4" style={{ height: "240px" }}>
+                <ResponsiveContainer width="100%" height="100%">
+                  <BarChart data={getDesignationData().slice(0, 5)}>
+                    <CartesianGrid strokeDasharray="3 3" vertical={false} />
+                    <XAxis dataKey="name" tick={{ fontSize: 9 }} />
+                    <YAxis tick={{ fontSize: 9 }} allowDecimals={false} />
+                    <Tooltip contentStyle={{ fontSize: 10 }} />
+                    <Bar dataKey="value" fill="#10b981" radius={[4, 4, 0, 0]} />
+                  </BarChart>
+                </ResponsiveContainer>
+              </div>
+            </div>
           </div>
         </div>
       ) : (
@@ -1114,12 +1180,12 @@ export default function AdminPage() {
                     {/* Requesters Box */}
                     <div className="space-y-1">
                       <span className="text-[9px] font-bold text-gray-500 uppercase tracking-wider block">Requesters ({hq.requesters.length})</span>
-                      <div className="flex flex-wrap gap-1 p-2 bg-gray-50 border border-gray-200 rounded max-h-24 overflow-y-auto">
+                      <div className="flex flex-nowrap gap-1.5 p-2 bg-gray-50 border border-gray-200 rounded overflow-x-auto whitespace-nowrap scrollbar-thin">
                         {hq.requesters.length === 0 ? (
                           <span className="text-[10px] text-gray-400 uppercase tracking-wider font-semibold">No employees mapped</span>
                         ) : (
                           hq.requesters.map((r) => (
-                            <span key={r.id} className="inline-flex items-center px-1.5 py-0.5 rounded bg-gray-200 text-gray-700 text-[10px] font-medium border border-gray-300 font-mono">
+                            <span key={r.id} className="inline-flex items-center px-2 py-0.5 rounded bg-gray-200 text-gray-700 text-[10px] font-medium border border-gray-300 font-mono shrink-0">
                               {r.user_name} ({r.user_code})
                             </span>
                           ))

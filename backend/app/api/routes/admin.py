@@ -70,29 +70,47 @@ async def create_user(
     # 2. Check if user already exists
     existing = db.query(User).filter(User.user_id == e_code_clean).first()
     if existing:
-        # Update details
-        existing.name = request.name.strip()
-        if request.password:
+        if request.name and request.name.strip():
+            existing.name = request.name.strip()
+        if request.password and request.password.strip():
             existing.hashed_password = get_password_hash(request.password)
-        existing.designation = request.designation
-        existing.grade = request.grade
-        existing.district = request.district
-        existing.zone = request.zone
-        existing.manager = manager_clean
-        existing.zonal_manager = zonal_manager_clean
-        existing.coordinator = coordinator_clean
-        existing.mobile_number = request.mobile_number
-        existing.mail_id = request.mail_id
-        existing.role = request.role
-        existing.type = request.type or "Employee"
-        existing.date_of_joining = request.date_of_joining
-        existing.date_of_birth = request.date_of_birth
-        existing.e_upkaran_id = request.e_upkaran_id.strip() if request.e_upkaran_id else None
-        existing.allowed_windows = request.allowed_windows or (
-            "home,expense,help,profile" if request.role.strip().lower() == "engineer"
-            else "home,approval,expense,help,profile" if request.role.strip().lower() == "manager"
-            else "home,approval,expense,analysis,report,help,profile"
-        )
+        if request.designation and request.designation.strip():
+            existing.designation = request.designation.strip()
+        if request.grade and request.grade.strip():
+            existing.grade = request.grade.strip()
+        if request.district and request.district.strip():
+            existing.district = request.district.strip()
+        if request.zone and request.zone.strip():
+            existing.zone = request.zone.strip()
+        if manager_clean and manager_clean.strip():
+            existing.manager = manager_clean
+        if zonal_manager_clean and zonal_manager_clean.strip():
+            existing.zonal_manager = zonal_manager_clean
+        if coordinator_clean and coordinator_clean.strip():
+            existing.coordinator = coordinator_clean
+        if request.mobile_number and request.mobile_number.strip():
+            existing.mobile_number = request.mobile_number.strip()
+        if request.mail_id and request.mail_id.strip():
+            existing.mail_id = request.mail_id.strip()
+        if request.role and request.role.strip():
+            existing.role = request.role.strip()
+        if request.type and request.type.strip():
+            existing.type = request.type.strip()
+        if request.date_of_joining:
+            existing.date_of_joining = request.date_of_joining
+        if request.date_of_birth:
+            existing.date_of_birth = request.date_of_birth
+        if request.e_upkaran_id and request.e_upkaran_id.strip():
+            existing.e_upkaran_id = request.e_upkaran_id.strip()
+            
+        if request.allowed_windows and request.allowed_windows.strip():
+            existing.allowed_windows = request.allowed_windows.strip()
+        elif request.role and request.role.strip():
+            existing.allowed_windows = (
+                "home,expense,help,profile" if request.role.strip().lower() == "engineer"
+                else "home,approval,expense,help,profile" if request.role.strip().lower() == "manager"
+                else "home,approval,expense,analysis,report,help,profile"
+            )
         
         if request.password:
             pwd_hist = PasswordHistory(
@@ -279,28 +297,47 @@ async def bulk_create_users(
         if existing:
             try:
                 # Update details
-                existing.name = item.name.strip()
-                if item.password:
+                if item.name and item.name.strip():
+                    existing.name = item.name.strip()
+                if item.password and item.password.strip():
                     existing.hashed_password = get_password_hash(item.password)
-                existing.designation = item.designation
-                existing.grade = item.grade
-                existing.district = item.district
-                existing.zone = item.zone
-                existing.manager = manager_clean
-                existing.zonal_manager = zonal_manager_clean
-                existing.coordinator = coordinator_clean
-                existing.mobile_number = item.mobile_number
-                existing.mail_id = item.mail_id
-                existing.role = item.role
-                existing.type = item.type or "Employee"
-                existing.date_of_joining = item.date_of_joining
-                existing.date_of_birth = item.date_of_birth
-                existing.e_upkaran_id = item.e_upkaran_id.strip() if item.e_upkaran_id else None
-                existing.allowed_windows = item.allowed_windows or (
-                    "home,expense,help,profile" if item.role.strip().lower() == "engineer"
-                    else "home,approval,expense,help,profile" if item.role.strip().lower() == "manager"
-                    else "home,approval,expense,analysis,report,help,profile"
-                )
+                if item.designation and item.designation.strip():
+                    existing.designation = item.designation.strip()
+                if item.grade and item.grade.strip():
+                    existing.grade = item.grade.strip()
+                if item.district and item.district.strip():
+                    existing.district = item.district.strip()
+                if item.zone and item.zone.strip():
+                    existing.zone = item.zone.strip()
+                if manager_clean and manager_clean.strip():
+                    existing.manager = manager_clean
+                if zonal_manager_clean and zonal_manager_clean.strip():
+                    existing.zonal_manager = zonal_manager_clean
+                if coordinator_clean and coordinator_clean.strip():
+                    existing.coordinator = coordinator_clean
+                if item.mobile_number and item.mobile_number.strip():
+                    existing.mobile_number = item.mobile_number.strip()
+                if item.mail_id and item.mail_id.strip():
+                    existing.mail_id = item.mail_id.strip()
+                if item.role and item.role.strip():
+                    existing.role = item.role.strip()
+                if item.type and item.type.strip():
+                    existing.type = item.type.strip()
+                if item.date_of_joining:
+                    existing.date_of_joining = item.date_of_joining
+                if item.date_of_birth:
+                    existing.date_of_birth = item.date_of_birth
+                if item.e_upkaran_id and item.e_upkaran_id.strip():
+                    existing.e_upkaran_id = item.e_upkaran_id.strip()
+                    
+                if item.allowed_windows and item.allowed_windows.strip():
+                    existing.allowed_windows = item.allowed_windows.strip()
+                elif item.role and item.role.strip():
+                    existing.allowed_windows = (
+                        "home,expense,help,profile" if item.role.strip().lower() == "engineer"
+                        else "home,approval,expense,help,profile" if item.role.strip().lower() == "manager"
+                        else "home,approval,expense,analysis,report,help,profile"
+                    )
                 
                 if item.password:
                     pwd_hist = PasswordHistory(
