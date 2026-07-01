@@ -865,7 +865,7 @@ export default function HomePage() {
                         outerRadius={isMobile ? 50 : 65}
                         paddingAngle={3} dataKey="value"
                       >
-                        {getPersonalChartData().map((c, i) => (
+                        {getPersonalChartData().map((_, i) => (
                           <Cell key={i} fill={`url(#homeGrad${i % 5})`} />
                         ))}
                       </Pie>
@@ -959,13 +959,6 @@ export default function HomePage() {
                   {(() => {
                     const chartData = getTeamChartData();
                     if (chartData.length === 0) return null;
-                    const colors = [
-                      { main: "#6366f1", dark: "#4f46e5" }, // Indigo
-                      { main: "#10b981", dark: "#059669" }, // Green
-                      { main: "#f59e0b", dark: "#d97706" }, // Amber
-                      { main: "#3b82f6", dark: "#2563eb" }, // Blue
-                      { main: "#ec4899", dark: "#db2777" }  // Pink
-                    ];
                     return (
                       <div style={{ height: 180 }}>
                         <ResponsiveContainer width="100%" height="100%">

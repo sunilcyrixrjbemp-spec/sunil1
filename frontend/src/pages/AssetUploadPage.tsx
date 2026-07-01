@@ -83,7 +83,6 @@ const defaultStats: AssetStats = {
   charts: { top_types: [], status_list: [], warranty_list: [] }
 };
 
-const CHART_COLORS = ["#3c8dbc", "#00a65a", "#f39c12", "#dd4b39", "#605ca8", "#00c0ef"];
 
 const fmt = (n: number) => n >= 10000000 ? `${(n / 10000000).toFixed(2)} Cr` :
   n >= 100000 ? `${(n / 100000).toFixed(2)} L` :

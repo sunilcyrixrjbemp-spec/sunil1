@@ -1206,7 +1206,7 @@ export default function AdminPage() {
                       label={({ name, percent }) => `${name} (${(percent * 100).toFixed(0)}%)`}
                       labelLine={false}
                     >
-                      {getZoneData().slice(0, 5).map((entry, index) => (
+                      {getZoneData().slice(0, 5).map((_, index) => (
                         <Cell key={`cell-${index}`} fill={`url(#pieGrad${index % 5})`} />
                       ))}
                     </Pie>
@@ -1307,7 +1307,7 @@ export default function AdminPage() {
                       label={({ name, percent }) => `${name} (${(percent * 100).toFixed(0)}%)`}
                       labelLine={false}
                     >
-                      {getDesignationData().slice(0, 5).map((entry, index) => (
+                      {getDesignationData().slice(0, 5).map((_, index) => (
                         <Cell key={`cell-${index}`} fill={`url(#desgGrad${index % 5})`} />
                       ))}
                     </Pie>

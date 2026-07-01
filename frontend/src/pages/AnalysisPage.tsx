@@ -9,8 +9,6 @@ import { expenseService } from "../services/expenseService";
 import { authService } from "../services/authService";
 import Loader from "../components/common/Loader";
 
-// AdminLTE / Bootstrap color palette
-const COLORS = ["#007bff", "#28a745", "#ffc107", "#dc3545", "#17a2b8", "#6f42c1", "#fd7e14", "#20c997"];
 
 const months = [
   "January", "February", "March", "April", "May", "June",
