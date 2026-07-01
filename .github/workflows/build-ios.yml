@@ -68,10 +68,7 @@ jobs:
         working-directory: frontend
         run: npx cap sync ios
 
-      # 9. Pod Install
-      - name: Pod Install
-        working-directory: frontend/ios/App
-        run: pod install
+
 
       # 10. Build Xcode Workspace (Unsigned Debug build)
       - name: Build Xcode Workspace

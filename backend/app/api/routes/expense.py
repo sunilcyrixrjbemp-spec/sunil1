@@ -255,22 +255,16 @@ async def init_expense(
     if not allowance_dict:
         allowance = db.query(AllowanceMaster).filter(AllowanceMaster.grade == user.grade).first()
         if allowance:
-            hotel_limit = max(
-                allowance.hotel_in_state_s or 0,
-                allowance.hotel_in_state_d or 0,
-                allowance.hotel_out_state_s or 0,
-                allowance.hotel_out_state_d or 0
-            )
             allowance_dict = {
-                "daily_in_district": allowance.daily_in_district,
-                "daily_out_district": allowance.daily_out_district,
-                "daily_hotel": allowance.daily_hotel,
-                "daily_out_state": allowance.daily_out_state,
-                "hotel_in_state_s": hotel_limit if hotel_limit > 0 else 1500,
-                "max_km_per_month": allowance.max_km_per_month,
+                "daily_in_district": allowance.daily_in_district or 250,
+                "daily_out_district": allowance.daily_out_district or 400,
+                "daily_hotel": allowance.daily_hotel or 350,
+                "daily_out_state": allowance.daily_out_state or 600,
+                "hotel_in_state_s": allowance.hotel_in_state_s if (allowance.hotel_in_state_s and allowance.hotel_in_state_s > 0) else 1500,
+                "max_km_per_month": allowance.max_km_per_month or 2000,
                 "rate_bike": allowance.rate_per_km if allowance.vehicle_type == "Bike" else 4.5,
                 "rate_car": allowance.rate_per_km if allowance.vehicle_type == "Car" else 9.0,
-                "vehicle_type": allowance.vehicle_type
+                "vehicle_type": allowance.vehicle_type or "Bike"
             }
         else:
             allowance_dict = {
@@ -611,7 +605,7 @@ async def submit_expense(
     daily_out = allowance.daily_out_district if allowance else 400
     daily_hotel = allowance.daily_hotel if allowance else 350
     daily_out_state = allowance.daily_out_state if allowance else 600
-    hotel_limit = allowance.hotel_in_state_s if allowance else 1500
+    hotel_limit = allowance.hotel_in_state_s if (allowance and allowance.hotel_in_state_s and allowance.hotel_in_state_s > 0) else 1500
 
     hDist = (current_user.district or "Jodhpur").strip()
     has_out_district = False
