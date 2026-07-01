@@ -621,24 +621,37 @@ export default function ExpensePage() {
   };
 
   const setupDateRules = (referenceDate?: string) => {
-    const today = referenceDate ? new Date(referenceDate) : new Date();
-    
-    // First day of that month
-    const firstDay = new Date(today.getFullYear(), today.getMonth(), 1);
-    // Last day of that month
-    const lastDay = new Date(today.getFullYear(), today.getMonth() + 1, 0);
-
+    const today = new Date();
     const pad = (n: number) => n.toString().padStart(2, "0");
     
-    const minStr = `${firstDay.getFullYear()}-${pad(firstDay.getMonth() + 1)}-01`;
-    const maxStr = `${lastDay.getFullYear()}-${pad(lastDay.getMonth() + 1)}-${pad(lastDay.getDate())}`;
-    
+    // Max date: today (prevent future date submissions)
+    const maxStr = `${today.getFullYear()}-${pad(today.getMonth() + 1)}-${pad(today.getDate())}`;
+
+    // Min date based on 15 days logic
+    const fifteenDaysAgo = new Date();
+    fifteenDaysAgo.setDate(today.getDate() - 15);
+    const fifteenDaysAgoStr = `${fifteenDaysAgo.getFullYear()}-${pad(fifteenDaysAgo.getMonth() + 1)}-${pad(fifteenDaysAgo.getDate())}`;
+
+    // Min date based on 2nd day of current month cut off
+    // If today is past the 2nd day of current month, previous month is cut off (must be >= 1st of current month).
+    let minStr = fifteenDaysAgoStr;
+    if (today.getDate() > 2) {
+      const currentMonthStartStr = `${today.getFullYear()}-${pad(today.getMonth() + 1)}-01`;
+      if (fifteenDaysAgoStr < currentMonthStartStr) {
+        minStr = currentMonthStartStr;
+      }
+    }
+
+    // If editing, allow the original date if it's older than our current min limit
+    if (referenceDate && referenceDate < minStr) {
+      minStr = referenceDate;
+    }
+
     setMinDate(minStr);
     setMaxDate(maxStr);
 
     if (!referenceDate) {
-      const todayStr = today.toISOString().split("T")[0];
-      setDate(todayStr);
+      setDate(maxStr);
     }
   };
 
@@ -1358,6 +1371,15 @@ export default function ExpensePage() {
       return false;
     }
 
+    if (minDate && date < minDate) {
+      toast.error(`Expense date cannot be earlier than ${minDate}.`);
+      return false;
+    }
+    if (maxDate && date > maxDate) {
+      toast.error(`Expense date cannot be later than ${maxDate}.`);
+      return false;
+    }
+
     for (let idx = 0; idx < listToValidate.length; idx++) {
       const leg = listToValidate[idx];
       const legNum = idx + 1;
@@ -1429,12 +1451,6 @@ export default function ExpensePage() {
         }
         if (leg.district_from === leg.district) {
           toast.error(`Leg ${legNum}: The starting and destination districts must be different for outdoor travel.`);
-          return false;
-        }
-        const commMail = files[legNum]?.comm_mail;
-        const hasCommAttachment = commMail || hasExistingFile(legNum, "Communication_Mail");
-        if (!hasCommAttachment) {
-          toast.error(`Leg ${legNum}: Outdoor travel requires manager approval screenshot.`);
           return false;
         }
       }
@@ -2282,14 +2298,13 @@ export default function ExpensePage() {
                         {leg.travel_type === "Outdoor" && (
                           <div className="p-3 bg-indigo-50/50 border border-dashed border-indigo-200 rounded-md">
                             <label className="label-lte block mb-1.5">
-                              Upload Manager Approval Screenshot <span className="text-red-500">*</span>
+                              Upload Manager Approval Screenshot (Optional)
                             </label>
                             {!files[leg.leg]?.comm_mail && !hasExistingFile(leg.leg, "Communication_Mail") ? (
                               <div className="flex items-center gap-2">
                                 <input
                                   type="file"
                                   accept="image/*,application/pdf,.pdf"
-                                  required={!hasExistingFile(leg.leg, "Communication_Mail")}
                                   onChange={(e) => handleLegFileChange(leg.leg, "comm_mail", e.target.files ? e.target.files[0] : null)}
                                   className="text-xs file:mr-4 file:py-1.5 file:px-3 file:rounded file:border file:border-indigo-300 file:text-[10px] file:font-bold file:uppercase file:bg-white file:text-indigo-700 hover:file:bg-indigo-50 cursor-pointer w-full"
                                 />
