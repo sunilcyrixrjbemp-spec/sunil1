@@ -41,11 +41,11 @@ const ALL_WINDOWS = [
 ];
 
 export default function AdminPage() {
-  const [activeTab, setActiveTab] = useState<"users" | "approvals">((() => {
-    return (localStorage.getItem("admin_active_tab") as "users" | "approvals") || "users";
+  const [activeTab, setActiveTab] = useState<"users" | "approvals" | "analytics">((() => {
+    return (localStorage.getItem("admin_active_tab") as "users" | "approvals" | "analytics") || "users";
   }));
 
-  const handleTabChange = (tab: "users" | "approvals") => {
+  const handleTabChange = (tab: "users" | "approvals" | "analytics") => {
     setActiveTab(tab);
     localStorage.setItem("admin_active_tab", tab);
   };
@@ -844,6 +844,30 @@ export default function AdminPage() {
       .sort((a, b) => b.value - a.value);
   };
 
+  // 3. Calculate Zone-wise distribution
+  const getZoneData = () => {
+    const counts: Record<string, number> = {};
+    safeUsers.forEach(u => {
+      const zone = u.zone?.trim() || "N/A";
+      counts[zone] = (counts[zone] || 0) + 1;
+    });
+    return Object.entries(counts)
+      .map(([name, value]) => ({ name, value }))
+      .sort((a, b) => b.value - a.value);
+  };
+
+  // 4. Calculate Manager-wise distribution
+  const getManagerData = () => {
+    const counts: Record<string, number> = {};
+    safeUsers.forEach(u => {
+      const mng = u.manager?.trim() || "N/A";
+      counts[mng] = (counts[mng] || 0) + 1;
+    });
+    return Object.entries(counts)
+      .map(([name, value]) => ({ name, value }))
+      .sort((a, b) => b.value - a.value);
+  };
+
   const mList = getEligibleManagers();
   const zmList = getEligibleZonalManagers();
   const cList = getEligibleCoordinators();
@@ -882,6 +906,16 @@ export default function AdminPage() {
           >
             Role Mappings
           </button>
+          <button
+            onClick={() => handleTabChange("analytics")}
+            className={`px-4 py-1.5 text-xs font-extrabold uppercase tracking-wider rounded-md transition-all cursor-pointer border-0 ${
+              activeTab === "analytics"
+                ? "bg-white text-blue-600 shadow-sm"
+                : "bg-transparent text-gray-500 hover:text-gray-800"
+            }`}
+          >
+            Dashboard Charts
+          </button>
         </div>
       </div>
 
@@ -893,230 +927,275 @@ export default function AdminPage() {
 
       {activeTab === "users" ? (
         /* ================= USERS LIST TAB ================= */
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 items-start">
-          {/* Left: Table and Actions */}
-          <div className="lg:col-span-2 card-lte-primary">
-            {/* Filters & Actions Bar */}
-            <div className="p-4 border-b border-gray-200 bg-gray-50 flex flex-col md:flex-row md:items-center justify-between gap-4">
-              
-              {/* Search Input */}
-              <div className="relative flex-1 max-w-md">
-                <span className="absolute inset-y-0 left-0 pl-3 flex items-center text-gray-400 pointer-events-none">
-                  <Search className="w-4 h-4" />
-                </span>
-                <input
-                  type="text"
-                  placeholder="Search by Employee Code, Name, Role..."
-                  value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
-                  className="input-lte-icon"
-                />
-              </div>
-
-              {/* User Controls */}
-              <div className="flex flex-wrap gap-2 shrink-0">
-                <button
-                  onClick={() => {
-                    setSingleUserError(null);
-                    setShowSingleUserModal(true);
-                  }}
-                  className="btn-lte-primary uppercase tracking-wider font-bold"
-                >
-                  + Single User
-                </button>
-                <button
-                  onClick={() => {
-                    setCsvText("");
-                    setBulkResult(null);
-                    setShowBulkUploadModal(true);
-                  }}
-                  className="btn-lte-outline uppercase tracking-wider font-bold"
-                >
-                  Bulk CSV Import
-                </button>
-                <button
-                  onClick={handleForceLogoutAll}
-                  className="px-3 py-1.5 bg-red-600 hover:bg-red-700 text-white rounded text-xs font-bold uppercase tracking-wider transition-colors flex items-center gap-1.5 border-0 cursor-pointer"
-                  title="Log out all active users from their current devices"
-                >
-                  <LogOut className="w-3.5 h-3.5" />
-                  Force Logout All
-                </button>
-              </div>
+        <div className="card-lte-primary">
+          {/* Filters & Actions Bar */}
+          <div className="p-4 border-b border-gray-200 bg-gray-50 flex flex-col md:flex-row md:items-center justify-between gap-4">
+            
+            {/* Search Input */}
+            <div className="relative flex-1 max-w-md">
+              <span className="absolute inset-y-0 left-0 pl-3 flex items-center text-gray-400 pointer-events-none">
+                <Search className="w-4 h-4" />
+              </span>
+              <input
+                type="text"
+                placeholder="Search by Employee Code, Name, Role..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                className="input-lte-icon"
+              />
             </div>
 
-            {/* Table Container */}
-            <div className="overflow-x-auto">
-              {loading ? (
-                <div className="py-12 flex flex-col items-center justify-center">
-                  <Loader message="Loading employees..." />
-                </div>
-              ) : filteredUsers.length === 0 ? (
-                <div className="py-12 text-center text-xs uppercase tracking-wider text-gray-500 font-semibold">
-                  No users found.
-                </div>
-              ) : (
-                <>
-                  <table className="w-full text-left border-collapse text-xs">
-                    <thead>
-                      <tr className="bg-gray-100 border-b border-gray-200 text-gray-700 font-bold uppercase tracking-wider text-[10px]">
-                        <th className="py-3 px-4">Emp Code</th>
-                        <th className="py-3 px-4">Full Name</th>
-                        <th className="py-3 px-4">Designation</th>
-                        <th className="py-3 px-4">Role</th>
-                        <th className="py-3 px-4">Mobile / Email</th>
-                        <th className="py-3 px-4">District / Zone</th>
-                        <th className="py-3 px-4">Status</th>
-                        <th className="py-3 px-4 text-right">Actions</th>
-                      </tr>
-                    </thead>
-                    <tbody className="divide-y divide-gray-200">
-                      {paginatedUsers.map((u) => (
-                        <tr key={u.id} className="hover:bg-gray-50 transition-colors">
-                          <td className="py-3 px-4 font-mono font-bold text-blue-600">{u.e_code || "-"}</td>
-                          <td className="py-3 px-4 font-semibold text-gray-800">{u.name}</td>
-                          <td className="py-3 px-4 text-gray-600">{u.designation || "-"}</td>
-                          <td className="py-3 px-4">
-                            <span className="px-2 py-0.5 rounded text-[9px] font-bold uppercase bg-gray-100 border border-gray-200 text-gray-600">
-                              {u.role}
-                            </span>
-                          </td>
-                          <td className="py-3 px-4 space-y-0.5">
-                            <div className="font-semibold text-gray-800">{u.mobile_number || "-"}</div>
-                            <div className="text-gray-500 text-[10px]">{u.mail_id || "-"}</div>
-                          </td>
-                          <td className="py-3 px-4 space-y-0.5">
-                            <div className="font-semibold text-gray-800">{u.district || "-"}</div>
-                            <div className="text-gray-500 text-[10px] uppercase tracking-wider">{u.zone || "-"}</div>
-                          </td>
-                          <td className="py-3 px-4">
-                            <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded text-[9px] font-bold uppercase border ${
-                              u.user_status === "active"
-                                ? "bg-green-50 border-green-200 text-green-700"
-                                : u.user_status === "locked"
-                                ? "bg-amber-50 border-amber-200 text-amber-700"
-                                : "bg-red-50 border-red-200 text-red-700"
-                            }`}>
-                              <span className={`h-1.5 w-1.5 rounded-full ${
-                                u.user_status === "active" ? "bg-green-500" : u.user_status === "locked" ? "bg-amber-500" : "bg-red-500"
-                              }`}></span>
-                              {u.user_status}
-                            </span>
-                          </td>
-                          <td className="py-3 px-4 text-right flex items-center justify-end gap-1.5">
-                            <button
-                              onClick={() => handleOpenEditUserModal(u)}
-                              className="px-2 py-1 bg-white hover:bg-gray-100 border border-gray-300 rounded text-gray-700 transition-all cursor-pointer"
-                              title="Edit User Config"
-                            >
-                              <Pencil className="w-3.5 h-3.5" />
-                            </button>
-                            <button
-                              onClick={() => handleForceLogoutSingle(u.user_id, u.name)}
-                              className="px-2 py-1 bg-rose-50 hover:bg-rose-100 border border-rose-200 text-rose-600 rounded transition-all cursor-pointer"
-                              title="Force Logout Session"
-                            >
-                              <LogOut className="w-3.5 h-3.5" />
-                            </button>
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-
-                  {/* Pagination Controls */}
-                  {totalPages > 1 && (
-                    <div className="flex items-center justify-between border-t border-gray-200 bg-white px-4 py-3 sm:px-6 mt-4">
-                      <div className="flex flex-1 justify-between sm:hidden">
-                        <button
-                          onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
-                          disabled={currentPage === 1}
-                          className="relative inline-flex items-center rounded-md border border-gray-300 bg-white px-4 py-2 text-xs font-semibold text-gray-700 hover:bg-gray-50 disabled:opacity-50 cursor-pointer shadow-sm"
-                        >
-                          Previous
-                        </button>
-                        <button
-                          onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))}
-                          disabled={currentPage === totalPages}
-                          className="relative ml-3 inline-flex items-center rounded-md border border-gray-300 bg-white px-4 py-2 text-xs font-semibold text-gray-700 hover:bg-gray-50 disabled:opacity-50 cursor-pointer shadow-sm"
-                        >
-                          Next
-                        </button>
-                      </div>
-                      <div className="hidden sm:flex sm:flex-1 sm:items-center sm:justify-between">
-                        <div>
-                          <p className="text-xs text-gray-700">
-                            Showing <span className="font-semibold">{startIndex + 1}</span> to{" "}
-                            <span className="font-semibold">{Math.min(endIndex, filteredUsers.length)}</span> of{" "}
-                            <span className="font-semibold">{filteredUsers.length}</span> employees
-                          </p>
-                        </div>
-                        <div>
-                          <nav className="isolate inline-flex -space-x-px rounded-md shadow-sm" aria-label="Pagination">
-                            <button
-                              onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
-                              disabled={currentPage === 1}
-                              className="relative inline-flex items-center rounded-l-md border border-gray-300 bg-white px-3 py-2 text-xs font-semibold text-gray-600 hover:bg-gray-50 disabled:opacity-50 cursor-pointer transition-colors shadow-sm"
-                            >
-                              Previous
-                            </button>
-                            <span className="relative inline-flex items-center border-t border-b border-gray-300 bg-gray-50 px-4 py-2 text-xs font-bold text-gray-700 font-mono">
-                              {currentPage} / {totalPages}
-                            </span>
-                            <button
-                              onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))}
-                              disabled={currentPage === totalPages}
-                              className="relative inline-flex items-center rounded-r-md border border-gray-300 bg-white px-3 py-2 text-xs font-semibold text-gray-600 hover:bg-gray-50 disabled:opacity-50 cursor-pointer transition-colors shadow-sm"
-                            >
-                              Next
-                            </button>
-                          </nav>
-                        </div>
-                      </div>
-                    </div>
-                  )}
-                </>
-              )}
+            {/* User Controls */}
+            <div className="flex flex-wrap gap-2 shrink-0">
+              <button
+                onClick={() => {
+                  setSingleUserError(null);
+                  setShowSingleUserModal(true);
+                }}
+                className="btn-lte-primary uppercase tracking-wider font-bold"
+              >
+                + Single User
+              </button>
+              <button
+                onClick={() => {
+                  setCsvText("");
+                  setBulkResult(null);
+                  setShowBulkUploadModal(true);
+                }}
+                className="btn-lte-outline uppercase tracking-wider font-bold"
+              >
+                Bulk CSV Import
+              </button>
+              <button
+                onClick={handleForceLogoutAll}
+                className="px-3 py-1.5 bg-red-600 hover:bg-red-700 text-white rounded text-xs font-bold uppercase tracking-wider transition-colors flex items-center gap-1.5 border-0 cursor-pointer"
+                title="Log out all active users from their current devices"
+              >
+                <LogOut className="w-3.5 h-3.5" />
+                Force Logout All
+              </button>
             </div>
           </div>
 
-          {/* Right: Charts Column (AdminLTE Bootstrap Style) */}
-          <div className="space-y-6">
-            {/* District Chart Card */}
+          {/* Table Container */}
+          <div className="overflow-x-auto">
+            {loading ? (
+              <div className="py-12 flex flex-col items-center justify-center">
+                <Loader message="Loading employees..." />
+              </div>
+            ) : filteredUsers.length === 0 ? (
+              <div className="py-12 text-center text-xs uppercase tracking-wider text-gray-500 font-semibold">
+                No users found.
+              </div>
+            ) : (
+              <>
+                <table className="w-full text-left border-collapse text-xs">
+                  <thead>
+                    <tr className="bg-gray-100 border-b border-gray-200 text-gray-700 font-bold uppercase tracking-wider text-[10px]">
+                      <th className="py-3 px-4">Emp Code</th>
+                      <th className="py-3 px-4">Full Name</th>
+                      <th className="py-3 px-4">Designation</th>
+                      <th className="py-3 px-4">Role</th>
+                      <th className="py-3 px-4">Mobile / Email</th>
+                      <th className="py-3 px-4">District / Zone</th>
+                      <th className="py-3 px-4">Status</th>
+                      <th className="py-3 px-4 text-right">Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-gray-200">
+                    {paginatedUsers.map((u) => (
+                      <tr key={u.id} className="hover:bg-gray-50 transition-colors">
+                        <td className="py-3 px-4 font-mono font-bold text-blue-600">{u.e_code || "-"}</td>
+                        <td className="py-3 px-4 font-semibold text-gray-800">{u.name}</td>
+                        <td className="py-3 px-4 text-gray-600">{u.designation || "-"}</td>
+                        <td className="py-3 px-4">
+                          <span className="px-2 py-0.5 rounded text-[9px] font-bold uppercase bg-gray-100 border border-gray-200 text-gray-600">
+                            {u.role}
+                          </span>
+                        </td>
+                        <td className="py-3 px-4 space-y-0.5">
+                          <div className="font-semibold text-gray-800">{u.mobile_number || "-"}</div>
+                          <div className="text-gray-500 text-[10px]">{u.mail_id || "-"}</div>
+                        </td>
+                        <td className="py-3 px-4 space-y-0.5">
+                          <div className="font-semibold text-gray-800">{u.district || "-"}</div>
+                          <div className="text-gray-500 text-[10px] uppercase tracking-wider">{u.zone || "-"}</div>
+                        </td>
+                        <td className="py-3 px-4">
+                          <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded text-[9px] font-bold uppercase border ${
+                            u.user_status === "active"
+                              ? "bg-green-50 border-green-200 text-green-700"
+                              : u.user_status === "locked"
+                              ? "bg-amber-50 border-amber-200 text-amber-700"
+                              : "bg-red-50 border-red-200 text-red-700"
+                          }`}>
+                            <span className={`h-1.5 w-1.5 rounded-full ${
+                              u.user_status === "active" ? "bg-green-500" : u.user_status === "locked" ? "bg-amber-500" : "bg-red-500"
+                            }`}></span>
+                            {u.user_status}
+                          </span>
+                        </td>
+                        <td className="py-3 px-4 text-right flex items-center justify-end gap-1.5">
+                          <button
+                            onClick={() => handleOpenEditUserModal(u)}
+                            className="px-2 py-1 bg-white hover:bg-gray-100 border border-gray-300 rounded text-gray-700 transition-all cursor-pointer"
+                            title="Edit User Config"
+                          >
+                            <Pencil className="w-3.5 h-3.5" />
+                          </button>
+                          <button
+                            onClick={() => handleForceLogoutSingle(u.user_id, u.name)}
+                            className="px-2 py-1 bg-rose-50 hover:bg-rose-100 border border-rose-200 text-rose-600 rounded transition-all cursor-pointer"
+                            title="Force Logout Session"
+                          >
+                            <LogOut className="w-3.5 h-3.5" />
+                          </button>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+
+                {/* Pagination Controls */}
+                {totalPages > 1 && (
+                  <div className="flex items-center justify-between border-t border-gray-200 bg-white px-4 py-3 sm:px-6 mt-4">
+                    <div className="flex flex-1 justify-between sm:hidden">
+                      <button
+                        onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
+                        disabled={currentPage === 1}
+                        className="relative inline-flex items-center rounded-md border border-gray-300 bg-white px-4 py-2 text-xs font-semibold text-gray-700 hover:bg-gray-50 disabled:opacity-50 cursor-pointer shadow-sm"
+                      >
+                        Previous
+                      </button>
+                      <button
+                        onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))}
+                        disabled={currentPage === totalPages}
+                        className="relative ml-3 inline-flex items-center rounded-md border border-gray-300 bg-white px-4 py-2 text-xs font-semibold text-gray-700 hover:bg-gray-50 disabled:opacity-50 cursor-pointer shadow-sm"
+                      >
+                        Next
+                      </button>
+                    </div>
+                    <div className="hidden sm:flex sm:flex-1 sm:items-center sm:justify-between">
+                      <div>
+                        <p className="text-xs text-gray-700">
+                          Showing <span className="font-semibold">{startIndex + 1}</span> to{" "}
+                          <span className="font-semibold">{Math.min(endIndex, filteredUsers.length)}</span> of{" "}
+                          <span className="font-semibold">{filteredUsers.length}</span> employees
+                        </p>
+                      </div>
+                      <div>
+                        <nav className="isolate inline-flex -space-x-px rounded-md shadow-sm" aria-label="Pagination">
+                          <button
+                            onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
+                            disabled={currentPage === 1}
+                            className="relative inline-flex items-center rounded-l-md border border-gray-300 bg-white px-3 py-2 text-xs font-semibold text-gray-600 hover:bg-gray-50 disabled:opacity-50 cursor-pointer transition-colors shadow-sm"
+                          >
+                            Previous
+                          </button>
+                          <span className="relative inline-flex items-center border-t border-b border-gray-300 bg-gray-50 px-4 py-2 text-xs font-bold text-gray-700 font-mono">
+                            {currentPage} / {totalPages}
+                          </span>
+                          <button
+                            onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))}
+                            disabled={currentPage === totalPages}
+                            className="relative inline-flex items-center rounded-r-md border border-gray-300 bg-white px-3 py-2 text-xs font-semibold text-gray-600 hover:bg-gray-50 disabled:opacity-50 cursor-pointer transition-colors shadow-sm"
+                          >
+                            Next
+                          </button>
+                        </nav>
+                      </div>
+                    </div>
+                  </div>
+                )}
+              </>
+            )}
+          </div>
+        </div>
+      ) : activeTab === "analytics" ? (
+        /* ================= ANALYTICS DASHBOARD TAB ================= */
+        <div className="space-y-6 animate-fadeIn">
+          {/* Top Info Header */}
+          <div className="bg-white border border-gray-200 rounded p-4 shadow-sm">
+            <h3 className="text-sm font-bold text-gray-800 uppercase tracking-wide">System Distribution Charts</h3>
+            <p className="text-gray-500 text-xs mt-1">Real-time charts showing distribution of users by Zone, District, Manager, and Designation in AdminLTE Bootstrap style.</p>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            {/* Zone-wise Chart */}
             <div className="bg-white border border-gray-200 rounded shadow-sm">
-              <div className="border-b border-gray-200 px-4 py-3 bg-gray-50 flex items-center justify-between">
-                <h4 className="text-xs font-bold uppercase tracking-wider text-gray-700">
-                  District-wise Employees
+              <div className="border-b border-gray-200 px-4 py-3 bg-[#007bff] text-white flex items-center justify-between rounded-t">
+                <h4 className="text-xs font-bold uppercase tracking-wider">
+                  Zone-wise Distribution
                 </h4>
               </div>
-              <div className="p-4" style={{ height: "240px" }}>
+              <div className="p-4" style={{ height: "280px" }}>
                 <ResponsiveContainer width="100%" height="100%">
-                  <BarChart data={getDistrictData().slice(0, 5)}>
+                  <BarChart data={getZoneData().slice(0, 8)}>
                     <CartesianGrid strokeDasharray="3 3" vertical={false} />
                     <XAxis dataKey="name" tick={{ fontSize: 9 }} />
                     <YAxis tick={{ fontSize: 9 }} allowDecimals={false} />
                     <Tooltip contentStyle={{ fontSize: 10 }} />
-                    <Bar dataKey="value" fill="#3b82f6" radius={[4, 4, 0, 0]} />
+                    <Bar dataKey="value" fill="#007bff" radius={[4, 4, 0, 0]} />
                   </BarChart>
                 </ResponsiveContainer>
               </div>
             </div>
 
-            {/* Designation Chart Card */}
+            {/* District-wise Chart */}
             <div className="bg-white border border-gray-200 rounded shadow-sm">
-              <div className="border-b border-gray-200 px-4 py-3 bg-gray-50 flex items-center justify-between">
-                <h4 className="text-xs font-bold uppercase tracking-wider text-gray-700">
-                  Designation-wise Employees
+              <div className="border-b border-gray-200 px-4 py-3 bg-[#28a745] text-white flex items-center justify-between rounded-t">
+                <h4 className="text-xs font-bold uppercase tracking-wider">
+                  District-wise Distribution
                 </h4>
               </div>
-              <div className="p-4" style={{ height: "240px" }}>
+              <div className="p-4" style={{ height: "280px" }}>
                 <ResponsiveContainer width="100%" height="100%">
-                  <BarChart data={getDesignationData().slice(0, 5)}>
+                  <BarChart data={getDistrictData().slice(0, 8)}>
                     <CartesianGrid strokeDasharray="3 3" vertical={false} />
                     <XAxis dataKey="name" tick={{ fontSize: 9 }} />
                     <YAxis tick={{ fontSize: 9 }} allowDecimals={false} />
                     <Tooltip contentStyle={{ fontSize: 10 }} />
-                    <Bar dataKey="value" fill="#10b981" radius={[4, 4, 0, 0]} />
+                    <Bar dataKey="value" fill="#28a745" radius={[4, 4, 0, 0]} />
+                  </BarChart>
+                </ResponsiveContainer>
+              </div>
+            </div>
+
+            {/* Manager-wise Chart */}
+            <div className="bg-white border border-gray-200 rounded shadow-sm">
+              <div className="border-b border-gray-200 px-4 py-3 bg-[#6f42c1] text-white flex items-center justify-between rounded-t">
+                <h4 className="text-xs font-bold uppercase tracking-wider">
+                  Manager-wise Distribution
+                </h4>
+              </div>
+              <div className="p-4" style={{ height: "280px" }}>
+                <ResponsiveContainer width="100%" height="100%">
+                  <BarChart data={getManagerData().slice(0, 8)}>
+                    <CartesianGrid strokeDasharray="3 3" vertical={false} />
+                    <XAxis dataKey="name" tick={{ fontSize: 9 }} />
+                    <YAxis tick={{ fontSize: 9 }} allowDecimals={false} />
+                    <Tooltip contentStyle={{ fontSize: 10 }} />
+                    <Bar dataKey="value" fill="#6f42c1" radius={[4, 4, 0, 0]} />
+                  </BarChart>
+                </ResponsiveContainer>
+              </div>
+            </div>
+
+            {/* Designation-wise Chart */}
+            <div className="bg-white border border-gray-200 rounded shadow-sm">
+              <div className="border-b border-gray-200 px-4 py-3 bg-[#17a2b8] text-white flex items-center justify-between rounded-t">
+                <h4 className="text-xs font-bold uppercase tracking-wider">
+                  Designation-wise Distribution
+                </h4>
+              </div>
+              <div className="p-4" style={{ height: "280px" }}>
+                <ResponsiveContainer width="100%" height="100%">
+                  <BarChart data={getDesignationData().slice(0, 8)}>
+                    <CartesianGrid strokeDasharray="3 3" vertical={false} />
+                    <XAxis dataKey="name" tick={{ fontSize: 9 }} />
+                    <YAxis tick={{ fontSize: 9 }} allowDecimals={false} />
+                    <Tooltip contentStyle={{ fontSize: 10 }} />
+                    <Bar dataKey="value" fill="#17a2b8" radius={[4, 4, 0, 0]} />
                   </BarChart>
                 </ResponsiveContainer>
               </div>
@@ -1213,24 +1292,27 @@ export default function AdminPage() {
                       </div>
                     </div>
 
-                    {/* Approvers Pipeline Flowchart */}
-                    <div className="space-y-1.5 pt-2">
-                      <span className="text-[9px] font-bold text-gray-500 uppercase tracking-wider block">Approver Levels</span>
-                      <div className="relative border-l-2 border-gray-300 pl-4 ml-1.5 space-y-4">
-                        {hq.approvers.map((a, idx) => (
-                          <div key={a.id} className="relative flex items-center gap-3">
-                            {/* Dot indicator */}
-                            <span className="absolute -left-[23px] top-1.5 h-3.5 w-3.5 rounded-full border-2 border-gray-300 bg-white flex items-center justify-center text-[8px] font-bold text-blue-600">
-                              {idx + 1}
-                            </span>
-                            <div>
-                              <div className="text-[11px] font-bold text-gray-800 leading-tight">{a.approver_name}</div>
-                              <div className="text-[9px] text-gray-500 mt-0.5 uppercase tracking-wider font-mono">
-                                Level {a.level_number} | {a.approver_role} ({a.approver_code})
+                    {/* Approvers Pipeline (Horizontal Single Line) */}
+                    <div className="space-y-1 pt-1">
+                      <span className="text-[9px] font-bold text-gray-500 uppercase tracking-wider block">Approver Levels ({hq.approvers.length})</span>
+                      <div className="flex flex-nowrap items-center gap-2 p-2 bg-gray-50 border border-gray-200 rounded overflow-x-auto whitespace-nowrap scrollbar-thin">
+                        {hq.approvers.length === 0 ? (
+                          <span className="text-[10px] text-gray-400 uppercase tracking-wider font-semibold">No approvers mapped</span>
+                        ) : (
+                          hq.approvers.map((a, idx) => (
+                            <React.Fragment key={a.id}>
+                              {idx > 0 && <span className="text-gray-400 text-xs font-bold shrink-0">→</span>}
+                              <div className="flex items-center gap-1.5 bg-blue-50 border border-blue-200 rounded px-2 py-1 shrink-0">
+                                <span className="h-4 w-4 rounded-full bg-blue-600 text-white flex items-center justify-center text-[9px] font-bold">
+                                  {idx + 1}
+                                </span>
+                                <div className="text-[10px] font-semibold text-gray-800">
+                                  {a.approver_name} <span className="text-[9px] text-gray-500 font-mono">({a.approver_code})</span>
+                                </div>
                               </div>
-                            </div>
-                          </div>
-                        ))}
+                            </React.Fragment>
+                          ))
+                        )}
                       </div>
                     </div>
 
