@@ -549,11 +549,18 @@ export default function HelpPage() {
           <div style={{ height: 160 }}>
             <ResponsiveContainer width="100%" height="100%">
               <BarChart data={analytics.categoryChart.map(c => ({ name: c.label, count: c.amount, color: c.color }))} layout="vertical" margin={{ left: 5, right: 10, top: 5, bottom: 5 }}>
+                <defs>
+                  <linearGradient id="cylinderBlue" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="0%" stopColor="#1e3a8a" />
+                    <stop offset="50%" stopColor="#60a5fa" />
+                    <stop offset="100%" stopColor="#1d4ed8" />
+                  </linearGradient>
+                </defs>
                 <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
                 <XAxis type="number" tick={{ fontSize: isMobile ? 8 : 9 }} allowDecimals={false} />
                 <YAxis type="category" dataKey="name" tick={{ fontSize: isMobile ? 8 : 9 }} width={isMobile ? 55 : 90} />
                 <Tooltip formatter={(v: number) => [v, "Count"]} />
-                <Bar dataKey="count" fill="#3b82f6" radius={[0, 3, 3, 0]} />
+                <Bar dataKey="count" fill="url(#cylinderBlue)" radius={[0, 4, 4, 0]} maxBarSize={16} />
               </BarChart>
             </ResponsiveContainer>
           </div>
@@ -565,11 +572,18 @@ export default function HelpPage() {
           <div style={{ height: 160 }}>
             <ResponsiveContainer width="100%" height="100%">
               <BarChart data={analytics.priorityChart.map(c => ({ name: c.label, count: c.amount, color: c.color }))} layout="vertical" margin={{ left: 5, right: 10, top: 5, bottom: 5 }}>
+                <defs>
+                  <linearGradient id="cylinderIndigo" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="0%" stopColor="#311042" />
+                    <stop offset="50%" stopColor="#a78bfa" />
+                    <stop offset="100%" stopColor="#6d28d9" />
+                  </linearGradient>
+                </defs>
                 <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
                 <XAxis type="number" tick={{ fontSize: isMobile ? 8 : 9 }} allowDecimals={false} />
                 <YAxis type="category" dataKey="name" tick={{ fontSize: isMobile ? 8 : 9 }} width={isMobile ? 55 : 80} />
                 <Tooltip formatter={(v: number) => [v, "Count"]} />
-                <Bar dataKey="count" fill="#6366f1" radius={[0, 3, 3, 0]} />
+                <Bar dataKey="count" fill="url(#cylinderIndigo)" radius={[0, 4, 4, 0]} maxBarSize={16} />
               </BarChart>
             </ResponsiveContainer>
           </div>
@@ -581,11 +595,18 @@ export default function HelpPage() {
           <div style={{ height: 160 }}>
             <ResponsiveContainer width="100%" height="100%">
               <BarChart data={analytics.statusChart.map(c => ({ name: c.label, count: c.amount, color: c.color }))} layout="vertical" margin={{ left: 5, right: 10, top: 5, bottom: 5 }}>
+                <defs>
+                  <linearGradient id="cylinderAmber" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="0%" stopColor="#78350f" />
+                    <stop offset="50%" stopColor="#fbbf24" />
+                    <stop offset="100%" stopColor="#d97706" />
+                  </linearGradient>
+                </defs>
                 <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
                 <XAxis type="number" tick={{ fontSize: isMobile ? 8 : 9 }} allowDecimals={false} />
                 <YAxis type="category" dataKey="name" tick={{ fontSize: isMobile ? 8 : 9 }} width={isMobile ? 55 : 95} />
                 <Tooltip formatter={(v: number) => [v, "Count"]} />
-                <Bar dataKey="count" fill="#eab308" radius={[0, 3, 3, 0]} />
+                <Bar dataKey="count" fill="url(#cylinderAmber)" radius={[0, 4, 4, 0]} maxBarSize={16} />
               </BarChart>
             </ResponsiveContainer>
           </div>

@@ -841,6 +841,23 @@ export default function HomePage() {
                 <div style={{ height: 180 }}>
                   <ResponsiveContainer width="100%" height="100%">
                     <PieChart>
+                      <defs>
+                        <linearGradient id="homeGrad0" x1="0" y1="0" x2="1" y2="1">
+                          <stop offset="0%" stopColor="#93c5fd" /><stop offset="100%" stopColor="#1d4ed8" />
+                        </linearGradient>
+                        <linearGradient id="homeGrad1" x1="0" y1="0" x2="1" y2="1">
+                          <stop offset="0%" stopColor="#a7f3d0" /><stop offset="100%" stopColor="#047857" />
+                        </linearGradient>
+                        <linearGradient id="homeGrad2" x1="0" y1="0" x2="1" y2="1">
+                          <stop offset="0%" stopColor="#ddd6fe" /><stop offset="100%" stopColor="#6d28d9" />
+                        </linearGradient>
+                        <linearGradient id="homeGrad3" x1="0" y1="0" x2="1" y2="1">
+                          <stop offset="0%" stopColor="#fed7aa" /><stop offset="100%" stopColor="#c2410c" />
+                        </linearGradient>
+                        <linearGradient id="homeGrad4" x1="0" y1="0" x2="1" y2="1">
+                          <stop offset="0%" stopColor="#fbcfe8" /><stop offset="100%" stopColor="#be185d" />
+                        </linearGradient>
+                      </defs>
                       <Pie
                         data={getPersonalChartData().map(c => ({ name: c.label, value: c.amount }))}
                         cx="50%" cy="50%"
@@ -849,7 +866,7 @@ export default function HomePage() {
                         paddingAngle={3} dataKey="value"
                       >
                         {getPersonalChartData().map((c, i) => (
-                          <Cell key={i} fill={c.colorStart} />
+                          <Cell key={i} fill={`url(#homeGrad${i % 5})`} />
                         ))}
                       </Pie>
                       <Tooltip formatter={(v: number) => `₹${v.toLocaleString()}`} />
@@ -953,6 +970,23 @@ export default function HomePage() {
                       <div style={{ height: 180 }}>
                         <ResponsiveContainer width="100%" height="100%">
                           <PieChart>
+                            <defs>
+                              <linearGradient id="teamGrad0" x1="0" y1="0" x2="1" y2="1">
+                                <stop offset="0%" stopColor="#c7d2fe" /><stop offset="100%" stopColor="#4f46e5" />
+                              </linearGradient>
+                              <linearGradient id="teamGrad1" x1="0" y1="0" x2="1" y2="1">
+                                <stop offset="0%" stopColor="#a7f3d0" /><stop offset="100%" stopColor="#047857" />
+                              </linearGradient>
+                              <linearGradient id="teamGrad2" x1="0" y1="0" x2="1" y2="1">
+                                <stop offset="0%" stopColor="#fef08a" /><stop offset="100%" stopColor="#ca8a04" />
+                              </linearGradient>
+                              <linearGradient id="teamGrad3" x1="0" y1="0" x2="1" y2="1">
+                                <stop offset="0%" stopColor="#93c5fd" /><stop offset="100%" stopColor="#1d4ed8" />
+                              </linearGradient>
+                              <linearGradient id="teamGrad4" x1="0" y1="0" x2="1" y2="1">
+                                <stop offset="0%" stopColor="#fbcfe8" /><stop offset="100%" stopColor="#be185d" />
+                              </linearGradient>
+                            </defs>
                             <Pie
                               data={chartData.map(c => ({ name: c.name, value: c.amount }))}
                               cx="50%" cy="50%"
@@ -961,7 +995,7 @@ export default function HomePage() {
                               paddingAngle={3} dataKey="value"
                             >
                               {chartData.map((_, i) => (
-                                <Cell key={i} fill={colors[i % colors.length].main} />
+                                <Cell key={i} fill={`url(#teamGrad${i % 5})`} />
                               ))}
                             </Pie>
                             <Tooltip formatter={(v: number) => `₹${v.toLocaleString()}`} />
