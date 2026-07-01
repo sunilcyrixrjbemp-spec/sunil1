@@ -3600,7 +3600,6 @@ export default function ExpensePage() {
               const filteredLegs = getFilteredLegs();
               const itemsList = activeClaimsTab === "sheets" ? filteredClaims : filteredLegs;
               const totalItems = itemsList.length;
-              const totalPages = Math.ceil(totalItems / 10) || 1;
               const slicedItems = itemsList.slice((myClaimsPage - 1) * 10, myClaimsPage * 10);
 
               if (totalItems === 0) {
