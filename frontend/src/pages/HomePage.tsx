@@ -36,12 +36,6 @@ ChartJS.register(ArcElement, ChartTooltip, ChartLegend);
 const GALLERY_COLORS = ["#2f5bb7", "#2b7d50", "#d28b2a", "#854aa5", "#d83b01", "#00a2ad", "#e81123"];
 
 export default function HomePage() {
-  const [isMobile, setIsMobile] = useState(window.innerWidth < 768);
-  useEffect(() => {
-    const handleResize = () => setIsMobile(window.innerWidth < 768);
-    window.addEventListener("resize", handleResize);
-    return () => window.removeEventListener("resize", handleResize);
-  }, []);
 
   const navigate = useNavigate();
   const [user, setUser] = useState<any>(() => {

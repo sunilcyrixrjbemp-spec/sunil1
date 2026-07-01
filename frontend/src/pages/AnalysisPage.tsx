@@ -1,6 +1,6 @@
 import { useEffect, useState, useMemo } from "react";
 import { BarChart3, Filter, Users, User as UserIcon, X, IndianRupee, Phone, ShieldCheck, TrendingUp, Activity, FileSpreadsheet } from "lucide-react";
-import { Bar, Doughnut, Line, Pie } from 'react-chartjs-2';
+import { Bar, Doughnut, Line } from 'react-chartjs-2';
 import {
   Chart as ChartJS,
   CategoryScale,
@@ -28,12 +28,6 @@ const months = [
 ];
 
 export default function AnalysisPage() {
-  const [isMobile, setIsMobile] = useState(window.innerWidth < 768);
-  useEffect(() => {
-    const handleResize = () => setIsMobile(window.innerWidth < 768);
-    window.addEventListener("resize", handleResize);
-    return () => window.removeEventListener("resize", handleResize);
-  }, []);
 
   const [myExpenses, setMyExpenses] = useState<any[]>(() => {
     const currentUser = authService.getCurrentUser();
@@ -388,18 +382,6 @@ export default function AnalysisPage() {
     return Array.from(years).sort((a, b) => b - a);
   }, [myExpenses, teamExpenses]);
 
-  // Custom tooltip for charts
-  const CustomTooltip = ({ active, payload, label }: any) => {
-    if (active && payload && payload.length) {
-      return (
-        <div className="bg-white border border-gray-200 shadow-lg rounded p-2 text-xs">
-          <p className="font-bold text-gray-800">{label || payload[0].name}</p>
-          <p className="text-blue-600 font-mono font-bold">₹{payload[0].value?.toLocaleString()}</p>
-        </div>
-      );
-    }
-    return null;
-  };
 
   console.log("AnalysisPage activeExpenses:", activeExpenses);
 
