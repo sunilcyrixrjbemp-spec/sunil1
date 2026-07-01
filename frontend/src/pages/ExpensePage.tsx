@@ -1140,7 +1140,7 @@ export default function ExpensePage() {
 
         if (field === "hotel" && legNum === 1) {
           const hotelAmt = parseFloat(value) || 0;
-          const hotelLimit = allowance.hotel_in_state_s || 1500;
+          const hotelLimit = allowance.hotel_in_state_s || 1000;
           if (hotelAmt > hotelLimit) {
             toast.error(`Maximum hotel stay allowance is ₹${hotelLimit}`);
             updatedLeg.hotel = hotelLimit.toString();
