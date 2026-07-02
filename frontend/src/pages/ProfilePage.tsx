@@ -1,28 +1,6 @@
 import React, { useEffect, useState } from "react";
 import { authService } from "../services/authService";
 import api from "../services/api";
-import { 
-  Pencil, 
-  Check, 
-  X, 
-  Lock, 
-  User, 
-  Mail, 
-  Phone, 
-  Calendar, 
-  Database, 
-  Briefcase, 
-  Award, 
-  Monitor, 
-  Users, 
-  Navigation, 
-  MapPin, 
-  Eye, 
-  EyeOff,
-  Camera,
-  Loader2,
-  Trash2
-} from "lucide-react";
 
 const LteSpinner = () => (
   <span className="spinner-lte mr-1.5"></span>
@@ -547,17 +525,17 @@ export default function ProfilePage() {
         
         {/* Left Column - Main Avatar / Card */}
         <div className="lg:col-span-1">
-          <div className="card-lte-primary p-6 text-center lg:sticky lg:top-20">
+          <div className="card-lte-primary p-6 text-center lg:sticky lg:top-20 bg-white shadow-sm">
             {/* Circle avatar with interactive upload */}
             <div className="relative h-24 w-24 mx-auto group mb-4">
               <label htmlFor="profile-photo-input" className="cursor-pointer block relative h-full w-full rounded-full overflow-hidden border-2 border-blue-100 shadow-md select-none group-hover:border-blue-400 transition-all">
                 {photoLoading ? (
                   <div className="absolute inset-0 bg-black/40 flex items-center justify-center text-white z-10">
-                    <Loader2 className="w-6 h-6 animate-spin" />
+                    <i className="fas fa-sync-alt animate-spin text-lg"></i>
                   </div>
                 ) : (
                   <div className="absolute inset-0 bg-black/0 group-hover:bg-black/40 flex flex-col items-center justify-center text-white opacity-0 group-hover:opacity-100 transition-all z-10">
-                    <Camera className="w-5 h-5 mb-0.5" />
+                    <i className="fas fa-camera text-base mb-0.5"></i>
                     <span className="text-[8px] font-bold uppercase tracking-wider">Change</span>
                   </div>
                 )}
@@ -591,7 +569,7 @@ export default function ProfilePage() {
                 className="mt-1 text-[10px] text-red-500 hover:text-red-700 bg-transparent border-0 cursor-pointer font-bold uppercase tracking-wider flex items-center gap-1 mx-auto hover:underline"
                 disabled={photoLoading}
               >
-                <Trash2 className="w-3 h-3" />
+                <i className="fas fa-trash-alt text-xs"></i>
                 <span>Remove Photo</span>
               </button>
             )}
@@ -624,7 +602,7 @@ export default function ProfilePage() {
  
         {/* Right Column - Work Area Card with Tabs */}
         <div className="lg:col-span-2">
-          <div className="card-lte border-t-3 border-t-[#17a2b8] flex flex-col min-h-[500px]">
+          <div className="card-lte border-t-3 border-t-[#17a2b8] flex flex-col min-h-[500px] bg-white shadow-sm">
             
             {/* Header Tabs */}
             <div className="border-b border-gray-200 bg-gray-50 flex flex-row items-stretch">
@@ -633,13 +611,13 @@ export default function ProfilePage() {
                   setNotice(null);
                   handleTabChange("info");
                 }}
-                className={`flex-1 py-2.5 px-3 sm:py-3 sm:px-6 text-center text-[10px] sm:text-xs font-bold uppercase tracking-wider transition-all flex items-center justify-center gap-1.5 cursor-pointer ${
+                className={`flex-1 py-2.5 px-3 sm:py-3 sm:px-6 text-center text-[10px] sm:text-xs font-bold uppercase tracking-wider transition-all flex items-center justify-center gap-1.5 cursor-pointer border-0 bg-transparent ${
                   activeTab === "info"
                     ? "bg-white text-blue-600 border-b-2 border-b-blue-600"
                     : "text-gray-500 hover:text-gray-900 hover:bg-gray-100"
                 }`}
               >
-                <User className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
+                <i className="fas fa-user"></i>
                 <span>Info</span>
               </button>
               <button
@@ -647,13 +625,13 @@ export default function ProfilePage() {
                   setPassNotice(null);
                   handleTabChange("password");
                 }}
-                className={`flex-1 py-2.5 px-3 sm:py-3 sm:px-6 text-center text-[10px] sm:text-xs font-bold uppercase tracking-wider transition-all flex items-center justify-center gap-1.5 border-l border-gray-200 cursor-pointer ${
+                className={`flex-1 py-2.5 px-3 sm:py-3 sm:px-6 text-center text-[10px] sm:text-xs font-bold uppercase tracking-wider transition-all flex items-center justify-center gap-1.5 border-l border-gray-200 cursor-pointer border-0 bg-transparent ${
                   activeTab === "password"
                     ? "bg-white text-blue-600 border-b-2 border-b-blue-600"
                     : "text-gray-500 hover:text-gray-900 hover:bg-gray-100"
                 }`}
               >
-                <Lock className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-blue-600" />
+                <i className="fas fa-lock text-blue-600"></i>
                 <span>Security</span>
               </button>
             </div>
@@ -667,7 +645,7 @@ export default function ProfilePage() {
                   {/* Category 1: Contact details */}
                   <div>
                     <h4 className="text-[10px] font-extrabold uppercase tracking-widest text-blue-600 border-b border-gray-200 pb-2 mb-3.5 flex items-center gap-2">
-<User className="w-3.5 h-3.5 text-blue-600" />
+                      <i className="fas fa-user text-blue-600"></i>
                       Contact & Personal Info
                     </h4>
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-3.5">
@@ -675,8 +653,8 @@ export default function ProfilePage() {
                       {/* Email Address (Editable Inline) */}
                       <div className="p-3 bg-gray-50 border border-gray-200 rounded flex flex-col justify-between text-xs gap-2 min-h-[62px] hover:bg-gray-100 transition-colors">
                         <div className="flex items-center justify-between">
-                          <div className="flex items-center gap-2.5">
-<Mail className="w-4 h-4 text-blue-600 shrink-0" />
+                           <div className="flex items-center gap-2.5">
+                            <i className="fas fa-envelope text-blue-600 shrink-0"></i>
                             <span className="font-bold text-gray-500 uppercase tracking-wider text-[9px] truncate">Email Address</span>
                           </div>
                           {!isEditingEmail && (
@@ -690,7 +668,7 @@ export default function ProfilePage() {
                               className="p-1 rounded text-gray-500 hover:text-blue-600 hover:bg-gray-200 transition-all shrink-0 bg-transparent border-0 outline-none"
                               title="Edit Email Address"
                             >
-                              <Pencil className="w-4 h-4" />
+                              <i className="fas fa-edit"></i>
                             </button>
                           )}
                         </div>
@@ -710,7 +688,7 @@ export default function ProfilePage() {
                               className="h-7 w-7 rounded bg-blue-600 hover:bg-blue-700 text-white transition-all flex items-center justify-center shrink-0 disabled:opacity-50 border-0 cursor-pointer"
                               title="Save"
                             >
-                              {emailLoading ? <LteSpinner /> : <Check className="w-4 h-4" />}
+                              {emailLoading ? <LteSpinner /> : <i className="fas fa-check"></i>}
                             </button>
                             <button
                               onClick={handleCancelEmail}
@@ -718,19 +696,18 @@ export default function ProfilePage() {
                               className="h-7 w-7 rounded bg-white hover:bg-gray-100 text-gray-500 transition-all border border-gray-350 flex items-center justify-center shrink-0 disabled:opacity-50 cursor-pointer"
                               title="Cancel"
                             >
-                              <X className="w-4 h-4" />
+                              <i className="fas fa-times"></i>
                             </button>
                           </div>
                         ) : (
-                          <span className="text-gray-800 font-semibold truncate pl-[26px]">{user.mail_id || "-"}</span>
+                          <span className="text-gray-805 font-semibold truncate pl-[26px]">{user.mail_id || "-"}</span>
                         )}
                       </div>
-
                       {/* Mobile Number (Editable Inline) */}
                       <div className="p-3 bg-gray-50 border border-gray-200 rounded flex flex-col justify-between text-xs gap-2 min-h-[62px] hover:bg-gray-100 transition-colors">
                         <div className="flex items-center justify-between">
                           <div className="flex items-center gap-2.5">
-<Phone className="w-4 h-4 text-blue-600 shrink-0" />
+                            <i className="fas fa-phone text-blue-600 shrink-0"></i>
                             <span className="font-bold text-gray-500 uppercase tracking-wider text-[9px] truncate">Mobile Number</span>
                           </div>
                           {!isEditingMobile && (
@@ -744,7 +721,7 @@ export default function ProfilePage() {
                               className="p-1 rounded text-gray-500 hover:text-blue-600 hover:bg-gray-200 transition-all shrink-0 bg-transparent border-0 outline-none"
                               title="Edit Mobile Number"
                             >
-                              <Pencil className="w-4 h-4" />
+                              <i className="fas fa-edit"></i>
                             </button>
                           )}
                         </div>
@@ -764,7 +741,7 @@ export default function ProfilePage() {
                               className="h-7 w-7 rounded bg-blue-600 hover:bg-blue-700 text-white transition-all flex items-center justify-center shrink-0 disabled:opacity-50 border-0 cursor-pointer"
                               title="Save"
                             >
-                              {mobileLoading ? <LteSpinner /> : <Check className="w-4 h-4" />}
+                              {mobileLoading ? <LteSpinner /> : <i className="fas fa-check"></i>}
                             </button>
                             <button
                               onClick={handleCancelMobile}
@@ -772,11 +749,11 @@ export default function ProfilePage() {
                               className="h-7 w-7 rounded bg-white hover:bg-gray-100 text-gray-500 transition-all border border-gray-350 flex items-center justify-center shrink-0 disabled:opacity-50 cursor-pointer"
                               title="Cancel"
                             >
-                              <X className="w-4 h-4" />
+                              <i className="fas fa-times"></i>
                             </button>
                           </div>
                         ) : (
-                          <span className="text-gray-800 font-semibold truncate pl-[26px]">{user.mobile_number || "-"}</span>
+                          <span className="text-gray-805 font-semibold truncate pl-[26px]">{user.mobile_number || "-"}</span>
                         )}
                       </div>
 
@@ -785,7 +762,7 @@ export default function ProfilePage() {
                         label="Date of Birth"
                         value={user.date_of_birth ? new Date(user.date_of_birth).toLocaleDateString("en-GB") : "-"}
                         icon={
-                          <Calendar className="w-4 h-4" />
+                          <i className="fas fa-calendar-alt"></i>
                         }
                       />
                     </div>
@@ -794,7 +771,7 @@ export default function ProfilePage() {
                   {/* Category 2: Employment details */}
                   <div>
                     <h4 className="text-[10px] font-extrabold uppercase tracking-widest text-blue-600 border-b border-gray-200 pb-2 mb-3.5 flex items-center gap-2">
-<Briefcase className="w-3.5 h-3.5 text-blue-600" />
+                      <i className="fas fa-briefcase text-blue-600"></i>
                       Employment & Systems Details
                     </h4>
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-3.5">
@@ -804,7 +781,7 @@ export default function ProfilePage() {
                         label="Employee Code"
                         value={user.e_code || "-"}
                         icon={
-                          <Database className="w-4 h-4" />
+                          <i className="fas fa-database"></i>
                         }
                       />
 
@@ -813,7 +790,7 @@ export default function ProfilePage() {
                         label="Grade"
                         value={user.grade || "-"}
                         icon={
-                          <Award className="w-4 h-4" />
+                          <i className="fas fa-award"></i>
                         }
                       />
 
@@ -822,7 +799,7 @@ export default function ProfilePage() {
                         label="Date of Joining"
                         value={user.date_of_joining ? new Date(user.date_of_joining).toLocaleDateString("en-GB") : "-"}
                         icon={
-                          <Calendar className="w-4 h-4" />
+                          <i className="fas fa-calendar-alt"></i>
                         }
                       />
 
@@ -831,7 +808,7 @@ export default function ProfilePage() {
                         label="Device / Upkaran ID"
                         value={user.e_upkaran_id || "-"}
                         icon={
-                          <Monitor className="w-4 h-4" />
+                          <i className="fas fa-desktop"></i>
                         }
                       />
                     </div>
@@ -840,7 +817,7 @@ export default function ProfilePage() {
                   {/* Category 3: Reporting hierarchy */}
                   <div>
                     <h4 className="text-[10px] font-extrabold uppercase tracking-widest text-blue-600 border-b border-gray-200 pb-2 mb-3.5 flex items-center gap-2">
-<Users className="w-3.5 h-3.5 text-blue-600" />
+                      <i className="fas fa-users text-blue-600"></i>
                       Reporting Hierarchy & Region
                     </h4>
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-3.5">
@@ -850,7 +827,7 @@ export default function ProfilePage() {
                         label="Reporting Manager"
                         value={user.manager || "-"}
                         icon={
-                          <User className="w-4 h-4" />
+                          <i className="fas fa-user-tie"></i>
                         }
                       />
 
@@ -859,7 +836,7 @@ export default function ProfilePage() {
                         label="Zonal Manager"
                         value={user.zonal_manager || "-"}
                         icon={
-                          <User className="w-4 h-4" />
+                          <i className="fas fa-user-shield"></i>
                         }
                       />
 
@@ -868,7 +845,7 @@ export default function ProfilePage() {
                         label="Coordinator"
                         value={user.coordinator || "-"}
                         icon={
-                          <Users className="w-4 h-4" />
+                          <i className="fas fa-users"></i>
                         }
                       />
 
@@ -877,7 +854,7 @@ export default function ProfilePage() {
                         label="Zone"
                         value={user.zone || "-"}
                         icon={
-                          <Navigation className="w-4 h-4" />
+                          <i className="fas fa-compass"></i>
                         }
                       />
 
@@ -886,7 +863,7 @@ export default function ProfilePage() {
                         label="District"
                         value={user.district || "-"}
                         icon={
-                          <MapPin className="w-4 h-4" />
+                          <i className="fas fa-map-marker-alt"></i>
                         }
                       />
                     </div>
@@ -897,7 +874,7 @@ export default function ProfilePage() {
                 <div className="p-6 space-y-6 flex-1 max-w-md mx-auto w-full animate-fadeIn">
                   <div className="text-center space-y-1 pb-2">
                     <h4 className="text-sm font-bold text-gray-800 uppercase tracking-wider flex items-center justify-center gap-2">
-                      <Lock className="w-4 h-4 text-blue-600" /> Update Credentials
+                      <i className="fas fa-lock text-blue-600"></i> Update Credentials
                     </h4>
                     <p className="text-[10px] text-gray-500">
                       Enter your current password and your new choice below.
@@ -942,9 +919,9 @@ export default function ProfilePage() {
                           className="absolute inset-y-0 right-0 pr-3 flex items-center text-gray-400 hover:text-gray-600 bg-transparent border-0 outline-none"
                         >
                           {showPass ? (
-<EyeOff className="w-4 h-4" />
+                            <i className="fas fa-eye-slash"></i>
                           ) : (
-<Eye className="w-4 h-4" />
+                            <i className="fas fa-eye"></i>
                           )}
                         </button>
                       </div>
@@ -1004,7 +981,7 @@ export default function ProfilePage() {
                 onClick={() => { setShowCropModal(false); setSelectedPhotoFile(null); setPreviewSrc(null); }} 
                 className="text-gray-400 hover:text-gray-600 bg-transparent border-0 cursor-pointer p-1"
               >
-                <X className="w-5 h-5" />
+                <i className="fas fa-times text-lg"></i>
               </button>
             </div>
 
@@ -1097,7 +1074,7 @@ export default function ProfilePage() {
                   </>
                 ) : (
                   <>
-                    <Check className="w-4 h-4" />
+                    <i className="fas fa-check"></i>
                     <span>Confirm & Upload</span>
                   </>
                 )}

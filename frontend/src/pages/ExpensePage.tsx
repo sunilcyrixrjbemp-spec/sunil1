@@ -3117,7 +3117,7 @@ export default function ExpensePage() {
                           {(leg.selected_activities || []).includes("PMS") && (
                             <div className="bg-amber-50/20 border border-amber-150 rounded p-3 flex flex-col gap-3">
                               <div className="flex items-center justify-between border-b border-amber-100 pb-1.5">
-                                <span className="text-[11px] font-bold text-amber-700 uppercase tracking-wide">Planned Maintenance Services (PMS)</span>
+                                <span className="text-[11px] font-bold text-amber-700 uppercase tracking-wide">Preventive Maintenance Services (PMS)</span>
                               </div>
                               <div className="grid grid-cols-1 sm:grid-cols-12 gap-3 items-end bg-gray-50/50 p-2.5 rounded border border-gray-200">
                                 <div className="sm:col-span-6">

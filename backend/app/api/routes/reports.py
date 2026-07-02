@@ -13,32 +13,19 @@ router = APIRouter()
 
 
 def _bulk_insert(db, table_name: str, columns: list[str], records: list[dict]):
-    """Insert records in multi-row batches using raw SQLite literals to avoid D1 parameter limits."""
+    """Insert records in multi-row batches using highly optimized parameter bindings."""
     if not records:
         return
     col_str = ", ".join(columns)
-    val_rows = []
-    for r in records:
-        row_vals = []
-        for k in columns:
-            val = r.get(k)
-            if val is None:
-                row_vals.append("NULL")
-            elif isinstance(val, (int, float)):
-                row_vals.append(str(val))
-            elif isinstance(val, bool):
-                row_vals.append("1" if val else "0")
-            else:
-                escaped = str(val).replace("'", "''")
-                row_vals.append(f"'{escaped}'")
-        val_rows.append("(" + ", ".join(row_vals) + ")")
-        
-    # Batch execute in chunks of 50 to keep query sizes under D1 SQLITE_TOOBIG limits
-    chunk_size = 50
-    for i in range(0, len(val_rows), chunk_size):
-        chunk = val_rows[i : i + chunk_size]
-        sql = f"INSERT OR REPLACE INTO {table_name} ({col_str}) VALUES " + ", ".join(chunk)
-        db.execute(text(sql))
+    placeholders = ", ".join([f":{col}" for col in columns])
+    sql = f"INSERT OR REPLACE INTO {table_name} ({col_str}) VALUES ({placeholders})"
+    
+    # Batch execute using SQLAlchemy executemany parameter binding
+    # Chunk size of 1000 is extremely fast and safe under standard SQLite/D1 limits
+    chunk_size = 1000
+    for i in range(0, len(records), chunk_size):
+        chunk = records[i:i + chunk_size]
+        db.execute(text(sql), chunk)
     db.commit()
 
 @router.get("/monthly/{month}")

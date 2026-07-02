@@ -1,16 +1,4 @@
 import React, { useState, useEffect, useRef } from "react";
-import { 
-  MessageSquare, 
-  AlertCircle, 
-  Send, 
-  RefreshCw, 
-  Lock,
-  Bookmark,
-  Filter,
-  Clock,
-  Activity,
-  CheckCircle
-} from "lucide-react";
 import toast from "react-hot-toast";
 import { ticketService, TicketCreatePayload } from "../services/ticketService";
 import { expenseService } from "../services/expenseService";
@@ -539,8 +527,8 @@ export default function HelpPage() {
       {/* Header Info */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <h2 className="text-xl font-black text-gray-800 uppercase tracking-wide flex items-center gap-2">
-            <Activity className="w-5 h-5 text-blue-600 animate-pulse" />
+          <h2 className="text-xl font-black text-gray-850 uppercase tracking-wide flex items-center gap-2">
+            <i className="fas fa-headset text-blue-600 animate-pulse"></i>
             FieldOps Help Desk
           </h2>
           <p className="text-gray-500 text-xs mt-0.5">
@@ -551,14 +539,16 @@ export default function HelpPage() {
           onClick={fetchInitialData}
           className="px-3 py-1.5 bg-gray-150 hover:bg-gray-200 text-gray-700 text-xs font-bold uppercase tracking-wider rounded border border-gray-300 cursor-pointer flex items-center gap-1.5 self-start transition-all"
         >
-          <RefreshCw className="w-3.5 h-3.5" />
+          <i className="fas fa-sync-alt"></i>
           Refresh desk
         </button>
-      </div>      {/* Analytics block */}
+      </div>
+
+      {/* Analytics block */}
       <div className="hidden lg:grid grid-cols-1 lg:grid-cols-3 gap-6">
         
         {/* Bar Chart 1: Category */}
-        <div className="bg-white border border-gray-200 border-t-4 border-t-blue-600 rounded shadow-sm p-4">
+        <div className="card-lte-primary p-4 bg-white shadow-sm">
           <span className="text-[10px] font-bold text-gray-500 uppercase tracking-wider block border-b border-gray-100 pb-1.5 mb-2">Concerns by Category</span>
           <div style={{ height: 160 }}>
             <ResponsiveContainer width="100%" height="100%">
@@ -578,7 +568,7 @@ export default function HelpPage() {
         </div>
 
         {/* Bar Chart 2: Priority */}
-        <div className="bg-white border border-gray-200 border-t-4 border-t-indigo-600 rounded shadow-sm p-4">
+        <div className="card-lte-primary p-4 bg-white shadow-sm" style={{ borderTopColor: "#6610f2" }}>
           <span className="text-[10px] font-bold text-gray-500 uppercase tracking-wider block border-b border-gray-100 pb-1.5 mb-2">Concerns by Priority</span>
           <div style={{ height: 160 }}>
             <ResponsiveContainer width="100%" height="100%">
@@ -598,7 +588,7 @@ export default function HelpPage() {
         </div>
 
         {/* Bar Chart 3: Status */}
-        <div className="bg-white border border-gray-200 border-t-4 border-t-amber-500 rounded shadow-sm p-4">
+        <div className="card-lte-warning p-4 bg-white shadow-sm">
           <span className="text-[10px] font-bold text-gray-500 uppercase tracking-wider block border-b border-gray-100 pb-1.5 mb-2">Concerns by Status</span>
           <div style={{ height: 160 }}>
             <ResponsiveContainer width="100%" height="100%">
@@ -624,24 +614,23 @@ export default function HelpPage() {
         
         {/* Left column: Raise ticket Form */}
         <div className="xl:col-span-1 space-y-6">
-          
-          <div className="bg-white border border-gray-200 border-t-4 border-t-green-600 rounded shadow-sm p-5 space-y-4">
+                    <div className="card-lte-success p-5 space-y-4 bg-white shadow-sm">
             <h3 className="text-xs font-bold text-gray-700 uppercase tracking-wider flex items-center gap-1.5">
-              <MessageSquare className="w-4 h-4 text-green-600" />
-              File support Ticket
+              <i className="fas fa-ticket-alt text-green-600"></i>
+              File Support Ticket
             </h3>
 
             <form onSubmit={handleRaiseTicket} className="space-y-4 text-xs font-medium">
               
               {/* Concern type dropdown */}
               <div>
-                <label className="block text-[9px] uppercase tracking-wider text-gray-500 font-bold mb-1">Concern Field *</label>
+                <label className="label-lte">Concern Field *</label>
                 <select
                   value={concernType}
                   onChange={(e) => setConcernType(e.target.value)}
-                  className="w-full bg-white border border-gray-300 rounded px-2.5 py-1.5 text-xs text-gray-850 focus:outline-none focus:border-green-600"
+                  className="input-lte focus:border-green-600 focus:ring-green-600/50"
                 >
-                  <option value="Expense">Expense Claim Claim Reference</option>
+                  <option value="Expense">Expense Claim Reference</option>
                   <option value="TA/DA">TA / DA Allowance Cap</option>
                   <option value="Profile">Profile Mappings</option>
                   <option value="Other">Other / Custom Issue</option>
@@ -651,13 +640,13 @@ export default function HelpPage() {
               {/* Custom Other category name input */}
               {concernType === "Other" && (
                 <div className="animate-fadeIn">
-                  <label className="block text-[9px] uppercase tracking-wider text-gray-500 font-bold mb-1">Specify custom category *</label>
+                  <label className="label-lte">Specify custom category *</label>
                   <input
                     type="text"
                     placeholder="e.g. System Crash, Fuel Rates, Sim Card"
                     value={otherCategory}
                     onChange={(e) => setOtherCategory(e.target.value)}
-                    className="w-full bg-white border border-gray-300 rounded px-2.5 py-1.5 text-xs text-gray-850 focus:outline-none focus:border-green-600"
+                    className="input-lte focus:border-green-600 focus:ring-green-600/50"
                     required
                   />
                 </div>
@@ -666,11 +655,11 @@ export default function HelpPage() {
               {/* Select Expense Claim Dropdown (visible only if Expense selected) */}
               {concernType === "Expense" && (
                 <div className="animate-fadeIn">
-                  <label className="block text-[9px] uppercase tracking-wider text-gray-500 font-bold mb-1">Select Claim Reference *</label>
+                  <label className="label-lte">Select Claim Reference *</label>
                   <select
                     value={selectedExpenseId}
                     onChange={(e) => setSelectedExpenseId(e.target.value)}
-                    className="w-full bg-white border border-gray-300 rounded px-2.5 py-1.5 text-xs text-gray-855 focus:outline-none focus:border-green-600"
+                    className="input-lte focus:border-green-600 focus:ring-green-600/50"
                     required
                   >
                     <option value="" disabled>-- Select Related Expense Claim --</option>
@@ -681,16 +670,14 @@ export default function HelpPage() {
                     ))}
                   </select>
                 </div>
-              )}
-
-              {/* Select Assignee (Manager or Zonal Coordinator) */}
+                            {/* Select Assignee (Manager or Zonal Coordinator) */}
               {concernType !== "Profile" ? (
                 <div>
-                  <label className="block text-[9px] uppercase tracking-wider text-gray-500 font-bold mb-1">Assign Concern Target *</label>
+                  <label className="label-lte">Assign Concern Target *</label>
                   <select
                     value={assignedToName}
                     onChange={(e) => setAssignedToName(e.target.value)}
-                    className="w-full bg-white border border-gray-300 rounded px-2.5 py-1.5 text-xs text-gray-850 focus:outline-none focus:border-green-600"
+                    className="input-lte focus:border-green-600 focus:ring-green-600/50"
                     required
                   >
                     {currentUser?.manager && (
@@ -706,9 +693,9 @@ export default function HelpPage() {
                 </div>
               ) : (
                 <div>
-                  <label className="block text-[9px] uppercase tracking-wider text-gray-400 font-bold mb-1">Assign Concern Target</label>
+                  <label className="label-lte">Assign Concern Target</label>
                   <div className="p-2 bg-gray-50 border border-gray-200 rounded text-gray-550 flex items-center gap-1.5 font-bold">
-                    <Lock className="w-3.5 h-3.5 text-gray-400" />
+                    <i className="fas fa-lock text-gray-400"></i>
                     Locked to Admin System
                   </div>
                 </div>
@@ -716,11 +703,11 @@ export default function HelpPage() {
 
               {/* Priority */}
               <div>
-                <label className="block text-[9px] uppercase tracking-wider text-gray-500 font-bold mb-1">Priority Level *</label>
+                <label className="label-lte">Priority Level *</label>
                 <select
                   value={priority}
                   onChange={(e) => setPriority(e.target.value)}
-                  className="w-full bg-white border border-gray-300 rounded px-2.5 py-1.5 text-xs text-gray-855 focus:outline-none focus:border-green-600"
+                  className="input-lte focus:border-green-600 focus:ring-green-600/50"
                 >
                   <option value="Low">Low (General Query)</option>
                   <option value="Medium">Medium (Delay/Discrepancy)</option>
@@ -731,13 +718,13 @@ export default function HelpPage() {
 
               {/* Description */}
               <div>
-                <label className="block text-[9px] uppercase tracking-wider text-gray-500 font-bold mb-1">Detailed Remarks / Concern Description *</label>
+                <label className="label-lte">Detailed Remarks / Concern Description *</label>
                 <textarea
                   rows={3}
                   placeholder="Explain your concern with details..."
                   value={description}
                   onChange={(e) => setDescription(e.target.value)}
-                  className="w-full px-3 py-2 bg-white border border-gray-300 rounded text-xs text-gray-850 focus:outline-none focus:border-green-600 focus:ring-1 focus:ring-green-600/20 resize-none font-sans font-medium"
+                  className="w-full px-3 py-2 bg-white border border-gray-300 rounded text-xs text-gray-800 focus:outline-none focus:border-green-600 focus:ring-1 focus:ring-green-600/50 resize-none font-sans font-medium"
                   required
                 />
               </div>
@@ -753,23 +740,23 @@ export default function HelpPage() {
             </form>
           </div>
 
-        </div>
+        </div></div>
 
         {/* Right column: Filter headers, listing tabs, and chat timeline logs */}
         <div className="xl:col-span-2 space-y-6">
           
           {/* Support Ticket Listing container */}
-          <div className="bg-white border border-gray-200 rounded shadow-sm overflow-hidden flex flex-col">
+          <div className="card-lte flex flex-col bg-white">
             
             {/* List Tab Headers */}
-            <div className="border-b border-gray-250 bg-gray-50 flex flex-wrap items-center justify-between px-4">
+            <div className="border-b border-gray-200 bg-gray-50 flex flex-wrap items-center justify-between px-4">
               <div className="flex">
                 <button
                   onClick={() => { handleTabChange("my-tickets"); setSelectedTicket(null); }}
                   className={`py-3 px-4 font-bold text-xs uppercase tracking-wider border-b-2 transition-all cursor-pointer ${
                     activeTab === "my-tickets"
                       ? "border-blue-600 text-blue-700 bg-white"
-                      : "border-transparent text-gray-500 hover:text-gray-800"
+                      : "border-transparent text-gray-500 hover:text-gray-850"
                   }`}
                 >
                   My Raised Tickets ({myRaisedTickets.length})
@@ -781,21 +768,21 @@ export default function HelpPage() {
                     className={`py-3 px-4 font-bold text-xs uppercase tracking-wider border-b-2 transition-all cursor-pointer ${
                       activeTab === "assigned-tickets"
                         ? "border-blue-600 text-blue-700 bg-white"
-                        : "border-transparent text-gray-500 hover:text-gray-800"
+                        : "border-transparent text-gray-500 hover:text-gray-855"
                     }`}
                   >
-                    Assigned concerns ({assignedTickets.length})
+                    Assigned Concerns ({assignedTickets.length})
                   </button>
                 )}
               </div>
             </div>
 
             {/* Structured filters block */}
-            <div className="p-3 bg-gray-50/50 border-b border-gray-200 flex flex-wrap items-center gap-3 text-[10px] font-bold text-gray-500 uppercase">
+            <div className="p-3 bg-gray-50 border-b border-gray-200 flex flex-wrap items-center gap-3 text-[10px] font-bold text-gray-500 uppercase">
               
               {/* Filter Follow-up flag */}
               <div className="flex items-center gap-1.5">
-                <Filter className="w-3.5 h-3.5 text-gray-400" />
+                <i className="fas fa-filter text-gray-400"></i>
                 <span>Follow-up:</span>
                 <select
                   value={filterFollowup}
@@ -850,7 +837,7 @@ export default function HelpPage() {
               </div>
             ) : filteredList.length === 0 ? (
               <div className="py-20 text-center text-gray-400 text-xs">
-                <AlertCircle className="w-8 h-8 mx-auto mb-2 text-gray-300 animate-pulse" />
+                <i className="fas fa-exclamation-circle fa-2x mx-auto mb-2 text-gray-300 animate-pulse"></i>
                 <p className="font-bold uppercase tracking-wider text-[10px]">No support concerns matched these filters.</p>
               </div>
             ) : (
@@ -864,7 +851,7 @@ export default function HelpPage() {
                       onClick={() => setSelectedTicket(tkt)}
                       className={`p-4 transition-colors cursor-pointer flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-l-[3px] ${
                         isSelected 
-                          ? "bg-blue-50/20 border-l-blue-600" 
+                          ? "bg-blue-50/10 border-l-blue-600" 
                           : "bg-white hover:bg-gray-50 border-l-transparent"
                       }`}
                     >
@@ -877,9 +864,9 @@ export default function HelpPage() {
                             className="p-0.5 hover:bg-gray-100 rounded border-0 bg-transparent cursor-pointer"
                             title="Toggle follow-up flag"
                           >
-                            <Bookmark className={`w-3.5 h-3.5 transition-all ${
-                              tkt.needs_followup ? "fill-amber-400 text-amber-500" : "text-gray-300"
-                            }`} />
+                            <i className={`fas fa-bookmark text-xs transition-all ${
+                              tkt.needs_followup ? "text-amber-500" : "text-gray-300"
+                            }`}></i>
                           </button>
                           
                           <span className="font-mono font-bold text-blue-600 uppercase tracking-wider">{tkt.ticket_code}</span>
@@ -917,17 +904,17 @@ export default function HelpPage() {
 
           {/* Ticket Thread detail panel */}
           {selectedTicket && (
-            <div className="bg-white border border-gray-200 border-t-3 border-t-blue-600 rounded shadow-sm p-5 space-y-4 animate-scaleIn text-xs">
+            <div className="card-lte-primary p-5 space-y-4 bg-white shadow-md animate-scaleIn text-xs">
               
               {/* Detail Header */}
               <div className="flex items-start justify-between border-b border-gray-150 pb-3">
                 <div className="space-y-1">
                   <div className="flex items-center gap-2">
-                    <h3 className="text-sm font-bold text-gray-900 font-mono flex items-center gap-1">
+                    <h3 className="text-sm font-bold text-gray-950 font-mono flex items-center gap-1.5">
                       {selectedTicket.ticket_code}
-                      <Bookmark className={`w-3.5 h-3.5 inline ${
-                        selectedTicket.needs_followup ? "fill-amber-400 text-amber-500" : "text-gray-300"
-                      }`} />
+                      <i className={`fas fa-bookmark text-xs ${
+                        selectedTicket.needs_followup ? "text-amber-500" : "text-gray-300"
+                      }`}></i>
                     </h3>
                     
                     <span className={`inline-flex items-center px-2 py-0.5 rounded border text-[8px] uppercase font-bold tracking-wider ${getStatusBadgeClass(selectedTicket.status)}`}>
@@ -948,7 +935,7 @@ export default function HelpPage() {
                       onClick={() => handleCloseTicket(selectedTicket.id)}
                       className="px-3 py-1 bg-red-600 hover:bg-red-700 text-white rounded text-[10px] font-bold uppercase tracking-wider cursor-pointer border-0 shadow-sm transition-colors flex items-center gap-1"
                     >
-                      <CheckCircle className="w-3.5 h-3.5" />
+                      <i className="fas fa-check-circle"></i>
                       Resolve Concern
                     </button>
                   )}
@@ -959,7 +946,7 @@ export default function HelpPage() {
                       onClick={() => handleReopenTicket(selectedTicket.id)}
                       className="px-3 py-1 bg-amber-500 hover:bg-amber-600 text-white rounded text-[10px] font-bold uppercase tracking-wider cursor-pointer border-0 shadow-sm transition-colors flex items-center gap-1"
                     >
-                      <RefreshCw className="w-3 h-3 animate-spin-slow" />
+                      <i className="fas fa-redo fa-spin-slow"></i>
                       Re-open (36h limit)
                     </button>
                   )}
@@ -979,7 +966,7 @@ export default function HelpPage() {
                 {/* Show individual TAT if closed */}
                 {selectedTicket.closed_at && (
                   <div className="mt-2.5 pt-2 border-t border-gray-200 flex items-center gap-1.5 text-[9px] text-gray-400 font-bold uppercase">
-                    <Clock className="w-3.5 h-3.5 text-gray-450" />
+                    <i className="fas fa-clock text-gray-450"></i>
                     <span>Resolution TAT:</span>
                     <span className="text-blue-700 font-mono">
                       {formatDuration(
@@ -1100,7 +1087,7 @@ export default function HelpPage() {
                       className="h-9 w-9 bg-green-600 hover:bg-green-700 disabled:bg-gray-300 disabled:text-gray-400 text-white rounded-full flex items-center justify-center shadow-md shrink-0 border-0 transition-colors cursor-pointer"
                       title="Send message"
                     >
-                      <Send className="w-3.5 h-3.5" />
+                      <i className="fas fa-paper-plane text-xs"></i>
                     </button>
                   </form>
                 </div>

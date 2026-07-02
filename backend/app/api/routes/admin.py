@@ -207,7 +207,14 @@ async def update_user(
         
     # Update fields if provided
     if request.name is not None:
-        user.name = request.name.strip()
+        new_name = request.name.strip()
+        if new_name != user.name:
+            old_name = user.name
+            user.name = new_name
+            # Cascade name changes to other users' string mappings
+            db.query(User).filter(User.manager == old_name).update({User.manager: new_name}, synchronize_session=False)
+            db.query(User).filter(User.zonal_manager == old_name).update({User.zonal_manager: new_name}, synchronize_session=False)
+            db.query(User).filter(User.coordinator == old_name).update({User.coordinator: new_name}, synchronize_session=False)
     if request.designation is not None:
         user.designation = request.designation
     if request.grade is not None:
@@ -278,88 +285,153 @@ async def bulk_create_users(
     db: Session = Depends(get_db),
     admin: User = Depends(verify_admin)
 ):
-    """Bulk create users from JSON payload (e.g. parsed CSV on frontend)"""
+    """Bulk create users from JSON payload with in-memory lookup optimization and duplicate check"""
+    # Pre-fetch all users to build in-memory maps to optimize database queries
+    all_users = db.query(User).all()
+    user_map = {u.user_id: u for u in all_users}
+    
+    # Track user_id, e_code, and name values that are valid for resolve_or_blank
+    user_ids = {u.user_id.lower() for u in all_users}
+    e_codes = {u.e_code.lower() for u in all_users if u.e_code}
+    names = {u.name.strip().lower() for u in all_users}
+    
+    # Track new users created in this batch in memory
+    batch_created_user_ids = set()
+    batch_created_names = set()
+    
+    # Build a lookup for existing roles
+    user_roles_map = {r.user_id: r for r in db.query(UserRole).all()}
+    
     created_count = 0
     errors = []
     
+    def resolve_or_blank_opt(val: str) -> str:
+        if not val or not val.strip():
+            return ""
+        val_clean = val.strip().lower()
+        if (val_clean in user_ids or 
+            val_clean in e_codes or 
+            val_clean in names or 
+            val_clean in batch_created_user_ids or 
+            val_clean in batch_created_names):
+            return val.strip()
+        return ""
+
     for index, item in enumerate(payload):
         e_code_clean = item.e_code.strip()
         if not e_code_clean:
             errors.append(f"Row {index + 1}: Missing Employee Code")
             continue
             
-        # Resolve manager, zonal_manager, coordinator to blank if not exist
-        manager_clean = resolve_or_blank(item.manager, db)
-        zonal_manager_clean = resolve_or_blank(item.zonal_manager, db)
-        coordinator_clean = resolve_or_blank(item.coordinator, db)
-
-        existing = db.query(User).filter(User.user_id == e_code_clean).first()
+        existing = user_map.get(e_code_clean)
         if existing:
             try:
-                # Update details
-                if item.name and item.name.strip():
-                    existing.name = item.name.strip()
-                if item.password and item.password.strip():
-                    existing.hashed_password = get_password_hash(item.password)
-                if item.designation and item.designation.strip():
-                    existing.designation = item.designation.strip()
-                if item.grade and item.grade.strip():
-                    existing.grade = item.grade.strip()
-                if item.district and item.district.strip():
-                    existing.district = item.district.strip()
-                if item.zone and item.zone.strip():
-                    existing.zone = item.zone.strip()
-                if manager_clean and manager_clean.strip():
-                    existing.manager = manager_clean
-                if zonal_manager_clean and zonal_manager_clean.strip():
-                    existing.zonal_manager = zonal_manager_clean
-                if coordinator_clean and coordinator_clean.strip():
-                    existing.coordinator = coordinator_clean
-                if item.mobile_number and item.mobile_number.strip():
-                    existing.mobile_number = item.mobile_number.strip()
-                if item.mail_id and item.mail_id.strip():
-                    existing.mail_id = item.mail_id.strip()
-                if item.role and item.role.strip():
-                    existing.role = item.role.strip()
-                if item.type and item.type.strip():
-                    existing.type = item.type.strip()
-                if item.date_of_joining:
-                    existing.date_of_joining = item.date_of_joining
-                if item.date_of_birth:
-                    existing.date_of_birth = item.date_of_birth
-                if item.e_upkaran_id and item.e_upkaran_id.strip():
-                    existing.e_upkaran_id = item.e_upkaran_id.strip()
-                    
-                if item.allowed_windows and item.allowed_windows.strip():
-                    existing.allowed_windows = item.allowed_windows.strip()
-                elif item.role and item.role.strip():
-                    existing.allowed_windows = (
-                        "home,expense,help,profile" if item.role.strip().lower() == "engineer"
-                        else "home,approval,expense,help,profile" if item.role.strip().lower() == "manager"
-                        else "home,approval,expense,analysis,report,help,profile"
-                    )
+                # Resolve manager, zonal_manager, coordinator using optimized in-memory logic
+                manager_clean = resolve_or_blank_opt(item.manager)
+                zonal_manager_clean = resolve_or_blank_opt(item.zonal_manager)
+                coordinator_clean = resolve_or_blank_opt(item.coordinator)
                 
-                if item.password:
-                    pwd_hist = PasswordHistory(
-                        user_id=existing.id,
-                        hashed_password=existing.hashed_password
-                    )
-                    db.add(pwd_hist)
+                # Check if anything changed (excluding name and e_code)
+                has_changed = False
+                
+                if item.password and item.password.strip():
+                    has_changed = True
+                if item.designation and item.designation.strip() != (existing.designation or "").strip():
+                    has_changed = True
+                if item.grade and item.grade.strip() != (existing.grade or "").strip():
+                    has_changed = True
+                if item.district and item.district.strip() != (existing.district or "").strip():
+                    has_changed = True
+                if item.zone and item.zone.strip() != (existing.zone or "").strip():
+                    has_changed = True
+                if manager_clean != (existing.manager or ""):
+                    has_changed = True
+                if zonal_manager_clean != (existing.zonal_manager or ""):
+                    has_changed = True
+                if coordinator_clean != (existing.coordinator or ""):
+                    has_changed = True
+                if item.mobile_number and item.mobile_number.strip() != (existing.mobile_number or "").strip():
+                    has_changed = True
+                if item.mail_id and item.mail_id.strip() != (existing.mail_id or "").strip():
+                    has_changed = True
+                if item.role and item.role.strip() != (existing.role or "").strip():
+                    has_changed = True
+                if item.type and item.type.strip() != (existing.type or "").strip():
+                    has_changed = True
+                if item.date_of_joining and item.date_of_joining != existing.date_of_joining:
+                    has_changed = True
+                if item.date_of_birth and item.date_of_birth != existing.date_of_birth:
+                    has_changed = True
+                if item.e_upkaran_id and item.e_upkaran_id.strip() != (existing.e_upkaran_id or "").strip():
+                    has_changed = True
+                if item.allowed_windows and item.allowed_windows.strip() != (existing.allowed_windows or "").strip():
+                    has_changed = True
                     
-                role_entry = db.query(UserRole).filter(UserRole.user_id == existing.user_id).first()
-                if role_entry:
-                    role_entry.role = existing.role
-                else:
-                    role_entry = UserRole(user_id=existing.user_id, role=existing.role)
-                    db.add(role_entry)
+                if has_changed:
+                    if item.password and item.password.strip():
+                        existing.hashed_password = get_password_hash(item.password)
+                        pwd_hist = PasswordHistory(
+                            user_id=existing.id,
+                            hashed_password=existing.hashed_password
+                        )
+                        db.add(pwd_hist)
+                    if item.designation is not None:
+                        existing.designation = item.designation.strip()
+                    if item.grade is not None:
+                        existing.grade = item.grade.strip()
+                    if item.district is not None:
+                        existing.district = item.district.strip()
+                    if item.zone is not None:
+                        existing.zone = item.zone.strip()
+                    existing.manager = manager_clean
+                    existing.zonal_manager = zonal_manager_clean
+                    existing.coordinator = coordinator_clean
+                    if item.mobile_number is not None:
+                        existing.mobile_number = item.mobile_number.strip()
+                    if item.mail_id is not None:
+                        existing.mail_id = item.mail_id.strip()
                     
-                created_count += 1
+                    old_role = existing.role
+                    if item.role is not None:
+                        existing.role = item.role.strip()
+                    if item.type is not None:
+                        existing.type = item.type.strip()
+                    if item.date_of_joining is not None:
+                        existing.date_of_joining = item.date_of_joining
+                    if item.date_of_birth is not None:
+                        existing.date_of_birth = item.date_of_birth
+                    if item.e_upkaran_id is not None:
+                        existing.e_upkaran_id = item.e_upkaran_id.strip()
+                    if item.allowed_windows is not None:
+                        existing.allowed_windows = item.allowed_windows.strip()
+                    elif item.role and item.role.strip():
+                        existing.allowed_windows = (
+                            "home,expense,help,profile" if item.role.strip().lower() == "engineer"
+                            else "home,approval,expense,help,profile" if item.role.strip().lower() == "manager"
+                            else "home,approval,expense,analysis,report,help,profile"
+                        )
+                    
+                    # Sync roles table using in-memory map
+                    if old_role != existing.role:
+                        role_entry = user_roles_map.get(existing.user_id)
+                        if role_entry:
+                            role_entry.role = existing.role
+                        else:
+                            role_entry = UserRole(user_id=existing.user_id, role=existing.role)
+                            db.add(role_entry)
+                            user_roles_map[existing.user_id] = role_entry
+                    
+                    created_count += 1
             except Exception as ex:
                 errors.append(f"Row {index + 1} ({e_code_clean}): Failed to update due to {str(ex)}")
             continue
             
         try:
             hashed = get_password_hash(item.password)
+            manager_clean = resolve_or_blank_opt(item.manager)
+            zonal_manager_clean = resolve_or_blank_opt(item.zonal_manager)
+            coordinator_clean = resolve_or_blank_opt(item.coordinator)
+            
             user = User(
                 user_id=e_code_clean,
                 e_code=e_code_clean,
@@ -389,6 +461,13 @@ async def bulk_create_users(
             db.add(user)
             db.flush()
             
+            # Update preloaded maps so subsequent rows can link to this newly created user!
+            user_ids.add(e_code_clean.lower())
+            e_codes.add(e_code_clean.lower())
+            names.add(item.name.strip().lower())
+            batch_created_user_ids.add(e_code_clean.lower())
+            batch_created_names.add(item.name.strip().lower())
+            
             pwd_hist = PasswordHistory(
                 user_id=user.id,
                 hashed_password=hashed
@@ -400,6 +479,7 @@ async def bulk_create_users(
                 role=user.role
             )
             db.add(role_entry)
+            user_roles_map[user.user_id] = role_entry
             created_count += 1
         except Exception as ex:
             errors.append(f"Row {index + 1} ({e_code_clean}): Failed to create due to {str(ex)}")
@@ -542,10 +622,21 @@ async def bulk_import_hierarchies(
     db: Session = Depends(get_db),
     admin: User = Depends(verify_admin)
 ):
-    """Bulk import team hierarchies via JSON payload (parsed CSV)"""
+    """Bulk import team hierarchies via JSON payload (parsed CSV) with O(1) in-memory checks and bulk database operations"""
     errors = []
     
-    # Validate all rows first
+    # 1. Pre-fetch all users to build a single fast in-memory lookup map
+    all_users = db.query(User).all()
+    user_lookup = {}
+    for u in all_users:
+        if u.e_code:
+            user_lookup[u.e_code.strip().lower()] = u
+        if u.user_id:
+            user_lookup[u.user_id.strip().lower()] = u
+        if u.name:
+            user_lookup[u.name.strip().lower()] = u
+
+    # Validate all rows in memory first
     for index, row in enumerate(request.rows):
         h_name = row.hierarchy_name.strip()
         if not h_name:
@@ -555,11 +646,7 @@ async def bulk_import_hierarchies(
         # Parse requesters
         req_codes = [c.strip() for c in row.requester_e_codes.split(",") if c.strip()]
         for code in req_codes:
-            u = db.query(User).filter(
-                (User.e_code.ilike(code)) |
-                (User.user_id.ilike(code)) |
-                (User.name.ilike(code))
-            ).first()
+            u = user_lookup.get(code.lower())
             if not u:
                 errors.append(f"Row {index + 1}: Requester '{code}' not found in database")
                 
@@ -568,11 +655,7 @@ async def bulk_import_hierarchies(
             app_code = getattr(row, f"level_{lvl}_approver", "")
             if app_code and app_code.strip():
                 app_code_clean = app_code.strip()
-                u = db.query(User).filter(
-                    (User.e_code.ilike(app_code_clean)) |
-                    (User.user_id.ilike(app_code_clean)) |
-                    (User.name.ilike(app_code_clean))
-                ).first()
+                u = user_lookup.get(app_code_clean.lower())
                 if not u:
                     errors.append(f"Row {index + 1}: Level {lvl} Approver '{app_code_clean}' not found in database")
                     
@@ -582,36 +665,53 @@ async def bulk_import_hierarchies(
             detail={"errors": errors}
         )
         
-    # If no validation errors, proceed to update/create
+    # If no validation errors, proceed to update/create in bulk
     try:
         from app.utils import cache
         
+        # 2. Pre-fetch existing hierarchies for mapping
+        all_hierarchies = db.query(ApprovalHierarchy).all()
+        hierarchy_map = {h.name.strip().lower(): h for h in all_hierarchies}
+        
+        # Collect all hierarchy names from this bulk operation
+        imported_names = {row.hierarchy_name.strip().lower() for row in request.rows if row.hierarchy_name.strip()}
+        
+        # Bulk delete existing relationships of hierarchies being imported to prevent N+1 deletes
+        hierarchy_ids_to_clear = [h.id for name, h in hierarchy_map.items() if name in imported_names]
+        if hierarchy_ids_to_clear:
+            db.query(HierarchyRequester).filter(HierarchyRequester.hierarchy_id.in_(hierarchy_ids_to_clear)).delete(synchronize_session=False)
+            db.query(HierarchyApprover).filter(HierarchyApprover.hierarchy_id.in_(hierarchy_ids_to_clear)).delete(synchronize_session=False)
+            db.flush()
+            
+        # Collect all user IDs of imported requesters to clear their mapping to other hierarchies in a single query
+        imported_requester_user_ids = []
+        for row in request.rows:
+            req_codes = [c.strip() for c in row.requester_e_codes.split(",") if c.strip()]
+            for code in req_codes:
+                u = user_lookup.get(code.lower())
+                if u:
+                    imported_requester_user_ids.append(u.id)
+                    
+        # Bulk clear requester mappings in other hierarchies
+        if imported_requester_user_ids:
+            db.query(HierarchyRequester).filter(HierarchyRequester.user_id.in_(imported_requester_user_ids)).delete(synchronize_session=False)
+            db.flush()
+            
+        # 3. Create or update hierarchies and append relationships
         for row in request.rows:
             h_name = row.hierarchy_name.strip()
-            # Find existing hierarchy by name
-            h = db.query(ApprovalHierarchy).filter(ApprovalHierarchy.name.ilike(h_name)).first()
+            h = hierarchy_map.get(h_name.lower())
             if not h:
                 h = ApprovalHierarchy(name=h_name)
                 db.add(h)
                 db.flush()
-            else:
-                # Clear existing relationships
-                db.query(HierarchyRequester).filter(HierarchyRequester.hierarchy_id == h.id).delete()
-                db.query(HierarchyApprover).filter(HierarchyApprover.hierarchy_id == h.id).delete()
-                db.flush()
+                hierarchy_map[h_name.lower()] = h
                 
             # Add requesters
             req_codes = [c.strip() for c in row.requester_e_codes.split(",") if c.strip()]
             for code in req_codes:
-                u = db.query(User).filter(
-                    (User.e_code.ilike(code)) |
-                    (User.user_id.ilike(code)) |
-                    (User.name.ilike(code))
-                ).first()
+                u = user_lookup.get(code.lower())
                 if u:
-                    # Remove from other hierarchies
-                    db.query(HierarchyRequester).filter(HierarchyRequester.user_id == u.id).delete()
-                    db.flush()
                     db.add(HierarchyRequester(hierarchy_id=h.id, user_id=u.id))
                     
             # Add approvers
@@ -619,11 +719,7 @@ async def bulk_import_hierarchies(
                 app_code = getattr(row, f"level_{lvl}_approver", "")
                 if app_code and app_code.strip():
                     app_code_clean = app_code.strip()
-                    u = db.query(User).filter(
-                        (User.e_code.ilike(app_code_clean)) |
-                        (User.user_id.ilike(app_code_clean)) |
-                        (User.name.ilike(app_code_clean))
-                    ).first()
+                    u = user_lookup.get(app_code_clean.lower())
                     if u:
                         db.add(HierarchyApprover(
                             hierarchy_id=h.id,

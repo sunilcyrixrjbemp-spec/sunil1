@@ -187,11 +187,17 @@ class AuthService:
         }
 
     def verify_otp(self, user_id: str, otp: str, otp_type: str, db: Session) -> bool:
+        # Delete expired OTPs for this user first
+        db.query(OTP).filter(
+            OTP.user_id == user_id,
+            datetime.utcnow() > OTP.expires_at
+        ).delete(synchronize_session=False)
+        db.commit()
+
         # Find latest unused OTP for user + type
         otp_entry = db.query(OTP).filter(
             OTP.user_id == user_id,
-            OTP.otp_type == otp_type,
-            OTP.is_used == False
+            OTP.otp_type == otp_type
         ).order_by(desc(OTP.created_at)).first()
 
         if not otp_entry:
@@ -200,24 +206,21 @@ class AuthService:
                 detail="No pending OTP found for this user."
             )
 
-        if datetime.utcnow() > otp_entry.expires_at:
-            raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail="OTP has expired. Please request a new one."
-            )
-
         if not verify_otp(otp, otp_entry.otp_code):
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
                 detail="Invalid OTP code. Please enter the correct code."
             )
 
-        # Mark OTP as used
-        otp_entry.is_used = True
+        # Delete the OTP entry from database completely upon verification
+        db.delete(otp_entry)
         db.commit()
         return True
 
     def reset_password(self, user_id: str, otp: str, new_password: str, confirm_password: str, db: Session) -> Dict[str, str]:
+        # Validate OTP first to secure password reset endpoint against bypass attempts
+        self.verify_otp(user_id, otp, "reset_password", db)
+
         if new_password != confirm_password:
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,

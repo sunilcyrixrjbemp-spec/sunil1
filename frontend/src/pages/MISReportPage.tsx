@@ -1,24 +1,4 @@
 import { useState, useEffect, useRef } from "react";
-import { 
-  Upload, 
-  MapPin, 
-  DollarSign, 
-  TrendingUp, 
-  Clock,
-  RefreshCw,
-  Layers,
-  AlertTriangle,
-  UserCheck,
-  Database,
-  Filter,
-  X,
-  ShieldCheck,
-  Table,
-  Activity,
-  Calendar,
-  Briefcase,
-  AlertOctagon
-} from "lucide-react";
 import toast from "react-hot-toast";
 import api from "../services/api";
 import { authService } from "../services/authService";
@@ -296,7 +276,7 @@ export default function MISReportPage() {
         <div>
           <h1 className="text-xl font-semibold text-slate-800 flex items-center gap-2">
             MIS Report Dashboard
-            {isUpdating && <RefreshCw className="w-4 h-4 text-blue-500 animate-spin" />}
+            {isUpdating && <i className="fas fa-sync-alt text-blue-500 animate-spin text-sm"></i>}
           </h1>
           <p className="text-xs text-slate-500 mt-0.5">
             Downtime SLA penalties, FTFR, zone allocations, and coordinator analytics metrics.
@@ -313,17 +293,17 @@ export default function MISReportPage() {
           <button
             onClick={triggerFileSelect}
             disabled={syncing}
-            className="px-3 py-1.5 bg-[#28a745] hover:bg-[#218838] disabled:bg-slate-300 text-white text-xs font-bold uppercase rounded cursor-pointer flex items-center gap-1 shadow-sm transition-all"
+            className="px-3 py-1.5 bg-[#28a745] hover:bg-[#218838] disabled:bg-slate-300 text-white text-xs font-bold uppercase rounded cursor-pointer flex items-center gap-1 shadow-sm transition-all border-0"
           >
-            <Upload className="w-3.5 h-3.5" />
+            <i className="fas fa-upload"></i>
             {syncing ? "Syncing..." : "Sync Excel"}
           </button>
           <button
             onClick={fetchDashboardData}
-            className="p-1.5 bg-white hover:bg-slate-100 border border-slate-300 text-slate-700 rounded transition-all cursor-pointer flex items-center justify-center"
+            className="p-1.5 bg-white hover:bg-slate-100 border border-slate-300 text-slate-700 rounded transition-all cursor-pointer flex items-center justify-center h-8 w-8"
             title="Reload data"
           >
-            <RefreshCw className="w-4 h-4" />
+            <i className="fas fa-sync-alt"></i>
           </button>
         </div>
       </div>
@@ -332,7 +312,7 @@ export default function MISReportPage() {
         <div className="bg-white border border-slate-200 border-l-4 border-l-[#28a745] rounded shadow-sm p-4 space-y-2">
           <div className="flex justify-between items-center text-xs">
             <span className="font-bold text-slate-700 flex items-center gap-1.5 animate-pulse">
-              <Database className="w-4 h-4 text-[#28a745]" />
+              <i className="fas fa-database text-[#28a745]"></i>
               {syncStatusText}
             </span>
             <span className="font-bold text-slate-950">{syncProgress}%</span>
@@ -351,10 +331,10 @@ export default function MISReportPage() {
           <button
             key={z}
             onClick={() => setActiveTab(z)}
-            className={`flex-1 text-center py-2 px-4 rounded-lg text-xs font-bold transition-all duration-300 ${
+            className={`flex-1 text-center py-2 px-4 rounded-lg text-xs font-bold transition-all duration-300 border-0 cursor-pointer ${
               isActiveTab(z)
                 ? "bg-white text-blue-600 shadow-md transform scale-102"
-                : "text-slate-600 hover:text-slate-800 hover:bg-white/50"
+                : "text-slate-600 hover:text-slate-800 hover:bg-white/50 bg-transparent"
             }`}
           >
             {z === "All" ? "All Zones" : `${z} Zone`}
@@ -362,10 +342,10 @@ export default function MISReportPage() {
         ))}
       </div>
 
-      <div className="bg-white border border-slate-200 border-t-4 border-t-blue-500 rounded shadow-sm">
+      <div className="card-lte-primary bg-white shadow-sm">
         <div className="px-4 py-2.5 border-b border-slate-150 flex items-center justify-between bg-slate-50/50">
           <h3 className="text-xs font-bold text-slate-700 flex items-center gap-1.5">
-            <Filter className="w-4 h-4 text-blue-500" />
+            <i className="fas fa-filter text-blue-500"></i>
             Filter Operations (Cascading Dropdowns)
           </h3>
           {(selectedZone || selectedDistrict || selectedCoordinator || selectedMonth || selectedEquipment) && (
@@ -373,13 +353,13 @@ export default function MISReportPage() {
               onClick={handleResetFilters}
               className="text-[10px] font-bold text-red-500 hover:text-red-700 flex items-center gap-1 uppercase transition-all bg-transparent border-0 cursor-pointer"
             >
-              <X className="w-3.5 h-3.5" /> Clear Filters
+              <i className="fas fa-times"></i> Clear Filters
             </button>
           )}
         </div>
         <div className="p-4 grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4">
           <div>
-            <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wide block mb-1">Zone</label>
+            <label className="label-lte">Zone</label>
             <select 
               value={selectedZone} 
               onChange={(e) => {
@@ -387,7 +367,7 @@ export default function MISReportPage() {
                 setSelectedDistrict(""); 
               }}
               disabled={userRole === "Zonal Manager"}
-              className="w-full border border-slate-300 rounded px-2.5 py-1.5 text-xs text-slate-700 font-semibold focus:outline-none focus:border-blue-500 bg-white"
+              className="input-lte focus:border-blue-500"
             >
               <option value="">All Zones ({options?.zones.length || 0})</option>
               {options?.zones.map(z => <option key={z} value={z}>{z} Zone</option>)}
@@ -395,12 +375,12 @@ export default function MISReportPage() {
           </div>
 
           <div>
-            <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wide block mb-1">District / DI</label>
+            <label className="label-lte">District / DI</label>
             <select 
               value={selectedDistrict} 
               onChange={(e) => setSelectedDistrict(e.target.value)}
               disabled={userRole === "Engineer"}
-              className="w-full border border-slate-300 rounded px-2.5 py-1.5 text-xs text-slate-700 font-semibold focus:outline-none focus:border-blue-500 bg-white"
+              className="input-lte focus:border-blue-500"
             >
               <option value="">All Districts ({options?.districts.length || 0})</option>
               {options?.districts.map(d => <option key={d} value={d}>{d}</option>)}
@@ -408,12 +388,12 @@ export default function MISReportPage() {
           </div>
 
           <div>
-            <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wide block mb-1">Coordinator</label>
+            <label className="label-lte">Coordinator</label>
             <select 
               value={selectedCoordinator} 
               onChange={(e) => setSelectedCoordinator(e.target.value)}
               disabled={userRole === "Coordinator"}
-              className="w-full border border-slate-300 rounded px-2.5 py-1.5 text-xs text-slate-700 font-semibold focus:outline-none focus:border-blue-500 bg-white"
+              className="input-lte focus:border-blue-500"
             >
               <option value="">All Coordinators ({options?.coordinators.length || 0})</option>
               {options?.coordinators.map(c => <option key={c} value={c}>{c}</option>)}
@@ -421,11 +401,11 @@ export default function MISReportPage() {
           </div>
 
           <div>
-            <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wide block mb-1">Billing Month</label>
+            <label className="label-lte">Billing Month</label>
             <select 
               value={selectedMonth} 
               onChange={(e) => setSelectedMonth(e.target.value)}
-              className="w-full border border-slate-300 rounded px-2.5 py-1.5 text-xs text-slate-700 font-semibold focus:outline-none focus:border-blue-500 bg-white"
+              className="input-lte focus:border-blue-500"
             >
               <option value="">All Months ({options?.months.length || 0})</option>
               {options?.months.map(m => <option key={m} value={m}>{m}</option>)}
@@ -433,11 +413,11 @@ export default function MISReportPage() {
           </div>
 
           <div>
-            <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wide block mb-1">Equipment</label>
+            <label className="label-lte">Equipment</label>
             <select 
               value={selectedEquipment} 
               onChange={(e) => setSelectedEquipment(e.target.value)}
-              className="w-full border border-slate-300 rounded px-2.5 py-1.5 text-xs text-slate-700 font-semibold focus:outline-none focus:border-blue-500 bg-white"
+              className="input-lte focus:border-blue-500"
             >
               <option value="">All Equipments ({options?.equipments.length || 0})</option>
               {options?.equipments.map(eq => <option key={eq} value={eq}>{eq}</option>)}
@@ -451,8 +431,8 @@ export default function MISReportPage() {
           <Loader message="Recalculating business analytics matrices..." />
         </div>
       ) : data?.success === false || !stats ? (
-        <div className="bg-white border border-slate-200 border-t-4 border-t-red-500 p-12 text-center space-y-4 rounded shadow-sm">
-          <AlertTriangle className="w-12 h-12 text-amber-500 mx-auto" />
+        <div className="card-lte p-12 text-center space-y-4 bg-white shadow-sm" style={{ borderTopColor: "#dc3545" }}>
+          <i className="fas fa-exclamation-triangle text-amber-500 fa-2x mx-auto"></i>
           <h3 className="text-sm font-bold uppercase text-slate-700 tracking-wider">No Matching Records</h3>
           <p className="text-slate-500 text-xs max-w-md mx-auto leading-relaxed">
             No rows found matching the selected combination of filters. Please clear filters to reload statistics.
@@ -462,7 +442,7 @@ export default function MISReportPage() {
         <>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
             
-            <div className="bg-white border border-slate-200 rounded-xl p-5 shadow-sm flex items-center justify-between">
+            <div className="card-lte p-5 bg-white shadow-sm flex items-center justify-between">
               <div>
                 <span className="text-[10px] text-slate-400 font-extrabold uppercase tracking-wider block mb-1">Calls Logged & Closed</span>
                 <h3 className="text-2xl font-black text-slate-800 font-mono">
@@ -473,11 +453,11 @@ export default function MISReportPage() {
                 </span>
               </div>
               <div className="w-12 h-12 rounded-xl bg-blue-50 flex items-center justify-center text-blue-600">
-                <Activity className="w-6 h-6" />
+                <i className="fas fa-chart-line fa-lg"></i>
               </div>
             </div>
 
-            <div className="bg-white border border-slate-200 rounded-xl p-5 shadow-sm flex items-center justify-between">
+            <div className="card-lte p-5 bg-white shadow-sm flex items-center justify-between">
               <div>
                 <span className="text-[10px] text-slate-400 font-extrabold uppercase tracking-wider block mb-1">Attended TAT (Days)</span>
                 <h3 className="text-2xl font-black text-slate-800 font-mono">
@@ -486,11 +466,11 @@ export default function MISReportPage() {
                 <span className="text-[10px] text-slate-400 block mt-1">Avg time to attend complaints</span>
               </div>
               <div className="w-12 h-12 rounded-xl bg-indigo-50 flex items-center justify-center text-indigo-600">
-                <Clock className="w-6 h-6" />
+                <i className="fas fa-clock fa-lg"></i>
               </div>
             </div>
 
-            <div className="bg-white border border-slate-200 rounded-xl p-5 shadow-sm flex items-center justify-between">
+            <div className="card-lte p-5 bg-white shadow-sm flex items-center justify-between">
               <div>
                 <span className="text-[10px] text-slate-400 font-extrabold uppercase tracking-wider block mb-1">Closed TAT (Downtime)</span>
                 <h3 className="text-2xl font-black text-slate-800 font-mono">
@@ -499,11 +479,11 @@ export default function MISReportPage() {
                 <span className="text-[10px] text-slate-400 block mt-1">Avg time to close complaints</span>
               </div>
               <div className="w-12 h-12 rounded-xl bg-amber-50 flex items-center justify-center text-amber-600">
-                <TrendingUp className="w-6 h-6" />
+                <i className="fas fa-chart-line fa-lg"></i>
               </div>
             </div>
 
-            <div className="bg-white border border-slate-200 rounded-xl p-5 shadow-sm flex items-center justify-between">
+            <div className="card-lte p-5 bg-white shadow-sm flex items-center justify-between">
               <div>
                 <span className="text-[10px] text-slate-400 font-extrabold uppercase tracking-wider block mb-1">Total SLA Penalty</span>
                 <h3 className="text-2xl font-black text-red-600 font-mono">
@@ -514,16 +494,16 @@ export default function MISReportPage() {
                 </span>
               </div>
               <div className="w-12 h-12 rounded-xl bg-red-50 flex items-center justify-center text-red-600">
-                <DollarSign className="w-6 h-6" />
+                <i className="fas fa-rupee-sign fa-lg"></i>
               </div>
             </div>
 
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6 bg-slate-50 border border-slate-200 rounded-lg p-5">
-            <div className="bg-white border border-slate-200 rounded p-4 shadow-sm flex items-center gap-3">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6 bg-slate-50 border border-slate-205 rounded-lg p-5">
+            <div className="card-lte p-4 bg-white shadow-sm flex items-center gap-3">
               <span className="p-3 bg-orange-50 text-orange-500 rounded-lg">
-                <AlertOctagon className="w-5 h-5" />
+                <i className="fas fa-exclamation-circle fa-lg"></i>
               </span>
               <div>
                 <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">Response Breaches</span>
@@ -532,9 +512,9 @@ export default function MISReportPage() {
               </div>
             </div>
 
-            <div className="bg-white border border-slate-200 rounded p-4 shadow-sm flex items-center gap-3">
+            <div className="card-lte p-4 bg-white shadow-sm flex items-center gap-3">
               <span className="p-3 bg-red-50 text-red-500 rounded-lg">
-                <AlertTriangle className="w-5 h-5" />
+                <i className="fas fa-exclamation-triangle fa-lg"></i>
               </span>
               <div>
                 <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">Resolution Breaches</span>
@@ -543,9 +523,9 @@ export default function MISReportPage() {
               </div>
             </div>
 
-            <div className="bg-white border border-slate-200 rounded p-4 shadow-sm flex items-center gap-3">
+            <div className="card-lte p-4 bg-white shadow-sm flex items-center gap-3">
               <span className="p-3 bg-green-50 text-green-500 rounded-lg">
-                <ShieldCheck className="w-5 h-5" />
+                <i className="fas fa-shield-alt fa-lg"></i>
               </span>
               <div>
                 <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">First Time Fix Rate (FTFR)</span>
@@ -557,9 +537,9 @@ export default function MISReportPage() {
 
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             
-            <div className="bg-white border border-slate-200 rounded shadow-sm md:col-span-2">
+            <div className="card-lte bg-white shadow-sm md:col-span-2">
               <div className="px-4 py-3 border-b border-slate-150 flex items-center gap-1.5 bg-slate-50/50">
-                <Activity className="w-4 h-4 text-blue-500" />
+                <i className="fas fa-chart-line text-blue-500"></i>
                 <h4 className="text-xs font-bold text-slate-700 uppercase tracking-wide">Daily Logged vs Closed Calls (Area Chart)</h4>
               </div>
               <div className="p-4 h-64">
@@ -624,9 +604,9 @@ export default function MISReportPage() {
               </div>
             </div>
 
-            <div className="bg-white border border-slate-200 rounded shadow-sm md:col-span-2">
+            <div className="card-lte bg-white shadow-sm md:col-span-2">
               <div className="px-4 py-2.5 border-b border-slate-150 flex items-center gap-1.5 bg-slate-50/50">
-                <DollarSign className="w-4 h-4 text-red-500" />
+                <i className="fas fa-rupee-sign text-red-500"></i>
                 <h4 className="text-xs font-bold text-slate-700 uppercase tracking-wide">Day-wise Attended vs Delay Penalties (Stacked)</h4>
               </div>
               <div className="p-4 h-64">
@@ -644,9 +624,9 @@ export default function MISReportPage() {
               </div>
             </div>
 
-            <div className="bg-white border border-slate-200 rounded shadow-sm">
+            <div className="card-lte bg-white shadow-sm">
               <div className="px-4 py-2.5 border-b border-slate-150 flex items-center gap-1.5 bg-slate-50/50">
-                <Layers className="w-4 h-4 text-purple-500" />
+                <i className="fas fa-layer-group text-purple-500"></i>
                 <h4 className="text-xs font-bold text-slate-700 uppercase tracking-wide">DI-wise Penalties</h4>
               </div>
               <div className="p-4 h-64">
@@ -666,9 +646,9 @@ export default function MISReportPage() {
               </div>
             </div>
 
-            <div className="bg-white border border-slate-200 rounded shadow-sm">
+            <div className="card-lte bg-white shadow-sm">
               <div className="px-4 py-2.5 border-b border-slate-150 flex items-center gap-1.5 bg-slate-50/50">
-                <Layers className="w-4 h-4 text-red-500" />
+                <i className="fas fa-layer-group text-red-500"></i>
                 <h4 className="text-xs font-bold text-slate-700 uppercase tracking-wide">Top Equipment Penalties</h4>
               </div>
               <div className="p-4 h-60">
@@ -691,9 +671,9 @@ export default function MISReportPage() {
               </div>
             </div>
 
-            <div className="bg-white border border-slate-200 rounded shadow-sm">
+            <div className="card-lte bg-white shadow-sm">
               <div className="px-4 py-2.5 border-b border-slate-150 flex items-center gap-1.5 bg-slate-50/50">
-                <MapPin className="w-4 h-4 text-[#28a745]" />
+                <i className="fas fa-map-marker-alt text-[#28a745]"></i>
                 <h4 className="text-xs font-bold text-slate-700 uppercase tracking-wide">District Penalties</h4>
               </div>
               <div className="p-4 h-60">
@@ -726,9 +706,9 @@ export default function MISReportPage() {
               </div>
             </div>
 
-            <div className="bg-white border border-slate-200 rounded shadow-sm">
+            <div className="card-lte bg-white shadow-sm">
               <div className="px-4 py-2.5 border-b border-slate-150 flex items-center gap-1.5 bg-slate-50/50">
-                <Calendar className="w-4 h-4 text-purple-500" />
+                <i className="fas fa-calendar-alt text-purple-500"></i>
                 <h4 className="text-xs font-bold text-slate-700 uppercase tracking-wide">Monthly Penalty Trend</h4>
               </div>
               <div className="p-4 h-60">
@@ -753,9 +733,9 @@ export default function MISReportPage() {
               </div>
             </div>
 
-            <div className="bg-white border border-slate-200 rounded shadow-sm">
+            <div className="card-lte bg-white shadow-sm">
               <div className="px-4 py-2.5 border-b border-slate-150 flex items-center gap-1.5 bg-slate-50/50">
-                <Briefcase className="w-4 h-4 text-teal-500" />
+                <i className="fas fa-briefcase text-teal-500"></i>
                 <h4 className="text-xs font-bold text-slate-700 uppercase tracking-wide">Top Vendor Penalties</h4>
               </div>
               <div className="p-4 h-60">
@@ -780,10 +760,10 @@ export default function MISReportPage() {
 
           </div>
 
-          <div className="bg-white border border-slate-200 rounded shadow-sm overflow-hidden mt-6">
+          <div className="card-lte bg-white shadow-sm overflow-hidden mt-6">
             <div className="px-4 py-3 border-b border-slate-150 flex items-center justify-between bg-slate-50/50">
               <div className="flex items-center gap-1.5">
-                <UserCheck className="w-4 h-4 text-blue-500" />
+                <i className="fas fa-user-check text-blue-500"></i>
                 <h4 className="text-xs font-bold text-slate-700 uppercase tracking-wide">Coordinator Workload Analysis (Monthly)</h4>
               </div>
             </div>

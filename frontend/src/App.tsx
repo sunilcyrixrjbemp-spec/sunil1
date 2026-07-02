@@ -29,18 +29,8 @@ const NotFoundPage = lazy(() => import("./pages/NotFoundPage"));
 
 function PageLoader() {
   return (
-    <div className="flex flex-col items-center justify-center min-h-[70vh] w-full p-6 antialiased select-none animate-fade-in-up">
-      <div className="flex flex-col items-center space-y-5 text-center max-w-xs p-7 rounded-2xl bg-white/70 backdrop-blur-xl border border-white/50 shadow-xl">
-        <div className="relative flex items-center justify-center">
-          <div className="text-blue-600 text-3xl animate-spin">
-            <i className="fas fa-sync-alt"></i>
-          </div>
-        </div>
-        <div className="space-y-1">
-          <p className="text-[11px] font-bold text-slate-700 uppercase tracking-widest animate-pulse">Decrypting Console...</p>
-          <p className="text-[9px] text-slate-400 font-semibold uppercase tracking-wider">Securing Handshake</p>
-        </div>
-      </div>
+    <div className="flex items-center justify-center min-h-[60vh] w-full p-6">
+      <div className="w-10 h-10 rounded-full border-4 border-slate-200 border-t-blue-600 animate-spin"></div>
     </div>
   );
 }

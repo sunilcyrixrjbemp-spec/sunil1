@@ -86,6 +86,115 @@ app.add_middleware(
 from fastapi import Request
 from fastapi.responses import JSONResponse
 from sqlalchemy.exc import SQLAlchemyError
+import collections
+from datetime import datetime, timedelta
+from jose import jwt
+from app.config.settings import settings
+
+# DDoS IP Auto-Ban and Request tracker maps
+banned_ips = {}  # ip: ban_expiry_datetime
+suspicious_strikes = collections.defaultdict(int)  # ip: strike_count
+
+ip_request_history = collections.defaultdict(list)  # ip: [timestamp]
+user_request_history = collections.defaultdict(list)  # user_id: [timestamp]
+
+# Configurable security thresholds
+SENSITIVE_PATHS = {
+    "/api/auth/login", 
+    "/api/auth/reset-password", 
+    "/api/auth/verify-otp", 
+    "/api/auth/send-otp",
+    "/api/admin/users/bulk"
+}
+SENSITIVE_LIMIT = 10  # Max 10 requests per 60s for authentication endpoints
+GENERAL_LIMIT = 150  # Max 150 requests per 60s for generic API paths
+WINDOW_SIZE = 60  # seconds
+
+@app.middleware("http")
+async def security_and_rate_limiting_middleware(request: Request, call_next):
+    # 1. IP Blocklist validation
+    ip = request.client.host if request.client else "unknown"
+    now = datetime.utcnow()
+    
+    if ip in banned_ips:
+        expiry = banned_ips[ip]
+        if now < expiry:
+            return JSONResponse(
+                status_code=403,
+                content={"detail": "Your IP is temporarily banned due to suspicious traffic patterns. Try again later."}
+            )
+        else:
+            del banned_ips[ip]
+            suspicious_strikes[ip] = 0
+
+    # 2. Extract Auth Token to prevent botnets bypassing IP blocks via proxy rotation
+    auth_header = request.headers.get("Authorization")
+    user_id = None
+    if auth_header and auth_header.startswith("Bearer "):
+        try:
+            token = auth_header.split(" ")[1]
+            payload = jwt.decode(token, settings.SECRET_KEY, algorithms=[settings.ALGORITHM])
+            user_id = payload.get("sub")
+        except Exception:
+            pass # Invalid tokens are safely intercepted by route dependencies
+
+    # 3. Path-based threshold assessment
+    path = request.url.path
+    limit = SENSITIVE_LIMIT if path in SENSITIVE_PATHS else GENERAL_LIMIT
+
+    # 4. Filter expired history entries
+    ip_history = ip_request_history[ip]
+    ip_history = [t for t in ip_history if (now - t).total_seconds() < WINDOW_SIZE]
+    ip_request_history[ip] = ip_history
+
+    user_history = []
+    if user_id:
+        user_history = user_request_history[user_id]
+        user_history = [t for t in user_history if (now - t).total_seconds() < WINDOW_SIZE]
+        user_request_history[user_id] = user_history
+
+    # Check IP limits and register suspicious strikes
+    if len(ip_history) >= limit:
+        suspicious_strikes[ip] += 1
+        if suspicious_strikes[ip] >= 3:
+            # Auto-ban IP for 15 minutes
+            banned_ips[ip] = now + timedelta(minutes=15)
+            logger.warning(f"Suspect IP {ip} banned for 15 minutes due to aggressive request rates on {path}.")
+        return JSONResponse(
+            status_code=429,
+            content={"detail": "Rate limit exceeded. Suspicious request sequence detected."}
+        )
+
+    # Check User session limits to prevent account spam
+    if user_id and len(user_history) >= GENERAL_LIMIT:
+        return JSONResponse(
+            status_code=429,
+            content={"detail": "Account session rate limit exceeded. Connection throttled."}
+        )
+
+    # Log current hits
+    ip_request_history[ip].append(now)
+    if user_id:
+        user_request_history[user_id].append(now)
+
+    # 5. Process Request
+    response = await call_next(request)
+
+    # 6. Inject Premium Hardened HTTP Security Headers (Defends against clickjacking, MitM, sniffing)
+    response.headers["X-Frame-Options"] = "DENY"
+    response.headers["X-Content-Type-Options"] = "nosniff"
+    response.headers["X-XSS-Protection"] = "1; mode=block"
+    response.headers["Strict-Transport-Security"] = "max-age=31536000; includeSubDomains; preload"
+    response.headers["Referrer-Policy"] = "no-referrer-when-downgrade"
+    response.headers["Content-Security-Policy"] = (
+        "default-src 'self' https:; "
+        "script-src 'self' 'unsafe-inline' 'unsafe-eval' https:; "
+        "style-src 'self' 'unsafe-inline' https:; "
+        "img-src 'self' data: https:; "
+        "font-src 'self' data: https:; "
+        "connect-src 'self' https:;"
+    )
+    return response
 
 @app.exception_handler(SQLAlchemyError)
 async def sqlalchemy_exception_handler(request: Request, exc: SQLAlchemyError):

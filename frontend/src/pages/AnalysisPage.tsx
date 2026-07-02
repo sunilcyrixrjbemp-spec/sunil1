@@ -1,5 +1,4 @@
 import { useEffect, useState, useMemo } from "react";
-import { BarChart3, Filter, Users, User as UserIcon, X, IndianRupee, Phone, ShieldCheck, TrendingUp, Activity, FileSpreadsheet } from "lucide-react";
 import { BarChart, Bar, Cell, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, AreaChart, Area, PieChart, Pie } from "recharts";
 import { expenseService } from "../services/expenseService";
 import { authService } from "../services/authService";
@@ -416,7 +415,7 @@ export default function AnalysisPage() {
   }
 
   return (
-    <div className="space-y-5 text-gray-800 p-4 lg:p-6" style={{ fontFamily: "'Aptos', 'Source Sans Pro', sans-serif" }}>
+    <div className="space-y-5 text-gray-800 p-4 lg:p-6" style={{ fontFamily: "'Plus Jakarta Sans', sans-serif" }}>
       
       {/* Page Header */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 pb-1">
@@ -434,7 +433,7 @@ export default function AnalysisPage() {
                 viewMode === "my" ? "bg-blue-600 text-white" : "bg-white text-gray-600 hover:bg-gray-50"
               }`}
             >
-              <UserIcon className="w-3 h-3" /> My Data
+              <i className="fas fa-user text-xs"></i> My Data
             </button>
             <button
               onClick={() => setViewMode("team")}
@@ -442,16 +441,16 @@ export default function AnalysisPage() {
                 viewMode === "team" ? "bg-blue-600 text-white" : "bg-white text-gray-600 hover:bg-gray-50"
               }`}
             >
-              <Users className="w-3 h-3" /> Team Data
+              <i className="fas fa-users text-xs"></i> Team Data
             </button>
           </div>
         )}
       </div>
 
       {/* Dedicated Compact Filter Panel Bar */}
-      <div className="bg-white border border-gray-200 rounded shadow-sm p-2 flex flex-wrap items-center gap-2 text-xs">
+      <div className="card-lte p-2 flex flex-wrap items-center gap-2 text-xs bg-white">
         <div className="flex items-center gap-1 text-gray-400 font-semibold mr-1 shrink-0">
-          <Filter className="w-3.5 h-3.5" />
+          <i className="fas fa-filter text-[10px] uppercase tracking-wider"></i>
           <span className="text-[10px] uppercase tracking-wider">Filters:</span>
         </div>
         
@@ -545,7 +544,7 @@ export default function AnalysisPage() {
               className="p-0.5 text-gray-400 hover:text-red-500 rounded bg-transparent border-0 cursor-pointer flex items-center justify-center"
               title="Clear Dates"
             >
-              <X className="w-3 h-3" />
+              <i className="fas fa-times"></i>
             </button>
           )}
         </div>
@@ -556,7 +555,7 @@ export default function AnalysisPage() {
         {/* Card 1: Total Claims */}
         <div className="info-box-lte animate-fadeIn">
           <div className="info-box-icon bg-[#007bff]">
-            <FileSpreadsheet className="w-5 h-5 text-white" />
+            <i className="fas fa-file-excel text-white text-sm"></i>
           </div>
           <div className="info-box-content">
             <span className="text-[9px] font-bold uppercase tracking-wider text-gray-400 block">Total Claims</span>
@@ -567,7 +566,7 @@ export default function AnalysisPage() {
         {/* Card 2: Total Amount */}
         <div className="info-box-lte animate-fadeIn">
           <div className="info-box-icon bg-[#28a745]">
-            <IndianRupee className="w-5 h-5 text-white" />
+            <i className="fas fa-rupee-sign text-white text-sm"></i>
           </div>
           <div className="info-box-content">
             <span className="text-[9px] font-bold uppercase tracking-wider text-gray-400 block">Total Amount</span>
@@ -578,7 +577,7 @@ export default function AnalysisPage() {
         {/* Card 3: Average Claim */}
         <div className="info-box-lte animate-fadeIn">
           <div className="info-box-icon bg-[#ffc107]">
-            <TrendingUp className="w-5 h-5 text-white" />
+            <i className="fas fa-chart-line text-white text-sm"></i>
           </div>
           <div className="info-box-content">
             <span className="text-[9px] font-bold uppercase tracking-wider text-gray-400 block">Average Claim</span>
@@ -589,7 +588,7 @@ export default function AnalysisPage() {
         {/* Card 4: Calls Done / Assigned */}
         <div className="info-box-lte animate-fadeIn">
           <div className="info-box-icon bg-[#605ca8]">
-            <Phone className="w-5 h-5 text-white" />
+            <i className="fas fa-phone text-white text-sm"></i>
           </div>
           <div className="info-box-content">
             <span className="text-[9px] font-bold uppercase tracking-wider text-gray-400 block">Calls Done / Assigned</span>
@@ -600,7 +599,7 @@ export default function AnalysisPage() {
         {/* Card 5: PMS Completed */}
         <div className="info-box-lte animate-fadeIn">
           <div className="info-box-icon bg-[#20c997]">
-            <ShieldCheck className="w-5 h-5 text-white" />
+            <i className="fas fa-shield-alt text-white text-sm"></i>
           </div>
           <div className="info-box-content">
             <span className="text-[9px] font-bold uppercase tracking-wider text-gray-400 block">PMS Completed</span>
@@ -611,7 +610,7 @@ export default function AnalysisPage() {
         {/* Card 6: Tag & Calib Done */}
         <div className="info-box-lte animate-fadeIn">
           <div className="info-box-icon bg-[#17a2b8]">
-            <Activity className="w-5 h-5 text-white" />
+            <i className="fas fa-chart-line text-white text-sm"></i>
           </div>
           <div className="info-box-content">
             <span className="text-[9px] font-bold uppercase tracking-wider text-gray-400 block">Tag & Calib Done</span>
@@ -622,7 +621,7 @@ export default function AnalysisPage() {
         {/* Card 7: Scope */}
         <div className="info-box-lte animate-fadeIn">
           <div className="info-box-icon bg-[#6f42c1]">
-            {viewMode === "team" ? <Users className="w-5 h-5 text-white" /> : <UserIcon className="w-5 h-5 text-white" />}
+            {viewMode === "team" ? <i className="fas fa-users text-white text-sm"></i> : <i className="fas fa-user text-white text-sm"></i>}
           </div>
           <div className="info-box-content">
             <span className="text-[9px] font-bold uppercase tracking-wider text-gray-400 block">Scope</span>
@@ -633,8 +632,8 @@ export default function AnalysisPage() {
 
       {/* No Data State */}
       {count === 0 && (
-        <div className="bg-white border border-gray-200 rounded p-10 text-center">
-          <BarChart3 className="w-10 h-10 text-gray-300 mx-auto mb-3" />
+        <div className="card-lte p-10 text-center bg-white shadow-sm">
+          <i className="fas fa-chart-bar fa-2x text-gray-300 mx-auto mb-3 block"></i>
           <p className="text-sm font-bold text-gray-500">No expense data found for {months[selectedMonth]} {selectedYear}</p>
           <p className="text-xs text-gray-400 mt-1">Try selecting a different month or year from the filter above</p>
         </div>
