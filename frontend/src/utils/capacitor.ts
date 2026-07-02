@@ -77,14 +77,11 @@ export interface BiometricResult {
 }
 
 export const biometricAuth = {
-  /**
-   * Check if biometric authentication is available on the device
-   */
   isAvailable: async (): Promise<boolean> => {
     if (!isNativeApp()) return false;
     try {
       const { NativeBiometric } = await import('@capgo/capacitor-native-biometric');
-      const result = await NativeBiometric.isAvailable();
+      const result = await NativeBiometric.isAvailable({ useFallback: true } as any);
       return result.isAvailable;
     } catch (_) {
       return false;
@@ -107,7 +104,7 @@ export const biometricAuth = {
         description: reason,
         negativeButtonText: 'Cancel',
         usePin: true
-      });
+      } as any);
       return { success: true };
     } catch (error: any) {
       return {

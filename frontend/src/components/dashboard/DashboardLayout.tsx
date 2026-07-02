@@ -303,7 +303,6 @@ export default function DashboardLayout() {
         try {
           const currentUser = JSON.parse(localStorage.getItem("user") || "null");
           if (currentUser) {
-            const userId = currentUser.user_id;
             for (let i = 0; i < localStorage.length; i++) {
               const key = localStorage.key(i);
               if (key && key.startsWith("cache_month_limits_")) {
