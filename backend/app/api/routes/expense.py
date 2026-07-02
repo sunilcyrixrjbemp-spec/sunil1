@@ -658,12 +658,13 @@ async def submit_expense(
 
         # 4. Daily Allowance (DA) validation
         if leg_num == 1:
+            is_company_provided = bool(iti.get("company_provided"))
             if not to_dist:
                 max_da = 0.0
             elif has_out_district:
-                max_da = daily_out_state if hotel_amount > 0 else daily_out
+                max_da = daily_out_state if (hotel_amount > 0 or is_company_provided) else daily_out
             else:
-                max_da = daily_hotel if hotel_amount > 0 else daily_in
+                max_da = daily_hotel if (hotel_amount > 0 or is_company_provided) else daily_in
 
             if da_amount > (max_da + 1.0):
                 raise HTTPException(

@@ -1716,6 +1716,7 @@ export default function ExpensePage() {
           da: legNum === 1 ? leg.da : "0",
           hotel: legNum === 1 ? leg.hotel : "0",
           local_purchase: legNum === 1 ? leg.local_purchase : "0",
+          company_provided: legNum === 1 ? !!leg.company_provided : false,
           oth_desc: leg.oth_desc,
           oth_amount: leg.oth_amount,
           ws_assigned: ws_assigned.toString(),
