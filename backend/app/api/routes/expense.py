@@ -166,7 +166,8 @@ async def init_expense(
     ).filter(
         Expense.user_id == user.id,
         Expense.month == month_name,
-        Expense.year == year_val
+        Expense.year == year_val,
+        Expense.status.notin_(["draft", "rejected"])
     ).first()
 
     accum_km = stats[0] or 0.0 if stats else 0.0
@@ -558,7 +559,8 @@ async def submit_expense(
     ).filter(
         Expense.user_id == current_user.id,
         Expense.month == month_name,
-        Expense.year == year_val
+        Expense.year == year_val,
+        Expense.status.notin_(["draft", "rejected"])
     ).first()
 
     accum_km = stats[0] or 0.0 if stats else 0.0
