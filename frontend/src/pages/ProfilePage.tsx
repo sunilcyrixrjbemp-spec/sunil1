@@ -673,31 +673,35 @@ export default function ProfilePage() {
                           )}
                         </div>
                         {isEditingEmail ? (
-                          <div className="flex items-center gap-1.5 w-full animate-fadeIn mt-1">
+                          <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 w-full animate-fadeIn mt-1">
                             <input
                               type="email"
                               value={tempEmail}
                               onChange={(e) => setTempEmail(e.target.value)}
-                              className="input-lte h-7"
+                              className="input-lte h-8 flex-1"
                               disabled={emailLoading}
                               autoFocus
                             />
-                            <button
-                              onClick={handleSaveEmail}
-                              disabled={emailLoading}
-                              className="h-7 w-7 rounded bg-blue-600 hover:bg-blue-700 text-white transition-all flex items-center justify-center shrink-0 disabled:opacity-50 border-0 cursor-pointer"
-                              title="Save"
-                            >
-                              {emailLoading ? <LteSpinner /> : <i className="fas fa-check"></i>}
-                            </button>
-                            <button
-                              onClick={handleCancelEmail}
-                              disabled={emailLoading}
-                              className="h-7 w-7 rounded bg-white hover:bg-gray-100 text-gray-500 transition-all border border-gray-350 flex items-center justify-center shrink-0 disabled:opacity-50 cursor-pointer"
-                              title="Cancel"
-                            >
-                              <i className="fas fa-times"></i>
-                            </button>
+                            <div className="flex gap-1.5 shrink-0">
+                              <button
+                                onClick={handleSaveEmail}
+                                disabled={emailLoading}
+                                className="px-3.5 h-8 rounded bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs transition-all flex items-center justify-center gap-1.5 disabled:opacity-50 border-0 cursor-pointer shadow-sm"
+                                title="Save changes"
+                              >
+                                {emailLoading ? <LteSpinner /> : <i className="fas fa-check"></i>}
+                                <span>Save</span>
+                              </button>
+                              <button
+                                onClick={handleCancelEmail}
+                                disabled={emailLoading}
+                                className="px-3.5 h-8 rounded bg-white hover:bg-gray-150 text-gray-600 border border-gray-300 font-bold text-xs transition-all flex items-center justify-center gap-1.5 disabled:opacity-50 cursor-pointer shadow-sm"
+                                title="Cancel editing"
+                              >
+                                <i className="fas fa-times"></i>
+                                <span>Cancel</span>
+                              </button>
+                            </div>
                           </div>
                         ) : (
                           <span className="text-gray-805 font-semibold truncate pl-[26px]">{user.mail_id || "-"}</span>
@@ -726,31 +730,35 @@ export default function ProfilePage() {
                           )}
                         </div>
                         {isEditingMobile ? (
-                          <div className="flex items-center gap-1.5 w-full animate-fadeIn mt-1">
+                          <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 w-full animate-fadeIn mt-1">
                             <input
                               type="tel"
                               value={tempMobile}
                               onChange={(e) => setTempMobile(e.target.value)}
-                              className="input-lte h-7"
+                              className="input-lte h-8 flex-1"
                               disabled={mobileLoading}
                               autoFocus
                             />
-                            <button
-                              onClick={handleSaveMobile}
-                              disabled={mobileLoading}
-                              className="h-7 w-7 rounded bg-blue-600 hover:bg-blue-700 text-white transition-all flex items-center justify-center shrink-0 disabled:opacity-50 border-0 cursor-pointer"
-                              title="Save"
-                            >
-                              {mobileLoading ? <LteSpinner /> : <i className="fas fa-check"></i>}
-                            </button>
-                            <button
-                              onClick={handleCancelMobile}
-                              disabled={mobileLoading}
-                              className="h-7 w-7 rounded bg-white hover:bg-gray-100 text-gray-500 transition-all border border-gray-350 flex items-center justify-center shrink-0 disabled:opacity-50 cursor-pointer"
-                              title="Cancel"
-                            >
-                              <i className="fas fa-times"></i>
-                            </button>
+                            <div className="flex gap-1.5 shrink-0">
+                              <button
+                                onClick={handleSaveMobile}
+                                disabled={mobileLoading}
+                                className="px-3.5 h-8 rounded bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs transition-all flex items-center justify-center gap-1.5 disabled:opacity-50 border-0 cursor-pointer shadow-sm"
+                                title="Save changes"
+                              >
+                                {mobileLoading ? <LteSpinner /> : <i className="fas fa-check"></i>}
+                                <span>Save</span>
+                              </button>
+                              <button
+                                onClick={handleCancelMobile}
+                                disabled={mobileLoading}
+                                className="px-3.5 h-8 rounded bg-white hover:bg-gray-150 text-gray-600 border border-gray-300 font-bold text-xs transition-all flex items-center justify-center gap-1.5 disabled:opacity-50 cursor-pointer shadow-sm"
+                                title="Cancel editing"
+                              >
+                                <i className="fas fa-times"></i>
+                                <span>Cancel</span>
+                              </button>
+                            </div>
                           </div>
                         ) : (
                           <span className="text-gray-805 font-semibold truncate pl-[26px]">{user.mobile_number || "-"}</span>
