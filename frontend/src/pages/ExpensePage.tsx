@@ -734,11 +734,7 @@ export default function ExpensePage() {
   useEffect(() => {
     if (date) {
       const monthStr = date.slice(0, 7);
-      const cacheKey = `cache_month_limits_${currentUserId}_${monthStr}`;
-      const hasCache = localStorage.getItem(cacheKey) !== null;
-      if (monthStr !== loadedMonth || !hasCache) {
-        fetchMonthLimits(monthStr, itineraries.length === 1 && !itineraries[0].from);
-      }
+      fetchMonthLimits(monthStr, itineraries.length === 1 && !itineraries[0].from);
     }
   }, [date]);
 
