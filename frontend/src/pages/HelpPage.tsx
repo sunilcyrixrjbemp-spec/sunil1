@@ -670,7 +670,8 @@ export default function HelpPage() {
                     ))}
                   </select>
                 </div>
-                            {/* Select Assignee (Manager or Zonal Coordinator) */}
+              )}
+              {/* Select Assignee (Manager or Zonal Coordinator) */}
               {concernType !== "Profile" ? (
                 <div>
                   <label className="label-lte">Assign Concern Target *</label>
