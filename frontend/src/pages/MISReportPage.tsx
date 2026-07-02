@@ -576,7 +576,7 @@ export default function MISReportPage() {
 
             <div className="bg-white border border-slate-200 rounded shadow-sm">
               <div className="px-4 py-2.5 border-b border-slate-150 flex items-center gap-1.5 bg-slate-50/50">
-                <Clock className="w-4 h-4 text-indigo-500" />
+                <i className="fas fa-clock text-indigo-500"></i>
                 <h4 className="text-xs font-bold text-slate-700 uppercase tracking-wide">Monthly Average TAT (Days)</h4>
               </div>
               <div className="p-4 h-64">
@@ -815,7 +815,7 @@ export default function MISReportPage() {
 
           <div className="bg-white border border-slate-200 rounded shadow-sm overflow-hidden mt-6">
             <div className="px-4 py-3 border-b border-slate-150 flex items-center gap-1.5 bg-slate-50/50">
-              <Table className="w-4 h-4 text-indigo-500" />
+              <i className="fas fa-table text-indigo-500"></i>
               <h4 className="text-xs font-bold text-slate-700 uppercase tracking-wide">Top Regional SLA Penalty Details</h4>
             </div>
             <div className="overflow-x-auto">
