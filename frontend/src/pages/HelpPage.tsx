@@ -741,7 +741,7 @@ export default function HelpPage() {
             </form>
           </div>
 
-        </div></div>
+        </div>
 
         {/* Right column: Filter headers, listing tabs, and chat timeline logs */}
         <div className="xl:col-span-2 space-y-6">
