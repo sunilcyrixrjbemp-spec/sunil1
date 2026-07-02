@@ -1,0 +1,1098 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Login — Cyrix Field Report App</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&display=swap"
+        rel="stylesheet">
+    <style>
+        *,
+        *::before,
+        *::after {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        :root {
+            --primary: #1d4ed8;
+            --primary-dark: #1e3a8a;
+            --primary-light: #3b82f6;
+            --primary-glow: rgba(29, 78, 216, 0.12);
+            --secondary: #0ea5e9;
+            --success: #16a34a;
+            --danger: #dc2626;
+            --text: #0f172a;
+            --text-2: #475569;
+            --text-3: #94a3b8;
+            --border: #e2e8f0;
+            --bg-input: #f8fafc;
+            --font: 'Plus Jakarta Sans', system-ui, sans-serif;
+            --r: 10px;
+            --dur: 200ms;
+        }
+
+        html,
+        body {
+            height: 100%;
+            font-family: var(--font);
+        }
+
+        body {
+            display: flex;
+            min-height: 100vh;
+            -webkit-font-smoothing: antialiased;
+        }
+
+        /* ── Left Panel ── */
+        .left-panel {
+            flex: 1;
+            background: var(--primary-dark);
+            background-image:
+                radial-gradient(ellipse at 20% 50%, rgba(29, 78, 216, 0.6) 0%, transparent 60%),
+                radial-gradient(ellipse at 80% 20%, rgba(14, 165, 233, 0.3) 0%, transparent 50%),
+                radial-gradient(ellipse at 60% 80%, rgba(6, 182, 212, 0.2) 0%, transparent 40%);
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+            padding: 48px;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .left-panel::before {
+            content: '';
+            position: absolute;
+            inset: 0;
+            background-image: url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%23ffffff' fill-opacity='0.03'%3E%3Cpath d='M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E");
+        }
+
+        .left-brand {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            position: relative;
+            z-index: 1;
+        }
+
+        .left-logo {
+            width: 46px;
+            height: 46px;
+            background: white;
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            overflow: hidden;
+            padding: 3px;
+            box-shadow: 0 4px 16px rgba(0, 0, 0, 0.2);
+        }
+
+        .left-logo img {
+            width: 100%;
+            height: 100%;
+            object-fit: contain;
+        }
+
+        .left-logo-fallback {
+            width: 40px;
+            height: 40px;
+            background: linear-gradient(135deg, #1d4ed8, #0ea5e9);
+            border-radius: 9px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-size: 16px;
+            font-weight: 900;
+        }
+
+        .left-brand-name {
+            font-size: 15px;
+            font-weight: 800;
+            color: white;
+            line-height: 1.2;
+            letter-spacing: -0.2px;
+        }
+
+        .left-brand-sub {
+            font-size: 10.5px;
+            color: rgba(255, 255, 255, 0.5);
+            font-weight: 500;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .left-hero {
+            position: relative;
+            z-index: 1;
+        }
+
+        .left-hero h2 {
+            font-size: 38px;
+            font-weight: 800;
+            color: white;
+            line-height: 1.15;
+            letter-spacing: -1px;
+            margin-bottom: 16px;
+        }
+
+        .left-hero h2 span {
+            background: linear-gradient(90deg, #67e8f9, #a5f3fc);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        .left-hero p {
+            font-size: 14.5px;
+            color: rgba(255, 255, 255, 0.6);
+            line-height: 1.7;
+            max-width: 340px;
+        }
+
+        .left-features {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+            margin-top: 28px;
+        }
+
+        .feature-pill {
+            display: inline-flex;
+            align-items: center;
+            gap: 10px;
+            background: rgba(255, 255, 255, 0.08);
+            border: 1px solid rgba(255, 255, 255, 0.12);
+            border-radius: 40px;
+            padding: 9px 16px;
+            width: fit-content;
+            font-size: 13px;
+            font-weight: 500;
+            color: rgba(255, 255, 255, 0.85);
+        }
+
+        .feature-pill svg {
+            color: #67e8f9;
+        }
+
+        .left-footer {
+            position: relative;
+            z-index: 1;
+            font-size: 11.5px;
+            color: rgba(255, 255, 255, 0.3);
+            line-height: 1.8;
+        }
+
+        .left-footer a {
+            color: rgba(255, 255, 255, 0.55);
+            transition: color var(--dur);
+        }
+
+        .left-footer a:hover {
+            color: white;
+        }
+
+        /* ── Right Panel (Form) ── */
+        .right-panel {
+            width: 460px;
+            flex-shrink: 0;
+            background: #ffffff;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            padding: 48px 44px;
+            overflow-y: auto;
+        }
+
+        .form-header {
+            margin-bottom: 32px;
+        }
+
+        .form-header .app-name {
+            font-size: 13px;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            color: var(--primary);
+            margin-bottom: 8px;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .form-header .app-name::before {
+            content: '';
+            width: 20px;
+            height: 2px;
+            background: var(--primary);
+            border-radius: 2px;
+        }
+
+        .form-header h1 {
+            font-size: 26px;
+            font-weight: 800;
+            color: var(--text);
+            letter-spacing: -0.5px;
+            line-height: 1.2;
+        }
+
+        .form-header p {
+            font-size: 13.5px;
+            color: var(--text-3);
+            margin-top: 6px;
+        }
+
+        /* Form */
+        .login-form {
+            display: flex;
+            flex-direction: column;
+            gap: 16px;
+        }
+
+        .field-group {
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+        }
+
+        .field-group label {
+            font-size: 11.5px;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            color: var(--text-2);
+        }
+
+        .input-wrap {
+            position: relative;
+            display: flex;
+            align-items: center;
+        }
+
+        .input-wrap svg.input-icon {
+            position: absolute;
+            left: 12px;
+            color: var(--text-3);
+            pointer-events: none;
+            flex-shrink: 0;
+        }
+
+        .input-wrap input {
+            width: 100%;
+            padding: 11px 12px 11px 40px;
+            border: 1.5px solid var(--border);
+            border-radius: var(--r);
+            background: var(--bg-input);
+            color: var(--text);
+            font-size: 14px;
+            font-family: var(--font);
+            outline: none;
+            transition: border-color var(--dur), box-shadow var(--dur), background var(--dur);
+        }
+
+        .input-wrap input:focus {
+            border-color: var(--primary-light);
+            box-shadow: 0 0 0 3px var(--primary-glow);
+            background: white;
+        }
+
+        .input-wrap input.error {
+            border-color: var(--danger);
+        }
+
+        .toggle-pwd {
+            position: absolute;
+            right: 12px;
+            background: none;
+            border: none;
+            cursor: pointer;
+            color: var(--text-3);
+            display: flex;
+            padding: 4px;
+            transition: color var(--dur);
+        }
+
+        .toggle-pwd:hover {
+            color: var(--text-2);
+        }
+
+        .field-error {
+            font-size: 11.5px;
+            color: var(--danger);
+            font-weight: 500;
+            min-height: 16px;
+        }
+
+        .login-btn {
+            padding: 13px;
+            background: var(--primary);
+            color: white;
+            border: none;
+            border-radius: var(--r);
+            font-size: 14.5px;
+            font-weight: 700;
+            font-family: var(--font);
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            transition: all var(--dur);
+            margin-top: 4px;
+        }
+
+        .login-btn:hover:not(:disabled) {
+            background: var(--primary-dark);
+            transform: translateY(-1px);
+            box-shadow: 0 6px 20px rgba(29, 78, 216, 0.3);
+        }
+
+        .login-btn:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        /* OTP section */
+        .otp-section {
+            display: none;
+        }
+
+        .otp-inputs {
+            display: flex;
+            gap: 8px;
+            justify-content: center;
+        }
+
+        .otp-digit {
+            width: 46px;
+            height: 52px;
+            border: 1.5px solid var(--border);
+            border-radius: var(--r);
+            background: var(--bg-input);
+            text-align: center;
+            font-size: 20px;
+            font-weight: 700;
+            color: var(--text);
+            font-family: var(--font);
+            outline: none;
+            transition: border-color var(--dur), box-shadow var(--dur);
+        }
+
+        .otp-digit:focus {
+            border-color: var(--primary-light);
+            box-shadow: 0 0 0 3px var(--primary-glow);
+            background: white;
+        }
+
+        .links-row {
+            display: flex;
+            justify-content: space-between;
+            flex-wrap: wrap;
+            gap: 8px;
+            margin-top: 4px;
+        }
+
+        .text-link {
+            font-size: 12.5px;
+            font-weight: 600;
+            color: var(--primary);
+            background: none;
+            border: none;
+            cursor: pointer;
+            font-family: var(--font);
+            padding: 0;
+            transition: color var(--dur);
+            text-decoration: none;
+        }
+
+        .text-link:hover {
+            color: var(--primary-dark);
+            text-decoration: underline;
+        }
+
+        .divider {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            font-size: 11.5px;
+            color: var(--text-3);
+            margin: 4px 0;
+        }
+
+        .divider::before,
+        .divider::after {
+            content: '';
+            flex: 1;
+            height: 1px;
+            background: var(--border);
+        }
+
+        /* Alert box */
+        .alert-box {
+            display: none;
+            padding: 12px 14px;
+            border-radius: var(--r);
+            font-size: 13px;
+            line-height: 1.5;
+            font-weight: 500;
+            border: 1px solid;
+        }
+
+        .alert-box.error {
+            background: #fef2f2;
+            color: var(--danger);
+            border-color: #fecaca;
+        }
+
+        .alert-box.success {
+            background: #f0fdf4;
+            color: var(--success);
+            border-color: #bbf7d0;
+        }
+
+        .alert-box.info {
+            background: #eff6ff;
+            color: var(--primary);
+            border-color: #bfdbfe;
+        }
+
+        .alert-box.show {
+            display: flex;
+            align-items: flex-start;
+            gap: 10px;
+        }
+
+        /* Forget modal overlay */
+        .forget-overlay {
+            position: fixed;
+            inset: 0;
+            background: rgba(15, 23, 42, 0.55);
+            backdrop-filter: blur(4px);
+            display: none;
+            align-items: center;
+            justify-content: center;
+            z-index: 999;
+            padding: 20px;
+        }
+
+        .forget-overlay.show {
+            display: flex;
+        }
+
+        .forget-modal {
+            background: white;
+            border-radius: 16px;
+            padding: 32px;
+            max-width: 420px;
+            width: 100%;
+            box-shadow: 0 24px 48px rgba(15, 23, 42, 0.15);
+            animation: modal-in 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+        }
+
+        @keyframes modal-in {
+            from {
+                opacity: 0;
+                transform: scale(0.92) translateY(12px);
+            }
+
+            to {
+                opacity: 1;
+                transform: scale(1) translateY(0);
+            }
+        }
+
+        .forget-modal h3 {
+            font-size: 18px;
+            font-weight: 800;
+            margin-bottom: 6px;
+        }
+
+        .forget-modal p {
+            font-size: 13px;
+            color: var(--text-3);
+            margin-bottom: 20px;
+        }
+
+        .modal-footer {
+            display: flex;
+            gap: 8px;
+            margin-top: 20px;
+        }
+
+        /* Spinner */
+        .btn-spinner {
+            width: 16px;
+            height: 16px;
+            border: 2px solid rgba(255, 255, 255, 0.4);
+            border-top-color: white;
+            border-radius: 50%;
+            animation: spin 0.7s linear infinite;
+        }
+
+        @keyframes spin {
+            to {
+                transform: rotate(360deg);
+            }
+        }
+
+        /* ── Footer links ── */
+        .page-footer {
+            margin-top: 32px;
+            padding-top: 20px;
+            border-top: 1px solid var(--border);
+            font-size: 12px;
+            color: var(--text-3);
+            text-align: center;
+            line-height: 1.8;
+        }
+
+        .page-footer a {
+            color: var(--primary);
+            font-weight: 600;
+            text-decoration: none;
+            transition: color var(--dur);
+        }
+
+        .page-footer a:hover {
+            color: var(--primary-dark);
+        }
+
+        .page-footer .sep {
+            margin: 0 6px;
+        }
+
+        /* ── Responsive ── */
+        @media (max-width: 900px) {
+            .left-panel {
+                display: none;
+            }
+
+            .right-panel {
+                width: 100%;
+                padding: 40px 28px;
+            }
+        }
+
+        @media (max-width: 480px) {
+            .right-panel {
+                padding: 32px 20px;
+            }
+        }
+    </style>
+</head>
+
+<body>
+
+    <!-- Forget Password Modal -->
+    <div class="forget-overlay" id="forgetOverlay">
+        <div class="forget-modal">
+            <h3 id="forgetModalTitle">Reset Password</h3>
+            <p id="forgetModalDesc">Enter your Employee Code and registered Email to receive a reset link.</p>
+
+            <div id="forgetStep1">
+                <div class="field-group" style="margin-bottom:12px;">
+                    <label>Employee Code (E-Code)</label>
+                    <div class="input-wrap">
+                        <svg class="input-icon" width="16" height="16" fill="none" stroke="currentColor"
+                            stroke-width="2" viewBox="0 0 24 24">
+                            <rect x="2" y="3" width="20" height="14" rx="2" />
+                            <line x1="8" y1="21" x2="16" y2="21" />
+                            <line x1="12" y1="17" x2="12" y2="21" />
+                        </svg>
+                        <input type="text" id="forget_ecode" placeholder="e.g. CX1042" style="padding-left:40px;">
+                    </div>
+                </div>
+                <div class="field-group">
+                    <label>Registered Email</label>
+                    <div class="input-wrap">
+                        <svg class="input-icon" width="16" height="16" fill="none" stroke="currentColor"
+                            stroke-width="2" viewBox="0 0 24 24">
+                            <path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z" />
+                            <polyline points="22,6 12,13 2,6" />
+                        </svg>
+                        <input type="email" id="forget_email" placeholder="your.email@company.com"
+                            style="padding-left:40px;">
+                    </div>
+                </div>
+                <div id="forgetAlert" class="alert-box" style="margin-top:12px;"></div>
+                <div class="modal-footer">
+                    <button class="login-btn" style="flex:1;font-size:13px;padding:11px;" onclick="sendForgetOTP()">
+                        Send Reset Link
+                    </button>
+                    <button onclick="closeForget()"
+                        style="padding:11px 16px;border:1.5px solid #e2e8f0;border-radius:10px;background:none;cursor:pointer;font-size:13px;font-weight:600;color:#475569;font-family:var(--font);">Cancel</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Know Your ID Modal -->
+    <div class="forget-overlay" id="knowIdOverlay">
+        <div class="forget-modal">
+            <h3>Know Your User ID</h3>
+            <p>Enter your details and we'll send your User ID to your registered email.</p>
+
+            <div class="field-group" style="margin-bottom:12px;">
+                <label>E-Code</label>
+                <div class="input-wrap">
+                    <svg class="input-icon" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2"
+                        viewBox="0 0 24 24">
+                        <rect x="2" y="3" width="20" height="14" rx="2" />
+                        <line x1="8" y1="21" x2="16" y2="21" />
+                        <line x1="12" y1="17" x2="12" y2="21" />
+                    </svg>
+                    <input type="text" id="kid_ecode" placeholder="e.g. CX1042" style="padding-left:40px;">
+                </div>
+            </div>
+            <div class="field-group" style="margin-bottom:12px;">
+                <label>Date of Birth</label>
+                <input type="date" id="kid_dob" class="input"
+                    style="width:100%;padding:11px 12px;border:1.5px solid #e2e8f0;border-radius:10px;font-size:14px;font-family:var(--font);background:#f8fafc;outline:none;">
+            </div>
+            <div class="field-group">
+                <label>Date of Joining</label>
+                <input type="date" id="kid_doj" class="input"
+                    style="width:100%;padding:11px 12px;border:1.5px solid #e2e8f0;border-radius:10px;font-size:14px;font-family:var(--font);background:#f8fafc;outline:none;">
+            </div>
+
+            <div id="kidAlert" class="alert-box" style="margin-top:12px;"></div>
+            <div id="kidOtpSection" style="display:none;margin-top:16px;">
+                <div class="field-group">
+                    <label>Enter OTP sent to your email</label>
+                    <div class="otp-inputs">
+                        <input class="otp-digit" maxlength="1" id="kid_otp_1" oninput="moveOtp(this,null,'kid_otp_2')">
+                        <input class="otp-digit" maxlength="1" id="kid_otp_2"
+                            oninput="moveOtp(this,'kid_otp_1','kid_otp_3')">
+                        <input class="otp-digit" maxlength="1" id="kid_otp_3"
+                            oninput="moveOtp(this,'kid_otp_2','kid_otp_4')">
+                        <input class="otp-digit" maxlength="1" id="kid_otp_4"
+                            oninput="moveOtp(this,'kid_otp_3','kid_otp_5')">
+                        <input class="otp-digit" maxlength="1" id="kid_otp_5"
+                            oninput="moveOtp(this,'kid_otp_4','kid_otp_6')">
+                        <input class="otp-digit" maxlength="1" id="kid_otp_6" oninput="moveOtp(this,'kid_otp_5',null)">
+                    </div>
+                </div>
+            </div>
+
+            <div class="modal-footer">
+                <button class="login-btn" style="flex:1;font-size:13px;padding:11px;" id="kidActionBtn"
+                    onclick="knowIdAction()">
+                    Send OTP
+                </button>
+                <button onclick="closeKnowId()"
+                    style="padding:11px 16px;border:1.5px solid #e2e8f0;border-radius:10px;background:none;cursor:pointer;font-size:13px;font-weight:600;color:#475569;font-family:var(--font);">Cancel</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Main Layout -->
+    <div class="left-panel">
+        <div class="left-brand">
+            <div class="left-logo">
+                <img src="logo.png" alt="Cyrix"
+                    onerror="this.parentElement.innerHTML='<div class=left-logo-fallback>CH</div>'">
+            </div>
+            <div>
+                <div class="left-brand-name">Cyrix Healthcare</div>
+                <div class="left-brand-sub">Pvt. Ltd.</div>
+            </div>
+        </div>
+
+        <div class="left-hero">
+            <h2>Field Report<br><span>Management</span><br>System</h2>
+            <p>Digitally manage your daily field expenses, travel claims, and work reports — all in one secure platform.
+            </p>
+            <div class="left-features">
+                <div class="feature-pill">
+                    <svg width="15" height="15" fill="none" stroke="currentColor" stroke-width="2.5"
+                        viewBox="0 0 24 24">
+                        <polyline points="20 6 9 17 4 12" />
+                    </svg>
+                    Smart Expense Submission
+                </div>
+                <div class="feature-pill">
+                    <svg width="15" height="15" fill="none" stroke="currentColor" stroke-width="2.5"
+                        viewBox="0 0 24 24">
+                        <polyline points="20 6 9 17 4 12" />
+                    </svg>
+                    Multi-Level Approvals
+                </div>
+                <div class="feature-pill">
+                    <svg width="15" height="15" fill="none" stroke="currentColor" stroke-width="2.5"
+                        viewBox="0 0 24 24">
+                        <polyline points="20 6 9 17 4 12" />
+                    </svg>
+                    Real-Time Tracking
+                </div>
+            </div>
+        </div>
+
+        <div class="left-footer">
+            Designed &amp; Developed for
+            <a href="https://cyrixhealthcare.com/" target="_blank">Cyrix Healthcare</a>
+            <br>
+            Managed by <a href="https://sunilbishnoi.co.in/" target="_blank">Sunil Bishnoi</a>
+        </div>
+    </div>
+
+    <div class="right-panel">
+        <div class="form-header">
+            <div class="app-name">Field Report App</div>
+            <h1>Welcome Back 👋</h1>
+            <p>Sign in with your User ID and password</p>
+        </div>
+
+        <div id="alertBox" class="alert-box">
+            <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"
+                style="flex-shrink:0;margin-top:1px;">
+                <circle cx="12" cy="12" r="10" />
+                <line x1="12" y1="8" x2="12" y2="12" />
+                <line x1="12" y1="16" x2="12.01" y2="16" />
+            </svg>
+            <span id="alertMsg"></span>
+        </div>
+
+        <!-- Login Step -->
+        <div class="login-form" id="loginStep">
+            <div class="field-group">
+                <label>User ID</label>
+                <div class="input-wrap">
+                    <svg class="input-icon" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2"
+                        viewBox="0 0 24 24">
+                        <path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2" />
+                        <circle cx="12" cy="7" r="4" />
+                    </svg>
+                    <input type="text" id="login_uid" placeholder="Enter your User ID" autocomplete="username">
+                </div>
+                <div class="field-error" id="err_uid"></div>
+            </div>
+
+            <div class="field-group">
+                <label>Password</label>
+                <div class="input-wrap">
+                    <svg class="input-icon" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2"
+                        viewBox="0 0 24 24">
+                        <rect x="3" y="11" width="18" height="11" rx="2" />
+                        <path d="M7 11V7a5 5 0 0110 0v4" />
+                    </svg>
+                    <input type="password" id="login_pwd" placeholder="Enter your password"
+                        autocomplete="current-password" onkeydown="if(event.key==='Enter')doLogin()">
+                    <button class="toggle-pwd" type="button" onclick="togglePwd('login_pwd',this)">
+                        <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2"
+                            viewBox="0 0 24 24" id="eyeIcon">
+                            <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" />
+                            <circle cx="12" cy="12" r="3" />
+                        </svg>
+                    </button>
+                </div>
+                <div class="field-error" id="err_pwd"></div>
+            </div>
+
+            <button class="login-btn" id="loginBtn" onclick="doLogin()">
+                <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24">
+                    <path d="M15 3h4a2 2 0 012 2v14a2 2 0 01-2 2h-4" />
+                    <polyline points="10 17 15 12 10 7" />
+                    <line x1="15" y1="12" x2="3" y2="12" />
+                </svg>
+                Sign In
+            </button>
+
+            <div class="links-row">
+                <button class="text-link" onclick="openForget()">Forgot Password?</button>
+                <button class="text-link" onclick="openKnowId()">Know Your ID</button>
+            </div>
+        </div>
+
+        <!-- OTP Step (for 2FA / if enabled) -->
+        <div class="otp-section" id="otpStep">
+            <div style="text-align:center;margin-bottom:24px;">
+                <div
+                    style="width:52px;height:52px;background:#eff6ff;border-radius:50%;display:flex;align-items:center;justify-content:center;margin:0 auto 12px;">
+                    <svg width="24" height="24" fill="none" stroke="#1d4ed8" stroke-width="2" viewBox="0 0 24 24">
+                        <path
+                            d="M22 16.92v3a2 2 0 01-2.18 2 19.79 19.79 0 01-8.63-3.07 19.5 19.5 0 01-6-6 19.79 19.79 0 01-3.07-8.67A2 2 0 014.11 2h3a2 2 0 012 1.72c.127.96.361 1.903.7 2.81a2 2 0 01-.45 2.11L8.09 9.91a16 16 0 006 6l1.27-1.27a2 2 0 012.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0122 16.92z" />
+                    </svg>
+                </div>
+                <p style="font-size:14px;color:#475569;line-height:1.6;">OTP sent to your registered email.<br>Please
+                    check and enter below.</p>
+            </div>
+
+            <div class="otp-inputs" style="margin-bottom:20px;">
+                <input class="otp-digit" maxlength="1" id="otp_1" oninput="moveOtp(this,null,'otp_2')">
+                <input class="otp-digit" maxlength="1" id="otp_2" oninput="moveOtp(this,'otp_1','otp_3')">
+                <input class="otp-digit" maxlength="1" id="otp_3" oninput="moveOtp(this,'otp_2','otp_4')">
+                <input class="otp-digit" maxlength="1" id="otp_4" oninput="moveOtp(this,'otp_3','otp_5')">
+                <input class="otp-digit" maxlength="1" id="otp_5" oninput="moveOtp(this,'otp_4','otp_6')">
+                <input class="otp-digit" maxlength="1" id="otp_6" oninput="moveOtp(this,'otp_5',null)">
+            </div>
+
+            <button class="login-btn" id="otpBtn" onclick="verifyOTP()">Verify & Login</button>
+            <div style="text-align:center;margin-top:12px;">
+                <button class="text-link" onclick="showLoginStep()">← Back</button>
+                <span style="color:#e2e8f0;margin:0 8px;">|</span>
+                <button class="text-link" id="resendBtn" onclick="resendOTP()">Resend OTP</button>
+            </div>
+        </div>
+
+        <!-- Footer -->
+        <div class="page-footer">
+            Designed &amp; Developed for
+            <a href="https://cyrixhealthcare.com/" target="_blank">Cyrix Healthcare</a>
+            <span class="sep">•</span>
+            Managed by <a href="https://sunilbishnoi.co.in/" target="_blank">Sunil Bishnoi</a>
+        </div>
+    </div>
+
+    <script>
+        // ── State ──────────────────────────────────────────
+        const API = '/api';
+        let kidMode = 'send'; // 'send' | 'verify'
+
+        // Redirect if already logged in
+        const existingToken = localStorage.getItem('cx_token');
+        if (existingToken) window.location.href = '/dashboard.html';
+
+        // ── Utilities ──────────────────────────────────────
+        function showAlert(msg, type = 'error', id = 'alertBox') {
+            const box = document.getElementById(id);
+            const msgEl = box.querySelector('span') || box;
+            if (msgEl.tagName === 'SPAN') msgEl.textContent = msg;
+            else box.textContent = msg;
+            box.className = `alert-box ${type} show`;
+        }
+
+        function hideAlert(id = 'alertBox') {
+            const box = document.getElementById(id);
+            box.className = 'alert-box';
+        }
+
+        function setLoading(btnId, loading, text = '') {
+            const btn = document.getElementById(btnId);
+            if (!btn) return;
+            if (loading) {
+                btn._original = btn.innerHTML;
+                btn.disabled = true;
+                btn.innerHTML = `<div class="btn-spinner"></div> Processing...`;
+            } else {
+                btn.disabled = false;
+                btn.innerHTML = btn._original || text;
+            }
+        }
+
+        function togglePwd(inputId, btn) {
+            const input = document.getElementById(inputId);
+            const isText = input.type === 'text';
+            input.type = isText ? 'password' : 'text';
+            btn.innerHTML = isText
+                ? `<svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>`
+                : `<svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M17.94 17.94A10.07 10.07 0 0112 20c-7 0-11-8-11-8a18.45 18.45 0 015.06-5.94M9.9 4.24A9.12 9.12 0 0112 4c7 0 11 8 11 8a18.5 18.5 0 01-2.16 3.19m-6.72-1.07a3 3 0 11-4.24-4.24"/><line x1="1" y1="1" x2="23" y2="23"/></svg>`;
+        }
+
+        function moveOtp(input, prevId, nextId) {
+            const val = input.value;
+            if (!/^\d$/.test(val)) { input.value = ''; return; }
+            if (nextId) document.getElementById(nextId)?.focus();
+            // Auto verify on last digit
+            if (!nextId) {
+                const prefix = input.id.includes('kid_') ? 'kid_' : (input.id.includes('otp_') ? 'otp_' : '');
+                if (prefix === 'otp_') verifyOTP();
+                if (prefix === 'kid_') verifyKidOTP();
+            }
+        }
+
+        function getOtpValue(prefix) {
+            return [1, 2, 3, 4, 5, 6].map(n => document.getElementById(`${prefix}${n}`)?.value || '').join('');
+        }
+
+        // ── Login Flow ──────────────────────────────────────
+        async function doLogin() {
+            hideAlert();
+            const uid = document.getElementById('login_uid').value.trim();
+            const pwd = document.getElementById('login_pwd').value;
+            let valid = true;
+
+            document.getElementById('err_uid').textContent = '';
+            document.getElementById('err_pwd').textContent = '';
+
+            if (!uid) { document.getElementById('err_uid').textContent = 'User ID is required'; valid = false; }
+            if (!pwd) { document.getElementById('err_pwd').textContent = 'Password is required'; valid = false; }
+            if (!valid) return;
+
+            setLoading('loginBtn', true);
+
+            try {
+                const res = await fetch(`${API}/auth/login`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ user_id: uid, password: pwd })
+                });
+                const data = await res.json();
+
+                if (data.success) {
+                    // Store token and user info
+                    localStorage.setItem('cx_token', data.token);
+                    localStorage.setItem('cx_user', JSON.stringify(data.user));
+                    showAlert('Login successful! Redirecting...', 'success');
+                    setTimeout(() => window.location.href = '/dashboard.html', 800);
+                } else {
+                    setLoading('loginBtn', false);
+                    showAlert(data.message || 'Invalid credentials. Please try again.');
+                }
+            } catch (e) {
+                setLoading('loginBtn', false);
+                showAlert('Connection error. Please check your network.');
+            }
+        }
+
+        function showLoginStep() {
+            document.getElementById('loginStep').style.display = 'flex';
+            document.getElementById('otpStep').style.display = 'none';
+            hideAlert();
+        }
+
+        async function verifyOTP() {
+            const otp = getOtpValue('otp_');
+            if (otp.length < 6) return;
+            setLoading('otpBtn', true);
+            try {
+                const uid = document.getElementById('login_uid').value.trim();
+                const res = await fetch(`${API}/auth/verify-otp`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ user_id: uid, otp })
+                });
+                const data = await res.json();
+                if (data.success) {
+                    localStorage.setItem('cx_token', data.token);
+                    localStorage.setItem('cx_user', JSON.stringify(data.user));
+                    window.location.href = '/dashboard.html';
+                } else {
+                    setLoading('otpBtn', false);
+                    showAlert(data.message || 'Invalid OTP');
+                }
+            } catch (e) {
+                setLoading('otpBtn', false);
+                showAlert('Connection error');
+            }
+        }
+
+        async function resendOTP() {
+            document.getElementById('resendBtn').disabled = true;
+            // hit resend endpoint
+            setTimeout(() => { document.getElementById('resendBtn').disabled = false; }, 30000);
+        }
+
+        // ── Forget Password ─────────────────────────────────
+        function openForget() { document.getElementById('forgetOverlay').classList.add('show'); }
+        function closeForget() {
+            document.getElementById('forgetOverlay').classList.remove('show');
+            document.getElementById('forget_ecode').value = '';
+            document.getElementById('forget_email').value = '';
+            document.getElementById('forgetAlert').className = 'alert-box';
+        }
+
+        async function sendForgetOTP() {
+            const ecode = document.getElementById('forget_ecode').value.trim();
+            const email = document.getElementById('forget_email').value.trim();
+            if (!ecode || !email) {
+                showAlert('Please fill all fields', 'error', 'forgetAlert');
+                document.getElementById('forgetAlert').classList.add('show');
+                return;
+            }
+            try {
+                const res = await fetch(`${API}/auth/forget-password`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ e_code: ecode, email })
+                });
+                const data = await res.json();
+                const alertEl = document.getElementById('forgetAlert');
+                alertEl.textContent = data.message;
+                alertEl.className = `alert-box ${data.success ? 'success' : 'error'} show`;
+            } catch (e) {
+                const alertEl = document.getElementById('forgetAlert');
+                alertEl.textContent = 'Connection error';
+                alertEl.className = 'alert-box error show';
+            }
+        }
+
+        // ── Know Your ID ────────────────────────────────────
+        function openKnowId() {
+            kidMode = 'send';
+            document.getElementById('knowIdOverlay').classList.add('show');
+            document.getElementById('kidActionBtn').textContent = 'Send OTP';
+            document.getElementById('kidOtpSection').style.display = 'none';
+        }
+
+        function closeKnowId() {
+            document.getElementById('knowIdOverlay').classList.remove('show');
+            kidMode = 'send';
+            document.getElementById('kidAlert').className = 'alert-box';
+        }
+
+        async function knowIdAction() {
+            if (kidMode === 'send') await sendKidOTP();
+            else await verifyKidOTP();
+        }
+
+        async function sendKidOTP() {
+            const ecode = document.getElementById('kid_ecode').value.trim();
+            const dob = document.getElementById('kid_dob').value;
+            const doj = document.getElementById('kid_doj').value;
+            if (!ecode || !dob || !doj) {
+                showKidAlert('Please fill all fields', 'error'); return;
+            }
+            try {
+                const res = await fetch(`${API}/auth/retrieve-id`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ e_code: ecode, dob, doj, action: 'SEND_OTP' })
+                });
+                const data = await res.json();
+                if (data.success) {
+                    kidMode = 'verify';
+                    document.getElementById('kidOtpSection').style.display = 'block';
+                    document.getElementById('kidActionBtn').textContent = 'Verify OTP';
+                    showKidAlert(data.message, 'success');
+                } else {
+                    showKidAlert(data.message, 'error');
+                }
+            } catch (e) { showKidAlert('Connection error', 'error'); }
+        }
+
+        async function verifyKidOTP() {
+            const otp = getOtpValue('kid_otp_');
+            if (otp.length < 6) { showKidAlert('Enter complete OTP', 'error'); return; }
+            const ecode = document.getElementById('kid_ecode').value.trim();
+            const dob = document.getElementById('kid_dob').value;
+            const doj = document.getElementById('kid_doj').value;
+            try {
+                const res = await fetch(`${API}/auth/retrieve-id`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ e_code: ecode, dob, doj, action: 'VERIFY_RETRIEVE', otp })
+                });
+                const data = await res.json();
+                if (data.success) {
+                    showKidAlert(`Your User ID is: ${data.user_id}`, 'success');
+                    document.getElementById('kidActionBtn').disabled = true;
+                } else {
+                    showKidAlert(data.message, 'error');
+                }
+            } catch (e) { showKidAlert('Connection error', 'error'); }
+        }
+
+        function showKidAlert(msg, type) {
+            const el = document.getElementById('kidAlert');
+            el.textContent = msg;
+            el.className = `alert-box ${type} show`;
+        }
+    </script>
+</body>
+
+</html>

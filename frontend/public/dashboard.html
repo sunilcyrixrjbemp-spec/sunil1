@@ -1,0 +1,651 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dashboard — Cyrix Field Report App</title>
+    <link rel="stylesheet" href="/design.css">
+    <style>
+        .dash-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr 1.5fr;
+            gap: 16px;
+            margin-bottom: 16px;
+        }
+
+        .quick-actions {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+            gap: 10px;
+            margin-bottom: 20px;
+        }
+
+        .qa-btn {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+            padding: 18px 12px;
+            background: var(--bg-card);
+            border: 1.5px solid var(--border);
+            border-radius: var(--r-lg);
+            cursor: pointer;
+            text-decoration: none;
+            color: var(--text-2);
+            font-size: 12.5px;
+            font-weight: 600;
+            text-align: center;
+            transition: all var(--dur);
+            box-shadow: var(--shadow-sm);
+        }
+
+        .qa-btn:hover {
+            border-color: var(--brand-primary);
+            color: var(--brand-primary);
+            transform: translateY(-2px);
+            box-shadow: var(--shadow);
+        }
+
+        .qa-icon {
+            width: 42px;
+            height: 42px;
+            border-radius: var(--r);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .activity-item {
+            display: flex;
+            align-items: flex-start;
+            gap: 12px;
+            padding: 14px 20px;
+            border-bottom: 1px solid var(--border);
+            transition: background var(--dur);
+        }
+
+        .activity-item:last-child {
+            border-bottom: none;
+        }
+
+        .activity-item:hover {
+            background: #f8fafc;
+        }
+
+        .act-dot {
+            width: 9px;
+            height: 9px;
+            border-radius: 50%;
+            flex-shrink: 0;
+            margin-top: 5px;
+        }
+
+        .act-info {
+            flex: 1;
+        }
+
+        .act-title {
+            font-size: 13px;
+            font-weight: 600;
+            color: var(--text);
+        }
+
+        .act-sub {
+            font-size: 11.5px;
+            color: var(--text-3);
+            margin-top: 2px;
+        }
+
+        .act-time {
+            font-size: 11px;
+            color: var(--text-3);
+            white-space: nowrap;
+            flex-shrink: 0;
+        }
+
+        /* Simple bar chart */
+        .bar-chart {
+            display: flex;
+            align-items: flex-end;
+            gap: 8px;
+            height: 90px;
+            padding: 0 4px;
+        }
+
+        .bar-grp {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 5px;
+        }
+
+        .bar-fill {
+            width: 100%;
+            border-radius: 4px 4px 0 0;
+            transition: height 0.7s var(--ease);
+            min-height: 4px;
+        }
+
+        .bar-lbl {
+            font-size: 9px;
+            color: var(--text-3);
+            font-weight: 600;
+        }
+
+        /* KM meter */
+        .km-ring-wrap {
+            display: flex;
+            align-items: center;
+            gap: 20px;
+        }
+
+        .km-stats {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+
+        .km-row {
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+        }
+
+        .km-row-top {
+            display: flex;
+            justify-content: space-between;
+            font-size: 12px;
+            font-weight: 600;
+        }
+
+        .km-row-label {
+            color: var(--text-2);
+        }
+
+        .km-row-val {
+            color: var(--text);
+        }
+
+        /* Approval queue */
+        .appr-item {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 13px 20px;
+            border-bottom: 1px solid var(--border);
+            cursor: pointer;
+            transition: background var(--dur);
+        }
+
+        .appr-item:last-child {
+            border-bottom: none;
+        }
+
+        .appr-item:hover {
+            background: #f8fafc;
+        }
+
+        .appr-av {
+            width: 36px;
+            height: 36px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, var(--brand-primary), var(--brand-secondary));
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 12px;
+            font-weight: 700;
+            color: white;
+            flex-shrink: 0;
+        }
+
+        .appr-info {
+            flex: 1;
+        }
+
+        .appr-name {
+            font-size: 13px;
+            font-weight: 600;
+        }
+
+        .appr-meta {
+            font-size: 11.5px;
+            color: var(--text-3);
+        }
+
+        .appr-right {
+            text-align: right;
+        }
+
+        .appr-amt {
+            font-size: 14px;
+            font-weight: 700;
+            color: var(--text);
+        }
+
+        .appr-date {
+            font-size: 11px;
+            color: var(--text-3);
+        }
+
+        /* SVG ring */
+        .ring-svg {
+            transform: rotate(-90deg);
+        }
+
+        .ring-bg {
+            fill: none;
+            stroke: var(--bg-input);
+            stroke-width: 10;
+        }
+
+        .ring-fill {
+            fill: none;
+            stroke-width: 10;
+            stroke-linecap: round;
+            transition: stroke-dasharray 1s var(--ease);
+        }
+
+        .ring-center-text {
+            position: absolute;
+            inset: 0;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .ring-wrap {
+            position: relative;
+            width: 100px;
+            height: 100px;
+            flex-shrink: 0;
+        }
+
+        @media (max-width: 1024px) {
+            .dash-grid {
+                grid-template-columns: 1fr 1fr;
+            }
+        }
+
+        @media (max-width: 768px) {
+            .dash-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .quick-actions {
+                grid-template-columns: repeat(3, 1fr);
+            }
+        }
+
+        @media (max-width: 400px) {
+            .quick-actions {
+                grid-template-columns: repeat(2, 1fr);
+            }
+        }
+    </style>
+</head>
+
+<body>
+    <div class="app-layout" id="cx-layout">
+        <div class="main-content" id="mainContainer" style="display:none">
+
+            <div class="topbar desktop-only">
+                <div class="topbar-left">
+                    <h1 id="topbar_greeting">Good Morning! 👋</h1>
+                    <p id="topbar_date">Loading...</p>
+                </div>
+                <div class="topbar-right">
+                    <a href="/submit-expense.html" class="btn btn-primary btn-sm">
+                        <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.5"
+                            viewBox="0 0 24 24">
+                            <line x1="12" y1="5" x2="12" y2="19" />
+                            <line x1="5" y1="12" x2="19" y2="12" />
+                        </svg>
+                        New Expense
+                    </a>
+                </div>
+            </div>
+
+            <div class="page-content">
+                <!-- Stats Grid -->
+                <div class="stats-grid" id="statsGrid">
+                    <div class="stat-card">
+                        <div class="stat-icon blue"><svg width="20" height="20" fill="none" stroke="currentColor"
+                                stroke-width="2" viewBox="0 0 24 24">
+                                <path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z" />
+                                <polyline points="14 2 14 8 20 8" />
+                            </svg></div>
+                        <div class="stat-info">
+                            <div class="stat-label">This Month Expenses</div>
+                            <div class="stat-value" id="s_total_exp">—</div>
+                            <div class="stat-sub" id="s_exp_count">Loading...</div>
+                        </div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-icon green"><svg width="20" height="20" fill="none" stroke="currentColor"
+                                stroke-width="2" viewBox="0 0 24 24">
+                                <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
+                            </svg></div>
+                        <div class="stat-info">
+                            <div class="stat-label">Approved Amount</div>
+                            <div class="stat-value" id="s_approved">—</div>
+                            <div class="stat-sub" id="s_approved_count">Loading...</div>
+                        </div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-icon amber"><svg width="20" height="20" fill="none" stroke="currentColor"
+                                stroke-width="2" viewBox="0 0 24 24">
+                                <circle cx="12" cy="12" r="10" />
+                                <polyline points="12 6 12 12 16 14" />
+                            </svg></div>
+                        <div class="stat-info">
+                            <div class="stat-label">Pending Approval</div>
+                            <div class="stat-value" id="s_pending">—</div>
+                            <div class="stat-sub" id="s_pending_count">Loading...</div>
+                        </div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-icon cyan"><svg width="20" height="20" fill="none" stroke="currentColor"
+                                stroke-width="2" viewBox="0 0 24 24">
+                                <circle cx="12" cy="12" r="10" />
+                                <line x1="2" y1="12" x2="22" y2="12" />
+                                <path
+                                    d="M12 2a15.3 15.3 0 014 10 15.3 15.3 0 01-4 10 15.3 15.3 0 01-4-10 15.3 15.3 0 014-10z" />
+                            </svg></div>
+                        <div class="stat-info">
+                            <div class="stat-label">KM Travelled</div>
+                            <div class="stat-value" id="s_km">—</div>
+                            <div class="stat-sub" id="s_km_sub">This month</div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Quick Actions -->
+                <div class="quick-actions" id="quickActionsGrid">
+                    <a href="/submit-expense.html" class="qa-btn" id="qa_expense">
+                        <div class="qa-icon" style="background:var(--brand-primary-glow);color:var(--brand-primary)">
+                            <svg width="20" height="20" fill="none" stroke="currentColor" stroke-width="2"
+                                viewBox="0 0 24 24">
+                                <path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z" />
+                                <line x1="12" y1="18" x2="12" y2="12" />
+                                <line x1="9" y1="15" x2="15" y2="15" />
+                            </svg></div>
+                        Submit Expense
+                    </a>
+                    <a href="/expense-status.html" class="qa-btn">
+                        <div class="qa-icon" style="background:var(--brand-success-glow);color:var(--brand-success)">
+                            <svg width="20" height="20" fill="none" stroke="currentColor" stroke-width="2"
+                                viewBox="0 0 24 24">
+                                <circle cx="12" cy="12" r="10" />
+                                <polyline points="12 6 12 12 16 14" />
+                            </svg></div>
+                        Expense Status
+                    </a>
+                    <a href="/monthly-report.html" class="qa-btn">
+                        <div class="qa-icon" style="background:rgba(6,182,212,0.1);color:var(--brand-accent)"><svg
+                                width="20" height="20" fill="none" stroke="currentColor" stroke-width="2"
+                                viewBox="0 0 24 24">
+                                <line x1="18" y1="20" x2="18" y2="10" />
+                                <line x1="12" y1="20" x2="12" y2="4" />
+                                <line x1="6" y1="20" x2="6" y2="14" />
+                            </svg></div>
+                        Monthly Report
+                    </a>
+                    <a href="/additional-km.html" class="qa-btn">
+                        <div class="qa-icon" style="background:rgba(124,58,237,0.1);color:#7c3aed"><svg width="20"
+                                height="20" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                                <circle cx="12" cy="12" r="10" />
+                                <line x1="12" y1="8" x2="12" y2="16" />
+                                <line x1="8" y1="12" x2="16" y2="12" />
+                            </svg></div>
+                        Extra KM Request
+                    </a>
+                    <a href="/approval-center.html" class="qa-btn" id="qa_approvals" style="display:none">
+                        <div class="qa-icon" style="background:var(--brand-warning-glow);color:var(--brand-warning)">
+                            <svg width="20" height="20" fill="none" stroke="currentColor" stroke-width="2"
+                                viewBox="0 0 24 24">
+                                <path d="M22 11.08V12a10 10 0 11-5.93-9.14" />
+                                <polyline points="22 4 12 14.01 9 11.01" />
+                            </svg></div>
+                        Approval Center
+                    </a>
+                    <a href="/penalty-report.html" class="qa-btn">
+                        <div class="qa-icon" style="background:var(--brand-danger-glow);color:var(--brand-danger)"><svg
+                                width="20" height="20" fill="none" stroke="currentColor" stroke-width="2"
+                                viewBox="0 0 24 24">
+                                <path
+                                    d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z" />
+                                <line x1="12" y1="9" x2="12" y2="13" />
+                            </svg></div>
+                        Penalty Report
+                    </a>
+                </div>
+
+                <!-- Charts Row -->
+                <div class="dash-grid">
+
+                    <!-- KM Usage Ring -->
+                    <div class="card">
+                        <div class="card-header">
+                            <div class="card-title"><svg width="16" height="16" fill="none" stroke="currentColor"
+                                    stroke-width="2" viewBox="0 0 24 24">
+                                    <circle cx="12" cy="12" r="10" />
+                                    <line x1="2" y1="12" x2="22" y2="12" />
+                                </svg> KM Usage</div>
+                        </div>
+                        <div class="card-body">
+                            <div class="km-ring-wrap">
+                                <div class="ring-wrap">
+                                    <svg viewBox="0 0 100 100" width="100" height="100" class="ring-svg">
+                                        <circle class="ring-bg" cx="50" cy="50" r="40" />
+                                        <circle class="ring-fill" cx="50" cy="50" r="40" id="bikeRing" stroke="#1d4ed8"
+                                            stroke-dasharray="0 251" />
+                                    </svg>
+                                    <div class="ring-center-text">
+                                        <div style="font-size:16px;font-weight:800;" id="ring_pct">0%</div>
+                                        <div style="font-size:9px;color:var(--text-3);font-weight:600;">USED</div>
+                                    </div>
+                                </div>
+                                <div class="km-stats">
+                                    <div class="km-row">
+                                        <div class="km-row-top"><span class="km-row-label">Used</span><span
+                                                class="km-row-val" id="km_used">0 km</span></div>
+                                        <div class="progress-bar" style="height:5px;">
+                                            <div class="progress-fill" id="km_bar" style="width:0%"></div>
+                                        </div>
+                                    </div>
+                                    <div class="km-row">
+                                        <div class="km-row-top"><span class="km-row-label">Limit</span><span
+                                                class="km-row-val" id="km_limit">0 km</span></div>
+                                    </div>
+                                    <div class="km-row">
+                                        <div class="km-row-top"><span class="km-row-label">Remaining</span><span
+                                                class="km-row-val" id="km_rem" style="color:var(--brand-success)">0
+                                                km</span></div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Monthly Expenses Bar -->
+                    <div class="card">
+                        <div class="card-header">
+                            <div class="card-title"><svg width="16" height="16" fill="none" stroke="currentColor"
+                                    stroke-width="2" viewBox="0 0 24 24">
+                                    <line x1="18" y1="20" x2="18" y2="10" />
+                                    <line x1="12" y1="20" x2="12" y2="4" />
+                                    <line x1="6" y1="20" x2="6" y2="14" />
+                                </svg> 6-Month Claims</div>
+                        </div>
+                        <div class="card-body">
+                            <div class="bar-chart" id="barChart"></div>
+                            <div style="text-align:center;margin-top:8px;font-size:11px;color:var(--text-3);">Amount in
+                                ₹ (thousands)</div>
+                        </div>
+                    </div>
+
+                    <!-- Pending Approvals -->
+                    <div class="card" id="pendingCard">
+                        <div class="card-header">
+                            <div class="card-title"><svg width="16" height="16" fill="none" stroke="currentColor"
+                                    stroke-width="2" viewBox="0 0 24 24">
+                                    <path d="M22 11.08V12a10 10 0 11-5.93-9.14" />
+                                    <polyline points="22 4 12 14.01 9 11.01" />
+                                </svg> Pending Approvals</div>
+                            <a href="/approval-center.html"
+                                style="font-size:11.5px;color:var(--brand-primary);font-weight:600;text-decoration:none;">View
+                                All →</a>
+                        </div>
+                        <div id="pendingList">
+                            <div class="empty-state" style="padding:30px 20px">
+                                <svg width="32" height="32" fill="none" stroke="currentColor" stroke-width="1.5"
+                                    viewBox="0 0 24 24">
+                                    <path d="M22 11.08V12a10 10 0 11-5.93-9.14" />
+                                    <polyline points="22 4 12 14.01 9 11.01" />
+                                </svg>
+                                <h4>No pending approvals</h4>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Recent Activity -->
+                <div class="card">
+                    <div class="card-header" style="padding:18px 20px 14px;">
+                        <div class="card-title"><svg width="16" height="16" fill="none" stroke="currentColor"
+                                stroke-width="2" viewBox="0 0 24 24">
+                                <polyline points="22 12 18 12 15 21 9 3 6 12 2 12" />
+                            </svg> Recent Activity</div>
+                        <a href="/expense-status.html"
+                            style="font-size:11.5px;color:var(--brand-primary);font-weight:600;text-decoration:none;">View
+                            All →</a>
+                    </div>
+                    <div id="activityList">
+                        <div class="empty-state">
+                            <p>Loading activity...</p>
+                        </div>
+                    </div>
+                </div>
+            </div><!-- page-content -->
+        </div>
+    </div>
+
+    <script src="/shared-nav.js" data-active="dashboard"></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            // Greeting
+            const h = new Date().getHours();
+            const gr = h < 12 ? 'Good Morning' : h < 17 ? 'Good Afternoon' : 'Good Evening';
+            const user = JSON.parse(localStorage.getItem('cx_user') || '{}');
+            document.getElementById('topbar_greeting').textContent = `${gr}, ${(user.full_name || '').split(' ')[0]}! 👋`;
+            document.getElementById('topbar_date').textContent = new Date().toLocaleDateString('en-IN', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
+
+            // Show approval quick action for managers
+            const role = user.role || '';
+            if (['manager', 'area_manager', 'admin', 'super_admin'].includes(role)) {
+                document.getElementById('qa_approvals').style.display = 'flex';
+                document.getElementById('pendingCard').style.display = '';
+            } else {
+                document.getElementById('pendingCard').style.display = 'none';
+            }
+
+            loadDashboard();
+        });
+
+        async function loadDashboard() {
+            try {
+                const data = await CxAPI.get('/dashboard');
+                if (!data.success) return;
+
+                const d = data.data;
+
+                // Stats
+                document.getElementById('s_total_exp').textContent = `₹${fmtNum(d.total_amount)}`;
+                document.getElementById('s_exp_count').textContent = `${d.total_count} expense(s) submitted`;
+                document.getElementById('s_approved').textContent = `₹${fmtNum(d.approved_amount)}`;
+                document.getElementById('s_approved_count').textContent = `${d.approved_count} approved`;
+                document.getElementById('s_pending').textContent = `₹${fmtNum(d.pending_amount)}`;
+                document.getElementById('s_pending_count').textContent = `${d.pending_count} awaiting`;
+                document.getElementById('s_km').textContent = `${d.km_used} km`;
+                document.getElementById('s_km_sub').textContent = `Limit: ${d.km_limit} km/month`;
+
+                // KM Ring
+                const pct = Math.min(100, Math.round((d.km_used / d.km_limit) * 100)) || 0;
+                const circ = 2 * Math.PI * 40;
+                document.getElementById('bikeRing').setAttribute('stroke-dasharray', `${(pct / 100) * circ} ${circ}`);
+                document.getElementById('ring_pct').textContent = pct + '%';
+                document.getElementById('km_used').textContent = d.km_used + ' km';
+                document.getElementById('km_limit').textContent = d.km_limit + ' km';
+                document.getElementById('km_rem').textContent = Math.max(0, d.km_limit - d.km_used) + ' km';
+                document.getElementById('km_bar').style.width = pct + '%';
+
+                // Bar chart
+                const months = d.monthly_chart || [];
+                const maxAmt = Math.max(...months.map(m => m.amount), 1);
+                const barColors = ['#1d4ed8', '#3b82f6', '#60a5fa', '#93c5fd', '#bfdbfe', '#dbeafe'];
+                document.getElementById('barChart').innerHTML = months.map((m, i) => {
+                    const h = Math.round((m.amount / maxAmt) * 85);
+                    return `<div class="bar-grp">
+        <div class="bar-fill" style="height:${h}px;background:${barColors[i] || '#3b82f6'}" title="₹${fmtNum(m.amount)}"></div>
+        <div class="bar-lbl">${m.month}</div>
+      </div>`;
+                }).join('');
+
+                // Pending approvals (managers)
+                if (d.pending_approvals && d.pending_approvals.length > 0) {
+                    document.getElementById('pendingList').innerHTML = d.pending_approvals.slice(0, 4).map(a => `
+        <div class="appr-item" onclick="window.location.href='/approval-center.html?id=${a.exp_id}'">
+          <div class="appr-av">${initials(a.employee_name)}</div>
+          <div class="appr-info">
+            <div class="appr-name">${a.employee_name}</div>
+            <div class="appr-meta">${a.exp_id} • ${a.exp_date}</div>
+          </div>
+          <div class="appr-right">
+            <div class="appr-amt">₹${fmtNum(a.total_amount)}</div>
+            <div><span class="badge badge-amber">Pending</span></div>
+          </div>
+        </div>
+      `).join('');
+                }
+
+                // Activity
+                if (d.recent_activity && d.recent_activity.length > 0) {
+                    const dotColor = { approved: 'dot-green', pending: 'dot-amber', rejected: 'dot-red', submitted: 'dot-blue' };
+                    document.getElementById('activityList').innerHTML = d.recent_activity.map(a => `
+        <div class="activity-item">
+          <div class="act-dot ${dotColor[a.status] || 'dot-gray'}"></div>
+          <div class="act-info">
+            <div class="act-title">${a.title}</div>
+            <div class="act-sub">${a.description}</div>
+          </div>
+          <div class="act-time">${a.time_ago}</div>
+        </div>
+      `).join('');
+                } else {
+                    document.getElementById('activityList').innerHTML = '<div class="empty-state" style="padding:30px"><p>No recent activity</p></div>';
+                }
+
+            } catch (e) {
+                console.error('Dashboard load failed', e);
+            }
+        }
+
+        function fmtNum(n) {
+            if (!n) return '0';
+            if (n >= 100000) return (n / 100000).toFixed(1) + 'L';
+            if (n >= 1000) return (n / 1000).toFixed(1) + 'K';
+            return n.toFixed ? n.toFixed(0) : n;
+        }
+        function initials(name) {
+            return (name || 'U').split(' ').map(w => w[0]).join('').slice(0, 2).toUpperCase();
+        }
+    </script>
+</body>
+
+</html>

@@ -1,0 +1,1375 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Cyrix Field Report App</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&display=swap"
+        rel="stylesheet">
+
+    <style>
+        :root {
+            /* Brand Colors */
+            --brand-primary: #1d4ed8;
+            --brand-primary-dark: #1e3a8a;
+            --brand-primary-light: #3b82f6;
+            --brand-primary-glow: rgba(29, 78, 216, 0.10);
+            --brand-secondary: #0ea5e9;
+            --brand-accent: #06b6d4;
+
+            /* Status Colors */
+            --success: #16a34a;
+            --success-glow: rgba(22, 163, 74, 0.12);
+            --warning: #d97706;
+            --warning-glow: rgba(217, 119, 6, 0.12);
+            --danger: #dc2626;
+            --danger-glow: rgba(220, 38, 38, 0.10);
+            --info: #0891b2;
+
+            /* Backgrounds & Text */
+            --bg: #f1f5f9;
+            --bg-card: #ffffff;
+            --bg-input: #f8fafc;
+            --bg-sidebar: #0f172a;
+            --text: #0f172a;
+            --text-muted: #64748b;
+            --text-light: #94a3b8;
+            --border: #e2e8f0;
+
+            /* Sizing & Effects */
+            --r-sm: 6px;
+            --r: 10px;
+            --r-lg: 16px;
+            --r-full: 9999px;
+            --shadow-sm: 0 1px 3px rgba(15, 23, 42, 0.06);
+            --shadow: 0 4px 12px rgba(15, 23, 42, 0.08);
+            --font: 'Plus Jakarta Sans', system-ui, sans-serif;
+            --transition: 250ms cubic-bezier(0.4, 0, 0.2, 1);
+
+            /* Layout */
+            --sidebar-w: 260px;
+            --header-h: 64px;
+            --mobile-nav-h: 65px;
+        }
+
+        *,
+        *::before,
+        *::after {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            font-family: var(--font);
+            background: var(--bg);
+            color: var(--text);
+            line-height: 1.5;
+            -webkit-font-smoothing: antialiased;
+            overflow-x: hidden;
+        }
+
+        a {
+            text-decoration: none;
+            color: inherit;
+        }
+
+        button,
+        input,
+        select,
+        textarea {
+            font-family: inherit;
+        }
+
+        .hidden {
+            display: none !important;
+        }
+
+        #view-login {
+            display: flex;
+            min-height: 100vh;
+        }
+
+        .login-left {
+            flex: 1;
+            background: var(--brand-primary-dark);
+            background-image: radial-gradient(circle at top left, var(--brand-primary), transparent 60%);
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+            padding: 48px;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .login-left::before {
+            content: '';
+            position: absolute;
+            inset: 0;
+            opacity: 0.05;
+            background-image: repeating-linear-gradient(45deg, #fff 0, #fff 1px, transparent 1px, transparent 20px);
+        }
+
+        .login-brand {
+            position: relative;
+            z-index: 1;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .login-logo {
+            width: 48px;
+            height: 48px;
+            background: white;
+            border-radius: 12px;
+            padding: 4px;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.2);
+        }
+
+        .login-brand-text h2 {
+            color: white;
+            font-size: 18px;
+            font-weight: 800;
+        }
+
+        .login-brand-text p {
+            color: rgba(255, 255, 255, 0.7);
+            font-size: 11px;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        .login-hero {
+            position: relative;
+            z-index: 1;
+            color: white;
+        }
+
+        .login-hero h1 {
+            font-size: 42px;
+            font-weight: 800;
+            line-height: 1.1;
+            margin-bottom: 16px;
+        }
+
+        .login-hero h1 span {
+            color: var(--brand-secondary);
+        }
+
+        .login-hero p {
+            font-size: 15px;
+            color: rgba(255, 255, 255, 0.8);
+            max-width: 400px;
+        }
+
+        .login-right {
+            width: 100%;
+            max-width: 480px;
+            background: white;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            padding: 48px;
+        }
+
+        .login-box h3 {
+            font-size: 26px;
+            font-weight: 800;
+            margin-bottom: 6px;
+        }
+
+        .login-box p {
+            color: var(--text-muted);
+            font-size: 14px;
+            margin-bottom: 32px;
+        }
+
+        .form-group {
+            margin-bottom: 16px;
+        }
+
+        .form-label {
+            display: block;
+            font-size: 12px;
+            font-weight: 700;
+            color: var(--text-muted);
+            margin-bottom: 6px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .form-control {
+            width: 100%;
+            padding: 12px 16px;
+            border: 1.5px solid var(--border);
+            border-radius: var(--r);
+            background: var(--bg-input);
+            font-size: 14px;
+            transition: var(--transition);
+            outline: none;
+        }
+
+        .form-control:focus {
+            border-color: var(--brand-primary);
+            background: white;
+            box-shadow: 0 0 0 3px var(--brand-primary-glow);
+        }
+
+        .btn {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            padding: 12px 20px;
+            border-radius: var(--r);
+            font-size: 14px;
+            font-weight: 700;
+            cursor: pointer;
+            transition: var(--transition);
+            border: none;
+            width: 100%;
+        }
+
+        .btn-primary {
+            background: var(--brand-primary);
+            color: white;
+        }
+
+        .btn-primary:hover {
+            background: var(--brand-primary-dark);
+            transform: translateY(-1px);
+            box-shadow: 0 6px 16px var(--brand-primary-glow);
+        }
+
+        .btn-secondary {
+            background: var(--bg-input);
+            color: var(--text);
+            border: 1.5px solid var(--border);
+        }
+
+        .login-links {
+            display: flex;
+            justify-content: space-between;
+            margin-top: 16px;
+        }
+
+        .text-link {
+            background: none;
+            border: none;
+            color: var(--brand-primary);
+            font-size: 13px;
+            font-weight: 600;
+            cursor: pointer;
+        }
+
+        .text-link:hover {
+            text-decoration: underline;
+        }
+
+        .auth-footer {
+            margin-top: auto;
+            padding-top: 32px;
+            text-align: center;
+            font-size: 12px;
+            color: var(--text-light);
+        }
+
+        .auth-footer a {
+            color: var(--brand-primary);
+            font-weight: 600;
+            text-decoration: none;
+        }
+
+        #view-app {
+            display: flex;
+            height: 100vh;
+            overflow: hidden;
+        }
+
+        /* Sidebar (Desktop) */
+        .sidebar {
+            width: var(--sidebar-w);
+            background: var(--bg-sidebar);
+            color: white;
+            display: flex;
+            flex-direction: column;
+            transition: var(--transition);
+            z-index: 100;
+        }
+
+        .sidebar-header {
+            padding: 20px;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .sidebar-header img {
+            width: 36px;
+            height: 36px;
+            border-radius: var(--r-sm);
+            background: white;
+            padding: 2px;
+        }
+
+        .sidebar-title {
+            font-size: 14px;
+            font-weight: 800;
+            line-height: 1.2;
+        }
+
+        .sidebar-subtitle {
+            font-size: 10px;
+            color: rgba(255, 255, 255, 0.5);
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .sidebar-nav {
+            flex: 1;
+            overflow-y: auto;
+            padding: 16px 12px;
+        }
+
+        .nav-section {
+            font-size: 10px;
+            font-weight: 700;
+            color: rgba(255, 255, 255, 0.3);
+            text-transform: uppercase;
+            margin: 16px 0 8px 12px;
+            letter-spacing: 1px;
+        }
+
+        .nav-item {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 10px 12px;
+            color: rgba(255, 255, 255, 0.6);
+            border-radius: var(--r-sm);
+            font-size: 14px;
+            font-weight: 500;
+            margin-bottom: 4px;
+            cursor: pointer;
+            transition: var(--transition);
+        }
+
+        .nav-item:hover,
+        .nav-item.active {
+            background: rgba(255, 255, 255, 0.1);
+            color: white;
+        }
+
+        .nav-item.active {
+            background: var(--brand-primary);
+            font-weight: 600;
+        }
+
+        .nav-badge {
+            margin-left: auto;
+            background: var(--danger);
+            color: white;
+            font-size: 10px;
+            font-weight: 800;
+            padding: 2px 6px;
+            border-radius: 20px;
+        }
+
+        .sidebar-footer {
+            padding: 16px;
+            border-top: 1px solid rgba(255, 255, 255, 0.1);
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .user-avatar {
+            width: 36px;
+            height: 36px;
+            border-radius: 50%;
+            background: var(--brand-primary);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 700;
+            font-size: 13px;
+            color: white;
+        }
+
+        .user-info {
+            flex: 1;
+            overflow: hidden;
+        }
+
+        .user-name {
+            font-size: 13px;
+            font-weight: 600;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .user-role {
+            font-size: 11px;
+            color: rgba(255, 255, 255, 0.5);
+            text-transform: capitalize;
+        }
+
+        .logout-btn {
+            background: none;
+            border: none;
+            color: rgba(255, 255, 255, 0.5);
+            cursor: pointer;
+            padding: 4px;
+            transition: var(--transition);
+        }
+
+        .logout-btn:hover {
+            color: var(--danger);
+        }
+
+        /* Main Content Area */
+        .main-wrapper {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+            position: relative;
+        }
+
+        .topbar {
+            height: var(--header-h);
+            background: white;
+            border-bottom: 1px solid var(--border);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 0 24px;
+        }
+
+        .page-title {
+            font-size: 20px;
+            font-weight: 800;
+            color: var(--text);
+        }
+
+        .content-area {
+            flex: 1;
+            overflow-y: auto;
+            padding: 24px;
+            background: var(--bg);
+            padding-bottom: 100px;
+        }
+
+        /* Padding bottom for mobile nav */
+
+        .mobile-header {
+            display: none;
+            height: var(--header-h);
+            background: white;
+            border-bottom: 1px solid var(--border);
+            align-items: center;
+            justify-content: space-between;
+            padding: 0 16px;
+            position: sticky;
+            top: 0;
+            z-index: 50;
+        }
+
+        .mobile-header img {
+            height: 32px;
+            border-radius: 6px;
+        }
+
+        .mobile-nav {
+            display: none;
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            height: var(--mobile-nav-h);
+            background: white;
+            border-top: 1px solid var(--border);
+            box-shadow: 0 -4px 12px rgba(0, 0, 0, 0.05);
+            z-index: 50;
+            justify-content: space-around;
+            align-items: center;
+            padding-bottom: env(safe-area-inset-bottom);
+        }
+
+        .mob-nav-item {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            gap: 4px;
+            color: var(--text-light);
+            font-size: 10px;
+            font-weight: 600;
+            flex: 1;
+            height: 100%;
+            cursor: pointer;
+            position: relative;
+        }
+
+        .mob-nav-item.active {
+            color: var(--brand-primary);
+        }
+
+        .mob-badge {
+            position: absolute;
+            top: 8px;
+            right: calc(50% - 16px);
+            background: var(--danger);
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            border: 2px solid white;
+        }
+
+        .card {
+            background: white;
+            border-radius: var(--r-lg);
+            border: 1px solid var(--border);
+            box-shadow: var(--shadow-sm);
+            overflow: hidden;
+            margin-bottom: 24px;
+        }
+
+        .card-header {
+            padding: 16px 20px;
+            border-bottom: 1px solid var(--border);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .card-title {
+            font-size: 15px;
+            font-weight: 700;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .card-body {
+            padding: 20px;
+        }
+
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 16px;
+            margin-bottom: 24px;
+        }
+
+        .stat-card {
+            background: white;
+            border-radius: var(--r-lg);
+            padding: 20px;
+            border: 1px solid var(--border);
+            display: flex;
+            align-items: center;
+            gap: 16px;
+            box-shadow: var(--shadow-sm);
+        }
+
+        .stat-icon {
+            width: 48px;
+            height: 48px;
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-shrink: 0;
+        }
+
+        .stat-info h4 {
+            font-size: 12px;
+            color: var(--text-muted);
+            text-transform: uppercase;
+            font-weight: 700;
+            margin-bottom: 4px;
+        }
+
+        .stat-info .value {
+            font-size: 24px;
+            font-weight: 800;
+            line-height: 1;
+        }
+
+        .table-responsive {
+            overflow-x: auto;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            text-align: left;
+        }
+
+        th {
+            background: var(--bg-input);
+            padding: 12px 16px;
+            font-size: 12px;
+            font-weight: 700;
+            color: var(--text-muted);
+            text-transform: uppercase;
+            border-bottom: 1px solid var(--border);
+            white-space: nowrap;
+        }
+
+        td {
+            padding: 16px;
+            font-size: 13px;
+            color: var(--text);
+            border-bottom: 1px solid var(--border);
+            vertical-align: middle;
+        }
+
+        tr:hover td {
+            background: var(--bg-input);
+        }
+
+        .badge {
+            display: inline-flex;
+            align-items: center;
+            padding: 4px 8px;
+            border-radius: 6px;
+            font-size: 11px;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .badge.pending {
+            background: var(--warning-glow);
+            color: var(--warning);
+            border: 1px solid rgba(217, 119, 6, 0.2);
+        }
+
+        .badge.approved {
+            background: var(--success-glow);
+            color: var(--success);
+            border: 1px solid rgba(22, 163, 74, 0.2);
+        }
+
+        .badge.rejected {
+            background: var(--danger-glow);
+            color: var(--danger);
+            border: 1px solid rgba(220, 38, 38, 0.2);
+        }
+
+        .badge.draft {
+            background: var(--bg-input);
+            color: var(--text-muted);
+            border: 1px solid var(--border);
+        }
+
+        .modal-overlay {
+            position: fixed;
+            inset: 0;
+            background: rgba(15, 23, 42, 0.6);
+            backdrop-filter: blur(4px);
+            display: none;
+            align-items: center;
+            justify-content: center;
+            z-index: 1000;
+            padding: 20px;
+        }
+
+        .modal {
+            background: white;
+            width: 100%;
+            max-width: 440px;
+            border-radius: var(--r-lg);
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.2);
+            overflow: hidden;
+            animation: slideUp 0.3s ease forwards;
+        }
+
+        .modal-header {
+            padding: 20px;
+            border-bottom: 1px solid var(--border);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .modal-header h3 {
+            font-size: 18px;
+            font-weight: 700;
+        }
+
+        .close-btn {
+            background: none;
+            border: none;
+            font-size: 20px;
+            color: var(--text-light);
+            cursor: pointer;
+        }
+
+        .modal-body {
+            padding: 20px;
+        }
+
+        @keyframes slideUp {
+            from {
+                opacity: 0;
+                transform: translateY(20px);
+            }
+
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        /* Utilities */
+        .grid-2 {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 16px;
+        }
+
+        .mt-4 {
+            margin-top: 16px;
+        }
+
+        .mb-4 {
+            margin-bottom: 16px;
+        }
+
+        .text-center {
+            text-align: center;
+        }
+
+        @media (max-width: 768px) {
+            .sidebar {
+                display: none;
+            }
+
+            .topbar {
+                display: none;
+            }
+
+            .mobile-header {
+                display: flex;
+            }
+
+            .mobile-nav {
+                display: flex;
+            }
+
+            .login-left {
+                display: none;
+            }
+
+            .login-right {
+                max-width: 100%;
+                padding: 32px 24px;
+            }
+
+            .grid-2 {
+                grid-template-columns: 1fr;
+            }
+
+            .content-area {
+                padding: 16px;
+            }
+        }
+    </style>
+</head>
+
+<body>
+
+    <div id="view-login" class="view">
+        <div class="login-left">
+            <div class="login-brand">
+                <img src="https://cyrixhealthcare.com/wp-content/uploads/2023/04/cyrix-logo-white.png" alt="Cyrix Logo"
+                    class="login-logo"
+                    onerror="this.src='data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAxMDAgMTAwIj48cmVjdCB3aWR0aD0iMTAwIiBoZWlnaHQ9IjEwMCIgZmlsbD0iIzFkNGVkOCIvPjx0ZXh0IHg9IjUwIiB5PSI2MCIgZm9udC1mYW1pbHk9IkFyaWFsIiBmb250LXNpemU9IjQwIiBmaWxsPSJ3aGl0ZSIgdGV4dC1hbmNob3I9Im1pZGRsZSI+Q0g8L3RleHQ+PC9zdmc+'">
+                <div class="login-brand-text">
+                    <h2>Cyrix Healthcare</h2>
+                    <p>Field Report App</p>
+                </div>
+            </div>
+            <div class="login-hero">
+                <h1>Manage field operations <br><span>Seamlessly.</span></h1>
+                <p>Securely submit expenses, track approvals, and manage your daily reports.</p>
+            </div>
+            <div style="color:rgba(255,255,255,0.4); font-size: 12px;">Secure Enterprise Portal &copy; 2026</div>
+        </div>
+
+        <div class="login-right">
+            <div class="login-box">
+                <h3>Welcome Back 👋</h3>
+                <p>Sign in to your account</p>
+
+                <form id="login-form" onsubmit="event.preventDefault(); window.api.login();">
+                    <div class="form-group">
+                        <label class="form-label">User ID (E-Code)</label>
+                        <input type="text" id="login-uid" class="form-control" placeholder="e.g. CX1042" required>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Password</label>
+                        <input type="password" id="login-pwd" class="form-control" placeholder="••••••••" required>
+                    </div>
+                    <button type="submit" class="btn btn-primary" id="btn-login">Sign In</button>
+                </form>
+
+                <div class="login-links">
+                    <button class="text-link" onclick="window.ui.showModal('modal-forgot')">Forgot Password?</button>
+                    <button class="text-link" onclick="window.ui.showModal('modal-knowid')">Know Your ID</button>
+                </div>
+            </div>
+
+            <div class="auth-footer">
+                Designed & Developed for <a href="https://cyrixhealthcare.com/" target="_blank">Cyrix Healthcare</a><br>
+                Managed by <a href="https://sunilbishnoi.co.in/" target="_blank">Sunil Bishnoi</a>
+            </div>
+        </div>
+    </div>
+
+    <div id="view-app" class="view hidden">
+        <!-- Desktop Sidebar -->
+        <aside class="sidebar">
+            <div class="sidebar-header">
+                <img src="https://cyrixhealthcare.com/wp-content/uploads/2023/04/cyrix-logo-white.png"
+                    onerror="this.src='data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAxMDAgMTAwIj48cmVjdCB3aWR0aD0iMTAwIiBoZWlnaHQ9IjEwMCIgZmlsbD0iIzFkNGVkOCIvPjx0ZXh0IHg9IjUwIiB5PSI2MCIgZm9udC1mYW1pbHk9IkFyaWFsIiBmb250LXNpemU9IjQwIiBmaWxsPSJ3aGl0ZSIgdGV4dC1hbmNob3I9Im1pZGRsZSI+Q0g8L3RleHQ+PC9zdmc+'"
+                    alt="Logo">
+                <div>
+                    <div class="sidebar-title">Cyrix Healthcare</div>
+                    <div class="sidebar-subtitle">Field Report App</div>
+                </div>
+            </div>
+
+            <nav class="sidebar-nav" id="desktop-nav">
+                <!-- Injected via JS based on Role -->
+            </nav>
+
+            <div class="sidebar-footer">
+                <div class="user-avatar" id="sidebar-avatar">U</div>
+                <div class="user-info">
+                    <div class="user-name" id="sidebar-name">User Name</div>
+                    <div class="user-role" id="sidebar-role">Role</div>
+                </div>
+                <button class="logout-btn" onclick="window.api.logout()" title="Logout">
+                    <svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                        <path d="M9 21H5a2 2 0 01-2-2V5a2 2 0 012-2h4" />
+                        <polyline points="16 17 21 12 16 7" />
+                        <line x1="21" y1="12" x2="9" y2="12" />
+                    </svg>
+                </button>
+            </div>
+        </aside>
+
+        <!-- Main Wrapper -->
+        <div class="main-wrapper">
+            <!-- Mobile Header -->
+            <header class="mobile-header">
+                <img src="https://cyrixhealthcare.com/wp-content/uploads/2023/04/cyrix-logo-white.png"
+                    onerror="this.src='data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAxMDAgMTAwIj48cmVjdCB3aWR0aD0iMTAwIiBoZWlnaHQ9IjEwMCIgZmlsbD0iIzFkNGVkOCIvPjx0ZXh0IHg9IjUwIiB5PSI2MCIgZm9udC1mYW1pbHk9IkFyaWFsIiBmb250LXNpemU9IjQwIiBmaWxsPSJ3aGl0ZSIgdGV4dC1hbmNob3I9Im1pZGRsZSI+Q0g8L3RleHQ+PC9zdmc+'"
+                    alt="Logo">
+                <div class="user-avatar" style="width:32px; height:32px; font-size:12px;" id="mobile-avatar"
+                    onclick="window.ui.navigate('profile')">U</div>
+            </header>
+
+            <!-- Desktop Topbar -->
+            <header class="topbar">
+                <div class="page-title" id="topbar-title">Dashboard</div>
+                <div style="display: flex; gap: 12px;">
+                    <button class="btn btn-primary" onclick="window.ui.navigate('submit-expense')"
+                        id="topbar-action-btn">
+                        + New Expense
+                    </button>
+                </div>
+            </header>
+
+            <!-- Dynamic Content Area -->
+            <main class="content-area" id="main-content">
+                <!-- Pages injected here -->
+            </main>
+        </div>
+
+        <!-- Mobile Bottom Nav -->
+        <nav class="mobile-nav" id="mobile-nav">
+            <!-- Injected via JS -->
+        </nav>
+    </div>
+
+    <!-- Forgot Password Modal -->
+    <div class="modal-overlay" id="modal-forgot">
+        <div class="modal">
+            <div class="modal-header">
+                <h3>Reset Password</h3>
+                <button class="close-btn" onclick="window.ui.hideModal('modal-forgot')">&times;</button>
+            </div>
+            <div class="modal-body">
+                <p style="font-size:13px; color:var(--text-muted); margin-bottom: 16px;">Enter your E-Code and
+                    registered Email to receive an OTP.</p>
+                <div class="form-group">
+                    <label class="form-label">E-Code</label>
+                    <input type="text" id="for-ecode" class="form-control" placeholder="CX1042">
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Email</label>
+                    <input type="email" id="for-email" class="form-control" placeholder="name@cyrixhealthcare.com">
+                </div>
+                <button class="btn btn-primary"
+                    onclick="alert('OTP logic connected to Google Script backend API.')">Send Reset Link</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Know ID Modal -->
+    <div class="modal-overlay" id="modal-knowid">
+        <div class="modal">
+            <div class="modal-header">
+                <h3>Retrieve User ID</h3>
+                <button class="close-btn" onclick="window.ui.hideModal('modal-knowid')">&times;</button>
+            </div>
+            <div class="modal-body">
+                <div class="form-group">
+                    <label class="form-label">Date of Birth</label>
+                    <input type="date" class="form-control">
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Registered Phone Number</label>
+                    <input type="tel" class="form-control" placeholder="10 digit number">
+                </div>
+                <button class="btn btn-primary" onclick="alert('User ID logic connected to backend API.')">Get User
+                    ID</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        /**
+         * CYRIX HEALTHCARE - FIELD REPORT APP (SPA LOGIC)
+         * Secure frontend architecture. All sensitive data is simulated to come from Backend.
+         */
+
+        // --- 1. MOCK API LAYER (Replace with Cloudflare D1/R2 Fetch Calls) ---
+        window.api = {
+            // Simulated database
+            db: {
+                users: {
+                    'CX1001': { pwd: 'password', role: 'field_engineer', name: 'Rahul Sharma', km_limit: 1500, km_used: 1240 },
+                    'CX2001': { pwd: 'password', role: 'manager', name: 'Vikram Singh', km_limit: 2000, km_used: 800 },
+                    'CX9001': { pwd: 'password', role: 'admin', name: 'Sunil Bishnoi', km_limit: 5000, km_used: 100 }
+                },
+                expenses: [
+                    { id: 'EXP-101', date: '2026-05-08', amount: 450, category: 'Travel', status: 'pending', user: 'CX1001' },
+                    { id: 'EXP-100', date: '2026-05-05', amount: 1200, category: 'Lodging', status: 'approved', user: 'CX1001' },
+                    { id: 'EXP-099', date: '2026-05-02', amount: 300, category: 'Food', status: 'rejected', user: 'CX1001' }
+                ]
+            },
+
+            // Login Function (Authenticates and stores simulated JWT token)
+            login: async function () {
+                const uid = document.getElementById('login-uid').value.toUpperCase();
+                const pwd = document.getElementById('login-pwd').value;
+                const btn = document.getElementById('btn-login');
+
+                btn.textContent = 'Authenticating...';
+                btn.disabled = true;
+
+                // Simulate network latency
+                setTimeout(() => {
+                    const user = this.db.users[uid];
+                    if (user && user.pwd === pwd) {
+                        // Success: Save to local storage
+                        const sessionData = { uid, role: user.role, name: user.name, token: 'mock_jwt_token_abc123' };
+                        localStorage.setItem('cyrix_session', JSON.stringify(sessionData));
+                        window.ui.initApp(); // Boot app
+                    } else {
+                        alert('Invalid User ID or Password.\nHint: Use CX1001 (Field), CX2001 (Manager), CX9001 (Admin) and pwd: password');
+                    }
+                    btn.textContent = 'Sign In';
+                    btn.disabled = false;
+                }, 800);
+            },
+
+            logout: function () {
+                if (confirm('Are you sure you want to log out?')) {
+                    localStorage.removeItem('cyrix_session');
+                    window.ui.showLogin();
+                }
+            },
+
+            // Fetch Dashboard Data
+            getDashboardData: async function () {
+                const session = JSON.parse(localStorage.getItem('cyrix_session'));
+                const user = this.db.users[session.uid];
+                let exps = this.db.expenses;
+
+                // If not manager/admin, only see own expenses
+                if (session.role === 'field_engineer') {
+                    exps = exps.filter(e => e.user === session.uid);
+                }
+
+                return {
+                    km_limit: user.km_limit,
+                    km_used: user.km_used,
+                    total_amount: exps.reduce((sum, e) => sum + e.amount, 0),
+                    approved_amount: exps.filter(e => e.status === 'approved').reduce((sum, e) => sum + e.amount, 0),
+                    pending_amount: exps.filter(e => e.status === 'pending').reduce((sum, e) => sum + e.amount, 0),
+                    recent: exps.slice(0, 5)
+                };
+            },
+
+            // Submit Expense (Simulate DB insert)
+            submitExpense: async function (data) {
+                const session = JSON.parse(localStorage.getItem('cyrix_session'));
+                const newExp = {
+                    id: 'EXP-' + Math.floor(Math.random() * 1000 + 200),
+                    date: data.date,
+                    amount: parseFloat(data.amount),
+                    category: data.category,
+                    status: 'pending',
+                    user: session.uid
+                };
+                this.db.expenses.unshift(newExp);
+                return { success: true, message: 'Expense submitted successfully for approval.' };
+            }
+        };
+
+        // --- 2. UI & ROUTER LOGIC ---
+        window.ui = {
+            session: null,
+
+            navStructure: [
+                { id: 'dashboard', label: 'Dashboard', icon: '<circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/>', roles: ['field_engineer', 'manager', 'admin'] },
+                { id: 'submit-expense', label: 'Submit Expense', icon: '<path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><line x1="12" y1="18" x2="12" y2="12"/><line x1="9" y1="15" x2="15" y2="15"/>', roles: ['field_engineer', 'manager'] },
+                { id: 'expense-status', label: 'Expense Status', icon: '<line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/>', roles: ['field_engineer', 'manager'] },
+                { id: 'approval-center', label: 'Approval Center', icon: '<path d="M22 11.08V12a10 10 0 11-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/>', roles: ['manager', 'admin'] },
+                { id: 'admin-panel', label: 'Admin Panel', icon: '<path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>', roles: ['admin'] },
+                { id: 'profile', label: 'Profile', icon: '<path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2"/><circle cx="12" cy="7" r="4"/>', roles: ['field_engineer', 'manager', 'admin'] }
+            ],
+
+            checkAuth: function () {
+                const s = localStorage.getItem('cyrix_session');
+                if (s) {
+                    this.session = JSON.parse(s);
+                    this.initApp();
+                } else {
+                    this.showLogin();
+                }
+            },
+
+            showLogin: function () {
+                document.getElementById('view-login').classList.remove('hidden');
+                document.getElementById('view-app').classList.add('hidden');
+            },
+
+            initApp: function () {
+                const s = localStorage.getItem('cyrix_session');
+                if (!s) return this.showLogin();
+                this.session = JSON.parse(s);
+
+                document.getElementById('view-login').classList.add('hidden');
+                document.getElementById('view-app').classList.remove('hidden');
+
+                // Update UI User Info
+                const initials = this.session.name.split(' ').map(n => n[0]).join('').substring(0, 2);
+                document.getElementById('sidebar-avatar').textContent = initials;
+                document.getElementById('mobile-avatar').textContent = initials;
+                document.getElementById('sidebar-name').textContent = this.session.name;
+                document.getElementById('sidebar-role').textContent = this.session.role.replace('_', ' ');
+
+                this.buildNavigation();
+                this.navigate('dashboard'); // Default route
+            },
+
+            buildNavigation: function () {
+                const allowedNav = this.navStructure.filter(n => n.roles.includes(this.session.role));
+
+                // Desktop Sidebar
+                let dHTML = '';
+                allowedNav.forEach(n => {
+                    dHTML += `<a class="nav-item" id="nav-d-${n.id}" onclick="window.ui.navigate('${n.id}')">
+                                <svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">${n.icon}</svg>
+                                ${n.label}
+                              </a>`;
+                });
+                document.getElementById('desktop-nav').innerHTML = dHTML;
+
+                // Mobile Bottom Nav (max 4-5 items)
+                let mHTML = '';
+                const mobileItems = allowedNav.slice(0, 4);
+                mobileItems.forEach(n => {
+                    let shortLabel = n.label.split(' ')[0]; // keep it short
+                    mHTML += `<div class="mob-nav-item" id="nav-m-${n.id}" onclick="window.ui.navigate('${n.id}')">
+                                <svg width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">${n.icon}</svg>
+                                <span>${shortLabel}</span>
+                              </div>`;
+                });
+                document.getElementById('mobile-nav').innerHTML = mHTML;
+            },
+
+            navigate: function (viewId) {
+                // Update active nav state
+                document.querySelectorAll('.nav-item, .mob-nav-item').forEach(el => el.classList.remove('active'));
+                if (document.getElementById(`nav-d-${viewId}`)) document.getElementById(`nav-d-${viewId}`).classList.add('active');
+                if (document.getElementById(`nav-m-${viewId}`)) document.getElementById(`nav-m-${viewId}`).classList.add('active');
+
+                // Update Topbar Title
+                const navItem = this.navStructure.find(n => n.id === viewId);
+                document.getElementById('topbar-title').textContent = navItem ? navItem.label : 'Cyrix App';
+
+                // Render specific view content
+                const content = document.getElementById('main-content');
+                content.innerHTML = '<div style="text-align:center; padding: 40px; color: var(--text-light);">Loading...</div>';
+
+                setTimeout(() => {
+                    switch (viewId) {
+                        case 'dashboard': this.renderDashboard(content); break;
+                        case 'submit-expense': this.renderSubmitExpense(content); break;
+                        case 'expense-status': this.renderExpenseStatus(content); break;
+                        case 'approval-center': this.renderApprovalCenter(content); break;
+                        case 'admin-panel': this.renderAdminPanel(content); break;
+                        case 'profile': this.renderProfile(content); break;
+                        default: content.innerHTML = `<h2>${viewId}</h2><p>Page under construction.</p>`;
+                    }
+                }, 100); // Simulate brief render delay
+            },
+
+            renderDashboard: async function (container) {
+                const data = await window.api.getDashboardData();
+                let recentHTML = data.recent.map(e => `
+                    <tr>
+                        <td><strong>${e.id}</strong><br><span style="font-size:11px;color:var(--text-muted)">${e.date}</span></td>
+                        <td>${e.category}</td>
+                        <td style="font-weight:700">₹${e.amount}</td>
+                        <td><span class="badge ${e.status}">${e.status}</span></td>
+                    </tr>
+                `).join('');
+
+                container.innerHTML = `
+                    <div class="stats-grid">
+                        <div class="stat-card">
+                            <div class="stat-icon" style="background: var(--brand-primary-glow); color: var(--brand-primary);">
+                                <svg width="24" height="24" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>
+                            </div>
+                            <div class="stat-info">
+                                <h4>Total Submitted</h4>
+                                <div class="value">₹${data.total_amount}</div>
+                            </div>
+                        </div>
+                        <div class="stat-card">
+                            <div class="stat-icon" style="background: var(--success-glow); color: var(--success);">
+                                <svg width="24" height="24" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
+                            </div>
+                            <div class="stat-info">
+                                <h4>Approved</h4>
+                                <div class="value" style="color:var(--success)">₹${data.approved_amount}</div>
+                            </div>
+                        </div>
+                        <div class="stat-card">
+                            <div class="stat-icon" style="background: rgba(6,182,212,0.1); color: var(--brand-accent);">
+                                <svg width="24" height="24" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+                            </div>
+                            <div class="stat-info">
+                                <h4>KM Utilized</h4>
+                                <div class="value">${data.km_used} / ${data.km_limit}</div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="card">
+                        <div class="card-header">
+                            <div class="card-title">Recent Expenses</div>
+                        </div>
+                        <div class="table-responsive">
+                            <table>
+                                <thead><tr><th>ID & Date</th><th>Category</th><th>Amount</th><th>Status</th></tr></thead>
+                                <tbody>${recentHTML}</tbody>
+                            </table>
+                        </div>
+                    </div>
+                `;
+            },
+
+            renderSubmitExpense: function (container) {
+                container.innerHTML = `
+                    <div class="card" style="max-width: 600px; margin: 0 auto;">
+                        <div class="card-header"><div class="card-title">New Expense Claim</div></div>
+                        <div class="card-body">
+                            <form id="expense-form" onsubmit="event.preventDefault(); window.ui.handleExpenseSubmit();">
+                                <div class="grid-2">
+                                    <div class="form-group">
+                                        <label class="form-label">Date of Expense</label>
+                                        <input type="date" id="exp-date" class="form-control" required>
+                                    </div>
+                                    <div class="form-group">
+                                        <label class="form-label">Category</label>
+                                        <select id="exp-category" class="form-control" required>
+                                            <option value="">Select...</option>
+                                            <option value="Travel (Bike)">Travel (Bike - KM based)</option>
+                                            <option value="Travel (Public)">Travel (Public Transport)</option>
+                                            <option value="Lodging">Lodging</option>
+                                            <option value="Food">Food / DA</option>
+                                            <option value="Misc">Miscellaneous</option>
+                                        </select>
+                                    </div>
+                                </div>
+                                <div class="form-group">
+                                    <label class="form-label">Amount (₹)</label>
+                                    <input type="number" id="exp-amount" class="form-control" placeholder="0.00" required>
+                                </div>
+                                <div class="form-group">
+                                    <label class="form-label">Description / Route Info</label>
+                                    <textarea id="exp-desc" class="form-control" rows="3" placeholder="Explain the expense or route taken..." required></textarea>
+                                </div>
+                                <div class="form-group">
+                                    <label class="form-label">Upload Receipt (Simulated R2 Cloud Storage)</label>
+                                    <input type="file" class="form-control" accept="image/*,.pdf">
+                                    <small style="color:var(--text-light); font-size: 11px; margin-top:4px; display:block;">Secure upload via Cloudflare R2 presigned URLs.</small>
+                                </div>
+                                <div class="mt-4">
+                                    <button type="submit" class="btn btn-primary">Submit for Approval</button>
+                                </div>
+                            </form>
+                        </div>
+                    </div>
+                `;
+            },
+
+            handleExpenseSubmit: async function () {
+                const data = {
+                    date: document.getElementById('exp-date').value,
+                    category: document.getElementById('exp-category').value,
+                    amount: document.getElementById('exp-amount').value,
+                    desc: document.getElementById('exp-desc').value
+                };
+                const res = await window.api.submitExpense(data);
+                if (res.success) {
+                    alert(res.message);
+                    this.navigate('expense-status');
+                }
+            },
+
+            renderExpenseStatus: async function (container) {
+                const data = await window.api.getDashboardData(); // Reusing for mock list
+                let list = data.recent.map(e => `
+                    <div style="background:white; border:1px solid var(--border); border-radius:var(--r-sm); padding: 16px; margin-bottom: 12px; display:flex; justify-content:space-between; align-items:center;">
+                        <div>
+                            <div style="font-weight:700; font-size:14px;">${e.category} - ₹${e.amount}</div>
+                            <div style="font-size:12px; color:var(--text-muted); margin-top:4px;">${e.id} | ${e.date}</div>
+                        </div>
+                        <div><span class="badge ${e.status}">${e.status}</span></div>
+                    </div>
+                `).join('');
+
+                container.innerHTML = `
+                    <div style="max-width: 800px; margin: 0 auto;">
+                        <h3 style="margin-bottom: 16px;">My Submitted Expenses</h3>
+                        ${list}
+                    </div>
+                `;
+            },
+
+            renderApprovalCenter: async function (container) {
+                // Mock pending approvals view
+                const data = await window.api.getDashboardData();
+                let pending = data.recent.filter(e => e.status === 'pending').map(e => `
+                    <tr>
+                        <td><strong>${e.id}</strong><br><span style="font-size:11px;color:var(--text-muted)">User: ${e.user}</span></td>
+                        <td>${e.date}</td>
+                        <td>${e.category}</td>
+                        <td style="font-weight:700">₹${e.amount}</td>
+                        <td>
+                            <button class="btn btn-primary" style="padding: 6px 12px; font-size: 12px; width:auto;" onclick="alert('Approved via D1 API')">Approve</button>
+                            <button class="btn btn-secondary" style="padding: 6px 12px; font-size: 12px; width:auto; color:var(--danger); border-color:var(--danger);" onclick="alert('Rejected via D1 API')">Reject</button>
+                        </td>
+                    </tr>
+                `).join('');
+
+                container.innerHTML = `
+                    <div class="card">
+                        <div class="card-header"><div class="card-title">Pending Approvals (Multi-level)</div></div>
+                        <div class="table-responsive">
+                            <table>
+                                <thead><tr><th>Request Info</th><th>Date</th><th>Category</th><th>Amount</th><th>Action</th></tr></thead>
+                                <tbody>${pending || '<tr><td colspan="5" class="text-center">No pending approvals!</td></tr>'}</tbody>
+                            </table>
+                        </div>
+                    </div>
+                `;
+            },
+
+            renderAdminPanel: function (container) {
+                container.innerHTML = `
+                    <div class="card">
+                        <div class="card-header"><div class="card-title">System Administration</div></div>
+                        <div class="card-body">
+                            <p style="margin-bottom: 24px; color:var(--text-muted);">Manage users, roles, hierarchy, and system masters.</p>
+                            
+                            <div style="display:flex; gap: 12px; flex-wrap: wrap; margin-bottom: 24px;">
+                                <button class="btn btn-primary" style="width:auto;">User Management</button>
+                                <button class="btn btn-secondary" style="width:auto;">Approval Hierarchy</button>
+                                <button class="btn btn-secondary" style="width:auto;">Facility Master</button>
+                                <button class="btn btn-secondary" style="width:auto;">Role Management</button>
+                            </div>
+
+                            <div style="border:1px solid var(--border); border-radius: var(--r-sm); padding: 24px; background:var(--bg-input);">
+                                <h4>User Management</h4>
+                                <p style="font-size:12px; color:var(--text-muted); margin-bottom: 16px;">Add/Edit/Disable system users and assign roles.</p>
+                                <button class="btn btn-secondary" style="width:auto; background:white;">+ Add New User</button>
+                                <hr style="border:none; border-top:1px solid var(--border); margin: 20px 0;">
+                                <p style="font-size:13px;">* Full CRUD interface connects to Cloudflare D1.</p>
+                            </div>
+                        </div>
+                    </div>
+                `;
+            },
+
+            renderProfile: function (container) {
+                container.innerHTML = `
+                    <div class="card" style="max-width: 500px; margin: 0 auto;">
+                        <div class="card-body text-center">
+                            <div style="width:80px; height:80px; border-radius:50%; background:var(--brand-primary); color:white; display:flex; align-items:center; justify-content:center; font-size:32px; font-weight:800; margin: 0 auto 16px;">
+                                ${this.session.name.substring(0, 2).toUpperCase()}
+                            </div>
+                            <h3>${this.session.name}</h3>
+                            <p style="color:var(--text-muted); text-transform:capitalize; margin-bottom: 24px;">${this.session.role.replace('_', ' ')} | ID: ${this.session.uid}</p>
+                            
+                            <div style="text-align:left; border-top:1px solid var(--border); padding-top: 24px;">
+                                <div class="form-group">
+                                    <label class="form-label">Email</label>
+                                    <input type="text" class="form-control" value="name@cyrixhealthcare.com" disabled>
+                                </div>
+                                <div class="form-group">
+                                    <label class="form-label">Phone</label>
+                                    <input type="text" class="form-control" value="+91 9876543210" disabled>
+                                </div>
+                            </div>
+                            
+                            <div class="mt-4" style="text-align:left;">
+                                <div style="font-size:11px; color:var(--text-light); margin-bottom:8px;">App Links</div>
+                                <a href="https://cyrixhealthcare.com/" target="_blank" style="display:block; color:var(--brand-primary); font-size:14px; font-weight:600; margin-bottom:4px;">Visit Cyrix Website ↗</a>
+                                <a href="https://sunilbishnoi.co.in/" target="_blank" style="display:block; color:var(--brand-primary); font-size:14px; font-weight:600;">Contact Developer ↗</a>
+                            </div>
+                        </div>
+                    </div>
+                `;
+            },
+
+            // Modal Utilities
+            showModal: function (id) { document.getElementById(id).style.display = 'flex'; },
+            hideModal: function (id) { document.getElementById(id).style.display = 'none'; }
+        };
+
+        // --- 3. INITIALIZATION ---
+        document.addEventListener('DOMContentLoaded', () => {
+            window.ui.checkAuth();
+        });
+    </script>
+</body>
+
+</html>
