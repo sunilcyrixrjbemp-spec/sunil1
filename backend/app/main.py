@@ -68,14 +68,40 @@ app = FastAPI(
     lifespan=lifespan
 )
 
-# CORS Middleware config
+# CORS Middleware config - Hardened to allow only trusted origins
+trusted_origins = [
+    "https://indrae.in",
+    "http://localhost:5173",
+    "http://localhost:3000",
+]
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origin_regex=".*",
+    allow_origins=trusted_origins,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+from fastapi import Request
+from fastapi.responses import JSONResponse
+from sqlalchemy.exc import SQLAlchemyError
+
+@app.exception_handler(SQLAlchemyError)
+async def sqlalchemy_exception_handler(request: Request, exc: SQLAlchemyError):
+    logger.error(f"SQLAlchemy Database Error on {request.url.path}: {str(exc)}", exc_info=True)
+    return JSONResponse(
+        status_code=500,
+        content={"detail": "A secure database transaction error occurred. Raw query details have been logged."}
+    )
+
+@app.exception_handler(Exception)
+async def general_exception_handler(request: Request, exc: Exception):
+    logger.error(f"Unhandled Server Error on {request.url.path}: {str(exc)}", exc_info=True)
+    return JSONResponse(
+        status_code=500,
+        content={"detail": "An internal server error occurred. System paths and tracebacks are secured."}
+    )
 
 # Mount static uploads directory
 static_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "static")

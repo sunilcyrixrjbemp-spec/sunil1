@@ -28,9 +28,19 @@ const NotFoundPage = lazy(() => import("./pages/NotFoundPage"));
 
 function PageLoader() {
   return (
-    <div className="flex flex-col items-center justify-center min-h-[60vh] w-full space-y-4">
-      <div className="animate-spin rounded-full h-10 w-10 border-t-2 border-b-2 border-blue-600"></div>
-      <p className="text-xs font-semibold text-gray-400 tracking-wider">LOADING SECURE GATEWAY...</p>
+    <div className="flex flex-col items-center justify-center min-h-[70vh] w-full p-6 antialiased select-none">
+      <div className="flex flex-col items-center space-y-6 text-center max-w-xs p-8 rounded-2xl bg-white/60 backdrop-blur-xl border border-white/40 shadow-xl">
+        <div className="relative flex items-center justify-center">
+          <div className="w-16 h-16 rounded-full border-4 border-slate-100 border-t-blue-600 animate-spin"></div>
+          <div className="absolute w-8 h-8 rounded-full bg-blue-50 flex items-center justify-center border border-blue-100">
+            <Lock className="w-4 h-4 text-blue-500 animate-pulse" />
+          </div>
+        </div>
+        <div className="space-y-1.5">
+          <p className="text-xs font-bold text-slate-700 uppercase tracking-widest animate-pulse">Decrypting Console...</p>
+          <p className="text-[10px] text-slate-400 font-semibold uppercase tracking-wider">Securing Handshake</p>
+        </div>
+      </div>
     </div>
   );
 }
