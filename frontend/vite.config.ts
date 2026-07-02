@@ -25,7 +25,28 @@ export default defineConfig({
   },
   build: {
     outDir: 'dist',
-    sourcemap: true,
+    sourcemap: false,
     minify: 'esbuild',
+    rollupOptions: {
+      output: {
+        manualChunks(id) {
+          if (id.includes('node_modules')) {
+            if (id.includes('recharts')) {
+              return 'vendor-recharts';
+            }
+            if (id.includes('xlsx')) {
+              return 'vendor-xlsx';
+            }
+            if (id.includes('firebase')) {
+              return 'vendor-firebase';
+            }
+            if (id.includes('axios') || id.includes('zustand') || id.includes('react-router-dom')) {
+              return 'vendor-core';
+            }
+            return 'vendor';
+          }
+        }
+      }
+    }
   },
 })

@@ -1,28 +1,39 @@
 import { HashRouter as Router, Routes, Route, Navigate } from "react-router-dom";
 import { Toaster } from "react-hot-toast";
 import { tokenPersistence, nativeConfig } from "./utils/persistence";
-import { useState, useEffect, useCallback, useRef } from "react";
+import { useState, useEffect, useCallback, useRef, lazy, Suspense } from "react";
 import { isNativeApp, biometricAuth } from "./utils/capacitor";
 import { Fingerprint, Lock, ScanFace } from "lucide-react";
-import LoginPage from "./pages/LoginPage";
 import ProtectedRoute from "./components/auth/ProtectedRoute";
 import DashboardLayout from "./components/dashboard/DashboardLayout";
-import HomePage from "./pages/HomePage";
-import ApprovalPage from "./pages/ApprovalPage";
-import ExpensePage from "./pages/ExpensePage";
-import AnalysisPage from "./pages/AnalysisPage";
-import MonthSummaryPage from "./pages/MonthSummaryPage";
-import ConsolidatedReportPage from "./pages/ConsolidatedReportPage";
-import HelpPage from "./pages/HelpPage";
-import ProfilePage from "./pages/ProfilePage";
-import AdminPage from "./pages/AdminPage";
-import NotificationsPage from "./pages/NotificationsPage";
-import NotFoundPage from "./pages/NotFoundPage";
-import MISReportPage from "./pages/MISReportPage";
-import KPIDashboardPage from "./pages/KPIDashboardPage";
-import UploadDataPage from "./pages/UploadDataPage";
-import AssetUploadPage from "./pages/AssetUploadPage";
-import PenaltyReportPage from "./pages/PenaltyReportPage";
+
+// Lazy-loaded page components for fast initial loading
+const LoginPage = lazy(() => import("./pages/LoginPage"));
+const HomePage = lazy(() => import("./pages/HomePage"));
+const ApprovalPage = lazy(() => import("./pages/ApprovalPage"));
+const ExpensePage = lazy(() => import("./pages/ExpensePage"));
+const MISReportPage = lazy(() => import("./pages/MISReportPage"));
+const KPIDashboardPage = lazy(() => import("./pages/KPIDashboardPage"));
+const UploadDataPage = lazy(() => import("./pages/UploadDataPage"));
+const AssetUploadPage = lazy(() => import("./pages/AssetUploadPage"));
+const PenaltyReportPage = lazy(() => import("./pages/PenaltyReportPage"));
+const AnalysisPage = lazy(() => import("./pages/AnalysisPage"));
+const MonthSummaryPage = lazy(() => import("./pages/MonthSummaryPage"));
+const ConsolidatedReportPage = lazy(() => import("./pages/ConsolidatedReportPage"));
+const NotificationsPage = lazy(() => import("./pages/NotificationsPage"));
+const HelpPage = lazy(() => import("./pages/HelpPage"));
+const ProfilePage = lazy(() => import("./pages/ProfilePage"));
+const AdminPage = lazy(() => import("./pages/AdminPage"));
+const NotFoundPage = lazy(() => import("./pages/NotFoundPage"));
+
+function PageLoader() {
+  return (
+    <div className="flex flex-col items-center justify-center min-h-[60vh] w-full space-y-4">
+      <div className="animate-spin rounded-full h-10 w-10 border-t-2 border-b-2 border-blue-600"></div>
+      <p className="text-xs font-semibold text-gray-400 tracking-wider">LOADING SECURE GATEWAY...</p>
+    </div>
+  );
+}
 import { useFCMNotifications } from "./hooks/useFCMNotifications";
 
 function AppInner() {
@@ -166,40 +177,42 @@ function App() {
       <div className="min-h-screen bg-[#f4f6f9] text-[#212529] font-sans antialiased">
         {/* FCM notification system — runs silently in background */}
         <AppInner />
-        <Routes>
-          {/* Public Routes */}
-          <Route path="/login" element={<LoginPage />} />
+        <Suspense fallback={<PageLoader />}>
+          <Routes>
+            {/* Public Routes */}
+            <Route path="/login" element={<LoginPage />} />
 
-          {/* Protected Dashboard Routes */}
-          <Route element={<ProtectedRoute />}>
-            <Route element={<DashboardLayout />}>
-              <Route path="/home" element={<HomePage />} />
-              <Route path="/approval-center" element={<ApprovalPage />} />
-              <Route path="/submit-expense" element={<ExpensePage />} />
-              <Route path="/mis-report" element={<MISReportPage />} />
-              <Route path="/kpi-dashboard" element={<KPIDashboardPage />} />
-              <Route path="/upload-data" element={<UploadDataPage />} />
-              <Route path="/asset-upload" element={<AssetUploadPage />} />
-              <Route path="/penalty-report" element={<PenaltyReportPage />} />
-              <Route path="/analysis" element={<AnalysisPage />} />
-              <Route path="/month-report" element={<MonthSummaryPage />} />
-              <Route path="/consolidated-report" element={<ConsolidatedReportPage />} />
-              <Route path="/notifications" element={<NotificationsPage />} />
-              <Route path="/help-center" element={<HelpPage />} />
-              <Route path="/profile" element={<ProfilePage />} />
-              <Route path="/admin" element={<AdminPage />} />
-              <Route path="/not-found" element={<NotFoundPage />} />
+            {/* Protected Dashboard Routes */}
+            <Route element={<ProtectedRoute />}>
+              <Route element={<DashboardLayout />}>
+                <Route path="/home" element={<HomePage />} />
+                <Route path="/approval-center" element={<ApprovalPage />} />
+                <Route path="/submit-expense" element={<ExpensePage />} />
+                <Route path="/mis-report" element={<MISReportPage />} />
+                <Route path="/kpi-dashboard" element={<KPIDashboardPage />} />
+                <Route path="/upload-data" element={<UploadDataPage />} />
+                <Route path="/asset-upload" element={<AssetUploadPage />} />
+                <Route path="/penalty-report" element={<PenaltyReportPage />} />
+                <Route path="/analysis" element={<AnalysisPage />} />
+                <Route path="/month-report" element={<MonthSummaryPage />} />
+                <Route path="/consolidated-report" element={<ConsolidatedReportPage />} />
+                <Route path="/notifications" element={<NotificationsPage />} />
+                <Route path="/help-center" element={<HelpPage />} />
+                <Route path="/profile" element={<ProfilePage />} />
+                <Route path="/admin" element={<AdminPage />} />
+                <Route path="/not-found" element={<NotFoundPage />} />
+              </Route>
             </Route>
-          </Route>
 
-          {/* Navigation Fallbacks */}
-          <Route path="/" element={
-            tokenPersistence.isAuthenticated() 
-              ? <Navigate to="/home" replace /> 
-              : <Navigate to="/login" replace />
-          } />
-          <Route path="*" element={<Navigate to="/not-found" replace />} />
-        </Routes>
+            {/* Navigation Fallbacks */}
+            <Route path="/" element={
+              tokenPersistence.isAuthenticated() 
+                ? <Navigate to="/home" replace /> 
+                : <Navigate to="/login" replace />
+            } />
+            <Route path="*" element={<Navigate to="/not-found" replace />} />
+          </Routes>
+        </Suspense>
         <Toaster 
           position="top-right"
           toastOptions={{
