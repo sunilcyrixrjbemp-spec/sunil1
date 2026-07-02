@@ -23,7 +23,7 @@ export default {
         error: '#ef4444',
       },
       fontFamily: {
-        sans: ['Aptos', 'Inter', 'system-ui', 'sans-serif'],
+        sans: ['Plus Jakarta Sans', 'Aptos', 'Inter', 'system-ui', 'sans-serif'],
       },
       fontSize: {
         xs: '0.75rem',
