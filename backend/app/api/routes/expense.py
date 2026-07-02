@@ -23,18 +23,6 @@ from app.config.settings import settings
 
 router = APIRouter()
 
-@router.get("/debug-db-schema-temp")
-def debug_db_schema_temp(db: Session = Depends(get_db)):
-    from sqlalchemy import inspect
-    inspector = inspect(db.bind)
-    tables = inspector.get_table_names()
-    columns_exp = inspector.get_columns("expenses")
-    columns_iti = inspector.get_columns("expense_itineraries")
-    return {
-        "tables": tables,
-        "expenses_columns": [c["name"] for c in columns_exp],
-        "expense_itineraries_columns": [c["name"] for c in columns_iti]
-    }
 def parse_client_timestamp(ts_str: str | None) -> datetime:
     if not ts_str:
         return datetime.now()
