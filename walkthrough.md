@@ -66,7 +66,7 @@ We have completed the implementation of the core features and enhancements reque
 *   **Problem**: In enterprise-grade systems, page transitions must feel immediate (even under slow cellular connections), and client-side exceptions should never trigger raw blank screens.
 *   **Fix**:
     *   **Link Hover Preloading**: Created `src/utils/preload.ts` mapping routes to lazy chunks. Configured all navigation layout links to trigger `onMouseEnter={() => preloadRoute(item.path)}`. Chunks are pre-fetched in the background 100-200ms before a user clicks, boosting screen switch speeds to feel instant.
-    *   **React Error Boundary**: Added a global `ErrorBoundary.tsx` to wrap the app layout. Isolates and catches unexpected rendering runtime crashes, presenting a premium glassmorphic UI card with details and a safe reload button rather than a blank screen.
+    *   **React Error Boundary**: Added a global `ErrorBoundary.tsx` to wrap the app layout. Isolates and catches unexpected rendering runtime crashes, presenting a premium glassmorphic UI card with details and a safe reload button rather than a blank screen. Also includes automatic chunk recovery: if an isolated component crash is caused by a chunk load failure (such as when new files are compiled and deployed during active user sessions), it automatically triggers a silent page reload to fetch the latest production bundles seamlessly.
 
 ### 8. 🔠 Typography Uniformity (Plus Jakarta Sans)
 *   **Problem**: The legacy pages used `Plus Jakarta Sans` as their primary font, while the React application was using `Aptos` and `Inter`, causing visual inconsistency during transitions.
