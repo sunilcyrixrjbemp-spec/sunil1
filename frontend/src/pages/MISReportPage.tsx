@@ -135,6 +135,14 @@ const CustomCountTooltip = ({ active, payload }: any) => {
               </span>
               <span className="font-mono font-bold text-white">{item.value}</span>
             </div>
+          ))}
+        </div>
+      </div>
+    );
+  }
+  return null;
+};
+
 export default function MISReportPage() {
   const [data, setData] = useState<DashboardData | null>(null);
   const [loading, setLoading] = useState(true);
