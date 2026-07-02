@@ -2,6 +2,8 @@ from fastapi import APIRouter, Depends, HTTPException, UploadFile, File
 from sqlalchemy.orm import Session
 from sqlalchemy import text
 from app.config.database import get_db
+from app.api.routes.dependencies import get_current_user
+from app.models.user import User
 import openpyxl
 from datetime import datetime
 import logging
@@ -51,11 +53,12 @@ async def get_mis_dashboard_data(
     coordinator: str = None,
     month: str = None,
     equipment: str = None,
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
 ):
     """
     Returns advanced operational analytics and BI intelligence from rj_penalties table.
-    Supports dynamic multi-dimensional filtering.
+    Supports dynamic multi-dimensional filtering and row-level access control.
     """
     try:
         # Check if table exists
@@ -70,15 +73,32 @@ async def get_mis_dashboard_data(
                 "summary": {}
             }
 
+        # Row-level access control restriction
+        user_role = current_user.role.strip() if current_user.role else "Engineer"
+        
+        # Enforce Zonal Manager restriction
+        if user_role == "Zonal Manager":
+            zone = current_user.zone
+        # Enforce Coordinator restriction
+        elif user_role == "Coordinator":
+            coordinator = current_user.name
+        # Enforce Engineer restriction
+        elif user_role == "Engineer":
+            district = current_user.district
+
+        # Sanitize zone input (Ajmer Zone -> Ajmer)
+        if zone:
+            zone = zone.replace(" Zone", "").strip()
+
         # 1. Build dynamic WHERE clause based on filters
         where_clauses = ["1=1"]
         params = {}
         
         if district:
-            where_clauses.append("district_name = :district")
+            where_clauses.append("LOWER(district_name) = LOWER(:district)")
             params["district"] = district
         if coordinator:
-            where_clauses.append("coordinator_name = :coordinator")
+            where_clauses.append("LOWER(coordinator_name) = LOWER(:coordinator)")
             params["coordinator"] = coordinator
         if month:
             where_clauses.append("month_text = :month")
@@ -98,7 +118,7 @@ async def get_mis_dashboard_data(
                     ELSE 'Other'
                 END
             """
-            where_clauses.append(f"{zone_sql} = :zone")
+            where_clauses.append(f"LOWER({zone_sql}) = LOWER(:zone)")
             params["zone"] = zone
 
         where_str = " AND ".join(where_clauses)
@@ -120,10 +140,10 @@ async def get_mis_dashboard_data(
         where_d = ["1=1"]
         params_d = {}
         if zone:
-            where_d.append(f"{zone_sql_expr} = :zone")
+            where_d.append(f"LOWER({zone_sql_expr}) = LOWER(:zone)")
             params_d["zone"] = zone
         if coordinator:
-            where_d.append("coordinator_name = :coordinator")
+            where_d.append("LOWER(coordinator_name) = LOWER(:coordinator)")
             params_d["coordinator"] = coordinator
         if month:
             where_d.append("month_text = :month")
@@ -142,10 +162,10 @@ async def get_mis_dashboard_data(
         where_c = ["1=1"]
         params_c = {}
         if zone:
-            where_c.append(f"{zone_sql_expr} = :zone")
+            where_c.append(f"LOWER({zone_sql_expr}) = LOWER(:zone)")
             params_c["zone"] = zone
         if district:
-            where_c.append("district_name = :district")
+            where_c.append("LOWER(district_name) = LOWER(:district)")
             params_c["district"] = district
         if month:
             where_c.append("month_text = :month")
@@ -164,13 +184,13 @@ async def get_mis_dashboard_data(
         where_m = ["1=1"]
         params_m = {}
         if zone:
-            where_m.append(f"{zone_sql_expr} = :zone")
+            where_m.append(f"LOWER({zone_sql_expr}) = LOWER(:zone)")
             params_m["zone"] = zone
         if district:
-            where_m.append("district_name = :district")
+            where_m.append("LOWER(district_name) = LOWER(:district)")
             params_m["district"] = district
         if coordinator:
-            where_m.append("coordinator_name = :coordinator")
+            where_m.append("LOWER(coordinator_name) = LOWER(:coordinator)")
             params_m["coordinator"] = coordinator
         if equipment:
             where_m.append("equipment_name = :equipment")
@@ -186,13 +206,13 @@ async def get_mis_dashboard_data(
         where_eq = ["1=1"]
         params_eq = {}
         if zone:
-            where_eq.append(f"{zone_sql_expr} = :zone")
+            where_eq.append(f"LOWER({zone_sql_expr}) = LOWER(:zone)")
             params_eq["zone"] = zone
         if district:
-            where_eq.append("district_name = :district")
+            where_eq.append("LOWER(district_name) = LOWER(:district)")
             params_eq["district"] = district
         if coordinator:
-            where_eq.append("coordinator_name = :coordinator")
+            where_eq.append("LOWER(coordinator_name) = LOWER(:coordinator)")
             params_eq["coordinator"] = coordinator
         if month:
             where_eq.append("month_text = :month")
@@ -208,10 +228,10 @@ async def get_mis_dashboard_data(
         where_z = ["1=1"]
         params_z = {}
         if district:
-            where_z.append("district_name = :district")
+            where_z.append("LOWER(district_name) = LOWER(:district)")
             params_z["district"] = district
         if coordinator:
-            where_z.append("coordinator_name = :coordinator")
+            where_z.append("LOWER(coordinator_name) = LOWER(:coordinator)")
             params_z["coordinator"] = coordinator
         if month:
             where_z.append("month_text = :month")
@@ -238,7 +258,9 @@ async def get_mis_dashboard_data(
                 SUM(per_day_penalty) as total_per_day_penalty,
                 AVG(CASE WHEN complaint_status = 'Final Closed' OR status = 'Closed' THEN total_downtime END) as avg_downtime_days,
                 SUM(CASE WHEN attend_penalty > 0 THEN 1 ELSE 0 END) as attend_breach_count,
-                SUM(CASE WHEN delay_penalty > 0 THEN 1 ELSE 0 END) as delay_breach_count
+                SUM(CASE WHEN delay_penalty > 0 THEN 1 ELSE 0 END) as delay_breach_count,
+                AVG(call_attend_hour_diff) / 24.0 as avg_attend_tat_days,
+                AVG(total_downtime) / 24.0 as avg_close_tat_days
             FROM rj_penalties
             WHERE {where_str}
         """), params).fetchone()
@@ -253,6 +275,8 @@ async def get_mis_dashboard_data(
         avg_downtime = totals[7] or 0.0
         attend_breach_count = totals[8] or 0
         delay_breach_count = totals[9] or 0
+        avg_attend_tat = totals[10] or 0.0
+        avg_close_tat = totals[11] or 0.0
         
         ftfr_percentage = (ftfr_calls * 100.0 / closed_calls) if closed_calls > 0 else 0.0
 
@@ -317,7 +341,7 @@ async def get_mis_dashboard_data(
             ORDER BY total DESC
         """), params).fetchall()
 
-        # 9. Hospital-wise Penalty Breakdown (New)
+        # 9. Hospital-wise Penalty Breakdown
         hospital_penalty = db.execute(text(f"""
             SELECT hospital_name, SUM(total_penalty) as total, COUNT(*) as count
             FROM rj_penalties
@@ -326,7 +350,7 @@ async def get_mis_dashboard_data(
             ORDER BY total DESC LIMIT 8
         """), params).fetchall()
 
-        # 10. Under Warranty vs Out of Warranty Penalty Share (New)
+        # 10. Under Warranty vs Out of Warranty Penalty Share
         warranty_share = db.execute(text(f"""
             SELECT 
                 CASE 
@@ -339,7 +363,7 @@ async def get_mis_dashboard_data(
             GROUP BY warranty_status
         """), params).fetchall()
 
-        # 11. Hospital Type Breakdown (New)
+        # 11. Hospital Type Breakdown
         hosp_type_share = db.execute(text(f"""
             SELECT hospital_type, SUM(total_penalty) as total
             FROM rj_penalties
@@ -348,7 +372,7 @@ async def get_mis_dashboard_data(
             ORDER BY total DESC
         """), params).fetchall()
 
-        # 12. Top Service Providers Penalties (New)
+        # 12. Top Service Providers Penalties
         vendor_penalty = db.execute(text(f"""
             SELECT service_provider_name, SUM(total_penalty) as total
             FROM rj_penalties
@@ -357,13 +381,56 @@ async def get_mis_dashboard_data(
             ORDER BY total DESC LIMIT 8
         """), params).fetchall()
 
-        # 13. Monthly Penalty Trend (New)
+        # 13. Monthly Penalty Trend
         monthly_trend = db.execute(text(f"""
             SELECT month_text, SUM(total_penalty) as total
             FROM rj_penalties
             WHERE {where_str} AND month_text IS NOT NULL AND month_text != ''
             GROUP BY month_text
             ORDER BY MIN(id)
+        """), params).fetchall()
+
+        # 14. Monthly TAT Trend (New)
+        monthly_tat = db.execute(text(f"""
+            SELECT month_text, 
+                   AVG(call_attend_hour_diff) / 24.0 as avg_attend_tat_days,
+                   AVG(total_downtime) / 24.0 as avg_close_tat_days
+            FROM rj_penalties
+            WHERE {where_str} AND month_text IS NOT NULL AND month_text != ''
+            GROUP BY month_text
+            ORDER BY MIN(id)
+        """), params).fetchall()
+
+        # 15. Per Coordinator Workload Month-wise (New)
+        coord_workload = db.execute(text(f"""
+            SELECT coordinator_name, month_text, 
+                   COUNT(*) as total_calls, 
+                   SUM(CASE WHEN complaint_status = 'Final Closed' OR status = 'Closed' THEN 1 ELSE 0 END) as closed_calls
+            FROM rj_penalties
+            WHERE {where_str} AND coordinator_name IS NOT NULL AND coordinator_name != ''
+            GROUP BY coordinator_name, month_text
+            ORDER BY total_calls DESC
+        """), params).fetchall()
+
+        # 16. Daywise Penalty Breakdown (New)
+        daywise_penalties = db.execute(text(f"""
+            SELECT SUBSTR(complaint_raise_date, 1, 10) as day, 
+                   SUM(attend_penalty) as attend_penalty, 
+                   SUM(delay_penalty) as delay_penalty
+            FROM rj_penalties
+            WHERE {where_str} AND complaint_raise_date IS NOT NULL AND complaint_raise_date != ''
+            GROUP BY day 
+            ORDER BY day DESC 
+            LIMIT 15
+        """), params).fetchall()
+
+        # 17. DI-wise Penalty Breakdown (New)
+        di_penalty = db.execute(text(f"""
+            SELECT di_name, SUM(total_penalty) as total
+            FROM rj_penalties
+            WHERE {where_str} AND di_name IS NOT NULL AND di_name != ''
+            GROUP BY di_name
+            ORDER BY total DESC LIMIT 8
         """), params).fetchall()
 
         return {
@@ -385,7 +452,9 @@ async def get_mis_dashboard_data(
                 "total_per_day_penalty": round(total_per_day, 1),
                 "avg_downtime_days": round(avg_downtime, 1),
                 "attend_breach_count": attend_breach_count,
-                "delay_breach_count": delay_breach_count
+                "delay_breach_count": delay_breach_count,
+                "avg_attend_tat_days": round(avg_attend_tat, 2),
+                "avg_close_tat_days": round(avg_close_tat, 2)
             },
             "daily_activity": {
                 "logged": [{"day": r[0], "count": r[1]} for r in daily_logged],
@@ -400,14 +469,12 @@ async def get_mis_dashboard_data(
                 "warranty": [{"status": r[0], "penalty": round(r[1], 1)} for r in warranty_share],
                 "hospital_type": [{"type": r[0], "penalty": round(r[1], 1)} for r in hosp_type_share],
                 "vendor": [{"name": r[0], "penalty": round(r[1], 1)} for r in vendor_penalty],
-                "monthly_trend": [{"month": r[0], "penalty": round(r[1], 1)} for r in monthly_trend]
+                "monthly_trend": [{"month": r[0], "penalty": round(r[1], 1)} for r in monthly_trend],
+                "di": [{"name": r[0], "penalty": round(r[1], 1)} for r in di_penalty],
+                "monthly_tat": [{"month": r[0], "avg_attend_tat_days": round(r[1] or 0.0, 2), "avg_close_tat_days": round(r[2] or 0.0, 2)} for r in monthly_tat],
+                "coordinator_workload": [{"coordinator": r[0], "month": r[1], "total_calls": r[2], "closed_calls": r[3]} for r in coord_workload],
+                "daywise_penalties": [{"day": r[0], "attend_penalty": round(r[1] or 0.0, 1), "delay_penalty": round(r[2] or 0.0, 1)} for r in daywise_penalties]
             }
-        }
-    except Exception as e:
-        logger.error(f"Error fetching MIS dashboard metrics: {str(e)}")
-        return {
-            "success": False,
-            "message": f"Server query error: {str(e)}"
         }
     except Exception as e:
         logger.error(f"Error fetching MIS dashboard metrics: {str(e)}")
