@@ -491,7 +491,7 @@ export default function AdminPage() {
       return;
     }
 
-    const headers = lines[0].split(",").map(h => h.trim().replace(/^["']|["']$/g, ""));
+    const headers = lines[0].split(/,(?=(?:(?:[^"]*"){2})*[^"]*$)/).map(h => h.trim().replace(/^["']|["']$/g, ""));
     const payload: UserCreatePayload[] = [];
     const missingFieldsErrors: string[] = [];
 
@@ -499,7 +499,7 @@ export default function AdminPage() {
       const line = lines[i].trim();
       if (!line) continue;
 
-      const values = line.split(",").map(v => v.trim().replace(/^["']|["']$/g, ""));
+      const values = line.split(/,(?=(?:(?:[^"]*"){2})*[^"]*$)/).map(v => v.trim().replace(/^["']|["']$/g, ""));
       const record: any = {};
       headers.forEach((header, index) => {
         if (header) {
@@ -523,8 +523,9 @@ export default function AdminPage() {
         // Enforce compulsory keys for new users
         for (const key of compulsoryKeys) {
           if (!record[key] || record[key].trim() === "") {
-            missingFieldsErrors.push(`Row ${i + 1}: Missing mandatory column '${key}' for new user creation`);
+            missingFieldsErrors.push(`Row ${i + 1} (${record.e_code || "New"}): Missing mandatory column '${key}'`);
             isRowValid = false;
+            break;
           }
         }
       } else {
@@ -563,9 +564,9 @@ export default function AdminPage() {
       }
     }
 
-    if (missingFieldsErrors.length > 0) {
+    if (payload.length === 0) {
       setBulkResult({
-        error: "Validation Failed. All user details are compulsory.",
+        error: "Validation Failed. No valid rows were found to import.",
         rowErrors: missingFieldsErrors
       });
       setBulkLoading(false);
@@ -574,11 +575,24 @@ export default function AdminPage() {
 
     try {
       const res = await adminService.bulkCreateUsers(payload);
-      setBulkResult(res);
-      toast.success(`Successfully uploaded ${res.created_count} users!`);
+      const combinedErrors = [...missingFieldsErrors, ...(res.errors || [])];
+      setBulkResult({
+        ...res,
+        errors: combinedErrors,
+        failed_count: combinedErrors.length
+      });
+      if (res.created_count > 0) {
+        toast.success(`Successfully uploaded/updated ${res.created_count} users!`);
+      }
+      if (combinedErrors.length > 0) {
+        toast.error(`${combinedErrors.length} records were skipped due to errors.`);
+      }
       await fetchInitialData();
     } catch (err: any) {
-      setBulkResult({ error: getErrorMessage(err, "Bulk import failed. Please check CSV formatting.") });
+      setBulkResult({ 
+        error: getErrorMessage(err, "Bulk import failed. Please check CSV formatting."),
+        rowErrors: missingFieldsErrors
+      });
     } finally {
       setBulkLoading(false);
     }

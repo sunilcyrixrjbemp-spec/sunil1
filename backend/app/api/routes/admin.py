@@ -281,11 +281,11 @@ async def update_user(
 
 @router.post("/users/bulk")
 async def bulk_create_users(
-    payload: List[UserCreateRequest],
+    payload: List[dict],
     db: Session = Depends(get_db),
     admin: User = Depends(verify_admin)
 ):
-    """Bulk create users from JSON payload with in-memory lookup optimization and duplicate check"""
+    """Bulk create users from JSON payload with in-memory lookup optimization, duplicate check, and per-row error skipping"""
     # Pre-fetch all users to build in-memory maps to optimize database queries
     all_users = db.query(User).all()
     user_map = {u.user_id: u for u in all_users}
@@ -317,32 +317,119 @@ async def bulk_create_users(
             return val.strip()
         return ""
 
+    def try_parse_date(val) -> Optional[date]:
+        if not val:
+            return None
+        val_str = str(val).strip()
+        if not val_str or val_str.lower() in ("none", "null", ""):
+            return None
+        
+        # Strip timestamp part if present (e.g. 2020-05-15T00:00:00)
+        if "t" in val_str.lower():
+            val_str = val_str.lower().split("t")[0]
+        if " " in val_str:
+            val_str = val_str.split(" ")[0]
+            
+        formats = [
+            "%Y-%m-%d",
+            "%d-%m-%Y",
+            "%d/%m/%Y",
+            "%Y/%m/%d",
+            "%d-%b-%Y",
+            "%d-%b-%y",
+        ]
+        for fmt in formats:
+            try:
+                return datetime.strptime(val_str, fmt).date()
+            except ValueError:
+                continue
+        return None
+
     for index, item in enumerate(payload):
-        e_code_clean = item.e_code.strip()
+        e_code_clean = str(item.get("e_code", "")).strip()
         if not e_code_clean:
-            errors.append(f"Row {index + 1}: Missing Employee Code")
+            errors.append(f"Row {index + 1}: Missing Employee Code. Skipped.")
             continue
             
         existing = user_map.get(e_code_clean)
+        
+        # If new user, validate name and other mandatory fields
+        name_clean = str(item.get("name", "")).strip()
+        if not existing:
+            if not name_clean:
+                errors.append(f"Row {index + 1} ({e_code_clean}): Missing Name. Skipped.")
+                continue
+            mandatory_fields = [
+                ("role", "Role"),
+                ("designation", "Designation"),
+                ("grade", "Grade"),
+                ("district", "District"),
+                ("zone", "Zone"),
+                ("mobile_number", "Mobile Number"),
+                ("mail_id", "Email Address"),
+                ("password", "Password")
+            ]
+            missing = [label for key, label in mandatory_fields if not str(item.get(key, "")).strip()]
+            if missing:
+                errors.append(f"Row {index + 1} ({e_code_clean}): Missing mandatory columns: {', '.join(missing)}. Skipped.")
+                continue
+
+        # Try parsing dates
+        doj_raw = item.get("date_of_joining")
+        dob_raw = item.get("date_of_birth")
+        
+        doj = None
+        dob = None
+        
+        if doj_raw:
+            doj = try_parse_date(doj_raw)
+            if not doj:
+                errors.append(f"Row {index + 1} ({e_code_clean}): Invalid date_of_joining format '{doj_raw}'. Skipped.")
+                continue
+        elif not existing:
+            errors.append(f"Row {index + 1} ({e_code_clean}): Date of Joining is required for new user. Skipped.")
+            continue
+            
+        if dob_raw:
+            dob = try_parse_date(dob_raw)
+            if not dob:
+                errors.append(f"Row {index + 1} ({e_code_clean}): Invalid date_of_birth format '{dob_raw}'. Skipped.")
+                continue
+        elif not existing:
+            errors.append(f"Row {index + 1} ({e_code_clean}): Date of Birth is required for new user. Skipped.")
+            continue
+            
         if existing:
             try:
                 # Resolve manager, zonal_manager, coordinator using optimized in-memory logic
-                manager_clean = resolve_or_blank_opt(item.manager)
-                zonal_manager_clean = resolve_or_blank_opt(item.zonal_manager)
-                coordinator_clean = resolve_or_blank_opt(item.coordinator)
+                manager_clean = resolve_or_blank_opt(str(item.get("manager", "")))
+                zonal_manager_clean = resolve_or_blank_opt(str(item.get("zonal_manager", "")))
+                coordinator_clean = resolve_or_blank_opt(str(item.get("coordinator", "")))
                 
                 # Check if anything changed (excluding name and e_code)
                 has_changed = False
                 
-                if item.password and item.password.strip():
+                pwd_raw = str(item.get("password", "")).strip()
+                desig_raw = str(item.get("designation", "")).strip()
+                grade_raw = str(item.get("grade", "")).strip()
+                dist_raw = str(item.get("district", "")).strip()
+                zone_raw = str(item.get("zone", "")).strip()
+                mobile_raw = str(item.get("mobile_number", "")).strip()
+                mail_raw = str(item.get("mail_id", "")).strip()
+                role_raw = str(item.get("role", "")).strip()
+                type_raw = str(item.get("type", "")).strip()
+                upk_raw = str(item.get("e_upkaran_id", "")).strip()
+                win_raw = str(item.get("allowed_windows", "")).strip()
+                
+                if pwd_raw:
                     has_changed = True
-                if item.designation and item.designation.strip() != (existing.designation or "").strip():
+                if desig_raw and desig_raw != (existing.designation or "").strip():
                     has_changed = True
-                if item.grade and item.grade.strip() != (existing.grade or "").strip():
+                if grade_raw and grade_raw != (existing.grade or "").strip():
                     has_changed = True
-                if item.district and item.district.strip() != (existing.district or "").strip():
+                if dist_raw and dist_raw != (existing.district or "").strip():
                     has_changed = True
-                if item.zone and item.zone.strip() != (existing.zone or "").strip():
+                if zone_raw and zone_raw != (existing.zone or "").strip():
                     has_changed = True
                 if manager_clean != (existing.manager or ""):
                     has_changed = True
@@ -350,64 +437,64 @@ async def bulk_create_users(
                     has_changed = True
                 if coordinator_clean != (existing.coordinator or ""):
                     has_changed = True
-                if item.mobile_number and item.mobile_number.strip() != (existing.mobile_number or "").strip():
+                if mobile_raw and mobile_raw != (existing.mobile_number or "").strip():
                     has_changed = True
-                if item.mail_id and item.mail_id.strip() != (existing.mail_id or "").strip():
+                if mail_raw and mail_raw != (existing.mail_id or "").strip():
                     has_changed = True
-                if item.role and item.role.strip() != (existing.role or "").strip():
+                if role_raw and role_raw != (existing.role or "").strip():
                     has_changed = True
-                if item.type and item.type.strip() != (existing.type or "").strip():
+                if type_raw and type_raw != (existing.type or "").strip():
                     has_changed = True
-                if item.date_of_joining and item.date_of_joining != existing.date_of_joining:
+                if doj and doj != existing.date_of_joining:
                     has_changed = True
-                if item.date_of_birth and item.date_of_birth != existing.date_of_birth:
+                if dob and dob != existing.date_of_birth:
                     has_changed = True
-                if item.e_upkaran_id and item.e_upkaran_id.strip() != (existing.e_upkaran_id or "").strip():
+                if upk_raw and upk_raw != (existing.e_upkaran_id or "").strip():
                     has_changed = True
-                if item.allowed_windows and item.allowed_windows.strip() != (existing.allowed_windows or "").strip():
+                if win_raw and win_raw != (existing.allowed_windows or "").strip():
                     has_changed = True
                     
                 if has_changed:
-                    if item.password and item.password.strip():
-                        existing.hashed_password = get_password_hash(item.password)
+                    if pwd_raw:
+                        existing.hashed_password = get_password_hash(pwd_raw)
                         pwd_hist = PasswordHistory(
                             user_id=existing.id,
                             hashed_password=existing.hashed_password
                         )
                         db.add(pwd_hist)
-                    if item.designation is not None:
-                        existing.designation = item.designation.strip()
-                    if item.grade is not None:
-                        existing.grade = item.grade.strip()
-                    if item.district is not None:
-                        existing.district = item.district.strip()
-                    if item.zone is not None:
-                        existing.zone = item.zone.strip()
+                    if desig_raw:
+                        existing.designation = desig_raw
+                    if grade_raw:
+                        existing.grade = grade_raw
+                    if dist_raw:
+                        existing.district = dist_raw
+                    if zone_raw:
+                        existing.zone = zone_raw
                     existing.manager = manager_clean
                     existing.zonal_manager = zonal_manager_clean
                     existing.coordinator = coordinator_clean
-                    if item.mobile_number is not None:
-                        existing.mobile_number = item.mobile_number.strip()
-                    if item.mail_id is not None:
-                        existing.mail_id = item.mail_id.strip()
+                    if mobile_raw:
+                        existing.mobile_number = mobile_raw
+                    if mail_raw:
+                        existing.mail_id = mail_raw
                     
                     old_role = existing.role
-                    if item.role is not None:
-                        existing.role = item.role.strip()
-                    if item.type is not None:
-                        existing.type = item.type.strip()
-                    if item.date_of_joining is not None:
-                        existing.date_of_joining = item.date_of_joining
-                    if item.date_of_birth is not None:
-                        existing.date_of_birth = item.date_of_birth
-                    if item.e_upkaran_id is not None:
-                        existing.e_upkaran_id = item.e_upkaran_id.strip()
-                    if item.allowed_windows is not None:
-                        existing.allowed_windows = item.allowed_windows.strip()
-                    elif item.role and item.role.strip():
+                    if role_raw:
+                        existing.role = role_raw
+                    if type_raw:
+                        existing.type = type_raw
+                    if doj:
+                        existing.date_of_joining = doj
+                    if dob:
+                        existing.date_of_birth = dob
+                    if upk_raw:
+                        existing.e_upkaran_id = upk_raw
+                    if win_raw:
+                        existing.allowed_windows = win_raw
+                    elif role_raw:
                         existing.allowed_windows = (
-                            "home,expense,help,profile" if item.role.strip().lower() == "engineer"
-                            else "home,approval,expense,help,profile" if item.role.strip().lower() == "manager"
+                            "home,expense,help,profile" if role_raw.lower() == "engineer"
+                            else "home,approval,expense,help,profile" if role_raw.lower() == "manager"
                             else "home,approval,expense,analysis,report,help,profile"
                         )
                     
@@ -427,34 +514,40 @@ async def bulk_create_users(
             continue
             
         try:
-            hashed = get_password_hash(item.password)
-            manager_clean = resolve_or_blank_opt(item.manager)
-            zonal_manager_clean = resolve_or_blank_opt(item.zonal_manager)
-            coordinator_clean = resolve_or_blank_opt(item.coordinator)
+            pwd_raw = str(item.get("password", "")).strip()
+            hashed = get_password_hash(pwd_raw)
+            manager_clean = resolve_or_blank_opt(str(item.get("manager", "")))
+            zonal_manager_clean = resolve_or_blank_opt(str(item.get("zonal_manager", "")))
+            coordinator_clean = resolve_or_blank_opt(str(item.get("coordinator", "")))
+            
+            role_raw = str(item.get("role", "")).strip()
+            type_raw = str(item.get("type", "Employee")).strip()
+            upk_raw = str(item.get("e_upkaran_id", "")).strip()
+            win_raw = str(item.get("allowed_windows", "")).strip()
             
             user = User(
                 user_id=e_code_clean,
                 e_code=e_code_clean,
-                name=item.name.strip(),
+                name=name_clean,
                 hashed_password=hashed,
                 user_status="active",
-                designation=item.designation,
-                grade=item.grade,
-                district=item.district,
-                zone=item.zone,
+                designation=str(item.get("designation", "")).strip(),
+                grade=str(item.get("grade", "")).strip(),
+                district=str(item.get("district", "")).strip(),
+                zone=str(item.get("zone", "")).strip(),
                 manager=manager_clean,
                 zonal_manager=zonal_manager_clean,
                 coordinator=coordinator_clean,
-                mobile_number=item.mobile_number,
-                mail_id=item.mail_id,
-                role=item.role,
-                type=item.type or "Employee",
-                date_of_joining=item.date_of_joining,
-                date_of_birth=item.date_of_birth,
-                e_upkaran_id=item.e_upkaran_id.strip() if item.e_upkaran_id else None,
-                allowed_windows=item.allowed_windows or (
-                    "home,expense,help,profile" if item.role.strip().lower() == "engineer"
-                    else "home,approval,expense,help,profile" if item.role.strip().lower() == "manager"
+                mobile_number=str(item.get("mobile_number", "")).strip(),
+                mail_id=str(item.get("mail_id", "")).strip(),
+                role=role_raw,
+                type=type_raw,
+                date_of_joining=doj,
+                date_of_birth=dob,
+                e_upkaran_id=upk_raw if upk_raw else None,
+                allowed_windows=win_raw or (
+                    "home,expense,help,profile" if role_raw.lower() == "engineer"
+                    else "home,approval,expense,help,profile" if role_raw.lower() == "manager"
                     else "home,approval,expense,analysis,report,help,profile"
                 )
             )
@@ -464,9 +557,9 @@ async def bulk_create_users(
             # Update preloaded maps so subsequent rows can link to this newly created user!
             user_ids.add(e_code_clean.lower())
             e_codes.add(e_code_clean.lower())
-            names.add(item.name.strip().lower())
+            names.add(name_clean.lower())
             batch_created_user_ids.add(e_code_clean.lower())
-            batch_created_names.add(item.name.strip().lower())
+            batch_created_names.add(name_clean.lower())
             
             pwd_hist = PasswordHistory(
                 user_id=user.id,
