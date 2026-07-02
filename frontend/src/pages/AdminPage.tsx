@@ -491,7 +491,68 @@ export default function AdminPage() {
       return;
     }
 
-    const headers = lines[0].split(/,(?=(?:(?:[^"]*"){2})*[^"]*$)/).map(h => h.trim().replace(/^["']|["']$/g, ""));
+    const HEADER_NORMALIZATION_MAP: { [key: string]: string } = {
+      "e_code": "e_code",
+      "employee code": "e_code",
+      "employee_code": "e_code",
+      "ecode": "e_code",
+      "code": "e_code",
+      "name": "name",
+      "employee name": "name",
+      "user name": "name",
+      "username": "name",
+      "password": "password",
+      "pass": "password",
+      "role": "role",
+      "user role": "role",
+      "designation": "designation",
+      "desig": "designation",
+      "grade": "grade",
+      "district": "district",
+      "dist": "district",
+      "zone": "zone",
+      "region": "zone",
+      "manager": "manager",
+      "reporting manager": "manager",
+      "manager name": "manager",
+      "zonal_manager": "zonal_manager",
+      "zonal manager": "zonal_manager",
+      "zonal_manager_name": "zonal_manager",
+      "coordinator": "coordinator",
+      "zonal coordinator": "coordinator",
+      "mobile_number": "mobile_number",
+      "mobile number": "mobile_number",
+      "mobile": "mobile_number",
+      "phone": "mobile_number",
+      "contact": "mobile_number",
+      "mail_id": "mail_id",
+      "mail id": "mail_id",
+      "email": "mail_id",
+      "email id": "mail_id",
+      "email_id": "mail_id",
+      "type": "type",
+      "employee type": "type",
+      "user type": "type",
+      "date_of_joining": "date_of_joining",
+      "date of joining": "date_of_joining",
+      "joining date": "date_of_joining",
+      "doj": "date_of_joining",
+      "date_of_birth": "date_of_birth",
+      "date of birth": "date_of_birth",
+      "dob": "date_of_birth",
+      "birth date": "date_of_birth",
+      "e_upkaran_id": "e_upkaran_id",
+      "e-upkaran id": "e_upkaran_id",
+      "e upkaran id": "e_upkaran_id",
+      "upkaran id": "e_upkaran_id",
+      "upkaran_id": "e_upkaran_id",
+      "e_upkaran": "e_upkaran_id"
+    };
+
+    const headers = lines[0].split(/,(?=(?:(?:[^"]*"){2})*[^"]*$)/).map(h => {
+      const clean = h.trim().replace(/^["']|["']$/g, "").toLowerCase();
+      return HEADER_NORMALIZATION_MAP[clean] || clean;
+    });
     const payload: UserCreatePayload[] = [];
     const missingFieldsErrors: string[] = [];
 
