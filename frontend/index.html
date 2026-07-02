@@ -5,6 +5,26 @@
     <link rel="icon" type="image/svg+xml" href="/favicon.ico" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Expense Management - Cyrix HealthCare</title>
+    <script>
+      // Global recovery script to handle chunk load failures during redeployments
+      window.addEventListener('error', function(e) {
+        const errorMsg = e.message || '';
+        const isChunkError = errorMsg.indexOf('Failed to fetch dynamically imported module') > -1 ||
+                             errorMsg.indexOf('Importing a module script failed') > -1 ||
+                             (e.target && (e.target.tagName === 'SCRIPT' || e.target.tagName === 'LINK'));
+        
+        if (isChunkError) {
+          const now = Date.now();
+          const lastReload = sessionStorage.getItem('last_chunk_reload');
+          // Only reload if the last reload was more than 10 seconds ago to avoid loops
+          if (!lastReload || (now - parseInt(lastReload)) > 10000) {
+            sessionStorage.setItem('last_chunk_reload', now.toString());
+            console.warn('Resource load failed. Reloading page to fetch latest application files...');
+            window.location.reload();
+          }
+        }
+      }, true);
+    </script>
   </head>
   <body>
     <div id="root"></div>
