@@ -1932,7 +1932,7 @@ export default function ExpensePage() {
     try {
       // Find the claim's month before deleting to refresh the correct month's limits!
       const targetClaim = claims.find((c: any) => c.id === claimId);
-      const targetMonth = targetClaim?.month || new Date().toISOString().slice(0, 7);
+      const targetMonth = targetClaim?.itinerary ? targetClaim.itinerary.slice(0, 7) : new Date().toISOString().slice(0, 7);
       
       await expenseService.deleteExpense(claimId);
       toast.success("Claim deleted successfully.");
