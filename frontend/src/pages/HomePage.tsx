@@ -137,7 +137,7 @@ export default function HomePage() {
     const allowedWindows = currentUser.allowed_windows
       ? currentUser.allowed_windows.split(",").map((w: string) => w.trim().toLowerCase())
       : ["home", "profile", "help"];
-    const isReviewer = currentUser.role === "Admin" || allowedWindows.includes("approval");
+    const isReviewer = allowedWindows.includes("approval");
 
     if (isReviewer) {
       approvalService.getPendingApprovals()
@@ -474,7 +474,7 @@ export default function HomePage() {
           
           {(() => {
             const allowed = (user?.allowed_windows || "").toLowerCase();
-            const isReviewer = user?.role === "Admin" || allowed.includes("approval");
+            const isReviewer = allowed.includes("approval");
             if (isReviewer) {
               return (
                 <Link
@@ -491,7 +491,7 @@ export default function HomePage() {
 
           {(() => {
             const allowed = (user?.allowed_windows || "").toLowerCase();
-            if (user?.role === "Admin" || allowed.includes("consolidated_report")) {
+            if (allowed.includes("consolidated_report")) {
               return (
                 <Link
                   to="/consolidated-report"
@@ -507,7 +507,7 @@ export default function HomePage() {
 
           {(() => {
             const allowed = (user?.allowed_windows || "").toLowerCase();
-            if (user?.role === "Admin" || allowed.includes("analysis")) {
+            if (allowed.includes("analysis")) {
               return (
                 <Link
                   to="/analysis"
@@ -521,7 +521,7 @@ export default function HomePage() {
             return null;
           })()}
 
-          {user?.role === "Admin" && (
+          {(user?.allowed_windows || "").toLowerCase().includes("admin") && (
             <Link
               to="/admin"
               className="flex items-center gap-2 bg-gray-800 hover:bg-gray-900 text-white text-xs font-bold px-3.5 py-2 rounded no-underline shadow-sm transition-all duration-200"

@@ -22,6 +22,7 @@ import {
 } from "lucide-react";
 
 interface ItineraryLeg {
+  company_provided?: boolean;
   leg: number;
   travel_type: "In-District" | "Outdoor";
   district_from: string;
@@ -120,6 +121,7 @@ export default function ExpensePage() {
       } catch (e) { return false; }
     })();
     return {
+      company_provided: false,
       leg: num,
       travel_type: "In-District",
       district_from: "",
@@ -199,6 +201,7 @@ export default function ExpensePage() {
       } catch (e) { return false; }
     })();
     const leg: ItineraryLeg = {
+      company_provided: false,
       leg: 1,
       travel_type: "In-District",
       district_from: homeDistrict,
@@ -624,7 +627,9 @@ export default function ExpensePage() {
             sub_km: (leg.sub_km || 0).toString(),
             sub_amount: (leg.sub_amount || 0).toString(),
             da: (leg.da || 0).toString(),
-            hotel: leg.hotel && parseFloat(leg.hotel) !== 0 ? leg.hotel.toString() : "",
+            hotel: leg.hotel !== undefined && leg.hotel !== null && parseFloat(leg.hotel.toString()) === 0 ? "0" : (leg.hotel && parseFloat(leg.hotel.toString()) !== 0 ? leg.hotel.toString() : ""),
+            company_provided: leg.hotel !== undefined && leg.hotel !== null && parseFloat(leg.hotel.toString()) === 0 && 
+              (parseFloat((leg.da || 0).toString()) === (allowance?.daily_hotel || 350) || parseFloat((leg.da || 0).toString()) === (allowance?.daily_out_state || 600)),
             local_purchase: leg.local_purchase && parseFloat(leg.local_purchase) !== 0 ? leg.local_purchase.toString() : "",
             oth_desc: leg.oth_desc || "",
             oth_amount: (leg.oth_amount || 0).toString(),
@@ -766,7 +771,7 @@ export default function ExpensePage() {
           });
 
           const allowanceObj = data.allowance || {};
-          if (hotelAmt > 0) {
+          if (hotelAmt > 0 || leg1.company_provided) {
             if (hasOutDistrictLeg) {
               leg1.da = (allowanceObj.daily_out_state || 600).toString();
             } else {
@@ -1145,6 +1150,9 @@ export default function ExpensePage() {
             toast.error(`Maximum hotel stay allowance is ₹${hotelLimit}`);
             updatedLeg.hotel = hotelLimit.toString();
           }
+          if (value !== "0" && value !== 0) {
+            updatedLeg.company_provided = false;
+          }
         }
 
         return updatedLeg;
@@ -1162,7 +1170,7 @@ export default function ExpensePage() {
       if (leg1) {
         if (field !== "da") {
           const hotelAmt = parseFloat(leg1.hotel) || 0;
-          if (hotelAmt > 0) {
+          if (hotelAmt > 0 || leg1.company_provided) {
             if (hasOutDistrictLeg) {
               leg1.da = (allowance.daily_out_state || 600).toString();
             } else {
@@ -1731,7 +1739,7 @@ export default function ExpensePage() {
           if (legFiles.sub_bill) formData.append(`sub_bill_${legNum}`, legFiles.sub_bill);
           if (legFiles.comm_mail) formData.append(`comm_mail_${legNum}`, legFiles.comm_mail);
           if (legFiles.oth_bill) formData.append(`oth_bill_${legNum}`, legFiles.oth_bill);
-          if (legNum === 1 && legFiles.hotel_bill) formData.append("hotel_bill_1", legFiles.hotel_bill);
+          if (legNum === 1 && legFiles.hotel_bill && !itineraries[0].company_provided) formData.append("hotel_bill_1", legFiles.hotel_bill);
           if (legNum === 1 && legFiles.local_purchase_bill) formData.append("local_purchase_bill_1", legFiles.local_purchase_bill);
         }
       });
@@ -2614,11 +2622,30 @@ export default function ExpensePage() {
                               onChange={(e) => handleItineraryChange(leg.leg, "hotel", e.target.value)}
                               className="input-lte font-bold"
                             />
+                            {leg.hotel === "0" && (
+                              <div className="flex items-center gap-1.5 mt-2 bg-blue-50/50 p-1.5 rounded border border-blue-100 w-fit">
+                                <input
+                                  type="checkbox"
+                                  id="company_provided_hotel"
+                                  checked={!!leg.company_provided}
+                                  onChange={(e) => handleItineraryChange(leg.leg, "company_provided", e.target.checked)}
+                                  className="w-3.5 h-3.5 text-blue-600 border-gray-300 rounded focus:ring-blue-500 cursor-pointer"
+                                />
+                                <label htmlFor="company_provided_hotel" className="text-[10px] font-bold text-blue-800 cursor-pointer select-none">
+                                  Company Provided
+                                </label>
+                              </div>
+                            )}
                           </div>
 
                           <div>
                             <label className="label-lte">Hotel Bill Attachment</label>
-                            {!files[leg.leg]?.hotel_bill && !hasExistingFile(leg.leg, "Hotel") ? (
+                            {leg.company_provided ? (
+                              <div className="bg-emerald-50/50 text-emerald-800 border border-emerald-200 px-3 py-2 rounded text-[10px] mt-1.5 font-bold flex items-center gap-1.5">
+                                <ShieldCheck className="w-4 h-4 text-emerald-600" />
+                                Company Provided Stay - Bill Exempted
+                              </div>
+                            ) : !files[leg.leg]?.hotel_bill && !hasExistingFile(leg.leg, "Hotel") ? (
                               <div className="flex items-center gap-2 mt-1.5">
                                 <input
                                   type="file"

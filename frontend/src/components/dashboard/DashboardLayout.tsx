@@ -267,9 +267,8 @@ export default function DashboardLayout() {
     }
   } catch (_) {}
 
-  // Check if user has permission for menu items based on allowed_windows (and bypass for Admin)
+  // Check if user has permission for menu items based on allowed_windows
   const allowedMenuItems = MENU_ITEMS.filter((item) => {
-    if (userRole === "Admin") return true;
     if (["home", "profile", "help"].includes(item.id.toLowerCase())) return true;
     return allowedWindows.includes(item.id.toLowerCase());
   });
@@ -291,7 +290,6 @@ export default function DashboardLayout() {
 
   const hasAccess = 
     !currentActiveItem || 
-    userRole === "Admin" || 
     ["home", "profile", "help"].includes(currentActiveItem.id.toLowerCase()) ||
     allowedWindows.includes(currentActiveItem.id.toLowerCase());
   const safeNotifications = Array.isArray(notifications) ? notifications : [];
