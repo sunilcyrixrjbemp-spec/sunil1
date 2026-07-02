@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { useNavigate, Outlet, useLocation, Link } from "react-router-dom";
 import { authService } from "../../services/authService";
+import { preloadRoute } from "../../utils/preload";
 import api from "../../services/api";
 import { notificationService, NotificationItem } from "../../services/notificationService";
 import brandLogo from "../../assets/images/brand.png";
@@ -356,6 +357,7 @@ export default function DashboardLayout() {
               <Link
                 key={item.id}
                 to={item.path}
+                onMouseEnter={() => preloadRoute(item.path)}
                 title={isSidebarCollapsed ? item.name : undefined}
                 className={`flex items-center gap-3 px-3 py-2.5 text-xs font-semibold uppercase tracking-wider transition-all duration-150 border-l-4 group ${
                   isActive
@@ -522,6 +524,7 @@ export default function DashboardLayout() {
             <Link
               key={item.id}
               to={item.path}
+              onMouseEnter={() => preloadRoute(item.path)}
               className={`flex flex-col items-center justify-center w-14 h-10 rounded transition-all ${
                 isActive ? "text-blue-600" : "text-gray-500 hover:text-gray-800"
               }`}
@@ -596,6 +599,7 @@ export default function DashboardLayout() {
                   <Link
                     key={item.id}
                     to={item.path}
+                    onMouseEnter={() => preloadRoute(item.path)}
                     onClick={() => setIsMobileMenuOpen(false)}
                     className={`flex flex-col items-center justify-center p-3 rounded-lg border transition-all ${
                       isActive 

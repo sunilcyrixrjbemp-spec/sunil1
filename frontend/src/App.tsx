@@ -6,6 +6,7 @@ import { isNativeApp, biometricAuth } from "./utils/capacitor";
 import { Fingerprint, Lock, ScanFace } from "lucide-react";
 import ProtectedRoute from "./components/auth/ProtectedRoute";
 import DashboardLayout from "./components/dashboard/DashboardLayout";
+import ErrorBoundary from "./components/common/ErrorBoundary";
 
 // Lazy-loaded page components for fast initial loading
 const LoginPage = lazy(() => import("./pages/LoginPage"));
@@ -183,8 +184,9 @@ function App() {
   }
 
   return (
-    <Router>
-      <div className="min-h-screen bg-[#f4f6f9] text-[#212529] font-sans antialiased">
+    <ErrorBoundary>
+      <Router>
+        <div className="min-h-screen bg-[#f4f6f9] text-[#212529] font-sans antialiased">
         {/* FCM notification system — runs silently in background */}
         <AppInner />
         <Suspense fallback={<PageLoader />}>
@@ -249,8 +251,9 @@ function App() {
             },
           }}
         />
-      </div>
-    </Router>
+        </div>
+      </Router>
+    </ErrorBoundary>
   );
 }
 
