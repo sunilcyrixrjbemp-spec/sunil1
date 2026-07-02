@@ -68,17 +68,11 @@ app = FastAPI(
     lifespan=lifespan
 )
 
-# CORS Middleware config - Hardened to allow only trusted origins
-trusted_origins = [
-    "https://indrae.in",
-    "http://localhost:5173",
-    "http://localhost:3000",
-]
-
+# CORS Middleware config - Configured for robust token-based CORS
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=trusted_origins,
-    allow_credentials=True,
+    allow_origins=["*"],
+    allow_credentials=False,
     allow_methods=["*"],
     allow_headers=["*"],
 )
