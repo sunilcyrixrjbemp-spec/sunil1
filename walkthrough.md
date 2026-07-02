@@ -62,6 +62,12 @@ We have completed the implementation of the core features and enhancements reque
     *   **Write-Through Invalidation**: Connected the cache keys to the existing user-hierarchy invalidator (`clear_user_and_managers_cache`). The cache is cleared immediately when a user submits, updates, deletes an expense, or when a manager reviews a claim. Dashboard cache is cleared instantly upon penalty spreadsheet uploads.
     *   **Result**: Dashboard and list requests load in `< 1ms` from RAM instead of querying D1, reducing database read counts by over 95%.
 
+### 7. 🚀 Instant Page Hover Preloader & Error Boundary Protection
+*   **Problem**: In enterprise-grade systems, page transitions must feel immediate (even under slow cellular connections), and client-side exceptions should never trigger raw blank screens.
+*   **Fix**:
+    *   **Link Hover Preloading**: Created `src/utils/preload.ts` mapping routes to lazy chunks. Configured all navigation layout links to trigger `onMouseEnter={() => preloadRoute(item.path)}`. Chunks are pre-fetched in the background 100-200ms before a user clicks, boosting screen switch speeds to feel instant.
+    *   **React Error Boundary**: Added a global `ErrorBoundary.tsx` to wrap the app layout. Isolates and catches unexpected rendering runtime crashes, presenting a premium glassmorphic UI card with details and a safe reload button rather than a blank screen.
+
 ---
 
 ## 🚀 Deployment Instructions for the User
