@@ -102,10 +102,11 @@ export const biometricAuth = {
       const { NativeBiometric } = await import('@capgo/capacitor-native-biometric');
       await NativeBiometric.verifyIdentity({
         reason,
-        title: 'Biometric Login',
+        title: 'Security Verification',
         subtitle: 'Log in to your account',
         description: reason,
-        negativeButtonText: 'Cancel'
+        negativeButtonText: 'Cancel',
+        usePin: true
       });
       return { success: true };
     } catch (error: any) {
@@ -235,9 +236,11 @@ export const initCapacitorPush = async (): Promise<void> => {
       const data = action.notification.data || {};
       // Navigate based on notification type
       if (data.type === 'comment' || data.type === 'closed' || data.type === 'new_ticket') {
-        window.location.hash = '#/help';
-      } else if (data.type === 'approved' || data.type === 'rejected' || data.type === 'forwarded') {
-        window.location.hash = '#/expense';
+        window.location.hash = '#/help-center';
+      } else if (data.type === 'approved' || data.type === 'rejected') {
+        window.location.hash = '#/submit-expense';
+      } else if (data.type === 'forwarded' || data.type === 'pending') {
+        window.location.hash = '#/approval-center';
       }
     });
 

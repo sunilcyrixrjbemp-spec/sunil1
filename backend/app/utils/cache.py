@@ -95,14 +95,16 @@ def clear_user_and_managers_cache(db, user_id_val):
         for app_usr in approvers:
             affected_ids.add(app_usr.user_id)
             
-    # Clear specific keys in cache
+    # Clear specific keys in cache case-insensitively
     keys_to_clear = []
     for k in list(_cache.keys()):
         for affected_id in affected_ids:
-            if (k.startswith("user_init:") and f":{affected_id}:" in k) or \
-               k == f"user_expenses:{affected_id}" or \
-               k == f"team_expenses:{affected_id}" or \
-               k == f"pending_approvals:{affected_id}":
+            aff_lower = affected_id.lower()
+            k_lower = k.lower()
+            if (k_lower.startswith("user_init:") and f":{aff_lower}:" in k_lower) or \
+               k_lower == f"user_expenses:{aff_lower}" or \
+               k_lower == f"team_expenses:{aff_lower}" or \
+               k_lower == f"pending_approvals:{aff_lower}":
                 keys_to_clear.append(k)
                 break
                 

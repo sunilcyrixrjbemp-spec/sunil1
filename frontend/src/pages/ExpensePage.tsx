@@ -567,6 +567,23 @@ export default function ExpensePage() {
   };
 
   useEffect(() => {
+    const handlePullRefresh = () => {
+      if (date) {
+        const monthStr = date.slice(0, 7);
+        const cacheKey = `cache_month_limits_${currentUserId}_${monthStr}`;
+        localStorage.removeItem(cacheKey);
+        fetchMonthLimits(monthStr, false);
+      }
+      const claimsCacheKey = `cache_my_expenses_${currentUserId}`;
+      localStorage.removeItem(claimsCacheKey);
+      fetchClaims();
+    };
+
+    window.addEventListener("app-pull-to-refresh", handlePullRefresh);
+    return () => window.removeEventListener("app-pull-to-refresh", handlePullRefresh);
+  }, [date, currentUserId]);
+
+  useEffect(() => {
     setupDateRules();
     fetchClaims();
 

@@ -253,6 +253,88 @@ export default function DashboardLayout() {
     }
   };
 
+  // Pull-to-refresh gesture tracking for mobile APK
+  const [pullDistance, setPullDistance] = useState(0);
+  const [isRefreshing, setIsRefreshing] = useState(false);
+
+  useEffect(() => {
+    let startTouchY = 0;
+    let active = false;
+
+    const handleTouchStart = (e: TouchEvent) => {
+      // Only initiate if scroll is at absolute top
+      if (window.scrollY === 0) {
+        startTouchY = e.touches[0].clientY;
+        active = true;
+      } else {
+        active = false;
+      }
+    };
+
+    const handleTouchMove = (e: TouchEvent) => {
+      if (!active) return;
+      const currentY = e.touches[0].clientY;
+      const diff = currentY - startTouchY;
+
+      if (diff > 0) {
+        // Resistance pull factor
+        const distance = Math.min(diff * 0.45, 90);
+        setPullDistance(distance);
+        
+        // Prevent browser elastic scroll bounce during active pull
+        if (diff > 12 && e.cancelable) {
+          e.preventDefault();
+        }
+      }
+    };
+
+    const handleTouchEnd = () => {
+      if (!active) return;
+      active = false;
+      
+      if (pullDistance >= 60) {
+        setIsRefreshing(true);
+        setPullDistance(35); // Keep visible during spinner rotation
+        
+        // Broadcast custom pull-to-refresh event for listening pages
+        window.dispatchEvent(new CustomEvent("app-pull-to-refresh"));
+        
+        // Clear local limits cache to force updates
+        try {
+          const currentUser = JSON.parse(localStorage.getItem("user") || "null");
+          if (currentUser) {
+            const userId = currentUser.user_id;
+            for (let i = 0; i < localStorage.length; i++) {
+              const key = localStorage.key(i);
+              if (key && key.startsWith("cache_month_limits_")) {
+                localStorage.removeItem(key);
+                i--;
+              }
+            }
+          }
+        } catch (_) {}
+
+        // Clear indicator after refresh completes
+        setTimeout(() => {
+          setIsRefreshing(false);
+          setPullDistance(0);
+        }, 1200);
+      } else {
+        setPullDistance(0);
+      }
+    };
+
+    window.addEventListener("touchstart", handleTouchStart, { passive: false });
+    window.addEventListener("touchmove", handleTouchMove, { passive: false });
+    window.addEventListener("touchend", handleTouchEnd);
+
+    return () => {
+      window.removeEventListener("touchstart", handleTouchStart);
+      window.removeEventListener("touchmove", handleTouchMove);
+      window.removeEventListener("touchend", handleTouchEnd);
+    };
+  }, [pullDistance]);
+
   if (!user) return null;
 
   const userRole = user.role || "Engineer";
@@ -298,6 +380,30 @@ export default function DashboardLayout() {
 
   return (
     <div className="min-h-screen bg-[#f4f6f9] text-[#212529] flex flex-col lg:flex-row antialiased">
+      
+      {/* Pull-to-refresh overlay for mobile APK */}
+      {(pullDistance > 0 || isRefreshing) && (
+        <div 
+          className="fixed top-0 left-0 right-0 z-[9999] flex justify-center pointer-events-none transition-all duration-75"
+          style={{ transform: `translateY(${pullDistance}px)` }}
+        >
+          <div className="bg-white rounded-full p-2.5 shadow-md border border-gray-150 flex items-center justify-center">
+            <svg 
+              className={`w-6 h-6 text-green-600 ${isRefreshing ? "animate-spin" : ""}`} 
+              viewBox="0 0 24 24" 
+              fill="none" 
+              stroke="currentColor" 
+              strokeWidth="3.5"
+            >
+              {isRefreshing ? (
+                <path d="M21.5 2v6h-6M21.34 15.57a10 10 0 1 1-.57-8.38l5.67-5.67" />
+              ) : (
+                <path strokeLinecap="round" strokeLinejoin="round" d="M19.5 13.5L12 21m0 0l-7.5-7.5M12 21V3" />
+              )}
+            </svg>
+          </div>
+        </div>
+      )}
       
       {/* SIDEBAR - DESKTOP ONLY */}
       <aside className={`hidden lg:flex flex-col bg-[#343a40] text-[#c2c7d0] transition-all duration-200 ${

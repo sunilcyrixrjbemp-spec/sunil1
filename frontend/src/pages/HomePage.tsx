@@ -248,6 +248,23 @@ export default function HomePage() {
     refreshDashboardData();
   }, [navigate, selectMonth]);
 
+  useEffect(() => {
+    const handlePullRefresh = () => {
+      const currentUser = authService.getCurrentUser() || user;
+      if (currentUser) {
+        const uId = currentUser.user_id;
+        localStorage.removeItem(`cache_approvals_count_${uId}`);
+        localStorage.removeItem(`cache_team_expenses_${uId}`);
+        localStorage.removeItem(`cache_my_expenses_${uId}`);
+        localStorage.removeItem(`cache_allowance_stats_${uId}`);
+      }
+      refreshDashboardData();
+    };
+
+    window.addEventListener("app-pull-to-refresh", handlePullRefresh);
+    return () => window.removeEventListener("app-pull-to-refresh", handlePullRefresh);
+  }, [user]);
+
   if (!user) return null;
 
   const userRole = user.role || "Engineer";

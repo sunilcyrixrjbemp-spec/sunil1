@@ -51,9 +51,7 @@ export const useBiometricLogin = (): UseBiometricLoginReturn => {
   const loginWithBiometric = useCallback(async (): Promise<boolean> => {
     if (!biometricAvailable) return false;
 
-    const reason = biometryType === 'face'
-      ? 'Use Face ID to login'
-      : 'Use fingerprint to login';
+    const reason = 'Use Face ID, Fingerprint, or PIN to login';
 
     const authResult = await biometricAuth.authenticate(reason);
     if (!authResult.success) {
