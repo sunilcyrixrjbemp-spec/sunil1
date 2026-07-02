@@ -29,17 +29,16 @@ const NotFoundPage = lazy(() => import("./pages/NotFoundPage"));
 
 function PageLoader() {
   return (
-    <div className="flex flex-col items-center justify-center min-h-[70vh] w-full p-6 antialiased select-none">
-      <div className="flex flex-col items-center space-y-6 text-center max-w-xs p-8 rounded-2xl bg-white/60 backdrop-blur-xl border border-white/40 shadow-xl">
+    <div className="flex flex-col items-center justify-center min-h-[70vh] w-full p-6 antialiased select-none animate-fade-in-up">
+      <div className="flex flex-col items-center space-y-5 text-center max-w-xs p-7 rounded-2xl bg-white/70 backdrop-blur-xl border border-white/50 shadow-xl">
         <div className="relative flex items-center justify-center">
-          <div className="w-16 h-16 rounded-full border-4 border-slate-100 border-t-blue-600 animate-spin"></div>
-          <div className="absolute w-8 h-8 rounded-full bg-blue-50 flex items-center justify-center border border-blue-100">
-            <Lock className="w-4 h-4 text-blue-500 animate-pulse" />
+          <div className="text-blue-600 text-3xl animate-spin">
+            <i className="fas fa-sync-alt"></i>
           </div>
         </div>
-        <div className="space-y-1.5">
-          <p className="text-xs font-bold text-slate-700 uppercase tracking-widest animate-pulse">Decrypting Console...</p>
-          <p className="text-[10px] text-slate-400 font-semibold uppercase tracking-wider">Securing Handshake</p>
+        <div className="space-y-1">
+          <p className="text-[11px] font-bold text-slate-700 uppercase tracking-widest animate-pulse">Decrypting Console...</p>
+          <p className="text-[9px] text-slate-400 font-semibold uppercase tracking-wider">Securing Handshake</p>
         </div>
       </div>
     </div>
