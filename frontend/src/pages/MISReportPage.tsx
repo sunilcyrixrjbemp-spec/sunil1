@@ -488,7 +488,7 @@ export default function MISReportPage() {
               <h4 className="text-xs font-bold text-slate-700 uppercase tracking-wide">Daily Logged vs Closed Calls (Area Chart)</h4>
             </div>
               <ResponsiveContainer width="100%" height="100%">
-                <AreaChart data={dailyLoggedData.map((d, index) => {
+                <AreaChart data={dailyLoggedData.map((d) => {
                   const match = dailyClosedData.find(c => c.day === d.day);
                   return {
                     day: formatLabelDate(d.day),
