@@ -68,6 +68,10 @@ We have completed the implementation of the core features and enhancements reque
     *   **Link Hover Preloading**: Created `src/utils/preload.ts` mapping routes to lazy chunks. Configured all navigation layout links to trigger `onMouseEnter={() => preloadRoute(item.path)}`. Chunks are pre-fetched in the background 100-200ms before a user clicks, boosting screen switch speeds to feel instant.
     *   **React Error Boundary**: Added a global `ErrorBoundary.tsx` to wrap the app layout. Isolates and catches unexpected rendering runtime crashes, presenting a premium glassmorphic UI card with details and a safe reload button rather than a blank screen.
 
+### 8. 🔠 Typography Uniformity (Plus Jakarta Sans)
+*   **Problem**: The legacy pages used `Plus Jakarta Sans` as their primary font, while the React application was using `Aptos` and `Inter`, causing visual inconsistency during transitions.
+*   **Fix**: Loaded `Plus Jakarta Sans` from Google Fonts globally in `index.html` and configured it as the primary sans-serif font family in `tailwind.config.js`. This creates a unified and premium typographic layout across both legacy and React pages.
+
 ---
 
 ## 🚀 Deployment Instructions for the User
