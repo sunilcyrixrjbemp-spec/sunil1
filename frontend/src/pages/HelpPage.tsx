@@ -27,6 +27,8 @@ import {
 
 ChartJS.register(CategoryScale, LinearScale, BarElement, ChartTooltip, ChartLegend);
 
+const GALLERY_COLORS = ["#2f5bb7", "#2b7d50", "#d28b2a", "#854aa5", "#d83b01", "#00a2ad", "#e81123"];
+
 // Helper to format date strings to user-friendly local browser dates
 function formatDateTime(dateVal: any) {
   if (!dateVal) return "—";
@@ -558,7 +560,7 @@ export default function HelpPage() {
                   {
                     label: 'Concerns',
                     data: analytics.categoryChart.map(c => c.amount),
-                    backgroundColor: '#2f5bb7',
+                    backgroundColor: GALLERY_COLORS,
                     borderRadius: 4
                   }
                 ]
@@ -590,7 +592,7 @@ export default function HelpPage() {
                   {
                     label: 'Concerns',
                     data: analytics.priorityChart.map(c => c.amount),
-                    backgroundColor: '#854aa5',
+                    backgroundColor: GALLERY_COLORS,
                     borderRadius: 4
                   }
                 ]
@@ -622,7 +624,7 @@ export default function HelpPage() {
                   {
                     label: 'Concerns',
                     data: analytics.statusChart.map(c => c.amount),
-                    backgroundColor: '#d28b2a',
+                    backgroundColor: GALLERY_COLORS,
                     borderRadius: 4
                   }
                 ]

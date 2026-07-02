@@ -639,7 +639,7 @@ export default function AnalysisPage() {
                         {
                           label: 'Expenditure (₹)',
                           data: userWiseData.map(u => u.amount),
-                          backgroundColor: '#854aa5',
+                          backgroundColor: GALLERY_COLORS,
                           borderRadius: 4
                         }
                       ]
@@ -728,7 +728,7 @@ export default function AnalysisPage() {
                         {
                           label: 'Expenditure (₹)',
                           data: districtWiseData.map(d => d.amount),
-                          backgroundColor: '#2f5bb7',
+                          backgroundColor: GALLERY_COLORS,
                           borderRadius: 4
                         }
                       ]
@@ -861,7 +861,7 @@ export default function AnalysisPage() {
                         {
                           label: 'Expenditure (₹)',
                           data: categoryData.map(c => c.amount),
-                          backgroundColor: '#00a2ad',
+                          backgroundColor: GALLERY_COLORS,
                           borderRadius: 4
                         }
                       ]

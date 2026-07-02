@@ -906,7 +906,7 @@ export default function AssetUploadPage() {
                         {
                           label: 'Units',
                           data: stats.charts.top_types.map(t => t.value),
-                          backgroundColor: '#2b7d50',
+                          backgroundColor: GALLERY_COLORS,
                           borderRadius: 4
                         }
                       ]

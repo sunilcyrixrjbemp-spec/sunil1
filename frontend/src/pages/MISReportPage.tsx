@@ -280,8 +280,8 @@ export default function MISReportPage() {
       {
         label: 'Total Penalty Amount (₹)',
         data: breakdown?.equipment.map(e => e.penalty) || [],
-        backgroundColor: '#d83b01',
-        borderColor: '#d83b01',
+        backgroundColor: ['#2f5bb7', '#2b7d50', '#d28b2a', '#854aa5', '#d83b01', '#00a2ad', '#e81123'],
+        borderColor: ['#2f5bb7', '#2b7d50', '#d28b2a', '#854aa5', '#d83b01', '#00a2ad', '#e81123'],
         borderWidth: 1,
         borderRadius: 4
       }
@@ -308,8 +308,8 @@ export default function MISReportPage() {
       {
         label: 'Coordinator Penalty (₹)',
         data: breakdown?.coordinator.map(c => c.penalty) || [],
-        backgroundColor: '#2f5bb7',
-        borderColor: '#2f5bb7',
+        backgroundColor: ['#2f5bb7', '#2b7d50', '#d28b2a', '#854aa5', '#d83b01', '#00a2ad', '#e81123'],
+        borderColor: ['#2f5bb7', '#2b7d50', '#d28b2a', '#854aa5', '#d83b01', '#00a2ad', '#e81123'],
         borderWidth: 1,
         borderRadius: 4
       }
@@ -349,8 +349,8 @@ export default function MISReportPage() {
       {
         label: 'Hospital Penalty (₹)',
         data: breakdown?.hospital.map(h => h.penalty) || [],
-        backgroundColor: '#d28b2a',
-        borderColor: '#d28b2a',
+        backgroundColor: ['#2f5bb7', '#2b7d50', '#d28b2a', '#854aa5', '#d83b01', '#00a2ad', '#e81123'],
+        borderColor: ['#2f5bb7', '#2b7d50', '#d28b2a', '#854aa5', '#d83b01', '#00a2ad', '#e81123'],
         borderWidth: 1,
         borderRadius: 4
       }

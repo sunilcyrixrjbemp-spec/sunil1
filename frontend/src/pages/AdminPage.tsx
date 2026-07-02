@@ -1237,7 +1237,7 @@ export default function AdminPage() {
                         {
                           label: 'Employees',
                           data: getDistrictData().slice(0, 6).map(d => d.value),
-                          backgroundColor: '#2f5bb7',
+                          backgroundColor: GALLERY_COLORS,
                           borderRadius: 4
                         }
                       ]
@@ -1274,7 +1274,7 @@ export default function AdminPage() {
                         {
                           label: 'Employees',
                           data: getManagerData().slice(0, 6).map(m => m.value),
-                          backgroundColor: '#854aa5',
+                          backgroundColor: GALLERY_COLORS,
                           borderRadius: 4
                         }
                       ]
