@@ -69,8 +69,8 @@ We have completed the implementation of the core features and enhancements reque
     *   **React Error Boundary**: Added a global `ErrorBoundary.tsx` to wrap the app layout. Isolates and catches unexpected rendering runtime crashes, presenting a premium glassmorphic UI card with details and a safe reload button rather than a blank screen. Also includes automatic chunk recovery: if an isolated component crash is caused by a chunk load failure (such as when new files are compiled and deployed during active user sessions), it automatically triggers a silent page reload to fetch the latest production bundles seamlessly.
 
 ### 8. 🔠 Typography Uniformity (Plus Jakarta Sans)
-*   **Problem**: The legacy pages used `Plus Jakarta Sans` as their primary font, while the React application was using `Aptos` and `Inter`, causing visual inconsistency during transitions.
-*   **Fix**: Loaded `Plus Jakarta Sans` from Google Fonts globally in `index.html` and configured it as the primary sans-serif font family in `tailwind.config.js`. This creates a unified and premium typographic layout across both legacy and React pages.
+*   **Problem**: The legacy pages used `Plus Jakarta Sans` as their primary font, while the React application was using `Aptos` and `Inter`, and a hardcoded CSS rule in `globals.css` was overriding body styling to load `Outfit`, causing typography inconsistency during transitions.
+*   **Fix**: Loaded `Plus Jakarta Sans` from Google Fonts globally in `index.html`, configured it as the primary sans-serif font family in `tailwind.config.js`, and refactored the body styling rule inside `globals.css` to use `'Plus Jakarta Sans' !important`. This creates a unified, system-wide premium typographic layout across both legacy and React pages.
 
 ---
 
