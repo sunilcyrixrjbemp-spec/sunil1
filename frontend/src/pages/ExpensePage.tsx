@@ -475,9 +475,7 @@ export default function ExpensePage() {
     }
     return null;
   });
-  const [loadedMonth, setLoadedMonth] = useState(() => {
-    return new Date().toISOString().slice(0, 7);
-  });
+  const [loadedMonth, setLoadedMonth] = useState<string>("");
 
 
   const getFacilitiesForDistrict = (districtName: string): string[] => {
@@ -734,9 +732,11 @@ export default function ExpensePage() {
   useEffect(() => {
     if (date) {
       const monthStr = date.slice(0, 7);
-      fetchMonthLimits(monthStr, itineraries.length === 1 && !itineraries[0].from);
+      if (monthStr !== loadedMonth) {
+        fetchMonthLimits(monthStr, itineraries.length === 1 && !itineraries[0].from);
+      }
     }
-  }, [date]);
+  }, [date, loadedMonth]);
 
   const fetchMonthLimits = async (monthStr: string, isInitialLoad = false) => {
     const cacheKey = `cache_month_limits_${currentUserId}_${monthStr}`;
