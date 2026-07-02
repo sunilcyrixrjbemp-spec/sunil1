@@ -5,13 +5,7 @@ import { expenseService } from "../services/expenseService";
 import { approvalService } from "../services/approvalService";
 import toast from "react-hot-toast";
 import Loader from "../components/common/Loader";
-import { Doughnut } from 'react-chartjs-2';
-import {
-  Chart as ChartJS,
-  ArcElement,
-  Tooltip as ChartTooltip,
-  Legend as ChartLegend
-} from 'chart.js';
+import { PieChart, Pie, Cell, Tooltip, Legend, ResponsiveContainer } from "recharts";
 import ExpenseCalendar from "../components/common/ExpenseCalendar";
 import brandLogo from "../assets/images/brand.png";
 import { 
@@ -31,7 +25,7 @@ import {
   ShieldCheck
 } from "lucide-react";
 
-ChartJS.register(ArcElement, ChartTooltip, ChartLegend);
+
 
 const GALLERY_COLORS = ["#2f5bb7", "#2b7d50", "#d28b2a", "#854aa5", "#d83b01", "#00a2ad", "#e81123"];
 
@@ -842,40 +836,26 @@ export default function HomePage() {
                   No claims to analyze
                 </div>
               ) : (
-                <div style={{ height: 180 }} className="relative flex justify-center items-center">
-                  <Doughnut
-                    data={{
-                      labels: getPersonalChartData().map(c => c.label),
-                      datasets: [
-                        {
-                          data: getPersonalChartData().map(c => c.amount),
-                          backgroundColor: GALLERY_COLORS.slice(0, getPersonalChartData().length),
-                          borderColor: '#ffffff',
-                          borderWidth: 2
-                        }
-                      ]
-                    }}
-                    options={{
-                      responsive: true,
-                      maintainAspectRatio: false,
-                      plugins: {
-                        legend: {
-                          position: 'bottom' as const,
-                          labels: {
-                            boxWidth: 8,
-                            padding: 6,
-                            font: { size: 9, weight: 'bold' }
-                          }
-                        },
-                        tooltip: {
-                          callbacks: {
-                            label: (context: any) => ` ₹${context.raw.toLocaleString("en-IN")}`
-                          }
-                        }
-                      },
-                      cutout: '65%'
-                    }}
-                  />
+                <div style={{ height: 180 }}>
+                  <ResponsiveContainer width="100%" height="100%">
+                    <PieChart>
+                      <Pie
+                        data={getPersonalChartData().map(c => ({ name: c.label, value: c.amount }))}
+                        cx="50%" cy="50%"
+                        innerRadius={35}
+                        outerRadius={65}
+                        paddingAngle={3} dataKey="value"
+                        stroke="#ffffff"
+                        strokeWidth={2}
+                      >
+                        {getPersonalChartData().map((_, i) => (
+                          <Cell key={i} fill={GALLERY_COLORS[i % GALLERY_COLORS.length]} />
+                        ))}
+                      </Pie>
+                      <Tooltip formatter={(v: number) => `₹${v.toLocaleString()}`} />
+                      <Legend verticalAlign="bottom" height={36} iconType="circle" wrapperStyle={{ fontSize: 9 }} />
+                    </PieChart>
+                  </ResponsiveContainer>
                 </div>
               )}
             </div>
@@ -963,40 +943,26 @@ export default function HomePage() {
                     const chartData = getTeamChartData();
                     if (chartData.length === 0) return null;
                     return (
-                      <div style={{ height: 180 }} className="relative flex justify-center items-center">
-                        <Doughnut
-                          data={{
-                            labels: chartData.map(c => c.name),
-                            datasets: [
-                              {
-                                data: chartData.map(c => c.amount),
-                                backgroundColor: GALLERY_COLORS.slice(0, chartData.length),
-                                borderColor: '#ffffff',
-                                borderWidth: 2
-                              }
-                            ]
-                          }}
-                          options={{
-                            responsive: true,
-                            maintainAspectRatio: false,
-                            plugins: {
-                              legend: {
-                                position: 'bottom' as const,
-                                labels: {
-                                  boxWidth: 8,
-                                  padding: 6,
-                                  font: { size: 9, weight: 'bold' }
-                                }
-                              },
-                              tooltip: {
-                                callbacks: {
-                                  label: (context: any) => ` ₹${context.raw.toLocaleString("en-IN")}`
-                                }
-                              }
-                            },
-                            cutout: '65%'
-                          }}
-                        />
+                      <div style={{ height: 180 }}>
+                        <ResponsiveContainer width="100%" height="100%">
+                          <PieChart>
+                            <Pie
+                              data={chartData.map(c => ({ name: c.name, value: c.amount }))}
+                              cx="50%" cy="50%"
+                              innerRadius={35}
+                              outerRadius={65}
+                              paddingAngle={3} dataKey="value"
+                              stroke="#ffffff"
+                              strokeWidth={2}
+                            >
+                              {chartData.map((_, i) => (
+                                <Cell key={i} fill={GALLERY_COLORS[i % GALLERY_COLORS.length]} />
+                              ))}
+                            </Pie>
+                            <Tooltip formatter={(v: number) => `₹${v.toLocaleString()}`} />
+                            <Legend verticalAlign="bottom" height={36} iconType="circle" wrapperStyle={{ fontSize: 9 }} />
+                          </PieChart>
+                        </ResponsiveContainer>
                       </div>
                     );
                   })()}

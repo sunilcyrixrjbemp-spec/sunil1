@@ -4,18 +4,7 @@ import { adminService, UserCreatePayload, UserEditPayload, ApprovalHierarchyResp
 import { authService } from "../services/authService";
 import { Search, UploadCloud, Pencil, Trash2, Plus, LogOut, Download } from "lucide-react";
 import Loader from "../components/common/Loader";
-import { Doughnut, Bar, Pie } from 'react-chartjs-2';
-import {
-  Chart as ChartJS,
-  CategoryScale,
-  LinearScale,
-  BarElement,
-  ArcElement,
-  Tooltip as ChartTooltip,
-  Legend as ChartLegend
-} from 'chart.js';
-
-ChartJS.register(CategoryScale, LinearScale, BarElement, ArcElement, ChartTooltip, ChartLegend);
+import { PieChart, Pie, Cell, Tooltip, Legend, ResponsiveContainer, BarChart, Bar, XAxis, YAxis, CartesianGrid } from "recharts";
 
 const LteSpinner = () => (
   <span className="spinner-lte mr-1.5"></span>
@@ -1188,36 +1177,28 @@ export default function AdminPage() {
                 </h4>
               </div>
               <div className="p-4" style={{ height: "290px" }}>
-                <div style={{ height: 250 }} className="relative flex justify-center items-center">
-                  <Doughnut
-                    data={{
-                      labels: getZoneData().slice(0, 5).map(z => z.name),
-                      datasets: [
-                        {
-                          data: getZoneData().slice(0, 5).map(z => z.value),
-                          backgroundColor: GALLERY_COLORS.slice(0, 5),
-                          borderColor: '#ffffff',
-                          borderWidth: 2
-                        }
-                      ]
-                    }}
-                    options={{
-                      responsive: true,
-                      maintainAspectRatio: false,
-                      plugins: {
-                        legend: {
-                          position: 'bottom' as const,
-                          labels: {
-                            boxWidth: 8,
-                            padding: 6,
-                            font: { size: 9, weight: 'bold' }
-                          }
-                        }
-                      },
-                      cutout: '60%'
-                    }}
-                  />
-                </div>
+                <ResponsiveContainer width="100%" height="100%">
+                  <PieChart>
+                    <Pie
+                      data={getZoneData().slice(0, 5)}
+                      dataKey="value"
+                      nameKey="name"
+                      cx="50%"
+                      cy="50%"
+                      innerRadius={45}
+                      outerRadius={75}
+                      paddingAngle={3}
+                      stroke="#ffffff"
+                      strokeWidth={2}
+                    >
+                      {getZoneData().slice(0, 5).map((_, index) => (
+                        <Cell key={`cell-${index}`} fill={GALLERY_COLORS[index % GALLERY_COLORS.length]} />
+                      ))}
+                    </Pie>
+                    <Tooltip formatter={(value) => [`${value} Employees`, 'Count']} />
+                    <Legend verticalAlign="bottom" height={36} iconType="circle" wrapperStyle={{ fontSize: 9 }} />
+                  </PieChart>
+                </ResponsiveContainer>
               </div>
             </div>
 
@@ -1229,32 +1210,19 @@ export default function AdminPage() {
                 </h4>
               </div>
               <div className="p-4" style={{ height: "290px" }}>
-                <div style={{ height: 250 }} className="relative flex justify-center items-center">
-                  <Bar
-                    data={{
-                      labels: getDistrictData().slice(0, 6).map(d => d.name),
-                      datasets: [
-                        {
-                          label: 'Employees',
-                          data: getDistrictData().slice(0, 6).map(d => d.value),
-                          backgroundColor: GALLERY_COLORS,
-                          borderRadius: 4
-                        }
-                      ]
-                    }}
-                    options={{
-                      responsive: true,
-                      maintainAspectRatio: false,
-                      plugins: {
-                        legend: { display: false }
-                      },
-                      scales: {
-                        x: { ticks: { font: { size: 9 } }, grid: { display: false } },
-                        y: { ticks: { font: { size: 9 } }, grid: { display: false } }
-                      }
-                    }}
-                  />
-                </div>
+                <ResponsiveContainer width="100%" height="100%">
+                  <BarChart data={getDistrictData().slice(0, 6)}>
+                    <CartesianGrid strokeDasharray="3 3" horizontal={false} vertical={true} />
+                    <XAxis dataKey="name" tick={{ fontSize: 9, fontWeight: 'bold' }} />
+                    <YAxis tick={{ fontSize: 9 }} allowDecimals={false} />
+                    <Tooltip formatter={(value) => [`${value} Employees`, 'Count']} />
+                    <Bar dataKey="value" radius={[4, 4, 0, 0]} maxBarSize={40}>
+                      {getDistrictData().slice(0, 6).map((_, index) => (
+                        <Cell key={`cell-${index}`} fill={GALLERY_COLORS[index % GALLERY_COLORS.length]} />
+                      ))}
+                    </Bar>
+                  </BarChart>
+                </ResponsiveContainer>
               </div>
             </div>
 
@@ -1266,33 +1234,19 @@ export default function AdminPage() {
                 </h4>
               </div>
               <div className="p-4" style={{ height: "290px" }}>
-                <div style={{ height: 250 }} className="relative flex justify-center items-center">
-                  <Bar
-                    data={{
-                      labels: getManagerData().slice(0, 6).map(m => m.name),
-                      datasets: [
-                        {
-                          label: 'Employees',
-                          data: getManagerData().slice(0, 6).map(m => m.value),
-                          backgroundColor: GALLERY_COLORS,
-                          borderRadius: 4
-                        }
-                      ]
-                    }}
-                    options={{
-                      indexAxis: 'y' as const,
-                      responsive: true,
-                      maintainAspectRatio: false,
-                      plugins: {
-                        legend: { display: false }
-                      },
-                      scales: {
-                        x: { ticks: { font: { size: 9 } }, grid: { display: false } },
-                        y: { ticks: { font: { size: 9 } }, grid: { display: false } }
-                      }
-                    }}
-                  />
-                </div>
+                <ResponsiveContainer width="100%" height="100%">
+                  <BarChart data={getManagerData().slice(0, 6)} layout="vertical">
+                    <CartesianGrid strokeDasharray="3 3" horizontal={true} vertical={false} />
+                    <XAxis type="number" tick={{ fontSize: 9 }} allowDecimals={false} />
+                    <YAxis dataKey="name" type="category" tick={{ fontSize: 9, fontWeight: 'bold' }} width={85} />
+                    <Tooltip formatter={(value) => [`${value} Employees`, 'Count']} />
+                    <Bar dataKey="value" radius={[0, 4, 4, 0]} maxBarSize={22}>
+                      {getManagerData().slice(0, 6).map((_, index) => (
+                        <Cell key={`cell-${index}`} fill={GALLERY_COLORS[index % GALLERY_COLORS.length]} />
+                      ))}
+                    </Bar>
+                  </BarChart>
+                </ResponsiveContainer>
               </div>
             </div>
 
@@ -1304,35 +1258,26 @@ export default function AdminPage() {
                 </h4>
               </div>
               <div className="p-4" style={{ height: "290px" }}>
-                <div style={{ height: 250 }} className="relative flex justify-center items-center">
-                  <Pie
-                    data={{
-                      labels: getDesignationData().slice(0, 5).map(d => d.name),
-                      datasets: [
-                        {
-                          data: getDesignationData().slice(0, 5).map(d => d.value),
-                          backgroundColor: GALLERY_COLORS.slice(0, 5),
-                          borderColor: '#ffffff',
-                          borderWidth: 2
-                        }
-                      ]
-                    }}
-                    options={{
-                      responsive: true,
-                      maintainAspectRatio: false,
-                      plugins: {
-                        legend: {
-                          position: 'bottom' as const,
-                          labels: {
-                            boxWidth: 8,
-                            padding: 6,
-                            font: { size: 9, weight: 'bold' }
-                          }
-                        }
-                      }
-                    }}
-                  />
-                </div>
+                <ResponsiveContainer width="100%" height="100%">
+                  <PieChart>
+                    <Pie
+                      data={getDesignationData().slice(0, 5)}
+                      dataKey="value"
+                      nameKey="name"
+                      cx="50%"
+                      cy="50%"
+                      outerRadius={75}
+                      stroke="#ffffff"
+                      strokeWidth={2}
+                    >
+                      {getDesignationData().slice(0, 5).map((_, index) => (
+                        <Cell key={`cell-${index}`} fill={GALLERY_COLORS[index % GALLERY_COLORS.length]} />
+                      ))}
+                    </Pie>
+                    <Tooltip formatter={(value) => [`${value} Employees`, 'Count']} />
+                    <Legend verticalAlign="bottom" height={36} iconType="circle" wrapperStyle={{ fontSize: 9 }} />
+                  </PieChart>
+                </ResponsiveContainer>
               </div>
             </div>
           </div>

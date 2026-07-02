@@ -27,35 +27,9 @@ import api from "../services/api";
 import Loader from "../components/common/Loader";
 
 // Register Chart.js components
-import {
-  Chart as ChartJS,
-  CategoryScale,
-  LinearScale,
-  BarElement,
-  PointElement,
-  LineElement,
-  ArcElement,
-  RadialLinearScale,
-  Title,
-  Tooltip,
-  Legend,
-  Filler
-} from 'chart.js';
-import { Bar, Doughnut, PolarArea, Pie, Line } from 'react-chartjs-2';
+import { BarChart, Bar, Cell, XAxis, YAxis, CartesianGrid, Tooltip as RechartsTooltip, Legend as RechartsLegend, ResponsiveContainer, AreaChart, Area, PieChart as RePieChart, Pie as RePie } from "recharts";
 
-ChartJS.register(
-  CategoryScale,
-  LinearScale,
-  BarElement,
-  PointElement,
-  LineElement,
-  ArcElement,
-  RadialLinearScale,
-  Title,
-  Tooltip,
-  Legend,
-  Filler
-);
+const GALLERY_COLORS = ["#2f5bb7", "#2b7d50", "#d28b2a", "#854aa5", "#d83b01", "#00a2ad", "#e81123"];
 
 interface ChartItem {
   name: string;
@@ -244,168 +218,6 @@ export default function MISReportPage() {
   const dailyLoggedData = activity?.logged ? [...activity.logged].reverse() : [];
   const dailyClosedData = activity?.closed ? [...activity.closed].reverse() : [];
   
-  const dailyChartData = {
-    labels: dailyLoggedData.map(d => formatLabelDate(d.day)),
-    datasets: [
-      {
-        fill: true,
-        label: 'Logged Calls',
-        data: dailyLoggedData.map(d => d.count),
-        backgroundColor: 'rgba(47, 91, 183, 0.15)',
-        borderColor: '#2f5bb7',
-        pointBorderColor: '#2f5bb7',
-        pointBackgroundColor: '#2f5bb7',
-        tension: 0.4
-      },
-      {
-        fill: true,
-        label: 'Closed Calls',
-        data: dailyLoggedData.map(d => {
-          const match = dailyClosedData.find(c => c.day === d.day);
-          return match ? match.count : 0;
-        }),
-        backgroundColor: 'rgba(43, 125, 80, 0.15)',
-        borderColor: '#2b7d50',
-        pointBorderColor: '#2b7d50',
-        pointBackgroundColor: '#2b7d50',
-        tension: 0.4
-      }
-    ]
-  };
-
-  // Chart 2: Top Equipment Penalties (Horizontal Bar)
-  const equipmentChartData = {
-    labels: breakdown?.equipment.map(e => e.name.length > 20 ? e.name.slice(0, 18) + ".." : e.name) || [],
-    datasets: [
-      {
-        label: 'Total Penalty Amount (₹)',
-        data: breakdown?.equipment.map(e => e.penalty) || [],
-        backgroundColor: ['#2f5bb7', '#2b7d50', '#d28b2a', '#854aa5', '#d83b01', '#00a2ad', '#e81123'],
-        borderColor: ['#2f5bb7', '#2b7d50', '#d28b2a', '#854aa5', '#d83b01', '#00a2ad', '#e81123'],
-        borderWidth: 1,
-        borderRadius: 4
-      }
-    ]
-  };
-
-  // Chart 3: District / DI Penalties (Doughnut Chart)
-  const districtChartData = {
-    labels: breakdown?.district.map(d => d.name) || [],
-    datasets: [
-      {
-        data: breakdown?.district.map(d => d.penalty) || [],
-        backgroundColor: ['#2f5bb7', '#2b7d50', '#d28b2a', '#854aa5', '#d83b01', '#00a2ad', '#e81123'],
-        borderColor: '#ffffff',
-        borderWidth: 3
-      }
-    ]
-  };
-
-  // Chart 4: Coordinator Penalties (Vertical Bar Chart)
-  const coordinatorChartData = {
-    labels: breakdown?.coordinator.map(c => c.name) || [],
-    datasets: [
-      {
-        label: 'Coordinator Penalty (₹)',
-        data: breakdown?.coordinator.map(c => c.penalty) || [],
-        backgroundColor: ['#2f5bb7', '#2b7d50', '#d28b2a', '#854aa5', '#d83b01', '#00a2ad', '#e81123'],
-        borderColor: ['#2f5bb7', '#2b7d50', '#d28b2a', '#854aa5', '#d83b01', '#00a2ad', '#e81123'],
-        borderWidth: 1,
-        borderRadius: 4
-      }
-    ]
-  };
-
-  // Chart 5: Hospital Type share (Pie Chart)
-  const hospTypeChartData = {
-    labels: breakdown?.hospital_type.map(h => h.type) || [],
-    datasets: [
-      {
-        data: breakdown?.hospital_type.map(h => h.penalty) || [],
-        backgroundColor: ['#2f5bb7', '#2b7d50', '#d28b2a', '#854aa5', '#d83b01', '#00a2ad'],
-        borderColor: '#ffffff',
-        borderWidth: 3
-      }
-    ]
-  };
-
-  // Chart 6: Warranty share (Doughnut cutout)
-  const warrantyChartData = {
-    labels: breakdown?.warranty.map(w => w.status) || [],
-    datasets: [
-      {
-        data: breakdown?.warranty.map(w => w.penalty) || [],
-        backgroundColor: ['#2b7d50', '#d83b01'],
-        borderColor: '#ffffff',
-        borderWidth: 3
-      }
-    ]
-  };
-
-  // Chart 7: Top Hospital Penalties (Bar Chart)
-  const hospitalChartData = {
-    labels: breakdown?.hospital.map(h => h.name.length > 15 ? h.name.slice(0, 12) + ".." : h.name) || [],
-    datasets: [
-      {
-        label: 'Hospital Penalty (₹)',
-        data: breakdown?.hospital.map(h => h.penalty) || [],
-        backgroundColor: ['#2f5bb7', '#2b7d50', '#d28b2a', '#854aa5', '#d83b01', '#00a2ad', '#e81123'],
-        borderColor: ['#2f5bb7', '#2b7d50', '#d28b2a', '#854aa5', '#d83b01', '#00a2ad', '#e81123'],
-        borderWidth: 1,
-        borderRadius: 4
-      }
-    ]
-  };
-
-  // Chart 8: Zone share (Polar Area)
-  const zoneChartData = {
-    labels: breakdown?.zone.map(z => z.name + " Zone") || [],
-    datasets: [
-      {
-        data: breakdown?.zone.map(z => z.penalty) || [],
-        backgroundColor: [
-          'rgba(255, 193, 7, 0.85)',
-          'rgba(23, 162, 184, 0.85)',
-          'rgba(40, 167, 69, 0.85)',
-          'rgba(220, 53, 69, 0.85)',
-          'rgba(0, 123, 255, 0.85)',
-          'rgba(111, 66, 193, 0.85)'
-        ]
-      }
-    ]
-  };
-
-  // Chart 9: Monthly SLA Penalty Trend (Line Chart)
-  const monthlyTrendChartData = {
-    labels: breakdown?.monthly_trend.map(m => m.month) || [],
-    datasets: [
-      {
-        fill: true,
-        label: 'Monthly Penalty Total (₹)',
-        data: breakdown?.monthly_trend.map(m => m.penalty) || [],
-        backgroundColor: 'rgba(111, 66, 193, 0.15)',
-        borderColor: 'rgba(111, 66, 193, 1)',
-        pointBorderColor: '#6f42c1',
-        pointBackgroundColor: 'rgba(111, 66, 193, 1)',
-        tension: 0.3
-      }
-    ]
-  };
-
-  // Chart 10: Top Service Providers / Vendors (Horizontal Bar)
-  const vendorChartData = {
-    labels: breakdown?.vendor.map(v => v.name.length > 20 ? v.name.slice(0, 18) + ".." : v.name) || [],
-    datasets: [
-      {
-        label: 'Vendor Penalty Assessed (₹)',
-        data: breakdown?.vendor.map(v => v.penalty) || [],
-        backgroundColor: '#17a2b8',
-        borderColor: '#117a8b',
-        borderWidth: 1,
-        borderRadius: 2
-      }
-    ]
-  };
 
   return (
     <div className="space-y-6 text-slate-800 font-sans">
@@ -675,25 +487,34 @@ export default function MISReportPage() {
               <Activity className="w-4 h-4 text-blue-500" />
               <h4 className="text-xs font-bold text-slate-700 uppercase tracking-wide">Daily Logged vs Closed Calls (Area Chart)</h4>
             </div>
-            <div className="p-4 h-64 relative">
-              <Line 
-                data={dailyChartData} 
-                options={{
-                  responsive: true,
-                  maintainAspectRatio: false,
-                  scales: {
-                    x: { grid: { display: false } },
-                    y: { ticks: { precision: 0 } }
-                  },
-                  plugins: {
-                    legend: {
-                      position: 'top',
-                      labels: { boxWidth: 12, font: { size: 10, weight: 'bold' } }
-                    }
-                  }
-                }} 
-              />
-            </div>
+              <ResponsiveContainer width="100%" height="100%">
+                <AreaChart data={dailyLoggedData.map((d, index) => {
+                  const match = dailyClosedData.find(c => c.day === d.day);
+                  return {
+                    day: formatLabelDate(d.day),
+                    Logged: d.count,
+                    Closed: match ? match.count : 0
+                  };
+                })} margin={{ left: 10, right: 10, top: 10, bottom: 5 }}>
+                  <defs>
+                    <linearGradient id="colorLogged" x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="5%" stopColor="#2f5bb7" stopOpacity={0.2}/>
+                      <stop offset="95%" stopColor="#2f5bb7" stopOpacity={0.01}/>
+                    </linearGradient>
+                    <linearGradient id="colorClosed" x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="5%" stopColor="#2b7d50" stopOpacity={0.2}/>
+                      <stop offset="95%" stopColor="#2b7d50" stopOpacity={0.01}/>
+                    </linearGradient>
+                  </defs>
+                  <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
+                  <XAxis dataKey="day" tick={{ fontSize: 9 }} />
+                  <YAxis tick={{ fontSize: 9 }} allowDecimals={false} />
+                  <RechartsTooltip />
+                  <RechartsLegend verticalAlign="top" height={36} iconType="circle" wrapperStyle={{ fontSize: 10, fontWeight: 'bold' }} />
+                  <Area type="monotone" dataKey="Logged" stroke="#2f5bb7" strokeWidth={2} fill="url(#colorLogged)" />
+                  <Area type="monotone" dataKey="Closed" stroke="#2b7d50" strokeWidth={2} fill="url(#colorClosed)" />
+                </AreaChart>
+              </ResponsiveContainer>
           </div>
 
           {/* 3x3 Grid for Breakdown charts */}
@@ -705,22 +526,23 @@ export default function MISReportPage() {
                 <Layers className="w-4 h-4 text-red-500" />
                 <h4 className="text-xs font-bold text-slate-700 uppercase tracking-wide">Top Equipment Penalties</h4>
               </div>
-              <div className="p-4 h-60 relative">
-                <Bar 
-                  data={equipmentChartData} 
-                  options={{
-                    indexAxis: 'y',
-                    responsive: true,
-                    maintainAspectRatio: false,
-                    scales: {
-                      x: { grid: { display: false } },
-                      y: { grid: { display: false } }
-                    },
-                    plugins: {
-                      legend: { display: false }
-                    }
-                  }} 
-                />
+              <div className="p-4 h-60">
+                <ResponsiveContainer width="100%" height="100%">
+                  <BarChart data={breakdown?.equipment.map((e) => ({
+                    name: e.name.length > 20 ? e.name.slice(0, 18) + ".." : e.name,
+                    penalty: e.penalty
+                  })) || []} layout="vertical" margin={{ left: 10, right: 10, top: 5, bottom: 5 }}>
+                    <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" horizontal={false} vertical={true} />
+                    <XAxis type="number" tick={{ fontSize: 9 }} tickFormatter={(v) => `₹${v.toLocaleString()}`} />
+                    <YAxis type="category" dataKey="name" tick={{ fontSize: 8 }} width={80} />
+                    <RechartsTooltip formatter={(v: number) => `₹${v.toLocaleString()}`} />
+                    <Bar dataKey="penalty" radius={[0, 4, 4, 0]} maxBarSize={16}>
+                      {(breakdown?.equipment || []).map((_, index) => (
+                        <Cell key={`cell-${index}`} fill={GALLERY_COLORS[index % GALLERY_COLORS.length]} />
+                      ))}
+                    </Bar>
+                  </BarChart>
+                </ResponsiveContainer>
               </div>
             </div>
 
@@ -730,20 +552,31 @@ export default function MISReportPage() {
                 <MapPin className="w-4 h-4 text-[#28a745]" />
                 <h4 className="text-xs font-bold text-slate-700 uppercase tracking-wide">District (DI) Penalties</h4>
               </div>
-              <div className="p-4 h-60 flex justify-center items-center relative">
-                <Doughnut 
-                  data={districtChartData} 
-                  options={{
-                    responsive: true,
-                    maintainAspectRatio: false,
-                    plugins: {
-                      legend: {
-                        position: 'right',
-                        labels: { boxWidth: 10, font: { size: 9 } }
-                      }
-                    }
-                  }} 
-                />
+              <div className="p-4 h-60">
+                <ResponsiveContainer width="100%" height="100%">
+                  <RePieChart margin={{ top: 10, right: 10, bottom: 10, left: 10 }}>
+                    <RePie
+                      data={breakdown?.district.map(d => ({
+                        name: d.name,
+                        value: d.penalty
+                      })) || []}
+                      cx="50%"
+                      cy="50%"
+                      innerRadius={45}
+                      outerRadius={70}
+                      paddingAngle={3}
+                      dataKey="value"
+                      stroke="#ffffff"
+                      strokeWidth={2}
+                    >
+                      {(breakdown?.district || []).map((_, index) => (
+                        <Cell key={`cell-${index}`} fill={GALLERY_COLORS[index % GALLERY_COLORS.length]} />
+                      ))}
+                    </RePie>
+                    <RechartsTooltip formatter={(v: number) => `₹${v.toLocaleString()}`} />
+                    <RechartsLegend verticalAlign="bottom" height={36} iconType="circle" wrapperStyle={{ fontSize: 9 }} />
+                  </RePieChart>
+                </ResponsiveContainer>
               </div>
             </div>
 
@@ -753,21 +586,23 @@ export default function MISReportPage() {
                 <UserCheck className="w-4 h-4 text-blue-500" />
                 <h4 className="text-xs font-bold text-slate-700 uppercase tracking-wide">Coordinator Penalties</h4>
               </div>
-              <div className="p-4 h-60 relative">
-                <Bar 
-                  data={coordinatorChartData} 
-                  options={{
-                    responsive: true,
-                    maintainAspectRatio: false,
-                    scales: {
-                      x: { grid: { display: false } },
-                      y: { grid: { display: false } }
-                    },
-                    plugins: {
-                      legend: { display: false }
-                    }
-                  }} 
-                />
+              <div className="p-4 h-60">
+                <ResponsiveContainer width="100%" height="100%">
+                  <BarChart data={breakdown?.coordinator.map(c => ({
+                    name: c.name,
+                    penalty: c.penalty
+                  })) || []} margin={{ left: 5, right: 5, top: 10, bottom: 5 }}>
+                    <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" horizontal={true} vertical={false} />
+                    <XAxis dataKey="name" tick={{ fontSize: 9 }} />
+                    <YAxis tick={{ fontSize: 9 }} tickFormatter={(v) => `₹${(v / 1000).toFixed(0)}k`} />
+                    <RechartsTooltip formatter={(v: number) => `₹${v.toLocaleString()}`} />
+                    <Bar dataKey="penalty" radius={[4, 4, 0, 0]} maxBarSize={30}>
+                      {(breakdown?.coordinator || []).map((_, index) => (
+                        <Cell key={`cell-${index}`} fill={GALLERY_COLORS[index % GALLERY_COLORS.length]} />
+                      ))}
+                    </Bar>
+                  </BarChart>
+                </ResponsiveContainer>
               </div>
             </div>
 
@@ -777,20 +612,29 @@ export default function MISReportPage() {
                 <PieChart className="w-4 h-4 text-purple-500" />
                 <h4 className="text-xs font-bold text-slate-700 uppercase tracking-wide">Hospital Type Penalties</h4>
               </div>
-              <div className="p-4 h-60 flex justify-center items-center relative">
-                <Pie 
-                  data={hospTypeChartData} 
-                  options={{
-                    responsive: true,
-                    maintainAspectRatio: false,
-                    plugins: {
-                      legend: {
-                        position: 'right',
-                        labels: { boxWidth: 10, font: { size: 9 } }
-                      }
-                    }
-                  }} 
-                />
+              <div className="p-4 h-60">
+                <ResponsiveContainer width="100%" height="100%">
+                  <RePieChart margin={{ top: 10, right: 10, bottom: 10, left: 10 }}>
+                    <RePie
+                      data={breakdown?.hospital_type.map(h => ({
+                        name: h.type,
+                        value: h.penalty
+                      })) || []}
+                      cx="50%"
+                      cy="50%"
+                      outerRadius={70}
+                      dataKey="value"
+                      stroke="#ffffff"
+                      strokeWidth={2}
+                    >
+                      {(breakdown?.hospital_type || []).map((_, index) => (
+                        <Cell key={`cell-${index}`} fill={GALLERY_COLORS[index % GALLERY_COLORS.length]} />
+                      ))}
+                    </RePie>
+                    <RechartsTooltip formatter={(v: number) => `₹${v.toLocaleString()}`} />
+                    <RechartsLegend verticalAlign="bottom" height={36} iconType="circle" wrapperStyle={{ fontSize: 9 }} />
+                  </RePieChart>
+                </ResponsiveContainer>
               </div>
             </div>
 
@@ -800,20 +644,30 @@ export default function MISReportPage() {
                 <ShieldCheck className="w-4 h-4 text-[#17a2b8]" />
                 <h4 className="text-xs font-bold text-slate-700 uppercase tracking-wide">Warranty Status share</h4>
               </div>
-              <div className="p-4 h-60 flex justify-center items-center relative">
-                <Doughnut 
-                  data={warrantyChartData} 
-                  options={{
-                    responsive: true,
-                    maintainAspectRatio: false,
-                    plugins: {
-                      legend: {
-                        position: 'right',
-                        labels: { boxWidth: 10, font: { size: 9 } }
-                      }
-                    }
-                  }} 
-                />
+              <div className="p-4 h-60">
+                <ResponsiveContainer width="100%" height="100%">
+                  <RePieChart margin={{ top: 10, right: 10, bottom: 10, left: 10 }}>
+                    <RePie
+                      data={breakdown?.warranty.map(w => ({
+                        name: w.status,
+                        value: w.penalty
+                      })) || []}
+                      cx="50%"
+                      cy="50%"
+                      innerRadius={45}
+                      outerRadius={70}
+                      paddingAngle={3}
+                      dataKey="value"
+                      stroke="#ffffff"
+                      strokeWidth={2}
+                    >
+                      <Cell fill="#2b7d50" />
+                      <Cell fill="#d83b01" />
+                    </RePie>
+                    <RechartsTooltip formatter={(v: number) => `₹${v.toLocaleString()}`} />
+                    <RechartsLegend verticalAlign="bottom" height={36} iconType="circle" wrapperStyle={{ fontSize: 9 }} />
+                  </RePieChart>
+                </ResponsiveContainer>
               </div>
             </div>
 
@@ -823,21 +677,23 @@ export default function MISReportPage() {
                 <Building className="w-4 h-4 text-orange-500" />
                 <h4 className="text-xs font-bold text-slate-700 uppercase tracking-wide">Top Hospital Penalties</h4>
               </div>
-              <div className="p-4 h-60 relative">
-                <Bar 
-                  data={hospitalChartData} 
-                  options={{
-                    responsive: true,
-                    maintainAspectRatio: false,
-                    scales: {
-                      x: { grid: { display: false } },
-                      y: { grid: { display: false } }
-                    },
-                    plugins: {
-                      legend: { display: false }
-                    }
-                  }} 
-                />
+              <div className="p-4 h-60">
+                <ResponsiveContainer width="100%" height="100%">
+                  <BarChart data={breakdown?.hospital.map(h => ({
+                    name: h.name.length > 15 ? h.name.slice(0, 12) + ".." : h.name,
+                    penalty: h.penalty
+                  })) || []} margin={{ left: 5, right: 5, top: 10, bottom: 5 }}>
+                    <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" horizontal={true} vertical={false} />
+                    <XAxis dataKey="name" tick={{ fontSize: 9 }} />
+                    <YAxis tick={{ fontSize: 9 }} tickFormatter={(v) => `₹${(v / 1000).toFixed(0)}k`} />
+                    <RechartsTooltip formatter={(v: number) => `₹${v.toLocaleString()}`} />
+                    <Bar dataKey="penalty" radius={[4, 4, 0, 0]} maxBarSize={30}>
+                      {(breakdown?.hospital || []).map((_, index) => (
+                        <Cell key={`cell-${index}`} fill={GALLERY_COLORS[index % GALLERY_COLORS.length]} />
+                      ))}
+                    </Bar>
+                  </BarChart>
+                </ResponsiveContainer>
               </div>
             </div>
 
@@ -847,20 +703,29 @@ export default function MISReportPage() {
                 <BarChart2 className="w-4 h-4 text-[#ffc107]" />
                 <h4 className="text-xs font-bold text-slate-700 uppercase tracking-wide">Zone-wise Penalties</h4>
               </div>
-              <div className="p-4 h-60 flex justify-center items-center relative">
-                <PolarArea 
-                  data={zoneChartData} 
-                  options={{
-                    responsive: true,
-                    maintainAspectRatio: false,
-                    plugins: {
-                      legend: {
-                        position: 'right',
-                        labels: { boxWidth: 10, font: { size: 9 } }
-                      }
-                    }
-                  }} 
-                />
+              <div className="p-4 h-60">
+                <ResponsiveContainer width="100%" height="100%">
+                  <RePieChart margin={{ top: 10, right: 10, bottom: 10, left: 10 }}>
+                    <RePie
+                      data={breakdown?.zone.map(z => ({
+                        name: z.name,
+                        value: z.penalty
+                      })) || []}
+                      cx="50%"
+                      cy="50%"
+                      outerRadius={70}
+                      dataKey="value"
+                      stroke="#ffffff"
+                      strokeWidth={2}
+                    >
+                      {(breakdown?.zone || []).map((_, index) => (
+                        <Cell key={`cell-${index}`} fill={GALLERY_COLORS[index % GALLERY_COLORS.length]} />
+                      ))}
+                    </RePie>
+                    <RechartsTooltip formatter={(v: number) => `₹${v.toLocaleString()}`} />
+                    <RechartsLegend verticalAlign="bottom" height={36} iconType="circle" wrapperStyle={{ fontSize: 9 }} />
+                  </RePieChart>
+                </ResponsiveContainer>
               </div>
             </div>
 
@@ -870,21 +735,25 @@ export default function MISReportPage() {
                 <Calendar className="w-4 h-4 text-purple-500" />
                 <h4 className="text-xs font-bold text-slate-700 uppercase tracking-wide">Monthly Penalty Trend</h4>
               </div>
-              <div className="p-4 h-60 relative">
-                <Line 
-                  data={monthlyTrendChartData} 
-                  options={{
-                    responsive: true,
-                    maintainAspectRatio: false,
-                    scales: {
-                      x: { grid: { display: false } },
-                      y: { ticks: { precision: 0 } }
-                    },
-                    plugins: {
-                      legend: { display: false }
-                    }
-                  }} 
-                />
+              <div className="p-4 h-60">
+                <ResponsiveContainer width="100%" height="100%">
+                  <AreaChart data={breakdown?.monthly_trend.map(m => ({
+                    month: m.month,
+                    penalty: m.penalty
+                  })) || []} margin={{ left: 10, right: 10, top: 10, bottom: 5 }}>
+                    <defs>
+                      <linearGradient id="colorMonthly" x1="0" y1="0" x2="0" y2="1">
+                        <stop offset="5%" stopColor="#854aa5" stopOpacity={0.2}/>
+                        <stop offset="95%" stopColor="#854aa5" stopOpacity={0.01}/>
+                      </linearGradient>
+                    </defs>
+                    <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
+                    <XAxis dataKey="month" tick={{ fontSize: 9 }} />
+                    <YAxis tick={{ fontSize: 9 }} tickFormatter={(v) => `₹${(v / 1000).toFixed(0)}k`} />
+                    <RechartsTooltip formatter={(v: number) => `₹${v.toLocaleString()}`} />
+                    <Area type="monotone" dataKey="penalty" stroke="#854aa5" strokeWidth={2} fill="url(#colorMonthly)" />
+                  </AreaChart>
+                </ResponsiveContainer>
               </div>
             </div>
 
@@ -894,22 +763,23 @@ export default function MISReportPage() {
                 <Briefcase className="w-4 h-4 text-teal-500" />
                 <h4 className="text-xs font-bold text-slate-700 uppercase tracking-wide">Top Vendor Penalties</h4>
               </div>
-              <div className="p-4 h-60 relative">
-                <Bar 
-                  data={vendorChartData} 
-                  options={{
-                    indexAxis: 'y',
-                    responsive: true,
-                    maintainAspectRatio: false,
-                    scales: {
-                      x: { grid: { display: false } },
-                      y: { grid: { display: false } }
-                    },
-                    plugins: {
-                      legend: { display: false }
-                    }
-                  }} 
-                />
+              <div className="p-4 h-60">
+                <ResponsiveContainer width="100%" height="100%">
+                  <BarChart data={breakdown?.vendor.map((v) => ({
+                    name: v.name.length > 20 ? v.name.slice(0, 18) + ".." : v.name,
+                    penalty: v.penalty
+                  })) || []} layout="vertical" margin={{ left: 10, right: 10, top: 5, bottom: 5 }}>
+                    <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" horizontal={false} vertical={true} />
+                    <XAxis type="number" tick={{ fontSize: 9 }} tickFormatter={(v) => `₹${v.toLocaleString()}`} />
+                    <YAxis type="category" dataKey="name" tick={{ fontSize: 8 }} width={80} />
+                    <RechartsTooltip formatter={(v: number) => `₹${v.toLocaleString()}`} />
+                    <Bar dataKey="penalty" radius={[0, 4, 4, 0]} maxBarSize={16}>
+                      {(breakdown?.vendor || []).map((_, index) => (
+                        <Cell key={`cell-${index}`} fill={GALLERY_COLORS[index % GALLERY_COLORS.length]} />
+                      ))}
+                    </Bar>
+                  </BarChart>
+                </ResponsiveContainer>
               </div>
             </div>
 
