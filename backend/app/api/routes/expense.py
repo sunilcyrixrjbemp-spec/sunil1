@@ -23,6 +23,115 @@ from app.config.settings import settings
 
 router = APIRouter()
 
+@router.get("/debug-db-schema-temp")
+def debug_db_schema_temp(db: Session = Depends(get_db)):
+    import traceback
+    from sqlalchemy import inspect, text
+    inspector = inspect(db.bind)
+    
+    result = {
+        "tables": inspector.get_table_names(),
+        "expenses_columns": [c["name"] for c in inspector.get_columns("expenses")],
+        "expense_itineraries_columns": [c["name"] for c in inspector.get_columns("expense_itineraries")],
+        "expense_edit_logs_columns": [c["name"] for c in inspector.get_columns("expense_edit_logs")],
+        "test_insert_status": "Not run",
+        "error": None
+    }
+    
+    # Try inserting a mock expense and itinerary leg, then roll back
+    try:
+        db.begin_nested()
+        
+        # 1. Get a test user
+        from app.models.user import User
+        user = db.query(User).first()
+        if not user:
+            result["test_insert_status"] = "No users found in DB to test"
+            db.rollback()
+            return result
+            
+        # 2. Try inserting mock Expense
+        from app.models.expense import Expense
+        mock_exp = Expense(
+            user_id=user.id,
+            expense_code="RJ-TEST-000000",
+            month="July",
+            year=2026,
+            amount=100.0,
+            status="draft",
+            travel_mode="Bike",
+            itinerary="2026-07-04",
+            description="Test description",
+            attachments="[]",
+            da_amount=0.0,
+            hotel_amount=0.0,
+            other_expense_amount=0.0,
+            local_purchase_amount=0.0,
+            calls_assigned=0,
+            calls_completed=0,
+            pms_count=0,
+            asset_tagging=0,
+            calibration_count=0,
+            mobilise_count=0,
+            original_amount=100.0,
+            original_da_amount=0.0,
+            original_hotel_amount=0.0,
+            original_other_expense_amount=0.0,
+            original_local_purchase_amount=0.0
+        )
+        db.add(mock_exp)
+        db.flush()
+        
+        # 3. Try inserting mock Itinerary
+        from app.models.expense_itinerary import ExpenseItinerary
+        mock_iti = ExpenseItinerary(
+            itinerary_id="RJ-TEST-000000-1",
+            exp_id="RJ-TEST-000000",
+            leg_number=1,
+            from_district="Jodhpur",
+            to_district="Jodhpur",
+            from_location="A",
+            to_location="B",
+            travel_mode="Bike",
+            distance_km=10.0,
+            travel_amount=45.0,
+            sub_mode=None,
+            sub_km=0.0,
+            sub_amount=0.0,
+            da_amount=150.0,
+            hotel_amount=0.0,
+            local_purchase=0.0,
+            other_desc=None,
+            other_amount=0.0,
+            calls_assigned=0,
+            calls_completed=0,
+            pms_count=0,
+            asset_tagging=0,
+            calibration_count=0,
+            mobilise_count=0,
+            visit_purpose="Test",
+            activity_details=None,
+            original_distance_km=10.0,
+            original_travel_amount=45.0,
+            original_sub_amount=0.0,
+            original_da_amount=150.0,
+            original_hotel_amount=0.0,
+            original_other_amount=0.0,
+            original_local_purchase=0.0
+        )
+        db.add(mock_iti)
+        db.flush()
+        
+        result["test_insert_status"] = "Success (Mock inserts flushed and rolled back)"
+        db.rollback()
+    except Exception as e:
+        db.rollback()
+        result["test_insert_status"] = "Failed"
+        result["error"] = str(e)
+        result["traceback"] = traceback.format_exc()
+        
+    return result
+
 def parse_client_timestamp(ts_str: str | None) -> datetime:
     if not ts_str:
         return datetime.now()
