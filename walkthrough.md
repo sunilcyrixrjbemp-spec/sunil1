@@ -23,6 +23,13 @@ We have completed the implementation of the core features and enhancements reque
         *   A manager rejects a claim (notifies the submitter with remarks).
         *   A support ticket is created (notifies assignee), replied to (notifies other party), or closed/reopened (notifies creator/assignee).
     *   **Frontend Refactoring**: Refactored `NotificationsPage.tsx` and `DashboardLayout.tsx` to fetch notifications from the new API endpoints and perform optimistic UI state updates. Read states are now 100% saved in the database.
+    *   **MIME Type Mismatch & ChunkLoadError Recovery**:
+        - **Identified Root Cause**: When a new frontend deployment completes, previous chunk hashes are replaced on the server. If the user's browser has cached the old `index.html`, it requests deleted JS chunk files. The server falls back to returning the main index HTML (`text/html`), causing a browser MIME type mismatch error and a blank page.
+        - **Implemented Solution**: Added a global error-event recovery script inside the `<head>` of `index.html`. This script listens for resource loading errors (stylesheet or JS chunk fails). If a chunk loading mismatch is detected, it automatically clears dynamic variables and triggers a page reload (`window.location.reload()`) once to fetch the latest production asset files.
+        - **Bundler Simplification**: Removed custom manual chunks configurations from `vite.config.ts` to ensure stable, default module compilation.
+    *   **GPU-Accelerated Tailwind Animations (wow.js/animate.css equivalent)**:
+        - **Custom Keyframe Configurations**: Configured hardware-accelerated transition animations (`fade-in-up`, `scale-up`, `slide-in-right`, and loading `shimmer` gradients) inside the extend block of `tailwind.config.js`.
+        - **Performance & Stability**: This enables highly optimized, GPU-rendered CSS transitions across all cards, modals, and charts with zero extra JavaScript payloads or third-party dependency weight.
 
 ### 2. 📲 Google Play Services Status Bar Push Notifications
 *   **Problem**: Push notifications were only visible inside the app's bell icon, but did not appear in the phone's top status bar notification tray.
