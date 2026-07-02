@@ -96,6 +96,46 @@ interface DashboardData {
   };
 }
 
+const CustomMoneyTooltip = ({ active, payload }: any) => {
+  if (active && payload && payload.length) {
+    return (
+      <div className="bg-slate-900/95 backdrop-blur-md text-white border border-slate-800 shadow-2xl rounded-xl p-3 text-xs min-w-[120px] font-sans pointer-events-none">
+        <p className="font-extrabold text-[10px] uppercase text-slate-400 tracking-wider mb-1.5">{payload[0].name}</p>
+        <div className="flex items-center justify-between gap-4">
+          <span className="flex items-center gap-1.5 text-slate-300">
+            <span className="w-2 h-2 rounded-full" style={{ backgroundColor: payload[0].payload.fill || payload[0].color }} />
+            Penalty:
+          </span>
+          <span className="font-mono font-bold text-white">₹{payload[0].value?.toLocaleString()}</span>
+        </div>
+      </div>
+    );
+  }
+  return null;
+};
+
+const CustomCountTooltip = ({ active, payload }: any) => {
+  if (active && payload && payload.length) {
+    return (
+      <div className="bg-slate-900/95 backdrop-blur-md text-white border border-slate-800 shadow-2xl rounded-xl p-3 text-xs min-w-[120px] font-sans pointer-events-none">
+        <p className="font-extrabold text-[10px] uppercase text-slate-400 tracking-wider mb-1.5">{payload[0].payload.day || payload[0].name}</p>
+        <div className="space-y-1">
+          {payload.map((item: any, idx: number) => (
+            <div key={idx} className="flex items-center justify-between gap-4">
+              <span className="flex items-center gap-1.5 text-slate-300">
+                <span className="w-2 h-2 rounded-full" style={{ backgroundColor: item.color }} />
+                {item.name}:
+              </span>
+              <span className="font-mono font-bold text-white">{item.value}</span>
+            </div>
+          ))}
+        </div>
+      </div>
+    );
+  }
+  return null;
+};
+
 export default function MISReportPage() {
   const [data, setData] = useState<DashboardData | null>(null);
   const [loading, setLoading] = useState(true);
@@ -505,11 +545,15 @@ export default function MISReportPage() {
                       <stop offset="5%" stopColor="#2b7d50" stopOpacity={0.2}/>
                       <stop offset="95%" stopColor="#2b7d50" stopOpacity={0.01}/>
                     </linearGradient>
+                    <linearGradient id="colorMonthly" x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="5%" stopColor="#854aa5" stopOpacity={0.2}/>
+                      <stop offset="95%" stopColor="#854aa5" stopOpacity={0.01}/>
+                    </linearGradient>
                   </defs>
-                  <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
+                  <CartesianGrid strokeDasharray="3 3" stroke="#f3f4f6" />
                   <XAxis dataKey="day" tick={{ fontSize: 9 }} />
                   <YAxis tick={{ fontSize: 9 }} allowDecimals={false} />
-                  <RechartsTooltip />
+                  <RechartsTooltip content={<CustomCountTooltip />} />
                   <RechartsLegend verticalAlign="top" height={36} iconType="circle" wrapperStyle={{ fontSize: 10, fontWeight: 'bold' }} />
                   <Area type="monotone" dataKey="Logged" stroke="#2f5bb7" strokeWidth={2} fill="url(#colorLogged)" />
                   <Area type="monotone" dataKey="Closed" stroke="#2b7d50" strokeWidth={2} fill="url(#colorClosed)" />
@@ -532,11 +576,11 @@ export default function MISReportPage() {
                     name: e.name.length > 20 ? e.name.slice(0, 18) + ".." : e.name,
                     penalty: e.penalty
                   })) || []} layout="vertical" margin={{ left: 10, right: 10, top: 5, bottom: 5 }}>
-                    <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" horizontal={false} vertical={true} />
+                    <CartesianGrid strokeDasharray="3 3" stroke="#f3f4f6" horizontal={false} vertical={true} />
                     <XAxis type="number" tick={{ fontSize: 9 }} tickFormatter={(v) => `₹${v.toLocaleString()}`} />
                     <YAxis type="category" dataKey="name" tick={{ fontSize: 8 }} width={80} />
-                    <RechartsTooltip formatter={(v: number) => `₹${v.toLocaleString()}`} />
-                    <Bar dataKey="penalty" radius={[0, 4, 4, 0]} maxBarSize={16}>
+                    <RechartsTooltip content={<CustomMoneyTooltip />} />
+                    <Bar dataKey="penalty" radius={[0, 6, 6, 0]} maxBarSize={16}>
                       {(breakdown?.equipment || []).map((_, index) => (
                         <Cell key={`cell-${index}`} fill={GALLERY_COLORS[index % GALLERY_COLORS.length]} />
                       ))}
@@ -553,30 +597,38 @@ export default function MISReportPage() {
                 <h4 className="text-xs font-bold text-slate-700 uppercase tracking-wide">District (DI) Penalties</h4>
               </div>
               <div className="p-4 h-60">
-                <ResponsiveContainer width="100%" height="100%">
-                  <RePieChart margin={{ top: 10, right: 10, bottom: 10, left: 10 }}>
-                    <RePie
-                      data={breakdown?.district.map(d => ({
-                        name: d.name,
-                        value: d.penalty
-                      })) || []}
-                      cx="50%"
-                      cy="50%"
-                      innerRadius={45}
-                      outerRadius={70}
-                      paddingAngle={3}
-                      dataKey="value"
-                      stroke="#ffffff"
-                      strokeWidth={2}
-                    >
-                      {(breakdown?.district || []).map((_, index) => (
-                        <Cell key={`cell-${index}`} fill={GALLERY_COLORS[index % GALLERY_COLORS.length]} />
-                      ))}
-                    </RePie>
-                    <RechartsTooltip formatter={(v: number) => `₹${v.toLocaleString()}`} />
-                    <RechartsLegend verticalAlign="bottom" height={36} iconType="circle" wrapperStyle={{ fontSize: 9 }} />
-                  </RePieChart>
-                </ResponsiveContainer>
+                <div className="relative flex justify-center items-center h-full">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <RePieChart margin={{ top: 10, right: 10, bottom: 10, left: 10 }}>
+                      <RePie
+                        data={breakdown?.district.map(d => ({
+                          name: d.name,
+                          value: d.penalty
+                        })) || []}
+                        cx="50%"
+                        cy="50%"
+                        innerRadius={45}
+                        outerRadius={65}
+                        paddingAngle={3}
+                        dataKey="value"
+                        stroke="#ffffff"
+                        strokeWidth={2}
+                      >
+                        {(breakdown?.district || []).map((_, index) => (
+                          <Cell key={`cell-${index}`} fill={GALLERY_COLORS[index % GALLERY_COLORS.length]} />
+                        ))}
+                      </RePie>
+                      <RechartsTooltip content={<CustomMoneyTooltip />} />
+                      <RechartsLegend verticalAlign="bottom" height={36} iconType="circle" wrapperStyle={{ fontSize: 9, fontWeight: 'bold' }} />
+                    </RePieChart>
+                  </ResponsiveContainer>
+                  <div className="absolute flex flex-col items-center justify-center pointer-events-none" style={{ top: '40%', left: '50%', transform: 'translate(-50%, -50%)' }}>
+                    <span className="text-[8px] text-gray-400 font-bold uppercase tracking-wider">Total</span>
+                    <span className="text-[10px] font-black text-slate-800 font-mono">
+                      ₹{breakdown?.district.reduce((sum, item) => sum + item.penalty, 0).toLocaleString()}
+                    </span>
+                  </div>
+                </div>
               </div>
             </div>
 
@@ -592,11 +644,11 @@ export default function MISReportPage() {
                     name: c.name,
                     penalty: c.penalty
                   })) || []} margin={{ left: 5, right: 5, top: 10, bottom: 5 }}>
-                    <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" horizontal={true} vertical={false} />
+                    <CartesianGrid strokeDasharray="3 3" stroke="#f3f4f6" horizontal={true} vertical={false} />
                     <XAxis dataKey="name" tick={{ fontSize: 9 }} />
                     <YAxis tick={{ fontSize: 9 }} tickFormatter={(v) => `₹${(v / 1000).toFixed(0)}k`} />
-                    <RechartsTooltip formatter={(v: number) => `₹${v.toLocaleString()}`} />
-                    <Bar dataKey="penalty" radius={[4, 4, 0, 0]} maxBarSize={30}>
+                    <RechartsTooltip content={<CustomMoneyTooltip />} />
+                    <Bar dataKey="penalty" radius={[6, 6, 0, 0]} maxBarSize={30}>
                       {(breakdown?.coordinator || []).map((_, index) => (
                         <Cell key={`cell-${index}`} fill={GALLERY_COLORS[index % GALLERY_COLORS.length]} />
                       ))}
@@ -622,7 +674,7 @@ export default function MISReportPage() {
                       })) || []}
                       cx="50%"
                       cy="50%"
-                      outerRadius={70}
+                      outerRadius={65}
                       dataKey="value"
                       stroke="#ffffff"
                       strokeWidth={2}
@@ -631,8 +683,8 @@ export default function MISReportPage() {
                         <Cell key={`cell-${index}`} fill={GALLERY_COLORS[index % GALLERY_COLORS.length]} />
                       ))}
                     </RePie>
-                    <RechartsTooltip formatter={(v: number) => `₹${v.toLocaleString()}`} />
-                    <RechartsLegend verticalAlign="bottom" height={36} iconType="circle" wrapperStyle={{ fontSize: 9 }} />
+                    <RechartsTooltip content={<CustomMoneyTooltip />} />
+                    <RechartsLegend verticalAlign="bottom" height={36} iconType="circle" wrapperStyle={{ fontSize: 9, fontWeight: 'bold' }} />
                   </RePieChart>
                 </ResponsiveContainer>
               </div>
@@ -645,29 +697,37 @@ export default function MISReportPage() {
                 <h4 className="text-xs font-bold text-slate-700 uppercase tracking-wide">Warranty Status share</h4>
               </div>
               <div className="p-4 h-60">
-                <ResponsiveContainer width="100%" height="100%">
-                  <RePieChart margin={{ top: 10, right: 10, bottom: 10, left: 10 }}>
-                    <RePie
-                      data={breakdown?.warranty.map(w => ({
-                        name: w.status,
-                        value: w.penalty
-                      })) || []}
-                      cx="50%"
-                      cy="50%"
-                      innerRadius={45}
-                      outerRadius={70}
-                      paddingAngle={3}
-                      dataKey="value"
-                      stroke="#ffffff"
-                      strokeWidth={2}
-                    >
-                      <Cell fill="#2b7d50" />
-                      <Cell fill="#d83b01" />
-                    </RePie>
-                    <RechartsTooltip formatter={(v: number) => `₹${v.toLocaleString()}`} />
-                    <RechartsLegend verticalAlign="bottom" height={36} iconType="circle" wrapperStyle={{ fontSize: 9 }} />
-                  </RePieChart>
-                </ResponsiveContainer>
+                <div className="relative flex justify-center items-center h-full">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <RePieChart margin={{ top: 10, right: 10, bottom: 10, left: 10 }}>
+                      <RePie
+                        data={breakdown?.warranty.map(w => ({
+                          name: w.status,
+                          value: w.penalty
+                        })) || []}
+                        cx="50%"
+                        cy="50%"
+                        innerRadius={45}
+                        outerRadius={65}
+                        paddingAngle={3}
+                        dataKey="value"
+                        stroke="#ffffff"
+                        strokeWidth={2}
+                      >
+                        <Cell fill="#2b7d50" />
+                        <Cell fill="#d83b01" />
+                      </RePie>
+                      <RechartsTooltip content={<CustomMoneyTooltip />} />
+                      <RechartsLegend verticalAlign="bottom" height={36} iconType="circle" wrapperStyle={{ fontSize: 9, fontWeight: 'bold' }} />
+                    </RePieChart>
+                  </ResponsiveContainer>
+                  <div className="absolute flex flex-col items-center justify-center pointer-events-none" style={{ top: '40%', left: '50%', transform: 'translate(-50%, -50%)' }}>
+                    <span className="text-[8px] text-gray-400 font-bold uppercase tracking-wider">Total</span>
+                    <span className="text-[10px] font-black text-slate-800 font-mono">
+                      ₹{breakdown?.warranty.reduce((sum, item) => sum + item.penalty, 0).toLocaleString()}
+                    </span>
+                  </div>
+                </div>
               </div>
             </div>
 
@@ -683,11 +743,11 @@ export default function MISReportPage() {
                     name: h.name.length > 15 ? h.name.slice(0, 12) + ".." : h.name,
                     penalty: h.penalty
                   })) || []} margin={{ left: 5, right: 5, top: 10, bottom: 5 }}>
-                    <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" horizontal={true} vertical={false} />
+                    <CartesianGrid strokeDasharray="3 3" stroke="#f3f4f6" horizontal={true} vertical={false} />
                     <XAxis dataKey="name" tick={{ fontSize: 9 }} />
                     <YAxis tick={{ fontSize: 9 }} tickFormatter={(v) => `₹${(v / 1000).toFixed(0)}k`} />
-                    <RechartsTooltip formatter={(v: number) => `₹${v.toLocaleString()}`} />
-                    <Bar dataKey="penalty" radius={[4, 4, 0, 0]} maxBarSize={30}>
+                    <RechartsTooltip content={<CustomMoneyTooltip />} />
+                    <Bar dataKey="penalty" radius={[6, 6, 0, 0]} maxBarSize={30}>
                       {(breakdown?.hospital || []).map((_, index) => (
                         <Cell key={`cell-${index}`} fill={GALLERY_COLORS[index % GALLERY_COLORS.length]} />
                       ))}
@@ -713,7 +773,7 @@ export default function MISReportPage() {
                       })) || []}
                       cx="50%"
                       cy="50%"
-                      outerRadius={70}
+                      outerRadius={65}
                       dataKey="value"
                       stroke="#ffffff"
                       strokeWidth={2}
@@ -722,8 +782,8 @@ export default function MISReportPage() {
                         <Cell key={`cell-${index}`} fill={GALLERY_COLORS[index % GALLERY_COLORS.length]} />
                       ))}
                     </RePie>
-                    <RechartsTooltip formatter={(v: number) => `₹${v.toLocaleString()}`} />
-                    <RechartsLegend verticalAlign="bottom" height={36} iconType="circle" wrapperStyle={{ fontSize: 9 }} />
+                    <RechartsTooltip content={<CustomMoneyTooltip />} />
+                    <RechartsLegend verticalAlign="bottom" height={36} iconType="circle" wrapperStyle={{ fontSize: 9, fontWeight: 'bold' }} />
                   </RePieChart>
                 </ResponsiveContainer>
               </div>
@@ -747,10 +807,10 @@ export default function MISReportPage() {
                         <stop offset="95%" stopColor="#854aa5" stopOpacity={0.01}/>
                       </linearGradient>
                     </defs>
-                    <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
+                    <CartesianGrid strokeDasharray="3 3" stroke="#f3f4f6" />
                     <XAxis dataKey="month" tick={{ fontSize: 9 }} />
                     <YAxis tick={{ fontSize: 9 }} tickFormatter={(v) => `₹${(v / 1000).toFixed(0)}k`} />
-                    <RechartsTooltip formatter={(v: number) => `₹${v.toLocaleString()}`} />
+                    <RechartsTooltip content={<CustomMoneyTooltip />} />
                     <Area type="monotone" dataKey="penalty" stroke="#854aa5" strokeWidth={2} fill="url(#colorMonthly)" />
                   </AreaChart>
                 </ResponsiveContainer>
@@ -769,11 +829,11 @@ export default function MISReportPage() {
                     name: v.name.length > 20 ? v.name.slice(0, 18) + ".." : v.name,
                     penalty: v.penalty
                   })) || []} layout="vertical" margin={{ left: 10, right: 10, top: 5, bottom: 5 }}>
-                    <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" horizontal={false} vertical={true} />
+                    <CartesianGrid strokeDasharray="3 3" stroke="#f3f4f6" horizontal={false} vertical={true} />
                     <XAxis type="number" tick={{ fontSize: 9 }} tickFormatter={(v) => `₹${v.toLocaleString()}`} />
                     <YAxis type="category" dataKey="name" tick={{ fontSize: 8 }} width={80} />
-                    <RechartsTooltip formatter={(v: number) => `₹${v.toLocaleString()}`} />
-                    <Bar dataKey="penalty" radius={[0, 4, 4, 0]} maxBarSize={16}>
+                    <RechartsTooltip content={<CustomMoneyTooltip />} />
+                    <Bar dataKey="penalty" radius={[0, 6, 6, 0]} maxBarSize={16}>
                       {(breakdown?.vendor || []).map((_, index) => (
                         <Cell key={`cell-${index}`} fill={GALLERY_COLORS[index % GALLERY_COLORS.length]} />
                       ))}

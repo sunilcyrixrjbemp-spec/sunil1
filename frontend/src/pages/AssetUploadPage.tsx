@@ -106,6 +106,24 @@ const parseCSVLine = (line: string, delimiter: string): string[] => {
   return result;
 };
 
+const CustomTooltip = ({ active, payload }: any) => {
+  if (active && payload && payload.length) {
+    return (
+      <div className="bg-slate-900/95 backdrop-blur-md text-white border border-slate-800 shadow-2xl rounded-xl p-3 text-xs min-w-[120px] font-sans pointer-events-none">
+        <p className="font-extrabold text-[10px] uppercase text-slate-400 tracking-wider mb-1.5">{payload[0].name}</p>
+        <div className="flex items-center justify-between gap-4">
+          <span className="flex items-center gap-1.5 text-slate-300">
+            <span className="w-2 h-2 rounded-full" style={{ backgroundColor: payload[0].payload.fill || payload[0].color }} />
+            Units:
+          </span>
+          <span className="font-mono font-bold text-white">{payload[0].value}</span>
+        </div>
+      </div>
+    );
+  }
+  return null;
+};
+
 export default function AssetUploadPage() {
 
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
@@ -841,27 +859,35 @@ export default function AssetUploadPage() {
             </div>
             <div className="w-full h-64 p-4">
               {stats.charts.status_list.length > 0 ? (
-                <ResponsiveContainer width="100%" height="100%">
-                  <PieChart>
-                    <Pie
-                      data={stats.charts.status_list}
-                      cx="50%"
-                      cy="50%"
-                      innerRadius={50}
-                      outerRadius={75}
-                      paddingAngle={3}
-                      dataKey="value"
-                      stroke="#ffffff"
-                      strokeWidth={2}
-                    >
-                      {stats.charts.status_list.map((_, index) => (
-                        <Cell key={`cell-${index}`} fill={GALLERY_COLORS[index % GALLERY_COLORS.length]} />
-                      ))}
-                    </Pie>
-                    <Tooltip formatter={(value) => `${value} units`} />
-                    <Legend verticalAlign="bottom" height={36} iconType="circle" wrapperStyle={{ fontSize: 9 }} />
-                  </PieChart>
-                </ResponsiveContainer>
+                <div className="relative flex justify-center items-center h-full">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <PieChart>
+                      <Pie
+                        data={stats.charts.status_list}
+                        cx="50%"
+                        cy="50%"
+                        innerRadius={45}
+                        outerRadius={65}
+                        paddingAngle={3}
+                        dataKey="value"
+                        stroke="#ffffff"
+                        strokeWidth={2}
+                      >
+                        {stats.charts.status_list.map((_, index) => (
+                          <Cell key={`cell-${index}`} fill={GALLERY_COLORS[index % GALLERY_COLORS.length]} />
+                        ))}
+                      </Pie>
+                      <Tooltip content={<CustomTooltip />} />
+                      <Legend verticalAlign="bottom" height={36} iconType="circle" wrapperStyle={{ fontSize: 9, fontWeight: 'bold' }} />
+                    </PieChart>
+                  </ResponsiveContainer>
+                  <div className="absolute flex flex-col items-center justify-center pointer-events-none" style={{ top: '40%', left: '50%', transform: 'translate(-50%, -50%)' }}>
+                    <span className="text-[8px] text-gray-400 font-bold uppercase tracking-wider">Total</span>
+                    <span className="text-xs font-black text-slate-800 font-mono">
+                      {stats.charts.status_list.reduce((sum, item) => sum + item.value, 0)}
+                    </span>
+                  </div>
+                </div>
               ) : (
                 <div className="flex items-center justify-center h-full text-xs text-gray-400 font-bold">No Data Available</div>
               )}
@@ -880,11 +906,11 @@ export default function AssetUploadPage() {
               {stats.charts.top_types.length > 0 ? (
                 <ResponsiveContainer width="100%" height="100%">
                   <BarChart data={stats.charts.top_types} layout="vertical" margin={{ left: 10, right: 10, top: 10, bottom: 10 }}>
-                    <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" horizontal={false} vertical={true} />
+                    <CartesianGrid strokeDasharray="3 3" stroke="#f3f4f6" horizontal={false} vertical={true} />
                     <XAxis type="number" stroke="#9ca3af" fontSize={9} />
                     <YAxis dataKey="name" type="category" stroke="#9ca3af" fontSize={8} width={80} />
-                    <Tooltip formatter={(value) => `${value} units`} />
-                    <Bar dataKey="value" radius={[0, 4, 4, 0]} maxBarSize={16}>
+                    <Tooltip content={<CustomTooltip />} />
+                    <Bar dataKey="value" radius={[0, 6, 6, 0]} maxBarSize={16}>
                       {stats.charts.top_types.map((_, index) => (
                         <Cell key={`cell-${index}`} fill={GALLERY_COLORS[index % GALLERY_COLORS.length]} />
                       ))}
@@ -913,7 +939,7 @@ export default function AssetUploadPage() {
                       data={stats.charts.warranty_list}
                       cx="50%"
                       cy="50%"
-                      outerRadius={75}
+                      outerRadius={70}
                       dataKey="value"
                       stroke="#ffffff"
                       strokeWidth={2}
@@ -921,8 +947,8 @@ export default function AssetUploadPage() {
                       <Cell fill="#2b7d50" />
                       <Cell fill="#d28b2a" />
                     </Pie>
-                    <Tooltip formatter={(value) => `${value} units`} />
-                    <Legend verticalAlign="bottom" height={36} iconType="circle" wrapperStyle={{ fontSize: 9 }} />
+                    <Tooltip content={<CustomTooltip />} />
+                    <Legend verticalAlign="bottom" height={36} iconType="circle" wrapperStyle={{ fontSize: 9, fontWeight: 'bold' }} />
                   </PieChart>
                 </ResponsiveContainer>
               ) : (

@@ -10,6 +10,24 @@ const LteSpinner = () => (
   <span className="spinner-lte mr-1.5"></span>
 );
 
+const CustomCountTooltip = ({ active, payload }: any) => {
+  if (active && payload && payload.length) {
+    return (
+      <div className="bg-slate-900/95 backdrop-blur-md text-white border border-slate-800 shadow-2xl rounded-xl p-3 text-xs min-w-[120px] font-sans pointer-events-none">
+        <p className="font-extrabold text-[10px] uppercase text-slate-400 tracking-wider mb-1.5">{payload[0].name}</p>
+        <div className="flex items-center justify-between gap-4">
+          <span className="flex items-center gap-1.5 text-slate-300">
+            <span className="w-2 h-2 rounded-full" style={{ backgroundColor: payload[0].payload.fill || payload[0].color }} />
+            Employees:
+          </span>
+          <span className="font-mono font-bold text-white">{payload[0].value}</span>
+        </div>
+      </div>
+    );
+  }
+  return null;
+};
+
 const getErrorMessage = (err: any, fallback: string): string => {
   const detail = err.response?.data?.detail;
   if (!detail) return fallback;
@@ -1177,28 +1195,36 @@ export default function AdminPage() {
                 </h4>
               </div>
               <div className="p-4" style={{ height: "290px" }}>
-                <ResponsiveContainer width="100%" height="100%">
-                  <PieChart>
-                    <Pie
-                      data={getZoneData().slice(0, 5)}
-                      dataKey="value"
-                      nameKey="name"
-                      cx="50%"
-                      cy="50%"
-                      innerRadius={45}
-                      outerRadius={75}
-                      paddingAngle={3}
-                      stroke="#ffffff"
-                      strokeWidth={2}
-                    >
-                      {getZoneData().slice(0, 5).map((_, index) => (
-                        <Cell key={`cell-${index}`} fill={GALLERY_COLORS[index % GALLERY_COLORS.length]} />
-                      ))}
-                    </Pie>
-                    <Tooltip formatter={(value) => [`${value} Employees`, 'Count']} />
-                    <Legend verticalAlign="bottom" height={36} iconType="circle" wrapperStyle={{ fontSize: 9 }} />
-                  </PieChart>
-                </ResponsiveContainer>
+                <div className="relative flex justify-center items-center h-full">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <PieChart>
+                      <Pie
+                        data={getZoneData().slice(0, 5)}
+                        dataKey="value"
+                        nameKey="name"
+                        cx="50%"
+                        cy="50%"
+                        innerRadius={45}
+                        outerRadius={65}
+                        paddingAngle={3}
+                        stroke="#ffffff"
+                        strokeWidth={2}
+                      >
+                        {getZoneData().slice(0, 5).map((_, index) => (
+                          <Cell key={`cell-${index}`} fill={GALLERY_COLORS[index % GALLERY_COLORS.length]} />
+                        ))}
+                      </Pie>
+                      <Tooltip content={<CustomCountTooltip />} />
+                      <Legend verticalAlign="bottom" height={36} iconType="circle" wrapperStyle={{ fontSize: 9, fontWeight: 'bold' }} />
+                    </PieChart>
+                  </ResponsiveContainer>
+                  <div className="absolute flex flex-col items-center justify-center pointer-events-none" style={{ top: '40%', left: '50%', transform: 'translate(-50%, -50%)' }}>
+                    <span className="text-[8px] text-gray-400 font-bold uppercase tracking-wider">Total</span>
+                    <span className="text-xs font-black text-slate-800 font-mono">
+                      {getZoneData().reduce((sum, item) => sum + item.value, 0)}
+                    </span>
+                  </div>
+                </div>
               </div>
             </div>
 
@@ -1212,11 +1238,11 @@ export default function AdminPage() {
               <div className="p-4" style={{ height: "290px" }}>
                 <ResponsiveContainer width="100%" height="100%">
                   <BarChart data={getDistrictData().slice(0, 6)}>
-                    <CartesianGrid strokeDasharray="3 3" horizontal={false} vertical={true} />
+                    <CartesianGrid strokeDasharray="3 3" stroke="#f3f4f6" horizontal={false} vertical={true} />
                     <XAxis dataKey="name" tick={{ fontSize: 9, fontWeight: 'bold' }} />
                     <YAxis tick={{ fontSize: 9 }} allowDecimals={false} />
-                    <Tooltip formatter={(value) => [`${value} Employees`, 'Count']} />
-                    <Bar dataKey="value" radius={[4, 4, 0, 0]} maxBarSize={40}>
+                    <Tooltip content={<CustomCountTooltip />} />
+                    <Bar dataKey="value" radius={[6, 6, 0, 0]} maxBarSize={40}>
                       {getDistrictData().slice(0, 6).map((_, index) => (
                         <Cell key={`cell-${index}`} fill={GALLERY_COLORS[index % GALLERY_COLORS.length]} />
                       ))}
@@ -1236,11 +1262,11 @@ export default function AdminPage() {
               <div className="p-4" style={{ height: "290px" }}>
                 <ResponsiveContainer width="100%" height="100%">
                   <BarChart data={getManagerData().slice(0, 6)} layout="vertical">
-                    <CartesianGrid strokeDasharray="3 3" horizontal={true} vertical={false} />
+                    <CartesianGrid strokeDasharray="3 3" stroke="#f3f4f6" horizontal={true} vertical={false} />
                     <XAxis type="number" tick={{ fontSize: 9 }} allowDecimals={false} />
                     <YAxis dataKey="name" type="category" tick={{ fontSize: 9, fontWeight: 'bold' }} width={85} />
-                    <Tooltip formatter={(value) => [`${value} Employees`, 'Count']} />
-                    <Bar dataKey="value" radius={[0, 4, 4, 0]} maxBarSize={22}>
+                    <Tooltip content={<CustomCountTooltip />} />
+                    <Bar dataKey="value" radius={[0, 6, 6, 0]} maxBarSize={22}>
                       {getManagerData().slice(0, 6).map((_, index) => (
                         <Cell key={`cell-${index}`} fill={GALLERY_COLORS[index % GALLERY_COLORS.length]} />
                       ))}
@@ -1266,7 +1292,7 @@ export default function AdminPage() {
                       nameKey="name"
                       cx="50%"
                       cy="50%"
-                      outerRadius={75}
+                      outerRadius={70}
                       stroke="#ffffff"
                       strokeWidth={2}
                     >
@@ -1274,8 +1300,8 @@ export default function AdminPage() {
                         <Cell key={`cell-${index}`} fill={GALLERY_COLORS[index % GALLERY_COLORS.length]} />
                       ))}
                     </Pie>
-                    <Tooltip formatter={(value) => [`${value} Employees`, 'Count']} />
-                    <Legend verticalAlign="bottom" height={36} iconType="circle" wrapperStyle={{ fontSize: 9 }} />
+                    <Tooltip content={<CustomCountTooltip />} />
+                    <Legend verticalAlign="bottom" height={36} iconType="circle" wrapperStyle={{ fontSize: 9, fontWeight: 'bold' }} />
                   </PieChart>
                 </ResponsiveContainer>
               </div>

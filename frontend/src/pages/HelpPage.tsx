@@ -69,6 +69,24 @@ function formatDuration(totalHours: number) {
   return parts.join(" ");
 }
 
+const CustomTooltip = ({ active, payload }: any) => {
+  if (active && payload && payload.length) {
+    return (
+      <div className="bg-slate-900/95 backdrop-blur-md text-white border border-slate-800 shadow-2xl rounded-xl p-3 text-xs min-w-[120px] font-sans pointer-events-none">
+        <p className="font-extrabold text-[10px] uppercase text-slate-400 tracking-wider mb-1.5">{payload[0].payload.label || payload[0].name}</p>
+        <div className="flex items-center justify-between gap-4">
+          <span className="flex items-center gap-1.5 text-slate-300">
+            <span className="w-2 h-2 rounded-full" style={{ backgroundColor: payload[0].payload.fill || payload[0].color }} />
+            Concerns:
+          </span>
+          <span className="font-mono font-bold text-white">{payload[0].value}</span>
+        </div>
+      </div>
+    );
+  }
+  return null;
+};
+
 export default function HelpPage() {
 
   // Auth User
@@ -545,11 +563,11 @@ export default function HelpPage() {
           <div style={{ height: 160 }}>
             <ResponsiveContainer width="100%" height="100%">
               <BarChart data={analytics.categoryChart} layout="vertical" margin={{ left: 5, right: 10, top: 5, bottom: 5 }}>
-                <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" horizontal={true} vertical={false} />
+                <CartesianGrid strokeDasharray="3 3" stroke="#f3f4f6" horizontal={true} vertical={false} />
                 <XAxis type="number" tick={{ fontSize: 9 }} allowDecimals={false} />
                 <YAxis type="category" dataKey="label" tick={{ fontSize: 9 }} width={80} />
-                <Tooltip formatter={(v: number) => [v, "Count"]} />
-                <Bar dataKey="amount" radius={[0, 4, 4, 0]} maxBarSize={16}>
+                <Tooltip content={<CustomTooltip />} />
+                <Bar dataKey="amount" radius={[0, 6, 6, 0]} maxBarSize={16}>
                   {analytics.categoryChart.map((_, index) => (
                     <Cell key={`cell-${index}`} fill={GALLERY_COLORS[index % GALLERY_COLORS.length]} />
                   ))}
@@ -565,11 +583,11 @@ export default function HelpPage() {
           <div style={{ height: 160 }}>
             <ResponsiveContainer width="100%" height="100%">
               <BarChart data={analytics.priorityChart} layout="vertical" margin={{ left: 5, right: 10, top: 5, bottom: 5 }}>
-                <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" horizontal={true} vertical={false} />
+                <CartesianGrid strokeDasharray="3 3" stroke="#f3f4f6" horizontal={true} vertical={false} />
                 <XAxis type="number" tick={{ fontSize: 9 }} allowDecimals={false} />
                 <YAxis type="category" dataKey="label" tick={{ fontSize: 9 }} width={70} />
-                <Tooltip formatter={(v: number) => [v, "Count"]} />
-                <Bar dataKey="amount" radius={[0, 4, 4, 0]} maxBarSize={16}>
+                <Tooltip content={<CustomTooltip />} />
+                <Bar dataKey="amount" radius={[0, 6, 6, 0]} maxBarSize={16}>
                   {analytics.priorityChart.map((_, index) => (
                     <Cell key={`cell-${index}`} fill={GALLERY_COLORS[index % GALLERY_COLORS.length]} />
                   ))}
@@ -585,11 +603,11 @@ export default function HelpPage() {
           <div style={{ height: 160 }}>
             <ResponsiveContainer width="100%" height="100%">
               <BarChart data={analytics.statusChart} layout="vertical" margin={{ left: 5, right: 10, top: 5, bottom: 5 }}>
-                <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" horizontal={true} vertical={false} />
+                <CartesianGrid strokeDasharray="3 3" stroke="#f3f4f6" horizontal={true} vertical={false} />
                 <XAxis type="number" tick={{ fontSize: 9 }} allowDecimals={false} />
                 <YAxis type="category" dataKey="label" tick={{ fontSize: 9 }} width={85} />
-                <Tooltip formatter={(v: number) => [v, "Count"]} />
-                <Bar dataKey="amount" radius={[0, 4, 4, 0]} maxBarSize={16}>
+                <Tooltip content={<CustomTooltip />} />
+                <Bar dataKey="amount" radius={[0, 6, 6, 0]} maxBarSize={16}>
                   {analytics.statusChart.map((_, index) => (
                     <Cell key={`cell-${index}`} fill={GALLERY_COLORS[index % GALLERY_COLORS.length]} />
                   ))}

@@ -13,6 +13,42 @@ const months = [
   "July", "August", "September", "October", "November", "December"
 ];
 
+const CustomMoneyTooltip = ({ active, payload }: any) => {
+  if (active && payload && payload.length) {
+    return (
+      <div className="bg-slate-900/95 backdrop-blur-md text-white border border-slate-800 shadow-2xl rounded-xl p-3 text-xs min-w-[120px] font-sans pointer-events-none">
+        <p className="font-extrabold text-[10px] uppercase text-slate-400 tracking-wider mb-1.5">{payload[0].name}</p>
+        <div className="flex items-center justify-between gap-4">
+          <span className="flex items-center gap-1.5 text-slate-300">
+            <span className="w-2 h-2 rounded-full" style={{ backgroundColor: payload[0].payload.fill || payload[0].color }} />
+            Amount:
+          </span>
+          <span className="font-mono font-bold text-white">₹{payload[0].value?.toLocaleString()}</span>
+        </div>
+      </div>
+    );
+  }
+  return null;
+};
+
+const CustomCountTooltip = ({ active, payload }: any) => {
+  if (active && payload && payload.length) {
+    return (
+      <div className="bg-slate-900/95 backdrop-blur-md text-white border border-slate-800 shadow-2xl rounded-xl p-3 text-xs min-w-[120px] font-sans pointer-events-none">
+        <p className="font-extrabold text-[10px] uppercase text-slate-400 tracking-wider mb-1.5">{payload[0].name}</p>
+        <div className="flex items-center justify-between gap-4">
+          <span className="flex items-center gap-1.5 text-slate-300">
+            <span className="w-2 h-2 rounded-full" style={{ backgroundColor: payload[0].payload.fill || payload[0].color }} />
+            Count:
+          </span>
+          <span className="font-mono font-bold text-white">{payload[0].value}</span>
+        </div>
+      </div>
+    );
+  }
+  return null;
+};
+
 export default function AnalysisPage() {
 
   const [myExpenses, setMyExpenses] = useState<any[]>(() => {
@@ -619,11 +655,11 @@ export default function AnalysisPage() {
               {userWiseData.length > 0 ? (
                 <ResponsiveContainer width="100%" height="100%">
                   <BarChart data={userWiseData} layout="vertical" margin={{ left: 10, right: 20 }}>
-                    <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" horizontal={false} vertical={true} />
+                    <CartesianGrid strokeDasharray="3 3" stroke="#f3f4f6" horizontal={false} vertical={true} />
                     <XAxis type="number" tick={{ fontSize: 10 }} tickFormatter={(v) => `₹${(v / 1000).toFixed(0)}k`} />
                     <YAxis type="category" dataKey="name" tick={{ fontSize: 10 }} width={90} />
-                    <Tooltip formatter={(v: number) => [`₹${v.toLocaleString()}`, "Expenditure"]} />
-                    <Bar dataKey="amount" radius={[0, 4, 4, 0]} maxBarSize={16}>
+                    <Tooltip content={<CustomMoneyTooltip />} />
+                    <Bar dataKey="amount" radius={[0, 6, 6, 0]} maxBarSize={16}>
                       {userWiseData.map((_, index) => (
                         <Cell key={`cell-${index}`} fill={GALLERY_COLORS[index % GALLERY_COLORS.length]} />
                       ))}
@@ -646,27 +682,35 @@ export default function AnalysisPage() {
             </div>
             <div className="p-4" style={{ height: 280 }}>
               {statusWiseData.length > 0 ? (
-                <ResponsiveContainer width="100%" height="100%">
-                  <PieChart margin={{ top: 15, right: 15, bottom: 15, left: 15 }}>
-                    <Pie
-                      data={statusWiseData}
-                      cx="50%"
-                      cy="50%"
-                      innerRadius={45}
-                      outerRadius={75}
-                      paddingAngle={3}
-                      dataKey="value"
-                      stroke="#ffffff"
-                      strokeWidth={2}
-                    >
-                      {statusWiseData.map((_, i) => (
-                        <Cell key={i} fill={i === 0 ? "#2b7d50" : i === 1 ? "#d28b2a" : "#d83b01"} />
-                      ))}
-                    </Pie>
-                    <Tooltip formatter={(v: number) => `₹${v.toLocaleString()}`} />
-                    <Legend verticalAlign="bottom" height={36} iconType="circle" wrapperStyle={{ fontSize: 9 }} />
-                  </PieChart>
-                </ResponsiveContainer>
+                <div className="relative flex justify-center items-center h-full">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <PieChart margin={{ top: 15, right: 15, bottom: 15, left: 15 }}>
+                      <Pie
+                        data={statusWiseData}
+                        cx="50%"
+                        cy="50%"
+                        innerRadius={45}
+                        outerRadius={65}
+                        paddingAngle={3}
+                        dataKey="value"
+                        stroke="#ffffff"
+                        strokeWidth={2}
+                      >
+                        {statusWiseData.map((_, i) => (
+                          <Cell key={i} fill={i === 0 ? "#2b7d50" : i === 1 ? "#d28b2a" : "#d83b01"} />
+                        ))}
+                      </Pie>
+                      <Tooltip content={<CustomMoneyTooltip />} />
+                      <Legend verticalAlign="bottom" height={36} iconType="circle" wrapperStyle={{ fontSize: 9, fontWeight: 'bold' }} />
+                    </PieChart>
+                  </ResponsiveContainer>
+                  <div className="absolute flex flex-col items-center justify-center pointer-events-none" style={{ top: '40%', left: '50%', transform: 'translate(-50%, -50%)' }}>
+                    <span className="text-[8px] text-gray-400 font-bold uppercase tracking-wider">Total Claims</span>
+                    <span className="text-[10px] font-black text-slate-800 font-mono">
+                      ₹{statusWiseData.reduce((sum, item) => sum + item.value, 0).toLocaleString()}
+                    </span>
+                  </div>
+                </div>
               ) : (
                 <div className="flex items-center justify-center h-full text-gray-400 text-xs">No status data</div>
               )}
@@ -685,11 +729,11 @@ export default function AnalysisPage() {
               {districtWiseData.length > 0 ? (
                 <ResponsiveContainer width="100%" height="100%">
                   <BarChart data={districtWiseData} margin={{ bottom: 5 }}>
-                    <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" horizontal={true} vertical={false} />
+                    <CartesianGrid strokeDasharray="3 3" stroke="#f3f4f6" horizontal={true} vertical={false} />
                     <XAxis dataKey="name" tick={{ fontSize: 10 }} />
                     <YAxis tick={{ fontSize: 10 }} tickFormatter={(v) => `₹${(v / 1000).toFixed(0)}k`} />
-                    <Tooltip formatter={(v: number) => [`₹${v.toLocaleString()}`, "Expenditure"]} />
-                    <Bar dataKey="amount" radius={[4, 4, 0, 0]} maxBarSize={30}>
+                    <Tooltip content={<CustomMoneyTooltip />} />
+                    <Bar dataKey="amount" radius={[6, 6, 0, 0]} maxBarSize={30}>
                       {districtWiseData.map((_, index) => (
                         <Cell key={`cell-${index}`} fill={GALLERY_COLORS[index % GALLERY_COLORS.length]} />
                       ))}
@@ -720,10 +764,10 @@ export default function AnalysisPage() {
                         <stop offset="95%" stopColor="#007bff" stopOpacity={0.02} />
                       </linearGradient>
                     </defs>
-                    <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
+                    <CartesianGrid strokeDasharray="3 3" stroke="#f3f4f6" />
                     <XAxis dataKey="date" tick={{ fontSize: 10 }} />
                     <YAxis tick={{ fontSize: 10 }} tickFormatter={(v) => `₹${(v / 1000).toFixed(0)}k`} />
-                    <Tooltip formatter={(v: number) => [`₹${v.toLocaleString()}`, "Spending"]} />
+                    <Tooltip content={<CustomMoneyTooltip />} />
                     <Area type="monotone" dataKey="amount" stroke="#007bff" strokeWidth={2} fill="url(#colorAmount)" />
                   </AreaChart>
                 </ResponsiveContainer>
@@ -743,27 +787,35 @@ export default function AnalysisPage() {
             </div>
             <div className="p-4" style={{ height: 280 }}>
               {zoneWiseData.length > 0 ? (
-                <ResponsiveContainer width="100%" height="100%">
-                  <PieChart margin={{ top: 15, right: 15, bottom: 15, left: 15 }}>
-                    <Pie
-                      data={zoneWiseData}
-                      cx="50%"
-                      cy="50%"
-                      innerRadius={45}
-                      outerRadius={75}
-                      paddingAngle={3}
-                      dataKey="value"
-                      stroke="#ffffff"
-                      strokeWidth={2}
-                    >
-                      {zoneWiseData.map((_, i) => (
-                        <Cell key={i} fill={GALLERY_COLORS[i % GALLERY_COLORS.length]} />
-                      ))}
-                    </Pie>
-                    <Tooltip formatter={(v: number) => `₹${v.toLocaleString()}`} />
-                    <Legend verticalAlign="bottom" height={36} iconType="circle" wrapperStyle={{ fontSize: 9 }} />
-                  </PieChart>
-                </ResponsiveContainer>
+                <div className="relative flex justify-center items-center h-full">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <PieChart margin={{ top: 15, right: 15, bottom: 15, left: 15 }}>
+                      <Pie
+                        data={zoneWiseData}
+                        cx="50%"
+                        cy="50%"
+                        innerRadius={45}
+                        outerRadius={65}
+                        paddingAngle={3}
+                        dataKey="value"
+                        stroke="#ffffff"
+                        strokeWidth={2}
+                      >
+                        {zoneWiseData.map((_, i) => (
+                          <Cell key={i} fill={GALLERY_COLORS[i % GALLERY_COLORS.length]} />
+                        ))}
+                      </Pie>
+                      <Tooltip content={<CustomMoneyTooltip />} />
+                      <Legend verticalAlign="bottom" height={36} iconType="circle" wrapperStyle={{ fontSize: 9, fontWeight: 'bold' }} />
+                    </PieChart>
+                  </ResponsiveContainer>
+                  <div className="absolute flex flex-col items-center justify-center pointer-events-none" style={{ top: '40%', left: '50%', transform: 'translate(-50%, -50%)' }}>
+                    <span className="text-[8px] text-gray-400 font-bold uppercase tracking-wider">Total Zone</span>
+                    <span className="text-[10px] font-black text-slate-800 font-mono">
+                      ₹{zoneWiseData.reduce((sum, item) => sum + item.value, 0).toLocaleString()}
+                    </span>
+                  </div>
+                </div>
               ) : (
                 <div className="flex items-center justify-center h-full text-gray-400 text-xs">No zone data</div>
               )}
@@ -782,11 +834,11 @@ export default function AnalysisPage() {
               {categoryData.length > 0 ? (
                 <ResponsiveContainer width="100%" height="100%">
                   <BarChart data={categoryData} margin={{ bottom: 5 }}>
-                    <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" horizontal={true} vertical={false} />
+                    <CartesianGrid strokeDasharray="3 3" stroke="#f3f4f6" horizontal={true} vertical={false} />
                     <XAxis dataKey="name" tick={{ fontSize: 10 }} />
                     <YAxis tick={{ fontSize: 10 }} tickFormatter={(v) => `₹${(v / 1000).toFixed(0)}k`} />
-                    <Tooltip formatter={(v: number) => [`₹${v.toLocaleString()}`, "Expenditure"]} />
-                    <Bar dataKey="amount" radius={[4, 4, 0, 0]} maxBarSize={30}>
+                    <Tooltip content={<CustomMoneyTooltip />} />
+                    <Bar dataKey="amount" radius={[6, 6, 0, 0]} maxBarSize={30}>
                       {categoryData.map((_, index) => (
                         <Cell key={`cell-${index}`} fill={GALLERY_COLORS[index % GALLERY_COLORS.length]} />
                       ))}
@@ -816,11 +868,11 @@ export default function AnalysisPage() {
               {activityChartData.some(d => d.count > 0) ? (
                 <ResponsiveContainer width="100%" height="100%">
                   <BarChart data={activityChartData} margin={{ bottom: 15, top: 10 }}>
-                    <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" horizontal={true} vertical={false} />
+                    <CartesianGrid strokeDasharray="3 3" stroke="#f3f4f6" horizontal={true} vertical={false} />
                     <XAxis dataKey="name" tick={{ fontSize: 10, fontWeight: "bold" }} />
                     <YAxis tick={{ fontSize: 10 }} allowDecimals={false} />
-                    <Tooltip formatter={(value) => [value, "Count"]} />
-                    <Bar dataKey="count" radius={[4, 4, 0, 0]} maxBarSize={60}>
+                    <Tooltip content={<CustomCountTooltip />} />
+                    <Bar dataKey="count" radius={[6, 6, 0, 0]} maxBarSize={60}>
                       {activityChartData.map((_, idx) => (
                         <Cell key={idx} fill={GALLERY_COLORS[idx % GALLERY_COLORS.length]} />
                       ))}
