@@ -7,6 +7,9 @@ _cache = {}
 
 def get(key):
     """Retrieve item from cache."""
+    # Prevent transactional user data from getting cached in local worker memory
+    if any(key.startswith(prefix) for prefix in ["user_init:", "user_expenses:", "team_expenses:", "pending_approvals:"]):
+        return None
     return _cache.get(key)
 
 def set(key, value):
