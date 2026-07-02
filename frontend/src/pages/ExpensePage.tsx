@@ -1756,6 +1756,7 @@ export default function ExpensePage() {
         setItineraries([createDefaultLeg(1)]);
         setFiles({ 1: createDefaultFiles() });
         const todayStr = new Date().toISOString().split("T")[0];
+        const targetMonth = date ? date.slice(0, 7) : todayStr.slice(0, 7);
         setDate(todayStr);
         setHasShownExceededModal(false);
         setEditExpenseId(null);
@@ -1763,7 +1764,11 @@ export default function ExpensePage() {
         setExistingAttachmentsDetailed([]);
         setDeletedAttachments([]);
         
-        await fetchMonthLimits(todayStr.slice(0, 7), false);
+        // Clear limits cache to force refetch
+        const cacheKey = `cache_month_limits_${currentUserId}_${targetMonth}`;
+        localStorage.removeItem(cacheKey);
+        
+        await fetchMonthLimits(targetMonth, false);
         await fetchClaims();
         
         if (editExpenseId) {
@@ -1908,8 +1913,21 @@ export default function ExpensePage() {
   const handleDeleteClaim = async (claimId: number) => {
     if (!window.confirm("Are you sure you want to delete this expense claim?")) return;
     try {
+      // Find the claim's month before deleting to refresh the correct month's limits!
+      const targetClaim = claims.find((c: any) => c.id === claimId);
+      const targetMonth = targetClaim?.month || new Date().toISOString().slice(0, 7);
+      
       await expenseService.deleteExpense(claimId);
       toast.success("Claim deleted successfully.");
+      
+      // Clear limits cache to force refetch
+      const cacheKey = `cache_month_limits_${currentUserId}_${targetMonth}`;
+      localStorage.removeItem(cacheKey);
+      
+      // Refresh limits in state
+      await fetchMonthLimits(targetMonth, false);
+      
+      // Refresh claims list
       await fetchClaims();
     } catch (err: any) {
       toast.error(err.response?.data?.detail || "Failed to delete claim.");
