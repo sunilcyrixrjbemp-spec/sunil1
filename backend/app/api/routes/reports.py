@@ -61,6 +61,12 @@ async def get_mis_dashboard_data(
     Supports dynamic multi-dimensional filtering and row-level access control.
     """
     try:
+        from app.utils import cache
+        cache_key = f"mis_dashboard:{current_user.user_id}:{zone}:{district}:{coordinator}:{month}:{equipment}"
+        cached_val = cache.get(cache_key)
+        if cached_val is not None:
+            return cached_val
+            
         # Check if table exists
         table_exists = db.execute(text(
             "SELECT name FROM sqlite_master WHERE type='table' AND name='rj_penalties'"
@@ -433,7 +439,7 @@ async def get_mis_dashboard_data(
             ORDER BY total DESC LIMIT 8
         """), params).fetchall()
 
-        return {
+        res_data = {
             "success": True,
             "filter_options": {
                 "districts": districts_list,
@@ -476,6 +482,8 @@ async def get_mis_dashboard_data(
                 "daywise_penalties": [{"day": r[0], "attend_penalty": round(r[1] or 0.0, 1), "delay_penalty": round(r[2] or 0.0, 1)} for r in daywise_penalties]
             }
         }
+        cache.set(cache_key, res_data)
+        return res_data
     except Exception as e:
         logger.error(f"Error fetching MIS dashboard metrics: {str(e)}")
         return {
@@ -695,6 +703,8 @@ async def upload_excel_penalties(
             _bulk_insert(db, "rj_penalties", list(records[0].keys()), records)
             
         os.unlink(tmp_path)
+        from app.utils import cache
+        cache.clear_prefix("mis_dashboard:")
         return {
             "success": True,
             "message": f"Successfully parsed and synced {row_count} rows of Rajasthan Penalty Cyrix logs."
@@ -751,6 +761,8 @@ async def upload_penalties_chunk(
             columns = list(rows[0].keys())
             _bulk_insert(db, "rj_penalties", columns, rows)
         
+        from app.utils import cache
+        cache.clear_prefix("mis_dashboard:")
         return {
             "success": True,
             "message": f"Inserted {len(rows)} rows. clear_first={clear_first}"

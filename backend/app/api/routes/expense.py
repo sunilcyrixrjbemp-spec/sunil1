@@ -1471,9 +1471,11 @@ async def get_expenses(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user)
 ):
-    """Lists all submitted expense claims for the current user."""
-    # Disable caching to ensure fresh zone and district maps are processed
-    pass
+    from app.utils import cache
+    cache_key = f"user_expenses:{current_user.user_id}"
+    cached_val = cache.get(cache_key)
+    if cached_val is not None:
+        return cached_val
 
     expenses = db.query(Expense).filter(Expense.user_id == current_user.id).order_by(Expense.created_at.desc()).all()
     if not expenses:
@@ -1559,6 +1561,7 @@ async def get_expenses(
                 for l in legs
             ]
         })
+    cache.set(cache_key, result)
     return result
 
 @router.get("/team")
@@ -1566,9 +1569,11 @@ async def get_team_expenses(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user)
 ):
-    """Lists all submitted expense claims for the user's team members."""
-    # Disable caching to ensure fresh zone and district maps are processed
-    pass
+    from app.utils import cache
+    cache_key = f"team_expenses:{current_user.user_id}"
+    cached_val = cache.get(cache_key)
+    if cached_val is not None:
+        return cached_val
 
     # Check if user has approval access or is mapped to manage someone
     name_clean = current_user.name.strip()
@@ -1684,6 +1689,7 @@ async def get_team_expenses(
             "zone": submitter.zone if submitter and submitter.zone else "Bikaner"
         })
         
+    cache.set(cache_key, result)
     return result
 
 @router.get("/verify-barcode")
