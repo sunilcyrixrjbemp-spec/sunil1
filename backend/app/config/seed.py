@@ -241,6 +241,8 @@ def run_schema_updates(db: Session):
         ("idx_users_coordinator", "users(coordinator)"),
         ("idx_users_zonal_manager", "users(zonal_manager)"),
         ("idx_expenses_user_id", "expenses(user_id)"),
+        ("idx_expenses_expense_code", "expenses(expense_code)"),
+        ("idx_expenses_status", "expenses(status)"),
         ("idx_expense_itineraries_exp_id", "expense_itineraries(exp_id)"),
         ("idx_approvals_expense_id", "approvals(expense_id)"),
         ("idx_approvals_approver_id", "approvals(approver_id)"),
@@ -252,6 +254,10 @@ def run_schema_updates(db: Session):
         ("idx_support_tickets_assigned_to_name", "support_tickets(assigned_to_name)"),
         ("idx_support_tickets_assigned_to_role", "support_tickets(assigned_to_role)"),
         ("idx_support_tickets_status", "support_tickets(status)"),
+        ("idx_complaints_zone_name", "complaints(zone_name)"),
+        ("idx_complaints_district_name", "complaints(district_name)"),
+        ("idx_complaints_coordinator_name", "complaints(coordinator_name)"),
+        ("idx_complaints_created_at", "complaints(created_at)"),
     ]
     for idx_name, idx_target in indexes_to_create:
         try:
