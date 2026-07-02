@@ -18,7 +18,8 @@ import {
   Bike,
   Car,
   Bus,
-  Camera
+  Camera,
+  ShieldCheck
 } from "lucide-react";
 
 interface ItineraryLeg {
