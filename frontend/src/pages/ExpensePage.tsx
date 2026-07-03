@@ -741,7 +741,6 @@ export default function ExpensePage() {
 
   const fetchMonthLimits = async (monthStr: string, isInitialLoad = false) => {
     const cacheKey = `cache_month_limits_${currentUserId}_${monthStr}`;
-    const cached = localStorage.getItem(cacheKey);
 
     const applyInitData = (data: any) => {
       setLoadedMonth(monthStr);
