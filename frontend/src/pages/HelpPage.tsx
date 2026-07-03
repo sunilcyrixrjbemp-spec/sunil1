@@ -793,16 +793,15 @@ export default function HelpPage() {
           
           {/* Support Ticket Listing container */}
           <div className="card-lte flex flex-col bg-white">
-            
-            {/* List Tab Headers */}
-            <div className="border-b border-gray-200 bg-gray-50 flex flex-wrap items-center justify-between px-4">
+                    {/* List Tab Headers */}
+            <div className="hidden xl:flex border-b border-gray-200 bg-gray-50 items-center justify-between px-4">
               <div className="flex">
                 <button
                   onClick={() => { handleTabChange("my-tickets"); setSelectedTicket(null); }}
                   className={`py-3 px-4 font-bold text-xs uppercase tracking-wider border-b-2 transition-all cursor-pointer ${
                     activeTab === "my-tickets"
                       ? "border-blue-600 text-blue-700 bg-white"
-                      : "border-transparent text-gray-500 hover:text-gray-850"
+                      : "border-transparent text-gray-500 hover:text-gray-900"
                   }`}
                 >
                   My Raised Tickets ({myRaisedTickets.length})
@@ -814,7 +813,7 @@ export default function HelpPage() {
                     className={`py-3 px-4 font-bold text-xs uppercase tracking-wider border-b-2 transition-all cursor-pointer ${
                       activeTab === "assigned-tickets"
                         ? "border-blue-600 text-blue-700 bg-white"
-                        : "border-transparent text-gray-500 hover:text-gray-855"
+                        : "border-transparent text-gray-500 hover:text-gray-900"
                     }`}
                   >
                     Assigned Concerns ({assignedTickets.length})
@@ -824,16 +823,16 @@ export default function HelpPage() {
             </div>
 
             {/* Structured filters block */}
-            <div className="p-3 bg-gray-50 border-b border-gray-200 flex flex-wrap items-center gap-3 text-[10px] font-bold text-gray-500 uppercase">
+            <div className="p-3 bg-slate-100 border-b border-gray-250 flex items-center gap-4 text-[10px] font-bold text-gray-500 uppercase overflow-x-auto whitespace-nowrap scrollbar-none">
               
               {/* Filter Follow-up flag */}
-              <div className="flex items-center gap-1.5">
+              <div className="flex items-center gap-1.5 shrink-0">
                 <i className="fas fa-filter text-gray-400"></i>
-                <span>Follow-up:</span>
+                <span className="text-gray-700">Follow-up:</span>
                 <select
                   value={filterFollowup}
                   onChange={(e: any) => setFilterFollowup(e.target.value)}
-                  className="bg-white border border-gray-300 rounded px-1.5 py-0.5 text-[10px] text-gray-700 font-bold focus:outline-none"
+                  className="bg-white border border-gray-300 rounded-none px-2 py-1 text-[10px] text-gray-800 font-black focus:outline-none focus:border-indigo-500"
                 >
                   <option value="all">All Concerns</option>
                   <option value="flagged">Flagged Only</option>
@@ -842,12 +841,12 @@ export default function HelpPage() {
               </div>
 
               {/* Filter Status */}
-              <div className="flex items-center gap-1.5 border-l border-gray-200 pl-3">
-                <span>Status:</span>
+              <div className="flex items-center gap-1.5 border-l border-gray-300 pl-4 shrink-0">
+                <span className="text-gray-700">Status:</span>
                 <select
                   value={filterStatus}
                   onChange={(e: any) => setFilterStatus(e.target.value)}
-                  className="bg-white border border-gray-300 rounded px-1.5 py-0.5 text-[10px] text-gray-700 font-bold focus:outline-none"
+                  className="bg-white border border-gray-300 rounded-none px-2 py-1 text-[10px] text-gray-800 font-black focus:outline-none focus:border-indigo-500"
                 >
                   <option value="all">All Statuses</option>
                   <option value="Open">Open</option>
@@ -859,12 +858,12 @@ export default function HelpPage() {
               </div>
 
               {/* Filter Category */}
-              <div className="flex items-center gap-1.5 border-l border-gray-200 pl-3">
-                <span>Category:</span>
+              <div className="flex items-center gap-1.5 border-l border-gray-300 pl-4 shrink-0">
+                <span className="text-gray-700">Category:</span>
                 <select
                   value={filterCategory}
                   onChange={(e: any) => setFilterCategory(e.target.value)}
-                  className="bg-white border border-gray-300 rounded px-1.5 py-0.5 text-[10px] text-gray-700 font-bold focus:outline-none"
+                  className="bg-white border border-gray-300 rounded-none px-2 py-1 text-[10px] text-gray-800 font-black focus:outline-none focus:border-indigo-500"
                 >
                   <option value="all">All Categories</option>
                   <option value="Expense">Expense</option>

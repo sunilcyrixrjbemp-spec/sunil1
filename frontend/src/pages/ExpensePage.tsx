@@ -4178,7 +4178,7 @@ export default function ExpensePage() {
               </h3>
               <button 
                 onClick={() => { setShowDetailsModal(false); setSelectedClaim(null); }}
-                className="text-gray-400 hover:text-gray-600 border-0 bg-transparent text-lg font-bold cursor-pointer"
+                className="text-red-600 hover:text-red-800 border-0 bg-transparent text-lg font-black cursor-pointer transition-colors"
               >
                 ✕
               </button>
@@ -4336,169 +4336,106 @@ export default function ExpensePage() {
                                             <span className="text-[9px] font-bold text-gray-500 uppercase mr-2 mt-0.5">Activities:</span>
                                             {selectedActs.map((act: string, actIdx: number) => (
                                               <span key={actIdx} className="px-1.5 py-0.5 rounded bg-gray-100 border border-gray-200 text-[8px] font-bold text-gray-700 uppercase">
-                                                {act}
-                                              </span>
-                                            ))}
-                                          </div>
-
-                                          {/* Sub-table for Calls */}
+                                                     {/* Sub-table for Calls */}
                                           {selectedActs.includes("Calls") && callsList.length > 0 && (
-                                            <div className="border border-blue-100 rounded overflow-hidden bg-white max-w-4xl">
-                                              <div className="px-2 py-1 bg-blue-50/50 border-b border-blue-100 text-[9px] font-bold text-blue-700 uppercase">Support Calls Logs</div>
-                                              <table className="min-w-full divide-y divide-gray-100 text-[10px] text-left">
-                                                <thead className="bg-gray-50 text-[8px] text-gray-400 font-bold uppercase">
-                                                  <tr>
-                                                    <th className="py-1 px-2 text-left">District Name</th>
-                                                    <th className="py-1 px-2 text-left">Hospital Name</th>
-                                                    <th className="py-1 px-2 text-left">Equipment Name</th>
-                                                    <th className="py-1 px-2 text-left">Model</th>
-                                                    <th className="py-1 px-2 text-left font-mono">Bar Code</th>
-                                                    <th className="py-1 px-2 text-left">Inventory Status</th>
-                                                    <th className="py-1 px-2 text-left">Call Type</th>
-                                                    <th className="py-1 px-2 text-left">Call Status</th>
-                                                    <th className="py-1 px-2 text-center w-12">Photo</th>
-                                                  </tr>
-                                                </thead>
-                                                <tbody className="divide-y divide-gray-100">
-                                                  {callsList.map((c: any, cIdx: number) => (
-                                                    <tr key={cIdx}>
-                                                      <td className="py-1 px-2 text-gray-700">{c.asset_details?.district_name || "—"}</td>
-                                                      <td className="py-1 px-2 text-gray-700">{c.asset_details?.hospital_name || "—"}</td>
-                                                      <td className="py-1 px-2 text-gray-805 font-bold">{c.asset_details?.equipment_name || "—"}</td>
-                                                      <td className="py-1 px-2 text-gray-700">{c.asset_details?.model_name || "—"}</td>
-                                                      <td className="py-1 px-2 font-mono font-bold text-gray-700">{c.barcode}</td>
-                                                      <td className="py-1 px-2">
-                                                        <span className="px-1 py-0.2 rounded font-extrabold text-[7px] uppercase bg-green-50 text-green-700 border border-green-200">
-                                                          {c.asset_details?.inventory_status || "Active"}
-                                                        </span>
-                                                      </td>
-                                                      <td className="py-1 px-2 text-gray-650">{c.type || "Support Call"}</td>
-                                                      <td className="py-1 px-2">
-                                                        <span className="px-1 py-0.2 rounded font-extrabold text-[7px] uppercase bg-blue-50 text-blue-700 border border-blue-100">
-                                                          {c.status || "Attend"}
-                                                        </span>
-                                                      </td>
-                                                      <td className="py-1 px-2 text-center">
-                                                        {c.photo_url ? (
-                                                          <a
-                                                            href={`${import.meta.env.VITE_API_URL || "https://expense-backend-zio8.onrender.com"}${c.photo_url}`}
-                                                            target="_blank"
-                                                            rel="noreferrer"
-                                                            className="text-xs text-blue-600 font-bold hover:underline"
-                                                          >
-                                                            View
-                                                          </a>
-                                                        ) : (
-                                                          <span className="text-[10px] text-gray-400">—</span>
-                                                        )}
-                                                      </td>
-                                                    </tr>
-                                                  ))}
-                                                </tbody>
-                                              </table>
+                                            <div className="space-y-1.5 max-w-full">
+                                              <div className="text-[9px] font-black text-indigo-700 uppercase tracking-wider">Support Calls Logs</div>
+                                              <div className="flex flex-wrap gap-2">
+                                                {callsList.map((c: any, cIdx: number) => (
+                                                  <div key={cIdx} className="bg-white border border-gray-300 p-2.5 shadow-xs text-[10px] w-full sm:w-[220px] flex flex-col justify-between hover:border-indigo-400 transition-colors">
+                                                    <div className="flex justify-between items-center border-b border-gray-100 pb-1 mb-1">
+                                                      <span className="font-mono font-bold text-indigo-650">{c.barcode}</span>
+                                                      <span className="px-1.5 py-0.2 rounded-sm font-black text-[7px] uppercase bg-blue-50 text-blue-700 border border-blue-100">{c.status || "Attend"}</span>
+                                                    </div>
+                                                    <div className="space-y-0.5 flex-1">
+                                                      <p className="font-bold text-gray-800 line-clamp-1">{c.asset_details?.equipment_name || "—"}</p>
+                                                      <p className="text-gray-555 truncate">{c.asset_details?.hospital_name || "—"}</p>
+                                                      <p className="text-gray-400 text-[8px] uppercase tracking-wider">{c.asset_details?.district_name || "—"} | {c.type || "Support"}</p>
+                                                    </div>
+                                                    {c.photo_url && (
+                                                      <button 
+                                                        onClick={() => setLightboxImage(`${import.meta.env.VITE_API_URL || "https://expense-backend-zio8.onrender.com"}${c.photo_url}`)}
+                                                        className="mt-1.5 w-full bg-slate-50 hover:bg-slate-100 py-1 text-center font-bold text-slate-700 rounded border border-gray-300 cursor-pointer text-[8px] uppercase"
+                                                      >
+                                                        View Photo
+                                                      </button>
+                                                    )}
+                                                  </div>
+                                                ))}
+                                              </div>
                                             </div>
                                           )}
 
                                           {/* Sub-table for PMS */}
                                           {selectedActs.includes("PMS") && pmsList.length > 0 && (
-                                            <div className="border border-amber-100 rounded overflow-hidden bg-white max-w-4xl">
-                                              <div className="px-2 py-1 bg-amber-50/50 border-b border-amber-100 text-[9px] font-bold text-amber-700 uppercase">PMS Service Logs</div>
-                                              <table className="min-w-full divide-y divide-gray-100 text-[10px] text-left">
-                                                <thead className="bg-gray-50 text-[8px] text-gray-400 font-bold uppercase">
-                                                  <tr>
-                                                    <th className="py-1 px-2 text-left">District Name</th>
-                                                    <th className="py-1 px-2 text-left">Hospital Name</th>
-                                                    <th className="py-1 px-2 text-left">Equipment Name</th>
-                                                    <th className="py-1 px-2 text-left">Model</th>
-                                                    <th className="py-1 px-2 text-left font-mono">Bar Code</th>
-                                                    <th className="py-1 px-2 text-left">Inventory Status</th>
-                                                    <th className="py-1 px-2 text-left">PMS Frequency Period</th>
-                                                    <th className="py-1 px-2 text-center w-12">Photo</th>
-                                                  </tr>
-                                                </thead>
-                                                <tbody className="divide-y divide-gray-100">
-                                                  {pmsList.map((p: any, pIdx: number) => (
-                                                    <tr key={pIdx}>
-                                                      <td className="py-1 px-2 text-gray-700">{p.asset_details?.district_name || "—"}</td>
-                                                      <td className="py-1 px-2 text-gray-700">{p.asset_details?.hospital_name || "—"}</td>
-                                                      <td className="py-1 px-2 text-gray-805 font-bold">{p.asset_details?.equipment_name || "—"}</td>
-                                                      <td className="py-1 px-2 text-gray-700">{p.asset_details?.model_name || "—"}</td>
-                                                      <td className="py-1 px-2 font-mono font-bold text-gray-700">{p.barcode}</td>
-                                                      <td className="py-1 px-2">
-                                                        <span className="px-1 py-0.2 rounded font-extrabold text-[7px] uppercase bg-green-50 text-green-700 border border-green-200">
-                                                          {p.asset_details?.inventory_status || "Active"}
-                                                        </span>
-                                                      </td>
-                                                      <td className="py-1 px-2 text-gray-650">{p.frequency || "3 month"}</td>
-                                                      <td className="py-1 px-2 text-center">
-                                                        {p.photo_url ? (
-                                                          <a
-                                                            href={`${import.meta.env.VITE_API_URL || "https://expense-backend-zio8.onrender.com"}${p.photo_url}`}
-                                                            target="_blank"
-                                                            rel="noreferrer"
-                                                            className="text-xs text-blue-600 font-bold hover:underline"
-                                                          >
-                                                            View
-                                                          </a>
-                                                        ) : (
-                                                          <span className="text-[10px] text-gray-400">—</span>
-                                                        )}
-                                                      </td>
-                                                    </tr>
-                                                  ))}
-                                                </tbody>
-                                              </table>
+                                            <div className="space-y-1.5 max-w-full">
+                                              <div className="text-[9px] font-black text-amber-700 uppercase tracking-wider">PMS Service Logs</div>
+                                              <div className="flex flex-wrap gap-2">
+                                                {pmsList.map((p: any, pIdx: number) => (
+                                                  <div key={pIdx} className="bg-white border border-gray-300 p-2.5 shadow-xs text-[10px] w-full sm:w-[220px] flex flex-col justify-between hover:border-amber-400 transition-colors">
+                                                    <div className="flex justify-between items-center border-b border-gray-100 pb-1 mb-1">
+                                                      <span className="font-mono font-bold text-amber-600">{p.barcode}</span>
+                                                      <span className="px-1.5 py-0.2 rounded-sm font-black text-[7px] uppercase bg-green-50 text-green-700 border border-green-205">{p.asset_details?.inventory_status || "Active"}</span>
+                                                    </div>
+                                                    <div className="space-y-0.5 flex-1">
+                                                      <p className="font-bold text-gray-800 line-clamp-1">{p.asset_details?.equipment_name || "—"}</p>
+                                                      <p className="text-gray-500 truncate">{p.asset_details?.hospital_name || "—"}</p>
+                                                      <p className="text-gray-400 text-[8px] uppercase tracking-wider">{p.asset_details?.district_name || "—"} | Freq: {p.frequency || "3M"}</p>
+                                                    </div>
+                                                    {p.photo_url && (
+                                                      <button 
+                                                        onClick={() => setLightboxImage(`${import.meta.env.VITE_API_URL || "https://expense-backend-zio8.onrender.com"}${p.photo_url}`)}
+                                                        className="mt-1.5 w-full bg-slate-50 hover:bg-slate-100 py-1 text-center font-bold text-slate-700 rounded border border-gray-300 cursor-pointer text-[8px] uppercase"
+                                                      >
+                                                        View Photo
+                                                      </button>
+                                                    )}
+                                                  </div>
+                                                ))}
+                                              </div>
                                             </div>
                                           )}
 
                                           {/* Sub-table for Asset Tagging */}
                                           {selectedActs.includes("Asset Tagging") && assetsList.length > 0 && (
-                                            <div className="border border-emerald-100 rounded overflow-hidden bg-white max-w-4xl">
-                                              <div className="px-2 py-1 bg-emerald-50/50 border-b border-emerald-100 text-[9px] font-bold text-emerald-700 uppercase">Asset Tagging Records</div>
-                                              <table className="min-w-full divide-y divide-gray-100 text-[10px] text-left">
-                                                <thead className="bg-gray-50 text-[8px] text-gray-400 font-bold uppercase">
-                                                  <tr>
-                                                    <th className="py-1 px-2 text-left">Equipment Name</th>
-                                                    <th className="py-1 px-2 text-center w-20">Quantity</th>
-                                                    {(() => {
-                                                      const isEngineer = (user.designation || "").toLowerCase().trim() === "engineer" || 
-                                                                         (user.role || "").toLowerCase().trim() === "engineer";
-                                                      const isSubmitter = (selectedClaim.user_id === user.id) || (selectedClaim.submitter_code === user.user_id);
-                                                      const hideCost = isEngineer || isSubmitter;
-                                                      return !hideCost ? (
-                                                        <>
-                                                          <th className="py-1 px-2 text-right w-28">Tender Rate</th>
-                                                          <th className="py-1 px-2 text-right w-28">Total Cost</th>
-                                                        </>
-                                                      ) : null;
-                                                    })()}
-                                                  </tr>
-                                                </thead>
-                                                <tbody className="divide-y divide-gray-100">
-                                                  {assetsList.map((a: any, aIdx: number) => {
-                                                    const selectedEq = assetValueMaster.find(eq => eq.equipment_name === a.equipment_name);
-                                                    const costPerUnit = selectedEq ? (selectedEq.rmsc_tender_cost || 0) : 0;
-                                                    const qty = parseInt(a.quantity || "0") || 0;
-                                                    const totalCost = qty * costPerUnit;
-                                                    
-                                                    const isEngineer = (user.designation || "").toLowerCase().trim() === "engineer" || 
-                                                                       (user.role || "").toLowerCase().trim() === "engineer";
-                                                    const isSubmitter = (selectedClaim.user_id === user.id) || (selectedClaim.submitter_code === user.user_id);
-                                                    const hideCost = isEngineer || isSubmitter;
-                                                                       
-                                                    return (
-                                                      <tr key={aIdx}>
-                                                        <td className="py-1 px-2 font-semibold text-gray-700">{a.equipment_name}</td>
-                                                        <td className="py-1 px-2 text-center text-gray-600">{qty}</td>
+                                            <div className="space-y-1.5 max-w-full">
+                                              <div className="text-[9px] font-black text-emerald-700 uppercase tracking-wider">Asset Tagging Records</div>
+                                              <div className="flex flex-wrap gap-2">
+                                                {assetsList.map((a: any, aIdx: number) => {
+                                                  const selectedEq = assetValueMaster.find(eq => eq.equipment_name === a.equipment_name);
+                                                  const costPerUnit = selectedEq ? (selectedEq.rmsc_tender_cost || 0) : 0;
+                                                  const qty = parseInt(a.quantity || "0") || 0;
+                                                  const totalCost = qty * costPerUnit;
+                                                  
+                                                  const isEngineer = (user.designation || "").toLowerCase().trim() === "engineer" || 
+                                                                     (user.role || "").toLowerCase().trim() === "engineer";
+                                                  const isSubmitter = (selectedClaim.user_id === user.id) || (selectedClaim.submitter_code === user.user_id);
+                                                  const hideCost = isEngineer || isSubmitter;
+                                                  
+                                                  return (
+                                                    <div key={aIdx} className="bg-white border border-gray-300 p-2.5 shadow-xs text-[10px] w-full sm:w-[220px] flex flex-col justify-between hover:border-emerald-400 transition-colors">
+                                                      <div className="space-y-0.5">
+                                                        <p className="font-bold text-gray-800 line-clamp-1">{a.equipment_name}</p>
+                                                        <span className="text-[7px] text-gray-400 uppercase tracking-wider">Asset Tagged</span>
+                                                      </div>
+                                                      <div className="flex justify-between items-center mt-2 pt-2 border-t border-gray-100">
+                                                        <div>
+                                                          <span className="text-[8px] text-gray-400 block">QTY</span>
+                                                          <span className="font-extrabold text-gray-700">{qty} units</span>
+                                                        </div>
                                                         {!hideCost && (
-                                                          <>
-                                                            <td className="py-1 px-2 text-right text-gray-500">₹{costPerUnit.toLocaleString()}</td>
-                                                            <td className="py-1 px-2 text-right font-bold text-emerald-700">₹{totalCost.toLocaleString()}</td>
-                                                          </>
+                                                          <div className="text-right">
+                                                            <span className="text-[8px] text-gray-400 block">COST (₹{costPerUnit})</span>
+                                                            <span className="font-bold text-emerald-700">₹{totalCost.toLocaleString()}</span>
+                                                          </div>
                                                         )}
-                                                      </tr>
-                                                    );
-                                                  })}
+                                                      </div>
+                                                    </div>
+                                                  );
+                                                })}
+                                              </div>
+                                            </div>
+                                          )}         })}
                                                 </tbody>
                                               </table>
                                             </div>
@@ -5037,7 +4974,7 @@ export default function ExpensePage() {
                 </a>
                 <button
                   onClick={() => setLightboxImage(null)}
-                  className="px-2 py-1 bg-gray-200 hover:bg-gray-300 text-gray-700 rounded text-[10px] font-bold border-0 cursor-pointer"
+                  className="px-2 py-1 bg-red-600 hover:bg-red-750 text-white rounded text-[10px] font-bold border-0 cursor-pointer transition-colors"
                 >
                   ✕ Close
                 </button>
@@ -5075,7 +5012,7 @@ export default function ExpensePage() {
                   setActiveCameraTarget(null);
                   setActiveActivityCameraTarget(null);
                 }}
-                className="text-gray-500 hover:text-gray-800 bg-transparent border-0 cursor-pointer font-bold"
+                className="text-red-600 hover:text-red-800 bg-transparent border-0 cursor-pointer font-black"
               >
                 ✕
               </button>

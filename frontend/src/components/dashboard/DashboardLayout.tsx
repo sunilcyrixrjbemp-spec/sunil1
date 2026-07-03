@@ -53,16 +53,16 @@ const MENU_ITEMS: MenuItem[] = [
 ];
 
 const MenuGridIcon = () => (
-  <svg className="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-    <rect x="3" y="3" width="4" height="4" />
-    <rect x="10" y="3" width="4" height="4" />
-    <rect x="17" y="3" width="4" height="4" />
-    <rect x="3" y="10" width="4" height="4" />
-    <rect x="10" y="10" width="4" height="4" />
-    <rect x="17" y="10" width="4" height="4" />
-    <rect x="3" y="17" width="4" height="4" />
-    <rect x="10" y="17" width="4" height="4" />
-    <rect x="17" y="17" width="4" height="4" />
+  <svg className="w-5 h-5 transition-all duration-200 hover:scale-110 active:scale-95 text-inherit" viewBox="0 0 24 24" fill="currentColor">
+    <circle cx="5" cy="5" r="2" />
+    <circle cx="12" cy="5" r="2" />
+    <circle cx="19" cy="5" r="2" />
+    <circle cx="5" cy="12" r="2" />
+    <circle cx="12" cy="12" r="2" />
+    <circle cx="19" cy="12" r="2" />
+    <circle cx="5" cy="19" r="2" />
+    <circle cx="12" cy="19" r="2" />
+    <circle cx="19" cy="19" r="2" />
   </svg>
 );
 
@@ -71,6 +71,7 @@ export default function DashboardLayout() {
   const location = useLocation();
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(window.innerWidth < 1024);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  const [isMobileScreen, setIsMobileScreen] = useState(window.innerWidth < 1024);
   const [user, setUser] = useState<any>(null);
   const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
   const [avatarError, setAvatarError] = useState(false);
@@ -95,7 +96,9 @@ export default function DashboardLayout() {
 
   useEffect(() => {
     const handleResize = () => {
-      if (window.innerWidth < 1024) {
+      const isMobile = window.innerWidth < 1024;
+      setIsMobileScreen(isMobile);
+      if (isMobile) {
         setIsSidebarCollapsed(true);
       } else {
         setIsSidebarCollapsed(false);
@@ -358,6 +361,9 @@ export default function DashboardLayout() {
 
   // Check if user has permission for menu items based on allowed_windows
   const allowedMenuItems = MENU_ITEMS.filter((item) => {
+    if (isMobileScreen && ["report", "consolidated_report", "mis_report"].includes(item.id.toLowerCase())) {
+      return false;
+    }
     if (["home", "profile", "help", "expense"].includes(item.id.toLowerCase())) return true;
     return allowedWindows.includes(item.id.toLowerCase());
   });
@@ -515,7 +521,7 @@ export default function DashboardLayout() {
             >
               <Menu className="w-5 h-5" />
             </button>
-            <h1 className="text-sm font-black text-white uppercase tracking-wider md:text-base">
+            <h1 className="text-base md:text-xl font-black text-white uppercase tracking-wider ml-4 md:ml-6">
               {currentActiveItem ? currentActiveItem.name : "Dashboard"}
             </h1>
           </div>
@@ -631,32 +637,30 @@ export default function DashboardLayout() {
       </div>
 
       {/* MOBILE BOTTOM NAVIGATION BAR */}
-      <nav className="lg:hidden fixed bottom-0 left-0 right-0 h-16 bg-white border-t border-gray-200 flex items-center justify-around px-2 z-[999] shadow-lg pb-safe overflow-visible">
+      <nav className="lg:hidden fixed bottom-0 left-0 right-0 h-14 bg-white border-t border-gray-200 flex items-center justify-around px-2 z-[999] shadow-lg pb-safe">
         {/* Home Tab */}
         <Link
           to="/home"
           onMouseEnter={() => preloadRoute("/home")}
           className={`flex flex-col items-center justify-center w-14 h-12 rounded transition-all ${
-            currentActiveItem?.id === "home" ? "text-indigo-650" : "text-gray-500 hover:text-gray-800"
+            currentActiveItem?.id === "home" ? "text-[#0f172a] font-extrabold" : "text-gray-500 hover:text-gray-800"
           }`}
         >
           <Home className="w-5 h-5" />
           <span className="text-[9px] font-bold uppercase tracking-wider mt-1">Home</span>
         </Link>
 
-        {/* Submit Claim Tab (Styled as a circular floating button in the center!) */}
+        {/* Submit Claim Tab (Inline layout!) */}
         {allowedWindows.includes("expense") && (
           <Link
             to="/submit-expense"
             onMouseEnter={() => preloadRoute("/submit-expense")}
-            className="flex flex-col items-center justify-center w-14 h-12 rounded transition-all relative -top-4 z-50 transform active:scale-95"
+            className={`flex flex-col items-center justify-center w-14 h-12 rounded transition-all ${
+              currentActiveItem?.id === "expense" ? "text-[#0f172a] font-extrabold" : "text-gray-500 hover:text-gray-800"
+            }`}
           >
-            <div className={`h-11 w-11 rounded-full flex items-center justify-center shadow-md border-2 transition-all ${
-              currentActiveItem?.id === "expense" ? "bg-amber-500 text-slate-900 border-slate-900" : "bg-slate-900 text-white border-white"
-            }`}>
-              <Plus className="w-6 h-6" />
-            </div>
-            <span className="text-[8px] font-extrabold uppercase tracking-wider text-gray-500 mt-1 absolute -bottom-1">Claim</span>
+            <Plus className="w-5 h-5" />
+            <span className="text-[9px] font-bold uppercase tracking-wider mt-1">Claim</span>
           </Link>
         )}
 
@@ -665,18 +669,18 @@ export default function DashboardLayout() {
           to="/profile"
           onMouseEnter={() => preloadRoute("/profile")}
           className={`flex flex-col items-center justify-center w-14 h-12 rounded transition-all ${
-            currentActiveItem?.id === "profile" ? "text-indigo-650" : "text-gray-500 hover:text-gray-800"
+            currentActiveItem?.id === "profile" ? "text-[#0f172a] font-extrabold" : "text-gray-500 hover:text-gray-800"
           }`}
         >
           <User className="w-5 h-5" />
           <span className="text-[9px] font-bold uppercase tracking-wider mt-1">Profile</span>
         </Link>
 
-        {/* More Menu Tab (Always shown to give access to other windows & logout) */}
+        {/* More Menu Tab */}
         <button
           onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
           className={`flex flex-col items-center justify-center w-14 h-12 rounded transition-all border-0 bg-transparent cursor-pointer ${
-            isMobileMenuOpen ? "text-indigo-650" : "text-gray-500 hover:text-gray-800"
+            isMobileMenuOpen ? "text-[#0f172a] font-extrabold" : "text-gray-500 hover:text-gray-800"
           }`}
         >
           <MenuGridIcon />
@@ -733,6 +737,8 @@ export default function DashboardLayout() {
               {allowedMenuItems.map((item) => {
                 const Icon = item.icon;
                 const isActive = currentActiveItem?.id === item.id;
+                const isAnalysis = item.id.toLowerCase() === "analysis";
+                
                 return (
                   <Link
                     key={item.id}
@@ -741,11 +747,19 @@ export default function DashboardLayout() {
                     onClick={() => setIsMobileMenuOpen(false)}
                     className={`flex flex-col items-center justify-center p-3 rounded-lg border transition-all ${
                       isActive 
-                        ? "bg-indigo-50 border-indigo-200 text-indigo-700 font-bold" 
-                        : "bg-white border-gray-200 hover:bg-gray-50 text-gray-700 shadow-sm"
+                        ? "bg-[#0f172a] border-[#0f172a] text-white font-extrabold" 
+                        : isAnalysis
+                          ? "bg-emerald-50 border-emerald-200 hover:bg-emerald-100 text-emerald-800 shadow-xs"
+                          : "bg-white border-gray-200 hover:bg-gray-50 text-gray-700 shadow-sm"
                     }`}
                   >
-                    <div className={`p-2.5 rounded-full ${isActive ? "bg-indigo-600 text-white" : "bg-gray-50 text-gray-505 border border-gray-100 shadow-inner"}`}>
+                    <div className={`p-2.5 rounded-full ${
+                      isActive 
+                        ? "bg-white text-[#0f172a]" 
+                        : isAnalysis
+                          ? "bg-emerald-600 text-white"
+                          : "bg-gray-50 text-gray-505 border border-gray-100 shadow-inner"
+                    }`}>
                       <Icon className="w-5 h-5" />
                     </div>
                     <span className="text-[10px] font-bold uppercase tracking-wider mt-2 leading-tight truncate w-full">

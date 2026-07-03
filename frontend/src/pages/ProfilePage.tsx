@@ -753,7 +753,7 @@ export default function ProfilePage() {
             )}
           </div>
 
-          {/* Section 3: System Hierarchy & Permissions */}
+          {/* Section 3: System & Hierarchy Details */}
           <div className="bg-white border border-gray-200 rounded-2xl overflow-hidden shadow-xs">
             <button
               type="button"
@@ -761,37 +761,44 @@ export default function ProfilePage() {
               className="w-full px-4 py-3.5 flex items-center justify-between border-0 bg-white font-bold text-xs text-gray-800 cursor-pointer"
             >
               <span className="flex items-center gap-2">
-                <i className="fas fa-shield-alt text-indigo-600"></i> Role & Permissions
+                <i className="fas fa-shield-alt text-[#0f172a]"></i> System & Hierarchy Details
               </span>
               <i className={`fas fa-chevron-${activeMobileSection === "permissions" ? "up" : "down"} text-gray-400 text-[10px]`}></i>
             </button>
 
             {activeMobileSection === "permissions" && (
-              <div className="px-4 pb-4 pt-1 border-t border-gray-100 space-y-3.5 animate-fadeIn text-left animate-fadeIn">
+              <div className="px-4 pb-4 pt-1 border-t border-gray-100 space-y-3.5 animate-fadeIn text-left">
+                <div className="flex justify-between items-center text-[11px] border-b border-gray-50 pb-2">
+                  <span className="text-gray-400 font-bold">Employee Code</span>
+                  <span className="font-bold text-gray-855">{user.e_code || "—"}</span>
+                </div>
+                <div className="flex justify-between items-center text-[11px] border-b border-gray-50 pb-2">
+                  <span className="text-gray-400 font-bold">Grade</span>
+                  <span className="font-bold text-gray-855">{user.grade || "—"}</span>
+                </div>
+                <div className="flex justify-between items-center text-[11px] border-b border-gray-50 pb-2">
+                  <span className="text-gray-400 font-bold">Zone</span>
+                  <span className="font-bold text-gray-855">{user.zone || "—"}</span>
+                </div>
+                <div className="flex justify-between items-center text-[11px] border-b border-gray-50 pb-2">
+                  <span className="text-gray-455 font-bold">District</span>
+                  <span className="font-bold text-gray-855">{user.district || "—"}</span>
+                </div>
                 <div className="flex justify-between items-center text-[11px] border-b border-gray-50 pb-2">
                   <span className="text-gray-400 font-bold">Reporting Manager</span>
-                  <span className="font-bold text-gray-855">{user.reporting_manager || "Not assigned"}</span>
+                  <span className="font-bold text-gray-855">{user.manager || "—"}</span>
                 </div>
                 <div className="flex justify-between items-center text-[11px] border-b border-gray-50 pb-2">
-                  <span className="text-gray-400 font-bold">Zonal Manager</span>
-                  <span className="font-bold text-gray-855">{user.zonal_manager || "Not assigned"}</span>
+                  <span className="text-gray-450 font-bold">Zonal Manager</span>
+                  <span className="font-bold text-gray-855">{user.zonal_manager || "—"}</span>
                 </div>
                 <div className="flex justify-between items-center text-[11px] border-b border-gray-50 pb-2">
-                  <span className="text-gray-455 font-bold">Coordinator</span>
-                  <span className="font-bold text-gray-855">{user.coordinator || "Not assigned"}</span>
+                  <span className="text-gray-450 font-bold">Coordinator</span>
+                  <span className="font-bold text-gray-855">{user.coordinator || "—"}</span>
                 </div>
-
-                <div>
-                  <span className="text-[10px] text-gray-450 font-bold uppercase tracking-wider block mb-2">Permitted Modules</span>
-                  <div className="flex flex-wrap gap-2">
-                    {user.allowed_windows ? user.allowed_windows.split(",").map((win: string, wIdx: number) => (
-                      <span key={wIdx} className="px-2.5 py-0.5 rounded-full bg-indigo-50 border border-indigo-100 text-indigo-650 text-[10px] font-bold uppercase tracking-wide">
-                        {win.trim()}
-                      </span>
-                    )) : (
-                      <span className="text-xs text-gray-400">None</span>
-                    )}
-                  </div>
+                <div className="flex justify-between items-center text-[11px]">
+                  <span className="text-gray-455 font-bold">Device / Upkaran ID</span>
+                  <span className="font-bold text-gray-855">{user.e_upkaran_id || "—"}</span>
                 </div>
               </div>
             )}

@@ -1,4 +1,3 @@
-import { Loader2 } from "lucide-react";
 
 interface LoaderProps {
   message?: string;
@@ -8,9 +7,9 @@ interface LoaderProps {
 export default function Loader({ message = "Loading...", fullPage = false }: LoaderProps) {
   const content = (
     <div className="flex flex-col items-center justify-center p-6 text-center select-none animate-fadeIn">
-      {/* AdminLTE style spinner ring */}
+      {/* Circular spinner ring */}
       <div className="relative flex items-center justify-center mb-3">
-        <Loader2 className="w-8 h-8 text-[#007bff] animate-spin" />
+        <div className="w-8 h-8 border-3 border-slate-200 border-t-indigo-600 rounded-full animate-spin"></div>
       </div>
       
       {message && (
