@@ -1493,8 +1493,9 @@ async def get_expenses(
         return cached_val
 
     expenses = db.query(Expense).filter(Expense.user_id == current_user.id).order_by(Expense.created_at.desc()).all()
+    
     if not expenses:
-        return []
+        expenses = []
         
     expense_codes = [e.expense_code for e in expenses]
     
@@ -1728,7 +1729,7 @@ async def get_team_expenses(
     # Retrieve all expenses for team members
     expenses = db.query(Expense).filter(Expense.user_id.in_(team_user_ids)).order_by(Expense.created_at.desc()).all()
     if not expenses:
-        return []
+        expenses = []
         
     expense_codes = [e.expense_code for e in expenses]
     
