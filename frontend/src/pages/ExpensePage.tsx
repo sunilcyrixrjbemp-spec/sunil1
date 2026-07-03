@@ -4336,7 +4336,12 @@ export default function ExpensePage() {
                                             <span className="text-[9px] font-bold text-gray-500 uppercase mr-2 mt-0.5">Activities:</span>
                                             {selectedActs.map((act: string, actIdx: number) => (
                                               <span key={actIdx} className="px-1.5 py-0.5 rounded bg-gray-100 border border-gray-200 text-[8px] font-bold text-gray-700 uppercase">
-                                                     {/* Sub-table for Calls */}
+                                                {act}
+                                              </span>
+                                            ))}
+                                          </div>
+
+                                          {/* Sub-table for Calls */}
                                           {selectedActs.includes("Calls") && callsList.length > 0 && (
                                             <div className="space-y-1.5 max-w-full">
                                               <div className="text-[9px] font-black text-indigo-700 uppercase tracking-wider">Support Calls Logs</div>
