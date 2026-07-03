@@ -199,7 +199,7 @@ export default function PenaltyReportPage() {
       {/* Main logs list */}
       <div className="bg-white border border-gray-200 rounded shadow-sm overflow-hidden">
         <div className="overflow-x-auto">
-          <table className="w-full text-left text-xs border-collapse">
+          <table className="hidden md:table w-full text-left text-xs border-collapse">
             <thead>
               <tr className="bg-gray-50 text-gray-500 font-bold uppercase border-b border-gray-200 tracking-wider">
                 <th className="py-3 px-4">Employee</th>
@@ -262,6 +262,69 @@ export default function PenaltyReportPage() {
               )}
             </tbody>
           </table>
+
+          {/* Mobile Card List View */}
+          <div className="block md:hidden space-y-3 p-3 bg-slate-50/30">
+            {filteredRecords.length === 0 ? (
+              <div className="py-10 text-center text-gray-400 font-bold uppercase tracking-wider text-[10px]">
+                No penalty logs found for this period.
+              </div>
+            ) : (
+              filteredRecords.map(rec => (
+                <div
+                  key={rec.id}
+                  className="bg-white border border-gray-200 rounded-lg p-3.5 space-y-3.5 shadow-sm text-xs"
+                >
+                  <div className="flex justify-between items-start">
+                    <div>
+                      <div className="font-bold text-gray-800">{rec.name}</div>
+                      <span className="text-[9px] text-gray-400 font-mono mt-0.5">{rec.eCode} ({rec.designation})</span>
+                    </div>
+                    <span className={`inline-flex items-center gap-0.5 px-2 py-0.5 rounded text-[8px] font-bold uppercase border ${
+                      rec.status === "Deducted"
+                        ? "bg-blue-50 border-blue-200 text-blue-700"
+                        : rec.status === "Waived"
+                        ? "bg-green-50 border-green-200 text-green-700"
+                        : "bg-red-50 border-red-200 text-red-750"
+                    }`}>
+                      {rec.status}
+                    </span>
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-2 text-[11px] border-t border-gray-100 pt-2.5">
+                    <div>
+                      <span className="text-gray-400 font-bold uppercase text-[9px] block">Claim / Ticket</span>
+                      <span className="font-mono text-blue-750 font-bold">{rec.ticketCode || rec.expenseCode || "--"}</span>
+                    </div>
+                    <div>
+                      <span className="text-gray-400 font-bold uppercase text-[9px] block">Penalty Charges</span>
+                      <span className="font-extrabold text-red-600">₹{rec.amount}</span>
+                    </div>
+                    <div>
+                      <span className="text-gray-400 font-bold uppercase text-[9px] block">Issue Date</span>
+                      <span className="font-mono text-gray-500">{rec.date}</span>
+                    </div>
+                  </div>
+
+                  <div className="border-t border-gray-100 pt-2">
+                    <span className="text-red-600 font-bold text-[9px] uppercase tracking-wider block">{rec.category}</span>
+                    <p className="text-gray-600 font-semibold leading-relaxed mt-0.5">{rec.description}</p>
+                  </div>
+
+                  {rec.status === "Assessed" && (
+                    <div className="border-t border-gray-100 pt-3 flex justify-end">
+                      <button
+                        onClick={() => handleWaivePenalty(rec.id)}
+                        className="px-3 py-1.5 bg-green-600 hover:bg-green-700 text-white rounded text-[10px] font-bold uppercase tracking-wider cursor-pointer border-0 shadow-sm transition-colors active:scale-95"
+                      >
+                        Waive charge
+                      </button>
+                    </div>
+                  )}
+                </div>
+              ))
+            )}
+          </div>
         </div>
       </div>
 

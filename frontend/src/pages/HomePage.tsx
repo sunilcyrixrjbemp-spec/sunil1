@@ -391,9 +391,9 @@ export default function HomePage() {
   };
 
   const filteredTeamExpenses = getFilteredTeamExpenses();
-  const totalFilteredKm = filteredTeamExpenses.reduce((sum, e) => sum + (e.total_km || 0), 0);
-  const totalFilteredAuto = filteredTeamExpenses.reduce((sum, e) => sum + (e.total_auto || 0), 0);
-  const totalFilteredAmount = filteredTeamExpenses.reduce((sum, e) => sum + (e.amount || 0), 0);
+  const totalFilteredKm = filteredTeamExpenses.filter(e => e.category !== "Limit Request").reduce((sum, e) => sum + (e.total_km || 0), 0);
+  const totalFilteredAuto = filteredTeamExpenses.filter(e => e.category !== "Limit Request").reduce((sum, e) => sum + (e.total_auto || 0), 0);
+  const totalFilteredAmount = filteredTeamExpenses.filter(e => e.category !== "Limit Request").reduce((sum, e) => sum + (e.amount || 0), 0);
 
   const pendingApprovalStep = claimDetails?.approvals?.find(
     (app: any) => app.approver_code === user?.user_id && app.status === "pending"
@@ -402,6 +402,7 @@ export default function HomePage() {
   const getPersonalChartData = () => {
     let bike = 0, car = 0, auto = 0, da = 0, hotel = 0, lp = 0, other = 0;
     filteredPersonalExpenses.forEach(e => {
+      if (e.category === "Limit Request") return;
       bike += e.bike_amount || 0;
       car += e.car_amount || 0;
       auto += e.auto_amount || 0;
@@ -431,6 +432,7 @@ export default function HomePage() {
   const getTeamChartData = () => {
     const grouped: Record<string, { name: string, amount: number }> = {};
     filteredTeamExpenses.forEach(e => {
+      if (e.category === "Limit Request") return;
       const code = e.submitter_code;
       if (!grouped[code]) {
         grouped[code] = { name: e.submitter_name, amount: 0 };
@@ -454,7 +456,7 @@ export default function HomePage() {
     return s.startsWith("submitted") || s === "pending" || s === "draft";
   });
 
-  const getStatsSums = (list: any[]) => list.reduce((sum, c) => sum + (c.amount || 0), 0);
+  const getStatsSums = (list: any[]) => list.filter(c => c.category !== "Limit Request").reduce((sum, c) => sum + (c.amount || 0), 0);
 
   const totalAmount = getStatsSums(statsTotalClaims);
   const approvedAmount = getStatsSums(statsApprovedClaims);
@@ -787,7 +789,7 @@ export default function HomePage() {
                     <p className="font-bold">No expense claims found for this month.</p>
                   </div>
                 ) : (
-                  <table className="table-lte">
+                  <table className="hidden md:table table-lte">
                     <thead>
                       <tr className="border-b border-gray-200 text-[9px] uppercase font-bold tracking-wider text-gray-400 bg-gray-50/50">
                         <th className="py-2.5 px-3">Claim ID</th>
@@ -823,6 +825,53 @@ export default function HomePage() {
                       ))}
                     </tbody>
                   </table>
+
+                  {/* Mobile Card List View */}
+                  <div className="block md:hidden space-y-3">
+                    {filteredPersonalExpenses.map((exp) => (
+                      <div
+                        key={exp.id}
+                        onClick={() => handleOpenClaimDetails(exp.id)}
+                        className="bg-white border border-gray-200 rounded-lg p-3.5 space-y-3.5 active:bg-gray-50 transition-colors shadow-sm cursor-pointer"
+                      >
+                        <div className="flex justify-between items-center">
+                          <span className="font-bold font-mono text-blue-600 text-xs uppercase">{exp.expense_code}</span>
+                          <span className={`inline-flex items-center px-2 py-0.5 rounded border text-[8px] font-bold uppercase tracking-wider ${getStatusBadgeClass(exp.status)}`}>
+                            {exp.status}
+                          </span>
+                        </div>
+                        
+                        <div className="grid grid-cols-2 gap-2 text-[11px]">
+                          <div>
+                            <span className="text-gray-400 font-bold uppercase text-[9px] block">Date</span>
+                            <span className="text-gray-700 font-semibold">{exp.itinerary || exp.date}</span>
+                          </div>
+                          <div>
+                            <span className="text-gray-400 font-bold uppercase text-[9px] block">Travel Mode</span>
+                            <span className="text-gray-700 font-semibold">{exp.travel_mode || exp.category}</span>
+                          </div>
+                          <div>
+                            <span className="text-gray-400 font-bold uppercase text-[9px] block">Distance / Auto</span>
+                            <span className="text-gray-700 font-semibold">
+                              {exp.total_km ? `${exp.total_km.toFixed(1)} KM` : "—"}
+                              {exp.total_auto ? ` / ₹${exp.total_auto.toLocaleString()}` : ""}
+                            </span>
+                          </div>
+                          <div>
+                            <span className="text-gray-400 font-bold uppercase text-[9px] block">Total Amount</span>
+                            <span className="text-gray-900 font-extrabold text-xs">₹{exp.amount.toLocaleString()}</span>
+                          </div>
+                        </div>
+                        
+                        {exp.description && (
+                          <div className="border-t border-gray-100 pt-2 text-[10px]">
+                            <span className="text-gray-400 font-bold uppercase text-[8px] block">Purpose</span>
+                            <p className="text-gray-600 font-semibold mt-0.5 truncate">{exp.description}</p>
+                          </div>
+                        )}
+                      </div>
+                    ))}
+                  </div>
                 )
               )}
 
@@ -836,7 +885,7 @@ export default function HomePage() {
                     <p className="font-bold">No claims submitted by your team members yet.</p>
                   </div>
                 ) : (
-                  <table className="table-lte">
+                  <table className="hidden md:table table-lte">
                     <thead>
                       <tr className="border-b border-gray-200 text-[9px] uppercase font-bold tracking-wider text-gray-400 bg-gray-50/50">
                         <th className="py-2.5 px-3">Employee</th>
@@ -877,6 +926,56 @@ export default function HomePage() {
                       ))}
                     </tbody>
                   </table>
+
+                  {/* Mobile Card List View */}
+                  <div className="block md:hidden space-y-3">
+                    {filteredTeamExpenses.map((exp) => (
+                      <div
+                        key={exp.id}
+                        onClick={() => handleOpenClaimDetails(exp.id)}
+                        className="bg-white border border-gray-200 rounded-lg p-3.5 space-y-3.5 active:bg-gray-50 transition-colors shadow-sm cursor-pointer"
+                      >
+                        <div className="flex justify-between items-center">
+                          <div>
+                            <p className="font-bold text-gray-800 text-xs leading-none">{exp.submitter_name}</p>
+                            <span className="text-[8px] font-mono uppercase text-blue-600 block mt-0.5">{exp.submitter_code}</span>
+                          </div>
+                          <span className={`inline-flex items-center px-2 py-0.5 rounded border text-[8px] font-bold uppercase tracking-wider ${getStatusBadgeClass(exp.status)}`}>
+                            {exp.status}
+                          </span>
+                        </div>
+                        
+                        <div className="grid grid-cols-2 gap-2 text-[11px]">
+                          <div>
+                            <span className="text-gray-400 font-bold uppercase text-[9px] block">Claim ID / Date</span>
+                            <span className="text-gray-700 font-semibold">{exp.expense_code} ({exp.date || exp.itinerary})</span>
+                          </div>
+                          <div>
+                            <span className="text-gray-400 font-bold uppercase text-[9px] block">Mode</span>
+                            <span className="text-gray-700 font-semibold">{exp.category || exp.travel_mode}</span>
+                          </div>
+                          <div>
+                            <span className="text-gray-400 font-bold uppercase text-[9px] block">Distance / Auto</span>
+                            <span className="text-gray-700 font-semibold">
+                              {exp.total_km ? `${exp.total_km.toFixed(1)} KM` : "—"}
+                              {exp.total_auto ? ` / ₹${exp.total_auto.toLocaleString()}` : ""}
+                            </span>
+                          </div>
+                          <div>
+                            <span className="text-gray-400 font-bold uppercase text-[9px] block">Amount</span>
+                            <span className="text-gray-900 font-extrabold text-xs">₹{exp.amount.toLocaleString()}</span>
+                          </div>
+                        </div>
+                        
+                        {exp.purpose && (
+                          <div className="border-t border-gray-100 pt-2 text-[10px]">
+                            <span className="text-gray-400 font-bold uppercase text-[8px] block">Purpose</span>
+                            <p className="text-gray-600 font-semibold mt-0.5 truncate">{exp.purpose}</p>
+                          </div>
+                        )}
+                      </div>
+                    ))}
+                  </div>
                 )
               )}
 
@@ -886,7 +985,7 @@ export default function HomePage() {
         </div>
 
         {/* Right Sidebar: Dynamic Charts & Filters */}
-        <div className="space-y-4 font-sans">
+        <div className="hidden lg:block space-y-4 font-sans">
           {activeTab === "my-claims" ? (
             /* PERSONAL CLAIMS CHART BOX */
             <div className="bg-white border border-gray-200 border-t-4 border-t-blue-600 rounded shadow-sm p-5 space-y-4">

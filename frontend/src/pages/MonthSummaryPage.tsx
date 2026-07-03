@@ -1018,7 +1018,7 @@ export default function MonthSummaryPage() {
               <p className="text-gray-450 text-[11px] mt-1">Make sure filters are correct and claims have been approved.</p>
             </div>
           ) : (
-            <table className="w-full text-left table-auto min-w-[1050px] border-collapse">
+            <table className="hidden md:table w-full text-left table-auto min-w-[1050px] border-collapse">
               <thead>
                 <tr className="bg-gray-50 border-b border-gray-200 text-[10px] uppercase font-bold tracking-wider text-gray-600 font-sans">
                   <th className="py-2.5 px-3 border-r border-gray-200 text-center w-10">
@@ -1114,8 +1114,77 @@ export default function MonthSummaryPage() {
                     <td />
                   </tr>
                 </tfoot>
-              )}
             </table>
+
+            {/* Mobile Card List View */}
+            <div className="block md:hidden space-y-3">
+              {filtered.map((row, idx) => {
+                const key = `${row.user_id}-${row.month}-${row.year}`;
+                const isLoading = pdfLoadingId === key;
+                return (
+                  <div
+                    key={key}
+                    className="bg-white border border-gray-200 rounded-lg p-3.5 space-y-3 shadow-sm text-xs"
+                  >
+                    <div className="flex justify-between items-start">
+                      <div className="flex items-center gap-2">
+                        <input
+                          type="checkbox"
+                          checked={selectedKeys.includes(key)}
+                          onChange={(e) => handleSelectRow(key, e.target.checked)}
+                          className="cursor-pointer rounded h-4 w-4"
+                        />
+                        <div>
+                          <div className="font-bold text-gray-800 leading-tight">{row.name}</div>
+                          <span className="text-[9px] text-gray-500 font-semibold uppercase">{row.designation}</span>
+                        </div>
+                      </div>
+                      <span className="text-[9px] font-mono font-bold text-blue-700 bg-blue-50/50 px-2 py-0.5 rounded border border-blue-100">{row.e_code}</span>
+                    </div>
+
+                    <div className="grid grid-cols-2 gap-2 text-[11px] border-t border-gray-150 pt-2.5">
+                      <div>
+                        <span className="text-gray-400 font-bold uppercase text-[9px] block">Base District</span>
+                        <span className="text-gray-700 font-semibold">{row.district || "—"}</span>
+                      </div>
+                      <div>
+                        <span className="text-gray-400 font-bold uppercase text-[9px] block">Month</span>
+                        <span className="text-[10px] font-bold text-indigo-700 bg-indigo-50/50 px-2 py-0.5 rounded border border-indigo-100 inline-block mt-0.5">{row.month} {row.year}</span>
+                      </div>
+                      <div>
+                        <span className="text-gray-400 font-bold uppercase text-[9px] block">Claimed / Approved / Rejected</span>
+                        <span className="text-gray-800 font-bold leading-tight block">
+                          Claimed: <span className="text-blue-650">{fmt(row.claimed_amount)}</span>
+                        </span>
+                        <span className="text-green-700 font-bold leading-tight block">
+                          Approved: {fmt(row.total_amount)}
+                        </span>
+                        {row.rejected_amount > 0 && (
+                          <span className="text-rose-700 font-bold leading-tight block">
+                            Rejected: {fmt(row.rejected_amount)}
+                          </span>
+                        )}
+                      </div>
+                      <div>
+                        <span className="text-gray-400 font-bold uppercase text-[9px] block">Tasks Metrics</span>
+                        <span className="text-gray-700 block mt-0.5">Calls: {row.calls_assigned > 0 ? `${row.calls_completed}/${row.calls_assigned}` : "—"}</span>
+                        <span className="text-gray-700 block">PMS: {row.pms_count || "—"}</span>
+                        <span className="text-gray-700 block">Tagging: {row.asset_tagging_count || "—"}</span>
+                      </div>
+                    </div>
+
+                    <div className="border-t border-gray-150 pt-3.5 flex justify-end">
+                      <button onClick={() => handlePDF(row)} disabled={isLoading}
+                        className="inline-flex items-center justify-center gap-1.5 px-3 py-1.5 rounded bg-red-600 hover:bg-red-700 text-white text-[10px] font-bold shadow-sm transition-all cursor-pointer disabled:opacity-60 border-0 active:scale-95"
+                      >
+                        {isLoading ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Download className="w-3.5 h-3.5" />}
+                        <span>Download PDF Form</span>
+                      </button>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
           )}
         </div>
       </div>

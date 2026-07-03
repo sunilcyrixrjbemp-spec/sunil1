@@ -588,7 +588,7 @@ export default function DashboardLayout() {
         </header>
 
         {/* MAIN AREA WORKSPACE */}
-        <main className="flex-1 p-4 pb-16 lg:pb-4 overflow-y-auto min-w-0 overflow-x-hidden w-full">
+        <main className="flex-1 p-4 pb-20 lg:pb-4 overflow-y-auto min-w-0 overflow-x-hidden w-full">
           {hasAccess ? (
             <Outlet />
           ) : (
@@ -621,33 +621,70 @@ export default function DashboardLayout() {
       </div>
 
       {/* MOBILE BOTTOM NAVIGATION BAR */}
-      <nav className="lg:hidden h-14 fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 flex items-center justify-around px-2 z-40 shadow-lg">
-        {allowedMenuItems.slice(0, 3).map((item) => {
-          const Icon = item.icon;
-          const isActive = currentActiveItem?.id === item.id;
-          return (
-            <Link
-              key={item.id}
-              to={item.path}
-              onMouseEnter={() => preloadRoute(item.path)}
-              className={`flex flex-col items-center justify-center w-14 h-10 rounded transition-all ${
-                isActive ? "text-blue-600" : "text-gray-500 hover:text-gray-800"
-              }`}
-            >
-              <Icon className="w-5 h-5" />
-              <span className="text-[9px] font-semibold uppercase tracking-wider mt-1 truncate w-full text-center">{item.name}</span>
-            </Link>
-          );
-        })}
-        {/* Menu (9-dot Icon) */}
+      <nav className="lg:hidden fixed bottom-0 left-0 right-0 h-16 bg-white border-t border-gray-200 flex items-center justify-around px-2 z-40 shadow-lg pb-safe">
+        {/* Home Tab */}
+        <Link
+          to="/home"
+          onMouseEnter={() => preloadRoute("/home")}
+          className={`flex flex-col items-center justify-center w-14 h-12 rounded transition-all ${
+            currentActiveItem?.id === "home" ? "text-blue-600" : "text-gray-500 hover:text-gray-800"
+          }`}
+        >
+          <Home className="w-5 h-5" />
+          <span className="text-[9px] font-bold uppercase tracking-wider mt-1">Home</span>
+        </Link>
+
+        {/* Submit Claim Tab (Styled as a circular floating button in the center!) */}
+        {allowedWindows.includes("expense") && (
+          <Link
+            to="/submit-expense"
+            onMouseEnter={() => preloadRoute("/submit-expense")}
+            className="flex flex-col items-center justify-center w-14 h-12 rounded transition-all relative -top-3"
+          >
+            <div className={`h-11 w-11 rounded-full flex items-center justify-center shadow-md border-2 border-white transition-all ${
+              currentActiveItem?.id === "expense" ? "bg-blue-600 text-white" : "bg-gray-800 text-gray-100"
+            }`}>
+              <Plus className="w-6 h-6" />
+            </div>
+            <span className="text-[8px] font-extrabold uppercase tracking-wider text-gray-500 mt-1 absolute -bottom-1">Claim</span>
+          </Link>
+        )}
+
+        {/* Approvals Tab */}
+        {allowedWindows.includes("approval") && (
+          <Link
+            to="/approval-center"
+            onMouseEnter={() => preloadRoute("/approval-center")}
+            className={`flex flex-col items-center justify-center w-14 h-12 rounded transition-all ${
+              currentActiveItem?.id === "approval" ? "text-blue-600" : "text-gray-500 hover:text-gray-800"
+            }`}
+          >
+            <CheckSquare className="w-5 h-5" />
+            <span className="text-[9px] font-bold uppercase tracking-wider mt-1">Approvals</span>
+          </Link>
+        )}
+
+        {/* Profile Tab */}
+        <Link
+          to="/profile"
+          onMouseEnter={() => preloadRoute("/profile")}
+          className={`flex flex-col items-center justify-center w-14 h-12 rounded transition-all ${
+            currentActiveItem?.id === "profile" ? "text-blue-600" : "text-gray-500 hover:text-gray-800"
+          }`}
+        >
+          <User className="w-5 h-5" />
+          <span className="text-[9px] font-bold uppercase tracking-wider mt-1">Profile</span>
+        </Link>
+
+        {/* More Menu Tab */}
         <button
           onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
-          className={`flex flex-col items-center justify-center w-14 h-10 rounded transition-all border-0 bg-transparent cursor-pointer ${
+          className={`flex flex-col items-center justify-center w-14 h-12 rounded transition-all border-0 bg-transparent cursor-pointer ${
             isMobileMenuOpen ? "text-blue-600" : "text-gray-500 hover:text-gray-800"
           }`}
         >
           <MenuGridIcon />
-          <span className="text-[9px] font-semibold uppercase tracking-wider mt-1">Menu</span>
+          <span className="text-[9px] font-bold uppercase tracking-wider mt-1">More</span>
         </button>
       </nav>
 

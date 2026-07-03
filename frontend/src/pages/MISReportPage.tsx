@@ -535,9 +535,9 @@ export default function MISReportPage() {
             </div>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          <div className="hidden lg:grid grid-cols-1 lg:grid-cols-3 gap-6">
             
-            <div className="card-lte bg-white shadow-sm md:col-span-2">
+            <div className="card-lte bg-white shadow-sm lg:col-span-2">
               <div className="px-4 py-3 border-b border-slate-150 flex items-center gap-1.5 bg-slate-50/50">
                 <i className="fas fa-chart-line text-blue-500"></i>
                 <h4 className="text-xs font-bold text-slate-700 uppercase tracking-wide">Daily Logged vs Closed Calls (Area Chart)</h4>
@@ -604,7 +604,7 @@ export default function MISReportPage() {
               </div>
             </div>
 
-            <div className="card-lte bg-white shadow-sm md:col-span-2">
+            <div className="card-lte bg-white shadow-sm lg:col-span-2">
               <div className="px-4 py-2.5 border-b border-slate-150 flex items-center gap-1.5 bg-slate-50/50">
                 <i className="fas fa-rupee-sign text-red-500"></i>
                 <h4 className="text-xs font-bold text-slate-700 uppercase tracking-wide">Day-wise Attended vs Delay Penalties (Stacked)</h4>

@@ -174,6 +174,7 @@ export default function LoginForm({ onForgotPassword, onUnlockAccount }: LoginFo
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (loading) return;
     setStatusMessage(null);
     
     if (!userId.trim() || !password) {
@@ -215,6 +216,7 @@ export default function LoginForm({ onForgotPassword, onUnlockAccount }: LoginFo
   };
 
   const handleForceLogin = async () => {
+    if (loading) return;
     setShowAlreadyLoggedInModal(false);
     setLoading(true);
     setStatusMessage(null);

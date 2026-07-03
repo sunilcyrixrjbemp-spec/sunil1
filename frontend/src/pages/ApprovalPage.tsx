@@ -503,8 +503,8 @@ export default function ApprovalPage() {
               <span className="w-2.5 h-2.5 rounded-full bg-blue-600 animate-pulse"></span>
               Limit Extension Requests
             </h3>
-            <div className="overflow-x-auto border border-gray-250 rounded shadow-sm bg-white">
-              <table className="w-full text-left border-collapse text-xs">
+            <div className="overflow-x-auto border border-gray-250 rounded shadow-sm bg-white p-3 md:p-0">
+              <table className="hidden md:table w-full text-left border-collapse text-xs">
                 <thead>
                   <tr className="bg-gray-50 border-b border-gray-250 text-gray-500 font-bold uppercase tracking-wider text-[10px]">
                     <th className="px-4 py-3">Employee Details</th>
@@ -596,6 +596,96 @@ export default function ApprovalPage() {
                   })}
                 </tbody>
               </table>
+
+              {/* Mobile view for Limit Extension Requests */}
+              <div className="block md:hidden space-y-3">
+                {limitRequests.map((req) => {
+                  const reqVal = req.amount;
+                  const currentValue = editedLimits[req.id] !== undefined ? editedLimits[req.id] : reqVal;
+                  return (
+                    <div
+                      key={req.id}
+                      className="bg-white rounded-lg p-3 space-y-3.5"
+                    >
+                      <div className="flex justify-between items-center">
+                        <div className="flex items-center gap-2">
+                          <div className="h-7 w-7 rounded-full bg-blue-600/10 border border-blue-500/20 text-blue-600 flex items-center justify-center font-bold text-xs uppercase shadow-sm">
+                            {req.employeeName ? req.employeeName.charAt(0) : "U"}
+                          </div>
+                          <div>
+                            <div className="font-bold text-gray-800 leading-tight">{req.employeeName}</div>
+                            <span className="text-[8px] text-blue-600 font-mono font-bold mt-0.5">{req.eCode}</span>
+                          </div>
+                        </div>
+                        <span className={`text-[9px] px-2 py-0.5 rounded font-bold uppercase tracking-wider border ${
+                          req.purpose.toLowerCase().includes("km") 
+                            ? "text-cyan-700 bg-cyan-50 border-cyan-200" 
+                            : "text-amber-700 bg-amber-50 border-amber-200"
+                        }`}>
+                          {req.purpose.toLowerCase().includes("km") ? "KM Limit" : "Auto Limit"}
+                        </span>
+                      </div>
+
+                      <div className="grid grid-cols-2 gap-2 text-[11px]">
+                        <div>
+                          <span className="text-gray-400 font-bold uppercase text-[9px] block">Month</span>
+                          <span className="text-gray-700 font-semibold">{req.date}</span>
+                        </div>
+                        <div>
+                          <span className="text-gray-400 font-bold uppercase text-[9px] block">Requested Limit</span>
+                          <div className="flex items-center gap-1.5 mt-1" onClick={(e) => e.stopPropagation()}>
+                            <input
+                              type="number"
+                              value={currentValue}
+                              onChange={(e) => handleEditLimitChange(req.id, parseFloat(e.target.value))}
+                              className="w-20 bg-white border border-gray-300 rounded px-1.5 py-0.5 text-xs font-bold text-gray-800 focus:outline-none focus:border-blue-500 shadow-xs"
+                              min="0"
+                              step="any"
+                            />
+                            <span className="font-bold text-gray-500">
+                              {req.purpose.toLowerCase().includes("km") ? "KM" : "₹"}
+                            </span>
+                          </div>
+                        </div>
+                      </div>
+
+                      {req.purpose && (
+                        <div className="border-t border-gray-100 pt-2 text-[10px]">
+                          <span className="text-gray-400 font-bold uppercase text-[8px] block">Purpose</span>
+                          <p className="text-gray-600 font-semibold mt-0.5">{req.purpose}</p>
+                        </div>
+                      )}
+
+                      <div className="border-t border-gray-100 pt-3 flex items-center justify-between gap-2">
+                        <button
+                          onClick={() => handleOpenDetails(req)}
+                          className="btn-lte-primary py-1.5 px-3 flex-1 flex items-center justify-center gap-1 text-[10px]"
+                        >
+                          <Eye className="w-3.5 h-3.5" />
+                          <span>Details</span>
+                        </button>
+                        <button
+                          onClick={() => handleApproveLimit(req.expense_id, currentValue)}
+                          disabled={actionLoading}
+                          className="py-1.5 px-3 rounded bg-green-600 text-white font-bold hover:bg-green-700 transition-all text-[10px] flex-1 flex items-center justify-center gap-1 cursor-pointer border-0 shadow-xs"
+                        >
+                          <Check className="w-3.5 h-3.5" />
+                          <span>Approve</span>
+                        </button>
+                        <button
+                          onClick={() => handleRejectLimit(req.expense_id)}
+                          disabled={actionLoading}
+                          className="py-1.5 px-3 rounded bg-red-600 text-white font-bold hover:bg-red-700 transition-all text-[10px] flex-1 flex items-center justify-center gap-1 cursor-pointer border-0 shadow-xs"
+                        >
+                          <X className="w-3.5 h-3.5" />
+                          <span>Reject</span>
+                        </button>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+
             </div>
           </div>
         )}
@@ -613,8 +703,8 @@ export default function ApprovalPage() {
             <p className="font-bold uppercase tracking-wider text-gray-600">Great! All pending claims have been processed.</p>
           </div>
         ) : (
-          <div className="overflow-x-auto border border-gray-250 rounded shadow-sm bg-white">
-            <table className="w-full text-left border-collapse text-xs">
+          <div className="overflow-x-auto border border-gray-250 rounded shadow-sm bg-white p-3 md:p-0">
+            <table className="hidden md:table w-full text-left border-collapse text-xs">
               <thead>
                 <tr className="bg-gray-50 border-b border-gray-250 text-gray-500 font-bold uppercase tracking-wider text-[10px]">
                   <th className="px-4 py-3 w-12 text-center">Select</th>
@@ -707,7 +797,82 @@ export default function ApprovalPage() {
                 })}
               </tbody>
             </table>
-            
+
+            {/* Mobile Card List View */}
+            <div className="block md:hidden space-y-3">
+              {claimRequests.slice((approvalsPage - 1) * 25, approvalsPage * 25).map((req) => {
+                const isChecked = selectedIds.includes(req.expense_id);
+                return (
+                  <div
+                    key={req.id}
+                    onClick={() => handleOpenDetails(req)}
+                    className={`bg-white border rounded-lg p-3.5 space-y-3.5 shadow-sm active:bg-gray-50 transition-all cursor-pointer text-xs ${
+                      isChecked ? "border-blue-300 bg-blue-50/10" : "border-gray-200"
+                    }`}
+                  >
+                    <div className="flex justify-between items-start">
+                      <div className="flex items-center gap-2">
+                        <div className="h-7 w-7 rounded-full bg-blue-600/10 border border-blue-500/20 text-blue-600 flex items-center justify-center font-bold text-xs uppercase shadow-sm">
+                          {req.employeeName ? req.employeeName.charAt(0) : "U"}
+                        </div>
+                        <div>
+                          <div className="font-bold text-gray-800 leading-tight">{req.employeeName}</div>
+                          <span className="text-[8px] text-blue-600 font-mono font-bold mt-0.5">{req.eCode}</span>
+                        </div>
+                      </div>
+                      
+                      <div className="flex items-center gap-2" onClick={(e) => e.stopPropagation()}>
+                        <button 
+                          onClick={() => toggleSelectClaim(req.expense_id)}
+                          className="bg-transparent border-0 p-1 text-gray-400 hover:text-blue-600 cursor-pointer"
+                        >
+                          {isChecked ? (
+                            <CheckSquare className="w-5 h-5 text-blue-600" />
+                          ) : (
+                            <Square className="w-5 h-5 text-gray-300" />
+                          )}
+                        </button>
+                      </div>
+                    </div>
+
+                    <div className="grid grid-cols-2 gap-2 text-[11px]">
+                      <div>
+                        <span className="text-gray-400 font-bold uppercase text-[9px] block">Claim ID / Date</span>
+                        <span className="text-gray-700 font-semibold font-mono uppercase">{req.expense_code}</span>
+                        <span className="text-gray-550 block text-[9px] mt-0.5">{req.date}</span>
+                      </div>
+                      <div>
+                        <span className="text-gray-400 font-bold uppercase text-[9px] block">Category</span>
+                        <span className="text-[9px] text-blue-600 bg-blue-50 border border-blue-200 px-2 py-0.5 rounded font-bold uppercase tracking-wider inline-block mt-0.5">
+                          {req.category}
+                        </span>
+                      </div>
+                      <div>
+                        <span className="text-gray-400 font-bold uppercase text-[9px] block">Total Amount</span>
+                        <span className="text-gray-950 font-extrabold text-sm">₹{(Number(req.amount) || 0).toLocaleString()}</span>
+                      </div>
+                      <div className="flex items-center justify-end">
+                        <button
+                          onClick={() => handleOpenDetails(req)}
+                          className="btn-lte-primary py-1 px-3 flex items-center justify-center gap-1 text-[10px]"
+                        >
+                          <Eye className="w-3.5 h-3.5" />
+                          <span>Review</span>
+                        </button>
+                      </div>
+                    </div>
+
+                    {req.purpose && (
+                      <div className="border-t border-gray-100 pt-2 text-[10px]">
+                        <span className="text-gray-400 font-bold uppercase text-[8px] block">Purpose</span>
+                        <p className="text-gray-600 font-semibold mt-0.5 truncate">{req.purpose}</p>
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+
             {claimRequests.length > 25 && (
               <div className="px-5 py-3 border-t border-gray-200 bg-slate-50 flex items-center justify-between text-xs text-gray-500">
                 <span>Showing {((approvalsPage - 1) * 25) + 1} to {Math.min(approvalsPage * 25, claimRequests.length)} of {claimRequests.length} items</span>

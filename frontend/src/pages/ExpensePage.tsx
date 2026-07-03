@@ -175,8 +175,18 @@ export default function ExpensePage() {
     comm_mail: null,
     oth_bill: null,
     hotel_bill: null,
-    local_purchase_bill: null
   });
+
+  const resetForm = () => {
+    setItineraries([createDefaultLeg(1)]);
+    setFiles({ 1: createDefaultFiles() });
+    setDate(new Date().toLocaleDateString('sv'));
+    setHasShownExceededModal(false);
+    setEditExpenseId(null);
+    setExistingAttachments([]);
+    setExistingAttachmentsDetailed([]);
+    setDeletedAttachments([]);
+  };
 
   const [itineraries, setItineraries] = useState<ItineraryLeg[]>(() => {
     const currentUserId = (() => { try { const u = JSON.parse(localStorage.getItem("user") || "{}"); return u.user_id || "Admin"; } catch(e) { return "Admin"; } })().trim();
@@ -602,7 +612,19 @@ export default function ExpensePage() {
     if (editId) {
       setEditExpenseId(editId);
       loadExpenseForEdit(editId);
+    } else {
+      resetForm();
     }
+
+    const handlePageShow = (event: PageTransitionEvent) => {
+      if (event.persisted) {
+        resetForm();
+      }
+    };
+    window.addEventListener("pageshow", handlePageShow);
+    return () => {
+      window.removeEventListener("pageshow", handlePageShow);
+    };
   }, []);
 
   const loadExpenseForEdit = async (editId: string) => {
@@ -630,13 +652,18 @@ export default function ExpensePage() {
 
           const isCalib = (user?.designation || "").toLowerCase().includes("calibration");
 
+          const fromCustom = leg.from ? !getFacilitiesForDistrict(leg.from_district || "").includes(leg.from) : false;
+          const toCustom = leg.to ? !getFacilitiesForDistrict(leg.to_district || "").includes(leg.to) : false;
+
           return {
             leg: leg.leg,
             travel_type: leg.from_district === leg.to_district ? "In-District" : "Outdoor",
             district_from: leg.from_district,
             district: leg.to_district,
             from: leg.from || "",
+            from_custom: fromCustom,
             to: leg.to || "",
+            to_custom: toCustom,
             mode: leg.mode || "",
             km: (leg.km || 0).toString(),
             amount: (leg.amount || 0).toString(),
@@ -1775,16 +1802,8 @@ export default function ExpensePage() {
         setShowConfirmModal(false);
         
         // Reset form
-        setItineraries([createDefaultLeg(1)]);
-        setFiles({ 1: createDefaultFiles() });
-        const todayStr = new Date().toISOString().split("T")[0];
-        const targetMonth = date ? date.slice(0, 7) : todayStr.slice(0, 7);
-        setDate(todayStr);
-        setHasShownExceededModal(false);
-        setEditExpenseId(null);
-        setExistingAttachments([]);
-        setExistingAttachmentsDetailed([]);
-        setDeletedAttachments([]);
+        const targetMonth = date ? date.slice(0, 7) : new Date().toISOString().slice(0, 7);
+        resetForm();
         
         // Clear limits cache to force refetch
         const cacheKey = `cache_month_limits_${currentUserId}_${targetMonth}`;
@@ -3763,109 +3782,223 @@ export default function ExpensePage() {
 
               if (activeClaimsTab === "sheets") {
                 return (
-                  <table className="table-lte">
-                    <thead>
-                      <tr className="border-b border-gray-200 text-[9px] uppercase font-bold tracking-wider text-gray-400 bg-gray-50/50">
-                        <th className="py-2.5 px-3">Claim ID</th>
-                        <th className="py-2.5 px-3">Date</th>
-                        <th className="py-2.5 px-3">Purpose</th>
-                        <th className="py-2.5 px-3">Travel Mode</th>
-                        <th className="py-2.5 px-3">Amount</th>
-                        <th className="py-2.5 px-3">Status</th>
-                        <th className="py-2.5 px-3 text-right">Actions</th>
-                      </tr>
-                    </thead>
-                    <tbody className="divide-y divide-gray-100">
+                  <>
+                    <table className="hidden md:table table-lte">
+                      <thead>
+                        <tr className="border-b border-gray-200 text-[9px] uppercase font-bold tracking-wider text-gray-400 bg-gray-50/50">
+                          <th className="py-2.5 px-3">Claim ID</th>
+                          <th className="py-2.5 px-3">Date</th>
+                          <th className="py-2.5 px-3">Purpose</th>
+                          <th className="py-2.5 px-3">Travel Mode</th>
+                          <th className="py-2.5 px-3">Amount</th>
+                          <th className="py-2.5 px-3">Status</th>
+                          <th className="py-2.5 px-3 text-right">Actions</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-gray-100">
+                        {slicedItems.map((exp: any) => (
+                          <tr
+                            key={exp.id}
+                            onClick={() => handleViewDetails(exp.id)}
+                            className="hover:bg-slate-50 cursor-pointer transition-colors"
+                          >
+                            <td className="py-3 px-3 font-semibold font-mono text-blue-600 uppercase">{exp.expense_code}</td>
+                            <td className="py-3 px-3 text-slate-500">{exp.itinerary}</td>
+                            <td className="py-3 px-3 font-semibold text-slate-800 truncate max-w-[200px]" title={exp.description}>{exp.description}</td>
+                            <td className="py-3 px-3 text-slate-500">{exp.travel_mode}</td>
+                            <td className="py-3 px-3 font-bold text-slate-900">₹{exp.amount.toLocaleString()}</td>
+                            <td className="py-3 px-3">
+                              <span className={`inline-flex items-center px-2 py-0.5 rounded border text-[9px] font-bold uppercase tracking-wider ${getStatusBadgeClass(exp.status)}`}>
+                                {getStatusLabel(exp.status)}
+                              </span>
+                            </td>
+                            <td className="py-3 px-3 text-right" onClick={(e) => e.stopPropagation()}>
+                              <div className="flex items-center justify-end gap-1">
+                                {(exp.status === "draft" || exp.status === "submitted") && (
+                                  <>
+                                    <button
+                                      onClick={() => handleEditFromModal(exp.id)}
+                                      className="p-1.5 text-amber-600 hover:text-amber-800 rounded-lg hover:bg-amber-50 border border-transparent hover:border-amber-200 cursor-pointer transition-all active:scale-95"
+                                      title="Edit Claim"
+                                    >
+                                      <Pencil className="w-3.5 h-3.5" />
+                                    </button>
+                                    <button
+                                      onClick={() => handleDeleteClaim(exp.id)}
+                                      className="p-1.5 text-rose-600 hover:text-rose-800 rounded-lg hover:bg-rose-50 border border-transparent hover:border-rose-200 cursor-pointer transition-all active:scale-95"
+                                      title="Delete Claim Draft"
+                                    >
+                                      <Trash2 className="w-3.5 h-3.5" />
+                                    </button>
+                                  </>
+                                )}
+                              </div>
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+
+                    {/* Mobile Card List View */}
+                    <div className="block md:hidden space-y-3">
                       {slicedItems.map((exp: any) => (
-                        <tr
+                        <div
                           key={exp.id}
                           onClick={() => handleViewDetails(exp.id)}
-                          className="hover:bg-slate-50 cursor-pointer transition-colors"
+                          className="bg-white border border-gray-200 rounded-lg p-3.5 space-y-3 active:bg-gray-50 transition-colors shadow-sm cursor-pointer text-xs"
                         >
-                          <td className="py-3 px-3 font-semibold font-mono text-blue-600 uppercase">{exp.expense_code}</td>
-                          <td className="py-3 px-3 text-slate-500">{exp.itinerary}</td>
-                          <td className="py-3 px-3 font-semibold text-slate-800 truncate max-w-[200px]" title={exp.description}>{exp.description}</td>
-                          <td className="py-3 px-3 text-slate-500">{exp.travel_mode}</td>
-                          <td className="py-3 px-3 font-bold text-slate-900">₹{exp.amount.toLocaleString()}</td>
-                          <td className="py-3 px-3">
-                            <span className={`inline-flex items-center px-2 py-0.5 rounded border text-[9px] font-bold uppercase tracking-wider ${getStatusBadgeClass(exp.status)}`}>
+                          <div className="flex justify-between items-center">
+                            <span className="font-bold font-mono text-blue-600 text-xs uppercase">{exp.expense_code}</span>
+                            <span className={`inline-flex items-center px-2 py-0.5 rounded border text-[8px] font-bold uppercase tracking-wider ${getStatusBadgeClass(exp.status)}`}>
                               {getStatusLabel(exp.status)}
                             </span>
-                          </td>
-                          <td className="py-3 px-3 text-right" onClick={(e) => e.stopPropagation()}>
-                            <div className="flex items-center justify-end gap-1">
+                          </div>
+                          
+                          <div className="grid grid-cols-2 gap-2 text-[11px]">
+                            <div>
+                              <span className="text-gray-400 font-bold uppercase text-[9px] block">Date</span>
+                              <span className="text-gray-700 font-semibold">{exp.itinerary}</span>
+                            </div>
+                            <div>
+                              <span className="text-gray-400 font-bold uppercase text-[9px] block">Mode</span>
+                              <span className="text-gray-700 font-semibold">{exp.travel_mode || "Other"}</span>
+                            </div>
+                            <div>
+                              <span className="text-gray-400 font-bold uppercase text-[9px] block">Amount</span>
+                              <span className="text-gray-900 font-extrabold text-xs">₹{exp.amount.toLocaleString()}</span>
+                            </div>
+                            <div className="flex items-center justify-end" onClick={(e) => e.stopPropagation()}>
                               {(exp.status === "draft" || exp.status === "submitted") && (
-                                <>
+                                <div className="flex gap-1.5">
                                   <button
                                     onClick={() => handleEditFromModal(exp.id)}
-                                    className="p-1.5 text-amber-600 hover:text-amber-800 rounded-lg hover:bg-amber-50 border border-transparent hover:border-amber-200 cursor-pointer transition-all active:scale-95"
-                                    title="Edit Claim"
+                                    className="p-1 text-amber-600 hover:text-amber-800 rounded bg-amber-50 border border-amber-200 cursor-pointer text-[10px] font-bold px-2 py-0.5 transition-all"
                                   >
-                                    <Pencil className="w-3.5 h-3.5" />
+                                    Edit
                                   </button>
                                   <button
                                     onClick={() => handleDeleteClaim(exp.id)}
-                                    className="p-1.5 text-rose-600 hover:text-rose-800 rounded-lg hover:bg-rose-50 border border-transparent hover:border-rose-200 cursor-pointer transition-all active:scale-95"
-                                    title="Delete Claim Draft"
+                                    className="p-1 text-rose-600 hover:text-rose-800 rounded bg-rose-50 border border-rose-200 cursor-pointer text-[10px] font-bold px-2 py-0.5 transition-all"
                                   >
-                                    <Trash2 className="w-3.5 h-3.5" />
+                                    Delete
                                   </button>
-                                </>
+                                </div>
                               )}
                             </div>
-                          </td>
-                        </tr>
+                          </div>
+
+                          {exp.description && (
+                            <div className="border-t border-gray-100 pt-2 text-[10px]">
+                              <span className="text-gray-400 font-bold uppercase text-[8px] block">Purpose</span>
+                              <p className="text-gray-600 font-semibold mt-0.5 truncate">{exp.description}</p>
+                            </div>
+                          )}
+                        </div>
                       ))}
-                    </tbody>
-                  </table>
+                    </div>
+                  </>
                 );
               } else {
                 return (
-                  <table className="table-lte">
-                    <thead>
-                      <tr className="border-b border-gray-200 text-[9px] uppercase font-bold tracking-wider text-gray-400 bg-gray-50/50">
-                        <th className="py-2.5 px-3">Parent ID</th>
-                        <th className="py-2.5 px-3">Travel Date</th>
-                        <th className="py-2.5 px-3 text-center">Leg</th>
-                        <th className="py-2.5 px-3">Route</th>
-                        <th className="py-2.5 px-3">Mode</th>
-                        <th className="py-2.5 px-3 text-right">KM</th>
-                        <th className="py-2.5 px-3 text-right">Fare</th>
-                        <th className="py-2.5 px-3 text-right">DA</th>
-                        <th className="py-2.5 px-3 text-right">Hotel</th>
-                        <th className="py-2.5 px-3 text-right">Local Purchase</th>
-                        <th className="py-2.5 px-3 text-right">Other</th>
-                        <th className="py-2.5 px-3">Purpose</th>
-                      </tr>
-                    </thead>
-                    <tbody className="divide-y divide-gray-100">
+                  <>
+                    <table className="hidden md:table table-lte">
+                      <thead>
+                        <tr className="border-b border-gray-200 text-[9px] uppercase font-bold tracking-wider text-gray-400 bg-gray-50/50">
+                          <th className="py-2.5 px-3">Parent ID</th>
+                          <th className="py-2.5 px-3">Travel Date</th>
+                          <th className="py-2.5 px-3 text-center">Leg</th>
+                          <th className="py-2.5 px-3">Route</th>
+                          <th className="py-2.5 px-3">Mode</th>
+                          <th className="py-2.5 px-3 text-right">KM</th>
+                          <th className="py-2.5 px-3 text-right">Fare</th>
+                          <th className="py-2.5 px-3 text-right">DA</th>
+                          <th className="py-2.5 px-3 text-right">Hotel</th>
+                          <th className="py-2.5 px-3 text-right">Local Purchase</th>
+                          <th className="py-2.5 px-3 text-right">Other</th>
+                          <th className="py-2.5 px-3">Purpose</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-gray-100">
+                        {slicedItems.map((leg: any, idx: number) => {
+                          const hasSub = leg.sub_mode && (parseFloat(leg.sub_amount) || 0) > 0;
+                          return (
+                            <tr key={idx} className="hover:bg-slate-50 transition-colors">
+                              <td className="py-3 px-3 font-semibold font-mono text-blue-600 uppercase">{leg.parentCode}</td>
+                              <td className="py-3 px-3 text-slate-500">{leg.parentDate}</td>
+                              <td className="py-3 px-3 text-center font-bold text-gray-400">{leg.leg}</td>
+                              <td className="py-3 px-3">
+                                <span className="font-bold text-gray-800">{leg.from_district === leg.to_district ? leg.to_district : `${leg.from_district} → ${leg.to_district}`}</span>
+                                <span className="text-[9px] text-gray-400 block">{leg.from || "Start"} → {leg.to || "End"}</span>
+                              </td>
+                              <td className="py-3 px-3">
+                                <span className="text-[9px] font-bold uppercase bg-blue-50 text-blue-700 px-1.5 py-0.5 rounded border border-blue-100">{leg.mode || "Other"}</span>
+                                {hasSub && <span className="text-[9px] font-bold uppercase bg-purple-50 text-purple-700 px-1.5 py-0.5 rounded border border-purple-100 ml-1">+{leg.sub_mode}</span>}
+                              </td>
+                              <td className="py-3 px-3 text-right font-mono font-semibold text-gray-600">{leg.km || 0} KM</td>
+                              <td className="py-3 px-3 text-right font-mono font-semibold text-gray-900">₹{(parseFloat(leg.amount) || 0).toLocaleString()}</td>
+                              <td className="py-3 px-3 text-right font-mono font-semibold text-gray-900">₹{(parseFloat(leg.da) || 0).toLocaleString()}</td>
+                              <td className="py-3 px-3 text-right font-mono font-semibold text-gray-900">₹{(parseFloat(leg.hotel) || 0).toLocaleString()}</td>
+                              <td className="py-3 px-3 text-right font-mono font-semibold text-gray-900">₹{(parseFloat(leg.local_purchase) || 0).toLocaleString()}</td>
+                              <td className="py-3 px-3 text-right font-mono font-semibold text-gray-900">₹{(parseFloat(leg.other_amount) || 0).toLocaleString()}</td>
+                              <td className="py-3 px-3 text-slate-600 max-w-[150px] truncate" title={leg.visit_purpose}>{leg.visit_purpose || "Field visit"}</td>
+                            </tr>
+                          );
+                        })}
+                      </tbody>
+                    </table>
+
+                    {/* Mobile Card List View */}
+                    <div className="block md:hidden space-y-3 text-xs">
                       {slicedItems.map((leg: any, idx: number) => {
                         const hasSub = leg.sub_mode && (parseFloat(leg.sub_amount) || 0) > 0;
                         return (
-                          <tr key={idx} className="hover:bg-slate-50 transition-colors">
-                            <td className="py-3 px-3 font-semibold font-mono text-blue-600 uppercase">{leg.parentCode}</td>
-                            <td className="py-3 px-3 text-slate-500">{leg.parentDate}</td>
-                            <td className="py-3 px-3 text-center font-bold text-gray-400">{leg.leg}</td>
-                            <td className="py-3 px-3">
-                              <span className="font-bold text-gray-800">{leg.from_district === leg.to_district ? leg.to_district : `${leg.from_district} → ${leg.to_district}`}</span>
-                              <span className="text-[9px] text-gray-400 block">{leg.from || "Start"} → {leg.to || "End"}</span>
-                            </td>
-                            <td className="py-3 px-3">
-                              <span className="text-[9px] font-bold uppercase bg-blue-50 text-blue-700 px-1.5 py-0.5 rounded border border-blue-100">{leg.mode || "Other"}</span>
-                              {hasSub && <span className="text-[9px] font-bold uppercase bg-purple-50 text-purple-700 px-1.5 py-0.5 rounded border border-purple-100 ml-1">+{leg.sub_mode}</span>}
-                            </td>
-                            <td className="py-3 px-3 text-right font-mono font-semibold text-gray-600">{leg.km || 0} KM</td>
-                            <td className="py-3 px-3 text-right font-mono font-semibold text-gray-900">₹{(parseFloat(leg.amount) || 0).toLocaleString()}</td>
-                            <td className="py-3 px-3 text-right font-mono font-semibold text-gray-900">₹{(parseFloat(leg.da) || 0).toLocaleString()}</td>
-                            <td className="py-3 px-3 text-right font-mono font-semibold text-gray-900">₹{(parseFloat(leg.hotel) || 0).toLocaleString()}</td>
-                            <td className="py-3 px-3 text-right font-mono font-semibold text-gray-900">₹{(parseFloat(leg.local_purchase) || 0).toLocaleString()}</td>
-                            <td className="py-3 px-3 text-right font-mono font-semibold text-gray-900">₹{(parseFloat(leg.other_amount) || 0).toLocaleString()}</td>
-                            <td className="py-3 px-3 text-slate-600 max-w-[150px] truncate" title={leg.visit_purpose}>{leg.visit_purpose || "Field visit"}</td>
-                          </tr>
+                          <div
+                            key={idx}
+                            className="bg-white border border-gray-200 rounded-lg p-3.5 space-y-3 shadow-sm"
+                          >
+                            <div className="flex justify-between items-center">
+                              <span className="font-bold font-mono text-blue-600 text-xs uppercase">{leg.parentCode}</span>
+                              <span className="text-[10px] font-bold text-gray-400">Leg {leg.leg}</span>
+                            </div>
+
+                            <div className="grid grid-cols-2 gap-2 text-[11px]">
+                              <div>
+                                <span className="text-gray-400 font-bold uppercase text-[9px] block">Date</span>
+                                <span className="text-gray-700 font-semibold">{leg.parentDate}</span>
+                              </div>
+                              <div>
+                                <span className="text-gray-400 font-bold uppercase text-[9px] block">Route</span>
+                                <span className="text-gray-800 font-bold block leading-tight">{leg.from_district === leg.to_district ? leg.to_district : `${leg.from_district} → ${leg.to_district}`}</span>
+                                <span className="text-[9px] text-gray-400 block mt-0.5">{leg.from || "Start"} → {leg.to || "End"}</span>
+                              </div>
+                              <div>
+                                <span className="text-gray-400 font-bold uppercase text-[9px] block">Mode / Distance</span>
+                                <span className="text-[9px] font-bold uppercase bg-blue-50 text-blue-700 px-1.5 py-0.5 rounded border border-blue-100 inline-block mr-1">{leg.mode || "Other"}</span>
+                                {hasSub && <span className="text-[9px] font-bold uppercase bg-purple-50 text-purple-700 px-1.5 py-0.5 rounded border border-purple-100 inline-block mr-1">+{leg.sub_mode}</span>}
+                                <span className="text-gray-700 font-semibold">{leg.km || 0} KM</span>
+                              </div>
+                              <div>
+                                <span className="text-gray-400 font-bold uppercase text-[9px] block">Fare / DA / Hotel</span>
+                                <span className="text-gray-700 font-semibold">
+                                  ₹{(parseFloat(leg.amount) || 0).toLocaleString()} / ₹{(parseFloat(leg.da) || 0).toLocaleString()} / ₹{(parseFloat(leg.hotel) || 0).toLocaleString()}
+                                </span>
+                              </div>
+                              <div>
+                                <span className="text-gray-400 font-bold uppercase text-[9px] block">Local Purchase / Other</span>
+                                <span className="text-gray-700 font-semibold">
+                                  ₹{(parseFloat(leg.local_purchase) || 0).toLocaleString()} / ₹{(parseFloat(leg.other_amount) || 0).toLocaleString()}
+                                </span>
+                              </div>
+                              <div>
+                                <span className="text-gray-400 font-bold uppercase text-[9px] block">Purpose</span>
+                                <span className="text-gray-600 font-semibold leading-snug block">{leg.visit_purpose || "Field visit"}</span>
+                              </div>
+                            </div>
+                          </div>
                         );
                       })}
-                    </tbody>
-                  </table>
+                    </div>
+                  </>
                 );
               }
             })()

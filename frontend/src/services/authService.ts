@@ -38,12 +38,12 @@ export const authService = {
   },
 
   logout: async () => {
+    tokenPersistence.clear();
     try {
       await api.post("/auth/logout");
     } catch (e) {
       console.warn("Backend logout failed", e);
     }
-    tokenPersistence.clear();
   },
 
   bootstrap: async (): Promise<any> => {

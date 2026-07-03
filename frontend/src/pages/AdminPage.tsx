@@ -1095,7 +1095,7 @@ export default function AdminPage() {
               </div>
             ) : (
               <>
-                <table className="w-full text-left border-collapse text-xs">
+                <table className="hidden md:table w-full text-left border-collapse text-xs">
                   <thead>
                     <tr className="bg-gray-100 border-b border-gray-200 text-gray-700 font-bold uppercase tracking-wider text-[10px]">
                       <th className="py-3 px-4">Emp Code</th>
@@ -1161,6 +1161,72 @@ export default function AdminPage() {
                     ))}
                   </tbody>
                 </table>
+
+                {/* Mobile Card List View */}
+                <div className="block md:hidden space-y-3 p-1">
+                  {paginatedUsers.map((u) => (
+                    <div
+                      key={u.id}
+                      className="bg-white border border-gray-200 rounded-lg p-3.5 space-y-3 shadow-sm text-xs"
+                    >
+                      <div className="flex justify-between items-start">
+                        <div>
+                          <div className="font-bold text-gray-800 leading-tight">{u.name}</div>
+                          <span className="text-[9px] text-gray-400 font-mono mt-0.5">{u.e_code || "-"}</span>
+                        </div>
+                        <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded text-[9px] font-bold uppercase border ${
+                          u.user_status === "active"
+                            ? "bg-green-50 border-green-200 text-green-700"
+                            : u.user_status === "locked"
+                            ? "bg-amber-50 border-amber-200 text-amber-700"
+                            : "bg-red-50 border-red-200 text-red-700"
+                        }`}>
+                          <span className={`h-1.5 w-1.5 rounded-full ${
+                            u.user_status === "active" ? "bg-green-500" : u.user_status === "locked" ? "bg-amber-500" : "bg-red-500"
+                          }`}></span>
+                          {u.user_status}
+                        </span>
+                      </div>
+
+                      <div className="grid grid-cols-2 gap-2 text-[11px] border-t border-gray-100 pt-2.5">
+                        <div>
+                          <span className="text-gray-400 font-bold uppercase text-[9px] block">Role / Designation</span>
+                          <span className="px-2 py-0.5 rounded text-[9px] font-bold uppercase bg-gray-100 border border-gray-200 text-gray-600 inline-block mt-0.5">{u.role}</span>
+                          <span className="text-gray-700 font-semibold block mt-1">{u.designation || "-"}</span>
+                        </div>
+                        <div>
+                          <span className="text-gray-400 font-bold uppercase text-[9px] block">District / Zone</span>
+                          <span className="text-gray-700 font-semibold">{u.district || "-"}</span>
+                          <span className="text-gray-500 block text-[9px] mt-0.5 uppercase tracking-wider">{u.zone || "-"}</span>
+                        </div>
+                        <div>
+                          <span className="text-gray-400 font-bold uppercase text-[9px] block">Mobile / Email</span>
+                          <span className="text-gray-700 font-semibold block">{u.mobile_number || "-"}</span>
+                          <span className="text-gray-550 block text-[9px] break-all">{u.mail_id || "-"}</span>
+                        </div>
+                      </div>
+
+                      <div className="border-t border-gray-100 pt-3 flex justify-end gap-2">
+                        <button
+                          onClick={() => handleOpenEditUserModal(u)}
+                          className="px-3 py-1.5 bg-white hover:bg-gray-100 border border-gray-300 rounded text-gray-700 transition-all cursor-pointer flex items-center justify-center gap-1 text-[10px] font-bold shadow-xs active:scale-95"
+                          title="Edit User Config"
+                        >
+                          <Pencil className="w-3.5 h-3.5" />
+                          <span>Edit</span>
+                        </button>
+                        <button
+                          onClick={() => handleForceLogoutSingle(u.user_id, u.name)}
+                          className="px-3 py-1.5 bg-rose-50 hover:bg-rose-100 border border-rose-200 text-rose-600 rounded transition-all cursor-pointer flex items-center justify-center gap-1 text-[10px] font-bold shadow-xs active:scale-95"
+                          title="Force Logout Session"
+                        >
+                          <LogOut className="w-3.5 h-3.5" />
+                          <span>Logout Session</span>
+                        </button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
 
                 {/* Pagination Controls */}
                 {totalPages > 1 && (

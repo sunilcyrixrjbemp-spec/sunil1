@@ -193,7 +193,7 @@ export default function UploadDataPage() {
           </div>
 
           <div className="overflow-x-auto">
-            <table className="w-full text-left text-xs border-collapse">
+            <table className="hidden md:table w-full text-left text-xs border-collapse">
               <thead>
                 <tr className="bg-gray-50 text-gray-500 font-bold uppercase border-b border-gray-200 text-[10px] tracking-wider">
                   <th className="py-2 px-3">File details</th>
@@ -205,7 +205,7 @@ export default function UploadDataPage() {
               </thead>
               <tbody className="divide-y divide-gray-100 font-medium">
                 {logs.map(log => (
-                  <tr key={log.id} className="hover:bg-gray-50/50 transition-colors">
+                  <tr key={log.id} className="hover:bg-gray-55/50 transition-colors">
                     <td className="py-3 px-3">
                       <div className="font-bold text-gray-800 truncate max-w-[180px]" title={log.fileName}>
                         {log.fileName}
@@ -232,6 +232,49 @@ export default function UploadDataPage() {
                 ))}
               </tbody>
             </table>
+
+            {/* Mobile Card List View */}
+            <div className="block md:hidden space-y-3 p-1">
+              {logs.map(log => (
+                <div
+                  key={log.id}
+                  className="bg-white border border-gray-200 rounded-lg p-3.5 space-y-3 shadow-sm text-xs"
+                >
+                  <div className="flex justify-between items-start">
+                    <div>
+                      <div className="font-bold text-gray-800 break-all">{log.fileName}</div>
+                      <span className="text-[9px] text-gray-400 font-mono flex items-center gap-1 mt-1">
+                        <Clock className="w-3 h-3" />
+                        {log.timestamp}
+                      </span>
+                    </div>
+                    <span className={`inline-flex items-center gap-0.5 px-2 py-0.5 rounded text-[8px] font-bold uppercase border ${
+                      log.status === "Success"
+                        ? "bg-green-50 border-green-200 text-green-700"
+                        : "bg-red-50 border-red-200 text-red-700"
+                    }`}>
+                      {log.status === "Success" ? <CheckCircle className="w-2.5 h-2.5" /> : <AlertCircle className="w-2.5 h-2.5" />}
+                      {log.status}
+                    </span>
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-2 text-[11px] border-t border-gray-100 pt-2.5">
+                    <div>
+                      <span className="text-gray-400 font-bold uppercase text-[9px] block">Import Category</span>
+                      <span className="text-gray-700 font-semibold">{log.dataType}</span>
+                    </div>
+                    <div>
+                      <span className="text-gray-400 font-bold uppercase text-[9px] block">Uploaded By</span>
+                      <span className="text-gray-550 font-semibold">{log.uploadedBy}</span>
+                    </div>
+                    <div>
+                      <span className="text-gray-400 font-bold uppercase text-[9px] block">Records Count</span>
+                      <span className="font-mono text-gray-700">{log.recordsCount} rows</span>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
           </div>
         </div>
 

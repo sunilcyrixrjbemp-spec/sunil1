@@ -780,7 +780,7 @@ export default function AssetUploadPage() {
             </div>
           ) : (
             <div className="overflow-x-auto">
-              <table className="w-full text-left text-[10px] border-collapse min-w-[1400px]">
+              <table className="hidden md:table w-full text-left text-[10px] border-collapse min-w-[1400px]">
                 <thead>
                   <tr className="bg-gray-50 text-gray-500 font-bold uppercase border-b border-gray-200 text-[9px] tracking-wider sticky top-0 z-10">
                     <th className="py-2.5 px-2">#</th>
@@ -824,6 +824,49 @@ export default function AssetUploadPage() {
                   ))}
                 </tbody>
               </table>
+
+              {/* Mobile Card List View */}
+              <div className="block md:hidden space-y-3 p-3">
+                {assets.map((a, idx) => (
+                  <div
+                    key={a.id || idx}
+                    className="bg-white border border-gray-200 rounded-lg p-3.5 space-y-3 shadow-sm text-xs"
+                  >
+                    <div className="flex justify-between items-start">
+                      <div>
+                        <div className="font-bold text-gray-800 leading-tight">{a.equipment_name}</div>
+                        <span className="text-[9px] font-bold text-indigo-600 bg-indigo-50 border border-indigo-100 px-1.5 py-0.5 rounded font-mono block mt-1 w-fit">{a.qr_code}</span>
+                      </div>
+                      <span className={`inline-block px-1.5 py-0.5 rounded text-[8px] font-bold uppercase border ${
+                        (a.equipment_status || "").toLowerCase().includes("functional") ? "bg-green-50 border-green-200 text-green-700" : "bg-gray-100 border-gray-200 text-gray-600"
+                      }`}>{a.equipment_status || "N/A"}</span>
+                    </div>
+
+                    <div className="grid grid-cols-2 gap-2 text-[11px] border-t border-gray-100 pt-2.5">
+                      <div>
+                        <span className="text-gray-400 font-bold uppercase text-[9px] block">Location</span>
+                        <span className="text-gray-700 font-semibold block">{a.hospital_name}</span>
+                        <span className="text-gray-500 block text-[9px]">{a.district_name}</span>
+                      </div>
+                      <div>
+                        <span className="text-gray-400 font-bold uppercase text-[9px] block">Department / Type</span>
+                        <span className="text-gray-600 block">{a.department_name}</span>
+                        <span className="text-gray-500 block text-[9px]">{a.equipment_type || "-"}</span>
+                      </div>
+                      <div>
+                        <span className="text-gray-400 font-bold uppercase text-[9px] block">Model / Serial No</span>
+                        <span className="text-gray-600 block">{a.model_name || "-"}</span>
+                        <span className="text-gray-500 font-mono block text-[9px]">{a.serial_no}</span>
+                      </div>
+                      <div>
+                        <span className="text-gray-400 font-bold uppercase text-[9px] block">Asset Value / Category</span>
+                        <span className="text-gray-700 font-semibold font-mono block">₹{a.asset_value || "0"}</span>
+                        <span className="text-gray-550 block text-[9px]">{a.equipment_category || "-"}</span>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
             </div>
           )}
 
@@ -846,10 +889,17 @@ export default function AssetUploadPage() {
         </div>
       )}
 
-      {/* ====== Analytics Tab (AdminLTE Bootstrap Theme Grid) ====== */}
       {activeTab === "analytics" && (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
-          {/* Chart 1: Status Breakdown */}
+        <>
+          {/* Mobile view warning message */}
+          <div className="block lg:hidden card-lte p-8 text-center bg-white shadow-sm font-sans">
+            <BarChart3 className="w-12 h-12 text-blue-500 mx-auto mb-3 opacity-80" />
+            <p className="text-sm font-bold text-gray-700">Analytics & Charts are optimized for desktop</p>
+            <p className="text-xs text-gray-500 mt-1">Please use a desktop browser to view the interactive charts and regional distribution reports.</p>
+          </div>
+
+          <div className="hidden lg:grid grid-cols-1 lg:grid-cols-3 gap-5">
+            {/* Chart 1: Status Breakdown */}
           <div className="bg-white border border-gray-200 border-t-[3px] border-t-primary rounded shadow-sm flex flex-col">
             <div className="p-3 border-b border-gray-150 flex items-center justify-between bg-gray-50/50">
               <h3 className="text-xs font-bold uppercase tracking-wider text-gray-600 flex items-center gap-1.5">
@@ -956,7 +1006,7 @@ export default function AssetUploadPage() {
               )}
             </div>
           </div>
-        </div>
+        </>
       )}
 
     </div>

@@ -640,7 +640,7 @@ export default function AnalysisPage() {
       )}
 
       {count > 0 && (
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
+        <div className="hidden lg:grid grid-cols-1 lg:grid-cols-2 gap-5">
 
           {/* Chart 1: Top Spenders (User-wise) */}
           <div className="bg-white border border-gray-200 rounded shadow-sm">
