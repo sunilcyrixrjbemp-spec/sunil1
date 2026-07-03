@@ -251,7 +251,11 @@ svg, path, g, sector, .recharts-pie-sector, .recharts-sector, .recharts-pie, .re
   }
 
   .min-h-screen.bg-\[\#e9ecef\] .bg-white.border.border-gray-300.rounded.shadow-md {
-    @apply border-none shadow-2xl rounded-3xl bg-white/95 backdrop-blur-md !important;
+    border-style: none !important;
+    box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25) !important;
+    border-radius: 24px !important;
+    background-color: rgba(255, 255, 255, 0.95) !important;
+    backdrop-filter: blur(12px) !important;
     overflow: hidden !important;
   }
 
@@ -263,8 +267,9 @@ svg, path, g, sector, .recharts-pie-sector, .recharts-sector, .recharts-pie, .re
   .card-lte-danger, 
   .card-lte-info, 
   .card-lte-gold {
-    @apply border-none shadow-[0_8px_30px_rgb(0,0,0,0.03)] rounded-2xl bg-white p-4 mb-4;
+    @apply border-none rounded-2xl bg-white p-4 mb-4;
     border-top: none !important;
+    box-shadow: 0 8px 30px rgba(0,0,0,0.03) !important;
   }
 
   /* 4. Touch-optimized Input Form Fields (enforcing 44px min height & 14px size to prevent iOS zoom) */
@@ -349,7 +354,8 @@ svg, path, g, sector, .recharts-pie-sector, .recharts-sector, .recharts-pie, .re
   }
 
   .flex.border-b button {
-    @apply flex-1 text-center py-2.5 px-3 font-extrabold text-[10px] uppercase tracking-wider rounded-xl transition-all border-none bg-transparent text-slate-500 !important;
+    @apply flex-1 text-center py-2.5 px-3 font-extrabold uppercase tracking-wider rounded-xl transition-all border-none bg-transparent text-slate-500 !important;
+    font-size: 10px !important;
     min-height: auto !important;
     box-shadow: none !important;
   }
@@ -361,7 +367,10 @@ svg, path, g, sector, .recharts-pie-sector, .recharts-sector, .recharts-pie, .re
 
   /* 7. Summary info box widgets styling */
   .info-box-lte {
-    @apply rounded-2xl border-none shadow-[0_4px_20px_rgba(0,0,0,0.02)] bg-white p-3 min-h-[58px] flex items-center gap-3.5 mb-3;
+    @apply border-none bg-white p-3 flex items-center gap-3.5 mb-3;
+    border-radius: 16px !important;
+    min-height: 58px !important;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.02) !important;
   }
 
   .info-box-icon {
@@ -437,11 +446,25 @@ svg, path, g, sector, .recharts-pie-sector, .recharts-sector, .recharts-pie, .re
 
   /* 9. Bottom-Sheet Slide-Up Modal System for Native Mobile Feel */
   .modal-lte-overlay {
-    @apply p-0 items-end bg-black/60 z-[1000] !important;
+    padding: 0 !important;
+    display: flex !important;
+    align-items: flex-end !important;
+    background-color: rgba(0, 0, 0, 0.6) !important;
+    z-index: 1000 !important;
   }
 
   .modal-lte-content {
-    @apply rounded-t-[28px] rounded-b-none max-h-[92vh] h-[92vh] border-none shadow-2xl p-0 flex flex-col !important;
+    border-top-left-radius: 28px !important;
+    border-top-right-radius: 28px !important;
+    border-bottom-left-radius: 0 !important;
+    border-bottom-right-radius: 0 !important;
+    max-height: 92vh !important;
+    height: 92vh !important;
+    border-style: none !important;
+    box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25) !important;
+    padding: 0 !important;
+    display: flex !important;
+    flex-direction: column !important;
     animation: slideUp 0.28s cubic-bezier(0.32, 0.94, 0.6, 1) !important;
   }
 
@@ -452,16 +475,33 @@ svg, path, g, sector, .recharts-pie-sector, .recharts-sector, .recharts-pie, .re
 
   .modal-lte-header, 
   .px-4.py-3.bg-gray-100 {
-    @apply bg-white border-b border-slate-100 px-5 py-4 flex items-center justify-between rounded-t-[28px] shrink-0 !important;
+    background-color: #ffffff !important;
+    border-bottom: 1px solid #f1f5f9 !important;
+    padding: 1rem 1.25rem !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: space-between !important;
+    border-top-left-radius: 28px !important;
+    border-top-right-radius: 28px !important;
+    flex-shrink: 0 !important;
   }
 
   .modal-lte-body, 
   .flex-1.overflow-y-auto {
-    @apply px-5 py-4 space-y-4 !important;
+    padding: 1rem 1.25rem !important;
+    @apply space-y-4 !important;
   }
 
   .modal-lte-footer,
   .pt-3.border-t.border-gray-200 {
-    @apply border-t border-slate-100 px-5 py-3.5 bg-slate-50/50 flex items-center justify-end gap-3 shrink-0 pb-safe !important;
+    border-top: 1px solid #f1f5f9 !important;
+    padding: 0.875rem 1.25rem !important;
+    background-color: rgba(248, 250, 252, 0.5) !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: flex-end !important;
+    gap: 0.75rem !important;
+    flex-shrink: 0 !important;
+    padding-bottom: calc(0.875rem + env(safe-area-inset-bottom)) !important;
   }
 }
