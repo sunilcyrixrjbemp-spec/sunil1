@@ -766,6 +766,8 @@ export default function HomePage() {
                   </button>
                 ))}
               </div>
+            </div>
+
             {/* Tab Content Tables */}
             <div className="overflow-x-auto p-4 flex-1 bg-slate-50/30">
                {/* MY CLAIMS TAB */}
