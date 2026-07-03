@@ -225,6 +225,19 @@ export default function ApprovalPage() {
     }
   };
 
+  const getLegAttachmentUrl = (legNum: number, billType: string) => {
+    if (!expenseDetails?.attachments_detailed) return null;
+    const found = expenseDetails.attachments_detailed.find((a: any) => {
+      if (!a.itinerary_id) return false;
+      const parts = a.itinerary_id.split("-");
+      const aLegNum = parseInt(parts[parts.length - 1]);
+      return aLegNum === legNum && a.bill_type === billType;
+    });
+    if (!found) return null;
+    const API_BASE = import.meta.env.VITE_API_URL || "https://expense-backend-zio8.onrender.com";
+    return found.file_url.startsWith("http") ? found.file_url : `${API_BASE}${found.file_url}`;
+  };
+
   const handleLegAmountChange = (index: number, field: string, value: string) => {
     const numericValue = parseFloat(value) || 0;
     setEditedLegs(prev => {
@@ -835,6 +848,13 @@ export default function ApprovalPage() {
                         const lpModified = leg.local_purchase !== (originalLeg.local_purchase || 0);
                         const otherModified = leg.other_amount !== (originalLeg.oth_amount || 0);
 
+                        const travelReceiptUrl = getLegAttachmentUrl(leg.leg, leg.mode);
+                        const subReceiptUrl = leg.sub_mode ? getLegAttachmentUrl(leg.leg, leg.sub_mode) : null;
+                        const hotelReceiptUrl = getLegAttachmentUrl(leg.leg, "Hotel");
+                        const mailReceiptUrl = getLegAttachmentUrl(leg.leg, "Communication_Mail");
+                        const lpReceiptUrl = getLegAttachmentUrl(leg.leg, "Local_Purchase");
+                        const otherReceiptUrl = getLegAttachmentUrl(leg.leg, "Other");
+
                         let actDetails: any = null;
                         try {
                           if (originalLeg.activity_details) {
@@ -921,6 +941,15 @@ export default function ApprovalPage() {
                                       />
                                     </div>
                                     <span className="text-[9px] text-gray-500 block font-semibold">Amt: ₹{leg.travel_amount} (Orig: {originalLeg.km || 0} KM)</span>
+                                    {travelReceiptUrl && (
+                                      <button 
+                                        type="button" 
+                                        onClick={() => setLightboxImage(travelReceiptUrl)} 
+                                        className="text-[9px] text-blue-600 hover:underline font-bold mt-1 block bg-transparent border-0 cursor-pointer p-0 text-left"
+                                      >
+                                        👁 Preview Receipt
+                                      </button>
+                                    )}
                                   </div>
                                 ) : (
                                   <div className="space-y-1">
@@ -938,6 +967,15 @@ export default function ApprovalPage() {
                                       />
                                     </div>
                                     <span className="text-[9px] text-gray-455 block font-semibold">Original: ₹{originalLeg.amount || 0}</span>
+                                    {travelReceiptUrl && (
+                                      <button 
+                                        type="button" 
+                                        onClick={() => setLightboxImage(travelReceiptUrl)} 
+                                        className="text-[9px] text-blue-600 hover:underline font-bold mt-1 block bg-transparent border-0 cursor-pointer p-0 text-left"
+                                      >
+                                        👁 Preview Receipt
+                                      </button>
+                                    )}
                                   </div>
                                 )}
 
@@ -958,6 +996,15 @@ export default function ApprovalPage() {
                                     />
                                   </div>
                                   <span className="text-[9px] text-gray-455 block font-semibold">Original: ₹{originalLeg.sub_amount || 0}</span>
+                                  {subReceiptUrl && (
+                                    <button 
+                                      type="button" 
+                                      onClick={() => setLightboxImage(subReceiptUrl)} 
+                                      className="text-[9px] text-blue-600 hover:underline font-bold mt-1 block bg-transparent border-0 cursor-pointer p-0 text-left"
+                                    >
+                                      👁 Preview Receipt
+                                    </button>
+                                  )}
                                 </div>
 
                                 {/* Hotel stay amount */}
@@ -976,6 +1023,24 @@ export default function ApprovalPage() {
                                     />
                                   </div>
                                   <span className="text-[9px] text-gray-455 block font-semibold">Original: ₹{originalLeg.hotel || 0}</span>
+                                  {hotelReceiptUrl && (
+                                    <button 
+                                      type="button" 
+                                      onClick={() => setLightboxImage(hotelReceiptUrl)} 
+                                      className="text-[9px] text-blue-600 hover:underline font-bold mt-1 block bg-transparent border-0 cursor-pointer p-0 text-left"
+                                    >
+                                      👁 Preview Hotel Receipt
+                                    </button>
+                                  )}
+                                  {mailReceiptUrl && (
+                                    <button 
+                                      type="button" 
+                                      onClick={() => setLightboxImage(mailReceiptUrl)} 
+                                      className="text-[9px] text-purple-600 hover:underline font-bold mt-1 block bg-transparent border-0 cursor-pointer p-0 text-left"
+                                    >
+                                      ✉ Preview Approval Mail
+                                    </button>
+                                  )}
                                 </div>
 
                                 {/* Local purchase */}
@@ -994,6 +1059,15 @@ export default function ApprovalPage() {
                                     />
                                   </div>
                                   <span className="text-[9px] text-gray-455 block font-semibold">Original: ₹{originalLeg.local_purchase || 0}</span>
+                                  {lpReceiptUrl && (
+                                    <button 
+                                      type="button" 
+                                      onClick={() => setLightboxImage(lpReceiptUrl)} 
+                                      className="text-[9px] text-blue-600 hover:underline font-bold mt-1 block bg-transparent border-0 cursor-pointer p-0 text-left"
+                                    >
+                                      👁 Preview Receipt
+                                    </button>
+                                  )}
                                 </div>
 
                                 {/* Other / Misc amount */}
@@ -1014,6 +1088,15 @@ export default function ApprovalPage() {
                                   <span className="text-[9px] text-gray-455 block font-semibold truncate" title={leg.oth_desc || "No Description"}>
                                     Orig: ₹{originalLeg.oth_amount || 0} ({leg.oth_desc || "Other"})
                                   </span>
+                                  {otherReceiptUrl && (
+                                    <button 
+                                      type="button" 
+                                      onClick={() => setLightboxImage(otherReceiptUrl)} 
+                                      className="text-[9px] text-blue-600 hover:underline font-bold mt-1 block bg-transparent border-0 cursor-pointer p-0 text-left"
+                                    >
+                                      👁 Preview Receipt
+                                    </button>
+                                  )}
                                 </div>
                               </div>
 
