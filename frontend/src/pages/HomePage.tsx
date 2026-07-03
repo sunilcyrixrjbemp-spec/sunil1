@@ -307,13 +307,21 @@ export default function HomePage() {
     setSelectedClaimId(claimId);
     setShowDetailsModal(true);
 
-    // SWR: load from cache instantly, then refresh in background
+    // Pre-populate basic details from list instantly to bypass server lag
+    const listExpenses = [
+      ...(Array.isArray(myExpenses) ? myExpenses : []),
+      ...(Array.isArray(teamExpenses) ? teamExpenses : [])
+    ];
+    const basicClaim = listExpenses.find(e => e && e.id === claimId);
+    if (basicClaim) {
+      setClaimDetails(basicClaim);
+    }
+
     const cacheKey = `cache_claim_detail_${claimId}`;
     const cached = localStorage.getItem(cacheKey);
     if (cached) {
       setClaimDetails(JSON.parse(cached));
       setLoadingDetails(false);
-      // Background refresh (silent)
       expenseService.getExpenseDetails(claimId)
         .then(data => {
           setClaimDetails(data);
@@ -327,8 +335,11 @@ export default function HomePage() {
         setClaimDetails(data);
         localStorage.setItem(cacheKey, JSON.stringify(data));
       } catch (err) {
-        toast.error("Failed to load expense details.");
-        setShowDetailsModal(false);
+        // If we already pre-populated from list, don't close the modal on network failure
+        if (!basicClaim) {
+          toast.error("Failed to load expense details.");
+          setShowDetailsModal(false);
+        }
       } finally {
         setLoadingDetails(false);
       }
@@ -1171,7 +1182,8 @@ export default function HomePage() {
             <div className="px-4 py-3 bg-gray-100 border-b border-gray-200 flex items-center justify-between shrink-0">
               <h3 className="text-sm font-bold uppercase tracking-wider text-gray-800 flex items-center gap-2">
                 <Layers className="w-4 h-4 text-blue-600" />
-                Claim Details {claimDetails ? `— ${claimDetails.expense_code}` : ""}
+                <span>Claim Details {claimDetails ? `— ${claimDetails.expense_code}` : ""}</span>
+                {loadingDetails && <Loader2 className="w-3.5 h-3.5 animate-spin text-blue-500 shrink-0" />}
               </h3>
               <button 
                 onClick={() => { setShowDetailsModal(false); setClaimDetails(null); }}
@@ -1183,7 +1195,7 @@ export default function HomePage() {
 
             {/* Modal Content */}
             <div className="flex-1 overflow-y-auto p-4 space-y-4">
-              {loadingDetails || !claimDetails ? (
+              {!claimDetails ? (
                 <Loader message="Loading claim details..." />
               ) : (
                 <>
