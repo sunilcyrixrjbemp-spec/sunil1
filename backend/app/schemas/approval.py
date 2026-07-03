@@ -16,6 +16,7 @@ class ApprovalActionRequest(BaseModel):
     comments: Optional[str] = ""
     itinerary_edits: Optional[List[ItineraryLegEdit]] = None
     client_timestamp: Optional[str] = None
+    approved_value: Optional[float] = None
 
 class ApprovalResponse(BaseModel):
     id: int

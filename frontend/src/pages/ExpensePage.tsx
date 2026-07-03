@@ -451,7 +451,7 @@ export default function ExpensePage() {
     }
     return 0;
   });
-  const [_existingKmReq, setExistingKmReq] = useState<any>(() => {
+  const [existingKmReq, setExistingKmReq] = useState<any>(() => {
     const currentUserId = (() => { try { const u = JSON.parse(localStorage.getItem("user") || "{}"); return u.user_id || "Admin"; } catch(e) { return "Admin"; } })().trim();
     const monthStr = new Date().toISOString().slice(0, 7);
     const cached = localStorage.getItem(`cache_month_limits_${currentUserId}_${monthStr}`);
@@ -463,7 +463,7 @@ export default function ExpensePage() {
     }
     return null;
   });
-  const [_existingAutoReq, setExistingAutoReq] = useState<any>(() => {
+  const [existingAutoReq, setExistingAutoReq] = useState<any>(() => {
     const currentUserId = (() => { try { const u = JSON.parse(localStorage.getItem("user") || "{}"); return u.user_id || "Admin"; } catch(e) { return "Admin"; } })().trim();
     const monthStr = new Date().toISOString().slice(0, 7);
     const cached = localStorage.getItem(`cache_month_limits_${currentUserId}_${monthStr}`);
@@ -2071,6 +2071,20 @@ export default function ExpensePage() {
                 style={{ width: `${getProgressPercentage(allowance.current_month_km || 0, ((allowance.max_km_per_month || 2000) + approvedKm))}%` }}
               ></div>
             </div>
+            {existingKmReq && (
+              <div className="mt-1.5 pt-1.5 border-t border-gray-100 flex items-center justify-between text-[9px] font-bold shrink-0">
+                <span className="text-gray-400">Request:</span>
+                <span className={
+                  existingKmReq.status === "Approved" ? "text-green-600 font-black" :
+                  existingKmReq.status === "Rejected" ? "text-red-600 font-black" :
+                  "text-amber-600 animate-pulse font-black"
+                }>
+                  {existingKmReq.status === "Approved" ? "✓ Approved" :
+                   existingKmReq.status === "Rejected" ? "❌ Rejected" :
+                   "⏳ Pending"}: +{existingKmReq.requested_value} KM
+                </span>
+              </div>
+            )}
           </div>
         </div>
 
@@ -2092,6 +2106,20 @@ export default function ExpensePage() {
                 style={{ width: `${getProgressPercentage(allowance.current_month_auto || 0, (1000 + approvedAuto))}%` }}
               ></div>
             </div>
+            {existingAutoReq && (
+              <div className="mt-1.5 pt-1.5 border-t border-gray-100 flex items-center justify-between text-[9px] font-bold shrink-0">
+                <span className="text-gray-400">Request:</span>
+                <span className={
+                  existingAutoReq.status === "Approved" ? "text-green-600 font-black" :
+                  existingAutoReq.status === "Rejected" ? "text-red-650 font-black" :
+                  "text-amber-600 animate-pulse font-black"
+                }>
+                  {existingAutoReq.status === "Approved" ? "✓ Approved" :
+                   existingAutoReq.status === "Rejected" ? "❌ Rejected" :
+                   "⏳ Pending"}: +₹{existingAutoReq.requested_value}
+                </span>
+              </div>
+            )}
           </div>
         </div>
       </div>

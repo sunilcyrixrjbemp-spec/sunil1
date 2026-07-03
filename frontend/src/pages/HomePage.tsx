@@ -22,7 +22,8 @@ import {
   Check,
   X,
   Loader2,
-  ShieldCheck
+  ShieldCheck,
+  AlertTriangle
 } from "lucide-react";
 
 
@@ -59,6 +60,12 @@ export default function HomePage() {
     const currentUser = JSON.parse(localStorage.getItem("user") || "null");
     if (!currentUser) return 0;
     const cached = localStorage.getItem(`cache_approvals_count_${currentUser.user_id}`);
+    return cached ? parseInt(cached) || 0 : 0;
+  });
+  const [pendingLimitRequestsCount, setPendingLimitRequestsCount] = useState(() => {
+    const currentUser = JSON.parse(localStorage.getItem("user") || "null");
+    if (!currentUser) return 0;
+    const cached = localStorage.getItem(`cache_limit_approvals_count_${currentUser.user_id}`);
     return cached ? parseInt(cached) || 0 : 0;
   });
   const [myExpenses, setMyExpenses] = useState<any[]>(() => {
@@ -142,8 +149,12 @@ export default function HomePage() {
     if (isReviewer) {
       approvalService.getPendingApprovals()
         .then(data => {
-          setPendingApprovalsCount(data.length);
-          localStorage.setItem(`cache_approvals_count_${uId}`, data.length.toString());
+          const limitCount = data.filter((a: any) => a.category === "Limit Request").length;
+          const standardCount = data.filter((a: any) => a.category !== "Limit Request").length;
+          setPendingApprovalsCount(standardCount);
+          setPendingLimitRequestsCount(limitCount);
+          localStorage.setItem(`cache_approvals_count_${uId}`, standardCount.toString());
+          localStorage.setItem(`cache_limit_approvals_count_${uId}`, limitCount.toString());
         })
         .catch(err => console.error("Error fetching approvals count:", err));
       
@@ -549,6 +560,26 @@ export default function HomePage() {
           )}
         </div>
       </div>
+
+      {isReviewerRole && pendingLimitRequestsCount > 0 && (
+        <div className="bg-amber-50 border-l-4 border-amber-500 p-4 rounded shadow-sm flex items-center justify-between animate-fadeIn mb-4">
+          <div className="flex items-center gap-3">
+            <AlertTriangle className="w-5 h-5 text-amber-600 shrink-0" />
+            <div>
+              <h4 className="text-xs font-bold text-amber-800 uppercase tracking-wider">Pending Limit Extension Requests</h4>
+              <p className="text-[11px] text-amber-700 font-semibold mt-0.5">
+                You have {pendingLimitRequestsCount} pending limit request{pendingLimitRequestsCount > 1 ? 's' : ''} from your team awaiting your review.
+              </p>
+            </div>
+          </div>
+          <Link 
+            to="/approval-center" 
+            className="btn-lte-warning px-3 py-1.5 flex items-center gap-1.5 text-[10px] font-black uppercase tracking-wider shadow-xs no-underline"
+          >
+            Review Now
+          </Link>
+        </div>
+      )}
 
       {/* Navigation Quick Cards replaced by Stats Cards */}
       <div className="space-y-3">

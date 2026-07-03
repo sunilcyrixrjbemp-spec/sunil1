@@ -43,6 +43,9 @@ export default function ApprovalPage() {
     const cached = localStorage.getItem("cache_pending_approvals");
     return cached ? JSON.parse(cached) : [];
   });
+  const limitRequests = pendingApprovals.filter((a: any) => a.category === "Limit Request");
+  const claimRequests = pendingApprovals.filter((a: any) => a.category !== "Limit Request");
+
   const [loading, setLoading] = useState(() => {
     return !localStorage.getItem("cache_pending_approvals");
   });
@@ -69,6 +72,44 @@ export default function ApprovalPage() {
   // In-app Lightbox state
   const [lightboxImage, setLightboxImage] = useState<string | null>(null);
   const [assetValueMaster, setAssetValueMaster] = useState<any[]>([]);
+  const [editedLimits, setEditedLimits] = useState<{[key: number]: number}>({});
+
+  const handleEditLimitChange = (id: number, val: number) => {
+    setEditedLimits(prev => ({ ...prev, [id]: val }));
+  };
+
+  const handleApproveLimit = async (expenseId: number, approvedValue: number) => {
+    if (isNaN(approvedValue) || approvedValue <= 0) {
+      toast.error("Please enter a valid approved value.");
+      return;
+    }
+    
+    setActionLoading(true);
+    try {
+      await approvalService.approveExpense(expenseId, "Approved limit extension", undefined, approvedValue);
+      toast.success("Limit extension request approved successfully!");
+      fetchPendingApprovals();
+    } catch (err: any) {
+      console.error("Failed to approve limit", err);
+      toast.error(err.response?.data?.detail || "Failed to approve limit extension.");
+    } finally {
+      setActionLoading(false);
+    }
+  };
+
+  const handleRejectLimit = async (expenseId: number) => {
+    setActionLoading(true);
+    try {
+      await approvalService.rejectExpense(expenseId, "Limit extension rejected");
+      toast.success("Limit extension request rejected.");
+      fetchPendingApprovals();
+    } catch (err: any) {
+      console.error("Failed to reject limit", err);
+      toast.error(err.response?.data?.detail || "Failed to reject limit extension.");
+    } finally {
+      setActionLoading(false);
+    }
+  };
 
   useEffect(() => {
     fetchPendingApprovals();
@@ -266,10 +307,10 @@ export default function ApprovalPage() {
   };
 
   const toggleSelectAll = () => {
-    if (selectedIds.length === pendingApprovals.length) {
+    if (selectedIds.length === claimRequests.length) {
       setSelectedIds([]);
     } else {
-      setSelectedIds(pendingApprovals.map(item => item.expense_id));
+      setSelectedIds(claimRequests.map(item => item.expense_id));
     }
   };
 
@@ -366,10 +407,15 @@ export default function ApprovalPage() {
           </h2>
           <p className="text-gray-500 text-xs mt-1">Review operational, local purchase, and travel claims submitted by staff.</p>
         </div>
-        <div className="flex items-center gap-2.5">
+        <div className="flex items-center gap-2.5 flex-wrap">
           <span className="px-3 py-1.5 rounded bg-blue-50 border border-blue-200 text-blue-700 text-xs font-bold uppercase tracking-wider">
-            Pending Claims: <strong>{pendingApprovals.length}</strong>
+            Pending Claims: <strong>{claimRequests.length}</strong>
           </span>
+          {limitRequests.length > 0 && (
+            <span className="px-3 py-1.5 rounded bg-cyan-50 border border-cyan-200 text-cyan-700 text-xs font-bold uppercase tracking-wider">
+              Limit Extensions: <strong>{limitRequests.length}</strong>
+            </span>
+          )}
           {selectedIds.length > 0 && (
             <span className="px-3 py-1.5 rounded bg-amber-50 border border-amber-250 text-amber-800 text-xs font-bold uppercase tracking-wider animate-pulse">
               Selected: <strong>{selectedIds.length}</strong>
@@ -382,19 +428,19 @@ export default function ApprovalPage() {
       <div className="card-lte-primary p-5 space-y-4">
         
         {/* Bulk Toolbar */}
-        {pendingApprovals.length > 0 && (
+        {claimRequests.length > 0 && (
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 p-3 bg-gray-50 border border-gray-200 rounded text-xs shrink-0">
             <button
               onClick={toggleSelectAll}
               className="flex items-center gap-2 font-bold text-gray-700 uppercase tracking-wider bg-transparent border-0 cursor-pointer self-start sm:self-center"
             >
-              {selectedIds.length === pendingApprovals.length ? (
+              {selectedIds.length === claimRequests.length ? (
                 <CheckSquare className="w-4.5 h-4.5 text-blue-600 shrink-0" />
               ) : (
                 <Square className="w-4.5 h-4.5 text-gray-400 shrink-0" />
               )}
               <span>
-                {selectedIds.length === pendingApprovals.length ? "Deselect All" : "Select All Pending"}
+                {selectedIds.length === claimRequests.length ? "Deselect All" : "Select All Pending"}
               </span>
             </button>
 
@@ -419,6 +465,102 @@ export default function ApprovalPage() {
           </div>
         )}
 
+        {/* ================= LIMIT EXTENSION REQUESTS SECTION ================= */}
+        {limitRequests.length > 0 && (
+          <div className="space-y-3 mb-6">
+            <h3 className="text-xs font-bold text-gray-700 uppercase tracking-wide flex items-center gap-2 pt-1">
+              <span className="w-2.5 h-2.5 rounded-full bg-blue-600 animate-pulse"></span>
+              Limit Extension Requests
+            </h3>
+            <div className="overflow-x-auto border border-gray-250 rounded shadow-sm bg-white">
+              <table className="w-full text-left border-collapse text-xs">
+                <thead>
+                  <tr className="bg-gray-50 border-b border-gray-250 text-gray-500 font-bold uppercase tracking-wider text-[10px]">
+                    <th className="px-4 py-3">Employee Details</th>
+                    <th className="px-4 py-3">Limit Type</th>
+                    <th className="px-4 py-3 text-center">Month</th>
+                    <th className="px-4 py-3">Purpose</th>
+                    <th className="px-4 py-3">Requested Extension</th>
+                    <th className="px-4 py-3 text-center">Actions</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-gray-150">
+                  {limitRequests.map((req) => {
+                    const reqVal = req.amount;
+                    const currentValue = editedLimits[req.id] !== undefined ? editedLimits[req.id] : reqVal;
+                    
+                    return (
+                      <tr key={req.id} className="hover:bg-slate-50 transition-colors">
+                        <td className="px-4 py-3.5">
+                          <div className="flex items-center gap-2">
+                            <div className="h-7 w-7 rounded-full bg-blue-600/10 border border-blue-500/20 text-blue-600 flex items-center justify-center font-bold text-xs uppercase shadow-sm">
+                              {req.employeeName ? req.employeeName.charAt(0) : "U"}
+                            </div>
+                            <div>
+                              <div className="font-bold text-gray-800 leading-tight">{req.employeeName}</div>
+                              <div className="text-[9px] text-blue-600 font-mono font-bold mt-0.5">{req.eCode}</div>
+                            </div>
+                          </div>
+                        </td>
+                        <td className="px-4 py-3.5">
+                          <span className={`text-[9px] px-2 py-0.5 rounded font-bold uppercase tracking-wider border ${
+                            req.purpose.toLowerCase().includes("km") 
+                              ? "text-cyan-700 bg-cyan-50 border-cyan-200" 
+                              : "text-amber-700 bg-amber-50 border-amber-200"
+                          }`}>
+                            {req.purpose.toLowerCase().includes("km") ? "KM Limit" : "Auto Limit"}
+                          </span>
+                        </td>
+                        <td className="px-4 py-3.5 text-center text-gray-600 font-medium">
+                          {req.date}
+                        </td>
+                        <td className="px-4 py-3.5 text-gray-600 font-medium">
+                          {req.purpose}
+                        </td>
+                        <td className="px-4 py-3.5">
+                          <div className="flex items-center gap-1.5" onClick={(e) => e.stopPropagation()}>
+                            <input
+                              type="number"
+                              value={currentValue}
+                              onChange={(e) => handleEditLimitChange(req.id, parseFloat(e.target.value))}
+                              className="w-24 bg-white border border-gray-300 rounded px-2 py-1 text-xs font-bold text-gray-800 focus:outline-none focus:border-blue-500 shadow-xs"
+                              min="0"
+                              step="any"
+                            />
+                            <span className="font-bold text-gray-500">
+                              {req.purpose.toLowerCase().includes("km") ? "KM" : "₹"}
+                            </span>
+                          </div>
+                        </td>
+                        <td className="px-4 py-3.5 text-center" onClick={(e) => e.stopPropagation()}>
+                          <div className="flex items-center justify-center gap-2">
+                            <button
+                              onClick={() => handleApproveLimit(req.expense_id, currentValue)}
+                              disabled={actionLoading}
+                              className="p-1.5 rounded-full bg-green-50 border border-green-200 text-green-600 hover:bg-green-100 transition-colors shadow-xs cursor-pointer flex items-center justify-center"
+                              title="Approve Request"
+                            >
+                              <Check className="w-4.5 h-4.5" />
+                            </button>
+                            <button
+                              onClick={() => handleRejectLimit(req.expense_id)}
+                              disabled={actionLoading}
+                              className="p-1.5 rounded-full bg-red-50 border border-red-200 text-red-600 hover:bg-red-100 transition-colors shadow-xs cursor-pointer flex items-center justify-center"
+                              title="Reject Request"
+                            >
+                              <X className="w-4.5 h-4.5" />
+                            </button>
+                          </div>
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        )}
+
         <h3 className="text-xs font-bold text-gray-700 uppercase tracking-wide flex items-center gap-2 pt-1">
           <span className="w-2.5 h-2.5 rounded-full bg-amber-500 animate-pulse"></span>
           Claims Awaiting Actions
@@ -426,7 +568,7 @@ export default function ApprovalPage() {
 
         {loading ? (
           <Loader message="Loading pending reviews..." />
-        ) : pendingApprovals.length === 0 ? (
+        ) : claimRequests.length === 0 ? (
           <div className="py-16 text-center text-gray-400 text-xs space-y-2">
             <div className="h-10 w-10 rounded-full bg-green-50 border border-green-200 text-green-600 flex items-center justify-center mx-auto text-base">✓</div>
             <p className="font-bold uppercase tracking-wider text-gray-600">Great! All pending claims have been processed.</p>
@@ -447,7 +589,7 @@ export default function ApprovalPage() {
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-150">
-                {pendingApprovals.slice((approvalsPage - 1) * 25, approvalsPage * 25).map((req) => {
+                {claimRequests.slice((approvalsPage - 1) * 25, approvalsPage * 25).map((req) => {
                   const isChecked = selectedIds.includes(req.expense_id);
                   return (
                     <tr 
@@ -527,9 +669,9 @@ export default function ApprovalPage() {
               </tbody>
             </table>
             
-            {pendingApprovals.length > 25 && (
+            {claimRequests.length > 25 && (
               <div className="px-5 py-3 border-t border-gray-200 bg-slate-50 flex items-center justify-between text-xs text-gray-500">
-                <span>Showing {((approvalsPage - 1) * 25) + 1} to {Math.min(approvalsPage * 25, pendingApprovals.length)} of {pendingApprovals.length} items</span>
+                <span>Showing {((approvalsPage - 1) * 25) + 1} to {Math.min(approvalsPage * 25, claimRequests.length)} of {claimRequests.length} items</span>
                 <div className="flex gap-2">
                   <button
                     type="button"
@@ -541,8 +683,8 @@ export default function ApprovalPage() {
                   </button>
                   <button
                     type="button"
-                    disabled={approvalsPage >= Math.ceil(pendingApprovals.length / 25)}
-                    onClick={() => setApprovalsPage(p => Math.min(p + 1, Math.ceil(pendingApprovals.length / 25)))}
+                    disabled={approvalsPage >= Math.ceil(claimRequests.length / 25)}
+                    onClick={() => setApprovalsPage(p => Math.min(p + 1, Math.ceil(claimRequests.length / 25)))}
                     className="px-3 py-1 border border-gray-300 rounded bg-white text-gray-700 font-bold hover:bg-gray-50 disabled:opacity-50 disabled:hover:bg-white active:scale-95 transition-all cursor-pointer"
                   >
                     Next

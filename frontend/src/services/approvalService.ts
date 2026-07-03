@@ -12,11 +12,12 @@ export const approvalService = {
     return response.data;
   },
 
-  approveExpense: async (expenseId: number, comments: string, itineraryEdits?: any[]): Promise<any> => {
+  approveExpense: async (expenseId: number, comments: string, itineraryEdits?: any[], approvedValue?: number): Promise<any> => {
     const response = await api.post(`/approval/${expenseId}/approve`, {
       comments,
       itinerary_edits: itineraryEdits,
-      client_timestamp: getLocalTimestamp()
+      client_timestamp: getLocalTimestamp(),
+      approved_value: approvedValue
     });
     return response.data;
   },
