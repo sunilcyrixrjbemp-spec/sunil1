@@ -18,7 +18,8 @@ import {
   CheckSquare,
   ThumbsUp,
   ThumbsDown,
-  Loader2
+  Loader2,
+  TrendingUp
 } from "lucide-react";
 
 const formatDateTime = (dateVal: any) => {
@@ -746,6 +747,65 @@ export default function ApprovalPage() {
                       <span className="font-semibold text-gray-700 truncate block" title={expenseDetails.purpose}>{expenseDetails.purpose}</span>
                     </div>
                   </div>
+
+                  {expenseDetails.user_monthly_stats && (
+                    <div className="p-4 bg-blue-50/30 border border-blue-150 rounded text-xs space-y-3">
+                      <h4 className="text-xs font-black uppercase text-blue-800 tracking-wider flex items-center gap-1.5">
+                        <TrendingUp className="w-4 h-4 text-blue-600" />
+                        Submitter's Cumulative Monthly Summary ({expenseDetails.month} {expenseDetails.year})
+                      </h4>
+                      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
+                        <div className="bg-white p-2.5 border border-gray-150 rounded shadow-xs">
+                          <span className="text-gray-400 font-bold block text-[8px] uppercase tracking-wider">KM Used So Far</span>
+                          <span className="text-xs font-extrabold text-gray-800 font-mono mt-0.5 block">{(expenseDetails.user_monthly_stats.km_used_so_far || 0).toFixed(1)} KM</span>
+                        </div>
+                        <div className="bg-white p-2.5 border border-gray-150 rounded shadow-xs">
+                          <span className="text-gray-400 font-bold block text-[8px] uppercase tracking-wider">Total Approved DA</span>
+                          <span className="text-xs font-extrabold text-gray-800 font-mono mt-0.5 block">₹{(expenseDetails.user_monthly_stats.total_da || 0).toLocaleString()}</span>
+                        </div>
+                        <div className="bg-white p-2.5 border border-gray-150 rounded shadow-xs">
+                          <span className="text-gray-400 font-bold block text-[8px] uppercase tracking-wider">Total Bike Distance</span>
+                          <span className="text-xs font-extrabold text-gray-800 font-mono mt-0.5 block">{(expenseDetails.user_monthly_stats.total_bike_km || 0).toFixed(1)} KM</span>
+                        </div>
+                        <div className="bg-white p-2.5 border border-gray-150 rounded shadow-xs">
+                          <span className="text-gray-400 font-bold block text-[8px] uppercase tracking-wider">Total Approved Auto</span>
+                          <span className="text-xs font-extrabold text-gray-800 font-mono mt-0.5 block">₹{(expenseDetails.user_monthly_stats.total_auto || 0).toLocaleString()}</span>
+                        </div>
+                        <div className="bg-white p-2.5 border border-gray-150 rounded shadow-xs">
+                          <span className="text-gray-400 font-bold block text-[8px] uppercase tracking-wider">Total Approved Bus</span>
+                          <span className="text-xs font-extrabold text-gray-800 font-mono mt-0.5 block">₹{(expenseDetails.user_monthly_stats.total_bus || 0).toLocaleString()}</span>
+                        </div>
+                        <div className="bg-white p-2.5 border border-gray-150 rounded shadow-xs">
+                          <span className="text-gray-400 font-bold block text-[8px] uppercase tracking-wider">Total Approved Train</span>
+                          <span className="text-xs font-extrabold text-gray-800 font-mono mt-0.5 block">₹{(expenseDetails.user_monthly_stats.total_train || 0).toLocaleString()}</span>
+                        </div>
+                        <div className="bg-white p-2.5 border border-gray-150 rounded shadow-xs">
+                          <span className="text-gray-400 font-bold block text-[8px] uppercase tracking-wider">Total Approved Hotel</span>
+                          <span className="text-xs font-extrabold text-gray-800 font-mono mt-0.5 block">₹{(expenseDetails.user_monthly_stats.total_hotel || 0).toLocaleString()}</span>
+                        </div>
+                        <div className="bg-white p-2.5 border border-gray-150 rounded shadow-xs">
+                          <span className="text-gray-400 font-bold block text-[8px] uppercase tracking-wider">Calls Completed</span>
+                          <span className="text-xs font-extrabold text-gray-800 font-mono mt-0.5 block">{expenseDetails.user_monthly_stats.calls_completed || 0}</span>
+                        </div>
+                        <div className="bg-white p-2.5 border border-gray-150 rounded shadow-xs">
+                          <span className="text-gray-400 font-bold block text-[8px] uppercase tracking-wider">PMS Count</span>
+                          <span className="text-xs font-extrabold text-gray-800 font-mono mt-0.5 block">{expenseDetails.user_monthly_stats.pms_count || 0}</span>
+                        </div>
+                        <div className="bg-white p-2.5 border border-gray-150 rounded shadow-xs">
+                          <span className="text-gray-400 font-bold block text-[8px] uppercase tracking-wider">Asset Tagging</span>
+                          <span className="text-xs font-extrabold text-gray-800 font-mono mt-0.5 block">{expenseDetails.user_monthly_stats.asset_tagging || 0}</span>
+                        </div>
+                        <div className="bg-white p-2.5 border border-gray-150 rounded shadow-xs">
+                          <span className="text-gray-400 font-bold block text-[8px] uppercase tracking-wider">Mobilised Verification</span>
+                          <span className="text-xs font-extrabold text-gray-800 font-mono mt-0.5 block">{expenseDetails.user_monthly_stats.mobilise_count || 0}</span>
+                        </div>
+                        <div className="bg-white p-2.5 border border-gray-150 rounded shadow-xs">
+                          <span className="text-gray-400 font-bold block text-[8px] uppercase tracking-wider">Calibration Count</span>
+                          <span className="text-xs font-extrabold text-gray-800 font-mono mt-0.5 block">{expenseDetails.user_monthly_stats.calibration_count || 0}</span>
+                        </div>
+                      </div>
+                    </div>
+                  )}
 
                   {/* EDITABLE ITINERARY LEGS */}
                   <div className="space-y-3">

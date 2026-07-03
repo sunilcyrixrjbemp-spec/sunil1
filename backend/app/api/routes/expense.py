@@ -2018,6 +2018,92 @@ async def get_consolidated_report(
 
     return {"success": True, "data": report_rows}
 
+def get_user_monthly_stats(db, user_db_id: int, month: str, year: int):
+    from app.models.expense import Expense
+    from app.models.expense_itinerary import ExpenseItinerary
+    
+    approved_expenses = db.query(Expense).filter(
+        Expense.user_id == user_db_id,
+        Expense.month == month,
+        Expense.year == year,
+        Expense.status == "approved"
+    ).all()
+    
+    all_submitted_expenses = db.query(Expense).filter(
+        Expense.user_id == user_db_id,
+        Expense.month == month,
+        Expense.year == year,
+        Expense.status.in_(["submitted", "approved", "partially_approved"])
+    ).all()
+    
+    approved_exp_codes = [e.expense_code for e in approved_expenses if e.expense_code]
+    approved_legs = db.query(ExpenseItinerary).filter(ExpenseItinerary.exp_id.in_(approved_exp_codes)).all() if approved_exp_codes else []
+    
+    submitted_exp_codes = [e.expense_code for e in all_submitted_expenses if e.expense_code]
+    submitted_legs = db.query(ExpenseItinerary).filter(ExpenseItinerary.exp_id.in_(submitted_exp_codes)).all() if submitted_exp_codes else []
+    
+    total_approved_da = 0.0
+    total_approved_bike_km = 0.0
+    total_approved_auto = 0.0
+    total_approved_bus = 0.0
+    total_approved_train = 0.0
+    total_approved_hotel = 0.0
+    
+    total_calls_completed = 0
+    total_pms_count = 0
+    total_asset_tagging = 0
+    total_mobilise_count = 0
+    total_calibration_count = 0
+    
+    for leg in approved_legs:
+        total_approved_da += leg.da_amount or 0.0
+        total_approved_hotel += leg.hotel_amount or 0.0
+        
+        mode = (leg.travel_mode or "").strip().lower()
+        if mode == "bike":
+            total_approved_bike_km += leg.distance_km or 0.0
+        elif mode == "auto":
+            total_approved_auto += (leg.travel_amount or 0.0) + (leg.sub_amount or 0.0)
+        elif mode == "bus":
+            total_approved_bus += (leg.travel_amount or 0.0) + (leg.sub_amount or 0.0)
+        elif mode == "train":
+            total_approved_train += (leg.travel_amount or 0.0) + (leg.sub_amount or 0.0)
+            
+        sub_mode = (leg.sub_mode or "").strip().lower()
+        if sub_mode == "auto":
+            total_approved_auto += leg.sub_amount or 0.0
+        elif sub_mode == "bus":
+            total_approved_bus += leg.sub_amount or 0.0
+        elif sub_mode == "train":
+            total_approved_train += leg.sub_amount or 0.0
+            
+        total_calls_completed += leg.calls_completed or 0
+        total_pms_count += leg.pms_count or 0
+        total_asset_tagging += leg.asset_tagging or 0
+        total_mobilise_count += leg.mobilise_count or 0
+        total_calibration_count += leg.calibration_count or 0
+        
+    total_submitted_km_used = 0.0
+    for leg in submitted_legs:
+        mode = (leg.travel_mode or "").strip().lower()
+        if mode in ["bike", "car"]:
+            total_submitted_km_used += leg.distance_km or 0.0
+            
+    return {
+        "km_used_so_far": total_submitted_km_used,
+        "total_da": total_approved_da,
+        "total_bike_km": total_approved_bike_km,
+        "total_auto": total_approved_auto,
+        "total_bus": total_approved_bus,
+        "total_train": total_approved_train,
+        "total_hotel": total_approved_hotel,
+        "calls_completed": total_calls_completed,
+        "pms_count": total_pms_count,
+        "asset_tagging": total_asset_tagging,
+        "mobilise_count": total_mobilise_count,
+        "calibration_count": total_calibration_count
+    }
+
 @router.get("/{expense_id}")
 async def get_expense_details(
     expense_id: str,
@@ -2042,6 +2128,11 @@ async def get_expense_details(
         if pl.user_id != current_user.user_id and current_user.user_id != pl.manager_id and current_user.role != "Admin":
             raise HTTPException(status_code=403, detail="Access denied to view this request.")
             
+        limit_year = int(pl.for_month.split("-")[0]) if "-" in pl.for_month else datetime.now().year
+        monthly_stats = None
+        if submitter:
+            monthly_stats = get_user_monthly_stats(db, submitter.id, pl.for_month, limit_year)
+
         # Mock details response
         return {
             "id": -pl.id,
@@ -2050,7 +2141,7 @@ async def get_expense_details(
             "submitter_name": submitter.name if submitter else f"Employee {pl.user_id}",
             "submitter_code": pl.user_id,
             "month": pl.for_month,
-            "year": int(pl.for_month.split("-")[0]) if "-" in pl.for_month else datetime.now().year,
+            "year": limit_year,
             "amount": pl.requested_value,
             "status": pl.status,
             "category": "Limit Request",
@@ -2063,6 +2154,7 @@ async def get_expense_details(
             "original_local_purchase_amount": 0.0,
             "attachments": [],
             "attachments_detailed": [],
+            "user_monthly_stats": monthly_stats,
             "itineraries": [
                 {
                     "leg": 1,
@@ -2184,6 +2276,8 @@ async def get_expense_details(
         } for el in edit_logs
     ]
 
+    monthly_stats = get_user_monthly_stats(db, expense.user_id, expense.month, expense.year)
+
     return {
         "id": expense.id,
         "expense_code": expense.expense_code,
@@ -2257,7 +2351,8 @@ async def get_expense_details(
         "created_at": expense.created_at,
         "updated_at": expense.updated_at,
         "approvals": approvals_list,
-        "edit_history": edit_history_list
+        "edit_history": edit_history_list,
+        "user_monthly_stats": monthly_stats
     }
 
 @router.delete("/{expense_id}")
