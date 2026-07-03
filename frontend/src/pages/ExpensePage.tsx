@@ -809,10 +809,7 @@ export default function ExpensePage() {
       });
     };
 
-    if (cached) {
-      applyInitData(JSON.parse(cached));
-      setInitLoading(false);
-    } else if (isInitialLoad) {
+    if (isInitialLoad) {
       setInitLoading(true);
     }
 
@@ -824,9 +821,7 @@ export default function ExpensePage() {
       }
     } catch (err) {
       console.error("Failed to load month limits", err);
-      if (!cached) {
-        toast.error("Failed to initialize expense rules.");
-      }
+      toast.error("Failed to initialize expense rules.");
     } finally {
       if (isInitialLoad) setInitLoading(false);
     }

@@ -254,41 +254,39 @@ async def init_expense(
 
     # 7. Allowance Rules lookup
     grade_to_lookup = "O1" if "specialist" in (user.designation or "").lower() else user.grade
-    allowance_dict = cache.get(f"allowance_master:{grade_to_lookup}")
-    if not allowance_dict:
-        allowance = db.query(AllowanceMaster).filter(AllowanceMaster.grade == grade_to_lookup).first()
-        
-        # Get dynamic default rates from database instead of hardcoding fallbacks
-        default_bike = db.query(AllowanceMaster).filter(AllowanceMaster.vehicle_type == "Bike").first()
-        default_car = db.query(AllowanceMaster).filter(AllowanceMaster.vehicle_type == "Car").first()
-        fallback_bike_rate = default_bike.rate_per_km if default_bike else 4.5
-        fallback_car_rate = default_car.rate_per_km if default_car else 9.0
-        
-        if allowance:
-            allowance_dict = {
-                "daily_in_district": allowance.daily_in_district if allowance.daily_in_district is not None else 150,
-                "daily_out_district": allowance.daily_out_district if allowance.daily_out_district is not None else 200,
-                "daily_hotel": allowance.daily_hotel if allowance.daily_hotel is not None else 300,
-                "daily_out_state": allowance.daily_out_state if allowance.daily_out_state is not None else 400,
-                "hotel_in_state_s": allowance.hotel_in_state_s if allowance.hotel_in_state_s is not None else 1000,
-                "max_km_per_month": allowance.max_km_per_month if allowance.max_km_per_month is not None else 2000,
-                "rate_bike": allowance.rate_per_km if allowance.vehicle_type == "Bike" else fallback_bike_rate,
-                "rate_car": allowance.rate_per_km if allowance.vehicle_type == "Car" else fallback_car_rate,
-                "vehicle_type": allowance.vehicle_type if allowance.vehicle_type is not None else "Bike"
-            }
-        else:
-            allowance_dict = {
-                "daily_in_district": 150,
-                "daily_out_district": 200,
-                "daily_hotel": 300,
-                "daily_out_state": 400,
-                "hotel_in_state_s": 1000,
-                "max_km_per_month": 2000,
-                "rate_bike": fallback_bike_rate,
-                "rate_car": fallback_car_rate,
-                "vehicle_type": "Bike"
-            }
-        cache.set(f"allowance_master:{grade_to_lookup}", allowance_dict)
+    
+    allowance = db.query(AllowanceMaster).filter(AllowanceMaster.grade == grade_to_lookup).first()
+    
+    # Get dynamic default rates from database instead of hardcoding fallbacks
+    default_bike = db.query(AllowanceMaster).filter(AllowanceMaster.vehicle_type == "Bike").first()
+    default_car = db.query(AllowanceMaster).filter(AllowanceMaster.vehicle_type == "Car").first()
+    fallback_bike_rate = default_bike.rate_per_km if default_bike else 4.5
+    fallback_car_rate = default_car.rate_per_km if default_car else 9.0
+    
+    if allowance:
+        allowance_dict = {
+            "daily_in_district": allowance.daily_in_district if allowance.daily_in_district is not None else 150,
+            "daily_out_district": allowance.daily_out_district if allowance.daily_out_district is not None else 200,
+            "daily_hotel": allowance.daily_hotel if allowance.daily_hotel is not None else 300,
+            "daily_out_state": allowance.daily_out_state if allowance.daily_out_state is not None else 400,
+            "hotel_in_state_s": allowance.hotel_in_state_s if allowance.hotel_in_state_s is not None else 1000,
+            "max_km_per_month": allowance.max_km_per_month if allowance.max_km_per_month is not None else 2000,
+            "rate_bike": allowance.rate_per_km if allowance.vehicle_type == "Bike" else fallback_bike_rate,
+            "rate_car": allowance.rate_per_km if allowance.vehicle_type == "Car" else fallback_car_rate,
+            "vehicle_type": allowance.vehicle_type if allowance.vehicle_type is not None else "Bike"
+        }
+    else:
+        allowance_dict = {
+            "daily_in_district": 150,
+            "daily_out_district": 200,
+            "daily_hotel": 300,
+            "daily_out_state": 400,
+            "hotel_in_state_s": 1000,
+            "max_km_per_month": 2000,
+            "rate_bike": fallback_bike_rate,
+            "rate_car": fallback_car_rate,
+            "vehicle_type": "Bike"
+        }
 
     # Make a copy of allowance dict before modifying with monthly totals
     allowance_dict = dict(allowance_dict)
