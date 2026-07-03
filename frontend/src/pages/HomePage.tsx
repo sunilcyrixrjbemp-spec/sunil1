@@ -26,7 +26,32 @@ import {
   AlertTriangle
 } from "lucide-react";
 
-
+const getAttachmentsArray = (attachments: any): string[] => {
+  if (!attachments) return [];
+  if (Array.isArray(attachments)) return attachments.filter(Boolean);
+  if (typeof attachments === "string") {
+    const trimmed = attachments.trim();
+    if (!trimmed) return [];
+    if (trimmed.startsWith("[") || trimmed.startsWith("\"[")) {
+      try {
+        let parsed = JSON.parse(trimmed);
+        if (typeof parsed === "string") {
+          parsed = JSON.parse(parsed);
+        }
+        if (Array.isArray(parsed)) {
+          return parsed.filter(Boolean);
+        }
+      } catch (e) {
+        console.warn("Failed to parse attachments JSON string:", trimmed, e);
+      }
+    }
+    if (trimmed.includes(",")) {
+      return trimmed.split(",").map(x => x.trim()).filter(Boolean);
+    }
+    return [trimmed];
+  }
+  return [];
+};
 
 const GALLERY_COLORS = ["#2f5bb7", "#2b7d50", "#d28b2a", "#854aa5", "#d83b01", "#00a2ad", "#e81123"];
 
@@ -499,14 +524,14 @@ export default function HomePage() {
       </div>
 
       {/* ⚡ Quick Actions Navigation Bar */}
-      <div className="bg-white border-t-4 border-t-blue-500 rounded shadow-xs p-3 mb-4">
+      <div className="hidden md:block bg-white border-t-4 border-t-blue-500 rounded shadow-xs p-3 mb-4">
         <h4 className="text-[10px] font-black uppercase text-gray-500 tracking-wider mb-2.5 flex items-center gap-1.5">
           <Compass className="w-4 h-4 text-blue-600" />
           Quick Actions Shortcuts
         </h4>
         <div className="flex flex-wrap gap-2.5">
           <Link
-            to="/expense"
+            to="/submit-expense"
             className="flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold px-3.5 py-2 rounded no-underline shadow-sm transition-all duration-200"
           >
             <Plus className="w-4 h-4" />
@@ -680,72 +705,6 @@ export default function HomePage() {
         
         {/* Left Area: Tab list and Limits */}
         <div className="lg:col-span-2 space-y-6">
-          
-          {/* Allowances Caps */}
-          <div className="bg-white border border-gray-200 rounded shadow-sm p-5 space-y-4">
-            <h3 className="text-xs font-bold text-gray-700 uppercase tracking-wide flex items-center gap-1.5">
-              <TrendingUp className="w-4 h-4 text-blue-600" />
-              Reimbursement Allowance Status ({(() => {
-                try {
-                  const [y, m] = selectMonth.split("-");
-                  const d = new Date(parseInt(y), parseInt(m) - 1, 1);
-                  return d.toLocaleString("en-US", { month: "long", year: "numeric" });
-                } catch(e) {
-                  return "Selected Month";
-                }
-              })()})
-            </h3>
-
-            {loadingAllowance ? (
-              <Loader message="Loading allowance status..." />
-            ) : allowanceStats ? (
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                {/* KM Limit */}
-                <div className="border border-gray-150 p-4 bg-gray-50/50 rounded text-xs space-y-2.5">
-                  <div className="flex justify-between items-center font-bold">
-                    <span className="text-gray-500 uppercase tracking-wide text-[9px]">{allowanceStats.vehicleType} Distance Allowance</span>
-                    <span className="text-blue-700 font-mono">{allowanceStats.currentKm} / {allowanceStats.maxKm} KM</span>
-                  </div>
-                  <div className="h-2 w-full bg-gray-200 rounded-full overflow-hidden">
-                    <div 
-                      className={`h-full rounded-full transition-all duration-300 ${
-                        getProgressPercentage(allowanceStats.currentKm, allowanceStats.maxKm) > 85 ? "bg-amber-500" : "bg-blue-600"
-                      }`}
-                      style={{ width: `${getProgressPercentage(allowanceStats.currentKm, allowanceStats.maxKm)}%` }}
-                    ></div>
-                  </div>
-                  <div className="flex justify-between text-[9px] text-gray-400 font-bold">
-                    <span>Used: {getProgressPercentage(allowanceStats.currentKm, allowanceStats.maxKm)}%</span>
-                    <span>Rate: ₹{(allowanceStats.vehicleType === "Car" ? allowanceStats.rateCar : allowanceStats.rateBike).toFixed(1)}/KM</span>
-                  </div>
-                </div>
-
-                {/* Auto Fare Limit */}
-                <div className="border border-gray-150 p-4 bg-gray-50/50 rounded text-xs space-y-2.5">
-                  <div className="flex justify-between items-center font-bold">
-                    <span className="text-gray-500 uppercase tracking-wide text-[9px]">Auto Fare Allowance</span>
-                    <span className="text-blue-700 font-mono">₹{allowanceStats.currentAuto} / ₹{allowanceStats.maxAuto}</span>
-                  </div>
-                  <div className="h-2 w-full bg-gray-200 rounded-full overflow-hidden">
-                    <div 
-                      className={`h-full rounded-full transition-all duration-300 ${
-                        getProgressPercentage(allowanceStats.currentAuto, allowanceStats.maxAuto) > 85 ? "bg-amber-500" : "bg-blue-600"
-                      }`}
-                      style={{ width: `${getProgressPercentage(allowanceStats.currentAuto, allowanceStats.maxAuto)}%` }}
-                    ></div>
-                  </div>
-                  <div className="flex justify-between text-[9px] text-gray-400 font-bold">
-                    <span>Used: {getProgressPercentage(allowanceStats.currentAuto, allowanceStats.maxAuto)}%</span>
-                    <span>Monthly Limit Cap</span>
-                  </div>
-                </div>
-              </div>
-            ) : (
-              <div className="p-4 text-center text-gray-400 text-xs font-semibold">
-                Could not retrieve allowance limit details. Check your grade config.
-              </div>
-            )}
-          </div>
 
           {/* TAB SYSTEM: My Claims vs Team Claims */}
           <div className="bg-white border border-gray-200 rounded shadow-sm overflow-hidden flex flex-col">
@@ -1203,8 +1162,8 @@ export default function HomePage() {
                   <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 text-xs">
                     <div className="p-3 bg-gray-50 border border-gray-200 rounded">
                       <span className="text-[9px] text-gray-400 font-bold uppercase block">Submitted By</span>
-                      <span className="font-bold text-gray-800 block mt-0.5">{claimDetails.submitter_name}</span>
-                      <span className="text-[10px] text-gray-500 font-mono">{claimDetails.submitter_code}</span>
+                      <span className="font-bold text-gray-800 block mt-0.5">{claimDetails.submitter_name || user?.name || "Sunil Vishnoi"}</span>
+                      <span className="text-[10px] text-gray-500 font-mono">{claimDetails.submitter_code || user?.user_id || "E1704"}</span>
                     </div>
                     <div className="p-3 bg-gray-50 border border-gray-200 rounded">
                       <span className="text-[9px] text-gray-400 font-bold uppercase block">Travel Date</span>
@@ -1264,7 +1223,9 @@ export default function HomePage() {
                       <div className="px-3 py-2 bg-gray-50 border-b border-gray-200">
                         <h4 className="text-[10px] font-bold uppercase text-gray-600 tracking-wider">Visit Legs Details</h4>
                       </div>
-                      <div className="overflow-x-auto">
+                      
+                      {/* Desktop View Table */}
+                      <div className="hidden lg:block overflow-x-auto">
                         <table className="table-lte">
                           <thead>
                             <tr className="border-b border-gray-200 text-[9px] uppercase font-bold tracking-wider text-gray-400 bg-gray-50">
@@ -1337,7 +1298,7 @@ export default function HomePage() {
 
                                   {hasActivities && (
                                     <tr className="bg-slate-50/50">
-                                      <td colSpan={9} className="py-2.5 px-4 border-t border-gray-150">
+                                      <td colSpan={10} className="py-2.5 px-4 border-t border-gray-150">
                                         <div className="flex flex-col gap-2.5 text-left">
                                           <div className="flex flex-wrap gap-2">
                                             <span className="text-[9px] font-bold text-gray-500 uppercase mr-2 mt-0.5">Activities:</span>
@@ -1458,7 +1419,7 @@ export default function HomePage() {
                                             </div>
                                           )}
 
-                                          {/* Sub-table for Asset Tagging - Hide cost from submitter */}
+                                          {/* Sub-table for Asset Tagging */}
                                           {selectedActs.includes("Asset Tagging") && assetsList.length > 0 && (
                                             <div className="border border-emerald-100 rounded overflow-hidden bg-white max-w-4xl">
                                               <div className="px-2 py-1 bg-emerald-50/50 border-b border-emerald-100 text-[9px] font-bold text-emerald-700 uppercase">Asset Tagging Records</div>
@@ -1515,6 +1476,249 @@ export default function HomePage() {
                           </tbody>
                         </table>
                       </div>
+
+                      {/* Mobile View Card List */}
+                      <div className="block lg:hidden space-y-3 p-3 bg-gray-50/30">
+                        {claimDetails.itineraries.map((leg: any, idx: number) => {
+                          const travelCost = leg.amount || 0;
+                          const subCost = leg.sub_amount || 0;
+                          const daCost = leg.da || 0;
+                          const hotelCost = leg.hotel || 0;
+                          const lpCost = leg.local_purchase || 0;
+                          const otherCost = leg.oth_amount || 0;
+                          const legTotal = travelCost + subCost + daCost + hotelCost + lpCost + otherCost;
+
+                          let actDetails: any = null;
+                          try {
+                            if (leg.activity_details) {
+                              actDetails = typeof leg.activity_details === "string" ? JSON.parse(leg.activity_details) : leg.activity_details;
+                            }
+                          } catch (e) {
+                            console.error("Error parsing activity details", e);
+                          }
+
+                          const callsList = actDetails?.calls_list || [];
+                          const pmsList = actDetails?.pms_list || [];
+                          const assetsList = actDetails?.assets_list || [];
+                          const selectedActs = actDetails?.selected_activities || leg.selected_activities || [];
+                          const mobiliseCount = parseInt(actDetails?.mobilise_asset_count || leg.mobilise_asset_count || "0") || 0;
+                          const calibrationCount = parseInt(actDetails?.calibration_count || leg.calibration_count || "0") || 0;
+                          const activityOtherDesc = actDetails?.activity_other_desc || leg.activity_other_desc || "";
+
+                          const hasActivities = selectedActs.length > 0 || callsList.length > 0 || pmsList.length > 0 || assetsList.length > 0;
+
+                          return (
+                            <div key={idx} className="bg-white border border-gray-200 rounded-lg p-3.5 space-y-3 shadow-xs">
+                              {/* Card Header */}
+                              <div className="flex justify-between items-center border-b border-gray-100 pb-2">
+                                <span className="font-extrabold text-blue-600 font-mono text-xs">Leg #{leg.leg}</span>
+                                <span className="font-extrabold text-gray-900 text-sm">₹{legTotal.toLocaleString()}</span>
+                              </div>
+
+                              {/* Route & Mode */}
+                              <div className="space-y-1.5">
+                                <div>
+                                  <span className="text-[9px] text-gray-400 font-bold uppercase block">Route</span>
+                                  <span className="font-bold text-gray-800 text-[11px]">
+                                    {leg.from_district === leg.to_district ? leg.to_district : `${leg.from_district} → ${leg.to_district}`}
+                                  </span>
+                                  <span className="text-[10px] text-gray-500 block">
+                                    {leg.from || "Start"} → {leg.to || "End"}
+                                  </span>
+                                </div>
+
+                                <div className="flex flex-wrap gap-1.5 pt-0.5">
+                                  <span className="text-[9px] font-bold uppercase bg-blue-50 text-blue-700 px-1.5 py-0.5 rounded border border-blue-100">
+                                    {leg.mode}
+                                  </span>
+                                  {leg.sub_mode && (
+                                    <span className="text-[9px] font-bold uppercase bg-purple-50 text-purple-700 px-1.5 py-0.5 rounded border border-purple-100">
+                                      +{leg.sub_mode}
+                                    </span>
+                                  )}
+                                  {leg.km > 0 && (
+                                    <span className="text-[9px] font-bold uppercase bg-gray-50 text-gray-650 px-1.5 py-0.5 rounded border border-gray-200 font-mono">
+                                      {leg.km} KM
+                                    </span>
+                                  )}
+                                </div>
+                              </div>
+
+                              {/* Breakdown of costs */}
+                              <div className="grid grid-cols-3 gap-2 bg-gray-50/50 p-2.5 rounded-lg border border-gray-150 text-[10px] font-bold">
+                                <div>
+                                  <span className="text-gray-400 text-[8px] uppercase block">DA</span>
+                                  <span className="text-gray-700 font-mono">₹{daCost.toLocaleString()}</span>
+                                </div>
+                                <div>
+                                  <span className="text-gray-400 text-[8px] uppercase block">Hotel</span>
+                                  <span className="text-gray-700 font-mono">₹{hotelCost.toLocaleString()}</span>
+                                </div>
+                                <div>
+                                  <span className="text-gray-400 text-[8px] uppercase block">Local Purc.</span>
+                                  <span className="text-gray-700 font-mono">₹{lpCost.toLocaleString()}</span>
+                                </div>
+                                {otherCost > 0 && (
+                                  <div className="col-span-3 border-t border-gray-100 pt-1.5 mt-0.5">
+                                    <span className="text-gray-400 text-[8px] uppercase block">Other/Misc (₹{otherCost.toLocaleString()})</span>
+                                    <span className="text-gray-655 block text-[9px] font-normal italic">{leg.oth_desc || "No description"}</span>
+                                  </div>
+                                )}
+                              </div>
+
+                              {/* Work Summary */}
+                              <div className="text-[10px] text-gray-500 bg-gray-50/50 px-2.5 py-1.5 rounded border border-gray-100 flex justify-between font-bold">
+                                <span>Work: {leg.ws_assigned||0}</span>
+                                <span className="text-green-600">Done: {leg.ws_closed||0}</span>
+                                <span>PMS: {leg.ws_pms||0}</span>
+                                <span>Asset: {leg.ws_asset||0}</span>
+                              </div>
+
+                              {/* Activities & Sub logs */}
+                              {hasActivities && (
+                                <div className="border-t border-gray-100 pt-2.5 space-y-3">
+                                  <div className="flex flex-wrap gap-1.5">
+                                    {selectedActs.map((act: string, actIdx: number) => (
+                                      <span key={actIdx} className="px-1.5 py-0.5 rounded bg-gray-100 border border-gray-200 text-[8px] font-bold text-gray-700 uppercase">
+                                        {act}
+                                      </span>
+                                    ))}
+                                  </div>
+
+                                  {/* Calls card list */}
+                                  {selectedActs.includes("Calls") && callsList.length > 0 && (
+                                    <div className="space-y-2">
+                                      <div className="text-[9px] font-bold text-blue-700 uppercase">Support Calls Logs</div>
+                                      {callsList.map((c: any, cIdx: number) => (
+                                        <div key={cIdx} className="bg-blue-50/30 border border-blue-100 rounded-lg p-2.5 space-y-2 text-[10px] text-left">
+                                          <div className="flex justify-between items-start">
+                                            <div>
+                                              <span className="font-extrabold text-gray-805 block">{c.asset_details?.equipment_name || "—"}</span>
+                                              <span className="text-[9px] text-gray-500">{c.asset_details?.hospital_name || "—"}</span>
+                                            </div>
+                                            <span className="px-1.5 py-0.5 rounded font-extrabold text-[8px] uppercase bg-blue-50 text-blue-700 border border-blue-100">
+                                              {c.status || "Attend"}
+                                            </span>
+                                          </div>
+                                          <div className="grid grid-cols-2 gap-x-2 gap-y-1 text-[9px] text-gray-600 font-bold border-t border-blue-100/50 pt-1.5">
+                                            <div>District: <span className="text-gray-800">{c.asset_details?.district_name || "—"}</span></div>
+                                            <div>Model: <span className="text-gray-800">{c.asset_details?.model_name || "—"}</span></div>
+                                            <div>Barcode: <span className="text-gray-800 font-mono">{c.barcode}</span></div>
+                                            <div>Type: <span className="text-gray-800">{c.type || "Support Call"}</span></div>
+                                          </div>
+                                          {c.photo_url && (
+                                            <div className="pt-2">
+                                              <span className="text-gray-400 text-[8px] uppercase block mb-1">Attachment Photo</span>
+                                              <div className="relative rounded overflow-hidden border border-blue-100 bg-white">
+                                                <img
+                                                  src={`${import.meta.env.VITE_API_URL || "https://expense-backend-zio8.onrender.com"}${c.photo_url}`}
+                                                  alt="Call verification"
+                                                  className="w-full h-auto object-cover max-h-48 cursor-pointer"
+                                                  onClick={() => setLightboxImage(`${import.meta.env.VITE_API_URL || "https://expense-backend-zio8.onrender.com"}${c.photo_url}`)}
+                                                />
+                                                <button
+                                                  type="button"
+                                                  onClick={() => setLightboxImage(`${import.meta.env.VITE_API_URL || "https://expense-backend-zio8.onrender.com"}${c.photo_url}`)}
+                                                  className="absolute bottom-1 right-1 bg-black/60 text-white font-bold text-[8px] px-2 py-0.5 rounded cursor-pointer border-0"
+                                                >
+                                                  Full View
+                                                </button>
+                                              </div>
+                                            </div>
+                                          )}
+                                        </div>
+                                      ))}
+                                    </div>
+                                  )}
+
+                                  {/* PMS card list */}
+                                  {selectedActs.includes("PMS") && pmsList.length > 0 && (
+                                    <div className="space-y-2">
+                                      <div className="text-[9px] font-bold text-amber-700 uppercase">PMS Service Logs</div>
+                                      {pmsList.map((p: any, pIdx: number) => (
+                                        <div key={pIdx} className="bg-amber-50/30 border border-amber-100 rounded-lg p-2.5 space-y-2 text-[10px] text-left">
+                                          <div className="flex justify-between items-start">
+                                            <div>
+                                              <span className="font-extrabold text-gray-850 block">{p.asset_details?.equipment_name || "—"}</span>
+                                              <span className="text-[9px] text-gray-500">{p.asset_details?.hospital_name || "—"}</span>
+                                            </div>
+                                            <span className="px-1.5 py-0.5 rounded font-extrabold text-[8px] uppercase bg-green-50 text-green-700 border border-green-200">
+                                              {p.frequency || "3 month"}
+                                            </span>
+                                          </div>
+                                          <div className="grid grid-cols-2 gap-x-2 gap-y-1 text-[9px] text-gray-600 font-bold border-t border-amber-100/50 pt-1.5">
+                                            <div>District: <span className="text-gray-800">{p.asset_details?.district_name || "—"}</span></div>
+                                            <div>Model: <span className="text-gray-800">{p.asset_details?.model_name || "—"}</span></div>
+                                            <div>Barcode: <span className="text-gray-800 font-mono">{p.barcode}</span></div>
+                                            <div>Status: <span className="text-gray-800">{p.asset_details?.inventory_status || "Active"}</span></div>
+                                          </div>
+                                          {p.photo_url && (
+                                            <div className="pt-2">
+                                              <span className="text-gray-400 text-[8px] uppercase block mb-1">Attachment Photo</span>
+                                              <div className="relative rounded overflow-hidden border border-amber-100 bg-white">
+                                                <img
+                                                  src={`${import.meta.env.VITE_API_URL || "https://expense-backend-zio8.onrender.com"}${p.photo_url}`}
+                                                  alt="PMS verification"
+                                                  className="w-full h-auto object-cover max-h-48 cursor-pointer"
+                                                  onClick={() => setLightboxImage(`${import.meta.env.VITE_API_URL || "https://expense-backend-zio8.onrender.com"}${p.photo_url}`)}
+                                                />
+                                                <button
+                                                  type="button"
+                                                  onClick={() => setLightboxImage(`${import.meta.env.VITE_API_URL || "https://expense-backend-zio8.onrender.com"}${p.photo_url}`)}
+                                                  className="absolute bottom-1 right-1 bg-black/60 text-white font-bold text-[8px] px-2 py-0.5 rounded cursor-pointer border-0"
+                                                >
+                                                  Full View
+                                                </button>
+                                              </div>
+                                            </div>
+                                          )}
+                                        </div>
+                                      ))}
+                                    </div>
+                                  )}
+
+                                  {/* Asset Tagging list */}
+                                  {selectedActs.includes("Asset Tagging") && assetsList.length > 0 && (
+                                    <div className="space-y-2">
+                                      <div className="text-[9px] font-bold text-emerald-700 uppercase">Asset Tagging Records</div>
+                                      {assetsList.map((a: any, aIdx: number) => (
+                                        <div key={aIdx} className="bg-emerald-50/30 border border-emerald-100 rounded-lg p-2.5 flex justify-between items-center text-[10px] text-left">
+                                          <span className="font-extrabold text-gray-800">{a.equipment_name}</span>
+                                          <span className="px-2 py-0.5 rounded bg-white border border-emerald-200 text-gray-700 font-bold font-mono">Qty: {a.quantity}</span>
+                                        </div>
+                                      ))}
+                                    </div>
+                                  )}
+
+                                  {/* Quantities for Mobilise, Calibration or Other */}
+                                  {(selectedActs.includes("Mobilise Asset Update") || selectedActs.includes("Calibration") || (selectedActs.includes("Other") && activityOtherDesc)) && (
+                                    <div className="bg-gray-50/50 p-2.5 rounded-lg border border-gray-150 text-[10px] font-bold space-y-1">
+                                      {selectedActs.includes("Mobilise Asset Update") && (
+                                        <div className="flex justify-between">
+                                          <span className="text-gray-500">Mobilise Qty:</span>
+                                          <span className="text-indigo-700 font-extrabold">{mobiliseCount} units</span>
+                                        </div>
+                                      )}
+                                      {selectedActs.includes("Calibration") && (
+                                        <div className="flex justify-between">
+                                          <span className="text-gray-500">Calibration Qty:</span>
+                                          <span className="text-purple-700 font-extrabold">{calibrationCount} units</span>
+                                        </div>
+                                      )}
+                                      {selectedActs.includes("Other") && activityOtherDesc && (
+                                        <div className="border-t border-gray-100 pt-1.5 mt-1 font-normal text-left">
+                                          <span className="text-gray-400 text-[8px] uppercase block font-bold">Other Activity Description</span>
+                                          <span className="italic text-gray-700 block">{activityOtherDesc}</span>
+                                        </div>
+                                      )}
+                                    </div>
+                                  )}
+                                </div>
+                              )}
+                            </div>
+                          );
+                        })}
+                      </div>
                     </div>
                   )}
 
@@ -1566,13 +1770,13 @@ export default function HomePage() {
                   )}
 
                   {/* Attachments */}
-                  {claimDetails.attachments && claimDetails.attachments.length > 0 && (
+                  {getAttachmentsArray(claimDetails.attachments).length > 0 && (
                     <div className="border border-gray-200 rounded overflow-hidden">
                       <div className="px-3 py-2 bg-gray-50 border-b border-gray-200">
                         <h4 className="text-[10px] font-bold uppercase text-gray-600 tracking-wider">Attachments / Receipts</h4>
                       </div>
                       <div className="p-3 flex flex-wrap gap-2">
-                        {claimDetails.attachments.map((url: string, attIdx: number) => {
+                        {getAttachmentsArray(claimDetails.attachments).map((url: string, attIdx: number) => {
                           const filename = url.split("/").pop() || "Receipt";
                           let cleanType = "Receipt";
                           if (url.includes("_Bike_")) cleanType = "Bike Fuel";

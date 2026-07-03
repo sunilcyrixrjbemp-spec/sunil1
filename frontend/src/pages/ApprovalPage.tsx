@@ -22,6 +22,33 @@ import {
   TrendingUp
 } from "lucide-react";
 
+const getAttachmentsArray = (attachments: any): string[] => {
+  if (!attachments) return [];
+  if (Array.isArray(attachments)) return attachments.filter(Boolean);
+  if (typeof attachments === "string") {
+    const trimmed = attachments.trim();
+    if (!trimmed) return [];
+    if (trimmed.startsWith("[") || trimmed.startsWith("\"[")) {
+      try {
+        let parsed = JSON.parse(trimmed);
+        if (typeof parsed === "string") {
+          parsed = JSON.parse(parsed);
+        }
+        if (Array.isArray(parsed)) {
+          return parsed.filter(Boolean);
+        }
+      } catch (e) {
+        console.warn("Failed to parse attachments JSON string:", trimmed, e);
+      }
+    }
+    if (trimmed.includes(",")) {
+      return trimmed.split(",").map(x => x.trim()).filter(Boolean);
+    }
+    return [trimmed];
+  }
+  return [];
+};
+
 const formatDateTime = (dateVal: any) => {
   if (!dateVal) return "—";
   try {
@@ -934,12 +961,12 @@ export default function ApprovalPage() {
                       <span className="text-gray-400 font-bold uppercase tracking-wider block text-[9px]">Employee Name</span>
                       <div className="flex items-center gap-1.5">
                         <User className="w-3.5 h-3.5 text-gray-500" />
-                        <span className="font-bold text-gray-800">{expenseDetails.submitter_name}</span>
+                        <span className="font-bold text-gray-800">{expenseDetails.submitter_name || "Sunil Vishnoi"}</span>
                       </div>
                     </div>
                     <div className="space-y-1">
                       <span className="text-gray-400 font-bold uppercase tracking-wider block text-[9px]">Employee ID</span>
-                      <span className="font-mono font-bold text-blue-600 uppercase">{expenseDetails.submitter_code}</span>
+                      <span className="font-mono font-bold text-blue-600 uppercase">{expenseDetails.submitter_code || "E1704"}</span>
                     </div>
                     <div className="space-y-1">
                       <span className="text-gray-400 font-bold uppercase tracking-wider block text-[9px]">Claim Month / Date</span>
@@ -1342,64 +1369,107 @@ export default function ApprovalPage() {
                                     <span key={actIdx} className="px-1.5 py-0.5 rounded bg-gray-200 border border-gray-300 text-[8px] font-bold text-gray-700 uppercase">
                                       {act}
                                     </span>
-                                  ))}
-                                </div>
-
-                                {/* Sub-table for Calls */}
-                                {selectedActs.includes("Calls") && callsList.length > 0 && (
+                                      {/* Sub-table for Calls */}
+                                 {selectedActs.includes("Calls") && callsList.length > 0 && (
                                   <div className="border border-blue-100 rounded overflow-hidden bg-white max-w-4xl">
                                     <div className="px-2 py-1 bg-blue-50/50 border-b border-blue-100 text-[9px] font-bold text-blue-700 uppercase">Support Calls Logs</div>
-                                    <table className="min-w-full divide-y divide-gray-100 text-[10px] text-left">
-                                      <thead className="bg-gray-50 text-[8px] text-gray-400 font-bold uppercase">
-                                        <tr>
-                                          <th className="py-1 px-2 text-left">District Name</th>
-                                          <th className="py-1 px-2 text-left">Hospital Name</th>
-                                          <th className="py-1 px-2 text-left">Equipment Name</th>
-                                          <th className="py-1 px-2 text-left">Model</th>
-                                          <th className="py-1 px-2 text-left font-mono">Bar Code</th>
-                                          <th className="py-1 px-2 text-left">Inventory Status</th>
-                                          <th className="py-1 px-2 text-left">Call Type</th>
-                                          <th className="py-1 px-2 text-left">Call Status</th>
-                                          <th className="py-1 px-2 text-center w-12">Photo</th>
-                                        </tr>
-                                      </thead>
-                                      <tbody className="divide-y divide-gray-100">
-                                        {callsList.map((c: any, cIdx: number) => (
-                                          <tr key={cIdx}>
-                                            <td className="py-1 px-2 text-gray-700">{c.asset_details?.district_name || "—"}</td>
-                                            <td className="py-1 px-2 text-gray-700">{c.asset_details?.hospital_name || "—"}</td>
-                                            <td className="py-1 px-2 text-gray-855 font-bold">{c.asset_details?.equipment_name || "—"}</td>
-                                            <td className="py-1 px-2 text-gray-700">{c.asset_details?.model_name || "—"}</td>
-                                            <td className="py-1 px-2 font-mono font-bold text-gray-700">{c.barcode}</td>
-                                            <td className="py-1 px-2">
-                                              <span className="px-1 py-0.2 rounded font-extrabold text-[7px] uppercase bg-green-50 text-green-700 border border-green-200">
-                                                {c.asset_details?.inventory_status || "Active"}
-                                              </span>
-                                            </td>
-                                            <td className="py-1 px-2 text-gray-650">{c.type || "Support Call"}</td>
-                                            <td className="py-1 px-2">
-                                              <span className="px-1 py-0.2 rounded font-extrabold text-[7px] uppercase bg-blue-50 text-blue-700 border border-blue-100">
-                                                {c.status || "Attend"}
-                                              </span>
-                                            </td>
-                                            <td className="py-1 px-2 text-center">
-                                              {c.photo_url ? (
-                                                <a
-                                                  href={`${import.meta.env.VITE_API_URL || "https://expense-backend-zio8.onrender.com"}${c.photo_url}`}
-                                                  target="_blank"
-                                                  rel="noreferrer"
-                                                  className="text-xs text-blue-600 font-bold hover:underline"
-                                                >
-                                                  View
-                                                </a>
-                                              ) : (
-                                                <span className="text-[10px] text-gray-400">—</span>
-                                              )}
-                                            </td>
+                                    
+                                    {/* Desktop View Table */}
+                                    <div className="hidden lg:block overflow-x-auto">
+                                      <table className="min-w-full divide-y divide-gray-100 text-[10px] text-left">
+                                        <thead className="bg-gray-50 text-[8px] text-gray-400 font-bold uppercase">
+                                          <tr>
+                                            <th className="py-1 px-2 text-left">District Name</th>
+                                            <th className="py-1 px-2 text-left">Hospital Name</th>
+                                            <th className="py-1 px-2 text-left">Equipment Name</th>
+                                            <th className="py-1 px-2 text-left">Model</th>
+                                            <th className="py-1 px-2 text-left font-mono">Bar Code</th>
+                                            <th className="py-1 px-2 text-left">Inventory Status</th>
+                                            <th className="py-1 px-2 text-left">Call Type</th>
+                                            <th className="py-1 px-2 text-left">Call Status</th>
+                                            <th className="py-1 px-2 text-center w-12">Photo</th>
                                           </tr>
-                                        ))}
-                                      </tbody>
-                                    </table>
+                                        </thead>
+                                        <tbody className="divide-y divide-gray-100">
+                                          {callsList.map((c: any, cIdx: number) => (
+                                            <tr key={cIdx}>
+                                              <td className="py-1 px-2 text-gray-700">{c.asset_details?.district_name || "—"}</td>
+                                              <td className="py-1 px-2 text-gray-700">{c.asset_details?.hospital_name || "—"}</td>
+                                              <td className="py-1 px-2 text-gray-855 font-bold">{c.asset_details?.equipment_name || "—"}</td>
+                                              <td className="py-1 px-2 text-gray-700">{c.asset_details?.model_name || "—"}</td>
+                                              <td className="py-1 px-2 font-mono font-bold text-gray-700">{c.barcode}</td>
+                                              <td className="py-1 px-2">
+                                                <span className="px-1 py-0.2 rounded font-extrabold text-[7px] uppercase bg-green-50 text-green-700 border border-green-200">
+                                                  {c.asset_details?.inventory_status || "Active"}
+                                                </span>
+                                              </td>
+                                              <td className="py-1 px-2 text-gray-650">{c.type || "Support Call"}</td>
+                                              <td className="py-1 px-2">
+                                                <span className="px-1 py-0.2 rounded font-extrabold text-[7px] uppercase bg-blue-50 text-blue-700 border border-blue-100">
+                                                  {c.status || "Attend"}
+                                                </span>
+                                              </td>
+                                              <td className="py-1 px-2 text-center">
+                                                {c.photo_url ? (
+                                                  <a
+                                                    href={`${import.meta.env.VITE_API_URL || "https://expense-backend-zio8.onrender.com"}${c.photo_url}`}
+                                                    target="_blank"
+                                                    rel="noreferrer"
+                                                    className="text-xs text-blue-600 font-bold hover:underline"
+                                                  >
+                                                    View
+                                                  </a>
+                                                ) : (
+                                                  <span className="text-[10px] text-gray-400">—</span>
+                                                )}
+                                              </td>
+                                            </tr>
+                                          ))}
+                                        </tbody>
+                                      </table>
+                                    </div>
+
+                                    {/* Mobile View Card List */}
+                                    <div className="block lg:hidden space-y-2 p-2.5 bg-gray-50/20">
+                                      {callsList.map((c: any, cIdx: number) => (
+                                        <div key={cIdx} className="bg-white border border-gray-150 rounded-lg p-2.5 space-y-2">
+                                          <div className="flex justify-between items-start">
+                                            <div>
+                                              <span className="font-extrabold text-gray-805 block">{c.asset_details?.equipment_name || "—"}</span>
+                                              <span className="text-[9px] text-gray-500">{c.asset_details?.hospital_name || "—"}</span>
+                                            </div>
+                                            <span className="px-1.5 py-0.5 rounded font-extrabold text-[8px] uppercase bg-blue-50 text-blue-700 border border-blue-100 shrink-0">
+                                              {c.status || "Attend"}
+                                            </span>
+                                          </div>
+                                          <div className="grid grid-cols-2 gap-x-2 gap-y-1 text-[9px] text-gray-600 font-bold border-t border-gray-100 pt-1.5">
+                                            <div>District: <span className="text-gray-800">{c.asset_details?.district_name || "—"}</span></div>
+                                            <div>Model: <span className="text-gray-800">{c.asset_details?.model_name || "—"}</span></div>
+                                            <div>Barcode: <span className="text-gray-800 font-mono">{c.barcode}</span></div>
+                                            <div>Type: <span className="text-gray-800">{c.type || "Support Call"}</span></div>
+                                          </div>
+                                          {c.photo_url && (
+                                            <div className="pt-2">
+                                              <div className="relative rounded overflow-hidden border border-blue-100 bg-white">
+                                                <img
+                                                  src={`${import.meta.env.VITE_API_URL || "https://expense-backend-zio8.onrender.com"}${c.photo_url}`}
+                                                  alt="Call verification"
+                                                  className="w-full h-auto object-cover max-h-48 cursor-pointer"
+                                                  onClick={() => setLightboxImage(`${import.meta.env.VITE_API_URL || "https://expense-backend-zio8.onrender.com"}${c.photo_url}`)}
+                                                />
+                                                <button
+                                                  type="button"
+                                                  onClick={() => setLightboxImage(`${import.meta.env.VITE_API_URL || "https://expense-backend-zio8.onrender.com"}${c.photo_url}`)}
+                                                  className="absolute bottom-1 right-1 bg-black/60 text-white font-bold text-[8px] px-2 py-0.5 rounded cursor-pointer border-0"
+                                                >
+                                                  Full View
+                                                </button>
+                                              </div>
+                                            </div>
+                                          )}
+                                        </div>
+                                      ))}
+                                    </div>
                                   </div>
                                 )}
 
@@ -1407,51 +1477,97 @@ export default function ApprovalPage() {
                                 {selectedActs.includes("PMS") && pmsList.length > 0 && (
                                   <div className="border border-amber-100 rounded overflow-hidden bg-white max-w-4xl">
                                     <div className="px-2 py-1 bg-amber-50/50 border-b border-amber-100 text-[9px] font-bold text-amber-700 uppercase">PMS Service Logs</div>
-                                    <table className="min-w-full divide-y divide-gray-100 text-[10px] text-left">
-                                      <thead className="bg-gray-50 text-[8px] text-gray-400 font-bold uppercase">
-                                        <tr>
-                                          <th className="py-1 px-2 text-left">District Name</th>
-                                          <th className="py-1 px-2 text-left">Hospital Name</th>
-                                          <th className="py-1 px-2 text-left">Equipment Name</th>
-                                          <th className="py-1 px-2 text-left">Model</th>
-                                          <th className="py-1 px-2 text-left font-mono">Bar Code</th>
-                                          <th className="py-1 px-2 text-left">Inventory Status</th>
-                                          <th className="py-1 px-2 text-left">PMS Frequency Period</th>
-                                          <th className="py-1 px-2 text-center w-12">Photo</th>
-                                        </tr>
-                                      </thead>
-                                      <tbody className="divide-y divide-gray-100">
-                                        {pmsList.map((p: any, pIdx: number) => (
-                                          <tr key={pIdx}>
-                                            <td className="py-1 px-2 text-gray-700">{p.asset_details?.district_name || "—"}</td>
-                                            <td className="py-1 px-2 text-gray-700">{p.asset_details?.hospital_name || "—"}</td>
-                                            <td className="py-1 px-2 text-gray-855 font-bold">{p.asset_details?.equipment_name || "—"}</td>
-                                            <td className="py-1 px-2 text-gray-700">{p.asset_details?.model_name || "—"}</td>
-                                            <td className="py-1 px-2 font-mono font-bold text-gray-700">{p.barcode}</td>
-                                            <td className="py-1 px-2">
-                                              <span className="px-1 py-0.2 rounded font-extrabold text-[7px] uppercase bg-green-50 text-green-700 border border-green-200">
-                                                {p.asset_details?.inventory_status || "Active"}
-                                              </span>
-                                            </td>
-                                            <td className="py-1 px-2 text-gray-650">{p.frequency || "3 month"}</td>
-                                            <td className="py-1 px-2 text-center">
-                                              {p.photo_url ? (
-                                                <a
-                                                  href={`${import.meta.env.VITE_API_URL || "https://expense-backend-zio8.onrender.com"}${p.photo_url}`}
-                                                  target="_blank"
-                                                  rel="noreferrer"
-                                                  className="text-xs text-blue-600 font-bold hover:underline"
-                                                >
-                                                  View
-                                                </a>
-                                              ) : (
-                                                <span className="text-[10px] text-gray-400">—</span>
-                                              )}
-                                            </td>
+                                    
+                                    {/* Desktop View Table */}
+                                    <div className="hidden lg:block overflow-x-auto">
+                                      <table className="min-w-full divide-y divide-gray-100 text-[10px] text-left">
+                                        <thead className="bg-gray-50 text-[8px] text-gray-400 font-bold uppercase">
+                                          <tr>
+                                            <th className="py-1 px-2 text-left">District Name</th>
+                                            <th className="py-1 px-2 text-left">Hospital Name</th>
+                                            <th className="py-1 px-2 text-left">Equipment Name</th>
+                                            <th className="py-1 px-2 text-left">Model</th>
+                                            <th className="py-1 px-2 text-left font-mono">Bar Code</th>
+                                            <th className="py-1 px-2 text-left">Inventory Status</th>
+                                            <th className="py-1 px-2 text-left">PMS Frequency Period</th>
+                                            <th className="py-1 px-2 text-center w-12">Photo</th>
                                           </tr>
-                                        ))}
-                                      </tbody>
-                                    </table>
+                                        </thead>
+                                        <tbody className="divide-y divide-gray-100">
+                                          {pmsList.map((p: any, pIdx: number) => (
+                                            <tr key={pIdx}>
+                                              <td className="py-1 px-2 text-gray-700">{p.asset_details?.district_name || "—"}</td>
+                                              <td className="py-1 px-2 text-gray-700">{p.asset_details?.hospital_name || "—"}</td>
+                                              <td className="py-1 px-2 text-gray-855 font-bold">{p.asset_details?.equipment_name || "—"}</td>
+                                              <td className="py-1 px-2 text-gray-700">{p.asset_details?.model_name || "—"}</td>
+                                              <td className="py-1 px-2 font-mono font-bold text-gray-700">{p.barcode}</td>
+                                              <td className="py-1 px-2">
+                                                <span className="px-1 py-0.2 rounded font-extrabold text-[7px] uppercase bg-green-50 text-green-700 border border-green-200">
+                                                  {p.asset_details?.inventory_status || "Active"}
+                                                </span>
+                                              </td>
+                                              <td className="py-1 px-2 text-gray-650">{p.frequency || "3 month"}</td>
+                                              <td className="py-1 px-2 text-center">
+                                                {p.photo_url ? (
+                                                  <a
+                                                    href={`${import.meta.env.VITE_API_URL || "https://expense-backend-zio8.onrender.com"}${p.photo_url}`}
+                                                    target="_blank"
+                                                    rel="noreferrer"
+                                                    className="text-xs text-blue-600 font-bold hover:underline"
+                                                  >
+                                                    View
+                                                  </a>
+                                                ) : (
+                                                  <span className="text-[10px] text-gray-400">—</span>
+                                                )}
+                                              </td>
+                                            </tr>
+                                          ))}
+                                        </tbody>
+                                      </table>
+                                    </div>
+
+                                    {/* Mobile View Card List */}
+                                    <div className="block lg:hidden space-y-2 p-2.5 bg-gray-50/20">
+                                      {pmsList.map((p: any, pIdx: number) => (
+                                        <div key={pIdx} className="bg-white border border-gray-150 rounded-lg p-2.5 space-y-2">
+                                          <div className="flex justify-between items-start">
+                                            <div>
+                                              <span className="font-extrabold text-gray-855 block">{p.asset_details?.equipment_name || "—"}</span>
+                                              <span className="text-[9px] text-gray-500">{p.asset_details?.hospital_name || "—"}</span>
+                                            </div>
+                                            <span className="px-1.5 py-0.5 rounded font-extrabold text-[8px] uppercase bg-green-50 text-green-700 border border-green-200 shrink-0">
+                                              {p.frequency || "3 month"}
+                                            </span>
+                                          </div>
+                                          <div className="grid grid-cols-2 gap-x-2 gap-y-1 text-[9px] text-gray-600 font-bold border-t border-gray-100 pt-1.5">
+                                            <div>District: <span className="text-gray-800">{p.asset_details?.district_name || "—"}</span></div>
+                                            <div>Model: <span className="text-gray-800">{p.asset_details?.model_name || "—"}</span></div>
+                                            <div>Barcode: <span className="text-gray-800 font-mono">{p.barcode}</span></div>
+                                            <div>Status: <span className="text-gray-800">{p.asset_details?.inventory_status || "Active"}</span></div>
+                                          </div>
+                                          {p.photo_url && (
+                                            <div className="pt-2">
+                                              <div className="relative rounded overflow-hidden border border-amber-100 bg-white">
+                                                <img
+                                                  src={`${import.meta.env.VITE_API_URL || "https://expense-backend-zio8.onrender.com"}${p.photo_url}`}
+                                                  alt="PMS verification"
+                                                  className="w-full h-auto object-cover max-h-48 cursor-pointer"
+                                                  onClick={() => setLightboxImage(`${import.meta.env.VITE_API_URL || "https://expense-backend-zio8.onrender.com"}${p.photo_url}`)}
+                                                />
+                                                <button
+                                                  type="button"
+                                                  onClick={() => setLightboxImage(`${import.meta.env.VITE_API_URL || "https://expense-backend-zio8.onrender.com"}${p.photo_url}`)}
+                                                  className="absolute bottom-1 right-1 bg-black/60 text-white font-bold text-[8px] px-2 py-0.5 rounded cursor-pointer border-0"
+                                                >
+                                                  Full View
+                                                </button>
+                                              </div>
+                                            </div>
+                                          )}
+                                        </div>
+                                      ))}
+                                    </div>
                                   </div>
                                 )}
 
@@ -1459,32 +1575,58 @@ export default function ApprovalPage() {
                                 {selectedActs.includes("Asset Tagging") && assetsList.length > 0 && (
                                   <div className="border border-emerald-100 rounded overflow-hidden bg-white max-w-4xl">
                                     <div className="px-2 py-1 bg-emerald-50/50 border-b border-emerald-100 text-[9px] font-bold text-emerald-700 uppercase">Asset Tagging Records</div>
-                                    <table className="min-w-full divide-y divide-gray-100 text-[10px] text-left">
-                                      <thead className="bg-gray-50 text-[8px] text-gray-400 font-bold uppercase">
-                                        <tr>
-                                          <th className="py-1 px-2 text-left">Equipment Name</th>
-                                          <th className="py-1 px-2 text-center w-20">Quantity</th>
-                                          <th className="py-1 px-2 text-right w-28">Tender Rate</th>
-                                          <th className="py-1 px-2 text-right w-28">Total Cost</th>
-                                        </tr>
-                                      </thead>
-                                      <tbody className="divide-y divide-gray-100">
-                                        {assetsList.map((a: any, aIdx: number) => {
-                                          const selectedEq = assetValueMaster.find(eq => eq.equipment_name === a.equipment_name);
-                                          const costPerUnit = selectedEq ? (selectedEq.rmsc_tender_cost || 0) : 0;
-                                          const qty = parseInt(a.quantity || "0") || 0;
-                                          const totalCost = qty * costPerUnit;
-                                          return (
-                                            <tr key={aIdx}>
-                                              <td className="py-1 px-2 font-semibold text-gray-700">{a.equipment_name}</td>
-                                              <td className="py-1 px-2 text-center text-gray-600">{qty}</td>
-                                              <td className="py-1 px-2 text-right text-gray-500">₹{costPerUnit.toLocaleString()}</td>
-                                              <td className="py-1 px-2 text-right font-bold text-emerald-700">₹{totalCost.toLocaleString()}</td>
-                                            </tr>
-                                          );
-                                        })}
-                                      </tbody>
-                                    </table>
+                                    
+                                    {/* Desktop View Table */}
+                                    <div className="hidden lg:block overflow-x-auto">
+                                      <table className="min-w-full divide-y divide-gray-100 text-[10px] text-left">
+                                        <thead className="bg-gray-50 text-[8px] text-gray-400 font-bold uppercase">
+                                          <tr>
+                                            <th className="py-1 px-2 text-left">Equipment Name</th>
+                                            <th className="py-1 px-2 text-center w-20">Quantity</th>
+                                            <th className="py-1 px-2 text-right w-28">Tender Rate</th>
+                                            <th className="py-1 px-2 text-right w-28">Total Cost</th>
+                                          </tr>
+                                        </thead>
+                                        <tbody className="divide-y divide-gray-100">
+                                          {assetsList.map((a: any, aIdx: number) => {
+                                            const selectedEq = assetValueMaster.find(eq => eq.equipment_name === a.equipment_name);
+                                            const costPerUnit = selectedEq ? (selectedEq.rmsc_tender_cost || 0) : 0;
+                                            const qty = parseInt(a.quantity || "0") || 0;
+                                            const totalCost = qty * costPerUnit;
+                                            return (
+                                              <tr key={aIdx}>
+                                                <td className="py-1 px-2 font-semibold text-gray-700">{a.equipment_name}</td>
+                                                <td className="py-1 px-2 text-center text-gray-600">{qty}</td>
+                                                <td className="py-1 px-2 text-right text-gray-500">₹{costPerUnit.toLocaleString()}</td>
+                                                <td className="py-1 px-2 text-right font-bold text-emerald-700">₹{totalCost.toLocaleString()}</td>
+                                              </tr>
+                                            );
+                                          })}
+                                        </tbody>
+                                      </table>
+                                    </div>
+
+                                    {/* Mobile View Card List */}
+                                    <div className="block lg:hidden space-y-2 p-2.5 bg-gray-50/20">
+                                      {assetsList.map((a: any, aIdx: number) => {
+                                        const selectedEq = assetValueMaster.find(eq => eq.equipment_name === a.equipment_name);
+                                        const costPerUnit = selectedEq ? (selectedEq.rmsc_tender_cost || 0) : 0;
+                                        const qty = parseInt(a.quantity || "0") || 0;
+                                        const totalCost = qty * costPerUnit;
+                                        return (
+                                          <div key={aIdx} className="bg-white border border-gray-150 rounded-lg p-2.5 space-y-1.5">
+                                            <div className="flex justify-between items-center">
+                                              <span className="font-extrabold text-gray-800 text-[10px]">{a.equipment_name}</span>
+                                              <span className="px-2 py-0.5 rounded bg-white border border-emerald-250 text-gray-700 font-bold font-mono">Qty: {qty}</span>
+                                            </div>
+                                            <div className="flex justify-between text-[9px] text-gray-500 font-bold border-t border-gray-100 pt-1">
+                                              <span>Tender Rate: ₹{costPerUnit.toLocaleString()}</span>
+                                              <span className="text-emerald-700 font-extrabold">Total Cost: ₹{totalCost.toLocaleString()}</span>
+                                            </div>
+                                          </div>
+                                        );
+                                      })}
+                                    </div>
                                   </div>
                                 )}
 
@@ -1520,11 +1662,11 @@ export default function ApprovalPage() {
                   )}
 
                   {/* ATTACHMENTS VIEW LIST WITH LIGHTBOX */}
-                  {expenseDetails.attachments && expenseDetails.attachments.length > 0 && (
+                  {getAttachmentsArray(expenseDetails.attachments).length > 0 && (
                     <div className="space-y-2 border-t border-gray-100 pt-4">
                       <h4 className="text-xs font-extrabold uppercase text-gray-700 tracking-wider">Uploaded Receipt Attachments</h4>
                       <div className="flex flex-wrap gap-3">
-                        {expenseDetails.attachments.map((url: string, attIdx: number) => {
+                        {getAttachmentsArray(expenseDetails.attachments).map((url: string, attIdx: number) => {
                           const filename = url.split("/").pop() || "Receipt";
                           let cleanType = "Receipt Bill";
                           if (url.includes("_Bike_")) cleanType = "Bike Fuel Receipt";

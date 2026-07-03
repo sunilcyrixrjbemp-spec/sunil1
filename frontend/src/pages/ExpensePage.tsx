@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useLocation } from "react-router-dom";
 import toast from "react-hot-toast";
 import Loader from "../components/common/Loader";
 import { expenseService } from "../services/expenseService";
@@ -22,6 +22,33 @@ import {
   Camera,
   ShieldCheck
 } from "lucide-react";
+
+const getAttachmentsArray = (attachments: any): string[] => {
+  if (!attachments) return [];
+  if (Array.isArray(attachments)) return attachments.filter(Boolean);
+  if (typeof attachments === "string") {
+    const trimmed = attachments.trim();
+    if (!trimmed) return [];
+    if (trimmed.startsWith("[") || trimmed.startsWith("\"[")) {
+      try {
+        let parsed = JSON.parse(trimmed);
+        if (typeof parsed === "string") {
+          parsed = JSON.parse(parsed);
+        }
+        if (Array.isArray(parsed)) {
+          return parsed.filter(Boolean);
+        }
+      } catch (e) {
+        console.warn("Failed to parse attachments JSON string:", trimmed, e);
+      }
+    }
+    if (trimmed.includes(",")) {
+      return trimmed.split(",").map(x => x.trim()).filter(Boolean);
+    }
+    return [trimmed];
+  }
+  return [];
+};
 
 interface ItineraryLeg {
   company_provided?: boolean;
@@ -186,6 +213,11 @@ export default function ExpensePage() {
     setExistingAttachments([]);
     setExistingAttachmentsDetailed([]);
     setDeletedAttachments([]);
+    
+    // Clear URL query parameters from browser address bar silently
+    if (window.location.search.includes("edit")) {
+      window.history.pushState({}, '', window.location.pathname);
+    }
   };
 
   const [itineraries, setItineraries] = useState<ItineraryLeg[]>(() => {
@@ -592,6 +624,20 @@ export default function ExpensePage() {
     return () => window.removeEventListener("app-pull-to-refresh", handlePullRefresh);
   }, [date, currentUserId]);
 
+  const location = useLocation();
+
+  useEffect(() => {
+    const params = new URLSearchParams(location.search);
+    const editId = params.get("edit");
+    if (editId) {
+      setEditExpenseId(editId);
+      loadExpenseForEdit(editId);
+    } else {
+      setEditExpenseId(null);
+      resetForm();
+    }
+  }, [location.search]);
+
   useEffect(() => {
     setupDateRules();
     fetchClaims();
@@ -605,16 +651,6 @@ export default function ExpensePage() {
       }
     };
     fetchAssetMaster();
-
-    // Check for edit parameter in query string
-    const params = new URLSearchParams(window.location.search);
-    const editId = params.get("edit");
-    if (editId) {
-      setEditExpenseId(editId);
-      loadExpenseForEdit(editId);
-    } else {
-      resetForm();
-    }
 
     const handlePageShow = (event: PageTransitionEvent) => {
       if (event.persisted) {
@@ -4200,8 +4236,8 @@ export default function ExpensePage() {
                   <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 text-xs">
                     <div className="p-3 bg-gray-50 border border-gray-200 rounded">
                       <span className="text-[9px] text-gray-400 font-bold uppercase block">Submitted By</span>
-                      <span className="font-bold text-gray-800 block mt-0.5">{selectedClaim.submitter_name || user.name}</span>
-                      <span className="text-[10px] text-gray-500 font-mono">{selectedClaim.submitter_code || user.user_id}</span>
+                      <span className="font-bold text-gray-800 block mt-0.5">{selectedClaim.submitter_name || user.name || "Sunil Vishnoi"}</span>
+                      <span className="text-[10px] text-gray-500 font-mono">{selectedClaim.submitter_code || user.user_id || "E1704"}</span>
                     </div>
                     <div className="p-3 bg-gray-50 border border-gray-200 rounded">
                       <span className="text-[9px] text-gray-400 font-bold uppercase block">Travel Date</span>
@@ -4261,7 +4297,9 @@ export default function ExpensePage() {
                       <div className="px-3 py-2 bg-gray-50 border-b border-gray-200">
                         <h4 className="text-[10px] font-bold uppercase text-gray-600 tracking-wider">Visit Legs Details</h4>
                       </div>
-                      <div className="overflow-x-auto">
+                      
+                      {/* Desktop View Table */}
+                      <div className="hidden lg:block overflow-x-auto">
                         <table className="table-lte">
                           <thead>
                             <tr className="border-b border-gray-200 text-[9px] uppercase font-bold tracking-wider text-gray-400 bg-gray-50">
@@ -4334,7 +4372,7 @@ export default function ExpensePage() {
                                   
                                   {hasActivities && (
                                     <tr className="bg-slate-50/50">
-                                      <td colSpan={9} className="py-2.5 px-4 border-t border-gray-150">
+                                      <td colSpan={10} className="py-2.5 px-4 border-t border-gray-150">
                                         <div className="flex flex-col gap-2.5">
                                           <div className="flex flex-wrap gap-2">
                                             <span className="text-[9px] font-bold text-gray-500 uppercase mr-2 mt-0.5">Activities:</span>
@@ -4360,6 +4398,7 @@ export default function ExpensePage() {
                                                     <th className="py-1 px-2 text-left">Inventory Status</th>
                                                     <th className="py-1 px-2 text-left">Call Type</th>
                                                     <th className="py-1 px-2 text-left">Call Status</th>
+                                                    <th className="py-1 px-2 text-center w-12">Photo</th>
                                                   </tr>
                                                 </thead>
                                                 <tbody className="divide-y divide-gray-100">
@@ -4380,6 +4419,20 @@ export default function ExpensePage() {
                                                         <span className="px-1 py-0.2 rounded font-extrabold text-[7px] uppercase bg-blue-50 text-blue-700 border border-blue-100">
                                                           {c.status || "Attend"}
                                                         </span>
+                                                      </td>
+                                                      <td className="py-1 px-2 text-center">
+                                                        {c.photo_url ? (
+                                                          <a
+                                                            href={`${import.meta.env.VITE_API_URL || "https://expense-backend-zio8.onrender.com"}${c.photo_url}`}
+                                                            target="_blank"
+                                                            rel="noreferrer"
+                                                            className="text-xs text-blue-600 font-bold hover:underline"
+                                                          >
+                                                            View
+                                                          </a>
+                                                        ) : (
+                                                          <span className="text-[10px] text-gray-400">—</span>
+                                                        )}
                                                       </td>
                                                     </tr>
                                                   ))}
@@ -4402,6 +4455,7 @@ export default function ExpensePage() {
                                                     <th className="py-1 px-2 text-left font-mono">Bar Code</th>
                                                     <th className="py-1 px-2 text-left">Inventory Status</th>
                                                     <th className="py-1 px-2 text-left">PMS Frequency Period</th>
+                                                    <th className="py-1 px-2 text-center w-12">Photo</th>
                                                   </tr>
                                                 </thead>
                                                 <tbody className="divide-y divide-gray-100">
@@ -4418,6 +4472,20 @@ export default function ExpensePage() {
                                                         </span>
                                                       </td>
                                                       <td className="py-1 px-2 text-gray-650">{p.frequency || "3 month"}</td>
+                                                      <td className="py-1 px-2 text-center">
+                                                        {p.photo_url ? (
+                                                          <a
+                                                            href={`${import.meta.env.VITE_API_URL || "https://expense-backend-zio8.onrender.com"}${p.photo_url}`}
+                                                            target="_blank"
+                                                            rel="noreferrer"
+                                                            className="text-xs text-blue-600 font-bold hover:underline"
+                                                          >
+                                                            View
+                                                          </a>
+                                                        ) : (
+                                                          <span className="text-[10px] text-gray-400">—</span>
+                                                        )}
+                                                      </td>
                                                     </tr>
                                                   ))}
                                                 </tbody>
@@ -4510,11 +4578,6 @@ export default function ExpensePage() {
                           </tbody>
                         </table>
                       </div>
-                    </div>
-                  )}
-
-                  {/* Cumulative stats for Limit Requests */}
-                  {selectedClaim.category === "Limit Request" && selectedClaim.user_monthly_stats && (
                     <div className="border border-gray-200 rounded overflow-hidden">
                       <div className="px-3 py-2 bg-gray-50 border-b border-gray-200 flex items-center justify-between">
                         <h4 className="text-[10px] font-bold uppercase text-gray-600 tracking-wider flex items-center gap-1.5">
@@ -4561,13 +4624,13 @@ export default function ExpensePage() {
                   )}
 
                   {/* Attachments */}
-                  {selectedClaim.attachments && selectedClaim.attachments.length > 0 && (
+                  {getAttachmentsArray(selectedClaim.attachments).length > 0 && (
                     <div className="border border-gray-200 rounded overflow-hidden">
                       <div className="px-3 py-2 bg-gray-50 border-b border-gray-200">
                         <h4 className="text-[10px] font-bold uppercase text-gray-600 tracking-wider">Attachments / Receipts</h4>
                       </div>
                       <div className="p-3 flex flex-wrap gap-2">
-                        {selectedClaim.attachments.map((url: string, attIdx: number) => {
+                        {getAttachmentsArray(selectedClaim.attachments).map((url: string, attIdx: number) => {
                           const filename = url.split("/").pop() || "Receipt";
                           let cleanType = "Receipt";
                           if (url.includes("_Bike_")) cleanType = "Bike Fuel";
