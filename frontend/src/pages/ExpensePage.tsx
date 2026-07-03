@@ -835,6 +835,15 @@ export default function ExpensePage() {
       });
     };
 
+    const cached = localStorage.getItem(cacheKey);
+    if (cached) {
+      try {
+        const cachedData = JSON.parse(cached);
+        applyInitData(cachedData);
+        if (!isInitialLoad) return;
+      } catch (_) {}
+    }
+
     if (isInitialLoad) {
       setInitLoading(true);
     }
@@ -847,9 +856,13 @@ export default function ExpensePage() {
       }
     } catch (err) {
       console.error("Failed to load month limits", err);
-      toast.error("Failed to initialize expense rules.");
+      if (!cached) {
+        toast.error("Failed to initialize expense rules.");
+      }
     } finally {
-      if (isInitialLoad) setInitLoading(false);
+      if (isInitialLoad) {
+        setInitLoading(false);
+      }
     }
   };
 

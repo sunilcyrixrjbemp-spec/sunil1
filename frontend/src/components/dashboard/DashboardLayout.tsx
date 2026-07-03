@@ -339,20 +339,26 @@ export default function DashboardLayout() {
 
   const userRole = user.role || "Engineer";
 
-  let allowedWindows: string[] = ["home", "profile", "help"];
+  let allowedWindows: string[] = ["home", "profile", "help", "expense"];
   try {
     if (user && user.allowed_windows) {
       if (Array.isArray(user.allowed_windows)) {
-        allowedWindows = user.allowed_windows.map((w: any) => String(w).trim().toLowerCase());
+        const parsed = user.allowed_windows.map((w: any) => String(w).trim().toLowerCase());
+        parsed.forEach(w => {
+          if (!allowedWindows.includes(w)) allowedWindows.push(w);
+        });
       } else if (typeof user.allowed_windows === "string") {
-        allowedWindows = user.allowed_windows.split(",").map((w: string) => w.trim().toLowerCase());
+        const parsed = user.allowed_windows.split(",").map((w: string) => w.trim().toLowerCase());
+        parsed.forEach(w => {
+          if (!allowedWindows.includes(w)) allowedWindows.push(w);
+        });
       }
     }
   } catch (_) {}
 
   // Check if user has permission for menu items based on allowed_windows
   const allowedMenuItems = MENU_ITEMS.filter((item) => {
-    if (["home", "profile", "help"].includes(item.id.toLowerCase())) return true;
+    if (["home", "profile", "help", "expense"].includes(item.id.toLowerCase())) return true;
     return allowedWindows.includes(item.id.toLowerCase());
   });
 
@@ -622,7 +628,7 @@ export default function DashboardLayout() {
       </div>
 
       {/* MOBILE BOTTOM NAVIGATION BAR */}
-      <nav className="lg:hidden fixed bottom-0 left-0 right-0 h-16 bg-white border-t border-gray-200 flex items-center justify-around px-2 z-40 shadow-lg pb-safe">
+      <nav className="lg:hidden fixed bottom-0 left-0 right-0 h-16 bg-white border-t border-gray-200 flex items-center justify-around px-2 z-[999] shadow-lg pb-safe overflow-visible">
         {/* Home Tab */}
         <Link
           to="/home"
@@ -640,7 +646,7 @@ export default function DashboardLayout() {
           <Link
             to="/submit-expense"
             onMouseEnter={() => preloadRoute("/submit-expense")}
-            className="flex flex-col items-center justify-center w-14 h-12 rounded transition-all relative -top-3"
+            className="flex flex-col items-center justify-center w-14 h-12 rounded transition-all relative -top-4 z-50 transform active:scale-95"
           >
             <div className={`h-11 w-11 rounded-full flex items-center justify-center shadow-md border-2 border-white transition-all ${
               currentActiveItem?.id === "expense" ? "bg-blue-600 text-white" : "bg-gray-800 text-gray-100"

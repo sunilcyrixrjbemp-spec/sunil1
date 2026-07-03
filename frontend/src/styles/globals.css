@@ -234,4 +234,131 @@ svg, path, g, sector, .recharts-pie-sector, .recharts-sector, .recharts-pie, .re
   -webkit-tap-highlight-color: transparent !important;
 }
 
+/* ================= PREMIUM MOBILE THEME OVERRIDES ================= */
+@media (max-width: 1023px) {
+  /* 1. Global Page spacing & margins */
+  main {
+    padding: 0.75rem !important; /* Smaller gaps on mobile sides */
+    padding-bottom: 5.5rem !important; /* Save space for bottom navbar */
+  }
+
+  /* 2. Remove desktop card layouts, borders & add premium shadows */
+  .card-lte, 
+  .card-lte-primary, 
+  .card-lte-success, 
+  .card-lte-warning, 
+  .card-lte-danger, 
+  .card-lte-info, 
+  .card-lte-gold {
+    @apply border-none shadow-md rounded-2xl bg-white p-4 mb-4;
+    border-top: none !important;
+  }
+
+  /* 3. Make all inputs, selects, and textareas touch-friendly and modern */
+  .input-lte, 
+  .input-lte-icon, 
+  .form-control-lte,
+  input[type="text"],
+  input[type="number"],
+  input[type="date"],
+  input[type="month"],
+  select,
+  textarea {
+    min-height: 44px !important; /* Native Apple/Android minimum tap height */
+    padding: 0.75rem 1rem !important;
+    font-size: 14px !important; /* Prevent iOS zoom */
+    border-radius: 12px !important;
+    border-color: #e5e7eb !important;
+    background-color: #f9fafb !important;
+    font-weight: 600 !important;
+    transition: all 0.2s ease-in-out !important;
+  }
+
+  .input-lte:focus, 
+  .input-lte-icon:focus, 
+  .form-control-lte:focus,
+  input:focus,
+  select:focus,
+  textarea:focus {
+    background-color: #ffffff !important;
+    border-color: #3b82f6 !important;
+    box-shadow: 0 0 0 4px rgba(59, 130, 246, 0.1) !important;
+  }
+
+  /* 4. Touch-optimized Labels */
+  .label-lte, label {
+    font-size: 11px !important;
+    font-weight: 700 !important;
+    color: #4b5563 !important;
+    text-transform: uppercase !important;
+    letter-spacing: 0.05em !important;
+    margin-bottom: 6px !important;
+  }
+
+  /* 5. Mobile buttons with tactile feedback */
+  .btn-lte-primary, 
+  .btn-lte-success, 
+  .btn-lte-danger, 
+  .btn-lte-warning, 
+  .btn-lte-secondary,
+  .btn-lte-outline,
+  button[type="submit"],
+  button[type="button"] {
+    min-height: 44px !important;
+    border-radius: 12px !important;
+    font-size: 13px !important;
+    font-weight: 700 !important;
+    letter-spacing: 0.03em !important;
+    text-transform: uppercase !important;
+    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -1px rgba(0, 0, 0, 0.03) !important;
+    transition: all 0.15s cubic-bezier(0.4, 0, 0.2, 1) !important;
+  }
+
+  .btn-lte-primary:active, 
+  .btn-lte-success:active, 
+  .btn-lte-danger:active, 
+  .btn-lte-warning:active, 
+  .btn-lte-secondary:active,
+  button:active {
+    transform: scale(0.97) !important;
+  }
+
+  /* 6. Tabs & Segments (e.g. My Claims / Team Claims) */
+  .flex.border-b {
+    @apply flex-row bg-gray-100 p-1.5 rounded-2xl mb-4 w-full justify-between items-center border-none;
+  }
+
+  .flex.border-b button {
+    @apply flex-1 text-center py-2.5 px-3 font-bold text-[10px] uppercase tracking-wider rounded-xl transition-all border-none bg-transparent text-gray-500 !important;
+    min-height: auto !important;
+    box-shadow: none !important;
+  }
+
+  .flex.border-b button.border-blue-600 {
+    @apply bg-white text-blue-600 shadow-sm font-extrabold !important;
+  }
+
+  /* 7. info-box cards layout for mobile summary widgets */
+  .info-box-lte {
+    @apply rounded-2xl border-none shadow-sm bg-white p-3 min-h-[56px] flex items-center gap-3 mb-3;
+  }
+
+  .info-box-icon {
+    @apply w-10 h-10 rounded-xl flex items-center justify-center text-white shrink-0;
+  }
+
+  .info-box-content {
+    @apply p-0 flex flex-col justify-center flex-1;
+  }
+
+  /* 8. Spacing helpers to fit more content on small screens */
+  .gap-6 {
+    gap: 0.75rem !important;
+  }
+  .gap-4 {
+    gap: 0.5rem !important;
+  }
+}
+
+
 
