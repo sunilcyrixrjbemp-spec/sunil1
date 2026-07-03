@@ -154,6 +154,7 @@ export default function HomePage() {
   const [selectMonth, setSelectMonth] = useState<string>(() => {
     return new Date().toISOString().substring(0, 7); // Default current month YYYY-MM
   });
+  const [homeStatusFilter, setHomeStatusFilter] = useState<"all" | "pending" | "approved" | "rejected">("all");
 
   const refreshDashboardData = async () => {
     const currentUser = authService.getCurrentUser() || user;
@@ -398,7 +399,18 @@ export default function HomePage() {
     return safeMyExpenses.filter(exp => {
       if (!exp) return false;
       const rawDate = exp.itinerary || exp.date;
-      return rawDate && rawDate.startsWith(selectMonth);
+      if (!(rawDate && rawDate.startsWith(selectMonth))) return false;
+      if (homeStatusFilter !== "all") {
+        const s = (exp.status || "").toLowerCase();
+        if (homeStatusFilter === "pending") {
+          if (!(s.startsWith("submitted") || s === "pending" || s === "draft")) return false;
+        } else if (homeStatusFilter === "approved") {
+          if (s !== "approved") return false;
+        } else if (homeStatusFilter === "rejected") {
+          if (s !== "rejected") return false;
+        }
+      }
+      return true;
     });
   };
 
@@ -410,6 +422,16 @@ export default function HomePage() {
       if (rawDate && !rawDate.startsWith(selectMonth)) return false;
       if (filterEmployee !== "all" && exp.submitter_code !== filterEmployee) return false;
       if (filterMode !== "all" && exp.category !== filterMode) return false;
+      if (homeStatusFilter !== "all") {
+        const s = (exp.status || "").toLowerCase();
+        if (homeStatusFilter === "pending") {
+          if (!(s.startsWith("submitted") || s === "pending" || s === "draft")) return false;
+        } else if (homeStatusFilter === "approved") {
+          if (s !== "approved") return false;
+        } else if (homeStatusFilter === "rejected") {
+          if (s !== "rejected") return false;
+        }
+      }
       return true;
     });
   };
@@ -498,7 +520,8 @@ export default function HomePage() {
       <div className="space-y-6 animate-fadeIn text-[#212529]">
       
       {/* Welcome Banner - AdminLTE card style with gradient border top */}
-      <div className="bg-white border-t-4 border-t-blue-600 border-x border-b border-gray-200 rounded shadow-sm p-4 hover:shadow-md transition-shadow">
+      <div className="bg-white border-2 border-blue-200 rounded-lg shadow-md p-4 hover:shadow-lg transition-shadow relative overflow-hidden">
+        <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-blue-600 via-indigo-500 to-blue-600"></div>
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
           <div className="space-y-0.5 flex-1">
             <span className="text-blue-600 font-extrabold text-[9px] uppercase tracking-widest block">Operations Hub</span>
@@ -625,7 +648,7 @@ export default function HomePage() {
             />
           </div>
         </div>
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
           {/* Card 1: Total Claimed */}
           <div 
             onClick={() => handleOpenStatsModal("Total Claimed", statsTotalClaims)}
@@ -704,7 +727,7 @@ export default function HomePage() {
                   onClick={() => handleTabChange("my-claims")}
                   className={`py-3.5 px-4 font-bold text-xs uppercase tracking-wider border-b-2 transition-all flex items-center gap-1.5 cursor-pointer ${
                     activeTab === "my-claims"
-                      ? "border-blue-600 text-blue-700 bg-white"
+                      ? "border-blue-600 text-blue-700 bg-blue-50/80"
                       : "border-transparent text-gray-500 hover:text-gray-800"
                   }`}
                 >
@@ -717,7 +740,7 @@ export default function HomePage() {
                     onClick={() => handleTabChange("team-claims")}
                     className={`py-3.5 px-4 font-bold text-xs uppercase tracking-wider border-b-2 transition-all flex items-center gap-1.5 cursor-pointer ${
                       activeTab === "team-claims"
-                        ? "border-blue-600 text-blue-700 bg-white"
+                        ? "border-green-600 text-green-700 bg-green-50/80"
                         : "border-transparent text-gray-500 hover:text-gray-800"
                     }`}
                   >
@@ -727,12 +750,25 @@ export default function HomePage() {
                 )}
               </div>
 
-                {activeTab === "my-claims" && hasAccess("expense") && (
-                  <Link to="/submit-expense" className="hidden lg:flex btn-lte-primary py-1 px-3 items-center gap-1.5 text-[11px] font-bold">
-                    <Plus className="w-3.5 h-3.5" />
-                    File Claim
-                  </Link>
-                )}
+              {/* Status Filter Pills */}
+              <div className="flex items-center gap-1.5 py-2">
+                {(["all", "pending", "approved", "rejected"] as const).map((status) => (
+                  <button
+                    key={status}
+                    onClick={() => setHomeStatusFilter(status)}
+                    className={`px-2.5 py-1 rounded-full text-[9px] font-bold uppercase tracking-wider transition-all cursor-pointer border ${
+                      homeStatusFilter === status
+                        ? status === "all" ? "bg-blue-600 text-white border-blue-600"
+                          : status === "approved" ? "bg-green-600 text-white border-green-600"
+                          : status === "pending" ? "bg-amber-500 text-white border-amber-500"
+                          : "bg-red-600 text-white border-red-600"
+                        : "bg-white text-gray-500 border-gray-300 hover:border-gray-400"
+                    }`}
+                  >
+                    {status === "all" ? "All" : status}
+                  </button>
+                ))}
+              </div>
             </div>
 
             {/* Tab Content Tables */}
@@ -1126,22 +1162,22 @@ export default function HomePage() {
           <div className="modal-lte-content max-w-5xl max-h-[90vh] flex flex-col">
             
             {/* Modal Header */}
-            <div className="px-4 py-3 bg-gray-100 border-b border-gray-200 flex items-center justify-between shrink-0">
-              <h3 className="text-sm font-bold uppercase tracking-wider text-gray-800 flex items-center gap-2">
+            <div className="px-4 py-3 bg-gradient-to-r from-slate-50 to-gray-100 border-b border-gray-200 flex items-center justify-between shrink-0">
+              <h3 className="text-sm font-extrabold uppercase tracking-wider text-gray-800 flex items-center gap-2">
                 <Layers className="w-4 h-4 text-blue-600" />
                 <span>Claim Details {claimDetails ? `— ${claimDetails.expense_code}` : ""}</span>
                 {loadingDetails && <Loader2 className="w-3.5 h-3.5 animate-spin text-blue-500 shrink-0" />}
               </h3>
               <button 
                 onClick={() => { setShowDetailsModal(false); setClaimDetails(null); }}
-                className="p-1 hover:bg-gray-200 rounded transition-colors text-gray-500 hover:text-gray-800 border-0 bg-transparent cursor-pointer"
+                className="text-gray-400 hover:text-gray-600 border-0 bg-transparent text-lg font-bold cursor-pointer"
               >
-                <X className="w-4 h-4" />
+                ✕
               </button>
             </div>
 
             {/* Modal Content */}
-            <div className="flex-1 overflow-y-auto p-4 space-y-4">
+            <div className="flex-1 overflow-y-auto p-4 space-y-4 bg-slate-50/70">
               {!claimDetails ? (
                 <Loader message="Loading claim details..." />
               ) : (
@@ -1971,7 +2007,7 @@ export default function HomePage() {
           <div className="modal-lte-content max-w-4xl max-h-[85vh] flex flex-col">
             
             {/* Modal Header */}
-            <div className="px-5 py-4 border-b border-gray-200 bg-gray-50 flex items-center justify-between shrink-0">
+            <div className="px-5 py-4 border-b border-gray-200 bg-gradient-to-r from-slate-50 to-gray-100 flex items-center justify-between shrink-0">
               <div className="flex items-center gap-2">
                 <FileSpreadsheet className="w-5 h-5 text-blue-600" />
                 <h3 className="text-sm font-extrabold uppercase tracking-wider text-gray-800">

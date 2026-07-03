@@ -270,6 +270,7 @@ async def init_expense(
             "daily_hotel": allowance.daily_hotel if allowance.daily_hotel is not None else 300,
             "daily_out_state": allowance.daily_out_state if allowance.daily_out_state is not None else 400,
             "hotel_in_state_s": allowance.hotel_in_state_s if allowance.hotel_in_state_s is not None else 1000,
+            "hotel_out_state_s": allowance.hotel_out_state_s if allowance.hotel_out_state_s is not None else 2000,
             "max_km_per_month": allowance.max_km_per_month if allowance.max_km_per_month is not None else 2000,
             "rate_bike": allowance.rate_per_km if allowance.vehicle_type == "Bike" else fallback_bike_rate,
             "rate_car": allowance.rate_per_km if allowance.vehicle_type == "Car" else fallback_car_rate,
@@ -282,6 +283,7 @@ async def init_expense(
             "daily_hotel": 300,
             "daily_out_state": 400,
             "hotel_in_state_s": 1000,
+            "hotel_out_state_s": 2000,
             "max_km_per_month": 2000,
             "rate_bike": fallback_bike_rate,
             "rate_car": fallback_car_rate,
@@ -666,10 +668,18 @@ async def submit_expense(
                 )
 
         # 3. Hotel limit validation
-        if hotel_amount > hotel_limit:
+        l_state = iti.get("state")
+        d_state = iti.get("dest_state")
+        is_out_state = bool(l_state and d_state and l_state.strip().lower() != d_state.strip().lower())
+        current_hotel_limit = (
+            (allowance.hotel_out_state_s if (allowance and allowance.hotel_out_state_s and allowance.hotel_out_state_s > 0) else 2000)
+            if is_out_state else
+            hotel_limit
+        )
+        if hotel_amount > current_hotel_limit:
             raise HTTPException(
                 status_code=400,
-                detail=f"Leg {leg_num}: Hotel charge (₹{hotel_amount}) exceeds the maximum limit for your grade (₹{hotel_limit})."
+                detail=f"Leg {leg_num}: Hotel charge (₹{hotel_amount}) exceeds the maximum limit for your grade (₹{current_hotel_limit})."
             )
 
         # 4. Daily Allowance (DA) validation

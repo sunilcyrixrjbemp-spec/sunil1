@@ -362,6 +362,10 @@ export default function DashboardLayout() {
     return allowedWindows.includes(item.id.toLowerCase());
   });
 
+  const hasExtraMenus = allowedMenuItems.some(
+    (item) => !["home", "expense", "profile"].includes(item.id.toLowerCase())
+  );
+
   const handleLogout = async () => {
     try {
       await authService.logout();
@@ -513,9 +517,9 @@ export default function DashboardLayout() {
             >
               <Menu className="w-5 h-5" />
             </button>
-            <span className="text-xs font-bold text-gray-700 uppercase tracking-widest">
+            <h1 className="text-sm font-black text-gray-950 uppercase tracking-wider md:text-base">
               {currentActiveItem ? currentActiveItem.name : "Dashboard"}
-            </span>
+            </h1>
           </div>
 
           {/* Right Actions & Notification System */}
@@ -539,8 +543,9 @@ export default function DashboardLayout() {
               {/* Notification Dropdown Panel */}
               {isNotifOpen && (
                 <>
-                  <div className="fixed inset-0 z-40" onClick={() => setIsNotifOpen(false)} />
-                  <div className="fixed right-4 left-4 sm:absolute sm:right-0 sm:left-auto mt-2 sm:w-80 bg-white border border-gray-200 rounded shadow-lg z-50 overflow-hidden text-xs text-gray-700 animate-fade-in">
+                  <div className="fixed inset-0 z-40 bg-black/20 sm:bg-transparent" onClick={() => setIsNotifOpen(false)} />
+                  <div className="fixed bottom-0 left-0 right-0 sm:absolute sm:bottom-auto sm:top-full sm:right-0 sm:left-auto mt-0 sm:mt-2 sm:w-80 bg-white border border-gray-200 rounded-t-2xl sm:rounded-lg shadow-lg z-50 overflow-hidden text-xs text-gray-700 animate-fade-in max-h-[70vh] sm:max-h-none">
+                    <div className="sm:hidden w-10 h-1 rounded-full bg-gray-300 mx-auto mt-2 mb-1"></div>
                     <div className="px-4 py-2.5 bg-gray-50 border-b border-gray-200 flex items-center justify-between font-bold">
                       <span className="uppercase tracking-wider text-[10px]">Alerts Center</span>
                       <span className="text-[10px] text-blue-600 cursor-pointer hover:underline" onClick={markAllAsRead}>
@@ -634,7 +639,7 @@ export default function DashboardLayout() {
           to="/home"
           onMouseEnter={() => preloadRoute("/home")}
           className={`flex flex-col items-center justify-center w-14 h-12 rounded transition-all ${
-            currentActiveItem?.id === "home" ? "text-blue-600" : "text-gray-500 hover:text-gray-800"
+            currentActiveItem?.id === "home" ? "text-indigo-650" : "text-gray-500 hover:text-gray-800"
           }`}
         >
           <Home className="w-5 h-5" />
@@ -649,25 +654,11 @@ export default function DashboardLayout() {
             className="flex flex-col items-center justify-center w-14 h-12 rounded transition-all relative -top-4 z-50 transform active:scale-95"
           >
             <div className={`h-11 w-11 rounded-full flex items-center justify-center shadow-md border-2 border-white transition-all ${
-              currentActiveItem?.id === "expense" ? "bg-blue-600 text-white" : "bg-gray-800 text-gray-100"
+              currentActiveItem?.id === "expense" ? "bg-indigo-650 text-white" : "bg-gray-800 text-gray-100"
             }`}>
               <Plus className="w-6 h-6" />
             </div>
             <span className="text-[8px] font-extrabold uppercase tracking-wider text-gray-500 mt-1 absolute -bottom-1">Claim</span>
-          </Link>
-        )}
-
-        {/* Approvals Tab */}
-        {allowedWindows.includes("approval") && (
-          <Link
-            to="/approval-center"
-            onMouseEnter={() => preloadRoute("/approval-center")}
-            className={`flex flex-col items-center justify-center w-14 h-12 rounded transition-all ${
-              currentActiveItem?.id === "approval" ? "text-blue-600" : "text-gray-500 hover:text-gray-800"
-            }`}
-          >
-            <CheckSquare className="w-5 h-5" />
-            <span className="text-[9px] font-bold uppercase tracking-wider mt-1">Approvals</span>
           </Link>
         )}
 
@@ -676,23 +667,34 @@ export default function DashboardLayout() {
           to="/profile"
           onMouseEnter={() => preloadRoute("/profile")}
           className={`flex flex-col items-center justify-center w-14 h-12 rounded transition-all ${
-            currentActiveItem?.id === "profile" ? "text-blue-600" : "text-gray-500 hover:text-gray-800"
+            currentActiveItem?.id === "profile" ? "text-indigo-650" : "text-gray-500 hover:text-gray-800"
           }`}
         >
           <User className="w-5 h-5" />
           <span className="text-[9px] font-bold uppercase tracking-wider mt-1">Profile</span>
         </Link>
 
-        {/* More Menu Tab */}
+        {/* Logout Tab (profile ke pas logout button) */}
         <button
-          onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
-          className={`flex flex-col items-center justify-center w-14 h-12 rounded transition-all border-0 bg-transparent cursor-pointer ${
-            isMobileMenuOpen ? "text-blue-600" : "text-gray-500 hover:text-gray-800"
-          }`}
+          onClick={handleLogout}
+          className="flex flex-col items-center justify-center w-14 h-12 rounded transition-all border-0 bg-transparent cursor-pointer text-gray-500 hover:text-rose-600"
         >
-          <MenuGridIcon />
-          <span className="text-[9px] font-bold uppercase tracking-wider mt-1">More</span>
+          <LogOut className="w-5 h-5 text-rose-500" />
+          <span className="text-[9px] font-bold uppercase tracking-wider mt-1 text-rose-600">Logout</span>
         </button>
+
+        {/* More Menu Tab (Only shown if extra menus are allowed) */}
+        {hasExtraMenus && (
+          <button
+            onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
+            className={`flex flex-col items-center justify-center w-14 h-12 rounded transition-all border-0 bg-transparent cursor-pointer ${
+              isMobileMenuOpen ? "text-indigo-650" : "text-gray-500 hover:text-gray-800"
+            }`}
+          >
+            <MenuGridIcon />
+            <span className="text-[9px] font-bold uppercase tracking-wider mt-1">More</span>
+          </button>
+        )}
       </nav>
 
       {/* MOBILE FULL NAVIGATION OVERLAY MODAL */}
@@ -731,7 +733,7 @@ export default function DashboardLayout() {
             </div>
             <div>
               <p className="text-xs font-bold text-gray-800 leading-tight">{user?.name || "Employee"}</p>
-              <p className="text-[10px] text-gray-500 font-mono mt-0.5">{user?.user_id}</p>
+              <p className="text-[10px] text-gray-550 font-mono mt-0.5">{user?.user_id}</p>
             </div>
             <div className="ml-auto bg-green-50 border border-green-200 rounded px-2 py-0.5">
               <span className="text-[9px] text-green-700 font-bold uppercase tracking-wide">{userRole}</span>
@@ -756,7 +758,7 @@ export default function DashboardLayout() {
                         : "bg-white border-gray-200 hover:bg-gray-50 text-gray-700 shadow-sm"
                     }`}
                   >
-                    <div className={`p-2.5 rounded-full ${isActive ? "bg-indigo-600 text-white" : "bg-gray-50 text-gray-500 border border-gray-100 shadow-inner"}`}>
+                    <div className={`p-2.5 rounded-full ${isActive ? "bg-indigo-600 text-white" : "bg-gray-50 text-gray-505 border border-gray-100 shadow-inner"}`}>
                       <Icon className="w-5 h-5" />
                     </div>
                     <span className="text-[10px] font-bold uppercase tracking-wider mt-2 leading-tight truncate w-full">
@@ -768,17 +770,17 @@ export default function DashboardLayout() {
             </div>
           </div>
 
-          {/* Footer with Logout */}
+          {/* Footer with Home Button */}
           <div className="p-4 bg-white border-t border-gray-200 shrink-0">
             <button
               type="button"
               onClick={() => {
                 setIsMobileMenuOpen(false);
-                handleLogout();
+                navigate("/home");
               }}
-              className="w-full py-2.5 bg-rose-600 hover:bg-rose-700 text-white rounded text-xs font-bold transition-all cursor-pointer border-0 flex items-center justify-center gap-1.5 shadow-sm"
+              className="w-full py-2.5 bg-indigo-605 hover:bg-indigo-700 text-white rounded text-xs font-bold transition-all cursor-pointer border-0 flex items-center justify-center gap-1.5 shadow-sm"
             >
-              <LogOut className="w-4 h-4" /> LOG OUT
+              <Home className="w-4 h-4" /> GO TO HOME
             </button>
           </div>
         </div>

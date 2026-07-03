@@ -15,7 +15,6 @@ import {
   Users,
   FileText,
   Navigation,
-  X,
   Bike,
   Car,
   Bus,
@@ -1234,7 +1233,10 @@ export default function ExpensePage() {
 
         if (field === "hotel" && legNum === 1) {
           const hotelAmt = parseFloat(value) || 0;
-          const hotelLimit = allowance.hotel_in_state_s || 1000;
+          const isOutState = updatedLeg.dest_state !== updatedLeg.state;
+          const hotelLimit = isOutState 
+            ? (allowance.hotel_out_state_s && allowance.hotel_out_state_s > 0 ? allowance.hotel_out_state_s : 2000)
+            : (allowance.hotel_in_state_s || 1000);
           if (hotelAmt > hotelLimit) {
             toast.error(`Maximum hotel stay allowance is ₹${hotelLimit}`);
             updatedLeg.hotel = hotelLimit.toString();
@@ -2201,7 +2203,7 @@ export default function ExpensePage() {
             {/* Date Selection card */}
             <div className="card-lte-primary bg-white shadow-sm">
               <div className="bg-slate-50 border-b border-gray-200 p-3 flex items-center justify-between">
-                <h3 className="text-xs font-bold uppercase tracking-wider text-gray-700 flex items-center gap-1.5">
+                <h3 className="text-xs font-black uppercase tracking-wider text-gray-700 flex items-center gap-1.5">
                   <Calendar className="w-4 h-4 text-blue-600" />
                   Expense Date
                 </h3>
@@ -2249,7 +2251,7 @@ export default function ExpensePage() {
                     
                     {/* Leg Header */}
                     <div className="bg-slate-50 border-b border-gray-200 p-3 flex items-center justify-between">
-                      <h3 className="text-xs font-bold uppercase tracking-wider text-gray-700 flex items-center gap-2">
+                      <h3 className="text-xs font-black uppercase tracking-wider text-gray-700 flex items-center gap-2">
                         <span className="bg-blue-600 text-white h-5 w-5 rounded-full flex items-center justify-center text-[10px] font-bold">
                           {legNum}
                         </span>
@@ -2278,8 +2280,8 @@ export default function ExpensePage() {
                             onClick={() => handleItineraryChange(leg.leg, "travel_type", "In-District")}
                             className={`px-4 py-1.5 text-xs font-bold rounded-l-md border transition-all cursor-pointer ${
                               leg.travel_type === "In-District"
-                                ? "bg-blue-600 text-white border-blue-600 shadow-sm"
-                                : "bg-white text-gray-700 border-gray-300 hover:bg-gray-50"
+                                ? "border-indigo-500 bg-indigo-50 text-indigo-700 shadow-sm"
+                                : "border-gray-300 bg-white text-gray-600 hover:border-indigo-300"
                             }`}
                           >
                             In-District
@@ -2290,8 +2292,8 @@ export default function ExpensePage() {
                             onClick={() => handleItineraryChange(leg.leg, "travel_type", "Outdoor")}
                             className={`px-4 py-1.5 text-xs font-bold rounded-r-md border-t border-b border-r transition-all cursor-pointer ${
                               leg.travel_type === "Outdoor"
-                                ? "bg-blue-600 text-white border-blue-600 shadow-sm"
-                                : "bg-white text-gray-700 border-gray-300 hover:bg-gray-50"
+                                ? "border-amber-500 bg-amber-50 text-amber-700 shadow-sm"
+                                : "border-gray-300 bg-white text-gray-600 hover:border-amber-300"
                             }`}
                           >
                             Outdoor
@@ -2512,22 +2514,12 @@ export default function ExpensePage() {
                               {(leg.mode === "Bus" || leg.mode === "Auto") && (parseFloat(leg.amount) || 0) >= 300 && <span className="text-red-500"> *</span>}
                             </label>
                             {!files[leg.leg]?.main_bill && !hasExistingFile(leg.leg, leg.mode) ? (
-                              <div className="flex items-center gap-2">
-                                <input
+                              <input
                                   type="file"
                                   accept="image/*,application/pdf,.pdf"
                                   onChange={(e) => handleLegFileChange(leg.leg, "main_bill", e.target.files ? e.target.files[0] : null)}
                                   className="text-xs file:mr-4 file:py-1.5 file:px-3 file:rounded file:border file:border-gray-305 file:text-[10px] file:font-bold file:uppercase file:bg-white file:text-gray-700 hover:file:bg-gray-50 cursor-pointer w-full"
                                 />
-                                <button
-                                  type="button"
-                                  onClick={() => startCameraCapture(leg.leg, "main_bill")}
-                                  className="p-1.5 border border-gray-300 rounded bg-white hover:bg-gray-100 text-gray-700 flex items-center justify-center shrink-0 cursor-pointer shadow-sm"
-                                  title="Capture from Camera"
-                                >
-                                  <Camera className="w-3.5 h-3.5" />
-                                </button>
-                              </div>
                             ) : files[leg.leg]?.main_bill ? (
                               <div className="flex items-center justify-between bg-blue-50 border border-blue-200 px-3 py-1.5 rounded text-xs">
                                 <span className="font-semibold text-blue-700 truncate max-w-[200px]">{files[leg.leg]?.main_bill?.name}</span>
@@ -2567,22 +2559,12 @@ export default function ExpensePage() {
                               Upload Manager Approval Screenshot (Optional)
                             </label>
                             {!files[leg.leg]?.comm_mail && !hasExistingFile(leg.leg, "Communication_Mail") ? (
-                              <div className="flex items-center gap-2">
-                                <input
+                              <input
                                   type="file"
                                   accept="image/*,application/pdf,.pdf"
                                   onChange={(e) => handleLegFileChange(leg.leg, "comm_mail", e.target.files ? e.target.files[0] : null)}
                                   className="text-xs file:mr-4 file:py-1.5 file:px-3 file:rounded file:border file:border-indigo-300 file:text-[10px] file:font-bold file:uppercase file:bg-white file:text-indigo-700 hover:file:bg-indigo-50 cursor-pointer w-full"
                                 />
-                                <button
-                                  type="button"
-                                  onClick={() => startCameraCapture(leg.leg, "comm_mail")}
-                                  className="p-1.5 border border-indigo-300 rounded bg-white hover:bg-indigo-50 text-indigo-700 flex items-center justify-center shrink-0 cursor-pointer shadow-sm"
-                                  title="Capture from Camera"
-                                >
-                                  <Camera className="w-3.5 h-3.5" />
-                                </button>
-                              </div>
                             ) : files[leg.leg]?.comm_mail ? (
                               <div className="flex items-center justify-between bg-blue-50 border border-blue-200 px-3 py-1.5 rounded text-xs">
                                 <span className="font-semibold text-blue-700 truncate max-w-[200px]">{files[leg.leg]?.comm_mail?.name}</span>
@@ -2685,21 +2667,13 @@ export default function ExpensePage() {
                                   {(leg.sub_mode === "Bus" || leg.sub_mode === "Auto") && (parseFloat(leg.sub_amount) || 0) >= 300 && <span className="text-red-500"> *</span>}
                                 </label>
                                 {!files[leg.leg]?.sub_bill && !hasExistingFile(leg.leg, leg.sub_mode) ? (
-                                  <div className="flex items-center gap-2 mt-1.5">
+                                  <div className="mt-1.5">
                                     <input
                                       type="file"
                                       accept="image/*,application/pdf,.pdf"
                                       onChange={(e) => handleLegFileChange(leg.leg, "sub_bill", e.target.files ? e.target.files[0] : null)}
                                       className="text-xs file:mr-4 file:py-1 file:px-2 file:rounded file:border-0 file:text-[9px] file:font-bold file:uppercase file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100 cursor-pointer w-full"
                                     />
-                                    <button
-                                      type="button"
-                                      onClick={() => startCameraCapture(leg.leg, "sub_bill")}
-                                      className="p-1 border border-blue-200 rounded bg-white hover:bg-blue-50 text-blue-700 flex items-center justify-center shrink-0 cursor-pointer shadow-xs"
-                                      title="Capture from Camera"
-                                    >
-                                      <Camera className="w-3.5 h-3.5" />
-                                    </button>
                                   </div>
                                 ) : files[leg.leg]?.sub_bill ? (
                                   <div className="flex items-center justify-between bg-blue-50 border border-blue-200 px-2 py-1 rounded text-[10px] mt-1.5">
@@ -2792,21 +2766,13 @@ export default function ExpensePage() {
                                 Company Provided Stay - Bill Exempted
                               </div>
                             ) : !files[leg.leg]?.hotel_bill && !hasExistingFile(leg.leg, "Hotel") ? (
-                              <div className="flex items-center gap-2 mt-1.5">
+                              <div className="mt-1.5">
                                 <input
                                   type="file"
                                   accept="image/*,application/pdf,.pdf"
                                   onChange={(e) => handleLegFileChange(leg.leg, "hotel_bill", e.target.files ? e.target.files[0] : null)}
                                   className="text-xs file:mr-4 file:py-1 file:px-2 file:rounded file:border-0 file:text-[9px] file:font-bold file:uppercase file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100 cursor-pointer w-full"
                                 />
-                                <button
-                                  type="button"
-                                  onClick={() => startCameraCapture(leg.leg, "hotel_bill")}
-                                  className="p-1 border border-blue-200 rounded bg-white hover:bg-blue-50 text-blue-700 flex items-center justify-center shrink-0 cursor-pointer shadow-xs"
-                                  title="Capture from Camera"
-                                >
-                                  <Camera className="w-3.5 h-3.5" />
-                                </button>
                               </div>
                             ) : files[leg.leg]?.hotel_bill ? (
                               <div className="flex items-center justify-between bg-blue-50 border border-blue-200 px-2 py-1 rounded text-[10px] mt-1.5">
@@ -2856,21 +2822,13 @@ export default function ExpensePage() {
                               Local Purchase Bill {parseFloat(leg.local_purchase) >= 300 && <span className="text-red-500">*</span>}
                             </label>
                             {!files[leg.leg]?.local_purchase_bill && !hasExistingFile(leg.leg, "Local_Purchase") ? (
-                              <div className="flex items-center gap-2 mt-1.5">
+                              <div className="mt-1.5">
                                 <input
                                   type="file"
                                   accept="image/*,application/pdf,.pdf"
                                   onChange={(e) => handleLegFileChange(leg.leg, "local_purchase_bill", e.target.files ? e.target.files[0] : null)}
                                   className="text-xs file:mr-4 file:py-1 file:px-2 file:rounded file:border-0 file:text-[9px] file:font-bold file:uppercase file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100 cursor-pointer w-full"
                                 />
-                                <button
-                                  type="button"
-                                  onClick={() => startCameraCapture(leg.leg, "local_purchase_bill")}
-                                  className="p-1 border border-blue-200 rounded bg-white hover:bg-blue-50 text-blue-700 flex items-center justify-center shrink-0 cursor-pointer shadow-xs"
-                                  title="Capture from Camera"
-                                >
-                                  <Camera className="w-3.5 h-3.5" />
-                                </button>
                               </div>
                             ) : files[leg.leg]?.local_purchase_bill ? (
                               <div className="flex items-center justify-between bg-blue-50 border border-blue-200 px-2 py-1 rounded text-[10px] mt-1.5">
@@ -2934,22 +2892,12 @@ export default function ExpensePage() {
                           <label className="label-lte block">Misc Bill Attachment Indicator</label>
                           <div className="flex items-center gap-2">
                             {!files[leg.leg]?.oth_bill && !hasExistingFile(leg.leg, "Other") ? (
-                              <div className="flex items-center gap-2">
-                                <input
+                              <input
                                   type="file"
                                   accept="image/*,application/pdf,.pdf"
                                   onChange={(e) => handleLegFileChange(leg.leg, "oth_bill", e.target.files ? e.target.files[0] : null)}
                                   className="text-xs file:mr-4 file:py-1 file:px-2 file:rounded file:border-0 file:text-[9px] file:font-bold file:uppercase file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100 cursor-pointer w-full"
                                 />
-                                <button
-                                  type="button"
-                                  onClick={() => startCameraCapture(leg.leg, "oth_bill")}
-                                  className="p-1 border border-blue-200 rounded bg-white hover:bg-blue-50 text-blue-700 flex items-center justify-center shrink-0 cursor-pointer shadow-xs"
-                                  title="Capture from Camera"
-                                >
-                                  <Camera className="w-3.5 h-3.5" />
-                                </button>
-                              </div>
                             ) : files[leg.leg]?.oth_bill ? (
                               <div className="flex items-center gap-1.5 bg-blue-50 border border-blue-200 px-2 py-1 rounded text-[10px]">
                                 <span className="font-semibold text-blue-700 truncate max-w-[100px]">{files[leg.leg]?.oth_bill?.name}</span>
@@ -3145,7 +3093,7 @@ export default function ExpensePage() {
                                       </div>
                                     </div>
                                   ) : (
-                                    <div className="relative flex items-center gap-2">
+                                    <div className="relative">
                                        <input
                                          type="file"
                                          accept="image/*"
@@ -3157,14 +3105,6 @@ export default function ExpensePage() {
                                          }}
                                          className="text-xs file:mr-4 file:py-1.5 file:px-3 file:rounded file:border file:border-gray-350 file:text-[10px] file:font-bold file:uppercase file:bg-white file:text-gray-700 hover:file:bg-gray-50 cursor-pointer w-full"
                                        />
-                                       <button
-                                         type="button"
-                                         onClick={() => startCameraCaptureForActivity(leg.leg, "Calls")}
-                                         className="p-1.5 border border-gray-300 rounded bg-white hover:bg-gray-100 text-gray-700 flex items-center justify-center shrink-0 cursor-pointer shadow-sm"
-                                         title="Capture from Camera"
-                                       >
-                                         <Camera className="w-3.5 h-3.5" />
-                                       </button>
                                        {leg.calls_photo_loading && <span className="text-[9px] text-blue-600 font-semibold block animate-pulse mt-0.5">Uploading...</span>}
                                     </div>
                                   )}
@@ -3351,7 +3291,7 @@ export default function ExpensePage() {
                                       </div>
                                     </div>
                                   ) : (
-                                    <div className="relative flex items-center gap-2">
+                                    <div className="relative">
                                       <input
                                         type="file"
                                         accept="image/*"
@@ -3363,14 +3303,6 @@ export default function ExpensePage() {
                                         }}
                                         className="text-xs file:mr-4 file:py-1.5 file:px-3 file:rounded file:border file:border-gray-350 file:text-[10px] file:font-bold file:uppercase file:bg-white file:text-gray-700 hover:file:bg-gray-50 cursor-pointer w-full"
                                       />
-                                      <button
-                                        type="button"
-                                        onClick={() => startCameraCaptureForActivity(leg.leg, "PMS")}
-                                        className="p-1.5 border border-gray-300 rounded bg-white hover:bg-gray-100 text-gray-700 flex items-center justify-center shrink-0 cursor-pointer shadow-sm"
-                                        title="Capture from Camera"
-                                      >
-                                        <Camera className="w-3.5 h-3.5" />
-                                      </button>
                                       {leg.pms_photo_loading && <span className="text-[9px] text-blue-600 font-semibold block animate-pulse mt-0.5">Uploading...</span>}
                                     </div>
                                   )}
@@ -4099,7 +4031,7 @@ export default function ExpensePage() {
       {showConfirmModal && (
         <div className="modal-lte-overlay">
           <div className="modal-lte-content max-w-md">
-            <h3 className="text-sm font-extrabold uppercase tracking-wider border-b border-gray-200 pb-3 text-gray-800 text-left">
+            <h3 className="text-sm font-extrabold uppercase tracking-wider border-b border-gray-200 pb-3 text-gray-800 text-left bg-gradient-to-r from-slate-50 to-gray-100 -mx-6 -mt-4 px-6 pt-4 rounded-t">
               Confirm Reimbursement Submission
             </h3>
 
@@ -4215,21 +4147,21 @@ export default function ExpensePage() {
           <div className="modal-lte-content max-w-5xl max-h-[90vh] flex flex-col">
             
             {/* Modal Header */}
-            <div className="px-4 py-3 bg-gray-100 border-b border-gray-200 flex items-center justify-between shrink-0">
-              <h3 className="text-sm font-bold uppercase tracking-wider text-gray-800 flex items-center gap-2">
+            <div className="px-4 py-3 bg-gradient-to-r from-slate-50 to-gray-100 border-b border-gray-200 flex items-center justify-between shrink-0">
+              <h3 className="text-sm font-extrabold uppercase tracking-wider text-gray-800 flex items-center gap-2">
                 <Bookmark className="w-4 h-4 text-blue-600" />
                 Claim Details {selectedClaim ? `— ${selectedClaim.expense_code}` : ""}
               </h3>
               <button 
                 onClick={() => { setShowDetailsModal(false); setSelectedClaim(null); }}
-                className="p-1 hover:bg-gray-200 rounded transition-colors text-gray-500 hover:text-gray-800 border-0 bg-transparent cursor-pointer"
+                className="text-gray-400 hover:text-gray-600 border-0 bg-transparent text-lg font-bold cursor-pointer"
               >
-                <X className="w-4 h-4" />
+                ✕
               </button>
             </div>
 
             {/* Modal Content */}
-            <div className="flex-1 overflow-y-auto p-4 space-y-4">
+            <div className="flex-1 overflow-y-auto p-4 space-y-4 bg-slate-50/70">
               {detailsLoading || !selectedClaim ? (
                 <div className="flex justify-center p-12 text-gray-400 font-bold">Loading...</div>
               ) : (
