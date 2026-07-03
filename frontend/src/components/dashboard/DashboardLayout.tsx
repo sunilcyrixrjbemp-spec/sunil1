@@ -362,9 +362,7 @@ export default function DashboardLayout() {
     return allowedWindows.includes(item.id.toLowerCase());
   });
 
-  const hasExtraMenus = allowedMenuItems.some(
-    (item) => !["home", "expense", "profile"].includes(item.id.toLowerCase())
-  );
+
 
   const handleLogout = async () => {
     try {
