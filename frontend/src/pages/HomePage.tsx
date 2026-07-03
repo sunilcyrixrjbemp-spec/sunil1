@@ -874,7 +874,10 @@ export default function HomePage() {
                       ))}
                     </div>
                   </>
-                   {/* TEAM CLAIMS TAB */}
+                )
+              )}
+
+              {/* TEAM CLAIMS TAB */}
               {activeTab === "team-claims" && (
                 loadingTeamExpenses ? (
                   <Loader message="Loading team claims..." />

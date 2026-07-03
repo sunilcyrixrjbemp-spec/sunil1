@@ -1115,6 +1115,7 @@ export default function MonthSummaryPage() {
                     <td />
                   </tr>
                 </tfoot>
+              )}
             </table>
 
             {/* Mobile Card List View */}
