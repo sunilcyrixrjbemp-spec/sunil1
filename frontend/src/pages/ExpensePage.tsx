@@ -4083,13 +4083,20 @@ export default function ExpensePage() {
                       <span className="font-semibold text-gray-800 ml-1">{selectedClaim.purpose || selectedClaim.description || "Field visits"}</span>
                     </div>
                     <div className="text-right">
-                      <span className="text-[9px] text-gray-500 font-bold uppercase block">Total</span>
-                      <span className="text-lg font-black text-blue-700 font-mono">₹{selectedClaim.amount.toLocaleString()}</span>
+                      <span className="text-[9px] text-gray-500 font-bold uppercase block">
+                        {selectedClaim.category === "Limit Request" ? "Requested Limit" : "Total"}
+                      </span>
+                      <span className="text-lg font-black text-blue-700 font-mono">
+                        {selectedClaim.category === "Limit Request"
+                          ? (selectedClaim.travel_mode === "KM" ? `${selectedClaim.total_km} KM` : `₹${selectedClaim.amount.toLocaleString()}`)
+                          : `₹${selectedClaim.amount.toLocaleString()}`
+                        }
+                      </span>
                     </div>
                   </div>
 
                   {/* Legs Table */}
-                  {selectedClaim.itineraries && selectedClaim.itineraries.length > 0 && (
+                  {selectedClaim.category !== "Limit Request" && selectedClaim.itineraries && selectedClaim.itineraries.length > 0 && (
                     <div className="border border-gray-200 rounded overflow-hidden">
                       <div className="px-3 py-2 bg-gray-50 border-b border-gray-200">
                         <h4 className="text-[10px] font-bold uppercase text-gray-600 tracking-wider">Visit Legs Details</h4>
@@ -4346,6 +4353,53 @@ export default function ExpensePage() {
                     </div>
                   )}
 
+                  {/* Cumulative stats for Limit Requests */}
+                  {selectedClaim.category === "Limit Request" && selectedClaim.user_monthly_stats && (
+                    <div className="border border-gray-200 rounded overflow-hidden">
+                      <div className="px-3 py-2 bg-gray-50 border-b border-gray-200 flex items-center justify-between">
+                        <h4 className="text-[10px] font-bold uppercase text-gray-600 tracking-wider flex items-center gap-1.5">
+                          <Users className="w-3.5 h-3.5 text-blue-500" />
+                          Requester's Current Monthly Statistics
+                        </h4>
+                        <span className="text-[10px] text-gray-500 font-bold">Month: {selectedClaim.month} {selectedClaim.year}</span>
+                      </div>
+                      <div className="p-4 grid grid-cols-1 sm:grid-cols-3 gap-4 text-xs">
+                        <div className="p-3.5 bg-blue-50/50 border border-blue-100 rounded-lg">
+                          <span className="text-[9px] text-blue-500 font-extrabold uppercase tracking-wider block mb-1">Bike/Car Cumulative Distance</span>
+                          <div className="flex items-baseline gap-1.5 mt-1">
+                            <span className="text-xl font-black text-blue-700 font-mono">{(selectedClaim.user_monthly_stats.total_bike_km || 0).toFixed(1)}</span>
+                            <span className="text-[10px] text-blue-600 font-extrabold">KM Used</span>
+                          </div>
+                          <span className="text-[10px] text-gray-500 block mt-2 font-semibold">
+                            Total Approved Limit: {(selectedClaim.user_monthly_stats.max_km || 2000).toFixed(1)} KM
+                          </span>
+                        </div>
+
+                        <div className="p-3.5 bg-purple-50/50 border border-purple-100 rounded-lg">
+                          <span className="text-[9px] text-purple-500 font-extrabold uppercase tracking-wider block mb-1">Local Conveyance (Auto)</span>
+                          <div className="flex items-baseline gap-1.5 mt-1">
+                            <span className="text-xl font-black text-purple-700 font-mono">₹{(selectedClaim.user_monthly_stats.total_auto || 0).toLocaleString()}</span>
+                            <span className="text-[10px] text-purple-600 font-extrabold">Spent</span>
+                          </div>
+                          <span className="text-[10px] text-gray-500 block mt-2 font-semibold">
+                            Total Approved Limit: ₹{(selectedClaim.user_monthly_stats.max_auto || 1000).toLocaleString()}
+                          </span>
+                        </div>
+
+                        <div className="p-3.5 bg-emerald-50/50 border border-emerald-100 rounded-lg">
+                          <span className="text-[9px] text-emerald-500 font-extrabold uppercase tracking-wider block mb-1">Total Verified Field Work</span>
+                          <div className="grid grid-cols-2 gap-x-2 gap-y-1 mt-2 text-[10px] text-gray-600 font-bold">
+                            <div>Calls: <span className="text-emerald-700 font-mono">{selectedClaim.user_monthly_stats.calls_completed || 0}</span></div>
+                            <div>PMS: <span className="text-emerald-700 font-mono">{selectedClaim.user_monthly_stats.pms_count || 0}</span></div>
+                            <div>Tagging: <span className="text-emerald-700 font-mono">{selectedClaim.user_monthly_stats.asset_tagging || 0}</span></div>
+                            <div>Calibration: <span className="text-emerald-700 font-mono">{selectedClaim.user_monthly_stats.calibration_count || 0}</span></div>
+                            <div className="col-span-2">Mobilise Verif: <span className="text-emerald-700 font-mono">{selectedClaim.user_monthly_stats.mobilise_count || 0}</span></div>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+
                   {/* Attachments */}
                   {selectedClaim.attachments && selectedClaim.attachments.length > 0 && (
                     <div className="border border-gray-200 rounded overflow-hidden">
@@ -4480,7 +4534,7 @@ export default function ExpensePage() {
             {/* Modal Footer */}
             <div className="px-4 py-3 border-t border-gray-200 bg-gray-50 flex items-center justify-between shrink-0">
               <div className="flex gap-2">
-                {selectedClaim && ["draft", "submitted"].includes(selectedClaim.status?.toLowerCase()) && (
+                {selectedClaim && selectedClaim.category !== "Limit Request" && ["draft", "submitted"].includes(selectedClaim.status?.toLowerCase()) && (
                   <>
                     <button
                       type="button"

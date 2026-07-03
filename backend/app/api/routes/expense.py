@@ -1578,6 +1578,79 @@ async def get_expenses(
                 for l in legs
             ]
         })
+    # Fetch user's limit requests
+    from app.models.limit_approval_request import LimitApprovalRequest
+    limit_reqs = db.query(LimitApprovalRequest).filter(
+        LimitApprovalRequest.user_id == current_user.user_id
+    ).all()
+    for pl in limit_reqs:
+        month_name = "N/A"
+        year_val = datetime.now().year
+        if pl.for_month and "-" in pl.for_month:
+            try:
+                dt = datetime.strptime(pl.for_month, "%Y-%m")
+                month_name = dt.strftime("%B")
+                year_val = dt.year
+            except:
+                pass
+        
+        req_date = pl.created_at.strftime("%Y-%m-%d") if pl.created_at else pl.for_month
+        
+        result.append({
+            "id": -pl.id,
+            "expense_code": f"LIMIT-{pl.request_type}-{pl.id}",
+            "user_id": current_user.id,
+            "month": month_name,
+            "year": year_val,
+            "amount": pl.requested_value if pl.request_type == "AUTO" else 0.0,
+            "status": pl.status.lower(),
+            "travel_mode": pl.request_type,
+            "itinerary": req_date,
+            "date": req_date,
+            "description": f"Limit Extension Request: +{pl.requested_value:.1f} {pl.request_type}",
+            "attachments": [],
+            "da_amount": 0.0,
+            "hotel_amount": 0.0,
+            "other_expense_amount": 0.0,
+            "local_purchase_amount": 0.0,
+            "calls_assigned": 0,
+            "calls_completed": 0,
+            "pms_count": 0,
+            "asset_tagging": 0,
+            "created_at": pl.created_at,
+            "updated_at": pl.updated_at,
+            "total_km": pl.requested_value if pl.request_type == "KM" else 0.0,
+            "total_auto": pl.requested_value if pl.request_type == "AUTO" else 0.0,
+            "bike_amount": 0.0,
+            "car_amount": 0.0,
+            "auto_amount": pl.requested_value if pl.request_type == "AUTO" else 0.0,
+            "district": current_user.district if current_user.district else "Ganganar",
+            "zone": current_user.zone if current_user.zone else "Bikaner",
+            "category": "Limit Request",
+            "legs": [
+                {
+                    "leg": 1,
+                    "from_district": current_user.district or "N/A",
+                    "to_district": "N/A",
+                    "from": "N/A",
+                    "to": "N/A",
+                    "mode": pl.request_type,
+                    "km": pl.requested_value if pl.request_type == "KM" else 0.0,
+                    "amount": pl.requested_value if pl.request_type == "AUTO" else 0.0,
+                    "sub_mode": "",
+                    "sub_amount": 0.0,
+                    "da": 0.0,
+                    "hotel": 0.0,
+                    "local_purchase": 0.0,
+                    "other_desc": "",
+                    "other_amount": 0.0,
+                    "visit_purpose": f"Request additional {pl.requested_value:.1f} {pl.request_type} limit extension for month {pl.for_month}.",
+                    "activity_details": ""
+                }
+            ]
+        })
+    # Sort all results by created_at desc (convert tz if needed, but naive is standard in DB)
+    result.sort(key=lambda x: x["created_at"].replace(tzinfo=None) if (x.get("created_at") and hasattr(x.get("created_at"), "replace")) else (x.get("created_at") or datetime.min), reverse=True)
     cache.set(cache_key, result)
     return result
 
@@ -1706,6 +1779,60 @@ async def get_team_expenses(
             "zone": submitter.zone if submitter and submitter.zone else "Bikaner"
         })
         
+    # Fetch team members' limit requests
+    from app.models.limit_approval_request import LimitApprovalRequest
+    team_user_codes = [u.user_id for u in team_users if u.id != current_user.id]
+    
+    team_limit_reqs = db.query(LimitApprovalRequest).filter(
+        LimitApprovalRequest.user_id.in_(team_user_codes)
+    ).all()
+    
+    for pl in team_limit_reqs:
+        submitter = next((u for u in team_users if u.user_id == pl.user_id), None)
+        if not submitter:
+            continue
+            
+        month_name = "N/A"
+        year_val = datetime.now().year
+        if pl.for_month and "-" in pl.for_month:
+            try:
+                dt = datetime.strptime(pl.for_month, "%Y-%m")
+                month_name = dt.strftime("%B")
+                year_val = dt.year
+            except:
+                pass
+                
+        req_date = pl.created_at.strftime("%Y-%m-%d") if pl.created_at else pl.for_month
+        
+        result.append({
+            "id": -pl.id,
+            "expense_code": f"LIMIT-{pl.request_type}-{pl.id}",
+            "submitter_name": submitter.name if submitter else f"Employee {pl.user_id}",
+            "submitter_code": pl.user_id,
+            "submitter_designation": submitter.designation if submitter and submitter.designation else "Engineer",
+            "month": month_name,
+            "year": year_val,
+            "amount": pl.requested_value if pl.request_type == "AUTO" else 0.0,
+            "status": pl.status.lower(),
+            "category": "Limit Request",
+            "travel_mode": pl.request_type,
+            "date": req_date,
+            "purpose": f"Limit Extension Request: +{pl.requested_value:.1f} {pl.request_type}",
+            "created_at": pl.created_at,
+            "total_km": pl.requested_value if pl.request_type == "KM" else 0.0,
+            "total_auto": pl.requested_value if pl.request_type == "AUTO" else 0.0,
+            "bike_amount": 0.0,
+            "car_amount": 0.0,
+            "auto_amount": pl.requested_value if pl.request_type == "AUTO" else 0.0,
+            "da_amount": 0.0,
+            "hotel_amount": 0.0,
+            "other_expense_amount": 0.0,
+            "local_purchase_amount": 0.0,
+            "district": submitter.district if submitter and submitter.district else "Ganganar",
+            "zone": submitter.zone if submitter and submitter.zone else "Bikaner"
+        })
+    # Sort all results by created_at desc (convert tz if needed, naive is standard)
+    result.sort(key=lambda x: x["created_at"].replace(tzinfo=None) if (x.get("created_at") and hasattr(x.get("created_at"), "replace")) else (x.get("created_at") or datetime.min), reverse=True)
     cache.set(cache_key, result)
     return result
 
