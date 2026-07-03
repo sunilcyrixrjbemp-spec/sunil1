@@ -302,10 +302,7 @@ export default function HomePage() {
     ? user.allowed_windows.split(",").map((w: string) => w.trim().toLowerCase())
     : ["home", "profile", "help"];
 
-  const hasAccess = (windowId: string) => {
-    if (userRole === "Admin") return true;
-    return allowedWindows.includes(windowId.toLowerCase());
-  };
+
 
   const isReviewerRole = userRole === "Admin" || allowedWindows.includes("approval");
 

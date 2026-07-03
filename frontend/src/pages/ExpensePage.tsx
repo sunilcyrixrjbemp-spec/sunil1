@@ -54,7 +54,9 @@ interface ItineraryLeg {
   leg: number;
   travel_type: "In-District" | "Outdoor";
   district_from: string;
-  district: string; // to_district
+  district: string;
+  state?: string;
+  dest_state?: string;
   from: string;
   to: string;
   mode: string;
@@ -154,6 +156,8 @@ export default function ExpensePage() {
       travel_type: "In-District",
       district_from: "",
       district: "",
+      state: "Rajasthan",
+      dest_state: "Rajasthan",
       from: "",
       to: "",
       mode: "",
@@ -299,17 +303,7 @@ export default function ExpensePage() {
   const [facingMode, setFacingMode] = useState<"user" | "environment">("environment");
   const videoRef = React.useRef<HTMLVideoElement | null>(null);
 
-  const startCameraCapture = (legNum: number, key: keyof LegFiles) => {
-    setActiveActivityCameraTarget(null);
-    setActiveCameraTarget({ legNum, key });
-    setFacingMode("environment");
-  };
-
-  const startCameraCaptureForActivity = (legNum: number, activityType: "Calls" | "PMS") => {
-    setActiveCameraTarget(null);
-    setActiveActivityCameraTarget({ legNum, activityType });
-    setFacingMode("environment");
-  };
+  // Camera helper triggers removed (camera modal preserved if needed, but not triggered)
 
   useEffect(() => {
     if (!activeCameraTarget && !activeActivityCameraTarget) {
@@ -1246,6 +1240,18 @@ export default function ExpensePage() {
           }
         }
 
+        if (field === "dest_state" && legNum === 1) {
+          const hotelAmt = parseFloat(updatedLeg.hotel) || 0;
+          const isOutState = value !== updatedLeg.state;
+          const hotelLimit = isOutState 
+            ? (allowance.hotel_out_state_s && allowance.hotel_out_state_s > 0 ? allowance.hotel_out_state_s : 2000)
+            : (allowance.hotel_in_state_s || 1000);
+          if (hotelAmt > hotelLimit) {
+            toast.error(`Maximum hotel stay allowance is ₹${hotelLimit}`);
+            updatedLeg.hotel = hotelLimit.toString();
+          }
+        }
+
         // Force company_provided to false if conditions are not met
         const isUserJodhpur = (user.district || "").trim().toLowerCase() === "jodhpur";
         const isLegOutdoor = updatedLeg.travel_type === "Outdoor";
@@ -1808,6 +1814,8 @@ export default function ExpensePage() {
           travel_type: leg.travel_type,
           district_from: leg.district_from || user.home_district,
           district: leg.district,
+          state: leg.state || "Rajasthan",
+          dest_state: leg.dest_state || "Rajasthan",
           from: leg.from,
           to: leg.to,
           mode: leg.mode,
@@ -2739,6 +2747,22 @@ export default function ExpensePage() {
                               onChange={(e) => handleItineraryChange(leg.leg, "hotel", e.target.value)}
                               className="input-lte font-bold"
                             />
+                            {parseFloat(leg.hotel) > 0 && (
+                              <div className="flex items-center gap-1.5 mt-2 bg-amber-50/50 p-1.5 rounded border border-amber-100 w-fit">
+                                <input
+                                  type="checkbox"
+                                  id="out_of_state_hotel"
+                                  checked={leg.dest_state !== leg.state}
+                                  onChange={(e) => {
+                                    handleItineraryChange(leg.leg, "dest_state", e.target.checked ? "Out-of-State" : "Rajasthan");
+                                  }}
+                                  className="w-3.5 h-3.5 text-amber-600 border-gray-300 rounded focus:ring-amber-500 cursor-pointer"
+                                />
+                                <label htmlFor="out_of_state_hotel" className="text-[10px] font-bold text-amber-800 cursor-pointer select-none">
+                                  Out of State Stay
+                                </label>
+                              </div>
+                            )}
                             {leg.hotel === "0" &&
                              (user.district || "").trim().toLowerCase() !== "jodhpur" &&
                              leg.travel_type === "Outdoor" &&

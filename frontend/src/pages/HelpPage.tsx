@@ -1261,6 +1261,11 @@ export default function HelpPage() {
                       })
                     )}
                   </div>
+                  {typingUser && (
+                    <div className="px-4 py-1 text-[10px] text-gray-500 italic bg-[#efeae2] border-t border-gray-200 shrink-0 text-left font-semibold">
+                      {typingUser} is typing...
+                    </div>
+                  )}
 
                   {/* Input area (WhatsApp style) */}
                   <form onSubmit={handleAddComment} className="flex items-center gap-2 p-3 bg-[#f0f2f5] border-t border-gray-200 shrink-0">
