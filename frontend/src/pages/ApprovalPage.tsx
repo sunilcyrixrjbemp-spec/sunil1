@@ -1369,8 +1369,11 @@ export default function ApprovalPage() {
                                     <span key={actIdx} className="px-1.5 py-0.5 rounded bg-gray-200 border border-gray-300 text-[8px] font-bold text-gray-700 uppercase">
                                       {act}
                                     </span>
-                                      {/* Sub-table for Calls */}
-                                 {selectedActs.includes("Calls") && callsList.length > 0 && (
+                                  ))}
+                                </div>
+
+                                {/* Sub-table for Calls */}
+                                {selectedActs.includes("Calls") && callsList.length > 0 && (
                                   <div className="border border-blue-100 rounded overflow-hidden bg-white max-w-4xl">
                                     <div className="px-2 py-1 bg-blue-50/50 border-b border-blue-100 text-[9px] font-bold text-blue-700 uppercase">Support Calls Logs</div>
                                     

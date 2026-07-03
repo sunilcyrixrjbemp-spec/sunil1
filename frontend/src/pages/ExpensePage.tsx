@@ -4578,6 +4578,270 @@ export default function ExpensePage() {
                           </tbody>
                         </table>
                       </div>
+
+                      {/* Mobile View Card List */}
+                      <div className="block lg:hidden space-y-3 p-3 bg-gray-50/30">
+                        {selectedClaim.itineraries.map((leg: any, idx: number) => {
+                          const travelCost = leg.amount || 0;
+                          const subCost = leg.sub_amount || 0;
+                          const daCost = leg.da || 0;
+                          const hotelCost = leg.hotel || 0;
+                          const lpCost = leg.local_purchase || 0;
+                          const otherCost = leg.oth_amount || 0;
+                          const legTotal = travelCost + subCost + daCost + hotelCost + lpCost + otherCost;
+
+                          let actDetails: any = null;
+                          try {
+                            if (leg.activity_details) {
+                              actDetails = typeof leg.activity_details === "string" ? JSON.parse(leg.activity_details) : leg.activity_details;
+                            }
+                          } catch (e) {
+                            console.error("Error parsing activity details", e);
+                          }
+
+                          const callsList = actDetails?.calls_list || [];
+                          const pmsList = actDetails?.pms_list || [];
+                          const assetsList = actDetails?.assets_list || [];
+                          const selectedActs = actDetails?.selected_activities || leg.selected_activities || [];
+                          const mobiliseCount = parseInt(actDetails?.mobilise_asset_count || leg.mobilise_asset_count || "0") || 0;
+                          const calibrationCount = parseInt(actDetails?.calibration_count || leg.calibration_count || "0") || 0;
+                          const activityOtherDesc = actDetails?.activity_other_desc || leg.activity_other_desc || "";
+
+                          const hasActivities = selectedActs.length > 0 || callsList.length > 0 || pmsList.length > 0 || assetsList.length > 0;
+
+                          return (
+                            <div key={idx} className="bg-white border border-gray-200 rounded-lg p-3.5 space-y-3 shadow-xs text-xs">
+                              {/* Card Header */}
+                              <div className="flex justify-between items-center border-b border-gray-100 pb-2">
+                                <span className="font-extrabold text-blue-600 font-mono text-xs">Leg #{leg.leg}</span>
+                                <span className="font-extrabold text-gray-900 text-sm">₹{legTotal.toLocaleString()}</span>
+                              </div>
+
+                              {/* Route & Mode */}
+                              <div className="space-y-1.5 text-left">
+                                <div>
+                                  <span className="text-[9px] text-gray-400 font-bold uppercase block">Route</span>
+                                  <span className="font-bold text-gray-800 text-[11px]">
+                                    {leg.from_district === leg.to_district ? leg.to_district : `${leg.from_district} → ${leg.to_district}`}
+                                  </span>
+                                  <span className="text-[10px] text-gray-500 block">
+                                    {leg.from || "Start"} → {leg.to || "End"}
+                                  </span>
+                                </div>
+
+                                <div className="flex flex-wrap gap-1.5 pt-0.5">
+                                  <span className="text-[9px] font-bold uppercase bg-blue-50 text-blue-700 px-1.5 py-0.5 rounded border border-blue-100">
+                                    {leg.mode}
+                                  </span>
+                                  {leg.sub_mode && (
+                                    <span className="text-[9px] font-bold uppercase bg-purple-50 text-purple-700 px-1.5 py-0.5 rounded border border-purple-100">
+                                      +{leg.sub_mode}
+                                    </span>
+                                  )}
+                                  {leg.km > 0 && (
+                                    <span className="text-[9px] font-bold uppercase bg-gray-50 text-gray-650 px-1.5 py-0.5 rounded border border-gray-200 font-mono">
+                                      {leg.km} KM
+                                    </span>
+                                  )}
+                                </div>
+                              </div>
+
+                              {/* Breakdown of costs */}
+                              <div className="grid grid-cols-3 gap-2 bg-gray-50/50 p-2.5 rounded-lg border border-gray-150 text-[10px] font-bold text-left">
+                                <div>
+                                  <span className="text-gray-400 text-[8px] uppercase block">DA</span>
+                                  <span className="text-gray-700 font-mono">₹{daCost.toLocaleString()}</span>
+                                </div>
+                                <div>
+                                  <span className="text-gray-400 text-[8px] uppercase block">Hotel</span>
+                                  <span className="text-gray-700 font-mono">₹{hotelCost.toLocaleString()}</span>
+                                </div>
+                                <div>
+                                  <span className="text-gray-400 text-[8px] uppercase block">Local Purc.</span>
+                                  <span className="text-gray-700 font-mono">₹{lpCost.toLocaleString()}</span>
+                                </div>
+                                {otherCost > 0 && (
+                                  <div className="col-span-3 border-t border-gray-100 pt-1.5 mt-0.5">
+                                    <span className="text-gray-400 text-[8px] uppercase block">Other/Misc (₹{otherCost.toLocaleString()})</span>
+                                    <span className="text-gray-655 block text-[9px] font-normal italic">{leg.oth_desc || "No description"}</span>
+                                  </div>
+                                )}
+                              </div>
+
+                              {/* Work Summary */}
+                              <div className="text-[10px] text-gray-500 bg-gray-50/50 px-2.5 py-1.5 rounded border border-gray-100 flex justify-between font-bold">
+                                <span>Work: {leg.ws_assigned||0}</span>
+                                <span className="text-green-600">Done: {leg.ws_closed||0}</span>
+                                <span>PMS: {leg.ws_pms||0}</span>
+                                <span>Asset: {leg.ws_asset||0}</span>
+                              </div>
+
+                              {/* Activities & Sub logs */}
+                              {hasActivities && (
+                                <div className="border-t border-gray-100 pt-2.5 space-y-3">
+                                  <div className="flex flex-wrap gap-1.5">
+                                    {selectedActs.map((act: string, actIdx: number) => (
+                                      <span key={actIdx} className="px-1.5 py-0.5 rounded bg-gray-100 border border-gray-200 text-[8px] font-bold text-gray-700 uppercase">
+                                        {act}
+                                      </span>
+                                    ))}
+                                  </div>
+
+                                  {/* Calls card list */}
+                                  {selectedActs.includes("Calls") && callsList.length > 0 && (
+                                    <div className="space-y-2">
+                                      <div className="text-[9px] font-bold text-blue-700 uppercase text-left">Support Calls Logs</div>
+                                      {callsList.map((c: any, cIdx: number) => (
+                                        <div key={cIdx} className="bg-blue-50/30 border border-blue-100 rounded-lg p-2.5 space-y-2 text-[10px] text-left">
+                                          <div className="flex justify-between items-start">
+                                            <div>
+                                              <span className="font-extrabold text-gray-805 block">{c.asset_details?.equipment_name || "—"}</span>
+                                              <span className="text-[9px] text-gray-500">{c.asset_details?.hospital_name || "—"}</span>
+                                            </div>
+                                            <span className="px-1.5 py-0.5 rounded font-extrabold text-[8px] uppercase bg-blue-50 text-blue-700 border border-blue-100">
+                                              {c.status || "Attend"}
+                                            </span>
+                                          </div>
+                                          <div className="grid grid-cols-2 gap-x-2 gap-y-1 text-[9px] text-gray-600 font-bold border-t border-blue-100/50 pt-1.5">
+                                            <div>District: <span className="text-gray-800">{c.asset_details?.district_name || "—"}</span></div>
+                                            <div>Model: <span className="text-gray-800">{c.asset_details?.model_name || "—"}</span></div>
+                                            <div>Barcode: <span className="text-gray-800 font-mono">{c.barcode}</span></div>
+                                            <div>Type: <span className="text-gray-800">{c.type || "Support Call"}</span></div>
+                                          </div>
+                                          {c.photo_url && (
+                                            <div className="pt-2">
+                                              <span className="text-gray-400 text-[8px] uppercase block mb-1">Attachment Photo</span>
+                                              <div className="relative rounded overflow-hidden border border-blue-100 bg-white">
+                                                <img
+                                                  src={`${import.meta.env.VITE_API_URL || "https://expense-backend-zio8.onrender.com"}${c.photo_url}`}
+                                                  alt="Call verification"
+                                                  className="w-full h-auto object-cover max-h-48 cursor-pointer"
+                                                  onClick={() => setLightboxImage(`${import.meta.env.VITE_API_URL || "https://expense-backend-zio8.onrender.com"}${c.photo_url}`)}
+                                                />
+                                                <button
+                                                  type="button"
+                                                  onClick={() => setLightboxImage(`${import.meta.env.VITE_API_URL || "https://expense-backend-zio8.onrender.com"}${c.photo_url}`)}
+                                                  className="absolute bottom-1 right-1 bg-black/60 text-white font-bold text-[8px] px-2 py-0.5 rounded cursor-pointer border-0"
+                                                >
+                                                  Full View
+                                                </button>
+                                              </div>
+                                            </div>
+                                          )}
+                                        </div>
+                                      ))}
+                                    </div>
+                                  )}
+
+                                  {/* PMS card list */}
+                                  {selectedActs.includes("PMS") && pmsList.length > 0 && (
+                                    <div className="space-y-2">
+                                      <div className="text-[9px] font-bold text-amber-700 uppercase text-left">PMS Service Logs</div>
+                                      {pmsList.map((p: any, pIdx: number) => (
+                                        <div key={pIdx} className="bg-amber-50/30 border border-amber-100 rounded-lg p-2.5 space-y-2 text-[10px] text-left">
+                                          <div className="flex justify-between items-start">
+                                            <div>
+                                              <span className="font-extrabold text-gray-855 block">{p.asset_details?.equipment_name || "—"}</span>
+                                              <span className="text-[9px] text-gray-500">{p.asset_details?.hospital_name || "—"}</span>
+                                            </div>
+                                            <span className="px-1.5 py-0.5 rounded font-extrabold text-[8px] uppercase bg-green-50 text-green-700 border border-green-200">
+                                              {p.frequency || "3 month"}
+                                            </span>
+                                          </div>
+                                          <div className="grid grid-cols-2 gap-x-2 gap-y-1 text-[9px] text-gray-600 font-bold border-t border-amber-100/50 pt-1.5">
+                                            <div>District: <span className="text-gray-800">{p.asset_details?.district_name || "—"}</span></div>
+                                            <div>Model: <span className="text-gray-800">{p.asset_details?.model_name || "—"}</span></div>
+                                            <div>Barcode: <span className="text-gray-800 font-mono">{p.barcode}</span></div>
+                                            <div>Status: <span className="text-gray-800">{p.asset_details?.inventory_status || "Active"}</span></div>
+                                          </div>
+                                          {p.photo_url && (
+                                            <div className="pt-2">
+                                              <span className="text-gray-400 text-[8px] uppercase block mb-1">Attachment Photo</span>
+                                              <div className="relative rounded overflow-hidden border border-amber-100 bg-white">
+                                                <img
+                                                  src={`${import.meta.env.VITE_API_URL || "https://expense-backend-zio8.onrender.com"}${p.photo_url}`}
+                                                  alt="PMS verification"
+                                                  className="w-full h-auto object-cover max-h-48 cursor-pointer"
+                                                  onClick={() => setLightboxImage(`${import.meta.env.VITE_API_URL || "https://expense-backend-zio8.onrender.com"}${p.photo_url}`)}
+                                                />
+                                                <button
+                                                  type="button"
+                                                  onClick={() => setLightboxImage(`${import.meta.env.VITE_API_URL || "https://expense-backend-zio8.onrender.com"}${p.photo_url}`)}
+                                                  className="absolute bottom-1 right-1 bg-black/60 text-white font-bold text-[8px] px-2 py-0.5 rounded cursor-pointer border-0"
+                                                >
+                                                  Full View
+                                                </button>
+                                              </div>
+                                            </div>
+                                          )}
+                                        </div>
+                                      ))}
+                                    </div>
+                                  )}
+
+                                  {/* Asset Tagging list */}
+                                  {selectedActs.includes("Asset Tagging") && assetsList.length > 0 && (
+                                    <div className="space-y-2">
+                                      <div className="text-[9px] font-bold text-emerald-700 uppercase text-left">Asset Tagging Records</div>
+                                      {assetsList.map((a: any, aIdx: number) => {
+                                        const selectedEq = assetValueMaster.find(eq => eq.equipment_name === a.equipment_name);
+                                        const costPerUnit = selectedEq ? (selectedEq.rmsc_tender_cost || 0) : 0;
+                                        const qty = parseInt(a.quantity || "0") || 0;
+                                        const totalCost = qty * costPerUnit;
+                                        
+                                        const isEngineer = (user.designation || "").toLowerCase().trim() === "engineer" || 
+                                                           (user.role || "").toLowerCase().trim() === "engineer";
+                                        const isSubmitter = (selectedClaim.user_id === user.id) || (selectedClaim.submitter_code === user.user_id);
+                                        const hideCost = isEngineer || isSubmitter;
+                                        return (
+                                          <div key={aIdx} className="bg-emerald-50/30 border border-emerald-100 rounded-lg p-2.5 space-y-1.5 text-[10px] text-left">
+                                            <div className="flex justify-between items-center">
+                                              <span className="font-extrabold text-gray-800">{a.equipment_name}</span>
+                                              <span className="px-2 py-0.5 rounded bg-white border border-emerald-250 text-gray-700 font-bold font-mono">Qty: {qty}</span>
+                                            </div>
+                                            {!hideCost && (
+                                              <div className="flex justify-between text-[9px] text-gray-505 font-bold border-t border-emerald-100/50 pt-1">
+                                                <span>Tender Rate: ₹{costPerUnit.toLocaleString()}</span>
+                                                <span className="text-emerald-700 font-extrabold">Total Cost: ₹{totalCost.toLocaleString()}</span>
+                                              </div>
+                                            )}
+                                          </div>
+                                        );
+                                      })}
+                                    </div>
+                                  )}
+
+                                  {/* Quantities for Mobilise, Calibration or Other */}
+                                  {(selectedActs.includes("Mobilise Asset Update") || selectedActs.includes("Calibration") || (selectedActs.includes("Other") && activityOtherDesc)) && (
+                                    <div className="bg-gray-50/50 p-2.5 rounded-lg border border-gray-150 text-[10px] font-bold space-y-1 text-left">
+                                      {selectedActs.includes("Mobilise Asset Update") && (
+                                        <div className="flex justify-between">
+                                          <span className="text-gray-550">Mobilise Qty:</span>
+                                          <span className="text-indigo-700 font-extrabold">{mobiliseCount} units</span>
+                                        </div>
+                                      )}
+                                      {selectedActs.includes("Calibration") && (
+                                        <div className="flex justify-between">
+                                          <span className="text-gray-550">Calibration Qty:</span>
+                                          <span className="text-purple-700 font-extrabold">{calibrationCount} units</span>
+                                        </div>
+                                      )}
+                                      {selectedActs.includes("Other") && activityOtherDesc && (
+                                        <div className="border-t border-gray-100 pt-1.5 mt-1 font-normal text-left">
+                                          <span className="text-gray-455 text-[8px] uppercase block font-bold">Other Activity Description</span>
+                                          <span className="italic text-gray-700 block">{activityOtherDesc}</span>
+                                        </div>
+                                      )}
+                                    </div>
+                                  )}
+                                </div>
+                              )}
+                            </div>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  )}
                     <div className="border border-gray-200 rounded overflow-hidden">
                       <div className="px-3 py-2 bg-gray-50 border-b border-gray-200 flex items-center justify-between">
                         <h4 className="text-[10px] font-bold uppercase text-gray-600 tracking-wider flex items-center gap-1.5">
