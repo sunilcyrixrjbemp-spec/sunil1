@@ -24,7 +24,10 @@ import {
   UploadCloud,
   ShieldAlert,
   Package,
-  Plus
+  Plus,
+  AlertTriangle,
+  Check,
+  Info
 } from "lucide-react";
 
 interface MenuItem {

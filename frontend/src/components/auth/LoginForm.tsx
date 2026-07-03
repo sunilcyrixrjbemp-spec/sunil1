@@ -158,7 +158,7 @@ export default function LoginForm({ onForgotPassword, onUnlockAccount }: LoginFo
 
     try {
       // Force: true is always passed so other sessions are terminated automatically
-      const response = await authService.login({ user_id: userId, password, force: true });
+      await authService.login({ user_id: userId, password, force: true });
       
       // If running as native app, check if biometric login is available but not enabled yet
       if (isNativeApp()) {
@@ -202,7 +202,7 @@ export default function LoginForm({ onForgotPassword, onUnlockAccount }: LoginFo
     setLoading(true);
     setStatusMessage(null);
     try {
-      const response = await authService.login({ user_id: userId, password, force: true });
+      await authService.login({ user_id: userId, password, force: true });
       
       // Check biometric for force login as well
       if (isNativeApp()) {
