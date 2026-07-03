@@ -5066,7 +5066,6 @@ export default function ExpensePage() {
         </div>
       )}
 
-      </div>
     </>
   );
 }
