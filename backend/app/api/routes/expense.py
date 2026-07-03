@@ -2130,8 +2130,24 @@ async def get_expense_details(
             
         limit_year = int(pl.for_month.split("-")[0]) if "-" in pl.for_month else datetime.now().year
         monthly_stats = None
+        rate_bike = 4.5
+        rate_car = 9.0
         if submitter:
             monthly_stats = get_user_monthly_stats(db, submitter.id, pl.for_month, limit_year)
+            from app.models.allowance_master import AllowanceMaster
+            grade_to_lookup = "O1" if "specialist" in (submitter.designation or "").lower() else (submitter.grade or "O1")
+            allowance = db.query(AllowanceMaster).filter(AllowanceMaster.grade == grade_to_lookup).first()
+            default_bike = db.query(AllowanceMaster).filter(AllowanceMaster.vehicle_type == "Bike").first()
+            default_car = db.query(AllowanceMaster).filter(AllowanceMaster.vehicle_type == "Car").first()
+            fallback_bike_rate = default_bike.rate_per_km if default_bike else 4.5
+            fallback_car_rate = default_car.rate_per_km if default_car else 9.0
+            
+            if allowance:
+                rate_bike = allowance.rate_per_km if allowance.vehicle_type == "Bike" else fallback_bike_rate
+                rate_car = allowance.rate_per_km if allowance.vehicle_type == "Car" else fallback_car_rate
+            else:
+                rate_bike = fallback_bike_rate
+                rate_car = fallback_car_rate
 
         # Mock details response
         return {
@@ -2155,6 +2171,8 @@ async def get_expense_details(
             "attachments": [],
             "attachments_detailed": [],
             "user_monthly_stats": monthly_stats,
+            "rate_bike": rate_bike,
+            "rate_car": rate_car,
             "itineraries": [
                 {
                     "leg": 1,
@@ -2250,6 +2268,24 @@ async def get_expense_details(
         raise HTTPException(status_code=403, detail="Access denied to view this expense claim.")
 
     submitter = db.query(User).filter(User.id == expense.user_id).first()
+    
+    rate_bike = 4.5
+    rate_car = 9.0
+    if submitter:
+        from app.models.allowance_master import AllowanceMaster
+        grade_to_lookup = "O1" if "specialist" in (submitter.designation or "").lower() else (submitter.grade or "O1")
+        allowance = db.query(AllowanceMaster).filter(AllowanceMaster.grade == grade_to_lookup).first()
+        default_bike = db.query(AllowanceMaster).filter(AllowanceMaster.vehicle_type == "Bike").first()
+        default_car = db.query(AllowanceMaster).filter(AllowanceMaster.vehicle_type == "Car").first()
+        fallback_bike_rate = default_bike.rate_per_km if default_bike else 4.5
+        fallback_car_rate = default_car.rate_per_km if default_car else 9.0
+        
+        if allowance:
+            rate_bike = allowance.rate_per_km if allowance.vehicle_type == "Bike" else fallback_bike_rate
+            rate_car = allowance.rate_per_km if allowance.vehicle_type == "Car" else fallback_car_rate
+        else:
+            rate_bike = fallback_bike_rate
+            rate_car = fallback_car_rate
     
     # Load itineraries
     itineraries = db.query(ExpenseItinerary).filter(
@@ -2352,7 +2388,9 @@ async def get_expense_details(
         "updated_at": expense.updated_at,
         "approvals": approvals_list,
         "edit_history": edit_history_list,
-        "user_monthly_stats": monthly_stats
+        "user_monthly_stats": monthly_stats,
+        "rate_bike": rate_bike,
+        "rate_car": rate_car
     }
 
 @router.delete("/{expense_id}")

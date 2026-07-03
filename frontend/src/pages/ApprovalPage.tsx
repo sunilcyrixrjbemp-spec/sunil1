@@ -245,7 +245,10 @@ export default function ApprovalPage() {
       const leg = updated[index];
       if (field === "km") {
         const originalLeg = expenseDetails?.itineraries?.[index] || {};
-        const rate = (originalLeg.km && originalLeg.km > 0) ? ((originalLeg.amount || 0) / originalLeg.km) : 4.5;
+        const dbBikeRate = expenseDetails?.rate_bike || 4.5;
+        const dbCarRate = expenseDetails?.rate_car || 9.0;
+        const fallbackRate = leg.mode === "Car" ? dbCarRate : dbBikeRate;
+        const rate = (originalLeg.km && originalLeg.km > 0) ? ((originalLeg.amount || 0) / originalLeg.km) : fallbackRate;
         updated[index] = {
           ...leg,
           km: numericValue,
