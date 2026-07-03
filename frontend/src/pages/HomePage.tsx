@@ -718,14 +718,14 @@ export default function HomePage() {
           <div className="bg-white border border-gray-200 rounded shadow-sm overflow-hidden flex flex-col">
             
             {/* Tab Header bar */}
-            <div className="border-b border-gray-200 bg-gray-50 flex flex-wrap items-center justify-between px-4">
-              <div className="flex">
+            <div className="border-b border-gray-200 bg-slate-100 flex flex-wrap items-center justify-between px-4 gap-2">
+              <div className="flex gap-1.5 pt-1.5">
                 <button
                   onClick={() => handleTabChange("my-claims")}
-                  className={`py-3.5 px-4 font-bold text-xs uppercase tracking-wider border-b-2 transition-all flex items-center gap-1.5 cursor-pointer ${
+                  className={`py-2 px-4 font-black text-xs uppercase tracking-wider border-b-3 transition-all flex items-center gap-1.5 cursor-pointer whitespace-nowrap ${
                     activeTab === "my-claims"
-                      ? "border-blue-600 text-blue-700 bg-blue-50/80"
-                      : "border-transparent text-gray-500 hover:text-gray-800"
+                      ? "border-indigo-600 text-indigo-750 bg-indigo-50/90"
+                      : "border-transparent text-gray-500 hover:text-gray-800 hover:bg-slate-200/50"
                   }`}
                 >
                   <Layers className="w-3.5 h-3.5" />
@@ -735,10 +735,10 @@ export default function HomePage() {
                 {isReviewerRole && (
                   <button
                     onClick={() => handleTabChange("team-claims")}
-                    className={`py-3.5 px-4 font-bold text-xs uppercase tracking-wider border-b-2 transition-all flex items-center gap-1.5 cursor-pointer ${
+                    className={`py-2 px-4 font-black text-xs uppercase tracking-wider border-b-3 transition-all flex items-center gap-1.5 cursor-pointer whitespace-nowrap ${
                       activeTab === "team-claims"
-                        ? "border-green-600 text-green-700 bg-green-50/80"
-                        : "border-transparent text-gray-500 hover:text-gray-800"
+                        ? "border-emerald-600 text-emerald-750 bg-emerald-50/90"
+                        : "border-transparent text-gray-500 hover:text-gray-800 hover:bg-slate-200/50"
                     }`}
                   >
                     <Users className="w-3.5 h-3.5" />
@@ -753,23 +753,21 @@ export default function HomePage() {
                   <button
                     key={status}
                     onClick={() => setHomeStatusFilter(status)}
-                    className={`px-2.5 py-1 rounded-full text-[9px] font-bold uppercase tracking-wider transition-all cursor-pointer border ${
+                    className={`px-3 py-1 text-[9px] font-black uppercase tracking-wider transition-all cursor-pointer border whitespace-nowrap ${
                       homeStatusFilter === status
-                        ? status === "all" ? "bg-blue-600 text-white border-blue-600"
-                          : status === "approved" ? "bg-green-600 text-white border-green-600"
-                          : status === "pending" ? "bg-amber-500 text-white border-amber-500"
-                          : "bg-red-600 text-white border-red-600"
-                        : "bg-white text-gray-500 border-gray-300 hover:border-gray-400"
+                        ? status === "all" ? "bg-slate-700 text-white border-slate-700"
+                          : status === "approved" ? "bg-emerald-600 text-white border-emerald-600"
+                          : status === "pending" ? "bg-amber-600 text-white border-amber-600"
+                          : "bg-rose-600 text-white border-rose-600"
+                        : "bg-white text-gray-600 border-gray-300 hover:border-gray-400 hover:bg-gray-50"
                     }`}
                   >
                     {status === "all" ? "All" : status}
                   </button>
                 ))}
               </div>
-            </div>
-
             {/* Tab Content Tables */}
-            <div className="overflow-x-auto p-4 flex-1">
+            <div className="overflow-x-auto p-4 flex-1 bg-slate-50/30">
                {/* MY CLAIMS TAB */}
               {activeTab === "my-claims" && (
                 loadingMyExpenses ? (
@@ -783,32 +781,32 @@ export default function HomePage() {
                   <>
                     <table className="hidden md:table table-lte">
                       <thead>
-                        <tr className="border-b border-gray-200 text-[9px] uppercase font-bold tracking-wider text-gray-400 bg-gray-50/50">
-                          <th className="py-2.5 px-3">Claim ID</th>
-                          <th className="py-2.5 px-3">Date</th>
-                          <th className="py-2.5 px-3">Purpose</th>
-                          <th className="py-2.5 px-3">Travel Mode</th>
-                          <th className="py-2.5 px-3">Distance</th>
-                          <th className="py-2.5 px-3">Auto Fare</th>
-                          <th className="py-2.5 px-3">Amount</th>
-                          <th className="py-2.5 px-3 text-right">Status</th>
+                        <tr className="bg-slate-800 text-slate-100 text-[9px] uppercase font-black tracking-wider border-b border-slate-700">
+                          <th className="py-2.5 px-3 whitespace-nowrap text-left">Claim ID</th>
+                          <th className="py-2.5 px-3 whitespace-nowrap text-left">Date</th>
+                          <th className="py-2.5 px-3 whitespace-nowrap text-left">Purpose</th>
+                          <th className="py-2.5 px-3 whitespace-nowrap text-left">Travel Mode</th>
+                          <th className="py-2.5 px-3 whitespace-nowrap text-left">Distance</th>
+                          <th className="py-2.5 px-3 whitespace-nowrap text-left">Auto Fare</th>
+                          <th className="py-2.5 px-3 whitespace-nowrap text-left">Amount</th>
+                          <th className="py-2.5 px-3 whitespace-nowrap text-right">Status</th>
                         </tr>
                       </thead>
-                      <tbody className="divide-y divide-gray-100">
+                      <tbody className="divide-y divide-gray-100 bg-white">
                         {filteredPersonalExpenses.map((exp) => (
                           <tr 
                             key={exp.id} 
                             onClick={() => handleOpenClaimDetails(exp.id)}
                             className="hover:bg-blue-50/20 transition-colors cursor-pointer"
                           >
-                            <td className="py-3 px-3 font-semibold font-mono text-blue-600 uppercase">{exp.expense_code}</td>
-                            <td className="py-3 px-3 text-gray-550">{exp.itinerary}</td>
-                            <td className="py-3 px-3 font-semibold text-gray-800 truncate max-w-[150px]" title={exp.description}>{exp.description}</td>
-                            <td className="py-3 px-3 text-gray-500">{exp.travel_mode}</td>
-                            <td className="py-3 px-3 font-mono font-semibold text-gray-650">{exp.total_km ? `${exp.total_km.toFixed(1)} KM` : "—"}</td>
-                            <td className="py-3 px-3 font-mono font-semibold text-gray-650">{exp.total_auto ? `₹${exp.total_auto.toLocaleString()}` : "—"}</td>
-                            <td className="py-3 px-3 font-bold text-gray-900">₹{exp.amount.toLocaleString()}</td>
-                            <td className="py-3 px-3 text-right">
+                            <td className="py-3 px-3 font-semibold font-mono text-blue-600 uppercase whitespace-nowrap">{exp.expense_code}</td>
+                            <td className="py-3 px-3 text-gray-550 whitespace-nowrap">{exp.itinerary}</td>
+                            <td className="py-3 px-3 font-semibold text-gray-800 truncate max-w-[150px] whitespace-nowrap" title={exp.description}>{exp.description}</td>
+                            <td className="py-3 px-3 text-gray-500 whitespace-nowrap">{exp.travel_mode}</td>
+                            <td className="py-3 px-3 font-mono font-semibold text-gray-650 whitespace-nowrap">{exp.total_km ? `${exp.total_km.toFixed(1)} KM` : "—"}</td>
+                            <td className="py-3 px-3 font-mono font-semibold text-gray-650 whitespace-nowrap">{exp.total_auto ? `₹${exp.total_auto.toLocaleString()}` : "—"}</td>
+                            <td className="py-3 px-3 font-bold text-gray-900 whitespace-nowrap">₹{exp.amount.toLocaleString()}</td>
+                            <td className="py-3 px-3 text-right whitespace-nowrap">
                               <span className={`inline-flex items-center px-2 py-0.5 rounded border text-[9px] font-bold uppercase tracking-wider ${getStatusBadgeClass(exp.status)}`}>
                                 {exp.status}
                               </span>
@@ -881,37 +879,37 @@ export default function HomePage() {
                   <>
                     <table className="hidden md:table table-lte">
                       <thead>
-                        <tr className="border-b border-gray-200 text-[9px] uppercase font-bold tracking-wider text-gray-400 bg-gray-50/50">
-                          <th className="py-2.5 px-3">Employee</th>
-                          <th className="py-2.5 px-3">Claim ID</th>
-                          <th className="py-2.5 px-3">Date</th>
-                          <th className="py-2.5 px-3">Purpose</th>
-                          <th className="py-2.5 px-3">Mode</th>
-                          <th className="py-2.5 px-3">Distance</th>
-                          <th className="py-2.5 px-3">Auto Fare</th>
-                          <th className="py-2.5 px-3">Amount</th>
-                          <th className="py-2.5 px-3 text-right">Status</th>
+                        <tr className="bg-slate-800 text-slate-100 text-[9px] uppercase font-black tracking-wider border-b border-slate-700">
+                          <th className="py-2.5 px-3 whitespace-nowrap text-left">Employee</th>
+                          <th className="py-2.5 px-3 whitespace-nowrap text-left">Claim ID</th>
+                          <th className="py-2.5 px-3 whitespace-nowrap text-left">Date</th>
+                          <th className="py-2.5 px-3 whitespace-nowrap text-left">Purpose</th>
+                          <th className="py-2.5 px-3 whitespace-nowrap text-left">Mode</th>
+                          <th className="py-2.5 px-3 whitespace-nowrap text-left">Distance</th>
+                          <th className="py-2.5 px-3 whitespace-nowrap text-left">Auto Fare</th>
+                          <th className="py-2.5 px-3 whitespace-nowrap text-left">Amount</th>
+                          <th className="py-2.5 px-3 whitespace-nowrap text-right">Status</th>
                         </tr>
                       </thead>
-                      <tbody className="divide-y divide-gray-100">
+                      <tbody className="divide-y divide-gray-100 bg-white">
                         {filteredTeamExpenses.map((exp) => (
                           <tr 
                             key={exp.id} 
                             onClick={() => handleOpenClaimDetails(exp.id)}
                             className="hover:bg-blue-50/20 transition-colors cursor-pointer"
                           >
-                            <td className="py-3 px-3">
+                            <td className="py-3 px-3 whitespace-nowrap">
                               <p className="font-bold text-gray-800 leading-none">{exp.submitter_name}</p>
                               <span className="text-[8px] font-mono uppercase text-blue-600 block mt-0.5">{exp.submitter_code}</span>
                             </td>
-                            <td className="py-3 px-3 font-semibold font-mono text-blue-600 uppercase">{exp.expense_code}</td>
-                            <td className="py-3 px-3 text-gray-550">{exp.date}</td>
-                            <td className="py-3 px-3 font-semibold text-gray-800 truncate max-w-[120px]" title={exp.purpose}>{exp.purpose}</td>
-                            <td className="py-3 px-3 text-gray-500">{exp.category}</td>
-                            <td className="py-3 px-3 font-mono font-semibold text-gray-655">{exp.total_km ? `${exp.total_km.toFixed(1)} KM` : "—"}</td>
-                            <td className="py-3 px-3 font-mono font-semibold text-gray-655">{exp.total_auto ? `₹${exp.total_auto.toLocaleString()}` : "—"}</td>
-                            <td className="py-3 px-3 font-bold text-gray-900">₹{exp.amount.toLocaleString()}</td>
-                            <td className="py-3 px-3 text-right">
+                            <td className="py-3 px-3 font-semibold font-mono text-blue-600 uppercase whitespace-nowrap">{exp.expense_code}</td>
+                            <td className="py-3 px-3 text-gray-550 whitespace-nowrap">{exp.date}</td>
+                            <td className="py-3 px-3 font-semibold text-gray-800 truncate max-w-[120px] whitespace-nowrap" title={exp.purpose}>{exp.purpose}</td>
+                            <td className="py-3 px-3 text-gray-500 whitespace-nowrap">{exp.category}</td>
+                            <td className="py-3 px-3 font-mono font-semibold text-gray-655 whitespace-nowrap">{exp.total_km ? `${exp.total_km.toFixed(1)} KM` : "—"}</td>
+                            <td className="py-3 px-3 font-mono font-semibold text-gray-655 whitespace-nowrap">{exp.total_auto ? `₹${exp.total_auto.toLocaleString()}` : "—"}</td>
+                            <td className="py-3 px-3 font-bold text-gray-900 whitespace-nowrap">₹{exp.amount.toLocaleString()}</td>
+                            <td className="py-3 px-3 text-right whitespace-nowrap">
                               <span className={`inline-flex items-center px-2 py-0.5 rounded border text-[9px] font-bold uppercase tracking-wider ${getStatusBadgeClass(exp.status)}`}>
                                 {exp.status}
                               </span>

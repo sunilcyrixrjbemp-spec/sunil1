@@ -3792,34 +3792,34 @@ export default function ExpensePage() {
                   <>
                     <table className="hidden md:table table-lte">
                       <thead>
-                        <tr className="border-b border-gray-200 text-[9px] uppercase font-bold tracking-wider text-gray-400 bg-gray-50/50">
-                          <th className="py-2.5 px-3">Claim ID</th>
-                          <th className="py-2.5 px-3">Date</th>
-                          <th className="py-2.5 px-3">Purpose</th>
-                          <th className="py-2.5 px-3">Travel Mode</th>
-                          <th className="py-2.5 px-3">Amount</th>
-                          <th className="py-2.5 px-3">Status</th>
-                          <th className="py-2.5 px-3 text-right">Actions</th>
+                        <tr className="bg-slate-800 text-slate-100 text-[9px] uppercase font-black tracking-wider border-b border-slate-700">
+                          <th className="py-2.5 px-3 whitespace-nowrap text-left">Claim ID</th>
+                          <th className="py-2.5 px-3 whitespace-nowrap text-left">Date</th>
+                          <th className="py-2.5 px-3 whitespace-nowrap text-left">Purpose</th>
+                          <th className="py-2.5 px-3 whitespace-nowrap text-left">Travel Mode</th>
+                          <th className="py-2.5 px-3 whitespace-nowrap text-left">Amount</th>
+                          <th className="py-2.5 px-3 whitespace-nowrap text-left">Status</th>
+                          <th className="py-2.5 px-3 whitespace-nowrap text-right">Actions</th>
                         </tr>
                       </thead>
-                      <tbody className="divide-y divide-gray-100">
+                      <tbody className="divide-y divide-gray-100 bg-white">
                         {slicedItems.map((exp: any) => (
                           <tr
                             key={exp.id}
                             onClick={() => handleViewDetails(exp.id)}
                             className="hover:bg-slate-50 cursor-pointer transition-colors"
                           >
-                            <td className="py-3 px-3 font-semibold font-mono text-blue-600 uppercase">{exp.expense_code}</td>
-                            <td className="py-3 px-3 text-slate-500">{exp.itinerary}</td>
-                            <td className="py-3 px-3 font-semibold text-slate-800 truncate max-w-[200px]" title={exp.description}>{exp.description}</td>
-                            <td className="py-3 px-3 text-slate-500">{exp.travel_mode}</td>
-                            <td className="py-3 px-3 font-bold text-slate-900">₹{exp.amount.toLocaleString()}</td>
-                            <td className="py-3 px-3">
+                            <td className="py-3 px-3 font-semibold font-mono text-blue-600 uppercase whitespace-nowrap">{exp.expense_code}</td>
+                            <td className="py-3 px-3 text-slate-500 whitespace-nowrap">{exp.itinerary}</td>
+                            <td className="py-3 px-3 font-semibold text-slate-800 truncate max-w-[200px] whitespace-nowrap" title={exp.description}>{exp.description}</td>
+                            <td className="py-3 px-3 text-slate-500 whitespace-nowrap">{exp.travel_mode}</td>
+                            <td className="py-3 px-3 font-bold text-slate-900 whitespace-nowrap">₹{exp.amount.toLocaleString()}</td>
+                            <td className="py-3 px-3 whitespace-nowrap">
                               <span className={`inline-flex items-center px-2 py-0.5 rounded border text-[9px] font-bold uppercase tracking-wider ${getStatusBadgeClass(exp.status)}`}>
                                 {getStatusLabel(exp.status)}
                               </span>
                             </td>
-                            <td className="py-3 px-3 text-right" onClick={(e) => e.stopPropagation()}>
+                            <td className="py-3 px-3 text-right whitespace-nowrap" onClick={(e) => e.stopPropagation()}>
                               <div className="flex items-center justify-end gap-1">
                                 {(exp.status === "draft" || exp.status === "submitted") && (
                                   <>
@@ -3910,44 +3910,44 @@ export default function ExpensePage() {
                   <>
                     <table className="hidden md:table table-lte">
                       <thead>
-                        <tr className="border-b border-gray-200 text-[9px] uppercase font-bold tracking-wider text-gray-400 bg-gray-50/50">
-                          <th className="py-2.5 px-3">Parent ID</th>
-                          <th className="py-2.5 px-3">Travel Date</th>
-                          <th className="py-2.5 px-3 text-center">Leg</th>
-                          <th className="py-2.5 px-3">Route</th>
-                          <th className="py-2.5 px-3">Mode</th>
-                          <th className="py-2.5 px-3 text-right">KM</th>
-                          <th className="py-2.5 px-3 text-right">Fare</th>
-                          <th className="py-2.5 px-3 text-right">DA</th>
-                          <th className="py-2.5 px-3 text-right">Hotel</th>
-                          <th className="py-2.5 px-3 text-right">Local Purchase</th>
-                          <th className="py-2.5 px-3 text-right">Other</th>
-                          <th className="py-2.5 px-3">Purpose</th>
+                        <tr className="bg-slate-800 text-slate-100 text-[9px] uppercase font-black tracking-wider border-b border-slate-700">
+                          <th className="py-2.5 px-3 whitespace-nowrap text-left">Parent ID</th>
+                          <th className="py-2.5 px-3 whitespace-nowrap text-left">Travel Date</th>
+                          <th className="py-2.5 px-3 whitespace-nowrap text-center">Leg</th>
+                          <th className="py-2.5 px-3 whitespace-nowrap text-left">Route</th>
+                          <th className="py-2.5 px-3 whitespace-nowrap text-left">Mode</th>
+                          <th className="py-2.5 px-3 whitespace-nowrap text-right">KM</th>
+                          <th className="py-2.5 px-3 whitespace-nowrap text-right">Fare</th>
+                          <th className="py-2.5 px-3 whitespace-nowrap text-right">DA</th>
+                          <th className="py-2.5 px-3 whitespace-nowrap text-right">Hotel</th>
+                          <th className="py-2.5 px-3 whitespace-nowrap text-right">Local Purchase</th>
+                          <th className="py-2.5 px-3 whitespace-nowrap text-right">Other</th>
+                          <th className="py-2.5 px-3 whitespace-nowrap text-left">Purpose</th>
                         </tr>
                       </thead>
-                      <tbody className="divide-y divide-gray-100">
+                      <tbody className="divide-y divide-gray-100 bg-white">
                         {slicedItems.map((leg: any, idx: number) => {
                           const hasSub = leg.sub_mode && (parseFloat(leg.sub_amount) || 0) > 0;
                           return (
                             <tr key={idx} className="hover:bg-slate-50 transition-colors">
-                              <td className="py-3 px-3 font-semibold font-mono text-blue-600 uppercase">{leg.parentCode}</td>
-                              <td className="py-3 px-3 text-slate-500">{leg.parentDate}</td>
-                              <td className="py-3 px-3 text-center font-bold text-gray-400">{leg.leg}</td>
-                              <td className="py-3 px-3">
+                              <td className="py-3 px-3 font-semibold font-mono text-blue-600 uppercase whitespace-nowrap">{leg.parentCode}</td>
+                              <td className="py-3 px-3 text-slate-500 whitespace-nowrap">{leg.parentDate}</td>
+                              <td className="py-3 px-3 text-center font-bold text-gray-400 whitespace-nowrap">{leg.leg}</td>
+                              <td className="py-3 px-3 whitespace-nowrap">
                                 <span className="font-bold text-gray-800">{leg.from_district === leg.to_district ? leg.to_district : `${leg.from_district} → ${leg.to_district}`}</span>
                                 <span className="text-[9px] text-gray-400 block">{leg.from || "Start"} → {leg.to || "End"}</span>
                               </td>
-                              <td className="py-3 px-3">
-                                <span className="text-[9px] font-bold uppercase bg-blue-50 text-blue-700 px-1.5 py-0.5 rounded border border-blue-100">{leg.mode || "Other"}</span>
-                                {hasSub && <span className="text-[9px] font-bold uppercase bg-purple-50 text-purple-700 px-1.5 py-0.5 rounded border border-purple-100 ml-1">+{leg.sub_mode}</span>}
+                              <td className="py-3 px-3 whitespace-nowrap">
+                                <span className="text-[9px] font-bold uppercase bg-blue-50 text-blue-700 px-1.5 py-0.5 border border-blue-100">{leg.mode || "Other"}</span>
+                                {hasSub && <span className="text-[9px] font-bold uppercase bg-purple-50 text-purple-700 px-1.5 py-0.5 border border-purple-100 ml-1">+{leg.sub_mode}</span>}
                               </td>
-                              <td className="py-3 px-3 text-right font-mono font-semibold text-gray-600">{leg.km || 0} KM</td>
-                              <td className="py-3 px-3 text-right font-mono font-semibold text-gray-900">₹{(parseFloat(leg.amount) || 0).toLocaleString()}</td>
-                              <td className="py-3 px-3 text-right font-mono font-semibold text-gray-900">₹{(parseFloat(leg.da) || 0).toLocaleString()}</td>
-                              <td className="py-3 px-3 text-right font-mono font-semibold text-gray-900">₹{(parseFloat(leg.hotel) || 0).toLocaleString()}</td>
-                              <td className="py-3 px-3 text-right font-mono font-semibold text-gray-900">₹{(parseFloat(leg.local_purchase) || 0).toLocaleString()}</td>
-                              <td className="py-3 px-3 text-right font-mono font-semibold text-gray-900">₹{(parseFloat(leg.other_amount) || 0).toLocaleString()}</td>
-                              <td className="py-3 px-3 text-slate-600 max-w-[150px] truncate" title={leg.visit_purpose}>{leg.visit_purpose || "Field visit"}</td>
+                              <td className="py-3 px-3 text-right font-mono font-semibold text-gray-650 whitespace-nowrap">{leg.km || 0} KM</td>
+                              <td className="py-3 px-3 text-right font-mono font-semibold text-gray-900 whitespace-nowrap">₹{(parseFloat(leg.amount) || 0).toLocaleString()}</td>
+                              <td className="py-3 px-3 text-right font-mono font-semibold text-gray-900 whitespace-nowrap">₹{(parseFloat(leg.da) || 0).toLocaleString()}</td>
+                              <td className="py-3 px-3 text-right font-mono font-semibold text-gray-900 whitespace-nowrap">₹{(parseFloat(leg.hotel) || 0).toLocaleString()}</td>
+                              <td className="py-3 px-3 text-right font-mono font-semibold text-gray-900 whitespace-nowrap">₹{(parseFloat(leg.local_purchase) || 0).toLocaleString()}</td>
+                              <td className="py-3 px-3 text-right font-mono font-semibold text-gray-900 whitespace-nowrap">₹{(parseFloat(leg.other_amount) || 0).toLocaleString()}</td>
+                              <td className="py-3 px-3 text-slate-600 max-w-[150px] truncate whitespace-nowrap" title={leg.visit_purpose}>{leg.visit_purpose || "Field visit"}</td>
                             </tr>
                           );
                         })}

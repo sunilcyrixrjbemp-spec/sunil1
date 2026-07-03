@@ -5,6 +5,9 @@
 @tailwind utilities;
 
 @layer base {
+  * {
+    border-radius: 0px !important;
+  }
   body {
     @apply bg-[#f4f6f9] text-[#212529] antialiased font-sans min-h-screen overflow-x-hidden;
     font-family: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif !important;

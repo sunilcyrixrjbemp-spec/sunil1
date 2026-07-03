@@ -507,17 +507,17 @@ export default function DashboardLayout() {
       <div className="flex-1 flex flex-col min-h-screen min-w-0">
         
         {/* TOP NAVBAR - ADMINLTE WHITE NAVBAR */}
-        <header className="h-14 bg-white border-b border-gray-200 flex items-center justify-between px-4 sticky top-0 z-40 shrink-0 shadow-sm">
+        <header className="h-14 bg-slate-900 border-b border-slate-800 flex items-center justify-between px-4 sticky top-0 z-40 shrink-0 shadow-md">
           
           {/* Left Actions */}
           <div className="flex items-center gap-3">
             <button
               onClick={() => setIsSidebarCollapsed(!isSidebarCollapsed)}
-              className="hidden lg:flex h-9 w-9 items-center justify-center rounded text-gray-500 hover:text-gray-800 hover:bg-gray-100 transition-colors"
+              className="hidden lg:flex h-9 w-9 items-center justify-center text-slate-300 hover:text-white hover:bg-slate-800 transition-colors"
             >
               <Menu className="w-5 h-5" />
             </button>
-            <h1 className="text-sm font-black text-gray-950 uppercase tracking-wider md:text-base">
+            <h1 className="text-sm font-black text-white uppercase tracking-wider md:text-base">
               {currentActiveItem ? currentActiveItem.name : "Dashboard"}
             </h1>
           </div>
@@ -529,7 +529,7 @@ export default function DashboardLayout() {
             <div className="relative">
               <button
                 onClick={() => setIsNotifOpen(!isNotifOpen)}
-                className="h-9 w-9 flex items-center justify-center rounded text-gray-500 hover:text-gray-800 hover:bg-gray-100 transition-colors relative"
+                className="h-9 w-9 flex items-center justify-center text-slate-300 hover:text-white hover:bg-slate-800 transition-colors relative"
                 title="Notifications Center"
               >
                 <Bell className="w-5 h-5" />
@@ -653,8 +653,8 @@ export default function DashboardLayout() {
             onMouseEnter={() => preloadRoute("/submit-expense")}
             className="flex flex-col items-center justify-center w-14 h-12 rounded transition-all relative -top-4 z-50 transform active:scale-95"
           >
-            <div className={`h-11 w-11 rounded-full flex items-center justify-center shadow-md border-2 border-white transition-all ${
-              currentActiveItem?.id === "expense" ? "bg-indigo-650 text-white" : "bg-gray-800 text-gray-100"
+            <div className={`h-11 w-11 rounded-full flex items-center justify-center shadow-md border-2 transition-all ${
+              currentActiveItem?.id === "expense" ? "bg-amber-500 text-slate-900 border-slate-900" : "bg-slate-900 text-white border-white"
             }`}>
               <Plus className="w-6 h-6" />
             </div>
@@ -674,27 +674,16 @@ export default function DashboardLayout() {
           <span className="text-[9px] font-bold uppercase tracking-wider mt-1">Profile</span>
         </Link>
 
-        {/* Logout Tab (profile ke pas logout button) */}
+        {/* More Menu Tab (Always shown to give access to other windows & logout) */}
         <button
-          onClick={handleLogout}
-          className="flex flex-col items-center justify-center w-14 h-12 rounded transition-all border-0 bg-transparent cursor-pointer text-gray-500 hover:text-rose-600"
+          onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
+          className={`flex flex-col items-center justify-center w-14 h-12 rounded transition-all border-0 bg-transparent cursor-pointer ${
+            isMobileMenuOpen ? "text-indigo-650" : "text-gray-500 hover:text-gray-800"
+          }`}
         >
-          <LogOut className="w-5 h-5 text-rose-500" />
-          <span className="text-[9px] font-bold uppercase tracking-wider mt-1 text-rose-600">Logout</span>
+          <MenuGridIcon />
+          <span className="text-[9px] font-bold uppercase tracking-wider mt-1">More</span>
         </button>
-
-        {/* More Menu Tab (Only shown if extra menus are allowed) */}
-        {hasExtraMenus && (
-          <button
-            onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
-            className={`flex flex-col items-center justify-center w-14 h-12 rounded transition-all border-0 bg-transparent cursor-pointer ${
-              isMobileMenuOpen ? "text-indigo-650" : "text-gray-500 hover:text-gray-800"
-            }`}
-          >
-            <MenuGridIcon />
-            <span className="text-[9px] font-bold uppercase tracking-wider mt-1">More</span>
-          </button>
-        )}
       </nav>
 
       {/* MOBILE FULL NAVIGATION OVERLAY MODAL */}
@@ -770,17 +759,27 @@ export default function DashboardLayout() {
             </div>
           </div>
 
-          {/* Footer with Home Button */}
-          <div className="p-4 bg-white border-t border-gray-200 shrink-0">
+          {/* Footer with Home and Logout Buttons */}
+          <div className="p-4 bg-white border-t border-gray-200 shrink-0 flex gap-3">
             <button
               type="button"
               onClick={() => {
                 setIsMobileMenuOpen(false);
                 navigate("/home");
               }}
-              className="w-full py-2.5 bg-indigo-605 hover:bg-indigo-700 text-white rounded text-xs font-bold transition-all cursor-pointer border-0 flex items-center justify-center gap-1.5 shadow-sm"
+              className="flex-1 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold transition-all cursor-pointer border-0 flex items-center justify-center gap-1.5 shadow-sm"
             >
-              <Home className="w-4 h-4" /> GO TO HOME
+              <Home className="w-4 h-4" /> HOME
+            </button>
+            <button
+              type="button"
+              onClick={() => {
+                setIsMobileMenuOpen(false);
+                handleLogout();
+              }}
+              className="flex-1 py-2.5 bg-rose-600 hover:bg-rose-700 text-white text-xs font-bold transition-all cursor-pointer border-0 flex items-center justify-center gap-1.5 shadow-sm"
+            >
+              <LogOut className="w-4 h-4" /> LOGOUT
             </button>
           </div>
         </div>
