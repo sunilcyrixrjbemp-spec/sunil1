@@ -1006,8 +1006,9 @@ export default function AssetUploadPage() {
               )}
             </div>
           </div>
-        </>
-      )}
+        </div>
+      </>
+    )}
 
     </div>
   );

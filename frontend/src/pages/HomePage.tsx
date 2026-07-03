@@ -789,93 +789,92 @@ export default function HomePage() {
                     <p className="font-bold">No expense claims found for this month.</p>
                   </div>
                 ) : (
-                  <table className="hidden md:table table-lte">
-                    <thead>
-                      <tr className="border-b border-gray-200 text-[9px] uppercase font-bold tracking-wider text-gray-400 bg-gray-50/50">
-                        <th className="py-2.5 px-3">Claim ID</th>
-                        <th className="py-2.5 px-3">Date</th>
-                        <th className="py-2.5 px-3">Purpose</th>
-                        <th className="py-2.5 px-3">Travel Mode</th>
-                        <th className="py-2.5 px-3">Distance</th>
-                        <th className="py-2.5 px-3">Auto Fare</th>
-                        <th className="py-2.5 px-3">Amount</th>
-                        <th className="py-2.5 px-3 text-right">Status</th>
-                      </tr>
-                    </thead>
-                    <tbody className="divide-y divide-gray-100">
+                  <>
+                    <table className="hidden md:table table-lte">
+                      <thead>
+                        <tr className="border-b border-gray-200 text-[9px] uppercase font-bold tracking-wider text-gray-400 bg-gray-50/50">
+                          <th className="py-2.5 px-3">Claim ID</th>
+                          <th className="py-2.5 px-3">Date</th>
+                          <th className="py-2.5 px-3">Purpose</th>
+                          <th className="py-2.5 px-3">Travel Mode</th>
+                          <th className="py-2.5 px-3">Distance</th>
+                          <th className="py-2.5 px-3">Auto Fare</th>
+                          <th className="py-2.5 px-3">Amount</th>
+                          <th className="py-2.5 px-3 text-right">Status</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-gray-100">
+                        {filteredPersonalExpenses.map((exp) => (
+                          <tr 
+                            key={exp.id} 
+                            onClick={() => handleOpenClaimDetails(exp.id)}
+                            className="hover:bg-blue-50/20 transition-colors cursor-pointer"
+                          >
+                            <td className="py-3 px-3 font-semibold font-mono text-blue-600 uppercase">{exp.expense_code}</td>
+                            <td className="py-3 px-3 text-gray-550">{exp.itinerary}</td>
+                            <td className="py-3 px-3 font-semibold text-gray-800 truncate max-w-[150px]" title={exp.description}>{exp.description}</td>
+                            <td className="py-3 px-3 text-gray-500">{exp.travel_mode}</td>
+                            <td className="py-3 px-3 font-mono font-semibold text-gray-650">{exp.total_km ? `${exp.total_km.toFixed(1)} KM` : "—"}</td>
+                            <td className="py-3 px-3 font-mono font-semibold text-gray-650">{exp.total_auto ? `₹${exp.total_auto.toLocaleString()}` : "—"}</td>
+                            <td className="py-3 px-3 font-bold text-gray-900">₹{exp.amount.toLocaleString()}</td>
+                            <td className="py-3 px-3 text-right">
+                              <span className={`inline-flex items-center px-2 py-0.5 rounded border text-[9px] font-bold uppercase tracking-wider ${getStatusBadgeClass(exp.status)}`}>
+                                {exp.status}
+                              </span>
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+
+                    {/* Mobile Card List View */}
+                    <div className="block md:hidden space-y-3">
                       {filteredPersonalExpenses.map((exp) => (
-                        <tr 
-                          key={exp.id} 
+                        <div
+                          key={exp.id}
                           onClick={() => handleOpenClaimDetails(exp.id)}
-                          className="hover:bg-blue-50/20 transition-colors cursor-pointer"
+                          className="bg-white border border-gray-200 rounded-lg p-3.5 space-y-3.5 active:bg-gray-50 transition-colors shadow-sm cursor-pointer"
                         >
-                          <td className="py-3 px-3 font-semibold font-mono text-blue-600 uppercase">{exp.expense_code}</td>
-                          <td className="py-3 px-3 text-gray-500">{exp.itinerary}</td>
-                          <td className="py-3 px-3 font-semibold text-gray-800 truncate max-w-[150px]" title={exp.description}>{exp.description}</td>
-                          <td className="py-3 px-3 text-gray-500">{exp.travel_mode}</td>
-                          <td className="py-3 px-3 font-mono font-semibold text-gray-650">{exp.total_km ? `${exp.total_km.toFixed(1)} KM` : "—"}</td>
-                          <td className="py-3 px-3 font-mono font-semibold text-gray-650">{exp.total_auto ? `₹${exp.total_auto.toLocaleString()}` : "—"}</td>
-                          <td className="py-3 px-3 font-bold text-gray-900">₹{exp.amount.toLocaleString()}</td>
-                          <td className="py-3 px-3 text-right">
-                            <span className={`inline-flex items-center px-2 py-0.5 rounded border text-[9px] font-bold uppercase tracking-wider ${getStatusBadgeClass(exp.status)}`}>
+                          <div className="flex justify-between items-center">
+                            <span className="font-bold font-mono text-blue-600 text-xs uppercase">{exp.expense_code}</span>
+                            <span className={`inline-flex items-center px-2 py-0.5 rounded border text-[8px] font-bold uppercase tracking-wider ${getStatusBadgeClass(exp.status)}`}>
                               {exp.status}
                             </span>
-                          </td>
-                        </tr>
+                          </div>
+                          
+                          <div className="grid grid-cols-2 gap-2 text-[11px]">
+                            <div>
+                              <span className="text-gray-400 font-bold uppercase text-[9px] block">Date</span>
+                              <span className="text-gray-700 font-semibold">{exp.itinerary || exp.date}</span>
+                            </div>
+                            <div>
+                              <span className="text-gray-400 font-bold uppercase text-[9px] block">Travel Mode</span>
+                              <span className="text-gray-700 font-semibold">{exp.travel_mode || exp.category}</span>
+                            </div>
+                            <div>
+                              <span className="text-gray-400 font-bold uppercase text-[9px] block">Distance / Auto</span>
+                              <span className="text-gray-700 font-semibold">
+                                {exp.total_km ? `${exp.total_km.toFixed(1)} KM` : "—"}
+                                {exp.total_auto ? ` / ₹${exp.total_auto.toLocaleString()}` : ""}
+                              </span>
+                            </div>
+                            <div>
+                              <span className="text-gray-400 font-bold uppercase text-[9px] block">Total Amount</span>
+                              <span className="text-gray-900 font-extrabold text-xs">₹{exp.amount.toLocaleString()}</span>
+                            </div>
+                          </div>
+                          
+                          {exp.description && (
+                            <div className="border-t border-gray-100 pt-2 text-[10px]">
+                              <span className="text-gray-400 font-bold uppercase text-[8px] block">Purpose</span>
+                              <p className="text-gray-600 font-semibold mt-0.5 truncate">{exp.description}</p>
+                            </div>
+                          )}
+                        </div>
                       ))}
-                    </tbody>
-                  </table>
-
-                  {/* Mobile Card List View */}
-                  <div className="block md:hidden space-y-3">
-                    {filteredPersonalExpenses.map((exp) => (
-                      <div
-                        key={exp.id}
-                        onClick={() => handleOpenClaimDetails(exp.id)}
-                        className="bg-white border border-gray-200 rounded-lg p-3.5 space-y-3.5 active:bg-gray-50 transition-colors shadow-sm cursor-pointer"
-                      >
-                        <div className="flex justify-between items-center">
-                          <span className="font-bold font-mono text-blue-600 text-xs uppercase">{exp.expense_code}</span>
-                          <span className={`inline-flex items-center px-2 py-0.5 rounded border text-[8px] font-bold uppercase tracking-wider ${getStatusBadgeClass(exp.status)}`}>
-                            {exp.status}
-                          </span>
-                        </div>
-                        
-                        <div className="grid grid-cols-2 gap-2 text-[11px]">
-                          <div>
-                            <span className="text-gray-400 font-bold uppercase text-[9px] block">Date</span>
-                            <span className="text-gray-700 font-semibold">{exp.itinerary || exp.date}</span>
-                          </div>
-                          <div>
-                            <span className="text-gray-400 font-bold uppercase text-[9px] block">Travel Mode</span>
-                            <span className="text-gray-700 font-semibold">{exp.travel_mode || exp.category}</span>
-                          </div>
-                          <div>
-                            <span className="text-gray-400 font-bold uppercase text-[9px] block">Distance / Auto</span>
-                            <span className="text-gray-700 font-semibold">
-                              {exp.total_km ? `${exp.total_km.toFixed(1)} KM` : "—"}
-                              {exp.total_auto ? ` / ₹${exp.total_auto.toLocaleString()}` : ""}
-                            </span>
-                          </div>
-                          <div>
-                            <span className="text-gray-400 font-bold uppercase text-[9px] block">Total Amount</span>
-                            <span className="text-gray-900 font-extrabold text-xs">₹{exp.amount.toLocaleString()}</span>
-                          </div>
-                        </div>
-                        
-                        {exp.description && (
-                          <div className="border-t border-gray-100 pt-2 text-[10px]">
-                            <span className="text-gray-400 font-bold uppercase text-[8px] block">Purpose</span>
-                            <p className="text-gray-600 font-semibold mt-0.5 truncate">{exp.description}</p>
-                          </div>
-                        )}
-                      </div>
-                    ))}
-                  </div>
-                )
-              )}
-
-              {/* TEAM CLAIMS TAB */}
+                    </div>
+                  </>
+                   {/* TEAM CLAIMS TAB */}
               {activeTab === "team-claims" && (
                 loadingTeamExpenses ? (
                   <Loader message="Loading team claims..." />
@@ -885,97 +884,99 @@ export default function HomePage() {
                     <p className="font-bold">No claims submitted by your team members yet.</p>
                   </div>
                 ) : (
-                  <table className="hidden md:table table-lte">
-                    <thead>
-                      <tr className="border-b border-gray-200 text-[9px] uppercase font-bold tracking-wider text-gray-400 bg-gray-50/50">
-                        <th className="py-2.5 px-3">Employee</th>
-                        <th className="py-2.5 px-3">Claim ID</th>
-                        <th className="py-2.5 px-3">Date</th>
-                        <th className="py-2.5 px-3">Purpose</th>
-                        <th className="py-2.5 px-3">Mode</th>
-                        <th className="py-2.5 px-3">Distance</th>
-                        <th className="py-2.5 px-3">Auto Fare</th>
-                        <th className="py-2.5 px-3">Amount</th>
-                        <th className="py-2.5 px-3 text-right">Status</th>
-                      </tr>
-                    </thead>
-                    <tbody className="divide-y divide-gray-100">
+                  <>
+                    <table className="hidden md:table table-lte">
+                      <thead>
+                        <tr className="border-b border-gray-200 text-[9px] uppercase font-bold tracking-wider text-gray-400 bg-gray-50/50">
+                          <th className="py-2.5 px-3">Employee</th>
+                          <th className="py-2.5 px-3">Claim ID</th>
+                          <th className="py-2.5 px-3">Date</th>
+                          <th className="py-2.5 px-3">Purpose</th>
+                          <th className="py-2.5 px-3">Mode</th>
+                          <th className="py-2.5 px-3">Distance</th>
+                          <th className="py-2.5 px-3">Auto Fare</th>
+                          <th className="py-2.5 px-3">Amount</th>
+                          <th className="py-2.5 px-3 text-right">Status</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-gray-100">
+                        {filteredTeamExpenses.map((exp) => (
+                          <tr 
+                            key={exp.id} 
+                            onClick={() => handleOpenClaimDetails(exp.id)}
+                            className="hover:bg-blue-50/20 transition-colors cursor-pointer"
+                          >
+                            <td className="py-3 px-3">
+                              <p className="font-bold text-gray-800 leading-none">{exp.submitter_name}</p>
+                              <span className="text-[8px] font-mono uppercase text-blue-600 block mt-0.5">{exp.submitter_code}</span>
+                            </td>
+                            <td className="py-3 px-3 font-semibold font-mono text-blue-600 uppercase">{exp.expense_code}</td>
+                            <td className="py-3 px-3 text-gray-550">{exp.date}</td>
+                            <td className="py-3 px-3 font-semibold text-gray-800 truncate max-w-[120px]" title={exp.purpose}>{exp.purpose}</td>
+                            <td className="py-3 px-3 text-gray-500">{exp.category}</td>
+                            <td className="py-3 px-3 font-mono font-semibold text-gray-655">{exp.total_km ? `${exp.total_km.toFixed(1)} KM` : "—"}</td>
+                            <td className="py-3 px-3 font-mono font-semibold text-gray-655">{exp.total_auto ? `₹${exp.total_auto.toLocaleString()}` : "—"}</td>
+                            <td className="py-3 px-3 font-bold text-gray-900">₹{exp.amount.toLocaleString()}</td>
+                            <td className="py-3 px-3 text-right">
+                              <span className={`inline-flex items-center px-2 py-0.5 rounded border text-[9px] font-bold uppercase tracking-wider ${getStatusBadgeClass(exp.status)}`}>
+                                {exp.status}
+                              </span>
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+
+                    {/* Mobile Card List View */}
+                    <div className="block md:hidden space-y-3">
                       {filteredTeamExpenses.map((exp) => (
-                        <tr 
-                          key={exp.id} 
+                        <div
+                          key={exp.id}
                           onClick={() => handleOpenClaimDetails(exp.id)}
-                          className="hover:bg-blue-50/20 transition-colors cursor-pointer"
+                          className="bg-white border border-gray-200 rounded-lg p-3.5 space-y-3.5 active:bg-gray-50 transition-colors shadow-sm cursor-pointer"
                         >
-                          <td className="py-3 px-3">
-                            <p className="font-bold text-gray-800 leading-none">{exp.submitter_name}</p>
-                            <span className="text-[8px] font-mono uppercase text-blue-600 block mt-0.5">{exp.submitter_code}</span>
-                          </td>
-                          <td className="py-3 px-3 font-semibold font-mono text-blue-600 uppercase">{exp.expense_code}</td>
-                          <td className="py-3 px-3 text-gray-500">{exp.date}</td>
-                          <td className="py-3 px-3 font-semibold text-gray-800 truncate max-w-[120px]" title={exp.purpose}>{exp.purpose}</td>
-                          <td className="py-3 px-3 text-gray-500">{exp.category}</td>
-                          <td className="py-3 px-3 font-mono font-semibold text-gray-650">{exp.total_km ? `${exp.total_km.toFixed(1)} KM` : "—"}</td>
-                          <td className="py-3 px-3 font-mono font-semibold text-gray-650">{exp.total_auto ? `₹${exp.total_auto.toLocaleString()}` : "—"}</td>
-                          <td className="py-3 px-3 font-bold text-gray-900">₹{exp.amount.toLocaleString()}</td>
-                          <td className="py-3 px-3 text-right">
-                            <span className={`inline-flex items-center px-2 py-0.5 rounded border text-[9px] font-bold uppercase tracking-wider ${getStatusBadgeClass(exp.status)}`}>
+                          <div className="flex justify-between items-center">
+                            <div>
+                              <p className="font-bold text-gray-800 text-xs leading-none">{exp.submitter_name}</p>
+                              <span className="text-[8px] font-mono uppercase text-blue-600 block mt-0.5">{exp.submitter_code}</span>
+                            </div>
+                            <span className={`inline-flex items-center px-2 py-0.5 rounded border text-[8px] font-bold uppercase tracking-wider ${getStatusBadgeClass(exp.status)}`}>
                               {exp.status}
                             </span>
-                          </td>
-                        </tr>
+                          </div>
+                          
+                          <div className="grid grid-cols-2 gap-2 text-[11px]">
+                            <div>
+                              <span className="text-gray-400 font-bold uppercase text-[9px] block">Claim ID / Date</span>
+                              <span className="text-gray-700 font-semibold">{exp.expense_code} ({exp.date || exp.itinerary})</span>
+                            </div>
+                            <div>
+                              <span className="text-gray-400 font-bold uppercase text-[9px] block">Mode</span>
+                              <span className="text-gray-700 font-semibold">{exp.category || exp.travel_mode}</span>
+                            </div>
+                            <div>
+                              <span className="text-gray-400 font-bold uppercase text-[9px] block">Distance / Auto</span>
+                              <span className="text-gray-700 font-semibold">
+                                {exp.total_km ? `${exp.total_km.toFixed(1)} KM` : "—"}
+                                {exp.total_auto ? ` / ₹${exp.total_auto.toLocaleString()}` : ""}
+                              </span>
+                            </div>
+                            <div>
+                              <span className="text-gray-400 font-bold uppercase text-[9px] block">Amount</span>
+                              <span className="text-gray-900 font-extrabold text-xs">₹{exp.amount.toLocaleString()}</span>
+                            </div>
+                          </div>
+                          
+                          {exp.purpose && (
+                            <div className="border-t border-gray-100 pt-2 text-[10px]">
+                              <span className="text-gray-400 font-bold uppercase text-[8px] block">Purpose</span>
+                              <p className="text-gray-600 font-semibold mt-0.5 truncate">{exp.purpose}</p>
+                            </div>
+                          )}
+                        </div>
                       ))}
-                    </tbody>
-                  </table>
-
-                  {/* Mobile Card List View */}
-                  <div className="block md:hidden space-y-3">
-                    {filteredTeamExpenses.map((exp) => (
-                      <div
-                        key={exp.id}
-                        onClick={() => handleOpenClaimDetails(exp.id)}
-                        className="bg-white border border-gray-200 rounded-lg p-3.5 space-y-3.5 active:bg-gray-50 transition-colors shadow-sm cursor-pointer"
-                      >
-                        <div className="flex justify-between items-center">
-                          <div>
-                            <p className="font-bold text-gray-800 text-xs leading-none">{exp.submitter_name}</p>
-                            <span className="text-[8px] font-mono uppercase text-blue-600 block mt-0.5">{exp.submitter_code}</span>
-                          </div>
-                          <span className={`inline-flex items-center px-2 py-0.5 rounded border text-[8px] font-bold uppercase tracking-wider ${getStatusBadgeClass(exp.status)}`}>
-                            {exp.status}
-                          </span>
-                        </div>
-                        
-                        <div className="grid grid-cols-2 gap-2 text-[11px]">
-                          <div>
-                            <span className="text-gray-400 font-bold uppercase text-[9px] block">Claim ID / Date</span>
-                            <span className="text-gray-700 font-semibold">{exp.expense_code} ({exp.date || exp.itinerary})</span>
-                          </div>
-                          <div>
-                            <span className="text-gray-400 font-bold uppercase text-[9px] block">Mode</span>
-                            <span className="text-gray-700 font-semibold">{exp.category || exp.travel_mode}</span>
-                          </div>
-                          <div>
-                            <span className="text-gray-400 font-bold uppercase text-[9px] block">Distance / Auto</span>
-                            <span className="text-gray-700 font-semibold">
-                              {exp.total_km ? `${exp.total_km.toFixed(1)} KM` : "—"}
-                              {exp.total_auto ? ` / ₹${exp.total_auto.toLocaleString()}` : ""}
-                            </span>
-                          </div>
-                          <div>
-                            <span className="text-gray-400 font-bold uppercase text-[9px] block">Amount</span>
-                            <span className="text-gray-900 font-extrabold text-xs">₹{exp.amount.toLocaleString()}</span>
-                          </div>
-                        </div>
-                        
-                        {exp.purpose && (
-                          <div className="border-t border-gray-100 pt-2 text-[10px]">
-                            <span className="text-gray-400 font-bold uppercase text-[8px] block">Purpose</span>
-                            <p className="text-gray-600 font-semibold mt-0.5 truncate">{exp.purpose}</p>
-                          </div>
-                        )}
-                      </div>
-                    ))}
-                  </div>
+                    </div>
+                  </>
                 )
               )}
 

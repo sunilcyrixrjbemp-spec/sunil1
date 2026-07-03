@@ -1018,7 +1018,8 @@ export default function MonthSummaryPage() {
               <p className="text-gray-450 text-[11px] mt-1">Make sure filters are correct and claims have been approved.</p>
             </div>
           ) : (
-            <table className="hidden md:table w-full text-left table-auto min-w-[1050px] border-collapse">
+            <>
+              <table className="hidden md:table w-full text-left table-auto min-w-[1050px] border-collapse">
               <thead>
                 <tr className="bg-gray-50 border-b border-gray-200 text-[10px] uppercase font-bold tracking-wider text-gray-600 font-sans">
                   <th className="py-2.5 px-3 border-r border-gray-200 text-center w-10">
@@ -1185,7 +1186,8 @@ export default function MonthSummaryPage() {
                 );
               })}
             </div>
-          )}
+          </>
+        )}
         </div>
       </div>
 
