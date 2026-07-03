@@ -23,7 +23,7 @@ export default function LoginForm({ onForgotPassword, onUnlockAccount }: LoginFo
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
-  const [loadingMessage, setLoadingMessage] = useState("Verifying...");
+  const [loadingMessage, setLoadingMessage] = useState("Authenticating...");
   const isSubmitting = React.useRef(false);
   const [statusMessage, setStatusMessage] = useState<{ type: "success" | "error"; text: string } | null>(null);
   const [showAlreadyLoggedInModal, setShowAlreadyLoggedInModal] = useState(false);
@@ -187,7 +187,7 @@ export default function LoginForm({ onForgotPassword, onUnlockAccount }: LoginFo
     }
 
     setLoading(true);
-    setLoadingMessage("Verifying...");
+    setLoadingMessage("Authenticating...");
     const wakeupTimer = setTimeout(() => {
       setLoadingMessage("Connecting to server (waking up, please wait)...");
     }, 3000);

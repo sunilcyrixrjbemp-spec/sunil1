@@ -232,17 +232,30 @@ svg, path, g, sector, .recharts-pie-sector, .recharts-sector, .recharts-pie, .re
 *:focus {
   outline: none !important;
   -webkit-tap-highlight-color: transparent !important;
-}
-
-/* ================= PREMIUM MOBILE THEME OVERRIDES ================= */
+}/* ================= PREMIUM MOBILE THEME OVERRIDES ================= */
 @media (max-width: 1023px) {
-  /* 1. Global Page spacing & margins */
-  main {
-    padding: 0.75rem !important; /* Smaller gaps on mobile sides */
-    padding-bottom: 5.5rem !important; /* Save space for bottom navbar */
+  /* 1. Global Page spacing & modern background gradient */
+  body {
+    background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%) !important;
   }
 
-  /* 2. Remove desktop card layouts, borders & add premium shadows */
+  main {
+    padding: 0.75rem !important;
+    padding-bottom: 5.5rem !important;
+  }
+
+  /* 2. Login Page visual overhaul */
+  .min-h-screen.bg-\[\#e9ecef\] {
+    background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%) !important; /* Premium dark gradient */
+    padding: 1.5rem 1rem !important;
+  }
+
+  .min-h-screen.bg-\[\#e9ecef\] .bg-white.border.border-gray-300.rounded.shadow-md {
+    @apply border-none shadow-2xl rounded-3xl bg-white/95 backdrop-blur-md !important;
+    overflow: hidden !important;
+  }
+
+  /* 3. Borderless cards with soft, premium floating shadows */
   .card-lte, 
   .card-lte-primary, 
   .card-lte-success, 
@@ -250,11 +263,11 @@ svg, path, g, sector, .recharts-pie-sector, .recharts-sector, .recharts-pie, .re
   .card-lte-danger, 
   .card-lte-info, 
   .card-lte-gold {
-    @apply border-none shadow-md rounded-2xl bg-white p-4 mb-4;
+    @apply border-none shadow-[0_8px_30px_rgb(0,0,0,0.03)] rounded-2xl bg-white p-4 mb-4;
     border-top: none !important;
   }
 
-  /* 3. Make all inputs, selects, and textareas touch-friendly and modern */
+  /* 4. Touch-optimized Input Form Fields (enforcing 44px min height & 14px size to prevent iOS zoom) */
   .input-lte, 
   .input-lte-icon, 
   .form-control-lte,
@@ -264,14 +277,16 @@ svg, path, g, sector, .recharts-pie-sector, .recharts-sector, .recharts-pie, .re
   input[type="month"],
   select,
   textarea {
-    min-height: 44px !important; /* Native Apple/Android minimum tap height */
+    min-height: 44px !important;
     padding: 0.75rem 1rem !important;
-    font-size: 14px !important; /* Prevent iOS zoom */
+    font-size: 14px !important;
     border-radius: 12px !important;
-    border-color: #e5e7eb !important;
-    background-color: #f9fafb !important;
+    border: 1px solid #e2e8f0 !important;
+    background-color: #f8fafc !important;
     font-weight: 600 !important;
-    transition: all 0.2s ease-in-out !important;
+    color: #0f172a !important;
+    transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1) !important;
+    box-shadow: none !important;
   }
 
   .input-lte:focus, 
@@ -281,21 +296,21 @@ svg, path, g, sector, .recharts-pie-sector, .recharts-sector, .recharts-pie, .re
   select:focus,
   textarea:focus {
     background-color: #ffffff !important;
-    border-color: #3b82f6 !important;
-    box-shadow: 0 0 0 4px rgba(59, 130, 246, 0.1) !important;
+    border-color: #2563eb !important;
+    box-shadow: 0 0 0 4px rgba(37, 99, 235, 0.08) !important;
   }
 
-  /* 4. Touch-optimized Labels */
+  /* Labels */
   .label-lte, label {
     font-size: 11px !important;
     font-weight: 700 !important;
-    color: #4b5563 !important;
+    color: #64748b !important;
     text-transform: uppercase !important;
     letter-spacing: 0.05em !important;
     margin-bottom: 6px !important;
   }
 
-  /* 5. Mobile buttons with tactile feedback */
+  /* 5. Mobile Buttons with scale animations */
   .btn-lte-primary, 
   .btn-lte-success, 
   .btn-lte-danger, 
@@ -314,44 +329,105 @@ svg, path, g, sector, .recharts-pie-sector, .recharts-sector, .recharts-pie, .re
     transition: all 0.15s cubic-bezier(0.4, 0, 0.2, 1) !important;
   }
 
+  .btn-lte-primary {
+    background: linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%) !important;
+    @apply border-none text-white !important;
+  }
+
   .btn-lte-primary:active, 
   .btn-lte-success:active, 
   .btn-lte-danger:active, 
   .btn-lte-warning:active, 
   .btn-lte-secondary:active,
   button:active {
-    transform: scale(0.97) !important;
+    transform: scale(0.96) !important;
   }
 
-  /* 6. Tabs & Segments (e.g. My Claims / Team Claims) */
+  /* 6. Tabs & Segments (e.g. My Claims / Team Claims) layout */
   .flex.border-b {
-    @apply flex-row bg-gray-100 p-1.5 rounded-2xl mb-4 w-full justify-between items-center border-none;
+    @apply flex-row bg-slate-100 p-1 rounded-2xl mb-4 w-full justify-between items-center border-none !important;
   }
 
   .flex.border-b button {
-    @apply flex-1 text-center py-2.5 px-3 font-bold text-[10px] uppercase tracking-wider rounded-xl transition-all border-none bg-transparent text-gray-500 !important;
+    @apply flex-1 text-center py-2.5 px-3 font-extrabold text-[10px] uppercase tracking-wider rounded-xl transition-all border-none bg-transparent text-slate-500 !important;
     min-height: auto !important;
     box-shadow: none !important;
   }
 
   .flex.border-b button.border-blue-600 {
-    @apply bg-white text-blue-600 shadow-sm font-extrabold !important;
+    @apply bg-white text-blue-600 shadow-sm font-black !important;
+    border-bottom: none !important;
   }
 
-  /* 7. info-box cards layout for mobile summary widgets */
+  /* 7. Summary info box widgets styling */
   .info-box-lte {
-    @apply rounded-2xl border-none shadow-sm bg-white p-3 min-h-[56px] flex items-center gap-3 mb-3;
+    @apply rounded-2xl border-none shadow-[0_4px_20px_rgba(0,0,0,0.02)] bg-white p-3 min-h-[58px] flex items-center gap-3.5 mb-3;
   }
 
   .info-box-icon {
-    @apply w-10 h-10 rounded-xl flex items-center justify-center text-white shrink-0;
+    @apply w-11 h-11 rounded-xl flex items-center justify-center text-white shrink-0 shadow-sm;
   }
 
   .info-box-content {
     @apply p-0 flex flex-col justify-center flex-1;
   }
 
-  /* 8. Spacing helpers to fit more content on small screens */
+  /* 8. Unified Typography Scaling */
+  h1, .text-xl, .text-2xl, .text-3xl {
+    font-size: 15px !important;
+    font-weight: 800 !important;
+    letter-spacing: -0.01em !important;
+    line-height: 1.3 !important;
+    color: #0f172a !important;
+  }
+
+  h2, h3, .text-lg {
+    font-size: 13px !important;
+    font-weight: 750 !important;
+    letter-spacing: -0.01em !important;
+    line-height: 1.35 !important;
+    color: #1e293b !important;
+  }
+
+  .text-base {
+    font-size: 12px !important;
+    font-weight: 600 !important;
+    line-height: 1.4 !important;
+    color: #334155 !important;
+  }
+
+  .text-sm {
+    font-size: 11.5px !important;
+    font-weight: 600 !important;
+    line-height: 1.4 !important;
+    color: #475569 !important;
+  }
+
+  .text-xs {
+    font-size: 11px !important;
+    font-weight: 550 !important;
+    line-height: 1.45 !important;
+    color: #64748b !important;
+  }
+
+  .text-\[9px\] {
+    font-size: 9px !important;
+    font-weight: 700 !important;
+    letter-spacing: 0.05em !important;
+  }
+  
+  .text-\[10px\] {
+    font-size: 10px !important;
+    font-weight: 700 !important;
+    letter-spacing: 0.03em !important;
+  }
+  
+  .text-\[11px\] {
+    font-size: 11px !important;
+    font-weight: 600 !important;
+  }
+
+  /* Spacing overrides for compact modern spacing */
   .gap-6 {
     gap: 0.75rem !important;
   }
@@ -359,6 +435,3 @@ svg, path, g, sector, .recharts-pie-sector, .recharts-sector, .recharts-pie, .re
     gap: 0.5rem !important;
   }
 }
-
-
-
