@@ -23,6 +23,7 @@ export default function LoginForm({ onForgotPassword, onUnlockAccount }: LoginFo
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
+  const isSubmitting = React.useRef(false);
   const [statusMessage, setStatusMessage] = useState<{ type: "success" | "error"; text: string } | null>(null);
   const [showAlreadyLoggedInModal, setShowAlreadyLoggedInModal] = useState(false);
   const [showBiometricPrompt, setShowBiometricPrompt] = useState(false);
@@ -174,11 +175,13 @@ export default function LoginForm({ onForgotPassword, onUnlockAccount }: LoginFo
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (loading) return;
+    if (isSubmitting.current) return;
+    isSubmitting.current = true;
     setStatusMessage(null);
     
     if (!userId.trim() || !password) {
       setStatusMessage({ type: "error", text: "Please fill in all fields." });
+      isSubmitting.current = false;
       return;
     }
 
@@ -195,6 +198,7 @@ export default function LoginForm({ onForgotPassword, onUnlockAccount }: LoginFo
           const enabled = (await nativeConfig.get('biometric_login_enabled')) === 'true';
           if (available && !enabled) {
             setShowBiometricPrompt(true);
+            isSubmitting.current = false;
             setLoading(false);
             return;
           }
@@ -205,18 +209,26 @@ export default function LoginForm({ onForgotPassword, onUnlockAccount }: LoginFo
     } catch (err: any) {
       if (err.response?.status === 409 && err.response?.data?.detail === "ALREADY_LOGGED_IN") {
         setShowAlreadyLoggedInModal(true);
+        isSubmitting.current = false;
         setLoading(false);
         return;
       }
-      const errorMsg = err.response?.data?.detail || "Invalid User ID or Password";
+      let errorMsg = "Invalid User ID or Password";
+      if (!err.response) {
+        errorMsg = "Unable to connect to the server. Please check your internet connection or try again.";
+      } else if (err.response.data?.detail) {
+        errorMsg = err.response.data.detail;
+      }
       setStatusMessage({ type: "error", text: errorMsg });
     } finally {
+      isSubmitting.current = false;
       setLoading(false);
     }
   };
 
   const handleForceLogin = async () => {
-    if (loading) return;
+    if (isSubmitting.current) return;
+    isSubmitting.current = true;
     setShowAlreadyLoggedInModal(false);
     setLoading(true);
     setStatusMessage(null);
@@ -232,6 +244,7 @@ export default function LoginForm({ onForgotPassword, onUnlockAccount }: LoginFo
           const enabled = (await nativeConfig.get('biometric_login_enabled')) === 'true';
           if (available && !enabled) {
             setShowBiometricPrompt(true);
+            isSubmitting.current = false;
             setLoading(false);
             return;
           }
@@ -240,9 +253,15 @@ export default function LoginForm({ onForgotPassword, onUnlockAccount }: LoginFo
       
       navigate("/home");
     } catch (err: any) {
-      const errorMsg = err.response?.data?.detail || "Invalid User ID or Password";
+      let errorMsg = "Invalid User ID or Password";
+      if (!err.response) {
+        errorMsg = "Unable to connect to the server. Please check your internet connection or try again.";
+      } else if (err.response.data?.detail) {
+        errorMsg = err.response.data.detail;
+      }
       setStatusMessage({ type: "error", text: errorMsg });
     } finally {
+      isSubmitting.current = false;
       setLoading(false);
     }
   };
