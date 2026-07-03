@@ -1009,7 +1009,7 @@ export default function ApprovalPage() {
               </div>
               <button 
                 onClick={() => { setShowDetailModal(false); setSelectedApproval(null); }}
-                className="text-gray-400 hover:text-gray-600 border-0 bg-transparent text-lg font-bold cursor-pointer"
+                className="w-7 h-7 rounded-full border border-red-200 bg-red-50 text-red-500 hover:bg-red-100 hover:text-red-700 transition-all cursor-pointer flex items-center justify-center font-bold text-xs"
               >
                 ✕
               </button>

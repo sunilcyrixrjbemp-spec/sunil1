@@ -22,6 +22,39 @@ import {
   ShieldCheck
 } from "lucide-react";
 
+const AutoIcon = ({ className = "w-5 h-5" }: { className?: string }) => (
+  <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+    <path d="M5 17h14v-4l-3-6H8l-3 4v6z" />
+    <circle cx="5.5" cy="18" r="1.5" fill="currentColor" />
+    <circle cx="16.5" cy="18" r="2" fill="currentColor" />
+    <path d="M9 7h6v4H9z" strokeWidth="1.5" />
+    <path d="M3 14l2.5-3" />
+    <path d="M2.5 12.5h2" />
+  </svg>
+);
+
+const SportsBikeIcon = ({ className = "w-5 h-5" }: { className?: string }) => (
+  <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+    <circle cx="5" cy="16" r="3" fill="currentColor" fillOpacity="0.2" />
+    <circle cx="19" cy="16" r="3" fill="currentColor" fillOpacity="0.2" />
+    <path d="M5 16l3-6 4-2 3 2.5 4 5.5" />
+    <path d="M8.5 10l-1.5-3.5h2.5" />
+    <path d="M11 9h5.5l2.5 3.5" />
+    <path d="M11.5 11h3.5" />
+    <path d="M14 16.5h4.5" />
+  </svg>
+);
+
+const SportsCarIcon = ({ className = "w-5 h-5" }: { className?: string }) => (
+  <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+    <circle cx="7" cy="16" r="2" fill="currentColor" fillOpacity="0.2" />
+    <circle cx="17" cy="16" r="2" fill="currentColor" fillOpacity="0.2" />
+    <path d="M3 14h2.5l1.5-3 4-.5 4.5 3h6.5l1.5 2H3z" />
+    <path d="M8.5 11l2-4h4.5l2.5 4" />
+    <path d="M20.5 10h1.5v2h-1.5z" fill="currentColor" />
+  </svg>
+);
+
 const getAttachmentsArray = (attachments: any): string[] => {
   if (!attachments) return [];
   if (Array.isArray(attachments)) return attachments.filter(Boolean);
@@ -576,6 +609,7 @@ export default function ExpensePage() {
     return months[new Date().getMonth()];
   });
   const [activeClaimsTab, setActiveClaimsTab] = useState<"sheets" | "legs">("sheets");
+  const [claimsSortOrder, setClaimsSortOrder] = useState<"date_desc" | "date_asc" | "amount_desc" | "amount_asc">("date_desc");
 
   const hasExistingFile = (legNum: number, billType: string) => {
     if (!editExpenseId) return false;
@@ -1943,7 +1977,7 @@ export default function ExpensePage() {
   };
 
   const getFilteredClaims = () => {
-    return claims.filter(c => {
+    const result = claims.filter(c => {
       // 1. Month filter
       if (claimsMonthFilter !== "all" && c.month !== claimsMonthFilter) {
         return false;
@@ -1966,6 +2000,18 @@ export default function ExpensePage() {
       }
       return true;
     });
+
+    // Apply sorting
+    if (claimsSortOrder === "date_desc") {
+      result.sort((a, b) => new Date(b.itinerary).getTime() - new Date(a.itinerary).getTime());
+    } else if (claimsSortOrder === "date_asc") {
+      result.sort((a, b) => new Date(a.itinerary).getTime() - new Date(b.itinerary).getTime());
+    } else if (claimsSortOrder === "amount_desc") {
+      result.sort((a, b) => (b.amount || 0) - (a.amount || 0));
+    } else if (claimsSortOrder === "amount_asc") {
+      result.sort((a, b) => (a.amount || 0) - (b.amount || 0));
+    }
+    return result;
   };
 
   const getFilteredLegs = () => {
@@ -1978,10 +2024,30 @@ export default function ExpensePage() {
           parentCode: c.expense_code,
           parentDate: c.itinerary,
           parentStatus: c.status,
+          parentAmount: c.amount,
           ...l
         });
       });
     });
+
+    // Apply sorting to legs directly
+    if (claimsSortOrder === "date_desc") {
+      legsList.sort((a, b) => new Date(b.parentDate).getTime() - new Date(a.parentDate).getTime());
+    } else if (claimsSortOrder === "date_asc") {
+      legsList.sort((a, b) => new Date(a.parentDate).getTime() - new Date(b.parentDate).getTime());
+    } else if (claimsSortOrder === "amount_desc") {
+      legsList.sort((a, b) => {
+        const amtA = (parseFloat(a.amount) || 0) + (parseFloat(a.da) || 0) + (parseFloat(a.hotel) || 0) + (parseFloat(a.local_purchase) || 0) + (parseFloat(a.other_amount) || 0);
+        const amtB = (parseFloat(b.amount) || 0) + (parseFloat(b.da) || 0) + (parseFloat(b.hotel) || 0) + (parseFloat(b.local_purchase) || 0) + (parseFloat(b.other_amount) || 0);
+        return amtB - amtA;
+      });
+    } else if (claimsSortOrder === "amount_asc") {
+      legsList.sort((a, b) => {
+        const amtA = (parseFloat(a.amount) || 0) + (parseFloat(a.da) || 0) + (parseFloat(a.hotel) || 0) + (parseFloat(a.local_purchase) || 0) + (parseFloat(a.other_amount) || 0);
+        const amtB = (parseFloat(b.amount) || 0) + (parseFloat(b.da) || 0) + (parseFloat(b.hotel) || 0) + (parseFloat(b.local_purchase) || 0) + (parseFloat(b.other_amount) || 0);
+        return amtA - amtB;
+      });
+    }
     return legsList;
   };
 
@@ -2129,9 +2195,9 @@ export default function ExpensePage() {
         <div className="info-box-lte animate-fadeIn">
           <div className="info-box-icon bg-[#17a2b8]">
             {allowance.vehicle_type === "Car" ? (
-              <Car className="w-5 h-5 text-white" />
+              <SportsCarIcon className="w-5 h-5 text-white" />
             ) : allowance.vehicle_type === "Bike" ? (
-              <Bike className="w-5 h-5 text-white" />
+              <SportsBikeIcon className="w-5 h-5 text-white" />
             ) : (
               <Navigation className="w-5 h-5 text-white" />
             )}
@@ -2154,7 +2220,7 @@ export default function ExpensePage() {
                 <span className="text-gray-400">Request:</span>
                 <span className={
                   existingKmReq.status === "Approved" ? "text-green-600 font-black" :
-                  existingKmReq.status === "Rejected" ? "text-red-600 font-black" :
+                  existingKmReq.status === "Rejected" ? "text-red-650 font-black" :
                   "text-amber-600 animate-pulse font-black"
                 }>
                   {existingKmReq.status === "Approved" ? "✓ Approved" :
@@ -2169,7 +2235,7 @@ export default function ExpensePage() {
         {/* Monthly Auto Cap Card */}
         <div className="info-box-lte animate-fadeIn">
           <div className="info-box-icon bg-[#ffc107]">
-            <Bus className="w-5 h-5 text-white" />
+            <AutoIcon className="w-5 h-5 text-white" />
           </div>
           <div className="info-box-content">
             <span className="text-[9px] font-bold uppercase tracking-wider text-gray-400 block mb-0.5">
@@ -3672,35 +3738,42 @@ export default function ExpensePage() {
           </div>
         </div>
 
-        {/* Visit Activities Metrics Summary Panel */}
-        <div className="bg-slate-50 border border-gray-300 border-t-4 border-t-blue-600 rounded shadow-sm p-4 flex flex-wrap items-center gap-6 mt-4 w-full text-xs font-semibold">
-          <div className="flex items-center gap-1.5 border-r border-gray-200 pr-4 md:pr-6">
-            <Bookmark className="w-4 h-4 text-blue-600" />
-            <span className="text-xs font-extrabold uppercase text-gray-700 tracking-wide">Tasks Summary</span>
+        {/* Visit Activities Metrics Summary Grid of Box Cards */}
+        <div className="mt-4 grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3.5 w-full text-xs font-semibold">
+          {/* Card 1: Calls Attended */}
+          <div className="bg-white border border-gray-200 rounded-xl p-3.5 shadow-sm text-center flex flex-col justify-center items-center h-20 transition-all hover:shadow-md">
+            <span className="text-gray-400 uppercase text-[8px] tracking-wider font-black mb-1.5 block">Calls Attended</span>
+            <span className="text-gray-900 font-mono font-black text-xl leading-none">{totalCallsAttended}</span>
           </div>
-          <div>
-            <span className="text-gray-400 uppercase text-[9px] block mb-0.5">CALLS ATTENDED</span>
-            <span className="text-gray-800 font-mono font-bold text-sm">{totalCallsAttended}</span>
+
+          {/* Card 2: Calls Closed */}
+          <div className="bg-white border border-gray-200 rounded-xl p-3.5 shadow-sm text-center flex flex-col justify-center items-center h-20 transition-all hover:shadow-md border-t-2 border-t-green-500">
+            <span className="text-gray-400 uppercase text-[8px] tracking-wider font-black mb-1.5 block">Calls Closed</span>
+            <span className="text-green-700 font-mono font-black text-xl leading-none">{totalCallsClosed}</span>
           </div>
-          <div>
-            <span className="text-gray-400 uppercase text-[9px] block mb-0.5">CALLS CLOSED</span>
-            <span className="text-gray-800 font-mono font-bold text-sm text-green-700">{totalCallsClosed}</span>
+
+          {/* Card 3: PMs Done */}
+          <div className="bg-white border border-gray-200 rounded-xl p-3.5 shadow-sm text-center flex flex-col justify-center items-center h-20 transition-all hover:shadow-md border-t-2 border-t-amber-500">
+            <span className="text-gray-400 uppercase text-[8px] tracking-wider font-black mb-1.5 block">PMs Done</span>
+            <span className="text-amber-700 font-mono font-black text-xl leading-none">{totalPmsDone}</span>
           </div>
-          <div>
-            <span className="text-gray-400 uppercase text-[9px] block mb-0.5">PMS DONE</span>
-            <span className="text-gray-800 font-mono font-bold text-sm text-amber-700">{totalPmsDone}</span>
+
+          {/* Card 4: Assets Tagged */}
+          <div className="bg-white border border-gray-200 rounded-xl p-3.5 shadow-sm text-center flex flex-col justify-center items-center h-20 transition-all hover:shadow-md border-t-2 border-t-emerald-500">
+            <span className="text-gray-400 uppercase text-[8px] tracking-wider font-black mb-1.5 block">Assets Tagged</span>
+            <span className="text-emerald-700 font-mono font-black text-xl leading-none">{totalAssetsTagged}</span>
           </div>
-          <div>
-            <span className="text-gray-400 uppercase text-[9px] block mb-0.5">ASSETS TAGGED</span>
-            <span className="text-gray-800 font-mono font-bold text-sm text-emerald-700">{totalAssetsTagged}</span>
+
+          {/* Card 5: Mobilise Assets */}
+          <div className="bg-white border border-gray-200 rounded-xl p-3.5 shadow-sm text-center flex flex-col justify-center items-center h-20 transition-all hover:shadow-md border-t-2 border-t-indigo-500">
+            <span className="text-gray-400 uppercase text-[8px] tracking-wider font-black mb-1.5 block">Mobilise Assets</span>
+            <span className="text-indigo-700 font-mono font-black text-xl leading-none">{totalMobiliseAsset}</span>
           </div>
-          <div>
-            <span className="text-gray-400 uppercase text-[9px] block mb-0.5">MOBILISE ASSETS</span>
-            <span className="text-gray-800 font-mono font-bold text-sm text-indigo-700">{totalMobiliseAsset}</span>
-          </div>
-          <div>
-            <span className="text-gray-400 uppercase text-[9px] block mb-0.5">CALIBRATIONS</span>
-            <span className="text-gray-800 font-mono font-bold text-sm text-purple-700">{totalCalibration}</span>
+
+          {/* Card 6: Calibrations */}
+          <div className="bg-white border border-gray-200 rounded-xl p-3.5 shadow-sm text-center flex flex-col justify-center items-center h-20 transition-all hover:shadow-md border-t-2 border-t-purple-500">
+            <span className="text-gray-400 uppercase text-[8px] tracking-wider font-black mb-1.5 block">Calibrations</span>
+            <span className="text-purple-700 font-mono font-black text-xl leading-none">{totalCalibration}</span>
           </div>
         </div>
 
@@ -3754,6 +3827,20 @@ export default function ExpensePage() {
                 {getUniqueMonths().map(m => (
                   <option key={m} value={m}>{m}</option>
                 ))}
+              </select>
+            </div>
+
+            <div className="flex items-center gap-1.5 shrink-0">
+              <span className="text-[8px] font-bold uppercase text-gray-400">Sort By:</span>
+              <select
+                value={claimsSortOrder}
+                onChange={(e) => { setClaimsSortOrder(e.target.value as any); setMyClaimsPage(1); }}
+                className="bg-white border border-gray-300 rounded px-2 py-0.5 text-[10px] font-black text-gray-800 cursor-pointer shadow-xs focus:outline-none focus:border-blue-500"
+              >
+                <option value="date_desc">Newest Date</option>
+                <option value="date_asc">Oldest Date</option>
+                <option value="amount_desc">Highest Amount</option>
+                <option value="amount_asc">Lowest Amount</option>
               </select>
             </div>
           </div>
@@ -4188,7 +4275,7 @@ export default function ExpensePage() {
               </h3>
               <button 
                 onClick={() => { setShowDetailsModal(false); setSelectedClaim(null); }}
-                className="text-red-600 hover:text-red-800 border-0 bg-transparent text-lg font-black cursor-pointer transition-colors"
+                className="w-7 h-7 rounded-full border border-red-200 bg-red-50 text-red-500 hover:bg-red-100 hover:text-red-700 transition-all cursor-pointer flex items-center justify-center font-bold text-xs"
               >
                 ✕
               </button>

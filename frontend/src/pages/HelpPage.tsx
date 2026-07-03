@@ -533,7 +533,7 @@ export default function HelpPage() {
       {/* Header Info */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <h2 className="text-xl font-black text-gray-850 uppercase tracking-wide flex items-center gap-2">
+          <h2 className="text-2xl font-black text-gray-900 uppercase tracking-wide flex items-center gap-2">
             <i className="fas fa-headset text-blue-600 animate-pulse"></i>
             FieldOps Help Desk
           </h2>
@@ -957,7 +957,7 @@ export default function HelpPage() {
                   <div className="w-12 h-1.5 bg-gray-350 rounded-full mx-auto my-3 cursor-pointer" onClick={() => setSelectedTicket(null)}></div>
                   
                   {/* Detail Body */}
-                  <div className="flex-1 overflow-y-auto px-4 pb-6 space-y-4 text-left">
+                  <div className="flex-1 overflow-y-auto px-4 pb-28 space-y-4 text-left">
                     {/* Detail Header */}
                     <div className="flex items-start justify-between border-b border-gray-150 pb-3 pt-1">
                       <div className="space-y-1">
@@ -1079,7 +1079,7 @@ export default function HelpPage() {
 
                     {/* Chat Reply Form */}
                     {selectedTicket.status !== "Final Closed" && (
-                      <div className="pt-2 border-t border-gray-100">
+                      <div className="pt-2 border-t border-gray-100 pb-20">
                         <form onSubmit={handleSendCommentMessage} className="flex gap-2 items-center bg-gray-50 p-1.5 rounded-full border border-gray-200">
                           <input
                             type="text"

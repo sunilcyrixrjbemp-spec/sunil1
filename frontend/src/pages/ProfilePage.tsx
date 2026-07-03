@@ -513,6 +513,11 @@ export default function ProfilePage() {
   if (isMobile) {
     return (
       <div className="space-y-4 pb-20 text-gray-800 text-xs animate-fadeIn" style={{ fontFamily: "'Plus Jakarta Sans', sans-serif" }}>
+        {/* Page Header */}
+        <div>
+          <h2 className="text-xl font-black text-gray-900 uppercase tracking-wide">User Profile</h2>
+          <p className="text-gray-500 text-[9px] mt-0.5">Manage your credentials and view system configurations.</p>
+        </div>
         
         {/* Profile Card Header Banner */}
         <div className="bg-white border border-gray-200 rounded-2xl shadow-sm overflow-hidden text-center relative p-6">
@@ -807,7 +812,7 @@ export default function ProfilePage() {
     <div className="space-y-6 animate-fadeIn text-[#212529]">
       {/* Header Info */}
       <div>
-        <h2 className="text-xl font-bold text-gray-800 uppercase tracking-wide">
+        <h2 className="text-2xl font-black text-gray-900 uppercase tracking-wide">
           User Profile
         </h2>
         <p className="text-gray-500 text-xs mt-1">Manage your contact credentials and view system permissions configurations.</p>

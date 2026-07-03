@@ -186,7 +186,7 @@ class AuthService:
             "masked_email": self._mask_email(user.mail_id)
         }
 
-    def verify_otp(self, user_id: str, otp: str, otp_type: str, db: Session) -> bool:
+    def verify_otp(self, user_id: str, otp: str, otp_type: str, db: Session, delete_after_verify: bool = True) -> bool:
         # Delete expired OTPs for this user first
         db.query(OTP).filter(
             OTP.user_id == user_id,
@@ -212,9 +212,10 @@ class AuthService:
                 detail="Invalid OTP code. Please enter the correct code."
             )
 
-        # Delete the OTP entry from database completely upon verification
-        db.delete(otp_entry)
-        db.commit()
+        # Delete the OTP entry from database completely upon verification if requested
+        if delete_after_verify:
+            db.delete(otp_entry)
+            db.commit()
         return True
 
     def reset_password(self, user_id: str, otp: str, new_password: str, confirm_password: str, db: Session) -> Dict[str, str]:

@@ -73,7 +73,8 @@ async def verify_otp(request: VerifyOTPRequest, db: Session = Depends(get_db)):
         user_id=request.user_id,
         otp=request.otp,
         otp_type=request.otp_type,
-        db=db
+        db=db,
+        delete_after_verify=False
     )
     return {"success": success, "message": "OTP verified successfully."}
 

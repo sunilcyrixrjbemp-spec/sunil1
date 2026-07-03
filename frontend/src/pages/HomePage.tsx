@@ -515,8 +515,16 @@ export default function HomePage() {
   return (
     <>
       <div className="space-y-6 animate-fadeIn text-[#212529]">
+        
+        {/* Page Header */}
+        <div>
+          <h2 className="text-2xl font-black text-gray-900 uppercase tracking-wide">
+            Dashboard Home
+          </h2>
+          <p className="text-gray-500 text-xs mt-1">Access claims summary statistics and operations management hub.</p>
+        </div>
       
-      {/* Welcome Banner - AdminLTE card style with gradient border top */}
+        {/* Welcome Banner - AdminLTE card style with gradient border top */}
       <div className="bg-white border-2 border-blue-200 rounded-lg shadow-md p-4 hover:shadow-lg transition-shadow relative overflow-hidden">
         <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-blue-600 via-indigo-500 to-blue-600"></div>
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
@@ -1206,7 +1214,7 @@ export default function HomePage() {
               </h3>
               <button 
                 onClick={() => { setShowDetailsModal(false); setClaimDetails(null); }}
-                className="text-red-600 hover:text-red-800 border-0 bg-transparent text-lg font-black cursor-pointer transition-colors"
+                className="w-7 h-7 rounded-full border border-red-200 bg-red-50 text-red-500 hover:bg-red-100 hover:text-red-700 transition-all cursor-pointer flex items-center justify-center font-bold text-xs"
               >
                 ✕
               </button>
