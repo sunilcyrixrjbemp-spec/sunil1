@@ -234,32 +234,31 @@ svg, path, g, sector, .recharts-pie-sector, .recharts-sector, .recharts-pie, .re
   -webkit-tap-highlight-color: transparent !important;
 }/* ================= PREMIUM ANDROID MATERIAL 3 MOBILE THEME OVERRIDES ================= */
 @media (max-width: 1023px) {
-  /* 1. Global Page spacing & modern Material 3 slate gradient background */
+  /* 1. Global Page spacing & modern Material 3 slate background */
   body {
     background-color: #f8fafc !important;
     font-family: 'Plus Jakarta Sans', sans-serif !important;
   }
 
   main {
-    padding: 1rem 0.875rem !important;
-    padding-bottom: 6rem !important; /* Spacious footer gap */
+    padding: 0.5rem !important; /* Edge-to-edge feel, utilizing full screen width */
+    padding-bottom: 5.5rem !important;
   }
 
   /* 2. Top Navigation Header (Android Action Bar) */
   header.h-14 {
-    height: 56px !important; /* Android standard toolbar height */
-    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05) !important;
+    height: 56px !important;
+    box-shadow: none !important;
     border-bottom: 1px solid #f1f5f9 !important;
-    background-color: rgba(255, 255, 255, 0.9) !important;
-    backdrop-filter: blur(12px) !important;
-    padding-left: 1rem !important;
-    padding-right: 1rem !important;
+    background-color: #ffffff !important;
+    padding-left: 0.875rem !important;
+    padding-right: 0.875rem !important;
     display: flex !important;
     align-items: center !important;
     justify-content: space-between !important;
   }
 
-  /* 3. Material 3 Floating Cards (rounded-2xl, soft shadow) */
+  /* 3. Material 3 Cards (Using full screen space, borderless, clean layout) */
   .card-lte, 
   .card-lte-primary, 
   .card-lte-success, 
@@ -270,21 +269,14 @@ svg, path, g, sector, .recharts-pie-sector, .recharts-sector, .recharts-pie, .re
   .bg-white.border.rounded {
     border-style: none !important;
     background-color: #ffffff !important;
-    padding: 1rem !important;
-    margin-bottom: 1rem !important;
-    border-radius: 20px !important;
-    box-shadow: 0 4px 24px rgba(0, 0, 0, 0.03) !important;
-    border-top: none !important;
+    padding: 0.875rem !important;
+    margin-bottom: 0.75rem !important;
+    border-radius: 16px !important;
+    box-shadow: 0 2px 12px rgba(0, 0, 0, 0.015) !important;
+    border: 1px solid #f1f5f9 !important; /* Extremely thin clean border */
   }
 
-  /* Primary Accent Indicators for Cards */
-  .card-lte-primary { border-left: 4px solid #3b82f6 !important; }
-  .card-lte-success { border-left: 4px solid #10b981 !important; }
-  .card-lte-warning { border-left: 4px solid #f59e0b !important; }
-  .card-lte-danger { border-left: 4px solid #ef4444 !important; }
-  .card-lte-info { border-left: 4px solid #06b6d4 !important; }
-
-  /* 4. Touch-optimized Input Form Fields (enforcing 46px min height & 14px size to prevent iOS zoom) */
+  /* 4. Touch-optimized Input Form Fields (Clean white background, slate border) */
   .input-lte, 
   .input-lte-icon, 
   .form-control-lte,
@@ -294,15 +286,15 @@ svg, path, g, sector, .recharts-pie-sector, .recharts-sector, .recharts-pie, .re
   input[type="month"],
   select,
   textarea {
-    min-height: 46px !important;
-    padding: 0.75rem 1rem !important;
+    min-height: 44px !important;
+    padding: 0.625rem 0.875rem !important;
     font-size: 14px !important;
-    border-radius: 14px !important;
-    border: 1.5px solid #e2e8f0 !important;
-    background-color: #f8fafc !important;
-    font-weight: 600 !important;
+    border-radius: 10px !important;
+    border: 1px solid #cbd5e1 !important; /* Clean neutral border */
+    background-color: #ffffff !important; /* Pure white background */
+    font-weight: 500 !important;
     color: #0f172a !important;
-    transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1) !important;
+    transition: all 0.15s ease !important;
     box-shadow: none !important;
   }
 
@@ -312,22 +304,21 @@ svg, path, g, sector, .recharts-pie-sector, .recharts-sector, .recharts-pie, .re
   input:focus,
   select:focus,
   textarea:focus {
-    background-color: #ffffff !important;
-    border-color: #2563eb !important;
-    box-shadow: 0 0 0 4px rgba(37, 99, 235, 0.08) !important;
+    border-color: #3b82f6 !important;
+    box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.08) !important;
   }
 
   /* Labels */
   .label-lte, label {
     font-size: 11px !important;
-    font-weight: 700 !important;
+    font-weight: 600 !important;
     color: #64748b !important;
     text-transform: uppercase !important;
-    letter-spacing: 0.05em !important;
-    margin-bottom: 6px !important;
+    letter-spacing: 0.03em !important;
+    margin-bottom: 4px !important;
   }
 
-  /* 5. Mobile Buttons with scale animations */
+  /* 5. Mobile Buttons - Rounded-lg, Flat Clean colors */
   .btn-lte-primary, 
   .btn-lte-success, 
   .btn-lte-danger, 
@@ -336,18 +327,18 @@ svg, path, g, sector, .recharts-pie-sector, .recharts-sector, .recharts-pie, .re
   .btn-lte-outline,
   button[type="submit"],
   button[type="button"] {
-    min-height: 46px !important;
-    border-radius: 14px !important;
+    min-height: 44px !important;
+    border-radius: 10px !important;
     font-size: 13px !important;
-    font-weight: 700 !important;
-    letter-spacing: 0.03em !important;
+    font-weight: 600 !important;
+    letter-spacing: 0.02em !important;
     text-transform: uppercase !important;
-    box-shadow: 0 4px 12px rgba(37, 99, 235, 0.1) !important;
-    transition: all 0.15s cubic-bezier(0.4, 0, 0.2, 1) !important;
+    box-shadow: none !important;
+    transition: all 0.15s ease !important;
   }
 
   .btn-lte-primary {
-    background: linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%) !important;
+    background-color: #2563eb !important;
     border-style: none !important;
     color: #ffffff !important;
   }
@@ -358,17 +349,17 @@ svg, path, g, sector, .recharts-pie-sector, .recharts-sector, .recharts-pie, .re
   .btn-lte-warning:active, 
   .btn-lte-secondary:active,
   button:active {
-    transform: scale(0.96) !important;
+    transform: scale(0.97) !important;
   }
 
-  /* 6. Tabs & Segments (e.g. My Claims / Team Claims) layout */
+  /* 6. Tabs & Segments (Clean buttons style) */
   .flex.border-b {
     display: flex !important;
     flex-direction: row !important;
     background-color: #f1f5f9 !important;
-    padding: 0.375rem !important;
-    border-radius: 1rem !important;
-    margin-bottom: 1rem !important;
+    padding: 0.25rem !important;
+    border-radius: 0.75rem !important;
+    margin-bottom: 0.875rem !important;
     width: 100% !important;
     justify-content: space-between !important;
     align-items: center !important;
@@ -378,11 +369,11 @@ svg, path, g, sector, .recharts-pie-sector, .recharts-sector, .recharts-pie, .re
   .flex.border-b button {
     flex: 1 1 0% !important;
     text-align: center !important;
-    padding: 0.625rem 0.75rem !important;
-    font-weight: 800 !important;
+    padding: 0.5rem 0.75rem !important;
+    font-weight: 700 !important;
     text-transform: uppercase !important;
-    letter-spacing: 0.05em !important;
-    border-radius: 0.75rem !important;
+    letter-spacing: 0.03em !important;
+    border-radius: 0.5rem !important;
     transition: all 0.15s ease !important;
     border-style: none !important;
     background-color: transparent !important;
@@ -395,35 +386,35 @@ svg, path, g, sector, .recharts-pie-sector, .recharts-sector, .recharts-pie, .re
   .flex.border-b button.border-blue-600 {
     background-color: #ffffff !important;
     color: #2563eb !important;
-    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05) !important;
-    font-weight: 900 !important;
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05) !important;
+    font-weight: 800 !important;
     border-bottom: none !important;
   }
 
-  /* 7. Summary info box widgets styling (Android dashboard style) */
+  /* 7. Summary Widgets (Android dashboard style, clean list) */
   .info-box-lte {
     border-style: none !important;
     background-color: #ffffff !important;
-    padding: 0.875rem !important;
+    padding: 0.75rem !important;
     display: flex !important;
     align-items: center !important;
-    gap: 1rem !important;
-    margin-bottom: 0.75rem !important;
-    border-radius: 18px !important;
-    min-height: 60px !important;
-    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.02) !important;
+    gap: 0.875rem !important;
+    margin-bottom: 0.625rem !important;
+    border-radius: 14px !important;
+    min-height: 56px !important;
+    border: 1px solid #f1f5f9 !important;
   }
 
   .info-box-icon {
-    width: 44px !important;
-    height: 44px !important;
-    border-radius: 14px !important;
+    width: 40px !important;
+    height: 40px !important;
+    border-radius: 10px !important;
     display: flex !important;
     align-items: center !important;
     justify-content: center !important;
     color: #ffffff !important;
     flex-shrink: 0 !important;
-    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.04) !important;
+    box-shadow: none !important;
   }
 
   .info-box-content {
@@ -434,91 +425,81 @@ svg, path, g, sector, .recharts-pie-sector, .recharts-sector, .recharts-pie, .re
     flex-grow: 1 !important;
   }
 
-  /* 8. Unified Typography Scaling */
+  /* 8. Unified Typography Scaling (Simple and clean, no mismatched sizes) */
   h1, .text-xl, .text-2xl, .text-3xl {
-    font-size: 15px !important;
-    font-weight: 800 !important;
+    font-size: 14px !important;
+    font-weight: 700 !important;
     letter-spacing: -0.01em !important;
-    line-height: 1.3 !important;
+    line-height: 1.25 !important;
     color: #0f172a !important;
   }
 
   h2, h3, .text-lg {
-    font-size: 13px !important;
-    font-weight: 750 !important;
-    letter-spacing: -0.01em !important;
-    line-height: 1.35 !important;
+    font-size: 12px !important;
+    font-weight: 700 !important;
+    line-height: 1.3 !important;
     color: #1e293b !important;
   }
 
   .text-base {
-    font-size: 12px !important;
+    font-size: 11.5px !important;
     font-weight: 600 !important;
-    line-height: 1.4 !important;
     color: #334155 !important;
   }
 
   .text-sm {
-    font-size: 11.5px !important;
-    font-weight: 600 !important;
-    line-height: 1.4 !important;
+    font-size: 11px !important;
+    font-weight: 550 !important;
     color: #475569 !important;
   }
 
   .text-xs {
-    font-size: 11px !important;
-    font-weight: 550 !important;
-    line-height: 1.45 !important;
+    font-size: 10.5px !important;
+    font-weight: 500 !important;
     color: #64748b !important;
   }
 
   .text-\[9px\] {
     font-size: 9px !important;
     font-weight: 700 !important;
-    letter-spacing: 0.05em !important;
   }
   
   .text-\[10px\] {
-    font-size: 10px !important;
+    font-size: 9.5px !important;
     font-weight: 700 !important;
-    letter-spacing: 0.03em !important;
   }
   
   .text-\[11px\] {
-    font-size: 11px !important;
+    font-size: 10.5px !important;
     font-weight: 600 !important;
   }
 
-  /* Spacing overrides for compact modern spacing */
-  .gap-6 {
-    gap: 0.75rem !important;
-  }
-  .gap-4 {
-    gap: 0.5rem !important;
-  }
+  /* Spacing overrides */
+  .gap-6 { gap: 0.625rem !important; }
+  .gap-4 { gap: 0.5rem !important; }
 
-  /* 9. Bottom-Sheet Slide-Up Modal System for Native Mobile Feel */
+  /* 9. Bottom-Sheet Slide-Up Modal System */
   .modal-lte-overlay {
     padding: 0 !important;
     display: flex !important;
     align-items: flex-end !important;
-    background-color: rgba(0, 0, 0, 0.6) !important;
+    background-color: rgba(0, 0, 0, 0.5) !important;
     z-index: 1000 !important;
   }
 
   .modal-lte-content {
-    border-top-left-radius: 28px !important;
-    border-top-right-radius: 28px !important;
+    border-top-left-radius: 20px !important;
+    border-top-right-radius: 20px !important;
     border-bottom-left-radius: 0 !important;
     border-bottom-right-radius: 0 !important;
     max-height: 92vh !important;
     height: 92vh !important;
     border-style: none !important;
-    box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25) !important;
+    box-shadow: 0 -4px 24px rgba(0, 0, 0, 0.05) !important;
     padding: 0 !important;
     display: flex !important;
     flex-direction: column !important;
-    animation: slideUp 0.28s cubic-bezier(0.32, 0.94, 0.6, 1) !important;
+    animation: slideUp 0.25s ease-out !important;
   }
 
   @keyframes slideUp {
@@ -530,50 +511,51 @@ svg, path, g, sector, .recharts-pie-sector, .recharts-sector, .recharts-pie, .re
   .px-4.py-3.bg-gray-100 {
     background-color: #ffffff !important;
     border-bottom: 1px solid #f1f5f9 !important;
-    padding: 1rem 1.25rem !important;
+    padding: 0.875rem 1rem !important;
     display: flex !important;
     align-items: center !important;
     justify-content: space-between !important;
-    border-top-left-radius: 28px !important;
-    border-top-right-radius: 28px !important;
+    border-top-left-radius: 20px !important;
+    border-top-right-radius: 20px !important;
     flex-shrink: 0 !important;
   }
 
   .modal-lte-body, 
   .flex-1.overflow-y-auto {
-    padding: 1rem 1.25rem !important;
+    padding: 0.875rem 1rem !important;
   }
 
   .modal-lte-body > * + *, 
   .flex-1.overflow-y-auto > * + * {
-    margin-top: 1rem !important;
+    margin-top: 0.75rem !important;
   }
 
   .modal-lte-footer,
   .pt-3.border-t.border-gray-200 {
     border-top: 1px solid #f1f5f9 !important;
-    padding: 0.875rem 1.25rem !important;
-    background-color: rgba(248, 250, 252, 0.5) !important;
+    padding: 0.75rem 1rem !important;
+    background-color: #f8fafc !important;
     display: flex !important;
     align-items: center !important;
     justify-content: flex-end !important;
-    gap: 0.75rem !important;
+    gap: 0.5rem !important;
     flex-shrink: 0 !important;
-    padding-bottom: calc(0.875rem + env(safe-area-inset-bottom)) !important;
+    padding-bottom: calc(0.75rem + env(safe-area-inset-bottom)) !important;
   }
 
-  /* 10. Android Native-style List Rows instead of boxy cards */
+  /* 10. List Item Rows */
   .mobile-card-list-item,
   .block.md\:hidden .bg-white.border.border-gray-200.rounded-lg {
     border-style: none !important;
     background-color: #ffffff !important;
-    padding: 1rem !important;
-    margin-bottom: 0.625rem !important;
+    padding: 0.875rem !important;
+    margin-bottom: 0.5rem !important;
     display: flex !important;
     flex-direction: column !important;
     justify-content: space-between !important;
-    border-radius: 16px !important;
-    box-shadow: 0 2px 12px rgba(0, 0, 0, 0.02) !important;
+    border-radius: 12px !important;
+    border: 1px solid #f1f5f9 !important;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.01) !important;
     transition: background-color 0.15s ease !important;
   }
 
@@ -583,12 +565,10 @@ svg, path, g, sector, .recharts-pie-sector, .recharts-sector, .recharts-pie, .re
 
   /* 11. Android Material 3 Bottom Nav Bar styling overrides */
   nav.lg\:hidden {
-    height: 64px !important; /* Modern Android bottom navigation height */
+    height: 56px !important; /* standard bottom nav height */
     border-top: 1px solid #f1f5f9 !important;
-    box-shadow: 0 -4px 20px rgba(0, 0, 0, 0.04) !important;
-    background-color: rgba(255, 255, 255, 0.95) !important;
-    backdrop-filter: blur(16px) !important;
-    border-style: none !important;
+    box-shadow: 0 -2px 10px rgba(0, 0, 0, 0.02) !important;
+    background-color: #ffffff !important;
   }
 
   nav.lg\:hidden a, nav.lg\:hidden button {
@@ -603,20 +583,26 @@ svg, path, g, sector, .recharts-pie-sector, .recharts-sector, .recharts-pie, .re
     border-style: none !important;
   }
 
-  /* active icon pill highlight */
+  /* clean active highlight */
   nav.lg\:hidden a.text-blue-600 svg,
   nav.lg\:hidden button.text-blue-600 svg {
     color: #2563eb !important;
-    background-color: #eff6ff !important;
-    border-radius: 16px !important;
-    padding: 4px 12px !important;
+    background-color: #f1f5f9 !important;
+    border-radius: 12px !important;
+    padding: 3px 10px !important;
     box-sizing: content-box !important;
   }
 
   nav.lg\:hidden span {
     font-size: 9px !important;
-    font-weight: 800 !important;
+    font-weight: 700 !important;
     margin-top: 2px !important;
-    letter-spacing: 0.02em !important;
+    color: #64748b !important;
+  }
+
+  nav.lg\:hidden a.text-blue-600 span,
+  nav.lg\:hidden button.text-blue-600 span {
+    color: #2563eb !important;
+    font-weight: 850 !important;
   }
 }
