@@ -294,7 +294,7 @@ export default function NotificationsPage() {
               <div 
                 key={n.id}
                 className={`p-4 transition-colors flex flex-col sm:flex-row sm:items-center justify-between gap-4 ${
-                  n.read ? "bg-white hover:bg-gray-50/50" : "bg-blue-50/20 hover:bg-blue-50/40 border-l-2 border-l-blue-600"
+                  n.read ? "bg-white hover:bg-slate-50/50" : "bg-[#a5d8e8]/20 hover:bg-[#a5d8e8]/35 border-l-4 border-l-blue-600"
                 }`}
               >
                 <div className="space-y-2 flex-1 min-w-0">

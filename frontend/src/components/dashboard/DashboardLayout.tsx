@@ -451,37 +451,37 @@ export default function DashboardLayout() {
               </button>              {/* Notification Dropdown Panel */}
               {isNotifOpen && (
                 <>
-                  <div className="fixed inset-0 z-[9998] bg-black/40 sm:bg-transparent" onClick={() => setIsNotifOpen(false)} />
+                  <div className="fixed inset-0 z-[9998] bg-black/50 sm:bg-transparent" onClick={() => setIsNotifOpen(false)} />
                   
                   {/* MOBILE FULL-SCREEN NOTIFICATION CENTER & DESKTOP DROPDOWN */}
-                  <div className="fixed inset-0 sm:absolute sm:inset-auto sm:top-full sm:right-0 sm:mt-2 sm:w-85 bg-[#f8fafc] sm:bg-white border sm:border-gray-200 rounded-none sm:rounded-xl shadow-2xl z-[9999] overflow-hidden text-xs text-gray-700 animate-fadeIn flex flex-col h-full sm:h-auto sm:max-h-none">
+                  <div className="fixed inset-0 sm:absolute sm:inset-auto sm:top-full sm:right-0 sm:mt-2 sm:w-85 bg-slate-100 border sm:border-slate-250 rounded-none sm:rounded-xl shadow-2xl z-[9999] overflow-hidden text-xs text-gray-700 animate-fadeIn flex flex-col h-full sm:h-auto sm:max-h-none">
                     
                     {/* Header */}
-                    <div className="px-4 py-3 bg-white sm:bg-gray-50 border-b border-gray-200 flex items-center justify-between shrink-0 h-14 shadow-sm sm:shadow-none">
+                    <div className="px-4 py-3 bg-slate-800 text-white flex items-center justify-between shrink-0 h-14 shadow-md">
                       <div className="flex items-center gap-3">
                         <button
                           type="button"
                           onClick={() => setIsNotifOpen(false)}
-                          className="sm:hidden w-7 h-7 rounded-full border border-red-200 bg-red-50 text-red-500 hover:bg-red-100 hover:text-red-700 transition-all cursor-pointer flex items-center justify-center font-bold text-xs"
+                          className="sm:hidden w-7 h-7 rounded-full border border-slate-700 bg-slate-750 text-slate-300 hover:bg-slate-700 hover:text-white transition-all cursor-pointer flex items-center justify-center font-bold text-xs"
                         >
                           ✕
                         </button>
-                        <span className="uppercase tracking-widest text-[11px] sm:text-[10px] font-black text-gray-800">Notifications Center</span>
+                        <span className="uppercase tracking-widest text-[10px] font-black text-white">Notifications Center</span>
                       </div>
                       
                       <button
                         type="button"
                         onClick={markAllAsRead}
-                        className="text-[10px] text-blue-600 hover:text-blue-800 font-extrabold uppercase bg-transparent border-0 cursor-pointer"
+                        className="text-[10px] text-[#a5d8e8] hover:text-white font-black uppercase bg-transparent border-0 cursor-pointer transition-colors"
                       >
                         Mark all read
                       </button>
                     </div>
 
                     {/* Scrollable list */}
-                    <div className="flex-1 overflow-y-auto p-4 sm:p-0 divide-y sm:divide-y divide-gray-150 max-h-none sm:max-h-80 bg-[#f8fafc] sm:bg-white space-y-3 sm:space-y-0 pb-20 sm:pb-0">
+                    <div className="flex-1 overflow-y-auto p-3 max-h-none sm:max-h-80 bg-slate-100 space-y-2.5 pb-20 sm:pb-3">
                       {safeNotifications.length === 0 ? (
-                        <div className="p-12 text-center text-gray-400 font-extrabold uppercase tracking-wider text-[10px] bg-white rounded-2xl border border-gray-150 sm:border-0 sm:rounded-none">
+                        <div className="p-12 text-center text-slate-400 font-extrabold uppercase tracking-wider text-[10px] bg-white rounded-xl border border-slate-200 shadow-sm">
                           No notifications
                         </div>
                       ) : (
@@ -493,11 +493,11 @@ export default function DashboardLayout() {
                               markAsRead(n.id);
                               setIsNotifOpen(false);
                             }}
-                            className={`block p-4 sm:p-4.5 transition-all no-underline ${
+                            className={`block p-3.5 transition-all no-underline rounded-xl border shadow-xs ${
                               n.read 
-                                ? "bg-white hover:bg-gray-50 text-gray-700" 
-                                : "bg-blue-50/40 hover:bg-blue-50/70 border-l-4 border-l-blue-600 text-gray-800 shadow-sm sm:shadow-none"
-                            } rounded-2xl sm:rounded-none border border-gray-200/70 sm:border-0 sm:border-b sm:border-b-gray-100`}
+                                ? "bg-white hover:bg-slate-50 border-slate-200/80 text-slate-700" 
+                                : "bg-[#a5d8e8]/20 hover:bg-[#a5d8e8]/35 border-slate-300 border-l-4 border-l-blue-600 text-slate-900 font-semibold"
+                            }`}
                           >
                             <div className="flex justify-between items-start gap-2">
                               <div className="flex items-center gap-2 flex-wrap">
@@ -518,15 +518,15 @@ export default function DashboardLayout() {
                                   <span className="h-1.5 w-1.5 rounded-full bg-blue-600 animate-pulse"></span>
                                 )}
                               </div>
-                              <span className="text-[9px] text-gray-400 font-bold shrink-0 font-mono">{formatDateTime(n.created_at)}</span>
+                              <span className="text-[9px] text-slate-400 font-bold shrink-0 font-mono">{formatDateTime(n.created_at)}</span>
                             </div>
-                            <p className="text-gray-800 font-bold text-xs mt-2.5 leading-relaxed">{n.description}</p>
+                            <p className="text-slate-800 font-bold text-xs mt-2.5 leading-relaxed">{n.description}</p>
                           </Link>
                         ))
                       )}
                     </div>
 
-                    <Link to="/notifications" onClick={() => setIsNotifOpen(false)} className="block py-3.5 text-center bg-white border-t border-gray-200 text-[10px] text-blue-600 hover:text-blue-800 font-extrabold uppercase tracking-widest shrink-0 shadow-lg sm:shadow-none mb-safe">
+                    <Link to="/notifications" onClick={() => setIsNotifOpen(false)} className="block py-3 text-center bg-white border-t border-slate-200 text-[10px] text-blue-600 hover:text-blue-800 font-extrabold uppercase tracking-widest shrink-0 shadow-lg sm:shadow-none mb-safe transition-colors">
                       See All Notifications
                     </Link>
                   </div>
