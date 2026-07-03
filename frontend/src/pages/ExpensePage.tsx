@@ -785,7 +785,9 @@ export default function ExpensePage() {
           });
 
           const allowanceObj = data.allowance || {};
-          if (hotelAmt > 0 || leg1.company_provided) {
+          if (leg1.company_provided) {
+            leg1.da = (allowanceObj.daily_hotel || 350).toString();
+          } else if (hotelAmt > 0) {
             if (hasOutDistrictLeg) {
               leg1.da = (allowanceObj.daily_out_state || 600).toString();
             } else {
@@ -1153,7 +1155,7 @@ export default function ExpensePage() {
 
         if (field === "km" && (updatedLeg.mode === "Bike" || updatedLeg.mode === "Car")) {
           const kmNum = parseFloat(value) || 0;
-          const rate = updatedLeg.mode === "Bike" ? (allowance.rate_bike || 4.5) : (allowance.rate_car || 9.0);
+          const rate = updatedLeg.mode === "Bike" ? (allowance.rate_bike || 0) : (allowance.rate_car || 0);
           updatedLeg.amount = (kmNum * rate).toFixed(2);
         }
 
@@ -1167,6 +1169,16 @@ export default function ExpensePage() {
           if (value !== "0" && value !== 0) {
             updatedLeg.company_provided = false;
           }
+        }
+
+        // Force company_provided to false if conditions are not met
+        const isUserJodhpur = (user.district || "").trim().toLowerCase() === "jodhpur";
+        const isLegOutdoor = updatedLeg.travel_type === "Outdoor";
+        const isDestJodhpur = (updatedLeg.district || "").trim().toLowerCase() === "jodhpur";
+        const isHotelZero = updatedLeg.hotel === "0";
+        
+        if (isUserJodhpur || !isLegOutdoor || !isDestJodhpur || !isHotelZero) {
+          updatedLeg.company_provided = false;
         }
 
         return updatedLeg;
@@ -1184,7 +1196,9 @@ export default function ExpensePage() {
       if (leg1) {
         if (field !== "da") {
           const hotelAmt = parseFloat(leg1.hotel) || 0;
-          if (hotelAmt > 0 || leg1.company_provided) {
+          if (leg1.company_provided) {
+            leg1.da = (allowance.daily_hotel || 350).toString();
+          } else if (hotelAmt > 0) {
             if (hasOutDistrictLeg) {
               leg1.da = (allowance.daily_out_state || 600).toString();
             } else {
@@ -2655,7 +2669,10 @@ export default function ExpensePage() {
                               onChange={(e) => handleItineraryChange(leg.leg, "hotel", e.target.value)}
                               className="input-lte font-bold"
                             />
-                            {leg.hotel === "0" && (
+                            {leg.hotel === "0" &&
+                             (user.district || "").trim().toLowerCase() !== "jodhpur" &&
+                             leg.travel_type === "Outdoor" &&
+                             (leg.district || "").trim().toLowerCase() === "jodhpur" && (
                               <div className="flex items-center gap-1.5 mt-2 bg-blue-50/50 p-1.5 rounded border border-blue-100 w-fit">
                                 <input
                                   type="checkbox"

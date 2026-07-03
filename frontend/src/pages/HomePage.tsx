@@ -173,8 +173,8 @@ export default function HomePage() {
             currentAuto: data.allowance.current_month_auto || 0,
             maxAuto: (data.allowance.max_auto_per_month || 1000) + (data.approved_auto || 0),
             vehicleType: data.allowance.vehicle_type || "Bike",
-            rateBike: data.allowance.rate_bike || 4.5,
-            rateCar: data.allowance.rate_car || 9.0
+            rateBike: data.allowance.rate_bike || 0,
+            rateCar: data.allowance.rate_car || 0
           };
           setAllowanceStats(stats);
           localStorage.setItem(`cache_allowance_stats_${uId}`, JSON.stringify(stats));
