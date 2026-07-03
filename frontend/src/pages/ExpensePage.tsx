@@ -15,9 +15,6 @@ import {
   Users,
   FileText,
   Navigation,
-  Bike,
-  Car,
-  Bus,
   Camera,
   ShieldCheck
 } from "lucide-react";
