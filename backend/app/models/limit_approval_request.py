@@ -10,6 +10,7 @@ class LimitApprovalRequest(Base):
     manager_id = Column(String(50), nullable=False)
     request_type = Column(String(20), nullable=False)  # KM, AUTO
     requested_value = Column(Float, nullable=False)
+    approved_value = Column(Float, nullable=True)
     status = Column(String(20), default="Pending")  # Pending, Approved, Rejected
     for_month = Column(String(10), nullable=False)  # YYYY-MM
     created_at = Column(DateTime, server_default=func.now())

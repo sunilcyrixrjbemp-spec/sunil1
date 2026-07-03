@@ -1115,15 +1115,31 @@ export default function HomePage() {
                       <span className="font-semibold text-gray-800 ml-1">{claimDetails.purpose || claimDetails.description || "Field visits"}</span>
                     </div>
                     <div className="text-right">
-                      <span className="text-[9px] text-gray-500 font-bold uppercase block">
-                        {claimDetails.category === "Limit Request" ? "Requested Limit" : "Total"}
-                      </span>
-                      <span className="text-lg font-black text-blue-700 font-mono">
-                        {claimDetails.category === "Limit Request"
-                          ? (claimDetails.travel_mode === "KM" ? `${claimDetails.total_km} KM` : `₹${claimDetails.amount.toLocaleString()}`)
-                          : `₹${claimDetails.amount.toLocaleString()}`
-                        }
-                      </span>
+                      {claimDetails.category === "Limit Request" ? (
+                        <div className="space-y-1">
+                          <div>
+                            <span className="text-[9px] text-gray-400 font-bold uppercase block">Requested Limit</span>
+                            <span className="text-xs font-bold text-gray-600 font-mono">
+                              {claimDetails.travel_mode === "KM" ? `${claimDetails.requested_value || claimDetails.total_km} KM` : `₹${(claimDetails.requested_value || claimDetails.amount).toLocaleString()}`}
+                            </span>
+                          </div>
+                          {claimDetails.status.toLowerCase() === "approved" && (
+                            <div>
+                              <span className="text-[9px] text-emerald-600 font-extrabold uppercase block">Approved Limit</span>
+                              <span className="text-sm font-black text-emerald-700 font-mono">
+                                {claimDetails.travel_mode === "KM" ? `${claimDetails.approved_value ?? (claimDetails.requested_value || claimDetails.total_km)} KM` : `₹${(claimDetails.approved_value ?? (claimDetails.requested_value || claimDetails.amount)).toLocaleString()}`}
+                              </span>
+                            </div>
+                          )}
+                        </div>
+                      ) : (
+                        <>
+                          <span className="text-[9px] text-gray-500 font-bold uppercase block">Total</span>
+                          <span className="text-lg font-black text-blue-700 font-mono">
+                            ₹{claimDetails.amount.toLocaleString()}
+                          </span>
+                        </>
+                      )}
                     </div>
                   </div>
 

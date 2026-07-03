@@ -285,6 +285,19 @@ def run_schema_updates(db: Session):
         db.rollback()
         logger.warning(f"Error migrating existing user permissions: {str(e)}")
 
+    # Add approved_value column to limit_approval_requests table
+    try:
+        db.execute(text("ALTER TABLE limit_approval_requests ADD COLUMN approved_value FLOAT"))
+        db.commit()
+        logger.info("Added column approved_value to limit_approval_requests table.")
+    except Exception as e:
+        db.rollback()
+        err_str = str(e).lower()
+        if "duplicate column name" in err_str or "already exists" in err_str:
+            logger.info("Column approved_value already exists in limit_approval_requests table.")
+        else:
+            logger.warning(f"Error checking/adding approved_value: {str(e)}")
+
 def seed_allowance_master(db: Session):
     """Seed default grade allowances if allowance_master is empty"""
     from app.models.allowance_master import AllowanceMaster

@@ -219,8 +219,8 @@ async def init_expense(
 
     # 5. Approved limit extension requests (Consolidated into 1 query)
     limits = db.query(
-        func.sum(case((LimitApprovalRequest.request_type == "KM", LimitApprovalRequest.requested_value), else_=0.0)),
-        func.sum(case((LimitApprovalRequest.request_type == "AUTO", LimitApprovalRequest.requested_value), else_=0.0))
+        func.sum(case((LimitApprovalRequest.request_type == "KM", func.coalesce(LimitApprovalRequest.approved_value, LimitApprovalRequest.requested_value)), else_=0.0)),
+        func.sum(case((LimitApprovalRequest.request_type == "AUTO", func.coalesce(LimitApprovalRequest.approved_value, LimitApprovalRequest.requested_value)), else_=0.0))
     ).filter(
         LimitApprovalRequest.user_id == user.user_id,
         func.lower(LimitApprovalRequest.status) == "approved",
@@ -582,8 +582,8 @@ async def submit_expense(
 
     # Approved extensions (Consolidated into 1 query)
     limits = db.query(
-        func.sum(case((LimitApprovalRequest.request_type == "KM", LimitApprovalRequest.requested_value), else_=0.0)),
-        func.sum(case((LimitApprovalRequest.request_type == "AUTO", LimitApprovalRequest.requested_value), else_=0.0))
+        func.sum(case((LimitApprovalRequest.request_type == "KM", func.coalesce(LimitApprovalRequest.approved_value, LimitApprovalRequest.requested_value)), else_=0.0)),
+        func.sum(case((LimitApprovalRequest.request_type == "AUTO", func.coalesce(LimitApprovalRequest.approved_value, LimitApprovalRequest.requested_value)), else_=0.0))
     ).filter(
         LimitApprovalRequest.user_id == current_user.user_id,
         func.lower(LimitApprovalRequest.status) == "approved",
@@ -1600,7 +1600,9 @@ async def get_expenses(
             "user_id": current_user.id,
             "month": month_name,
             "year": year_val,
-            "amount": pl.requested_value if pl.request_type == "AUTO" else 0.0,
+            "amount": pl.approved_value if (pl.status == "Approved" and pl.approved_value is not None) else (pl.requested_value if pl.request_type == "AUTO" else 0.0),
+            "requested_value": pl.requested_value,
+            "approved_value": pl.approved_value,
             "status": pl.status.lower(),
             "travel_mode": pl.request_type,
             "itinerary": req_date,
@@ -1618,7 +1620,9 @@ async def get_expenses(
             "created_at": pl.created_at,
             "updated_at": pl.updated_at,
             "total_km": pl.requested_value if pl.request_type == "KM" else 0.0,
+            "approved_km": pl.approved_value if (pl.status == "Approved" and pl.approved_value is not None and pl.request_type == "KM") else (pl.requested_value if (pl.status == "Approved" and pl.request_type == "KM") else 0.0),
             "total_auto": pl.requested_value if pl.request_type == "AUTO" else 0.0,
+            "approved_auto": pl.approved_value if (pl.status == "Approved" and pl.approved_value is not None and pl.request_type == "AUTO") else (pl.requested_value if (pl.status == "Approved" and pl.request_type == "AUTO") else 0.0),
             "bike_amount": 0.0,
             "car_amount": 0.0,
             "auto_amount": pl.requested_value if pl.request_type == "AUTO" else 0.0,
@@ -1635,6 +1639,8 @@ async def get_expenses(
                     "mode": pl.request_type,
                     "km": pl.requested_value if pl.request_type == "KM" else 0.0,
                     "amount": pl.requested_value if pl.request_type == "AUTO" else 0.0,
+                    "approved_km": pl.approved_value if (pl.status == "Approved" and pl.approved_value is not None and pl.request_type == "KM") else (pl.requested_value if (pl.status == "Approved" and pl.request_type == "KM") else 0.0),
+                    "approved_amount": pl.approved_value if (pl.status == "Approved" and pl.approved_value is not None and pl.request_type == "AUTO") else (pl.requested_value if (pl.status == "Approved" and pl.request_type == "AUTO") else 0.0),
                     "sub_mode": "",
                     "sub_amount": 0.0,
                     "da": 0.0,
@@ -2283,12 +2289,14 @@ async def get_expense_details(
             "submitter_code": pl.user_id,
             "month": pl.for_month,
             "year": limit_year,
-            "amount": pl.requested_value,
+            "amount": pl.approved_value if (pl.status == "Approved" and pl.approved_value is not None) else (pl.requested_value if pl.request_type == "AUTO" else 0.0),
+            "requested_value": pl.requested_value,
+            "approved_value": pl.approved_value,
             "status": pl.status,
             "category": "Limit Request",
             "date": pl.for_month,
             "purpose": f"Request additional {pl.requested_value:.1f} {pl.request_type} limit extension for month {pl.for_month}.",
-            "original_amount": pl.requested_value,
+            "original_amount": pl.requested_value if pl.request_type == "AUTO" else 0.0,
             "original_da_amount": 0.0,
             "original_hotel_amount": 0.0,
             "original_other_expense_amount": 0.0,
@@ -2308,6 +2316,8 @@ async def get_expense_details(
                     "mode": pl.request_type,
                     "km": pl.requested_value if pl.request_type == "KM" else 0.0,
                     "amount": pl.requested_value if pl.request_type == "AUTO" else 0.0,
+                    "approved_km": pl.approved_value if (pl.status == "Approved" and pl.approved_value is not None and pl.request_type == "KM") else (pl.requested_value if (pl.status == "Approved" and pl.request_type == "KM") else 0.0),
+                    "approved_amount": pl.approved_value if (pl.status == "Approved" and pl.approved_value is not None and pl.request_type == "AUTO") else (pl.requested_value if (pl.status == "Approved" and pl.request_type == "AUTO") else 0.0),
                     "sub_mode": "",
                     "sub_amount": 0.0,
                     "da": 0.0,
@@ -2326,7 +2336,7 @@ async def get_expense_details(
                     "calibration_count": 0,
                     "mobilise_count": 0,
                     "mobilise_asset_count": 0,
-                    "visit_purpose": "Limit Extension",
+                    "visit_purpose": f"Request additional {pl.requested_value:.1f} {pl.request_type} limit extension for month {pl.for_month}.",
                     "activity_details": "",
                     "original_km": pl.requested_value if pl.request_type == "KM" else 0.0,
                     "original_amount": pl.requested_value if pl.request_type == "AUTO" else 0.0,
