@@ -714,13 +714,13 @@ export default function HomePage() {
           {/* TAB SYSTEM: My Claims vs Team Claims */}
           <div className="bg-white border border-gray-200 rounded shadow-sm overflow-hidden flex flex-col">
             {/* Tab Header bar */}
-            <div className="border-b border-gray-200 bg-slate-100 flex items-center justify-start px-4">
+            <div className="border-b border-gray-200 bg-slate-100 flex items-center justify-start">
               <button
                 onClick={() => handleTabChange("my-claims")}
-                className={`py-3 px-5 font-black text-xs uppercase tracking-wider border-b-3 transition-all flex items-center gap-1.5 cursor-pointer whitespace-nowrap ${
+                className={`py-3 px-5 font-black text-xs uppercase tracking-wider border-b-4 transition-all flex items-center gap-1.5 cursor-pointer whitespace-nowrap ${
                   activeTab === "my-claims"
-                    ? "border-indigo-650 text-indigo-750 bg-white"
-                    : "border-transparent text-gray-500 hover:text-gray-800 hover:bg-slate-200/50"
+                    ? "border-b-blue-600 text-blue-600 bg-white"
+                    : "border-b-transparent text-gray-500 hover:text-gray-800 hover:bg-slate-200/50"
                 }`}
               >
                 <Layers className="w-3.5 h-3.5" />
@@ -730,10 +730,10 @@ export default function HomePage() {
               {isReviewerRole && (
                 <button
                   onClick={() => handleTabChange("team-claims")}
-                  className={`py-3 px-5 font-black text-xs uppercase tracking-wider border-b-3 transition-all flex items-center gap-1.5 cursor-pointer whitespace-nowrap ${
+                  className={`py-3 px-5 font-black text-xs uppercase tracking-wider border-b-4 transition-all flex items-center gap-1.5 cursor-pointer whitespace-nowrap ${
                     activeTab === "team-claims"
-                      ? "border-emerald-605 text-emerald-755 bg-white"
-                      : "border-transparent text-gray-500 hover:text-gray-800 hover:bg-slate-200/50"
+                      ? "border-b-emerald-600 text-emerald-600 bg-white"
+                      : "border-b-transparent text-gray-500 hover:text-gray-800 hover:bg-slate-200/50"
                   }`}
                 >
                   <Users className="w-3.5 h-3.5" />
@@ -742,32 +742,29 @@ export default function HomePage() {
               )}
             </div>
 
-            {/* Contextual Single-Line Filters Row */}
-            <div className="bg-slate-50 border-b border-gray-200 px-4 py-2.5 flex flex-wrap items-center justify-between gap-4 text-[10px] font-bold text-gray-650">
-              {/* Left side: Month & Status pills (always shown) */}
-              <div className="flex flex-wrap items-center gap-3.5">
-                <div className="flex items-center gap-1.5">
-                  <span className="text-[9px] font-black uppercase text-gray-400 tracking-wider">Month:</span>
-                  <input 
-                    type="month"
-                    value={selectMonth}
-                    onChange={(e) => setSelectMonth(e.target.value)}
-                    className="bg-white border border-gray-300 px-2.5 py-1 text-[10px] font-bold text-gray-800 focus:outline-none focus:border-indigo-500 shadow-xs cursor-pointer whitespace-nowrap"
-                  />
-                </div>
+            {/* Contextual Single-Line Compact Filters Row */}
+            <div className="bg-slate-50 border-b border-gray-200 p-2 sm:p-3 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 text-[10px] font-bold text-gray-700">
+              {/* Left side: Month & Status pills */}
+              <div className="flex flex-wrap items-center gap-2">
+                <input 
+                  type="month"
+                  value={selectMonth}
+                  onChange={(e) => setSelectMonth(e.target.value)}
+                  className="bg-white border border-gray-300 rounded px-2 py-0.5 text-[10px] font-black text-gray-800 cursor-pointer shadow-xs focus:outline-none focus:border-blue-500"
+                />
                 
-                <div className="flex items-center gap-1">
+                <div className="flex items-center gap-1 overflow-x-auto no-scrollbar py-0.5">
                   {(["all", "pending", "approved", "rejected"] as const).map((status) => (
                     <button
                       key={status}
                       onClick={() => setHomeStatusFilter(status)}
-                      className={`px-2.5 py-1 text-[9px] font-black uppercase tracking-wider transition-all cursor-pointer border whitespace-nowrap ${
+                      className={`px-2 py-0.5 rounded text-[9px] font-black uppercase tracking-wider transition-all cursor-pointer border whitespace-nowrap ${
                         homeStatusFilter === status
-                          ? status === "all" ? "bg-slate-700 text-white border-slate-700"
+                          ? status === "all" ? "bg-slate-800 text-white border-slate-800"
                             : status === "approved" ? "bg-emerald-600 text-white border-emerald-600"
-                            : status === "pending" ? "bg-amber-600 text-white border-amber-600"
+                            : status === "pending" ? "bg-amber-500 text-white border-amber-500"
                             : "bg-rose-600 text-white border-rose-600"
-                          : "bg-white text-gray-600 border-gray-300 hover:border-gray-400 hover:bg-gray-50"
+                          : "bg-white text-gray-600 border-gray-300 hover:bg-gray-50"
                       }`}
                     >
                       {status === "all" ? "All" : status}
@@ -778,13 +775,13 @@ export default function HomePage() {
 
               {/* Right side: Employee & Mode dropdowns (only for Team Claims tab) */}
               {activeTab === "team-claims" && (
-                <div className="flex flex-wrap items-center gap-3.5">
-                  <div className="flex items-center gap-1.5">
-                    <span className="text-[9px] font-black uppercase text-gray-400 tracking-wider">Employee:</span>
+                <div className="flex items-center gap-2 border-t border-gray-200 pt-1.5 sm:border-t-0 sm:pt-0">
+                  <div className="flex items-center gap-1">
+                    <span className="text-[8px] font-bold uppercase text-gray-400">Emp:</span>
                     <select 
                       value={filterEmployee} 
                       onChange={(e) => setFilterEmployee(e.target.value)}
-                      className="bg-white border border-gray-300 px-2.5 py-1 text-[10px] font-bold text-gray-800 focus:outline-none focus:border-indigo-500 shadow-xs cursor-pointer max-w-[140px] truncate"
+                      className="bg-white border border-gray-300 rounded px-1.5 py-0.5 text-[10px] font-black text-gray-800 cursor-pointer max-w-[100px] truncate focus:outline-none focus:border-blue-500"
                     >
                       <option value="all">All Members</option>
                       {uniqueEmployees.map(emp => (
@@ -793,12 +790,12 @@ export default function HomePage() {
                     </select>
                   </div>
 
-                  <div className="flex items-center gap-1.5">
-                    <span className="text-[9px] font-black uppercase text-gray-400 tracking-wider">Mode:</span>
+                  <div className="flex items-center gap-1">
+                    <span className="text-[8px] font-bold uppercase text-gray-400">Mode:</span>
                     <select 
                       value={filterMode} 
                       onChange={(e) => setFilterMode(e.target.value)}
-                      className="bg-white border border-gray-300 px-2.5 py-1 text-[10px] font-bold text-gray-800 focus:outline-none focus:border-indigo-500 shadow-xs cursor-pointer"
+                      className="bg-white border border-gray-300 rounded px-1.5 py-0.5 text-[10px] font-black text-gray-800 cursor-pointer focus:outline-none focus:border-blue-500"
                     >
                       <option value="all">All Modes</option>
                       {uniqueModes.map(m => (
