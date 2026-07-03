@@ -209,7 +209,9 @@ async def approve_expense(
         
         if pl.manager_id != current_user.user_id and current_user.role != "Admin":
             raise HTTPException(status_code=403, detail="Access denied to approve this request.")
-            
+        if request.approved_value is not None:
+            pl.requested_value = request.approved_value
+
         pl.status = "Approved"
         db.commit()
         
