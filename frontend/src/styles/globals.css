@@ -232,47 +232,58 @@ svg, path, g, sector, .recharts-pie-sector, .recharts-sector, .recharts-pie, .re
 *:focus {
   outline: none !important;
   -webkit-tap-highlight-color: transparent !important;
-}/* ================= PREMIUM MOBILE THEME OVERRIDES ================= */
+}/* ================= PREMIUM ANDROID MATERIAL 3 MOBILE THEME OVERRIDES ================= */
 @media (max-width: 1023px) {
-  /* 1. Global Page spacing & modern background gradient */
+  /* 1. Global Page spacing & modern Material 3 slate gradient background */
   body {
-    background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%) !important;
+    background-color: #f8fafc !important;
+    font-family: 'Plus Jakarta Sans', sans-serif !important;
   }
 
   main {
-    padding: 0.75rem !important;
-    padding-bottom: 5.5rem !important;
+    padding: 1rem 0.875rem !important;
+    padding-bottom: 6rem !important; /* Spacious footer gap */
   }
 
-  /* 2. Login Page visual overhaul */
-  .min-h-screen.bg-\[\#e9ecef\] {
-    background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%) !important; /* Premium dark gradient */
-    padding: 1.5rem 1rem !important;
-  }
-
-  .min-h-screen.bg-\[\#e9ecef\] .bg-white.border.border-gray-300.rounded.shadow-md {
-    border-style: none !important;
-    box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25) !important;
-    border-radius: 24px !important;
-    background-color: rgba(255, 255, 255, 0.95) !important;
+  /* 2. Top Navigation Header (Android Action Bar) */
+  header.h-14 {
+    height: 56px !important; /* Android standard toolbar height */
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05) !important;
+    border-bottom: 1px solid #f1f5f9 !important;
+    background-color: rgba(255, 255, 255, 0.9) !important;
     backdrop-filter: blur(12px) !important;
-    overflow: hidden !important;
+    padding-left: 1rem !important;
+    padding-right: 1rem !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: space-between !important;
   }
 
-  /* 3. Borderless cards with soft, premium floating shadows */
+  /* 3. Material 3 Floating Cards (rounded-2xl, soft shadow) */
   .card-lte, 
   .card-lte-primary, 
   .card-lte-success, 
   .card-lte-warning, 
   .card-lte-danger, 
   .card-lte-info, 
-  .card-lte-gold {
-    @apply border-none rounded-2xl bg-white p-4 mb-4;
-    border-top: none !important;
-    box-shadow: 0 8px 30px rgba(0,0,0,0.03) !important;
+  .card-lte-gold,
+  .bg-white.border.rounded {
+    border-style: none !important;
+    background-color: #ffffff !important;
+    padding: 1rem !important;
+    margin-bottom: 1rem !important;
+    border-radius: 20px !important;
+    box-shadow: 0 4px 24px rgba(0, 0, 0, 0.03) !important;
   }
 
-  /* 4. Touch-optimized Input Form Fields (enforcing 44px min height & 14px size to prevent iOS zoom) */
+  /* Primary Accent Indicators for Cards */
+  .card-lte-primary { border-left: 4px solid #3b82f6 !important; }
+  .card-lte-success { border-left: 4px solid #10b981 !important; }
+  .card-lte-warning { border-left: 4px solid #f59e0b !important; }
+  .card-lte-danger { border-left: 4px solid #ef4444 !important; }
+  .card-lte-info { border-left: 4px solid #06b6d4 !important; }
+
+  /* 4. Touch-optimized Input Form Fields (enforcing 46px min height & 14px size to prevent iOS zoom) */
   .input-lte, 
   .input-lte-icon, 
   .form-control-lte,
@@ -282,11 +293,11 @@ svg, path, g, sector, .recharts-pie-sector, .recharts-sector, .recharts-pie, .re
   input[type="month"],
   select,
   textarea {
-    min-height: 44px !important;
+    min-height: 46px !important;
     padding: 0.75rem 1rem !important;
     font-size: 14px !important;
-    border-radius: 12px !important;
-    border: 1px solid #e2e8f0 !important;
+    border-radius: 14px !important;
+    border: 1.5px solid #e2e8f0 !important;
     background-color: #f8fafc !important;
     font-weight: 600 !important;
     color: #0f172a !important;
@@ -324,19 +335,20 @@ svg, path, g, sector, .recharts-pie-sector, .recharts-sector, .recharts-pie, .re
   .btn-lte-outline,
   button[type="submit"],
   button[type="button"] {
-    min-height: 44px !important;
-    border-radius: 12px !important;
+    min-height: 46px !important;
+    border-radius: 14px !important;
     font-size: 13px !important;
     font-weight: 700 !important;
     letter-spacing: 0.03em !important;
     text-transform: uppercase !important;
-    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -1px rgba(0, 0, 0, 0.03) !important;
+    box-shadow: 0 4px 12px rgba(37, 99, 235, 0.1) !important;
     transition: all 0.15s cubic-bezier(0.4, 0, 0.2, 1) !important;
   }
 
   .btn-lte-primary {
     background: linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%) !important;
-    @apply border-none text-white !important;
+    border-style: none !important;
+    color: #ffffff !important;
   }
 
   .btn-lte-primary:active, 
@@ -350,7 +362,7 @@ svg, path, g, sector, .recharts-pie-sector, .recharts-sector, .recharts-pie, .re
 
   /* 6. Tabs & Segments (e.g. My Claims / Team Claims) layout */
   .flex.border-b {
-    @apply flex-row bg-slate-100 p-1 rounded-2xl mb-4 w-full justify-between items-center border-none !important;
+    @apply flex-row bg-slate-100 p-1.5 rounded-2xl mb-4 w-full justify-between items-center border-none !important;
   }
 
   .flex.border-b button {
@@ -365,20 +377,38 @@ svg, path, g, sector, .recharts-pie-sector, .recharts-sector, .recharts-pie, .re
     border-bottom: none !important;
   }
 
-  /* 7. Summary info box widgets styling */
+  /* 7. Summary info box widgets styling (Android dashboard style) */
   .info-box-lte {
-    @apply border-none bg-white p-3 flex items-center gap-3.5 mb-3;
-    border-radius: 16px !important;
-    min-height: 58px !important;
+    border-style: none !important;
+    background-color: #ffffff !important;
+    padding: 0.875rem !important;
+    display: flex !important;
+    align-items: center !important;
+    gap: 1rem !important;
+    margin-bottom: 0.75rem !important;
+    border-radius: 18px !important;
+    min-height: 60px !important;
     box-shadow: 0 4px 20px rgba(0, 0, 0, 0.02) !important;
   }
 
   .info-box-icon {
-    @apply w-11 h-11 rounded-xl flex items-center justify-center text-white shrink-0 shadow-sm;
+    width: 44px !important;
+    height: 44px !important;
+    border-radius: 14px !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    color: #ffffff !important;
+    flex-shrink: 0 !important;
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.04) !important;
   }
 
   .info-box-content {
-    @apply p-0 flex flex-col justify-center flex-1;
+    padding: 0 !important;
+    display: flex !important;
+    flex-direction: column !important;
+    justify-content: center !important;
+    flex-1: 1 1 0% !important;
   }
 
   /* 8. Unified Typography Scaling */
@@ -503,5 +533,63 @@ svg, path, g, sector, .recharts-pie-sector, .recharts-sector, .recharts-pie, .re
     gap: 0.75rem !important;
     flex-shrink: 0 !important;
     padding-bottom: calc(0.875rem + env(safe-area-inset-bottom)) !important;
+  }
+
+  /* 10. Android Native-style List Rows instead of boxy cards */
+  .mobile-card-list-item,
+  .block.md\:hidden .bg-white.border.border-gray-200.rounded-lg {
+    border-style: none !important;
+    background-color: #ffffff !important;
+    padding: 1rem !important;
+    margin-bottom: 0.625rem !important;
+    display: flex !important;
+    flex-direction: column !important;
+    justify-content: space-between !important;
+    border-radius: 16px !important;
+    box-shadow: 0 2px 12px rgba(0, 0, 0, 0.02) !important;
+    transition: background-color 0.15s ease !important;
+  }
+
+  .block.md\:hidden .bg-white.border.border-gray-200.rounded-lg:active {
+    background-color: #f1f5f9 !important;
+  }
+
+  /* 11. Android Material 3 Bottom Nav Bar styling overrides */
+  nav.lg\:hidden {
+    height: 64px !important; /* Modern Android bottom navigation height */
+    border-top: 1px solid #f1f5f9 !important;
+    box-shadow: 0 -4px 20px rgba(0, 0, 0, 0.04) !important;
+    background-color: rgba(255, 255, 255, 0.95) !important;
+    backdrop-filter: blur(16px) !important;
+    @apply border-none !important;
+  }
+
+  nav.lg\:hidden a, nav.lg\:hidden button {
+    display: flex !important;
+    flex-direction: column !important;
+    align-items: center !important;
+    justify-content: center !important;
+    position: relative !important;
+    height: 100% !important;
+    width: 60px !important;
+    background-color: transparent !important;
+    border-style: none !important;
+  }
+
+  /* active icon pill highlight */
+  nav.lg\:hidden a.text-blue-600 svg,
+  nav.lg\:hidden button.text-blue-600 svg {
+    color: #2563eb !important;
+    background-color: #eff6ff !important;
+    border-radius: 16px !important;
+    padding: 4px 12px !important;
+    box-sizing: content-box !important;
+  }
+
+  nav.lg\:hidden span {
+    font-size: 9px !important;
+    font-weight: 800 !important;
+    margin-top: 2px !important;
+    letter-spacing: 0.02em !important;
   }
 }
