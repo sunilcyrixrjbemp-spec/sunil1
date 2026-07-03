@@ -536,6 +536,14 @@ export default function ApprovalPage() {
                         <td className="px-4 py-3.5 text-center" onClick={(e) => e.stopPropagation()}>
                           <div className="flex items-center justify-center gap-2">
                             <button
+                              onClick={() => handleOpenDetails(req)}
+                              className="btn-lte-primary px-2.5 py-1 flex items-center justify-center gap-1 cursor-pointer"
+                              title="Review details & monthly stats"
+                            >
+                              <Eye className="w-3.5 h-3.5" />
+                              <span>Review</span>
+                            </button>
+                            <button
                               onClick={() => handleApproveLimit(req.expense_id, currentValue)}
                               disabled={actionLoading}
                               className="p-1.5 rounded-full bg-green-50 border border-green-200 text-green-600 hover:bg-green-100 transition-colors shadow-xs cursor-pointer flex items-center justify-center"
@@ -1236,24 +1244,36 @@ export default function ApprovalPage() {
 
                   {/* Dynamic Summary bar */}
                   <div className="p-4 rounded border border-blue-200 bg-blue-50/30 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 text-xs">
-                    <div className="space-y-1">
-                      <h4 className="font-extrabold text-blue-800 uppercase tracking-wide">Expense Total Summary</h4>
+                    <div className="space-y-1 text-left">
+                      <h4 className="font-extrabold text-blue-800 uppercase tracking-wide">
+                        {selectedApproval.category === "Limit Request" ? "Limit Extension Request" : "Expense Total Summary"}
+                      </h4>
                       <p className="text-gray-600 font-semibold">
-                        This reflects the sum of Travel, Local Conveyance, DA, Hotel and Local Purchases.
+                        {selectedApproval.category === "Limit Request" 
+                          ? "This displays the requested limit extension value." 
+                          : "This reflects the sum of Travel, Local Conveyance, DA, Hotel and Local Purchases."}
                       </p>
                     </div>
                     <div className="flex items-center gap-6 self-end sm:self-center">
                       <div className="text-right">
-                        <span className="text-[10px] text-gray-400 font-bold block">CLAIMED TOTAL</span>
-                        <span className="text-sm font-bold text-gray-500 line-through font-mono">₹{(Number(expenseDetails?.amount) || 0).toLocaleString()}</span>
-                      </div>
-                      <ChevronRight className="w-5 h-5 text-gray-300 hidden sm:block animate-pulse" />
-                      <div className="text-right">
-                        <span className="text-[10px] text-blue-700 font-extrabold block">ADJUSTED APPROVAL TOTAL</span>
-                        <span className={`text-base font-black font-mono ${isEdited() ? "text-amber-600" : "text-blue-700"}`}>
-                          ₹{(Number(calculateAdjustedTotal()) || 0).toLocaleString()}
+                        <span className="text-[10px] text-gray-400 font-bold block">REQUESTED VALUE</span>
+                        <span className="text-sm font-bold text-blue-700 font-mono">
+                          {selectedApproval.category === "Limit Request" 
+                            ? `${expenseDetails?.amount} ${selectedApproval.expense_code.includes("KM") ? "KM" : "₹"}`
+                            : `₹${(Number(expenseDetails?.amount) || 0).toLocaleString()}`}
                         </span>
                       </div>
+                      {selectedApproval.category !== "Limit Request" && (
+                        <>
+                          <ChevronRight className="w-5 h-5 text-gray-300 hidden sm:block animate-pulse" />
+                          <div className="text-right">
+                            <span className="text-[10px] text-blue-700 font-extrabold block">ADJUSTED APPROVAL TOTAL</span>
+                            <span className={`text-base font-black font-mono ${isEdited() ? "text-amber-600" : "text-blue-700"}`}>
+                              ₹{(Number(calculateAdjustedTotal()) || 0).toLocaleString()}
+                            </span>
+                          </div>
+                        </>
+                      )}
                     </div>
                   </div>
 

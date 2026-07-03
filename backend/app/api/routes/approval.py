@@ -4,15 +4,19 @@ from sqlalchemy import func
 from typing import List
 import json
 from datetime import datetime
+import logging
 
 from app.config.database import get_db
 from app.api.routes.dependencies import get_current_user
 from app.models.user import User
+
+logger = logging.getLogger(__name__)
 from app.models.expense import Expense
 from app.models.approval import Approval
 from app.models.expense_itinerary import ExpenseItinerary
 from app.schemas.approval import ApprovalActionRequest, ApprovalResponse
 from app.utils.push_notifications import send_push_to_user_by_code
+from app.utils.db_notifications import create_notification
 
 router = APIRouter()
 
@@ -221,13 +225,13 @@ async def approve_expense(
         
         # Create database notification for the requester
         try:
-            from app.utils.db_notifications import create_notification
             create_notification(
                 db=db,
                 user_id=pl.user_id,
                 title=f"Limit Request {pl.request_type} Approved",
-                body=f"Your request for additional {pl.requested_value:.1f} {pl.request_type} has been approved by your manager.",
-                category="limit_approval"
+                description=f"Your request for additional {pl.requested_value:.1f} {pl.request_type} has been approved by your manager.",
+                notification_type="success",
+                link="/expense"
             )
         except Exception as e:
             logger.warning(f"Failed to create approval notification: {str(e)}")
@@ -365,15 +369,14 @@ async def reject_expense(
         from app.utils import cache
         cache.clear_user_and_managers_cache(db, pl.user_id)
         
-        # Create database notification for the requester
         try:
-            from app.utils.db_notifications import create_notification
             create_notification(
                 db=db,
                 user_id=pl.user_id,
                 title=f"Limit Request {pl.request_type} Rejected",
-                body=f"Your request for additional {pl.requested_value:.1f} {pl.request_type} has been rejected by your manager.",
-                category="limit_rejection"
+                description=f"Your request for additional {pl.requested_value:.1f} {pl.request_type} has been rejected by your manager.",
+                notification_type="danger",
+                link="/expense"
             )
         except Exception as e:
             logger.warning(f"Failed to create rejection notification: {str(e)}")
