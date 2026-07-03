@@ -1830,7 +1830,10 @@ export default function ExpensePage() {
         } else {
           setExistingAutoReq({ status: "Pending", requested_value: reqAdditional });
         }
+        // Clear local cache to force a fresh fetch from server
+        localStorage.removeItem(`cache_my_expenses_${currentUserId}`);
         await fetchMonthLimits(date.slice(0, 7), false);
+        await fetchClaims();
       }
     } catch (err: any) {
       toast.error(err.response?.data?.detail || err.message || "Failed to send request.");
