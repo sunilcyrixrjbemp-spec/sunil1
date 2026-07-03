@@ -1120,7 +1120,7 @@ export default function MonthSummaryPage() {
 
             {/* Mobile Card List View */}
             <div className="block md:hidden space-y-3">
-              {filtered.map((row, idx) => {
+              {filtered.map((row) => {
                 const key = `${row.user_id}-${row.month}-${row.year}`;
                 const isLoading = pdfLoadingId === key;
                 return (

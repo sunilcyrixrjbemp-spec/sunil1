@@ -23,7 +23,8 @@ import {
   Gauge,
   UploadCloud,
   ShieldAlert,
-  Package
+  Package,
+  Plus
 } from "lucide-react";
 
 interface MenuItem {
