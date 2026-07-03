@@ -506,10 +506,10 @@ export default function DashboardLayout() {
                                 {n.type === "error" && <X className="w-3.5 h-3.5 text-rose-500 shrink-0" />}
                                 {n.type !== "warning" && n.type !== "success" && n.type !== "error" && <Info className="w-3.5 h-3.5 text-blue-500 shrink-0" />}
                                 
-                                <span className={`font-black uppercase text-[8px] px-1.5 py-0.5 rounded tracking-wide ${
-                                  n.type === "warning" ? "bg-amber-50 text-amber-700 border border-amber-200" :
-                                  n.type === "success" ? "bg-emerald-50 text-emerald-700 border border-emerald-200" :
-                                  n.type === "error" ? "bg-rose-50 text-rose-700 border border-rose-200" : "bg-blue-50 text-blue-700 border border-blue-200"
+                                <span className={`font-black uppercase text-[8px] px-2 py-0.5 rounded-full tracking-wide text-white shadow-xs ${
+                                  n.type === "warning" ? "bg-amber-500" :
+                                  n.type === "success" ? "bg-emerald-500" :
+                                  n.type === "error" ? "bg-rose-500" : "bg-blue-600"
                                 }`}>
                                   {n.title || "Notification"}
                                 </span>

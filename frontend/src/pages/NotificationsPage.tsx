@@ -309,10 +309,10 @@ export default function NotificationsPage() {
                     </button>
 
                     {/* Badge */}
-                    <span className={`font-bold uppercase text-[9px] px-1.5 py-0.5 rounded border ${
-                      n.type === "warning" ? "bg-amber-50 border-amber-200 text-amber-700" :
-                      n.type === "success" ? "bg-green-50 border-green-200 text-green-700" :
-                      n.type === "error" ? "bg-red-50 border-red-200 text-red-700" : "bg-blue-50 border-blue-200 text-blue-700"
+                    <span className={`font-black uppercase text-[8px] px-2 py-0.5 rounded-full tracking-wide text-white shadow-xs ${
+                      n.type === "warning" ? "bg-amber-500" :
+                      n.type === "success" ? "bg-emerald-500" :
+                      n.type === "error" ? "bg-rose-500" : "bg-blue-600"
                     }`}>
                       {n.title}
                     </span>

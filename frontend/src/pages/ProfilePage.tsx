@@ -515,18 +515,18 @@ export default function ProfilePage() {
       <div className="space-y-4 pb-20 text-gray-800 text-xs animate-fadeIn" style={{ fontFamily: "'Plus Jakarta Sans', sans-serif" }}>
         
         {/* Profile Card Header Banner */}
-        <div className="bg-white border border-gray-200 rounded-2xl shadow-sm overflow-hidden text-center relative p-6">
+        <div className="bg-gradient-to-br from-slate-900 via-slate-800 to-indigo-950 text-white border border-slate-700/50 rounded-2xl shadow-xl overflow-hidden text-center relative p-6 animate-scaleIn">
           
           {/* Avatar Area */}
           <div className="relative h-24 w-24 mx-auto mb-3">
-            <label htmlFor="profile-photo-input-mob" className="cursor-pointer block relative h-full w-full rounded-full overflow-hidden border-4 border-white shadow-md select-none bg-slate-50">
+            <label htmlFor="profile-photo-input-mob" className="cursor-pointer block relative h-full w-full rounded-full overflow-hidden border-4 border-slate-800 shadow-md select-none bg-slate-850">
               {photoLoading ? (
                 <div className="absolute inset-0 bg-black/45 flex items-center justify-center text-white z-10">
-                  <i className="fas fa-sync-alt animate-spin text-sm"></i>
+                  <span className="animate-spin rounded-full h-4 w-4 border-2 border-slate-200 border-t-white inline-block"></span>
                 </div>
               ) : (
                 <div className="absolute inset-0 bg-black/0 hover:bg-black/40 flex flex-col items-center justify-center text-white opacity-0 hover:opacity-100 transition-all z-10">
-                  <i className="fas fa-camera text-sm mb-0.5"></i>
+                  <i className="fas fa-camera text-sm mb-0.5 text-[#a5d8e8]"></i>
                   <span className="text-[8px] font-black uppercase tracking-wider">Change</span>
                 </div>
               )}
@@ -538,7 +538,7 @@ export default function ProfilePage() {
                   onError={() => setAvatarError(true)}
                 />
               ) : (
-                <div className="h-full w-full bg-indigo-50 text-indigo-600 flex items-center justify-center font-black text-3xl uppercase">
+                <div className="h-full w-full bg-slate-800 text-[#a5d8e8] flex items-center justify-center font-black text-3xl uppercase">
                   {user.name ? user.name.charAt(0).toUpperCase() : "U"}
                 </div>
               )}
@@ -557,7 +557,7 @@ export default function ProfilePage() {
             <button
               type="button"
               onClick={handleRemovePhoto}
-              className="text-[9px] text-red-500 font-extrabold uppercase tracking-wider bg-transparent border-0 cursor-pointer flex items-center gap-1 mx-auto hover:text-red-700 transition-colors"
+              className="text-[9px] text-rose-400 font-extrabold uppercase tracking-wider bg-transparent border-0 cursor-pointer flex items-center gap-1 mx-auto hover:text-rose-350 transition-colors hover:underline"
               disabled={photoLoading}
             >
               <i className="fas fa-trash-alt text-[8px]"></i>
@@ -565,20 +565,21 @@ export default function ProfilePage() {
             </button>
           )}
 
-          <h3 className="text-base font-extrabold text-gray-900 mt-2 leading-tight">{user.name || "Employee"}</h3>
-          <p className="text-[10px] text-indigo-650 font-black uppercase tracking-wider mt-0.5">{user.designation || "Staff"}</p>
-          <span className="inline-block mt-2 px-3 py-0.5 rounded-full text-[9px] font-bold uppercase bg-indigo-50 border border-indigo-100 text-indigo-700">
+          <h3 className="text-base font-extrabold text-white mt-2 leading-tight">{user.name || "Employee"}</h3>
+          <p className="text-[10px] text-[#a5d8e8] font-black uppercase tracking-wider mt-0.5">{user.designation || "Staff"}</p>
+          
+          <span className="inline-block mt-2 px-3 py-0.5 rounded-full text-[9px] font-black uppercase bg-[#a5d8e8]/20 text-[#a5d8e8] border border-[#a5d8e8]/30 shadow-sm">
             {user.role}
           </span>
         </div>
 
         {/* Premium Settings Segment Control (Tab Menu) */}
-        <div className="flex border border-gray-200 bg-white p-1 rounded-xl shadow-xs text-[10px] font-bold text-gray-600">
+        <div className="flex border border-slate-200 bg-white p-1 rounded-xl shadow-sm text-[10px] font-bold text-slate-500">
           <button
             type="button"
             onClick={() => setActiveMobileSection("personal")}
-            className={`flex-1 py-2 rounded-lg border-0 transition-all cursor-pointer font-black ${
-              activeMobileSection === "personal" ? "bg-blue-600 text-white shadow-xs" : "bg-transparent text-gray-500 hover:text-gray-800"
+            className={`flex-1 py-2 rounded-lg border-0 transition-all cursor-pointer font-extrabold uppercase tracking-wider ${
+              activeMobileSection === "personal" ? "bg-[#a5d8e8] text-slate-800 shadow-xs" : "bg-transparent text-slate-400 hover:text-slate-800"
             }`}
           >
             Personal
@@ -586,8 +587,8 @@ export default function ProfilePage() {
           <button
             type="button"
             onClick={() => setActiveMobileSection("security")}
-            className={`flex-1 py-2 rounded-lg border-0 transition-all cursor-pointer font-black ${
-              activeMobileSection === "security" ? "bg-blue-600 text-white shadow-xs" : "bg-transparent text-gray-500 hover:text-gray-800"
+            className={`flex-1 py-2 rounded-lg border-0 transition-all cursor-pointer font-extrabold uppercase tracking-wider ${
+              activeMobileSection === "security" ? "bg-[#a5d8e8] text-slate-800 shadow-xs" : "bg-transparent text-slate-400 hover:text-slate-800"
             }`}
           >
             Security
@@ -595,8 +596,8 @@ export default function ProfilePage() {
           <button
             type="button"
             onClick={() => setActiveMobileSection("permissions")}
-            className={`flex-1 py-2 rounded-lg border-0 transition-all cursor-pointer font-black ${
-              activeMobileSection === "permissions" ? "bg-blue-600 text-white shadow-xs" : "bg-transparent text-gray-500 hover:text-gray-800"
+            className={`flex-1 py-2 rounded-lg border-0 transition-all cursor-pointer font-extrabold uppercase tracking-wider ${
+              activeMobileSection === "permissions" ? "bg-[#a5d8e8] text-slate-800 shadow-xs" : "bg-transparent text-slate-400 hover:text-slate-800"
             }`}
           >
             System Info
@@ -604,25 +605,25 @@ export default function ProfilePage() {
         </div>
 
         {/* Tab Content Cards */}
-        <div className="bg-white border border-gray-200 rounded-2xl shadow-xs p-4 min-h-[220px]">
+        <div className="bg-white border border-slate-200 rounded-2xl shadow-xs p-4 min-h-[220px]">
           
           {/* Section 1: Contact & Personal Info */}
           {activeMobileSection === "personal" && (
             <div className="space-y-3.5 animate-fadeIn">
-              <div className="flex justify-between items-center text-[11px] border-b border-gray-100 pb-2.5">
-                <span className="text-gray-400 font-bold uppercase tracking-wider text-[9px]">Login ID / User ID</span>
-                <span className="font-mono font-bold text-gray-800">{user.user_id}</span>
+              <div className="flex justify-between items-center text-[11px] border-b border-slate-100 pb-2.5">
+                <span className="text-slate-400 font-bold uppercase tracking-wider text-[9px]">Login ID / User ID</span>
+                <span className="font-mono font-bold text-slate-800">{user.user_id}</span>
               </div>
               
               {/* Email address field */}
-              <div className="border-b border-gray-100 pb-2.5">
+              <div className="border-b border-slate-100 pb-2.5">
                 <div className="flex justify-between items-center text-[11px]">
-                  <span className="text-gray-400 font-bold uppercase tracking-wider text-[9px]">Email Address</span>
+                  <span className="text-slate-400 font-bold uppercase tracking-wider text-[9px]">Email Address</span>
                   {!isEditingEmail && (
                     <button
                       type="button"
                       onClick={() => setIsEditingEmail(true)}
-                      className="text-indigo-600 font-black uppercase bg-transparent border-0 cursor-pointer text-[9px]"
+                      className="text-blue-600 font-black uppercase bg-transparent border-0 cursor-pointer text-[9px]"
                     >
                       Edit
                     </button>
@@ -634,14 +635,14 @@ export default function ProfilePage() {
                       type="email"
                       value={tempEmail}
                       onChange={(e) => setTempEmail(e.target.value)}
-                      className="input-lte text-xs font-semibold"
+                      className="input-lte text-xs font-semibold h-8"
                       placeholder="Enter email"
                     />
                     <div className="flex gap-2 justify-end">
                       <button
                         type="button"
                         onClick={handleCancelEmail}
-                        className="btn-lte-outline px-3 py-1 text-[9px] min-h-0 animate-pulse"
+                        className="px-3 py-1 bg-white hover:bg-slate-100 text-slate-600 border border-slate-300 font-bold text-[10px] rounded"
                       >
                         Cancel
                       </button>
@@ -649,26 +650,26 @@ export default function ProfilePage() {
                         type="button"
                         onClick={handleSaveEmail}
                         disabled={emailLoading}
-                        className="btn-lte-primary px-3 py-1 text-[9px] min-h-0"
+                        className="px-3 py-1 bg-blue-600 hover:bg-blue-700 text-white font-bold text-[10px] rounded border-0"
                       >
                         Save
                       </button>
                     </div>
                   </div>
                 ) : (
-                  <p className="text-xs font-bold text-gray-800 mt-1">{user.mail_id || "Not configured"}</p>
+                  <p className="text-xs font-bold text-slate-800 mt-1">{user.mail_id || "Not configured"}</p>
                 )}
               </div>
 
               {/* Mobile number field */}
               <div className="pb-1">
                 <div className="flex justify-between items-center text-[11px]">
-                  <span className="text-gray-400 font-bold uppercase tracking-wider text-[9px]">Mobile Number</span>
+                  <span className="text-slate-400 font-bold uppercase tracking-wider text-[9px]">Mobile Number</span>
                   {!isEditingMobile && (
                     <button
                       type="button"
                       onClick={() => setIsEditingMobile(true)}
-                      className="text-indigo-600 font-black uppercase bg-transparent border-0 cursor-pointer text-[9px]"
+                      className="text-blue-600 font-black uppercase bg-transparent border-0 cursor-pointer text-[9px]"
                     >
                       Edit
                     </button>
@@ -680,14 +681,14 @@ export default function ProfilePage() {
                       type="text"
                       value={tempMobile}
                       onChange={(e) => setTempMobile(e.target.value)}
-                      className="input-lte text-xs font-semibold"
+                      className="input-lte text-xs font-semibold h-8"
                       placeholder="Enter mobile"
                     />
                     <div className="flex gap-2 justify-end">
                       <button
                         type="button"
                         onClick={handleCancelMobile}
-                        className="btn-lte-outline px-3 py-1 text-[9px] min-h-0"
+                        className="px-3 py-1 bg-white hover:bg-slate-100 text-slate-600 border border-slate-300 font-bold text-[10px] rounded"
                       >
                         Cancel
                       </button>
@@ -695,14 +696,14 @@ export default function ProfilePage() {
                         type="button"
                         onClick={handleSaveMobile}
                         disabled={mobileLoading}
-                        className="btn-lte-primary px-3 py-1 text-[9px] min-h-0"
+                        className="px-3 py-1 bg-blue-600 hover:bg-blue-700 text-white font-bold text-[10px] rounded border-0"
                       >
                         Save
                       </button>
                     </div>
                   </div>
                 ) : (
-                  <p className="text-xs font-bold text-gray-800 mt-1">{user.mobile_number || "Not configured"}</p>
+                  <p className="text-xs font-bold text-slate-800 mt-1">{user.mobile_number || "Not configured"}</p>
                 )}
               </div>
             </div>
@@ -725,7 +726,7 @@ export default function ProfilePage() {
                     type="password"
                     value={oldPassword}
                     onChange={(e) => setOldPassword(e.target.value)}
-                    className="input-lte text-xs font-semibold"
+                    className="input-lte text-xs font-semibold h-8"
                     placeholder="••••••••"
                   />
                 </div>
@@ -735,7 +736,7 @@ export default function ProfilePage() {
                     type="password"
                     value={newPassword}
                     onChange={(e) => setNewPassword(e.target.value)}
-                    className="input-lte text-xs font-semibold"
+                    className="input-lte text-xs font-semibold h-8"
                     placeholder="Min 8 characters"
                   />
                 </div>
@@ -745,14 +746,14 @@ export default function ProfilePage() {
                     type="password"
                     value={confirmPassword}
                     onChange={(e) => setConfirmPassword(e.target.value)}
-                    className="input-lte text-xs font-semibold"
+                    className="input-lte text-xs font-semibold h-8"
                     placeholder="Repeat new password"
                   />
                 </div>
                 <button
                   type="submit"
                   disabled={passLoading}
-                  className="w-full btn-lte-primary py-2 text-xs uppercase font-extrabold mt-4"
+                  className="w-full h-8 bg-blue-600 hover:bg-blue-700 text-white rounded border-0 cursor-pointer font-black text-xs uppercase mt-4"
                 >
                   {passLoading ? "Updating..." : "Change Password"}
                 </button>
@@ -763,37 +764,37 @@ export default function ProfilePage() {
           {/* Section 3: System & Hierarchy Details */}
           {activeMobileSection === "permissions" && (
             <div className="space-y-3.5 animate-fadeIn">
-              <div className="flex justify-between items-center text-[11px] border-b border-gray-100 pb-2">
-                <span className="text-gray-400 font-bold uppercase tracking-wider text-[9px]">Employee Code</span>
-                <span className="font-bold text-gray-800">{user.e_code || "—"}</span>
+              <div className="flex justify-between items-center text-[11px] border-b border-slate-100 pb-2">
+                <span className="text-slate-400 font-bold uppercase tracking-wider text-[9px]">Employee Code</span>
+                <span className="font-bold text-slate-800">{user.e_code || "—"}</span>
               </div>
-              <div className="flex justify-between items-center text-[11px] border-b border-gray-100 pb-2">
-                <span className="text-gray-400 font-bold uppercase tracking-wider text-[9px]">Grade</span>
-                <span className="font-bold text-gray-800">{user.grade || "—"}</span>
+              <div className="flex justify-between items-center text-[11px] border-b border-slate-100 pb-2">
+                <span className="text-slate-400 font-bold uppercase tracking-wider text-[9px]">Grade</span>
+                <span className="font-bold text-slate-800">{user.grade || "—"}</span>
               </div>
-              <div className="flex justify-between items-center text-[11px] border-b border-gray-100 pb-2">
-                <span className="text-gray-400 font-bold uppercase tracking-wider text-[9px]">Zone</span>
-                <span className="font-bold text-gray-800">{user.zone || "—"}</span>
+              <div className="flex justify-between items-center text-[11px] border-b border-slate-100 pb-2">
+                <span className="text-slate-400 font-bold uppercase tracking-wider text-[9px]">Zone</span>
+                <span className="font-bold text-slate-800">{user.zone || "—"}</span>
               </div>
-              <div className="flex justify-between items-center text-[11px] border-b border-gray-100 pb-2">
-                <span className="text-gray-400 font-bold uppercase tracking-wider text-[9px]">District</span>
-                <span className="font-bold text-gray-800">{user.district || "—"}</span>
+              <div className="flex justify-between items-center text-[11px] border-b border-slate-100 pb-2">
+                <span className="text-slate-400 font-bold uppercase tracking-wider text-[9px]">District</span>
+                <span className="font-bold text-slate-800">{user.district || "—"}</span>
               </div>
-              <div className="flex justify-between items-center text-[11px] border-b border-gray-100 pb-2">
-                <span className="text-gray-400 font-bold uppercase tracking-wider text-[9px]">Reporting Manager</span>
-                <span className="font-bold text-gray-800">{user.manager || "—"}</span>
+              <div className="flex justify-between items-center text-[11px] border-b border-slate-100 pb-2">
+                <span className="text-slate-400 font-bold uppercase tracking-wider text-[9px]">Reporting Manager</span>
+                <span className="font-bold text-slate-800">{user.manager || "—"}</span>
               </div>
-              <div className="flex justify-between items-center text-[11px] border-b border-gray-100 pb-2">
-                <span className="text-gray-400 font-bold uppercase tracking-wider text-[9px]">Zonal Manager</span>
-                <span className="font-bold text-gray-800">{user.zonal_manager || "—"}</span>
+              <div className="flex justify-between items-center text-[11px] border-b border-slate-100 pb-2">
+                <span className="text-slate-400 font-bold uppercase tracking-wider text-[9px]">Zonal Manager</span>
+                <span className="font-bold text-slate-800">{user.zonal_manager || "—"}</span>
               </div>
-              <div className="flex justify-between items-center text-[11px] border-b border-gray-100 pb-2">
-                <span className="text-gray-400 font-bold uppercase tracking-wider text-[9px]">Coordinator</span>
-                <span className="font-bold text-gray-800">{user.coordinator || "—"}</span>
+              <div className="flex justify-between items-center text-[11px] border-b border-slate-100 pb-2">
+                <span className="text-slate-400 font-bold uppercase tracking-wider text-[9px]">Coordinator</span>
+                <span className="font-bold text-slate-800">{user.coordinator || "—"}</span>
               </div>
               <div className="flex justify-between items-center text-[11px]">
-                <span className="text-gray-400 font-bold uppercase tracking-wider text-[9px]">Device / Upkaran ID</span>
-                <span className="font-bold text-gray-800">{user.e_upkaran_id || "—"}</span>
+                <span className="text-slate-400 font-bold uppercase tracking-wider text-[9px]">Device / Upkaran ID</span>
+                <span className="font-bold text-slate-800">{user.e_upkaran_id || "—"}</span>
               </div>
             </div>
           )}
@@ -820,17 +821,18 @@ export default function ProfilePage() {
         
         {/* Left Column - Main Avatar / Card */}
         <div className="lg:col-span-1">
-          <div className="bg-white border border-gray-200 rounded-2xl p-6 text-center lg:sticky lg:top-20 shadow-sm">
+          <div className="bg-gradient-to-br from-slate-900 via-slate-800 to-indigo-950 text-white border border-slate-700/50 rounded-2xl p-6 text-center lg:sticky lg:top-20 shadow-xl overflow-hidden animate-scaleIn">
+            
             {/* Circle avatar with interactive upload */}
-            <div className="relative h-24 w-24 mx-auto group mb-4">
-              <label htmlFor="profile-photo-input" className="cursor-pointer block relative h-full w-full rounded-full overflow-hidden border-2 border-blue-100 shadow-md select-none group-hover:border-blue-400 transition-all">
+            <div className="relative h-28 w-28 mx-auto group mb-4">
+              <label htmlFor="profile-photo-input" className="cursor-pointer block relative h-full w-full rounded-full overflow-hidden border-4 border-slate-700/30 shadow-md select-none group-hover:border-[#a5d8e8] transition-all">
                 {photoLoading ? (
                   <div className="absolute inset-0 bg-black/40 flex items-center justify-center text-white z-10">
-                    <i className="fas fa-sync-alt animate-spin text-lg"></i>
+                    <span className="animate-spin rounded-full h-5 w-5 border-2 border-slate-200 border-t-white inline-block"></span>
                   </div>
                 ) : (
                   <div className="absolute inset-0 bg-black/0 group-hover:bg-black/40 flex flex-col items-center justify-center text-white opacity-0 group-hover:opacity-100 transition-all z-10">
-                    <i className="fas fa-camera text-base mb-0.5"></i>
+                    <i className="fas fa-camera text-base mb-0.5 text-[#a5d8e8]"></i>
                     <span className="text-[8px] font-bold uppercase tracking-wider">Change</span>
                   </div>
                 )}
@@ -842,7 +844,7 @@ export default function ProfilePage() {
                     onError={() => setAvatarError(true)}
                   />
                 ) : (
-                  <div className="h-full w-full bg-blue-100 text-blue-600 flex items-center justify-center font-black text-3xl uppercase">
+                  <div className="h-full w-full bg-slate-800 text-[#a5d8e8] flex items-center justify-center font-black text-4xl uppercase">
                     {user && user.name ? user.name.charAt(0).toUpperCase() : "U"}
                   </div>
                 )}
@@ -861,7 +863,7 @@ export default function ProfilePage() {
               <button
                 type="button"
                 onClick={handleRemovePhoto}
-                className="mt-1 text-[10px] text-red-500 hover:text-red-700 bg-transparent border-0 cursor-pointer font-bold uppercase tracking-wider flex items-center gap-1 mx-auto hover:underline"
+                className="mt-1 text-[10px] text-rose-450 hover:text-rose-400 bg-transparent border-0 cursor-pointer font-bold uppercase tracking-wider flex items-center gap-1 mx-auto hover:underline"
                 disabled={photoLoading}
               >
                 <i className="fas fa-trash-alt text-xs"></i>
@@ -869,27 +871,28 @@ export default function ProfilePage() {
               </button>
             )}
             
-            <h3 className="text-base font-bold text-gray-800 mt-4 leading-tight">{user.name || "Employee"}</h3>
-            <p className="text-[10px] text-blue-600 font-bold uppercase tracking-widest mt-1">{user.designation || "Staff Member"}</p>
-            <span className="inline-block mt-3 px-3.5 py-0.5 rounded text-[10px] font-bold uppercase bg-gray-100 border border-gray-200 text-gray-600">
+            <h3 className="text-lg font-black text-white mt-4 leading-tight">{user.name || "Employee"}</h3>
+            <p className="text-[10px] text-[#a5d8e8] font-black uppercase tracking-wider mt-1">{user.designation || "Staff Member"}</p>
+            
+            <span className="inline-block mt-3 px-3 py-0.5 rounded-full text-[9px] font-black uppercase bg-[#a5d8e8]/20 text-[#a5d8e8] border border-[#a5d8e8]/30 shadow-sm">
               {user.role}
             </span>
 
             {/* Quick Stats/Summary in left card */}
-            <div className="mt-6 pt-6 border-t border-gray-200 text-left space-y-3">
-              <div className="flex items-center justify-between text-[11px]">
-                <span className="text-gray-500">Login ID:</span>
-                <span className="font-mono font-bold text-gray-850">{user.user_id}</span>
+            <div className="mt-6 pt-6 border-t border-slate-800 text-left space-y-3">
+              <div className="flex items-center justify-between text-xs">
+                <span className="text-slate-400">Login ID:</span>
+                <span className="font-mono font-bold text-slate-200">{user.user_id}</span>
               </div>
-              <div className="flex items-center justify-between text-[11px]">
-                <span className="text-gray-500">Status:</span>
-                <span className="px-2 py-0.5 rounded bg-green-50 border border-green-200 text-green-700 font-bold uppercase text-[9px] tracking-wider">
+              <div className="flex items-center justify-between text-xs">
+                <span className="text-slate-400">Status:</span>
+                <span className="px-2 py-0.5 rounded bg-emerald-500/20 border border-emerald-500/30 text-emerald-400 font-extrabold uppercase text-[8px] tracking-wider">
                   Active
                 </span>
               </div>
-              <div className="flex items-center justify-between text-[11px]">
-                <span className="text-gray-500">Employee Type:</span>
-                <span className="font-semibold text-gray-800 uppercase text-[9px] tracking-wider">{user.type || "Staff"}</span>
+              <div className="flex items-center justify-between text-xs">
+                <span className="text-slate-400">Employee Type:</span>
+                <span className="font-bold text-slate-200 uppercase text-[9px] tracking-wider">{user.type || "Staff"}</span>
               </div>
             </div>
           </div>
@@ -897,37 +900,37 @@ export default function ProfilePage() {
  
         {/* Right Column - Work Area Card with Tabs */}
         <div className="lg:col-span-2">
-          <div className="card-lte border-t-3 border-t-[#17a2b8] flex flex-col min-h-[500px] bg-white shadow-sm">
+          <div className="card-lte flex flex-col min-h-[500px] bg-white border border-slate-200/80 rounded-2xl shadow-sm overflow-hidden">
             
             {/* Header Tabs */}
-            <div className="border-b border-gray-200 bg-gray-50 flex flex-row items-stretch">
+            <div className="border-b border-slate-250 bg-slate-50 flex flex-row items-stretch rounded-t-2xl overflow-hidden">
               <button
                 onClick={() => {
                   setNotice(null);
                   handleTabChange("info");
                 }}
-                className={`flex-1 py-2.5 px-3 sm:py-3 sm:px-6 text-center text-[10px] sm:text-xs font-bold uppercase tracking-wider transition-all flex items-center justify-center gap-1.5 cursor-pointer border-0 bg-transparent ${
+                className={`flex-1 py-3 px-6 text-center text-xs font-black uppercase tracking-widest transition-all flex items-center justify-center gap-2 cursor-pointer border-0 bg-transparent ${
                   activeTab === "info"
-                    ? "bg-white text-blue-600 border-b-2 border-b-blue-600"
-                    : "text-gray-500 hover:text-gray-900 hover:bg-gray-100"
+                    ? "bg-white text-slate-900 border-b-2 border-b-[#a5d8e8]"
+                    : "text-slate-500 hover:text-slate-900 hover:bg-slate-100"
                 }`}
               >
-                <i className="fas fa-user"></i>
-                <span>Info</span>
+                <i className="fas fa-user-circle text-[#a5d8e8]"></i>
+                <span>Personal Info</span>
               </button>
               <button
                 onClick={() => {
                   setPassNotice(null);
                   handleTabChange("password");
                 }}
-                className={`flex-1 py-2.5 px-3 sm:py-3 sm:px-6 text-center text-[10px] sm:text-xs font-bold uppercase tracking-wider transition-all flex items-center justify-center gap-1.5 border-l border-gray-200 cursor-pointer border-0 bg-transparent ${
+                className={`flex-1 py-3 px-6 text-center text-xs font-black uppercase tracking-widest transition-all flex items-center justify-center gap-2 cursor-pointer border-0 bg-transparent border-l border-slate-200 ${
                   activeTab === "password"
-                    ? "bg-white text-blue-600 border-b-2 border-b-blue-600"
-                    : "text-gray-500 hover:text-gray-900 hover:bg-gray-100"
+                    ? "bg-white text-slate-900 border-b-2 border-b-[#a5d8e8]"
+                    : "text-slate-500 hover:text-slate-900 hover:bg-slate-100"
                 }`}
               >
-                <i className="fas fa-lock text-blue-600"></i>
-                <span>Security</span>
+                <i className="fas fa-key text-[#a5d8e8]"></i>
+                <span>Security & Password</span>
               </button>
             </div>
 
@@ -935,146 +938,137 @@ export default function ProfilePage() {
             <div className="flex-1 flex flex-col justify-between">
               {activeTab === "info" ? (
                 /* Profile Information Grid Layout */
-                <div className="p-6 space-y-6 flex-1">
+                <div className="p-6 space-y-6 flex-1 bg-white">
                   
                   {/* Category 1: Contact details */}
                   <div>
-                    <h4 className="text-[10px] font-extrabold uppercase tracking-widest text-blue-600 border-b border-gray-200 pb-2 mb-3.5 flex items-center gap-2">
-                      <i className="fas fa-user text-blue-600"></i>
+                    <h4 className="text-[10px] font-extrabold uppercase tracking-widest text-[#a5d8e8] border-b border-slate-200 pb-2 mb-3.5 flex items-center gap-2">
+                      <i className="fas fa-user text-slate-500"></i>
                       Contact & Personal Info
                     </h4>
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-3.5">
                       
                       {/* Email Address (Editable Inline) */}
-                      <div className="p-3 bg-gray-50 border border-gray-200 rounded flex flex-col justify-between text-xs gap-2 min-h-[62px] hover:bg-gray-100 transition-colors">
-                        <div className="flex items-center justify-between">
-                           <div className="flex items-center gap-2.5">
-                            <i className="fas fa-envelope text-blue-600 shrink-0"></i>
-                            <span className="font-bold text-gray-500 uppercase tracking-wider text-[9px] truncate">Email Address</span>
-                          </div>
-                          {!isEditingEmail && (
-                            <button
-                              onClick={() => {
-                                setTempEmail(user.mail_id || "");
-                                setIsEditingEmail(true);
-                                setIsEditingMobile(false);
-                                setNotice(null);
-                              }}
-                              className="p-1 rounded text-gray-500 hover:text-blue-600 hover:bg-gray-200 transition-all shrink-0 bg-transparent border-0 outline-none"
-                              title="Edit Email Address"
-                            >
-                              <i className="fas fa-edit"></i>
-                            </button>
-                          )}
+                      <div className="p-3 bg-white border border-slate-200/70 rounded-xl flex items-center gap-3 hover:shadow-xs hover:border-[#a5d8e8] transition-all duration-150">
+                        <div className="w-8 h-8 rounded-lg bg-[#a5d8e8]/15 text-slate-700 flex items-center justify-center shrink-0">
+                          <i className="fas fa-envelope text-slate-600"></i>
                         </div>
-                        {isEditingEmail ? (
-                          <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 w-full animate-fadeIn mt-1">
-                            <input
-                              type="email"
-                              value={tempEmail}
-                              onChange={(e) => setTempEmail(e.target.value)}
-                              className="input-lte h-8 flex-1"
-                              disabled={emailLoading}
-                              autoFocus
-                            />
-                            <div className="flex gap-1.5 shrink-0">
+                        <div className="flex-1 min-w-0 flex flex-col justify-center">
+                          <div className="flex items-center justify-between">
+                            <span className="font-black uppercase tracking-wider text-[8px] text-slate-400">Email Address</span>
+                            {!isEditingEmail && (
+                              <button
+                                onClick={() => {
+                                  setTempEmail(user.mail_id || "");
+                                  setIsEditingEmail(true);
+                                  setIsEditingMobile(false);
+                                  setNotice(null);
+                                }}
+                                className="p-1 rounded text-slate-400 hover:text-blue-600 hover:bg-slate-100 transition-all shrink-0 bg-transparent border-0 outline-none cursor-pointer"
+                                title="Edit Email Address"
+                              >
+                                <i className="fas fa-edit text-xs"></i>
+                              </button>
+                            )}
+                          </div>
+                          {isEditingEmail ? (
+                            <div className="flex items-center gap-1.5 w-full mt-1">
+                              <input
+                                type="email"
+                                value={tempEmail}
+                                onChange={(e) => setTempEmail(e.target.value)}
+                                className="input-lte h-7 py-0.5 text-xs flex-1"
+                                disabled={emailLoading}
+                                autoFocus
+                              />
                               <button
                                 onClick={handleSaveEmail}
                                 disabled={emailLoading}
-                                className="px-3.5 h-8 rounded bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs transition-all flex items-center justify-center gap-1.5 disabled:opacity-50 border-0 cursor-pointer shadow-sm"
-                                title="Save changes"
+                                className="px-2 h-7 rounded bg-blue-600 hover:bg-blue-700 text-white font-bold text-[10px] transition-all border-0 cursor-pointer"
                               >
-                                {emailLoading ? <LteSpinner /> : <i className="fas fa-check"></i>}
-                                <span>Save</span>
+                                Save
                               </button>
                               <button
                                 onClick={handleCancelEmail}
                                 disabled={emailLoading}
-                                className="px-3.5 h-8 rounded bg-white hover:bg-gray-150 text-gray-600 border border-gray-300 font-bold text-xs transition-all flex items-center justify-center gap-1.5 disabled:opacity-50 cursor-pointer shadow-sm"
-                                title="Cancel editing"
+                                className="px-2 h-7 rounded bg-white hover:bg-slate-100 text-slate-600 border border-slate-350 font-bold text-[10px] transition-all cursor-pointer"
                               >
-                                <i className="fas fa-times"></i>
-                                <span>Cancel</span>
+                                Cancel
                               </button>
                             </div>
-                          </div>
-                        ) : (
-                          <span className="text-gray-805 font-semibold truncate pl-[26px]">{user.mail_id || "-"}</span>
-                        )}
-                      </div>
-                      {/* Mobile Number (Editable Inline) */}
-                      <div className="p-3 bg-gray-50 border border-gray-200 rounded flex flex-col justify-between text-xs gap-2 min-h-[62px] hover:bg-gray-100 transition-colors">
-                        <div className="flex items-center justify-between">
-                          <div className="flex items-center gap-2.5">
-                            <i className="fas fa-phone text-blue-600 shrink-0"></i>
-                            <span className="font-bold text-gray-500 uppercase tracking-wider text-[9px] truncate">Mobile Number</span>
-                          </div>
-                          {!isEditingMobile && (
-                            <button
-                              onClick={() => {
-                                setTempMobile(user.mobile_number || "");
-                                setIsEditingMobile(true);
-                                setIsEditingEmail(false);
-                                setNotice(null);
-                              }}
-                              className="p-1 rounded text-gray-500 hover:text-blue-600 hover:bg-gray-200 transition-all shrink-0 bg-transparent border-0 outline-none"
-                              title="Edit Mobile Number"
-                            >
-                              <i className="fas fa-edit"></i>
-                            </button>
+                          ) : (
+                            <span className="text-slate-805 font-extrabold text-xs truncate mt-0.5">{user.mail_id || "-"}</span>
                           )}
                         </div>
-                        {isEditingMobile ? (
-                          <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 w-full animate-fadeIn mt-1">
-                            <input
-                              type="tel"
-                              value={tempMobile}
-                              onChange={(e) => setTempMobile(e.target.value)}
-                              className="input-lte h-8 flex-1"
-                              disabled={mobileLoading}
-                              autoFocus
-                            />
-                            <div className="flex gap-1.5 shrink-0">
+                      </div>
+
+                      {/* Mobile Number (Editable Inline) */}
+                      <div className="p-3 bg-white border border-slate-200/70 rounded-xl flex items-center gap-3 hover:shadow-xs hover:border-[#a5d8e8] transition-all duration-150">
+                        <div className="w-8 h-8 rounded-lg bg-[#a5d8e8]/15 text-slate-700 flex items-center justify-center shrink-0">
+                          <i className="fas fa-phone text-slate-600"></i>
+                        </div>
+                        <div className="flex-1 min-w-0 flex flex-col justify-center">
+                          <div className="flex items-center justify-between">
+                            <span className="font-black uppercase tracking-wider text-[8px] text-slate-400">Mobile Number</span>
+                            {!isEditingMobile && (
+                              <button
+                                onClick={() => {
+                                  setTempMobile(user.mobile_number || "");
+                                  setIsEditingMobile(true);
+                                  setIsEditingEmail(false);
+                                  setNotice(null);
+                                }}
+                                className="p-1 rounded text-slate-400 hover:text-blue-600 hover:bg-slate-100 transition-all shrink-0 bg-transparent border-0 outline-none cursor-pointer"
+                                title="Edit Mobile Number"
+                              >
+                                <i className="fas fa-edit text-xs"></i>
+                              </button>
+                            )}
+                          </div>
+                          {isEditingMobile ? (
+                            <div className="flex items-center gap-1.5 w-full mt-1">
+                              <input
+                                type="tel"
+                                value={tempMobile}
+                                onChange={(e) => setTempMobile(e.target.value)}
+                                className="input-lte h-7 py-0.5 text-xs flex-1"
+                                disabled={mobileLoading}
+                                autoFocus
+                              />
                               <button
                                 onClick={handleSaveMobile}
                                 disabled={mobileLoading}
-                                className="px-3.5 h-8 rounded bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs transition-all flex items-center justify-center gap-1.5 disabled:opacity-50 border-0 cursor-pointer shadow-sm"
-                                title="Save changes"
+                                className="px-2 h-7 rounded bg-blue-600 hover:bg-blue-700 text-white font-bold text-[10px] transition-all border-0 cursor-pointer"
                               >
-                                {mobileLoading ? <LteSpinner /> : <i className="fas fa-check"></i>}
-                                <span>Save</span>
+                                Save
                               </button>
                               <button
                                 onClick={handleCancelMobile}
                                 disabled={mobileLoading}
-                                className="px-3.5 h-8 rounded bg-white hover:bg-gray-150 text-gray-600 border border-gray-300 font-bold text-xs transition-all flex items-center justify-center gap-1.5 disabled:opacity-50 cursor-pointer shadow-sm"
-                                title="Cancel editing"
+                                className="px-2 h-7 rounded bg-white hover:bg-slate-100 text-slate-600 border border-slate-350 font-bold text-[10px] transition-all cursor-pointer"
                               >
-                                <i className="fas fa-times"></i>
-                                <span>Cancel</span>
+                                Cancel
                               </button>
                             </div>
-                          </div>
-                        ) : (
-                          <span className="text-gray-805 font-semibold truncate pl-[26px]">{user.mobile_number || "-"}</span>
-                        )}
+                          ) : (
+                            <span className="text-slate-805 font-extrabold text-xs truncate mt-0.5">{user.mobile_number || "-"}</span>
+                          )}
+                        </div>
                       </div>
 
                       {/* Date of Birth */}
                       <DetailRow
                         label="Date of Birth"
                         value={user.date_of_birth ? new Date(user.date_of_birth).toLocaleDateString("en-GB") : "-"}
-                        icon={
-                          <i className="fas fa-calendar-alt"></i>
-                        }
+                        icon={<i className="fas fa-calendar-alt text-slate-600"></i>}
                       />
                     </div>
                   </div>
 
                   {/* Category 2: Employment details */}
                   <div>
-                    <h4 className="text-[10px] font-extrabold uppercase tracking-widest text-blue-600 border-b border-gray-200 pb-2 mb-3.5 flex items-center gap-2">
-                      <i className="fas fa-briefcase text-blue-600"></i>
+                    <h4 className="text-[10px] font-extrabold uppercase tracking-widest text-[#a5d8e8] border-b border-slate-200 pb-2 mb-3.5 flex items-center gap-2">
+                      <i className="fas fa-briefcase text-slate-500"></i>
                       Employment & Systems Details
                     </h4>
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-3.5">
@@ -1083,44 +1077,36 @@ export default function ProfilePage() {
                       <DetailRow
                         label="Employee Code"
                         value={user.e_code || "-"}
-                        icon={
-                          <i className="fas fa-database"></i>
-                        }
+                        icon={<i className="fas fa-database text-slate-600"></i>}
                       />
 
                       {/* Grade */}
                       <DetailRow
                         label="Grade"
                         value={user.grade || "-"}
-                        icon={
-                          <i className="fas fa-award"></i>
-                        }
+                        icon={<i className="fas fa-award text-slate-600"></i>}
                       />
 
                       {/* Date of Joining */}
                       <DetailRow
                         label="Date of Joining"
                         value={user.date_of_joining ? new Date(user.date_of_joining).toLocaleDateString("en-GB") : "-"}
-                        icon={
-                          <i className="fas fa-calendar-alt"></i>
-                        }
+                        icon={<i className="fas fa-calendar-alt text-slate-600"></i>}
                       />
 
                       {/* Device / Upkaran ID */}
                       <DetailRow
                         label="Device / Upkaran ID"
                         value={user.e_upkaran_id || "-"}
-                        icon={
-                          <i className="fas fa-desktop"></i>
-                        }
+                        icon={<i className="fas fa-desktop text-slate-600"></i>}
                       />
                     </div>
                   </div>
 
                   {/* Category 3: Reporting hierarchy */}
                   <div>
-                    <h4 className="text-[10px] font-extrabold uppercase tracking-widest text-blue-600 border-b border-gray-200 pb-2 mb-3.5 flex items-center gap-2">
-                      <i className="fas fa-users text-blue-600"></i>
+                    <h4 className="text-[10px] font-extrabold uppercase tracking-widest text-[#a5d8e8] border-b border-slate-200 pb-2 mb-3.5 flex items-center gap-2">
+                      <i className="fas fa-users text-slate-500"></i>
                       Reporting Hierarchy & Region
                     </h4>
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-3.5">
@@ -1129,57 +1115,47 @@ export default function ProfilePage() {
                       <DetailRow
                         label="Reporting Manager"
                         value={user.manager || "-"}
-                        icon={
-                          <i className="fas fa-user-tie"></i>
-                        }
+                        icon={<i className="fas fa-user-tie text-slate-600"></i>}
                       />
 
                       {/* Zonal Manager */}
                       <DetailRow
                         label="Zonal Manager"
                         value={user.zonal_manager || "-"}
-                        icon={
-                          <i className="fas fa-user-shield"></i>
-                        }
+                        icon={<i className="fas fa-user-shield text-slate-600"></i>}
                       />
 
                       {/* Coordinator */}
                       <DetailRow
                         label="Coordinator"
                         value={user.coordinator || "-"}
-                        icon={
-                          <i className="fas fa-users"></i>
-                        }
+                        icon={<i className="fas fa-users text-slate-600"></i>}
                       />
 
                       {/* Zone */}
                       <DetailRow
                         label="Zone"
                         value={user.zone || "-"}
-                        icon={
-                          <i className="fas fa-compass"></i>
-                        }
+                        icon={<i className="fas fa-compass text-slate-600"></i>}
                       />
 
                       {/* District */}
                       <DetailRow
                         label="District"
                         value={user.district || "-"}
-                        icon={
-                          <i className="fas fa-map-marker-alt"></i>
-                        }
+                        icon={<i className="fas fa-map-marker-alt text-slate-600"></i>}
                       />
                     </div>
                   </div>
                 </div>
               ) : (
                 /* Change Password / Security Tab Content Workspace */
-                <div className="p-6 space-y-6 flex-1 max-w-md mx-auto w-full animate-fadeIn">
+                <div className="p-6 space-y-6 flex-1 max-w-sm mx-auto w-full animate-fadeIn bg-white">
                   <div className="text-center space-y-1 pb-2">
-                    <h4 className="text-sm font-bold text-gray-800 uppercase tracking-wider flex items-center justify-center gap-2">
-                      <i className="fas fa-lock text-blue-600"></i> Update Credentials
+                    <h4 className="text-sm font-bold text-slate-800 uppercase tracking-wider flex items-center justify-center gap-2">
+                      <i className="fas fa-shield-alt text-[#a5d8e8]"></i> Update Credentials
                     </h4>
-                    <p className="text-[10px] text-gray-500">
+                    <p className="text-[10px] text-slate-400">
                       Enter your current password and your new choice below.
                     </p>
                   </div>
@@ -1194,50 +1170,50 @@ export default function ProfilePage() {
                     )}
 
                     <div>
-                      <label className="label-lte">Current Password</label>
+                      <label className="label-lte text-[9px] uppercase tracking-wider text-slate-400">Current Password</label>
                       <input
                         type="password"
                         placeholder="••••••••"
                         value={oldPassword}
                         onChange={(e) => setOldPassword(e.target.value)}
-                        className="input-lte"
+                        className="input-lte h-9 py-1 px-3 text-xs"
                         required
                       />
                     </div>
 
                     <div>
-                      <label className="label-lte">New Password</label>
+                      <label className="label-lte text-[9px] uppercase tracking-wider text-slate-400">New Password</label>
                       <div className="relative">
                         <input
                           type={showPass ? "text" : "password"}
                           placeholder="••••••••"
                           value={newPassword}
                           onChange={(e) => setNewPassword(e.target.value)}
-                          className="input-lte pr-9"
+                          className="input-lte h-9 py-1 px-3 text-xs pr-9"
                           required
                         />
                         <button
                           type="button"
                           onClick={() => setShowPass(!showPass)}
-                          className="absolute inset-y-0 right-0 pr-3 flex items-center text-gray-400 hover:text-gray-600 bg-transparent border-0 outline-none"
+                          className="absolute inset-y-0 right-0 pr-3 flex items-center text-gray-400 hover:text-gray-600 bg-transparent border-0 outline-none cursor-pointer"
                         >
                           {showPass ? (
-                            <i className="fas fa-eye-slash"></i>
+                            <i className="fas fa-eye-slash text-xs"></i>
                           ) : (
-                            <i className="fas fa-eye"></i>
+                            <i className="fas fa-eye text-xs"></i>
                           )}
                         </button>
                       </div>
                     </div>
 
                     <div>
-                      <label className="label-lte">Confirm New Password</label>
+                      <label className="label-lte text-[9px] uppercase tracking-wider text-slate-400">Confirm New Password</label>
                       <input
                         type="password"
                         placeholder="••••••••"
                         value={confirmPassword}
                         onChange={(e) => setConfirmPassword(e.target.value)}
-                        className="input-lte"
+                        className="input-lte h-9 py-1 px-3 text-xs"
                         required
                       />
                     </div>
@@ -1246,7 +1222,7 @@ export default function ProfilePage() {
                       <button
                         type="submit"
                         disabled={passLoading}
-                        className="btn-lte-primary w-full h-9 disabled:opacity-50"
+                        className="w-full h-9 bg-blue-600 hover:bg-blue-700 text-white font-extrabold text-xs uppercase rounded border-0 cursor-pointer transition-colors shadow-sm disabled:opacity-50"
                       >
                         {passLoading ? (
                           <>
