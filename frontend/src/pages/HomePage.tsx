@@ -210,8 +210,7 @@ export default function HomePage() {
           localStorage.setItem(`cache_allowance_stats_${uId}`, JSON.stringify(stats));
         }
       })
-      .catch(err => console.error("Error fetching allowance stats:", err))
-      .finally(() => setLoadingAllowance(false));
+      .catch(err => console.error("Error fetching allowance stats:", err));
   };
 
   const formatDateTime = (dateVal: any) => {
