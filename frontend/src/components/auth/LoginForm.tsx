@@ -14,7 +14,7 @@ interface LoginFormProps {
 }
 
 const PremiumSpinner = () => (
-  <span className="spinner-lte mr-1.5"></span>
+  <span className="animate-spin rounded-full h-3.5 w-3.5 border-2 border-slate-200 border-t-blue-600 inline-block mr-1.5 shrink-0"></span>
 );
 
 export default function LoginForm({ onForgotPassword, onUnlockAccount }: LoginFormProps) {

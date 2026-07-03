@@ -2154,8 +2154,8 @@ export default function ExpensePage() {
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         {/* Profile Card */}
         <div className="info-box-lte animate-fadeIn">
-          <div className="info-box-icon bg-[#007bff]">
-            <User className="w-5 h-5 text-white" />
+          <div className="info-box-icon bg-[#a5d8e8]">
+            <User className="w-5 h-5 text-slate-800" />
           </div>
           <div className="info-box-content">
             <span className="text-[9px] font-bold uppercase tracking-wider text-gray-400 block mb-0.5">
@@ -2172,8 +2172,8 @@ export default function ExpensePage() {
 
         {/* Assigned Home District Card */}
         <div className="info-box-lte animate-fadeIn">
-          <div className="info-box-icon bg-[#28a745]">
-            <MapPin className="w-5 h-5 text-white" />
+          <div className="info-box-icon bg-[#a5d8e8]">
+            <MapPin className="w-5 h-5 text-slate-800" />
           </div>
           <div className="info-box-content">
             <span className="text-[9px] font-bold uppercase tracking-wider text-gray-400 block mb-0.5">
@@ -2182,7 +2182,7 @@ export default function ExpensePage() {
             <span className="text-xs font-bold text-gray-800 block truncate">
               {user.district || "—"}
             </span>
-            <span className="text-[10px] text-[#28a745] font-semibold block mt-0.5">
+            <span className="text-[10px] text-blue-600 font-extrabold block mt-0.5">
               In-District travel boundary
             </span>
           </div>
@@ -2190,13 +2190,13 @@ export default function ExpensePage() {
 
         {/* Monthly Distance Limit Card */}
         <div className="info-box-lte animate-fadeIn">
-          <div className="info-box-icon bg-[#17a2b8]">
+          <div className="info-box-icon bg-[#a5d8e8]">
             {allowance.vehicle_type === "Car" ? (
-              <SportsCarIcon className="w-5 h-5 text-white" />
+              <SportsCarIcon className="w-5 h-5 text-slate-800" />
             ) : allowance.vehicle_type === "Bike" ? (
-              <SportsBikeIcon className="w-5 h-5 text-white" />
+              <SportsBikeIcon className="w-5 h-5 text-slate-800" />
             ) : (
-              <Navigation className="w-5 h-5 text-white" />
+              <Navigation className="w-5 h-5 text-slate-800" />
             )}
           </div>
           <div className="info-box-content">
@@ -2208,7 +2208,7 @@ export default function ExpensePage() {
             </span>
             <div className="w-full bg-gray-200 rounded-full h-1 mt-1.5 overflow-hidden">
               <div 
-                className="bg-[#17a2b8] h-1 rounded-full transition-all duration-300"
+                className="bg-[#a5d8e8] h-1 rounded-full transition-all duration-300"
                 style={{ width: `${getProgressPercentage(allowance.current_month_km || 0, ((allowance.max_km_per_month || 2000) + approvedKm))}%` }}
               ></div>
             </div>
@@ -2231,8 +2231,8 @@ export default function ExpensePage() {
 
         {/* Monthly Auto Cap Card */}
         <div className="info-box-lte animate-fadeIn">
-          <div className="info-box-icon bg-[#ffc107]">
-            <AutoIcon className="w-5 h-5 text-white" />
+          <div className="info-box-icon bg-[#a5d8e8]">
+            <AutoIcon className="w-5 h-5 text-slate-800" />
           </div>
           <div className="info-box-content">
             <span className="text-[9px] font-bold uppercase tracking-wider text-gray-400 block mb-0.5">
@@ -3077,124 +3077,115 @@ export default function ExpensePage() {
                         <div className="grid grid-cols-1 gap-4">
                           {/* Calls Sub-Form */}
                           {(leg.selected_activities || []).includes("Calls") && (
-                            <div className="bg-blue-50/20 border border-blue-150 rounded p-3 flex flex-col gap-3">
-                              <div className="flex items-center justify-between border-b border-blue-100 pb-1.5">
-                                <span className="text-[11px] font-bold text-blue-700 uppercase tracking-wide">Support Calls Log</span>
+                            <div className="bg-blue-50/20 border border-blue-150 rounded p-2.5 flex flex-col gap-2">
+                              <div className="flex items-center justify-between">
+                                <span className="text-[10px] font-bold text-blue-700 uppercase tracking-wide">Support Calls Log</span>
                               </div>
-                              <div className="grid grid-cols-1 sm:grid-cols-12 gap-3 items-end bg-gray-50/50 p-2.5 rounded border border-gray-200">
-                                <div className="sm:col-span-5">
-                                  <label className="label-lte font-bold">8-Digit Barcode (QR Code)</label>
+                              <div className="grid grid-cols-1 sm:grid-cols-12 gap-2 items-end bg-gray-50/50 p-2 rounded border border-gray-200 text-[10px]">
+                                {/* Barcode */}
+                                <div className="sm:col-span-4">
+                                  <label className="label-lte font-extrabold text-[8px] text-gray-500 uppercase">Barcode (QR)</label>
                                   <div className="flex gap-1.5 items-center">
                                     <input
                                       type="text"
                                       maxLength={8}
                                       value={leg.calls_barcode || ""}
-                                      placeholder="Enter 8 digits"
+                                      placeholder="8 digits"
                                       onChange={(e) => {
                                         const cleaned = e.target.value.replace(/\D/g, "");
                                         handleItineraryChange(leg.leg, "calls_barcode", cleaned);
                                         handleItineraryChange(leg.leg, "calls_verified", false);
                                         handleItineraryChange(leg.leg, "calls_asset_details", null);
                                       }}
-                                      className="input-lte font-mono"
+                                      className="input-lte font-mono h-7 py-0.5 text-xs"
                                     />
                                     <button
                                       type="button"
                                       onClick={() => verifyLegBarcode(leg.leg, "Calls")}
                                       disabled={!leg.calls_barcode || leg.calls_barcode.length !== 8}
-                                      className="btn-lte px-3 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded border-0 cursor-pointer disabled:bg-gray-200 disabled:text-gray-400 disabled:cursor-not-allowed text-xs font-bold shrink-0"
+                                      className="px-2 h-7 bg-blue-600 hover:bg-blue-700 text-white rounded border-0 cursor-pointer disabled:bg-gray-200 disabled:text-gray-400 text-[10px] font-black shrink-0"
                                     >
                                       Verify
                                     </button>
                                   </div>
                                 </div>
+
+                                {/* Call Type */}
                                 <div className="sm:col-span-3">
-                                  <label className="label-lte font-bold">Call Type</label>
+                                  <label className="label-lte font-extrabold text-[8px] text-gray-500 uppercase">Call Type</label>
                                   <select
                                     value={leg.calls_type || "Support Call"}
                                     onChange={(e) => handleItineraryChange(leg.leg, "calls_type", e.target.value)}
-                                    className="input-lte text-xs font-semibold py-1.5 px-2 bg-white"
+                                    className="input-lte text-[10px] font-bold h-7 py-0 px-1 bg-white"
                                   >
-                                    <option value="Support Call">Support Call</option>
-                                    <option value="Online Call">Online Call</option>
+                                    <option value="Support Call">Support</option>
+                                    <option value="Online Call">Online</option>
                                   </select>
                                 </div>
-                                <div className="sm:col-span-3">
-                                  <label className="label-lte font-bold">Call Status</label>
+
+                                {/* Call Status */}
+                                <div className="sm:col-span-2">
+                                  <label className="label-lte font-extrabold text-[8px] text-gray-500 uppercase">Status</label>
                                   <select
                                     value={leg.calls_status || "Attend"}
                                     onChange={(e) => handleItineraryChange(leg.leg, "calls_status", e.target.value)}
-                                    className="input-lte text-xs font-semibold py-1.5 px-2 bg-white"
+                                    className="input-lte text-[10px] font-bold h-7 py-0 px-1 bg-white"
                                   >
                                     <option value="Attend">Attend</option>
                                     <option value="Close">Close</option>
-                                    <option value="Attend & Close">Attend & Close</option>
+                                    <option value="Attend & Close">Both</option>
                                   </select>
                                 </div>
+
+                                {/* Photo Upload/Status Button */}
+                                <div className="sm:col-span-2">
+                                  <label className="label-lte font-extrabold text-[8px] text-gray-500 uppercase">Photo</label>
+                                  {leg.calls_photo_url ? (
+                                    <div className="flex gap-1 h-7 items-center justify-between bg-blue-50 border border-blue-200 px-1.5 rounded text-[9px] font-bold">
+                                      <span className="text-blue-700 cursor-pointer underline truncate max-w-[40px]" onClick={() => {
+                                        const fullUrl = `${import.meta.env.VITE_API_URL || "https://expense-backend-zio8.onrender.com"}${leg.calls_photo_url}`;
+                                        setLightboxImage(fullUrl);
+                                      }}>View</span>
+                                      <button 
+                                        type="button" 
+                                        onClick={() => {
+                                          handleItineraryChange(leg.leg, "calls_photo_url", "");
+                                          handleItineraryChange(leg.leg, "calls_photo_name", "");
+                                        }} 
+                                        className="text-rose-600 border-0 bg-transparent font-black cursor-pointer text-[9px]"
+                                      >
+                                        ✕
+                                      </button>
+                                    </div>
+                                  ) : (
+                                    <label className="cursor-pointer bg-white hover:bg-gray-50 text-gray-700 border border-gray-300 rounded h-7 px-2 flex items-center justify-center gap-1 text-[10px] font-bold shadow-xs">
+                                      <Camera className="w-3 h-3 text-gray-400" />
+                                      <span>Add</span>
+                                      <input
+                                        type="file"
+                                        accept="image/*"
+                                        onChange={(e) => {
+                                          const file = e.target.files?.[0];
+                                          if (file) uploadActivityPhoto(leg.leg, "Calls", file);
+                                        }}
+                                        className="hidden"
+                                      />
+                                    </label>
+                                  )}
+                                  {leg.calls_photo_loading && <span className="text-[8px] text-blue-600 font-semibold block animate-pulse mt-0.5">Uploading...</span>}
+                                </div>
+
+                                {/* Action Add Button */}
                                 <div className="sm:col-span-1 flex justify-center">
                                   <button
                                     type="button"
                                     onClick={() => addVerifiedBarcode(leg.leg, "Calls")}
                                     disabled={!leg.calls_verified}
-                                    className="btn-lte w-full py-2 bg-green-600 hover:bg-green-700 text-white rounded border-0 cursor-pointer disabled:bg-gray-200 disabled:text-gray-400 disabled:cursor-not-allowed flex items-center justify-center shrink-0"
+                                    className="w-full h-7 bg-green-600 hover:bg-green-700 text-white rounded border-0 cursor-pointer disabled:bg-gray-200 disabled:text-gray-400 flex items-center justify-center shrink-0 shadow-sm"
                                     title="Add Verified Entry"
                                   >
                                     <Plus className="w-4 h-4" />
                                   </button>
-                                </div>
-                                
-                                {/* Photo Upload Row - Spans Full Width */}
-                                <div className="sm:col-span-12 pt-2 border-t border-gray-150">
-                                  <label className="label-lte font-bold">Photo (Optional)</label>
-                                  {leg.calls_photo_url ? (
-                                    <div className="flex items-center justify-between bg-blue-50 border border-blue-200 px-3 py-1.5 rounded text-xs">
-                                      <span className="font-semibold text-blue-700 truncate max-w-[200px]">{leg.calls_photo_name || "photo.jpg"}</span>
-                                      <div className="flex gap-2">
-                                        <button 
-                                          type="button" 
-                                          onClick={() => {
-                                            const fullUrl = `${import.meta.env.VITE_API_URL || "https://expense-backend-zio8.onrender.com"}${leg.calls_photo_url}`;
-                                            setLightboxImage(fullUrl);
-                                          }} 
-                                          className="text-blue-600 hover:underline border-0 bg-transparent font-bold cursor-pointer"
-                                        >
-                                          Preview
-                                        </button>
-                                        <a 
-                                          href={`${import.meta.env.VITE_API_URL || "https://expense-backend-zio8.onrender.com"}${leg.calls_photo_url}`} 
-                                          download={leg.calls_photo_name || "download"} 
-                                          className="text-green-600 hover:underline font-bold"
-                                        >
-                                          Download
-                                        </a>
-                                        <button 
-                                          type="button" 
-                                          onClick={() => {
-                                            handleItineraryChange(leg.leg, "calls_photo_url", "");
-                                            handleItineraryChange(leg.leg, "calls_photo_name", "");
-                                          }} 
-                                          className="text-rose-600 hover:underline border-0 bg-transparent font-bold cursor-pointer"
-                                        >
-                                          Delete
-                                        </button>
-                                      </div>
-                                    </div>
-                                  ) : (
-                                    <div className="relative">
-                                       <input
-                                         type="file"
-                                         accept="image/*"
-                                         onChange={(e) => {
-                                           const file = e.target.files?.[0];
-                                           if (file) {
-                                             uploadActivityPhoto(leg.leg, "Calls", file);
-                                           }
-                                         }}
-                                         className="text-xs file:mr-4 file:py-1.5 file:px-3 file:rounded file:border file:border-gray-350 file:text-[10px] file:font-bold file:uppercase file:bg-white file:text-gray-700 hover:file:bg-gray-50 cursor-pointer w-full"
-                                       />
-                                       {leg.calls_photo_loading && <span className="text-[9px] text-blue-600 font-semibold block animate-pulse mt-0.5">Uploading...</span>}
-                                    </div>
-                                  )}
                                 </div>
                               </div>
 
@@ -3286,113 +3277,102 @@ export default function ExpensePage() {
 
                           {/* PMS Sub-Form */}
                           {(leg.selected_activities || []).includes("PMS") && (
-                            <div className="bg-amber-50/20 border border-amber-150 rounded p-3 flex flex-col gap-3">
-                              <div className="flex items-center justify-between border-b border-amber-100 pb-1.5">
-                                <span className="text-[11px] font-bold text-amber-700 uppercase tracking-wide">Preventive Maintenance Services (PMS)</span>
+                            <div className="bg-amber-50/20 border border-amber-150 rounded p-2.5 flex flex-col gap-2">
+                              <div className="flex items-center justify-between">
+                                <span className="text-[10px] font-bold text-amber-700 uppercase tracking-wide">Preventive Maintenance Services (PMS)</span>
                               </div>
-                              <div className="grid grid-cols-1 sm:grid-cols-12 gap-3 items-end bg-gray-50/50 p-2.5 rounded border border-gray-200">
-                                <div className="sm:col-span-6">
-                                  <label className="label-lte font-bold">8-Digit Barcode (QR Code)</label>
+                              <div className="grid grid-cols-1 sm:grid-cols-12 gap-2 items-end bg-gray-50/50 p-2 rounded border border-gray-200 text-[10px]">
+                                {/* Barcode */}
+                                <div className="sm:col-span-5">
+                                  <label className="label-lte font-extrabold text-[8px] text-gray-500 uppercase">Barcode (QR)</label>
                                   <div className="flex gap-1.5 items-center">
                                     <input
                                       type="text"
                                       maxLength={8}
                                       value={leg.pms_barcode || ""}
-                                      placeholder="Enter 8 digits"
+                                      placeholder="8 digits"
                                       onChange={(e) => {
                                         const cleaned = e.target.value.replace(/\D/g, "");
                                         handleItineraryChange(leg.leg, "pms_barcode", cleaned);
                                         handleItineraryChange(leg.leg, "pms_verified", false);
                                         handleItineraryChange(leg.leg, "pms_asset_details", null);
                                       }}
-                                      className="input-lte font-mono"
+                                      className="input-lte font-mono h-7 py-0.5 text-xs"
                                     />
                                     <button
                                       type="button"
                                       onClick={() => verifyLegBarcode(leg.leg, "PMS")}
                                       disabled={!leg.pms_barcode || leg.pms_barcode.length !== 8}
-                                      className="btn-lte px-3 py-2 bg-amber-600 hover:bg-amber-700 text-white rounded border-0 cursor-pointer disabled:bg-gray-200 disabled:text-gray-400 disabled:cursor-not-allowed text-xs font-bold shrink-0"
+                                      className="px-2 h-7 bg-amber-600 hover:bg-amber-700 text-white rounded border-0 cursor-pointer disabled:bg-gray-200 disabled:text-gray-400 text-[10px] font-black shrink-0"
                                     >
                                       Verify
                                     </button>
                                   </div>
                                 </div>
-                                <div className="sm:col-span-5">
-                                  <label className="label-lte font-bold">PMS Frequency Period</label>
+
+                                {/* Frequency */}
+                                <div className="sm:col-span-4">
+                                  <label className="label-lte font-extrabold text-[8px] text-gray-500 uppercase">PMS Period</label>
                                   <select
                                     value={leg.pms_frequency || "3 month"}
                                     onChange={(e) => handleItineraryChange(leg.leg, "pms_frequency", e.target.value)}
-                                    className="input-lte text-xs font-semibold py-1.5 px-2 bg-white"
+                                    className="input-lte text-[10px] font-bold h-7 py-0 px-1 bg-white"
                                   >
                                     <option value="3 month">3 month</option>
                                     <option value="6 month">6 month</option>
                                     <option value="12 month">12 month</option>
                                   </select>
                                 </div>
-                                <div className="sm:col-span-1 flex justify-center">
-                                  <button
-                                    type="button"
-                                    onClick={() => addVerifiedBarcode(leg.leg, "PMS")}
-                                    disabled={!leg.pms_verified}
-                                    className="btn-lte w-full py-2 bg-green-600 hover:bg-green-700 text-white rounded border-0 cursor-pointer disabled:bg-gray-200 disabled:text-gray-400 disabled:cursor-not-allowed flex items-center justify-center shrink-0"
-                                    title="Add Verified Entry"
-                                  >
-                                    <Plus className="w-4 h-4" />
-                                  </button>
-                                </div>
-                                
-                                {/* Photo Upload Row - Spans Full Width */}
-                                <div className="sm:col-span-12 pt-2 border-t border-gray-150">
-                                  <label className="label-lte font-bold">Photo (Optional)</label>
+
+                                {/* Photo Upload/Status Button */}
+                                <div className="sm:col-span-2">
+                                  <label className="label-lte font-extrabold text-[8px] text-gray-500 uppercase">Photo</label>
                                   {leg.pms_photo_url ? (
-                                    <div className="flex items-center justify-between bg-blue-50 border border-blue-200 px-3 py-1.5 rounded text-xs">
-                                      <span className="font-semibold text-blue-700 truncate max-w-[200px]">{leg.pms_photo_name || "photo.jpg"}</span>
-                                      <div className="flex gap-2">
-                                        <button 
-                                          type="button" 
-                                          onClick={() => {
-                                            const fullUrl = `${import.meta.env.VITE_API_URL || "https://expense-backend-zio8.onrender.com"}${leg.pms_photo_url}`;
-                                            setLightboxImage(fullUrl);
-                                          }} 
-                                          className="text-blue-600 hover:underline border-0 bg-transparent font-bold cursor-pointer"
-                                        >
-                                          Preview
-                                        </button>
-                                        <a 
-                                          href={`${import.meta.env.VITE_API_URL || "https://expense-backend-zio8.onrender.com"}${leg.pms_photo_url}`} 
-                                          download={leg.pms_photo_name || "download"} 
-                                          className="text-green-600 hover:underline font-bold"
-                                        >
-                                          Download
-                                        </a>
-                                        <button 
-                                          type="button" 
-                                          onClick={() => {
-                                            handleItineraryChange(leg.leg, "pms_photo_url", "");
-                                            handleItineraryChange(leg.leg, "pms_photo_name", "");
-                                          }} 
-                                          className="text-rose-600 hover:underline border-0 bg-transparent font-bold cursor-pointer"
-                                        >
-                                          Delete
-                                        </button>
-                                      </div>
+                                    <div className="flex gap-1 h-7 items-center justify-between bg-blue-50 border border-blue-200 px-1.5 rounded text-[9px] font-bold">
+                                      <span className="text-blue-700 cursor-pointer underline truncate max-w-[40px]" onClick={() => {
+                                        const fullUrl = `${import.meta.env.VITE_API_URL || "https://expense-backend-zio8.onrender.com"}${leg.pms_photo_url}`;
+                                        setLightboxImage(fullUrl);
+                                      }}>View</span>
+                                      <button 
+                                        type="button" 
+                                        onClick={() => {
+                                          handleItineraryChange(leg.leg, "pms_photo_url", "");
+                                          handleItineraryChange(leg.leg, "pms_photo_name", "");
+                                        }} 
+                                        className="text-rose-600 border-0 bg-transparent font-black cursor-pointer text-[9px]"
+                                      >
+                                        ✕
+                                      </button>
                                     </div>
                                   ) : (
-                                    <div className="relative">
+                                    <label className="cursor-pointer bg-white hover:bg-gray-50 text-gray-700 border border-gray-300 rounded h-7 px-2 flex items-center justify-center gap-1 text-[10px] font-bold shadow-xs">
+                                      <Camera className="w-3 h-3 text-gray-400" />
+                                      <span>Add</span>
                                       <input
                                         type="file"
                                         accept="image/*"
                                         onChange={(e) => {
                                           const file = e.target.files?.[0];
-                                          if (file) {
-                                            uploadActivityPhoto(leg.leg, "PMS", file);
-                                          }
+                                          if (file) uploadActivityPhoto(leg.leg, "PMS", file);
                                         }}
-                                        className="text-xs file:mr-4 file:py-1.5 file:px-3 file:rounded file:border file:border-gray-350 file:text-[10px] file:font-bold file:uppercase file:bg-white file:text-gray-700 hover:file:bg-gray-50 cursor-pointer w-full"
+                                        className="hidden"
                                       />
-                                      {leg.pms_photo_loading && <span className="text-[9px] text-blue-600 font-semibold block animate-pulse mt-0.5">Uploading...</span>}
-                                    </div>
+                                    </label>
                                   )}
+                                  {leg.pms_photo_loading && <span className="text-[8px] text-blue-600 font-semibold block animate-pulse mt-0.5">Uploading...</span>}
+                                </div>
+
+                                {/* Action Add Button */}
+                                <div className="sm:col-span-1 flex justify-center">
+                                  <button
+                                    type="button"
+                                    onClick={() => addVerifiedBarcode(leg.leg, "PMS")}
+                                    disabled={!leg.pms_verified}
+                                    className="w-full h-7 bg-green-600 hover:bg-green-700 text-white rounded border-0 cursor-pointer disabled:bg-gray-200 disabled:text-gray-400 flex items-center justify-center shrink-0 shadow-sm"
+                                    title="Add Verified Entry"
+                                  >
+                                    <Plus className="w-4 h-4" />
+                                  </button>
                                 </div>
                               </div>
 

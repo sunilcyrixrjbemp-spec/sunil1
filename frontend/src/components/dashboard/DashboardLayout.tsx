@@ -112,6 +112,10 @@ export default function DashboardLayout() {
   }, []);
 
   useEffect(() => {
+    setIsNotifOpen(false);
+  }, [location.pathname]);
+
+  useEffect(() => {
     if (typeof window !== "undefined" && "Notification" in window) {
       if (Notification.permission === "default") {
         Notification.requestPermission();
@@ -383,11 +387,11 @@ export default function DashboardLayout() {
                 title={isSidebarCollapsed ? item.name : undefined}
                 className={`flex items-center gap-3 px-3 py-2.5 text-xs font-semibold uppercase tracking-wider transition-all duration-150 border-l-4 group ${
                   isActive
-                    ? "bg-blue-600 text-white font-bold border-l-[#ffc107] shadow-sm"
+                    ? "bg-[#a5d8e8] text-slate-900 font-bold border-l-[#ffc107] shadow-sm"
                     : "border-l-transparent text-[#c2c7d0] hover:bg-emerald-950/30 hover:text-emerald-300"
                 }`}
               >
-                <div className={`${isActive ? "text-white" : "text-[#c2c7d0] group-hover:text-emerald-300"} shrink-0`}>
+                <div className={`${isActive ? "text-slate-900" : "text-[#c2c7d0] group-hover:text-emerald-300"} shrink-0`}>
                   <Icon className="w-4 h-4" />
                 </div>
                 {!isSidebarCollapsed && <span>{item.name}</span>}
@@ -578,13 +582,13 @@ export default function DashboardLayout() {
           to="/home"
           onMouseEnter={() => preloadRoute("/home")}
           className={`flex flex-col items-center justify-center w-16 h-11 rounded-xl transition-all relative ${
-            currentActiveItem?.id === "home" ? "bg-blue-600 text-white font-extrabold shadow-xs" : "text-gray-500 hover:bg-slate-100 hover:text-gray-800"
+            currentActiveItem?.id === "home" ? "bg-[#a5d8e8] text-slate-900 font-extrabold shadow-xs" : "text-gray-500 hover:bg-slate-100 hover:text-gray-800"
           }`}
         >
           <Home className="w-4 h-4" />
           <span className="text-[8px] font-bold uppercase tracking-wider mt-0.5">Home</span>
           {currentActiveItem?.id === "home" && (
-            <span className="absolute bottom-0.5 left-1/2 -translate-x-1/2 h-1 w-1 rounded-full bg-white animate-pulse"></span>
+            <span className="absolute bottom-0.5 left-1/2 -translate-x-1/2 h-1 w-1 rounded-full bg-slate-900 animate-pulse"></span>
           )}
         </Link>
 
@@ -594,13 +598,13 @@ export default function DashboardLayout() {
             to="/submit-expense"
             onMouseEnter={() => preloadRoute("/submit-expense")}
             className={`flex flex-col items-center justify-center w-16 h-11 rounded-xl transition-all relative ${
-              currentActiveItem?.id === "expense" ? "bg-blue-600 text-white font-extrabold shadow-xs" : "text-gray-500 hover:bg-slate-100 hover:text-gray-800"
+              currentActiveItem?.id === "expense" ? "bg-[#a5d8e8] text-slate-900 font-extrabold shadow-xs" : "text-gray-500 hover:bg-slate-100 hover:text-gray-800"
             }`}
           >
             <Plus className="w-4 h-4" />
             <span className="text-[8px] font-bold uppercase tracking-wider mt-0.5">Claim</span>
             {currentActiveItem?.id === "expense" && (
-              <span className="absolute bottom-0.5 left-1/2 -translate-x-1/2 h-1 w-1 rounded-full bg-white animate-pulse"></span>
+              <span className="absolute bottom-0.5 left-1/2 -translate-x-1/2 h-1 w-1 rounded-full bg-slate-900 animate-pulse"></span>
             )}
           </Link>
         )}
@@ -611,13 +615,13 @@ export default function DashboardLayout() {
             to="/approval-center"
             onMouseEnter={() => preloadRoute("/approval-center")}
             className={`flex flex-col items-center justify-center w-16 h-11 rounded-xl transition-all relative ${
-              currentActiveItem?.id === "approval" ? "bg-blue-600 text-white font-extrabold shadow-xs" : "text-gray-500 hover:bg-slate-100 hover:text-gray-800"
+              currentActiveItem?.id === "approval" ? "bg-[#a5d8e8] text-slate-900 font-extrabold shadow-xs" : "text-gray-500 hover:bg-slate-100 hover:text-gray-800"
             }`}
           >
             <CheckSquare className="w-4 h-4" />
             <span className="text-[8px] font-bold uppercase tracking-wider mt-0.5">Approval</span>
             {currentActiveItem?.id === "approval" && (
-              <span className="absolute bottom-0.5 left-1/2 -translate-x-1/2 h-1 w-1 rounded-full bg-white animate-pulse"></span>
+              <span className="absolute bottom-0.5 left-1/2 -translate-x-1/2 h-1 w-1 rounded-full bg-slate-900 animate-pulse"></span>
             )}
           </Link>
         )}
@@ -627,13 +631,13 @@ export default function DashboardLayout() {
           to="/profile"
           onMouseEnter={() => preloadRoute("/profile")}
           className={`flex flex-col items-center justify-center w-16 h-11 rounded-xl transition-all relative ${
-            currentActiveItem?.id === "profile" ? "bg-blue-600 text-white font-extrabold shadow-xs" : "text-gray-500 hover:bg-slate-100 hover:text-gray-800"
+            currentActiveItem?.id === "profile" ? "bg-[#a5d8e8] text-slate-900 font-extrabold shadow-xs" : "text-gray-500 hover:bg-slate-100 hover:text-gray-800"
           }`}
         >
           <User className="w-4 h-4" />
           <span className="text-[8px] font-bold uppercase tracking-wider mt-0.5">Profile</span>
           {currentActiveItem?.id === "profile" && (
-            <span className="absolute bottom-0.5 left-1/2 -translate-x-1/2 h-1 w-1 rounded-full bg-white animate-pulse"></span>
+            <span className="absolute bottom-0.5 left-1/2 -translate-x-1/2 h-1 w-1 rounded-full bg-slate-900 animate-pulse"></span>
           )}
         </Link>
 
@@ -641,13 +645,13 @@ export default function DashboardLayout() {
         <button
           onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
           className={`flex flex-col items-center justify-center w-16 h-11 rounded-xl transition-all border-0 bg-transparent cursor-pointer relative ${
-            isMobileMenuOpen ? "bg-blue-600 text-white font-extrabold shadow-xs" : "text-gray-500 hover:bg-slate-100 hover:text-gray-800"
+            isMobileMenuOpen ? "bg-[#a5d8e8] text-slate-900 font-extrabold shadow-xs" : "text-gray-500 hover:bg-slate-100 hover:text-gray-800"
           }`}
         >
           <MenuGridIcon />
           <span className="text-[8px] font-bold uppercase tracking-wider mt-0.5">More</span>
           {isMobileMenuOpen && (
-            <span className="absolute bottom-0.5 left-1/2 -translate-x-1/2 h-1 w-1 rounded-full bg-white animate-pulse"></span>
+            <span className="absolute bottom-0.5 left-1/2 -translate-x-1/2 h-1 w-1 rounded-full bg-slate-900 animate-pulse"></span>
           )}
         </button>
       </nav>

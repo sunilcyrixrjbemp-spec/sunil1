@@ -416,7 +416,9 @@ svg, path, g, sector, .recharts-pie-sector, .recharts-sector, .recharts-pie, .re
   }
 
   /* Prevent typed text from overlapping prefix/suffix icons inside User/Password fields */
-  .input-lte-icon {
+  .input-lte-icon,
+  input[type="text"].input-lte-icon,
+  input[type="password"].input-lte-icon {
     padding-left: 2.75rem !important; /* 44px padding to clear prefix icon */
   }
 

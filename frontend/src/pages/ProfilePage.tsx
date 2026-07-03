@@ -3,7 +3,7 @@ import { authService } from "../services/authService";
 import api from "../services/api";
 
 const LteSpinner = () => (
-  <span className="spinner-lte mr-1.5"></span>
+  <span className="animate-spin rounded-full h-3.5 w-3.5 border-2 border-slate-200 border-t-blue-600 inline-block mr-1.5 shrink-0"></span>
 );
 
 
@@ -15,12 +15,12 @@ interface DetailRowProps {
 }
 
 const DetailRow = ({ label, value, icon }: DetailRowProps) => (
-  <div className="p-3 bg-gray-50 border border-gray-200 rounded flex items-center justify-between text-xs gap-3 hover:bg-gray-100 transition-colors">
-    <div className="flex items-center gap-2.5 min-w-0">
-      {icon && <span className="text-blue-600 shrink-0">{icon}</span>}
-      <span className="font-bold text-gray-500 uppercase tracking-wider text-[9px] truncate">{label}</span>
+  <div className="p-3.5 bg-white border border-gray-200/80 rounded-xl flex flex-col justify-center text-xs gap-1.5 hover:shadow-xs hover:border-[#a5d8e8] transition-all duration-150">
+    <div className="flex items-center gap-2 text-[#64748b]">
+      {icon && <span className="text-[#a5d8e8] shrink-0 text-xs">{icon}</span>}
+      <span className="font-extrabold uppercase tracking-widest text-[8px]">{label}</span>
     </div>
-    <span className="text-gray-800 font-semibold truncate text-right pl-2 shrink-0">{value}</span>
+    <span className="text-gray-900 font-extrabold text-xs truncate mt-0.5">{value}</span>
   </div>
 );
 
@@ -513,15 +513,9 @@ export default function ProfilePage() {
   if (isMobile) {
     return (
       <div className="space-y-4 pb-20 text-gray-800 text-xs animate-fadeIn" style={{ fontFamily: "'Plus Jakarta Sans', sans-serif" }}>
-        {/* Page Header */}
-        <div>
-          <h2 className="text-xl font-black text-gray-900 uppercase tracking-wide">User Profile</h2>
-          <p className="text-gray-500 text-[9px] mt-0.5">Manage your credentials and view system configurations.</p>
-        </div>
         
         {/* Profile Card Header Banner */}
         <div className="bg-white border border-gray-200 rounded-2xl shadow-sm overflow-hidden text-center relative p-6">
-          <div className="absolute top-0 left-0 right-0 h-1.5 bg-gradient-to-r from-blue-600 to-indigo-650"></div>
           
           {/* Avatar Area */}
           <div className="relative h-24 w-24 mx-auto mb-3">
@@ -810,13 +804,6 @@ export default function ProfilePage() {
 
   return (
     <div className="space-y-6 animate-fadeIn text-[#212529]">
-      {/* Header Info */}
-      <div>
-        <h2 className="text-2xl font-black text-gray-900 uppercase tracking-wide">
-          User Profile
-        </h2>
-        <p className="text-gray-500 text-xs mt-1">Manage your contact credentials and view system permissions configurations.</p>
-      </div>
 
       {notice && (
         <div className={`p-3 border rounded text-xs flex items-center gap-2 shadow-sm animate-fadeIn ${
@@ -833,7 +820,7 @@ export default function ProfilePage() {
         
         {/* Left Column - Main Avatar / Card */}
         <div className="lg:col-span-1">
-          <div className="card-lte-primary p-6 text-center lg:sticky lg:top-20 bg-white shadow-sm">
+          <div className="bg-white border border-gray-200 rounded-2xl p-6 text-center lg:sticky lg:top-20 shadow-sm">
             {/* Circle avatar with interactive upload */}
             <div className="relative h-24 w-24 mx-auto group mb-4">
               <label htmlFor="profile-photo-input" className="cursor-pointer block relative h-full w-full rounded-full overflow-hidden border-2 border-blue-100 shadow-md select-none group-hover:border-blue-400 transition-all">
@@ -1385,7 +1372,7 @@ export default function ProfilePage() {
               >
                 {photoLoading ? (
                   <>
-                    <span className="spinner-lte"></span>
+                    <span className="animate-spin rounded-full h-3 w-3 border-2 border-slate-200 border-t-white inline-block shrink-0"></span>
                     <span>Uploading...</span>
                   </>
                 ) : (

@@ -622,7 +622,7 @@ export default function HelpPage() {
           onClick={() => { handleTabChange("my-tickets"); setSelectedTicket(null); }}
           className={`flex-1 py-2 text-center font-bold text-[10px] uppercase rounded-lg border-0 cursor-pointer transition-all ${
             activeTab === "my-tickets"
-              ? "bg-indigo-650 text-white shadow-xs"
+              ? "bg-[#a5d8e8] text-slate-800 shadow-xs font-extrabold"
               : "bg-transparent text-gray-500 hover:text-gray-800"
           }`}
         >
@@ -633,7 +633,7 @@ export default function HelpPage() {
           onClick={() => { handleTabChange("raise"); setSelectedTicket(null); }}
           className={`flex-1 py-2 text-center font-bold text-[10px] uppercase rounded-lg border-0 cursor-pointer transition-all ${
             activeTab === "raise"
-              ? "bg-indigo-650 text-white shadow-xs"
+              ? "bg-[#a5d8e8] text-slate-800 shadow-xs font-extrabold"
               : "bg-transparent text-gray-500 hover:text-gray-800"
           }`}
         >
@@ -645,7 +645,7 @@ export default function HelpPage() {
             onClick={() => { handleTabChange("assigned-tickets"); setSelectedTicket(null); }}
             className={`flex-1 py-2 text-center font-bold text-[10px] uppercase rounded-lg border-0 cursor-pointer transition-all ${
               activeTab === "assigned-tickets"
-                ? "bg-indigo-650 text-white shadow-xs"
+                ? "bg-[#a5d8e8] text-slate-800 shadow-xs font-extrabold"
                 : "bg-transparent text-gray-500 hover:text-gray-800"
             }`}
           >
@@ -800,7 +800,7 @@ export default function HelpPage() {
                   onClick={() => { handleTabChange("my-tickets"); setSelectedTicket(null); }}
                   className={`py-3 px-4 font-bold text-xs uppercase tracking-wider border-b-2 transition-all cursor-pointer ${
                     activeTab === "my-tickets"
-                      ? "border-blue-600 text-blue-700 bg-white"
+                      ? "border-[#a5d8e8] text-slate-800 bg-[#a5d8e8]/20 font-extrabold"
                       : "border-transparent text-gray-500 hover:text-gray-900"
                   }`}
                 >
@@ -812,7 +812,7 @@ export default function HelpPage() {
                     onClick={() => { handleTabChange("assigned-tickets"); setSelectedTicket(null); }}
                     className={`py-3 px-4 font-bold text-xs uppercase tracking-wider border-b-2 transition-all cursor-pointer ${
                       activeTab === "assigned-tickets"
-                        ? "border-blue-600 text-blue-700 bg-white"
+                        ? "border-[#a5d8e8] text-slate-800 bg-[#a5d8e8]/20 font-extrabold"
                         : "border-transparent text-gray-500 hover:text-gray-900"
                     }`}
                   >
