@@ -551,7 +551,7 @@ export default function AnalysisPage() {
       </div>
 
       {/* Summary Stats */}
-      <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-7 gap-3">
+      <div className="flex overflow-x-auto pb-1.5 lg:grid lg:grid-cols-7 gap-3 w-full scrollbar-none">
         {/* Card 1: Total Claims */}
         <div className="info-box-lte animate-fadeIn">
           <div className="info-box-icon bg-[#007bff]">
@@ -640,7 +640,7 @@ export default function AnalysisPage() {
       )}
 
       {count > 0 && (
-        <div className="hidden lg:grid grid-cols-1 lg:grid-cols-2 gap-5">
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
 
           {/* Chart 1: Top Spenders (User-wise) */}
           <div className="bg-white border border-gray-200 rounded shadow-sm">

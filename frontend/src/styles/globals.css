@@ -658,18 +658,32 @@ svg, path, g, sector, .recharts-pie-sector, .recharts-sector, .recharts-pie, .re
   }
 
   .modal-lte-content {
-    border-top-left-radius: 20px !important;
-    border-top-right-radius: 20px !important;
+    border-top-left-radius: 24px !important;
+    border-top-right-radius: 24px !important;
     border-bottom-left-radius: 0 !important;
     border-bottom-right-radius: 0 !important;
     max-height: 92vh !important;
-    height: 92vh !important;
+    height: auto !important;
     border-style: none !important;
-    box-shadow: 0 -4px 24px rgba(0, 0, 0, 0.05) !important;
+    box-shadow: 0 -10px 30px rgba(0, 0, 0, 0.15) !important;
     padding: 0 !important;
     display: flex !important;
     flex-direction: column !important;
-    animation: slideUp 0.25s ease-out !important;
+    animation: slideUp 0.25s cubic-bezier(0.16, 1, 0.3, 1) !important;
+    overflow: hidden !important;
+    position: relative !important;
+  }
+
+  /* Drag handle indicator at the top of the mobile bottom sheet */
+  .modal-lte-content::before {
+    content: "" !important;
+    display: block !important;
+    width: 36px !important;
+    height: 4px !important;
+    background-color: rgba(255, 255, 255, 0.25) !important;
+    border-radius: 2px !important;
+    margin: 8px auto -12px auto !important;
+    z-index: 1001 !important;
   }
 
   @keyframes slideUp {

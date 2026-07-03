@@ -82,7 +82,13 @@ export default function HelpPage() {
     return JSON.parse(localStorage.getItem("user") || "null");
   });
 
-  // Data states
+  // Check screen size for mobile view
+  const [isMobile, setIsMobile] = useState(window.innerWidth < 1024);
+  useEffect(() => {
+    const handleResize = () => setIsMobile(window.innerWidth < 1024);
+    window.addEventListener("resize", handleResize);
+    return () => window.removeEventListener("resize", handleResize);
+  }, []);
   const [tickets, setTickets] = useState<any[]>(() => {
     const currentUserId = (() => { try { const u = JSON.parse(localStorage.getItem("user") || "{}"); return u.user_id || "Admin"; } catch(e) { return "Admin"; } })().trim();
     const cached = localStorage.getItem(`cache_support_tickets_${currentUserId}`);
@@ -609,11 +615,50 @@ export default function HelpPage() {
 
       </div>
 
+      {/* Standalone Mobile Tab Selector */}
+      <div className="xl:hidden border-b border-gray-250 bg-white p-1 flex rounded-xl gap-1 shadow-xs mb-3">
+        <button
+          type="button"
+          onClick={() => { handleTabChange("my-tickets"); setSelectedTicket(null); }}
+          className={`flex-1 py-2 text-center font-bold text-[10px] uppercase rounded-lg border-0 cursor-pointer transition-all ${
+            activeTab === "my-tickets"
+              ? "bg-indigo-650 text-white shadow-xs"
+              : "bg-transparent text-gray-500 hover:text-gray-800"
+          }`}
+        >
+          My Tickets ({myRaisedTickets.length})
+        </button>
+        <button
+          type="button"
+          onClick={() => { handleTabChange("raise"); setSelectedTicket(null); }}
+          className={`flex-1 py-2 text-center font-bold text-[10px] uppercase rounded-lg border-0 cursor-pointer transition-all ${
+            activeTab === "raise"
+              ? "bg-indigo-650 text-white shadow-xs"
+              : "bg-transparent text-gray-500 hover:text-gray-800"
+          }`}
+        >
+          File Ticket
+        </button>
+        {hasAccessToAssignedTab && (
+          <button
+            type="button"
+            onClick={() => { handleTabChange("assigned-tickets"); setSelectedTicket(null); }}
+            className={`flex-1 py-2 text-center font-bold text-[10px] uppercase rounded-lg border-0 cursor-pointer transition-all ${
+              activeTab === "assigned-tickets"
+                ? "bg-indigo-650 text-white shadow-xs"
+                : "bg-transparent text-gray-500 hover:text-gray-800"
+            }`}
+          >
+            Assigned ({assignedTickets.length})
+          </button>
+        )}
+      </div>
+
       {/* Main Workspace layout */}
       <div className="grid grid-cols-1 xl:grid-cols-3 gap-6">
         
         {/* Left column: Raise ticket Form */}
-        <div className="xl:col-span-1 space-y-6">
+        <div className={`xl:col-span-1 space-y-6 ${activeTab === "raise" ? "block" : "hidden xl:block"}`}>
                     <div className="card-lte-success p-5 space-y-4 bg-white shadow-sm">
             <h3 className="text-xs font-bold text-gray-700 uppercase tracking-wider flex items-center gap-1.5">
               <i className="fas fa-ticket-alt text-green-600"></i>
@@ -744,7 +789,7 @@ export default function HelpPage() {
         </div>
 
         {/* Right column: Filter headers, listing tabs, and chat timeline logs */}
-        <div className="xl:col-span-2 space-y-6">
+        <div className={`xl:col-span-2 space-y-6 ${activeTab === "raise" ? "hidden xl:block" : "block"}`}>
           
           {/* Support Ticket Listing container */}
           <div className="card-lte flex flex-col bg-white">
@@ -905,109 +950,221 @@ export default function HelpPage() {
 
           {/* Ticket Thread detail panel */}
           {selectedTicket && (
-            <div className="card-lte-primary p-5 space-y-4 bg-white shadow-md animate-scaleIn text-xs">
-              
-              {/* Detail Header */}
-              <div className="flex items-start justify-between border-b border-gray-150 pb-3">
-                <div className="space-y-1">
-                  <div className="flex items-center gap-2">
-                    <h3 className="text-sm font-bold text-gray-950 font-mono flex items-center gap-1.5">
-                      {selectedTicket.ticket_code}
-                      <i className={`fas fa-bookmark text-xs ${
-                        selectedTicket.needs_followup ? "text-amber-500" : "text-gray-300"
-                      }`}></i>
-                    </h3>
-                    
-                    <span className={`inline-flex items-center px-2 py-0.5 rounded border text-[8px] uppercase font-bold tracking-wider ${getStatusBadgeClass(selectedTicket.status)}`}>
-                      {selectedTicket.status}
-                    </span>
-                  </div>
+            isMobile ? (
+              <div className="fixed inset-0 bg-black/60 z-[2000] flex items-end justify-center animate-fadeIn" onClick={() => setSelectedTicket(null)}>
+                <div className="bg-white rounded-t-[24px] w-full max-h-[90vh] flex flex-col shadow-xl animate-slideUp text-xs overflow-hidden" onClick={e => e.stopPropagation()}>
                   
-                  <p className="text-[10px] text-gray-550 font-bold uppercase">
-                    Category: <span className="text-gray-800">{selectedTicket.concern_type}</span>
-                    {selectedTicket.expense_code && ` (Claim Code: ${selectedTicket.expense_code})`}
-                  </p>
-                </div>
+                  {/* Top Drag Handle Indicator */}
+                  <div className="w-12 h-1.5 bg-gray-350 rounded-full mx-auto my-3 cursor-pointer" onClick={() => setSelectedTicket(null)}></div>
+                  
+                  {/* Detail Body */}
+                  <div className="flex-1 overflow-y-auto px-4 pb-6 space-y-4 text-left">
+                    {/* Detail Header */}
+                    <div className="flex items-start justify-between border-b border-gray-150 pb-3 pt-1">
+                      <div className="space-y-1">
+                        <div className="flex items-center gap-2">
+                          <h3 className="text-sm font-bold text-gray-955 font-mono flex items-center gap-1.5">
+                            {selectedTicket.ticket_code}
+                            <i className={`fas fa-bookmark text-xs ${
+                              selectedTicket.needs_followup ? "text-amber-500" : "text-gray-300"
+                            }`}></i>
+                          </h3>
+                        </div>
+                        <p className="text-[10px] text-gray-500 font-bold uppercase tracking-wider">
+                          Category: <span className="text-indigo-650">{selectedTicket.concern_type}</span>
+                          {selectedTicket.expense_code && ` (Claim Code: ${selectedTicket.expense_code})`}
+                        </p>
+                      </div>
 
-                <div className="flex items-center gap-2">
-                  {/* Close ticket button */}
-                  {["Open", "Updated", "Re-opened"].includes(selectedTicket.status) && (
-                    <button
-                      onClick={() => handleCloseTicket(selectedTicket.id)}
-                      className="px-3 py-1 bg-red-600 hover:bg-red-700 text-white rounded text-[10px] font-bold uppercase tracking-wider cursor-pointer border-0 shadow-sm transition-colors flex items-center gap-1"
-                    >
-                      <i className="fas fa-check-circle"></i>
-                      Resolve Concern
-                    </button>
-                  )}
-
-                  {/* Re-open ticket button */}
-                  {canReopen(selectedTicket) && (
-                    <button
-                      onClick={() => handleReopenTicket(selectedTicket.id)}
-                      className="px-3 py-1 bg-amber-500 hover:bg-amber-600 text-white rounded text-[10px] font-bold uppercase tracking-wider cursor-pointer border-0 shadow-sm transition-colors flex items-center gap-1"
-                    >
-                      <i className="fas fa-redo fa-spin-slow"></i>
-                      Re-open (36h limit)
-                    </button>
-                  )}
-                </div>
-              </div>
-
-              {/* Concern details card */}
-              <div className="p-3.5 bg-gray-50 border border-gray-200 rounded text-xs space-y-2">
-                <div className="flex justify-between items-center text-[9px] font-bold text-gray-400 uppercase">
-                  <span>Concern remarks</span>
-                  <span className={selectedTicket.priority === "Critical" ? "text-red-600 font-black" : ""}>Priority: {selectedTicket.priority}</span>
-                </div>
-                <p className="text-gray-700 font-bold leading-relaxed">
-                  {selectedTicket.description}
-                </p>
-
-                {/* Show individual TAT if closed */}
-                {selectedTicket.closed_at && (
-                  <div className="mt-2.5 pt-2 border-t border-gray-200 flex items-center gap-1.5 text-[9px] text-gray-400 font-bold uppercase">
-                    <i className="fas fa-clock text-gray-450"></i>
-                    <span>Resolution TAT:</span>
-                    <span className="text-blue-700 font-mono">
-                      {formatDuration(
-                        (new Date(selectedTicket.closed_at).getTime() - new Date(selectedTicket.created_at).getTime()) / (1000 * 60 * 60)
-                      )}
-                    </span>
-                  </div>
-                )}
-              </div>
-
-              {/* Discussion logs */}
-              <div className="space-y-2">
-                <div className="flex justify-between items-center">
-                  <h4 className="text-[10px] font-bold uppercase tracking-wider text-gray-400">Discussion Logs & Updates</h4>
-                  <span className="text-[9px] font-bold text-gray-400 uppercase select-none">💬 Live Chat</span>
-                </div>
-                
-                <div 
-                  className="rounded-lg p-4 min-h-[320px] max-h-[420px] overflow-y-auto flex flex-col gap-3 relative shadow-inner border border-gray-250"
-                  style={{
-                    backgroundColor: "#efeae2",
-                    backgroundImage: "radial-gradient(#dfdcd6 1px, transparent 1px)",
-                    backgroundSize: "16px 16px"
-                  }}
-                >
-                  {!selectedTicket.comments || !selectedTicket.comments.trim() ? (
-                    <div className="text-center my-auto py-10 text-gray-500 font-bold uppercase text-[9px] tracking-wider select-none bg-white/70 rounded p-4 mx-4 shadow-sm border border-gray-200">
-                      No replies logged yet. Type a message below to start the discussion thread.
+                      <div className="flex gap-2">
+                        {["Open", "Updated", "Re-opened"].includes(selectedTicket.status) && (
+                          <button
+                            onClick={() => handleCloseTicket(selectedTicket.id)}
+                            className="bg-red-650 hover:bg-red-700 text-white px-2.5 py-1 text-[9px] min-h-0 uppercase tracking-wider font-extrabold flex items-center gap-1 border-0 rounded cursor-pointer"
+                          >
+                            <i className="fas fa-check-circle"></i> Resolve
+                          </button>
+                        )}
+                        {canReopen(selectedTicket) && (
+                          <button
+                            onClick={() => handleReopenTicket(selectedTicket.id)}
+                            className="bg-amber-500 hover:bg-amber-600 text-white px-2.5 py-1 text-[9px] min-h-0 uppercase tracking-wider font-extrabold flex items-center gap-1 border-0 rounded cursor-pointer"
+                          >
+                            <i className="fas fa-undo"></i> Reopen
+                          </button>
+                        )}
+                        <button
+                          onClick={() => setSelectedTicket(null)}
+                          className="bg-gray-100 hover:bg-gray-250 border border-gray-300 text-gray-700 font-extrabold px-2.5 py-1 text-[9px] rounded uppercase tracking-wider cursor-pointer"
+                        >
+                          Close
+                        </button>
+                      </div>
                     </div>
-                  ) : (
-                    selectedTicket.comments.split("\n").map((cmt: string, cIdx: number) => {
-                      if (!cmt.trim()) return null;
-                      
-                      // Bulletproof separator for Sender name and Timestamp
-                      const openParenIdx = cmt.indexOf(" (");
-                      const closeParenIdx = cmt.indexOf("): ");
-                      let senderName = "System";
-                      let dateTime = "";
-                      let content = cmt;
 
+                    {/* Status and Priority Info Cards */}
+                    <div className="grid grid-cols-2 gap-2 text-[10px]">
+                      <div className="p-2 border border-gray-150 rounded-lg bg-gray-50/50">
+                        <span className="text-gray-400 block font-bold uppercase text-[8px] tracking-wider mb-0.5">Status</span>
+                        <span className={`inline-block px-2 py-0.5 rounded border ${getStatusBadgeClass(selectedTicket.status)}`}>
+                          {selectedTicket.status}
+                        </span>
+                      </div>
+                      <div className="p-2 border border-gray-150 rounded-lg bg-gray-50/50">
+                        <span className="text-gray-450 block font-bold uppercase text-[8px] tracking-wider mb-0.5">Priority</span>
+                        <span className={`inline-block px-2 py-0.5 rounded border ${getPriorityBadgeClass(selectedTicket.priority)}`}>
+                          {selectedTicket.priority}
+                        </span>
+                      </div>
+                    </div>
+
+                    {/* Ticket Description / Remarks */}
+                    <div className="bg-gray-50 border border-gray-150 rounded-xl p-3">
+                      <span className="text-[8px] font-bold text-gray-400 uppercase tracking-wider block mb-1">Issue Description</span>
+                      <p className="text-xs text-gray-800 font-medium whitespace-pre-wrap leading-relaxed">
+                        {selectedTicket.description}
+                      </p>
+                      {selectedTicket.closed_at && (
+                        <div className="mt-2.5 pt-2 border-t border-gray-150 flex items-center justify-between text-[9px] font-bold text-gray-500 uppercase">
+                          <span>Resolved In:</span>
+                          <span className="font-mono text-indigo-650">
+                            {formatDuration((new Date(selectedTicket.closed_at).getTime() - new Date(selectedTicket.created_at).getTime()) / (1000 * 60 * 60))}
+                          </span>
+                        </div>
+                      )}
+                    </div>
+
+                    {/* Discussion logs */}
+                    <div className="space-y-2">
+                      <div className="flex justify-between items-center">
+                        <h4 className="text-[10px] font-bold uppercase tracking-wider text-gray-400">Discussion Logs & Updates</h4>
+                        <span className="text-[9px] font-bold text-gray-400 uppercase select-none">💬 Live Chat</span>
+                      </div>
+                      
+                      <div 
+                        className="rounded-lg p-4 min-h-[220px] max-h-[320px] overflow-y-auto flex flex-col gap-3 relative shadow-inner border border-gray-250"
+                        style={{
+                          backgroundColor: "#efeae2",
+                          backgroundImage: "radial-gradient(#dfdcd6 1px, transparent 1px)",
+                          backgroundSize: "16px 16px"
+                        }}
+                      >
+                        {!selectedTicket.comments || !selectedTicket.comments.trim() ? (
+                          <div className="my-auto text-center py-6 text-gray-450 font-bold uppercase text-[9px] tracking-wider">
+                            No log comments recorded
+                          </div>
+                        ) : (
+                          selectedTicket.comments.split("\n").map((cmt: string, cIdx: number) => {
+                            if (!cmt.trim()) return null;
+                            const isSystem = cmt.startsWith("[SYSTEM]");
+                            const isEmployee = cmt.startsWith("[EMPLOYEE]");
+                            const cleanText = cmt.replace(/^\[SYSTEM\]\s*|^\[EMPLOYEE\]\s*/, "");
+                            return (
+                              <div
+                                key={cIdx}
+                                className={`p-2 rounded-lg text-xs leading-normal border shadow-2xs ${
+                                  isSystem
+                                    ? "bg-amber-50/60 border-amber-100/70 text-gray-700"
+                                    : isEmployee
+                                    ? "bg-indigo-50/60 border-indigo-100/70 text-indigo-950"
+                                    : "bg-white border-gray-150 text-gray-800"
+                                }`}
+                              >
+                                <p className="font-medium whitespace-pre-wrap">{cleanText}</p>
+                              </div>
+                            );
+                          })
+                        )}
+                      </div>
+                    </div>
+
+                    {/* Chat Reply Form */}
+                    {selectedTicket.status !== "Final Closed" && (
+                      <div className="pt-2 border-t border-gray-100">
+                        <form onSubmit={handleSendCommentMessage} className="flex gap-2 items-center bg-gray-50 p-1.5 rounded-full border border-gray-200">
+                          <input
+                            type="text"
+                            placeholder={selectedTicket.status === "Closed" ? "Ticket is closed. Reopen to chat..." : "Type reply message..."}
+                            value={newComment}
+                            onChange={(e) => handleInputChange(e.target.value)}
+                            disabled={selectedTicket.status === "Closed" || commenting}
+                            className="flex-1 px-4 py-2 bg-white border border-gray-300 rounded-full text-xs text-gray-800 placeholder-gray-400 focus:outline-none focus:ring-1 focus:ring-indigo-500 focus:border-indigo-500 outline-none font-medium h-9"
+                            required
+                          />
+                          <button
+                            type="submit"
+                            disabled={selectedTicket.status === "Closed" || commenting || !newComment.trim()}
+                            className="h-9 w-9 bg-green-600 hover:bg-green-700 disabled:bg-gray-300 disabled:text-gray-400 text-white rounded-full flex items-center justify-center shadow-md shrink-0 border-0 transition-colors cursor-pointer"
+                            title="Send message"
+                          >
+                            <i className="fas fa-paper-plane text-xs"></i>
+                          </button>
+                        </form>
+                      </div>
+                    )}
+
+                  </div>
+                </div>
+              </div>
+            ) : (
+              <div className="card-lte-primary p-5 space-y-4 bg-white shadow-md animate-scaleIn text-xs">
+                
+                {/* Detail Header */}
+                <div className="flex items-start justify-between border-b border-gray-150 pb-3">
+                  <div className="space-y-1">
+                    <div className="flex items-center gap-2">
+                      <h3 className="text-sm font-bold text-gray-955 font-mono flex items-center gap-1.5">
+                        {selectedTicket.ticket_code}
+                        <i className={`fas fa-bookmark text-xs ${
+                          selectedTicket.needs_followup ? "text-amber-500" : "text-gray-300"
+                        }`}></i>
+                      </h3>
+                      
+                      <span className={`inline-flex items-center px-2 py-0.5 rounded border text-[8px] uppercase font-bold tracking-wider ${getStatusBadgeClass(selectedTicket.status)}`}>
+                        {selectedTicket.status}
+                      </span>
+                    </div>
+                    
+                    <p className="text-[10px] text-gray-550 font-bold uppercase">
+                      Category: <span className="text-gray-800">{selectedTicket.concern_type}</span>
+                      {selectedTicket.expense_code && ` (Claim Code: ${selectedTicket.expense_code})`}
+                    </p>
+                  </div>
+
+                  <div className="flex items-center gap-2">
+                    {/* Close ticket button */}
+                    {["Open", "Updated", "Re-opened"].includes(selectedTicket.status) && (
+                      <button
+                        onClick={() => handleCloseTicket(selectedTicket.id)}
+                        className="px-3 py-1 bg-red-600 hover:bg-red-700 text-white rounded text-[10px] font-bold uppercase tracking-wider cursor-pointer border-0 shadow-sm transition-colors flex items-center gap-1"
+                      >
+                        <i className="fas fa-check-circle"></i>
+                        Resolve Concern
+                      </button>
+                    )}
+
+                    {/* Re-open ticket button */}
+                    {canReopen(selectedTicket) && (
+                      <button
+                        onClick={() => handleReopenTicket(selectedTicket.id)}
+                        className="px-3 py-1 bg-amber-500 hover:bg-amber-600 text-white rounded text-[10px] font-bold uppercase tracking-wider cursor-pointer border-0 shadow-sm transition-colors flex items-center gap-1"
+                      >
+                        <i className="fas fa-redo fa-spin-slow"></i>
+                        Re-open (36h limit)
+                      </button>
+                    )}
+                  </div>
+                </div>
+
+                {/* Concern details card */}
+                <div className="p-3.5 bg-gray-50 border border-gray-200 rounded text-xs space-y-2">
+                  <div className="flex justify-between items-center text-[9px] font-bold text-gray-400 uppercase">
+                    <span>Concern remarks</span>
+                    <span className={selectedTicket.priority === "Critical" ? "text-red-600 font-black" : ""}>Priority: {selectedTicket.priority}</span>
+                  </div>
+                  <p className="text-gray-700 font-bold leading-relaxed">
+                    {selectedTicket.description}
+                  </p>
                       if (openParenIdx !== -1 && closeParenIdx !== -1 && openParenIdx < closeParenIdx) {
                         senderName = cmt.substring(0, openParenIdx).trim();
                         const rawTime = cmt.substring(openParenIdx + 2, closeParenIdx).trim();

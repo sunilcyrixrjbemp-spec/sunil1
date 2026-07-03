@@ -699,13 +699,13 @@ export default function DashboardLayout() {
       {isMobileMenuOpen && (
         <div className="fixed inset-0 bg-[#f4f6f9] z-[999] flex flex-col lg:hidden animate-fadeIn">
           {/* Header */}
-          <div className="h-14 px-4 bg-white border-b border-gray-200 flex items-center justify-between shrink-0 shadow-sm">
-            <span className="text-xs font-bold uppercase tracking-wider text-gray-700 flex items-center gap-1.5">
+          <div className="h-14 px-4 bg-[#0f172a] border-b-0 flex items-center justify-between shrink-0 shadow-md">
+            <span className="text-xs font-bold uppercase tracking-wider text-white flex items-center gap-1.5">
               <MenuGridIcon /> Navigation Menu
             </span>
             <button 
               onClick={() => setIsMobileMenuOpen(false)}
-              className="p-1 hover:bg-gray-100 rounded transition-colors text-gray-500 hover:text-gray-800 border-0 bg-transparent cursor-pointer"
+              className="p-1 hover:bg-white/10 rounded transition-colors text-white border-0 bg-transparent cursor-pointer"
             >
               <X className="w-5 h-5" />
             </button>
@@ -717,7 +717,7 @@ export default function DashboardLayout() {
             onClick={() => setIsMobileMenuOpen(false)}
             className="p-4 bg-white border-b border-gray-150 shrink-0 flex items-center gap-3 text-gray-800 hover:bg-gray-50 transition-colors no-underline block"
           >
-            <div className="h-10 w-10 rounded-full bg-blue-600 flex items-center justify-center text-white font-black text-sm shadow-sm select-none overflow-hidden">
+            <div className="h-10 w-10 rounded-full bg-indigo-650 flex items-center justify-center text-white font-black text-sm shadow-sm select-none overflow-hidden">
               {avatarUrl && !avatarError ? (
                 <img 
                   src={avatarUrl} 
@@ -752,11 +752,11 @@ export default function DashboardLayout() {
                     onClick={() => setIsMobileMenuOpen(false)}
                     className={`flex flex-col items-center justify-center p-3 rounded-lg border transition-all ${
                       isActive 
-                        ? "bg-blue-50 border-blue-200 text-blue-700 font-bold" 
+                        ? "bg-indigo-50 border-indigo-200 text-indigo-700 font-bold" 
                         : "bg-white border-gray-200 hover:bg-gray-50 text-gray-700 shadow-sm"
                     }`}
                   >
-                    <div className={`p-2.5 rounded-full ${isActive ? "bg-blue-600 text-white" : "bg-gray-50 text-gray-500 border border-gray-100 shadow-inner"}`}>
+                    <div className={`p-2.5 rounded-full ${isActive ? "bg-indigo-600 text-white" : "bg-gray-50 text-gray-500 border border-gray-100 shadow-inner"}`}>
                       <Icon className="w-5 h-5" />
                     </div>
                     <span className="text-[10px] font-bold uppercase tracking-wider mt-2 leading-tight truncate w-full">

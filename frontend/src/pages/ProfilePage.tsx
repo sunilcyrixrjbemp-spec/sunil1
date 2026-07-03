@@ -30,6 +30,16 @@ export default function ProfilePage() {
   const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
   const [avatarError, setAvatarError] = useState(false);
 
+  // Check screen size for mobile view
+  const [isMobile, setIsMobile] = useState(window.innerWidth < 1024);
+  useEffect(() => {
+    const handleResize = () => setIsMobile(window.innerWidth < 1024);
+    window.addEventListener("resize", handleResize);
+    return () => window.removeEventListener("resize", handleResize);
+  }, []);
+
+  const [activeMobileSection, setActiveMobileSection] = useState<string>("personal");
+
   // States for Profile Crop and Zoom Modal
   const [selectedPhotoFile, setSelectedPhotoFile] = useState<File | null>(null);
   const [previewSrc, setPreviewSrc] = useState<string | null>(null);
@@ -499,6 +509,297 @@ export default function ProfilePage() {
   };
 
   if (!user) return null;
+
+  if (isMobile) {
+    return (
+      <div className="space-y-4 pb-20 text-gray-800 text-xs animate-fadeIn">
+        {/* Profile Card Header */}
+        <div className="bg-white border border-gray-200 rounded-2xl p-5 text-center shadow-sm relative overflow-hidden">
+          <div className="absolute top-0 left-0 right-0 h-1 bg-indigo-650"></div>
+          {/* Avatar */}
+          <div className="relative h-20 w-20 mx-auto mb-3.5">
+            <label htmlFor="profile-photo-input-mob" className="cursor-pointer block relative h-full w-full rounded-full overflow-hidden border-2 border-indigo-100 shadow-sm select-none">
+              {photoLoading ? (
+                <div className="absolute inset-0 bg-black/45 flex items-center justify-center text-white z-10">
+                  <i className="fas fa-sync-alt animate-spin text-sm"></i>
+                </div>
+              ) : (
+                <div className="absolute inset-0 bg-black/0 active:bg-black/45 flex flex-col items-center justify-center text-white opacity-0 active:opacity-100 transition-all z-10">
+                  <i className="fas fa-camera text-xs mb-0.5"></i>
+                  <span className="text-[7px] font-bold uppercase tracking-wider">Edit</span>
+                </div>
+              )}
+              {avatarUrl && !avatarError ? (
+                <img 
+                  src={avatarUrl} 
+                  alt="Avatar" 
+                  className="h-full w-full object-cover"
+                  onError={() => setAvatarError(true)}
+                />
+              ) : (
+                <div className="h-full w-full bg-indigo-50 text-indigo-650 flex items-center justify-center font-black text-2xl uppercase">
+                  {user.name ? user.name.charAt(0).toUpperCase() : "U"}
+                </div>
+              )}
+            </label>
+            <input 
+              type="file" 
+              id="profile-photo-input-mob" 
+              accept="image/jpeg,image/png,image/jpg" 
+              onChange={handlePhotoChange} 
+              className="hidden" 
+              disabled={photoLoading}
+            />
+          </div>
+
+          {avatarUrl && !avatarError && (
+            <button
+              type="button"
+              onClick={handleRemovePhoto}
+              className="text-[9px] text-red-505 font-extrabold uppercase tracking-wider bg-transparent border-0 cursor-pointer flex items-center gap-1 mx-auto"
+              disabled={photoLoading}
+            >
+              <i className="fas fa-trash-alt"></i>
+              <span>Remove Photo</span>
+            </button>
+          )}
+
+          <h3 className="text-sm font-bold text-gray-900 mt-2">{user.name || "Employee"}</h3>
+          <p className="text-[10px] text-indigo-650 font-bold uppercase tracking-wider mt-0.5">{user.designation || "Staff"}</p>
+          <span className="inline-block mt-2 px-2.5 py-0.5 rounded-full text-[9px] font-bold uppercase bg-slate-100 border border-slate-200 text-slate-650">
+            {user.role}
+          </span>
+        </div>
+
+        {/* Accordion List Options */}
+        <div className="space-y-2.5 text-left">
+          {/* Section 1: Personal Details */}
+          <div className="bg-white border border-gray-200 rounded-2xl overflow-hidden shadow-xs">
+            <button
+              type="button"
+              onClick={() => setActiveMobileSection(activeMobileSection === "personal" ? "" : "personal")}
+              className="w-full px-4 py-3.5 flex items-center justify-between border-0 bg-white font-bold text-xs text-gray-800 cursor-pointer"
+            >
+              <span className="flex items-center gap-2">
+                <i className="fas fa-user text-indigo-600"></i> Contact & Personal Info
+              </span>
+              <i className={`fas fa-chevron-${activeMobileSection === "personal" ? "up" : "down"} text-gray-400 text-[10px]`}></i>
+            </button>
+
+            {activeMobileSection === "personal" && (
+              <div className="px-4 pb-4 pt-1 space-y-3.5 border-t border-gray-100 animate-fadeIn text-left">
+                <div className="flex justify-between items-center text-[11px] border-b border-gray-50 pb-2">
+                  <span className="text-gray-400 font-bold">Login ID</span>
+                  <span className="font-mono font-bold text-gray-850">{user.user_id}</span>
+                </div>
+                
+                {/* Email address field */}
+                <div className="border-b border-gray-50 pb-2">
+                  <div className="flex justify-between items-center text-[11px]">
+                    <span className="text-gray-400 font-bold">Email Address</span>
+                    {!isEditingEmail && (
+                      <button
+                        type="button"
+                        onClick={() => setIsEditingEmail(true)}
+                        className="text-indigo-600 font-extrabold uppercase bg-transparent border-0 cursor-pointer text-[10px]"
+                      >
+                        Edit
+                      </button>
+                    )}
+                  </div>
+                  {isEditingEmail ? (
+                    <div className="mt-2 space-y-2">
+                      <input
+                        type="email"
+                        value={tempEmail}
+                        onChange={(e) => setTempEmail(e.target.value)}
+                        className="input-lte text-xs font-semibold"
+                        placeholder="Enter email"
+                      />
+                      <div className="flex gap-2 justify-end">
+                        <button
+                          type="button"
+                          onClick={handleCancelEmail}
+                          className="btn-lte-outline px-3 py-1 text-[10px] min-h-0"
+                        >
+                          Cancel
+                        </button>
+                        <button
+                          type="button"
+                          onClick={handleSaveEmail}
+                          disabled={emailLoading}
+                          className="btn-lte-primary px-3 py-1 text-[10px] min-h-0"
+                        >
+                          Save
+                        </button>
+                      </div>
+                    </div>
+                  ) : (
+                    <p className="text-xs font-semibold text-gray-800 mt-1">{user.mail_id || "Not configured"}</p>
+                  )}
+                </div>
+
+                {/* Mobile number field */}
+                <div className="pb-1">
+                  <div className="flex justify-between items-center text-[11px]">
+                    <span className="text-gray-450 font-bold">Mobile Number</span>
+                    {!isEditingMobile && (
+                      <button
+                        type="button"
+                        onClick={() => setIsEditingMobile(true)}
+                        className="text-indigo-600 font-extrabold uppercase bg-transparent border-0 cursor-pointer text-[10px]"
+                      >
+                        Edit
+                      </button>
+                    )}
+                  </div>
+                  {isEditingMobile ? (
+                    <div className="mt-2 space-y-2">
+                      <input
+                        type="text"
+                        value={tempMobile}
+                        onChange={(e) => setTempMobile(e.target.value)}
+                        className="input-lte text-xs font-semibold"
+                        placeholder="Enter mobile"
+                      />
+                      <div className="flex gap-2 justify-end">
+                        <button
+                          type="button"
+                          onClick={handleCancelMobile}
+                          className="btn-lte-outline px-3 py-1 text-[10px] min-h-0"
+                        >
+                          Cancel
+                        </button>
+                        <button
+                          type="button"
+                          onClick={handleSaveMobile}
+                          disabled={mobileLoading}
+                          className="btn-lte-primary px-3 py-1 text-[10px] min-h-0"
+                        >
+                          Save
+                        </button>
+                      </div>
+                    </div>
+                  ) : (
+                    <p className="text-xs font-semibold text-gray-800 mt-1">{user.mobile_number || "Not configured"}</p>
+                  )}
+                </div>
+              </div>
+            )}
+          </div>
+
+          {/* Section 2: Security & Password */}
+          <div className="bg-white border border-gray-200 rounded-2xl overflow-hidden shadow-xs">
+            <button
+              type="button"
+              onClick={() => setActiveMobileSection(activeMobileSection === "security" ? "" : "security")}
+              className="w-full px-4 py-3.5 flex items-center justify-between border-0 bg-white font-bold text-xs text-gray-800 cursor-pointer"
+            >
+              <span className="flex items-center gap-2">
+                <i className="fas fa-lock text-indigo-600"></i> Security & Password
+              </span>
+              <i className={`fas fa-chevron-${activeMobileSection === "security" ? "up" : "down"} text-gray-400 text-[10px]`}></i>
+            </button>
+
+            {activeMobileSection === "security" && (
+              <div className="px-4 pb-4 pt-1.5 border-t border-gray-100 animate-fadeIn text-left">
+                {passNotice && (
+                  <div className={`mb-3 p-2.5 border rounded text-[11px] font-bold ${
+                    passNotice.type === "success" ? "bg-green-50 border-green-200 text-green-700" : "bg-red-50 border-red-200 text-red-700"
+                  }`}>
+                    {passNotice.text}
+                  </div>
+                )}
+                <form onSubmit={handlePasswordChange} className="space-y-3 text-left">
+                  <div>
+                    <label className="label-lte text-[9px]">Current Password</label>
+                    <input
+                      type="password"
+                      value={oldPassword}
+                      onChange={(e) => setOldPassword(e.target.value)}
+                      className="input-lte text-xs font-semibold"
+                      placeholder="••••••••"
+                    />
+                  </div>
+                  <div>
+                    <label className="label-lte text-[9px]">New Password</label>
+                    <input
+                      type="password"
+                      value={newPassword}
+                      onChange={(e) => setNewPassword(e.target.value)}
+                      className="input-lte text-xs font-semibold"
+                      placeholder="Min 8 characters"
+                    />
+                  </div>
+                  <div>
+                    <label className="label-lte text-[9px]">Confirm New Password</label>
+                    <input
+                      type="password"
+                      value={confirmPassword}
+                      onChange={(e) => setConfirmPassword(e.target.value)}
+                      className="input-lte text-xs font-semibold"
+                      placeholder="Repeat new password"
+                    />
+                  </div>
+                  <button
+                    type="submit"
+                    disabled={passLoading}
+                    className="w-full btn-lte-primary py-2 text-xs uppercase font-extrabold mt-4"
+                  >
+                    {passLoading ? "Updating..." : "Change Password"}
+                  </button>
+                </form>
+              </div>
+            )}
+          </div>
+
+          {/* Section 3: System Hierarchy & Permissions */}
+          <div className="bg-white border border-gray-200 rounded-2xl overflow-hidden shadow-xs">
+            <button
+              type="button"
+              onClick={() => setActiveMobileSection(activeMobileSection === "permissions" ? "" : "permissions")}
+              className="w-full px-4 py-3.5 flex items-center justify-between border-0 bg-white font-bold text-xs text-gray-800 cursor-pointer"
+            >
+              <span className="flex items-center gap-2">
+                <i className="fas fa-shield-alt text-indigo-600"></i> Role & Permissions
+              </span>
+              <i className={`fas fa-chevron-${activeMobileSection === "permissions" ? "up" : "down"} text-gray-400 text-[10px]`}></i>
+            </button>
+
+            {activeMobileSection === "permissions" && (
+              <div className="px-4 pb-4 pt-1 border-t border-gray-100 space-y-3.5 animate-fadeIn text-left animate-fadeIn">
+                <div className="flex justify-between items-center text-[11px] border-b border-gray-50 pb-2">
+                  <span className="text-gray-400 font-bold">Reporting Manager</span>
+                  <span className="font-bold text-gray-855">{user.reporting_manager || "Not assigned"}</span>
+                </div>
+                <div className="flex justify-between items-center text-[11px] border-b border-gray-50 pb-2">
+                  <span className="text-gray-400 font-bold">Zonal Manager</span>
+                  <span className="font-bold text-gray-855">{user.zonal_manager || "Not assigned"}</span>
+                </div>
+                <div className="flex justify-between items-center text-[11px] border-b border-gray-50 pb-2">
+                  <span className="text-gray-455 font-bold">Coordinator</span>
+                  <span className="font-bold text-gray-855">{user.coordinator || "Not assigned"}</span>
+                </div>
+
+                <div>
+                  <span className="text-[10px] text-gray-450 font-bold uppercase tracking-wider block mb-2">Permitted Modules</span>
+                  <div className="flex flex-wrap gap-2">
+                    {user.allowed_windows ? user.allowed_windows.split(",").map((win: string, wIdx: number) => (
+                      <span key={wIdx} className="px-2.5 py-0.5 rounded-full bg-indigo-50 border border-indigo-100 text-indigo-650 text-[10px] font-bold uppercase tracking-wide">
+                        {win.trim()}
+                      </span>
+                    )) : (
+                      <span className="text-xs text-gray-400">None</span>
+                    )}
+                  </div>
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6 animate-fadeIn text-[#212529]">
