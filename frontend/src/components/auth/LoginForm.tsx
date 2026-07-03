@@ -23,6 +23,7 @@ export default function LoginForm({ onForgotPassword, onUnlockAccount }: LoginFo
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [loadingMessage, setLoadingMessage] = useState("Verifying...");
   const isSubmitting = React.useRef(false);
   const [statusMessage, setStatusMessage] = useState<{ type: "success" | "error"; text: string } | null>(null);
   const [showAlreadyLoggedInModal, setShowAlreadyLoggedInModal] = useState(false);
@@ -186,8 +187,14 @@ export default function LoginForm({ onForgotPassword, onUnlockAccount }: LoginFo
     }
 
     setLoading(true);
+    setLoadingMessage("Verifying...");
+    const wakeupTimer = setTimeout(() => {
+      setLoadingMessage("Connecting to server (waking up, please wait)...");
+    }, 3000);
+
     try {
-      const response = await authService.login({ user_id: userId, password });
+      // Force: true is always passed so other sessions are terminated automatically
+      const response = await authService.login({ user_id: userId, password, force: true });
       saveBootstrapData(response);
       triggerBackgroundBootstrap(response.user.user_id);
       
@@ -198,6 +205,7 @@ export default function LoginForm({ onForgotPassword, onUnlockAccount }: LoginFo
           const enabled = (await nativeConfig.get('biometric_login_enabled')) === 'true';
           if (available && !enabled) {
             setShowBiometricPrompt(true);
+            clearTimeout(wakeupTimer);
             isSubmitting.current = false;
             setLoading(false);
             return;
@@ -209,6 +217,7 @@ export default function LoginForm({ onForgotPassword, onUnlockAccount }: LoginFo
     } catch (err: any) {
       if (err.response?.status === 409 && err.response?.data?.detail === "ALREADY_LOGGED_IN") {
         setShowAlreadyLoggedInModal(true);
+        clearTimeout(wakeupTimer);
         isSubmitting.current = false;
         setLoading(false);
         return;
@@ -221,6 +230,7 @@ export default function LoginForm({ onForgotPassword, onUnlockAccount }: LoginFo
       }
       setStatusMessage({ type: "error", text: errorMsg });
     } finally {
+      clearTimeout(wakeupTimer);
       isSubmitting.current = false;
       setLoading(false);
     }
@@ -362,7 +372,7 @@ export default function LoginForm({ onForgotPassword, onUnlockAccount }: LoginFo
             {loading ? (
               <>
                 <PremiumSpinner />
-                <span>Verifying...</span>
+                <span>{loadingMessage}</span>
               </>
             ) : (
               <>
