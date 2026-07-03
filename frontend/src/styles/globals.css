@@ -234,31 +234,46 @@ svg, path, g, sector, .recharts-pie-sector, .recharts-sector, .recharts-pie, .re
   -webkit-tap-highlight-color: transparent !important;
 }/* ================= PREMIUM ANDROID MATERIAL 3 MOBILE THEME OVERRIDES ================= */
 @media (max-width: 1023px) {
-  /* 1. Global Page spacing & modern Material 3 slate background */
+  /* 1. Global Page spacing & modern Material 3 Slate-200 gray background */
   body, 
   #root, 
   .min-h-screen {
-    background-color: #f1f5f9 !important;
+    background-color: #e2e8f0 !important; /* Premium Slate-200 gray for high card contrast */
     font-family: 'Plus Jakarta Sans', sans-serif !important;
   }
 
   main {
     padding: 0.375rem !important; /* Compact edge padding to maximize screen width usage */
     padding-bottom: 5.5rem !important;
-    background-color: #f1f5f9 !important;
+    background-color: #e2e8f0 !important;
   }
 
-  /* 2. Top Navigation Header (Android Action Bar) */
+  /* 2. Top Navigation Header (Premium Android-Style Blue Action Bar) */
   header.h-14 {
     height: 56px !important;
-    box-shadow: none !important;
-    border-bottom: 1px solid #e2e8f0 !important;
-    background-color: #ffffff !important;
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.06) !important;
+    border-bottom: none !important;
+    background: linear-gradient(135deg, #1e3a8a 0%, #2563eb 100%) !important; /* Beautiful blue brand gradient */
     padding-left: 0.75rem !important;
     padding-right: 0.75rem !important;
     display: flex !important;
     align-items: center !important;
     justify-content: space-between !important;
+  }
+
+  /* Enforce white text and icons in blue header */
+  header.h-14 span,
+  header.h-14 button,
+  header.h-14 svg,
+  header.h-14 i,
+  header.h-14 a {
+    color: #ffffff !important;
+    fill: #ffffff !important;
+  }
+
+  header.h-14 img {
+    background-color: #ffffff !important;
+    border-color: rgba(255, 255, 255, 0.25) !important;
   }
 
   /* 3. Material 3 Cards (Using full screen space, borderless, clean layout) */
@@ -271,11 +286,23 @@ svg, path, g, sector, .recharts-pie-sector, .recharts-sector, .recharts-pie, .re
   .card-lte-gold {
     border-style: none !important;
     background-color: #ffffff !important;
-    padding: 0.75rem !important;
+    padding: 0.5rem !important; /* Compact padding */
     margin-bottom: 0.5rem !important;
     border-radius: 12px !important;
     box-shadow: 0 2px 8px rgba(0, 0, 0, 0.015) !important;
-    border: 1px solid #e2e8f0 !important;
+    border: 1px solid #cbd5e1 !important;
+  }
+
+  /* Reduce nested padding inside card bodies on mobile to stretch inputs */
+  .card-lte > .p-4,
+  .card-lte-primary > .p-4,
+  .card-lte-success > .p-4,
+  .card-lte-warning > .p-4,
+  .card-lte-danger > .p-4,
+  .card-lte-info > .p-4,
+  .card-lte-gold > .p-4,
+  .p-4.bg-slate-50.border.border-gray-200.rounded-md {
+    padding: 0.5rem !important; /* Shrink nested margins */
   }
 
   /* 3b. Explicit card styling for Home & Submit blocks to prevent blending */
@@ -285,9 +312,9 @@ svg, path, g, sector, .recharts-pie-sector, .recharts-sector, .recharts-pie, .re
   .bg-white.border.border-gray-250.border-t-4.border-t-green-600.rounded.shadow-sm,
   .bg-slate-50.border.border-gray-250.border-t-4.border-t-blue-600.rounded.shadow-sm {
     background-color: #ffffff !important;
-    border: 1px solid #e2e8f0 !important;
+    border: 1px solid #cbd5e1 !important;
     border-radius: 12px !important;
-    padding: 0.75rem !important;
+    padding: 0.5rem !important;
     box-shadow: 0 2px 8px rgba(0, 0, 0, 0.015) !important;
     margin-bottom: 0.5rem !important;
   }
@@ -308,7 +335,7 @@ svg, path, g, sector, .recharts-pie-sector, .recharts-sector, .recharts-pie, .re
     border-top: 4px solid #2563eb !important;
   }
 
-  /* Make outer list wrappers transparent on mobile so list items stand out on the slate background and use full width */
+  /* Make outer list wrappers transparent on mobile so list items stand out on the Slate-200 background */
   .bg-white.border.border-gray-200.rounded.shadow-sm.overflow-hidden.flex.flex-col,
   .bg-white.border.border-gray-200.rounded.shadow-sm.overflow-hidden,
   .bg-white.border.border-gray-200.rounded.shadow-sm.p-4,
@@ -319,6 +346,11 @@ svg, path, g, sector, .recharts-pie-sector, .recharts-sector, .recharts-pie, .re
     box-shadow: none !important;
     padding: 0 !important;
     margin-bottom: 0.5rem !important;
+  }
+
+  /* Force inputs and containers to use full screen width on mobile */
+  .max-w-xs {
+    max-width: 100% !important;
   }
 
   /* 4. Touch-optimized Input Form Fields (Clean white background, slate border) */
@@ -341,6 +373,7 @@ svg, path, g, sector, .recharts-pie-sector, .recharts-sector, .recharts-pie, .re
     color: #0f172a !important;
     transition: all 0.15s ease !important;
     box-shadow: none !important;
+    width: 100% !important;
   }
 
   .input-lte:focus, 
@@ -431,7 +464,7 @@ svg, path, g, sector, .recharts-pie-sector, .recharts-sector, .recharts-pie, .re
   .flex.border-b {
     display: flex !important;
     flex-direction: row !important;
-    background-color: #e2e8f0 !important;
+    background-color: #cbd5e1 !important;
     padding: 0.25rem !important;
     border-radius: 0.75rem !important;
     margin-bottom: 0.5rem !important;
@@ -452,7 +485,7 @@ svg, path, g, sector, .recharts-pie-sector, .recharts-sector, .recharts-pie, .re
     transition: all 0.15s ease !important;
     border-style: none !important;
     background-color: transparent !important;
-    color: #64748b !important;
+    color: #475569 !important;
     font-size: 10px !important;
     min-height: auto !important;
     box-shadow: none !important;
@@ -491,7 +524,7 @@ svg, path, g, sector, .recharts-pie-sector, .recharts-sector, .recharts-pie, .re
     margin-bottom: 0 !important;
     border-radius: 12px !important;
     min-height: 52px !important;
-    border: 1px solid #e2e8f0 !important;
+    border: 1px solid #cbd5e1 !important;
     box-shadow: 0 2px 6px rgba(0, 0, 0, 0.01) !important;
   }
 
