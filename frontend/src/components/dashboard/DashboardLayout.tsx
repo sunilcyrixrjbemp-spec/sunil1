@@ -344,12 +344,12 @@ export default function DashboardLayout() {
     if (user && user.allowed_windows) {
       if (Array.isArray(user.allowed_windows)) {
         const parsed = user.allowed_windows.map((w: any) => String(w).trim().toLowerCase());
-        parsed.forEach(w => {
+        parsed.forEach((w: string) => {
           if (!allowedWindows.includes(w)) allowedWindows.push(w);
         });
       } else if (typeof user.allowed_windows === "string") {
         const parsed = user.allowed_windows.split(",").map((w: string) => w.trim().toLowerCase());
-        parsed.forEach(w => {
+        parsed.forEach((w: string) => {
           if (!allowedWindows.includes(w)) allowedWindows.push(w);
         });
       }
