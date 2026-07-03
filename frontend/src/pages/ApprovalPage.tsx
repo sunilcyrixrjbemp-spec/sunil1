@@ -71,8 +71,22 @@ export default function ApprovalPage() {
     const cached = localStorage.getItem("cache_pending_approvals");
     return cached ? JSON.parse(cached) : [];
   });
-  const limitRequests = pendingApprovals.filter((a: any) => a.category === "Limit Request");
-  const claimRequests = pendingApprovals.filter((a: any) => a.category !== "Limit Request");
+  const [filterMonth, setFilterMonth] = useState("");
+  const [filterEngineer, setFilterEngineer] = useState("");
+
+  const filteredApprovals = pendingApprovals.filter((a: any) => {
+    if (filterMonth && (!a.month || !a.month.toLowerCase().includes(filterMonth.toLowerCase()))) return false;
+    if (filterEngineer) {
+      const q = filterEngineer.toLowerCase();
+      const nameMatch = a.employeeName && a.employeeName.toLowerCase().includes(q);
+      const codeMatch = a.eCode && a.eCode.toLowerCase().includes(q);
+      if (!nameMatch && !codeMatch) return false;
+    }
+    return true;
+  });
+
+  const limitRequests = filteredApprovals.filter((a: any) => a.category === "Limit Request");
+  const claimRequests = filteredApprovals.filter((a: any) => a.category !== "Limit Request");
 
   const [loading, setLoading] = useState(() => {
     return !localStorage.getItem("cache_pending_approvals");
@@ -485,6 +499,58 @@ export default function ApprovalPage() {
       {/* Pending Grid with Bulk Actions Toolbar */}
       <div className="card-lte-primary p-5 space-y-4">
         
+        {/* Contextual Two-Line Compact Filters Row */}
+        <div className="bg-slate-50 border border-gray-200 rounded p-2.5 flex flex-col gap-2 text-[10px] font-bold text-gray-700">
+          {/* Row 1: Dropdown filters in one single row */}
+          <div className="flex flex-wrap items-center gap-3">
+            <div className="flex items-center gap-1.5">
+              <span className="text-[8px] font-bold uppercase text-gray-400">Month:</span>
+              <select 
+                value={filterMonth} 
+                onChange={(e) => setFilterMonth(e.target.value)}
+                className="bg-white border border-gray-300 rounded px-2.5 py-0.5 text-[10px] font-black text-gray-800 cursor-pointer shadow-xs focus:outline-none focus:border-blue-500"
+              >
+                <option value="">All Months</option>
+                {["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"].map(m => (
+                  <option key={m} value={m}>{m}</option>
+                ))}
+              </select>
+            </div>
+
+            <div className="flex items-center gap-1.5">
+              <span className="text-[8px] font-bold uppercase text-gray-400">Engineer:</span>
+              <input 
+                type="text" 
+                value={filterEngineer} 
+                onChange={(e) => setFilterEngineer(e.target.value)}
+                placeholder="Search name or E-code..."
+                className="bg-white border border-gray-300 rounded px-2.5 py-0.5 text-[10px] font-medium text-gray-800 shadow-xs focus:outline-none focus:border-blue-500"
+              />
+            </div>
+          </div>
+
+          {/* Row 2: Status selection buttons directly below */}
+          <div className="flex items-center gap-1.5 overflow-x-auto no-scrollbar py-0.5 border-t border-gray-200/50 pt-1.5">
+            <button
+              className="px-2.5 py-0.5 rounded text-[9px] font-black uppercase tracking-wider transition-all cursor-pointer border bg-blue-600 text-white border-blue-600 font-extrabold shadow-sm"
+            >
+              Pending / Claimed
+            </button>
+            <button
+              disabled
+              className="px-2.5 py-0.5 rounded text-[9px] font-black uppercase tracking-wider transition-all border bg-gray-50 text-gray-400 border-gray-200 cursor-not-allowed"
+            >
+              Approved
+            </button>
+            <button
+              disabled
+              className="px-2.5 py-0.5 rounded text-[9px] font-black uppercase tracking-wider transition-all border bg-gray-50 text-gray-400 border-gray-200 cursor-not-allowed"
+            >
+              Rejected
+            </button>
+          </div>
+        </div>
+
         {/* Bulk Toolbar */}
         {claimRequests.length > 0 && (
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 p-3 bg-gray-50 border border-gray-200 rounded text-xs shrink-0">
@@ -1975,7 +2041,7 @@ export default function ApprovalPage() {
       {/* ================= RECEIPT IMAGE LIGHTBOX POPUP ================= */}
       {lightboxImage && (
         <div 
-          className="fixed inset-0 bg-black/90 flex items-center justify-center p-4 z-[60] animate-fadeIn"
+          className="fixed inset-0 bg-black/90 flex items-center justify-center p-4 z-[99999] animate-fadeIn"
           onClick={() => setLightboxImage(null)}
         >
           <div className="relative max-w-4xl max-h-[90vh] bg-transparent flex flex-col items-center justify-center">

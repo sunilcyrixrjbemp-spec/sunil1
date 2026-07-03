@@ -383,7 +383,7 @@ export default function DashboardLayout() {
                 title={isSidebarCollapsed ? item.name : undefined}
                 className={`flex items-center gap-3 px-3 py-2.5 text-xs font-semibold uppercase tracking-wider transition-all duration-150 border-l-4 group ${
                   isActive
-                    ? "bg-gradient-to-r from-blue-600 to-emerald-500 text-white font-bold border-l-emerald-400 shadow-sm"
+                    ? "bg-blue-600 text-white font-bold border-l-[#ffc107] shadow-sm"
                     : "border-l-transparent text-[#c2c7d0] hover:bg-emerald-950/30 hover:text-emerald-300"
                 }`}
               >
@@ -548,14 +548,15 @@ export default function DashboardLayout() {
         <Link
           to="/home"
           onMouseEnter={() => preloadRoute("/home")}
-          className={`flex flex-col items-center justify-center w-16 h-11 rounded-xl transition-all ${
-            currentActiveItem?.id === "home" 
-              ? "bg-gradient-to-br from-blue-600 to-emerald-500 text-white font-extrabold shadow-sm border border-teal-650" 
-              : "text-gray-500 hover:bg-emerald-50 hover:text-emerald-700"
+          className={`flex flex-col items-center justify-center w-16 h-11 rounded-xl transition-all relative ${
+            currentActiveItem?.id === "home" ? "text-blue-600 font-extrabold" : "text-gray-500 hover:bg-emerald-50 hover:text-emerald-700"
           }`}
         >
           <Home className="w-5 h-5" />
           <span className="text-[9px] font-bold uppercase tracking-wider mt-0.5">Home</span>
+          {currentActiveItem?.id === "home" && (
+            <span className="absolute bottom-0.5 left-1/2 -translate-x-1/2 h-1.5 w-1.5 rounded-full bg-blue-600 animate-pulse"></span>
+          )}
         </Link>
 
         {/* Submit Claim Tab (Inline layout!) */}
@@ -563,14 +564,32 @@ export default function DashboardLayout() {
           <Link
             to="/submit-expense"
             onMouseEnter={() => preloadRoute("/submit-expense")}
-            className={`flex flex-col items-center justify-center w-16 h-11 rounded-xl transition-all ${
-              currentActiveItem?.id === "expense" 
-                ? "bg-gradient-to-br from-blue-600 to-emerald-500 text-white font-extrabold shadow-sm border border-teal-655" 
-                : "text-gray-500 hover:bg-emerald-50 hover:text-emerald-700"
+            className={`flex flex-col items-center justify-center w-16 h-11 rounded-xl transition-all relative ${
+              currentActiveItem?.id === "expense" ? "text-blue-600 font-extrabold" : "text-gray-500 hover:bg-emerald-50 hover:text-emerald-700"
             }`}
           >
             <Plus className="w-5 h-5" />
             <span className="text-[9px] font-bold uppercase tracking-wider mt-0.5">Claim</span>
+            {currentActiveItem?.id === "expense" && (
+              <span className="absolute bottom-0.5 left-1/2 -translate-x-1/2 h-1.5 w-1.5 rounded-full bg-blue-600 animate-pulse"></span>
+            )}
+          </Link>
+        )}
+
+        {/* Approval Center Tab (Inline layout!) */}
+        {allowedWindows.includes("approval") && (
+          <Link
+            to="/approval-center"
+            onMouseEnter={() => preloadRoute("/approval-center")}
+            className={`flex flex-col items-center justify-center w-16 h-11 rounded-xl transition-all relative ${
+              currentActiveItem?.id === "approval" ? "text-blue-600 font-extrabold" : "text-gray-500 hover:bg-emerald-50 hover:text-emerald-700"
+            }`}
+          >
+            <CheckSquare className="w-5 h-5" />
+            <span className="text-[9px] font-bold uppercase tracking-wider mt-0.5">Approval</span>
+            {currentActiveItem?.id === "approval" && (
+              <span className="absolute bottom-0.5 left-1/2 -translate-x-1/2 h-1.5 w-1.5 rounded-full bg-blue-600 animate-pulse"></span>
+            )}
           </Link>
         )}
 
@@ -578,28 +597,39 @@ export default function DashboardLayout() {
         <Link
           to="/profile"
           onMouseEnter={() => preloadRoute("/profile")}
-          className={`flex flex-col items-center justify-center w-16 h-11 rounded-xl transition-all ${
-            currentActiveItem?.id === "profile" 
-              ? "bg-gradient-to-br from-blue-600 to-emerald-500 text-white font-extrabold shadow-sm border border-teal-660" 
-              : "text-gray-500 hover:bg-emerald-50 hover:text-emerald-700"
+          className={`flex flex-col items-center justify-center w-16 h-11 rounded-xl transition-all relative ${
+            currentActiveItem?.id === "profile" ? "text-blue-600 font-extrabold" : "text-gray-500 hover:bg-emerald-50 hover:text-emerald-700"
           }`}
         >
           <User className="w-5 h-5" />
           <span className="text-[9px] font-bold uppercase tracking-wider mt-0.5">Profile</span>
+          {currentActiveItem?.id === "profile" && (
+            <span className="absolute bottom-0.5 left-1/2 -translate-x-1/2 h-1.5 w-1.5 rounded-full bg-blue-600 animate-pulse"></span>
+          )}
         </Link>
 
-        {/* More Menu Tab */}
-        <button
-          onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
-          className={`flex flex-col items-center justify-center w-16 h-11 rounded-xl transition-all border-0 bg-transparent cursor-pointer ${
-            isMobileMenuOpen 
-              ? "bg-gradient-to-br from-blue-600 to-emerald-500 text-white font-extrabold shadow-sm border border-teal-665" 
-              : "text-gray-500 hover:bg-emerald-50 hover:text-emerald-700"
-          }`}
-        >
-          <MenuGridIcon />
-          <span className="text-[9px] font-bold uppercase tracking-wider mt-0.5">More</span>
-        </button>
+        {allowedMenuItems.some(item => !["home", "expense", "approval", "profile"].includes(item.id.toLowerCase())) ? (
+          <button
+            onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
+            className={`flex flex-col items-center justify-center w-16 h-11 rounded-xl transition-all border-0 bg-transparent cursor-pointer relative ${
+              isMobileMenuOpen ? "text-blue-600 font-extrabold" : "text-gray-500 hover:bg-emerald-50 hover:text-emerald-700"
+            }`}
+          >
+            <MenuGridIcon />
+            <span className="text-[9px] font-bold uppercase tracking-wider mt-0.5">More</span>
+            {isMobileMenuOpen && (
+              <span className="absolute bottom-0.5 left-1/2 -translate-x-1/2 h-1.5 w-1.5 rounded-full bg-blue-600 animate-pulse"></span>
+            )}
+          </button>
+        ) : (
+          <button
+            onClick={handleLogout}
+            className="flex flex-col items-center justify-center w-16 h-11 rounded-xl transition-all border-0 bg-transparent cursor-pointer text-gray-500 hover:bg-red-50 hover:text-red-600"
+          >
+            <LogOut className="w-5 h-5 text-gray-500" />
+            <span className="text-[9px] font-bold uppercase tracking-wider mt-0.5">Logout</span>
+          </button>
+        )}
       </nav>
 
       {/* MOBILE FULL NAVIGATION OVERLAY MODAL */}
@@ -652,8 +682,7 @@ export default function DashboardLayout() {
                 const Icon = item.icon;
                 const isActive = currentActiveItem?.id === item.id;
                 const isAnalysis = item.id.toLowerCase() === "analysis";
-                
-                return (
+                               return (
                   <Link
                     key={item.id}
                     to={item.path}
@@ -661,18 +690,14 @@ export default function DashboardLayout() {
                     onClick={() => setIsMobileMenuOpen(false)}
                     className={`flex flex-col items-center justify-center p-3 rounded-lg border transition-all ${
                       isActive 
-                        ? "bg-gradient-to-br from-blue-600 to-emerald-500 border-teal-650 text-white font-extrabold shadow-md" 
-                        : isAnalysis
-                          ? "bg-emerald-50 border-emerald-250 hover:bg-emerald-100/70 text-emerald-800 shadow-xs"
-                          : "bg-white border-gray-200 hover:bg-emerald-50 hover:text-emerald-700 text-gray-700 shadow-sm"
+                        ? "bg-blue-600 border-blue-600 text-white font-extrabold shadow-md" 
+                        : "bg-white border-gray-200 hover:bg-emerald-50 hover:text-emerald-700 text-gray-700 shadow-sm"
                     }`}
                   >
                     <div className={`p-2.5 rounded-full ${
                       isActive 
                         ? "bg-white/20 text-white" 
-                        : isAnalysis
-                          ? "bg-emerald-600 text-white"
-                          : "bg-gray-50 text-gray-500 border border-gray-100 shadow-inner"
+                        : "bg-gray-50 text-gray-500 border border-gray-100 shadow-inner"
                     }`}>
                       <Icon className="w-5 h-5" />
                     </div>

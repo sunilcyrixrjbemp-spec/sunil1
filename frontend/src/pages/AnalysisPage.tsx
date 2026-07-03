@@ -49,6 +49,12 @@ const CustomCountTooltip = ({ active, payload }: any) => {
 };
 
 export default function AnalysisPage() {
+  const [isMobile, setIsMobile] = useState(window.innerWidth < 768);
+  useEffect(() => {
+    const handleResize = () => setIsMobile(window.innerWidth < 768);
+    window.addEventListener("resize", handleResize);
+    return () => window.removeEventListener("resize", handleResize);
+  }, []);
 
   const [myExpenses, setMyExpenses] = useState<any[]>(() => {
     const currentUser = authService.getCurrentUser();
@@ -410,6 +416,212 @@ export default function AnalysisPage() {
     return (
       <div className="py-20">
         <Loader message="Loading analysis dashboard..." />
+      </div>
+    );
+  }
+
+  if (isMobile) {
+    return (
+      <div className="space-y-4 text-gray-800 p-3" style={{ fontFamily: "'Plus Jakarta Sans', sans-serif" }}>
+        {/* Page Header */}
+        <div className="flex justify-between items-center pb-1">
+          <div>
+            <h2 className="text-sm font-extrabold text-gray-900 uppercase tracking-wide">Expense Analytics</h2>
+            <p className="text-gray-500 text-[9px]">Mobile Dashboard & Insights</p>
+          </div>
+          
+          {isReviewer && (
+            <button
+              type="button"
+              onClick={() => setViewMode(viewMode === "my" ? "team" : "my")}
+              className="px-2.5 py-1 text-[9px] font-black uppercase rounded border border-blue-600 bg-blue-50 text-blue-700 cursor-pointer shadow-xs"
+            >
+              {viewMode === "my" ? "View Team" : "View Self"}
+            </button>
+          )}
+        </div>
+
+        {/* Filters */}
+        <div className="bg-white border border-gray-200 rounded p-2.5 space-y-2 text-[10px]">
+          <div className="flex flex-wrap gap-2">
+            <select
+              value={selectedMonth}
+              onChange={(e) => setSelectedMonth(Number(e.target.value))}
+              className="border border-gray-300 rounded px-2 py-0.5 text-[10px] font-black bg-white text-gray-805 focus:outline-none"
+            >
+              {months.map((m, i) => (
+                <option key={m} value={i}>{m}</option>
+              ))}
+            </select>
+            <select
+              value={selectedYear}
+              onChange={(e) => setSelectedYear(Number(e.target.value))}
+              className="border border-gray-300 rounded px-2 py-0.5 text-[10px] font-black bg-white text-gray-805 focus:outline-none"
+            >
+              {availableYears.map(y => (
+                <option key={y} value={y}>{y}</option>
+              ))}
+            </select>
+            <select
+              value={selectedStatus}
+              onChange={(e) => setSelectedStatus(e.target.value)}
+              className="border border-gray-300 rounded px-2 py-0.5 text-[10px] font-black bg-white text-gray-805 focus:outline-none"
+            >
+              <option value="all">All Statuses</option>
+              <option value="approved">Approved</option>
+              <option value="pending">Pending</option>
+              <option value="rejected">Rejected</option>
+            </select>
+          </div>
+
+          {viewMode === "team" && isReviewer && (
+            <div className="flex gap-2">
+              <select
+                value={selectedDistrict}
+                onChange={(e) => setSelectedDistrict(e.target.value)}
+                className="flex-1 border border-gray-300 rounded px-2 py-0.5 text-[10px] font-bold bg-white text-gray-805 focus:outline-none"
+              >
+                <option value="all">All Districts</option>
+                {filterOptions.districts.map(d => (
+                  <option key={d} value={d}>{d}</option>
+                ))}
+              </select>
+              <select
+                value={selectedEngineer}
+                onChange={(e) => setSelectedEngineer(e.target.value)}
+                className="flex-1 border border-gray-300 rounded px-2 py-0.5 text-[10px] font-bold bg-white text-gray-850 focus:outline-none"
+              >
+                <option value="all">All Engineers</option>
+                {filterOptions.engineers.map(name => (
+                  <option key={name} value={name}>{name}</option>
+                ))}
+              </select>
+            </div>
+          )}
+        </div>
+
+        {/* Stats Grid */}
+        {count === 0 ? (
+          <div className="bg-white border border-gray-200 rounded p-8 text-center text-gray-400">
+            <span className="text-xs font-bold block mb-1">No claims in this selection</span>
+            <span className="text-[10px]">Please update the month/year filter.</span>
+          </div>
+        ) : (
+          <>
+            <div className="grid grid-cols-2 gap-2">
+              <div className="bg-white border border-gray-200 rounded p-2.5 flex items-center gap-2">
+                <div className="w-8 h-8 rounded-full bg-emerald-50 text-emerald-600 flex items-center justify-center font-black text-xs">₹</div>
+                <div>
+                  <span className="text-[8px] uppercase tracking-wider text-gray-400 block">Total Spend</span>
+                  <span className="text-xs font-black font-mono leading-none block mt-0.5">₹{totalAmount.toLocaleString()}</span>
+                </div>
+              </div>
+              <div className="bg-white border border-gray-200 rounded p-2.5 flex items-center gap-2">
+                <div className="w-8 h-8 rounded-full bg-blue-50 text-blue-600 flex items-center justify-center font-black text-xs">#</div>
+                <div>
+                  <span className="text-[8px] uppercase tracking-wider text-gray-400 block">Total Claims</span>
+                  <span className="text-xs font-black font-mono leading-none block mt-0.5">{count}</span>
+                </div>
+              </div>
+              <div className="bg-white border border-gray-200 rounded p-2.5 flex items-center gap-2">
+                <div className="w-8 h-8 rounded-full bg-amber-50 text-amber-600 flex items-center justify-center font-black text-xs">Avg</div>
+                <div>
+                  <span className="text-[8px] uppercase tracking-wider text-gray-400 block">Avg Claim</span>
+                  <span className="text-xs font-black font-mono leading-none block mt-0.5">₹{avgValue.toLocaleString()}</span>
+                </div>
+              </div>
+              <div className="bg-white border border-gray-200 rounded p-2.5 flex items-center gap-2">
+                <div className="w-8 h-8 rounded-full bg-indigo-50 text-indigo-600 flex items-center justify-center font-black text-xs">☎</div>
+                <div>
+                  <span className="text-[8px] uppercase tracking-wider text-gray-400 block">Calls Done</span>
+                  <span className="text-xs font-black font-mono leading-none block mt-0.5">{activityStats.callsCompleted}/{activityStats.callsAssigned}</span>
+                </div>
+              </div>
+              <div className="bg-white border border-gray-200 rounded p-2.5 flex items-center gap-2">
+                <div className="w-8 h-8 rounded-full bg-teal-50 text-teal-600 flex items-center justify-center font-black text-xs">P</div>
+                <div>
+                  <span className="text-[8px] uppercase tracking-wider text-gray-400 block">PMS Done</span>
+                  <span className="text-xs font-black font-mono leading-none block mt-0.5">{activityStats.pmsCount}</span>
+                </div>
+              </div>
+              <div className="bg-white border border-gray-200 rounded p-2.5 flex items-center gap-2">
+                <div className="w-8 h-8 rounded-full bg-purple-50 text-purple-600 flex items-center justify-center font-black text-xs">T</div>
+                <div>
+                  <span className="text-[8px] uppercase tracking-wider text-gray-400 block">Tag & Calib</span>
+                  <span className="text-xs font-black font-mono leading-none block mt-0.5">{activityStats.assetTaggingCount + activityStats.calibrationCount}</span>
+                </div>
+              </div>
+            </div>
+
+            {/* Breakdown Lists */}
+            <div className="space-y-3">
+              {/* Category Wise spend */}
+              <div className="bg-white border border-gray-200 rounded p-3">
+                <h3 className="text-[10px] font-extrabold uppercase tracking-wider text-gray-700 mb-2 border-b border-gray-100 pb-1">Spend by Travel Mode</h3>
+                <div className="space-y-2">
+                  {categoryData.slice(0, 5).map((cat, i) => {
+                    const pct = totalAmount > 0 ? Math.round((cat.amount / totalAmount) * 100) : 0;
+                    return (
+                      <div key={i} className="space-y-1">
+                        <div className="flex justify-between items-center text-[10px] font-bold">
+                          <span className="text-gray-700">{cat.name}</span>
+                          <span className="font-mono text-gray-900">₹{cat.amount.toLocaleString()} ({pct}%)</span>
+                        </div>
+                        <div className="w-full bg-gray-150 rounded-full h-1.5 overflow-hidden">
+                          <div className="bg-blue-600 h-full rounded-full" style={{ width: `${pct}%` }}></div>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+
+              {/* Top Districts */}
+              <div className="bg-white border border-gray-200 rounded p-3">
+                <h3 className="text-[10px] font-extrabold uppercase tracking-wider text-gray-700 mb-2 border-b border-gray-100 pb-1">Top Districts</h3>
+                <div className="space-y-2">
+                  {districtWiseData.map((d, i) => {
+                    const pct = totalAmount > 0 ? Math.round((d.amount / totalAmount) * 100) : 0;
+                    return (
+                      <div key={i} className="space-y-1">
+                        <div className="flex justify-between items-center text-[10px] font-bold">
+                          <span className="text-gray-700">{d.name}</span>
+                          <span className="font-mono text-gray-900">₹{d.amount.toLocaleString()} ({pct}%)</span>
+                        </div>
+                        <div className="w-full bg-gray-150 rounded-full h-1.5 overflow-hidden">
+                          <div className="bg-emerald-600 h-full rounded-full" style={{ width: `${pct}%` }}></div>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+
+              {/* Top Spenders (only in Team mode) */}
+              {viewMode === "team" && userWiseData.length > 0 && (
+                <div className="bg-white border border-gray-200 rounded p-3">
+                  <h3 className="text-[10px] font-extrabold uppercase tracking-wider text-gray-700 mb-2 border-b border-gray-100 pb-1">Top Spenders</h3>
+                  <div className="space-y-2">
+                    {userWiseData.map((usr, i) => {
+                      const pct = totalAmount > 0 ? Math.round((usr.amount / totalAmount) * 100) : 0;
+                      return (
+                        <div key={i} className="space-y-1">
+                          <div className="flex justify-between items-center text-[10px] font-bold">
+                            <span className="text-gray-700 truncate max-w-[120px]">{usr.name}</span>
+                            <span className="font-mono text-gray-900">₹{usr.amount.toLocaleString()} ({pct}%)</span>
+                          </div>
+                          <div className="w-full bg-gray-150 rounded-full h-1.5 overflow-hidden">
+                            <div className="bg-purple-600 h-full rounded-full" style={{ width: `${pct}%` }}></div>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
+            </div>
+          </>
+        )}
       </div>
     );
   }

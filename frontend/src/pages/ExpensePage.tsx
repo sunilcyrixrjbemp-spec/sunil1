@@ -3730,40 +3730,50 @@ export default function ExpensePage() {
         </div>
 
         {/* Search & Advanced Filters */}
-        <div className="p-4 border-b border-gray-150 bg-slate-50/50 flex flex-wrap items-center gap-3">
-          <div className="flex-1 min-w-[200px]">
-            <input
-              type="text"
-              placeholder="Search by Code, Purpose, Mode, Amount..."
-              value={claimsSearch}
-              onChange={(e) => { setClaimsSearch(e.target.value); setMyClaimsPage(1); }}
-              className="input-lte text-xs py-1.5 font-semibold placeholder:text-gray-400"
-            />
+        <div className="p-2.5 border-b border-gray-150 bg-slate-50 flex flex-col gap-2 text-[10px] font-bold text-gray-700">
+          {/* Row 1: Search input and Month selection in one single row */}
+          <div className="flex flex-wrap items-center gap-3">
+            <div className="flex-1 min-w-[150px]">
+              <input
+                type="text"
+                placeholder="Search by Purpose, Mode, Amount..."
+                value={claimsSearch}
+                onChange={(e) => { setClaimsSearch(e.target.value); setMyClaimsPage(1); }}
+                className="w-full bg-white border border-gray-300 rounded px-2.5 py-1 text-[10px] font-medium text-gray-800 shadow-xs focus:outline-none focus:border-blue-500"
+              />
+            </div>
+            
+            <div className="flex items-center gap-1.5 shrink-0">
+              <span className="text-[8px] font-bold uppercase text-gray-400">Month:</span>
+              <select
+                value={claimsMonthFilter}
+                onChange={(e) => { setClaimsMonthFilter(e.target.value); setMyClaimsPage(1); }}
+                className="bg-white border border-gray-300 rounded px-2 py-0.5 text-[10px] font-black text-gray-800 cursor-pointer shadow-xs focus:outline-none focus:border-blue-500"
+              >
+                <option value="all">All Months</option>
+                {getUniqueMonths().map(m => (
+                  <option key={m} value={m}>{m}</option>
+                ))}
+              </select>
+            </div>
           </div>
-          <div className="w-40">
-            <select
-              value={claimsMonthFilter}
-              onChange={(e) => { setClaimsMonthFilter(e.target.value); setMyClaimsPage(1); }}
-              className="input-lte text-xs py-1.5 font-semibold cursor-pointer"
-            >
-              <option value="all">All Months</option>
-              {getUniqueMonths().map(m => (
-                <option key={m} value={m}>{m}</option>
-              ))}
-            </select>
-          </div>
-          <div className="w-40">
-            <select
-              value={claimsStatusFilter}
-              onChange={(e) => { setClaimsStatusFilter(e.target.value); setMyClaimsPage(1); }}
-              className="input-lte text-xs py-1.5 font-semibold cursor-pointer"
-            >
-              <option value="all">All Statuses</option>
-              <option value="draft">Draft</option>
-              <option value="submitted">Submitted</option>
-              <option value="approved">Approved</option>
-              <option value="rejected">Rejected</option>
-            </select>
+
+          {/* Row 2: Status selection pills underneath */}
+          <div className="flex items-center gap-1.5 overflow-x-auto no-scrollbar py-0.5 border-t border-gray-200/50 pt-1.5">
+            {(["all", "draft", "submitted", "approved", "rejected"] as const).map((status) => (
+              <button
+                key={status}
+                type="button"
+                onClick={() => { setClaimsStatusFilter(status); setMyClaimsPage(1); }}
+                className={`px-2.5 py-0.5 rounded text-[9px] font-black uppercase tracking-wider transition-all cursor-pointer border whitespace-nowrap ${
+                  claimsStatusFilter === status
+                    ? "bg-blue-600 text-white border-blue-600 font-extrabold shadow-sm"
+                    : "bg-white text-gray-600 border-gray-300 hover:bg-emerald-50 hover:text-emerald-700"
+                }`}
+              >
+                {status === "all" ? "All Statuses" : status}
+              </button>
+            ))}
           </div>
         </div>
 
@@ -4959,7 +4969,7 @@ export default function ExpensePage() {
       {/* ================= RECEIPT IMAGE LIGHTBOX POPUP ================= */}
       {lightboxImage && (
         <div 
-          className="fixed inset-0 bg-black/90 flex items-center justify-center p-4 z-[60] animate-fadeIn"
+          className="fixed inset-0 bg-black/90 flex items-center justify-center p-4 z-[99999] animate-fadeIn"
           onClick={() => setLightboxImage(null)}
         >
           <div className="relative max-w-4xl max-h-[90vh] bg-white border border-gray-300 rounded p-4 flex flex-col items-center justify-center select-none pointer-events-auto" onClick={(e) => e.stopPropagation()}>

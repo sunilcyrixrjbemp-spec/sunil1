@@ -285,7 +285,7 @@ export default function LoginForm({ onForgotPassword, onUnlockAccount }: LoginFo
                 setStatusMessage(null);
               }}
               disabled={loading}
-              className="input-lte-icon"
+              className="input-lte-icon !pl-11"
               required
             />
           </div>
@@ -307,7 +307,7 @@ export default function LoginForm({ onForgotPassword, onUnlockAccount }: LoginFo
                 setStatusMessage(null);
               }}
               disabled={loading}
-              className="input-lte-icon"
+              className="input-lte-icon !pl-11"
               required
             />
             <button
