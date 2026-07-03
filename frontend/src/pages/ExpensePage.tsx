@@ -4842,6 +4842,9 @@ export default function ExpensePage() {
                       </div>
                     </div>
                   )}
+
+                  {/* Cumulative stats for Limit Requests */}
+                  {selectedClaim.category === "Limit Request" && selectedClaim.user_monthly_stats && (
                     <div className="border border-gray-200 rounded overflow-hidden">
                       <div className="px-3 py-2 bg-gray-50 border-b border-gray-200 flex items-center justify-between">
                         <h4 className="text-[10px] font-bold uppercase text-gray-600 tracking-wider flex items-center gap-1.5">
