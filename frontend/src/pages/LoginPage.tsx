@@ -18,10 +18,10 @@ export default function LoginPage() {
   }, [navigate]);
 
   return (
-    <div className="min-h-screen bg-[#e9ecef] flex flex-col items-center justify-center py-12 px-4 sm:px-6 lg:px-8 text-gray-800">
-      <div className="w-full max-w-md space-y-4">
+    <div className="min-h-screen bg-[#e9ecef] flex flex-col items-center justify-center py-8 px-4 text-gray-800">
+      <div className="w-full max-w-[360px] space-y-4">
         {/* Content Box */}
-        <div className="bg-white border border-gray-300 rounded shadow-md overflow-hidden">
+        <div className="bg-white border border-gray-200 rounded-3xl shadow-xl overflow-hidden">
           {mode === "login" && (
             <LoginForm 
               onForgotPassword={() => setMode("forgot")} 
@@ -42,7 +42,7 @@ export default function LoginPage() {
           )}
 
           {/* Footer info inside the card */}
-          <div className="text-center pb-5 pt-3 text-xs text-gray-400 border-t border-gray-100 bg-gray-50/50">
+          <div className="text-center pb-5 pt-3.5 text-xs text-gray-400 border-t border-gray-100 bg-gray-50/50">
             Designed & Developed by{" "}
             <a 
               href="https://sunilbishnoi.co.in/" 

@@ -522,10 +522,7 @@ export default function HomePage() {
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
           <div className="space-y-0.5 flex-1">
             <span className="text-blue-600 font-extrabold text-[9px] uppercase tracking-widest block">Operations Hub</span>
-            <h2 className="text-base font-extrabold text-gray-800">Welcome, {user.name}!</h2>
-            <p className="text-gray-500 text-[10px] leading-relaxed">
-              Track and manage your field operations expenses and reimbursement claims.
-            </p>
+            <h2 className="text-base font-extrabold text-gray-800">Hi, {user.name}</h2>
           </div>
           <img src={brandLogo} alt="Cyrix Logo" className="h-14 w-auto object-contain shrink-0 hidden sm:block bg-white p-1.5 rounded border border-gray-300 shadow-xs" />
         </div>
@@ -864,48 +861,50 @@ export default function HomePage() {
                     </table>
 
                     {/* Mobile Card List View */}
-                    <div className="block md:hidden space-y-3">
+                    <div className="block md:hidden space-y-3 pb-24">
                       {filteredPersonalExpenses.map((exp) => (
                         <div
                           key={exp.id}
                           onClick={() => handleOpenClaimDetails(exp.id)}
-                          className="bg-white border border-gray-200 rounded-lg p-3.5 space-y-3.5 active:bg-gray-50 transition-colors shadow-sm cursor-pointer"
+                          className="bg-white border border-gray-200 rounded-xl overflow-hidden active:bg-gray-50 transition-colors shadow-sm cursor-pointer flex flex-col"
                         >
-                          <div className="flex justify-between items-center">
-                            <span className="font-bold font-mono text-blue-600 text-xs uppercase">{exp.expense_code}</span>
+                          <div className="bg-slate-50 border-b border-gray-100 p-3 flex justify-between items-center">
+                            <span className="font-bold font-mono text-blue-700 text-xs uppercase">{exp.expense_code}</span>
                             <span className={`inline-flex items-center px-2 py-0.5 rounded border text-[8px] font-bold uppercase tracking-wider ${getStatusBadgeClass(exp.status)}`}>
                               {exp.status}
                             </span>
                           </div>
                           
-                          <div className="grid grid-cols-2 gap-2 text-[11px]">
-                            <div>
-                              <span className="text-gray-400 font-bold uppercase text-[9px] block">Date</span>
-                              <span className="text-gray-700 font-semibold">{exp.itinerary || exp.date}</span>
+                          <div className="p-3 space-y-3">
+                            <div className="grid grid-cols-2 gap-2 text-[11px]">
+                              <div>
+                                <span className="text-gray-400 font-bold uppercase text-[9px] block">Date</span>
+                                <span className="text-gray-700 font-semibold">{exp.itinerary || exp.date}</span>
+                              </div>
+                              <div>
+                                <span className="text-gray-400 font-bold uppercase text-[9px] block">Travel Mode</span>
+                                <span className="text-gray-700 font-semibold">{exp.travel_mode || exp.category}</span>
+                              </div>
+                              <div>
+                                <span className="text-gray-400 font-bold uppercase text-[9px] block">Distance / Auto</span>
+                                <span className="text-gray-700 font-semibold">
+                                  {exp.total_km ? `${exp.total_km.toFixed(1)} KM` : "—"}
+                                  {exp.total_auto ? ` / ₹${exp.total_auto.toLocaleString()}` : ""}
+                                </span>
+                              </div>
+                              <div>
+                                <span className="text-gray-400 font-bold uppercase text-[9px] block">Total Amount</span>
+                                <span className="text-gray-900 font-extrabold text-xs">₹{exp.amount.toLocaleString()}</span>
+                              </div>
                             </div>
-                            <div>
-                              <span className="text-gray-400 font-bold uppercase text-[9px] block">Travel Mode</span>
-                              <span className="text-gray-700 font-semibold">{exp.travel_mode || exp.category}</span>
-                            </div>
-                            <div>
-                              <span className="text-gray-400 font-bold uppercase text-[9px] block">Distance / Auto</span>
-                              <span className="text-gray-700 font-semibold">
-                                {exp.total_km ? `${exp.total_km.toFixed(1)} KM` : "—"}
-                                {exp.total_auto ? ` / ₹${exp.total_auto.toLocaleString()}` : ""}
-                              </span>
-                            </div>
-                            <div>
-                              <span className="text-gray-400 font-bold uppercase text-[9px] block">Total Amount</span>
-                              <span className="text-gray-900 font-extrabold text-xs">₹{exp.amount.toLocaleString()}</span>
-                            </div>
+                            
+                            {exp.description && (
+                              <div className="border-t border-gray-100 pt-2 text-[10px]">
+                                <span className="text-gray-400 font-bold uppercase text-[8px] block">Purpose</span>
+                                <p className="text-gray-600 font-semibold mt-0.5 truncate">{exp.description}</p>
+                              </div>
+                            )}
                           </div>
-                          
-                          {exp.description && (
-                            <div className="border-t border-gray-100 pt-2 text-[10px]">
-                              <span className="text-gray-400 font-bold uppercase text-[8px] block">Purpose</span>
-                              <p className="text-gray-600 font-semibold mt-0.5 truncate">{exp.description}</p>
-                            </div>
-                          )}
                         </div>
                       ))}
                     </div>
@@ -967,51 +966,53 @@ export default function HomePage() {
                     </table>
 
                     {/* Mobile Card List View */}
-                    <div className="block md:hidden space-y-3">
+                    <div className="block md:hidden space-y-3 pb-24">
                       {filteredTeamExpenses.map((exp) => (
                         <div
                           key={exp.id}
                           onClick={() => handleOpenClaimDetails(exp.id)}
-                          className="bg-white border border-gray-200 rounded-lg p-3.5 space-y-3.5 active:bg-gray-50 transition-colors shadow-sm cursor-pointer"
+                          className="bg-white border border-gray-200 rounded-xl overflow-hidden active:bg-gray-50 transition-colors shadow-sm cursor-pointer flex flex-col"
                         >
-                          <div className="flex justify-between items-center">
+                          <div className="bg-slate-50 border-b border-gray-100 p-3 flex justify-between items-center">
                             <div>
                               <p className="font-bold text-gray-800 text-xs leading-none">{exp.submitter_name}</p>
-                              <span className="text-[8px] font-mono uppercase text-blue-600 block mt-0.5">{exp.submitter_code}</span>
+                              <span className="text-[8px] font-mono font-bold uppercase text-blue-650 block mt-1">{exp.submitter_code}</span>
                             </div>
                             <span className={`inline-flex items-center px-2 py-0.5 rounded border text-[8px] font-bold uppercase tracking-wider ${getStatusBadgeClass(exp.status)}`}>
                               {exp.status}
                             </span>
                           </div>
                           
-                          <div className="grid grid-cols-2 gap-2 text-[11px]">
-                            <div>
-                              <span className="text-gray-400 font-bold uppercase text-[9px] block">Claim ID / Date</span>
-                              <span className="text-gray-700 font-semibold">{exp.expense_code} ({exp.date || exp.itinerary})</span>
+                          <div className="p-3 space-y-3">
+                            <div className="grid grid-cols-2 gap-2 text-[11px]">
+                              <div>
+                                <span className="text-gray-400 font-bold uppercase text-[9px] block">Claim ID / Date</span>
+                                <span className="text-gray-700 font-semibold">{exp.expense_code} ({exp.date || exp.itinerary})</span>
+                              </div>
+                              <div>
+                                <span className="text-gray-400 font-bold uppercase text-[9px] block">Mode</span>
+                                <span className="text-gray-700 font-semibold">{exp.category || exp.travel_mode}</span>
+                              </div>
+                              <div>
+                                <span className="text-gray-400 font-bold uppercase text-[9px] block">Distance / Auto</span>
+                                <span className="text-gray-700 font-semibold">
+                                  {exp.total_km ? `${exp.total_km.toFixed(1)} KM` : "—"}
+                                  {exp.total_auto ? ` / ₹${exp.total_auto.toLocaleString()}` : ""}
+                                </span>
+                              </div>
+                              <div>
+                                <span className="text-gray-400 font-bold uppercase text-[9px] block">Amount</span>
+                                <span className="text-gray-900 font-extrabold text-xs">₹{exp.amount.toLocaleString()}</span>
+                              </div>
                             </div>
-                            <div>
-                              <span className="text-gray-400 font-bold uppercase text-[9px] block">Mode</span>
-                              <span className="text-gray-700 font-semibold">{exp.category || exp.travel_mode}</span>
-                            </div>
-                            <div>
-                              <span className="text-gray-400 font-bold uppercase text-[9px] block">Distance / Auto</span>
-                              <span className="text-gray-700 font-semibold">
-                                {exp.total_km ? `${exp.total_km.toFixed(1)} KM` : "—"}
-                                {exp.total_auto ? ` / ₹${exp.total_auto.toLocaleString()}` : ""}
-                              </span>
-                            </div>
-                            <div>
-                              <span className="text-gray-400 font-bold uppercase text-[9px] block">Amount</span>
-                              <span className="text-gray-900 font-extrabold text-xs">₹{exp.amount.toLocaleString()}</span>
-                            </div>
+                            
+                            {exp.purpose && (
+                              <div className="border-t border-gray-100 pt-2 text-[10px]">
+                                <span className="text-gray-400 font-bold uppercase text-[8px] block">Purpose</span>
+                                <p className="text-gray-600 font-semibold mt-0.5 truncate">{exp.purpose}</p>
+                              </div>
+                            )}
                           </div>
-                          
-                          {exp.purpose && (
-                            <div className="border-t border-gray-100 pt-2 text-[10px]">
-                              <span className="text-gray-400 font-bold uppercase text-[8px] block">Purpose</span>
-                              <p className="text-gray-600 font-semibold mt-0.5 truncate">{exp.purpose}</p>
-                            </div>
-                          )}
                         </div>
                       ))}
                     </div>
@@ -1372,7 +1373,10 @@ export default function HomePage() {
                                               <span key={actIdx} className="px-1.5 py-0.5 rounded bg-gray-100 border border-gray-200 text-[8px] font-bold text-gray-700 uppercase">
                                                 {act}
                                               </span>
-                                                                     {/* Sub-table for Calls */}
+                                            ))}
+                                          </div>
+
+                                          {/* Sub-table for Calls */}
                                           {selectedActs.includes("Calls") && callsList.length > 0 && (
                                             <div className="space-y-1.5 max-w-full">
                                               <div className="text-[9px] font-black text-indigo-700 uppercase tracking-wider">Support Calls Logs</div>
@@ -1451,9 +1455,7 @@ export default function HomePage() {
                                                     </div>
                                                   );
                                                 })}
-                                              </div>
                                             </div>
-                                          )}                                          </div>
                                           )}
 
                                           {/* Quantities for Mobilise, Calibration or Other */}

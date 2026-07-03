@@ -956,25 +956,31 @@ export default function ApprovalPage() {
               ) : expenseDetails ? (
                 <>
                   {/* Submitter details box */}
-                  <div className="grid grid-cols-1 md:grid-cols-4 gap-4 p-4 bg-gray-50 border border-gray-200 rounded text-xs">
-                    <div className="space-y-1">
-                      <span className="text-gray-400 font-bold uppercase tracking-wider block text-[9px]">Employee Name</span>
-                      <div className="flex items-center gap-1.5">
-                        <User className="w-3.5 h-3.5 text-gray-500" />
-                        <span className="font-bold text-gray-800">{expenseDetails.submitter_name || "Sunil Vishnoi"}</span>
+                  <div className="bg-white border-t-4 border-t-blue-600 border border-gray-200 rounded-xl p-4 shadow-sm space-y-3.5 text-xs text-left">
+                    <div className="flex justify-between items-center border-b border-gray-150 pb-2">
+                      <h4 className="font-black text-gray-800 text-[10px] uppercase tracking-widest">Submitter Details & Information</h4>
+                      <span className="font-mono text-[9px] font-bold uppercase bg-blue-50 text-blue-750 px-2 py-0.5 rounded border border-blue-200">{selectedApproval.expense_code}</span>
+                    </div>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3.5">
+                      <div className="p-2.5 bg-gray-50/70 border border-gray-200 rounded">
+                        <span className="text-gray-400 font-bold uppercase tracking-wider block text-[8px]">Employee Name</span>
+                        <div className="flex items-center gap-1.5 mt-1">
+                          <User className="w-3.5 h-3.5 text-gray-500" />
+                          <span className="font-extrabold text-gray-800">{expenseDetails.submitter_name || "—"}</span>
+                        </div>
                       </div>
-                    </div>
-                    <div className="space-y-1">
-                      <span className="text-gray-400 font-bold uppercase tracking-wider block text-[9px]">Employee ID</span>
-                      <span className="font-mono font-bold text-blue-600 uppercase">{expenseDetails.submitter_code || "E1704"}</span>
-                    </div>
-                    <div className="space-y-1">
-                      <span className="text-gray-400 font-bold uppercase tracking-wider block text-[9px]">Claim Month / Date</span>
-                      <span className="font-bold text-gray-700">{expenseDetails.month} {expenseDetails.year} ({expenseDetails.date})</span>
-                    </div>
-                    <div className="space-y-1">
-                      <span className="text-gray-400 font-bold uppercase tracking-wider block text-[9px]">Purpose / Description</span>
-                      <span className="font-semibold text-gray-700 truncate block" title={expenseDetails.purpose}>{expenseDetails.purpose}</span>
+                      <div className="p-2.5 bg-gray-50/70 border border-gray-200 rounded">
+                        <span className="text-gray-400 font-bold uppercase tracking-wider block text-[8px]">Employee ID</span>
+                        <p className="font-mono font-bold text-blue-700 mt-1.5 text-xs">{expenseDetails.submitter_code || "—"}</p>
+                      </div>
+                      <div className="p-2.5 bg-gray-50/70 border border-gray-200 rounded">
+                        <span className="text-gray-400 font-bold uppercase tracking-wider block text-[8px]">Claim Month / Date</span>
+                        <p className="font-extrabold text-gray-800 mt-1.5">{expenseDetails.month} {expenseDetails.year} ({expenseDetails.date})</p>
+                      </div>
+                      <div className="p-2.5 bg-gray-50/70 border border-gray-200 rounded">
+                        <span className="text-gray-400 font-bold uppercase tracking-wider block text-[8px]">Purpose / Description</span>
+                        <p className="font-bold text-gray-705 mt-1.5 truncate" title={expenseDetails.purpose}>{expenseDetails.purpose || "—"}</p>
+                      </div>
                     </div>
                   </div>
 
@@ -1134,17 +1140,41 @@ export default function ApprovalPage() {
                         
                         return (
                           <div key={index} className="border border-gray-250 bg-white rounded shadow-sm overflow-hidden text-xs">
-                            {/* Leg Title bar */}
-                            <div className="px-4 py-2.5 bg-slate-100 border-b border-gray-200 flex flex-wrap items-center justify-between gap-2">
-                              <span className="font-bold text-gray-700 uppercase tracking-wider flex items-center gap-1">
-                                Leg #{leg.leg}: <MapPin className="w-3.5 h-3.5 text-red-500" /> {leg.from_district} → {leg.to_district}
-                              </span>
-                              <div className="flex items-center gap-3">
-                                <span className="font-semibold text-gray-500">Route: <span className="text-gray-800">{leg.from || "N/A"} to {leg.to || "N/A"}</span></span>
-                                <span className="font-bold text-blue-700 bg-blue-50 px-2 py-0.5 rounded border border-blue-200 uppercase text-[9px]">{leg.mode} ({leg.km} KM)</span>
-                                {leg.sub_mode && (
-                                  <span className="font-bold text-purple-700 bg-purple-50 px-2 py-0.5 rounded border border-purple-200 uppercase text-[9px]">Local: {leg.sub_mode}</span>
-                                )}
+                            {/* Route Segment with clear From/To Facility and District labels */}
+                            <div className="bg-slate-100 border-b border-gray-200 p-3 space-y-2.5">
+                              <div className="flex justify-between items-center text-[10px] font-black text-slate-700 uppercase tracking-wide">
+                                <span className="flex items-center gap-1">
+                                  <MapPin className="w-3.5 h-3.5 text-red-500" />
+                                  Leg #{leg.leg} Route
+                                </span>
+                                <div className="flex gap-2">
+                                  <span className="font-bold text-blue-700 bg-blue-50 px-2 py-0.5 rounded border border-blue-200 uppercase text-[9px]">{leg.mode} ({leg.km} KM)</span>
+                                  {leg.sub_mode && (
+                                    <span className="font-bold text-purple-700 bg-purple-50 px-2 py-0.5 rounded border border-purple-200 uppercase text-[9px]">Local: {leg.sub_mode}</span>
+                                  )}
+                                </div>
+                              </div>
+                              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+                                <div className="bg-white p-2.5 border border-gray-200 rounded-lg flex flex-col justify-between">
+                                  <div>
+                                    <span className="text-[8px] text-gray-400 font-extrabold uppercase block tracking-wider mb-1">From Location (District)</span>
+                                    <p className="font-extrabold text-gray-800 text-xs leading-normal">{leg.from_district || "—"}</p>
+                                  </div>
+                                  <div className="mt-1.5 pt-1.5 border-t border-gray-50">
+                                    <span className="text-[7px] text-gray-400 font-extrabold uppercase block tracking-wider">Facility / Area name</span>
+                                    <p className="text-gray-600 font-bold text-[10px] leading-normal">{leg.from || "—"}</p>
+                                  </div>
+                                </div>
+                                <div className="bg-white p-2.5 border border-gray-200 rounded-lg flex flex-col justify-between">
+                                  <div>
+                                    <span className="text-[8px] text-gray-400 font-extrabold uppercase block tracking-wider mb-1">To Location (District)</span>
+                                    <p className="font-extrabold text-gray-800 text-xs leading-normal">{leg.to_district || "—"}</p>
+                                  </div>
+                                  <div className="mt-1.5 pt-1.5 border-t border-gray-50">
+                                    <span className="text-[7px] text-gray-400 font-extrabold uppercase block tracking-wider">Facility / Area name</span>
+                                    <p className="text-gray-600 font-bold text-[10px] leading-normal">{leg.to || "—"}</p>
+                                  </div>
+                                </div>
                               </div>
                             </div>
 
@@ -1829,34 +1859,35 @@ export default function ApprovalPage() {
             </div>
 
             {/* Modal Footer */}
-            <div className="px-5 py-4 border-t border-gray-200 bg-gray-50 flex items-center justify-between shrink-0">
+            <div className="px-4 py-3 bg-gray-50 border-t border-gray-200 flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 shrink-0">
               <button
                 type="button"
                 onClick={() => { setShowDetailModal(false); setSelectedApproval(null); }}
-                className="btn-lte-secondary px-6"
+                className="w-full sm:w-auto px-5 py-2.5 bg-slate-500 hover:bg-slate-600 active:bg-slate-700 text-white font-bold rounded-lg text-xs uppercase tracking-wider transition-all cursor-pointer border-0 shadow-sm flex items-center justify-center gap-1.5"
                 disabled={actionLoading}
               >
-                Close Window
+                <X className="w-3.5 h-3.5" />
+                <span>Close Window</span>
               </button>
 
-              <div className="flex gap-3">
+              <div className="flex flex-col sm:flex-row gap-2.5 w-full sm:w-auto">
                 <button
                   type="button"
                   onClick={() => handleProcessAction("reject")}
                   disabled={actionLoading || loadingDetails}
-                  className="btn-lte-danger px-6 py-2.5 flex items-center justify-center gap-1.5"
+                  className="w-full sm:w-auto px-5 py-2.5 bg-rose-600 hover:bg-rose-700 active:bg-rose-800 text-white font-bold rounded-lg text-xs uppercase tracking-wider transition-all cursor-pointer border-0 shadow-sm flex items-center justify-center gap-1.5"
                 >
-                  <X className="w-4 h-4" />
-                  Reject Claim
+                  <X className="w-3.5 h-3.5" />
+                  <span>Reject Claim</span>
                 </button>
                 <button
                   type="button"
                   onClick={() => handleProcessAction("approve")}
                   disabled={actionLoading || loadingDetails}
-                  className="btn-lte-success px-6 py-2.5 flex items-center justify-center gap-1.5"
+                  className="w-full sm:w-auto px-5 py-2.5 bg-emerald-600 hover:bg-emerald-700 active:bg-emerald-800 text-white font-bold rounded-lg text-xs uppercase tracking-wider transition-all cursor-pointer border-0 shadow-sm flex items-center justify-center gap-1.5"
                 >
-                  <Check className="w-4 h-4" />
-                  Approve Claim
+                  <Check className="w-3.5 h-3.5" />
+                  <span>Approve Claim</span>
                 </button>
               </div>
             </div>

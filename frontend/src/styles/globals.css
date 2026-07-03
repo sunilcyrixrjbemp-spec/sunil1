@@ -86,7 +86,7 @@ select.input-lte option {
 }
 
 .input-lte-icon {
-  @apply w-full bg-white border border-gray-300 rounded pl-9 pr-3 py-2 text-xs text-gray-800 placeholder-gray-400 focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500/50 transition-all;
+  @apply w-full bg-white border border-gray-300 rounded pl-11 pr-3 py-2 text-xs text-gray-800 placeholder-gray-400 focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500/50 transition-all;
 }
 
 .label-lte {
@@ -417,7 +417,7 @@ svg, path, g, sector, .recharts-pie-sector, .recharts-sector, .recharts-pie, .re
 
   /* Prevent typed text from overlapping prefix/suffix icons inside User/Password fields */
   .input-lte-icon {
-    padding-left: 2.25rem !important; /* 36px padding to clear prefix icon */
+    padding-left: 2.75rem !important; /* 44px padding to clear prefix icon */
   }
 
   .input-lte:focus, 

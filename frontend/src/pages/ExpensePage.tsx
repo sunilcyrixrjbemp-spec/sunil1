@@ -4433,11 +4433,6 @@ export default function ExpensePage() {
                                                     </div>
                                                   );
                                                 })}
-                                              </div>
-                                            </div>
-                                          )}         })}
-                                                </tbody>
-                                              </table>
                                             </div>
                                           )}
 

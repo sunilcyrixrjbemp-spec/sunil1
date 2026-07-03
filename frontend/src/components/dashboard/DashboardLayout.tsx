@@ -53,16 +53,16 @@ const MENU_ITEMS: MenuItem[] = [
 ];
 
 const MenuGridIcon = () => (
-  <svg className="w-5 h-5 transition-all duration-200 hover:scale-110 active:scale-95 text-inherit" viewBox="0 0 24 24" fill="currentColor">
-    <circle cx="5" cy="5" r="2" />
-    <circle cx="12" cy="5" r="2" />
-    <circle cx="19" cy="5" r="2" />
-    <circle cx="5" cy="12" r="2" />
-    <circle cx="12" cy="12" r="2" />
-    <circle cx="19" cy="12" r="2" />
-    <circle cx="5" cy="19" r="2" />
-    <circle cx="12" cy="19" r="2" />
-    <circle cx="19" cy="19" r="2" />
+  <svg className="w-5 h-5 transition-all duration-300 hover:rotate-90 text-inherit" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+    <rect x="3" y="3" width="4" height="4" rx="1" fill="currentColor" />
+    <rect x="10" y="3" width="4" height="4" rx="1" fill="currentColor" />
+    <rect x="17" y="3" width="4" height="4" rx="1" fill="currentColor" />
+    <rect x="3" y="10" width="4" height="4" rx="1" fill="currentColor" />
+    <rect x="10" y="10" width="4" height="4" rx="1" fill="currentColor" />
+    <rect x="17" y="10" width="4" height="4" rx="1" fill="currentColor" />
+    <rect x="3" y="17" width="4" height="4" rx="1" fill="currentColor" />
+    <rect x="10" y="17" width="4" height="4" rx="1" fill="currentColor" />
+    <rect x="17" y="17" width="4" height="4" rx="1" fill="currentColor" />
   </svg>
 );
 
@@ -257,86 +257,7 @@ export default function DashboardLayout() {
     }
   };
 
-  // Pull-to-refresh gesture tracking for mobile APK
-  const [pullDistance, setPullDistance] = useState(0);
-  const [isRefreshing, setIsRefreshing] = useState(false);
 
-  useEffect(() => {
-    let startTouchY = 0;
-    let active = false;
-
-    const handleTouchStart = (e: TouchEvent) => {
-      // Only initiate if scroll is at absolute top
-      if (window.scrollY === 0) {
-        startTouchY = e.touches[0].clientY;
-        active = true;
-      } else {
-        active = false;
-      }
-    };
-
-    const handleTouchMove = (e: TouchEvent) => {
-      if (!active) return;
-      const currentY = e.touches[0].clientY;
-      const diff = currentY - startTouchY;
-
-      if (diff > 0) {
-        // Resistance pull factor
-        const distance = Math.min(diff * 0.45, 90);
-        setPullDistance(distance);
-        
-        // Prevent browser elastic scroll bounce during active pull
-        if (diff > 12 && e.cancelable) {
-          e.preventDefault();
-        }
-      }
-    };
-
-    const handleTouchEnd = () => {
-      if (!active) return;
-      active = false;
-      
-      if (pullDistance >= 60) {
-        setIsRefreshing(true);
-        setPullDistance(35); // Keep visible during spinner rotation
-        
-        // Broadcast custom pull-to-refresh event for listening pages
-        window.dispatchEvent(new CustomEvent("app-pull-to-refresh"));
-        
-        // Clear local limits cache to force updates
-        try {
-          const currentUser = JSON.parse(localStorage.getItem("user") || "null");
-          if (currentUser) {
-            for (let i = 0; i < localStorage.length; i++) {
-              const key = localStorage.key(i);
-              if (key && key.startsWith("cache_month_limits_")) {
-                localStorage.removeItem(key);
-                i--;
-              }
-            }
-          }
-        } catch (_) {}
-
-        // Clear indicator after refresh completes
-        setTimeout(() => {
-          setIsRefreshing(false);
-          setPullDistance(0);
-        }, 1200);
-      } else {
-        setPullDistance(0);
-      }
-    };
-
-    window.addEventListener("touchstart", handleTouchStart, { passive: false });
-    window.addEventListener("touchmove", handleTouchMove, { passive: false });
-    window.addEventListener("touchend", handleTouchEnd);
-
-    return () => {
-      window.removeEventListener("touchstart", handleTouchStart);
-      window.removeEventListener("touchmove", handleTouchMove);
-      window.removeEventListener("touchend", handleTouchEnd);
-    };
-  }, [pullDistance]);
 
   if (!user) return null;
 
@@ -395,29 +316,7 @@ export default function DashboardLayout() {
   return (
     <div className="min-h-screen bg-[#f4f6f9] text-[#212529] flex flex-col lg:flex-row antialiased">
       
-      {/* Pull-to-refresh overlay for mobile APK */}
-      {(pullDistance > 0 || isRefreshing) && (
-        <div 
-          className="fixed top-0 left-0 right-0 z-[9999] flex justify-center pointer-events-none transition-all duration-75"
-          style={{ transform: `translateY(${pullDistance}px)` }}
-        >
-          <div className="bg-white rounded-full p-2.5 shadow-md border border-gray-150 flex items-center justify-center">
-            <svg 
-              className={`w-6 h-6 text-green-600 ${isRefreshing ? "animate-spin" : ""}`} 
-              viewBox="0 0 24 24" 
-              fill="none" 
-              stroke="currentColor" 
-              strokeWidth="3.5"
-            >
-              {isRefreshing ? (
-                <path d="M21.5 2v6h-6M21.34 15.57a10 10 0 1 1-.57-8.38l5.67-5.67" />
-              ) : (
-                <path strokeLinecap="round" strokeLinejoin="round" d="M19.5 13.5L12 21m0 0l-7.5-7.5M12 21V3" />
-              )}
-            </svg>
-          </div>
-        </div>
-      )}
+
       
       {/* SIDEBAR - DESKTOP ONLY */}
       <aside className={`hidden lg:flex flex-col bg-[#343a40] text-[#c2c7d0] transition-all duration-200 ${
@@ -542,23 +441,21 @@ export default function DashboardLayout() {
                     {unreadCount}
                   </span>
                 )}
-              </button>
-
-              {/* Notification Dropdown Panel */}
+              </button>              {/* Notification Dropdown Panel */}
               {isNotifOpen && (
                 <>
-                  <div className="fixed inset-0 z-40 bg-black/20 sm:bg-transparent" onClick={() => setIsNotifOpen(false)} />
-                  <div className="fixed bottom-0 left-0 right-0 sm:absolute sm:bottom-auto sm:top-full sm:right-0 sm:left-auto mt-0 sm:mt-2 sm:w-80 bg-white border border-gray-200 rounded-t-2xl sm:rounded-lg shadow-lg z-50 overflow-hidden text-xs text-gray-700 animate-fade-in max-h-[70vh] sm:max-h-none">
-                    <div className="sm:hidden w-10 h-1 rounded-full bg-gray-300 mx-auto mt-2 mb-1"></div>
-                    <div className="px-4 py-2.5 bg-gray-50 border-b border-gray-200 flex items-center justify-between font-bold">
-                      <span className="uppercase tracking-wider text-[10px]">Alerts Center</span>
+                  <div className="fixed inset-0 z-[9998] bg-black/40 sm:bg-transparent" onClick={() => setIsNotifOpen(false)} />
+                  <div className="fixed bottom-0 left-0 right-0 sm:absolute sm:bottom-auto sm:top-full sm:right-0 sm:left-auto mt-0 sm:mt-2 sm:w-85 bg-white border border-gray-200 rounded-t-3xl sm:rounded-xl shadow-2xl z-[9999] overflow-hidden text-xs text-gray-700 animate-fadeIn max-h-[85vh] sm:max-h-none pb-8 sm:pb-0">
+                    <div className="sm:hidden w-10.5 h-1 rounded-full bg-gray-300 mx-auto mt-3 mb-1.5"></div>
+                    <div className="px-4 py-3 bg-gray-50 border-b border-gray-200 flex items-center justify-between font-black">
+                      <span className="uppercase tracking-widest text-[10px] text-gray-600">Alerts Center</span>
                       <span className="text-[10px] text-blue-600 cursor-pointer hover:underline" onClick={markAllAsRead}>
                         Mark all read
                       </span>
                     </div>
-                    <div className="divide-y divide-gray-100 max-h-64 overflow-y-auto">
+                    <div className="divide-y divide-gray-150 max-h-72 overflow-y-auto">
                       {safeNotifications.length === 0 ? (
-                        <div className="p-4 text-center text-gray-400 font-semibold uppercase tracking-wider text-[10px]">
+                        <div className="p-8 text-center text-gray-400 font-extrabold uppercase tracking-wider text-[10px]">
                           No notifications
                         </div>
                       ) : (
@@ -570,24 +467,30 @@ export default function DashboardLayout() {
                               markAsRead(n.id);
                               setIsNotifOpen(false);
                             }}
-                            className={`p-3 block transition-colors ${n.read ? "bg-white hover:bg-gray-50" : "bg-blue-50/30 hover:bg-blue-50/50"}`}
+                            className={`p-4.5 block transition-colors ${n.read ? "bg-white hover:bg-gray-50" : "bg-blue-50/20 hover:bg-blue-50/40"}`}
                           >
                             <div className="flex justify-between items-start gap-2">
-                              <span className={`font-bold uppercase text-[9px] px-1.5 py-0.5 rounded ${
-                                n.type === "warning" ? "bg-amber-100 text-amber-700" :
-                                n.type === "success" ? "bg-green-100 text-green-700" :
-                                n.type === "error" ? "bg-red-100 text-red-700" : "bg-blue-100 text-blue-700"
-                              }`}>
-                                {n.title}
-                              </span>
-                              <span className="text-[9px] text-gray-400 font-medium shrink-0">{formatDateTime(n.created_at)}</span>
+                              <div className="flex items-center gap-2">
+                                {n.type === "warning" && <AlertTriangle className="w-3.5 h-3.5 text-amber-500 shrink-0" />}
+                                {n.type === "success" && <Check className="w-3.5 h-3.5 text-emerald-500 shrink-0" />}
+                                {n.type === "error" && <X className="w-3.5 h-3.5 text-rose-500 shrink-0" />}
+                                {n.type !== "warning" && n.type !== "success" && n.type !== "error" && <Info className="w-3.5 h-3.5 text-blue-500 shrink-0" />}
+                                <span className={`font-black uppercase text-[8px] px-1.5 py-0.5 rounded tracking-wide ${
+                                  n.type === "warning" ? "bg-amber-50 text-amber-700 border border-amber-200" :
+                                  n.type === "success" ? "bg-emerald-50 text-emerald-700 border border-emerald-200" :
+                                  n.type === "error" ? "bg-rose-50 text-rose-700 border border-rose-200" : "bg-blue-50 text-blue-700 border border-blue-200"
+                                }`}>
+                                  {n.title || "Notification"}
+                                </span>
+                              </div>
+                              <span className="text-[9px] text-gray-500 font-extrabold shrink-0">{formatDateTime(n.created_at)}</span>
                             </div>
-                            <p className="text-gray-600 mt-1 leading-normal font-semibold">{n.description}</p>
+                            <p className="text-gray-700 mt-2 leading-relaxed font-bold text-[11px]">{n.description}</p>
                           </Link>
                         ))
                       )}
                     </div>
-                    <Link to="/notifications" onClick={() => setIsNotifOpen(false)} className="block py-2 text-center bg-gray-50 border-t border-gray-200 text-[10px] text-blue-600 hover:text-blue-800 font-bold uppercase tracking-wider">
+                    <Link to="/notifications" onClick={() => setIsNotifOpen(false)} className="block py-3 text-center bg-gray-50 border-t border-gray-200 text-[10px] text-blue-600 hover:text-blue-800 font-extrabold uppercase tracking-widest">
                       See All Notifications
                     </Link>
                   </div>
@@ -642,12 +545,12 @@ export default function DashboardLayout() {
         <Link
           to="/home"
           onMouseEnter={() => preloadRoute("/home")}
-          className={`flex flex-col items-center justify-center w-14 h-12 rounded transition-all ${
-            currentActiveItem?.id === "home" ? "text-[#0f172a] font-extrabold" : "text-gray-500 hover:text-gray-800"
+          className={`flex flex-col items-center justify-center w-16 h-11 rounded-xl transition-all ${
+            currentActiveItem?.id === "home" ? "bg-blue-50 text-blue-600 font-extrabold shadow-xs border border-blue-100" : "text-gray-500 hover:text-gray-800"
           }`}
         >
           <Home className="w-5 h-5" />
-          <span className="text-[9px] font-bold uppercase tracking-wider mt-1">Home</span>
+          <span className="text-[9px] font-bold uppercase tracking-wider mt-0.5">Home</span>
         </Link>
 
         {/* Submit Claim Tab (Inline layout!) */}
@@ -655,12 +558,12 @@ export default function DashboardLayout() {
           <Link
             to="/submit-expense"
             onMouseEnter={() => preloadRoute("/submit-expense")}
-            className={`flex flex-col items-center justify-center w-14 h-12 rounded transition-all ${
-              currentActiveItem?.id === "expense" ? "text-[#0f172a] font-extrabold" : "text-gray-500 hover:text-gray-800"
+            className={`flex flex-col items-center justify-center w-16 h-11 rounded-xl transition-all ${
+              currentActiveItem?.id === "expense" ? "bg-blue-50 text-blue-600 font-extrabold shadow-xs border border-blue-100" : "text-gray-500 hover:text-gray-800"
             }`}
           >
             <Plus className="w-5 h-5" />
-            <span className="text-[9px] font-bold uppercase tracking-wider mt-1">Claim</span>
+            <span className="text-[9px] font-bold uppercase tracking-wider mt-0.5">Claim</span>
           </Link>
         )}
 
@@ -668,23 +571,23 @@ export default function DashboardLayout() {
         <Link
           to="/profile"
           onMouseEnter={() => preloadRoute("/profile")}
-          className={`flex flex-col items-center justify-center w-14 h-12 rounded transition-all ${
-            currentActiveItem?.id === "profile" ? "text-[#0f172a] font-extrabold" : "text-gray-500 hover:text-gray-800"
+          className={`flex flex-col items-center justify-center w-16 h-11 rounded-xl transition-all ${
+            currentActiveItem?.id === "profile" ? "bg-blue-50 text-blue-600 font-extrabold shadow-xs border border-blue-100" : "text-gray-500 hover:text-gray-800"
           }`}
         >
           <User className="w-5 h-5" />
-          <span className="text-[9px] font-bold uppercase tracking-wider mt-1">Profile</span>
+          <span className="text-[9px] font-bold uppercase tracking-wider mt-0.5">Profile</span>
         </Link>
 
         {/* More Menu Tab */}
         <button
           onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
-          className={`flex flex-col items-center justify-center w-14 h-12 rounded transition-all border-0 bg-transparent cursor-pointer ${
-            isMobileMenuOpen ? "text-[#0f172a] font-extrabold" : "text-gray-500 hover:text-gray-800"
+          className={`flex flex-col items-center justify-center w-16 h-11 rounded-xl transition-all border-0 bg-transparent cursor-pointer ${
+            isMobileMenuOpen ? "bg-blue-50 text-blue-600 font-extrabold shadow-xs border border-blue-100" : "text-gray-500 hover:text-gray-800"
           }`}
         >
           <MenuGridIcon />
-          <span className="text-[9px] font-bold uppercase tracking-wider mt-1">More</span>
+          <span className="text-[9px] font-bold uppercase tracking-wider mt-0.5">More</span>
         </button>
       </nav>
 
