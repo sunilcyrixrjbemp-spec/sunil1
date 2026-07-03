@@ -4433,6 +4433,7 @@ export default function ExpensePage() {
                                                     </div>
                                                   );
                                                 })}
+                                              </div>
                                             </div>
                                           )}
 
@@ -5060,6 +5061,7 @@ export default function ExpensePage() {
         </div>
       )}
 
+      </div>
     </>
   );
 }
