@@ -872,15 +872,17 @@ export default function ExpensePage() {
     };
 
     const cached = localStorage.getItem(cacheKey);
+    let hasLoadedFromCache = false;
     if (cached) {
       try {
         const cachedData = JSON.parse(cached);
         applyInitData(cachedData);
+        hasLoadedFromCache = true;
         if (!isInitialLoad) return;
       } catch (_) {}
     }
 
-    if (isInitialLoad) {
+    if (isInitialLoad && !hasLoadedFromCache) {
       setInitLoading(true);
     }
 

@@ -43,6 +43,11 @@ function AppInner() {
 }
 
 function App() {
+  // Non-blocking ping to wake up free-tier backend server instantly on app startup
+  useEffect(() => {
+    fetch("https://expense-backend-zio8.onrender.com/api/health").catch(() => {});
+  }, []);
+
   const [isAppLocked, setIsAppLocked] = useState(false);
   const [biometryType, setBiometryType] = useState<'fingerprint' | 'face' | 'none'>('fingerprint');
   const isLockedRef = useRef(false);
