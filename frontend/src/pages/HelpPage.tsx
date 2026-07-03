@@ -1165,75 +1165,99 @@ export default function HelpPage() {
                   <p className="text-gray-700 font-bold leading-relaxed">
                     {selectedTicket.description}
                   </p>
-                      if (openParenIdx !== -1 && closeParenIdx !== -1 && openParenIdx < closeParenIdx) {
-                        senderName = cmt.substring(0, openParenIdx).trim();
-                        const rawTime = cmt.substring(openParenIdx + 2, closeParenIdx).trim();
-                        content = cmt.substring(closeParenIdx + 3).trim();
-                        
-                        try {
-                          dateTime = formatDateTime(rawTime);
-                        } catch (e) {
-                          dateTime = rawTime;
-                        }
-                      }
-                      
-                      const isSystem = senderName === "System" || cmt.startsWith("System:") || !cmt.includes("): ");
-                      if (isSystem) {
-                        return (
-                          <div key={cIdx} className="flex justify-center my-1">
-                            <span className="bg-white/90 border border-gray-200/60 text-gray-500 text-[9px] font-bold px-3 py-1 rounded-md uppercase tracking-wider shadow-2xs select-none">
-                              {content}
-                            </span>
-                          </div>
-                        );
-                      }
 
-                      const isOwn = senderName.toLowerCase() === currentUser?.name?.toLowerCase() || 
-                                    senderName.toLowerCase().startsWith(currentUser?.name?.toLowerCase().substring(0, 5));
-
-                      return (
-                        <div key={cIdx} className={`flex w-full ${isOwn ? "justify-end" : "justify-start"}`}>
-                          <div 
-                            className={`px-3 py-2 rounded-lg max-w-[85%] sm:max-w-[70%] shadow-xs relative flex flex-col gap-0.5 ${
-                              isOwn 
-                                ? "bg-[#d9fdd3] text-gray-800 rounded-tr-none border border-[#c1e9bb]" 
-                                : "bg-white text-gray-800 rounded-tl-none border border-gray-200"
-                            }`}
-                          >
-                            {!isOwn && (
-                              <span className="font-extrabold text-[10px] text-green-600 block leading-none select-none">
-                                {senderName}
-                              </span>
-                            )}
-                            <p className="text-xs font-medium leading-relaxed whitespace-pre-wrap text-gray-850 break-words">
-                              {content}
-                            </p>
-                            <span className="text-[8px] text-gray-400 font-bold select-none text-right block leading-none mt-1">
-                              {dateTime} {isOwn && <span className="text-blue-500 ml-0.5">✓✓</span>}
-                            </span>
-                          </div>
-                        </div>
-                      );
-                    })
-                  )}
-                </div>
-              </div>
-
-              {/* Comment reply form */}
-              {selectedTicket.status !== "Final Closed" && (
-                <div className="space-y-1">
-                  {typingUser && (
-                    <div className="text-[10px] text-green-600 italic font-bold pl-2 flex items-center gap-1.5 animate-pulse select-none">
-                      <span className="w-1.5 h-1.5 rounded-full bg-green-500 inline-block animate-ping"></span>
-                      {typingUser} is typing...
+                  {/* Show individual TAT if closed */}
+                  {selectedTicket.closed_at && (
+                    <div className="mt-2.5 pt-2 border-t border-gray-200 flex items-center gap-1.5 text-[9px] text-gray-400 font-bold uppercase">
+                      <i className="fas fa-clock text-gray-450"></i>
+                      <span>Resolution TAT:</span>
+                      <span className="text-blue-700 font-mono">
+                        {formatDuration(
+                          (new Date(selectedTicket.closed_at).getTime() - new Date(selectedTicket.created_at).getTime()) / (1000 * 60 * 60)
+                        )}
+                      </span>
                     </div>
                   )}
+                </div>
 
-                  <form onSubmit={handleSendCommentMessage} className="flex gap-2 items-center bg-gray-100 p-2 rounded-lg border border-gray-200">
-                    <input
-                      type="text"
-                      placeholder={selectedTicket.status === "Closed" ? "Ticket is closed. Reopen to chat..." : "Type reply message..."}
-                      value={newComment}
+                {/* Discussion logs */}
+                <div className="space-y-2">
+                  <div className="flex justify-between items-center">
+                    <h4 className="text-[10px] font-bold uppercase tracking-wider text-gray-400">Discussion Logs & Updates</h4>
+                    <span className="text-[9px] font-bold text-gray-400 uppercase select-none">💬 Live Chat</span>
+                  </div>
+                  
+                  <div 
+                    className="rounded-lg p-4 min-h-[320px] max-h-[420px] overflow-y-auto flex flex-col gap-3 relative shadow-inner border border-gray-250"
+                    style={{
+                      backgroundColor: "#efeae2",
+                      backgroundImage: "radial-gradient(#dfdcd6 1px, transparent 1px)",
+                      backgroundSize: "16px 16px"
+                    }}
+                  >
+                    {!selectedTicket.comments || !selectedTicket.comments.trim() ? (
+                      <div className="my-auto text-center py-6 text-gray-450 font-bold uppercase text-[10px] tracking-wider select-none bg-white/70 rounded p-4 mx-4 shadow-sm border border-gray-200">
+                        No replies logged yet. Type a message below to start the discussion thread.
+                      </div>
+                    ) : (
+                      selectedTicket.comments.split("\n").map((cmt: string, cIdx: number) => {
+                        if (!cmt.trim()) return null;
+                        
+                        const openParenIdx = cmt.indexOf(" (");
+                        const closeParenIdx = cmt.indexOf("): ");
+                        let senderName = "System";
+                        let dateTime = "";
+                        let content = cmt;
+
+                        if (openParenIdx !== -1 && closeParenIdx !== -1 && openParenIdx < closeParenIdx) {
+                          senderName = cmt.substring(0, openParenIdx).trim();
+                          const rawTime = cmt.substring(openParenIdx + 2, closeParenIdx).trim();
+                          content = cmt.substring(closeParenIdx + 3).trim();
+                          
+                          try {
+                            dateTime = formatDateTime(rawTime);
+                          } catch (e) {
+                            dateTime = rawTime;
+                          }
+                        }
+                        
+                        const isSystem = senderName === "System" || cmt.startsWith("System:") || !cmt.includes("): ");
+                        if (isSystem) {
+                          return (
+                            <div key={cIdx} className="flex justify-center my-1">
+                              <span className="bg-white/90 border border-gray-200/60 text-gray-500 text-[9px] font-bold px-3 py-1 rounded-md uppercase tracking-wider shadow-2xs select-none">
+                                {content}
+                              </span>
+                            </div>
+                          );
+                        }
+
+                        const isOwn = senderName.toLowerCase() === currentUser?.name?.toLowerCase() || 
+                                      senderName.toLowerCase().startsWith(currentUser?.name?.toLowerCase().substring(0, 5));
+
+                        return (
+                          <div key={cIdx} className={`flex w-full ${isOwn ? "justify-end" : "justify-start"}`}>
+                            <div 
+                              className={`px-3 py-2 rounded-lg max-w-[85%] sm:max-w-[70%] shadow-xs relative flex flex-col gap-0.5 ${
+                                isOwn 
+                                  ? "bg-[#d9fdd3] text-gray-800 rounded-tr-none border border-[#c1e9bb]" 
+                                  : "bg-white text-gray-800 rounded-tl-none border border-gray-200"
+                              }`}
+                            >
+                              {!isOwn && (
+                                <span className="font-extrabold text-[10px] text-green-600 block leading-none select-none">
+                                  {senderName}
+                                </span>
+                              )}
+                              <p className="text-xs font-medium leading-relaxed whitespace-pre-wrap text-gray-850 break-words">
+                                {content}
+                              </p>
+                              <span className="text-[8px] text-gray-400 font-bold select-none text-right block leading-none mt-1">
+                                {dateTime} {isOwn && <span className="text-blue-500 ml-0.5">✓✓</span>}
+                              </span>
+                            </div>
+                          </div>
+                        );
                       onChange={(e) => handleInputChange(e.target.value)}
                       disabled={selectedTicket.status === "Closed" || commenting}
                       className="flex-1 px-4 py-2 bg-white border border-gray-300 rounded-full text-xs text-gray-800 placeholder-gray-400 focus:outline-none focus:ring-1 focus:ring-green-500 focus:border-green-500 outline-none font-medium h-9"
