@@ -16,7 +16,6 @@ import {
   CheckCircle2, 
   XCircle, 
   Compass, 
-  TrendingUp,
   Layers,
   Users,
   Check,
@@ -120,11 +119,6 @@ export default function HomePage() {
     if (!currentUser) return null;
     const cached = localStorage.getItem(`cache_allowance_stats_${currentUser.user_id}`);
     return cached ? JSON.parse(cached) : null;
-  });
-  const [loadingAllowance, setLoadingAllowance] = useState(() => {
-    const currentUser = JSON.parse(localStorage.getItem("user") || "null");
-    if (!currentUser) return true;
-    return !localStorage.getItem(`cache_allowance_stats_${currentUser.user_id}`);
   });
 
   // Tabs state - persisted on refresh
@@ -321,11 +315,6 @@ export default function HomePage() {
     if (s === "rejected") return "bg-red-50 border-red-200 text-red-700";
     if (s.startsWith("submitted")) return "bg-yellow-50 border-yellow-250 text-yellow-750 font-bold";
     return "bg-gray-50 border-gray-200 text-gray-600";
-  };
-
-  const getProgressPercentage = (used: number, limit: number) => {
-    if (!limit) return 0;
-    return Math.min(Math.round((used / limit) * 100), 100);
   };
 
   const handleOpenClaimDetails = async (claimId: number | string) => {
