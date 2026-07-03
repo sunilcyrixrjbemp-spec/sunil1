@@ -866,45 +866,43 @@ export default function HomePage() {
                         <div
                           key={exp.id}
                           onClick={() => handleOpenClaimDetails(exp.id)}
-                          className="bg-white border border-gray-200 rounded-xl overflow-hidden active:bg-gray-50 transition-colors shadow-sm cursor-pointer flex flex-col"
+                          className="bg-white border border-gray-200 rounded-xl p-3.5 space-y-3.5 active:bg-gray-50 transition-colors shadow-sm cursor-pointer"
                         >
-                          <div className="bg-slate-50 border-b border-gray-100 p-3 flex justify-between items-center">
-                            <span className="font-bold font-mono text-blue-700 text-xs uppercase">{exp.expense_code}</span>
+                          <div className="flex justify-between items-center pb-2.5 border-b border-gray-100">
+                            <span className="font-bold font-mono text-blue-600 text-xs uppercase">{exp.expense_code}</span>
                             <span className={`inline-flex items-center px-2 py-0.5 rounded border text-[8px] font-bold uppercase tracking-wider ${getStatusBadgeClass(exp.status)}`}>
                               {exp.status}
                             </span>
                           </div>
                           
-                          <div className="p-3 space-y-3">
-                            <div className="grid grid-cols-2 gap-2 text-[11px]">
-                              <div>
-                                <span className="text-gray-400 font-bold uppercase text-[9px] block">Date</span>
-                                <span className="text-gray-700 font-semibold">{exp.itinerary || exp.date}</span>
-                              </div>
-                              <div>
-                                <span className="text-gray-400 font-bold uppercase text-[9px] block">Travel Mode</span>
-                                <span className="text-gray-700 font-semibold">{exp.travel_mode || exp.category}</span>
-                              </div>
-                              <div>
-                                <span className="text-gray-400 font-bold uppercase text-[9px] block">Distance / Auto</span>
-                                <span className="text-gray-700 font-semibold">
-                                  {exp.total_km ? `${exp.total_km.toFixed(1)} KM` : "—"}
-                                  {exp.total_auto ? ` / ₹${exp.total_auto.toLocaleString()}` : ""}
-                                </span>
-                              </div>
-                              <div>
-                                <span className="text-gray-400 font-bold uppercase text-[9px] block">Total Amount</span>
-                                <span className="text-gray-900 font-extrabold text-xs">₹{exp.amount.toLocaleString()}</span>
-                              </div>
+                          <div className="grid grid-cols-2 gap-2 text-[11px] py-1">
+                            <div>
+                              <span className="text-gray-400 font-bold uppercase text-[9px] block">Date</span>
+                              <span className="text-gray-700 font-semibold">{exp.itinerary || exp.date}</span>
                             </div>
-                            
-                            {exp.description && (
-                              <div className="border-t border-gray-100 pt-2 text-[10px]">
-                                <span className="text-gray-400 font-bold uppercase text-[8px] block">Purpose</span>
-                                <p className="text-gray-600 font-semibold mt-0.5 truncate">{exp.description}</p>
-                              </div>
-                            )}
+                            <div>
+                              <span className="text-gray-400 font-bold uppercase text-[9px] block">Travel Mode</span>
+                              <span className="text-gray-700 font-semibold">{exp.travel_mode || exp.category}</span>
+                            </div>
+                            <div>
+                              <span className="text-gray-400 font-bold uppercase text-[9px] block">Distance / Auto</span>
+                              <span className="text-gray-700 font-semibold">
+                                {exp.total_km ? `${exp.total_km.toFixed(1)} KM` : "—"}
+                                {exp.total_auto ? ` / ₹${exp.total_auto.toLocaleString()}` : ""}
+                              </span>
+                            </div>
+                            <div>
+                              <span className="text-gray-400 font-bold uppercase text-[9px] block">Total Amount</span>
+                              <span className="text-gray-900 font-extrabold text-xs">₹{exp.amount.toLocaleString()}</span>
+                            </div>
                           </div>
+                          
+                          {exp.description && (
+                            <div className="border-t border-gray-100 pt-2.5 text-[10px]">
+                              <span className="text-gray-400 font-bold uppercase text-[8px] block">Purpose</span>
+                              <p className="text-gray-600 font-semibold mt-0.5 truncate">{exp.description}</p>
+                            </div>
+                          )}
                         </div>
                       ))}
                     </div>
@@ -971,48 +969,46 @@ export default function HomePage() {
                         <div
                           key={exp.id}
                           onClick={() => handleOpenClaimDetails(exp.id)}
-                          className="bg-white border border-gray-200 rounded-xl overflow-hidden active:bg-gray-50 transition-colors shadow-sm cursor-pointer flex flex-col"
+                          className="bg-white border border-gray-200 rounded-xl p-3.5 space-y-3.5 active:bg-gray-50 transition-colors shadow-sm cursor-pointer"
                         >
-                          <div className="bg-slate-50 border-b border-gray-100 p-3 flex justify-between items-center">
+                          <div className="flex justify-between items-center pb-2.5 border-b border-gray-100">
                             <div>
                               <p className="font-bold text-gray-800 text-xs leading-none">{exp.submitter_name}</p>
-                              <span className="text-[8px] font-mono font-bold uppercase text-blue-650 block mt-1">{exp.submitter_code}</span>
+                              <span className="text-[8px] font-mono font-bold uppercase text-blue-600 block mt-1">{exp.submitter_code}</span>
                             </div>
                             <span className={`inline-flex items-center px-2 py-0.5 rounded border text-[8px] font-bold uppercase tracking-wider ${getStatusBadgeClass(exp.status)}`}>
                               {exp.status}
                             </span>
                           </div>
                           
-                          <div className="p-3 space-y-3">
-                            <div className="grid grid-cols-2 gap-2 text-[11px]">
-                              <div>
-                                <span className="text-gray-400 font-bold uppercase text-[9px] block">Claim ID / Date</span>
-                                <span className="text-gray-700 font-semibold">{exp.expense_code} ({exp.date || exp.itinerary})</span>
-                              </div>
-                              <div>
-                                <span className="text-gray-400 font-bold uppercase text-[9px] block">Mode</span>
-                                <span className="text-gray-700 font-semibold">{exp.category || exp.travel_mode}</span>
-                              </div>
-                              <div>
-                                <span className="text-gray-400 font-bold uppercase text-[9px] block">Distance / Auto</span>
-                                <span className="text-gray-700 font-semibold">
-                                  {exp.total_km ? `${exp.total_km.toFixed(1)} KM` : "—"}
-                                  {exp.total_auto ? ` / ₹${exp.total_auto.toLocaleString()}` : ""}
-                                </span>
-                              </div>
-                              <div>
-                                <span className="text-gray-400 font-bold uppercase text-[9px] block">Amount</span>
-                                <span className="text-gray-900 font-extrabold text-xs">₹{exp.amount.toLocaleString()}</span>
-                              </div>
+                          <div className="grid grid-cols-2 gap-2 text-[11px] py-1">
+                            <div>
+                              <span className="text-gray-400 font-bold uppercase text-[9px] block">Claim ID / Date</span>
+                              <span className="text-gray-700 font-semibold">{exp.expense_code} ({exp.date || exp.itinerary})</span>
                             </div>
-                            
-                            {exp.purpose && (
-                              <div className="border-t border-gray-100 pt-2 text-[10px]">
-                                <span className="text-gray-400 font-bold uppercase text-[8px] block">Purpose</span>
-                                <p className="text-gray-600 font-semibold mt-0.5 truncate">{exp.purpose}</p>
-                              </div>
-                            )}
+                            <div>
+                              <span className="text-gray-400 font-bold uppercase text-[9px] block">Mode</span>
+                              <span className="text-gray-700 font-semibold">{exp.category || exp.travel_mode}</span>
+                            </div>
+                            <div>
+                              <span className="text-gray-400 font-bold uppercase text-[9px] block">Distance / Auto</span>
+                              <span className="text-gray-700 font-semibold">
+                                {exp.total_km ? `${exp.total_km.toFixed(1)} KM` : "—"}
+                                {exp.total_auto ? ` / ₹${exp.total_auto.toLocaleString()}` : ""}
+                              </span>
+                            </div>
+                            <div>
+                              <span className="text-gray-400 font-bold uppercase text-[9px] block">Amount</span>
+                              <span className="text-gray-900 font-extrabold text-xs">₹{exp.amount.toLocaleString()}</span>
+                            </div>
                           </div>
+                          
+                          {exp.purpose && (
+                            <div className="border-t border-gray-100 pt-2.5 text-[10px]">
+                              <span className="text-gray-400 font-bold uppercase text-[8px] block">Purpose</span>
+                              <p className="text-gray-600 font-semibold mt-0.5 truncate">{exp.purpose}</p>
+                            </div>
+                          )}
                         </div>
                       ))}
                     </div>
