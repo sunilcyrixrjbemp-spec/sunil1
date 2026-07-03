@@ -1284,8 +1284,8 @@ export default function HelpPage() {
                   </form>
                 </div>
               </div>
-            )}
-          </div>
+            )
+          )}
         </div>
 
       </div>
