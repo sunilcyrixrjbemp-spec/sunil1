@@ -2025,6 +2025,100 @@ async def get_expense_details(
     current_user: User = Depends(get_current_user)
 ):
     """Retrieves full details of a specific claim, including itineraries, attachments, and approvals."""
+    if expense_id.startswith("-"):
+        try:
+            limit_id = -int(expense_id)
+        except ValueError:
+            raise HTTPException(status_code=400, detail="Invalid expense ID format.")
+            
+        from app.models.limit_approval_request import LimitApprovalRequest
+        pl = db.query(LimitApprovalRequest).filter(LimitApprovalRequest.id == limit_id).first()
+        if not pl:
+            raise HTTPException(status_code=404, detail="Limit request not found.")
+            
+        submitter = db.query(User).filter(User.user_id == pl.user_id).first()
+        
+        # Permissions check: Submit user or assigned approver or Admin
+        if pl.user_id != current_user.user_id and current_user.user_id != pl.manager_id and current_user.role != "Admin":
+            raise HTTPException(status_code=403, detail="Access denied to view this request.")
+            
+        # Mock details response
+        return {
+            "id": -pl.id,
+            "expense_code": f"LIMIT-{pl.request_type}-{pl.id}",
+            "user_id": submitter.id if submitter else 0,
+            "submitter_name": submitter.name if submitter else f"Employee {pl.user_id}",
+            "submitter_code": pl.user_id,
+            "month": pl.for_month,
+            "year": int(pl.for_month.split("-")[0]) if "-" in pl.for_month else datetime.now().year,
+            "amount": pl.requested_value,
+            "status": pl.status,
+            "category": "Limit Request",
+            "date": pl.for_month,
+            "purpose": f"Request additional {pl.requested_value:.1f} {pl.request_type} limit extension for month {pl.for_month}.",
+            "original_amount": pl.requested_value,
+            "original_da_amount": 0.0,
+            "original_hotel_amount": 0.0,
+            "original_other_expense_amount": 0.0,
+            "original_local_purchase_amount": 0.0,
+            "attachments": [],
+            "attachments_detailed": [],
+            "itineraries": [
+                {
+                    "leg": 1,
+                    "from_district": submitter.district if submitter else "N/A",
+                    "to_district": "N/A",
+                    "from": "N/A",
+                    "to": "N/A",
+                    "mode": pl.request_type,
+                    "km": pl.requested_value if pl.request_type == "KM" else 0.0,
+                    "amount": pl.requested_value if pl.request_type == "AUTO" else 0.0,
+                    "sub_mode": "",
+                    "sub_amount": 0.0,
+                    "da": 0.0,
+                    "hotel": 0.0,
+                    "local_purchase": 0.0,
+                    "oth_desc": "",
+                    "oth_amount": 0.0,
+                    "ws_assigned": 0,
+                    "calls_assigned": 0,
+                    "ws_closed": 0,
+                    "calls_completed": 0,
+                    "ws_pms": 0,
+                    "pms_count": 0,
+                    "ws_asset": 0,
+                    "asset_tagging": 0,
+                    "calibration_count": 0,
+                    "mobilise_count": 0,
+                    "mobilise_asset_count": 0,
+                    "visit_purpose": "Limit Extension",
+                    "activity_details": "",
+                    "original_km": pl.requested_value if pl.request_type == "KM" else 0.0,
+                    "original_amount": pl.requested_value if pl.request_type == "AUTO" else 0.0,
+                    "original_sub_amount": 0.0,
+                    "original_da": 0.0,
+                    "original_hotel": 0.0,
+                    "original_oth_amount": 0.0,
+                    "original_local_purchase": 0.0
+                }
+            ],
+            "created_at": pl.created_at,
+            "updated_at": pl.updated_at,
+            "approvals": [
+                {
+                    "id": -pl.id,
+                    "level_number": 1,
+                    "approver_name": current_user.name,
+                    "approver_code": current_user.user_id,
+                    "approver_role": current_user.role,
+                    "status": pl.status.lower(),
+                    "comments": "",
+                    "updated_at": pl.updated_at
+                }
+            ],
+            "edit_history": []
+        }
+
     # Look up expense by PK ID or generated expense_code
     query = db.query(Expense)
     if expense_id.isdigit():

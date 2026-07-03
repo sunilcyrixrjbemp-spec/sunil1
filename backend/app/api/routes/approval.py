@@ -119,7 +119,38 @@ async def get_pending_approvals(
         Approval.status == "pending"
     ).all()
     
-    if not approvals:
+    result = []
+
+    # 1. Fetch pending limit requests assigned to this manager
+    from app.models.limit_approval_request import LimitApprovalRequest
+    pending_limits = db.query(LimitApprovalRequest).filter(
+        LimitApprovalRequest.manager_id == current_user.user_id,
+        LimitApprovalRequest.status == "Pending"
+    ).all()
+    
+    for pl in pending_limits:
+        submitter = db.query(User).filter(User.user_id == pl.user_id).first()
+        mock_app = Approval(
+            id=-pl.id,
+            expense_id=-pl.id,
+            approver_id=current_user.id,
+            level_number=1,
+            status="pending",
+            comments="",
+            created_at=pl.created_at,
+            updated_at=pl.updated_at
+        )
+        mock_app.expense_code = f"LIMIT-{pl.request_type}-{pl.id}"
+        mock_app.employeeName = submitter.name if submitter else f"Employee {pl.user_id}"
+        mock_app.eCode = pl.user_id
+        mock_app.purpose = f"Request additional {pl.requested_value:.1f} {pl.request_type} limit for month {pl.for_month}"
+        mock_app.category = "Limit Request"
+        mock_app.amount = pl.requested_value
+        mock_app.date = pl.for_month
+        mock_app.itinerariesCount = 0
+        result.append(mock_app)
+        
+    if not approvals and not pending_limits:
         cache.set(cache_key, [])
         return []
         
@@ -141,7 +172,6 @@ async def get_pending_approvals(
     ).all()
     iti_counts_by_code = {code: count for code, count in iti_counts}
     
-    result = []
     for app in approvals:
         expense = expenses_by_id.get(app.expense_id)
         if expense:
@@ -170,7 +200,41 @@ async def approve_expense(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user)
 ):
-    """Approve the expense claim at the current level. Saves itinerary leg edits, recalculates totals, and updates approval status."""
+    if expense_id < 0:
+        limit_id = -expense_id
+        from app.models.limit_approval_request import LimitApprovalRequest
+        pl = db.query(LimitApprovalRequest).filter(LimitApprovalRequest.id == limit_id).first()
+        if not pl:
+            raise HTTPException(status_code=404, detail="Limit approval request not found.")
+        
+        if pl.manager_id != current_user.user_id and current_user.role != "Admin":
+            raise HTTPException(status_code=403, detail="Access denied to approve this request.")
+            
+        pl.status = "Approved"
+        db.commit()
+        
+        # Clear the caches
+        from app.utils import cache
+        cache.clear_user_and_managers_cache(db, pl.user_id)
+        
+        # Create database notification for the requester
+        try:
+            from app.utils.db_notifications import create_notification
+            create_notification(
+                db=db,
+                user_id=pl.user_id,
+                title=f"Limit Request {pl.request_type} Approved",
+                body=f"Your request for additional {pl.requested_value:.1f} {pl.request_type} has been approved by your manager.",
+                category="limit_approval"
+            )
+        except Exception as e:
+            logger.warning(f"Failed to create approval notification: {str(e)}")
+            
+        return {
+            "status": "success",
+            "message": "Limit request approved successfully."
+        }
+
     # Find the pending approval step for this approver
     active_approval = db.query(Approval).filter(
         Approval.expense_id == expense_id,
@@ -282,6 +346,41 @@ async def reject_expense(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user)
 ):
+    if expense_id < 0:
+        limit_id = -expense_id
+        from app.models.limit_approval_request import LimitApprovalRequest
+        pl = db.query(LimitApprovalRequest).filter(LimitApprovalRequest.id == limit_id).first()
+        if not pl:
+            raise HTTPException(status_code=404, detail="Limit approval request not found.")
+        
+        if pl.manager_id != current_user.user_id and current_user.role != "Admin":
+            raise HTTPException(status_code=403, detail="Access denied to reject this request.")
+            
+        pl.status = "Rejected"
+        db.commit()
+        
+        # Clear the caches
+        from app.utils import cache
+        cache.clear_user_and_managers_cache(db, pl.user_id)
+        
+        # Create database notification for the requester
+        try:
+            from app.utils.db_notifications import create_notification
+            create_notification(
+                db=db,
+                user_id=pl.user_id,
+                title=f"Limit Request {pl.request_type} Rejected",
+                body=f"Your request for additional {pl.requested_value:.1f} {pl.request_type} has been rejected by your manager.",
+                category="limit_rejection"
+            )
+        except Exception as e:
+            logger.warning(f"Failed to create rejection notification: {str(e)}")
+            
+        return {
+            "status": "success",
+            "message": "Limit request rejected successfully."
+        }
+
     """Reject the expense claim. Remarks/Comments are strictly mandatory."""
     if not request.comments or not request.comments.strip():
         raise HTTPException(
