@@ -383,11 +383,11 @@ export default function DashboardLayout() {
                 title={isSidebarCollapsed ? item.name : undefined}
                 className={`flex items-center gap-3 px-3 py-2.5 text-xs font-semibold uppercase tracking-wider transition-all duration-150 border-l-4 group ${
                   isActive
-                    ? "bg-[#007bff] text-white font-bold border-l-[#ffc107] shadow-sm"
-                    : "border-l-transparent text-[#c2c7d0] hover:bg-white/5 hover:text-white"
+                    ? "bg-gradient-to-r from-blue-600 to-emerald-500 text-white font-bold border-l-emerald-400 shadow-sm"
+                    : "border-l-transparent text-[#c2c7d0] hover:bg-emerald-950/30 hover:text-emerald-300"
                 }`}
               >
-                <div className={`${isActive ? "text-white" : "text-[#c2c7d0] group-hover:text-white"} shrink-0`}>
+                <div className={`${isActive ? "text-white" : "text-[#c2c7d0] group-hover:text-emerald-300"} shrink-0`}>
                   <Icon className="w-4 h-4" />
                 </div>
                 {!isSidebarCollapsed && <span>{item.name}</span>}
@@ -549,7 +549,9 @@ export default function DashboardLayout() {
           to="/home"
           onMouseEnter={() => preloadRoute("/home")}
           className={`flex flex-col items-center justify-center w-16 h-11 rounded-xl transition-all ${
-            currentActiveItem?.id === "home" ? "bg-blue-50 text-blue-600 font-extrabold shadow-xs border border-blue-100" : "text-gray-500 hover:text-gray-800"
+            currentActiveItem?.id === "home" 
+              ? "bg-gradient-to-br from-blue-600 to-emerald-500 text-white font-extrabold shadow-sm border border-teal-650" 
+              : "text-gray-500 hover:bg-emerald-50 hover:text-emerald-700"
           }`}
         >
           <Home className="w-5 h-5" />
@@ -562,7 +564,9 @@ export default function DashboardLayout() {
             to="/submit-expense"
             onMouseEnter={() => preloadRoute("/submit-expense")}
             className={`flex flex-col items-center justify-center w-16 h-11 rounded-xl transition-all ${
-              currentActiveItem?.id === "expense" ? "bg-blue-50 text-blue-600 font-extrabold shadow-xs border border-blue-100" : "text-gray-500 hover:text-gray-800"
+              currentActiveItem?.id === "expense" 
+                ? "bg-gradient-to-br from-blue-600 to-emerald-500 text-white font-extrabold shadow-sm border border-teal-655" 
+                : "text-gray-500 hover:bg-emerald-50 hover:text-emerald-700"
             }`}
           >
             <Plus className="w-5 h-5" />
@@ -575,7 +579,9 @@ export default function DashboardLayout() {
           to="/profile"
           onMouseEnter={() => preloadRoute("/profile")}
           className={`flex flex-col items-center justify-center w-16 h-11 rounded-xl transition-all ${
-            currentActiveItem?.id === "profile" ? "bg-blue-50 text-blue-600 font-extrabold shadow-xs border border-blue-100" : "text-gray-500 hover:text-gray-800"
+            currentActiveItem?.id === "profile" 
+              ? "bg-gradient-to-br from-blue-600 to-emerald-500 text-white font-extrabold shadow-sm border border-teal-660" 
+              : "text-gray-500 hover:bg-emerald-50 hover:text-emerald-700"
           }`}
         >
           <User className="w-5 h-5" />
@@ -586,7 +592,9 @@ export default function DashboardLayout() {
         <button
           onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
           className={`flex flex-col items-center justify-center w-16 h-11 rounded-xl transition-all border-0 bg-transparent cursor-pointer ${
-            isMobileMenuOpen ? "bg-blue-50 text-blue-600 font-extrabold shadow-xs border border-blue-100" : "text-gray-500 hover:text-gray-800"
+            isMobileMenuOpen 
+              ? "bg-gradient-to-br from-blue-600 to-emerald-500 text-white font-extrabold shadow-sm border border-teal-665" 
+              : "text-gray-500 hover:bg-emerald-50 hover:text-emerald-700"
           }`}
         >
           <MenuGridIcon />
@@ -653,18 +661,18 @@ export default function DashboardLayout() {
                     onClick={() => setIsMobileMenuOpen(false)}
                     className={`flex flex-col items-center justify-center p-3 rounded-lg border transition-all ${
                       isActive 
-                        ? "bg-[#0f172a] border-[#0f172a] text-white font-extrabold" 
+                        ? "bg-gradient-to-br from-blue-600 to-emerald-500 border-teal-650 text-white font-extrabold shadow-md" 
                         : isAnalysis
-                          ? "bg-emerald-50 border-emerald-200 hover:bg-emerald-100 text-emerald-800 shadow-xs"
-                          : "bg-white border-gray-200 hover:bg-gray-50 text-gray-700 shadow-sm"
+                          ? "bg-emerald-50 border-emerald-250 hover:bg-emerald-100/70 text-emerald-800 shadow-xs"
+                          : "bg-white border-gray-200 hover:bg-emerald-50 hover:text-emerald-700 text-gray-700 shadow-sm"
                     }`}
                   >
                     <div className={`p-2.5 rounded-full ${
                       isActive 
-                        ? "bg-white text-[#0f172a]" 
+                        ? "bg-white/20 text-white" 
                         : isAnalysis
                           ? "bg-emerald-600 text-white"
-                          : "bg-gray-50 text-gray-505 border border-gray-100 shadow-inner"
+                          : "bg-gray-50 text-gray-500 border border-gray-100 shadow-inner"
                     }`}>
                       <Icon className="w-5 h-5" />
                     </div>

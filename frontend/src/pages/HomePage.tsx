@@ -717,10 +717,10 @@ export default function HomePage() {
             <div className="border-b border-gray-200 bg-slate-100 flex items-center justify-start">
               <button
                 onClick={() => handleTabChange("my-claims")}
-                className={`py-3 px-5 font-black text-xs uppercase tracking-wider border-b-4 transition-all flex items-center gap-1.5 cursor-pointer whitespace-nowrap ${
+                className={`py-3 px-5 font-black text-xs uppercase tracking-wider transition-all flex items-center gap-1.5 cursor-pointer whitespace-nowrap ${
                   activeTab === "my-claims"
-                    ? "border-b-blue-600 text-blue-600 bg-white"
-                    : "border-b-transparent text-gray-500 hover:text-gray-800 hover:bg-slate-200/50"
+                    ? "bg-gradient-to-r from-blue-600 to-emerald-500 text-white font-extrabold shadow-sm"
+                    : "text-gray-500 bg-slate-100 hover:text-emerald-700 hover:bg-emerald-50/70"
                 }`}
               >
                 <Layers className="w-3.5 h-3.5" />
@@ -730,10 +730,10 @@ export default function HomePage() {
               {isReviewerRole && (
                 <button
                   onClick={() => handleTabChange("team-claims")}
-                  className={`py-3 px-5 font-black text-xs uppercase tracking-wider border-b-4 transition-all flex items-center gap-1.5 cursor-pointer whitespace-nowrap ${
+                  className={`py-3 px-5 font-black text-xs uppercase tracking-wider transition-all flex items-center gap-1.5 cursor-pointer whitespace-nowrap ${
                     activeTab === "team-claims"
-                      ? "border-b-emerald-600 text-emerald-600 bg-white"
-                      : "border-b-transparent text-gray-500 hover:text-gray-800 hover:bg-slate-200/50"
+                      ? "bg-gradient-to-r from-blue-600 to-emerald-500 text-white font-extrabold shadow-sm"
+                      : "text-gray-500 bg-slate-100 hover:text-emerald-700 hover:bg-emerald-50/70"
                   }`}
                 >
                   <Users className="w-3.5 h-3.5" />
@@ -760,11 +760,8 @@ export default function HomePage() {
                       onClick={() => setHomeStatusFilter(status)}
                       className={`px-2 py-0.5 rounded text-[9px] font-black uppercase tracking-wider transition-all cursor-pointer border whitespace-nowrap ${
                         homeStatusFilter === status
-                          ? status === "all" ? "bg-slate-800 text-white border-slate-800"
-                            : status === "approved" ? "bg-emerald-600 text-white border-emerald-600"
-                            : status === "pending" ? "bg-amber-500 text-white border-amber-500"
-                            : "bg-rose-600 text-white border-rose-600"
-                          : "bg-white text-gray-600 border-gray-300 hover:bg-gray-50"
+                          ? "bg-gradient-to-r from-blue-600 to-emerald-500 text-white border-teal-600 font-extrabold shadow-sm"
+                          : "bg-white text-gray-600 border-gray-300 hover:bg-emerald-50 hover:text-emerald-700"
                       }`}
                     >
                       {status === "all" ? "All" : status}

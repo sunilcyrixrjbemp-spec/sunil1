@@ -3577,7 +3577,7 @@ export default function ExpensePage() {
         </div>
 
         {/* Claims Totals & Submissions bar (Full width under the grid) */}
-        <div className="bg-white border border-gray-250 border-t-4 border-t-green-600 rounded shadow-sm p-4 flex flex-col md:flex-row md:items-center md:justify-between gap-4 text-xs font-semibold mt-6 w-full">
+        <div className="bg-white border border-gray-300 border-t-4 border-t-green-600 rounded shadow-sm p-4 flex flex-col md:flex-row md:items-center md:justify-between gap-4 text-xs font-semibold mt-6 w-full">
           <div className="flex flex-wrap items-center gap-4 md:gap-6 text-[11px]">
             <div className="flex items-center gap-1.5 border-r border-gray-200 pr-4 md:pr-6">
               <TrendingUp className="w-4 h-4 text-green-600" />
@@ -3673,7 +3673,7 @@ export default function ExpensePage() {
         </div>
 
         {/* Visit Activities Metrics Summary Panel */}
-        <div className="bg-slate-50 border border-gray-250 border-t-4 border-t-blue-600 rounded shadow-sm p-4 flex flex-wrap items-center gap-6 mt-4 w-full text-xs font-semibold">
+        <div className="bg-slate-50 border border-gray-300 border-t-4 border-t-blue-600 rounded shadow-sm p-4 flex flex-wrap items-center gap-6 mt-4 w-full text-xs font-semibold">
           <div className="flex items-center gap-1.5 border-r border-gray-200 pr-4 md:pr-6">
             <Bookmark className="w-4 h-4 text-blue-600" />
             <span className="text-xs font-extrabold uppercase text-gray-700 tracking-wide">Tasks Summary</span>
