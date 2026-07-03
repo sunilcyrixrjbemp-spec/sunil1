@@ -2354,9 +2354,9 @@ async def get_expense_details(
                 {
                     "id": -pl.id,
                     "level_number": 1,
-                    "approver_name": current_user.name,
-                    "approver_code": current_user.user_id,
-                    "approver_role": current_user.role,
+                    "approver_name": db.query(User).filter(User.user_id == pl.manager_id).first().name if db.query(User).filter(User.user_id == pl.manager_id).first() else pl.manager_id,
+                    "approver_code": pl.manager_id,
+                    "approver_role": db.query(User).filter(User.user_id == pl.manager_id).first().role if db.query(User).filter(User.user_id == pl.manager_id).first() else "Manager",
                     "status": pl.status.lower(),
                     "comments": "",
                     "updated_at": pl.updated_at

@@ -294,8 +294,8 @@ export default function ApprovalPage() {
 
       if (selectedApproval.category === "Limit Request") {
         const approvedVal = selectedApproval.expense_code.includes("KM")
-          ? (editedLegs[0]?.km || expenseDetails?.amount || 0)
-          : (editedLegs[0]?.travel_amount || expenseDetails?.amount || 0);
+          ? (editedLegs[0]?.km ?? expenseDetails?.amount ?? 0)
+          : (editedLegs[0]?.travel_amount ?? expenseDetails?.amount ?? 0);
 
         if (type === "approve") {
           await approvalService.approveExpense(selectedApproval.expense_id, comments.trim() || "Approved limit extension", undefined, approvedVal);
@@ -845,8 +845,57 @@ export default function ApprovalPage() {
                     </div>
                   )}
 
+                  {selectedApproval.category === "Limit Request" && (
+                    <div className="p-4 bg-amber-50 border border-amber-200 rounded-lg text-left space-y-3">
+                      <h4 className="text-xs font-extrabold uppercase text-amber-800 tracking-wider">Approved Limit Adjustment</h4>
+                      <div className="flex items-center gap-4">
+                        <div className="flex-1">
+                          <label className="text-[10px] text-gray-500 font-extrabold uppercase block mb-1">
+                            Approved {selectedApproval.expense_code.includes("KM") ? "KM Limit" : "AUTO Amount"}
+                          </label>
+                          <div className="relative rounded-md shadow-sm max-w-xs">
+                            {selectedApproval.expense_code.includes("AUTO") && (
+                              <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                                <span className="text-gray-500 sm:text-xs">₹</span>
+                              </div>
+                            )}
+                            <input
+                              type="number"
+                              className={`input-lte w-full font-mono font-bold text-sm text-gray-800 ${selectedApproval.expense_code.includes("AUTO") ? "pl-7" : ""}`}
+                              value={selectedApproval.expense_code.includes("KM") ? (editedLegs[0]?.km ?? expenseDetails?.amount ?? 0) : (editedLegs[0]?.travel_amount ?? expenseDetails?.amount ?? 0)}
+                              onChange={(e) => {
+                                const val = parseFloat(e.target.value);
+                                const parsedVal = isNaN(val) ? 0 : val;
+                                setEditedLegs(prev => {
+                                  const updated = [...prev];
+                                  if (updated[0]) {
+                                    if (selectedApproval.expense_code.includes("KM")) {
+                                      updated[0].km = parsedVal;
+                                    } else {
+                                      updated[0].travel_amount = parsedVal;
+                                      updated[0].amount = parsedVal;
+                                    }
+                                  }
+                                  return updated;
+                                });
+                              }}
+                            />
+                            {selectedApproval.expense_code.includes("KM") && (
+                              <div className="absolute inset-y-0 right-0 pr-3 flex items-center pointer-events-none">
+                                <span className="text-gray-500 sm:text-xs">KM</span>
+                              </div>
+                            )}
+                          </div>
+                          <span className="text-[9px] text-gray-400 font-medium mt-1 block">
+                            Requested value was {expenseDetails?.amount} {selectedApproval.expense_code.includes("KM") ? "KM" : "₹"}. You can reduce or adjust it before approving.
+                          </span>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+
                   {/* EDITABLE ITINERARY LEGS */}
-                  {true && (
+                  {selectedApproval.category !== "Limit Request" && (
                     <div className="space-y-3">
                     <div className="flex items-center justify-between">
                       <h4 className="text-xs font-extrabold uppercase text-gray-700 tracking-wider">Itinerary legs & Claimed Amounts</h4>
