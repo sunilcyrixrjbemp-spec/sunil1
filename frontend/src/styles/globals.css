@@ -234,26 +234,26 @@ svg, path, g, sector, .recharts-pie-sector, .recharts-sector, .recharts-pie, .re
   -webkit-tap-highlight-color: transparent !important;
 }/* ================= PREMIUM ANDROID MATERIAL 3 MOBILE THEME OVERRIDES ================= */
 @media (max-width: 1023px) {
-  /* 1. Global Page spacing & modern Material 3 Slate-200 gray background */
+  /* 1. Global Page spacing & modern Material 3 Slate-300 gray background (Eye Comfort) */
   body, 
   #root, 
   .min-h-screen {
-    background-color: #e2e8f0 !important; /* Premium Slate-200 gray for high card contrast */
+    background-color: #cbd5e1 !important; /* Deeper Slate-300 gray background to eliminate screen glare */
     font-family: 'Plus Jakarta Sans', sans-serif !important;
   }
 
   main {
     padding: 0.375rem !important; /* Compact edge padding to maximize screen width usage */
     padding-bottom: 5.5rem !important;
-    background-color: #e2e8f0 !important;
+    background-color: #cbd5e1 !important;
   }
 
-  /* 2. Top Navigation Header (Premium Android-Style Blue Action Bar) */
+  /* 2. Top Navigation Header (Premium Android-Style Deep Slate Action Bar) */
   header.h-14 {
     height: 56px !important;
-    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.06) !important;
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.08) !important;
     border-bottom: none !important;
-    background: linear-gradient(135deg, #1e3a8a 0%, #2563eb 100%) !important; /* Beautiful blue brand gradient */
+    background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%) !important; /* Premium Slate-900/800 Indigo gradient */
     padding-left: 0.75rem !important;
     padding-right: 0.75rem !important;
     display: flex !important;
@@ -261,7 +261,7 @@ svg, path, g, sector, .recharts-pie-sector, .recharts-sector, .recharts-pie, .re
     justify-content: space-between !important;
   }
 
-  /* Enforce white text and icons in blue header */
+  /* Enforce white text and icons in deep slate header */
   header.h-14 span,
   header.h-14 button,
   header.h-14 svg,
@@ -276,7 +276,22 @@ svg, path, g, sector, .recharts-pie-sector, .recharts-sector, .recharts-pie, .re
     border-color: rgba(255, 255, 255, 0.25) !important;
   }
 
-  /* 3. Material 3 Cards (Using full screen space, borderless, clean layout) */
+  /* 2b. Align mobile navigation menu header design with the action bar */
+  .fixed.inset-0.bg-\[\#f4f6f9\].z-\[999\] .h-14.px-4.bg-white.border-b.border-gray-200 {
+    height: 56px !important;
+    background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%) !important;
+    border-bottom: none !important;
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.08) !important;
+  }
+
+  .fixed.inset-0.bg-\[\#f4f6f9\].z-\[999\] .h-14.px-4.bg-white.border-b.border-gray-200 span,
+  .fixed.inset-0.bg-\[\#f4f6f9\].z-\[999\] .h-14.px-4.bg-white.border-b.border-gray-200 button,
+  .fixed.inset-0.bg-\[\#f4f6f9\].z-\[999\] .h-14.px-4.bg-white.border-b.border-gray-200 svg {
+    color: #ffffff !important;
+    fill: #ffffff !important;
+  }
+
+  /* 3. Material 3 Cards (Using soft Slate-100 gray instead of pure white to avoid eye strain) */
   .card-lte, 
   .card-lte-primary, 
   .card-lte-success, 
@@ -285,11 +300,11 @@ svg, path, g, sector, .recharts-pie-sector, .recharts-sector, .recharts-pie, .re
   .card-lte-info, 
   .card-lte-gold {
     border-style: none !important;
-    background-color: #ffffff !important;
+    background-color: #f1f5f9 !important; /* Glare-free Slate-100 card background */
     padding: 0.5rem !important; /* Compact padding */
     margin-bottom: 0.5rem !important;
     border-radius: 12px !important;
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.015) !important;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.02) !important;
     border: 1px solid #cbd5e1 !important;
   }
 
@@ -311,7 +326,7 @@ svg, path, g, sector, .recharts-pie-sector, .recharts-sector, .recharts-pie, .re
   .bg-white.border.border-gray-200.rounded.shadow-sm.p-5,
   .bg-white.border.border-gray-250.border-t-4.border-t-green-600.rounded.shadow-sm,
   .bg-slate-50.border.border-gray-250.border-t-4.border-t-blue-600.rounded.shadow-sm {
-    background-color: #ffffff !important;
+    background-color: #f1f5f9 !important; /* Soft Slate-100 card bg */
     border: 1px solid #cbd5e1 !important;
     border-radius: 12px !important;
     padding: 0.5rem !important;
@@ -335,7 +350,7 @@ svg, path, g, sector, .recharts-pie-sector, .recharts-sector, .recharts-pie, .re
     border-top: 4px solid #2563eb !important;
   }
 
-  /* Make outer list wrappers transparent on mobile so list items stand out on the Slate-200 background */
+  /* Make outer list wrappers transparent on mobile so list items stand out on the Slate-300 background */
   .bg-white.border.border-gray-200.rounded.shadow-sm.overflow-hidden.flex.flex-col,
   .bg-white.border.border-gray-200.rounded.shadow-sm.overflow-hidden,
   .bg-white.border.border-gray-200.rounded.shadow-sm.p-4,
@@ -368,7 +383,7 @@ svg, path, g, sector, .recharts-pie-sector, .recharts-sector, .recharts-pie, .re
     font-size: 13px !important;
     border-radius: 8px !important;
     border: 1px solid #cbd5e1 !important; /* Clean neutral border */
-    background-color: #ffffff !important; /* Pure white background */
+    background-color: #ffffff !important; /* Pure white background for editing clarity */
     font-weight: 500 !important;
     color: #0f172a !important;
     transition: all 0.15s ease !important;
@@ -492,7 +507,7 @@ svg, path, g, sector, .recharts-pie-sector, .recharts-sector, .recharts-pie, .re
   }
 
   .flex.border-b button.border-blue-600 {
-    background-color: #ffffff !important;
+    background-color: #f1f5f9 !important; /* Soft gray background for active tab button */
     color: #2563eb !important;
     box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05) !important;
     font-weight: 800 !important;
@@ -516,7 +531,7 @@ svg, path, g, sector, .recharts-pie-sector, .recharts-sector, .recharts-pie, .re
 
   .info-box-lte {
     border-style: none !important;
-    background-color: #ffffff !important;
+    background-color: #f1f5f9 !important; /* Glare-free Slate-100 widget */
     padding: 0.5rem !important;
     display: flex !important;
     align-items: center !important;
@@ -638,8 +653,8 @@ svg, path, g, sector, .recharts-pie-sector, .recharts-sector, .recharts-pie, .re
 
   .modal-lte-header, 
   .px-4.py-3.bg-gray-100 {
-    background-color: #ffffff !important;
-    border-bottom: 1px solid #f1f5f9 !important;
+    background-color: #f1f5f9 !important; /* matches gray card style */
+    border-bottom: 1px solid #cbd5e1 !important;
     padding: 0.875rem 1rem !important;
     display: flex !important;
     align-items: center !important;
@@ -661,9 +676,9 @@ svg, path, g, sector, .recharts-pie-sector, .recharts-sector, .recharts-pie, .re
 
   .modal-lte-footer,
   .pt-3.border-t.border-gray-200 {
-    border-top: 1px solid #f1f5f9 !important;
+    border-top: 1px solid #cbd5e1 !important;
     padding: 0.75rem 1rem !important;
-    background-color: #f8fafc !important;
+    background-color: #e2e8f0 !important;
     display: flex !important;
     align-items: center !important;
     justify-content: flex-end !important;
@@ -675,20 +690,20 @@ svg, path, g, sector, .recharts-pie-sector, .recharts-sector, .recharts-pie, .re
   /* 10. List Item Rows */
   .mobile-card-list-item,
   .block.md\:hidden .bg-white.border.border-gray-200.rounded-lg {
-    background-color: #ffffff !important;
+    background-color: #f1f5f9 !important; /* Soft gray card bg */
     padding: 0.875rem !important;
     margin-bottom: 0.5rem !important;
     display: flex !important;
     flex-direction: column !important;
     justify-content: space-between !important;
     border-radius: 12px !important;
-    border: 1px solid #e2e8f0 !important;
+    border: 1px solid #cbd5e1 !important;
     box-shadow: 0 1px 3px rgba(0, 0, 0, 0.02) !important;
     transition: background-color 0.15s ease !important;
   }
 
   .block.md\:hidden .bg-white.border.border-gray-200.rounded-lg:active {
-    background-color: #f1f5f9 !important;
+    background-color: #cbd5e1 !important;
   }
 
   .overflow-x-auto.p-4 {
@@ -745,7 +760,7 @@ svg, path, g, sector, .recharts-pie-sector, .recharts-sector, .recharts-pie, .re
   /* 11. Android Material 3 Bottom Nav Bar styling overrides */
   nav.lg\:hidden {
     height: 56px !important; /* standard bottom nav height */
-    border-top: 1px solid #f1f5f9 !important;
+    border-top: 1px solid #cbd5e1 !important;
     box-shadow: 0 -2px 10px rgba(0, 0, 0, 0.02) !important;
     background-color: #ffffff !important;
   }
@@ -766,7 +781,7 @@ svg, path, g, sector, .recharts-pie-sector, .recharts-sector, .recharts-pie, .re
   nav.lg\:hidden a.text-blue-600 svg,
   nav.lg\:hidden button.text-blue-600 svg {
     color: #2563eb !important;
-    background-color: #f1f5f9 !important;
+    background-color: #cbd5e1 !important;
     border-radius: 12px !important;
     padding: 3px 10px !important;
     box-sizing: content-box !important;
@@ -776,7 +791,7 @@ svg, path, g, sector, .recharts-pie-sector, .recharts-sector, .recharts-pie, .re
     font-size: 9px !important;
     font-weight: 700 !important;
     margin-top: 2px !important;
-    color: #64748b !important;
+    color: #475569 !important;
   }
 
   nav.lg\:hidden a.text-blue-600 span,
