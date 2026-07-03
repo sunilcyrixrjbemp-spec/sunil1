@@ -816,7 +816,8 @@ export default function ApprovalPage() {
                   )}
 
                   {/* EDITABLE ITINERARY LEGS */}
-                  <div className="space-y-3">
+                  {selectedApproval.category !== "Limit Request" && (
+                    <div className="space-y-3">
                     <div className="flex items-center justify-between">
                       <h4 className="text-xs font-extrabold uppercase text-gray-700 tracking-wider">Itinerary legs & Claimed Amounts</h4>
                       <div className="flex items-center gap-2">
@@ -1202,6 +1203,7 @@ export default function ApprovalPage() {
                       })}
                     </div>
                   </div>
+                  )}
 
                   {/* ATTACHMENTS VIEW LIST WITH LIGHTBOX */}
                   {expenseDetails.attachments && expenseDetails.attachments.length > 0 && (
