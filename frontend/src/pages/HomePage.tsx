@@ -1128,7 +1128,7 @@ export default function HomePage() {
                   </div>
 
                   {/* Legs Table */}
-                  {claimDetails.category !== "Limit Request" && claimDetails.itineraries && claimDetails.itineraries.length > 0 && (
+                  {claimDetails.itineraries && claimDetails.itineraries.length > 0 && (
                     <div className="border border-gray-200 rounded overflow-hidden">
                       <div className="px-3 py-2 bg-gray-50 border-b border-gray-200">
                         <h4 className="text-[10px] font-bold uppercase text-gray-600 tracking-wider">Visit Legs Details</h4>

@@ -292,12 +292,26 @@ export default function ApprovalPage() {
         local_purchase: leg.local_purchase
       }));
 
-      if (type === "approve") {
-        await approvalService.approveExpense(selectedApproval.expense_id, comments.trim(), itineraryEdits);
-        toast.success(`Claim ${selectedApproval.expense_code} approved!`);
+      if (selectedApproval.category === "Limit Request") {
+        const approvedVal = selectedApproval.expense_code.includes("KM")
+          ? (editedLegs[0]?.km || expenseDetails?.amount || 0)
+          : (editedLegs[0]?.travel_amount || expenseDetails?.amount || 0);
+
+        if (type === "approve") {
+          await approvalService.approveExpense(selectedApproval.expense_id, comments.trim() || "Approved limit extension", undefined, approvedVal);
+          toast.success("Limit request approved successfully!");
+        } else {
+          await approvalService.rejectExpense(selectedApproval.expense_id, comments.trim() || "Limit extension rejected");
+          toast.error("Limit request rejected.");
+        }
       } else {
-        await approvalService.rejectExpense(selectedApproval.expense_id, comments.trim(), itineraryEdits);
-        toast.error(`Claim ${selectedApproval.expense_code} rejected.`);
+        if (type === "approve") {
+          await approvalService.approveExpense(selectedApproval.expense_id, comments.trim(), itineraryEdits);
+          toast.success(`Claim ${selectedApproval.expense_code} approved!`);
+        } else {
+          await approvalService.rejectExpense(selectedApproval.expense_id, comments.trim(), itineraryEdits);
+          toast.error(`Claim ${selectedApproval.expense_code} rejected.`);
+        }
       }
 
       setShowDetailModal(false);
@@ -832,7 +846,7 @@ export default function ApprovalPage() {
                   )}
 
                   {/* EDITABLE ITINERARY LEGS */}
-                  {selectedApproval.category !== "Limit Request" && (
+                  {true && (
                     <div className="space-y-3">
                     <div className="flex items-center justify-between">
                       <h4 className="text-xs font-extrabold uppercase text-gray-700 tracking-wider">Itinerary legs & Claimed Amounts</h4>
@@ -1351,7 +1365,19 @@ export default function ApprovalPage() {
                             : `₹${(Number(expenseDetails?.amount) || 0).toLocaleString()}`}
                         </span>
                       </div>
-                      {selectedApproval.category !== "Limit Request" && (
+                      {selectedApproval.category === "Limit Request" ? (
+                        <>
+                          <ChevronRight className="w-5 h-5 text-gray-300 hidden sm:block animate-pulse" />
+                          <div className="text-right">
+                            <span className="text-[10px] text-amber-700 font-extrabold block">ADJUSTED LIMIT APPROVED</span>
+                            <span className="text-base font-black font-mono text-amber-600">
+                              {selectedApproval.expense_code.includes("KM")
+                                ? `${editedLegs[0]?.km || expenseDetails?.amount} KM`
+                                : `₹${(editedLegs[0]?.travel_amount || expenseDetails?.amount || 0).toLocaleString()}`}
+                            </span>
+                          </div>
+                        </>
+                      ) : (
                         <>
                           <ChevronRight className="w-5 h-5 text-gray-300 hidden sm:block animate-pulse" />
                           <div className="text-right">
