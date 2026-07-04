@@ -726,10 +726,13 @@ export default function HomePage() {
               <button
                 type="button"
                 onClick={() => handleTabChange("my-claims")}
-                style={{ minHeight: 'auto' }}
+                style={{
+                  minHeight: 'auto',
+                  backgroundColor: activeTab === "my-claims" ? "#a5d8e8" : undefined
+                }}
                 className={`py-1.5 px-4 font-black text-xs uppercase tracking-wider rounded-lg transition-all flex items-center gap-1.5 cursor-pointer whitespace-nowrap border-0 ${
                   activeTab === "my-claims"
-                    ? "bg-[#a5d8e8] text-slate-900 font-extrabold shadow-sm"
+                    ? "text-slate-900 font-extrabold shadow-sm"
                     : "text-slate-600 bg-transparent hover:text-slate-900 hover:bg-slate-200/50"
                 }`}
               >
@@ -741,10 +744,13 @@ export default function HomePage() {
                 <button
                   type="button"
                   onClick={() => handleTabChange("team-claims")}
-                  style={{ minHeight: 'auto' }}
+                  style={{
+                    minHeight: 'auto',
+                    backgroundColor: activeTab === "team-claims" ? "#a5d8e8" : undefined
+                  }}
                   className={`py-1.5 px-4 font-black text-xs uppercase tracking-wider rounded-lg transition-all flex items-center gap-1.5 cursor-pointer whitespace-nowrap border-0 ${
                     activeTab === "team-claims"
-                      ? "bg-[#a5d8e8] text-slate-900 font-extrabold shadow-sm"
+                      ? "text-slate-900 font-extrabold shadow-sm"
                       : "text-slate-600 bg-transparent hover:text-slate-900 hover:bg-slate-200/50"
                   }`}
                 >

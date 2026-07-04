@@ -620,10 +620,13 @@ export default function HelpPage() {
         <button
           type="button"
           onClick={() => { handleTabChange("my-tickets"); setSelectedTicket(null); }}
-          style={{ minHeight: 'auto' }}
+          style={{
+            minHeight: 'auto',
+            backgroundColor: activeTab === "my-tickets" ? "#a5d8e8" : undefined
+          }}
           className={`flex-1 py-2 text-center font-black text-[10px] uppercase rounded-lg border-0 cursor-pointer transition-all ${
             activeTab === "my-tickets"
-              ? "bg-[#a5d8e8] text-slate-900 shadow-xs font-extrabold"
+              ? "text-slate-900 shadow-xs font-extrabold"
               : "bg-transparent text-slate-450 hover:text-slate-700"
           }`}
         >
@@ -632,10 +635,13 @@ export default function HelpPage() {
         <button
           type="button"
           onClick={() => { handleTabChange("raise"); setSelectedTicket(null); }}
-          style={{ minHeight: 'auto' }}
+          style={{
+            minHeight: 'auto',
+            backgroundColor: activeTab === "raise" ? "#a5d8e8" : undefined
+          }}
           className={`flex-1 py-2 text-center font-black text-[10px] uppercase rounded-lg border-0 cursor-pointer transition-all ${
             activeTab === "raise"
-              ? "bg-[#a5d8e8] text-slate-900 shadow-xs font-extrabold"
+              ? "text-slate-900 shadow-xs font-extrabold"
               : "bg-transparent text-slate-450 hover:text-slate-700"
           }`}
         >
@@ -645,10 +651,13 @@ export default function HelpPage() {
           <button
             type="button"
             onClick={() => { handleTabChange("assigned-tickets"); setSelectedTicket(null); }}
-            style={{ minHeight: 'auto' }}
+            style={{
+              minHeight: 'auto',
+              backgroundColor: activeTab === "assigned-tickets" ? "#a5d8e8" : undefined
+            }}
             className={`flex-1 py-2 text-center font-black text-[10px] uppercase rounded-lg border-0 cursor-pointer transition-all ${
               activeTab === "assigned-tickets"
-                ? "bg-[#a5d8e8] text-slate-900 shadow-xs font-extrabold"
+                ? "text-slate-900 shadow-xs font-extrabold"
                 : "bg-transparent text-slate-450 hover:text-slate-700"
             }`}
           >
@@ -801,9 +810,12 @@ export default function HelpPage() {
               <div className="flex">
                 <button
                   onClick={() => { handleTabChange("my-tickets"); setSelectedTicket(null); }}
+                  style={{
+                    backgroundColor: activeTab === "my-tickets" ? "#a5d8e8" : undefined
+                  }}
                   className={`py-2 px-4.5 font-black text-xs uppercase tracking-wider transition-all cursor-pointer rounded-t-lg ${
                     activeTab === "my-tickets"
-                      ? "bg-[#a5d8e8] text-slate-900 font-black border-t-2 border-x border-[#8ec7d9]"
+                      ? "text-slate-900 font-black border-t-2 border-x border-[#8ec7d9]"
                       : "text-gray-500 hover:text-gray-900 hover:bg-gray-100"
                   }`}
                 >
@@ -813,9 +825,12 @@ export default function HelpPage() {
                 {hasAccessToAssignedTab && (
                   <button
                     onClick={() => { handleTabChange("assigned-tickets"); setSelectedTicket(null); }}
+                    style={{
+                      backgroundColor: activeTab === "assigned-tickets" ? "#a5d8e8" : undefined
+                    }}
                     className={`py-2 px-4.5 font-black text-xs uppercase tracking-wider transition-all cursor-pointer rounded-t-lg ${
                       activeTab === "assigned-tickets"
-                        ? "bg-[#a5d8e8] text-slate-900 font-black border-t-2 border-x border-[#8ec7d9]"
+                        ? "text-slate-900 font-black border-t-2 border-x border-[#8ec7d9]"
                         : "text-gray-500 hover:text-gray-900 hover:bg-gray-100"
                     }`}
                   >
