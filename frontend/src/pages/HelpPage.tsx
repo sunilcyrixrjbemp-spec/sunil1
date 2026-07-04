@@ -616,14 +616,15 @@ export default function HelpPage() {
       </div>
 
       {/* Standalone Mobile Tab Selector */}
-      <div className="xl:hidden border-b border-gray-250 bg-white p-1 flex rounded-xl gap-1 shadow-xs mb-3">
+      <div className="xl:hidden bg-slate-100 p-1 flex rounded-xl gap-1 shadow-inner mb-3">
         <button
           type="button"
           onClick={() => { handleTabChange("my-tickets"); setSelectedTicket(null); }}
-          className={`flex-1 py-2 text-center font-bold text-[10px] uppercase rounded-lg border-0 cursor-pointer transition-all ${
+          style={{ minHeight: 'auto' }}
+          className={`flex-1 py-2 text-center font-black text-[10px] uppercase rounded-lg border-0 cursor-pointer transition-all ${
             activeTab === "my-tickets"
-              ? "bg-[#a5d8e8] text-slate-800 shadow-xs font-extrabold"
-              : "bg-transparent text-gray-500 hover:text-gray-800"
+              ? "bg-[#a5d8e8] text-slate-900 shadow-xs font-extrabold"
+              : "bg-transparent text-slate-450 hover:text-slate-700"
           }`}
         >
           My Tickets ({myRaisedTickets.length})
@@ -631,10 +632,11 @@ export default function HelpPage() {
         <button
           type="button"
           onClick={() => { handleTabChange("raise"); setSelectedTicket(null); }}
-          className={`flex-1 py-2 text-center font-bold text-[10px] uppercase rounded-lg border-0 cursor-pointer transition-all ${
+          style={{ minHeight: 'auto' }}
+          className={`flex-1 py-2 text-center font-black text-[10px] uppercase rounded-lg border-0 cursor-pointer transition-all ${
             activeTab === "raise"
-              ? "bg-[#a5d8e8] text-slate-800 shadow-xs font-extrabold"
-              : "bg-transparent text-gray-500 hover:text-gray-800"
+              ? "bg-[#a5d8e8] text-slate-900 shadow-xs font-extrabold"
+              : "bg-transparent text-slate-450 hover:text-slate-700"
           }`}
         >
           File Ticket
@@ -643,10 +645,11 @@ export default function HelpPage() {
           <button
             type="button"
             onClick={() => { handleTabChange("assigned-tickets"); setSelectedTicket(null); }}
-            className={`flex-1 py-2 text-center font-bold text-[10px] uppercase rounded-lg border-0 cursor-pointer transition-all ${
+            style={{ minHeight: 'auto' }}
+            className={`flex-1 py-2 text-center font-black text-[10px] uppercase rounded-lg border-0 cursor-pointer transition-all ${
               activeTab === "assigned-tickets"
-                ? "bg-[#a5d8e8] text-slate-800 shadow-xs font-extrabold"
-                : "bg-transparent text-gray-500 hover:text-gray-800"
+                ? "bg-[#a5d8e8] text-slate-900 shadow-xs font-extrabold"
+                : "bg-transparent text-slate-450 hover:text-slate-700"
             }`}
           >
             Assigned ({assignedTickets.length})

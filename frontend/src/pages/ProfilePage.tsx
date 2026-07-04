@@ -15,12 +15,18 @@ interface DetailRowProps {
 }
 
 const DetailRow = ({ label, value, icon }: DetailRowProps) => (
-  <div className="p-3.5 bg-white border border-gray-200/80 rounded-xl flex flex-col justify-center text-xs gap-1.5 hover:shadow-xs hover:border-[#a5d8e8] transition-all duration-150">
-    <div className="flex items-center gap-2 text-[#64748b]">
-      {icon && <span className="text-[#a5d8e8] shrink-0 text-xs">{icon}</span>}
-      <span className="font-extrabold uppercase tracking-widest text-[8px]">{label}</span>
+  <div className="info-box-lte animate-fadeIn">
+    <div className="info-box-icon bg-[#a5d8e8] shrink-0 flex items-center justify-center rounded-lg">
+      <span className="text-slate-800">{icon}</span>
     </div>
-    <span className="text-gray-900 font-extrabold text-xs truncate mt-0.5">{value}</span>
+    <div className="info-box-content min-w-0">
+      <span className="text-[9px] font-bold uppercase tracking-wider text-gray-400 block mb-0.5">
+        {label}
+      </span>
+      <span className="text-xs font-bold text-gray-800 block truncate" title={value}>
+        {value}
+      </span>
+    </div>
   </div>
 );
 
@@ -947,15 +953,13 @@ export default function ProfilePage() {
                       Contact & Personal Info
                     </h4>
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-3.5">
-                      
-                      {/* Email Address (Editable Inline) */}
-                      <div className="p-3 bg-white border border-slate-200/70 rounded-xl flex items-center gap-3 hover:shadow-xs hover:border-[#a5d8e8] transition-all duration-150">
-                        <div className="w-8 h-8 rounded-lg bg-[#a5d8e8]/15 text-slate-700 flex items-center justify-center shrink-0">
-                          <i className="fas fa-envelope text-slate-600"></i>
+                      <div className="info-box-lte animate-fadeIn">
+                        <div className="info-box-icon bg-[#a5d8e8] shrink-0 flex items-center justify-center rounded-lg">
+                          <i className="fas fa-envelope text-slate-800"></i>
                         </div>
-                        <div className="flex-1 min-w-0 flex flex-col justify-center">
+                        <div className="info-box-content flex-1 min-w-0">
                           <div className="flex items-center justify-between">
-                            <span className="font-black uppercase tracking-wider text-[8px] text-slate-400">Email Address</span>
+                            <span className="text-[9px] font-bold uppercase tracking-wider text-gray-400 block mb-0.5">Email Address</span>
                             {!isEditingEmail && (
                               <button
                                 onClick={() => {
@@ -997,19 +1001,19 @@ export default function ProfilePage() {
                               </button>
                             </div>
                           ) : (
-                            <span className="text-slate-805 font-extrabold text-xs truncate mt-0.5">{user.mail_id || "-"}</span>
+                            <span className="text-xs font-bold text-gray-800 block truncate">{user.mail_id || "-"}</span>
                           )}
                         </div>
                       </div>
 
                       {/* Mobile Number (Editable Inline) */}
-                      <div className="p-3 bg-white border border-slate-200/70 rounded-xl flex items-center gap-3 hover:shadow-xs hover:border-[#a5d8e8] transition-all duration-150">
-                        <div className="w-8 h-8 rounded-lg bg-[#a5d8e8]/15 text-slate-700 flex items-center justify-center shrink-0">
-                          <i className="fas fa-phone text-slate-600"></i>
+                      <div className="info-box-lte animate-fadeIn">
+                        <div className="info-box-icon bg-[#a5d8e8] shrink-0 flex items-center justify-center rounded-lg">
+                          <i className="fas fa-phone text-slate-800"></i>
                         </div>
-                        <div className="flex-1 min-w-0 flex flex-col justify-center">
+                        <div className="info-box-content flex-1 min-w-0">
                           <div className="flex items-center justify-between">
-                            <span className="font-black uppercase tracking-wider text-[8px] text-slate-400">Mobile Number</span>
+                            <span className="text-[9px] font-bold uppercase tracking-wider text-gray-400 block mb-0.5">Mobile Number</span>
                             {!isEditingMobile && (
                               <button
                                 onClick={() => {
@@ -1051,11 +1055,11 @@ export default function ProfilePage() {
                               </button>
                             </div>
                           ) : (
-                            <span className="text-slate-805 font-extrabold text-xs truncate mt-0.5">{user.mobile_number || "-"}</span>
+                            <span className="text-xs font-bold text-gray-800 block truncate">{user.mobile_number || "-"}</span>
                           )}
                         </div>
                       </div>
-
+                      
                       {/* Date of Birth */}
                       <DetailRow
                         label="Date of Birth"

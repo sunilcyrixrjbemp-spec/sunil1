@@ -2352,12 +2352,11 @@ export default function ExpensePage() {
 
                     <div className="p-4 space-y-4">
                       
-                      {/* Travel Type select */}
-                      <div className={`flex items-center justify-between pb-3 border-b border-gray-150 -mx-4 px-4 -mt-4 pt-3 mb-1 ${
+                      <div className={`flex items-center justify-between pb-3 -mx-4 px-4 -mt-4 pt-3 mb-1 ${
                         leg.travel_type === "In-District"
-                          ? "bg-indigo-50 border-b-indigo-200"
-                          : "bg-amber-50 border-b-amber-200"
-                      }`}>
+                          ? "bg-indigo-50"
+                          : "bg-amber-50"
+                      }`} style={{ borderBottom: '1px solid #e2e8f0' }}>
                         <span className="text-xs font-bold text-gray-700">Travel Category</span>
                         <div className="flex gap-2" role="group">
                           <button
@@ -3761,18 +3760,20 @@ export default function ExpensePage() {
         {/* Header with Windows Selector */}
         <div className="px-5 py-3.5 border-b border-gray-200 bg-slate-50 flex flex-wrap items-center justify-between gap-3">
           <h3 className="text-xs font-bold text-gray-700 uppercase tracking-wide">My Claims Dashboard</h3>
-          <div className="flex bg-gray-150 p-0.5 rounded-lg border border-gray-200">
+          <div className="flex bg-slate-100 p-1 rounded-xl border border-gray-250/50 shadow-inner">
             <button
               type="button"
               onClick={() => { setActiveClaimsTab("sheets"); setMyClaimsPage(1); }}
-              className={`px-3 py-1 text-[10px] font-bold uppercase rounded cursor-pointer transition-all ${activeClaimsTab === "sheets" ? "bg-green-600 text-white shadow-sm" : "text-gray-500 hover:text-gray-800"}`}
+              style={{ minHeight: 'auto' }}
+              className={`px-3 py-1.5 text-[9px] font-black uppercase rounded-lg cursor-pointer transition-all border-0 ${activeClaimsTab === "sheets" ? "bg-[#a5d8e8] text-slate-900 shadow-sm font-extrabold" : "bg-transparent text-gray-500 hover:text-gray-800"}`}
             >
               Expense Sheets View
             </button>
             <button
               type="button"
               onClick={() => { setActiveClaimsTab("legs"); setMyClaimsPage(1); }}
-              className={`px-3 py-1 text-[10px] font-bold uppercase rounded cursor-pointer transition-all ${activeClaimsTab === "legs" ? "bg-green-600 text-white shadow-sm" : "text-gray-500 hover:text-gray-800"}`}
+              style={{ minHeight: 'auto' }}
+              className={`px-3 py-1.5 text-[9px] font-black uppercase rounded-lg cursor-pointer transition-all border-0 ${activeClaimsTab === "legs" ? "bg-[#a5d8e8] text-slate-900 shadow-sm font-extrabold" : "bg-transparent text-gray-500 hover:text-gray-800"}`}
             >
               Legs Details View
             </button>

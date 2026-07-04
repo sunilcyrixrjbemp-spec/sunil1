@@ -501,30 +501,30 @@ export default function ApprovalPage() {
         
         {/* Contextual Two-Line Compact Filters Row */}
         <div className="bg-slate-50 border border-gray-200 rounded p-2.5 flex flex-col gap-2 text-[10px] font-bold text-gray-700">
-          {/* Row 1: Dropdown and Search filters side-by-side in one line */}
+          {/* Row 1: Dropdown and Search filters with labels on top */}
           <div className="grid grid-cols-2 gap-2.5 w-full">
-            <div className="flex items-center justify-between bg-white border border-gray-300 rounded px-2.5 py-1.5 shadow-xs">
-              <span className="text-[9px] font-black uppercase text-gray-500 mr-2">Month:</span>
+            <div className="flex flex-col gap-1">
+              <span className="text-[8px] font-black uppercase text-gray-400">Month</span>
               <select 
                 value={filterMonth} 
                 onChange={(e) => setFilterMonth(e.target.value)}
-                className="bg-transparent border-0 text-[10px] font-black text-gray-800 cursor-pointer focus:outline-none w-2/3 text-right"
+                className="bg-white border border-gray-300 rounded px-2 py-1 text-[10px] font-black text-gray-800 cursor-pointer focus:outline-none focus:border-blue-500 w-full"
               >
-                <option value="">All</option>
+                <option value="">All Months</option>
                 {["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"].map(m => (
-                  <option key={m} value={m}>{m.substring(0, 3)}</option>
+                  <option key={m} value={m}>{m}</option>
                 ))}
               </select>
             </div>
 
-            <div className="flex items-center justify-between bg-white border border-gray-300 rounded px-2.5 py-1.5 shadow-xs">
-              <span className="text-[9px] font-black uppercase text-gray-500 mr-2">Search:</span>
+            <div className="flex flex-col gap-1">
+              <span className="text-[8px] font-black uppercase text-gray-400">Search</span>
               <input 
                 type="text" 
                 value={filterEngineer} 
                 onChange={(e) => setFilterEngineer(e.target.value)}
-                placeholder="Name/Code..."
-                className="bg-transparent border-0 text-[10px] font-medium text-gray-800 focus:outline-none w-2/3 text-right"
+                placeholder="Name or Code..."
+                className="bg-white border border-gray-300 rounded px-2 py-1 text-[10px] font-black text-gray-800 focus:outline-none focus:border-blue-500 w-full"
               />
             </div>
           </div>

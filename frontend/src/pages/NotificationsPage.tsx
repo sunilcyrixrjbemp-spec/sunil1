@@ -334,8 +334,8 @@ export default function NotificationsPage() {
                     </span>
 
                     {/* Date/Time */}
-                    <span className="text-[10px] text-slate-800 font-black font-mono flex items-center gap-1 ml-2">
-                      <Calendar className="w-3 h-3 text-slate-650" />
+                    <span className="text-[10px] text-black font-extrabold font-mono flex items-center gap-1 ml-2">
+                      <Calendar className="w-3 h-3 text-slate-850" />
                       {formatDateTime(n.created_at)}
                     </span>
                   </div>

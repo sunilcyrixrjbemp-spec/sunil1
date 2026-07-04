@@ -756,16 +756,14 @@ export default function HomePage() {
                 /* My Self Tab Filters */
                 <div className="bg-slate-50 border border-gray-200 rounded p-2.5 flex flex-col gap-2 text-[10px] font-bold text-gray-700">
                   {/* Row 1: Month dropdown */}
-                  <div className="flex flex-wrap items-center gap-3">
-                    <div className="flex items-center gap-1.5">
-                      <span className="text-[8px] font-bold uppercase text-gray-400">Month:</span>
-                      <input 
-                        type="month"
-                        value={selectMonth}
-                        onChange={(e) => setSelectMonth(e.target.value)}
-                        className="bg-white border border-gray-300 rounded px-2.5 py-0.5 text-[10px] font-black text-gray-800 cursor-pointer shadow-xs focus:outline-none focus:border-blue-500"
-                      />
-                    </div>
+                  <div className="flex flex-col gap-1 max-w-[150px]">
+                    <span className="text-[8px] font-black uppercase text-gray-400">Month</span>
+                    <input 
+                      type="month"
+                      value={selectMonth}
+                      onChange={(e) => setSelectMonth(e.target.value)}
+                      className="bg-white border border-gray-300 rounded px-2 py-1 text-[10px] font-black text-gray-800 cursor-pointer focus:outline-none focus:border-blue-500 w-full"
+                    />
                   </div>
                   {/* Row 2: Status pill buttons */}
                   <div className="flex items-center gap-1.5 overflow-x-auto no-scrollbar py-0.5 border-t border-gray-200/50 pt-1.5">
@@ -787,26 +785,26 @@ export default function HomePage() {
               ) : (
                 /* Team / Engineer Claims Tab Filters */
                 <div className="bg-slate-50 border border-gray-200 rounded p-2.5 flex flex-col gap-2 text-[10px] font-bold text-gray-700">
-                  {/* Row 1: Month and Engineer dropdowns in a single side-by-side line */}
+                  {/* Row 1: Month and Engineer dropdowns with labels on top */}
                   <div className="grid grid-cols-2 gap-2.5 w-full">
-                    <div className="flex items-center justify-between bg-white border border-gray-300 rounded px-2.5 py-1.5 shadow-xs">
-                      <span className="text-[9px] font-black uppercase text-gray-500 mr-2">Month:</span>
+                    <div className="flex flex-col gap-1">
+                      <span className="text-[8px] font-black uppercase text-gray-400">Month</span>
                       <input 
                         type="month"
                         value={selectMonth}
                         onChange={(e) => setSelectMonth(e.target.value)}
-                        className="bg-transparent border-0 text-[10px] font-black text-gray-800 cursor-pointer focus:outline-none w-2/3 text-right"
+                        className="bg-white border border-gray-300 rounded px-2 py-1 text-[10px] font-black text-gray-800 cursor-pointer focus:outline-none focus:border-blue-500 w-full"
                       />
                     </div>
 
-                    <div className="flex items-center justify-between bg-white border border-gray-300 rounded px-2.5 py-1.5 shadow-xs">
-                      <span className="text-[9px] font-black uppercase text-gray-500 mr-2">Engineer:</span>
+                    <div className="flex flex-col gap-1">
+                      <span className="text-[8px] font-black uppercase text-gray-400">Engineer</span>
                       <select 
                         value={filterEmployee} 
                         onChange={(e) => setFilterEmployee(e.target.value)}
-                        className="bg-transparent border-0 text-[10px] font-black text-gray-800 cursor-pointer focus:outline-none w-2/3 text-right"
+                        className="bg-white border border-gray-300 rounded px-2 py-1 text-[10px] font-black text-gray-800 cursor-pointer focus:outline-none focus:border-blue-500 w-full"
                       >
-                        <option value="all">All</option>
+                        <option value="all">All Members</option>
                         {uniqueEmployees.map(emp => (
                           <option key={emp.code} value={emp.code}>{emp.name}</option>
                         ))}
@@ -823,7 +821,7 @@ export default function HomePage() {
                         className={`px-2.5 py-0.5 rounded text-[9px] font-black uppercase tracking-wider transition-all cursor-pointer border whitespace-nowrap ${
                           homeStatusFilter === status
                             ? "bg-[#a5d8e8] text-slate-800 border-[#a5d8e8] font-extrabold shadow-sm"
-                            : "bg-white text-gray-600 border-gray-300 hover:bg-emerald-50 hover:text-emerald-700"
+                            : "bg-white text-gray-600 border-gray-300 hover:bg-[#a5d8e8]/20 hover:text-slate-800"
                         }`}
                       >
                         {status === "all" ? "All" : status}

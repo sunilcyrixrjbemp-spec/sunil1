@@ -526,7 +526,7 @@ export default function DashboardLayout() {
                                   <span className="h-1.5 w-1.5 rounded-full bg-blue-600 animate-pulse"></span>
                                 )}
                                 
-                                <span className="text-[10px] text-slate-800 font-black shrink-0 font-mono">{formatDateTime(n.created_at)}</span>
+                                <span className="text-[10px] text-black font-extrabold shrink-0 font-mono">{formatDateTime(n.created_at)}</span>
                               </div>
                               <p className="text-slate-800 font-bold text-xs mt-1.5 leading-relaxed">{n.description}</p>
                             </div>
