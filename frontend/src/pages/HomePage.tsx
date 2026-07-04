@@ -787,26 +787,26 @@ export default function HomePage() {
               ) : (
                 /* Team / Engineer Claims Tab Filters */
                 <div className="bg-slate-50 border border-gray-200 rounded p-2.5 flex flex-col gap-2 text-[10px] font-bold text-gray-700">
-                  {/* Row 1: Month and Engineer dropdowns */}
-                  <div className="flex flex-wrap items-center gap-3">
-                    <div className="flex items-center gap-1.5">
-                      <span className="text-[8px] font-bold uppercase text-gray-400">Month:</span>
+                  {/* Row 1: Month and Engineer dropdowns in a single side-by-side line */}
+                  <div className="grid grid-cols-2 gap-2.5 w-full">
+                    <div className="flex items-center justify-between bg-white border border-gray-300 rounded px-2.5 py-1.5 shadow-xs">
+                      <span className="text-[9px] font-black uppercase text-gray-500 mr-2">Month:</span>
                       <input 
                         type="month"
                         value={selectMonth}
                         onChange={(e) => setSelectMonth(e.target.value)}
-                        className="bg-white border border-gray-300 rounded px-2.5 py-0.5 text-[10px] font-black text-gray-800 cursor-pointer shadow-xs focus:outline-none focus:border-blue-500"
+                        className="bg-transparent border-0 text-[10px] font-black text-gray-800 cursor-pointer focus:outline-none w-2/3 text-right"
                       />
                     </div>
 
-                    <div className="flex items-center gap-1.5">
-                      <span className="text-[8px] font-bold uppercase text-gray-400">Engineer:</span>
+                    <div className="flex items-center justify-between bg-white border border-gray-300 rounded px-2.5 py-1.5 shadow-xs">
+                      <span className="text-[9px] font-black uppercase text-gray-500 mr-2">Engineer:</span>
                       <select 
                         value={filterEmployee} 
                         onChange={(e) => setFilterEmployee(e.target.value)}
-                        className="bg-white border border-gray-300 rounded px-1.5 py-0.5 text-[10px] font-black text-gray-800 cursor-pointer max-w-[150px] focus:outline-none focus:border-blue-500"
+                        className="bg-transparent border-0 text-[10px] font-black text-gray-800 cursor-pointer focus:outline-none w-2/3 text-right"
                       >
-                        <option value="all">All Members</option>
+                        <option value="all">All</option>
                         {uniqueEmployees.map(emp => (
                           <option key={emp.code} value={emp.code}>{emp.name}</option>
                         ))}
@@ -906,7 +906,9 @@ export default function HomePage() {
                             </div>
                             <div>
                               <span className="text-gray-400 font-bold uppercase text-[9px] block">Travel Mode</span>
-                              <span className="text-gray-700 font-semibold">{exp.travel_mode || exp.category}</span>
+                              <span className="inline-block border border-blue-200 bg-blue-50 text-blue-700 font-black px-1.5 py-0.5 rounded text-[8px] uppercase tracking-wider mt-0.5">
+                                {exp.travel_mode || exp.category}
+                              </span>
                             </div>
                             <div>
                               <span className="text-gray-400 font-bold uppercase text-[9px] block">Distance / Auto</span>
@@ -973,7 +975,11 @@ export default function HomePage() {
                             <td className="py-3 px-3 font-semibold font-mono text-blue-600 uppercase whitespace-nowrap">{exp.expense_code}</td>
                             <td className="py-3 px-3 text-gray-550 whitespace-nowrap">{exp.date}</td>
                             <td className="py-3 px-3 font-semibold text-gray-800 truncate max-w-[120px] whitespace-nowrap" title={exp.purpose}>{exp.purpose}</td>
-                            <td className="py-3 px-3 text-gray-500 whitespace-nowrap">{exp.category}</td>
+                            <td className="py-3 px-3 whitespace-nowrap">
+                              <span className="inline-block border border-blue-200 bg-blue-50 text-blue-705 font-bold px-1.5 py-0.5 rounded text-[8px] uppercase tracking-wider">
+                                {exp.category}
+                              </span>
+                            </td>
                             <td className="py-3 px-3 font-mono font-semibold text-gray-655 whitespace-nowrap">{exp.total_km ? `${exp.total_km.toFixed(1)} KM` : "—"}</td>
                             <td className="py-3 px-3 font-mono font-semibold text-gray-655 whitespace-nowrap">{exp.total_auto ? `₹${exp.total_auto.toLocaleString()}` : "—"}</td>
                             <td className="py-3 px-3 font-bold text-gray-900 whitespace-nowrap">₹{exp.amount.toLocaleString()}</td>
@@ -1012,7 +1018,9 @@ export default function HomePage() {
                             </div>
                             <div>
                               <span className="text-gray-400 font-bold uppercase text-[9px] block">Mode</span>
-                              <span className="text-gray-700 font-semibold">{exp.category || exp.travel_mode}</span>
+                              <span className="inline-block border border-blue-200 bg-blue-50 text-blue-705 font-black px-1.5 py-0.5 rounded text-[8px] uppercase tracking-wider mt-0.5">
+                                {exp.category || exp.travel_mode}
+                              </span>
                             </div>
                             <div>
                               <span className="text-gray-400 font-bold uppercase text-[9px] block">Distance / Auto</span>
@@ -2073,7 +2081,11 @@ export default function HomePage() {
                           <td className="py-3 px-3 font-semibold font-mono text-blue-605 uppercase">{exp.expense_code}</td>
                           <td className="py-3 px-3 text-gray-500">{exp.itinerary || exp.date}</td>
                           <td className="py-3 px-3 font-semibold text-gray-800 truncate max-w-[150px]" title={exp.description || exp.purpose}>{exp.description || exp.purpose}</td>
-                          <td className="py-3 px-3 text-gray-500">{exp.travel_mode || exp.category}</td>
+                          <td className="py-3 px-3">
+                            <span className="inline-block border border-blue-200 bg-blue-50 text-blue-705 font-bold px-1.5 py-0.5 rounded text-[8px] uppercase tracking-wider">
+                              {exp.travel_mode || exp.category}
+                            </span>
+                          </td>
                           <td className="py-3 px-3 font-mono font-semibold text-gray-650">{exp.total_km ? `${exp.total_km.toFixed(1)} KM` : "—"}</td>
                           <td className="py-3 px-3 font-mono font-semibold text-gray-650">{exp.total_auto ? `₹${exp.total_auto.toLocaleString()}` : "—"}</td>
                           <td className="py-3 px-3 font-bold text-gray-900">₹{(exp.amount || 0).toLocaleString()}</td>

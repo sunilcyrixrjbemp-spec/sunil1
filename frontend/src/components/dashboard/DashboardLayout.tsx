@@ -493,23 +493,31 @@ export default function DashboardLayout() {
                               markAsRead(n.id);
                               setIsNotifOpen(false);
                             }}
-                            className={`block p-3.5 transition-all no-underline rounded-xl border shadow-xs ${
+                            className={`flex gap-3.5 p-3.5 transition-all no-underline rounded-xl border shadow-xs items-start ${
                               n.read 
                                 ? "bg-white hover:bg-slate-50 border-slate-200/80 text-slate-700" 
                                 : "bg-[#a5d8e8]/20 hover:bg-[#a5d8e8]/35 border-slate-300 border-l-4 border-l-blue-600 text-slate-900 font-semibold"
                             }`}
                           >
-                            <div className="flex justify-between items-start gap-2">
-                              <div className="flex items-center gap-2 flex-wrap">
-                                {n.type === "warning" && <AlertTriangle className="w-3.5 h-3.5 text-amber-500 shrink-0" />}
-                                {n.type === "success" && <Check className="w-3.5 h-3.5 text-emerald-500 shrink-0" />}
-                                {n.type === "error" && <X className="w-3.5 h-3.5 text-rose-500 shrink-0" />}
-                                {n.type !== "warning" && n.type !== "success" && n.type !== "error" && <Info className="w-3.5 h-3.5 text-blue-500 shrink-0" />}
-                                
+                            {/* Circular Icon Container */}
+                            <div className={`p-2 rounded-full shrink-0 flex items-center justify-center text-white shadow-xs ${
+                              n.type === "warning" ? "bg-amber-600" :
+                              n.type === "success" ? "bg-emerald-600" :
+                              n.type === "error" ? "bg-rose-600" : "bg-blue-600"
+                            }`}>
+                              {n.type === "warning" && <AlertTriangle className="w-3.5 h-3.5 text-white" />}
+                              {n.type === "success" && <Check className="w-3.5 h-3.5 text-white" />}
+                              {n.type === "error" && <X className="w-3.5 h-3.5 text-white" />}
+                              {n.type !== "warning" && n.type !== "success" && n.type !== "error" && <Info className="w-3.5 h-3.5 text-white" />}
+                            </div>
+
+                            {/* Text Content */}
+                            <div className="flex-1 min-w-0">
+                              <div className="flex items-center justify-between gap-2 flex-wrap mb-1">
                                 <span className={`font-black uppercase text-[8px] px-2 py-0.5 rounded-full tracking-wide text-white shadow-xs ${
-                                  n.type === "warning" ? "bg-amber-500" :
-                                  n.type === "success" ? "bg-emerald-500" :
-                                  n.type === "error" ? "bg-rose-500" : "bg-blue-600"
+                                  n.type === "warning" ? "bg-amber-600" :
+                                  n.type === "success" ? "bg-emerald-600" :
+                                  n.type === "error" ? "bg-rose-600" : "bg-blue-600"
                                 }`}>
                                   {n.title || "Notification"}
                                 </span>
@@ -517,10 +525,11 @@ export default function DashboardLayout() {
                                 {!n.read && (
                                   <span className="h-1.5 w-1.5 rounded-full bg-blue-600 animate-pulse"></span>
                                 )}
+                                
+                                <span className="text-[10px] text-slate-800 font-black shrink-0 font-mono">{formatDateTime(n.created_at)}</span>
                               </div>
-                              <span className="text-[9px] text-slate-400 font-bold shrink-0 font-mono">{formatDateTime(n.created_at)}</span>
+                              <p className="text-slate-800 font-bold text-xs mt-1.5 leading-relaxed">{n.description}</p>
                             </div>
-                            <p className="text-slate-800 font-bold text-xs mt-2.5 leading-relaxed">{n.description}</p>
                           </Link>
                         ))
                       )}
@@ -666,9 +675,9 @@ export default function DashboardLayout() {
             </span>
             <button 
               onClick={() => setIsMobileMenuOpen(false)}
-              className="p-1 rounded-full border border-red-500 bg-red-50 text-red-500 hover:bg-red-100 hover:text-red-700 transition-all cursor-pointer flex items-center justify-center"
+              className="p-1.5 rounded-full border-0 bg-red-650 text-white hover:bg-red-700 transition-all cursor-pointer flex items-center justify-center shadow-md"
             >
-              <X className="w-4 h-4" />
+              <X className="w-4 h-4 text-white" />
             </button>
           </div>
 

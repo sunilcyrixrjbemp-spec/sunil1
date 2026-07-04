@@ -798,10 +798,10 @@ export default function HelpPage() {
               <div className="flex">
                 <button
                   onClick={() => { handleTabChange("my-tickets"); setSelectedTicket(null); }}
-                  className={`py-3 px-4 font-bold text-xs uppercase tracking-wider border-b-2 transition-all cursor-pointer ${
+                  className={`py-2 px-4.5 font-black text-xs uppercase tracking-wider transition-all cursor-pointer rounded-t-lg ${
                     activeTab === "my-tickets"
-                      ? "border-[#a5d8e8] text-slate-800 bg-[#a5d8e8]/20 font-extrabold"
-                      : "border-transparent text-gray-500 hover:text-gray-900"
+                      ? "bg-[#a5d8e8] text-slate-900 font-black border-t-2 border-x border-[#8ec7d9]"
+                      : "text-gray-500 hover:text-gray-900 hover:bg-gray-100"
                   }`}
                 >
                   My Raised Tickets ({myRaisedTickets.length})
@@ -810,10 +810,10 @@ export default function HelpPage() {
                 {hasAccessToAssignedTab && (
                   <button
                     onClick={() => { handleTabChange("assigned-tickets"); setSelectedTicket(null); }}
-                    className={`py-3 px-4 font-bold text-xs uppercase tracking-wider border-b-2 transition-all cursor-pointer ${
+                    className={`py-2 px-4.5 font-black text-xs uppercase tracking-wider transition-all cursor-pointer rounded-t-lg ${
                       activeTab === "assigned-tickets"
-                        ? "border-[#a5d8e8] text-slate-800 bg-[#a5d8e8]/20 font-extrabold"
-                        : "border-transparent text-gray-500 hover:text-gray-900"
+                        ? "bg-[#a5d8e8] text-slate-900 font-black border-t-2 border-x border-[#8ec7d9]"
+                        : "text-gray-500 hover:text-gray-900 hover:bg-gray-100"
                     }`}
                   >
                     Assigned Concerns ({assignedTickets.length})

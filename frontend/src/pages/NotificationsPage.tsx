@@ -11,7 +11,11 @@ import {
   Filter,
   CheckSquare,
   Calendar,
-  ExternalLink
+  ExternalLink,
+  AlertTriangle,
+  Check,
+  X,
+  Info
 } from "lucide-react";
 
 export default function NotificationsPage() {
@@ -293,33 +297,45 @@ export default function NotificationsPage() {
             {filteredNotifs.map((n) => (
               <div 
                 key={n.id}
-                className={`p-4 transition-colors flex flex-col sm:flex-row sm:items-center justify-between gap-4 ${
+                className={`p-4 transition-colors flex gap-4 items-start ${
                   n.read ? "bg-white hover:bg-slate-50/50" : "bg-[#a5d8e8]/20 hover:bg-[#a5d8e8]/35 border-l-4 border-l-blue-600"
                 }`}
               >
+                {/* Circular Icon */}
+                <div className={`p-2 rounded-full shrink-0 flex items-center justify-center text-white shadow-xs ${
+                  n.type === "warning" ? "bg-amber-600" :
+                  n.type === "success" ? "bg-emerald-600" :
+                  n.type === "error" ? "bg-rose-600" : "bg-blue-600"
+                }`}>
+                  {n.type === "warning" && <AlertTriangle className="w-3.5 h-3.5 text-white" />}
+                  {n.type === "success" && <Check className="w-3.5 h-3.5 text-white" />}
+                  {n.type === "error" && <X className="w-3.5 h-3.5 text-white" />}
+                  {n.type !== "warning" && n.type !== "success" && n.type !== "error" && <Info className="w-3.5 h-3.5 text-white" />}
+                </div>
+
                 <div className="space-y-2 flex-1 min-w-0">
                   <div className="flex flex-wrap items-center gap-2">
-                    {/* Read indicator */}
+                    {/* Read indicator toggle */}
                     <button 
                       onClick={() => toggleReadStatus(n.id)}
                       className="bg-transparent border-0 p-0 text-gray-400 hover:text-blue-600 cursor-pointer shrink-0"
                       title={n.read ? "Mark as unread" : "Mark as read"}
                     >
-                      <CheckSquare className={`w-4.5 h-4.5 ${n.read ? "text-gray-300" : "text-blue-600"}`} />
+                      <CheckSquare className={`w-4 h-4 ${n.read ? "text-gray-300" : "text-blue-600"}`} />
                     </button>
 
                     {/* Badge */}
                     <span className={`font-black uppercase text-[8px] px-2 py-0.5 rounded-full tracking-wide text-white shadow-xs ${
-                      n.type === "warning" ? "bg-amber-500" :
-                      n.type === "success" ? "bg-emerald-500" :
-                      n.type === "error" ? "bg-rose-500" : "bg-blue-600"
+                      n.type === "warning" ? "bg-amber-600" :
+                      n.type === "success" ? "bg-emerald-600" :
+                      n.type === "error" ? "bg-rose-600" : "bg-blue-600"
                     }`}>
                       {n.title}
                     </span>
 
                     {/* Date/Time */}
-                    <span className="text-[10px] text-gray-400 font-mono flex items-center gap-1 ml-2">
-                      <Calendar className="w-3 h-3" />
+                    <span className="text-[10px] text-slate-800 font-black font-mono flex items-center gap-1 ml-2">
+                      <Calendar className="w-3 h-3 text-slate-650" />
                       {formatDateTime(n.created_at)}
                     </span>
                   </div>

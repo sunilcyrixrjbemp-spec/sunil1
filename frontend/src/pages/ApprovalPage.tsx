@@ -501,53 +501,39 @@ export default function ApprovalPage() {
         
         {/* Contextual Two-Line Compact Filters Row */}
         <div className="bg-slate-50 border border-gray-200 rounded p-2.5 flex flex-col gap-2 text-[10px] font-bold text-gray-700">
-          {/* Row 1: Dropdown filters in one single row */}
-          <div className="flex flex-wrap items-center gap-3">
-            <div className="flex items-center gap-1.5">
-              <span className="text-[8px] font-bold uppercase text-gray-400">Month:</span>
+          {/* Row 1: Dropdown and Search filters side-by-side in one line */}
+          <div className="grid grid-cols-2 gap-2.5 w-full">
+            <div className="flex items-center justify-between bg-white border border-gray-300 rounded px-2.5 py-1.5 shadow-xs">
+              <span className="text-[9px] font-black uppercase text-gray-500 mr-2">Month:</span>
               <select 
                 value={filterMonth} 
                 onChange={(e) => setFilterMonth(e.target.value)}
-                className="bg-white border border-gray-300 rounded px-2.5 py-0.5 text-[10px] font-black text-gray-800 cursor-pointer shadow-xs focus:outline-none focus:border-blue-500"
+                className="bg-transparent border-0 text-[10px] font-black text-gray-800 cursor-pointer focus:outline-none w-2/3 text-right"
               >
-                <option value="">All Months</option>
+                <option value="">All</option>
                 {["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"].map(m => (
-                  <option key={m} value={m}>{m}</option>
+                  <option key={m} value={m}>{m.substring(0, 3)}</option>
                 ))}
               </select>
             </div>
 
-            <div className="flex items-center gap-1.5">
-              <span className="text-[8px] font-bold uppercase text-gray-400">Engineer:</span>
+            <div className="flex items-center justify-between bg-white border border-gray-300 rounded px-2.5 py-1.5 shadow-xs">
+              <span className="text-[9px] font-black uppercase text-gray-500 mr-2">Search:</span>
               <input 
                 type="text" 
                 value={filterEngineer} 
                 onChange={(e) => setFilterEngineer(e.target.value)}
-                placeholder="Search name or E-code..."
-                className="bg-white border border-gray-300 rounded px-2.5 py-0.5 text-[10px] font-medium text-gray-800 shadow-xs focus:outline-none focus:border-blue-500"
+                placeholder="Name/Code..."
+                className="bg-transparent border-0 text-[10px] font-medium text-gray-800 focus:outline-none w-2/3 text-right"
               />
             </div>
           </div>
 
-          {/* Row 2: Status selection buttons directly below */}
-          <div className="flex items-center gap-1.5 overflow-x-auto no-scrollbar py-0.5 border-t border-gray-200/50 pt-1.5">
-            <button
-              className="px-2.5 py-0.5 rounded text-[9px] font-black uppercase tracking-wider transition-all cursor-pointer border bg-blue-600 text-white border-blue-600 font-extrabold shadow-sm"
-            >
-              Pending / Claimed
-            </button>
-            <button
-              disabled
-              className="px-2.5 py-0.5 rounded text-[9px] font-black uppercase tracking-wider transition-all border bg-gray-50 text-gray-400 border-gray-200 cursor-not-allowed"
-            >
-              Approved
-            </button>
-            <button
-              disabled
-              className="px-2.5 py-0.5 rounded text-[9px] font-black uppercase tracking-wider transition-all border bg-gray-50 text-gray-400 border-gray-200 cursor-not-allowed"
-            >
-              Rejected
-            </button>
+          {/* Row 2: Active filter status indicator only */}
+          <div className="flex items-center gap-1.5 py-0.5 border-t border-gray-200/50 pt-1.5">
+            <span className="px-2.5 py-0.5 rounded text-[9px] font-black uppercase tracking-wider border bg-blue-600 text-white border-blue-600 font-extrabold shadow-sm">
+              Pending / Claimed Reviews
+            </span>
           </div>
         </div>
 

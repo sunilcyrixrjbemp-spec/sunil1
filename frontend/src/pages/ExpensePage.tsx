@@ -2359,15 +2359,15 @@ export default function ExpensePage() {
                           : "bg-amber-50 border-b-amber-200"
                       }`}>
                         <span className="text-xs font-bold text-gray-700">Travel Category</span>
-                        <div className="inline-flex rounded-md shadow-sm" role="group">
+                        <div className="flex gap-2" role="group">
                           <button
                             key="In-District"
                             type="button"
                             onClick={() => handleItineraryChange(leg.leg, "travel_type", "In-District")}
-                            className={`px-4 py-1.5 text-xs font-bold rounded-l-md border transition-all cursor-pointer ${
+                            className={`px-4 py-1.5 text-xs font-black rounded border transition-all cursor-pointer shadow-sm ${
                               leg.travel_type === "In-District"
-                                ? "border-indigo-500 bg-indigo-50 text-indigo-700 shadow-sm"
-                                : "border-gray-300 bg-white text-gray-600 hover:border-indigo-300"
+                                ? "border-indigo-650 bg-indigo-600 text-white font-extrabold"
+                                : "border-gray-300 bg-white text-gray-600 hover:bg-slate-50"
                             }`}
                           >
                             In-District
@@ -2376,10 +2376,10 @@ export default function ExpensePage() {
                             key="Outdoor"
                             type="button"
                             onClick={() => handleItineraryChange(leg.leg, "travel_type", "Outdoor")}
-                            className={`px-4 py-1.5 text-xs font-bold rounded-r-md border-t border-b border-r transition-all cursor-pointer ${
+                            className={`px-4 py-1.5 text-xs font-black rounded border transition-all cursor-pointer shadow-sm ${
                               leg.travel_type === "Outdoor"
-                                ? "border-amber-500 bg-amber-50 text-amber-700 shadow-sm"
-                                : "border-gray-300 bg-white text-gray-600 hover:border-amber-300"
+                                ? "border-amber-600 bg-amber-500 text-white font-extrabold"
+                                : "border-gray-300 bg-white text-gray-600 hover:bg-slate-50"
                             }`}
                           >
                             Outdoor
