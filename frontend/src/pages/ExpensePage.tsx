@@ -3728,9 +3728,9 @@ export default function ExpensePage() {
       {/* Full Width Bottom Section: Recent Submissions table with Tabs and Filters */}
       <div className="bg-white border border-gray-250 rounded shadow-sm overflow-hidden flex flex-col mt-6">
         {/* Header with Windows Selector */}
-        <div className="px-5 py-3.5 bg-slate-50 flex flex-wrap items-center justify-between gap-3" style={{ borderBottom: '1px solid #e2e8f0' }}>
+        <div className="px-3 sm:px-5 py-3.5 bg-slate-50 flex flex-wrap items-center justify-between gap-3" style={{ borderBottom: '1px solid #e2e8f0' }}>
           <h3 className="text-xs font-bold text-gray-700 uppercase tracking-wide">My Claims Dashboard</h3>
-          <div className="flex bg-[#e9eff6] p-1 rounded-xl border border-gray-250/50 shadow-inner gap-1">
+          <div className="flex bg-[#e9eff6] p-1 rounded-xl border border-gray-250/50 shadow-inner gap-1 overflow-x-auto max-w-full scrollbar-none flex-nowrap">
             <button
               type="button"
               onClick={() => { setActiveClaimsTab("sheets"); setMyClaimsPage(1); }}
@@ -3744,7 +3744,7 @@ export default function ExpensePage() {
                   : "bg-transparent text-slate-600 hover:text-slate-900 hover:bg-slate-200/50"
               }`}
             >
-              Expense Sheets View
+              Expense Sheets
             </button>
             <button
               type="button"
@@ -3759,7 +3759,7 @@ export default function ExpensePage() {
                   : "bg-transparent text-slate-600 hover:text-slate-900 hover:bg-slate-200/50"
               }`}
             >
-              Legs Details View
+              Legs Details
             </button>
           </div>
         </div>
