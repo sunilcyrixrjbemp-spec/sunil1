@@ -3738,7 +3738,7 @@ export default function ExpensePage() {
                 minHeight: 'auto',
                 backgroundColor: activeClaimsTab === "sheets" ? "#a5d8e8" : undefined
               }}
-              className={`px-3 py-1.5 text-[10px] font-black uppercase tracking-wider rounded-lg cursor-pointer transition-all border-0 whitespace-nowrap ${
+              className={`px-3 py-1 text-[10px] font-black uppercase tracking-wider rounded-lg cursor-pointer transition-all border-0 whitespace-nowrap ${
                 activeClaimsTab === "sheets" 
                   ? "text-slate-900 shadow-sm font-extrabold" 
                   : "bg-transparent text-slate-600 hover:text-slate-900 hover:bg-slate-200/50"
@@ -3753,7 +3753,7 @@ export default function ExpensePage() {
                 minHeight: 'auto',
                 backgroundColor: activeClaimsTab === "legs" ? "#a5d8e8" : undefined
               }}
-              className={`px-3 py-1.5 text-[10px] font-black uppercase tracking-wider rounded-lg cursor-pointer transition-all border-0 whitespace-nowrap ${
+              className={`px-3 py-1 text-[10px] font-black uppercase tracking-wider rounded-lg cursor-pointer transition-all border-0 whitespace-nowrap ${
                 activeClaimsTab === "legs" 
                   ? "text-slate-900 shadow-sm font-extrabold" 
                   : "bg-transparent text-slate-600 hover:text-slate-900 hover:bg-slate-200/50"

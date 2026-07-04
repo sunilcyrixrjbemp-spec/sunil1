@@ -722,7 +722,7 @@ export default function HomePage() {
           {/* TAB SYSTEM: My Claims vs Team Claims */}
           <div className="bg-white border border-gray-200 rounded shadow-sm overflow-hidden flex flex-col">
             {/* Tab Header bar */}
-            <div className="border-b border-gray-200 bg-[#e9eff6] flex items-center justify-start p-1.5 gap-2">
+            <div className="bg-[#e9eff6] flex items-center justify-start p-1.5 gap-2" style={{ borderBottom: '1px solid #e2e8f0' }}>
               <button
                 type="button"
                 onClick={() => handleTabChange("my-claims")}
@@ -730,7 +730,7 @@ export default function HomePage() {
                   minHeight: 'auto',
                   backgroundColor: activeTab === "my-claims" ? "#a5d8e8" : undefined
                 }}
-                className={`py-1.5 px-4 font-black text-xs uppercase tracking-wider rounded-lg transition-all flex items-center gap-1.5 cursor-pointer whitespace-nowrap border-0 ${
+                className={`py-1 px-4 font-black text-xs uppercase tracking-wider rounded-lg transition-all flex items-center gap-1.5 cursor-pointer whitespace-nowrap border-0 ${
                   activeTab === "my-claims"
                     ? "text-slate-900 font-extrabold shadow-sm"
                     : "text-slate-600 bg-transparent hover:text-slate-900 hover:bg-slate-200/50"
@@ -748,7 +748,7 @@ export default function HomePage() {
                     minHeight: 'auto',
                     backgroundColor: activeTab === "team-claims" ? "#a5d8e8" : undefined
                   }}
-                  className={`py-1.5 px-4 font-black text-xs uppercase tracking-wider rounded-lg transition-all flex items-center gap-1.5 cursor-pointer whitespace-nowrap border-0 ${
+                  className={`py-1 px-4 font-black text-xs uppercase tracking-wider rounded-lg transition-all flex items-center gap-1.5 cursor-pointer whitespace-nowrap border-0 ${
                     activeTab === "team-claims"
                       ? "text-slate-900 font-extrabold shadow-sm"
                       : "text-slate-600 bg-transparent hover:text-slate-900 hover:bg-slate-200/50"
