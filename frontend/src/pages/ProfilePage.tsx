@@ -994,6 +994,8 @@ export default function ProfilePage() {
                 <i className="fas fa-key text-[#a5d8e8]"></i>
                 <span>Security & Password</span>
               </button>
+            </div>
+
             {/* Content Container */}
             <div className="flex-1 flex flex-col justify-between">
               {activeTab === "info" ? (
@@ -1110,7 +1112,7 @@ export default function ProfilePage() {
                                 type="button"
                                 onClick={handleCancelMobile}
                                 disabled={mobileLoading}
-                                className="px-2 h-7 rounded bg-white hover:bg-slate-100 text-slate-650 border border-slate-350 font-bold text-[9px] transition-all cursor-pointer"
+                                className="px-2 h-7 rounded bg-white hover:bg-slate-100 text-slate-655 border border-slate-350 font-bold text-[9px] transition-all cursor-pointer"
                               >
                                 Cancel
                               </button>
