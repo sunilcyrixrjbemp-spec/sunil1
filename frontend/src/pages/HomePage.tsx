@@ -722,7 +722,7 @@ export default function HomePage() {
           {/* TAB SYSTEM: My Claims vs Team Claims */}
           <div className="bg-white border border-gray-200 rounded shadow-sm overflow-hidden flex flex-col">
             {/* Tab Header bar */}
-            <div className="border-b border-gray-200 bg-slate-50 flex items-center justify-start p-1.5 gap-2">
+            <div className="border-b border-gray-200 bg-[#e9eff6] flex items-center justify-start p-1.5 gap-2">
               <button
                 type="button"
                 onClick={() => handleTabChange("my-claims")}
@@ -730,7 +730,7 @@ export default function HomePage() {
                 className={`py-1.5 px-4 font-black text-xs uppercase tracking-wider rounded-lg transition-all flex items-center gap-1.5 cursor-pointer whitespace-nowrap border-0 ${
                   activeTab === "my-claims"
                     ? "bg-[#a5d8e8] text-slate-900 font-extrabold shadow-sm"
-                    : "text-gray-500 bg-transparent hover:text-gray-800 hover:bg-slate-100"
+                    : "text-slate-600 bg-transparent hover:text-slate-900 hover:bg-slate-200/50"
                 }`}
               >
                 <Layers className="w-3.5 h-3.5" />
@@ -745,7 +745,7 @@ export default function HomePage() {
                   className={`py-1.5 px-4 font-black text-xs uppercase tracking-wider rounded-lg transition-all flex items-center gap-1.5 cursor-pointer whitespace-nowrap border-0 ${
                     activeTab === "team-claims"
                       ? "bg-[#a5d8e8] text-slate-900 font-extrabold shadow-sm"
-                      : "text-gray-500 bg-transparent hover:text-gray-800 hover:bg-slate-100"
+                      : "text-slate-600 bg-transparent hover:text-slate-900 hover:bg-slate-200/50"
                   }`}
                 >
                   <Users className="w-3.5 h-3.5" />

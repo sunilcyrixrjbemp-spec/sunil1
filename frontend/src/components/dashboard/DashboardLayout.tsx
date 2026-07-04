@@ -448,106 +448,7 @@ export default function DashboardLayout() {
                     {unreadCount}
                   </span>
                 )}
-              </button>              {/* Notification Dropdown Panel */}
-              {isNotifOpen && (
-                <>
-                  <div className="fixed inset-0 z-[9998] bg-black/50 sm:bg-transparent" onClick={() => setIsNotifOpen(false)} />
-                  
-                  {/* MOBILE FULL-SCREEN NOTIFICATION CENTER & DESKTOP DROPDOWN */}
-                  <div className="fixed inset-0 sm:absolute sm:inset-auto sm:top-full sm:right-0 sm:mt-2 sm:w-85 bg-slate-100 border sm:border-slate-250 rounded-none sm:rounded-xl shadow-2xl z-[9999] overflow-hidden text-xs text-gray-700 animate-fadeIn flex flex-col h-full sm:h-auto sm:max-h-none">
-                    
-                    {/* Header */}
-                    <div className="px-4 py-3 bg-slate-800 text-white flex items-center justify-between shrink-0 h-14 shadow-md">
-                      <div className="flex items-center gap-3">
-                        <button
-                          type="button"
-                          onClick={() => setIsNotifOpen(false)}
-                          className="sm:hidden w-7 h-7 rounded-full border border-slate-700 bg-slate-750 text-slate-300 hover:bg-slate-700 hover:text-white transition-all cursor-pointer flex items-center justify-center font-bold text-xs"
-                        >
-                          ✕
-                        </button>
-                        <span className="uppercase tracking-widest text-[10px] font-black text-white">Notifications Center</span>
-                      </div>
-                      
-                      <button
-                        type="button"
-                        onClick={markAllAsRead}
-                        className="text-[10px] text-[#a5d8e8] hover:text-white font-black uppercase bg-transparent border-0 cursor-pointer transition-colors"
-                      >
-                        Mark all read
-                      </button>
-                    </div>
-
-                    {/* Scrollable list */}
-                    <div className="flex-1 overflow-y-auto p-3 max-h-none sm:max-h-80 bg-slate-100 space-y-2.5 pb-20 sm:pb-3">
-                      {safeNotifications.length === 0 ? (
-                        <div className="p-12 text-center text-slate-400 font-extrabold uppercase tracking-wider text-[10px] bg-white rounded-xl border border-slate-200 shadow-sm">
-                          No notifications
-                        </div>
-                      ) : (
-                        safeNotifications.map((n) => (
-                          <Link
-                            key={n.id}
-                            to={n.link}
-                            onClick={() => {
-                              markAsRead(n.id);
-                              setIsNotifOpen(false);
-                            }}
-                            className={`flex gap-3.5 p-3.5 transition-all no-underline rounded-xl border shadow-xs items-start ${
-                              n.read 
-                                ? "bg-white hover:bg-slate-50 border-slate-200/80 text-slate-700" 
-                                : "bg-[#a5d8e8]/15 hover:bg-[#a5d8e8]/25 border-slate-300 border-l-4 border-l-blue-600 text-slate-900"
-                            }`}
-                          >
-                            {/* Circular Icon Container */}
-                            <div 
-                              className={`w-9 h-9 rounded-full shrink-0 flex items-center justify-center text-white shadow-xs ${
-                                n.type === "warning" ? "bg-amber-600" :
-                                n.type === "success" ? "bg-emerald-600" :
-                                n.type === "error" ? "bg-rose-600" : "bg-blue-600"
-                              }`}
-                            >
-                              {n.type === "warning" && <AlertTriangle className="w-4 h-4 text-white" />}
-                              {n.type === "success" && <Check className="w-4 h-4 text-white" />}
-                              {n.type === "error" && <X className="w-4 h-4 text-white" />}
-                              {n.type !== "warning" && n.type !== "success" && n.type !== "error" && <Info className="w-4 h-4 text-white" />}
-                            </div>
-
-                            {/* Text Content */}
-                            <div className="flex-1 min-w-0">
-                              <div className="flex items-center justify-between gap-2 flex-wrap mb-1">
-                                <span className={`font-black uppercase text-[8px] px-2 py-0.5 rounded-full tracking-wide text-white shadow-xs ${
-                                  n.type === "warning" ? "bg-amber-600" :
-                                  n.type === "success" ? "bg-emerald-600" :
-                                  n.type === "error" ? "bg-rose-600" : "bg-blue-600"
-                                }`}>
-                                  {n.title || "Notification"}
-                                </span>
-
-                                <div className="flex items-center gap-1.5">
-                                  {!n.read && (
-                                    <span className="h-1.5 w-1.5 rounded-full bg-blue-600 animate-pulse"></span>
-                                  )}
-                                  <span className="text-[10px] font-black shrink-0 font-mono" style={{ color: '#000000' }}>
-                                    {formatDateTime(n.created_at)}
-                                  </span>
-                                </div>
-                              </div>
-                              <p className="text-slate-900 font-extrabold text-xs mt-1.5 leading-relaxed" style={{ color: '#1e293b' }}>
-                                {n.description}
-                              </p>
-                            </div>
-                          </Link>
-                        ))
-                      )}
-                    </div>
-
-                    <Link to="/notifications" onClick={() => setIsNotifOpen(false)} className="block py-3 text-center bg-white border-t border-slate-200 text-[10px] text-blue-600 hover:text-blue-800 font-extrabold uppercase tracking-widest shrink-0 shadow-lg sm:shadow-none mb-safe transition-colors">
-                      See All Notifications
-                    </Link>
-                  </div>
-                </>
-              )}
+              </button>
             </div>
 
             <img 
@@ -557,6 +458,107 @@ export default function DashboardLayout() {
             />
           </div>
         </header>
+
+        {/* Notification Dropdown Panel - Rendered outside header to bypass mobile CSS styles */}
+        {isNotifOpen && (
+          <>
+            <div className="fixed inset-0 z-[9998] bg-black/50 sm:bg-transparent" onClick={() => setIsNotifOpen(false)} />
+            
+            {/* MOBILE FULL-SCREEN NOTIFICATION CENTER & DESKTOP DROPDOWN */}
+            <div className="fixed inset-0 sm:fixed sm:top-14 sm:right-4 sm:bottom-auto sm:left-auto sm:w-85 bg-slate-100 border sm:border-slate-250 rounded-none sm:rounded-xl shadow-2xl z-[9999] overflow-hidden text-xs text-gray-700 animate-fadeIn flex flex-col h-full sm:h-auto sm:max-h-[80vh]">
+              
+              {/* Header */}
+              <div className="px-4 py-3 bg-slate-800 text-white flex items-center justify-between shrink-0 h-14 shadow-md">
+                <div className="flex items-center gap-3">
+                  <button
+                    type="button"
+                    onClick={() => setIsNotifOpen(false)}
+                    className="sm:hidden w-7 h-7 rounded-full border border-slate-700 bg-slate-750 text-slate-350 hover:bg-slate-700 hover:text-white transition-all cursor-pointer flex items-center justify-center font-bold text-xs"
+                  >
+                    ✕
+                  </button>
+                  <span className="uppercase tracking-widest text-[10px] font-black text-white">Notifications Center</span>
+                </div>
+                
+                <button
+                  type="button"
+                  onClick={markAllAsRead}
+                  className="text-[10px] text-[#a5d8e8] hover:text-white font-black uppercase bg-transparent border-0 cursor-pointer transition-colors"
+                >
+                  Mark all read
+                </button>
+              </div>
+
+              {/* Notification List Panel */}
+              <div className="flex-1 overflow-y-auto p-3 space-y-3">
+                {safeNotifications.length === 0 ? (
+                  <div className="py-12 text-center text-slate-400 font-bold uppercase tracking-wider text-[10px]">
+                    No notifications
+                  </div>
+                ) : (
+                  safeNotifications.map((n) => (
+                    <Link
+                      key={n.id}
+                      to={n.link}
+                      onClick={() => {
+                        markAsRead(n.id);
+                        setIsNotifOpen(false);
+                      }}
+                      className={`flex gap-3.5 p-3.5 transition-all no-underline rounded-xl border shadow-xs items-start ${
+                        n.read 
+                          ? "bg-white hover:bg-slate-50 border-slate-200/80 text-slate-700" 
+                          : "bg-[#a5d8e8]/15 hover:bg-[#a5d8e8]/25 border-slate-300 border-l-4 border-l-blue-600 text-slate-900"
+                      }`}
+                    >
+                      {/* Circular Icon Container */}
+                      <div 
+                        className={`w-9 h-9 rounded-full shrink-0 flex items-center justify-center text-white shadow-xs ${
+                          n.type === "warning" ? "bg-amber-600" :
+                          n.type === "success" ? "bg-emerald-600" :
+                          n.type === "error" ? "bg-rose-600" : "bg-blue-600"
+                        }`}
+                      >
+                        {n.type === "warning" && <AlertTriangle className="w-4 h-4 text-white" />}
+                        {n.type === "success" && <Check className="w-4 h-4 text-white" />}
+                        {n.type === "error" && <X className="w-4 h-4 text-white" />}
+                        {n.type !== "warning" && n.type !== "success" && n.type !== "error" && <Info className="w-4 h-4 text-white" />}
+                      </div>
+
+                      {/* Text Content */}
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center justify-between gap-2 flex-wrap mb-1">
+                          <span className={`font-black uppercase text-[8px] px-2 py-0.5 rounded-full tracking-wide text-white shadow-xs ${
+                            n.type === "warning" ? "bg-amber-600" :
+                            n.type === "success" ? "bg-emerald-600" :
+                            n.type === "error" ? "bg-rose-600" : "bg-blue-600"
+                          }`}>
+                            {n.title || "Notification"}
+                          </span>
+
+                          <div className="flex items-center gap-1.5">
+                            {!n.read && (
+                              <span className="h-1.5 w-1.5 rounded-full bg-blue-600 animate-pulse"></span>
+                            )}
+                            <span className="text-[10px] font-black shrink-0 font-mono" style={{ color: '#000000' }}>
+                              {formatDateTime(n.created_at)}
+                            </span>
+                          </div>
+                        </div>
+                        <p className="text-slate-900 font-extrabold text-xs mt-1.5 leading-relaxed" style={{ color: '#1e293b' }}>
+                          {n.description}
+                        </p>
+                      </div>
+                    </Link>
+                  ))
+                )}
+              </div>
+
+              <Link to="/notifications" onClick={() => setIsNotifOpen(false)} className="block py-3 text-center bg-white border-t border-slate-200 text-[10px] text-blue-600 hover:text-blue-800 font-extrabold uppercase tracking-widest shrink-0 shadow-lg sm:shadow-none mb-safe transition-colors">
+                See All Notifications
+              </Link>
+            </div>
+          </>
+        )}
 
         {/* MAIN AREA WORKSPACE */}
         <main className="flex-1 p-4 pb-20 lg:pb-4 overflow-y-auto min-w-0 overflow-x-hidden w-full">
