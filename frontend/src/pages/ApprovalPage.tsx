@@ -2041,7 +2041,8 @@ export default function ApprovalPage() {
       {/* ================= RECEIPT IMAGE LIGHTBOX POPUP ================= */}
       {lightboxImage && (
         <div 
-          className="fixed inset-0 bg-black/90 flex items-center justify-center p-4 z-[99999] animate-fadeIn"
+          className="fixed inset-0 bg-black/90 flex items-center justify-center p-4 animate-fadeIn"
+          style={{ zIndex: 9999999 }}
           onClick={() => setLightboxImage(null)}
         >
           <div className="relative max-w-4xl max-h-[90vh] bg-transparent flex flex-col items-center justify-center">

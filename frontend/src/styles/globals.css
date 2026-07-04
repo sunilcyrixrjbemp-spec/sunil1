@@ -194,7 +194,8 @@ select.input-lte option {
 }
 
 .modal-lte-overlay {
-  @apply fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50 overflow-y-auto;
+  @apply fixed inset-0 bg-black/50 flex items-center justify-center p-4 overflow-y-auto;
+  z-index: 1000;
   animation: fadeIn 0.2s ease-out;
 }
 

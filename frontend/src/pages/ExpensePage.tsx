@@ -5031,7 +5031,8 @@ export default function ExpensePage() {
       {/* ================= RECEIPT IMAGE LIGHTBOX POPUP ================= */}
       {lightboxImage && (
         <div 
-          className="fixed inset-0 bg-black/90 flex items-center justify-center p-4 z-[99999] animate-fadeIn"
+          className="fixed inset-0 bg-black/90 flex items-center justify-center p-4 animate-fadeIn"
+          style={{ zIndex: 9999999 }}
           onClick={() => setLightboxImage(null)}
         >
           <div className="relative max-w-4xl max-h-[90vh] bg-white border border-gray-300 rounded p-4 flex flex-col items-center justify-center select-none pointer-events-auto" onClick={(e) => e.stopPropagation()}>

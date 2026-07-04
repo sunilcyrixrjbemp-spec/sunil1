@@ -286,6 +286,7 @@ export default function LoginForm({ onForgotPassword, onUnlockAccount }: LoginFo
               }}
               disabled={loading}
               className="input-lte-icon !pl-11"
+              style={{ paddingLeft: '2.75rem' }}
               required
             />
           </div>
@@ -308,6 +309,7 @@ export default function LoginForm({ onForgotPassword, onUnlockAccount }: LoginFo
               }}
               disabled={loading}
               className="input-lte-icon !pl-11"
+              style={{ paddingLeft: '2.75rem' }}
               required
             />
             <button

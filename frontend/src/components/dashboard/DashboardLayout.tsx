@@ -581,14 +581,14 @@ export default function DashboardLayout() {
         <Link
           to="/home"
           onMouseEnter={() => preloadRoute("/home")}
-          className={`flex flex-col items-center justify-center w-16 h-11 rounded-xl transition-all relative ${
-            currentActiveItem?.id === "home" ? "bg-[#a5d8e8] text-slate-900 font-extrabold shadow-xs" : "text-gray-500 hover:bg-slate-100 hover:text-gray-800"
+          className={`flex flex-col items-center justify-center w-16 h-12 rounded-xl transition-all relative ${
+            currentActiveItem?.id === "home" ? "text-slate-900 font-extrabold" : "text-gray-400 hover:text-gray-700"
           }`}
         >
-          <Home className="w-4 h-4" />
-          <span className="text-[8px] font-bold uppercase tracking-wider mt-0.5">Home</span>
+          <Home className={`w-5 h-5 transition-all ${currentActiveItem?.id === "home" ? "text-slate-800 scale-110" : ""}`} />
+          <span className={`text-[8px] font-bold uppercase tracking-wider mt-0.5 ${currentActiveItem?.id === "home" ? "text-slate-800" : ""}`}>Home</span>
           {currentActiveItem?.id === "home" && (
-            <span className="absolute bottom-0.5 left-1/2 -translate-x-1/2 h-1 w-1 rounded-full bg-slate-900 animate-pulse"></span>
+            <span className="absolute bottom-0 left-1/2 -translate-x-1/2 h-[3px] w-8 rounded-full bg-[#a5d8e8]"></span>
           )}
         </Link>
 
@@ -597,14 +597,14 @@ export default function DashboardLayout() {
           <Link
             to="/submit-expense"
             onMouseEnter={() => preloadRoute("/submit-expense")}
-            className={`flex flex-col items-center justify-center w-16 h-11 rounded-xl transition-all relative ${
-              currentActiveItem?.id === "expense" ? "bg-[#a5d8e8] text-slate-900 font-extrabold shadow-xs" : "text-gray-500 hover:bg-slate-100 hover:text-gray-800"
+            className={`flex flex-col items-center justify-center w-16 h-12 rounded-xl transition-all relative ${
+              currentActiveItem?.id === "expense" ? "text-slate-900 font-extrabold" : "text-gray-400 hover:text-gray-700"
             }`}
           >
-            <Plus className="w-4 h-4" />
-            <span className="text-[8px] font-bold uppercase tracking-wider mt-0.5">Claim</span>
+            <Plus className={`w-5 h-5 transition-all ${currentActiveItem?.id === "expense" ? "text-slate-800 scale-110" : ""}`} />
+            <span className={`text-[8px] font-bold uppercase tracking-wider mt-0.5 ${currentActiveItem?.id === "expense" ? "text-slate-800" : ""}`}>Claim</span>
             {currentActiveItem?.id === "expense" && (
-              <span className="absolute bottom-0.5 left-1/2 -translate-x-1/2 h-1 w-1 rounded-full bg-slate-900 animate-pulse"></span>
+              <span className="absolute bottom-0 left-1/2 -translate-x-1/2 h-[3px] w-8 rounded-full bg-[#a5d8e8]"></span>
             )}
           </Link>
         )}
@@ -614,14 +614,14 @@ export default function DashboardLayout() {
           <Link
             to="/approval-center"
             onMouseEnter={() => preloadRoute("/approval-center")}
-            className={`flex flex-col items-center justify-center w-16 h-11 rounded-xl transition-all relative ${
-              currentActiveItem?.id === "approval" ? "bg-[#a5d8e8] text-slate-900 font-extrabold shadow-xs" : "text-gray-500 hover:bg-slate-100 hover:text-gray-800"
+            className={`flex flex-col items-center justify-center w-16 h-12 rounded-xl transition-all relative ${
+              currentActiveItem?.id === "approval" ? "text-slate-900 font-extrabold" : "text-gray-400 hover:text-gray-700"
             }`}
           >
-            <CheckSquare className="w-4 h-4" />
-            <span className="text-[8px] font-bold uppercase tracking-wider mt-0.5">Approval</span>
+            <CheckSquare className={`w-5 h-5 transition-all ${currentActiveItem?.id === "approval" ? "text-slate-800 scale-110" : ""}`} />
+            <span className={`text-[8px] font-bold uppercase tracking-wider mt-0.5 ${currentActiveItem?.id === "approval" ? "text-slate-800" : ""}`}>Approval</span>
             {currentActiveItem?.id === "approval" && (
-              <span className="absolute bottom-0.5 left-1/2 -translate-x-1/2 h-1 w-1 rounded-full bg-slate-900 animate-pulse"></span>
+              <span className="absolute bottom-0 left-1/2 -translate-x-1/2 h-[3px] w-8 rounded-full bg-[#a5d8e8]"></span>
             )}
           </Link>
         )}
@@ -630,28 +630,28 @@ export default function DashboardLayout() {
         <Link
           to="/profile"
           onMouseEnter={() => preloadRoute("/profile")}
-          className={`flex flex-col items-center justify-center w-16 h-11 rounded-xl transition-all relative ${
-            currentActiveItem?.id === "profile" ? "bg-[#a5d8e8] text-slate-900 font-extrabold shadow-xs" : "text-gray-500 hover:bg-slate-100 hover:text-gray-800"
+          className={`flex flex-col items-center justify-center w-16 h-12 rounded-xl transition-all relative ${
+            currentActiveItem?.id === "profile" ? "text-slate-900 font-extrabold" : "text-gray-400 hover:text-gray-700"
           }`}
         >
-          <User className="w-4 h-4" />
-          <span className="text-[8px] font-bold uppercase tracking-wider mt-0.5">Profile</span>
+          <User className={`w-5 h-5 transition-all ${currentActiveItem?.id === "profile" ? "text-slate-800 scale-110" : ""}`} />
+          <span className={`text-[8px] font-bold uppercase tracking-wider mt-0.5 ${currentActiveItem?.id === "profile" ? "text-slate-800" : ""}`}>Profile</span>
           {currentActiveItem?.id === "profile" && (
-            <span className="absolute bottom-0.5 left-1/2 -translate-x-1/2 h-1 w-1 rounded-full bg-slate-900 animate-pulse"></span>
+            <span className="absolute bottom-0 left-1/2 -translate-x-1/2 h-[3px] w-8 rounded-full bg-[#a5d8e8]"></span>
           )}
         </Link>
 
         {/* More Tab - always visible for everyone to access Help Center, etc. */}
         <button
           onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
-          className={`flex flex-col items-center justify-center w-16 h-11 rounded-xl transition-all border-0 bg-transparent cursor-pointer relative ${
-            isMobileMenuOpen ? "bg-[#a5d8e8] text-slate-900 font-extrabold shadow-xs" : "text-gray-500 hover:bg-slate-100 hover:text-gray-800"
+          className={`flex flex-col items-center justify-center w-16 h-12 rounded-xl transition-all border-0 bg-transparent cursor-pointer relative ${
+            isMobileMenuOpen ? "text-slate-900 font-extrabold" : "text-gray-400 hover:text-gray-700"
           }`}
         >
           <MenuGridIcon />
-          <span className="text-[8px] font-bold uppercase tracking-wider mt-0.5">More</span>
+          <span className={`text-[8px] font-bold uppercase tracking-wider mt-0.5 ${isMobileMenuOpen ? "text-slate-800" : ""}`}>More</span>
           {isMobileMenuOpen && (
-            <span className="absolute bottom-0.5 left-1/2 -translate-x-1/2 h-1 w-1 rounded-full bg-slate-900 animate-pulse"></span>
+            <span className="absolute bottom-0 left-1/2 -translate-x-1/2 h-[3px] w-8 rounded-full bg-[#a5d8e8]"></span>
           )}
         </button>
       </nav>
