@@ -422,7 +422,7 @@ export default function AnalysisPage() {
 
   if (isMobile) {
     return (
-      <div className="space-y-4 text-gray-800 p-3" style={{ fontFamily: "'Plus Jakarta Sans', sans-serif" }}>
+      <div className="space-y-4 text-gray-800 p-3 pb-20" style={{ fontFamily: "'Plus Jakarta Sans', sans-serif" }}>
         {/* Page Header */}
         <div className="flex justify-between items-center pb-1">
           <div>
@@ -434,29 +434,29 @@ export default function AnalysisPage() {
             <button
               type="button"
               onClick={() => setViewMode(viewMode === "my" ? "team" : "my")}
-              className="px-2.5 py-1 text-[9px] font-black uppercase rounded border border-blue-600 bg-blue-50 text-blue-700 cursor-pointer shadow-xs"
+              className="px-2.5 py-1 text-[9px] font-black uppercase rounded border border-[#a5d8e8] bg-[#a5d8e8]/10 text-slate-700 cursor-pointer shadow-xs"
             >
               {viewMode === "my" ? "View Team" : "View Self"}
             </button>
           )}
         </div>
 
-        {/* Filters */}
-        <div className="bg-white border border-gray-200 rounded p-2.5 space-y-2 text-[10px]">
-          <div className="flex flex-wrap gap-2">
+        {/* Filters — all in one compact row */}
+        <div className="bg-white border border-gray-200 rounded-xl p-2.5 shadow-xs">
+          <div className="grid grid-cols-3 gap-1.5 w-full">
             <select
               value={selectedMonth}
               onChange={(e) => setSelectedMonth(Number(e.target.value))}
-              className="border border-gray-300 rounded px-2 py-0.5 text-[10px] font-black bg-white text-gray-805 focus:outline-none"
+              className="w-full border border-gray-300 rounded-lg px-1.5 py-1 text-[9px] font-black bg-white text-gray-800 focus:outline-none focus:border-[#a5d8e8]"
             >
               {months.map((m, i) => (
-                <option key={m} value={i}>{m}</option>
+                <option key={m} value={i}>{m.slice(0, 3)}</option>
               ))}
             </select>
             <select
               value={selectedYear}
               onChange={(e) => setSelectedYear(Number(e.target.value))}
-              className="border border-gray-300 rounded px-2 py-0.5 text-[10px] font-black bg-white text-gray-805 focus:outline-none"
+              className="w-full border border-gray-300 rounded-lg px-1.5 py-1 text-[9px] font-black bg-white text-gray-800 focus:outline-none focus:border-[#a5d8e8]"
             >
               {availableYears.map(y => (
                 <option key={y} value={y}>{y}</option>
@@ -465,9 +465,9 @@ export default function AnalysisPage() {
             <select
               value={selectedStatus}
               onChange={(e) => setSelectedStatus(e.target.value)}
-              className="border border-gray-300 rounded px-2 py-0.5 text-[10px] font-black bg-white text-gray-805 focus:outline-none"
+              className="w-full border border-gray-300 rounded-lg px-1.5 py-1 text-[9px] font-black bg-white text-gray-800 focus:outline-none focus:border-[#a5d8e8]"
             >
-              <option value="all">All Statuses</option>
+              <option value="all">All Status</option>
               <option value="approved">Approved</option>
               <option value="pending">Pending</option>
               <option value="rejected">Rejected</option>
@@ -475,11 +475,11 @@ export default function AnalysisPage() {
           </div>
 
           {viewMode === "team" && isReviewer && (
-            <div className="flex gap-2">
+            <div className="flex gap-1.5 mt-1.5">
               <select
                 value={selectedDistrict}
                 onChange={(e) => setSelectedDistrict(e.target.value)}
-                className="flex-1 border border-gray-300 rounded px-2 py-0.5 text-[10px] font-bold bg-white text-gray-805 focus:outline-none"
+                className="flex-1 border border-gray-300 rounded-lg px-1.5 py-1 text-[9px] font-bold bg-white text-gray-800 focus:outline-none focus:border-[#a5d8e8]"
               >
                 <option value="all">All Districts</option>
                 {filterOptions.districts.map(d => (
@@ -489,7 +489,7 @@ export default function AnalysisPage() {
               <select
                 value={selectedEngineer}
                 onChange={(e) => setSelectedEngineer(e.target.value)}
-                className="flex-1 border border-gray-300 rounded px-2 py-0.5 text-[10px] font-bold bg-white text-gray-850 focus:outline-none"
+                className="flex-1 border border-gray-300 rounded-lg px-1.5 py-1 text-[9px] font-bold bg-white text-gray-800 focus:outline-none focus:border-[#a5d8e8]"
               >
                 <option value="all">All Engineers</option>
                 {filterOptions.engineers.map(name => (
@@ -502,54 +502,42 @@ export default function AnalysisPage() {
 
         {/* Stats Grid */}
         {count === 0 ? (
-          <div className="bg-white border border-gray-200 rounded p-8 text-center text-gray-400">
+          <div className="bg-white border border-gray-200 rounded-xl p-8 text-center text-gray-400">
             <span className="text-xs font-bold block mb-1">No claims in this selection</span>
             <span className="text-[10px]">Please update the month/year filter.</span>
           </div>
         ) : (
           <>
-            <div className="grid grid-cols-2 gap-2">
-              <div className="bg-white border border-gray-200 rounded p-2.5 flex items-center gap-2">
-                <div className="w-8 h-8 rounded-full bg-emerald-50 text-emerald-600 flex items-center justify-center font-black text-xs">₹</div>
-                <div>
-                  <span className="text-[8px] uppercase tracking-wider text-gray-400 block">Total Spend</span>
-                  <span className="text-xs font-black font-mono leading-none block mt-0.5">₹{totalAmount.toLocaleString()}</span>
-                </div>
+            <div className="grid grid-cols-3 gap-2">
+              <div className="bg-white border border-gray-200 rounded-xl p-2 flex flex-col items-center text-center shadow-xs">
+                <div className="w-7 h-7 rounded-full bg-emerald-50 text-emerald-600 flex items-center justify-center font-black text-xs mb-1">₹</div>
+                <span className="text-[7px] uppercase tracking-wider text-gray-400 block">Total Spend</span>
+                <span className="text-[10px] font-black font-mono leading-none block mt-0.5">₹{totalAmount.toLocaleString()}</span>
               </div>
-              <div className="bg-white border border-gray-200 rounded p-2.5 flex items-center gap-2">
-                <div className="w-8 h-8 rounded-full bg-blue-50 text-blue-600 flex items-center justify-center font-black text-xs">#</div>
-                <div>
-                  <span className="text-[8px] uppercase tracking-wider text-gray-400 block">Total Claims</span>
-                  <span className="text-xs font-black font-mono leading-none block mt-0.5">{count}</span>
-                </div>
+              <div className="bg-white border border-gray-200 rounded-xl p-2 flex flex-col items-center text-center shadow-xs">
+                <div className="w-7 h-7 rounded-full bg-blue-50 text-blue-600 flex items-center justify-center font-black text-xs mb-1">#</div>
+                <span className="text-[7px] uppercase tracking-wider text-gray-400 block">Claims</span>
+                <span className="text-[10px] font-black font-mono leading-none block mt-0.5">{count}</span>
               </div>
-              <div className="bg-white border border-gray-200 rounded p-2.5 flex items-center gap-2">
-                <div className="w-8 h-8 rounded-full bg-amber-50 text-amber-600 flex items-center justify-center font-black text-xs">Avg</div>
-                <div>
-                  <span className="text-[8px] uppercase tracking-wider text-gray-400 block">Avg Claim</span>
-                  <span className="text-xs font-black font-mono leading-none block mt-0.5">₹{avgValue.toLocaleString()}</span>
-                </div>
+              <div className="bg-white border border-gray-200 rounded-xl p-2 flex flex-col items-center text-center shadow-xs">
+                <div className="w-7 h-7 rounded-full bg-amber-50 text-amber-600 flex items-center justify-center font-black text-xs mb-1">Avg</div>
+                <span className="text-[7px] uppercase tracking-wider text-gray-400 block">Avg Claim</span>
+                <span className="text-[10px] font-black font-mono leading-none block mt-0.5">₹{avgValue.toLocaleString()}</span>
               </div>
-              <div className="bg-white border border-gray-200 rounded p-2.5 flex items-center gap-2">
-                <div className="w-8 h-8 rounded-full bg-indigo-50 text-indigo-600 flex items-center justify-center font-black text-xs">☎</div>
-                <div>
-                  <span className="text-[8px] uppercase tracking-wider text-gray-400 block">Calls Done</span>
-                  <span className="text-xs font-black font-mono leading-none block mt-0.5">{activityStats.callsCompleted}/{activityStats.callsAssigned}</span>
-                </div>
+              <div className="bg-white border border-gray-200 rounded-xl p-2 flex flex-col items-center text-center shadow-xs">
+                <div className="w-7 h-7 rounded-full bg-indigo-50 text-indigo-600 flex items-center justify-center font-black text-xs mb-1">☎</div>
+                <span className="text-[7px] uppercase tracking-wider text-gray-400 block">Calls Done</span>
+                <span className="text-[10px] font-black font-mono leading-none block mt-0.5">{activityStats.callsCompleted}/{activityStats.callsAssigned}</span>
               </div>
-              <div className="bg-white border border-gray-200 rounded p-2.5 flex items-center gap-2">
-                <div className="w-8 h-8 rounded-full bg-teal-50 text-teal-600 flex items-center justify-center font-black text-xs">P</div>
-                <div>
-                  <span className="text-[8px] uppercase tracking-wider text-gray-400 block">PMS Done</span>
-                  <span className="text-xs font-black font-mono leading-none block mt-0.5">{activityStats.pmsCount}</span>
-                </div>
+              <div className="bg-white border border-gray-200 rounded-xl p-2 flex flex-col items-center text-center shadow-xs">
+                <div className="w-7 h-7 rounded-full bg-teal-50 text-teal-600 flex items-center justify-center font-black text-xs mb-1">PMS</div>
+                <span className="text-[7px] uppercase tracking-wider text-gray-400 block">PMS Done</span>
+                <span className="text-[10px] font-black font-mono leading-none block mt-0.5">{activityStats.pmsCount}</span>
               </div>
-              <div className="bg-white border border-gray-200 rounded p-2.5 flex items-center gap-2">
-                <div className="w-8 h-8 rounded-full bg-purple-50 text-purple-600 flex items-center justify-center font-black text-xs">T</div>
-                <div>
-                  <span className="text-[8px] uppercase tracking-wider text-gray-400 block">Tag & Calib</span>
-                  <span className="text-xs font-black font-mono leading-none block mt-0.5">{activityStats.assetTaggingCount + activityStats.calibrationCount}</span>
-                </div>
+              <div className="bg-white border border-gray-200 rounded-xl p-2 flex flex-col items-center text-center shadow-xs">
+                <div className="w-7 h-7 rounded-full bg-purple-50 text-purple-600 flex items-center justify-center font-black text-xs mb-1">Tag</div>
+                <span className="text-[7px] uppercase tracking-wider text-gray-400 block">Tag+Calib</span>
+                <span className="text-[10px] font-black font-mono leading-none block mt-0.5">{activityStats.assetTaggingCount + activityStats.calibrationCount}</span>
               </div>
             </div>
 

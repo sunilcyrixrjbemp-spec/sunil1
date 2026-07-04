@@ -427,7 +427,7 @@ export default function DashboardLayout() {
             >
               <Menu className="w-5 h-5" />
             </button>
-            <h1 className="text-base md:text-xl font-black text-white uppercase tracking-wider ml-4 md:ml-6">
+            <h1 className="text-lg md:text-xl font-black text-white uppercase tracking-wider ml-2 md:ml-6">
               {currentActiveItem ? currentActiveItem.name : "Dashboard"}
             </h1>
           </div>

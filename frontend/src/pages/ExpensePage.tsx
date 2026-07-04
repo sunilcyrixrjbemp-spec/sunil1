@@ -3716,41 +3716,41 @@ export default function ExpensePage() {
         </div>
 
         {/* Visit Activities Metrics Summary Grid of Box Cards */}
-        <div className="mt-4 grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3.5 w-full text-xs font-semibold">
+        <div className="mt-3 grid grid-cols-6 gap-1.5 w-full text-xs font-semibold">
           {/* Card 1: Calls Attended */}
-          <div className="bg-white border border-gray-200 rounded-xl p-3.5 shadow-sm text-center flex flex-col justify-center items-center h-20 transition-all hover:shadow-md">
-            <span className="text-gray-400 uppercase text-[8px] tracking-wider font-black mb-1.5 block">Calls Attended</span>
-            <span className="text-gray-900 font-mono font-black text-xl leading-none">{totalCallsAttended}</span>
+          <div className="bg-white border border-gray-200 rounded-lg p-1 shadow-xs text-center flex flex-col justify-center items-center h-11 transition-all hover:shadow-md">
+            <span className="text-gray-400 uppercase text-[6px] tracking-wider font-black mb-0.5 block leading-tight">Attended</span>
+            <span className="text-gray-900 font-mono font-black text-xs leading-none">{totalCallsAttended}</span>
           </div>
 
           {/* Card 2: Calls Closed */}
-          <div className="bg-white border border-gray-200 rounded-xl p-3.5 shadow-sm text-center flex flex-col justify-center items-center h-20 transition-all hover:shadow-md border-t-2 border-t-green-500">
-            <span className="text-gray-400 uppercase text-[8px] tracking-wider font-black mb-1.5 block">Calls Closed</span>
-            <span className="text-green-700 font-mono font-black text-xl leading-none">{totalCallsClosed}</span>
+          <div className="bg-white border border-gray-200 rounded-lg p-1 shadow-xs text-center flex flex-col justify-center items-center h-11 transition-all hover:shadow-md border-t-2 border-t-green-500">
+            <span className="text-gray-400 uppercase text-[6px] tracking-wider font-black mb-0.5 block leading-tight">Closed</span>
+            <span className="text-green-700 font-mono font-black text-xs leading-none">{totalCallsClosed}</span>
           </div>
 
           {/* Card 3: PMs Done */}
-          <div className="bg-white border border-gray-200 rounded-xl p-3.5 shadow-sm text-center flex flex-col justify-center items-center h-20 transition-all hover:shadow-md border-t-2 border-t-amber-500">
-            <span className="text-gray-400 uppercase text-[8px] tracking-wider font-black mb-1.5 block">PMs Done</span>
-            <span className="text-amber-700 font-mono font-black text-xl leading-none">{totalPmsDone}</span>
+          <div className="bg-white border border-gray-200 rounded-lg p-1 shadow-xs text-center flex flex-col justify-center items-center h-11 transition-all hover:shadow-md border-t-2 border-t-amber-500">
+            <span className="text-gray-400 uppercase text-[6px] tracking-wider font-black mb-0.5 block leading-tight">PMs</span>
+            <span className="text-amber-700 font-mono font-black text-xs leading-none">{totalPmsDone}</span>
           </div>
 
           {/* Card 4: Assets Tagged */}
-          <div className="bg-white border border-gray-200 rounded-xl p-3.5 shadow-sm text-center flex flex-col justify-center items-center h-20 transition-all hover:shadow-md border-t-2 border-t-emerald-500">
-            <span className="text-gray-400 uppercase text-[8px] tracking-wider font-black mb-1.5 block">Assets Tagged</span>
-            <span className="text-emerald-700 font-mono font-black text-xl leading-none">{totalAssetsTagged}</span>
+          <div className="bg-white border border-gray-200 rounded-lg p-1 shadow-xs text-center flex flex-col justify-center items-center h-11 transition-all hover:shadow-md border-t-2 border-t-emerald-500">
+            <span className="text-gray-400 uppercase text-[6px] tracking-wider font-black mb-0.5 block leading-tight">Tagged</span>
+            <span className="text-emerald-700 font-mono font-black text-xs leading-none">{totalAssetsTagged}</span>
           </div>
 
           {/* Card 5: Mobilise Assets */}
-          <div className="bg-white border border-gray-200 rounded-xl p-3.5 shadow-sm text-center flex flex-col justify-center items-center h-20 transition-all hover:shadow-md border-t-2 border-t-indigo-500">
-            <span className="text-gray-400 uppercase text-[8px] tracking-wider font-black mb-1.5 block">Mobilise Assets</span>
-            <span className="text-indigo-700 font-mono font-black text-xl leading-none">{totalMobiliseAsset}</span>
+          <div className="bg-white border border-gray-200 rounded-lg p-1 shadow-xs text-center flex flex-col justify-center items-center h-11 transition-all hover:shadow-md border-t-2 border-t-indigo-500">
+            <span className="text-gray-400 uppercase text-[6px] tracking-wider font-black mb-0.5 block leading-tight">Mobilise</span>
+            <span className="text-indigo-700 font-mono font-black text-xs leading-none">{totalMobiliseAsset}</span>
           </div>
 
           {/* Card 6: Calibrations */}
-          <div className="bg-white border border-gray-200 rounded-xl p-3.5 shadow-sm text-center flex flex-col justify-center items-center h-20 transition-all hover:shadow-md border-t-2 border-t-purple-500">
-            <span className="text-gray-400 uppercase text-[8px] tracking-wider font-black mb-1.5 block">Calibrations</span>
-            <span className="text-purple-700 font-mono font-black text-xl leading-none">{totalCalibration}</span>
+          <div className="bg-white border border-gray-200 rounded-lg p-1 shadow-xs text-center flex flex-col justify-center items-center h-11 transition-all hover:shadow-md border-t-2 border-t-purple-500">
+            <span className="text-gray-400 uppercase text-[6px] tracking-wider font-black mb-0.5 block leading-tight">Calib</span>
+            <span className="text-purple-700 font-mono font-black text-xs leading-none">{totalCalibration}</span>
           </div>
         </div>
 
@@ -3781,24 +3781,25 @@ export default function ExpensePage() {
 
         {/* Search & Advanced Filters */}
         <div className="p-2.5 border-b border-gray-150 bg-slate-50 flex flex-col gap-2 text-[10px] font-bold text-gray-700">
-          {/* Row 1: Search input and Month selection in one single row */}
-          <div className="flex flex-wrap items-center gap-3">
-            <div className="flex-1 min-w-[150px]">
-              <input
-                type="text"
-                placeholder="Search by Purpose, Mode, Amount..."
-                value={claimsSearch}
-                onChange={(e) => { setClaimsSearch(e.target.value); setMyClaimsPage(1); }}
-                className="w-full bg-white border border-gray-300 rounded px-2.5 py-1 text-[10px] font-medium text-gray-800 shadow-xs focus:outline-none focus:border-blue-500"
-              />
-            </div>
-            
-            <div className="flex items-center gap-1.5 shrink-0">
-              <span className="text-[8px] font-bold uppercase text-gray-400">Month:</span>
+          {/* Row 1: Search input */}
+          <div className="w-full">
+            <input
+              type="text"
+              placeholder="Search by Purpose, Mode, Amount..."
+              value={claimsSearch}
+              onChange={(e) => { setClaimsSearch(e.target.value); setMyClaimsPage(1); }}
+              className="w-full bg-white border border-gray-300 rounded px-2.5 py-1 text-[10px] font-medium text-gray-800 shadow-xs focus:outline-none focus:border-blue-500"
+            />
+          </div>
+          
+          {/* Row 2: Three dropdown filters in one line */}
+          <div className="grid grid-cols-3 gap-2 w-full">
+            <div className="flex flex-col gap-1">
+              <span className="text-[7px] font-black uppercase text-gray-400">Month:</span>
               <select
                 value={claimsMonthFilter}
                 onChange={(e) => { setClaimsMonthFilter(e.target.value); setMyClaimsPage(1); }}
-                className="bg-white border border-gray-300 rounded px-2 py-0.5 text-[10px] font-black text-gray-800 cursor-pointer shadow-xs focus:outline-none focus:border-blue-500"
+                className="w-full bg-white border border-gray-300 rounded px-1.5 py-1 text-[9px] font-black text-gray-800 cursor-pointer shadow-xs focus:outline-none focus:border-blue-500"
               >
                 <option value="all">All Months</option>
                 {getUniqueMonths().map(m => (
@@ -3807,12 +3808,27 @@ export default function ExpensePage() {
               </select>
             </div>
 
-            <div className="flex items-center gap-1.5 shrink-0">
-              <span className="text-[8px] font-bold uppercase text-gray-400">Sort By:</span>
+            <div className="flex flex-col gap-1">
+              <span className="text-[7px] font-black uppercase text-gray-400">Status:</span>
+              <select
+                value={claimsStatusFilter}
+                onChange={(e) => { setClaimsStatusFilter(e.target.value as any); setMyClaimsPage(1); }}
+                className="w-full bg-white border border-gray-300 rounded px-1.5 py-1 text-[9px] font-black text-gray-800 cursor-pointer shadow-xs focus:outline-none focus:border-blue-500"
+              >
+                <option value="all">All Statuses</option>
+                <option value="draft">Draft</option>
+                <option value="submitted">Submitted</option>
+                <option value="approved">Approved</option>
+                <option value="rejected">Rejected</option>
+              </select>
+            </div>
+
+            <div className="flex flex-col gap-1">
+              <span className="text-[7px] font-black uppercase text-gray-400">Sort By:</span>
               <select
                 value={claimsSortOrder}
                 onChange={(e) => { setClaimsSortOrder(e.target.value as any); setMyClaimsPage(1); }}
-                className="bg-white border border-gray-300 rounded px-2 py-0.5 text-[10px] font-black text-gray-800 cursor-pointer shadow-xs focus:outline-none focus:border-blue-500"
+                className="w-full bg-white border border-gray-300 rounded px-1.5 py-1 text-[9px] font-black text-gray-800 cursor-pointer shadow-xs focus:outline-none focus:border-blue-500"
               >
                 <option value="date_desc">Newest Date</option>
                 <option value="date_asc">Oldest Date</option>
@@ -3820,24 +3836,6 @@ export default function ExpensePage() {
                 <option value="amount_asc">Lowest Amount</option>
               </select>
             </div>
-          </div>
-
-          {/* Row 2: Status selection pills underneath */}
-          <div className="flex items-center gap-1.5 overflow-x-auto no-scrollbar py-0.5 border-t border-gray-200/50 pt-1.5">
-            {(["all", "draft", "submitted", "approved", "rejected"] as const).map((status) => (
-              <button
-                key={status}
-                type="button"
-                onClick={() => { setClaimsStatusFilter(status); setMyClaimsPage(1); }}
-                className={`px-2.5 py-0.5 rounded text-[9px] font-black uppercase tracking-wider transition-all cursor-pointer border whitespace-nowrap ${
-                  claimsStatusFilter === status
-                    ? "bg-blue-600 text-white border-blue-600 font-extrabold shadow-sm"
-                    : "bg-white text-gray-600 border-gray-300 hover:bg-emerald-50 hover:text-emerald-700"
-                }`}
-              >
-                {status === "all" ? "All Statuses" : status}
-              </button>
-            ))}
           </div>
         </div>
 
