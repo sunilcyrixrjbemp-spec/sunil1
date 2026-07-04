@@ -1241,7 +1241,19 @@ export default function ApprovalPage() {
                                 </div>
                                 <div>
                                   <span className="text-[9px] text-gray-400 font-bold uppercase tracking-wider block">DA Allowance</span>
-                                  <span className="font-bold text-gray-800">₹{(Number(leg.da) || 0).toLocaleString()}</span>
+                                  {selectedApproval?.level_number === 1 ? (
+                                    <div className="relative mt-1">
+                                      <span className="absolute left-2 top-0.5 text-gray-400 font-bold text-xs">₹</span>
+                                      <input
+                                        type="number"
+                                        value={leg.da}
+                                        onChange={(e) => handleLegAmountChange(index, "da", e.target.value)}
+                                        className="input-lte pl-5 pr-1 py-0.5 text-xs font-bold w-20 h-6 border-amber-300 bg-amber-50/10"
+                                      />
+                                    </div>
+                                  ) : (
+                                    <span className="font-bold text-gray-800">₹{(Number(leg.da) || 0).toLocaleString()}</span>
+                                  )}
                                 </div>
                                 <div className="col-span-2 border-t border-gray-200 pt-2 grid grid-cols-4 gap-1 text-center font-bold">
                                   <div>

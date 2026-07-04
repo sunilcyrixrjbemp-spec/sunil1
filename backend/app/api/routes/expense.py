@@ -363,7 +363,14 @@ async def create_limit_request(
                 manager_id = approver_user.user_id
 
     if not manager_id:
-        manager_id = user.manager or "Admin"
+        if user.manager:
+            mgr_user = db.query(User).filter(User.name == user.manager).first()
+            if mgr_user:
+                manager_id = mgr_user.user_id
+            else:
+                manager_id = user.manager
+        if not manager_id:
+            manager_id = "Admin"
 
     # Check if request already exists
     existing = db.query(LimitApprovalRequest).filter(
