@@ -334,8 +334,8 @@ export default function NotificationsPage() {
                     </span>
 
                     {/* Date/Time */}
-                    <span className="text-[10px] text-black font-extrabold font-mono flex items-center gap-1 ml-2">
-                      <Calendar className="w-3 h-3 text-slate-850" />
+                    <span className="text-[10px] font-extrabold font-mono flex items-center gap-1 ml-2" style={{ color: '#000000' }}>
+                      <Calendar className="w-3 h-3 text-black" style={{ color: '#000000' }} />
                       {formatDateTime(n.created_at)}
                     </span>
                   </div>

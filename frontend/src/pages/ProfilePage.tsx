@@ -15,18 +15,16 @@ interface DetailRowProps {
 }
 
 const DetailRow = ({ label, value, icon }: DetailRowProps) => (
-  <div className="info-box-lte animate-fadeIn">
-    <div className="info-box-icon bg-[#a5d8e8] shrink-0 flex items-center justify-center rounded-lg">
-      <span className="text-slate-800">{icon}</span>
+  <div className="flex items-center justify-between p-3.5 bg-white border border-gray-200/80 rounded-xl hover:bg-slate-50 transition-all shadow-xs gap-3 animate-fadeIn">
+    <div className="flex items-center gap-3.5 min-w-0">
+      <div className="w-8 h-8 rounded-lg bg-[#a5d8e8]/20 flex items-center justify-center shrink-0 text-slate-800 text-sm">
+        {icon}
+      </div>
+      <span className="text-[11px] font-bold text-gray-500 uppercase tracking-wide truncate">{label}</span>
     </div>
-    <div className="info-box-content min-w-0">
-      <span className="text-[9px] font-bold uppercase tracking-wider text-gray-400 block mb-0.5">
-        {label}
-      </span>
-      <span className="text-xs font-bold text-gray-800 block truncate" title={value}>
-        {value}
-      </span>
-    </div>
+    <span className="text-xs font-black text-gray-900 text-right truncate ml-4 max-w-[50%]" title={value}>
+      {value}
+    </span>
   </div>
 );
 
@@ -953,110 +951,121 @@ export default function ProfilePage() {
                       Contact & Personal Info
                     </h4>
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-3.5">
-                      <div className="info-box-lte animate-fadeIn">
-                        <div className="info-box-icon bg-[#a5d8e8] shrink-0 flex items-center justify-center rounded-lg">
-                          <i className="fas fa-envelope text-slate-800"></i>
-                        </div>
-                        <div className="info-box-content flex-1 min-w-0">
-                          <div className="flex items-center justify-between">
-                            <span className="text-[9px] font-bold uppercase tracking-wider text-gray-400 block mb-0.5">Email Address</span>
-                            {!isEditingEmail && (
-                              <button
-                                onClick={() => {
-                                  setTempEmail(user.mail_id || "");
-                                  setIsEditingEmail(true);
-                                  setIsEditingMobile(false);
-                                  setNotice(null);
-                                }}
-                                className="p-1 rounded text-slate-400 hover:text-blue-600 hover:bg-slate-100 transition-all shrink-0 bg-transparent border-0 outline-none cursor-pointer"
-                                title="Edit Email Address"
-                              >
-                                <i className="fas fa-edit text-xs"></i>
-                              </button>
+                      {/* Email Address (Editable Inline) */}
+                      <div className="flex items-center justify-between p-3.5 bg-white border border-gray-200/80 rounded-xl hover:bg-slate-50 transition-all shadow-xs gap-3 animate-fadeIn">
+                        <div className="flex items-center gap-3.5 min-w-0 flex-1">
+                          <div className="w-8 h-8 rounded-lg bg-[#a5d8e8]/20 flex items-center justify-center shrink-0 text-slate-800 text-sm">
+                            <i className="fas fa-envelope"></i>
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <div className="flex items-center justify-between">
+                              <span className="text-[11px] font-bold text-gray-500 uppercase tracking-wide truncate">Email Address</span>
+                              {!isEditingEmail && (
+                                <button
+                                  type="button"
+                                  onClick={() => {
+                                    setTempEmail(user.mail_id || "");
+                                    setIsEditingEmail(true);
+                                    setIsEditingMobile(false);
+                                    setNotice(null);
+                                  }}
+                                  className="p-1 rounded text-slate-400 hover:text-blue-600 hover:bg-slate-100 transition-all shrink-0 bg-transparent border-0 outline-none cursor-pointer"
+                                  title="Edit Email Address"
+                                >
+                                  <i className="fas fa-edit text-xs"></i>
+                                </button>
+                              )}
+                            </div>
+                            {isEditingEmail ? (
+                              <div className="flex items-center gap-1.5 w-full mt-1.5">
+                                <input
+                                  type="email"
+                                  value={tempEmail}
+                                  onChange={(e) => setTempEmail(e.target.value)}
+                                  className="input-lte h-7 py-0.5 text-xs flex-1"
+                                  disabled={emailLoading}
+                                  autoFocus
+                                />
+                                <button
+                                  type="button"
+                                  onClick={handleSaveEmail}
+                                  disabled={emailLoading}
+                                  className="px-2 h-7 rounded bg-blue-600 hover:bg-blue-700 text-white font-bold text-[10px] transition-all border-0 cursor-pointer"
+                                >
+                                  Save
+                                </button>
+                                <button
+                                  type="button"
+                                  onClick={handleCancelEmail}
+                                  disabled={emailLoading}
+                                  className="px-2 h-7 rounded bg-white hover:bg-slate-100 text-slate-600 border border-slate-350 font-bold text-[10px] transition-all cursor-pointer"
+                                >
+                                  Cancel
+                                </button>
+                              </div>
+                            ) : (
+                              <span className="text-xs font-black text-gray-900 block truncate mt-0.5">{user.mail_id || "-"}</span>
                             )}
                           </div>
-                          {isEditingEmail ? (
-                            <div className="flex items-center gap-1.5 w-full mt-1">
-                              <input
-                                type="email"
-                                value={tempEmail}
-                                onChange={(e) => setTempEmail(e.target.value)}
-                                className="input-lte h-7 py-0.5 text-xs flex-1"
-                                disabled={emailLoading}
-                                autoFocus
-                              />
-                              <button
-                                onClick={handleSaveEmail}
-                                disabled={emailLoading}
-                                className="px-2 h-7 rounded bg-blue-600 hover:bg-blue-700 text-white font-bold text-[10px] transition-all border-0 cursor-pointer"
-                              >
-                                Save
-                              </button>
-                              <button
-                                onClick={handleCancelEmail}
-                                disabled={emailLoading}
-                                className="px-2 h-7 rounded bg-white hover:bg-slate-100 text-slate-600 border border-slate-350 font-bold text-[10px] transition-all cursor-pointer"
-                              >
-                                Cancel
-                              </button>
-                            </div>
-                          ) : (
-                            <span className="text-xs font-bold text-gray-800 block truncate">{user.mail_id || "-"}</span>
-                          )}
                         </div>
                       </div>
 
                       {/* Mobile Number (Editable Inline) */}
-                      <div className="info-box-lte animate-fadeIn">
-                        <div className="info-box-icon bg-[#a5d8e8] shrink-0 flex items-center justify-center rounded-lg">
-                          <i className="fas fa-phone text-slate-800"></i>
-                        </div>
-                        <div className="info-box-content flex-1 min-w-0">
-                          <div className="flex items-center justify-between">
-                            <span className="text-[9px] font-bold uppercase tracking-wider text-gray-400 block mb-0.5">Mobile Number</span>
-                            {!isEditingMobile && (
-                              <button
-                                onClick={() => {
-                                  setTempMobile(user.mobile_number || "");
-                                  setIsEditingMobile(true);
-                                  setIsEditingEmail(false);
-                                  setNotice(null);
-                                }}
-                                className="p-1 rounded text-slate-400 hover:text-blue-600 hover:bg-slate-100 transition-all shrink-0 bg-transparent border-0 outline-none cursor-pointer"
-                                title="Edit Mobile Number"
-                              >
-                                <i className="fas fa-edit text-xs"></i>
-                              </button>
+                      <div className="flex items-center justify-between p-3.5 bg-white border border-gray-200/80 rounded-xl hover:bg-slate-50 transition-all shadow-xs gap-3 animate-fadeIn">
+                        <div className="flex items-center gap-3.5 min-w-0 flex-1">
+                          <div className="w-8 h-8 rounded-lg bg-[#a5d8e8]/20 flex items-center justify-center shrink-0 text-slate-800 text-sm">
+                            <i className="fas fa-phone"></i>
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <div className="flex items-center justify-between">
+                              <span className="text-[11px] font-bold text-gray-500 uppercase tracking-wide truncate">Mobile Number</span>
+                              {!isEditingMobile && (
+                                <button
+                                  type="button"
+                                  onClick={() => {
+                                    setTempMobile(user.mobile_number || "");
+                                    setIsEditingMobile(true);
+                                    setIsEditingEmail(false);
+                                    setNotice(null);
+                                  }}
+                                  className="p-1 rounded text-slate-400 hover:text-blue-600 hover:bg-slate-100 transition-all shrink-0 bg-transparent border-0 outline-none cursor-pointer"
+                                  title="Edit Mobile Number"
+                                >
+                                  <i className="fas fa-edit text-xs"></i>
+                                </button>
+                              )}
+                            </div>
+                            {isEditingMobile ? (
+                              <div className="flex items-center gap-1.5 w-full mt-1.5">
+                                <input
+                                  type="tel"
+                                  value={tempMobile}
+                                  onChange={(e) => setTempMobile(e.target.value)}
+                                  className="input-lte h-7 py-0.5 text-xs flex-1"
+                                  disabled={mobileLoading}
+                                  autoFocus
+                                />
+                                <button
+                                  type="button"
+                                  onClick={handleSaveMobile}
+                                  disabled={mobileLoading}
+                                  className="px-2 h-7 rounded bg-blue-600 hover:bg-blue-700 text-white font-bold text-[10px] transition-all border-0 cursor-pointer"
+                                >
+                                  Save
+                                </button>
+                                <button
+                                  type="button"
+                                  onClick={handleCancelMobile}
+                                  disabled={mobileLoading}
+                                  className="px-2 h-7 rounded bg-white hover:bg-slate-100 text-slate-600 border border-slate-350 font-bold text-[10px] transition-all cursor-pointer"
+                                >
+                                  Cancel
+                                </button>
+                              </div>
+                            ) : (
+                              <span className="text-xs font-black text-gray-900 block truncate mt-0.5">{user.mobile_number || "-"}</span>
                             )}
                           </div>
-                          {isEditingMobile ? (
-                            <div className="flex items-center gap-1.5 w-full mt-1">
-                              <input
-                                type="tel"
-                                value={tempMobile}
-                                onChange={(e) => setTempMobile(e.target.value)}
-                                className="input-lte h-7 py-0.5 text-xs flex-1"
-                                disabled={mobileLoading}
-                                autoFocus
-                              />
-                              <button
-                                onClick={handleSaveMobile}
-                                disabled={mobileLoading}
-                                className="px-2 h-7 rounded bg-blue-600 hover:bg-blue-700 text-white font-bold text-[10px] transition-all border-0 cursor-pointer"
-                              >
-                                Save
-                              </button>
-                              <button
-                                onClick={handleCancelMobile}
-                                disabled={mobileLoading}
-                                className="px-2 h-7 rounded bg-white hover:bg-slate-100 text-slate-600 border border-slate-350 font-bold text-[10px] transition-all cursor-pointer"
-                              >
-                                Cancel
-                              </button>
-                            </div>
-                          ) : (
-                            <span className="text-xs font-bold text-gray-800 block truncate">{user.mobile_number || "-"}</span>
-                          )}
                         </div>
                       </div>
                       

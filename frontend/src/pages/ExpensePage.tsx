@@ -16,41 +16,11 @@ import {
   FileText,
   Navigation,
   Camera,
-  ShieldCheck
+  ShieldCheck,
+  Car,
+  Bike
 } from "lucide-react";
 
-const AutoIcon = ({ className = "w-5 h-5" }: { className?: string }) => (
-  <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-    <path d="M5 17h14v-4l-3-6H8l-3 4v6z" />
-    <circle cx="5.5" cy="18" r="1.5" fill="currentColor" />
-    <circle cx="16.5" cy="18" r="2" fill="currentColor" />
-    <path d="M9 7h6v4H9z" strokeWidth="1.5" />
-    <path d="M3 14l2.5-3" />
-    <path d="M2.5 12.5h2" />
-  </svg>
-);
-
-const SportsBikeIcon = ({ className = "w-5 h-5" }: { className?: string }) => (
-  <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-    <circle cx="5" cy="16" r="3" fill="currentColor" fillOpacity="0.2" />
-    <circle cx="19" cy="16" r="3" fill="currentColor" fillOpacity="0.2" />
-    <path d="M5 16l3-6 4-2 3 2.5 4 5.5" />
-    <path d="M8.5 10l-1.5-3.5h2.5" />
-    <path d="M11 9h5.5l2.5 3.5" />
-    <path d="M11.5 11h3.5" />
-    <path d="M14 16.5h4.5" />
-  </svg>
-);
-
-const SportsCarIcon = ({ className = "w-5 h-5" }: { className?: string }) => (
-  <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-    <circle cx="7" cy="16" r="2" fill="currentColor" fillOpacity="0.2" />
-    <circle cx="17" cy="16" r="2" fill="currentColor" fillOpacity="0.2" />
-    <path d="M3 14h2.5l1.5-3 4-.5 4.5 3h6.5l1.5 2H3z" />
-    <path d="M8.5 11l2-4h4.5l2.5 4" />
-    <path d="M20.5 10h1.5v2h-1.5z" fill="currentColor" />
-  </svg>
-);
 
 const getAttachmentsArray = (attachments: any): string[] => {
   if (!attachments) return [];
@@ -2186,9 +2156,9 @@ export default function ExpensePage() {
         <div className="info-box-lte animate-fadeIn">
           <div className="info-box-icon bg-[#a5d8e8]">
             {allowance.vehicle_type === "Car" ? (
-              <SportsCarIcon className="w-5 h-5 text-slate-800" />
+              <Car className="w-5 h-5 text-slate-800" />
             ) : allowance.vehicle_type === "Bike" ? (
-              <SportsBikeIcon className="w-5 h-5 text-slate-800" />
+              <Bike className="w-5 h-5 text-slate-800" />
             ) : (
               <Navigation className="w-5 h-5 text-slate-800" />
             )}
@@ -2226,7 +2196,7 @@ export default function ExpensePage() {
         {/* Monthly Auto Cap Card */}
         <div className="info-box-lte animate-fadeIn">
           <div className="info-box-icon bg-[#a5d8e8]">
-            <AutoIcon className="w-5 h-5 text-slate-800" />
+            <Navigation className="w-5 h-5 text-slate-800" />
           </div>
           <div className="info-box-content">
             <span className="text-[9px] font-bold uppercase tracking-wider text-gray-400 block mb-0.5">
