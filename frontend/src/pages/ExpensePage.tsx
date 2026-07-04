@@ -3728,24 +3728,32 @@ export default function ExpensePage() {
       {/* Full Width Bottom Section: Recent Submissions table with Tabs and Filters */}
       <div className="bg-white border border-gray-250 rounded shadow-sm overflow-hidden flex flex-col mt-6">
         {/* Header with Windows Selector */}
-        <div className="px-5 py-3.5 border-b border-gray-200 bg-slate-50 flex flex-wrap items-center justify-between gap-3">
+        <div className="px-5 py-3.5 bg-slate-50 flex flex-wrap items-center justify-between gap-3" style={{ borderBottom: '1px solid #e2e8f0' }}>
           <h3 className="text-xs font-bold text-gray-700 uppercase tracking-wide">My Claims Dashboard</h3>
-          <div className="flex bg-slate-100 p-1 rounded-xl border border-gray-250/50 shadow-inner">
+          <div className="flex bg-slate-100 p-1 rounded-xl border border-gray-250/50 shadow-inner gap-1">
             <button
               type="button"
               onClick={() => { setActiveClaimsTab("sheets"); setMyClaimsPage(1); }}
               style={{ minHeight: 'auto' }}
-              className={`px-3 py-1.5 text-[9px] font-black uppercase rounded-lg cursor-pointer transition-all border-0 ${activeClaimsTab === "sheets" ? "bg-[#a5d8e8] text-slate-900 shadow-sm font-extrabold" : "bg-transparent text-gray-500 hover:text-gray-800"}`}
+              className={`px-3 py-1.5 text-[10px] font-black uppercase tracking-wider rounded-lg cursor-pointer transition-all border-0 whitespace-nowrap ${
+                activeClaimsTab === "sheets" 
+                  ? "bg-[#a5d8e8] text-slate-900 shadow-sm font-extrabold" 
+                  : "bg-transparent text-gray-500 hover:text-gray-800 hover:bg-slate-200/50"
+              }`}
             >
-              Expense Sheets View
+              Expense Sheets
             </button>
             <button
               type="button"
               onClick={() => { setActiveClaimsTab("legs"); setMyClaimsPage(1); }}
               style={{ minHeight: 'auto' }}
-              className={`px-3 py-1.5 text-[9px] font-black uppercase rounded-lg cursor-pointer transition-all border-0 ${activeClaimsTab === "legs" ? "bg-[#a5d8e8] text-slate-900 shadow-sm font-extrabold" : "bg-transparent text-gray-500 hover:text-gray-800"}`}
+              className={`px-3 py-1.5 text-[10px] font-black uppercase tracking-wider rounded-lg cursor-pointer transition-all border-0 whitespace-nowrap ${
+                activeClaimsTab === "legs" 
+                  ? "bg-[#a5d8e8] text-slate-900 shadow-sm font-extrabold" 
+                  : "bg-transparent text-gray-500 hover:text-gray-800 hover:bg-slate-200/50"
+              }`}
             >
-              Legs Details View
+              Legs Details
             </button>
           </div>
         </div>

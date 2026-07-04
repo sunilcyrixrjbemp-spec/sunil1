@@ -991,33 +991,39 @@ export default function AdminPage() {
         </div>
 
         {/* Tab Selection - Premium Segmented Control */}
-        <div className="flex bg-gray-100 border border-gray-200 rounded-lg p-1 shrink-0 shadow-sm">
+        <div className="flex bg-slate-100 border border-gray-250/50 rounded-xl p-1 shrink-0 shadow-inner gap-1">
           <button
+            type="button"
             onClick={() => handleTabChange("users")}
-            className={`px-4 py-1.5 text-xs font-extrabold uppercase tracking-wider rounded-md transition-all cursor-pointer border-0 ${
+            style={{ minHeight: 'auto' }}
+            className={`px-4 py-1.5 text-xs font-black uppercase tracking-wider rounded-lg transition-all cursor-pointer border-0 whitespace-nowrap ${
               activeTab === "users"
-                ? "bg-white text-blue-600 shadow-sm"
-                : "bg-transparent text-gray-500 hover:text-gray-800"
+                ? "bg-[#a5d8e8] text-slate-900 font-extrabold shadow-sm"
+                : "bg-transparent text-gray-500 hover:text-gray-800 hover:bg-slate-200/50"
             }`}
           >
             Users List
           </button>
           <button
+            type="button"
             onClick={() => handleTabChange("approvals")}
-            className={`px-4 py-1.5 text-xs font-extrabold uppercase tracking-wider rounded-md transition-all cursor-pointer border-0 ${
+            style={{ minHeight: 'auto' }}
+            className={`px-4 py-1.5 text-xs font-black uppercase tracking-wider rounded-lg transition-all cursor-pointer border-0 whitespace-nowrap ${
               activeTab === "approvals"
-                ? "bg-white text-blue-600 shadow-sm"
-                : "bg-transparent text-gray-500 hover:text-gray-800"
+                ? "bg-[#a5d8e8] text-slate-900 font-extrabold shadow-sm"
+                : "bg-transparent text-gray-500 hover:text-gray-800 hover:bg-slate-200/50"
             }`}
           >
             Role Mappings
           </button>
           <button
+            type="button"
             onClick={() => handleTabChange("analytics")}
-            className={`px-4 py-1.5 text-xs font-extrabold uppercase tracking-wider rounded-md transition-all cursor-pointer border-0 ${
+            style={{ minHeight: 'auto' }}
+            className={`px-4 py-1.5 text-xs font-black uppercase tracking-wider rounded-lg transition-all cursor-pointer border-0 whitespace-nowrap ${
               activeTab === "analytics"
-                ? "bg-white text-blue-600 shadow-sm"
-                : "bg-transparent text-gray-500 hover:text-gray-800"
+                ? "bg-[#a5d8e8] text-slate-900 font-extrabold shadow-sm"
+                : "bg-transparent text-gray-500 hover:text-gray-800 hover:bg-slate-200/50"
             }`}
           >
             Dashboard Charts

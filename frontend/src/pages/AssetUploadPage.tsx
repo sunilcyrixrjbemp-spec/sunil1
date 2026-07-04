@@ -543,7 +543,7 @@ export default function AssetUploadPage() {
       </div>
 
       {/* Tab Switcher */}
-      <div className="flex gap-0 border-b border-gray-200">
+      <div className="bg-slate-50 flex items-center justify-start p-1.5 gap-2 rounded-t-lg mb-4" style={{ borderBottom: '1px solid #e2e8f0' }}>
         {[
           { key: "upload" as const, label: "Upload Assets", icon: <UploadCloud className="w-3.5 h-3.5" /> },
           { key: "inventory" as const, label: "View Inventory", icon: <BarChart3 className="w-3.5 h-3.5" /> },
@@ -551,11 +551,13 @@ export default function AssetUploadPage() {
         ].map(tab => (
           <button
             key={tab.key}
+            type="button"
             onClick={() => { setActiveTab(tab.key); if (tab.key === "inventory") setCurrentPage(1); }}
-            className={`px-4 py-2.5 text-xs font-bold uppercase tracking-wider flex items-center gap-1.5 border-b-2 transition-colors cursor-pointer bg-transparent ${
+            style={{ minHeight: 'auto' }}
+            className={`py-1.5 px-4 font-black text-xs uppercase tracking-wider rounded-lg transition-all flex items-center gap-1.5 cursor-pointer whitespace-nowrap border-0 ${
               activeTab === tab.key
-                ? "border-indigo-600 text-indigo-700"
-                : "border-transparent text-gray-400 hover:text-gray-600"
+                ? "bg-[#a5d8e8] text-slate-900 font-extrabold shadow-sm"
+                : "text-gray-500 bg-transparent hover:text-gray-800 hover:bg-slate-100"
             }`}
           >
             {tab.icon}
