@@ -787,7 +787,7 @@ export default function HomePage() {
                             : "bg-white text-gray-600 border-gray-300 hover:bg-slate-100 hover:text-gray-800"
                         }`}
                       >
-                        {status === "all" ? "All Claims" : status}
+                        {status === "all" ? "All" : status}
                       </button>
                     ))}
                   </div>
