@@ -3072,7 +3072,11 @@ export default function ExpensePage() {
                                       type="button"
                                       onClick={() => verifyLegBarcode(leg.leg, "Calls")}
                                       disabled={!leg.calls_barcode || leg.calls_barcode.length !== 8}
-                                      className="px-2 h-7 bg-blue-600 hover:bg-blue-700 text-white rounded border-0 cursor-pointer disabled:bg-gray-200 disabled:text-gray-400 text-[10px] font-black shrink-0"
+                                      className={`px-2 h-7 rounded border-0 cursor-pointer text-[10px] font-black shrink-0 transition-all ${
+                                        leg.calls_barcode && leg.calls_barcode.length === 8
+                                          ? "bg-green-600 hover:bg-green-700 text-white shadow-sm"
+                                          : "bg-gray-200 text-gray-400 cursor-not-allowed"
+                                      }`}
                                     >
                                       Verify
                                     </button>
@@ -3272,7 +3276,11 @@ export default function ExpensePage() {
                                       type="button"
                                       onClick={() => verifyLegBarcode(leg.leg, "PMS")}
                                       disabled={!leg.pms_barcode || leg.pms_barcode.length !== 8}
-                                      className="px-2 h-7 bg-amber-600 hover:bg-amber-700 text-white rounded border-0 cursor-pointer disabled:bg-gray-200 disabled:text-gray-400 text-[10px] font-black shrink-0"
+                                      className={`px-2 h-7 rounded border-0 cursor-pointer text-[10px] font-black shrink-0 transition-all ${
+                                        leg.pms_barcode && leg.pms_barcode.length === 8
+                                          ? "bg-green-600 hover:bg-green-700 text-white shadow-sm"
+                                          : "bg-gray-200 text-gray-400 cursor-not-allowed"
+                                      }`}
                                     >
                                       Verify
                                     </button>
