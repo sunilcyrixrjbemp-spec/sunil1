@@ -875,11 +875,8 @@ export default function ExpensePage() {
           if (leg1.company_provided) {
             leg1.da = (allowanceObj.daily_hotel || 350).toString();
           } else if (hotelAmt > 0) {
-            if (hasOutDistrictLeg) {
-              leg1.da = (allowanceObj.daily_out_state || 600).toString();
-            } else {
-              leg1.da = (allowanceObj.daily_hotel || 350).toString();
-            }
+            // Hotel stay: always use daily_hotel rate (no out-of-state logic)
+            leg1.da = (allowanceObj.daily_hotel || 350).toString();
           } else if (hasOutDistrictLeg) {
             leg1.da = (allowanceObj.daily_out_district || 400).toString();
           } else {
@@ -1311,11 +1308,8 @@ export default function ExpensePage() {
           if (leg1.company_provided) {
             leg1.da = (allowance.daily_hotel || 350).toString();
           } else if (hotelAmt > 0) {
-            if (hasOutDistrictLeg) {
-              leg1.da = (allowance.daily_out_state || 600).toString();
-            } else {
-              leg1.da = (allowance.daily_hotel || 350).toString();
-            }
+            // Hotel stay: always use daily_hotel rate (no out-of-state logic)
+            leg1.da = (allowance.daily_hotel || 350).toString();
           } else if (hasOutDistrictLeg) {
             leg1.da = (allowance.daily_out_district || 400).toString();
           } else {
@@ -2318,15 +2312,32 @@ export default function ExpensePage() {
                 }
 
                 return (
-                  <div key={leg.leg} className="card-lte border-t-4 border-t-blue-600 bg-white animate-fadeIn text-xs mb-6 shadow-sm">
+                  <div key={leg.leg} className={`card-lte bg-white animate-fadeIn text-xs mb-6 shadow-sm border-t-4 ${
+                    leg.travel_type === "In-District"
+                      ? "border-t-indigo-500"
+                      : "border-t-amber-500"
+                  }`}>
                     
                     {/* Leg Header */}
-                    <div className="bg-slate-50 border-b border-gray-200 p-3 flex items-center justify-between">
+                    <div className={`border-b border-gray-200 p-3 flex items-center justify-between ${
+                      leg.travel_type === "In-District"
+                        ? "bg-indigo-50"
+                        : "bg-amber-50"
+                    }`}>
                       <h3 className="text-xs font-black uppercase tracking-wider text-gray-700 flex items-center gap-2">
-                        <span className="bg-blue-600 text-white h-5 w-5 rounded-full flex items-center justify-center text-[10px] font-bold">
+                        <span className={`text-white h-5 w-5 rounded-full flex items-center justify-center text-[10px] font-bold ${
+                          leg.travel_type === "In-District" ? "bg-indigo-600" : "bg-amber-500"
+                        }`}>
                           {legNum}
                         </span>
                         Travel Leg {legNum}
+                        <span className={`text-[8px] font-black uppercase px-2 py-0.5 rounded-full tracking-wider ${
+                          leg.travel_type === "In-District"
+                            ? "bg-indigo-100 text-indigo-700 border border-indigo-200"
+                            : "bg-amber-100 text-amber-700 border border-amber-200"
+                        }`}>
+                          {leg.travel_type === "In-District" ? "In-District" : "Outdoor"}
+                        </span>
                       </h3>
                       {legNum > 1 && (
                         <button
@@ -2342,7 +2353,11 @@ export default function ExpensePage() {
                     <div className="p-4 space-y-4">
                       
                       {/* Travel Type select */}
-                      <div className="flex items-center justify-between pb-3 border-b border-gray-150">
+                      <div className={`flex items-center justify-between pb-3 border-b border-gray-150 -mx-4 px-4 -mt-4 pt-3 mb-1 ${
+                        leg.travel_type === "In-District"
+                          ? "bg-indigo-50 border-b-indigo-200"
+                          : "bg-amber-50 border-b-amber-200"
+                      }`}>
                         <span className="text-xs font-bold text-gray-700">Travel Category</span>
                         <div className="inline-flex rounded-md shadow-sm" role="group">
                           <button
@@ -2810,22 +2825,7 @@ export default function ExpensePage() {
                               onChange={(e) => handleItineraryChange(leg.leg, "hotel", e.target.value)}
                               className="input-lte font-bold"
                             />
-                            {parseFloat(leg.hotel) > 0 && (
-                              <div className="flex items-center gap-1.5 mt-2 bg-amber-50/50 p-1.5 rounded border border-amber-100 w-fit">
-                                <input
-                                  type="checkbox"
-                                  id="out_of_state_hotel"
-                                  checked={leg.dest_state !== leg.state}
-                                  onChange={(e) => {
-                                    handleItineraryChange(leg.leg, "dest_state", e.target.checked ? "Out-of-State" : "Rajasthan");
-                                  }}
-                                  className="w-3.5 h-3.5 text-amber-600 border-gray-300 rounded focus:ring-amber-500 cursor-pointer"
-                                />
-                                <label htmlFor="out_of_state_hotel" className="text-[10px] font-bold text-amber-800 cursor-pointer select-none">
-                                  Out of State Stay
-                                </label>
-                              </div>
-                            )}
+                            {/* No out-of-state checkbox — DA is always daily_hotel when hotel amount > 0 */}
                             {leg.hotel === "0" &&
                              (user.district || "").trim().toLowerCase() !== "jodhpur" &&
                              leg.travel_type === "Outdoor" &&

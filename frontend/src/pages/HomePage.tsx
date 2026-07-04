@@ -750,38 +750,43 @@ export default function HomePage() {
               )}
             </div>
 
-            {/* Contextual Filters Row */}
-            <div className="bg-slate-50 border-b border-gray-200 p-2.5 flex flex-col gap-2 text-[10px] font-bold text-gray-700">
+            {/* Contextual Filters Row — matches ExpensePage compact filter style */}
+            <div className="border-b border-gray-200 px-3 py-2.5">
               {activeTab === "my-claims" ? (
-                /* My Self Tab Filters: Exactly 2 dropdowns side-by-side in a single row */
-                <div className="flex flex-wrap items-center gap-3">
-                  <div className="flex items-center gap-1.5">
-                    <span className="text-[8px] font-bold uppercase text-gray-400">Month:</span>
-                    <input 
-                      type="month"
-                      value={selectMonth}
-                      onChange={(e) => setSelectMonth(e.target.value)}
-                      className="bg-white border border-gray-300 rounded px-2.5 py-0.5 text-[10px] font-black text-gray-800 cursor-pointer shadow-xs focus:outline-none focus:border-blue-500"
-                    />
+                /* My Self Tab Filters */
+                <div className="bg-slate-50 border border-gray-200 rounded p-2.5 flex flex-col gap-2 text-[10px] font-bold text-gray-700">
+                  {/* Row 1: Month dropdown */}
+                  <div className="flex flex-wrap items-center gap-3">
+                    <div className="flex items-center gap-1.5">
+                      <span className="text-[8px] font-bold uppercase text-gray-400">Month:</span>
+                      <input 
+                        type="month"
+                        value={selectMonth}
+                        onChange={(e) => setSelectMonth(e.target.value)}
+                        className="bg-white border border-gray-300 rounded px-2.5 py-0.5 text-[10px] font-black text-gray-800 cursor-pointer shadow-xs focus:outline-none focus:border-blue-500"
+                      />
+                    </div>
                   </div>
-
-                  <div className="flex items-center gap-1.5">
-                    <span className="text-[8px] font-bold uppercase text-gray-400">Status:</span>
-                    <select
-                      value={homeStatusFilter}
-                      onChange={(e) => setHomeStatusFilter(e.target.value as any)}
-                      className="bg-white border border-gray-300 rounded px-2.5 py-0.5 text-[10px] font-black text-gray-800 cursor-pointer shadow-xs focus:outline-none focus:border-blue-500"
-                    >
-                      <option value="all">All / Claimed</option>
-                      <option value="pending">Pending</option>
-                      <option value="approved">Approved</option>
-                      <option value="rejected">Rejected</option>
-                    </select>
+                  {/* Row 2: Status pill buttons */}
+                  <div className="flex items-center gap-1.5 overflow-x-auto no-scrollbar py-0.5 border-t border-gray-200/50 pt-1.5">
+                    {(["all", "pending", "approved", "rejected"] as const).map((status) => (
+                      <button
+                        key={status}
+                        onClick={() => setHomeStatusFilter(status)}
+                        className={`px-2.5 py-0.5 rounded text-[9px] font-black uppercase tracking-wider transition-all cursor-pointer border whitespace-nowrap ${
+                          homeStatusFilter === status
+                            ? "bg-[#a5d8e8] text-slate-800 border-[#a5d8e8] font-extrabold shadow-sm"
+                            : "bg-white text-gray-600 border-gray-300 hover:bg-slate-100 hover:text-gray-800"
+                        }`}
+                      >
+                        {status === "all" ? "All Claims" : status}
+                      </button>
+                    ))}
                   </div>
                 </div>
               ) : (
-                /* Team / Engineer Claims Tab Filters: 2 dropdowns on top, 4 status pills below */
-                <>
+                /* Team / Engineer Claims Tab Filters */
+                <div className="bg-slate-50 border border-gray-200 rounded p-2.5 flex flex-col gap-2 text-[10px] font-bold text-gray-700">
                   {/* Row 1: Month and Engineer dropdowns */}
                   <div className="flex flex-wrap items-center gap-3">
                     <div className="flex items-center gap-1.5">
@@ -799,7 +804,7 @@ export default function HomePage() {
                       <select 
                         value={filterEmployee} 
                         onChange={(e) => setFilterEmployee(e.target.value)}
-                        className="bg-white border border-gray-300 rounded px-1.5 py-0.5 text-[10px] font-black text-gray-800 cursor-pointer max-w-[150px] truncate focus:outline-none focus:border-blue-500"
+                        className="bg-white border border-gray-300 rounded px-1.5 py-0.5 text-[10px] font-black text-gray-800 cursor-pointer max-w-[150px] focus:outline-none focus:border-blue-500"
                       >
                         <option value="all">All Members</option>
                         {uniqueEmployees.map(emp => (
@@ -809,7 +814,7 @@ export default function HomePage() {
                     </div>
                   </div>
 
-                  {/* Row 2: Status selection buttons (All, Pending, Approved, Rejected) */}
+                  {/* Row 2: Status pill buttons */}
                   <div className="flex items-center gap-1.5 overflow-x-auto no-scrollbar py-0.5 border-t border-gray-200/50 pt-1.5">
                     {(["all", "pending", "approved", "rejected"] as const).map((status) => (
                       <button
@@ -821,11 +826,11 @@ export default function HomePage() {
                             : "bg-white text-gray-600 border-gray-300 hover:bg-emerald-50 hover:text-emerald-700"
                         }`}
                       >
-                        {status === "all" ? "Claimed" : status}
+                        {status === "all" ? "All" : status}
                       </button>
                     ))}
                   </div>
-                </>
+                </div>
               )}
             </div>
 
