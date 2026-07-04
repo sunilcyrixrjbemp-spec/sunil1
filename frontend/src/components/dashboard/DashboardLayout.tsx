@@ -496,19 +496,21 @@ export default function DashboardLayout() {
                             className={`flex gap-3.5 p-3.5 transition-all no-underline rounded-xl border shadow-xs items-start ${
                               n.read 
                                 ? "bg-white hover:bg-slate-50 border-slate-200/80 text-slate-700" 
-                                : "bg-[#a5d8e8]/20 hover:bg-[#a5d8e8]/35 border-slate-300 border-l-4 border-l-blue-600 text-slate-900 font-semibold"
+                                : "bg-[#a5d8e8]/15 hover:bg-[#a5d8e8]/25 border-slate-300 border-l-4 border-l-blue-600 text-slate-900"
                             }`}
                           >
                             {/* Circular Icon Container */}
-                            <div className={`p-2 rounded-full shrink-0 flex items-center justify-center text-white shadow-xs ${
-                              n.type === "warning" ? "bg-amber-600" :
-                              n.type === "success" ? "bg-emerald-600" :
-                              n.type === "error" ? "bg-rose-600" : "bg-blue-600"
-                            }`}>
-                              {n.type === "warning" && <AlertTriangle className="w-3.5 h-3.5 text-white" />}
-                              {n.type === "success" && <Check className="w-3.5 h-3.5 text-white" />}
-                              {n.type === "error" && <X className="w-3.5 h-3.5 text-white" />}
-                              {n.type !== "warning" && n.type !== "success" && n.type !== "error" && <Info className="w-3.5 h-3.5 text-white" />}
+                            <div 
+                              className={`w-9 h-9 rounded-full shrink-0 flex items-center justify-center text-white shadow-xs ${
+                                n.type === "warning" ? "bg-amber-600" :
+                                n.type === "success" ? "bg-emerald-600" :
+                                n.type === "error" ? "bg-rose-600" : "bg-blue-600"
+                              }`}
+                            >
+                              {n.type === "warning" && <AlertTriangle className="w-4 h-4 text-white" />}
+                              {n.type === "success" && <Check className="w-4 h-4 text-white" />}
+                              {n.type === "error" && <X className="w-4 h-4 text-white" />}
+                              {n.type !== "warning" && n.type !== "success" && n.type !== "error" && <Info className="w-4 h-4 text-white" />}
                             </div>
 
                             {/* Text Content */}
@@ -522,13 +524,18 @@ export default function DashboardLayout() {
                                   {n.title || "Notification"}
                                 </span>
 
-                                {!n.read && (
-                                  <span className="h-1.5 w-1.5 rounded-full bg-blue-600 animate-pulse"></span>
-                                )}
-                                
-                                <span className="text-[10px] font-extrabold shrink-0 font-mono" style={{ color: '#000000' }}>{formatDateTime(n.created_at)}</span>
+                                <div className="flex items-center gap-1.5">
+                                  {!n.read && (
+                                    <span className="h-1.5 w-1.5 rounded-full bg-blue-600 animate-pulse"></span>
+                                  )}
+                                  <span className="text-[10px] font-black shrink-0 font-mono" style={{ color: '#000000' }}>
+                                    {formatDateTime(n.created_at)}
+                                  </span>
+                                </div>
                               </div>
-                              <p className="text-slate-800 font-bold text-xs mt-1.5 leading-relaxed">{n.description}</p>
+                              <p className="text-slate-900 font-extrabold text-xs mt-1.5 leading-relaxed" style={{ color: '#1e293b' }}>
+                                {n.description}
+                              </p>
                             </div>
                           </Link>
                         ))

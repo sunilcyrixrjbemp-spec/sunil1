@@ -298,19 +298,19 @@ export default function NotificationsPage() {
               <div 
                 key={n.id}
                 className={`p-4 transition-colors flex gap-4 items-start ${
-                  n.read ? "bg-white hover:bg-slate-50/50" : "bg-[#a5d8e8]/20 hover:bg-[#a5d8e8]/35 border-l-4 border-l-blue-600"
+                  n.read ? "bg-white hover:bg-slate-50/50" : "bg-[#a5d8e8]/15 hover:bg-[#a5d8e8]/25 border-l-4 border-l-blue-600"
                 }`}
               >
                 {/* Circular Icon */}
-                <div className={`p-2 rounded-full shrink-0 flex items-center justify-center text-white shadow-xs ${
+                <div className={`w-9 h-9 rounded-full shrink-0 flex items-center justify-center text-white shadow-xs ${
                   n.type === "warning" ? "bg-amber-600" :
                   n.type === "success" ? "bg-emerald-600" :
                   n.type === "error" ? "bg-rose-600" : "bg-blue-600"
                 }`}>
-                  {n.type === "warning" && <AlertTriangle className="w-3.5 h-3.5 text-white" />}
-                  {n.type === "success" && <Check className="w-3.5 h-3.5 text-white" />}
-                  {n.type === "error" && <X className="w-3.5 h-3.5 text-white" />}
-                  {n.type !== "warning" && n.type !== "success" && n.type !== "error" && <Info className="w-3.5 h-3.5 text-white" />}
+                  {n.type === "warning" && <AlertTriangle className="w-4 h-4 text-white" />}
+                  {n.type === "success" && <Check className="w-4 h-4 text-white" />}
+                  {n.type === "error" && <X className="w-4 h-4 text-white" />}
+                  {n.type !== "warning" && n.type !== "success" && n.type !== "error" && <Info className="w-4 h-4 text-white" />}
                 </div>
 
                 <div className="space-y-2 flex-1 min-w-0">
@@ -334,13 +334,13 @@ export default function NotificationsPage() {
                     </span>
 
                     {/* Date/Time */}
-                    <span className="text-[10px] font-extrabold font-mono flex items-center gap-1 ml-2" style={{ color: '#000000' }}>
+                    <span className="text-[10px] font-black font-mono flex items-center gap-1 ml-2" style={{ color: '#000000' }}>
                       <Calendar className="w-3 h-3 text-black" style={{ color: '#000000' }} />
                       {formatDateTime(n.created_at)}
                     </span>
                   </div>
 
-                  <p className="text-xs text-gray-700 font-medium leading-relaxed pr-4">
+                  <p className="text-xs text-slate-900 font-extrabold leading-relaxed pr-4 animate-fadeIn" style={{ color: '#1e293b' }}>
                     {n.description}
                   </p>
                 </div>
