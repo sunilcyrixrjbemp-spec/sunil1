@@ -253,6 +253,8 @@ async def get_logs(
 
 @router.get("/cloudflare-official")
 async def get_cloudflare_official(
+    date_str:  str = Query(None, alias="date"),
+    month_str: str = Query(None, alias="month"),
     current_user: User = Depends(get_current_user)
 ):
     """Fetch official Cloudflare account analytics for D1 & KV via Cloudflare GraphQL API."""
@@ -263,6 +265,35 @@ async def get_cloudflare_official(
             "success": False,
             "message": "Cloudflare integration is not configured or missing credentials."
         }
+
+    import calendar
+    from datetime import datetime
+    
+    start_time = None
+    end_time = None
+    
+    if date_str:
+        try:
+            dt = datetime.strptime(date_str, "%Y-%m-%d")
+            start_time = dt.strftime("%Y-%m-%dT00:00:00Z")
+            end_time = dt.strftime("%Y-%m-%dT23:59:59Z")
+        except ValueError:
+            date_str = None
+            
+    if month_str and not date_str:
+        try:
+            dt = datetime.strptime(month_str, "%Y-%m")
+            start_time = dt.strftime("%Y-%m-%dT00:00:00Z")
+            last_day = calendar.monthrange(dt.year, dt.month)[1]
+            end_time = f"{month_str}-{last_day:02d}T23:59:59Z"
+        except ValueError:
+            month_str = None
+            
+    if not start_time or not end_time:
+        # Default to today
+        dt = datetime.today()
+        start_time = dt.strftime("%Y-%m-%dT00:00:00Z")
+        end_time = dt.strftime("%Y-%m-%dT23:59:59Z")
 
     from app.config.settings import settings
     d1_db_id = getattr(settings, "CLOUDFLARE_DATABASE_ID", "")
@@ -275,10 +306,7 @@ async def get_cloudflare_official(
         headers["Authorization"] = f"Bearer {API_TOKEN}"
     headers["Content-Type"] = "application/json"
     
-    # Query today's data in UTC format
-    today_start = date.today().isoformat() + "T00:00:00Z"
-    
-    # Build GraphQL query for D1 and KV analytics
+    # Build GraphQL query for D1 and KV analytics with start and end times
     query_body = f"""
     query {{
       viewer {{
@@ -287,7 +315,8 @@ async def get_cloudflare_official(
             limit: 100
             filter: {{
               namespaceId: "{NAMESPACE_ID}"
-              datetime_geq: "{today_start}"
+              datetime_geq: "{start_time}"
+              datetime_leq: "{end_time}"
             }}
           ) {{
             dimensions {{
@@ -301,7 +330,8 @@ async def get_cloudflare_official(
             limit: 100
             filter: {{
               databaseId: "{d1_db_id}"
-              datetime_geq: "{today_start}"
+              datetime_geq: "{start_time}"
+              datetime_leq: "{end_time}"
             }}
           ) {{
             sum {{

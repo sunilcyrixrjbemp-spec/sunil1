@@ -186,13 +186,18 @@ export default function DBMonitoringPage() {
       // Page size is 50 logs per line as requested
       const logsQS= buildQS({ page: String(logPage), page_size: "50" });
       
+      // Build specific query string for Cloudflare billing stats based on active filter
+      const cfQS = new URLSearchParams(
+        activeFilter === "date" ? { date: filterDate } : { month: filterMonth }
+      ).toString();
+      
       const [s, u, p, t, l, cf] = await Promise.all([
         fetch(`${BASE}/api/monitoring/summary?${qs}`, { headers: getHeaders() }).then(r => r.json()),
         fetch(`${BASE}/api/monitoring/user-breakdown?${qs}`, { headers: getHeaders() }).then(r => r.json()),
         fetch(`${BASE}/api/monitoring/page-breakdown?${qs}`, { headers: getHeaders() }).then(r => r.json()),
         fetch(`${BASE}/api/monitoring/timeline?${tlQS}`, { headers: getHeaders() }).then(r => r.json()),
         fetch(`${BASE}/api/monitoring/logs?${logsQS}`, { headers: getHeaders() }).then(r => r.json()),
-        fetch(`${BASE}/api/monitoring/cloudflare-official`, { headers: getHeaders() }).then(r => r.json()).catch(() => ({ success: false, message: "Network error" })),
+        fetch(`${BASE}/api/monitoring/cloudflare-official?${cfQS}`, { headers: getHeaders() }).then(r => r.json()).catch(() => ({ success: false, message: "Network error" })),
       ]);
       
       if (s.success) setSummary(s);
@@ -479,16 +484,22 @@ export default function DBMonitoringPage() {
 
       {/* ── Official Cloudflare Edge Meter (Direct CF Billing Stats) ── */}
       <div className="bg-white border border-gray-200 rounded-2xl p-5 shadow-sm">
-        <h3 className="text-xs font-black uppercase tracking-wider text-slate-700 mb-3.5 flex items-center gap-2">
-          <span className="w-5 h-5 rounded-md bg-blue-50 text-blue-600 flex items-center justify-center text-xs">☁️</span>
-          Official Cloudflare Edge Meter (Server-Side Billing Stats)
-        </h3>
+        <div>
+          <h3 className="text-xs font-black uppercase tracking-wider text-slate-700 flex items-center gap-2">
+            <span className="w-5 h-5 rounded-md bg-blue-50 text-blue-600 flex items-center justify-center text-xs">☁️</span>
+            Official Cloudflare Edge Meter (Server-Side Billing Stats)
+          </h3>
+          <p className="text-[10px] text-slate-400 mt-1 font-semibold">
+            Account-level billing volume. Updates dynamically based on date/month selection.
+          </p>
+        </div>
+        
         {loading ? (
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mt-4">
             <Skeleton h="h-16"/><Skeleton h="h-16"/><Skeleton h="h-16"/><Skeleton h="h-16"/>
           </div>
         ) : cfError ? (
-          <div className="p-4.5 bg-amber-50 border border-amber-200/70 rounded-xl text-xs text-amber-900 leading-relaxed font-sans shadow-inner">
+          <div className="p-4.5 bg-amber-50 border border-amber-200/70 rounded-xl text-xs text-amber-900 leading-relaxed font-sans shadow-inner mt-4">
             <div className="flex items-center gap-2 mb-1.5">
               <span className="text-lg">⚠️</span>
               <p className="font-extrabold text-amber-800 uppercase tracking-wide">Cloudflare API Analytics Error</p>
@@ -507,30 +518,30 @@ export default function DBMonitoringPage() {
             )}
           </div>
         ) : cfOfficial ? (
-          <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+          <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mt-4">
             <div className="bg-slate-50 border border-slate-200/50 rounded-xl p-3">
               <p className="text-[10px] text-slate-400 font-bold uppercase tracking-wider">Official KV Reads</p>
               <p className="text-lg font-black text-slate-800 mt-1">{(cfOfficial.kv_reads || 0).toLocaleString()}</p>
-              <p className="text-[9px] text-slate-400 mt-0.5">official namespace read actions today</p>
+              <p className="text-[9px] text-slate-400 mt-0.5">actions in selected period</p>
             </div>
             <div className="bg-slate-50 border border-slate-200/50 rounded-xl p-3">
               <p className="text-[10px] text-slate-400 font-bold uppercase tracking-wider">Official KV Writes</p>
               <p className="text-lg font-black text-slate-800 mt-1">{(cfOfficial.kv_writes || 0).toLocaleString()}</p>
-              <p className="text-[9px] text-slate-400 mt-0.5">official namespace write actions today</p>
+              <p className="text-[9px] text-slate-400 mt-0.5">actions in selected period</p>
             </div>
             <div className="bg-slate-50 border border-slate-200/50 rounded-xl p-3">
               <p className="text-[10px] text-slate-400 font-bold uppercase tracking-wider">Official D1 Database Reads</p>
               <p className="text-lg font-black text-slate-800 mt-1">{(cfOfficial.d1_reads || 0).toLocaleString()}</p>
-              <p className="text-[9px] text-slate-400 mt-0.5">official executed queries today</p>
+              <p className="text-[9px] text-slate-400 mt-0.5">queries executed in period</p>
             </div>
             <div className="bg-slate-50 border border-slate-200/50 rounded-xl p-3">
               <p className="text-[10px] text-slate-400 font-bold uppercase tracking-wider">Official D1 Database Writes</p>
               <p className="text-lg font-black text-slate-800 mt-1">{(cfOfficial.d1_writes || 0).toLocaleString()}</p>
-              <p className="text-[9px] text-slate-400 mt-0.5">rows modification actions today</p>
+              <p className="text-[9px] text-slate-400 mt-0.5">rows modified in period</p>
             </div>
           </div>
         ) : (
-          <p className="text-slate-400 text-xs">Could not fetch server-side metrics.</p>
+          <p className="text-slate-400 text-xs mt-4">Could not fetch server-side metrics.</p>
         )}
       </div>
 
