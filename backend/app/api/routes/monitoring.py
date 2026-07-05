@@ -290,10 +290,11 @@ async def get_cloudflare_official(
               datetime_geq: "{today_start}"
             }}
           ) {{
+            dimensions {{
+              actionType
+            }}
             sum {{
-              readOperations
-              writeOperations
-              deleteOperations
+              requests
             }}
           }}
           d1AnalyticsAdaptiveGroups(
@@ -353,9 +354,13 @@ async def get_cloudflare_official(
             kv_groups = acc.get("kvOperationsAdaptiveGroups", []) or []
 
             for grp in kv_groups:
-                s = grp.get("sum", {}) or {}
-                kv_reads += s.get("readOperations", 0) or 0
-                kv_writes += s.get("writeOperations", 0) or 0
+                action = grp.get("dimensions", {}).get("actionType", "") or ""
+                sum_reqs = grp.get("sum", {}).get("requests", 0) or 0
+                if action == "read":
+                    kv_reads += sum_reqs
+                elif action in ("write", "put", "set", "delete"):
+                    kv_writes += sum_reqs
+
                 
             # Sum up D1 operations
             d1_groups = acc.get("d1AnalyticsAdaptiveGroups", []) or []

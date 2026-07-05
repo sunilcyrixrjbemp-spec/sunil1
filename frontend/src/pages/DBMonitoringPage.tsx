@@ -103,6 +103,9 @@ export default function DBMonitoringPage() {
   const [filterUser,     setFilterUser]     = useState("");
   const [activeFilter,   setActiveFilter]   = useState<"date"|"month">("date");
 
+  // Users database cache for dependent dropdown filters
+  const [allUsersList, setAllUsersList] = useState<any[]>([]);
+
   const [summary,     setSummary]     = useState<Summary | null>(null);
   const [users,       setUsers]       = useState<UserRow[]>([]);
   const [pages,       setPages]       = useState<PageRow[]>([]);
@@ -122,6 +125,38 @@ export default function DBMonitoringPage() {
   const [cfError,     setCfError]     = useState<string | null>(null);
   const [cfSuggestion,setCfSuggestion]= useState<string | null>(null);
 
+  // Fetch all registered users once on load to populate filter options
+  useEffect(() => {
+    fetch(`${BASE}/api/admin/users`, { headers: getHeaders() })
+      .then(r => r.json())
+      .then(data => {
+        if (Array.isArray(data)) {
+          setAllUsersList(data);
+        }
+      })
+      .catch(e => console.error("Error loading users for filters:", e));
+  }, []);
+
+  // Compute dependent choices
+  const availableZones = Array.from(
+    new Set(allUsersList.map(u => u.zone?.trim()).filter(Boolean))
+  ).sort() as string[];
+
+  const availableDistricts = Array.from(
+    new Set(
+      allUsersList
+        .filter(u => !filterZone || u.zone?.trim().toLowerCase() === filterZone.trim().toLowerCase())
+        .map(u => u.district?.trim())
+        .filter(Boolean)
+    )
+  ).sort() as string[];
+
+  const availableEngineers = allUsersList.filter(u => {
+    if (filterZone && u.zone?.trim().toLowerCase() !== filterZone.trim().toLowerCase()) return false;
+    if (filterDistrict && u.district?.trim().toLowerCase() !== filterDistrict.trim().toLowerCase()) return false;
+    return true;
+  });
+
   const buildQS = useCallback((extra: Record<string,string> = {}) => {
     const p: Record<string,string> = {};
     if (activeFilter === "date") p.date = filterDate; else p.month = filterMonth;
@@ -129,9 +164,9 @@ export default function DBMonitoringPage() {
     if (filterDistrict) p.district = filterDistrict;
     if (filterUser) p.user_id = filterUser;
     
-    // If tracking dashboard specifically, apply page_name=Dashboard filter
+    // If tracking dashboard specifically, apply page_name=Home filter
     if (activeMenuTab === "dashboard") {
-      p.page_name = "Dashboard";
+      p.page_name = "Home";
     }
 
     return new URLSearchParams({ ...p, ...extra }).toString();
@@ -144,11 +179,12 @@ export default function DBMonitoringPage() {
       
       const tlParams: Record<string, string> = { month: thisMonth };
       if (activeMenuTab === "dashboard") {
-        tlParams.page_name = "Dashboard";
+        tlParams.page_name = "Home";
       }
       const tlQS  = new URLSearchParams(tlParams).toString();
       
-      const logsQS= buildQS({ page: String(logPage), page_size: "30" });
+      // Page size is 50 logs per line as requested
+      const logsQS= buildQS({ page: String(logPage), page_size: "50" });
       
       const [s, u, p, t, l, cf] = await Promise.all([
         fetch(`${BASE}/api/monitoring/summary?${qs}`, { headers: getHeaders() }).then(r => r.json()),
@@ -213,7 +249,7 @@ export default function DBMonitoringPage() {
 
   // Bar chart for page breakdown (top 8)
   const pageBarData = pages.slice(0, 8).map(p => ({
-    name: p.page_name?.replace("Data Upload - ","Upload ") || "?",
+    name: p.page_name || "?",
     "DB Reads": p.db_reads,
     "KV Hits":  p.kv_hits,
     "Writes":   p.db_writes,
@@ -296,24 +332,58 @@ export default function DBMonitoringPage() {
                 className="bg-white border border-slate-250 text-slate-800 text-xs rounded-xl px-3 py-1.5 focus:outline-none focus:border-blue-500"/>
             </div>
           )}
+          
+          {/* Dynamic Zone Selector */}
           <div>
             <p className="text-[10px] text-slate-400 font-black uppercase tracking-wider mb-1.5">Zone</p>
-            <select value={filterZone} onChange={e=>setFilterZone(e.target.value)}
-              className="bg-white border border-slate-250 text-slate-800 text-xs rounded-xl px-3 py-1.5 focus:outline-none focus:border-blue-500">
+            <select 
+              value={filterZone} 
+              onChange={e => {
+                setFilterZone(e.target.value);
+                setFilterDistrict("");
+                setFilterUser("");
+              }}
+              className="bg-white border border-slate-250 text-slate-800 text-xs rounded-xl px-3 py-1.5 min-w-[120px] focus:outline-none focus:border-blue-500"
+            >
               <option value="">All Zones</option>
-              {["Ajmer","Bikaner","Jaipur","Jodhpur","Kota","Udaipur","Bharatpur"].map(z=><option key={z}>{z}</option>)}
+              {availableZones.map(z => <option key={z} value={z}>{z}</option>)}
             </select>
           </div>
+
+          {/* Dynamic District Selector */}
           <div>
             <p className="text-[10px] text-slate-400 font-black uppercase tracking-wider mb-1.5">District</p>
-            <input type="text" value={filterDistrict} onChange={e=>setFilterDistrict(e.target.value)} placeholder="Any"
-              className="bg-white border border-slate-250 text-slate-800 text-xs rounded-xl px-3 py-1.5 w-32 focus:outline-none focus:border-blue-500"/>
+            <select 
+              value={filterDistrict} 
+              onChange={e => {
+                setFilterDistrict(e.target.value);
+                setFilterUser("");
+              }}
+              disabled={!filterZone && availableDistricts.length === 0}
+              className="bg-white border border-slate-250 text-slate-800 text-xs rounded-xl px-3 py-1.5 min-w-[120px] focus:outline-none focus:border-blue-500 disabled:opacity-50"
+            >
+              <option value="">All Districts</option>
+              {availableDistricts.map(d => <option key={d} value={d}>{d}</option>)}
+            </select>
           </div>
+
+          {/* Dynamic User/Engineer Selector */}
           <div>
-            <p className="text-[10px] text-slate-400 font-black uppercase tracking-wider mb-1.5">User ID</p>
-            <input type="text" value={filterUser} onChange={e=>setFilterUser(e.target.value)} placeholder="e.g. E2157"
-              className="bg-white border border-slate-250 text-slate-800 text-xs rounded-xl px-3 py-1.5 w-32 focus:outline-none focus:border-blue-500"/>
+            <p className="text-[10px] text-slate-400 font-black uppercase tracking-wider mb-1.5">User / Engineer</p>
+            <select 
+              value={filterUser} 
+              onChange={e => setFilterUser(e.target.value)}
+              className="bg-white border border-slate-250 text-slate-800 text-xs rounded-xl px-3 py-1.5 min-w-[160px] max-w-[220px] focus:outline-none focus:border-blue-500"
+            >
+              <option value="">All Users</option>
+              {availableEngineers.map(u => (
+                <option key={u.user_id} value={u.user_id}>
+                  {u.name} ({u.user_id}) - {u.role}
+                </option>
+              ))}
+            </select>
           </div>
+
           <div className="flex gap-2">
             <button onClick={fetchAll} disabled={loading}
               className="px-5 py-1.5 bg-blue-600 hover:bg-blue-700 disabled:opacity-40 text-white text-xs font-extrabold uppercase tracking-wide rounded-xl transition-all shadow-sm">
@@ -421,7 +491,7 @@ export default function DBMonitoringPage() {
           <div className="p-4.5 bg-amber-50 border border-amber-200/70 rounded-xl text-xs text-amber-900 leading-relaxed font-sans shadow-inner">
             <div className="flex items-center gap-2 mb-1.5">
               <span className="text-lg">⚠️</span>
-              <p className="font-extrabold text-amber-800 uppercase tracking-wide">Cloudflare API Analytics Permission Missing</p>
+              <p className="font-extrabold text-amber-800 uppercase tracking-wide">Cloudflare API Analytics Error</p>
             </div>
             <p>Cloudflare API returned error: <code className="bg-amber-100/80 px-1 rounded font-mono text-[11px] font-bold">{cfError}</code></p>
             {cfSuggestion && (
@@ -609,7 +679,7 @@ export default function DBMonitoringPage() {
           </div>
         </div>
 
-        {/* Live requests logs */}
+        {/* Live requests logs (Now showing 50 entries per line) */}
         <div className="bg-white border border-gray-200 rounded-2xl p-5 shadow-sm">
           <div className="flex items-center justify-between mb-4">
             <h3 className="text-xs font-black uppercase tracking-wider text-slate-700">Recent Request Stream</h3>
@@ -621,7 +691,7 @@ export default function DBMonitoringPage() {
             <table className="w-full text-xs">
               <thead>
                 <tr className="border-b border-gray-200 text-slate-400 text-[10px] font-black uppercase tracking-wider">
-                  {["Time","User ID","Page Screen","Method","DB","KV"].map(h=>(
+                  {["Time","User Name","Page Screen","Method","DB","KV"].map(h=>(
                     <th key={h} className="text-left py-2 px-1.5 font-bold">{h}</th>
                   ))}
                 </tr>
@@ -636,11 +706,11 @@ export default function DBMonitoringPage() {
                 ) : logs.map((l,i)=>(
                   <tr key={i} className="border-b border-gray-100 hover:bg-slate-50 transition-colors text-slate-700">
                     <td className="py-2 px-1.5 text-slate-400 font-mono text-[10px]">{l.created_at?.slice(11,19)||l.log_date}</td>
-                    <td className="py-2 px-1.5 text-blue-600 font-mono font-black">{l.user_id||"—"}</td>
+                    <td className="py-2 px-1.5 text-blue-600 font-semibold" title={l.user_id}>{l.user_name || l.user_id}</td>
                     <td className="py-2 px-1.5 text-slate-700 font-semibold max-w-[110px] truncate" title={l.page_name}>{l.page_name||"—"}</td>
                     <td className="py-2 px-1.5">
                       <span className={`px-1.5 py-0.5 rounded font-black text-[9px] uppercase tracking-wide
-                        ${l.op_type==="read" ? "bg-blue-50 text-blue-600" : "bg-amber-50 text-amber-600"}`}>
+                        ${l.op_type === "read" ? "bg-blue-50 text-blue-600" : "bg-amber-50 text-amber-600"}`}>
                         {l.method}
                       </span>
                     </td>
@@ -654,12 +724,12 @@ export default function DBMonitoringPage() {
                 ))}
               </tbody>
             </table>
-            {logsTotal > 30 && (
+            {logsTotal > 50 && (
               <div className="flex justify-center items-center gap-3 mt-4">
                 <button onClick={()=>setLogPage(p=>Math.max(1,p-1))} disabled={logPage===1}
                   className="px-3 py-1 bg-white border border-gray-200 text-slate-600 text-[10px] font-bold rounded-lg disabled:opacity-40 hover:bg-slate-50">← Prev</button>
-                <span className="text-[10px] font-bold text-slate-500">Page {logPage} / {Math.ceil(logsTotal/30)}</span>
-                <button onClick={()=>setLogPage(p=>p+1)} disabled={logPage>=Math.ceil(logsTotal/30)}
+                <span className="text-[10px] font-bold text-slate-500">Page {logPage} / {Math.ceil(logsTotal/50)}</span>
+                <button onClick={()=>setLogPage(p=>p+1)} disabled={logPage>=Math.ceil(logsTotal/50)}
                   className="px-3 py-1 bg-white border border-gray-200 text-slate-600 text-[10px] font-bold rounded-lg disabled:opacity-40 hover:bg-slate-50 font-sans">Next →</button>
               </div>
             )}
