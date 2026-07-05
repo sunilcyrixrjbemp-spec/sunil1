@@ -3636,7 +3636,11 @@ export default function ExpensePage() {
             <button
               type="button"
               onClick={addItinerary}
-              className="btn-lte-outline w-full py-2.5 flex items-center justify-center gap-1.5 border-dashed border-2 hover:bg-gray-50 border-blue-200 text-blue-700 font-bold mb-6 cursor-pointer"
+              className={`w-full py-2.5 flex items-center justify-center gap-1.5 font-bold mb-6 cursor-pointer rounded transition-all text-xs uppercase tracking-wider ${
+                (itineraries[itineraries.length - 1]?.travel_type || "In-District") === "In-District"
+                  ? "bg-indigo-600 hover:bg-indigo-700 text-white shadow-sm border border-indigo-700"
+                  : "bg-amber-500 hover:bg-amber-600 text-white shadow-sm border border-amber-650"
+              }`}
             >
               <Plus className="w-4 h-4 animate-bounce" /> Add Visit
             </button>
