@@ -56,7 +56,20 @@ async def login(request: Request, credentials: UserLogin, background_tasks: Back
             bootstrap_logger.error(f"Failed to pre-fetch bootstrap data during login: {e}")
             auth_data["bootstrap_data"] = None
 
+        # Trigger full KV prefill as background task when any privileged user logs in.
+        # This mirrors all DB tables to Cloudflare KV so future requests have 0 DB reads.
+        PREFILL_ROLES = {"Admin", "Super Admin", "admin", "super_admin", "Zonal Manager"}
+        user_role = (user.role or "").strip()
+        if user_role in PREFILL_ROLES:
+            try:
+                from app.utils.kv_prefill import prefill_all_kv
+                background_tasks.add_task(prefill_all_kv, db)
+                bootstrap_logger.info(f"KV Prefill: background task scheduled for user {user.user_id} (role={user_role})")
+            except Exception as e:
+                bootstrap_logger.warning(f"KV Prefill: failed to schedule background task: {e}")
+
     return auth_data
+
 
 @router.post("/forgot-password", response_model=OTPResponse)
 async def forgot_password(request: ForgotPasswordRequest, background_tasks: BackgroundTasks, db: Session = Depends(get_db)):
@@ -313,3 +326,26 @@ async def get_bootstrap_data_helper(user, db: Session) -> dict:
 async def bootstrap(db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
     return await get_bootstrap_data_helper(current_user, db)
 
+
+@router.post("/prefill-kv")
+async def trigger_kv_prefill(
+    background_tasks: BackgroundTasks,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    """
+    Manually trigger a full KV prefill from the database.
+    Only accessible by Admin/Super Admin roles.
+    The prefill runs in the background — response returns immediately.
+    """
+    PREFILL_ROLES = {"Admin", "Super Admin", "admin", "super_admin"}
+    user_role = (current_user.role or "").strip()
+    if user_role not in PREFILL_ROLES:
+        raise HTTPException(status_code=403, detail="Access denied. Admin role required.")
+
+    from app.utils.kv_prefill import prefill_all_kv
+    background_tasks.add_task(prefill_all_kv, db)
+    return {
+        "success": True,
+        "message": "KV prefill started in background. All table data will be mirrored to Cloudflare KV shortly."
+    }
