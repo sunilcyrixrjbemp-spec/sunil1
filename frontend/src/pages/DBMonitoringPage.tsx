@@ -551,30 +551,97 @@ export default function DBMonitoringPage() {
               </div>
             )}
           </div>
-        ) : cfOfficial ? (
-          <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mt-4">
-            <div className="bg-slate-50 border border-slate-200/50 rounded-xl p-3">
-              <p className="text-[10px] text-slate-400 font-bold uppercase tracking-wider">Official KV Reads</p>
-              <p className="text-lg font-black text-slate-800 mt-1">{(cfOfficial.kv_reads || 0).toLocaleString()}</p>
-              <p className="text-[9px] text-slate-400 mt-0.5">actions in selected period</p>
-            </div>
-            <div className="bg-slate-50 border border-slate-200/50 rounded-xl p-3">
-              <p className="text-[10px] text-slate-400 font-bold uppercase tracking-wider">Official KV Writes</p>
-              <p className="text-lg font-black text-slate-800 mt-1">{(cfOfficial.kv_writes || 0).toLocaleString()}</p>
-              <p className="text-[9px] text-slate-400 mt-0.5">actions in selected period</p>
-            </div>
-            <div className="bg-slate-50 border border-slate-200/50 rounded-xl p-3">
-              <p className="text-[10px] text-slate-400 font-bold uppercase tracking-wider">Official D1 Database Reads</p>
-              <p className="text-lg font-black text-slate-800 mt-1">{(cfOfficial.d1_reads || 0).toLocaleString()}</p>
-              <p className="text-[9px] text-slate-400 mt-0.5">queries executed in period</p>
-            </div>
-            <div className="bg-slate-50 border border-slate-200/50 rounded-xl p-3">
-              <p className="text-[10px] text-slate-400 font-bold uppercase tracking-wider">Official D1 Database Writes</p>
-              <p className="text-lg font-black text-slate-800 mt-1">{(cfOfficial.d1_writes || 0).toLocaleString()}</p>
-              <p className="text-[9px] text-slate-400 mt-0.5">rows modified in period</p>
-            </div>
-          </div>
-        ) : (
+        ) : cfOfficial ? (() => {
+            const daysCount = cfPeriod === "monthly" ? (() => {
+              try {
+                const year = parseInt(filterMonth.split("-")[0]) || new Date().getFullYear();
+                const month = parseInt(filterMonth.split("-")[1]) || (new Date().getMonth() + 1);
+                return new Date(year, month, 0).getDate();
+              } catch {
+                return 30;
+              }
+            })() : 1;
+            
+            const rLimit = 5000000 * daysCount;
+            const wLimit = 100000 * daysCount;
+            
+            const kvRPct = Math.min((cfOfficial.kv_reads / rLimit) * 100, 100);
+            const kvWPct = Math.min((cfOfficial.kv_writes / wLimit) * 100, 100);
+            const d1RPct = Math.min((cfOfficial.d1_reads / rLimit) * 100, 100);
+            const d1WPct = Math.min((cfOfficial.d1_writes / wLimit) * 100, 100);
+            
+            return (
+              <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mt-4">
+                {/* KV Reads */}
+                <div className="bg-slate-50 border border-slate-200/50 rounded-xl p-3 flex flex-col justify-between">
+                  <div>
+                    <p className="text-[10px] text-slate-400 font-bold uppercase tracking-wider">Official KV Reads</p>
+                    <p className="text-lg font-black text-slate-800 mt-1">{(cfOfficial.kv_reads || 0).toLocaleString()}</p>
+                  </div>
+                  <div className="mt-3">
+                    <div className="h-1 bg-slate-200 rounded-full overflow-hidden">
+                      <div className="h-full bg-blue-600 rounded-full" style={{ width: `${kvRPct}%` }}/>
+                    </div>
+                    <div className="flex justify-between text-[9px] text-slate-400 mt-1.5 font-semibold">
+                      <span>{kvRPct.toFixed(4)}% used</span>
+                      <span>of {rLimit >= 1000000 ? `${(rLimit/1000000).toFixed(0)}M` : rLimit.toLocaleString()}</span>
+                    </div>
+                  </div>
+                </div>
+
+                {/* KV Writes */}
+                <div className="bg-slate-50 border border-slate-200/50 rounded-xl p-3 flex flex-col justify-between">
+                  <div>
+                    <p className="text-[10px] text-slate-400 font-bold uppercase tracking-wider">Official KV Writes</p>
+                    <p className="text-lg font-black text-slate-800 mt-1">{(cfOfficial.kv_writes || 0).toLocaleString()}</p>
+                  </div>
+                  <div className="mt-3">
+                    <div className="h-1 bg-slate-200 rounded-full overflow-hidden">
+                      <div className="h-full bg-amber-600 rounded-full" style={{ width: `${kvWPct}%` }}/>
+                    </div>
+                    <div className="flex justify-between text-[9px] text-slate-400 mt-1.5 font-semibold">
+                      <span>{kvWPct.toFixed(4)}% used</span>
+                      <span>of {wLimit >= 100000 ? `${(wLimit/1000).toFixed(0)}k` : wLimit.toLocaleString()}</span>
+                    </div>
+                  </div>
+                </div>
+
+                {/* D1 Reads */}
+                <div className="bg-slate-50 border border-slate-200/50 rounded-xl p-3 flex flex-col justify-between">
+                  <div>
+                    <p className="text-[10px] text-slate-400 font-bold uppercase tracking-wider">Official D1 Database Reads</p>
+                    <p className="text-lg font-black text-slate-800 mt-1">{(cfOfficial.d1_reads || 0).toLocaleString()}</p>
+                  </div>
+                  <div className="mt-3">
+                    <div className="h-1 bg-slate-200 rounded-full overflow-hidden">
+                      <div className="h-full bg-blue-600 rounded-full" style={{ width: `${d1RPct}%` }}/>
+                    </div>
+                    <div className="flex justify-between text-[9px] text-slate-400 mt-1.5 font-semibold">
+                      <span>{d1RPct.toFixed(4)}% used</span>
+                      <span>of {rLimit >= 1000000 ? `${(rLimit/1000000).toFixed(0)}M` : rLimit.toLocaleString()}</span>
+                    </div>
+                  </div>
+                </div>
+
+                {/* D1 Writes */}
+                <div className="bg-slate-50 border border-slate-200/50 rounded-xl p-3 flex flex-col justify-between">
+                  <div>
+                    <p className="text-[10px] text-slate-400 font-bold uppercase tracking-wider">Official D1 Database Writes</p>
+                    <p className="text-lg font-black text-slate-800 mt-1">{(cfOfficial.d1_writes || 0).toLocaleString()}</p>
+                  </div>
+                  <div className="mt-3">
+                    <div className="h-1 bg-slate-200 rounded-full overflow-hidden">
+                      <div className="h-full bg-amber-600 rounded-full" style={{ width: `${d1WPct}%` }}/>
+                    </div>
+                    <div className="flex justify-between text-[9px] text-slate-400 mt-1.5 font-semibold">
+                      <span>{d1WPct.toFixed(4)}% used</span>
+                      <span>of {wLimit >= 100000 ? `${(wLimit/1000).toFixed(0)}k` : wLimit.toLocaleString()}</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            );
+        })() : (
           <p className="text-slate-400 text-xs mt-4">Could not fetch server-side metrics.</p>
         )}
       </div>
