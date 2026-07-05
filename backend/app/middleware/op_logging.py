@@ -151,6 +151,21 @@ def _flush_buffer():
                      :log_date, :log_month, :log_year, :created_at)
             """), row)
         db.commit()
+        
+        # Repair any historical logs that have missing names or roles due to the previous token decoding issue
+        try:
+            db.execute(text("""
+                UPDATE db_op_logs 
+                SET user_name = (SELECT name FROM users WHERE users.user_id = db_op_logs.user_id),
+                    user_role = (SELECT role FROM users WHERE users.user_id = db_op_logs.user_id),
+                    user_zone = (SELECT zone FROM users WHERE users.user_id = db_op_logs.user_id),
+                    user_district = (SELECT district FROM users WHERE users.user_id = db_op_logs.user_id)
+                WHERE user_name IS NULL OR user_name = '';
+            """))
+            db.commit()
+        except Exception as ex:
+            logger.debug(f"op_log historical repair failed: {ex}")
+            
         logger.debug(f"op_log: flushed {len(rows)} buffered rows to DB (1 write)")
     except Exception as e:
         logger.debug(f"op_log flush failed: {e}")
@@ -185,10 +200,36 @@ class DBOpLoggingMiddleware(BaseHTTPMiddleware):
                 token   = auth_header.split(" ")[1]
                 payload = jwt.decode(token, settings.SECRET_KEY, algorithms=[settings.ALGORITHM])
                 user_id   = payload.get("sub", "")
-                user_name = payload.get("name", "")
-                role      = payload.get("role", "")
-                zone      = payload.get("zone", "")
-                district  = payload.get("district", "")
+                
+                if user_id:
+                    # Check cache for user info to prevent heavy database queries
+                    from app.utils import cache
+                    cache_key = f"user_profile_data:{user_id}"
+                    cached_profile = cache.get(cache_key)
+                    if cached_profile and isinstance(cached_profile, dict):
+                        user_name = cached_profile.get("name", "")
+                        role      = cached_profile.get("role", "")
+                        zone      = cached_profile.get("zone", "")
+                        district  = cached_profile.get("district", "")
+                    else:
+                        # Fetch from DB and cache for 24 hours
+                        db_session = SessionLocal()
+                        try:
+                            from app.models.user import User
+                            db_user = db_session.query(User).filter(User.user_id == user_id).first()
+                            if db_user:
+                                user_name = db_user.name or ""
+                                role      = db_user.role or ""
+                                zone      = db_user.zone or ""
+                                district  = db_user.district or ""
+                                cache.set(cache_key, {
+                                    "name": user_name,
+                                    "role": role,
+                                    "zone": zone,
+                                    "district": district
+                                }, ttl=86400)
+                        finally:
+                            db_session.close()
             except JWTError:
                 pass
             except Exception:

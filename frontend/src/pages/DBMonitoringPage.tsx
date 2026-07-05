@@ -123,6 +123,8 @@ export default function DBMonitoringPage() {
   const [cfOfficial,  setCfOfficial]  = useState<any>(null);
   const [cfError,     setCfError]     = useState<string | null>(null);
   const [cfSuggestion,setCfSuggestion]= useState<string | null>(null);
+  const [cfPeriod,    setCfPeriod]    = useState<"daily" | "monthly">("daily");
+  const [cfLoading,   setCfLoading]   = useState(false);
 
   // Fetch all registered users once on load to populate filter options
   useEffect(() => {
@@ -185,18 +187,12 @@ export default function DBMonitoringPage() {
       // Page size is 50 logs per line as requested
       const logsQS= buildQS({ page: String(logPage), page_size: "50" });
       
-      // Build specific query string for Cloudflare billing stats based on active filter
-      const cfQS = new URLSearchParams(
-        activeFilter === "date" ? { date: filterDate } : { month: filterMonth }
-      ).toString();
-      
-      const [s, u, p, t, l, cf] = await Promise.all([
+      const [s, u, p, t, l] = await Promise.all([
         fetch(`${BASE}/api/monitoring/summary?${qs}`, { headers: getHeaders() }).then(r => r.json()),
         fetch(`${BASE}/api/monitoring/user-breakdown?${qs}`, { headers: getHeaders() }).then(r => r.json()),
         fetch(`${BASE}/api/monitoring/page-breakdown?${qs}`, { headers: getHeaders() }).then(r => r.json()),
         fetch(`${BASE}/api/monitoring/timeline?${tlQS}`, { headers: getHeaders() }).then(r => r.json()),
         fetch(`${BASE}/api/monitoring/logs?${logsQS}`, { headers: getHeaders() }).then(r => r.json()),
-        fetch(`${BASE}/api/monitoring/cloudflare-official?${cfQS}`, { headers: getHeaders() }).then(r => r.json()).catch(() => ({ success: false, message: "Network error" })),
       ]);
       
       if (s.success) setSummary(s);
@@ -204,7 +200,23 @@ export default function DBMonitoringPage() {
       setPages(p.pages || []);
       setTimeline(t.timeline || []);
       setLogs(l.logs || []);
+      setLogsTotal(l.total || 0);
+      setLastUpdated(new Date().toLocaleTimeString("en-IN"));
+    } catch (e) { console.error(e); }
+    finally { setLoading(false); }
+  }, [buildQS, logPage, thisMonth, activeMenuTab]);
 
+  const fetchCloudflareOfficial = useCallback(async () => {
+    setCfLoading(true);
+    try {
+      const cfQS = new URLSearchParams(
+        cfPeriod === "daily" ? { date: today } : { month: thisMonth }
+      ).toString();
+      
+      const cf = await fetch(`${BASE}/api/monitoring/cloudflare-official?${cfQS}`, { headers: getHeaders() })
+        .then(r => r.json())
+        .catch(() => ({ success: false, message: "Network error" }));
+        
       if (cf.success) {
         setCfOfficial(cf);
         setCfError(null);
@@ -214,17 +226,26 @@ export default function DBMonitoringPage() {
         setCfError(cf.message);
         setCfSuggestion(cf.suggestion || null);
       }
-      setLogsTotal(l.total || 0);
-      setLastUpdated(new Date().toLocaleTimeString("en-IN"));
-    } catch (e) { console.error(e); }
-    finally { setLoading(false); }
-  }, [buildQS, logPage, thisMonth, activeMenuTab]);
+    } catch (e) {
+      console.error(e);
+    } finally {
+      setCfLoading(false);
+    }
+  }, [cfPeriod, today, thisMonth]);
 
   useEffect(() => {
     fetchAll();
-    intervalRef.current = setInterval(fetchAll, 60_000);
+    fetchCloudflareOfficial();
+    intervalRef.current = setInterval(() => {
+      fetchAll();
+      fetchCloudflareOfficial();
+    }, 60_000);
     return () => { if (intervalRef.current) clearInterval(intervalRef.current); };
-  }, [fetchAll, activeMenuTab]);
+  }, [fetchAll, fetchCloudflareOfficial]);
+
+  useEffect(() => {
+    fetchCloudflareOfficial();
+  }, [cfPeriod]);
 
   const handleSort = (col: string) => {
     if (sortCol === col) setSortAsc(v => !v); else { setSortCol(col); setSortAsc(false); }
@@ -469,17 +490,45 @@ export default function DBMonitoringPage() {
 
       {/* ── Official Cloudflare Edge Meter (Direct CF Billing Stats) ── */}
       <div className="bg-white border border-gray-200 rounded-2xl p-5 shadow-sm">
-        <div>
-          <h3 className="text-xs font-black uppercase tracking-wider text-slate-700 flex items-center gap-2">
-            <span className="w-5 h-5 rounded-md bg-blue-50 text-blue-600 flex items-center justify-center text-xs">☁️</span>
-            Official Cloudflare Edge Meter (Server-Side Billing Stats)
-          </h3>
-          <p className="text-[10px] text-slate-400 mt-1 font-semibold">
-            Account-level billing volume. Updates dynamically based on date/month selection.
-          </p>
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-slate-100 pb-3">
+          <div>
+            <h3 className="text-xs font-black uppercase tracking-wider text-slate-700 flex items-center gap-2">
+              <span className="w-5 h-5 rounded-md bg-blue-50 text-blue-600 flex items-center justify-center text-xs">☁️</span>
+              Official Cloudflare Edge Meter (Server-Side Billing Stats)
+            </h3>
+            <p className="text-[10px] text-slate-400 mt-1 font-semibold">
+              Account-level billing volume retrieved directly from Cloudflare Analytics.
+            </p>
+          </div>
+          
+          {/* Daily / Monthly selector button group inside Cloudflare Edge Meter */}
+          <div className="flex bg-slate-100 border border-slate-200/60 rounded-xl p-0.5 text-[10px] font-bold self-start sm:self-auto shrink-0 shadow-inner">
+            <button
+              type="button"
+              onClick={() => setCfPeriod("daily")}
+              className={`px-3 py-1 rounded-lg transition-all border-0 cursor-pointer ${
+                cfPeriod === "daily"
+                  ? "bg-white text-slate-800 shadow-sm font-extrabold"
+                  : "bg-transparent text-slate-500 hover:text-slate-800"
+              }`}
+            >
+              Daily (Today)
+            </button>
+            <button
+              type="button"
+              onClick={() => setCfPeriod("monthly")}
+              className={`px-3 py-1 rounded-lg transition-all border-0 cursor-pointer ${
+                cfPeriod === "monthly"
+                  ? "bg-white text-slate-800 shadow-sm font-extrabold"
+                  : "bg-transparent text-slate-500 hover:text-slate-800"
+              }`}
+            >
+              Monthly (This Month)
+            </button>
+          </div>
         </div>
         
-        {loading ? (
+        {cfLoading ? (
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mt-4">
             <Skeleton h="h-16"/><Skeleton h="h-16"/><Skeleton h="h-16"/><Skeleton h="h-16"/>
           </div>
