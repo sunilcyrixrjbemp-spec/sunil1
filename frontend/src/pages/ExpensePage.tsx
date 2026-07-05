@@ -1604,22 +1604,38 @@ export default function ExpensePage() {
   const validateClaim = (customItineraries?: ItineraryLeg[]) => {
     const listToValidate = customItineraries || itineraries;
     if (!date) {
-      toast.error("Please choose a travel date first.");
+      setValidationModal({
+        show: true,
+        title: "Missing Travel Date",
+        message: "Please choose a travel date first before submitting."
+      });
       return false;
     }
 
     if (minDate && date < minDate) {
-      toast.error(`Expense date cannot be earlier than ${minDate}.`);
+      setValidationModal({
+        show: true,
+        title: "Invalid Travel Date",
+        message: `Expense date cannot be earlier than ${minDate}.`
+      });
       return false;
     }
     if (maxDate && date > maxDate) {
-      toast.error(`Expense date cannot be later than ${maxDate}.`);
+      setValidationModal({
+        show: true,
+        title: "Invalid Travel Date",
+        message: `Expense date cannot be later than ${maxDate}.`
+      });
       return false;
     }
 
     // Minimum 2 visits required for expense submission
     if (listToValidate.length < 2) {
-      toast.error("Minimum 2 visits are required to submit an expense claim.");
+      setValidationModal({
+        show: true,
+        title: "Minimum Visits Required",
+        message: "Minimum 2 visits are required to submit an expense claim."
+      });
       return false;
     }
 
@@ -1628,33 +1644,57 @@ export default function ExpensePage() {
       const legNum = idx + 1;
 
       if (!leg.from.trim()) {
-        toast.error(`Visit ${legNum}: Please enter the starting location.`);
+        setValidationModal({
+          show: true,
+          title: `Visit ${legNum}: Missing Starting Location`,
+          message: "Please enter the starting location (From)."
+        });
         return false;
       }
       if (!leg.to.trim()) {
-        toast.error(`Visit ${legNum}: Please enter the destination location.`);
+        setValidationModal({
+          show: true,
+          title: `Visit ${legNum}: Missing Destination Location`,
+          message: "Please enter the destination location (To)."
+        });
         return false;
       }
       // Same from/to location not allowed in a single leg
       if (leg.from.trim().toLowerCase() === leg.to.trim().toLowerCase()) {
-        toast.error(`Visit ${legNum}: Starting location (From) and Destination (To) cannot be the same.`);
+        setValidationModal({
+          show: true,
+          title: `Visit ${legNum}: Same Locations`,
+          message: "Starting location (From) and Destination (To) cannot be the same."
+        });
         return false;
       }
       if (!leg.mode) {
-        toast.error(`Visit ${legNum}: Please select a travel mode.`);
+        setValidationModal({
+          show: true,
+          title: `Visit ${legNum}: Missing Travel Mode`,
+          message: "Please select a travel mode."
+        });
         return false;
       }
 
       if (leg.mode === "Bike" || leg.mode === "Car") {
         const kmVal = parseFloat(leg.km) || 0;
         if (kmVal <= 0) {
-          toast.error(`Visit ${legNum}: Please enter a distance greater than 0 KM.`);
+          setValidationModal({
+            show: true,
+            title: `Visit ${legNum}: Invalid Distance`,
+            message: "Please enter a distance greater than 0 KM."
+          });
           return false;
         }
       } else {
         const amtVal = parseFloat(leg.amount) || 0;
         if (amtVal <= 0) {
-          toast.error(`Visit ${legNum}: Please enter a valid fare amount.`);
+          setValidationModal({
+            show: true,
+            title: `Visit ${legNum}: Invalid Amount`,
+            message: "Please enter a valid fare amount."
+          });
           return false;
         }
       }
@@ -1662,43 +1702,75 @@ export default function ExpensePage() {
       const mainBill = files[legNum]?.main_bill;
       const hasMainAttachment = mainBill || hasExistingFile(legNum, leg.mode);
       if (leg.mode === "Train" && !hasMainAttachment) {
-        toast.error(`Visit ${legNum}: Please upload your train ticket receipt.`);
+        setValidationModal({
+          show: true,
+          title: `Visit ${legNum}: Missing Train Ticket`,
+          message: "Please upload your train ticket receipt."
+        });
         return false;
       }
-      if ((leg.mode === "Bus" || leg.mode === "Auto") && (parseFloat(leg.amount) || 0) >= 300 && !hasMainAttachment) {
-        toast.error(`Visit ${legNum}: Please upload a receipt screenshot since the fare is ₹300 or more.`);
+      if ((leg.mode === "Bus" || leg.mode === "Auto") && (parseFloat(leg.amount) || 0) >= 305 && !hasMainAttachment) {
+        setValidationModal({
+          show: true,
+          title: `Visit ${legNum}: Missing Ticket Receipt`,
+          message: "Please upload a receipt screenshot since the fare is ₹300 or more."
+        });
         return false;
       }
 
       if (leg.sub_mode) {
         const subAmt = parseFloat(leg.sub_amount) || 0;
         if (subAmt <= 0) {
-          toast.error(`Visit ${legNum}: Please enter a valid sub-connection fare.`);
+          setValidationModal({
+            show: true,
+            title: `Visit ${legNum}: Invalid Sub-connection Fare`,
+            message: "Please enter a valid sub-connection fare."
+          });
           return false;
         }
         const subBill = files[legNum]?.sub_bill;
         const hasSubAttachment = subBill || hasExistingFile(legNum, leg.sub_mode);
         if (leg.sub_mode === "Train" && !hasSubAttachment) {
-          toast.error(`Visit ${legNum}: Please upload the sub-connection train ticket receipt.`);
+          setValidationModal({
+            show: true,
+            title: `Visit ${legNum}: Missing Sub-connection Ticket`,
+            message: "Please upload the sub-connection train ticket receipt."
+          });
           return false;
         }
-        if ((leg.sub_mode === "Bus" || leg.sub_mode === "Auto") && subAmt >= 300 && !hasSubAttachment) {
-          toast.error(`Visit ${legNum}: Please upload a sub-connection receipt screenshot since the fare is ₹300 or more.`);
+        if ((leg.sub_mode === "Bus" || leg.sub_mode === "Auto") && subAmt >= 305 && !hasSubAttachment) {
+          setValidationModal({
+            show: true,
+            title: `Visit ${legNum}: Missing Sub-connection Receipt`,
+            message: "Please upload a sub-connection receipt screenshot since the fare is ₹300 or more."
+          });
           return false;
         }
       }
 
       if (leg.travel_type === "Outdoor") {
         if (!leg.district_from) {
-          toast.error(`Visit ${legNum}: Please select the starting district.`);
+          setValidationModal({
+            show: true,
+            title: `Visit ${legNum}: Missing Starting District`,
+            message: "Please select the starting district."
+          });
           return false;
         }
         if (!leg.district) {
-          toast.error(`Visit ${legNum}: Please select the destination district.`);
+          setValidationModal({
+            show: true,
+            title: `Visit ${legNum}: Missing Destination District`,
+            message: "Please select the destination district."
+          });
           return false;
         }
         if (leg.district_from === leg.district) {
-          toast.error(`Visit ${legNum}: The starting and destination districts must be different for outdoor travel.`);
+          setValidationModal({
+            show: true,
+            title: `Visit ${legNum}: Same Districts`,
+            message: "The starting and destination districts must be different for outdoor travel."
+          });
           return false;
         }
       }
@@ -1708,15 +1780,23 @@ export default function ExpensePage() {
         const hotelBill = files[1]?.hotel_bill;
         const hasHotelAttachment = hotelBill || hasExistingFile(1, "Hotel");
         if (hotelAmt > 0 && !hasHotelAttachment) {
-          toast.error("Please upload your hotel stay receipt.");
+          setValidationModal({
+            show: true,
+            title: "Visit 1: Missing Hotel stay receipt",
+            message: "Please upload your hotel stay receipt."
+          });
           return false;
         }
 
         const lpAmt = parseFloat(leg.local_purchase) || 0;
         const lpBill = files[1]?.local_purchase_bill;
         const hasLpAttachment = lpBill || hasExistingFile(1, "Local_Purchase");
-        if (lpAmt >= 300 && !hasLpAttachment) {
-          toast.error("Please upload a receipt for local purchase since the amount is ₹300 or more.");
+        if (lpAmt >= 305 && !hasLpAttachment) {
+          setValidationModal({
+            show: true,
+            title: "Visit 1: Missing Local Purchase receipt",
+            message: "Please upload a receipt for local purchase since the amount is ₹300 or more."
+          });
           return false;
         }
       }
@@ -1724,13 +1804,21 @@ export default function ExpensePage() {
       if (leg.oth_desc.trim()) {
         const othAmt = parseFloat(leg.oth_amount) || 0;
         if (othAmt <= 0) {
-          toast.error(`Visit ${legNum}: Please enter a valid amount for other expenses.`);
+          setValidationModal({
+            show: true,
+            title: `Visit ${legNum}: Invalid Other Amount`,
+            message: "Please enter a valid amount for other expenses."
+          });
           return false;
         }
         const othBill = files[legNum]?.oth_bill;
         const hasOthAttachment = othBill || hasExistingFile(legNum, "Other_Expense");
-        if (othAmt >= 300 && !hasOthAttachment) {
-          toast.error(`Visit ${legNum}: Please upload a receipt screenshot for other expenses since the amount is ₹300 or more.`);
+        if (othAmt >= 305 && !hasOthAttachment) {
+          setValidationModal({
+            show: true,
+            title: `Visit ${legNum}: Missing Other Receipt`,
+            message: "Please upload a receipt screenshot for other expenses since the amount is ₹300 or more."
+          });
           return false;
         }
       }
@@ -1738,7 +1826,11 @@ export default function ExpensePage() {
       // Dynamic activities validations
       const acts = leg.selected_activities || [];
       if (acts.length === 0) {
-        toast.error(`Visit ${legNum}: Please select at least one activity (Calls, PMS, Asset Tagging, etc.)`);
+        setValidationModal({
+          show: true,
+          title: `Visit ${legNum}: No Activity Selected`,
+          message: "Please select at least one activity (Calls, PMS, Asset Tagging, etc.)"
+        });
         return false;
       }
       
@@ -1776,7 +1868,11 @@ export default function ExpensePage() {
 
       if (acts.includes("Asset Tagging")) {
         if ((leg.assets_list || []).length === 0) {
-          toast.error(`Visit ${legNum}: Please add at least one tagged equipment and quantity.`);
+          setValidationModal({
+            show: true,
+            title: `Visit ${legNum}: Missing Asset Tagging Details`,
+            message: "Please add at least one tagged equipment and quantity."
+          });
           return false;
         }
       }
@@ -1784,7 +1880,11 @@ export default function ExpensePage() {
       if (acts.includes("Mobilise Asset Update")) {
         const qty = parseInt(leg.mobilise_asset_count || "0") || 0;
         if (qty <= 0) {
-          toast.error(`Visit ${legNum}: Please enter a valid quantity for Mobilise Asset Update.`);
+          setValidationModal({
+            show: true,
+            title: `Visit ${legNum}: Invalid Mobilise Asset Count`,
+            message: "Please enter a valid quantity for Mobilise Asset Update."
+          });
           return false;
         }
       }
@@ -1792,14 +1892,22 @@ export default function ExpensePage() {
       if (acts.includes("Calibration")) {
         const qty = parseInt(leg.calibration_count || "0") || 0;
         if (qty <= 0) {
-          toast.error(`Visit ${legNum}: Please enter a valid quantity for Calibration.`);
+          setValidationModal({
+            show: true,
+            title: `Visit ${legNum}: Invalid Calibration Count`,
+            message: "Please enter a valid quantity for Calibration."
+          });
           return false;
         }
       }
 
       if (acts.includes("Other")) {
         if (!leg.activity_other_desc || !leg.activity_other_desc.trim()) {
-          toast.error(`Visit ${legNum}: Please enter description for Other activity.`);
+          setValidationModal({
+            show: true,
+            title: `Visit ${legNum}: Missing Other Activity Description`,
+            message: "Please enter description for Other activity."
+          });
           return false;
         }
       }
@@ -3146,6 +3254,8 @@ export default function ExpensePage() {
                                   <div className="flex gap-1.5 items-center">
                                     <input
                                       type="text"
+                                      inputMode="numeric"
+                                      pattern="[0-9]*"
                                       maxLength={8}
                                       value={leg.calls_barcode || ""}
                                       placeholder="8 digits"
@@ -3161,11 +3271,11 @@ export default function ExpensePage() {
                                       type="button"
                                       onClick={() => verifyLegBarcode(leg.leg, "Calls")}
                                       disabled={!leg.calls_barcode || String(leg.calls_barcode).length !== 8}
-                                      className={
+                                      className={`h-7 min-h-[28px] px-3 rounded-lg font-black text-[10px] uppercase border-0 flex items-center justify-center transition-all ${
                                         leg.calls_barcode && String(leg.calls_barcode).length === 8
-                                          ? "btn-verify-highlighted"
-                                          : "btn-verify-normal-disabled"
-                                      }
+                                          ? "bg-emerald-500 text-white cursor-pointer hover:bg-emerald-600 shadow-md shadow-emerald-500/20 active:scale-95"
+                                          : "bg-slate-200 text-slate-400 cursor-not-allowed"
+                                      }`}
                                     >
                                       Verify
                                     </button>
@@ -3350,6 +3460,8 @@ export default function ExpensePage() {
                                   <div className="flex gap-1.5 items-center">
                                     <input
                                       type="text"
+                                      inputMode="numeric"
+                                      pattern="[0-9]*"
                                       maxLength={8}
                                       value={leg.pms_barcode || ""}
                                       placeholder="8 digits"
@@ -3365,11 +3477,11 @@ export default function ExpensePage() {
                                       type="button"
                                       onClick={() => verifyLegBarcode(leg.leg, "PMS")}
                                       disabled={!leg.pms_barcode || String(leg.pms_barcode).length !== 8}
-                                      className={
+                                      className={`h-7 min-h-[28px] px-3 rounded-lg font-black text-[10px] uppercase border-0 flex items-center justify-center transition-all ${
                                         leg.pms_barcode && String(leg.pms_barcode).length === 8
-                                          ? "btn-verify-highlighted"
-                                          : "btn-verify-normal-disabled"
-                                      }
+                                          ? "bg-emerald-500 text-white cursor-pointer hover:bg-emerald-600 shadow-md shadow-emerald-500/20 active:scale-95"
+                                          : "bg-slate-200 text-slate-400 cursor-not-allowed"
+                                      }`}
                                     >
                                       Verify
                                     </button>
