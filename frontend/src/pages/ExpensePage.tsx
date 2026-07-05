@@ -3638,7 +3638,7 @@ export default function ExpensePage() {
               onClick={addItinerary}
               className="btn-lte-outline w-full py-2.5 flex items-center justify-center gap-1.5 border-dashed border-2 hover:bg-gray-50 border-blue-200 text-blue-700 font-bold mb-6 cursor-pointer"
             >
-              <Plus className="w-4 h-4 animate-bounce" /> Add Itinerary leg visit
+              <Plus className="w-4 h-4 animate-bounce" /> Add Visit
             </button>
 
           </div>
