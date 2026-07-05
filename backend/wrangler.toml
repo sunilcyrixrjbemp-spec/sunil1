@@ -6,9 +6,6 @@ compatibility_flags = ["python_workers"]
 [vars]
 # Environment variables (overridden by wrangler secrets in production)
 DATABASE_URL = "sqlite:///./test.db"
-CLOUDFLARE_API_TOKEN = ""
-CLOUDFLARE_ACCOUNT_ID = "befbd2e0ff580a1d0d0865f011002053"
-CLOUDFLARE_DATABASE_ID = "34e085d8-c078-4f2f-b240-9bf8f4cf9301"
 CLOUDFLARE_R2_BUCKET_NAME = "fieldops-uploads"
 
 [[d1_databases]]
