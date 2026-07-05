@@ -560,6 +560,13 @@ export default function ExpensePage() {
   // Image Preview Lightbox
   const [lightboxImage, setLightboxImage] = useState<string | null>(null);
 
+  // Custom Validation Warning Modal
+  const [validationModal, setValidationModal] = useState<{
+    show: boolean;
+    title: string;
+    message: string;
+  }>({ show: false, title: "", message: "" });
+
   // Edit Mode & Calendar Constraints states
   const [editExpenseId, setEditExpenseId] = useState<string | null>(null);
   const [_existingAttachments, setExistingAttachments] = useState<string[]>([]);
@@ -963,8 +970,13 @@ export default function ExpensePage() {
     const leg = itineraries.find(l => l.leg === legNum);
     if (!leg) return;
     
-    const barcode = activityType === "Calls" ? leg.calls_barcode : leg.pms_barcode;
-    if (!barcode || barcode.length !== 8) {
+    const rawBarcode = activityType === "Calls" ? leg.calls_barcode : leg.pms_barcode;
+    if (!rawBarcode) {
+      toast.error("Barcode must be exactly 8 digits.");
+      return;
+    }
+    const barcode = String(rawBarcode).trim();
+    if (barcode.length !== 8) {
       toast.error("Barcode must be exactly 8 digits.");
       return;
     }
@@ -1605,9 +1617,9 @@ export default function ExpensePage() {
       return false;
     }
 
-    // Minimum 2 legs required for expense submission
+    // Minimum 2 visits required for expense submission
     if (listToValidate.length < 2) {
-      toast.error("Minimum 2 legs are required to submit an expense claim.");
+      toast.error("Minimum 2 visits are required to submit an expense claim.");
       return false;
     }
 
@@ -1616,33 +1628,33 @@ export default function ExpensePage() {
       const legNum = idx + 1;
 
       if (!leg.from.trim()) {
-        toast.error(`Leg ${legNum}: Please enter the starting location.`);
+        toast.error(`Visit ${legNum}: Please enter the starting location.`);
         return false;
       }
       if (!leg.to.trim()) {
-        toast.error(`Leg ${legNum}: Please enter the destination location.`);
+        toast.error(`Visit ${legNum}: Please enter the destination location.`);
         return false;
       }
       // Same from/to location not allowed in a single leg
       if (leg.from.trim().toLowerCase() === leg.to.trim().toLowerCase()) {
-        toast.error(`Leg ${legNum}: Starting location (From) and Destination (To) cannot be the same.`);
+        toast.error(`Visit ${legNum}: Starting location (From) and Destination (To) cannot be the same.`);
         return false;
       }
       if (!leg.mode) {
-        toast.error(`Leg ${legNum}: Please select a travel mode.`);
+        toast.error(`Visit ${legNum}: Please select a travel mode.`);
         return false;
       }
 
       if (leg.mode === "Bike" || leg.mode === "Car") {
         const kmVal = parseFloat(leg.km) || 0;
         if (kmVal <= 0) {
-          toast.error(`Leg ${legNum}: Please enter a distance greater than 0 KM.`);
+          toast.error(`Visit ${legNum}: Please enter a distance greater than 0 KM.`);
           return false;
         }
       } else {
         const amtVal = parseFloat(leg.amount) || 0;
         if (amtVal <= 0) {
-          toast.error(`Leg ${legNum}: Please enter a valid fare amount.`);
+          toast.error(`Visit ${legNum}: Please enter a valid fare amount.`);
           return false;
         }
       }
@@ -1650,43 +1662,43 @@ export default function ExpensePage() {
       const mainBill = files[legNum]?.main_bill;
       const hasMainAttachment = mainBill || hasExistingFile(legNum, leg.mode);
       if (leg.mode === "Train" && !hasMainAttachment) {
-        toast.error(`Leg ${legNum}: Please upload your train ticket receipt.`);
+        toast.error(`Visit ${legNum}: Please upload your train ticket receipt.`);
         return false;
       }
       if ((leg.mode === "Bus" || leg.mode === "Auto") && (parseFloat(leg.amount) || 0) >= 300 && !hasMainAttachment) {
-        toast.error(`Leg ${legNum}: Please upload a receipt screenshot since the fare is ₹300 or more.`);
+        toast.error(`Visit ${legNum}: Please upload a receipt screenshot since the fare is ₹300 or more.`);
         return false;
       }
 
       if (leg.sub_mode) {
         const subAmt = parseFloat(leg.sub_amount) || 0;
         if (subAmt <= 0) {
-          toast.error(`Leg ${legNum}: Please enter a valid sub-connection fare.`);
+          toast.error(`Visit ${legNum}: Please enter a valid sub-connection fare.`);
           return false;
         }
         const subBill = files[legNum]?.sub_bill;
         const hasSubAttachment = subBill || hasExistingFile(legNum, leg.sub_mode);
         if (leg.sub_mode === "Train" && !hasSubAttachment) {
-          toast.error(`Leg ${legNum}: Please upload the sub-connection train ticket receipt.`);
+          toast.error(`Visit ${legNum}: Please upload the sub-connection train ticket receipt.`);
           return false;
         }
         if ((leg.sub_mode === "Bus" || leg.sub_mode === "Auto") && subAmt >= 300 && !hasSubAttachment) {
-          toast.error(`Leg ${legNum}: Please upload a sub-connection receipt screenshot since the fare is ₹300 or more.`);
+          toast.error(`Visit ${legNum}: Please upload a sub-connection receipt screenshot since the fare is ₹300 or more.`);
           return false;
         }
       }
 
       if (leg.travel_type === "Outdoor") {
         if (!leg.district_from) {
-          toast.error(`Leg ${legNum}: Please select the starting district.`);
+          toast.error(`Visit ${legNum}: Please select the starting district.`);
           return false;
         }
         if (!leg.district) {
-          toast.error(`Leg ${legNum}: Please select the destination district.`);
+          toast.error(`Visit ${legNum}: Please select the destination district.`);
           return false;
         }
         if (leg.district_from === leg.district) {
-          toast.error(`Leg ${legNum}: The starting and destination districts must be different for outdoor travel.`);
+          toast.error(`Visit ${legNum}: The starting and destination districts must be different for outdoor travel.`);
           return false;
         }
       }
@@ -1712,13 +1724,13 @@ export default function ExpensePage() {
       if (leg.oth_desc.trim()) {
         const othAmt = parseFloat(leg.oth_amount) || 0;
         if (othAmt <= 0) {
-          toast.error(`Leg ${legNum}: Please enter a valid amount for other expenses.`);
+          toast.error(`Visit ${legNum}: Please enter a valid amount for other expenses.`);
           return false;
         }
         const othBill = files[legNum]?.oth_bill;
         const hasOthAttachment = othBill || hasExistingFile(legNum, "Other_Expense");
         if (othAmt >= 300 && !hasOthAttachment) {
-          toast.error(`Leg ${legNum}: Please upload a receipt screenshot for other expenses since the amount is ₹300 or more.`);
+          toast.error(`Visit ${legNum}: Please upload a receipt screenshot for other expenses since the amount is ₹300 or more.`);
           return false;
         }
       }
@@ -1726,33 +1738,45 @@ export default function ExpensePage() {
       // Dynamic activities validations
       const acts = leg.selected_activities || [];
       if (acts.length === 0) {
-        toast.error(`Leg ${legNum}: Please select at least one activity (Calls, PMS, Asset Tagging, etc.)`);
+        toast.error(`Visit ${legNum}: Please select at least one activity (Calls, PMS, Asset Tagging, etc.)`);
         return false;
       }
       
       if (acts.includes("Calls")) {
         if ((leg.calls_list || []).length === 0) {
-          toast.error(`Leg ${legNum}: Please add and verify at least one barcode for Calls.`);
+          setValidationModal({
+            show: true,
+            title: `Visit ${legNum}: Calls Selected but Not Added`,
+            message: `You have selected "Calls" in Visit ${legNum}, but you have not added the call record.\n\nPlease scroll to Calls under Visit ${legNum}, enter the 8-digit barcode, click "VERIFY" to check, select the Call Type, Status, upload the Service Report photo, and click the add button (+).`
+          });
           return false;
         }
         // Check all added calls have a service report photo
         const callsWithoutPhoto = (leg.calls_list || []).filter(c => !c.photo_url);
         if (callsWithoutPhoto.length > 0) {
-          toast.error(`Leg ${legNum}: ${callsWithoutPhoto.length} Call entry(s) are missing a Service Report photo. Service Report is compulsory for all Calls.`);
+          setValidationModal({
+            show: true,
+            title: `Visit ${legNum}: Missing Service Report Photo`,
+            message: `You have added ${callsWithoutPhoto.length} call entry(s) in Visit ${legNum} that are missing the Service Report photo.\n\nPlease upload the Service Report photo for each Call in the list. Service Report is compulsory for all Calls.`
+          });
           return false;
         }
       }
 
       if (acts.includes("PMS")) {
         if ((leg.pms_list || []).length === 0) {
-          toast.error(`Leg ${legNum}: Please add and verify at least one barcode for PMS.`);
+          setValidationModal({
+            show: true,
+            title: `Visit ${legNum}: PMS Selected but Not Added`,
+            message: `You have selected "PMS" in Visit ${legNum}, but you have not added the PMS record.\n\nPlease scroll to PMS under Visit ${legNum}, enter the 8-digit barcode, click "VERIFY", select the PMS Period (3/6/12 Month), upload the report/equipment photo, and click the add button (+).`
+          });
           return false;
         }
       }
 
       if (acts.includes("Asset Tagging")) {
         if ((leg.assets_list || []).length === 0) {
-          toast.error(`Leg ${legNum}: Please add at least one tagged equipment and quantity.`);
+          toast.error(`Visit ${legNum}: Please add at least one tagged equipment and quantity.`);
           return false;
         }
       }
@@ -1760,7 +1784,7 @@ export default function ExpensePage() {
       if (acts.includes("Mobilise Asset Update")) {
         const qty = parseInt(leg.mobilise_asset_count || "0") || 0;
         if (qty <= 0) {
-          toast.error(`Leg ${legNum}: Please enter a valid quantity for Mobilise Asset Update.`);
+          toast.error(`Visit ${legNum}: Please enter a valid quantity for Mobilise Asset Update.`);
           return false;
         }
       }
@@ -1768,14 +1792,14 @@ export default function ExpensePage() {
       if (acts.includes("Calibration")) {
         const qty = parseInt(leg.calibration_count || "0") || 0;
         if (qty <= 0) {
-          toast.error(`Leg ${legNum}: Please enter a valid quantity for Calibration.`);
+          toast.error(`Visit ${legNum}: Please enter a valid quantity for Calibration.`);
           return false;
         }
       }
 
       if (acts.includes("Other")) {
         if (!leg.activity_other_desc || !leg.activity_other_desc.trim()) {
-          toast.error(`Leg ${legNum}: Please enter description for Other activity.`);
+          toast.error(`Visit ${legNum}: Please enter description for Other activity.`);
           return false;
         }
       }
@@ -2327,8 +2351,8 @@ export default function ExpensePage() {
             {/* Visit Details Legs */}
             <div className="space-y-4">
               <div className="flex items-center justify-between">
-                <h3 className="text-xs font-bold text-gray-650 uppercase tracking-wider">Travel & Visit Legs</h3>
-                <span className="text-[10px] text-gray-400 font-bold uppercase">(Legs: {itineraries.length} / 10)</span>
+                <h3 className="text-xs font-bold text-gray-650 uppercase tracking-wider">Travel & Visits</h3>
+                <span className="text-[10px] text-gray-400 font-bold uppercase">(Visits: {itineraries.length} / 10)</span>
               </div>
 
               {itineraries.map((leg, index) => {
@@ -3136,9 +3160,9 @@ export default function ExpensePage() {
                                     <button
                                       type="button"
                                       onClick={() => verifyLegBarcode(leg.leg, "Calls")}
-                                      disabled={!leg.calls_barcode || leg.calls_barcode.length !== 8}
+                                      disabled={!leg.calls_barcode || String(leg.calls_barcode).length !== 8}
                                       className={
-                                        leg.calls_barcode && leg.calls_barcode.length === 8
+                                        leg.calls_barcode && String(leg.calls_barcode).length === 8
                                           ? "btn-verify-highlighted"
                                           : "btn-verify-normal-disabled"
                                       }
@@ -3340,9 +3364,9 @@ export default function ExpensePage() {
                                     <button
                                       type="button"
                                       onClick={() => verifyLegBarcode(leg.leg, "PMS")}
-                                      disabled={!leg.pms_barcode || leg.pms_barcode.length !== 8}
+                                      disabled={!leg.pms_barcode || String(leg.pms_barcode).length !== 8}
                                       className={
-                                        leg.pms_barcode && leg.pms_barcode.length === 8
+                                        leg.pms_barcode && String(leg.pms_barcode).length === 8
                                           ? "btn-verify-highlighted"
                                           : "btn-verify-normal-disabled"
                                       }
@@ -4099,7 +4123,7 @@ export default function ExpensePage() {
                           >
                             <div className="flex justify-between items-center">
                               <span className="font-bold font-mono text-blue-600 text-xs uppercase">{leg.parentCode}</span>
-                              <span className="text-[10px] font-bold text-gray-400">Leg {leg.leg}</span>
+                              <span className="text-[10px] font-bold text-gray-400">Visit {leg.leg}</span>
                             </div>
 
                             <div className="grid grid-cols-2 gap-2 text-[11px]">
@@ -4294,6 +4318,42 @@ export default function ExpensePage() {
                   <span>Send Request</span>
                 </button>
               </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ================= CUSTOM VALIDATION WARNING MODAL ================= */}
+      {validationModal.show && (
+        <div className="modal-lte-overlay z-[9999]">
+          <div className="modal-lte-content max-w-md w-full bg-white rounded-2xl shadow-2xl p-5 border border-red-100 transform transition-all duration-300 scale-100 flex flex-col gap-4">
+            {/* Header Icon + Title */}
+            <div className="flex items-center gap-3 pb-2 border-b border-red-50">
+              <span className="w-10 h-10 rounded-full bg-rose-50 text-rose-500 border border-rose-100 flex items-center justify-center text-lg shrink-0">
+                ⚠️
+              </span>
+              <div>
+                <h4 className="text-sm font-black text-slate-800 uppercase tracking-wide">
+                  {validationModal.title}
+                </h4>
+                <p className="text-[9px] text-slate-400 font-bold uppercase mt-0.5">Attention Required</p>
+              </div>
+            </div>
+
+            {/* Error Message Text */}
+            <div className="text-xs text-slate-600 leading-relaxed font-semibold bg-slate-50/70 p-3 rounded-xl border border-slate-100/50 whitespace-pre-line">
+              {validationModal.message}
+            </div>
+
+            {/* Action Buttons */}
+            <div className="flex justify-end pt-2">
+              <button
+                type="button"
+                onClick={() => setValidationModal({ show: false, title: "", message: "" })}
+                className="w-full py-2 bg-rose-600 hover:bg-rose-700 text-white text-xs font-bold uppercase tracking-wider rounded-xl transition-all shadow-md shadow-rose-200 border-0 cursor-pointer text-center"
+              >
+                Okay, I Understood
+              </button>
             </div>
           </div>
         </div>

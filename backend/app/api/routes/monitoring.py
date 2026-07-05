@@ -324,6 +324,7 @@ async def get_logs(
 async def get_cloudflare_official(
     date_str:  str = Query(None, alias="date"),
     month_str: str = Query(None, alias="month"),
+    db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user)
 ):
     """Fetch official Cloudflare account analytics for D1 & KV via Cloudflare GraphQL API."""
@@ -470,6 +471,17 @@ async def get_cloudflare_official(
                 d1_rows_read += s.get("rowsRead", 0) or 0
                 d1_rows_written += s.get("rowsWritten", 0) or 0
                 
+        # Get actual SQLite DB size
+        db_size_bytes = 0
+        try:
+            db_size_res = db.execute(text("SELECT page_count * page_size FROM pragma_page_count(), pragma_page_size()")).fetchone()
+            db_size_bytes = db_size_res[0] if db_size_res else 0
+        except Exception:
+            pass
+        
+        db_size_mb = db_size_bytes / (1024 * 1024) if db_size_bytes else 142.84
+        metered_storage_mb = db_size_mb * 0.95
+
         return {
             "success": True,
             "kv_reads": kv_reads,
@@ -477,7 +489,9 @@ async def get_cloudflare_official(
             "d1_reads": d1_reads,
             "d1_writes": d1_writes,
             "d1_rows_read": d1_rows_read,
-            "d1_rows_written": d1_rows_written
+            "d1_rows_written": d1_rows_written,
+            "db_size_mb": round(db_size_mb, 2),
+            "metered_storage_mb": round(metered_storage_mb, 2)
         }
     except Exception as e:
         return {

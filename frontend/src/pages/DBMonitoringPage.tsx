@@ -1,7 +1,7 @@
-import { useState, useEffect, useCallback, useRef } from "react";
+import { useState, useEffect, useCallback } from "react";
 import {
   AreaChart, Area, BarChart, Bar, XAxis, YAxis, CartesianGrid,
-  Tooltip, Legend, ResponsiveContainer, Cell, PieChart, Pie
+  Tooltip, Legend, ResponsiveContainer
 } from "recharts";
 import toast from "react-hot-toast";
 
@@ -13,24 +13,24 @@ const getHeaders = () => ({
 
 // ── Types ──────────────────────────────────────────────────────────────
 interface Summary {
-  db_reads: number; db_writes: number; kv_hits: number;
-  total_requests: number; kv_savings_pct: number;
+  db_reads: number; db_writes: number;
+  total_requests: number;
   reads_used_pct: number; writes_used_pct: number;
   daily_read_limit: number; daily_write_limit: number;
 }
 interface UserRow {
   user_id: string; user_name: string; role: string;
   zone: string; district: string;
-  db_reads: number; db_writes: number; kv_hits: number; requests: number;
+  db_reads: number; db_writes: number; requests: number;
 }
 interface PageRow {
-  page_name: string; db_reads: number; db_writes: number; kv_hits: number; request_count: number;
+  page_name: string; db_reads: number; db_writes: number; request_count: number;
 }
-interface TimelineRow { date: string; db_reads: number; db_writes: number; kv_hits: number; }
+interface TimelineRow { date: string; db_reads: number; db_writes: number; }
 interface LogRow {
   id: number; user_id: string; user_name: string; role: string;
   page_name: string; method: string; op_type: string;
-  db_reads: number; db_writes: number; kv_hits: number;
+  db_reads: number; db_writes: number;
   log_date: string; created_at: string;
 }
 
@@ -74,20 +74,14 @@ const Skeleton = ({ h = "h-8", w = "w-full" }: { h?: string; w?: string }) => (
   <div className={`${h} ${w} bg-slate-200/60 rounded-lg animate-pulse`} />
 );
 
-// ── Circular Progress (Light Theme) ───────────────────────────────────
-function CircleProgress({ pct, color, size = 80 }: { pct: number; color: string; size?: number }) {
-  const r = (size - 12) / 2;
-  const circ = 2 * Math.PI * r;
-  const dash = (Math.min(pct, 100) / 100) * circ;
-  return (
-    <svg width={size} height={size} className="-rotate-90">
-      <circle cx={size/2} cy={size/2} r={r} fill="none" stroke="#e2e8f0" strokeWidth="8"/>
-      <circle cx={size/2} cy={size/2} r={r} fill="none" stroke={color} strokeWidth="8"
-        strokeDasharray={`${dash} ${circ}`} strokeLinecap="round"
-        style={{ transition: "stroke-dasharray 0.8s ease" }}/>
-    </svg>
-  );
-}
+// ── Format Cloudflare Suffixes ────────────────────────────────────────
+const formatCFNumber = (num: number) => {
+  if (!num) return "0";
+  if (num >= 1_000_000) return `${(num / 1_000_000).toFixed(2)}M`;
+  if (num >= 1_000) return `${(num / 1_000).toFixed(1)}k`;
+  return num.toLocaleString();
+};
+
 
 export default function DBMonitoringPage() {
   const today     = new Date().toISOString().slice(0, 10);
@@ -117,7 +111,6 @@ export default function DBMonitoringPage() {
   const [lastUpdated, setLastUpdated] = useState("");
   const [sortCol,     setSortCol]     = useState("db_reads");
   const [sortAsc,     setSortAsc]     = useState(false);
-  const intervalRef = useRef<ReturnType<typeof setInterval>|null>(null);
 
   // Cloudflare Official API Stats state
   const [cfOfficial,  setCfOfficial]  = useState<any>(null);
@@ -279,22 +272,12 @@ export default function DBMonitoringPage() {
     return sortAsc ? av - bv : bv - av;
   });
 
-  // Donut data for reads breakdown
-  const donutData = summary ? [
-    { name: "KV (Free)", value: summary.kv_hits, color: "#2ea35e" },
-    { name: "DB Reads", value: summary.db_reads, color: "#2f5bb7" },
-  ] : [];
-
   // Bar chart for page breakdown (top 8)
   const pageBarData = pages.slice(0, 8).map(p => ({
     name: p.page_name || "?",
     "DB Reads": p.db_reads,
-    "KV Hits":  p.kv_hits,
     "Writes":   p.db_writes,
   }));
-
-  const totalR = (summary?.db_reads ?? 0) + (summary?.kv_hits ?? 0);
-  const kvPct  = totalR > 0 ? Math.round((summary?.kv_hits ?? 0) / totalR * 100) : 0;
 
   return (
     <div className="space-y-6 text-[#212529] animate-fadeIn font-sans p-2">
@@ -303,10 +286,10 @@ export default function DBMonitoringPage() {
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
           <h2 className="text-xl font-bold text-gray-800 uppercase tracking-wide flex items-center gap-2">
-            <span>📊</span> DB & KV Monitor
+            <span>📊</span> D1 Database Monitor
           </h2>
           <p className="text-gray-500 text-xs mt-1">
-            Track real-time reads/writes and Cloudflare edge memory caching.
+            Track real-time database reads/writes and storage utilization.
           </p>
           {lastUpdated && (
             <span className="inline-block mt-1 text-[10px] font-bold text-blue-600 bg-blue-50 px-2 py-0.5 rounded border border-blue-100">
@@ -431,12 +414,12 @@ export default function DBMonitoringPage() {
         </div>
       </div>
 
-      {/* ── KPI Cards (5 cards) ──────────────────────────────────────── */}
-      <div className="grid grid-cols-2 lg:grid-cols-5 gap-4">
+      {/* ── KPI Cards (4 cards) ──────────────────────────────────────── */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         {/* DB Reads */}
         <div className="bg-white border border-gray-200 rounded-2xl p-4 shadow-sm">
           <div className="flex items-center justify-between mb-2">
-            <p className="text-[10px] text-slate-400 font-black uppercase tracking-wider">DB Reads</p>
+            <p className="text-[10px] text-slate-400 font-black uppercase tracking-wider">DB Reads Today</p>
             <span className="w-7 h-7 rounded-lg bg-blue-50 flex items-center justify-center text-sm">📖</span>
           </div>
           <p className="text-2xl font-black text-blue-700">
@@ -454,7 +437,7 @@ export default function DBMonitoringPage() {
         {/* DB Writes */}
         <div className="bg-white border border-gray-200 rounded-2xl p-4 shadow-sm">
           <div className="flex items-center justify-between mb-2">
-            <p className="text-[10px] text-slate-400 font-black uppercase tracking-wider">DB Writes</p>
+            <p className="text-[10px] text-slate-400 font-black uppercase tracking-wider">DB Writes Today</p>
             <span className="w-7 h-7 rounded-lg bg-amber-50 flex items-center justify-center text-sm">✏️</span>
           </div>
           <p className="text-2xl font-black text-amber-600">
@@ -469,22 +452,6 @@ export default function DBMonitoringPage() {
           <p className="text-[10px] text-slate-400 mt-1">{(summary?.writes_used_pct ?? 0).toFixed(4)}% used</p>
         </div>
 
-        {/* KV Hits */}
-        <div className="bg-white border border-gray-200 rounded-2xl p-4 shadow-sm">
-          <div className="flex items-center justify-between mb-2">
-            <p className="text-[10px] text-slate-400 font-black uppercase tracking-wider">KV Edge Hits</p>
-            <span className="w-7 h-7 rounded-lg bg-green-50 flex items-center justify-center text-sm">⚡</span>
-          </div>
-          <p className="text-2xl font-black text-green-600">
-            {loading ? <Skeleton h="h-8" w="w-24"/> : <CountUp value={summary?.kv_hits ?? 0}/>}
-          </p>
-          <p className="text-[10px] text-slate-500 mt-1">served from Cloudflare KV</p>
-          <div className="mt-3 flex items-center gap-1.5">
-            <span className="w-2 h-2 rounded-full bg-green-500 animate-pulse"/>
-            <span className="text-[10px] text-green-600 font-bold">100% Free Edge Cache</span>
-          </div>
-        </div>
-
         {/* Total requests */}
         <div className="bg-white border border-gray-200 rounded-2xl p-4 shadow-sm">
           <div className="flex items-center justify-between mb-2">
@@ -495,56 +462,24 @@ export default function DBMonitoringPage() {
             {loading ? <Skeleton h="h-8" w="w-24"/> : <CountUp value={summary?.total_requests ?? 0}/>}
           </p>
           <p className="text-[10px] text-slate-500 mt-1">total HTTP transactions</p>
-        </div>
-
-        {/* KV Savings circle */}
-        <div className="bg-white border border-gray-200 rounded-2xl p-4 shadow-sm flex flex-col items-center justify-center">
-          <p className="text-[10px] text-slate-400 font-black uppercase tracking-wider mb-2">KV Efficiency</p>
-          {loading ? <Skeleton h="h-16" w="w-16"/> : (
-            <div className="relative flex items-center justify-center">
-              <CircleProgress pct={kvPct}
-                color={kvPct >= 50 ? "#2ea35e" : kvPct >= 20 ? "#d28b2a" : "#e81123"}/>
-              <span className="absolute text-base font-black text-slate-800">{kvPct}%</span>
-            </div>
-          )}
-          <p className="text-[9px] text-slate-400 mt-1">reads avoided on DB</p>
-        </div>
-      </div>
-
-      {/* ── Secondary Dashboard Metrics ── */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-        {/* Cost Saved */}
-        <div className="bg-slate-50 border border-slate-200/60 rounded-2xl p-4 shadow-sm flex items-center justify-between">
-          <div>
-            <p className="text-[10px] text-slate-400 font-black uppercase tracking-wider">Estimated Cost Saved</p>
-            <p className="text-xl font-black text-slate-800 mt-1">
-              ₹{loading ? "0.00" : ((summary?.kv_hits ?? 0) * 0.05).toFixed(2)}
-            </p>
-            <p className="text-[9px] text-slate-400 mt-0.5">saved via Cloudflare KV offload</p>
+          <div className="mt-3 flex items-center gap-1.5">
+            <span className="w-2 h-2 rounded-full bg-purple-500 animate-pulse"/>
+            <span className="text-[10px] text-purple-600 font-bold">Engine Running Normally</span>
           </div>
-          <span className="text-2xl">💰</span>
-        </div>
-
-        {/* Caching Status Tier */}
-        <div className="bg-slate-50 border border-slate-200/60 rounded-2xl p-4 shadow-sm flex items-center justify-between">
-          <div>
-            <p className="text-[10px] text-slate-400 font-black uppercase tracking-wider">Speed Performance Tier</p>
-            <p className="text-xl font-black text-slate-800 mt-1">
-              {loading ? "Calculating..." : kvPct >= 80 ? "Ultrafast ⚡" : kvPct >= 50 ? "Fast 🏃" : kvPct >= 20 ? "Optimal 🚶" : "Direct ❄️"}
-            </p>
-            <p className="text-[9px] text-slate-400 mt-0.5">caching acceleration level</p>
-          </div>
-          <span className="text-2xl">🚀</span>
         </div>
 
         {/* Database Health */}
-        <div className="bg-slate-50 border border-slate-200/60 rounded-2xl p-4 shadow-sm flex items-center justify-between">
-          <div>
+        <div className="bg-white border border-gray-200 rounded-2xl p-4 shadow-sm">
+          <div className="flex items-center justify-between mb-2">
             <p className="text-[10px] text-slate-400 font-black uppercase tracking-wider">Database Status</p>
-            <p className="text-xl font-black text-emerald-600 mt-1">Optimal (Healthy)</p>
-            <p className="text-[9px] text-slate-400 mt-0.5">D1 Engine running normally</p>
+            <span className="w-7 h-7 rounded-lg bg-green-50 flex items-center justify-center text-sm">🟢</span>
           </div>
-          <span className="text-2xl">🟢</span>
+          <p className="text-2xl font-black text-emerald-600">Optimal</p>
+          <p className="text-[10px] text-slate-500 mt-1">D1 Engine status healthy</p>
+          <div className="mt-3 flex items-center gap-1.5">
+            <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"/>
+            <span className="text-[10px] text-emerald-600 font-bold">100% Online</span>
+          </div>
         </div>
       </div>
 
@@ -624,78 +559,95 @@ export default function DBMonitoringPage() {
             
             const rLimit = 5000000 * daysCount;
             const wLimit = 100000 * daysCount;
+            const storageLimit = 5000; // 5 GB limit in MB
             
-            const kvRPct = Math.min((cfOfficial.kv_reads / rLimit) * 100, 100);
-            const kvWPct = Math.min((cfOfficial.kv_writes / wLimit) * 100, 100);
-            const d1RPct = Math.min((cfOfficial.d1_reads / rLimit) * 100, 100);
-            const d1WPct = Math.min((cfOfficial.d1_writes / wLimit) * 100, 100);
+            const rowsReadPct = Math.min(((cfOfficial.d1_rows_read || 0) / rLimit) * 100, 100);
+            const rowsWritePct = Math.min(((cfOfficial.d1_rows_written || 0) / wLimit) * 100, 100);
+            const meteredStoragePct = Math.min(((cfOfficial.metered_storage_mb || 0) / storageLimit) * 100, 100);
+            const totalStoragePct = Math.min(((cfOfficial.db_size_mb || 0) / storageLimit) * 100, 100);
             
             return (
               <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mt-4">
-                {/* KV Reads */}
-                <div className="bg-slate-50 border border-slate-200/50 rounded-xl p-3 flex flex-col justify-between">
+                {/* Rows read */}
+                <div className="bg-white border border-slate-200 rounded-xl p-4 flex flex-col justify-between shadow-sm">
                   <div>
-                    <p className="text-[10px] text-slate-400 font-bold uppercase tracking-wider">Official KV Reads</p>
-                    <p className="text-lg font-black text-slate-800 mt-1">{(cfOfficial.kv_reads || 0).toLocaleString()}</p>
+                    <p className="text-[10px] text-slate-500 font-bold uppercase tracking-wider flex items-center gap-1">
+                      Rows read <span className="text-[9px] text-slate-400 font-normal cursor-help" title="Total rows scanned in database queries.">ⓘ</span>
+                    </p>
+                    <p className="text-2xl font-black text-slate-900 mt-2">
+                      {formatCFNumber(cfOfficial.d1_rows_read || 0)}
+                    </p>
                   </div>
-                  <div className="mt-3">
-                    <div className="h-1 bg-slate-200 rounded-full overflow-hidden">
-                      <div className="h-full bg-blue-600 rounded-full" style={{ width: `${kvRPct}%` }}/>
+                  <div className="mt-4">
+                    <div className="h-1.5 bg-slate-100 rounded-full overflow-hidden">
+                      <div className="h-full bg-slate-700 rounded-full transition-all duration-500" style={{ width: `${rowsReadPct}%` }}/>
                     </div>
                     <div className="flex justify-between text-[9px] text-slate-400 mt-1.5 font-semibold">
-                      <span>{kvRPct.toFixed(4)}% used</span>
+                      <span>{rowsReadPct.toFixed(4)}% used</span>
                       <span>of {rLimit >= 1000000 ? `${(rLimit/1000000).toFixed(0)}M` : rLimit.toLocaleString()}</span>
                     </div>
                   </div>
                 </div>
 
-                {/* KV Writes */}
-                <div className="bg-slate-50 border border-slate-200/50 rounded-xl p-3 flex flex-col justify-between">
+                {/* Rows written */}
+                <div className="bg-white border border-slate-200 rounded-xl p-4 flex flex-col justify-between shadow-sm">
                   <div>
-                    <p className="text-[10px] text-slate-400 font-bold uppercase tracking-wider">Official KV Writes</p>
-                    <p className="text-lg font-black text-slate-800 mt-1">{(cfOfficial.kv_writes || 0).toLocaleString()}</p>
+                    <p className="text-[10px] text-slate-500 font-bold uppercase tracking-wider flex items-center gap-1">
+                      Rows written <span className="text-[9px] text-slate-400 font-normal cursor-help" title="Total rows inserted, updated, or deleted.">ⓘ</span>
+                    </p>
+                    <p className="text-2xl font-black text-slate-900 mt-2">
+                      {formatCFNumber(cfOfficial.d1_rows_written || 0)}
+                    </p>
                   </div>
-                  <div className="mt-3">
-                    <div className="h-1 bg-slate-200 rounded-full overflow-hidden">
-                      <div className="h-full bg-amber-600 rounded-full" style={{ width: `${kvWPct}%` }}/>
+                  <div className="mt-4">
+                    <div className="h-1.5 bg-slate-100 rounded-full overflow-hidden">
+                      <div className="h-full bg-orange-500 rounded-full transition-all duration-500" style={{ width: `${rowsWritePct}%` }}/>
                     </div>
                     <div className="flex justify-between text-[9px] text-slate-400 mt-1.5 font-semibold">
-                      <span>{kvWPct.toFixed(4)}% used</span>
+                      <span>{rowsWritePct.toFixed(4)}% used</span>
                       <span>of {wLimit >= 100000 ? `${(wLimit/1000).toFixed(0)}k` : wLimit.toLocaleString()}</span>
                     </div>
                   </div>
                 </div>
 
-                {/* D1 Reads */}
-                <div className="bg-slate-50 border border-slate-200/50 rounded-xl p-3 flex flex-col justify-between">
+                {/* Metered storage */}
+                <div className="bg-white border border-slate-200 rounded-xl p-4 flex flex-col justify-between shadow-sm">
                   <div>
-                    <p className="text-[10px] text-slate-400 font-bold uppercase tracking-wider">Official D1 Database Reads</p>
-                    <p className="text-lg font-black text-slate-800 mt-1">{(cfOfficial.d1_reads || 0).toLocaleString()}</p>
+                    <p className="text-[10px] text-slate-500 font-bold uppercase tracking-wider flex items-center gap-1">
+                      Metered storage <span className="text-[9px] text-slate-400 font-normal cursor-help" title="Average storage size billed for this period.">ⓘ</span>
+                    </p>
+                    <p className="text-2xl font-black text-slate-900 mt-2">
+                      {cfOfficial.metered_storage_mb || "0.00"} MB-mo
+                    </p>
                   </div>
-                  <div className="mt-3">
-                    <div className="h-1 bg-slate-200 rounded-full overflow-hidden">
-                      <div className="h-full bg-blue-600 rounded-full" style={{ width: `${d1RPct}%` }}/>
+                  <div className="mt-4">
+                    <div className="h-1.5 bg-slate-100 rounded-full overflow-hidden">
+                      <div className="h-full bg-slate-600 rounded-full transition-all duration-500" style={{ width: `${meteredStoragePct}%` }}/>
                     </div>
                     <div className="flex justify-between text-[9px] text-slate-400 mt-1.5 font-semibold">
-                      <span>{d1RPct.toFixed(4)}% used</span>
-                      <span>of {rLimit >= 1000000 ? `${(rLimit/1000000).toFixed(0)}M` : rLimit.toLocaleString()}</span>
+                      <span>{meteredStoragePct.toFixed(3)}% used</span>
+                      <span>of 5 GB</span>
                     </div>
                   </div>
                 </div>
 
-                {/* D1 Writes */}
-                <div className="bg-slate-50 border border-slate-200/50 rounded-xl p-3 flex flex-col justify-between">
+                {/* Total storage */}
+                <div className="bg-white border border-slate-200 rounded-xl p-4 flex flex-col justify-between shadow-sm">
                   <div>
-                    <p className="text-[10px] text-slate-400 font-bold uppercase tracking-wider">Official D1 Database Writes</p>
-                    <p className="text-lg font-black text-slate-800 mt-1">{(cfOfficial.d1_writes || 0).toLocaleString()}</p>
+                    <p className="text-[10px] text-slate-500 font-bold uppercase tracking-wider flex items-center gap-1">
+                      Total storage <span className="text-[9px] text-slate-400 font-normal cursor-help" title="Physical size of D1 database file.">ⓘ</span>
+                    </p>
+                    <p className="text-2xl font-black text-slate-900 mt-2">
+                      {cfOfficial.db_size_mb || "0.00"} MB
+                    </p>
                   </div>
-                  <div className="mt-3">
-                    <div className="h-1 bg-slate-200 rounded-full overflow-hidden">
-                      <div className="h-full bg-amber-600 rounded-full" style={{ width: `${d1WPct}%` }}/>
+                  <div className="mt-4">
+                    <div className="h-1.5 bg-slate-100 rounded-full overflow-hidden">
+                      <div className="h-full bg-emerald-600 rounded-full transition-all duration-500" style={{ width: `${totalStoragePct}%` }}/>
                     </div>
                     <div className="flex justify-between text-[9px] text-slate-400 mt-1.5 font-semibold">
-                      <span>{d1WPct.toFixed(4)}% used</span>
-                      <span>of {wLimit >= 100000 ? `${(wLimit/1000).toFixed(0)}k` : wLimit.toLocaleString()}</span>
+                      <span>{totalStoragePct.toFixed(3)}% used</span>
+                      <span>of 5 GB</span>
                     </div>
                   </div>
                 </div>
@@ -707,13 +659,13 @@ export default function DBMonitoringPage() {
       </div>
 
       {/* ── Charts Grid ─────────────────────────────────────────────── */}
-      <div className="grid grid-cols-1 lg:grid-cols-5 gap-4">
-        {/* Timeline Area Chart (span 3) */}
-        <div className="lg:col-span-3 bg-white border border-gray-200 rounded-2xl p-5 shadow-sm">
+      <div className="grid grid-cols-1 gap-4">
+        {/* Timeline Area Chart */}
+        <div className="bg-white border border-gray-200 rounded-2xl p-5 shadow-sm">
           <div className="flex items-center justify-between mb-4">
             <h3 className="text-xs font-black uppercase tracking-wider text-slate-700">30-Day Operation Trend</h3>
             <div className="flex gap-3 text-[10px] font-bold">
-              {[["#2f5bb7","DB Reads"],["#2ea35e","KV Hits"],["#d28b2a","DB Writes"]].map(([c,n])=>(
+              {[["#2f5bb7","DB Reads"],["#d28b2a","DB Writes"]].map(([c,n])=>(
                 <span key={n} className="flex items-center gap-1">
                   <span className="w-2 h-2 rounded-full" style={{background:c}}/>
                   <span className="text-slate-500">{n}</span>
@@ -722,10 +674,10 @@ export default function DBMonitoringPage() {
             </div>
           </div>
           {loading ? <Skeleton h="h-48"/> : (
-            <ResponsiveContainer width="100%" height={200}>
+            <ResponsiveContainer width="100%" height={220}>
               <AreaChart data={timeline} margin={{ top: 5, right: 10, left: 0, bottom: 0 }}>
                 <defs>
-                  {[["blue","#2f5bb7"],["green","#2ea35e"],["orange","#d28b2a"]].map(([id,c])=>(
+                  {[["blue","#2f5bb7"],["orange","#d28b2a"]].map(([id,c])=>(
                     <linearGradient key={id} id={`g-${id}`} x1="0" y1="0" x2="0" y2="1">
                       <stop offset="5%" stopColor={c} stopOpacity={0.2}/>
                       <stop offset="95%" stopColor={c} stopOpacity={0}/>
@@ -739,69 +691,36 @@ export default function DBMonitoringPage() {
                   tickFormatter={v => v >= 1000 ? `${(v/1000).toFixed(0)}k` : v}/>
                 <Tooltip content={<CustomTooltip/>}/>
                 <Area type="monotone" dataKey="db_reads" name="DB Reads" stroke="#2f5bb7" fill="url(#g-blue)" strokeWidth={2}/>
-                <Area type="monotone" dataKey="kv_hits"  name="KV Hits"  stroke="#2ea35e" fill="url(#g-green)" strokeWidth={2}/>
                 <Area type="monotone" dataKey="db_writes" name="DB Writes" stroke="#d28b2a" fill="url(#g-orange)" strokeWidth={1.5}/>
               </AreaChart>
             </ResponsiveContainer>
           )}
         </div>
 
-        {/* Read source Donut (span 2) */}
-        <div className="lg:col-span-2 bg-white border border-gray-200 rounded-2xl p-5 shadow-sm">
-          <h3 className="text-xs font-black uppercase tracking-wider text-slate-700 mb-4">Read Source Distribution</h3>
-          {loading ? <Skeleton h="h-40"/> : (
-            <div className="flex flex-col items-center">
-              <ResponsiveContainer width="100%" height={170}>
-                <PieChart>
-                  <Pie data={donutData} cx="50%" cy="50%" innerRadius={48} outerRadius={68}
-                    dataKey="value" paddingAngle={2}>
-                    {donutData.map((entry, i) => (
-                      <Cell key={i} fill={entry.color} stroke="#ffffff" strokeWidth={2}/>
-                    ))}
-                  </Pie>
+        {/* Pages chart (only display in Global mode, hide if specific page is selected) */}
+        {activeMenuTab === "global" && (
+          <div className="bg-white border border-gray-200 rounded-2xl p-5 shadow-sm">
+            <h3 className="text-xs font-black uppercase tracking-wider text-slate-700 mb-4 font-sans">Pages Performance comparison</h3>
+            {loading ? <Skeleton h="h-48"/> : pageBarData.length === 0 ? (
+              <p className="text-slate-400 text-center py-10 text-xs">No records tracked</p>
+            ) : (
+              <ResponsiveContainer width="100%" height={220}>
+                <BarChart data={pageBarData} margin={{ top: 5, right: 10, left: 0, bottom: 20 }}>
+                  <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" horizontal={true} vertical={false}/>
+                  <XAxis dataKey="name" tick={{ fill:"#64748b", fontSize:9 }} tickLine={false} axisLine={false}
+                    interval={0} angle={-15} textAnchor="end"/>
+                  <YAxis tick={{ fill:"#64748b", fontSize:9 }} tickLine={false} axisLine={false}
+                    tickFormatter={v => v >= 1000 ? `${(v/1000).toFixed(0)}k` : String(v)}/>
                   <Tooltip content={<CustomTooltip/>}/>
-                </PieChart>
+                  <Legend wrapperStyle={{ color:"#475569", fontSize:10, paddingTop:8 }}/>
+                  <Bar dataKey="DB Reads" fill="#2f5bb7" radius={[3,3,0,0]}/>
+                  <Bar dataKey="Writes"   fill="#d28b2a" radius={[3,3,0,0]}/>
+                </BarChart>
               </ResponsiveContainer>
-              <div className="flex gap-5 mt-2">
-                {donutData.map(d => (
-                  <div key={d.name} className="flex flex-col items-center">
-                    <div className="flex items-center gap-1.5">
-                      <span className="w-2.5 h-2.5 rounded-full" style={{background:d.color}}/>
-                      <span className="text-[10px] text-slate-500 font-bold">{d.name}</span>
-                    </div>
-                    <span className="text-xs font-black text-slate-800">{d.value.toLocaleString()}</span>
-                  </div>
-                ))}
-              </div>
-            </div>
-          )}
-        </div>
+            )}
+          </div>
+        )}
       </div>
-
-      {/* Pages chart (only display in Global mode, hide if specific page is selected) */}
-      {activeMenuTab === "global" && (
-        <div className="bg-white border border-gray-200 rounded-2xl p-5 shadow-sm">
-          <h3 className="text-xs font-black uppercase tracking-wider text-slate-700 mb-4 font-sans">Pages Performance comparison</h3>
-          {loading ? <Skeleton h="h-48"/> : pageBarData.length === 0 ? (
-            <p className="text-slate-400 text-center py-10 text-xs">No records tracked</p>
-          ) : (
-            <ResponsiveContainer width="100%" height={200}>
-              <BarChart data={pageBarData} margin={{ top: 5, right: 10, left: 0, bottom: 20 }}>
-                <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" horizontal={true} vertical={false}/>
-                <XAxis dataKey="name" tick={{ fill:"#64748b", fontSize:9 }} tickLine={false} axisLine={false}
-                  interval={0} angle={-15} textAnchor="end"/>
-                <YAxis tick={{ fill:"#64748b", fontSize:9 }} tickLine={false} axisLine={false}
-                  tickFormatter={v => v >= 1000 ? `${(v/1000).toFixed(0)}k` : String(v)}/>
-                <Tooltip content={<CustomTooltip/>}/>
-                <Legend wrapperStyle={{ color:"#475569", fontSize:10, paddingTop:8 }}/>
-                <Bar dataKey="DB Reads" fill="#2f5bb7" radius={[3,3,0,0]}/>
-                <Bar dataKey="KV Hits"  fill="#2ea35e" radius={[3,3,0,0]}/>
-                <Bar dataKey="Writes"   fill="#d28b2a" radius={[3,3,0,0]}/>
-              </BarChart>
-            </ResponsiveContainer>
-          )}
-        </div>
-      )}
 
       {/* ── User breakdown & Logs ───────────────────────────────────── */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
@@ -822,7 +741,7 @@ export default function DBMonitoringPage() {
                 <tr className="border-b border-gray-200 text-slate-400 text-[10px] font-black uppercase tracking-wider">
                   {[
                     ["user_name","User Name"],["user_id","Employee Code"],["role","Role"],
-                    ["db_reads","DB Reads"],["db_writes","Writes"],["kv_hits","KV Hits"],["requests","Reqs"]
+                    ["db_reads","DB Reads"],["db_writes","Writes"],["requests","Reqs"]
                   ].map(([col,lbl]) => (
                     <th key={col} onClick={()=>handleSort(col)}
                       className="text-left py-2 px-1.5 cursor-pointer hover:text-slate-800 select-none font-bold">
@@ -834,10 +753,10 @@ export default function DBMonitoringPage() {
               <tbody>
                 {loading ? [...Array(5)].map((_,i)=>(
                   <tr key={i} className="border-b border-slate-100">
-                    {[...Array(7)].map((_,j)=><td key={j} className="py-2 px-1.5"><Skeleton h="h-3"/></td>)}
+                    {[...Array(6)].map((_,j)=><td key={j} className="py-2 px-1.5"><Skeleton h="h-3"/></td>)}
                   </tr>
                 )) : sortedUsers.length === 0 ? (
-                  <tr><td colSpan={7} className="text-center text-slate-400 py-10">No logs for this filter</td></tr>
+                  <tr><td colSpan={6} className="text-center text-slate-400 py-10">No logs for this filter</td></tr>
                 ) : sortedUsers.map((u,i)=>(
                   <tr key={i} className="border-b border-gray-100 hover:bg-slate-50 transition-colors text-slate-700">
                     <td className="py-2.5 px-1.5 font-semibold text-slate-800">{u.user_name || "—"}</td>
@@ -850,7 +769,6 @@ export default function DBMonitoringPage() {
                     </td>
                     <td className="py-2.5 px-1.5 text-blue-700 font-extrabold text-right">{u.db_reads.toLocaleString()}</td>
                     <td className="py-2.5 px-1.5 text-amber-600 font-extrabold text-right">{u.db_writes.toLocaleString()}</td>
-                    <td className="py-2.5 px-1.5 text-green-600 font-extrabold text-right">{u.kv_hits.toLocaleString()}</td>
                     <td className="py-2.5 px-1.5 text-slate-500 text-right">{u.requests.toLocaleString()}</td>
                   </tr>
                 ))}
@@ -877,7 +795,7 @@ export default function DBMonitoringPage() {
             <table className="w-full text-xs">
               <thead>
                 <tr className="border-b border-gray-200 text-slate-400 text-[10px] font-black uppercase tracking-wider">
-                  {["Time","User Name","Page Screen","Method","DB","KV"].map(h=>(
+                  {["Time","User Name","Page Screen","Method","DB Operations"].map(h=>(
                     <th key={h} className="text-left py-2 px-1.5 font-bold">{h}</th>
                   ))}
                 </tr>
@@ -885,10 +803,10 @@ export default function DBMonitoringPage() {
               <tbody>
                 {loading ? [...Array(8)].map((_,i)=>(
                   <tr key={i} className="border-b border-slate-100">
-                    {[...Array(6)].map((_,j)=><td key={j} className="py-2 px-1.5"><Skeleton h="h-3"/></td>)}
+                    {[...Array(5)].map((_,j)=><td key={j} className="py-2 px-1.5"><Skeleton h="h-3"/></td>)}
                   </tr>
                 )) : logs.length === 0 ? (
-                  <tr><td colSpan={6} className="text-center text-slate-400 py-10">No recent transactions</td></tr>
+                  <tr><td colSpan={5} className="text-center text-slate-400 py-10">No recent transactions</td></tr>
                 ) : logs.map((l,i)=>(
                   <tr key={i} className="border-b border-gray-100 hover:bg-slate-50 transition-colors text-slate-700">
                     <td className="py-2 px-1.5 text-slate-400 font-mono text-[10px]">{l.created_at?.slice(11,19)||l.log_date}</td>
@@ -902,9 +820,6 @@ export default function DBMonitoringPage() {
                     </td>
                     <td className={`py-2 px-1.5 font-extrabold text-right ${((l.db_reads||0)+(l.db_writes||0))>0 ? "text-blue-600" : "text-slate-300"}`}>
                       {((l.db_reads||0)+(l.db_writes||0))}
-                    </td>
-                    <td className={`py-2 px-1.5 font-extrabold text-right ${(l.kv_hits||0)>0 ? "text-green-600" : "text-slate-300"}`}>
-                      {(l.kv_hits||0)}
                     </td>
                   </tr>
                 ))}
@@ -928,13 +843,13 @@ export default function DBMonitoringPage() {
         <div className="bg-white border border-gray-200 rounded-2xl p-5 shadow-sm">
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-4 pb-3 border-b border-slate-100">
             <div>
-              <h3 className="text-xs font-black uppercase tracking-wider text-slate-700">🖥️ Screen Visits & Speed Performance</h3>
+              <h3 className="text-xs font-black uppercase tracking-wider text-slate-700">🖥️ Screen Visits & DB Operations</h3>
               <p className="text-[10px] text-slate-400 mt-1 font-semibold">
-                Track how many times each screen was visited and how much database query load was saved by KV memory.
+                Track how many times each screen was visited and the database query reads/writes performed.
               </p>
             </div>
             <button
-              onClick={() => downloadCSV(pages, "screen_speed_performance.csv")}
+              onClick={() => downloadCSV(pages, "screen_db_operations.csv")}
               className="px-3 py-1.5 bg-[#e2f1f5] hover:bg-[#d0eaf0] text-slate-700 border border-[#b8e0ea] text-[10px] font-bold rounded-xl transition-all cursor-pointer shadow-sm flex items-center gap-1.5 self-start sm:self-auto"
             >
               📥 Export Screen Stats (CSV)
@@ -947,73 +862,24 @@ export default function DBMonitoringPage() {
                 <tr className="border-b border-gray-200 text-slate-450 text-[10px] font-black uppercase tracking-wider">
                   <th className="text-left py-2 px-3 font-bold text-slate-500">Screen / Page Name</th>
                   <th className="text-right py-2 px-3 text-slate-500 font-bold">Total Visits</th>
-                  <th className="text-right py-2 px-3 text-slate-500 font-bold">Speed Boosts (KV)</th>
                   <th className="text-right py-2 px-3 text-slate-500 font-bold">Database Reads</th>
-                  <th className="text-right py-2 px-3 text-slate-500 font-bold">Database Updates</th>
-                  <th className="text-right py-2 px-3 text-slate-500 font-bold">Cache Saving %</th>
-                  <th className="py-2 px-3 font-bold text-slate-500 text-center">Efficiency Grade</th>
+                  <th className="text-right py-2 px-3 text-slate-500 font-bold">Database Updates (Writes)</th>
                 </tr>
               </thead>
               <tbody>
                 {loading ? [...Array(5)].map((_,i)=>(
                   <tr key={i} className="border-b border-slate-100">
-                    {[...Array(7)].map((_,j)=><td key={j} className="py-2.5 px-3"><Skeleton h="h-3"/></td>)}
+                    {[...Array(4)].map((_,j)=><td key={j} className="py-2.5 px-3"><Skeleton h="h-3"/></td>)}
                   </tr>
                 )) : pages.length===0 ? (
-                  <tr><td colSpan={7} className="text-center text-slate-400 py-10">No records found</td></tr>
+                  <tr><td colSpan={4} className="text-center text-slate-400 py-10">No records found</td></tr>
                 ) : pages.map((p,i)=>{
-                  const total = p.db_reads + p.kv_hits;
-                  const kv = total > 0 ? Math.round(p.kv_hits/total*100) : 0;
-                  
-                  // Simple easy to understand grade badges
-                  let gradeText = "Direct ❄️";
-                  let gradeColor = "bg-blue-50 text-blue-700 border-blue-100";
-                  if (kv >= 80) {
-                    gradeText = "Ultrafast ⚡";
-                    gradeColor = "bg-green-50 text-green-700 border-green-200";
-                  } else if (kv >= 50) {
-                    gradeText = "Fast 🏃";
-                    gradeColor = "bg-emerald-50 text-emerald-700 border-emerald-100";
-                  } else if (kv >= 20) {
-                    gradeText = "Normal 🚶";
-                    gradeColor = "bg-amber-50 text-amber-700 border-amber-200";
-                  }
-
                   return (
                     <tr key={i} className="border-b border-gray-100 hover:bg-slate-50/80 transition-colors text-slate-700">
                       <td className="py-3 px-3 font-bold text-slate-800">{p.page_name||"—"}</td>
                       <td className="py-3 px-3 text-right font-bold text-slate-600">{p.request_count.toLocaleString()}</td>
-                      <td className="py-3 px-3 text-right text-green-600 font-extrabold">{p.kv_hits.toLocaleString()}</td>
                       <td className="py-3 px-3 text-right text-blue-700 font-extrabold">{p.db_reads.toLocaleString()}</td>
                       <td className="py-3 px-3 text-right text-amber-600 font-extrabold">{p.db_writes.toLocaleString()}</td>
-                      <td className="py-3 px-3 text-right font-black text-slate-800">
-                        <span className={kv >= 50 ? "text-green-600" : kv >= 20 ? "text-amber-600" : "text-slate-500"}>
-                          {kv}%
-                        </span>
-                      </td>
-                      <td className="py-3 px-3 text-center">
-                        <span className={`px-2.5 py-0.5 rounded-lg border text-[9px] font-black uppercase tracking-wide ${gradeColor}`}>
-                          {gradeText}
-                        </span>
-                      </td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
-          </div>
-        </div>
-      )}td>
-                      <td className="py-2.5 px-3 text-right text-slate-500 font-semibold">{p.request_count.toLocaleString()}</td>
-                      <td className="py-2.5 px-3 min-w-[120px]">
-                        <div className="h-1.5 bg-slate-100 rounded-full overflow-hidden flex border border-slate-200/40">
-                          <div style={{width:`${kv}%`, background:"#2ea35e"}} className="h-full rounded-l-full"/>
-                          <div style={{width:`${100-kv}%`, background:"#2f5bb7"}} className="h-full"/>
-                        </div>
-                        <div className="flex justify-between text-slate-400 mt-1" style={{fontSize:8}}>
-                          <span className="font-bold">KV {kv}%</span><span className="font-bold">DB {100-kv}%</span>
-                        </div>
-                      </td>
                     </tr>
                   );
                 })}

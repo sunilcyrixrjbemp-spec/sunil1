@@ -99,6 +99,8 @@ export default function ApprovalPage() {
   const [_actionType, setActionType] = useState<"approve" | "reject" | null>(null);
   const [actionLoading, setActionLoading] = useState(false);
   const [showDetailModal, setShowDetailModal] = useState(false);
+  const [processingLimitId, setProcessingLimitId] = useState<number | null>(null);
+  const [processingLimitType, setProcessingLimitType] = useState<"approve" | "reject" | null>(null);
 
   // Edit single itineraries state
   const [editedLegs, setEditedLegs] = useState<any[]>([]);
@@ -137,6 +139,8 @@ export default function ApprovalPage() {
       return;
     }
     
+    setProcessingLimitId(expenseId);
+    setProcessingLimitType("approve");
     setActionLoading(true);
     try {
       await approvalService.approveExpense(expenseId, "Approved limit extension", undefined, approvedValue);
@@ -147,10 +151,14 @@ export default function ApprovalPage() {
       toast.error(err.response?.data?.detail || "Failed to approve limit extension.");
     } finally {
       setActionLoading(false);
+      setProcessingLimitId(null);
+      setProcessingLimitType(null);
     }
   };
 
   const handleRejectLimit = async (expenseId: number) => {
+    setProcessingLimitId(expenseId);
+    setProcessingLimitType("reject");
     setActionLoading(true);
     try {
       await approvalService.rejectExpense(expenseId, "Limit extension rejected");
@@ -161,6 +169,8 @@ export default function ApprovalPage() {
       toast.error(err.response?.data?.detail || "Failed to reject limit extension.");
     } finally {
       setActionLoading(false);
+      setProcessingLimitId(null);
+      setProcessingLimitType(null);
     }
   };
 
@@ -358,7 +368,7 @@ export default function ApprovalPage() {
             if (check.current !== check.original) {
               const rMark = leg.remarks?.[check.field] || "";
               if (!rMark.trim()) {
-                toast.error(`Leg ${leg.leg}: Please enter a reason/remark for modifying ${check.name}.`);
+                toast.error(`Visit ${leg.leg}: Please enter a reason/remark for modifying ${check.name}.`);
                 setActionLoading(false);
                 return;
               }
@@ -699,21 +709,29 @@ export default function ApprovalPage() {
                               <span>Review</span>
                             </button>
                             <button
-                              onClick={() => handleApproveLimit(req.expense_id, currentValue)}
-                              disabled={actionLoading}
-                              className="p-1.5 rounded-full bg-green-50 border border-green-200 text-green-600 hover:bg-green-100 transition-colors shadow-xs cursor-pointer flex items-center justify-center"
-                              title="Approve Request"
-                            >
-                              <Check className="w-4.5 h-4.5" />
-                            </button>
-                            <button
-                              onClick={() => handleRejectLimit(req.expense_id)}
-                              disabled={actionLoading}
-                              className="p-1.5 rounded-full bg-red-50 border border-red-200 text-red-600 hover:bg-red-100 transition-colors shadow-xs cursor-pointer flex items-center justify-center"
-                              title="Reject Request"
-                            >
-                              <X className="w-4.5 h-4.5" />
-                            </button>
+                               onClick={() => handleApproveLimit(req.expense_id, currentValue)}
+                               disabled={actionLoading}
+                               className="p-1.5 rounded-full bg-green-50 border border-green-200 text-green-600 hover:bg-green-100 transition-colors shadow-xs cursor-pointer flex items-center justify-center w-8 h-8 shrink-0"
+                               title="Approve Request"
+                             >
+                               {actionLoading && processingLimitId === req.expense_id && processingLimitType === "approve" ? (
+                                 <span className="w-4 h-4 rounded-full border-2 border-green-600/35 border-t-green-600 animate-spin shrink-0"/>
+                               ) : (
+                                 <Check className="w-4.5 h-4.5" />
+                               )}
+                             </button>
+                             <button
+                               onClick={() => handleRejectLimit(req.expense_id)}
+                               disabled={actionLoading}
+                               className="p-1.5 rounded-full bg-red-50 border border-red-200 text-red-600 hover:bg-red-100 transition-colors shadow-xs cursor-pointer flex items-center justify-center w-8 h-8 shrink-0"
+                               title="Reject Request"
+                             >
+                               {actionLoading && processingLimitId === req.expense_id && processingLimitType === "reject" ? (
+                                 <span className="w-4 h-4 rounded-full border-2 border-red-600/35 border-t-red-600 animate-spin shrink-0"/>
+                               ) : (
+                                 <X className="w-4.5 h-4.5" />
+                               )}
+                             </button>
                           </div>
                         </td>
                       </tr>
@@ -792,18 +810,26 @@ export default function ApprovalPage() {
                         <button
                           onClick={() => handleApproveLimit(req.expense_id, currentValue)}
                           disabled={actionLoading}
-                          className="py-1.5 px-3 rounded bg-green-600 text-white font-bold hover:bg-green-700 transition-all text-[10px] flex-1 flex items-center justify-center gap-1 cursor-pointer border-0 shadow-xs"
+                          className="py-1.5 px-3 rounded bg-green-600 text-white font-bold hover:bg-green-700 transition-all text-[10px] flex-1 flex items-center justify-center gap-1 cursor-pointer border-0 shadow-xs min-h-[28px]"
                         >
-                          <Check className="w-3.5 h-3.5" />
-                          <span>Approve</span>
+                          {actionLoading && processingLimitId === req.expense_id && processingLimitType === "approve" ? (
+                            <span className="w-3.5 h-3.5 rounded-full border-2 border-white/35 border-t-white animate-spin shrink-0"/>
+                          ) : (
+                            <Check className="w-3.5 h-3.5" />
+                          )}
+                          <span>{actionLoading && processingLimitId === req.expense_id && processingLimitType === "approve" ? "Processing" : "Approve"}</span>
                         </button>
                         <button
                           onClick={() => handleRejectLimit(req.expense_id)}
                           disabled={actionLoading}
-                          className="py-1.5 px-3 rounded bg-red-600 text-white font-bold hover:bg-red-700 transition-all text-[10px] flex-1 flex items-center justify-center gap-1 cursor-pointer border-0 shadow-xs"
+                          className="py-1.5 px-3 rounded bg-red-600 text-white font-bold hover:bg-red-700 transition-all text-[10px] flex-1 flex items-center justify-center gap-1 cursor-pointer border-0 shadow-xs min-h-[28px]"
                         >
-                          <X className="w-3.5 h-3.5" />
-                          <span>Reject</span>
+                          {actionLoading && processingLimitId === req.expense_id && processingLimitType === "reject" ? (
+                            <span className="w-3.5 h-3.5 rounded-full border-2 border-white/35 border-t-white animate-spin shrink-0"/>
+                          ) : (
+                            <X className="w-3.5 h-3.5" />
+                          )}
+                          <span>{actionLoading && processingLimitId === req.expense_id && processingLimitType === "reject" ? "Processing" : "Reject"}</span>
                         </button>
                       </div>
                     </div>
@@ -1174,7 +1200,7 @@ export default function ApprovalPage() {
                   {selectedApproval.category !== "Limit Request" && (
                     <div className="space-y-3">
                     <div className="flex items-center justify-between">
-                      <h4 className="text-xs font-extrabold uppercase text-gray-700 tracking-wider">Itinerary legs & Claimed Amounts</h4>
+                       <h4 className="text-xs font-extrabold uppercase text-gray-700 tracking-wider">Facility Visits & Claimed Amounts</h4>
                       <div className="flex items-center gap-2">
                         <Info className="w-3.5 h-3.5 text-blue-500" />
                         <span className="text-[10px] text-gray-500 font-semibold">Adjust TA, Hotel and Local Purchase amounts below if needed.</span>
@@ -2051,7 +2077,7 @@ export default function ApprovalPage() {
                   {isEdited() && (
                     <div className="p-3 bg-amber-50 border border-amber-250 rounded text-amber-800 text-xs font-semibold flex items-center gap-2">
                       <AlertTriangle className="w-4 h-4 text-amber-600 shrink-0" />
-                      <span>Warning: You have changed one or more leg amounts. Approving will override values with these adjusted rates.</span>
+                      <span>Warning: You have changed one or more visit amounts. Approving will override values with these adjusted rates.</span>
                     </div>
                   )}
 
@@ -2144,19 +2170,27 @@ export default function ApprovalPage() {
                   type="button"
                   onClick={() => handleProcessAction("reject")}
                   disabled={actionLoading || loadingDetails}
-                  className="w-full sm:w-auto px-5 py-2.5 bg-rose-600 hover:bg-rose-700 active:bg-rose-800 text-white font-bold rounded-lg text-xs uppercase tracking-wider transition-all cursor-pointer border-0 shadow-sm flex items-center justify-center gap-1.5"
+                  className="w-full sm:w-auto px-5 py-2.5 bg-rose-600 hover:bg-rose-700 active:bg-rose-800 text-white font-bold rounded-lg text-xs uppercase tracking-wider transition-all cursor-pointer border-0 shadow-sm flex items-center justify-center gap-1.5 min-w-[120px]"
                 >
-                  <X className="w-3.5 h-3.5" />
-                  <span>Reject Claim</span>
+                  {actionLoading && _actionType === "reject" ? (
+                    <span className="w-3.5 h-3.5 rounded-full border-2 border-white/35 border-t-white animate-spin shrink-0"/>
+                  ) : (
+                    <X className="w-3.5 h-3.5" />
+                  )}
+                  <span>{actionLoading && _actionType === "reject" ? "Rejecting..." : "Reject Claim"}</span>
                 </button>
                 <button
                   type="button"
                   onClick={() => handleProcessAction("approve")}
                   disabled={actionLoading || loadingDetails}
-                  className="w-full sm:w-auto px-5 py-2.5 bg-emerald-600 hover:bg-emerald-700 active:bg-emerald-800 text-white font-bold rounded-lg text-xs uppercase tracking-wider transition-all cursor-pointer border-0 shadow-sm flex items-center justify-center gap-1.5"
+                  className="w-full sm:w-auto px-5 py-2.5 bg-emerald-600 hover:bg-emerald-700 active:bg-emerald-800 text-white font-bold rounded-lg text-xs uppercase tracking-wider transition-all cursor-pointer border-0 shadow-sm flex items-center justify-center gap-1.5 min-w-[130px]"
                 >
-                  <Check className="w-3.5 h-3.5" />
-                  <span>Approve Claim</span>
+                  {actionLoading && _actionType === "approve" ? (
+                    <span className="w-3.5 h-3.5 rounded-full border-2 border-white/35 border-t-white animate-spin shrink-0"/>
+                  ) : (
+                    <Check className="w-3.5 h-3.5" />
+                  )}
+                  <span>{actionLoading && _actionType === "approve" ? "Approving..." : "Approve Claim"}</span>
                 </button>
               </div>
             </div>
@@ -2180,7 +2214,7 @@ export default function ApprovalPage() {
                   <p>Accumulated Total Value: <span className="font-bold text-blue-700">₹{(Number(getSelectedTotalAmount()) || 0).toLocaleString()}</span></p>
                 )}
                 <p className="text-[10px] text-gray-400 font-semibold italic mt-1 leading-normal">
-                  Note: Bulk actions will process all selected claims sequentially as-is without any leg amount modifications.
+                  Note: Bulk actions will process all selected claims sequentially as-is without any visit amount modifications.
                 </p>
               </div>
 

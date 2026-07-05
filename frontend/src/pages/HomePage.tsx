@@ -1324,7 +1324,7 @@ export default function HomePage() {
                   {claimDetails.category !== "Limit Request" && claimDetails.itineraries && claimDetails.itineraries.length > 0 && (
                     <div className="border border-gray-200 rounded overflow-hidden">
                       <div className="px-3 py-2 bg-gray-50 border-b border-gray-200">
-                        <h4 className="text-[10px] font-bold uppercase text-gray-600 tracking-wider">Visit Legs Details</h4>
+                        <h4 className="text-[10px] font-bold uppercase text-gray-600 tracking-wider">Visit Details</h4>
                       </div>
                       
                       {/* Desktop View Table */}
@@ -1561,7 +1561,7 @@ export default function HomePage() {
                             <div key={idx} className="bg-white border border-gray-200 rounded-lg p-3.5 space-y-3 shadow-xs">
                               {/* Card Header */}
                               <div className="flex justify-between items-center border-b border-gray-100 pb-2">
-                                <span className="font-extrabold text-blue-600 font-mono text-xs">Leg #{leg.leg}</span>
+                                <span className="font-extrabold text-blue-600 font-mono text-xs">Visit #{leg.leg}</span>
                                 <span className="font-extrabold text-gray-900 text-sm">₹{legTotal.toLocaleString()}</span>
                               </div>
 
