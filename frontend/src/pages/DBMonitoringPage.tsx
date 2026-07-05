@@ -264,11 +264,6 @@ export default function DBMonitoringPage() {
   useEffect(() => {
     fetchAll();
     fetchCloudflareOfficial();
-    intervalRef.current = setInterval(() => {
-      fetchAll();
-      fetchCloudflareOfficial();
-    }, 60_000);
-    return () => { if (intervalRef.current) clearInterval(intervalRef.current); };
   }, [fetchAll, fetchCloudflareOfficial]);
 
   useEffect(() => {

@@ -14,12 +14,12 @@ API_TOKEN = settings.CLOUDFLARE_API_TOKEN
 NAMESPACE_ID = settings.CLOUDFLARE_KV_NAMESPACE_ID
 
 # Check if KV caching is active
-IS_KV_ENABLED = bool(ACCOUNT_ID and API_TOKEN and NAMESPACE_ID)
+IS_KV_ENABLED = False
 
 if IS_KV_ENABLED:
     logger.info(f"Cloudflare KV Caching is ENABLED using Namespace: {NAMESPACE_ID}")
 else:
-    logger.warning("Cloudflare KV Caching is DISABLED (missing credentials). Falling back to local in-memory cache.")
+    logger.warning("Cloudflare KV Caching is DISABLED. Falling back strictly to local in-memory cache and direct D1 DB reads.")
 
 def _make_kv_url(key):
     return f"https://api.cloudflare.com/client/v4/accounts/{ACCOUNT_ID}/storage/kv/namespaces/{NAMESPACE_ID}/values/{key}"
