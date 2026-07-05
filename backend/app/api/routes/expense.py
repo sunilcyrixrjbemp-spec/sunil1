@@ -2202,11 +2202,13 @@ def get_user_monthly_stats(db, user_db_id: int, month: str, year: int, exclude_d
     else:
         month_str = month_str.capitalize()
 
+    from sqlalchemy import func
+
     query = db.query(Expense).filter(
         Expense.user_id == user_db_id,
         Expense.month == month_str,
         Expense.year == year_val,
-        Expense.status.notin_(["draft", "rejected"])
+        func.lower(Expense.status).notin_(["draft", "rejected"])
     )
     
     # If exclude_date is provided, only include expenses strictly before that date
@@ -2216,58 +2218,69 @@ def get_user_monthly_stats(db, user_db_id: int, month: str, year: int, exclude_d
     expenses = query.all()
     
     # Group expense codes by whether they are approved or just claimed
-    approved_exp_codes = [e.expense_code for e in expenses if e.expense_code and e.status in ["approved", "partially_approved"]]
+    approved_exp_codes = [
+        e.expense_code for e in expenses 
+        if e.expense_code and e.status and e.status.strip().lower() in ["approved", "partially_approved"]
+    ]
     all_exp_codes = [e.expense_code for e in expenses if e.expense_code]
     
     approved_legs = db.query(ExpenseItinerary).filter(ExpenseItinerary.exp_id.in_(approved_exp_codes)).all() if approved_exp_codes else []
     all_legs = db.query(ExpenseItinerary).filter(ExpenseItinerary.exp_id.in_(all_exp_codes)).all() if all_exp_codes else []
     
     def get_leg_stats(leg):
+        # Default to database columns
         leg_calls = leg.calls_completed or 0
         leg_pms = leg.pms_count or 0
         leg_asset = leg.asset_tagging or 0
         leg_mobilise = leg.mobilise_count or 0
         leg_calibration = leg.calibration_count or 0
 
-        # Try parsing JSON to get actual counts if column values are 0 or empty
+        # Parse from activity_details JSON (primary source of truth) if available
         if leg.activity_details:
             try:
                 act_details = json.loads(leg.activity_details)
                 if isinstance(act_details, dict):
                     selected_acts = act_details.get("selected_activities") or []
                     
-                    if leg_calls == 0 and "Calls" in selected_acts:
+                    if "Calls" in selected_acts:
                         calls_list = act_details.get("calls_list") or []
-                        leg_calls = sum(
-                            1 for c in calls_list
-                            if str(c.get("status") or "").strip().lower() in ["close", "attend & close", "attend & close "]
-                        )
+                        if isinstance(calls_list, list):
+                            leg_calls = sum(
+                                1 for c in calls_list 
+                                if isinstance(c, dict) and c.get("barcode")
+                            )
                         
-                    if leg_pms == 0 and "PMS" in selected_acts:
+                    if "PMS" in selected_acts:
                         pms_list = act_details.get("pms_list") or []
-                        leg_pms = len(pms_list)
+                        if isinstance(pms_list, list):
+                            leg_pms = sum(
+                                1 for p in pms_list 
+                                if isinstance(p, dict) and p.get("barcode")
+                            )
                         
-                    if leg_asset == 0 and "Asset Tagging" in selected_acts:
+                    if "Asset Tagging" in selected_acts:
                         assets_list = act_details.get("assets_list") or []
-                        for item in assets_list:
-                            try:
-                                leg_asset += int(item.get("quantity") or 0)
-                            except Exception:
-                                pass
+                        if isinstance(assets_list, list):
+                            sum_qty = 0
+                            for item in assets_list:
+                                if isinstance(item, dict):
+                                    try:
+                                        sum_qty += int(item.get("quantity") or 0)
+                                    except Exception:
+                                        pass
+                            leg_asset = sum_qty
                                 
-                    if leg_mobilise == 0:
-                        try:
-                            leg_mobilise = int(act_details.get("mobilise_asset_count") or 0)
-                        except Exception:
-                            pass
+                    try:
+                        leg_mobilise = int(act_details.get("mobilise_asset_count") or 0)
+                    except Exception:
+                        pass
                             
-                    if leg_calibration == 0:
-                        try:
-                            leg_calibration = int(act_details.get("calibration_count") or 0)
-                        except Exception:
-                            pass
+                    try:
+                        leg_calibration = int(act_details.get("calibration_count") or 0)
+                    except Exception:
+                        pass
             except Exception as e:
-                logger.warning(f"Error parsing activity_details fallback for leg {leg.itinerary_id}: {e}")
+                logger.warning(f"Error parsing activity_details for leg {leg.itinerary_id}: {e}")
         return leg_calls, leg_pms, leg_asset, leg_mobilise, leg_calibration
 
     # 1. Approved stats
