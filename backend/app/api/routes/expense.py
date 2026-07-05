@@ -2170,11 +2170,42 @@ async def get_consolidated_report(
 def get_user_monthly_stats(db, user_db_id: int, month: str, year: int, exclude_date: str = None):
     from app.models.expense import Expense
     from app.models.expense_itinerary import ExpenseItinerary
+    import calendar
+    import json
+    import logging
     
+    logger = logging.getLogger(__name__)
+
+    # Normalize month and year inputs
+    month_str = str(month).strip()
+    year_val = int(year) if year else None
+    
+    # Check if month is in YYYY-MM or YYYY-MM-DD format
+    if "-" in month_str:
+        parts = month_str.split("-")
+        if len(parts) >= 2:
+            try:
+                y = int(parts[0])
+                m_num = int(parts[1])
+                if 1 <= m_num <= 12:
+                    month_str = calendar.month_name[m_num]
+                    year_val = y
+            except Exception:
+                pass
+    elif month_str.isdigit():
+        try:
+            m_num = int(month_str)
+            if 1 <= m_num <= 12:
+                month_str = calendar.month_name[m_num]
+        except Exception:
+            pass
+    else:
+        month_str = month_str.capitalize()
+
     query = db.query(Expense).filter(
         Expense.user_id == user_db_id,
-        Expense.month == month,
-        Expense.year == year,
+        Expense.month == month_str,
+        Expense.year == year_val,
         Expense.status.notin_(["draft", "rejected"])
     )
     
@@ -2191,6 +2222,54 @@ def get_user_monthly_stats(db, user_db_id: int, month: str, year: int, exclude_d
     approved_legs = db.query(ExpenseItinerary).filter(ExpenseItinerary.exp_id.in_(approved_exp_codes)).all() if approved_exp_codes else []
     all_legs = db.query(ExpenseItinerary).filter(ExpenseItinerary.exp_id.in_(all_exp_codes)).all() if all_exp_codes else []
     
+    def get_leg_stats(leg):
+        leg_calls = leg.calls_completed or 0
+        leg_pms = leg.pms_count or 0
+        leg_asset = leg.asset_tagging or 0
+        leg_mobilise = leg.mobilise_count or 0
+        leg_calibration = leg.calibration_count or 0
+
+        # Try parsing JSON to get actual counts if column values are 0 or empty
+        if leg.activity_details:
+            try:
+                act_details = json.loads(leg.activity_details)
+                if isinstance(act_details, dict):
+                    selected_acts = act_details.get("selected_activities") or []
+                    
+                    if leg_calls == 0 and "Calls" in selected_acts:
+                        calls_list = act_details.get("calls_list") or []
+                        leg_calls = sum(
+                            1 for c in calls_list
+                            if str(c.get("status") or "").strip().lower() in ["close", "attend & close", "attend & close "]
+                        )
+                        
+                    if leg_pms == 0 and "PMS" in selected_acts:
+                        pms_list = act_details.get("pms_list") or []
+                        leg_pms = len(pms_list)
+                        
+                    if leg_asset == 0 and "Asset Tagging" in selected_acts:
+                        assets_list = act_details.get("assets_list") or []
+                        for item in assets_list:
+                            try:
+                                leg_asset += int(item.get("quantity") or 0)
+                            except Exception:
+                                pass
+                                
+                    if leg_mobilise == 0:
+                        try:
+                            leg_mobilise = int(act_details.get("mobilise_asset_count") or 0)
+                        except Exception:
+                            pass
+                            
+                    if leg_calibration == 0:
+                        try:
+                            leg_calibration = int(act_details.get("calibration_count") or 0)
+                        except Exception:
+                            pass
+            except Exception as e:
+                logger.warning(f"Error parsing activity_details fallback for leg {leg.itinerary_id}: {e}")
+        return leg_calls, leg_pms, leg_asset, leg_mobilise, leg_calibration
+
     # 1. Approved stats
     approved_da = 0.0
     approved_bike_km = 0.0
@@ -2233,11 +2312,12 @@ def get_user_monthly_stats(db, user_db_id: int, month: str, year: int, exclude_d
         elif sub_mode == "train":
             approved_train += leg.sub_amount or 0.0
             
-        approved_calls += leg.calls_completed or 0
-        approved_pms += leg.pms_count or 0
-        approved_asset += leg.asset_tagging or 0
-        approved_mobilise += leg.mobilise_count or 0
-        approved_calibration += leg.calibration_count or 0
+        leg_calls, leg_pms, leg_asset, leg_mobilise, leg_calibration = get_leg_stats(leg)
+        approved_calls += leg_calls
+        approved_pms += leg_pms
+        approved_asset += leg_asset
+        approved_mobilise += leg_mobilise
+        approved_calibration += leg_calibration
         
     # 2. Claimed stats
     claimed_da = 0.0
@@ -2289,11 +2369,12 @@ def get_user_monthly_stats(db, user_db_id: int, month: str, year: int, exclude_d
         elif sub_mode == "train":
             claimed_train += orig_sub_amt
             
-        claimed_calls += leg.calls_completed or 0
-        claimed_pms += leg.pms_count or 0
-        claimed_asset += leg.asset_tagging or 0
-        claimed_mobilise += leg.mobilise_count or 0
-        claimed_calibration += leg.calibration_count or 0
+        leg_calls, leg_pms, leg_asset, leg_mobilise, leg_calibration = get_leg_stats(leg)
+        claimed_calls += leg_calls
+        claimed_pms += leg_pms
+        claimed_asset += leg_asset
+        claimed_mobilise += leg_mobilise
+        claimed_calibration += leg_calibration
         
     return {
         "km_used_so_far_approved": approved_km_used,
