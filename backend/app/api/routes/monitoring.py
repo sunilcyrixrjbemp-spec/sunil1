@@ -329,7 +329,7 @@ async def get_cloudflare_official(
     """Fetch official Cloudflare account analytics for D1 & KV via Cloudflare GraphQL API."""
     _admin_check(current_user)
     
-    if not IS_KV_ENABLED:
+    if not (ACCOUNT_ID and API_TOKEN):
         return {
             "success": False,
             "message": "Cloudflare integration is not configured or missing credentials."
