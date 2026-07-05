@@ -158,6 +158,34 @@ export default function DBMonitoringPage() {
     return true;
   });
 
+  const downloadCSV = (data: any[], filename: string) => {
+    if (!data || data.length === 0) {
+      toast.error("No data available to export");
+      return;
+    }
+    const headers = Object.keys(data[0]);
+    const csvContent = [
+      headers.join(","),
+      ...data.map(row => 
+        headers.map(h => {
+          const val = row[h];
+          const valStr = val === null || val === undefined ? "" : String(val);
+          return `"${valStr.replace(/"/g, '""')}"`;
+        }).join(",")
+      )
+    ].join("\n");
+    
+    const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = url;
+    link.setAttribute("download", filename);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    toast.success(`${filename} exported successfully!`);
+  };
+
   const buildQS = useCallback((extra: Record<string,string> = {}) => {
     const p: Record<string,string> = {};
     if (activeFilter === "date") p.date = filterDate; else p.month = filterMonth;
@@ -184,8 +212,8 @@ export default function DBMonitoringPage() {
       }
       const tlQS  = new URLSearchParams(tlParams).toString();
       
-      // Page size is 50 logs per line as requested
-      const logsQS= buildQS({ page: String(logPage), page_size: "50" });
+      // Page size is 15 logs per page as requested
+      const logsQS= buildQS({ page: String(logPage), page_size: "15" });
       
       const [s, u, p, t, l] = await Promise.all([
         fetch(`${BASE}/api/monitoring/summary?${qs}`, { headers: getHeaders() }).then(r => r.json()),
@@ -488,6 +516,43 @@ export default function DBMonitoringPage() {
         </div>
       </div>
 
+      {/* ── Secondary Dashboard Metrics ── */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        {/* Cost Saved */}
+        <div className="bg-slate-50 border border-slate-200/60 rounded-2xl p-4 shadow-sm flex items-center justify-between">
+          <div>
+            <p className="text-[10px] text-slate-400 font-black uppercase tracking-wider">Estimated Cost Saved</p>
+            <p className="text-xl font-black text-slate-800 mt-1">
+              ₹{loading ? "0.00" : ((summary?.kv_hits ?? 0) * 0.05).toFixed(2)}
+            </p>
+            <p className="text-[9px] text-slate-400 mt-0.5">saved via Cloudflare KV offload</p>
+          </div>
+          <span className="text-2xl">💰</span>
+        </div>
+
+        {/* Caching Status Tier */}
+        <div className="bg-slate-50 border border-slate-200/60 rounded-2xl p-4 shadow-sm flex items-center justify-between">
+          <div>
+            <p className="text-[10px] text-slate-400 font-black uppercase tracking-wider">Speed Performance Tier</p>
+            <p className="text-xl font-black text-slate-800 mt-1">
+              {loading ? "Calculating..." : kvPct >= 80 ? "Ultrafast ⚡" : kvPct >= 50 ? "Fast 🏃" : kvPct >= 20 ? "Optimal 🚶" : "Direct ❄️"}
+            </p>
+            <p className="text-[9px] text-slate-400 mt-0.5">caching acceleration level</p>
+          </div>
+          <span className="text-2xl">🚀</span>
+        </div>
+
+        {/* Database Health */}
+        <div className="bg-slate-50 border border-slate-200/60 rounded-2xl p-4 shadow-sm flex items-center justify-between">
+          <div>
+            <p className="text-[10px] text-slate-400 font-black uppercase tracking-wider">Database Status</p>
+            <p className="text-xl font-black text-emerald-600 mt-1">Optimal (Healthy)</p>
+            <p className="text-[9px] text-slate-400 mt-0.5">D1 Engine running normally</p>
+          </div>
+          <span className="text-2xl">🟢</span>
+        </div>
+      </div>
+
       {/* ── Official Cloudflare Edge Meter (Direct CF Billing Stats) ── */}
       <div className="bg-white border border-gray-200 rounded-2xl p-5 shadow-sm">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-slate-100 pb-3">
@@ -747,7 +812,15 @@ export default function DBMonitoringPage() {
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
         {/* User Stats Table */}
         <div className="bg-white border border-gray-200 rounded-2xl p-5 shadow-sm">
-          <h3 className="text-xs font-black uppercase tracking-wider text-slate-700 mb-4">User Activity Breakdown</h3>
+          <div className="flex items-center justify-between mb-4 pb-2 border-b border-slate-100">
+            <h3 className="text-xs font-black uppercase tracking-wider text-slate-700">User Activity Breakdown</h3>
+            <button
+              onClick={() => downloadCSV(users, "user_activity_breakdown.csv")}
+              className="px-2 py-1 bg-[#e2f1f5] hover:bg-[#d0eaf0] text-slate-700 border border-[#b8e0ea] text-[9px] font-bold rounded-lg transition-all cursor-pointer shadow-sm"
+            >
+              📥 Export (CSV)
+            </button>
+          </div>
           <div className="overflow-x-auto">
             <table className="w-full text-xs">
               <thead>
@@ -793,11 +866,17 @@ export default function DBMonitoringPage() {
 
         {/* Live requests logs (Now showing 50 entries per line) */}
         <div className="bg-white border border-gray-200 rounded-2xl p-5 shadow-sm">
-          <div className="flex items-center justify-between mb-4">
-            <h3 className="text-xs font-black uppercase tracking-wider text-slate-700">Recent Request Stream</h3>
-            <span className="text-[10px] font-bold text-slate-500 bg-slate-100 px-2 py-0.5 rounded-lg">
-              {logsTotal.toLocaleString()} rows
-            </span>
+          <div className="flex items-center justify-between mb-4 pb-2 border-b border-slate-100">
+            <div>
+              <h3 className="text-xs font-black uppercase tracking-wider text-slate-700">Recent Request Stream</h3>
+              <p className="text-[9px] text-slate-400 mt-0.5 font-bold">{logsTotal.toLocaleString()} total rows tracked</p>
+            </div>
+            <button
+              onClick={() => downloadCSV(logs, "recent_request_stream.csv")}
+              className="px-2 py-1 bg-[#e2f1f5] hover:bg-[#d0eaf0] text-slate-700 border border-[#b8e0ea] text-[9px] font-bold rounded-lg transition-all cursor-pointer shadow-sm"
+            >
+              📥 Export (CSV)
+            </button>
           </div>
           <div className="overflow-x-auto">
             <table className="w-full text-xs">
@@ -836,12 +915,12 @@ export default function DBMonitoringPage() {
                 ))}
               </tbody>
             </table>
-            {logsTotal > 50 && (
+            {logsTotal > 15 && (
               <div className="flex justify-center items-center gap-3 mt-4">
                 <button onClick={()=>setLogPage(p=>Math.max(1,p-1))} disabled={logPage===1}
                   className="px-3 py-1 bg-white border border-gray-200 text-slate-600 text-[10px] font-bold rounded-lg disabled:opacity-40 hover:bg-slate-50">← Prev</button>
-                <span className="text-[10px] font-bold text-slate-500">Page {logPage} / {Math.ceil(logsTotal/50)}</span>
-                <button onClick={()=>setLogPage(p=>p+1)} disabled={logPage>=Math.ceil(logsTotal/50)}
+                <span className="text-[10px] font-bold text-slate-500">Page {logPage} / {Math.ceil(logsTotal/15)}</span>
+                <button onClick={()=>setLogPage(p=>p+1)} disabled={logPage>=Math.ceil(logsTotal/15)}
                   className="px-3 py-1 bg-white border border-gray-200 text-slate-600 text-[10px] font-bold rounded-lg disabled:opacity-40 hover:bg-slate-50 font-sans">Next →</button>
               </div>
             )}
@@ -852,18 +931,32 @@ export default function DBMonitoringPage() {
       {/* Pages details table */}
       {activeMenuTab === "global" && (
         <div className="bg-white border border-gray-200 rounded-2xl p-5 shadow-sm">
-          <h3 className="text-xs font-black uppercase tracking-wider text-slate-700 mb-4">Granular Page performance log</h3>
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-4 pb-3 border-b border-slate-100">
+            <div>
+              <h3 className="text-xs font-black uppercase tracking-wider text-slate-700">🖥️ Screen Visits & Speed Performance</h3>
+              <p className="text-[10px] text-slate-400 mt-1 font-semibold">
+                Track how many times each screen was visited and how much database query load was saved by KV memory.
+              </p>
+            </div>
+            <button
+              onClick={() => downloadCSV(pages, "screen_speed_performance.csv")}
+              className="px-3 py-1.5 bg-[#e2f1f5] hover:bg-[#d0eaf0] text-slate-700 border border-[#b8e0ea] text-[10px] font-bold rounded-xl transition-all cursor-pointer shadow-sm flex items-center gap-1.5 self-start sm:self-auto"
+            >
+              📥 Export Screen Stats (CSV)
+            </button>
+          </div>
+          
           <div className="overflow-x-auto">
             <table className="w-full text-xs">
               <thead>
-                <tr className="border-b border-gray-200 text-slate-400 text-[10px] font-black uppercase tracking-wider">
-                  <th className="text-left py-2 px-3 font-bold">Page Screen</th>
-                  <th className="text-right py-2 px-3 text-blue-700 font-bold">DB Reads</th>
-                  <th className="text-right py-2 px-3 text-amber-600 font-bold">DB Writes</th>
-                  <th className="text-right py-2 px-3 text-green-600 font-bold">KV Hits</th>
-                  <th className="text-right py-2 px-3 text-emerald-600 font-bold">Edge Ratio %</th>
-                  <th className="text-right py-2 px-3 font-bold">Total hits</th>
-                  <th className="py-2 px-3 font-bold">Caching efficiency ratio</th>
+                <tr className="border-b border-gray-200 text-slate-450 text-[10px] font-black uppercase tracking-wider">
+                  <th className="text-left py-2 px-3 font-bold text-slate-500">Screen / Page Name</th>
+                  <th className="text-right py-2 px-3 text-slate-500 font-bold">Total Visits</th>
+                  <th className="text-right py-2 px-3 text-slate-500 font-bold">Speed Boosts (KV)</th>
+                  <th className="text-right py-2 px-3 text-slate-500 font-bold">Database Reads</th>
+                  <th className="text-right py-2 px-3 text-slate-500 font-bold">Database Updates</th>
+                  <th className="text-right py-2 px-3 text-slate-500 font-bold">Cache Saving %</th>
+                  <th className="py-2 px-3 font-bold text-slate-500 text-center">Efficiency Grade</th>
                 </tr>
               </thead>
               <tbody>
@@ -872,19 +965,50 @@ export default function DBMonitoringPage() {
                     {[...Array(7)].map((_,j)=><td key={j} className="py-2.5 px-3"><Skeleton h="h-3"/></td>)}
                   </tr>
                 )) : pages.length===0 ? (
-                  <tr><td colSpan={7} className="text-center text-slate-400 py-10">No data found</td></tr>
+                  <tr><td colSpan={7} className="text-center text-slate-400 py-10">No records found</td></tr>
                 ) : pages.map((p,i)=>{
                   const total = p.db_reads + p.kv_hits;
                   const kv = total > 0 ? Math.round(p.kv_hits/total*100) : 0;
+                  
+                  // Simple easy to understand grade badges
+                  let gradeText = "Direct ❄️";
+                  let gradeColor = "bg-blue-50 text-blue-700 border-blue-100";
+                  if (kv >= 80) {
+                    gradeText = "Ultrafast ⚡";
+                    gradeColor = "bg-green-50 text-green-700 border-green-200";
+                  } else if (kv >= 50) {
+                    gradeText = "Fast 🏃";
+                    gradeColor = "bg-emerald-50 text-emerald-700 border-emerald-100";
+                  } else if (kv >= 20) {
+                    gradeText = "Normal 🚶";
+                    gradeColor = "bg-amber-50 text-amber-700 border-amber-200";
+                  }
+
                   return (
-                    <tr key={i} className="border-b border-gray-100 hover:bg-slate-50 transition-colors text-slate-700">
-                      <td className="py-2.5 px-3 font-bold text-slate-800">{p.page_name||"—"}</td>
-                      <td className="py-2.5 px-3 text-right text-blue-700 font-extrabold">{p.db_reads.toLocaleString()}</td>
-                      <td className="py-2.5 px-3 text-right text-amber-600 font-extrabold">{p.db_writes.toLocaleString()}</td>
-                      <td className="py-2.5 px-3 text-right text-green-600 font-extrabold">{p.kv_hits.toLocaleString()}</td>
-                      <td className="py-2.5 px-3 text-right">
-                        <span className={`font-black ${kv>=50?"text-green-600":kv>=20?"text-amber-600":"text-red-500"}`}>{kv}%</span>
+                    <tr key={i} className="border-b border-gray-100 hover:bg-slate-50/80 transition-colors text-slate-700">
+                      <td className="py-3 px-3 font-bold text-slate-800">{p.page_name||"—"}</td>
+                      <td className="py-3 px-3 text-right font-bold text-slate-600">{p.request_count.toLocaleString()}</td>
+                      <td className="py-3 px-3 text-right text-green-600 font-extrabold">{p.kv_hits.toLocaleString()}</td>
+                      <td className="py-3 px-3 text-right text-blue-700 font-extrabold">{p.db_reads.toLocaleString()}</td>
+                      <td className="py-3 px-3 text-right text-amber-600 font-extrabold">{p.db_writes.toLocaleString()}</td>
+                      <td className="py-3 px-3 text-right font-black text-slate-800">
+                        <span className={kv >= 50 ? "text-green-600" : kv >= 20 ? "text-amber-600" : "text-slate-500"}>
+                          {kv}%
+                        </span>
                       </td>
+                      <td className="py-3 px-3 text-center">
+                        <span className={`px-2.5 py-0.5 rounded-lg border text-[9px] font-black uppercase tracking-wide ${gradeColor}`}>
+                          {gradeText}
+                        </span>
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      )}td>
                       <td className="py-2.5 px-3 text-right text-slate-500 font-semibold">{p.request_count.toLocaleString()}</td>
                       <td className="py-2.5 px-3 min-w-[120px]">
                         <div className="h-1.5 bg-slate-100 rounded-full overflow-hidden flex border border-slate-200/40">

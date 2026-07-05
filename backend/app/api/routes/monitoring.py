@@ -200,14 +200,33 @@ async def get_page_breakdown(
         rows = db.execute(text(f"""
             SELECT page_name, SUM(db_reads), SUM(db_writes), SUM(kv_hits), COUNT(*)
             FROM db_op_logs WHERE {where}
-            GROUP BY page_name ORDER BY SUM(db_reads) DESC
+            GROUP BY page_name
         """), params).fetchall()
-        return {"success": True, "pages": [
-            {"page_name": r[0], "db_reads": int(r[1] or 0), "db_writes": int(r[2] or 0),
-             "kv_hits": int(r[3] or 0), "request_count": int(r[4] or 0)}
-            for r in rows
-        ]}
+        
+        cleaned_pages = {}
+        for r in rows:
+            raw_name = r[0] or "General API"
+            name = raw_name
+            if "gdrive" in raw_name.lower() or "upload/file" in raw_name.lower():
+                name = "File Viewer"
+            elif "notifications" in raw_name.lower():
+                name = "Notifications"
+                
+            if name not in cleaned_pages:
+                cleaned_pages[name] = {"db_reads": 0, "db_writes": 0, "kv_hits": 0, "request_count": 0}
+            cleaned_pages[name]["db_reads"] += int(r[1] or 0)
+            cleaned_pages[name]["db_writes"] += int(r[2] or 0)
+            cleaned_pages[name]["kv_hits"] += int(r[3] or 0)
+            cleaned_pages[name]["request_count"] += int(r[4] or 0)
+            
+        pages_list = [
+            {"page_name": k, **v} for k, v in cleaned_pages.items()
+        ]
+        pages_list.sort(key=lambda x: x["db_reads"], reverse=True)
+        
+        return {"success": True, "pages": pages_list}
     except Exception as e:
+        logger.error(f"monitoring/page-breakdown error: {e}")
         return {"success": False, "message": str(e), "pages": []}
 
 
@@ -284,8 +303,18 @@ async def get_logs(
         cols = ["id","user_id","user_name","role","zone","district",
                 "endpoint","page_name","method","op_type",
                 "db_reads","db_writes","kv_hits","log_date","created_at"]
+        logs_list = []
+        for r in rows:
+            d = dict(zip(cols, r))
+            pn = d.get("page_name") or ""
+            if "gdrive" in pn.lower() or "upload/file" in pn.lower():
+                d["page_name"] = "File Viewer"
+            elif "notifications" in pn.lower():
+                d["page_name"] = "Notifications"
+            logs_list.append(d)
+            
         return {"success": True, "total": total, "page": page,
-                "page_size": page_size, "logs": [dict(zip(cols, r)) for r in rows]}
+                "page_size": page_size, "logs": logs_list}
     except Exception as e:
         logger.error(f"monitoring/logs error: {e}")
         return {"success": False, "message": str(e), "logs": []}
