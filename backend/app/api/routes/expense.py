@@ -538,12 +538,84 @@ async def submit_expense(
         total_hotel += float(iti.get("hotel") or 0.0)
         total_other += float(iti.get("oth_amount") or 0.0)
         total_local_purchase += float(iti.get("local_purchase") or 0.0)
-        total_assigned += int(iti.get("ws_assigned") or 0)
-        total_completed += int(iti.get("ws_closed") or 0)
-        total_pms += int(iti.get("ws_pms") or 0)
-        total_asset += int(iti.get("ws_asset") or 0)
-        total_calibration += int(iti.get("calibration_count") or 0)
-        total_mobilise += int(iti.get("mobilise_asset_count") or 0)
+        
+        # Parse activity details to get correct counts directly from JSON lists/fields
+        raw_act = iti.get("activity_details")
+        act_details = None
+        if raw_act:
+            if isinstance(raw_act, str):
+                try:
+                    act_details = json.loads(raw_act)
+                except Exception:
+                    pass
+            elif isinstance(raw_act, dict):
+                act_details = raw_act
+
+        iti_assigned = int(iti.get("ws_assigned") or 0)
+        iti_completed = int(iti.get("ws_closed") or 0)
+        iti_pms = int(iti.get("ws_pms") or 0)
+        iti_asset = int(iti.get("ws_asset") or 0)
+        iti_calibration = int(iti.get("calibration_count") or 0)
+        iti_mobilise = int(iti.get("mobilise_asset_count") or 0)
+
+        if act_details and isinstance(act_details, dict):
+            selected_acts = act_details.get("selected_activities") or []
+            
+            if "Calls" in selected_acts:
+                calls_list = act_details.get("calls_list") or []
+                if isinstance(calls_list, list):
+                    barcode_calls = sum(1 for c in calls_list if isinstance(c, dict) and c.get("barcode"))
+                    iti_assigned = len(calls_list)
+                    iti_completed = barcode_calls
+            else:
+                iti_assigned = 0
+                iti_completed = 0
+
+            if "PMS" in selected_acts:
+                pms_list = act_details.get("pms_list") or []
+                if isinstance(pms_list, list):
+                    iti_pms = sum(1 for p in pms_list if isinstance(p, dict) and p.get("barcode"))
+            else:
+                iti_pms = 0
+
+            if "Asset Tagging" in selected_acts:
+                assets_list = act_details.get("assets_list") or []
+                if isinstance(assets_list, list):
+                    sum_qty = 0
+                    for item in assets_list:
+                        if isinstance(item, dict):
+                            try:
+                                sum_qty += int(item.get("quantity") or 0)
+                            except Exception:
+                                pass
+                    iti_asset = sum_qty
+            else:
+                iti_asset = 0
+
+            try:
+                iti_mobilise = int(act_details.get("mobilise_asset_count") or 0)
+            except Exception:
+                pass
+
+            try:
+                iti_calibration = int(act_details.get("calibration_count") or 0)
+            except Exception:
+                pass
+
+        # Update the itinerary dict so the values are reused correctly below when inserting legs
+        iti["ws_assigned"] = iti_assigned
+        iti["ws_closed"] = iti_completed
+        iti["ws_pms"] = iti_pms
+        iti["ws_asset"] = iti_asset
+        iti["calibration_count"] = iti_calibration
+        iti["mobilise_asset_count"] = iti_mobilise
+
+        total_assigned += iti_assigned
+        total_completed += iti_completed
+        total_pms += iti_pms
+        total_asset += iti_asset
+        total_calibration += iti_calibration
+        total_mobilise += iti_mobilise
 
         mode = iti.get("mode")
         if mode in ["Bike", "Car"]:
