@@ -18,8 +18,7 @@ import {
   CheckSquare,
   ThumbsUp,
   ThumbsDown,
-  Loader2,
-  TrendingUp
+  Loader2
 } from "lucide-react";
 
 const getAttachmentsArray = (attachments: any): string[] => {
