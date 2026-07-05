@@ -62,10 +62,53 @@ _last_flush = _time.monotonic()
 
 
 def _get_page_name(path: str) -> str:
+    path_lower = path.lower()
+    # Match prefixes to menu screens
+    if "auth/login" in path_lower or "auth/logout" in path_lower:
+        return "Login"
+    if "auth/bootstrap" in path_lower:
+        return "Home"
+    if "prefill-kv" in path_lower:
+        return "Admin Panel"
+    if "mis-dashboard" in path_lower:
+        return "MIS Report"
+    if "assets-inventory" in path_lower or "assets-stats" in path_lower or "assets-filters" in path_lower:
+        return "Asset Inventory"
+    if "penalty" in path_lower:
+        return "Penalty Report"
+    if "upload-" in path_lower:
+        return "Upload Data"
+    if "expense" in path_lower:
+        return "Submit Expense"
+    if "approval" in path_lower:
+        return "Approval Center"
+    if "admin" in path_lower:
+        return "Admin Panel"
+    if "monitoring" in path_lower:
+        return "DB Monitor"
+    if "users" in path_lower or "profile" in path_lower:
+        return "Profile"
+    if "ticket" in path_lower or "help" in path_lower:
+        return "Help Center"
+    if "kpi" in path_lower:
+        return "KPI Dashboard"
+    if "analysis" in path_lower:
+        return "Analysis"
+    if "month-report" in path_lower:
+        return "Month Report"
+    if "consolidated" in path_lower:
+        return "Consolidated Report"
+
+    # Default lookup in MAP
     for prefix, name in PAGE_MAP.items():
         if path.startswith(prefix):
             return name
-    return path
+            
+    # Default fallback: extract path parts and title case
+    parts = [p for p in path.split("/") if p and p != "api"]
+    if parts:
+        return " ".join(parts).title()
+    return "General API"
 
 
 def _flush_buffer():

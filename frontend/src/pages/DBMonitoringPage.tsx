@@ -115,7 +115,6 @@ export default function DBMonitoringPage() {
   const [logPage,     setLogPage]     = useState(1);
   const [loading,     setLoading]     = useState(true);
   const [lastUpdated, setLastUpdated] = useState("");
-  const [kvBusy,      setKvBusy]      = useState(false);
   const [sortCol,     setSortCol]     = useState("db_reads");
   const [sortAsc,     setSortAsc]     = useState(false);
   const intervalRef = useRef<ReturnType<typeof setInterval>|null>(null);
@@ -227,16 +226,6 @@ export default function DBMonitoringPage() {
     return () => { if (intervalRef.current) clearInterval(intervalRef.current); };
   }, [fetchAll, activeMenuTab]);
 
-  const doKvRefresh = async () => {
-    setKvBusy(true);
-    try {
-      const r = await fetch(`${BASE}/api/auth/prefill-kv`, { method: "POST", headers: getHeaders() });
-      const d = await r.json();
-      toast.success(d.message || "KV prefill task triggered successfully!");
-    } catch { toast.error("Failed to start KV prefill."); }
-    finally { setKvBusy(false); }
-  };
-
   const handleSort = (col: string) => {
     if (sortCol === col) setSortAsc(v => !v); else { setSortCol(col); setSortAsc(false); }
   };
@@ -293,7 +282,7 @@ export default function DBMonitoringPage() {
                 : "bg-transparent text-gray-500 hover:text-gray-800 hover:bg-slate-200/50"
             }`}
           >
-            Global App Stats
+            All Screens
           </button>
           <button
             type="button"
@@ -304,7 +293,7 @@ export default function DBMonitoringPage() {
                 : "bg-transparent text-gray-500 hover:text-gray-800 hover:bg-slate-200/50"
             }`}
           >
-            Dashboard Screen
+            Home
           </button>
         </div>
       </div>
@@ -393,10 +382,6 @@ export default function DBMonitoringPage() {
             <button onClick={fetchAll} disabled={loading}
               className="px-5 py-1.5 bg-blue-600 hover:bg-blue-700 disabled:opacity-40 text-white text-xs font-extrabold uppercase tracking-wide rounded-xl transition-all shadow-sm">
               {loading ? "Loading…" : "Apply"}
-            </button>
-            <button onClick={doKvRefresh} disabled={kvBusy}
-              className="px-4 py-1.5 bg-purple-50 hover:bg-purple-100 text-purple-700 border border-purple-200 text-xs font-bold rounded-xl transition-all">
-              {kvBusy ? "Prefilling..." : "Warm KV Cache"}
             </button>
           </div>
         </div>
@@ -652,7 +637,7 @@ export default function DBMonitoringPage() {
               <thead>
                 <tr className="border-b border-gray-200 text-slate-400 text-[10px] font-black uppercase tracking-wider">
                   {[
-                    ["user_id","User ID"],["user_name","Name"],["role","Role"],
+                    ["user_name","User Name"],["user_id","Employee Code"],["role","Role"],
                     ["db_reads","DB Reads"],["db_writes","Writes"],["kv_hits","KV Hits"],["requests","Reqs"]
                   ].map(([col,lbl]) => (
                     <th key={col} onClick={()=>handleSort(col)}
@@ -671,8 +656,8 @@ export default function DBMonitoringPage() {
                   <tr><td colSpan={7} className="text-center text-slate-400 py-10">No logs for this filter</td></tr>
                 ) : sortedUsers.map((u,i)=>(
                   <tr key={i} className="border-b border-gray-100 hover:bg-slate-50 transition-colors text-slate-700">
+                    <td className="py-2.5 px-1.5 font-semibold text-slate-800">{u.user_name || "—"}</td>
                     <td className="py-2.5 px-1.5 font-mono text-blue-600 font-bold">{u.user_id}</td>
-                    <td className="py-2.5 px-1.5 font-semibold">{u.user_name || "—"}</td>
                     <td className="py-2.5 px-1.5">
                       <span className={`px-2 py-0.5 rounded text-[10px] font-extrabold uppercase tracking-wide
                         ${u.role?.includes("Admin") ? "bg-purple-100 text-purple-700" : "bg-slate-100 text-slate-600"}`}>
