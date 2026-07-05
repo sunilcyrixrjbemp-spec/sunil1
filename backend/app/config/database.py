@@ -363,3 +363,75 @@ def set_created_at(mapper, connection, target):
 def set_updated_at(mapper, connection, target):
     if hasattr(target, "updated_at"):
         target.updated_at = get_ist_now()
+
+
+# ─── Real-Time Cloudflare KV Cache Sync event listeners ─────────────────────────
+import threading
+from sqlalchemy.engine import Engine
+from sqlalchemy.orm import Session
+
+_modified_tables = threading.local()
+
+def mark_table_modified(table_name: str):
+    if not table_name:
+        return
+    table_name = table_name.strip('"`[]').lower()
+    if table_name in ("db_op_logs", "sqlite_sequence", "sqlite_schema", "sqlite_master"):
+        return
+    if not hasattr(_modified_tables, "items"):
+        _modified_tables.items = set()
+    _modified_tables.items.add(table_name)
+
+@event.listens_for(Mapper, "after_insert")
+def orm_after_insert(mapper, connection, target):
+    try:
+        table_name = mapper.mapped_table.name
+        mark_table_modified(table_name)
+    except Exception:
+        pass
+
+@event.listens_for(Mapper, "after_update")
+def orm_after_update(mapper, connection, target):
+    try:
+        table_name = mapper.mapped_table.name
+        mark_table_modified(table_name)
+    except Exception:
+        pass
+
+@event.listens_for(Mapper, "after_delete")
+def orm_after_delete(mapper, connection, target):
+    try:
+        table_name = mapper.mapped_table.name
+        mark_table_modified(table_name)
+    except Exception:
+        pass
+
+@event.listens_for(Engine, "after_execute")
+def engine_after_execute(conn, clauseelement, multiparams, params, execution_options, result):
+    try:
+        stmt = str(clauseelement).lower()
+        if any(kw in stmt for kw in ["insert", "update", "delete", "drop", "create", "alter"]):
+            target_tables = [
+                "allowance_master", "main_hospitals", "asset_value_master",
+                "critical_equipment", "facility_details", "di_name_list",
+                "rj_penalties", "assets_inventory_v2", "assets_inventory"
+            ]
+            for t in target_tables:
+                if t.lower() in stmt:
+                    mark_table_modified(t)
+    except Exception:
+        pass
+
+@event.listens_for(Session, "after_commit")
+def session_after_commit(session):
+    try:
+        if hasattr(_modified_tables, "items") and _modified_tables.items:
+            tables_to_sync = list(_modified_tables.items)
+            _modified_tables.items.clear()
+            
+            # Trigger sync in background thread
+            from app.utils.database_sync import run_sync_in_background
+            threading.Thread(target=run_sync_in_background, args=(tables_to_sync,)).start()
+    except Exception as e:
+        logger.warning(f"DB Sync event error: {e}")
+

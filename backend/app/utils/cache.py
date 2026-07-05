@@ -130,9 +130,9 @@ def set(key, value, ttl=None):
     if IS_KV_ENABLED:
         try:
             url = _make_kv_url(key)
-            # Default TTL is 24 hours (86,400 seconds) if not specified
+            # Default TTL is 365 days (31,536,000 seconds) to ensure long-term caching
             if ttl is None:
-                ttl = 86400
+                ttl = 31536000
                 
             if ttl is not None:
                 if ttl < 60:
