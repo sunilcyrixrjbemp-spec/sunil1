@@ -1,5 +1,29 @@
+import os
 from pydantic_settings import BaseSettings
 from typing import Optional, List
+
+# Pre-load Render Secret Files into os.environ so pydantic_settings can read them.
+# Render stores Secret Files at /etc/secrets/<FILENAME>
+_SECRET_DIRS = ["/etc/secrets", "/app"]
+_KV_KEYS = [
+    "CLOUDFLARE_API_TOKEN",
+    "CLOUDFLARE_ACCOUNT_ID",
+    "CLOUDFLARE_DATABASE_ID",
+    "CLOUDFLARE_KV_NAMESPACE_ID",
+    "FORCE_LOCAL_DB",
+    "SECRET_KEY",
+]
+for _key in _KV_KEYS:
+    if not os.environ.get(_key):
+        for _secret_dir in _SECRET_DIRS:
+            _path = os.path.join(_secret_dir, _key)
+            if os.path.exists(_path):
+                try:
+                    with open(_path, "r") as _f:
+                        os.environ[_key] = _f.read().strip()
+                    break
+                except Exception:
+                    pass
 
 class Settings(BaseSettings):
     DATABASE_URL: str = "sqlite:///./test.db"
