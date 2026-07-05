@@ -2,15 +2,19 @@
 DB & KV Operation Monitoring API
 Tracks per-user, per-page DB reads/writes and KV cache hits.
 Admin-only endpoints with date/month/zone/district filtering.
+Also fetches real Cloudflare Analytics (KV + D1) via GraphQL API.
 """
 from fastapi import APIRouter, Depends, Query
 from sqlalchemy.orm import Session
 from sqlalchemy import text
 from datetime import date
+import requests as http_req
+import logging
+
 from app.config.database import get_db
 from app.api.routes.dependencies import get_current_user
 from app.models.user import User
-import logging
+from app.utils.cache import ACCOUNT_ID, API_TOKEN, NAMESPACE_ID, IS_KV_ENABLED
 
 logger = logging.getLogger(__name__)
 router = APIRouter()
@@ -90,6 +94,7 @@ async def get_summary(
     zone:      str = None,
     district:  str = None,
     user_id:   str = None,
+    page_name: str = None,
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user)
 ):
@@ -97,7 +102,7 @@ async def get_summary(
     _ensure_table(db)
     if not date_str and not month_str:
         date_str = date.today().isoformat()
-    where, params = _build_where(date_str, month_str, zone, district, user_id, None, None)
+    where, params = _build_where(date_str, month_str, zone, district, user_id, page_name, None)
     try:
         row = db.execute(text(f"""
             SELECT COALESCE(SUM(db_reads),0), COALESCE(SUM(db_writes),0),
@@ -129,6 +134,7 @@ async def get_user_breakdown(
     month_str: str = Query(None, alias="month"),
     zone:      str = None,
     district:  str = None,
+    page_name: str = None,
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user)
 ):
@@ -136,7 +142,7 @@ async def get_user_breakdown(
     _ensure_table(db)
     if not date_str and not month_str:
         date_str = date.today().isoformat()
-    where, params = _build_where(date_str, month_str, zone, district, None, None, None)
+    where, params = _build_where(date_str, month_str, zone, district, None, page_name, None)
     try:
         rows = db.execute(text(f"""
             SELECT user_id, user_name, user_role, user_zone, user_district,
@@ -187,6 +193,7 @@ async def get_page_breakdown(
 async def get_timeline(
     month_str: str = Query(None, alias="month"),
     zone: str = None, district: str = None, user_id: str = None,
+    page_name: str = None,
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user)
 ):
@@ -194,7 +201,7 @@ async def get_timeline(
     _ensure_table(db)
     if not month_str:
         month_str = date.today().strftime("%Y-%m")
-    where, params = _build_where(None, month_str, zone, district, user_id, None, None)
+    where, params = _build_where(None, month_str, zone, district, user_id, page_name, None)
     try:
         rows = db.execute(text(f"""
             SELECT log_date, SUM(db_reads), SUM(db_writes), SUM(kv_hits)
