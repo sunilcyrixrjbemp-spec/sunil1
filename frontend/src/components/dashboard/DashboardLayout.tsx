@@ -290,10 +290,13 @@ export default function DashboardLayout() {
   } catch (_) {}
 
   // Check if user has permission for menu items based on allowed_windows
+  const isAdmin = ["Admin", "admin", "Super Admin", "super_admin"].includes(userRole);
+
   const allowedMenuItems = MENU_ITEMS.filter((item) => {
     if (isMobileScreen && ["report", "consolidated_report", "mis_report"].includes(item.id.toLowerCase())) {
       return false;
     }
+    if (isAdmin) return true;  // Admin sees all menu items
     if (["home", "profile", "help", "expense"].includes(item.id.toLowerCase())) return true;
     return allowedWindows.includes(item.id.toLowerCase());
   });
@@ -317,6 +320,7 @@ export default function DashboardLayout() {
 
   const hasAccess = 
     !currentActiveItem || 
+    isAdmin ||  // Admin always has full access
     ["home", "profile", "help"].includes(currentActiveItem.id.toLowerCase()) ||
     allowedWindows.includes(currentActiveItem.id.toLowerCase());
   const safeNotifications = Array.isArray(notifications) ? notifications : [];
