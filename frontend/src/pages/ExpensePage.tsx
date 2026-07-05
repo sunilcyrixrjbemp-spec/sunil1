@@ -903,7 +903,8 @@ export default function ExpensePage() {
   };
 
   const fetchClaims = async () => {
-    const cacheKey = `cache_my_expenses_${currentUserId}`;
+    const currentMonth = date ? date.substring(0, 7) : new Date().toISOString().substring(0, 7);
+    const cacheKey = `cache_my_expenses_${currentUserId}_${currentMonth}`;
     const cached = localStorage.getItem(cacheKey);
     if (cached) {
       setClaims(JSON.parse(cached));
@@ -913,7 +914,7 @@ export default function ExpensePage() {
     }
 
     try {
-      const data = await expenseService.getExpenses();
+      const data = await expenseService.getExpenses(currentMonth);
       localStorage.setItem(cacheKey, JSON.stringify(data));
       setClaims(data);
     } catch (err: any) {

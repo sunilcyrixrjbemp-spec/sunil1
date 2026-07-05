@@ -59,19 +59,37 @@ export default function AnalysisPage() {
   const [myExpenses, setMyExpenses] = useState<any[]>(() => {
     const currentUser = authService.getCurrentUser();
     if (!currentUser) return [];
-    const cached = localStorage.getItem(`cache_my_expenses_${currentUser.user_id}`);
+    const savedM = localStorage.getItem("analysis_selectedMonth");
+    const savedY = localStorage.getItem("analysis_selectedYear");
+    const m = savedM !== null ? Number(savedM) : new Date().getMonth();
+    const y = savedY !== null ? Number(savedY) : new Date().getFullYear();
+    const monthStr = String(m + 1).padStart(2, "0");
+    const key = `cache_my_expenses_${currentUser.user_id}_${y}-${monthStr}`;
+    const cached = localStorage.getItem(key);
     return cached ? JSON.parse(cached) : [];
   });
   const [teamExpenses, setTeamExpenses] = useState<any[]>(() => {
     const currentUser = authService.getCurrentUser();
     if (!currentUser) return [];
-    const cached = localStorage.getItem(`cache_team_expenses_${currentUser.user_id}`);
+    const savedM = localStorage.getItem("analysis_selectedMonth");
+    const savedY = localStorage.getItem("analysis_selectedYear");
+    const m = savedM !== null ? Number(savedM) : new Date().getMonth();
+    const y = savedY !== null ? Number(savedY) : new Date().getFullYear();
+    const monthStr = String(m + 1).padStart(2, "0");
+    const key = `cache_team_expenses_${currentUser.user_id}_${y}-${monthStr}`;
+    const cached = localStorage.getItem(key);
     return cached ? JSON.parse(cached) : [];
   });
   const [loading, setLoading] = useState(() => {
     const currentUser = authService.getCurrentUser();
     if (!currentUser) return true;
-    const hasMyCache = !!localStorage.getItem(`cache_my_expenses_${currentUser.user_id}`);
+    const savedM = localStorage.getItem("analysis_selectedMonth");
+    const savedY = localStorage.getItem("analysis_selectedYear");
+    const m = savedM !== null ? Number(savedM) : new Date().getMonth();
+    const y = savedY !== null ? Number(savedY) : new Date().getFullYear();
+    const monthStr = String(m + 1).padStart(2, "0");
+    const key = `cache_my_expenses_${currentUser.user_id}_${y}-${monthStr}`;
+    const hasMyCache = !!localStorage.getItem(key);
     return !hasMyCache;
   });
   const [viewMode, setViewMode] = useState<"my" | "team">(() => {
@@ -145,29 +163,33 @@ export default function AnalysisPage() {
   useEffect(() => {
     const currentUser = authService.getCurrentUser();
     const uId = currentUser?.user_id || "";
+    const monthStr = String(selectedMonth + 1).padStart(2, "0");
+    const monthQueryParam = `${selectedYear}-${monthStr}`;
     
     const fetchData = async () => {
-      const hasCache = uId && localStorage.getItem(`cache_my_expenses_${uId}`);
+      const cacheKeyMy = `cache_my_expenses_${uId}_${monthQueryParam}`;
+      const cacheKeyTeam = `cache_team_expenses_${uId}_${monthQueryParam}`;
+      const hasCache = uId && localStorage.getItem(cacheKeyMy);
       if (!hasCache) {
         setLoading(true);
       }
       try {
         if (isReviewer) {
           const [own, team] = await Promise.all([
-            expenseService.getExpenses(),
-            expenseService.getTeamExpenses()
+            expenseService.getExpenses(monthQueryParam),
+            expenseService.getTeamExpenses(monthQueryParam)
           ]);
           setMyExpenses(own || []);
           setTeamExpenses(team || []);
           if (uId) {
-            localStorage.setItem(`cache_my_expenses_${uId}`, JSON.stringify(own || []));
-            localStorage.setItem(`cache_team_expenses_${uId}`, JSON.stringify(team || []));
+            localStorage.setItem(cacheKeyMy, JSON.stringify(own || []));
+            localStorage.setItem(cacheKeyTeam, JSON.stringify(team || []));
           }
         } else {
-          const own = await expenseService.getExpenses();
+          const own = await expenseService.getExpenses(monthQueryParam);
           setMyExpenses(own || []);
           if (uId) {
-            localStorage.setItem(`cache_my_expenses_${uId}`, JSON.stringify(own || []));
+            localStorage.setItem(cacheKeyMy, JSON.stringify(own || []));
           }
         }
       } catch (err) {
@@ -177,7 +199,7 @@ export default function AnalysisPage() {
       }
     };
     fetchData();
-  }, [isReviewer]);
+  }, [isReviewer, selectedMonth, selectedYear]);
 
   // Filter expenses by selected month/year
   const filterByMonth = (expenses: any[]) => {

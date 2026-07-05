@@ -1582,16 +1582,39 @@ async def get_engineer_month_claims(
 
 @router.get("/")
 async def get_expenses(
+    month: str = None,
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user)
 ):
     from app.utils import cache
-    cache_key = f"user_expenses:{current_user.user_id}"
+    cache_key = f"user_expenses:{current_user.user_id}:{month or 'all'}"
     cached_val = cache.get(cache_key)
     if cached_val is not None:
         return cached_val
 
-    expenses = db.query(Expense).filter(Expense.user_id == current_user.id).order_by(Expense.created_at.desc()).all()
+    query = db.query(Expense).filter(Expense.user_id == current_user.id)
+    
+    if month:
+        if "-" in month and len(month) == 7:
+            try:
+                yr = int(month.split("-")[0])
+                mon_num = int(month.split("-")[1])
+                month_names = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"]
+                mon_name = month_names[mon_num - 1]
+                query = query.filter(Expense.year == yr, Expense.month == mon_name)
+            except Exception:
+                pass
+        else:
+            query = query.filter(Expense.month.ilike(f"%{month}%"))
+    else:
+        # Default to current month/year to minimize reads
+        from datetime import datetime
+        now = datetime.now()
+        month_names = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"]
+        current_month_name = month_names[now.month - 1]
+        query = query.filter(Expense.year == now.year, Expense.month == current_month_name)
+
+    expenses = query.order_by(Expense.created_at.desc()).all()
     
     if not expenses:
         expenses = []
@@ -1760,11 +1783,12 @@ async def get_expenses(
 
 @router.get("/team")
 async def get_team_expenses(
+    month: str = None,
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user)
 ):
     from app.utils import cache
-    cache_key = f"team_expenses:{current_user.user_id}"
+    cache_key = f"team_expenses:{current_user.user_id}:{month or 'all'}"
     cached_val = cache.get(cache_key)
     if cached_val is not None:
         return cached_val
@@ -1825,8 +1849,30 @@ async def get_team_expenses(
     team_user_ids = [u.id for u in team_users if u.id != current_user.id]
     submitters_by_id = {u.id: u for u in team_users}
     
-    # Retrieve all expenses for team members
-    expenses = db.query(Expense).filter(Expense.user_id.in_(team_user_ids)).order_by(Expense.created_at.desc()).all()
+    # Retrieve expenses for team members
+    query = db.query(Expense).filter(Expense.user_id.in_(team_user_ids))
+    
+    if month:
+        if "-" in month and len(month) == 7:
+            try:
+                yr = int(month.split("-")[0])
+                mon_num = int(month.split("-")[1])
+                month_names = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"]
+                mon_name = month_names[mon_num - 1]
+                query = query.filter(Expense.year == yr, Expense.month == mon_name)
+            except Exception:
+                pass
+        else:
+            query = query.filter(Expense.month.ilike(f"%{month}%"))
+    else:
+        # Default to current month/year to minimize reads
+        from datetime import datetime
+        now = datetime.now()
+        month_names = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"]
+        current_month_name = month_names[now.month - 1]
+        query = query.filter(Expense.year == now.year, Expense.month == current_month_name)
+
+    expenses = query.order_by(Expense.created_at.desc()).all()
     if not expenses:
         expenses = []
         

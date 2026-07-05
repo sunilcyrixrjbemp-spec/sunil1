@@ -178,7 +178,7 @@ export default function HomePage() {
         })
         .catch(err => console.error("Error fetching approvals count:", err));
       
-      expenseService.getTeamExpenses()
+      expenseService.getTeamExpenses(selectMonth)
         .then(data => {
           setTeamExpenses(data);
           localStorage.setItem(`cache_team_expenses_${uId}`, JSON.stringify(data));
@@ -187,7 +187,7 @@ export default function HomePage() {
         .finally(() => setLoadingTeamExpenses(false));
     }
 
-    expenseService.getExpenses()
+    expenseService.getExpenses(selectMonth)
       .then(data => {
         setMyExpenses(data);
         localStorage.setItem(`cache_my_expenses_${uId}`, JSON.stringify(data));

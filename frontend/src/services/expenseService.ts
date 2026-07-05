@@ -1,8 +1,9 @@
 import api from "./api";
 
 export const expenseService = {
-  getExpenses: async (): Promise<any[]> => {
-    const response = await api.get("/expense/");
+  getExpenses: async (month?: string): Promise<any[]> => {
+    const qp = month ? `?month=${encodeURIComponent(month)}` : "";
+    const response = await api.get(`/expense/${qp}`);
     return response.data;
   },
 
@@ -30,8 +31,9 @@ export const expenseService = {
     return response.data;
   },
 
-  getTeamExpenses: async (): Promise<any[]> => {
-    const response = await api.get("/expense/team");
+  getTeamExpenses: async (month?: string): Promise<any[]> => {
+    const qp = month ? `?month=${encodeURIComponent(month)}` : "";
+    const response = await api.get(`/expense/team${qp}`);
     return response.data;
   },
 
