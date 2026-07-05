@@ -1502,10 +1502,57 @@ async def get_assets_inventory(
     """Get paginated asset inventory with optional filters. Served from Cloudflare KV cache if available."""
     try:
         from app.utils import cache
+        from app.utils.kv_query import query_kv_table
+        
         cache_key = f"assets_inventory:{zone}:{district}:{hospital}:{di}:{month}:{equipment_status}:{search}:{page}:{page_size}"
         cached = cache.get(cache_key)
         if cached is not None:
             return cached
+
+        # Try fetching using local KV query engine first (zero database reads)
+        kv_filters = {}
+        if district: kv_filters["district_name"] = district
+        if hospital: kv_filters["hospital_name"] = hospital
+        if zone: kv_filters["zone_name"] = zone
+        if di: kv_filters["di_name"] = di
+        if equipment_status: kv_filters["equipment_status"] = equipment_status
+        if month:
+            try:
+                parts = month.split("-")
+                kv_filters["moic_year"] = int(parts[0])
+                kv_filters["moic_month"] = int(parts[1])
+                kv_filters["is_verified"] = 1
+            except Exception:
+                pass
+
+        search_fields = ["equipment_name", "qr_code", "serial_no", "hospital_name"]
+        kv_result = query_kv_table(
+            "assets_inventory",
+            filters=kv_filters,
+            search_fields=search_fields,
+            search_val=search,
+            order_by="id",
+            desc=True,
+            page=page,
+            page_size=page_size
+        )
+        if kv_result is not None:
+            total, assets = kv_result
+            result = {
+                "success": True,
+                "total": total,
+                "page": page,
+                "page_size": page_size,
+                "assets": assets
+            }
+            cache.set(cache_key, result)
+            # Track KV hit
+            try:
+                from app.utils import op_tracker
+                op_tracker.inc_kv_hit()
+            except Exception:
+                pass
+            return result
 
         # Check if table schema has is_verified columns
         try:
@@ -1599,6 +1646,61 @@ async def get_assets_filters(db: Session = Depends(get_db)):
         if cached is not None:
             return cached
 
+        # Try computing filters from KV table rows (zero database reads)
+        from app.utils.kv_query import get_full_table_from_kv
+        kv_rows = get_full_table_from_kv("assets_inventory")
+        if kv_rows is not None:
+            valid_rajasthan_zones = {"Ajmer", "Bikaner", "Jaipur", "Jodhpur", "Kota", "Udaipur", "Bharatpur"}
+            combinations = []
+            zones_set = set()
+            districts_set = set()
+            di_names_set = set()
+            months_set = set()
+            
+            for r in kv_rows:
+                z_clean = str(r.get("zone_name") or "").strip()
+                matched_zone = None
+                for rz in valid_rajasthan_zones:
+                    if rz.lower() in z_clean.lower():
+                        matched_zone = rz
+                        break
+                        
+                if matched_zone:
+                    d_clean = str(r.get("district_name") or "").strip()
+                    di_clean = str(r.get("di_name") or "").strip()
+                    zones_set.add(matched_zone)
+                    if d_clean: districts_set.add(d_clean)
+                    if di_clean: di_names_set.add(di_clean)
+                    combinations.append({
+                        "zone": matched_zone,
+                        "district": d_clean,
+                        "di": di_clean
+                    })
+                
+                if r.get("is_verified") == 1:
+                    y = r.get("moic_year")
+                    m = r.get("moic_month")
+                    if y is not None and m is not None:
+                        months_set.add(f"{y}-{str(m).zfill(2)}")
+            
+            result = {
+                "success": True,
+                "zones": sorted(list(zones_set)),
+                "districts": sorted(list(districts_set)),
+                "di_names": sorted(list(di_names_set)),
+                "months": sorted(list(months_set), reverse=True),
+                "combinations": combinations
+            }
+            cache.set("assets_filters", result)
+            # Track KV hit
+            try:
+                from app.utils import op_tracker
+                op_tracker.inc_kv_hit()
+            except Exception:
+                pass
+            return result
+
+        # Check if table schema has is_verified columns
         try:
             db.execute(text(f"SELECT is_verified FROM {ASSETS_INVENTORY_TABLE} LIMIT 1")).fetchone()
         except Exception:
@@ -1677,6 +1779,51 @@ async def get_assets_stats(
         if cached is not None:
             return cached
 
+        # Try computing stats from KV table rows (zero database reads)
+        from app.utils.kv_query import get_full_table_from_kv
+        kv_rows = get_full_table_from_kv("assets_inventory")
+        if kv_rows is not None:
+            filtered = kv_rows
+            if zone:
+                filtered = [r for r in filtered if r.get("zone_name") == zone]
+            if district:
+                filtered = [r for r in filtered if r.get("district_name") == district]
+            if di:
+                filtered = [r for r in filtered if r.get("di_name") == di]
+            if month:
+                try:
+                    parts = month.split("-")
+                    y, m = int(parts[0]), int(parts[1])
+                    filtered = [
+                        r for r in filtered 
+                        if r.get("is_verified") == 1 and r.get("moic_year") == y and r.get("moic_month") == m
+                    ]
+                except Exception:
+                    pass
+            
+            total_equipment = len(filtered)
+            verified_count = sum(1 for r in filtered if r.get("is_verified") == 1)
+            under_warranty = sum(1 for r in filtered if r.get("warranty_expired") == 0)
+            out_of_warranty = sum(1 for r in filtered if r.get("warranty_expired") == 1)
+            
+            stats_data = {
+                "success": True,
+                "total_equipment": total_equipment,
+                "verified_equipment": verified_count,
+                "under_warranty": under_warranty,
+                "out_of_warranty": out_of_warranty,
+                "charts": {}
+            }
+            cache.set(cache_key, stats_data)
+            # Track KV hit
+            try:
+                from app.utils import op_tracker
+                op_tracker.inc_kv_hit()
+            except Exception:
+                pass
+            return stats_data
+
+        # Check if table schema has is_verified columns
         try:
             db.execute(text(f"SELECT is_verified FROM {ASSETS_INVENTORY_TABLE} LIMIT 1")).fetchone()
         except Exception:
