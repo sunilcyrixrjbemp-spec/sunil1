@@ -98,6 +98,10 @@ def _get_page_name(path: str) -> str:
         return "Month Report"
     if "consolidated" in path_lower:
         return "Consolidated Report"
+    if "gdrive" in path_lower or "upload/file" in path_lower:
+        return "File Viewer"
+    if "notifications" in path_lower:
+        return "Notifications"
 
     # Default lookup in MAP
     for prefix, name in PAGE_MAP.items():
@@ -152,7 +156,7 @@ def _flush_buffer():
             """), row)
         db.commit()
         
-        # Repair any historical logs that have missing names or roles due to the previous token decoding issue
+        # Repair any historical logs that have missing names or roles, or developer page names
         try:
             db.execute(text("""
                 UPDATE db_op_logs 
@@ -161,6 +165,16 @@ def _flush_buffer():
                     user_zone = (SELECT zone FROM users WHERE users.user_id = db_op_logs.user_id),
                     user_district = (SELECT district FROM users WHERE users.user_id = db_op_logs.user_id)
                 WHERE user_name IS NULL OR user_name = '';
+            """))
+            db.execute(text("""
+                UPDATE db_op_logs
+                SET page_name = 'File Viewer'
+                WHERE page_name LIKE '%gdrive%' OR page_name LIKE '%upload/file%' OR endpoint LIKE '%gdrive%' OR endpoint LIKE '%upload/file%';
+            """))
+            db.execute(text("""
+                UPDATE db_op_logs
+                SET page_name = 'Upload Data'
+                WHERE endpoint LIKE '%upload-%' OR endpoint LIKE '%upload_data%' OR page_name LIKE '%Upload%';
             """))
             db.commit()
         except Exception as ex:

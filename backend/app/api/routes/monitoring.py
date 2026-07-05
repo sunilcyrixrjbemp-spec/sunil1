@@ -145,11 +145,32 @@ async def get_user_breakdown(
     where, params = _build_where(date_str, month_str, zone, district, None, page_name, None)
     try:
         rows = db.execute(text(f"""
-            SELECT user_id, user_name, user_role, user_zone, user_district,
-                   SUM(db_reads), SUM(db_writes), SUM(kv_hits), COUNT(*)
-            FROM db_op_logs WHERE {where}
-            GROUP BY user_id, user_name, user_role, user_zone, user_district
-            ORDER BY SUM(db_reads) DESC LIMIT 100
+            SELECT 
+                sub.user_id,
+                COALESCE(NULLIF(u.name, ''), sub.user_name, '—') as user_name,
+                COALESCE(NULLIF(u.role, ''), sub.user_role, '—') as user_role,
+                COALESCE(NULLIF(u.zone, ''), sub.user_zone, '—') as user_zone,
+                COALESCE(NULLIF(u.district, ''), sub.user_district, '—') as user_district,
+                sub.db_reads,
+                sub.db_writes,
+                sub.kv_hits,
+                sub.requests
+            FROM (
+                SELECT user_id, 
+                       MAX(user_name) as user_name, 
+                       MAX(user_role) as user_role, 
+                       MAX(user_zone) as user_zone, 
+                       MAX(user_district) as user_district,
+                       SUM(db_reads) as db_reads, 
+                       SUM(db_writes) as db_writes, 
+                       SUM(kv_hits) as kv_hits, 
+                       COUNT(*) as requests
+                FROM db_op_logs 
+                WHERE {where}
+                GROUP BY user_id
+            ) sub
+            LEFT JOIN users u ON sub.user_id = u.user_id
+            ORDER BY sub.db_reads DESC LIMIT 100
         """), params).fetchall()
         return {"success": True, "users": [
             {"user_id": r[0], "user_name": r[1], "role": r[2], "zone": r[3], "district": r[4],
@@ -158,6 +179,7 @@ async def get_user_breakdown(
             for r in rows
         ]}
     except Exception as e:
+        logger.error(f"monitoring/user-breakdown error: {e}")
         return {"success": False, "message": str(e), "users": []}
 
 
@@ -236,11 +258,28 @@ async def get_logs(
         total = db.execute(text(f"SELECT COUNT(*) FROM db_op_logs WHERE {where}"), params).scalar() or 0
         offset = (page - 1) * page_size
         rows = db.execute(text(f"""
-            SELECT id, user_id, user_name, user_role, user_zone, user_district,
-                   endpoint, page_name, method, op_type,
-                   db_reads, db_writes, kv_hits, log_date, created_at
-            FROM db_op_logs WHERE {where}
-            ORDER BY id DESC LIMIT :lim OFFSET :off
+            SELECT 
+                sub.id, 
+                sub.user_id, 
+                COALESCE(NULLIF(u.name, ''), sub.user_name, '—') as user_name, 
+                COALESCE(NULLIF(u.role, ''), sub.user_role, '—') as user_role, 
+                COALESCE(NULLIF(u.zone, ''), sub.user_zone, '—') as user_zone, 
+                COALESCE(NULLIF(u.district, ''), sub.user_district, '—') as user_district,
+                sub.endpoint, 
+                sub.page_name, 
+                sub.method, 
+                sub.op_type,
+                sub.db_reads, 
+                sub.db_writes, 
+                sub.kv_hits, 
+                sub.log_date, 
+                sub.created_at
+            FROM (
+                SELECT * FROM db_op_logs WHERE {where}
+                ORDER BY id DESC LIMIT :lim OFFSET :off
+            ) sub
+            LEFT JOIN users u ON sub.user_id = u.user_id
+            ORDER BY sub.id DESC
         """), {**params, "lim": page_size, "off": offset}).fetchall()
         cols = ["id","user_id","user_name","role","zone","district",
                 "endpoint","page_name","method","op_type",
@@ -248,6 +287,7 @@ async def get_logs(
         return {"success": True, "total": total, "page": page,
                 "page_size": page_size, "logs": [dict(zip(cols, r)) for r in rows]}
     except Exception as e:
+        logger.error(f"monitoring/logs error: {e}")
         return {"success": False, "message": str(e), "logs": []}
 
 
