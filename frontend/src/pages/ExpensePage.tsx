@@ -3271,9 +3271,9 @@ export default function ExpensePage() {
                                     <button
                                       type="button"
                                       onClick={() => verifyLegBarcode(leg.leg, "Calls")}
-                                      disabled={!leg.calls_barcode || String(leg.calls_barcode).trim().length !== 8}
+                                      disabled={String(leg.calls_barcode || '').replace(/\D/g, '').length !== 8}
                                       className={`h-7 min-h-[28px] px-3 rounded-lg font-black text-[10px] uppercase border-0 flex items-center justify-center transition-all ${
-                                        leg.calls_barcode && String(leg.calls_barcode).trim().length === 8
+                                        String(leg.calls_barcode || '').replace(/\D/g, '').length === 8
                                           ? "bg-emerald-500 text-white cursor-pointer hover:bg-emerald-600 shadow-md shadow-emerald-500/20 active:scale-95"
                                           : "bg-slate-200 text-slate-400 cursor-not-allowed"
                                       }`}
@@ -3477,9 +3477,9 @@ export default function ExpensePage() {
                                     <button
                                       type="button"
                                       onClick={() => verifyLegBarcode(leg.leg, "PMS")}
-                                      disabled={!leg.pms_barcode || String(leg.pms_barcode).trim().length !== 8}
+                                      disabled={String(leg.pms_barcode || '').replace(/\D/g, '').length !== 8}
                                       className={`h-7 min-h-[28px] px-3 rounded-lg font-black text-[10px] uppercase border-0 flex items-center justify-center transition-all ${
-                                        leg.pms_barcode && String(leg.pms_barcode).trim().length === 8
+                                        String(leg.pms_barcode || '').replace(/\D/g, '').length === 8
                                           ? "bg-emerald-500 text-white cursor-pointer hover:bg-emerald-600 shadow-md shadow-emerald-500/20 active:scale-95"
                                           : "bg-slate-200 text-slate-400 cursor-not-allowed"
                                       }`}
