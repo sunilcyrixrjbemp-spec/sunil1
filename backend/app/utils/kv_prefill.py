@@ -28,20 +28,20 @@ logger = logging.getLogger(__name__)
 KV_PAGE_SIZE = 500  # rows per KV page for large tables
 
 
-def _rows_to_dicts(rows, cursor_description):
-    """Convert SQLAlchemy raw rows to list of dicts using cursor description."""
+def _rows_to_dicts(rows, keys):
+    """Convert SQLAlchemy raw rows to list of dicts using column keys."""
     if not rows:
         return []
-    cols = [d[0] for d in cursor_description]
-    return [dict(zip(cols, r)) for r in rows]
+    return [dict(zip(keys, r)) for r in rows]
 
 
-def _store_table_all(db, table_name: str, kv_key: str, order_by: str = "id"):
+def _store_table_all(db, table_name: str, kv_key: str, order_by: str = "rowid"):
     """Fetch ALL rows of a small/medium table and store in a single KV key."""
     try:
         result = db.execute(text(f"SELECT * FROM {table_name} ORDER BY {order_by}"))
+        keys = list(result.keys())
         rows = result.fetchall()
-        data = _rows_to_dicts(rows, result.cursor.description)
+        data = _rows_to_dicts(rows, keys)
         cache.set(kv_key, {"success": True, "rows": data, "count": len(data)})
         logger.info(f"KV Prefill: {table_name} → {kv_key} ({len(data)} rows)")
         return len(data)
@@ -50,7 +50,7 @@ def _store_table_all(db, table_name: str, kv_key: str, order_by: str = "id"):
         return 0
 
 
-def _store_table_paged(db, table_name: str, key_prefix: str, order_by: str = "id"):
+def _store_table_paged(db, table_name: str, key_prefix: str, order_by: str = "rowid"):
     """Fetch ALL rows of a large table in pages and store each page in its own KV key."""
     try:
         total = db.execute(text(f"SELECT COUNT(*) FROM {table_name}")).scalar() or 0
@@ -63,8 +63,9 @@ def _store_table_paged(db, table_name: str, key_prefix: str, order_by: str = "id
                 text(f"SELECT * FROM {table_name} ORDER BY {order_by} LIMIT :lim OFFSET :off"),
                 {"lim": KV_PAGE_SIZE, "off": offset}
             )
+            keys = list(result.keys())
             rows = result.fetchall()
-            data = _rows_to_dicts(rows, result.cursor.description)
+            data = _rows_to_dicts(rows, keys)
             kv_key = f"{key_prefix}:page:{page}"
             cache.set(kv_key, {
                 "success": True,
@@ -103,14 +104,14 @@ def prefill_all_kv(db):
 
     # ─── Small/Medium tables (single KV key each) ─────────────────────────────
 
-    total_rows += _store_table_all(db, "allowance_master",    "table:allowance_master")
-    total_rows += _store_table_all(db, "main_hospitals",      "table:main_hospitals")
-    total_rows += _store_table_all(db, "asset_value_master",  "table:asset_value_master")
-    total_rows += _store_table_all(db, "critical_equipment",  "table:critical_equipment")
+    total_rows += _store_table_all(db, "allowance_master",    "table:allowance_master",   order_by="rowid")
+    total_rows += _store_table_all(db, "main_hospitals",      "table:main_hospitals",     order_by="rowid")
+    total_rows += _store_table_all(db, "asset_value_master",  "table:asset_value_master", order_by="rowid")
+    total_rows += _store_table_all(db, "critical_equipment",  "table:critical_equipment", order_by="rowid")
 
     # facility_details & di_name_list — medium size, stored whole
-    total_rows += _store_table_all(db, "facility_details", "table:facility_details", order_by="id")
-    total_rows += _store_table_all(db, "di_name_list",     "table:di_name_list",     order_by="id")
+    total_rows += _store_table_all(db, "facility_details", "table:facility_details", order_by="rowid")
+    total_rows += _store_table_all(db, "di_name_list",     "table:di_name_list",     order_by="rowid")
 
     # ─── Large tables (paged KV keys) ─────────────────────────────────────────
 
