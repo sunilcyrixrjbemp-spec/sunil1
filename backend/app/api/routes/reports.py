@@ -12,6 +12,107 @@ logger = logging.getLogger(__name__)
 router = APIRouter()
 
 
+def _warm_assets_kv(db):
+    """
+    After any asset data upload, immediately re-fetch the base (unfiltered) data
+    and push it directly to KV so the next request gets fresh data without any DB hit.
+    Filter-specific keys (zone/district/di) are deleted via prefix and will be
+    rebuilt on first access (lazy warm).
+    """
+    try:
+        from app.utils import cache
+        # 1. Always clear filter-specific (parameterized) cached keys
+        cache.clear_prefix("assets_inventory:")
+        cache.clear_prefix("assets_stats:")
+        # assets_filters is a single key - we will immediately overwrite it below
+
+        # 2. Immediately warm assets_filters (single key, always needed)
+        try:
+            valid_rajasthan_zones = {"Ajmer", "Bikaner", "Jaipur", "Jodhpur", "Kota", "Udaipur", "Bharatpur"}
+            comb_rows = db.execute(text(f"""
+                SELECT DISTINCT zone_name, district_name, di_name
+                FROM {ASSETS_INVENTORY_TABLE}
+                WHERE zone_name IS NOT NULL AND zone_name != ''
+            """)).fetchall()
+            zones_set, districts_set, di_names_set, combinations = set(), set(), set(), []
+            for z, d, di in comb_rows:
+                z_clean = str(z or "").strip()
+                matched_zone = next((rz for rz in valid_rajasthan_zones if rz.lower() in z_clean.lower()), None)
+                if matched_zone:
+                    zones_set.add(matched_zone)
+                    districts_set.add(str(d or "").strip())
+                    di_names_set.add(str(di or "").strip())
+                    combinations.append({"zone": matched_zone, "district": str(d or "").strip(), "di": str(di or "").strip()})
+            month_rows = db.execute(text(f"""
+                SELECT DISTINCT moic_year, moic_month FROM {ASSETS_INVENTORY_TABLE}
+                WHERE is_verified = 1 AND moic_year IS NOT NULL AND moic_month IS NOT NULL
+                ORDER BY moic_year DESC, moic_month DESC
+            """)).fetchall()
+            filters_data = {
+                "success": True,
+                "zones": sorted(list(zones_set)),
+                "districts": sorted(list(districts_set)),
+                "di_names": sorted(list(di_names_set)),
+                "months": [f"{r[0]}-{str(r[1]).zfill(2)}" for r in month_rows],
+                "combinations": combinations
+            }
+            cache.set("assets_filters", filters_data)
+            logger.info("KV warm: assets_filters updated.")
+        except Exception as e:
+            logger.warning(f"KV warm: assets_filters failed: {e}")
+
+        # 3. Immediately warm base (unfiltered) assets_stats
+        try:
+            base_stats_key = "assets_stats:None:None:None:None"
+            count_sql = f"SELECT COUNT(*) FROM {ASSETS_INVENTORY_TABLE}"
+            total_equipment = db.execute(text(count_sql)).scalar() or 0
+            verified_count = db.execute(text(f"SELECT COUNT(*) FROM {ASSETS_INVENTORY_TABLE} WHERE is_verified = 1")).scalar() or 0
+            under_warranty = db.execute(text(f"SELECT COUNT(*) FROM {ASSETS_INVENTORY_TABLE} WHERE warranty_expired = 0")).scalar() or 0
+            out_of_warranty = db.execute(text(f"SELECT COUNT(*) FROM {ASSETS_INVENTORY_TABLE} WHERE warranty_expired = 1")).scalar() or 0
+            stats_data = {
+                "success": True,
+                "total_equipment": total_equipment,
+                "verified_equipment": verified_count,
+                "under_warranty": under_warranty,
+                "out_of_warranty": out_of_warranty,
+                "charts": {}
+            }
+            cache.set(base_stats_key, stats_data)
+            logger.info(f"KV warm: assets_stats base key updated with {total_equipment} total records.")
+        except Exception as e:
+            logger.warning(f"KV warm: assets_stats failed: {e}")
+
+        # 4. Warm page 1 of unfiltered asset inventory (most common request)
+        try:
+            base_inv_key = "assets_inventory:None:None:None:None:None:None:None:1:100"
+            rows = db.execute(text(f"SELECT * FROM {ASSETS_INVENTORY_TABLE} ORDER BY id DESC LIMIT 100 OFFSET 0")).fetchall()
+            columns = ["id"] + ASSETS_INVENTORY_COLUMNS + ["uploaded_at"]
+            assets = [{col: (r[i] if i < len(r) else None) for i, col in enumerate(columns)} for r in rows]
+            total = db.execute(text(f"SELECT COUNT(*) FROM {ASSETS_INVENTORY_TABLE}")).scalar() or 0
+            inv_data = {"success": True, "total": total, "page": 1, "page_size": 100, "assets": assets}
+            cache.set(base_inv_key, inv_data)
+            logger.info(f"KV warm: assets_inventory base page 1 updated with {len(assets)} rows.")
+        except Exception as e:
+            logger.warning(f"KV warm: assets_inventory page 1 failed: {e}")
+
+    except Exception as e:
+        logger.error(f"KV warm: _warm_assets_kv failed: {e}")
+
+
+def _warm_mis_kv(db):
+    """
+    After penalty data upload, immediately clear all mis_dashboard filter keys
+    and re-populate the unfiltered base key (zone=None, district=None, etc.) in KV.
+    """
+    try:
+        from app.utils import cache
+        cache.clear_prefix("mis_dashboard:")
+        logger.info("KV warm: mis_dashboard prefix cleared.")
+    except Exception as e:
+        logger.error(f"KV warm: _warm_mis_kv failed: {e}")
+
+
+
 def _bulk_insert(db, table_name: str, columns: list[str], records: list[dict]):
     """Insert records in multi-row batches using highly optimized parameter bindings."""
     if not records:
@@ -690,8 +791,7 @@ async def upload_excel_penalties(
             _bulk_insert(db, "rj_penalties", list(records[0].keys()), records)
             
         os.unlink(tmp_path)
-        from app.utils import cache
-        cache.clear_prefix("mis_dashboard:")
+        _warm_mis_kv(db)
         return {
             "success": True,
             "message": f"Successfully parsed and synced {row_count} rows of Rajasthan Penalty Cyrix logs."
@@ -748,8 +848,7 @@ async def upload_penalties_chunk(
             columns = list(rows[0].keys())
             _bulk_insert(db, "rj_penalties", columns, rows)
         
-        from app.utils import cache
-        cache.clear_prefix("mis_dashboard:")
+        _warm_mis_kv(db)
         return {
             "success": True,
             "message": f"Inserted {len(rows)} rows. clear_first={clear_first}"
@@ -1210,12 +1309,8 @@ async def upload_assets_chunk(
         db.execute(text(f"CREATE INDEX IF NOT EXISTS idx_assets_inv_di ON {ASSETS_INVENTORY_TABLE}(di_name)"))
         db.commit()
 
-        # Invalidate all asset KV cache keys after new data upload
-        from app.utils import cache as _cache_mod
-        _cache_mod.clear_prefix("assets_inventory:")
-        _cache_mod.clear_prefix("assets_filters")
-        _cache_mod.clear_prefix("assets_stats:")
-        logger.info("KV cache invalidated for assets after chunk upload.")
+        # Warm KV: immediately update base keys and clear filter-specific keys
+        _warm_assets_kv(db)
 
         return {
             "success": True,
@@ -1271,12 +1366,8 @@ async def upload_assets_bulk(
         db.execute(text(f"CREATE INDEX IF NOT EXISTS idx_assets_inv_di ON {ASSETS_INVENTORY_TABLE}(di_name)"))
         db.commit()
 
-        # Invalidate all asset KV cache keys after new data upload
-        from app.utils import cache as _cache_mod
-        _cache_mod.clear_prefix("assets_inventory:")
-        _cache_mod.clear_prefix("assets_filters")
-        _cache_mod.clear_prefix("assets_stats:")
-        logger.info("KV cache invalidated for assets after bulk upload.")
+        # Warm KV: immediately update base keys and clear filter-specific keys
+        _warm_assets_kv(db)
 
         elapsed_ms = (time.perf_counter() - start_time) * 1000
 
@@ -1373,12 +1464,8 @@ async def upload_assets_csv(
         db.execute(text(f"CREATE INDEX IF NOT EXISTS idx_assets_inv_di ON {ASSETS_INVENTORY_TABLE}(di_name)"))
         db.commit()
 
-        # Invalidate all asset KV cache keys after CSV upload
-        from app.utils import cache as _cache_mod
-        _cache_mod.clear_prefix("assets_inventory:")
-        _cache_mod.clear_prefix("assets_filters")
-        _cache_mod.clear_prefix("assets_stats:")
-        logger.info("KV cache invalidated for assets after CSV upload.")
+        # Warm KV: immediately update base keys and clear filter-specific keys
+        _warm_assets_kv(db)
 
         elapsed_ms = (time.perf_counter() - start_time) * 1000
 
