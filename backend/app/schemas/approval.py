@@ -11,6 +11,7 @@ class ItineraryLegEdit(BaseModel):
     distance_km: Optional[float] = None
     da_amount: Optional[float] = None
     local_purchase: Optional[float] = None
+    remarks: Optional[dict] = None
 
 class ApprovalActionRequest(BaseModel):
     comments: Optional[str] = ""

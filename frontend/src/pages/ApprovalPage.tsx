@@ -228,7 +228,8 @@ export default function ApprovalPage() {
             ws_assigned: leg.ws_assigned,
             ws_closed: leg.ws_closed,
             ws_pms: leg.ws_pms,
-            ws_asset: leg.ws_asset
+            ws_asset: leg.ws_asset,
+            remarks: {}
           }))
         );
       }
@@ -322,6 +323,39 @@ export default function ApprovalPage() {
     setActionType(type);
     setActionLoading(true);
     try {
+      // Validate that every modified field has a corresponding remark
+      if (selectedApproval.category !== "Limit Request") {
+        for (let i = 0; i < editedLegs.length; i++) {
+          const leg = editedLegs[i];
+          const originalLeg = expenseDetails?.itineraries?.[i] || {};
+          
+          const checks = [
+            { field: "distance_km", name: "Distance KM", current: leg.km, original: originalLeg.km || 0 },
+            { field: "travel_amount", name: "Travel Amount", current: leg.travel_amount, original: originalLeg.amount || 0 },
+            { field: "sub_amount", name: "Local Conveyance", current: leg.sub_amount, original: originalLeg.sub_amount || 0 },
+            { field: "hotel_amount", name: "Hotel stay", current: leg.hotel_amount, original: originalLeg.hotel || 0 },
+            { field: "local_purchase", name: "Local Purchase", current: leg.local_purchase, original: originalLeg.local_purchase || 0 },
+            { field: "other_amount", name: "Other / Misc", current: leg.other_amount, original: originalLeg.oth_amount || 0 },
+            { field: "da_amount", name: "DA Amount", current: leg.da, original: originalLeg.da || 0 }
+          ];
+
+          for (const check of checks) {
+            // If Bike/Car is active, only require distance_km remark, skip travel_amount remark
+            if (check.field === "travel_amount" && ["Bike", "Car"].includes(leg.mode)) {
+              continue;
+            }
+            if (check.current !== check.original) {
+              const rMark = leg.remarks?.[check.field] || "";
+              if (!rMark.trim()) {
+                toast.error(`Leg ${leg.leg}: Please enter a reason/remark for modifying ${check.name}.`);
+                setActionLoading(false);
+                return;
+              }
+            }
+          }
+        }
+      }
+
       const itineraryEdits = editedLegs.map(leg => ({
         leg_number: leg.leg,
         travel_amount: leg.travel_amount,
@@ -330,7 +364,8 @@ export default function ApprovalPage() {
         other_amount: leg.other_amount,
         distance_km: leg.km,
         da_amount: leg.da,
-        local_purchase: leg.local_purchase
+        local_purchase: leg.local_purchase,
+        remarks: leg.remarks || {}
       }));
 
       if (selectedApproval.category === "Limit Request") {
@@ -365,6 +400,40 @@ export default function ApprovalPage() {
     } finally {
       setActionLoading(false);
     }
+  };
+
+  const renderEditRemarkInput = (index: number, field: string, originalVal: any, currentVal: any) => {
+    const isModified = currentVal !== originalVal;
+    if (!isModified) return null;
+    
+    const leg = editedLegs[index];
+    if (!leg) return null;
+    const remarkVal = leg.remarks?.[field] || "";
+    
+    return (
+      <div className="mt-1">
+        <input
+          type="text"
+          value={remarkVal}
+          onChange={(e) => {
+            const val = e.target.value;
+            setEditedLegs(prev => {
+              const updated = [...prev];
+              updated[index] = {
+                ...updated[index],
+                remarks: {
+                  ...updated[index].remarks,
+                  [field]: val
+                }
+              };
+              return updated;
+            });
+          }}
+          placeholder="Remark/Reason for edit *"
+          className="w-full text-[10px] px-1.5 py-0.5 border border-amber-300 bg-amber-50/20 rounded font-semibold text-amber-800 placeholder-amber-400 focus:outline-none focus:ring-1 focus:ring-amber-400"
+        />
+      </div>
+    );
   };
 
   // Checkbox functions
@@ -1251,6 +1320,7 @@ export default function ApprovalPage() {
                                         onChange={(e) => handleLegAmountChange(index, "da", e.target.value)}
                                         className="input-lte pl-5 pr-1 py-0.5 text-xs font-bold w-20 h-6 border-amber-300 bg-amber-50/10"
                                       />
+                                      {renderEditRemarkInput(index, "da_amount", originalLeg.da || 0, leg.da)}
                                     </div>
                                   ) : (
                                     <span className="font-bold text-gray-800">₹{(Number(leg.da) || 0).toLocaleString()}</span>
@@ -1292,6 +1362,7 @@ export default function ApprovalPage() {
                                         onChange={(e) => handleLegAmountChange(index, "km", e.target.value)}
                                         className={`input-lte px-2 py-1.5 text-xs font-bold ${leg.km !== (originalLeg.km || 0) ? "border-amber-450 bg-amber-50/10" : ""}`}
                                       />
+                                      {renderEditRemarkInput(index, "distance_km", originalLeg.km || 0, leg.km)}
                                     </div>
                                     <span className="text-[9px] text-gray-500 block font-semibold">Amt: ₹{leg.travel_amount} (Orig: {originalLeg.km || 0} KM)</span>
                                     {travelReceiptUrl && (
@@ -1318,6 +1389,7 @@ export default function ApprovalPage() {
                                         onChange={(e) => handleLegAmountChange(index, "travel_amount", e.target.value)}
                                         className={`input-lte pl-6 pr-2 py-1.5 text-xs font-bold ${travelModified ? "border-amber-450 bg-amber-50/10" : ""}`}
                                       />
+                                      {renderEditRemarkInput(index, "travel_amount", originalLeg.amount || 0, leg.travel_amount)}
                                     </div>
                                     <span className="text-[9px] text-gray-455 block font-semibold">Original: ₹{originalLeg.amount || 0}</span>
                                     {travelReceiptUrl && (
@@ -1347,6 +1419,7 @@ export default function ApprovalPage() {
                                       className={`input-lte pl-6 pr-2 py-1.5 text-xs font-bold ${subModified ? "border-amber-450 bg-amber-50/10" : ""}`}
                                       disabled={!leg.sub_mode}
                                     />
+                                    {renderEditRemarkInput(index, "sub_amount", originalLeg.sub_amount || 0, leg.sub_amount)}
                                   </div>
                                   <span className="text-[9px] text-gray-455 block font-semibold">Original: ₹{originalLeg.sub_amount || 0}</span>
                                   {subReceiptUrl && (
@@ -1374,6 +1447,7 @@ export default function ApprovalPage() {
                                       onChange={(e) => handleLegAmountChange(index, "hotel_amount", e.target.value)}
                                       className={`input-lte pl-6 pr-2 py-1.5 text-xs font-bold ${hotelModified ? "border-amber-450 bg-amber-50/10" : ""}`}
                                     />
+                                    {renderEditRemarkInput(index, "hotel_amount", originalLeg.hotel || 0, leg.hotel_amount)}
                                   </div>
                                   <span className="text-[9px] text-gray-455 block font-semibold">Original: ₹{originalLeg.hotel || 0}</span>
                                   {hotelReceiptUrl && (
@@ -1410,6 +1484,7 @@ export default function ApprovalPage() {
                                       onChange={(e) => handleLegAmountChange(index, "local_purchase", e.target.value)}
                                       className={`input-lte pl-6 pr-2 py-1.5 text-xs font-bold ${lpModified ? "border-amber-450 bg-amber-50/10" : ""}`}
                                     />
+                                    {renderEditRemarkInput(index, "local_purchase", originalLeg.local_purchase || 0, leg.local_purchase)}
                                   </div>
                                   <span className="text-[9px] text-gray-455 block font-semibold">Original: ₹{originalLeg.local_purchase || 0}</span>
                                   {lpReceiptUrl && (
@@ -1437,6 +1512,7 @@ export default function ApprovalPage() {
                                       onChange={(e) => handleLegAmountChange(index, "other_amount", e.target.value)}
                                       className={`input-lte pl-6 pr-2 py-1.5 text-xs font-bold ${otherModified ? "border-amber-450 bg-amber-50/10" : ""}`}
                                     />
+                                    {renderEditRemarkInput(index, "other_amount", originalLeg.oth_amount || 0, leg.other_amount)}
                                   </div>
                                   <span className="text-[9px] text-gray-455 block font-semibold truncate" title={leg.oth_desc || "No Description"}>
                                     Orig: ₹{originalLeg.oth_amount || 0} ({leg.oth_desc || "Other"})
@@ -1891,9 +1967,10 @@ export default function ApprovalPage() {
                               const cleanField = log.field_name === "travel_amount" ? "Travel Amount"
                                 : log.field_name === "sub_amount" ? "Local Conveyance"
                                 : log.field_name === "hotel_amount" ? "Hotel stay"
-                                : log.field_name === "other_amount" ? "Local purchase"
+                                : log.field_name === "other_amount" ? "Other / Misc"
                                 : log.field_name === "distance_km" ? "Distance KM"
                                 : log.field_name === "da_amount" ? "DA Amount"
+                                : log.field_name === "local_purchase" ? "Local Purchase"
                                 : log.field_name;
                               return (
                                 <tr key={logIdx} className="hover:bg-amber-50/10 text-slate-700">

@@ -975,14 +975,21 @@ export default function ExpensePage() {
       return;
     }
 
-    // Cross-leg duplicate barcode check: same barcode cannot be used in any other leg's calls_list, pms_list, or assets_list for same day
+    // Cross-leg duplicate barcode check
     for (const otherLeg of itineraries) {
       if (otherLeg.leg === legNum) continue;
-      const otherCallsBarcodes = (otherLeg.calls_list || []).map(item => item.barcode);
-      const otherPmsBarcodes = (otherLeg.pms_list || []).map(item => item.barcode);
-      if (otherCallsBarcodes.includes(barcode) || otherPmsBarcodes.includes(barcode)) {
-        toast.error(`This barcode (${barcode}) has already been used in Leg ${otherLeg.leg}. Same barcode cannot be used twice in a single day.`);
-        return;
+      if (activityType === "Calls") {
+        const otherCallsBarcodes = (otherLeg.calls_list || []).map(item => item.barcode);
+        if (otherCallsBarcodes.includes(barcode)) {
+          toast.error(`This barcode (${barcode}) has already been used in Leg ${otherLeg.leg} Calls. Same barcode cannot be repeated in Calls on the same day.`);
+          return;
+        }
+      } else {
+        const otherPmsBarcodes = (otherLeg.pms_list || []).map(item => item.barcode);
+        if (otherPmsBarcodes.includes(barcode)) {
+          toast.error(`This barcode (${barcode}) has already been used in Leg ${otherLeg.leg} PMS. Same barcode cannot be repeated in PMS on the same day.`);
+          return;
+        }
       }
     }
 
@@ -3114,11 +3121,11 @@ export default function ExpensePage() {
                                       type="button"
                                       onClick={() => verifyLegBarcode(leg.leg, "Calls")}
                                       disabled={!leg.calls_barcode || leg.calls_barcode.length !== 8}
-                                      className={`px-2 h-7 rounded border-0 cursor-pointer text-[10px] font-black shrink-0 transition-all ${
+                                      className={
                                         leg.calls_barcode && leg.calls_barcode.length === 8
-                                          ? "bg-green-600 hover:bg-green-700 text-white shadow-sm"
-                                          : "bg-gray-200 text-gray-400 cursor-not-allowed"
-                                      }`}
+                                          ? "btn-verify-highlighted"
+                                          : "btn-verify-normal-disabled"
+                                      }
                                     >
                                       Verify
                                     </button>
@@ -3318,11 +3325,11 @@ export default function ExpensePage() {
                                       type="button"
                                       onClick={() => verifyLegBarcode(leg.leg, "PMS")}
                                       disabled={!leg.pms_barcode || leg.pms_barcode.length !== 8}
-                                      className={`px-2 h-7 rounded border-0 cursor-pointer text-[10px] font-black shrink-0 transition-all ${
+                                      className={
                                         leg.pms_barcode && leg.pms_barcode.length === 8
-                                          ? "bg-green-600 hover:bg-green-700 text-white shadow-sm"
-                                          : "bg-gray-200 text-gray-400 cursor-not-allowed"
-                                      }`}
+                                          ? "btn-verify-highlighted"
+                                          : "btn-verify-normal-disabled"
+                                      }
                                     >
                                       Verify
                                     </button>
@@ -4997,9 +5004,10 @@ export default function ExpensePage() {
                               const cleanField = log.field_name === "travel_amount" ? "Travel Amount"
                                 : log.field_name === "sub_amount" ? "Local Conveyance"
                                 : log.field_name === "hotel_amount" ? "Hotel stay"
-                                : log.field_name === "other_amount" ? "Local purchase"
+                                : log.field_name === "other_amount" ? "Other / Misc"
                                 : log.field_name === "distance_km" ? "Distance KM"
                                 : log.field_name === "da_amount" ? "DA Amount"
+                                : log.field_name === "local_purchase" ? "Local Purchase"
                                 : log.field_name;
                               return (
                                 <tr key={logIdx} className="hover:bg-amber-50/10 text-slate-700 bg-white">

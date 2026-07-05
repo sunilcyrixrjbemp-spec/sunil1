@@ -89,6 +89,42 @@ select.input-lte option {
   @apply w-full bg-white border border-gray-300 rounded pl-11 pr-3 py-2 text-xs text-gray-800 placeholder-gray-400 focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500/50 transition-all;
 }
 
+/* Custom Verify Button Highlights */
+.btn-verify-highlighted {
+  background-color: #10b981 !important;
+  color: #ffffff !important;
+  border-radius: 6px !important;
+  min-height: 28px !important;
+  height: 28px !important;
+  padding: 0 12px !important;
+  font-weight: 900 !important;
+  font-size: 10px !important;
+  cursor: pointer !important;
+  box-shadow: 0 2px 4px rgba(16, 185, 129, 0.2) !important;
+  border: none !important;
+  text-transform: uppercase !important;
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+}
+
+.btn-verify-normal-disabled {
+  background-color: #e2e8f0 !important;
+  color: #94a3b8 !important;
+  border-radius: 6px !important;
+  min-height: 28px !important;
+  height: 28px !important;
+  padding: 0 12px !important;
+  font-weight: 900 !important;
+  font-size: 10px !important;
+  cursor: not-allowed !important;
+  border: none !important;
+  text-transform: uppercase !important;
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+}
+
 .label-lte {
   @apply text-xs font-bold text-gray-700 block mb-1.5;
 }

@@ -1923,9 +1923,10 @@ export default function HomePage() {
                               const cleanField = log.field_name === "travel_amount" ? "Travel Amount"
                                 : log.field_name === "sub_amount" ? "Local Conveyance"
                                 : log.field_name === "hotel_amount" ? "Hotel stay"
-                                : log.field_name === "other_amount" ? "Local purchase"
+                                : log.field_name === "other_amount" ? "Other / Misc"
                                 : log.field_name === "distance_km" ? "Distance KM"
                                 : log.field_name === "da_amount" ? "DA Amount"
+                                : log.field_name === "local_purchase" ? "Local Purchase"
                                 : log.field_name;
                               return (
                                 <tr key={logIdx} className="hover:bg-amber-50/10 text-slate-700 bg-white">

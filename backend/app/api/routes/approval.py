@@ -44,6 +44,16 @@ def apply_itinerary_edits_and_log(db: Session, expense: Expense, itinerary_edits
             ExpenseItinerary.leg_number == edit.leg_number
         ).first()
         if leg:
+            # Check if distance_km has changed
+            is_km_modified = False
+            if edit.distance_km is not None:
+                old_km = getattr(leg, "distance_km") or 0.0
+                try:
+                    if round(float(old_km), 2) != round(float(edit.distance_km), 2):
+                        is_km_modified = True
+                except Exception:
+                    pass
+
             fields_to_check = [
                 ("travel_amount", edit.travel_amount),
                 ("sub_amount", edit.sub_amount),
@@ -55,38 +65,62 @@ def apply_itinerary_edits_and_log(db: Session, expense: Expense, itinerary_edits
             ]
             for field, new_val in fields_to_check:
                 if new_val is not None:
+                    # Skip logging travel_amount if distance_km is modified on Bike/Car (secondary auto-change)
+                    skip_log = False
+                    if field == "travel_amount" and is_km_modified and (leg.travel_mode or "").strip().lower() in ["bike", "car"]:
+                        skip_log = True
+
                     old_val = getattr(leg, field) or 0.0
                     try:
                         # Float comparisons
                         if round(float(old_val), 2) != round(float(new_val), 2):
-                            log_rec = ExpenseEditLog(
-                                expense_id=expense.id,
-                                editor_id=current_user.id,
-                                editor_name=current_user.name,
-                                editor_role=current_user.role,
-                                leg_number=leg.leg_number,
-                                field_name=field,
-                                old_value=str(old_val),
-                                new_value=str(new_val),
-                                comment=comments or "Adjusted during approval"
-                            )
-                            db.add(log_rec)
+                            if not skip_log:
+                                # Get specific remark for this field from client
+                                field_remark = None
+                                if hasattr(edit, "remarks") and isinstance(edit.remarks, dict):
+                                    field_remark = edit.remarks.get(field)
+                                    # Fallback mapping mapping: frontend da_amount is da
+                                    if not field_remark and field == "da_amount":
+                                        field_remark = edit.remarks.get("da") or edit.remarks.get("da_amount")
+                                    elif not field_remark and field == "distance_km":
+                                        field_remark = edit.remarks.get("km") or edit.remarks.get("distance_km")
+
+                                log_rec = ExpenseEditLog(
+                                    expense_id=expense.id,
+                                    editor_id=current_user.id,
+                                    editor_name=current_user.name,
+                                    editor_role=current_user.role,
+                                    leg_number=leg.leg_number,
+                                    field_name=field,
+                                    old_value=str(old_val),
+                                    new_value=str(new_val),
+                                    comment=field_remark or comments or "Adjusted during approval"
+                                )
+                                db.add(log_rec)
                             setattr(leg, field, new_val)
                     except Exception:
-                        # Fallback for non-numeric field changes
                         if str(old_val) != str(new_val):
-                            log_rec = ExpenseEditLog(
-                                expense_id=expense.id,
-                                editor_id=current_user.id,
-                                editor_name=current_user.name,
-                                editor_role=current_user.role,
-                                leg_number=leg.leg_number,
-                                field_name=field,
-                                old_value=str(old_val),
-                                new_value=str(new_val),
-                                comment=comments or "Adjusted during approval"
-                            )
-                            db.add(log_rec)
+                            if not skip_log:
+                                field_remark = None
+                                if hasattr(edit, "remarks") and isinstance(edit.remarks, dict):
+                                    field_remark = edit.remarks.get(field)
+                                    if not field_remark and field == "da_amount":
+                                        field_remark = edit.remarks.get("da") or edit.remarks.get("da_amount")
+                                    elif not field_remark and field == "distance_km":
+                                        field_remark = edit.remarks.get("km") or edit.remarks.get("distance_km")
+
+                                log_rec = ExpenseEditLog(
+                                    expense_id=expense.id,
+                                    editor_id=current_user.id,
+                                    editor_name=current_user.name,
+                                    editor_role=current_user.role,
+                                    leg_number=leg.leg_number,
+                                    field_name=field,
+                                    old_value=str(old_val),
+                                    new_value=str(new_val),
+                                    comment=field_remark or comments or "Adjusted during approval"
+                                )
+                                db.add(log_rec)
                             setattr(leg, field, new_val)
     db.flush()
 
