@@ -226,3 +226,13 @@ app.include_router(notification.router, prefix="/api/notifications", tags=["noti
 @app.get("/api/health")
 def health_check():
     return {"status": "ok", "message": "API is running", "version": "v1.0.3-clean-pem"}
+
+@app.get("/api/test-kv")
+def test_kv_check():
+    from app.utils import cache
+    return {
+        "kv_enabled": cache.IS_KV_ENABLED,
+        "kv_namespace": bool(cache.NAMESPACE_ID),
+        "has_token": bool(cache.API_TOKEN),
+        "has_account": bool(cache.ACCOUNT_ID)
+    }
