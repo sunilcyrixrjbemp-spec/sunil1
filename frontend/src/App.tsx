@@ -25,6 +25,7 @@ const NotificationsPage = lazy(() => import("./pages/NotificationsPage"));
 const HelpPage = lazy(() => import("./pages/HelpPage"));
 const ProfilePage = lazy(() => import("./pages/ProfilePage"));
 const AdminPage = lazy(() => import("./pages/AdminPage"));
+const DBMonitoringPage = lazy(() => import("./pages/DBMonitoringPage"));
 const NotFoundPage = lazy(() => import("./pages/NotFoundPage"));
 
 function PageLoader() {
@@ -206,6 +207,7 @@ function App() {
                 <Route path="/help-center" element={<HelpPage />} />
                 <Route path="/profile" element={<ProfilePage />} />
                 <Route path="/admin" element={<AdminPage />} />
+                <Route path="/db-monitor" element={<DBMonitoringPage />} />
                 <Route path="/not-found" element={<NotFoundPage />} />
               </Route>
             </Route>

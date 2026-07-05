@@ -92,9 +92,15 @@ def get(key):
                 try:
                     val = json.loads(res.text)
                 except Exception:
-                    # Fallback for plain strings if json.loads fails
                     val = res.text
                 
+                # Track KV hit in per-request op_tracker
+                try:
+                    from app.utils import op_tracker
+                    op_tracker.inc_kv_hit()
+                except Exception:
+                    pass
+
                 # Store in RAM cache to avoid constant HTTP calls (only for non-transactional)
                 if not is_transactional:
                     _cache[key] = val

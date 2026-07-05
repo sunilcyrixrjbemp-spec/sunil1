@@ -15,7 +15,8 @@ import os
 
 from app.config.database import engine, Base, SessionLocal
 from app.config.seed import seed_admin_user, seed_approval_levels, run_schema_updates, seed_allowance_master, seed_facility_details
-from app.api.routes import auth, expense, dashboard, approval, admin, upload, reports, users, ticket, notification
+from app.api.routes import auth, expense, dashboard, approval, admin, upload, reports, users, ticket, notification, monitoring
+from app.middleware.op_logging import DBOpLoggingMiddleware
 import app.models
 
 
@@ -76,6 +77,7 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+app.add_middleware(DBOpLoggingMiddleware)
 
 from fastapi import Request
 from fastapi.responses import JSONResponse
@@ -222,6 +224,7 @@ app.include_router(reports.router, prefix="/api/reports", tags=["reports"])
 app.include_router(users.router, prefix="/api/users", tags=["users"])
 app.include_router(ticket.router, prefix="/api/ticket", tags=["ticket"])
 app.include_router(notification.router, prefix="/api/notifications", tags=["notifications"])
+app.include_router(monitoring.router, prefix="/api/monitoring", tags=["monitoring"])
 
 @app.get("/api/health")
 def health_check():
