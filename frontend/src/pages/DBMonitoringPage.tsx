@@ -117,6 +117,11 @@ export default function DBMonitoringPage() {
   const [sortAsc,     setSortAsc]     = useState(false);
   const intervalRef = useRef<ReturnType<typeof setInterval>|null>(null);
 
+  // Cloudflare Official API Stats state
+  const [cfOfficial,  setCfOfficial]  = useState<any>(null);
+  const [cfError,     setCfError]     = useState<string | null>(null);
+  const [cfSuggestion,setCfSuggestion]= useState<string | null>(null);
+
   const buildQS = useCallback((extra: Record<string,string> = {}) => {
     const p: Record<string,string> = {};
     if (activeFilter === "date") p.date = filterDate; else p.month = filterMonth;
@@ -145,12 +150,13 @@ export default function DBMonitoringPage() {
       
       const logsQS= buildQS({ page: String(logPage), page_size: "30" });
       
-      const [s, u, p, t, l] = await Promise.all([
+      const [s, u, p, t, l, cf] = await Promise.all([
         fetch(`${BASE}/api/monitoring/summary?${qs}`, { headers: getHeaders() }).then(r => r.json()),
         fetch(`${BASE}/api/monitoring/user-breakdown?${qs}`, { headers: getHeaders() }).then(r => r.json()),
         fetch(`${BASE}/api/monitoring/page-breakdown?${qs}`, { headers: getHeaders() }).then(r => r.json()),
         fetch(`${BASE}/api/monitoring/timeline?${tlQS}`, { headers: getHeaders() }).then(r => r.json()),
         fetch(`${BASE}/api/monitoring/logs?${logsQS}`, { headers: getHeaders() }).then(r => r.json()),
+        fetch(`${BASE}/api/monitoring/cloudflare-official`, { headers: getHeaders() }).then(r => r.json()).catch(() => ({ success: false, message: "Network error" })),
       ]);
       
       if (s.success) setSummary(s);
@@ -158,6 +164,16 @@ export default function DBMonitoringPage() {
       setPages(p.pages || []);
       setTimeline(t.timeline || []);
       setLogs(l.logs || []);
+
+      if (cf.success) {
+        setCfOfficial(cf);
+        setCfError(null);
+        setCfSuggestion(null);
+      } else {
+        setCfOfficial(null);
+        setCfError(cf.message);
+        setCfSuggestion(cf.suggestion || null);
+      }
       setLogsTotal(l.total || 0);
       setLastUpdated(new Date().toLocaleTimeString("en-IN"));
     } catch (e) { console.error(e); }
@@ -389,6 +405,63 @@ export default function DBMonitoringPage() {
           )}
           <p className="text-[9px] text-slate-400 mt-1">reads avoided on DB</p>
         </div>
+      </div>
+
+      {/* ── Official Cloudflare Edge Meter (Direct CF Billing Stats) ── */}
+      <div className="bg-white border border-gray-200 rounded-2xl p-5 shadow-sm">
+        <h3 className="text-xs font-black uppercase tracking-wider text-slate-700 mb-3.5 flex items-center gap-2">
+          <span className="w-5 h-5 rounded-md bg-blue-50 text-blue-600 flex items-center justify-center text-xs">☁️</span>
+          Official Cloudflare Edge Meter (Server-Side Billing Stats)
+        </h3>
+        {loading ? (
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+            <Skeleton h="h-16"/><Skeleton h="h-16"/><Skeleton h="h-16"/><Skeleton h="h-16"/>
+          </div>
+        ) : cfError ? (
+          <div className="p-4.5 bg-amber-50 border border-amber-200/70 rounded-xl text-xs text-amber-900 leading-relaxed font-sans shadow-inner">
+            <div className="flex items-center gap-2 mb-1.5">
+              <span className="text-lg">⚠️</span>
+              <p className="font-extrabold text-amber-800 uppercase tracking-wide">Cloudflare API Analytics Permission Missing</p>
+            </div>
+            <p>Cloudflare API returned error: <code className="bg-amber-100/80 px-1 rounded font-mono text-[11px] font-bold">{cfError}</code></p>
+            {cfSuggestion && (
+              <div className="mt-3 p-3 bg-white/80 border border-amber-200 rounded-lg text-slate-700">
+                <span className="font-extrabold text-blue-700 block mb-1">🔧 How to enable this view:</span>
+                <ol className="list-decimal list-inside space-y-1 text-[11px]">
+                  <li>Go to your Cloudflare Dashboard &gt; My Profile &gt; <strong>API Tokens</strong>.</li>
+                  <li>Click <strong>Edit</strong> on the token used in your application (<code className="bg-slate-100 px-1 rounded font-mono">CLOUDFLARE_API_TOKEN</code>).</li>
+                  <li>Add permission: <strong>Account</strong> &gt; <strong>Analytics</strong> &gt; <strong>Read</strong>.</li>
+                  <li>Save changes. The system will start loading official CF statistics instantly.</li>
+                </ol>
+              </div>
+            )}
+          </div>
+        ) : cfOfficial ? (
+          <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+            <div className="bg-slate-50 border border-slate-200/50 rounded-xl p-3">
+              <p className="text-[10px] text-slate-400 font-bold uppercase tracking-wider">Official KV Reads</p>
+              <p className="text-lg font-black text-slate-800 mt-1">{(cfOfficial.kv_reads || 0).toLocaleString()}</p>
+              <p className="text-[9px] text-slate-400 mt-0.5">official namespace read actions today</p>
+            </div>
+            <div className="bg-slate-50 border border-slate-200/50 rounded-xl p-3">
+              <p className="text-[10px] text-slate-400 font-bold uppercase tracking-wider">Official KV Writes</p>
+              <p className="text-lg font-black text-slate-800 mt-1">{(cfOfficial.kv_writes || 0).toLocaleString()}</p>
+              <p className="text-[9px] text-slate-400 mt-0.5">official namespace write actions today</p>
+            </div>
+            <div className="bg-slate-50 border border-slate-200/50 rounded-xl p-3">
+              <p className="text-[10px] text-slate-400 font-bold uppercase tracking-wider">Official D1 Database Reads</p>
+              <p className="text-lg font-black text-slate-800 mt-1">{(cfOfficial.d1_reads || 0).toLocaleString()}</p>
+              <p className="text-[9px] text-slate-400 mt-0.5">official executed queries today</p>
+            </div>
+            <div className="bg-slate-50 border border-slate-200/50 rounded-xl p-3">
+              <p className="text-[10px] text-slate-400 font-bold uppercase tracking-wider">Official D1 Database Writes</p>
+              <p className="text-lg font-black text-slate-800 mt-1">{(cfOfficial.d1_writes || 0).toLocaleString()}</p>
+              <p className="text-[9px] text-slate-400 mt-0.5">rows modification actions today</p>
+            </div>
+          </div>
+        ) : (
+          <p className="text-slate-400 text-xs">Could not fetch server-side metrics.</p>
+        )}
       </div>
 
       {/* ── Charts Grid ─────────────────────────────────────────────── */}

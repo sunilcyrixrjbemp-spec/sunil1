@@ -249,3 +249,134 @@ async def get_logs(
                 "page_size": page_size, "logs": [dict(zip(cols, r)) for r in rows]}
     except Exception as e:
         return {"success": False, "message": str(e), "logs": []}
+
+
+@router.get("/cloudflare-official")
+async def get_cloudflare_official(
+    current_user: User = Depends(get_current_user)
+):
+    """Fetch official Cloudflare account analytics for D1 & KV via Cloudflare GraphQL API."""
+    _admin_check(current_user)
+    
+    if not IS_KV_ENABLED:
+        return {
+            "success": False,
+            "message": "Cloudflare integration is not configured or missing credentials."
+        }
+
+    from app.config.settings import settings
+    d1_db_id = getattr(settings, "CLOUDFLARE_DATABASE_ID", "")
+    
+    headers = {}
+    if API_TOKEN.startswith("cfk_"):
+        headers["X-Auth-Key"] = API_TOKEN
+        headers["X-Auth-Email"] = "Sunil.cyrixrjbemp@gmail.com"
+    else:
+        headers["Authorization"] = f"Bearer {API_TOKEN}"
+    headers["Content-Type"] = "application/json"
+    
+    # Query today's data in UTC format
+    today_start = date.today().isoformat() + "T00:00:00Z"
+    
+    # Build GraphQL query for D1 and KV analytics
+    query_body = f"""
+    query {{
+      viewer {{
+        accounts(filter: {{ accountTag: "{ACCOUNT_ID}" }}) {{
+          kvNamespaceAdaptiveGroups(
+            limit: 100
+            filter: {{
+              namespaceId: "{NAMESPACE_ID}"
+              datetime_geq: "{today_start}"
+            }}
+          ) {{
+            sum {{
+              readOperations
+              writeOperations
+              deleteOperations
+            }}
+          }}
+          d1AnalyticsAdaptiveGroups(
+            limit: 100
+            filter: {{
+              databaseId: "{d1_db_id}"
+              datetime_geq: "{today_start}"
+            }}
+          ) {{
+            sum {{
+              readQueries
+              writeQueries
+              rowsRead
+              rowsWritten
+            }}
+          }}
+        }}
+      }}
+    }}
+    """
+    
+    try:
+        res = http_req.post(
+            "https://api.cloudflare.com/client/v4/graphql",
+            headers=headers,
+            json={"query": query_body},
+            timeout=8
+        )
+        if res.status_code != 200:
+            return {
+                "success": False,
+                "message": f"Cloudflare API returned HTTP {res.status_code}",
+                "suggestion": "Verify that your Cloudflare API Token has permissions to read Analytics."
+            }
+            
+        data = res.json()
+        if "errors" in data and data["errors"]:
+            err_msg = data["errors"][0].get("message", "GraphQL Query Failed")
+            return {
+                "success": False,
+                "message": err_msg,
+                "suggestion": "Your Cloudflare token might lack Account Analytics Read permissions."
+            }
+            
+        accounts = data.get("data", {}).get("viewer", {}).get("accounts", [])
+        
+        kv_reads = 0
+        kv_writes = 0
+        d1_reads = 0
+        d1_writes = 0
+        d1_rows_read = 0
+        d1_rows_written = 0
+        
+        if accounts:
+            acc = accounts[0]
+            # Sum up KV operations
+            kv_groups = acc.get("kvNamespaceAdaptiveGroups", []) or []
+            for grp in kv_groups:
+                s = grp.get("sum", {}) or {}
+                kv_reads += s.get("readOperations", 0) or 0
+                kv_writes += s.get("writeOperations", 0) or 0
+                
+            # Sum up D1 operations
+            d1_groups = acc.get("d1AnalyticsAdaptiveGroups", []) or []
+            for grp in d1_groups:
+                s = grp.get("sum", {}) or {}
+                d1_reads += s.get("readQueries", 0) or 0
+                d1_writes += s.get("writeQueries", 0) or 0
+                d1_rows_read += s.get("rowsRead", 0) or 0
+                d1_rows_written += s.get("rowsWritten", 0) or 0
+                
+        return {
+            "success": True,
+            "kv_reads": kv_reads,
+            "kv_writes": kv_writes,
+            "d1_reads": d1_reads,
+            "d1_writes": d1_writes,
+            "d1_rows_read": d1_rows_read,
+            "d1_rows_written": d1_rows_written
+        }
+    except Exception as e:
+        return {
+            "success": False,
+            "message": f"Could not contact Cloudflare API: {str(e)}"
+        }
+
