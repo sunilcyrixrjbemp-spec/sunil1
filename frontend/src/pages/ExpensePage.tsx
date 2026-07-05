@@ -975,6 +975,17 @@ export default function ExpensePage() {
       return;
     }
 
+    // Cross-leg duplicate barcode check: same barcode cannot be used in any other leg's calls_list, pms_list, or assets_list for same day
+    for (const otherLeg of itineraries) {
+      if (otherLeg.leg === legNum) continue;
+      const otherCallsBarcodes = (otherLeg.calls_list || []).map(item => item.barcode);
+      const otherPmsBarcodes = (otherLeg.pms_list || []).map(item => item.barcode);
+      if (otherCallsBarcodes.includes(barcode) || otherPmsBarcodes.includes(barcode)) {
+        toast.error(`This barcode (${barcode}) has already been used in Leg ${otherLeg.leg}. Same barcode cannot be used twice in a single day.`);
+        return;
+      }
+    }
+
     try {
       const res = await expenseService.verifyBarcode(barcode);
       if (res.success && res.data) {
@@ -1165,6 +1176,15 @@ export default function ExpensePage() {
       if (currentList.some(item => item.equipment_name === eq)) {
         toast.error("This equipment has already been added to this leg.");
         return l;
+      }
+
+      // Cross-leg duplicate equipment check for same day
+      const otherLegs = prev.filter(ol => ol.leg !== legNum);
+      for (const otherLeg of otherLegs) {
+        if ((otherLeg.assets_list || []).some(item => item.equipment_name === eq)) {
+          toast.error(`Equipment "${eq}" has already been tagged in Leg ${otherLeg.leg}. Same equipment cannot be tagged twice in a single day.`);
+          return l;
+        }
       }
 
       return {
@@ -1558,6 +1578,12 @@ export default function ExpensePage() {
       return false;
     }
 
+    // Minimum 2 legs required for expense submission
+    if (listToValidate.length < 2) {
+      toast.error("Minimum 2 legs are required to submit an expense claim.");
+      return false;
+    }
+
     for (let idx = 0; idx < listToValidate.length; idx++) {
       const leg = listToValidate[idx];
       const legNum = idx + 1;
@@ -1568,6 +1594,11 @@ export default function ExpensePage() {
       }
       if (!leg.to.trim()) {
         toast.error(`Leg ${legNum}: Please enter the destination location.`);
+        return false;
+      }
+      // Same from/to location not allowed in a single leg
+      if (leg.from.trim().toLowerCase() === leg.to.trim().toLowerCase()) {
+        toast.error(`Leg ${legNum}: Starting location (From) and Destination (To) cannot be the same.`);
         return false;
       }
       if (!leg.mode) {
