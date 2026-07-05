@@ -1034,6 +1034,10 @@ export default function ExpensePage() {
           toast.error("Please verify the barcode first.");
           return l;
         }
+        if (!l.calls_photo_url) {
+          toast.error("Service Report photo is compulsory for Calls. Please upload a photo before adding.");
+          return l;
+        }
         const newItem = {
           barcode: l.calls_barcode || "",
           verified: true,
@@ -1706,6 +1710,12 @@ export default function ExpensePage() {
       if (acts.includes("Calls")) {
         if ((leg.calls_list || []).length === 0) {
           toast.error(`Leg ${legNum}: Please add and verify at least one barcode for Calls.`);
+          return false;
+        }
+        // Check all added calls have a service report photo
+        const callsWithoutPhoto = (leg.calls_list || []).filter(c => !c.photo_url);
+        if (callsWithoutPhoto.length > 0) {
+          toast.error(`Leg ${legNum}: ${callsWithoutPhoto.length} Call entry(s) are missing a Service Report photo. Service Report is compulsory for all Calls.`);
           return false;
         }
       }
@@ -3080,6 +3090,7 @@ export default function ExpensePage() {
                             <div className="bg-blue-50/20 border border-blue-150 rounded p-2.5 flex flex-col gap-2">
                               <div className="flex items-center justify-between">
                                 <span className="text-[10px] font-bold text-blue-700 uppercase tracking-wide">Support Calls Log</span>
+                                <span className="text-[8px] font-bold text-rose-500 uppercase">⚠ Service Report Compulsory</span>
                               </div>
                               <div className="grid grid-cols-1 sm:grid-cols-12 gap-2 items-end bg-gray-50/50 p-2 rounded border border-gray-200 text-[10px]">
                                 {/* Barcode */}
@@ -3143,7 +3154,7 @@ export default function ExpensePage() {
 
                                 {/* Photo Upload/Status Button */}
                                 <div className="sm:col-span-2">
-                                  <label className="label-lte font-extrabold text-[8px] text-gray-500 uppercase">Photo</label>
+                                  <label className="label-lte font-extrabold text-[8px] text-gray-500 uppercase">Service Report <span className="text-rose-500">*</span></label>
                                   {leg.calls_photo_url ? (
                                     <div className="flex gap-1 h-7 items-center justify-between bg-blue-50 border border-blue-200 px-1.5 rounded text-[9px] font-bold">
                                       <span className="text-blue-700 cursor-pointer underline truncate max-w-[40px]" onClick={() => {

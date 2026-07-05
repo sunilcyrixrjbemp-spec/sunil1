@@ -2167,23 +2167,30 @@ async def get_consolidated_report(
 
     return {"success": True, "data": report_rows}
 
-def get_user_monthly_stats(db, user_db_id: int, month: str, year: int):
+def get_user_monthly_stats(db, user_db_id: int, month: str, year: int, exclude_date: str = None):
     from app.models.expense import Expense
     from app.models.expense_itinerary import ExpenseItinerary
     
-    approved_expenses = db.query(Expense).filter(
+    approved_query = db.query(Expense).filter(
         Expense.user_id == user_db_id,
         Expense.month == month,
         Expense.year == year,
         Expense.status == "approved"
-    ).all()
-    
-    all_submitted_expenses = db.query(Expense).filter(
+    )
+    submitted_query = db.query(Expense).filter(
         Expense.user_id == user_db_id,
         Expense.month == month,
         Expense.year == year,
         Expense.status.in_(["submitted", "approved", "partially_approved"])
-    ).all()
+    )
+    
+    # If exclude_date is provided, only include expenses before that date
+    if exclude_date:
+        approved_query = approved_query.filter(Expense.itinerary < exclude_date)
+        submitted_query = submitted_query.filter(Expense.itinerary < exclude_date)
+    
+    approved_expenses = approved_query.all()
+    all_submitted_expenses = submitted_query.all()
     
     approved_exp_codes = [e.expense_code for e in approved_expenses if e.expense_code]
     approved_legs = db.query(ExpenseItinerary).filter(ExpenseItinerary.exp_id.in_(approved_exp_codes)).all() if approved_exp_codes else []
@@ -2465,7 +2472,7 @@ async def get_expense_details(
         } for el in edit_logs
     ]
 
-    monthly_stats = get_user_monthly_stats(db, expense.user_id, expense.month, expense.year)
+    monthly_stats = get_user_monthly_stats(db, expense.user_id, expense.month, expense.year, exclude_date=expense.itinerary)
 
     return {
         "id": expense.id,

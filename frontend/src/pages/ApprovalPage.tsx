@@ -1040,8 +1040,9 @@ export default function ApprovalPage() {
                     <div className="p-4 bg-blue-50/30 border border-blue-150 rounded text-xs space-y-3">
                       <h4 className="text-xs font-black uppercase text-blue-800 tracking-wider flex items-center gap-1.5">
                         <TrendingUp className="w-4 h-4 text-blue-600" />
-                        Submitter's Cumulative Monthly Summary ({expenseDetails.month} {expenseDetails.year})
+                        Cumulative Summary Before This Claim ({expenseDetails.month} {expenseDetails.year})
                       </h4>
+                      <p className="text-[9px] text-blue-600 font-semibold -mt-1">Totals from dates prior to {expenseDetails.date || "this claim date"} only (excludes current claim)</p>
                       <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
                         <div className="bg-white p-2.5 border border-gray-150 rounded shadow-xs">
                           <span className="text-gray-400 font-bold block text-[8px] uppercase tracking-wider">KM Used So Far</span>
