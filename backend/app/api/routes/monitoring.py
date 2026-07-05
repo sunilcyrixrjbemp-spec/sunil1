@@ -283,7 +283,7 @@ async def get_cloudflare_official(
     query {{
       viewer {{
         accounts(filter: {{ accountTag: "{ACCOUNT_ID}" }}) {{
-          kvNamespaceAdaptiveGroups(
+          kvOperationsAdaptiveGroups(
             limit: 100
             filter: {{
               namespaceId: "{NAMESPACE_ID}"
@@ -350,7 +350,8 @@ async def get_cloudflare_official(
         if accounts:
             acc = accounts[0]
             # Sum up KV operations
-            kv_groups = acc.get("kvNamespaceAdaptiveGroups", []) or []
+            kv_groups = acc.get("kvOperationsAdaptiveGroups", []) or []
+
             for grp in kv_groups:
                 s = grp.get("sum", {}) or {}
                 kv_reads += s.get("readOperations", 0) or 0

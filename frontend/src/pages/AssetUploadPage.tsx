@@ -192,7 +192,15 @@ export default function AssetUploadPage() {
       if (filterMonth) params.month = filterMonth;
       const res = await api.get("/reports/assets-stats", { params });
       if (res.data.success) {
-        setStats(res.data);
+        setStats({
+          ...defaultStats,
+          ...res.data,
+          charts: {
+            top_types: res.data.charts?.top_types || [],
+            status_list: res.data.charts?.status_list || [],
+            warranty_list: res.data.charts?.warranty_list || []
+          }
+        });
       }
     } catch (_) {}
   };
@@ -503,11 +511,11 @@ export default function AssetUploadPage() {
       {/* ===== Stats Dashboard (AdminLTE Theme Grid) ===== */}
       <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-4">
         {[
-          { label: "Total Equipment", value: stats.total_equipment.toLocaleString(), icon: <Package className="w-5 h-5 text-white" />, bgColor: "bg-[#007bff]" },
-          { label: "Verified Equipment", value: stats.verified_equipment.toLocaleString(), icon: <ShieldCheck className="w-5 h-5 text-white" />, bgColor: "bg-[#28a745]" },
-          { label: "Under Warranty", value: stats.under_warranty.toLocaleString(), icon: <ShieldCheck className="w-5 h-5 text-white" />, bgColor: "bg-[#17a2b8]" },
-          { label: "Out of Warranty", value: stats.out_of_warranty.toLocaleString(), icon: <ShieldOff className="w-5 h-5 text-white" />, bgColor: "bg-[#ffc107]" },
-          { label: "Total Equipment Value", value: fmtRs(stats.total_value), icon: <IndianRupee className="w-5 h-5 text-white" />, bgColor: "bg-[#605ca8]" },
+          { label: "Total Equipment", value: (stats?.total_equipment ?? 0).toLocaleString(), icon: <Package className="w-5 h-5 text-white" />, bgColor: "bg-[#007bff]" },
+          { label: "Verified Equipment", value: (stats?.verified_equipment ?? 0).toLocaleString(), icon: <ShieldCheck className="w-5 h-5 text-white" />, bgColor: "bg-[#28a745]" },
+          { label: "Under Warranty", value: (stats?.under_warranty ?? 0).toLocaleString(), icon: <ShieldCheck className="w-5 h-5 text-white" />, bgColor: "bg-[#17a2b8]" },
+          { label: "Out of Warranty", value: (stats?.out_of_warranty ?? 0).toLocaleString(), icon: <ShieldOff className="w-5 h-5 text-white" />, bgColor: "bg-[#ffc107]" },
+          { label: "Total Equipment Value", value: fmtRs(stats?.total_value ?? 0), icon: <IndianRupee className="w-5 h-5 text-white" />, bgColor: "bg-[#605ca8]" },
         ].map((s, i) => (
           <div key={i} className="info-box-lte animate-fadeIn">
             <div className={`info-box-icon ${s.bgColor}`}>
@@ -523,11 +531,11 @@ export default function AssetUploadPage() {
 
       <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-4 mt-4">
         {[
-          { label: "Verified Value", value: fmtRs(stats.verified_value), icon: <CheckCircle className="w-5 h-5 text-white" />, bgColor: "bg-[#28a745]" },
-          { label: "Verified OOW Value", value: fmtRs(stats.verified_out_of_warranty_value), icon: <ShieldOff className="w-5 h-5 text-white" />, bgColor: "bg-[#fd7e14]" },
-          { label: "Monthly Billing", value: fmtRs(stats.monthly_value), sub: "(Value × 6.08% ÷ 12)", icon: <Calendar className="w-5 h-5 text-white" />, bgColor: "bg-[#007bff]" },
-          { label: "Arrear Billing", value: fmtRs(stats.arrear_billing), sub: "Verified in target month", icon: <Receipt className="w-5 h-5 text-white" />, bgColor: "bg-[#dc3545]" },
-          { label: "Total Billing Value", value: fmtRs(stats.total_billing), icon: <IndianRupee className="w-5 h-5 text-white" />, bgColor: "bg-[#6f42c1]" },
+          { label: "Verified Value", value: fmtRs(stats?.verified_value ?? 0), icon: <CheckCircle className="w-5 h-5 text-white" />, bgColor: "bg-[#28a745]" },
+          { label: "Verified OOW Value", value: fmtRs(stats?.verified_out_of_warranty_value ?? 0), icon: <ShieldOff className="w-5 h-5 text-white" />, bgColor: "bg-[#fd7e14]" },
+          { label: "Monthly Billing", value: fmtRs(stats?.monthly_value ?? 0), sub: "(Value × 6.08% ÷ 12)", icon: <Calendar className="w-5 h-5 text-white" />, bgColor: "bg-[#007bff]" },
+          { label: "Arrear Billing", value: fmtRs(stats?.arrear_billing ?? 0), sub: "Verified in target month", icon: <Receipt className="w-5 h-5 text-white" />, bgColor: "bg-[#dc3545]" },
+          { label: "Total Billing Value", value: fmtRs(stats?.total_billing ?? 0), icon: <IndianRupee className="w-5 h-5 text-white" />, bgColor: "bg-[#6f42c1]" },
         ].map((s, i) => (
           <div key={i} className="info-box-lte animate-fadeIn">
             <div className={`info-box-icon ${s.bgColor}`}>
