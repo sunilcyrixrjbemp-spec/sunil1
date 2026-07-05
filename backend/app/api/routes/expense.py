@@ -2183,69 +2183,160 @@ def get_user_monthly_stats(db, user_db_id: int, month: str, year: int, exclude_d
         query = query.filter(Expense.itinerary < exclude_date)
     
     expenses = query.all()
-    exp_codes = [e.expense_code for e in expenses if e.expense_code]
-    legs = db.query(ExpenseItinerary).filter(ExpenseItinerary.exp_id.in_(exp_codes)).all() if exp_codes else []
     
-    total_approved_da = 0.0
-    total_approved_bike_km = 0.0
-    total_approved_auto = 0.0
-    total_approved_bus = 0.0
-    total_approved_train = 0.0
-    total_approved_hotel = 0.0
+    # Group expense codes by whether they are approved or just claimed
+    approved_exp_codes = [e.expense_code for e in expenses if e.expense_code and e.status in ["approved", "partially_approved"]]
+    all_exp_codes = [e.expense_code for e in expenses if e.expense_code]
     
-    total_calls_completed = 0
-    total_pms_count = 0
-    total_asset_tagging = 0
-    total_mobilise_count = 0
-    total_calibration_count = 0
+    approved_legs = db.query(ExpenseItinerary).filter(ExpenseItinerary.exp_id.in_(approved_exp_codes)).all() if approved_exp_codes else []
+    all_legs = db.query(ExpenseItinerary).filter(ExpenseItinerary.exp_id.in_(all_exp_codes)).all() if all_exp_codes else []
     
-    for leg in legs:
-        total_approved_da += leg.da_amount or 0.0
-        total_approved_hotel += leg.hotel_amount or 0.0
+    # 1. Approved stats
+    approved_da = 0.0
+    approved_bike_km = 0.0
+    approved_auto = 0.0
+    approved_bus = 0.0
+    approved_train = 0.0
+    approved_hotel = 0.0
+    approved_local_purchase = 0.0
+    approved_km_used = 0.0
+    
+    approved_calls = 0
+    approved_pms = 0
+    approved_asset = 0
+    approved_mobilise = 0
+    approved_calibration = 0
+    
+    for leg in approved_legs:
+        approved_da += leg.da_amount or 0.0
+        approved_hotel += leg.hotel_amount or 0.0
+        approved_local_purchase += leg.local_purchase or 0.0
         
         mode = (leg.travel_mode or "").strip().lower()
         if mode == "bike":
-            total_approved_bike_km += leg.distance_km or 0.0
+            approved_bike_km += leg.distance_km or 0.0
+            approved_km_used += leg.distance_km or 0.0
+        elif mode == "car":
+            approved_km_used += leg.distance_km or 0.0
         elif mode == "auto":
-            total_approved_auto += leg.travel_amount or 0.0
+            approved_auto += leg.travel_amount or 0.0
         elif mode == "bus":
-            total_approved_bus += leg.travel_amount or 0.0
+            approved_bus += leg.travel_amount or 0.0
         elif mode == "train":
-            total_approved_train += leg.travel_amount or 0.0
+            approved_train += leg.travel_amount or 0.0
             
         sub_mode = (leg.sub_mode or "").strip().lower()
         if sub_mode == "auto":
-            total_approved_auto += leg.sub_amount or 0.0
+            approved_auto += leg.sub_amount or 0.0
         elif sub_mode == "bus":
-            total_approved_bus += leg.sub_amount or 0.0
+            approved_bus += leg.sub_amount or 0.0
         elif sub_mode == "train":
-            total_approved_train += leg.sub_amount or 0.0
+            approved_train += leg.sub_amount or 0.0
             
-        total_calls_completed += leg.calls_completed or 0
-        total_pms_count += leg.pms_count or 0
-        total_asset_tagging += leg.asset_tagging or 0
-        total_mobilise_count += leg.mobilise_count or 0
-        total_calibration_count += leg.calibration_count or 0
+        approved_calls += leg.calls_completed or 0
+        approved_pms += leg.pms_count or 0
+        approved_asset += leg.asset_tagging or 0
+        approved_mobilise += leg.mobilise_count or 0
+        approved_calibration += leg.calibration_count or 0
         
-    total_submitted_km_used = 0.0
-    for leg in legs:
+    # 2. Claimed stats
+    claimed_da = 0.0
+    claimed_bike_km = 0.0
+    claimed_auto = 0.0
+    claimed_bus = 0.0
+    claimed_train = 0.0
+    claimed_hotel = 0.0
+    claimed_local_purchase = 0.0
+    claimed_km_used = 0.0
+    
+    claimed_calls = 0
+    claimed_pms = 0
+    claimed_asset = 0
+    claimed_mobilise = 0
+    claimed_calibration = 0
+    
+    for leg in all_legs:
+        orig_da = leg.original_da_amount if (leg.original_da_amount is not None and leg.original_da_amount > 0) else (leg.da_amount or 0.0)
+        orig_hotel = leg.original_hotel_amount if (leg.original_hotel_amount is not None and leg.original_hotel_amount > 0) else (leg.hotel_amount or 0.0)
+        orig_lp = leg.original_local_purchase if (leg.original_local_purchase is not None and leg.original_local_purchase > 0) else (leg.local_purchase or 0.0)
+        
+        claimed_da += orig_da
+        claimed_hotel += orig_hotel
+        claimed_local_purchase += orig_lp
+        
         mode = (leg.travel_mode or "").strip().lower()
-        if mode in ["bike", "car"]:
-            total_submitted_km_used += leg.distance_km or 0.0
+        orig_km = leg.original_distance_km if (leg.original_distance_km is not None and leg.original_distance_km > 0) else (leg.distance_km or 0.0)
+        orig_travel_amt = leg.original_travel_amount if (leg.original_travel_amount is not None and leg.original_travel_amount > 0) else (leg.travel_amount or 0.0)
+        
+        if mode == "bike":
+            claimed_bike_km += orig_km
+            claimed_km_used += orig_km
+        elif mode == "car":
+            claimed_km_used += orig_km
+        elif mode == "auto":
+            claimed_auto += orig_travel_amt
+        elif mode == "bus":
+            claimed_bus += orig_travel_amt
+        elif mode == "train":
+            claimed_train += orig_travel_amt
             
+        orig_sub_amt = leg.original_sub_amount if (leg.original_sub_amount is not None and leg.original_sub_amount > 0) else (leg.sub_amount or 0.0)
+        sub_mode = (leg.sub_mode or "").strip().lower()
+        if sub_mode == "auto":
+            claimed_auto += orig_sub_amt
+        elif sub_mode == "bus":
+            claimed_bus += orig_sub_amt
+        elif sub_mode == "train":
+            claimed_train += orig_sub_amt
+            
+        claimed_calls += leg.calls_completed or 0
+        claimed_pms += leg.pms_count or 0
+        claimed_asset += leg.asset_tagging or 0
+        claimed_mobilise += leg.mobilise_count or 0
+        claimed_calibration += leg.calibration_count or 0
+        
     return {
-        "km_used_so_far": total_submitted_km_used,
-        "total_da": total_approved_da,
-        "total_bike_km": total_approved_bike_km,
-        "total_auto": total_approved_auto,
-        "total_bus": total_approved_bus,
-        "total_train": total_approved_train,
-        "total_hotel": total_approved_hotel,
-        "calls_completed": total_calls_completed,
-        "pms_count": total_pms_count,
-        "asset_tagging": total_asset_tagging,
-        "mobilise_count": total_mobilise_count,
-        "calibration_count": total_calibration_count
+        "km_used_so_far_approved": approved_km_used,
+        "km_used_so_far_claimed": claimed_km_used,
+        "total_da_approved": approved_da,
+        "total_da_claimed": claimed_da,
+        "total_bike_km_approved": approved_bike_km,
+        "total_bike_km_claimed": claimed_bike_km,
+        "total_auto_approved": approved_auto,
+        "total_auto_claimed": claimed_auto,
+        "total_bus_approved": approved_bus,
+        "total_bus_claimed": claimed_bus,
+        "total_train_approved": approved_train,
+        "total_train_claimed": claimed_train,
+        "total_hotel_approved": approved_hotel,
+        "total_hotel_claimed": claimed_hotel,
+        "total_local_purchase_approved": approved_local_purchase,
+        "total_local_purchase_claimed": claimed_local_purchase,
+        "calls_completed_approved": approved_calls,
+        "calls_completed_claimed": claimed_calls,
+        "pms_count_approved": approved_pms,
+        "pms_count_claimed": claimed_pms,
+        "asset_tagging_approved": approved_asset,
+        "asset_tagging_claimed": claimed_asset,
+        "mobilise_count_approved": approved_mobilise,
+        "mobilise_count_claimed": claimed_mobilise,
+        "calibration_count_approved": approved_calibration,
+        "calibration_count_claimed": claimed_calibration,
+        
+        # Legacy backward-compatible keys
+        "km_used_so_far": claimed_km_used,
+        "total_da": approved_da,
+        "total_bike_km": approved_bike_km,
+        "total_auto": approved_auto,
+        "total_bus": approved_bus,
+        "total_train": approved_train,
+        "total_hotel": approved_hotel,
+        "total_local_purchase": approved_local_purchase,
+        "calls_completed": approved_calls,
+        "pms_count": approved_pms,
+        "asset_tagging": approved_asset,
+        "mobilise_count": approved_mobilise,
+        "calibration_count": approved_calibration
     }
 
 @router.get("/{expense_id}")

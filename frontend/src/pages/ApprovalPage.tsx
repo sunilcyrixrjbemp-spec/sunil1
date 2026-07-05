@@ -1072,60 +1072,100 @@ export default function ApprovalPage() {
                   </div>
 
                   {expenseDetails.user_monthly_stats && (
-                    <div className="p-4 bg-blue-50/30 border border-blue-150 rounded text-xs space-y-3">
-                      <h4 className="text-xs font-black uppercase text-blue-800 tracking-wider flex items-center gap-1.5">
-                        <TrendingUp className="w-4 h-4 text-blue-600" />
-                        Cumulative Summary Before This Claim ({expenseDetails.month} {expenseDetails.year})
-                      </h4>
-                      <p className="text-[9px] text-blue-600 font-semibold -mt-1">Totals from dates prior to {expenseDetails.date || "this claim date"} only (excludes current claim)</p>
-                      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
+                    <div className="p-4 bg-blue-50/30 border border-blue-150 rounded text-xs space-y-3.5">
+                      <div className="flex flex-wrap items-center justify-between gap-2 border-b border-blue-100 pb-2">
+                        <div>
+                          <h4 className="text-xs font-black uppercase text-blue-800 tracking-wider flex items-center gap-1.5">
+                            <TrendingUp className="w-4 h-4 text-blue-600" />
+                            Cumulative Summary Before This Claim ({expenseDetails.month} {expenseDetails.year})
+                          </h4>
+                          <p className="text-[9px] text-blue-600 font-semibold mt-0.5">
+                            Totals from dates prior to {expenseDetails.date || "this claim date"} (excludes current claim)
+                          </p>
+                        </div>
+                        <span className="text-[10px] font-black text-amber-800 bg-amber-100 border border-amber-250 px-2 py-0.5 rounded uppercase tracking-wider">
+                          Format: Approved / Claimed
+                        </span>
+                      </div>
+                      
+                      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-7 gap-2.5">
                         <div className="bg-white p-2.5 border border-gray-150 rounded shadow-xs">
                           <span className="text-gray-400 font-bold block text-[8px] uppercase tracking-wider">KM Used So Far</span>
-                          <span className="text-xs font-extrabold text-gray-800 font-mono mt-0.5 block">{(expenseDetails.user_monthly_stats.km_used_so_far || 0).toFixed(1)} KM</span>
+                          <span className="text-xs font-extrabold text-gray-800 font-mono mt-0.5 block">
+                            {(expenseDetails.user_monthly_stats.km_used_so_far_approved || 0).toFixed(1)} / {(expenseDetails.user_monthly_stats.km_used_so_far_claimed || 0).toFixed(1)} KM
+                          </span>
                         </div>
                         <div className="bg-white p-2.5 border border-gray-150 rounded shadow-xs">
-                          <span className="text-gray-400 font-bold block text-[8px] uppercase tracking-wider">Total Approved DA</span>
-                          <span className="text-xs font-extrabold text-gray-800 font-mono mt-0.5 block">₹{(expenseDetails.user_monthly_stats.total_da || 0).toLocaleString()}</span>
+                          <span className="text-gray-400 font-bold block text-[8px] uppercase tracking-wider">DA Allowance</span>
+                          <span className="text-xs font-extrabold text-gray-800 font-mono mt-0.5 block">
+                            ₹{(expenseDetails.user_monthly_stats.total_da_approved || 0).toLocaleString()} / ₹{(expenseDetails.user_monthly_stats.total_da_claimed || 0).toLocaleString()}
+                          </span>
                         </div>
                         <div className="bg-white p-2.5 border border-gray-150 rounded shadow-xs">
                           <span className="text-gray-400 font-bold block text-[8px] uppercase tracking-wider">Total Bike Distance</span>
-                          <span className="text-xs font-extrabold text-gray-800 font-mono mt-0.5 block">{(expenseDetails.user_monthly_stats.total_bike_km || 0).toFixed(1)} KM</span>
+                          <span className="text-xs font-extrabold text-gray-800 font-mono mt-0.5 block">
+                            {(expenseDetails.user_monthly_stats.total_bike_km_approved || 0).toFixed(1)} / {(expenseDetails.user_monthly_stats.total_bike_km_claimed || 0).toFixed(1)} KM
+                          </span>
                         </div>
                         <div className="bg-white p-2.5 border border-gray-150 rounded shadow-xs">
-                          <span className="text-gray-400 font-bold block text-[8px] uppercase tracking-wider">Total Approved Auto</span>
-                          <span className="text-xs font-extrabold text-gray-800 font-mono mt-0.5 block">₹{(expenseDetails.user_monthly_stats.total_auto || 0).toLocaleString()}</span>
+                          <span className="text-gray-400 font-bold block text-[8px] uppercase tracking-wider">Auto Conveyance</span>
+                          <span className="text-xs font-extrabold text-gray-800 font-mono mt-0.5 block">
+                            ₹{(expenseDetails.user_monthly_stats.total_auto_approved || 0).toLocaleString()} / ₹{(expenseDetails.user_monthly_stats.total_auto_claimed || 0).toLocaleString()}
+                          </span>
                         </div>
                         <div className="bg-white p-2.5 border border-gray-150 rounded shadow-xs">
-                          <span className="text-gray-400 font-bold block text-[8px] uppercase tracking-wider">Total Approved Bus</span>
-                          <span className="text-xs font-extrabold text-gray-800 font-mono mt-0.5 block">₹{(expenseDetails.user_monthly_stats.total_bus || 0).toLocaleString()}</span>
+                          <span className="text-gray-400 font-bold block text-[8px] uppercase tracking-wider">Bus Fare</span>
+                          <span className="text-xs font-extrabold text-gray-800 font-mono mt-0.5 block">
+                            ₹{(expenseDetails.user_monthly_stats.total_bus_approved || 0).toLocaleString()} / ₹{(expenseDetails.user_monthly_stats.total_bus_claimed || 0).toLocaleString()}
+                          </span>
                         </div>
                         <div className="bg-white p-2.5 border border-gray-150 rounded shadow-xs">
-                          <span className="text-gray-400 font-bold block text-[8px] uppercase tracking-wider">Total Approved Train</span>
-                          <span className="text-xs font-extrabold text-gray-800 font-mono mt-0.5 block">₹{(expenseDetails.user_monthly_stats.total_train || 0).toLocaleString()}</span>
+                          <span className="text-gray-400 font-bold block text-[8px] uppercase tracking-wider">Train Fare</span>
+                          <span className="text-xs font-extrabold text-gray-800 font-mono mt-0.5 block">
+                            ₹{(expenseDetails.user_monthly_stats.total_train_approved || 0).toLocaleString()} / ₹{(expenseDetails.user_monthly_stats.total_train_claimed || 0).toLocaleString()}
+                          </span>
                         </div>
                         <div className="bg-white p-2.5 border border-gray-150 rounded shadow-xs">
-                          <span className="text-gray-400 font-bold block text-[8px] uppercase tracking-wider">Total Approved Hotel</span>
-                          <span className="text-xs font-extrabold text-gray-800 font-mono mt-0.5 block">₹{(expenseDetails.user_monthly_stats.total_hotel || 0).toLocaleString()}</span>
+                          <span className="text-gray-400 font-bold block text-[8px] uppercase tracking-wider">Hotel stay</span>
+                          <span className="text-xs font-extrabold text-gray-800 font-mono mt-0.5 block">
+                            ₹{(expenseDetails.user_monthly_stats.total_hotel_approved || 0).toLocaleString()} / ₹{(expenseDetails.user_monthly_stats.total_hotel_claimed || 0).toLocaleString()}
+                          </span>
+                        </div>
+                        <div className="bg-white p-2.5 border border-gray-150 rounded shadow-xs">
+                          <span className="text-gray-400 font-bold block text-[8px] uppercase tracking-wider">Local Purchase</span>
+                          <span className="text-xs font-extrabold text-gray-800 font-mono mt-0.5 block">
+                            ₹{(expenseDetails.user_monthly_stats.total_local_purchase_approved || 0).toLocaleString()} / ₹{(expenseDetails.user_monthly_stats.total_local_purchase_claimed || 0).toLocaleString()}
+                          </span>
                         </div>
                         <div className="bg-white p-2.5 border border-gray-150 rounded shadow-xs">
                           <span className="text-gray-400 font-bold block text-[8px] uppercase tracking-wider">Calls Completed</span>
-                          <span className="text-xs font-extrabold text-gray-800 font-mono mt-0.5 block">{expenseDetails.user_monthly_stats.calls_completed || 0}</span>
+                          <span className="text-xs font-extrabold text-gray-800 font-mono mt-0.5 block">
+                            {expenseDetails.user_monthly_stats.calls_completed_approved || 0} / {expenseDetails.user_monthly_stats.calls_completed_claimed || 0}
+                          </span>
                         </div>
                         <div className="bg-white p-2.5 border border-gray-150 rounded shadow-xs">
                           <span className="text-gray-400 font-bold block text-[8px] uppercase tracking-wider">PMS Count</span>
-                          <span className="text-xs font-extrabold text-gray-800 font-mono mt-0.5 block">{expenseDetails.user_monthly_stats.pms_count || 0}</span>
+                          <span className="text-xs font-extrabold text-gray-800 font-mono mt-0.5 block">
+                            {expenseDetails.user_monthly_stats.pms_count_approved || 0} / {expenseDetails.user_monthly_stats.pms_count_claimed || 0}
+                          </span>
                         </div>
                         <div className="bg-white p-2.5 border border-gray-150 rounded shadow-xs">
                           <span className="text-gray-400 font-bold block text-[8px] uppercase tracking-wider">Asset Tagging</span>
-                          <span className="text-xs font-extrabold text-gray-800 font-mono mt-0.5 block">{expenseDetails.user_monthly_stats.asset_tagging || 0}</span>
+                          <span className="text-xs font-extrabold text-gray-800 font-mono mt-0.5 block">
+                            {expenseDetails.user_monthly_stats.asset_tagging_approved || 0} / {expenseDetails.user_monthly_stats.asset_tagging_claimed || 0}
+                          </span>
                         </div>
                         <div className="bg-white p-2.5 border border-gray-150 rounded shadow-xs">
                           <span className="text-gray-400 font-bold block text-[8px] uppercase tracking-wider">Mobilised Verification</span>
-                          <span className="text-xs font-extrabold text-gray-800 font-mono mt-0.5 block">{expenseDetails.user_monthly_stats.mobilise_count || 0}</span>
+                          <span className="text-xs font-extrabold text-gray-800 font-mono mt-0.5 block">
+                            {expenseDetails.user_monthly_stats.mobilise_count_approved || 0} / {expenseDetails.user_monthly_stats.mobilise_count_claimed || 0}
+                          </span>
                         </div>
                         <div className="bg-white p-2.5 border border-gray-150 rounded shadow-xs">
                           <span className="text-gray-400 font-bold block text-[8px] uppercase tracking-wider">Calibration Count</span>
-                          <span className="text-xs font-extrabold text-gray-800 font-mono mt-0.5 block">{expenseDetails.user_monthly_stats.calibration_count || 0}</span>
+                          <span className="text-xs font-extrabold text-gray-800 font-mono mt-0.5 block">
+                            {expenseDetails.user_monthly_stats.calibration_count_approved || 0} / {expenseDetails.user_monthly_stats.calibration_count_claimed || 0}
+                          </span>
                         </div>
                       </div>
                     </div>
