@@ -1210,6 +1210,13 @@ async def upload_assets_chunk(
         db.execute(text(f"CREATE INDEX IF NOT EXISTS idx_assets_inv_di ON {ASSETS_INVENTORY_TABLE}(di_name)"))
         db.commit()
 
+        # Invalidate all asset KV cache keys after new data upload
+        from app.utils import cache as _cache_mod
+        _cache_mod.clear_prefix("assets_inventory:")
+        _cache_mod.clear_prefix("assets_filters")
+        _cache_mod.clear_prefix("assets_stats:")
+        logger.info("KV cache invalidated for assets after chunk upload.")
+
         return {
             "success": True,
             "inserted": len(valid_rows),
@@ -1263,6 +1270,13 @@ async def upload_assets_bulk(
         db.execute(text(f"CREATE INDEX IF NOT EXISTS idx_assets_inv_zone ON {ASSETS_INVENTORY_TABLE}(zone_name)"))
         db.execute(text(f"CREATE INDEX IF NOT EXISTS idx_assets_inv_di ON {ASSETS_INVENTORY_TABLE}(di_name)"))
         db.commit()
+
+        # Invalidate all asset KV cache keys after new data upload
+        from app.utils import cache as _cache_mod
+        _cache_mod.clear_prefix("assets_inventory:")
+        _cache_mod.clear_prefix("assets_filters")
+        _cache_mod.clear_prefix("assets_stats:")
+        logger.info("KV cache invalidated for assets after bulk upload.")
 
         elapsed_ms = (time.perf_counter() - start_time) * 1000
 
@@ -1359,6 +1373,13 @@ async def upload_assets_csv(
         db.execute(text(f"CREATE INDEX IF NOT EXISTS idx_assets_inv_di ON {ASSETS_INVENTORY_TABLE}(di_name)"))
         db.commit()
 
+        # Invalidate all asset KV cache keys after CSV upload
+        from app.utils import cache as _cache_mod
+        _cache_mod.clear_prefix("assets_inventory:")
+        _cache_mod.clear_prefix("assets_filters")
+        _cache_mod.clear_prefix("assets_stats:")
+        logger.info("KV cache invalidated for assets after CSV upload.")
+
         elapsed_ms = (time.perf_counter() - start_time) * 1000
 
         return {
@@ -1391,8 +1412,14 @@ async def get_assets_inventory(
     page_size: int = 100,
     db: Session = Depends(get_db)
 ):
-    """Get paginated asset inventory with optional filters served directly using optimized SQLite queries."""
+    """Get paginated asset inventory with optional filters. Served from Cloudflare KV cache if available."""
     try:
+        from app.utils import cache
+        cache_key = f"assets_inventory:{zone}:{district}:{hospital}:{di}:{month}:{equipment_status}:{search}:{page}:{page_size}"
+        cached = cache.get(cache_key)
+        if cached is not None:
+            return cached
+
         # Check if table schema has is_verified columns
         try:
             db.execute(text(f"SELECT is_verified FROM {ASSETS_INVENTORY_TABLE} LIMIT 1")).fetchone()
@@ -1462,13 +1489,15 @@ async def get_assets_inventory(
                 row_dict[col] = r[i] if i < len(r) else None
             assets.append(row_dict)
 
-        return {
+        result = {
             "success": True,
             "total": total,
             "page": page,
             "page_size": page_size,
             "assets": assets
         }
+        cache.set(cache_key, result)
+        return result
     except Exception as e:
         logger.error(f"Error fetching assets inventory: {str(e)}")
         return {"success": False, "total": 0, "assets": [], "message": str(e)}
@@ -1476,8 +1505,13 @@ async def get_assets_inventory(
 
 @router.get("/assets-filters")
 async def get_assets_filters(db: Session = Depends(get_db)):
-    """Get distinct filter lists and combinations for dependent dropdowns from D1."""
+    """Get distinct filter lists from D1. Served from Cloudflare KV cache if available."""
     try:
+        from app.utils import cache
+        cached = cache.get("assets_filters")
+        if cached is not None:
+            return cached
+
         try:
             db.execute(text(f"SELECT is_verified FROM {ASSETS_INVENTORY_TABLE} LIMIT 1")).fetchone()
         except Exception:
@@ -1525,7 +1559,7 @@ async def get_assets_filters(db: Session = Depends(get_db)):
         month_rows = db.execute(text(month_sql)).fetchall()
         months = [f"{r[0]}-{str(r[1]).zfill(2)}" for r in month_rows]
 
-        return {
+        result = {
             "success": True,
             "zones": sorted(list(zones_set)),
             "districts": sorted(list(districts_set)),
@@ -1533,6 +1567,8 @@ async def get_assets_filters(db: Session = Depends(get_db)):
             "months": months,
             "combinations": combinations
         }
+        cache.set("assets_filters", result)
+        return result
     except Exception as e:
         logger.error(f"Error fetching assets filters: {str(e)}")
         return {"success": False, "zones": [], "districts": [], "di_names": [], "months": [], "combinations": []}
@@ -1546,8 +1582,14 @@ async def get_assets_stats(
     month: str = None, # format: "YYYY-MM"
     db: Session = Depends(get_db)
 ):
-    """Get MIS dashboard summary metrics and chart items computed directly via SQL aggregation (0 RAM / Timeout risk)."""
+    """Get MIS dashboard summary stats. Served from Cloudflare KV cache if available."""
     try:
+        from app.utils import cache
+        cache_key = f"assets_stats:{zone}:{district}:{di}:{month}"
+        cached = cache.get(cache_key)
+        if cached is not None:
+            return cached
+
         try:
             db.execute(text(f"SELECT is_verified FROM {ASSETS_INVENTORY_TABLE} LIMIT 1")).fetchone()
         except Exception:
@@ -1667,7 +1709,7 @@ async def get_assets_stats(
             {"name": "Out of Warranty", "value": warranty_dict[1]}
         ]
 
-        return {
+        result = {
             "success": True,
             "total_equipment": total_equipment,
             "verified_equipment": verified_count,
@@ -1685,6 +1727,8 @@ async def get_assets_stats(
                 "warranty_list": warranty_list
             }
         }
+        cache.set(cache_key, result)
+        return result
     except Exception as e:
         logger.error(f"Error fetching assets stats: {str(e)}")
         return {
