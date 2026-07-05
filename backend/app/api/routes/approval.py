@@ -20,6 +20,12 @@ from app.utils.db_notifications import create_notification
 
 router = APIRouter()
 
+def get_legacy_expense_hash_id(exp_id: str) -> int:
+    import hashlib
+    h = hashlib.md5(exp_id.encode('utf-8')).hexdigest()
+    val = int(h[:7], 16)
+    return -200000 - val
+
 def parse_client_timestamp(ts_str: str | None) -> datetime:
     if not ts_str:
         return datetime.now()
@@ -228,6 +234,76 @@ async def get_pending_approvals(
         else:
             result.append(app)
             
+    # Query legacy pending claims from expense_master table
+    try:
+        from sqlalchemy import text
+        legacy_query = text("""
+            SELECT m.exp_id, m.user_id, m.expense_date, m.total_amount, m.status,
+                   m.da_amount, m.hotel_amount, m.other_expense_amount,
+                   m.level_first_approver, m.level_second_approver,
+                   u.full_name, u.e_code
+            FROM expense_master m
+            JOIN user u ON m.user_id = u.user_id
+            WHERE 
+                ((m.status = 'Pending L1' OR m.status = 'Pending') AND m.level_first_approver = :user_id)
+                OR
+                (m.status = 'Pending L2' AND m.level_second_approver = :user_id)
+        """)
+        legacy_rows = db.execute(legacy_query, {"user_id": current_user.user_id}).fetchall()
+        for row in legacy_rows:
+            exp_id = row[0]
+            user_id_str = row[1]
+            expense_date = row[2]
+            total_amount = float(row[3]) if row[3] else 0.0
+            status_val = row[4]
+            full_name = row[10]
+            e_code = row[11]
+            
+            level_number = 2 if status_val == "Pending L2" else 1
+            mock_id = get_legacy_expense_hash_id(exp_id)
+            
+            # Fetch itineraries count for this legacy expense
+            iti_count_query = text("SELECT COUNT(itinerary_id) FROM expense_itinerary WHERE exp_id = :exp_id")
+            iti_count = db.execute(iti_count_query, {"exp_id": exp_id}).scalar() or 0
+            
+            # Get category (travel_mode) and purpose (visit_purpose)
+            purpose = ""
+            category = "Travel"
+            master_info = db.execute(text("SELECT visit_purpose FROM expense_master WHERE exp_id = :exp_id"), {"exp_id": exp_id}).first()
+            if master_info and master_info[0]:
+                purpose = master_info[0]
+                
+            first_iti = db.execute(text("SELECT travel_mode FROM expense_itinerary WHERE exp_id = :exp_id ORDER BY leg_number LIMIT 1"), {"exp_id": exp_id}).first()
+            if first_iti and first_iti[0]:
+                category = first_iti[0]
+                
+            try:
+                created_dt = datetime.strptime(expense_date, "%Y-%m-%d")
+            except Exception:
+                created_dt = datetime.now()
+                
+            mock_app = Approval(
+                id=mock_id,
+                expense_id=mock_id,
+                approver_id=current_user.id,
+                level_number=level_number,
+                status="pending",
+                comments="",
+                created_at=created_dt,
+                updated_at=created_dt
+            )
+            mock_app.expense_code = exp_id
+            mock_app.employeeName = full_name if full_name else "Unknown Employee"
+            mock_app.eCode = e_code if e_code else "N/A"
+            mock_app.purpose = purpose if purpose else "Legacy Mobile Claim"
+            mock_app.category = category
+            mock_app.amount = total_amount
+            mock_app.date = expense_date
+            mock_app.itinerariesCount = iti_count
+            result.append(mock_app)
+    except Exception as e:
+        logger.error(f"Error querying legacy pending approvals: {e}")
+            
     cache.set(cache_key, result)
     return result
 
@@ -239,6 +315,109 @@ async def approve_expense(
     current_user: User = Depends(get_current_user)
 ):
     if expense_id < 0:
+        if expense_id <= -200000:
+            # Find the matching exp_id by hashing all exp_ids from expense_master
+            from sqlalchemy import text
+            all_rows = db.execute(text("SELECT exp_id FROM expense_master")).fetchall()
+            matching_exp_id = None
+            for row in all_rows:
+                if get_legacy_expense_hash_id(row[0]) == expense_id:
+                    matching_exp_id = row[0]
+                    break
+                    
+            if not matching_exp_id:
+                raise HTTPException(status_code=404, detail="Legacy expense claim not found.")
+                
+            # Query legacy details
+            exp = db.execute(
+                text("SELECT user_id, status, level_first_approver, level_second_approver, total_amount FROM expense_master WHERE exp_id = :exp_id"),
+                {"exp_id": matching_exp_id}
+            ).first()
+            
+            if not exp:
+                raise HTTPException(status_code=404, detail="Legacy expense claim details not found.")
+                
+            submitter_id, current_status, l1_app, l2_app, total_amount = exp
+            
+            # Check permissions
+            is_l1 = (l1_app == current_user.user_id)
+            is_l2 = (l2_app == current_user.user_id)
+            
+            if not is_l1 and not is_l2 and current_user.role != "Admin":
+                raise HTTPException(status_code=403, detail="Access denied to approve this claim.")
+                
+            # Determine the action level
+            if (current_status in ["Pending L1", "Pending"]) and is_l1:
+                new_status = "Pending L2" if (l2_app and l2_app.strip() and l2_app != "None") else "Approved"
+                db.execute(
+                    text("UPDATE expense_master SET status = :status, approved_by = :approved_by, level_first_approver_time = datetime('now') WHERE exp_id = :exp_id"),
+                    {"status": new_status, "approved_by": current_user.user_id, "exp_id": matching_exp_id}
+                )
+                
+                # Send notifications
+                try:
+                    from app.utils.db_notifications import create_notification
+                    if new_status == "Pending L2":
+                        create_notification(
+                            db=db,
+                            user_id=submitter_id,
+                            title="🔄 Claim Approved at Level 1",
+                            description=f"Your claim {matching_exp_id} has been approved at Level 1 by {current_user.name} and is pending Level 2 approval.",
+                            notification_type="info",
+                            link="/home"
+                        )
+                        create_notification(
+                            db=db,
+                            user_id=l2_app,
+                            title="📥 Pending Approval",
+                            description=f"New claim {matching_exp_id} submitted by {submitter_id} (₹{total_amount:,.0f}) is pending your Level 2 approval.",
+                            notification_type="warning",
+                            link="/approval-center"
+                        )
+                    else:
+                        create_notification(
+                            db=db,
+                            user_id=submitter_id,
+                            title="✅ Expense Claim Approved!",
+                            description=f"Your claim {matching_exp_id} has been fully approved by {current_user.name}.",
+                            notification_type="success",
+                            link="/home"
+                        )
+                except Exception as e:
+                    logger.warning(f"Failed to create notification: {str(e)}")
+                    
+            elif current_status == "Pending L2" and is_l2:
+                db.execute(
+                    text("UPDATE expense_master SET status = 'Approved', approved_by = :approved_by, level_second_approver_time = datetime('now') WHERE exp_id = :exp_id"),
+                    {"approved_by": current_user.user_id, "exp_id": matching_exp_id}
+                )
+                
+                # Send notification
+                try:
+                    from app.utils.db_notifications import create_notification
+                    create_notification(
+                        db=db,
+                        user_id=submitter_id,
+                        title="✅ Expense Claim Approved!",
+                        description=f"Your claim {matching_exp_id} has been fully approved by {current_user.name}.",
+                        notification_type="success",
+                        link="/home"
+                    )
+                except Exception as e:
+                    logger.warning(f"Failed to create notification: {str(e)}")
+            else:
+                raise HTTPException(status_code=400, detail="Cannot action this claim at this time or invalid status.")
+                
+            db.commit()
+            from app.utils import cache
+            cache.clear_user_and_managers_cache(db, submitter_id)
+            
+            return {
+                "status": "success",
+                "message": "Expense claim approved successfully.",
+                "expense_status": "Approved"
+            }
+
         limit_id = -expense_id
         from app.models.limit_approval_request import LimitApprovalRequest
         pl = db.query(LimitApprovalRequest).filter(LimitApprovalRequest.id == limit_id).first()
@@ -389,6 +568,76 @@ async def reject_expense(
     current_user: User = Depends(get_current_user)
 ):
     if expense_id < 0:
+        if expense_id <= -200000:
+            # Find the matching exp_id by hashing all exp_ids from expense_master
+            from sqlalchemy import text
+            all_rows = db.execute(text("SELECT exp_id FROM expense_master")).fetchall()
+            matching_exp_id = None
+            for row in all_rows:
+                if get_legacy_expense_hash_id(row[0]) == expense_id:
+                    matching_exp_id = row[0]
+                    break
+                    
+            if not matching_exp_id:
+                raise HTTPException(status_code=404, detail="Legacy expense claim not found.")
+                
+            # Query legacy details
+            exp = db.execute(
+                text("SELECT user_id, status, level_first_approver, level_second_approver FROM expense_master WHERE exp_id = :exp_id"),
+                {"exp_id": matching_exp_id}
+            ).first()
+            
+            if not exp:
+                raise HTTPException(status_code=404, detail="Legacy expense claim details not found.")
+                
+            submitter_id, current_status, l1_app, l2_app = exp
+            
+            # Check permissions
+            is_l1 = (l1_app == current_user.user_id)
+            is_l2 = (l2_app == current_user.user_id)
+            
+            if not is_l1 and not is_l2 and current_user.role != "Admin":
+                raise HTTPException(status_code=403, detail="Access denied to reject this claim.")
+                
+            # Determine L1 or L2 rejection
+            if (current_status in ["Pending L1", "Pending"]) and is_l1:
+                db.execute(
+                    text("UPDATE expense_master SET status = 'Rejected', reject_reason = :reason, approved_by = 'L1', level_first_approver_time = datetime('now') WHERE exp_id = :exp_id"),
+                    {"reason": request.comments, "exp_id": matching_exp_id}
+                )
+            elif current_status == "Pending L2" and is_l2:
+                db.execute(
+                    text("UPDATE expense_master SET status = 'Rejected', reject_reason = :reason, approved_by = 'L2', level_second_approver_time = datetime('now') WHERE exp_id = :exp_id"),
+                    {"reason": request.comments, "exp_id": matching_exp_id}
+                )
+            else:
+                raise HTTPException(status_code=400, detail="Cannot reject this claim at this time or invalid status.")
+                
+            # Send rejection notification
+            try:
+                from app.utils.db_notifications import create_notification
+                remark = (request.comments or "").strip()[:80]
+                create_notification(
+                    db=db,
+                    user_id=submitter_id,
+                    title="❌ Expense Claim Rejected",
+                    description=f"Your claim {matching_exp_id} has been rejected by {current_user.name}. Reason: {remark}",
+                    notification_type="error",
+                    link="/home"
+                )
+            except Exception as e:
+                logger.warning(f"Failed to create rejection notification: {str(e)}")
+                
+            db.commit()
+            from app.utils import cache
+            cache.clear_user_and_managers_cache(db, submitter_id)
+            
+            return {
+                "status": "success",
+                "message": "Expense claim has been rejected.",
+                "expense_status": "Rejected"
+            }
+
         limit_id = -expense_id
         from app.models.limit_approval_request import LimitApprovalRequest
         pl = db.query(LimitApprovalRequest).filter(LimitApprovalRequest.id == limit_id).first()

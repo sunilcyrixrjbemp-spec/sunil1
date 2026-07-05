@@ -135,6 +135,8 @@ def run_schema_updates(db: Session):
         ("original_hotel_amount", "FLOAT DEFAULT 0.0"),
         ("original_other_expense_amount", "FLOAT DEFAULT 0.0"),
         ("original_local_purchase_amount", "FLOAT DEFAULT 0.0"),
+        ("ai_analysis", "TEXT"),
+        ("is_anomaly", "BOOLEAN DEFAULT 0"),
     ]
     
     for col_name, col_type in columns_to_add:

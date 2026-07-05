@@ -1,4 +1,4 @@
-from sqlalchemy import Column, Integer, String, Float, DateTime, ForeignKey, Text
+from sqlalchemy import Column, Integer, String, Float, DateTime, ForeignKey, Text, Boolean
 from sqlalchemy.sql import func
 from app.config.database import Base
 
@@ -16,6 +16,10 @@ class Expense(Base):
     itinerary = Column(Text)  # stored as date string (or JSON summary)
     description = Column(Text)
     attachments = Column(Text)  # JSON array of files
+    
+    # AI Fraud & Anomaly Detection columns
+    ai_analysis = Column(Text, nullable=True)
+    is_anomaly = Column(Boolean, default=False)
     
     # New Itinerary-based master totals
     da_amount = Column(Float, default=0.0)

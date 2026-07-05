@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, HTTPException, status, Request, Form, UploadFile, File
+from fastapi import APIRouter, Depends, HTTPException, status, Request, Form, UploadFile, File, BackgroundTasks
 from sqlalchemy.orm import Session
 from sqlalchemy import func, case, text
 from typing import List, Optional
@@ -8,7 +8,7 @@ import time
 import shutil
 from datetime import datetime
 
-from app.config.database import get_db
+from app.config.database import get_db, SessionLocal
 from app.api.routes.dependencies import get_current_user
 from app.models.user import User
 from app.models.expense import Expense
@@ -22,6 +22,12 @@ from app.models.limit_approval_request import LimitApprovalRequest
 from app.config.settings import settings
 
 router = APIRouter()
+
+def get_legacy_expense_hash_id(exp_id: str) -> int:
+    import hashlib
+    h = hashlib.md5(exp_id.encode('utf-8')).hexdigest()
+    val = int(h[:7], 16)
+    return -200000 - val
 
 def parse_client_timestamp(ts_str: str | None) -> datetime:
     if not ts_str:
@@ -407,6 +413,7 @@ async def create_limit_request(
 @router.post("/")
 async def submit_expense(
     request: Request,
+    background_tasks: BackgroundTasks,
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user)
 ):
@@ -1175,6 +1182,9 @@ async def submit_expense(
         db.add(approval_step)
 
     db.commit()
+
+    # Trigger background AI anomaly analysis
+    background_tasks.add_task(run_expense_ai_analysis, expense.id, SessionLocal)
 
     # Trigger notification to the first approver
     try:
@@ -2514,10 +2524,189 @@ async def get_expense_details(
     """Retrieves full details of a specific claim, including itineraries, attachments, and approvals."""
     if expense_id.startswith("-"):
         try:
-            limit_id = -int(expense_id)
+            val = int(expense_id)
         except ValueError:
             raise HTTPException(status_code=400, detail="Invalid expense ID format.")
             
+        if val <= -200000:
+            # Legacy expense_master claim!
+            from sqlalchemy import text
+            all_rows = db.execute(text("SELECT exp_id FROM expense_master")).fetchall()
+            matching_exp_id = None
+            for row in all_rows:
+                if get_legacy_expense_hash_id(row[0]) == val:
+                    matching_exp_id = row[0]
+                    break
+            
+            if not matching_exp_id:
+                raise HTTPException(status_code=404, detail="Legacy expense claim not found.")
+                
+            # Query legacy details
+            master_row = db.execute(
+                text("SELECT exp_id, user_id, expense_date, total_amount, status, da_amount, hotel_amount, other_expense_amount, local_purchase_amount, local_purchase_desc, other_expense_desc, visit_purpose, created_at, level_first_approver, level_second_approver, reject_reason, approved_by, original_amount, is_edited, manager_edit_remark FROM expense_master WHERE exp_id = :exp_id"),
+                {"exp_id": matching_exp_id}
+            ).first()
+            
+            if not master_row:
+                raise HTTPException(status_code=404, detail="Legacy expense claim details not found.")
+                
+            exp_id_val, user_id_str, expense_date, total_amount, status_val, da_amount, hotel_amount, other_amount, lp_amount, lp_desc, other_desc, visit_purpose, created_at, l1_app, l2_app, reject_reason, approved_by, orig_amt, is_edited, mgr_edit_remark = master_row
+            
+            # Query submitter user
+            submitter = db.query(User).filter(User.user_id == user_id_str).first()
+            
+            # Get allowances
+            rate_bike = 4.5
+            rate_car = 9.0
+            if submitter:
+                from app.models.allowance_master import AllowanceMaster
+                grade_to_lookup = "O1" if "specialist" in (submitter.designation or "").lower() else (submitter.grade or "O1")
+                allowance = db.query(AllowanceMaster).filter(AllowanceMaster.grade == grade_to_lookup).first()
+                default_bike = db.query(AllowanceMaster).filter(AllowanceMaster.vehicle_type == "Bike").first()
+                default_car = db.query(AllowanceMaster).filter(AllowanceMaster.vehicle_type == "Car").first()
+                fallback_bike_rate = default_bike.rate_per_km if default_bike else 4.5
+                fallback_car_rate = default_car.rate_per_km if default_car else 9.0
+                
+                if allowance:
+                    rate_bike = allowance.rate_per_km if allowance.vehicle_type == "Bike" else fallback_bike_rate
+                    rate_car = allowance.rate_per_km if allowance.vehicle_type == "Car" else fallback_car_rate
+                else:
+                    rate_bike = fallback_bike_rate
+                    rate_car = fallback_car_rate
+                    
+            # Load itineraries
+            iti_rows = db.execute(
+                text("SELECT leg_number, from_district, to_district, from_location, to_location, travel_mode, distance_km, travel_amount, sub_mode, sub_amount, da_amount, hotel_amount, other_amount, other_desc, calls_assigned, calls_completed, pms_count, asset_tagging, visit_purpose FROM expense_itinerary WHERE exp_id = :exp_id ORDER BY leg_number"),
+                {"exp_id": matching_exp_id}
+            ).fetchall()
+            
+            itineraries_list = []
+            for r in iti_rows:
+                itineraries_list.append({
+                    "leg": r[0],
+                    "from_district": r[1],
+                    "to_district": r[2],
+                    "from": r[3],
+                    "to": r[4],
+                    "mode": r[5],
+                    "km": float(r[6]) if r[6] else 0.0,
+                    "amount": float(r[7]) if r[7] else 0.0,
+                    "sub_mode": r[8],
+                    "sub_amount": float(r[9]) if r[9] else 0.0,
+                    "da": float(r[10]) if r[10] else 0.0,
+                    "hotel": float(r[11]) if r[11] else 0.0,
+                    "local_purchase": 0.0,
+                    "oth_desc": r[13],
+                    "oth_amount": float(r[12]) if r[12] else 0.0,
+                    "ws_assigned": r[14] or 0,
+                    "calls_assigned": r[14] or 0,
+                    "ws_closed": r[15] or 0,
+                    "calls_completed": r[15] or 0,
+                    "ws_pms": r[16] or 0,
+                    "pms_count": r[16] or 0,
+                    "ws_asset": r[17] or 0,
+                    "asset_tagging": r[17] or 0,
+                    "calibration_count": 0,
+                    "mobilise_count": 0,
+                    "mobilise_asset_count": 0,
+                    "visit_purpose": r[18],
+                    "activity_details": "",
+                    "original_km": float(r[6]) if r[6] else 0.0,
+                    "original_amount": float(r[7]) if r[7] else 0.0,
+                    "original_sub_amount": float(r[9]) if r[9] else 0.0,
+                    "original_da": float(r[10]) if r[10] else 0.0,
+                    "original_hotel": float(r[11]) if r[11] else 0.0,
+                    "original_oth_amount": float(r[12]) if r[12] else 0.0,
+                    "original_local_purchase": 0.0
+                })
+                
+            # Load attachments
+            att_rows = db.execute(
+                text("SELECT file_url, itinerary_id, bill_type FROM expense_attachments WHERE exp_id = :exp_id"),
+                {"exp_id": matching_exp_id}
+            ).fetchall()
+            
+            attachments_list = [r[0] for r in att_rows]
+            attachments_detailed = [
+                {
+                    "file_url": r[0],
+                    "itinerary_id": r[1],
+                    "bill_type": r[2]
+                } for r in att_rows
+            ]
+            
+            # Mock approvals list
+            approvals_list = []
+            l1_user = db.query(User).filter(User.user_id == l1_app).first() if l1_app else None
+            l2_user = db.query(User).filter(User.user_id == l2_app).first() if l2_app else None
+            
+            l1_status = "approved" if status_val in ["Pending L2", "Approved"] else ("rejected" if (status_val == "Rejected" and approved_by == "L1") else "pending")
+            approvals_list.append({
+                "id": val,
+                "level_number": 1,
+                "approver_name": l1_user.name if l1_user else (l1_app or "N/A"),
+                "approver_code": l1_app or "",
+                "approver_role": l1_user.role if l1_user else "Manager",
+                "status": l1_status,
+                "comments": reject_reason if (status_val == "Rejected" and approved_by == "L1") else "",
+                "updated_at": created_at
+            })
+            
+            if l2_app:
+                l2_status = "approved" if status_val == "Approved" else ("rejected" if (status_val == "Rejected" and approved_by == "L2") else ("pending" if status_val == "Pending L2" else "waiting"))
+                approvals_list.append({
+                    "id": val - 1,
+                    "level_number": 2,
+                    "approver_name": l2_user.name if l2_user else l2_app,
+                    "approver_code": l2_app,
+                    "approver_role": l2_user.role if l2_user else "HOD",
+                    "status": l2_status,
+                    "comments": reject_reason if (status_val == "Rejected" and approved_by == "L2") else "",
+                    "updated_at": created_at
+                })
+                
+            month_name = "January"
+            year_val = datetime.now().year
+            try:
+                dt = datetime.strptime(expense_date, "%Y-%m-%d")
+                month_name = dt.strftime("%B")
+                year_val = dt.year
+            except Exception:
+                pass
+                
+            monthly_stats = get_user_monthly_stats(db, submitter.id if submitter else 0, month_name, year_val, exclude_date=expense_date)
+            
+            return {
+                "id": val,
+                "expense_code": matching_exp_id,
+                "user_id": submitter.id if submitter else 0,
+                "submitter_name": submitter.name if submitter else (user_id_str or ""),
+                "submitter_code": user_id_str or "",
+                "month": month_name,
+                "year": year_val,
+                "amount": float(total_amount) if total_amount else 0.0,
+                "status": "approved" if status_val == "Approved" else ("rejected" if status_val == "Rejected" else "submitted"),
+                "category": itineraries_list[0]["mode"] if itineraries_list else "Travel",
+                "date": expense_date,
+                "purpose": visit_purpose or "",
+                "original_amount": float(orig_amt) if orig_amt else (float(total_amount) if total_amount else 0.0),
+                "original_da_amount": float(da_amount) if da_amount else 0.0,
+                "original_hotel_amount": float(hotel_amount) if hotel_amount else 0.0,
+                "original_other_expense_amount": float(other_amount) if other_amount else 0.0,
+                "original_local_purchase_amount": float(lp_amount) if lp_amount else 0.0,
+                "attachments": attachments_list,
+                "attachments_detailed": attachments_detailed,
+                "itineraries": itineraries_list,
+                "created_at": created_at,
+                "updated_at": created_at,
+                "approvals": approvals_list,
+                "edit_history": [],
+                "user_monthly_stats": monthly_stats,
+                "rate_bike": rate_bike,
+                "rate_car": rate_car
+            }
+
+        limit_id = -val
         from app.models.limit_approval_request import LimitApprovalRequest
         pl = db.query(LimitApprovalRequest).filter(LimitApprovalRequest.id == limit_id).first()
         if not pl:
@@ -2732,6 +2921,8 @@ async def get_expense_details(
         "category": expense.travel_mode,
         "date": expense.itinerary,
         "purpose": expense.description,
+        "ai_analysis": expense.ai_analysis,
+        "is_anomaly": expense.is_anomaly,
         
         # Original master totals
         "original_amount": expense.original_amount or expense.amount,
@@ -2820,9 +3011,128 @@ async def delete_expense(
     db.query(ExpenseAttachment).filter(ExpenseAttachment.exp_id == expense.expense_code).delete()
     db.query(Approval).filter(Approval.expense_id == expense.id).delete()
     
+    # Clean up related notifications
+    from app.models.notification import Notification
+    db.query(Notification).filter(
+        (Notification.description.like(f"%{expense.expense_code}%")) |
+        (Notification.link.like(f"%{expense.expense_code}%"))
+    ).delete(synchronize_session=False)
+    
     db.delete(expense)
     db.commit()
     from app.utils import cache
     cache.clear_user_and_managers_cache(db, current_user.user_id)
     return {"status": "success", "message": "Expense claim deleted successfully."}
+
+
+def run_expense_ai_analysis(expense_id: int, db_session_maker):
+    """Runs Cloudflare Workers AI Llama 3.2 3B Instruct model in background to check for anomalies and fraud in submitted expense."""
+    import requests
+    from app.models.expense import Expense
+    from app.models.expense_itinerary import ExpenseItinerary
+    from app.models.user import User
+    
+    db = db_session_maker()
+    try:
+        expense = db.query(Expense).filter(Expense.id == expense_id).first()
+        if not expense:
+            return
+            
+        submitter = db.query(User).filter(User.id == expense.user_id).first()
+        submitter_name = submitter.name if submitter else "Unknown"
+        submitter_role = submitter.role if submitter else "Employee"
+        
+        # Load itineraries to give AI complete context
+        itineraries = db.query(ExpenseItinerary).filter(ExpenseItinerary.exp_id == expense.expense_code).all()
+        iti_text = ""
+        for i in itineraries:
+            iti_text += f"- Leg {i.leg_number}: {i.from_district} to {i.to_district} via {i.travel_mode}. Distance: {i.distance_km}km. Travel Amount: {i.travel_amount}. DA: {i.da_amount}. Hotel: {i.hotel_amount}. Local Purchase: {i.local_purchase}. Other: {i.other_amount} (Desc: {i.other_desc}). Purpose: {i.visit_purpose}.\n"
+            
+        # Get settings/env
+        account_id = os.getenv("CLOUDFLARE_ACCOUNT_ID") or "befbd2e0ff580a1d0d0865f011002053"
+        api_token = os.getenv("CLOUDFLARE_API_TOKEN")
+        
+        if not api_token:
+            mock_analysis = {
+                "summary": "AI Anomaly Detection bypassed: CLOUDFLARE_API_TOKEN not configured in environment.",
+                "is_anomaly": False,
+                "confidence_score": 0,
+                "flags": []
+            }
+            expense.ai_analysis = json.dumps(mock_analysis)
+            db.commit()
+            return
+            
+        # Cloudflare Workers AI request
+        model = "@cf/meta/llama-3.2-3b-instruct"
+        url = f"https://api.cloudflare.com/client/v4/accounts/{account_id}/ai/run/{model}"
+        headers = {
+            "Authorization": f"Bearer {api_token}",
+            "Content-Type": "application/json"
+        }
+        
+        prompt = f"""
+You are an expert corporate auditor detecting fraud, anomalies, and errors in employee expense claims.
+Analyze the following expense claim and flag any discrepancies:
+
+Employee: {submitter_name} ({submitter_role})
+Claim Month: {expense.month} {expense.year}
+Total Claimed Amount: Rs. {expense.amount:,.2f}
+Description: {expense.description or "N/A"}
+Itinerary Details:
+{iti_text}
+
+Check for:
+1. Distance and Travel Mode consistency (e.g. claiming excessive distance or unrealistic travel mode/costs).
+2. Duplications or unusually high auxiliary costs (DA, Hotel, Local Purchase, Other).
+3. Purpose consistency (e.g., claiming tourist spots or holidays as official work visits).
+
+Return ONLY a valid JSON string (no markdown block, no extra text) with this exact schema:
+{{
+  "is_anomaly": true/false,
+  "confidence_score": integer (0 to 100 representing confidence of anomaly/fraud),
+  "flags": ["list of flagged issues or observations"],
+  "summary": "a short 2-3 sentence audit summary for the manager to read"
+}}
+"""
+        payload = {
+            "messages": [
+                {"role": "system", "content": "You are a professional corporate audit assistant. Return ONLY valid JSON."},
+                {"role": "user", "content": prompt}
+            ]
+        }
+        
+        # Make API call with a 10s timeout
+        res = requests.post(url, headers=headers, json=payload, timeout=10)
+        if res.status_code == 200:
+            ai_res = res.json()
+            if ai_res.get("success") and ai_res.get("result"):
+                raw_text = ai_res["result"].get("response", "").strip()
+                try:
+                    if raw_text.startswith("```json"):
+                        raw_text = raw_text.replace("```json", "", 1)
+                    if raw_text.endswith("```"):
+                        raw_text = raw_text[:-3].strip()
+                    parsed = json.loads(raw_text.strip())
+                    
+                    expense.ai_analysis = json.dumps(parsed)
+                    expense.is_anomaly = bool(parsed.get("is_anomaly", False))
+                    db.commit()
+                except Exception as parse_err:
+                    fallback = {
+                        "summary": raw_text[:300],
+                        "is_anomaly": False,
+                        "confidence_score": 0,
+                        "flags": ["Error parsing structured AI report"]
+                    }
+                    expense.ai_analysis = json.dumps(fallback)
+                    db.commit()
+            else:
+                pass
+        else:
+            pass
+    except Exception as e:
+        pass
+    finally:
+        db.close()
         

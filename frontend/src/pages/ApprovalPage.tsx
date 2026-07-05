@@ -110,6 +110,18 @@ export default function ApprovalPage() {
   const [bulkComments, setBulkComments] = useState("");
   const [bulkActionLoading, setBulkActionLoading] = useState(false);
 
+  const aiReport = (() => {
+    if (!expenseDetails || !expenseDetails.ai_analysis) return null;
+    try {
+      return typeof expenseDetails.ai_analysis === "string" 
+        ? JSON.parse(expenseDetails.ai_analysis) 
+        : expenseDetails.ai_analysis;
+    } catch (e) {
+      console.error("Error parsing AI report", e);
+      return null;
+    }
+  })();
+
   // In-app Lightbox state
   const [lightboxImage, setLightboxImage] = useState<string | null>(null);
   const [assetValueMaster, setAssetValueMaster] = useState<any[]>([]);
@@ -1070,7 +1082,44 @@ export default function ApprovalPage() {
                     </div>
                   </div>
 
-
+                  {aiReport && (
+                    <div className={`border rounded-xl p-4 shadow-sm text-xs text-left space-y-2.5 ${
+                      expenseDetails.is_anomaly 
+                        ? "bg-red-50/50 border-red-200 border-t-4 border-t-red-600" 
+                        : "bg-green-50/40 border-green-200 border-t-4 border-t-green-600"
+                    }`}>
+                      <div className="flex justify-between items-center border-b pb-2">
+                        <h4 className={`font-black text-[10px] uppercase tracking-widest flex items-center gap-1.5 ${
+                          expenseDetails.is_anomaly ? "text-red-800" : "text-green-800"
+                        }`}>
+                          <span>🤖 AI Security Audit Report</span>
+                          {expenseDetails.is_anomaly && (
+                            <span className="bg-red-600 text-white font-bold text-[8px] px-1.5 py-0.5 rounded animate-pulse">SUSPICION FLAGGED</span>
+                          )}
+                        </h4>
+                        <span className={`font-mono text-[9px] font-black uppercase px-2 py-0.5 rounded border ${
+                          expenseDetails.is_anomaly 
+                            ? "bg-red-105 text-red-750 border-red-200" 
+                            : "bg-green-105 text-green-750 border-green-200"
+                        }`}>
+                          Risk Score: {aiReport.confidence_score}%
+                        </span>
+                      </div>
+                      
+                      <p className="text-gray-700 font-bold leading-relaxed">{aiReport.summary}</p>
+                      
+                      {aiReport.flags && aiReport.flags.length > 0 && (
+                        <div className="space-y-1.5 pt-1.5">
+                          <span className="text-[9px] text-gray-400 font-black uppercase block tracking-wider">Flagged Observations:</span>
+                          <ul className="list-disc list-inside space-y-1 text-gray-600 font-medium">
+                            {aiReport.flags.map((flag: string, fIdx: number) => (
+                              <li key={fIdx} className="text-red-750">{flag}</li>
+                            ))}
+                          </ul>
+                        </div>
+                      )}
+                    </div>
+                  )}
 
                   {selectedApproval.category === "Limit Request" && (
                     <div className="p-4 bg-amber-50 border border-amber-200 rounded-lg text-left space-y-3">

@@ -34,6 +34,7 @@ class Settings(BaseSettings):
     CLOUDFLARE_DATABASE_ID: str = "34e085d8-c078-4f2f-b240-9bf8f4cf9301"
     CLOUDFLARE_API_TOKEN: str = ""
     CLOUDFLARE_R2_BUCKET_NAME: str = "fieldops-uploads"
+    CLOUDFLARE_KV_NAMESPACE_ID: str = ""
     FORCE_LOCAL_DB: bool = False
 
     # Firebase Cloud Messaging (Push Notifications)

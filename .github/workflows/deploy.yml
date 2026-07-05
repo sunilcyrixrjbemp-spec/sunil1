@@ -1,0 +1,76 @@
+name: Deploy Application (Backend & Frontend)
+
+on:
+  push:
+    branches: [ main ]
+  workflow_dispatch:
+
+jobs:
+  deploy-backend:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: '20'
+
+      - name: Install Wrangler
+        run: npm install -g wrangler
+
+      - name: Deploy Worker
+        working-directory: ./backend
+        run: npx wrangler deploy
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CF_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CF_ACCOUNT_ID }}
+
+      - name: Set Wrangler Secrets
+        working-directory: ./backend
+        run: |
+          echo "${{ secrets.CF_API_TOKEN }}" | npx wrangler secret put CLOUDFLARE_API_TOKEN
+          echo "${{ secrets.CF_ACCOUNT_ID }}" | npx wrangler secret put CLOUDFLARE_ACCOUNT_ID
+          echo "${{ secrets.CF_DATABASE_ID }}" | npx wrangler secret put CLOUDFLARE_DATABASE_ID
+          if [ -n "${{ secrets.CF_KV_NAMESPACE_ID }}" ]; then
+            echo "${{ secrets.CF_KV_NAMESPACE_ID }}" | npx wrangler secret put CLOUDFLARE_KV_NAMESPACE_ID
+          fi
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CF_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CF_ACCOUNT_ID }}
+
+  deploy-frontend:
+    needs: deploy-backend
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: '20'
+          cache: 'npm'
+          cache-dependency-path: 'frontend/package-lock.json'
+
+      - name: Install dependencies
+        working-directory: ./frontend
+        run: npm install --legacy-peer-deps
+
+      - name: Build
+        working-directory: ./frontend
+        env:
+          VITE_API_BASE_URL: ${{ secrets.VITE_API_BASE_URL }}
+        run: |
+          npm run build
+          if [ -n "${{ secrets.VITE_API_BASE_URL }}" ]; then
+            CLEAN_URL=$(echo "${{ secrets.VITE_API_BASE_URL }}" | sed 's/\/$//' | sed 's/\/api$//')
+            echo "/api/* $CLEAN_URL/api/:splat 200" > dist/_redirects
+          fi
+
+      - name: Deploy to Cloudflare Pages
+        uses: cloudflare/wrangler-action@v3
+        with:
+          apiToken: ${{ secrets.CF_API_TOKEN }}
+          accountId: ${{ secrets.CF_ACCOUNT_ID }}
+          command: pages deploy dist --project-name=sunil1
+          workingDirectory: frontend
