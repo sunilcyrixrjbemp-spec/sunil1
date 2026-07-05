@@ -2171,32 +2171,20 @@ def get_user_monthly_stats(db, user_db_id: int, month: str, year: int, exclude_d
     from app.models.expense import Expense
     from app.models.expense_itinerary import ExpenseItinerary
     
-    approved_query = db.query(Expense).filter(
+    query = db.query(Expense).filter(
         Expense.user_id == user_db_id,
         Expense.month == month,
         Expense.year == year,
-        Expense.status == "approved"
-    )
-    submitted_query = db.query(Expense).filter(
-        Expense.user_id == user_db_id,
-        Expense.month == month,
-        Expense.year == year,
-        Expense.status.in_(["submitted", "approved", "partially_approved"])
+        Expense.status.notin_(["draft", "rejected"])
     )
     
-    # If exclude_date is provided, only include expenses before that date
+    # If exclude_date is provided, only include expenses strictly before that date
     if exclude_date:
-        approved_query = approved_query.filter(Expense.itinerary < exclude_date)
-        submitted_query = submitted_query.filter(Expense.itinerary < exclude_date)
+        query = query.filter(Expense.itinerary < exclude_date)
     
-    approved_expenses = approved_query.all()
-    all_submitted_expenses = submitted_query.all()
-    
-    approved_exp_codes = [e.expense_code for e in approved_expenses if e.expense_code]
-    approved_legs = db.query(ExpenseItinerary).filter(ExpenseItinerary.exp_id.in_(approved_exp_codes)).all() if approved_exp_codes else []
-    
-    submitted_exp_codes = [e.expense_code for e in all_submitted_expenses if e.expense_code]
-    submitted_legs = db.query(ExpenseItinerary).filter(ExpenseItinerary.exp_id.in_(submitted_exp_codes)).all() if submitted_exp_codes else []
+    expenses = query.all()
+    exp_codes = [e.expense_code for e in expenses if e.expense_code]
+    legs = db.query(ExpenseItinerary).filter(ExpenseItinerary.exp_id.in_(exp_codes)).all() if exp_codes else []
     
     total_approved_da = 0.0
     total_approved_bike_km = 0.0
@@ -2211,7 +2199,7 @@ def get_user_monthly_stats(db, user_db_id: int, month: str, year: int, exclude_d
     total_mobilise_count = 0
     total_calibration_count = 0
     
-    for leg in approved_legs:
+    for leg in legs:
         total_approved_da += leg.da_amount or 0.0
         total_approved_hotel += leg.hotel_amount or 0.0
         
@@ -2219,11 +2207,11 @@ def get_user_monthly_stats(db, user_db_id: int, month: str, year: int, exclude_d
         if mode == "bike":
             total_approved_bike_km += leg.distance_km or 0.0
         elif mode == "auto":
-            total_approved_auto += (leg.travel_amount or 0.0) + (leg.sub_amount or 0.0)
+            total_approved_auto += leg.travel_amount or 0.0
         elif mode == "bus":
-            total_approved_bus += (leg.travel_amount or 0.0) + (leg.sub_amount or 0.0)
+            total_approved_bus += leg.travel_amount or 0.0
         elif mode == "train":
-            total_approved_train += (leg.travel_amount or 0.0) + (leg.sub_amount or 0.0)
+            total_approved_train += leg.travel_amount or 0.0
             
         sub_mode = (leg.sub_mode or "").strip().lower()
         if sub_mode == "auto":
@@ -2240,7 +2228,7 @@ def get_user_monthly_stats(db, user_db_id: int, month: str, year: int, exclude_d
         total_calibration_count += leg.calibration_count or 0
         
     total_submitted_km_used = 0.0
-    for leg in submitted_legs:
+    for leg in legs:
         mode = (leg.travel_mode or "").strip().lower()
         if mode in ["bike", "car"]:
             total_submitted_km_used += leg.distance_km or 0.0

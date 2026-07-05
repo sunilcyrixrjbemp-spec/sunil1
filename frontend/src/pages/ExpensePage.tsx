@@ -2348,7 +2348,7 @@ export default function ExpensePage() {
                         }`}>
                           {legNum}
                         </span>
-                        Travel Leg {legNum}
+                        Facility Visit {legNum}
                         <span className={`text-[8px] font-black uppercase px-2 py-0.5 rounded-full tracking-wider ${
                           leg.travel_type === "In-District"
                             ? "bg-indigo-100 text-indigo-700 border border-indigo-200"
@@ -2363,7 +2363,7 @@ export default function ExpensePage() {
                           onClick={() => removeItinerary(leg.leg)}
                           className="text-red-600 hover:text-red-800 text-[10px] font-bold flex items-center gap-1 border-0 bg-transparent cursor-pointer"
                         >
-                          <Trash2 className="w-3.5 h-3.5" /> Remove Leg
+                          <Trash2 className="w-3.5 h-3.5" /> Remove Facility Visit
                         </button>
                       )}
                     </div>
@@ -4623,7 +4623,7 @@ export default function ExpensePage() {
                             <div key={idx} className="bg-white border border-gray-200 rounded-lg p-3.5 space-y-3 shadow-xs text-xs">
                               {/* Card Header */}
                               <div className="flex justify-between items-center border-b border-gray-100 pb-2">
-                                <span className="font-extrabold text-blue-600 font-mono text-xs">Leg #{leg.leg}</span>
+                                <span className="font-extrabold text-blue-600 font-mono text-xs">Facility Visit {leg.leg}</span>
                                 <span className="font-extrabold text-gray-900 text-sm">₹{legTotal.toLocaleString()}</span>
                               </div>
 
@@ -5011,7 +5011,7 @@ export default function ExpensePage() {
                                 : log.field_name;
                               return (
                                 <tr key={logIdx} className="hover:bg-amber-50/10 text-slate-700 bg-white">
-                                  <td className="py-2.5 px-3 font-mono font-bold text-gray-500">Leg #{log.leg_number}</td>
+                                  <td className="py-2.5 px-3 font-mono font-bold text-gray-500">Facility Visit {log.leg_number}</td>
                                   <td className="py-2.5 px-3 font-semibold text-gray-800">{cleanField}</td>
                                   <td className="py-2.5 px-3 font-mono text-gray-500">{log.field_name === "distance_km" ? `${log.old_value} KM` : `₹${parseFloat(log.old_value || "0").toLocaleString()}`}</td>
                                   <td className="py-2.5 px-3 font-mono font-bold text-blue-600">{log.field_name === "distance_km" ? `${log.new_value} KM` : `₹${parseFloat(log.new_value || "0").toLocaleString()}`}</td>

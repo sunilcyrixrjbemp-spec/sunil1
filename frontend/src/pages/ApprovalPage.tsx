@@ -402,40 +402,6 @@ export default function ApprovalPage() {
     }
   };
 
-  const renderEditRemarkInput = (index: number, field: string, originalVal: any, currentVal: any) => {
-    const isModified = currentVal !== originalVal;
-    if (!isModified) return null;
-    
-    const leg = editedLegs[index];
-    if (!leg) return null;
-    const remarkVal = leg.remarks?.[field] || "";
-    
-    return (
-      <div className="mt-1">
-        <input
-          type="text"
-          value={remarkVal}
-          onChange={(e) => {
-            const val = e.target.value;
-            setEditedLegs(prev => {
-              const updated = [...prev];
-              updated[index] = {
-                ...updated[index],
-                remarks: {
-                  ...updated[index].remarks,
-                  [field]: val
-                }
-              };
-              return updated;
-            });
-          }}
-          placeholder="Remark/Reason for edit *"
-          className="w-full text-[10px] px-1.5 py-0.5 border border-amber-300 bg-amber-50/20 rounded font-semibold text-amber-800 placeholder-amber-400 focus:outline-none focus:ring-1 focus:ring-amber-400"
-        />
-      </div>
-    );
-  };
-
   // Checkbox functions
   const toggleSelectClaim = (expenseId: number) => {
     setSelectedIds(prev => {
@@ -1267,7 +1233,7 @@ export default function ApprovalPage() {
                               <div className="flex justify-between items-center text-[10px] font-black text-slate-700 uppercase tracking-wide">
                                 <span className="flex items-center gap-1">
                                   <MapPin className="w-3.5 h-3.5 text-red-500" />
-                                  Leg #{leg.leg} Route
+                                  Facility Visit {leg.leg}
                                 </span>
                                 <div className="flex gap-2">
                                   <span className="font-bold text-blue-700 bg-blue-50 px-2 py-0.5 rounded border border-blue-200 uppercase text-[9px]">{leg.mode} ({leg.km} KM)</span>
@@ -1320,7 +1286,6 @@ export default function ApprovalPage() {
                                         onChange={(e) => handleLegAmountChange(index, "da", e.target.value)}
                                         className="input-lte pl-5 pr-1 py-0.5 text-xs font-bold w-20 h-6 border-amber-300 bg-amber-50/10"
                                       />
-                                      {renderEditRemarkInput(index, "da_amount", originalLeg.da || 0, leg.da)}
                                     </div>
                                   ) : (
                                     <span className="font-bold text-gray-800">₹{(Number(leg.da) || 0).toLocaleString()}</span>
@@ -1362,7 +1327,6 @@ export default function ApprovalPage() {
                                         onChange={(e) => handleLegAmountChange(index, "km", e.target.value)}
                                         className={`input-lte px-2 py-1.5 text-xs font-bold ${leg.km !== (originalLeg.km || 0) ? "border-amber-450 bg-amber-50/10" : ""}`}
                                       />
-                                      {renderEditRemarkInput(index, "distance_km", originalLeg.km || 0, leg.km)}
                                     </div>
                                     <span className="text-[9px] text-gray-500 block font-semibold">Amt: ₹{leg.travel_amount} (Orig: {originalLeg.km || 0} KM)</span>
                                     {travelReceiptUrl && (
@@ -1389,7 +1353,6 @@ export default function ApprovalPage() {
                                         onChange={(e) => handleLegAmountChange(index, "travel_amount", e.target.value)}
                                         className={`input-lte pl-6 pr-2 py-1.5 text-xs font-bold ${travelModified ? "border-amber-450 bg-amber-50/10" : ""}`}
                                       />
-                                      {renderEditRemarkInput(index, "travel_amount", originalLeg.amount || 0, leg.travel_amount)}
                                     </div>
                                     <span className="text-[9px] text-gray-455 block font-semibold">Original: ₹{originalLeg.amount || 0}</span>
                                     {travelReceiptUrl && (
@@ -1419,7 +1382,6 @@ export default function ApprovalPage() {
                                       className={`input-lte pl-6 pr-2 py-1.5 text-xs font-bold ${subModified ? "border-amber-450 bg-amber-50/10" : ""}`}
                                       disabled={!leg.sub_mode}
                                     />
-                                    {renderEditRemarkInput(index, "sub_amount", originalLeg.sub_amount || 0, leg.sub_amount)}
                                   </div>
                                   <span className="text-[9px] text-gray-455 block font-semibold">Original: ₹{originalLeg.sub_amount || 0}</span>
                                   {subReceiptUrl && (
@@ -1447,7 +1409,6 @@ export default function ApprovalPage() {
                                       onChange={(e) => handleLegAmountChange(index, "hotel_amount", e.target.value)}
                                       className={`input-lte pl-6 pr-2 py-1.5 text-xs font-bold ${hotelModified ? "border-amber-450 bg-amber-50/10" : ""}`}
                                     />
-                                    {renderEditRemarkInput(index, "hotel_amount", originalLeg.hotel || 0, leg.hotel_amount)}
                                   </div>
                                   <span className="text-[9px] text-gray-455 block font-semibold">Original: ₹{originalLeg.hotel || 0}</span>
                                   {hotelReceiptUrl && (
@@ -1484,7 +1445,6 @@ export default function ApprovalPage() {
                                       onChange={(e) => handleLegAmountChange(index, "local_purchase", e.target.value)}
                                       className={`input-lte pl-6 pr-2 py-1.5 text-xs font-bold ${lpModified ? "border-amber-450 bg-amber-50/10" : ""}`}
                                     />
-                                    {renderEditRemarkInput(index, "local_purchase", originalLeg.local_purchase || 0, leg.local_purchase)}
                                   </div>
                                   <span className="text-[9px] text-gray-455 block font-semibold">Original: ₹{originalLeg.local_purchase || 0}</span>
                                   {lpReceiptUrl && (
@@ -1512,7 +1472,6 @@ export default function ApprovalPage() {
                                       onChange={(e) => handleLegAmountChange(index, "other_amount", e.target.value)}
                                       className={`input-lte pl-6 pr-2 py-1.5 text-xs font-bold ${otherModified ? "border-amber-450 bg-amber-50/10" : ""}`}
                                     />
-                                    {renderEditRemarkInput(index, "other_amount", originalLeg.oth_amount || 0, leg.other_amount)}
                                   </div>
                                   <span className="text-[9px] text-gray-455 block font-semibold truncate" title={leg.oth_desc || "No Description"}>
                                     Orig: ₹{originalLeg.oth_amount || 0} ({leg.oth_desc || "Other"})
@@ -1530,6 +1489,184 @@ export default function ApprovalPage() {
                               </div>
 
                             </div>
+
+                            {/* Verification / Edit remark card for modified fields in this leg */}
+                            {((leg.km !== (originalLeg.km || 0)) ||
+                              (leg.travel_amount !== (originalLeg.amount || 0)) ||
+                              (leg.sub_amount !== (originalLeg.sub_amount || 0)) ||
+                              (leg.hotel_amount !== (originalLeg.hotel || 0)) ||
+                              (leg.local_purchase !== (originalLeg.local_purchase || 0)) ||
+                              (leg.other_amount !== (originalLeg.oth_amount || 0)) ||
+                              (selectedApproval?.level_number === 1 && (leg.da !== (originalLeg.da || 0)))) && (
+                              <div className="mx-4 mb-4 p-3 bg-amber-50/50 border border-amber-200 rounded-lg space-y-2.5 text-left">
+                                <div className="flex items-center gap-1.5 text-amber-800 font-extrabold text-[10px] uppercase tracking-wider">
+                                  <AlertTriangle className="w-3.5 h-3.5 text-amber-600 shrink-0" />
+                                  <span>Reason(s) Required for Facility Visit {leg.leg} Modifications</span>
+                                </div>
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-3.5">
+                                  {leg.km !== (originalLeg.km || 0) && (
+                                    <div className="space-y-1">
+                                      <label className="text-[9px] font-bold text-amber-700 uppercase block">Distance KM Reason *</label>
+                                      <input
+                                        type="text"
+                                        value={leg.remarks?.distance_km || ""}
+                                        onChange={(e) => {
+                                          const val = e.target.value;
+                                          setEditedLegs(prev => {
+                                            const updated = [...prev];
+                                            updated[index] = {
+                                              ...updated[index],
+                                              remarks: { ...updated[index].remarks, distance_km: val }
+                                            };
+                                            return updated;
+                                          });
+                                        }}
+                                        placeholder="e.g., Shortest path taken, route mapping error"
+                                        className="w-full text-xs px-2.5 py-1.5 border border-amber-300 bg-white rounded font-medium text-amber-900 placeholder-amber-450 focus:outline-none focus:ring-1 focus:ring-amber-500 focus:border-amber-500"
+                                      />
+                                    </div>
+                                  )}
+
+                                  {leg.travel_amount !== (originalLeg.amount || 0) && !["Bike", "Car"].includes(leg.mode) && (
+                                    <div className="space-y-1">
+                                      <label className="text-[9px] font-bold text-amber-700 uppercase block">Travel Amount Reason *</label>
+                                      <input
+                                        type="text"
+                                        value={leg.remarks?.travel_amount || ""}
+                                        onChange={(e) => {
+                                          const val = e.target.value;
+                                          setEditedLegs(prev => {
+                                            const updated = [...prev];
+                                            updated[index] = {
+                                              ...updated[index],
+                                              remarks: { ...updated[index].remarks, travel_amount: val }
+                                            };
+                                            return updated;
+                                          });
+                                        }}
+                                        placeholder="e.g., Actual fare paid was higher/lower"
+                                        className="w-full text-xs px-2.5 py-1.5 border border-amber-300 bg-white rounded font-medium text-amber-900 placeholder-amber-455 focus:outline-none focus:ring-1 focus:ring-amber-500 focus:border-amber-500"
+                                      />
+                                    </div>
+                                  )}
+
+                                  {leg.sub_amount !== (originalLeg.sub_amount || 0) && (
+                                    <div className="space-y-1">
+                                      <label className="text-[9px] font-bold text-amber-700 uppercase block">Local Conveyance Reason *</label>
+                                      <input
+                                        type="text"
+                                        value={leg.remarks?.sub_amount || ""}
+                                        onChange={(e) => {
+                                          const val = e.target.value;
+                                          setEditedLegs(prev => {
+                                            const updated = [...prev];
+                                            updated[index] = {
+                                              ...updated[index],
+                                              remarks: { ...updated[index].remarks, sub_amount: val }
+                                            };
+                                            return updated;
+                                          });
+                                        }}
+                                        placeholder="e.g., Adjusted according to local rates"
+                                        className="w-full text-xs px-2.5 py-1.5 border border-amber-300 bg-white rounded font-medium text-amber-900 placeholder-amber-455 focus:outline-none focus:ring-1 focus:ring-amber-500 focus:border-amber-500"
+                                      />
+                                    </div>
+                                  )}
+
+                                  {leg.hotel_amount !== (originalLeg.hotel || 0) && (
+                                    <div className="space-y-1">
+                                      <label className="text-[9px] font-bold text-amber-700 uppercase block">Hotel Stay Reason *</label>
+                                      <input
+                                        type="text"
+                                        value={leg.remarks?.hotel_amount || ""}
+                                        onChange={(e) => {
+                                          const val = e.target.value;
+                                          setEditedLegs(prev => {
+                                            const updated = [...prev];
+                                            updated[index] = {
+                                              ...updated[index],
+                                              remarks: { ...updated[index].remarks, hotel_amount: val }
+                                            };
+                                            return updated;
+                                          });
+                                        }}
+                                        placeholder="e.g., Approved out of state limit exceeded"
+                                        className="w-full text-xs px-2.5 py-1.5 border border-amber-300 bg-white rounded font-medium text-amber-900 placeholder-amber-455 focus:outline-none focus:ring-1 focus:ring-amber-500 focus:border-amber-500"
+                                      />
+                                    </div>
+                                  )}
+
+                                  {leg.local_purchase !== (originalLeg.local_purchase || 0) && (
+                                    <div className="space-y-1">
+                                      <label className="text-[9px] font-bold text-amber-700 uppercase block">Local Purchase Reason *</label>
+                                      <input
+                                        type="text"
+                                        value={leg.remarks?.local_purchase || ""}
+                                        onChange={(e) => {
+                                          const val = e.target.value;
+                                          setEditedLegs(prev => {
+                                            const updated = [...prev];
+                                            updated[index] = {
+                                              ...updated[index],
+                                              remarks: { ...updated[index].remarks, local_purchase: val }
+                                            };
+                                            return updated;
+                                          });
+                                        }}
+                                        placeholder="e.g., Item cost validation from supplier"
+                                        className="w-full text-xs px-2.5 py-1.5 border border-amber-300 bg-white rounded font-medium text-amber-900 placeholder-amber-455 focus:outline-none focus:ring-1 focus:ring-amber-500 focus:border-amber-500"
+                                      />
+                                    </div>
+                                  )}
+
+                                  {leg.other_amount !== (originalLeg.oth_amount || 0) && (
+                                    <div className="space-y-1">
+                                      <label className="text-[9px] font-bold text-amber-700 uppercase block">Other / Misc Reason *</label>
+                                      <input
+                                        type="text"
+                                        value={leg.remarks?.other_amount || ""}
+                                        onChange={(e) => {
+                                          const val = e.target.value;
+                                          setEditedLegs(prev => {
+                                            const updated = [...prev];
+                                            updated[index] = {
+                                              ...updated[index],
+                                              remarks: { ...updated[index].remarks, other_amount: val }
+                                            };
+                                            return updated;
+                                          });
+                                        }}
+                                        placeholder="e.g., Missing receipt penalty adjustment"
+                                        className="w-full text-xs px-2.5 py-1.5 border border-amber-300 bg-white rounded font-medium text-amber-900 placeholder-amber-455 focus:outline-none focus:ring-1 focus:ring-amber-500 focus:border-amber-500"
+                                      />
+                                    </div>
+                                  )}
+
+                                  {selectedApproval?.level_number === 1 && leg.da !== (originalLeg.da || 0) && (
+                                    <div className="space-y-1">
+                                      <label className="text-[9px] font-bold text-amber-700 uppercase block">DA Allowance Reason *</label>
+                                      <input
+                                        type="text"
+                                        value={leg.remarks?.da_amount || ""}
+                                        onChange={(e) => {
+                                          const val = e.target.value;
+                                          setEditedLegs(prev => {
+                                            const updated = [...prev];
+                                            updated[index] = {
+                                              ...updated[index],
+                                              remarks: { ...updated[index].remarks, da_amount: val }
+                                            };
+                                            return updated;
+                                          });
+                                        }}
+                                        placeholder="e.g., Company guest house stay, DA adjusted"
+                                        className="w-full text-xs px-2.5 py-1.5 border border-amber-300 bg-white rounded font-medium text-amber-900 placeholder-amber-455 focus:outline-none focus:ring-1 focus:ring-amber-500 focus:border-amber-500"
+                                      />
+                                    </div>
+                                  )}
+                                </div>
+                              </div>
+                            )}
 
                             {/* New Detailed Activities section */}
                             {hasActivities && (
@@ -1974,7 +2111,7 @@ export default function ApprovalPage() {
                                 : log.field_name;
                               return (
                                 <tr key={logIdx} className="hover:bg-amber-50/10 text-slate-700">
-                                  <td className="py-2 px-3 font-mono font-bold text-gray-500">Leg #{log.leg_number}</td>
+                                  <td className="py-2 px-3 font-mono font-bold text-gray-500">Facility Visit {log.leg_number}</td>
                                   <td className="py-2 px-3 font-semibold text-gray-800">{cleanField}</td>
                                   <td className="py-2 px-3 font-mono text-gray-500">{log.field_name === "distance_km" ? `${log.old_value} KM` : `₹${parseFloat(log.old_value || "0").toLocaleString()}`}</td>
                                   <td className="py-2 px-3 font-mono font-bold text-blue-600">{log.field_name === "distance_km" ? `${log.new_value} KM` : `₹${parseFloat(log.new_value || "0").toLocaleString()}`}</td>

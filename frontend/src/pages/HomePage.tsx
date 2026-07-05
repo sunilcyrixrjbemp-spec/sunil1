@@ -1930,7 +1930,7 @@ export default function HomePage() {
                                 : log.field_name;
                               return (
                                 <tr key={logIdx} className="hover:bg-amber-50/10 text-slate-700 bg-white">
-                                  <td className="py-2.5 px-3 font-mono font-bold text-gray-500">Leg #{log.leg_number}</td>
+                                  <td className="py-2.5 px-3 font-mono font-bold text-gray-500">Facility Visit {log.leg_number}</td>
                                   <td className="py-2.5 px-3 font-semibold text-gray-800">{cleanField}</td>
                                   <td className="py-2.5 px-3 font-mono text-gray-500">{log.field_name === "distance_km" ? `${log.old_value} KM` : `₹${parseFloat(log.old_value || "0").toLocaleString()}`}</td>
                                   <td className="py-2.5 px-3 font-mono font-bold text-blue-600">{log.field_name === "distance_km" ? `${log.new_value} KM` : `₹${parseFloat(log.new_value || "0").toLocaleString()}`}</td>
