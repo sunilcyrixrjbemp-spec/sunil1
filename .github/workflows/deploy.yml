@@ -21,14 +21,28 @@ jobs:
 
       - name: Deploy Worker
         working-directory: ./backend
-        run: npx wrangler deploy
+        run: |
+          if [[ "${{ secrets.CF_API_TOKEN }}" == cfk_* ]]; then
+            echo "Using Cloudflare Global API Key authentication..."
+            export CLOUDFLARE_API_KEY="${{ secrets.CF_API_TOKEN }}"
+            export CLOUDFLARE_EMAIL="Sunil.cyrixrjbemp@gmail.com"
+          else
+            echo "Using Cloudflare Scoped API Token authentication..."
+            export CLOUDFLARE_API_TOKEN="${{ secrets.CF_API_TOKEN }}"
+          fi
+          npx wrangler deploy
         env:
-          CLOUDFLARE_API_TOKEN: ${{ secrets.CF_API_TOKEN }}
           CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CF_ACCOUNT_ID }}
 
       - name: Set Wrangler Secrets
         working-directory: ./backend
         run: |
+          if [[ "${{ secrets.CF_API_TOKEN }}" == cfk_* ]]; then
+            export CLOUDFLARE_API_KEY="${{ secrets.CF_API_TOKEN }}"
+            export CLOUDFLARE_EMAIL="Sunil.cyrixrjbemp@gmail.com"
+          else
+            export CLOUDFLARE_API_TOKEN="${{ secrets.CF_API_TOKEN }}"
+          fi
           echo "${{ secrets.CF_API_TOKEN }}" | npx wrangler secret put CLOUDFLARE_API_TOKEN
           echo "${{ secrets.CF_ACCOUNT_ID }}" | npx wrangler secret put CLOUDFLARE_ACCOUNT_ID
           echo "${{ secrets.CF_DATABASE_ID }}" | npx wrangler secret put CLOUDFLARE_DATABASE_ID
@@ -36,7 +50,6 @@ jobs:
             echo "${{ secrets.CF_KV_NAMESPACE_ID }}" | npx wrangler secret put CLOUDFLARE_KV_NAMESPACE_ID
           fi
         env:
-          CLOUDFLARE_API_TOKEN: ${{ secrets.CF_API_TOKEN }}
           CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CF_ACCOUNT_ID }}
 
   deploy-frontend:
@@ -68,9 +81,14 @@ jobs:
           fi
 
       - name: Deploy to Cloudflare Pages
-        uses: cloudflare/wrangler-action@v3
-        with:
-          apiToken: ${{ secrets.CF_API_TOKEN }}
-          accountId: ${{ secrets.CF_ACCOUNT_ID }}
-          command: pages deploy dist --project-name=sunil1
-          workingDirectory: frontend
+        working-directory: ./frontend
+        run: |
+          if [[ "${{ secrets.CF_API_TOKEN }}" == cfk_* ]]; then
+            export CLOUDFLARE_API_KEY="${{ secrets.CF_API_TOKEN }}"
+            export CLOUDFLARE_EMAIL="Sunil.cyrixrjbemp@gmail.com"
+          else
+            export CLOUDFLARE_API_TOKEN="${{ secrets.CF_API_TOKEN }}"
+          fi
+          npx wrangler pages deploy dist --project-name=sunil1
+        env:
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CF_ACCOUNT_ID }}
