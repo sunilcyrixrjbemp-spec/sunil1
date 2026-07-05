@@ -1238,7 +1238,7 @@ export default function ExpensePage() {
           checkFromDist.trim().toLowerCase() === checkToDist.trim().toLowerCase()
         ) {
           toast.error("Source (From) and Destination (To) locations cannot be the same.");
-          updatedLeg[field] = "";
+          (updatedLeg as any)[field] = "";
         }
 
         if (field === "mode") {
