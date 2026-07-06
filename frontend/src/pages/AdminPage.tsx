@@ -2655,6 +2655,7 @@ export default function AdminPage() {
             </div>
           </div>
         </div>
+      )}
       {/* ================= MODAL: UNLOCK SENSITIVE FIELDS ================= */}
       {showUnlockModal && (
         <div className="modal-lte-overlay z-[99999]">
