@@ -34,9 +34,18 @@ const api: AxiosInstance = axios.create({
   },
 });
 
+const WORKER_BACKEND_URL = "https://fieldops-secondary-api.sunnybishnoi.workers.dev";
+
 // Inject bearer token into request headers if exists
 api.interceptors.request.use(
   async (config) => {
+    // Dynamically route GET requests (reads) directly to Cloudflare Workers edge for maximum speed
+    if (config.method?.toUpperCase() === "GET") {
+      config.baseURL = `${WORKER_BACKEND_URL}/api`;
+    } else {
+      config.baseURL = API_BASE_URL;
+    }
+
     // Do not inject tokens or restore them for public auth endpoints
     const isPublicEndpoint = config.url?.includes("/auth/login") || 
                              config.url?.includes("/auth/forgot-password") || 
