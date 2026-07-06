@@ -85,8 +85,11 @@ class D1Cursor:
         self._idx = 0
 
     def executemany(self, sql, seq_of_parameters):
+        total_rowcount = 0
         for parameters in seq_of_parameters:
             self.execute(sql, parameters)
+            total_rowcount += max(self.rowcount, 0)
+        self.rowcount = total_rowcount
         return self
 
     def execute(self, sql, parameters=None):

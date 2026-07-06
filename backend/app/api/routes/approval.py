@@ -128,7 +128,8 @@ def apply_itinerary_edits_and_log(db: Session, expense: Expense, itinerary_edits
                                 )
                                 db.add(log_rec)
                             setattr(leg, field, new_val)
-    db.flush()
+            # Flush each leg's changes individually to avoid batch executemany issues with D1
+            db.flush()
 
     # Recalculate totals including local purchase
     legs = db.query(ExpenseItinerary).filter(ExpenseItinerary.exp_id == expense.expense_code).all()
@@ -473,9 +474,14 @@ async def approve_expense(
     if not expense:
         raise HTTPException(status_code=404, detail="Expense claim not found.")
 
-    # Save itinerary updates if present
+    # Save itinerary updates if present — flush each leg individually to avoid executemany batch issues
     if request.itinerary_edits:
-        apply_itinerary_edits_and_log(db, expense, request.itinerary_edits, current_user, request.comments)
+        try:
+            apply_itinerary_edits_and_log(db, expense, request.itinerary_edits, current_user, request.comments)
+        except Exception as edit_err:
+            db.rollback()
+            logger.error(f"Failed to apply itinerary edits for expense {expense_id}: {edit_err}", exc_info=True)
+            raise HTTPException(status_code=500, detail=f"Failed to save edits: {str(edit_err)}")
 
     # Update active approval
     active_approval.status = "approved"
@@ -510,7 +516,12 @@ async def approve_expense(
         # No more levels, expense is fully approved!
         expense.status = "approved"
         
-    db.commit()
+    try:
+        db.commit()
+    except Exception as commit_err:
+        db.rollback()
+        logger.error(f"Failed to commit approval for expense {expense_id}: {commit_err}", exc_info=True)
+        raise HTTPException(status_code=500, detail=f"Failed to approve: {str(commit_err)}")
 
     from app.utils import cache
     cache.clear_user_and_managers_cache(db, expense.user_id)
@@ -697,7 +708,12 @@ async def reject_expense(
 
     # Save itinerary updates if present (in case they want to reject with updated values)
     if request.itinerary_edits:
-        apply_itinerary_edits_and_log(db, expense, request.itinerary_edits, current_user, request.comments)
+        try:
+            apply_itinerary_edits_and_log(db, expense, request.itinerary_edits, current_user, request.comments)
+        except Exception as edit_err:
+            db.rollback()
+            logger.error(f"Failed to apply itinerary edits for expense {expense_id}: {edit_err}", exc_info=True)
+            raise HTTPException(status_code=500, detail=f"Failed to save edits: {str(edit_err)}")
 
     # Update active approval to rejected
     active_approval.status = "rejected"
@@ -720,7 +736,12 @@ async def reject_expense(
             a.updated_at = parse_client_timestamp(request.client_timestamp)
         
     expense.status = "rejected"
-    db.commit()
+    try:
+        db.commit()
+    except Exception as commit_err:
+        db.rollback()
+        logger.error(f"Failed to commit rejection for expense {expense_id}: {commit_err}", exc_info=True)
+        raise HTTPException(status_code=500, detail=f"Failed to reject: {str(commit_err)}")
 
     from app.utils import cache
     cache.clear_user_and_managers_cache(db, expense.user_id)

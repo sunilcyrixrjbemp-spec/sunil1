@@ -1293,8 +1293,7 @@ export default function ApprovalPage() {
                                 </div>
                                 <div>
                                   <span className="text-[9px] text-gray-400 font-bold uppercase tracking-wider block">DA Allowance</span>
-                                  {selectedApproval?.level_number === 1 ? (
-                                    <div className="relative mt-1">
+                                  <div className="relative mt-1">
                                       <span className="absolute left-2 top-0.5 text-gray-400 font-bold text-xs">₹</span>
                                       <input
                                         type="number"
@@ -1303,9 +1302,6 @@ export default function ApprovalPage() {
                                         className="input-lte pl-5 pr-1 py-0.5 text-xs font-bold w-20 h-6 border-amber-300 bg-amber-50/10"
                                       />
                                     </div>
-                                  ) : (
-                                    <span className="font-bold text-gray-800">₹{(Number(leg.da) || 0).toLocaleString()}</span>
-                                  )}
                                 </div>
                                 <div className="col-span-2 border-t border-gray-200 pt-2 grid grid-cols-4 gap-1 text-center font-bold">
                                   <div>
@@ -1513,7 +1509,7 @@ export default function ApprovalPage() {
                               (leg.hotel_amount !== (originalLeg.hotel || 0)) ||
                               (leg.local_purchase !== (originalLeg.local_purchase || 0)) ||
                               (leg.other_amount !== (originalLeg.oth_amount || 0)) ||
-                              (selectedApproval?.level_number === 1 && (leg.da !== (originalLeg.da || 0)))) && (
+                              (leg.da !== (originalLeg.da || 0))) && (
                               <div className="mx-4 mb-4 p-3 bg-amber-50/50 border border-amber-200 rounded-lg space-y-2.5 text-left">
                                 <div className="flex items-center gap-1.5 text-amber-800 font-extrabold text-[10px] uppercase tracking-wider">
                                   <AlertTriangle className="w-3.5 h-3.5 text-amber-600 shrink-0" />
@@ -1658,7 +1654,7 @@ export default function ApprovalPage() {
                                     </div>
                                   )}
 
-                                  {selectedApproval?.level_number === 1 && leg.da !== (originalLeg.da || 0) && (
+                                  {leg.da !== (originalLeg.da || 0) && (
                                     <div className="space-y-1">
                                       <label className="text-[9px] font-bold text-amber-700 uppercase block">DA Allowance Reason *</label>
                                       <input
