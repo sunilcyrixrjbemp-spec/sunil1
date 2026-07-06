@@ -1947,7 +1947,7 @@ export default function AdminPage() {
                     value={editAdminPassword}
                     onChange={(e) => setEditAdminPassword(e.target.value)}
                     className="input-lte border-amber-300 focus:border-amber-500 focus:ring-1 focus:ring-amber-500 bg-white"
-                    placeholder="Enter security password (012001@Sunil) to authorize changes"
+                    placeholder="Enter security password to authorize changes"
                     required
                   />
                 </div>
