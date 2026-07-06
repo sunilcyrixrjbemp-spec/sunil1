@@ -217,9 +217,12 @@ from starlette.exceptions import HTTPException as StarletteHTTPException
 @app.exception_handler(SQLAlchemyError)
 async def sqlalchemy_exception_handler(request: Request, exc: SQLAlchemyError):
     logger.error(f"SQLAlchemy Database Error on {request.url.path}: {str(exc)}", exc_info=True)
+    err_msg = str(exc)
+    if "D1 query execution failed:" in err_msg:
+        err_msg = err_msg.split("D1 query execution failed:")[-1].strip()
     return JSONResponse(
         status_code=500,
-        content={"detail": "A secure database transaction error occurred. Raw query details have been logged."},
+        content={"detail": f"Database Error: {err_msg}"},
         headers={
             "Access-Control-Allow-Origin": "*",
             "Access-Control-Allow-Methods": "*",
@@ -256,7 +259,7 @@ async def general_exception_handler(request: Request, exc: Exception):
     logger.error(f"Unhandled Server Error on {request.url.path}: {str(exc)}", exc_info=True)
     return JSONResponse(
         status_code=500,
-        content={"detail": "An internal server error occurred. System paths and tracebacks are secured."},
+        content={"detail": f"Server Error: {str(exc)}"},
         headers={
             "Access-Control-Allow-Origin": "*",
             "Access-Control-Allow-Methods": "*",
