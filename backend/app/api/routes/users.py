@@ -7,7 +7,7 @@ from sqlalchemy import desc
 from pydantic import BaseModel
 from typing import Optional
 
-from app.config.database import get_db
+from app.config.database import get_db, get_read_db
 from app.api.routes.dependencies import get_current_user
 from app.models.user import User
 from app.models.password_history import PasswordHistory
@@ -43,7 +43,7 @@ async def save_fcm_token(
 
 
 @router.get("/profile", response_model=UserResponse)
-async def get_profile(current_user: User = Depends(get_current_user), db: Session = Depends(get_db)):
+async def get_profile(current_user: User = Depends(get_current_user), db: Session = Depends(get_read_db)):
     """Get authenticated user profile"""
     return auth_service.resolve_user_hierarchy_names(current_user, db)
 

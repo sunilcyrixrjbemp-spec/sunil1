@@ -7,7 +7,7 @@ from pydantic import BaseModel
 from jose import jwt
 from app.config.settings import settings
 
-from app.config.database import get_db
+from app.config.database import get_db, get_read_db
 from app.api.routes.dependencies import get_current_user
 from app.models.user import User
 from app.models.ticket import SupportTicket
@@ -43,7 +43,7 @@ def check_and_auto_close_tickets(db: Session):
 
 @router.get("/")
 def get_tickets(
-    db: Session = Depends(get_db),
+    db: Session = Depends(get_read_db),
     current_user: User = Depends(get_current_user)
 ):
     """

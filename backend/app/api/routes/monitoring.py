@@ -11,7 +11,7 @@ from datetime import date
 import requests as http_req
 import logging
 
-from app.config.database import get_db
+from app.config.database import get_read_db
 from app.api.routes.dependencies import get_current_user
 from app.models.user import User
 from app.utils.cache import ACCOUNT_ID, API_TOKEN, NAMESPACE_ID, IS_KV_ENABLED
@@ -95,7 +95,7 @@ async def get_summary(
     district:  str = None,
     user_id:   str = None,
     page_name: str = None,
-    db: Session = Depends(get_db),
+    db: Session = Depends(get_read_db),
     current_user: User = Depends(get_current_user)
 ):
     _admin_check(current_user)
@@ -135,7 +135,7 @@ async def get_user_breakdown(
     zone:      str = None,
     district:  str = None,
     page_name: str = None,
-    db: Session = Depends(get_db),
+    db: Session = Depends(get_read_db),
     current_user: User = Depends(get_current_user)
 ):
     _admin_check(current_user)
@@ -188,7 +188,7 @@ async def get_page_breakdown(
     date_str:  str = Query(None, alias="date"),
     month_str: str = Query(None, alias="month"),
     zone: str = None, district: str = None, user_id: str = None,
-    db: Session = Depends(get_db),
+    db: Session = Depends(get_read_db),
     current_user: User = Depends(get_current_user)
 ):
     _admin_check(current_user)
@@ -235,7 +235,7 @@ async def get_timeline(
     month_str: str = Query(None, alias="month"),
     zone: str = None, district: str = None, user_id: str = None,
     page_name: str = None,
-    db: Session = Depends(get_db),
+    db: Session = Depends(get_read_db),
     current_user: User = Depends(get_current_user)
 ):
     _admin_check(current_user)
@@ -265,7 +265,7 @@ async def get_logs(
     zone: str = None, district: str = None, user_id: str = None,
     page_name: str = None, op_type: str = None,
     page: int = 1, page_size: int = 50,
-    db: Session = Depends(get_db),
+    db: Session = Depends(get_read_db),
     current_user: User = Depends(get_current_user)
 ):
     _admin_check(current_user)

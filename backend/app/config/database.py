@@ -338,19 +338,79 @@ else:
         "Please add these environment variables in your Render Dashboard settings."
     )
 
-# Create session factory
+# Create session factory (Primary - for writes)
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 
 # Base class for models
 Base = declarative_base()
 
-# Dependency to get DB session
+# ─── Secondary Database (Read Replica) ────────────────────────────────────────
+_secondary_engine = None
+_SecondarySessionLocal = None
+
+def _init_secondary_db():
+    """Initialize the secondary D1 database connection for read operations."""
+    global _secondary_engine, _SecondarySessionLocal
+    
+    sec_account = settings.SECONDARY_CLOUDFLARE_ACCOUNT_ID
+    sec_db_id = settings.SECONDARY_CLOUDFLARE_DATABASE_ID
+    sec_token = settings.SECONDARY_CLOUDFLARE_API_TOKEN
+    sec_email = settings.SECONDARY_CLOUDFLARE_EMAIL
+    
+    if sec_account and sec_db_id and sec_token and not force_local:
+        logger.info(f"Connecting to SECONDARY D1 Database (Read Replica): {sec_db_id}")
+        sec_creator = lambda: D1Connection(sec_account, sec_db_id, sec_token, sec_email)
+        _secondary_engine = create_engine(
+            "sqlite://",
+            creator=sec_creator,
+            poolclass=NullPool,
+            echo=False
+        )
+        _SecondarySessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=_secondary_engine)
+    else:
+        logger.warning("Secondary D1 Database not configured. All reads will use Primary DB.")
+
+_init_secondary_db()
+
+def get_secondary_session():
+    """Get a raw secondary session for direct use (e.g., dual-write replication)."""
+    if _SecondarySessionLocal:
+        return _SecondarySessionLocal()
+    return None
+
+# Dependency to get DB session (Primary - for writes)
 def get_db():
     db = SessionLocal()
     try:
         yield db
     finally:
         db.close()
+
+# Dependency to get DB session (Secondary - for reads, with fallback to Primary)
+def get_read_db():
+    """Returns a session connected to the Secondary (read replica) DB.
+    Falls back to Primary DB if Secondary is unavailable."""
+    if _SecondarySessionLocal:
+        db = _SecondarySessionLocal()
+        try:
+            yield db
+        except Exception as e:
+            logger.warning(f"Secondary DB read failed, falling back to Primary: {e}")
+            db.close()
+            db = SessionLocal()
+            try:
+                yield db
+            finally:
+                db.close()
+        else:
+            db.close()
+    else:
+        # No secondary configured, use primary
+        db = SessionLocal()
+        try:
+            yield db
+        finally:
+            db.close()
 
 # Global event listeners to enforce IST for created_at and updated_at on all models
 from sqlalchemy import event
@@ -417,22 +477,56 @@ def orm_after_delete(mapper, connection, target):
 @event.listens_for(Engine, "after_execute")
 def engine_after_execute(conn, clauseelement, multiparams, params, execution_options, result):
     try:
-        stmt = str(clauseelement).lower()
-        if any(kw in stmt for kw in ["insert", "update", "delete", "drop", "create", "alter"]):
+        stmt = str(clauseelement)
+        stmt_lower = stmt.lower()
+        
+        # Track modified tables for KV cache sync
+        if any(kw in stmt_lower for kw in ["insert", "update", "delete", "drop", "create", "alter"]):
             target_tables = [
                 "allowance_master", "main_hospitals", "asset_value_master",
                 "critical_equipment", "facility_details", "di_name_list",
                 "rj_penalties", "assets_inventory_v2", "assets_inventory"
             ]
             for t in target_tables:
-                if t.lower() in stmt:
+                if t.lower() in stmt_lower:
                     mark_table_modified(t)
+        
+        # ─── Dual-Write: Capture write statements for Secondary DB replication ───
+        if any(kw in stmt_lower for kw in ["insert", "update", "delete"]):
+            # Skip internal/system tables and PRAGMA
+            skip_tables = ("db_op_logs", "sqlite_sequence", "sqlite_schema", "sqlite_master", "_cf_kv")
+            if not any(st in stmt_lower for st in skip_tables) and "pragma" not in stmt_lower:
+                # Collect parameters
+                param_list = []
+                if params:
+                    if isinstance(params, dict):
+                        # SQLAlchemy compiled params - extract values in order
+                        compiled = clauseelement.compile() if hasattr(clauseelement, 'compile') else None
+                        if compiled and hasattr(compiled, 'positiontup'):
+                            param_list = [params.get(k) for k in compiled.positiontup]
+                        else:
+                            param_list = list(params.values())
+                    elif isinstance(params, (list, tuple)):
+                        param_list = list(params)
+                
+                # Convert special types
+                for i, p in enumerate(param_list):
+                    if hasattr(p, "isoformat"):
+                        param_list[i] = p.isoformat()
+                    elif hasattr(p, "strftime"):
+                        param_list[i] = p.strftime("%Y-%m-%d %H:%M:%S")
+                
+                # Store for replication after commit
+                if not hasattr(_modified_tables, "repl_statements"):
+                    _modified_tables.repl_statements = []
+                _modified_tables.repl_statements.append((stmt, param_list))
     except Exception:
         pass
 
 @event.listens_for(Session, "after_commit")
 def session_after_commit(session):
     try:
+        # ─── KV Cache Sync ───
         if hasattr(_modified_tables, "items") and _modified_tables.items:
             tables_to_sync = list(_modified_tables.items)
             _modified_tables.items.clear()
@@ -440,6 +534,14 @@ def session_after_commit(session):
             # Trigger sync in background thread
             from app.utils.database_sync import run_sync_in_background
             threading.Thread(target=run_sync_in_background, args=(tables_to_sync,)).start()
+        
+        # ─── Dual-Write Replication to Secondary DB ───
+        if hasattr(_modified_tables, "repl_statements") and _modified_tables.repl_statements:
+            statements = list(_modified_tables.repl_statements)
+            _modified_tables.repl_statements.clear()
+            
+            from app.utils.dual_write import replicate_batch_in_background
+            replicate_batch_in_background(statements)
     except Exception as e:
-        logger.warning(f"DB Sync event error: {e}")
+        logger.warning(f"DB Sync/Replication event error: {e}")
 

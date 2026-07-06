@@ -2,7 +2,7 @@ from fastapi import APIRouter, Depends, Request, HTTPException, status, Backgrou
 from sqlalchemy.orm import Session
 from jose import jwt, JWTError
 
-from app.config.database import get_db
+from app.config.database import get_db, get_read_db
 from app.config.settings import settings
 from app.schemas.user import (
     UserLogin,
@@ -189,7 +189,7 @@ async def refresh_token(request: RefreshTokenRequest, db: Session = Depends(get_
         )
 
 @router.get("/dropdowns", response_model=DropdownResponse)
-async def get_dropdowns(db: Session = Depends(get_db)):
+async def get_dropdowns(db: Session = Depends(get_read_db)):
     return auth_service.get_dropdowns(db)
 
 from app.api.routes.dependencies import get_current_user
@@ -323,7 +323,7 @@ async def get_bootstrap_data_helper(user, db: Session) -> dict:
     }
 
 @router.get("/bootstrap")
-async def bootstrap(db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
+async def bootstrap(db: Session = Depends(get_read_db), current_user: User = Depends(get_current_user)):
     return await get_bootstrap_data_helper(current_user, db)
 
 

@@ -6,7 +6,7 @@ import json
 from datetime import datetime
 import logging
 
-from app.config.database import get_db
+from app.config.database import get_db, get_read_db
 from app.api.routes.dependencies import get_current_user
 from app.models.user import User
 
@@ -148,7 +148,7 @@ def apply_itinerary_edits_and_log(db: Session, expense: Expense, itinerary_edits
 
 @router.get("/", response_model=List[ApprovalResponse])
 async def get_pending_approvals(
-    db: Session = Depends(get_db),
+    db: Session = Depends(get_read_db),
     current_user: User = Depends(get_current_user)
 ):
     """Get all expense approvals assigned to the logged-in user that are pending active review"""

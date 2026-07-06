@@ -8,7 +8,7 @@ import time
 import shutil
 from datetime import datetime
 
-from app.config.database import get_db, SessionLocal
+from app.config.database import get_db, get_read_db, SessionLocal
 from app.api.routes.dependencies import get_current_user
 from app.models.user import User
 from app.models.expense import Expense
@@ -136,7 +136,7 @@ def save_upload_file(upload_file: UploadFile, exp_id: str, type_str: str) -> str
 async def init_expense(
     user_id: str,
     month: Optional[str] = None,
-    db: Session = Depends(get_db),
+    db: Session = Depends(get_read_db),
     current_user: User = Depends(get_current_user)
 ):
     """Initializes user limits, allowance rules, submitted dates, and facilities for the claim builder."""
@@ -1218,7 +1218,7 @@ async def get_month_summary(
     year: Optional[int] = None,
     district: Optional[str] = None,
     engineer: Optional[str] = None,
-    db: Session = Depends(get_db),
+    db: Session = Depends(get_read_db),
     current_user: User = Depends(get_current_user)
 ):
     """Engineer-wise approved expense summary grouped by month/year. Used for Month Summary report page."""
@@ -1367,7 +1367,7 @@ async def get_engineer_month_claims(
     user_code: str,
     month: str,
     year: int,
-    db: Session = Depends(get_db),
+    db: Session = Depends(get_read_db),
     current_user: User = Depends(get_current_user)
 ):
     """Returns all individual approved expense claims (with per-leg itinerary detail) for a specific engineer
@@ -1583,7 +1583,7 @@ async def get_engineer_month_claims(
 @router.get("/")
 async def get_expenses(
     month: str = None,
-    db: Session = Depends(get_db),
+    db: Session = Depends(get_read_db),
     current_user: User = Depends(get_current_user)
 ):
     from app.utils import cache
@@ -1784,7 +1784,7 @@ async def get_expenses(
 @router.get("/team")
 async def get_team_expenses(
     month: str = None,
-    db: Session = Depends(get_db),
+    db: Session = Depends(get_read_db),
     current_user: User = Depends(get_current_user)
 ):
     from app.utils import cache
@@ -1989,7 +1989,7 @@ async def get_team_expenses(
 @router.get("/verify-barcode")
 async def verify_barcode(
     barcode: str,
-    db: Session = Depends(get_db),
+    db: Session = Depends(get_read_db),
     current_user: User = Depends(get_current_user)
 ):
     if len(barcode) != 8:
@@ -2019,7 +2019,7 @@ async def verify_barcode(
 
 @router.get("/asset-value-master")
 async def get_asset_value_master(
-    db: Session = Depends(get_db),
+    db: Session = Depends(get_read_db),
     current_user: User = Depends(get_current_user)
 ):
     sql = text("SELECT equipment_name, rmsc_tender_cost FROM asset_value_master")
@@ -2042,7 +2042,7 @@ async def get_engineer_advance(
     user_code: str,
     month: str,
     year: int,
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_read_db)
 ):
     from app.models.engineer_advance import EngineerAdvance
     adv = db.query(EngineerAdvance).filter(
@@ -2101,7 +2101,7 @@ async def upsert_engineer_advance(
 async def get_consolidated_report(
     month: str,
     year: int,
-    db: Session = Depends(get_db),
+    db: Session = Depends(get_read_db),
     current_user: User = Depends(get_current_user)
 ):
     # Role or Allowed Windows checking
@@ -2564,7 +2564,7 @@ def get_user_monthly_stats(db, user_db_id: int, month: str, year: int, exclude_d
 @router.get("/{expense_id}")
 async def get_expense_details(
     expense_id: str,
-    db: Session = Depends(get_db),
+    db: Session = Depends(get_read_db),
     current_user: User = Depends(get_current_user)
 ):
     """Retrieves full details of a specific claim, including itineraries, attachments, and approvals."""

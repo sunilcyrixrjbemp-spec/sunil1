@@ -3,7 +3,7 @@ from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from jose import jwt, JWTError
 from sqlalchemy.orm import Session
 
-from app.config.database import get_db
+from app.config.database import get_read_db
 from app.config.settings import settings
 from app.models.user import User
 
@@ -11,7 +11,7 @@ security_scheme = HTTPBearer()
 
 def get_current_user(
     credentials: HTTPAuthorizationCredentials = Depends(security_scheme),
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_read_db)
 ) -> User:
     token = credentials.credentials
     credentials_exception = HTTPException(

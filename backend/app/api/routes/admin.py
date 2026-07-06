@@ -3,7 +3,7 @@ from sqlalchemy.orm import Session, selectinload
 from typing import List, Optional
 from datetime import date, datetime
 
-from app.config.database import get_db
+from app.config.database import get_db, get_read_db
 from app.api.routes.dependencies import get_current_user
 from app.models.user import User
 from app.models.user_role import UserRole
@@ -42,7 +42,7 @@ def verify_admin(current_user: User = Depends(get_current_user)):
     return current_user
 
 @router.get("/users", response_model=List[UserResponse])
-async def get_users(db: Session = Depends(get_db), admin: User = Depends(verify_admin)):
+async def get_users(db: Session = Depends(get_read_db), admin: User = Depends(verify_admin)):
     """Get all registered users"""
     from app.utils import cache
     cached = cache.get("admin_users_list")
@@ -671,7 +671,7 @@ async def bulk_create_users(
     }
 
 @router.get("/eligible-approvers", response_model=List[UserResponse])
-async def get_eligible_approvers(db: Session = Depends(get_db), admin: User = Depends(verify_admin)):
+async def get_eligible_approvers(db: Session = Depends(get_read_db), admin: User = Depends(verify_admin)):
     """Get all users eligible to be approvers"""
     from app.utils import cache
     cached = cache.get("admin_eligible_approvers_list")
@@ -684,7 +684,7 @@ async def get_eligible_approvers(db: Session = Depends(get_db), admin: User = De
     return users
 
 @router.get("/hierarchies", response_model=List[ApprovalHierarchyResponse])
-async def get_hierarchies(db: Session = Depends(get_db), admin: User = Depends(verify_admin)):
+async def get_hierarchies(db: Session = Depends(get_read_db), admin: User = Depends(verify_admin)):
     """Get all configured team hierarchies"""
     from app.utils import cache
     cached = cache.get("admin_hierarchies_list")
@@ -737,7 +737,7 @@ async def get_hierarchies(db: Session = Depends(get_db), admin: User = Depends(v
 
 @router.get("/hierarchies/export")
 async def export_hierarchies_csv(
-    db: Session = Depends(get_db),
+    db: Session = Depends(get_read_db),
     admin: User = Depends(verify_admin)
 ):
     """Export all team hierarchies to a CSV file structure"""
@@ -909,7 +909,7 @@ async def bulk_import_hierarchies(
     return {"status": "success", "message": "All team hierarchies successfully imported/updated."}
 
 @router.get("/hierarchies/{hierarchy_id}", response_model=ApprovalHierarchyResponse)
-async def get_hierarchy(hierarchy_id: int, db: Session = Depends(get_db), admin: User = Depends(verify_admin)):
+async def get_hierarchy(hierarchy_id: int, db: Session = Depends(get_read_db), admin: User = Depends(verify_admin)):
     """Get a single hierarchy by ID"""
     h = db.query(ApprovalHierarchy).filter(ApprovalHierarchy.id == hierarchy_id).first()
     if not h:
@@ -1068,12 +1068,12 @@ async def delete_hierarchy(hierarchy_id: int, db: Session = Depends(get_db), adm
 
 
 @router.get("/assets")
-async def get_assets(db: Session = Depends(get_db), admin: User = Depends(verify_admin)):
+async def get_assets(db: Session = Depends(get_read_db), admin: User = Depends(verify_admin)):
     """Get asset master list (stub)"""
     return {"assets": []}
 
 @router.get("/reports")
-async def get_reports(db: Session = Depends(get_db), admin: User = Depends(verify_admin)):
+async def get_reports(db: Session = Depends(get_read_db), admin: User = Depends(verify_admin)):
     """Get system reports (stub)"""
     return {"reports": []}
 

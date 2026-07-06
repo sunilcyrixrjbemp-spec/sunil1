@@ -1,11 +1,11 @@
 from fastapi import APIRouter, Depends
 from sqlalchemy.orm import Session
-from app.config.database import get_db
+from app.config.database import get_read_db
 
 router = APIRouter()
 
 @router.get("/stats")
-async def get_dashboard_stats(db: Session = Depends(get_db)):
+async def get_dashboard_stats(db: Session = Depends(get_read_db)):
     """Get dashboard statistics"""
     return {
         "total_expenses": 0,
@@ -15,6 +15,6 @@ async def get_dashboard_stats(db: Session = Depends(get_db)):
     }
 
 @router.get("/summary")
-async def get_summary(db: Session = Depends(get_db)):
+async def get_summary(db: Session = Depends(get_read_db)):
     """Get summary data"""
     return {"summary": {}}

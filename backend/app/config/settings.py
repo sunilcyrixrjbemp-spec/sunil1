@@ -12,6 +12,10 @@ _KV_KEYS = [
     "CLOUDFLARE_KV_NAMESPACE_ID",
     "FORCE_LOCAL_DB",
     "SECRET_KEY",
+    "SECONDARY_CLOUDFLARE_ACCOUNT_ID",
+    "SECONDARY_CLOUDFLARE_DATABASE_ID",
+    "SECONDARY_CLOUDFLARE_API_TOKEN",
+    "SECONDARY_CLOUDFLARE_EMAIL",
 ]
 for _key in _KV_KEYS:
     if not os.environ.get(_key):
@@ -53,13 +57,19 @@ class Settings(BaseSettings):
     PASSWORD_MIN_LENGTH: int = 8
     PASSWORD_HISTORY_COUNT: int = 5
 
-    # Cloudflare D1 & R2 Integration Settings
+    # Cloudflare D1 & R2 Integration Settings (Primary - Writes)
     CLOUDFLARE_ACCOUNT_ID: str = "befbd2e0ff580a1d0d0865f011002053"
     CLOUDFLARE_DATABASE_ID: str = "34e085d8-c078-4f2f-b240-9bf8f4cf9301"
     CLOUDFLARE_API_TOKEN: str = ""
     CLOUDFLARE_R2_BUCKET_NAME: str = "fieldops-uploads"
     CLOUDFLARE_KV_NAMESPACE_ID: str = ""
     FORCE_LOCAL_DB: bool = False
+
+    # Secondary Cloudflare D1 Database (Read Replica)
+    SECONDARY_CLOUDFLARE_ACCOUNT_ID: str = ""
+    SECONDARY_CLOUDFLARE_DATABASE_ID: str = ""
+    SECONDARY_CLOUDFLARE_API_TOKEN: str = ""
+    SECONDARY_CLOUDFLARE_EMAIL: str = ""
 
     # Firebase Cloud Messaging (Push Notifications)
     FIREBASE_SERVICE_ACCOUNT_PATH: str = "./firebase-service-account.json"

@@ -1,7 +1,7 @@
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 from typing import List, Optional
-from app.config.database import get_db
+from app.config.database import get_db, get_read_db
 from app.api.routes.dependencies import get_current_user
 from app.models.user import User
 from app.models.notification import Notification
@@ -26,7 +26,7 @@ class NotificationResponse(BaseModel):
 @router.get("/", response_model=List[NotificationResponse])
 def get_notifications(
     current_user: User = Depends(get_current_user),
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_read_db)
 ):
     """Retrieve notifications for the current authenticated user"""
     return db.query(Notification).filter(

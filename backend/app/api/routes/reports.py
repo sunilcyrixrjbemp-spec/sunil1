@@ -1,7 +1,7 @@
 from fastapi import APIRouter, Depends, HTTPException, UploadFile, File
 from sqlalchemy.orm import Session
 from sqlalchemy import text
-from app.config.database import get_db
+from app.config.database import get_db, get_read_db
 from app.api.routes.dependencies import get_current_user
 from app.models.user import User
 import openpyxl
@@ -130,7 +130,7 @@ def _bulk_insert(db, table_name: str, columns: list[str], records: list[dict]):
     db.commit()
 
 @router.get("/monthly/{month}")
-async def get_monthly_report(month: str, db: Session = Depends(get_db)):
+async def get_monthly_report(month: str, db: Session = Depends(get_read_db)):
     """Get monthly report"""
     return {"report": {}}
 
@@ -141,7 +141,7 @@ async def get_mis_dashboard_data(
     coordinator: str = None,
     month: str = None,
     equipment: str = None,
-    db: Session = Depends(get_db),
+    db: Session = Depends(get_read_db),
     current_user: User = Depends(get_current_user)
 ):
     """
@@ -861,7 +861,7 @@ async def upload_penalties_chunk(
         }
 
 @router.get("/existing-complaints")
-async def get_existing_complaints(db: Session = Depends(get_db)):
+async def get_existing_complaints(db: Session = Depends(get_read_db)):
     """
     Returns a list of all existing complaint_id values in the rj_penalties table
     to allow the client to filter duplicates before uploading.
@@ -1497,7 +1497,7 @@ async def get_assets_inventory(
     search: str = None,
     page: int = 1,
     page_size: int = 100,
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_read_db)
 ):
     """Get paginated asset inventory with optional filters. Served from local RAM cache if available."""
     try:
@@ -1583,7 +1583,7 @@ async def get_assets_inventory(
 
 
 @router.get("/assets-filters")
-async def get_assets_filters(db: Session = Depends(get_db)):
+async def get_assets_filters(db: Session = Depends(get_read_db)):
     """Get distinct filter lists from D1. Served from local RAM cache if available."""
     try:
         from app.utils import cache
@@ -1653,7 +1653,7 @@ async def get_assets_stats(
     district: str = None,
     di: str = None,
     month: str = None, # format: "YYYY-MM"
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_read_db)
 ):
     """Get MIS dashboard summary stats. Served from local RAM cache if available."""
     try:
