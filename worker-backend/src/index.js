@@ -175,7 +175,11 @@ router.delete("/api/expense/:id", handleDeleteExpense, true);
 export default {
   async fetch(request, env, ctx) {
     const url = new URL(request.url);
-    const { pathname, searchParams } = url;
+    let pathname = url.pathname;
+    if (pathname.endsWith("/") && pathname !== "/") {
+      pathname = pathname.slice(0, -1);
+    }
+    const { searchParams } = url;
     const method = request.method;
     const origin = request.headers.get("Origin") || "*";
 

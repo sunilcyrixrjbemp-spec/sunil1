@@ -78,7 +78,7 @@ export async function getBootstrapDataHelper(env, user) {
   const isTeamLead = user.role === "Admin" || allowedWindows.includes("approval") || hasDirectReports || isHierarchyApprover;
 
   // 1. Dropdown lists setup
-  const gradesRows = await env.DB.prepare("SELECT DISTINCT grade FROM allowance_masters").all();
+  const gradesRows = await env.DB.prepare("SELECT DISTINCT grade FROM allowance_master").all();
   const grades = (gradesRows.results || []).map(r => r.grade).filter(Boolean).sort();
   const dropdowns = {
     designations: DESIGNATIONS,
@@ -228,16 +228,14 @@ export async function handleLogin(request, env, params, query) {
   // Prefetch bootstrap data for instant frontend load
   const bootstrapData = await getBootstrapDataHelper(env, user);
 
+  const profile = { ...user };
+  delete profile.hashed_password;
+
   return jsonResponse({
     access_token: accessToken,
     refresh_token: refreshToken,
     token_type: "bearer",
-    user: {
-      user_id: user.user_id,
-      name: user.name,
-      e_code: user.e_code,
-      role: user.role
-    },
+    user: profile,
     bootstrap_data: bootstrapData
   });
 }

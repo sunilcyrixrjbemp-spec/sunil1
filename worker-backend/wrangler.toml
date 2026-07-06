@@ -10,3 +10,8 @@ database_id = "6ee33815-4d7e-4eb4-8a60-c001d5a8331f"
 [vars]
 CORS_ORIGIN = "*"
 API_SECRET = "012001@Sunil"
+
+# Primary DB sync credentials (replicate writes back to Primary)
+PRIMARY_CLOUDFLARE_ACCOUNT_ID = "befbd2e0ff580a1d0d0865f011002053"
+PRIMARY_CLOUDFLARE_DATABASE_ID = "34e085d8-c078-4f2f-b240-9bf8f4cf9301"
+PRIMARY_CLOUDFLARE_API_TOKEN = "" # Add API Token here or as a secret via Dashboard

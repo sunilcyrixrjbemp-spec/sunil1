@@ -24,27 +24,11 @@ function validatePasswordStrength(password) {
  * GET /api/users/profile
  */
 export async function handleGetProfile(request, env, params, query, user) {
-  // Return resolved profile
   const roleRow = await env.DB.prepare("SELECT role FROM user_roles WHERE user_id = ?").bind(user.user_id).first();
-  return jsonResponse({
-    id: user.id,
-    user_id: user.user_id,
-    e_code: user.e_code,
-    name: user.name,
-    email: user.email,
-    phone: user.phone,
-    mobile_number: user.mobile_number,
-    mail_id: user.mail_id,
-    zone: user.zone,
-    district: user.district,
-    designation: user.designation,
-    user_status: user.user_status,
-    user_type: user.user_type,
-    profile_pic_url: user.profile_pic_url,
-    created_at: user.created_at,
-    updated_at: user.updated_at,
-    role: roleRow?.role || "user"
-  });
+  const profile = { ...user };
+  delete profile.hashed_password;
+  profile.role = roleRow?.role || "user";
+  return jsonResponse(profile);
 }
 
 /**

@@ -84,48 +84,58 @@ export async function fetchPendingApprovals(env, user) {
   }
 
   // 3. Fetch legacy pending claims
-  const legacyRows = await env.DB.prepare(`
-    SELECT m.exp_id, m.user_id, m.expense_date, m.total_amount, m.status, m.visit_purpose, u.full_name, u.e_code
-    FROM expense_master m
-    JOIN user u ON LOWER(m.user_id) = LOWER(u.user_id)
-    WHERE 
-      ((m.status = 'Pending L1' OR m.status = 'Pending') AND LOWER(m.level_first_approver) = LOWER(?))
-      OR
-      (m.status = 'Pending L2' AND LOWER(m.level_second_approver) = LOWER(?))
-  `).bind(user.user_id, user.user_id).all();
+  try {
+    const legacyRows = await env.DB.prepare(`
+      SELECT m.exp_id, m.user_id, m.expense_date, m.total_amount, m.status, m.visit_purpose, u.name as full_name, u.e_code
+      FROM expense_master m
+      JOIN users u ON LOWER(m.user_id) = LOWER(u.user_id)
+      WHERE 
+        ((m.status = 'Pending L1' OR m.status = 'Pending') AND LOWER(m.level_first_approver) = LOWER(?))
+        OR
+        (m.status = 'Pending L2' AND LOWER(m.level_second_approver) = LOWER(?))
+    `).bind(user.user_id, user.user_id).all();
 
-  for (const row of (legacyRows.results || [])) {
-    const mockId = await getLegacyExpenseHashId(row.exp_id);
-    const levelNumber = row.status === "Pending L2" ? 2 : 1;
+    for (const row of (legacyRows.results || [])) {
+      const mockId = await getLegacyExpenseHashId(row.exp_id);
+      const levelNumber = row.status === "Pending L2" ? 2 : 1;
 
-    // Fetch count of itineraries for this legacy claim
-    const countResult = await env.DB.prepare("SELECT COUNT(*) as cnt FROM expense_itinerary WHERE exp_id = ?").bind(row.exp_id).first();
-    const itiCount = countResult?.cnt || 0;
+      // Fetch count of itineraries for this legacy claim
+      let itiCount = 0;
+      try {
+        const countResult = await env.DB.prepare("SELECT COUNT(*) as cnt FROM expense_itinerary WHERE exp_id = ?").bind(row.exp_id).first();
+        itiCount = countResult?.cnt || 0;
+      } catch (e) {}
 
-    // Fetch first travel mode
-    const firstLeg = await env.DB.prepare(`
-      SELECT travel_mode FROM expense_itinerary WHERE exp_id = ? ORDER BY leg_number ASC LIMIT 1
-    `).bind(row.exp_id).first();
-    const category = firstLeg?.travel_mode || "Travel";
+      // Fetch first travel mode
+      let category = "Travel";
+      try {
+        const firstLeg = await env.DB.prepare(`
+          SELECT travel_mode FROM expense_itinerary WHERE exp_id = ? ORDER BY leg_number ASC LIMIT 1
+        `).bind(row.exp_id).first();
+        category = firstLeg?.travel_mode || "Travel";
+      } catch (e) {}
 
-    result.push({
-      id: mockId,
-      expense_id: mockId,
-      approver_id: user.id,
-      level_number: levelNumber,
-      status: "pending",
-      comments: "",
-      created_at: row.expense_date,
-      updated_at: row.expense_date,
-      expense_code: row.exp_id,
-      employeeName: row.full_name || "Unknown Employee",
-      eCode: row.e_code || row.user_id,
-      purpose: row.visit_purpose || "",
-      category: category,
-      amount: parseFloat(row.total_amount || 0),
-      date: row.expense_date,
-      itinerariesCount: itiCount
-    });
+      result.push({
+        id: mockId,
+        expense_id: mockId,
+        approver_id: user.id,
+        level_number: levelNumber,
+        status: "pending",
+        comments: "",
+        created_at: row.expense_date,
+        updated_at: row.expense_date,
+        expense_code: row.exp_id,
+        employeeName: row.full_name || "Unknown Employee",
+        eCode: row.e_code || row.user_id,
+        purpose: row.visit_purpose || "",
+        category: category,
+        amount: parseFloat(row.total_amount || 0),
+        date: row.expense_date,
+        itinerariesCount: itiCount
+      });
+    }
+  } catch (error) {
+    console.warn("Legacy table expense_master not found or query failed, skipping legacy pending claims:", error.message);
   }
 
   return result;

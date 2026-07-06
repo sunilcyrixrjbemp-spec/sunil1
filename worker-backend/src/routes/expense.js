@@ -7,22 +7,151 @@ function jsonResponse(data, status = 200) {
   });
 }
 
+export async function serializeExpenses(env, expenses, submittersMap) {
+  if (!expenses || expenses.length === 0) return [];
+
+  const expenseCodes = expenses.map(e => e.expense_code).filter(Boolean);
+  
+  // Batch fetch itineraries for all these expenses
+  let allLegs = [];
+  if (expenseCodes.length > 0) {
+    const placeholders = expenseCodes.map(() => "?").join(",");
+    const legsResult = await env.DB.prepare(`
+      SELECT * FROM expense_itineraries WHERE exp_id IN (${placeholders})
+    `).bind(...expenseCodes).all();
+    allLegs = legsResult.results || [];
+  }
+
+  // Group legs by exp_id
+  const legsByCode = {};
+  for (const l of allLegs) {
+    if (!legsByCode[l.exp_id]) legsByCode[l.exp_id] = [];
+    legsByCode[l.exp_id].push(l);
+  }
+
+  const result = [];
+  for (const exp of expenses) {
+    const submitter = submittersMap[exp.user_id] || null;
+    const legs = legsByCode[exp.expense_code] || [];
+
+    const totKm = legs
+      .filter(l => ["Bike", "Car"].includes(l.travel_mode))
+      .reduce((sum, l) => sum + (parseFloat(l.distance_km) || 0.0), 0.0);
+
+    const totAuto = legs
+      .filter(l => l.travel_mode === "Auto")
+      .reduce((sum, l) => sum + (parseFloat(l.travel_amount) || 0.0), 0.0) +
+      legs
+      .filter(l => l.sub_mode === "Auto")
+      .reduce((sum, l) => sum + (parseFloat(l.sub_amount) || 0.0), 0.0);
+
+    const bikeAmount = legs
+      .filter(l => l.travel_mode === "Bike")
+      .reduce((sum, l) => sum + (parseFloat(l.travel_amount) || 0.0), 0.0);
+
+    const carAmount = legs
+      .filter(l => l.travel_mode === "Car")
+      .reduce((sum, l) => sum + (parseFloat(l.travel_amount) || 0.0), 0.0);
+
+    result.push({
+      id: exp.id,
+      expense_code: exp.expense_code,
+      user_id: exp.user_id,
+      month: exp.month,
+      year: exp.year,
+      amount: parseFloat(exp.amount || 0),
+      status: exp.status,
+      travel_mode: exp.travel_mode,
+      itinerary: exp.itinerary,
+      description: exp.description || "",
+      attachments: exp.attachments || "",
+      da_amount: parseFloat(exp.da_amount || 0.0),
+      hotel_amount: parseFloat(exp.hotel_amount || 0.0),
+      other_expense_amount: parseFloat(exp.other_expense_amount || 0.0),
+      local_purchase_amount: parseFloat(exp.local_purchase_amount || 0.0),
+      calls_assigned: exp.calls_assigned || 0,
+      calls_completed: exp.calls_completed || 0,
+      pms_count: exp.pms_count || 0,
+      asset_tagging: exp.asset_tagging || 0,
+      created_at: exp.created_at,
+      updated_at: exp.updated_at,
+      total_km: totKm,
+      total_auto: totAuto,
+      bike_amount: bikeAmount,
+      car_amount: carAmount,
+      auto_amount: totAuto,
+      district: submitter?.district || "Ganganar",
+      zone: submitter?.zone || "Bikaner",
+      legs: legs.map(l => ({
+        leg: l.leg_number,
+        from_district: l.from_district,
+        to_district: l.to_district,
+        from: l.from_location || "",
+        to: l.to_location || "",
+        mode: l.travel_mode,
+        km: parseFloat(l.distance_km || 0),
+        amount: parseFloat(l.travel_amount || 0),
+        sub_mode: l.sub_mode,
+        sub_amount: parseFloat(l.sub_amount || 0),
+        da: parseFloat(l.da_amount || 0),
+        hotel: parseFloat(l.hotel_amount || 0),
+        local_purchase: parseFloat(l.local_purchase || 0),
+        other_desc: l.other_desc || "",
+        other_amount: parseFloat(l.other_amount || 0),
+        visit_purpose: l.visit_purpose || "",
+        activity_details: l.activity_details || ""
+      }))
+    });
+  }
+
+  return result;
+}
+
 /**
  * GET /api/expense/
  */
 export async function handleListExpenses(request, env, params, query, user) {
   const month = query.get("month");
-  let result;
-  if (month) {
-    result = await env.DB.prepare(`
-      SELECT * FROM expenses WHERE user_id = ? AND month = ? ORDER BY id DESC
-    `).bind(user.id, month).all();
-  } else {
-    result = await env.DB.prepare(`
-      SELECT * FROM expenses WHERE user_id = ? ORDER BY id DESC
-    `).bind(user.id).all();
+
+  if (!month) {
+    // Default to current month & year to minimize reads
+    const now = new Date();
+    const monthNames = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
+    const currentMonthName = monthNames[now.getMonth()];
+    const currentYear = now.getFullYear();
+
+    const expensesRows = await env.DB.prepare(`
+      SELECT * FROM expenses WHERE user_id = ? AND year = ? AND month = ? ORDER BY created_at DESC
+    `).bind(user.id, currentYear, currentMonthName).all();
+
+    const submittersMap = { [user.id]: user };
+    const serialized = await serializeExpenses(env, expensesRows.results || [], submittersMap);
+    return jsonResponse(serialized);
   }
-  return jsonResponse(result.results || []);
+
+  let querySql = "SELECT * FROM expenses WHERE user_id = ?";
+  const binds = [user.id];
+
+  if (month.includes("-") && month.length === 7) {
+    const parts = month.split("-");
+    const yr = parseInt(parts[0], 10);
+    const monNum = parseInt(parts[1], 10);
+    const monthNames = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
+    const monName = monthNames[monNum - 1];
+
+    querySql += " AND year = ? AND month = ?";
+    binds.push(yr, monName);
+  } else {
+    querySql += " AND LOWER(month) LIKE ?";
+    binds.push(`%${month.toLowerCase()}%`);
+  }
+
+  querySql += " ORDER BY created_at DESC";
+
+  const expensesRows = await env.DB.prepare(querySql).bind(...binds).all();
+  const submittersMap = { [user.id]: user };
+  const serialized = await serializeExpenses(env, expensesRows.results || [], submittersMap);
+  return jsonResponse(serialized);
 }
 
 /**
@@ -76,10 +205,10 @@ export async function getExpenseInitData(env, targetUser, monthStr) {
 
   // Allowance rules
   const gradeToLookup = (targetUser.designation || "").toLowerCase().includes("specialist") ? "O1" : targetUser.grade;
-  const allowance = await env.DB.prepare("SELECT * FROM allowance_masters WHERE grade = ?").bind(gradeToLookup).first();
+  const allowance = await env.DB.prepare("SELECT * FROM allowance_master WHERE grade = ?").bind(gradeToLookup).first();
 
-  const defaultBike = await env.DB.prepare("SELECT rate_per_km FROM allowance_masters WHERE vehicle_type = 'Bike' LIMIT 1").first();
-  const defaultCar = await env.DB.prepare("SELECT rate_per_km FROM allowance_masters WHERE vehicle_type = 'Car' LIMIT 1").first();
+  const defaultBike = await env.DB.prepare("SELECT rate_per_km FROM allowance_master WHERE vehicle_type = 'Bike' LIMIT 1").first();
+  const defaultCar = await env.DB.prepare("SELECT rate_per_km FROM allowance_master WHERE vehicle_type = 'Car' LIMIT 1").first();
   const fallbackBikeRate = defaultBike?.rate_per_km || 4.5;
   const fallbackCarRate = defaultCar?.rate_per_km || 9.0;
 
@@ -97,13 +226,18 @@ export async function getExpenseInitData(env, targetUser, monthStr) {
   };
 
   // Month-wise accumulated aggregates
-  const claims = await env.DB.prepare(`
-    SELECT SUM(total_distance) as total_km, SUM(auto_allowance) as total_auto
-    FROM expenses WHERE user_id = ? AND month = ? AND year = ? AND status != 'rejected'
+  const statsRes = await env.DB.prepare(`
+    SELECT 
+      SUM(CASE WHEN i.travel_mode IN ('Bike', 'Car') THEN COALESCE(i.distance_km, 0.0) ELSE 0.0 END) as total_km,
+      SUM(CASE WHEN i.travel_mode = 'Auto' THEN COALESCE(i.travel_amount, 0.0) ELSE 0.0 END) +
+      SUM(CASE WHEN i.sub_mode = 'Auto' THEN COALESCE(i.sub_amount, 0.0) ELSE 0.0 END) as total_auto
+    FROM expense_itineraries i
+    JOIN expenses e ON i.exp_id = e.expense_code
+    WHERE e.user_id = ? AND e.month = ? AND e.year = ? AND e.status != 'rejected'
   `).bind(targetUser.id, monthName, yearVal).first();
 
-  const accumulatedKm = claims?.total_km || 0.0;
-  const accumulatedAuto = claims?.total_auto || 0.0;
+  const accumulatedKm = statsRes?.total_km || 0.0;
+  const accumulatedAuto = statsRes?.total_auto || 0.0;
 
   // Append monthly totals inside allowanceDict exactly as Python does
   allowanceDict.current_month_km = accumulatedKm;
@@ -198,38 +332,228 @@ export async function handleCreateLimitRequest(request, env, params, query, user
  */
 export async function handleGetTeamExpenses(request, env, params, query, user) {
   const month = query.get("month");
-  let result;
+
+  const allowedWindows = user.allowed_windows ? user.allowed_windows.split(",").map(w => w.trim().toLowerCase()) : [];
   
-  if (user.role === "Admin") {
-    if (month) {
-      result = await env.DB.prepare("SELECT e.*, u.name as employee_name FROM expenses e JOIN users u ON e.user_id = u.id WHERE e.month = ? ORDER BY e.id DESC").bind(month).all();
+  // 1. Fetch team users
+  let teamUsers = [];
+  if (["Admin", "MIS", "VP", "Accountant"].includes(user.role)) {
+    const res = await env.DB.prepare("SELECT * FROM users").all();
+    teamUsers = res.results || [];
+  } else {
+    const nameClean = (user.name || "").trim();
+    const uidClean = (user.user_id || "").trim();
+
+    // Query direct reports
+    const directReportsRes = await env.DB.prepare(`
+      SELECT * FROM users
+      WHERE LOWER(manager) = ? OR LOWER(manager) = ?
+         OR LOWER(coordinator) = ? OR LOWER(coordinator) = ?
+         OR LOWER(zonal_manager) = ? OR LOWER(zonal_manager) = ?
+    `).bind(nameClean.toLowerCase(), uidClean.toLowerCase(), nameClean.toLowerCase(), uidClean.toLowerCase(), nameClean.toLowerCase(), uidClean.toLowerCase()).all();
+    const directReports = directReportsRes.results || [];
+
+    // Query hierarchy reports
+    const hierarchyApprovals = await env.DB.prepare(`
+      SELECT hierarchy_id FROM hierarchy_approvers WHERE approver_id = ?
+    `).bind(user.id).all();
+    
+    let hierarchyReports = [];
+    if (hierarchyApprovals.results && hierarchyApprovals.results.length > 0) {
+      const hIds = hierarchyApprovals.results.map(h => h.hierarchy_id);
+      const placeholders = hIds.map(() => "?").join(",");
+      const reqsRes = await env.DB.prepare(`
+        SELECT u.* FROM users u
+        JOIN hierarchy_requesters hr ON u.id = hr.user_id
+        WHERE hr.hierarchy_id IN (${placeholders})
+      `).bind(...hIds).all();
+      hierarchyReports = reqsRes.results || [];
+    }
+
+    // Merge and de-duplicate team users
+    const reportsMap = {};
+    for (const u of [...directReports, ...hierarchyReports]) {
+      reportsMap[u.id] = u;
+    }
+    teamUsers = Object.values(reportsMap);
+  }
+
+  if (teamUsers.length === 0) return jsonResponse([]);
+
+  const teamUserIds = teamUsers.map(u => u.id).filter(id => id !== user.id);
+  if (teamUserIds.length === 0) return jsonResponse([]);
+
+  const submittersById = {};
+  for (const u of teamUsers) {
+    submittersById[u.id] = u;
+  }
+
+  // 2. Fetch expenses of team members
+  const placeholders = teamUserIds.map(() => "?").join(",");
+  let querySql = `SELECT * FROM expenses WHERE user_id IN (${placeholders})`;
+  const binds = [...teamUserIds];
+
+  if (month) {
+    if (month.includes("-") && month.length === 7) {
+      const parts = month.split("-");
+      const yr = parseInt(parts[0], 10);
+      const monNum = parseInt(parts[1], 10);
+      const monthNames = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
+      const monName = monthNames[monNum - 1];
+
+      querySql += " AND year = ? AND month = ?";
+      binds.push(yr, monName);
     } else {
-      result = await env.DB.prepare("SELECT e.*, u.name as employee_name FROM expenses e JOIN users u ON e.user_id = u.id ORDER BY e.id DESC").all();
+      querySql += " AND LOWER(month) LIKE ?";
+      binds.push(`%${month.toLowerCase()}%`);
     }
   } else {
-    // Managers see expenses they are assigned to review in approvals
-    if (month) {
-      result = await env.DB.prepare(`
-        SELECT DISTINCT e.*, u.name as employee_name 
-        FROM expenses e
-        JOIN approvals a ON e.id = a.expense_id
-        JOIN users u ON e.user_id = u.id
-        WHERE a.approver_id = ? AND e.month = ?
-        ORDER BY e.id DESC
-      `).bind(user.id, month).all();
-    } else {
-      result = await env.DB.prepare(`
-        SELECT DISTINCT e.*, u.name as employee_name 
-        FROM expenses e
-        JOIN approvals a ON e.id = a.expense_id
-        JOIN users u ON e.user_id = u.id
-        WHERE a.approver_id = ?
-        ORDER BY e.id DESC
-      `).bind(user.id).all();
+    // Default to current month/year
+    const now = new Date();
+    const monthNames = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
+    const currentMonthName = monthNames[now.getMonth()];
+    const currentYear = now.getFullYear();
+
+    querySql += " AND year = ? AND month = ?";
+    binds.push(currentYear, currentMonthName);
+  }
+
+  querySql += " ORDER BY created_at DESC";
+
+  const expensesRows = await env.DB.prepare(querySql).bind(...binds).all();
+  const expenses = expensesRows.results || [];
+
+  // Fetch legs & serialize team expenses
+  const result = [];
+  if (expenses.length > 0) {
+    const expenseCodes = expenses.map(e => e.expense_code).filter(Boolean);
+    let allLegs = [];
+    if (expenseCodes.length > 0) {
+      const legPlaceholders = expenseCodes.map(() => "?").join(",");
+      const legsResult = await env.DB.prepare(`
+        SELECT * FROM expense_itineraries WHERE exp_id IN (${legPlaceholders})
+      `).bind(...expenseCodes).all();
+      allLegs = legsResult.results || [];
+    }
+
+    const legsByCode = {};
+    for (const l of allLegs) {
+      if (!legsByCode[l.exp_id]) legsByCode[l.exp_id] = [];
+      legsByCode[l.exp_id].push(l);
+    }
+
+    for (const exp of expenses) {
+      const submitter = submittersById[exp.user_id] || null;
+      const legs = legsByCode[exp.expense_code] || [];
+
+      const totKm = legs
+        .filter(l => ["Bike", "Car"].includes(l.travel_mode))
+        .reduce((sum, l) => sum + (parseFloat(l.distance_km) || 0.0), 0.0);
+
+      const totAuto = legs
+        .filter(l => l.travel_mode === "Auto")
+        .reduce((sum, l) => sum + (parseFloat(l.travel_amount) || 0.0), 0.0) +
+        legs
+        .filter(l => l.sub_mode === "Auto")
+        .reduce((sum, l) => sum + (parseFloat(l.sub_amount) || 0.0), 0.0);
+
+      const bikeAmount = legs
+        .filter(l => l.travel_mode === "Bike")
+        .reduce((sum, l) => sum + (parseFloat(l.travel_amount) || 0.0), 0.0);
+
+      const carAmount = legs
+        .filter(l => l.travel_mode === "Car")
+        .reduce((sum, l) => sum + (parseFloat(l.travel_amount) || 0.0), 0.0);
+
+      result.push({
+        id: exp.id,
+        expense_code: exp.expense_code,
+        submitter_name: submitter?.name || "Unknown",
+        submitter_code: submitter?.user_id || "N/A",
+        submitter_designation: submitter?.designation || "Engineer",
+        month: exp.month,
+        year: exp.year,
+        amount: parseFloat(exp.amount || 0),
+        status: exp.status,
+        category: exp.travel_mode,
+        date: exp.itinerary,
+        purpose: exp.description || "",
+        created_at: exp.created_at,
+        total_km: totKm,
+        total_auto: totAuto,
+        bike_amount: bikeAmount,
+        car_amount: carAmount,
+        auto_amount: totAuto,
+        da_amount: parseFloat(exp.da_amount || 0.0),
+        hotel_amount: parseFloat(exp.hotel_amount || 0.0),
+        other_expense_amount: parseFloat(exp.other_expense_amount || 0.0),
+        local_purchase_amount: parseFloat(exp.local_purchase_amount || 0.0),
+        district: submitter?.district || "Ganganar",
+        zone: submitter?.zone || "Bikaner"
+      });
     }
   }
 
-  return jsonResponse(result.results || []);
+  // 3. Fetch team members' limit requests
+  const teamUserCodes = teamUsers.map(u => u.user_id).filter(uc => uc !== user.user_id);
+  if (teamUserCodes.length > 0) {
+    const codePlaceholders = teamUserCodes.map(() => "?").join(",");
+    const limitReqsRes = await env.DB.prepare(`
+      SELECT * FROM limit_approval_requests WHERE user_id IN (${codePlaceholders})
+    `).bind(...teamUserCodes).all();
+
+    for (const pl of (limitReqsRes.results || [])) {
+      const submitter = teamUsers.find(u => u.user_id === pl.user_id);
+      if (!submitter) continue;
+
+      let monthName = "N/A";
+      let yearVal = new Date().getFullYear();
+      if (pl.for_month && pl.for_month.includes("-")) {
+        try {
+          const parts = pl.for_month.split("-");
+          yearVal = parseInt(parts[0], 10);
+          const monNum = parseInt(parts[1], 10);
+          const monthNames = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
+          monthName = monthNames[monNum - 1];
+        } catch (e) {}
+      }
+
+      const reqDate = pl.created_at ? pl.created_at.substring(0, 10) : pl.for_month;
+
+      result.push({
+        id: -pl.id,
+        expense_code: `LIMIT-${pl.request_type}-${pl.id}`,
+        submitter_name: submitter.name,
+        submitter_code: pl.user_id,
+        submitter_designation: submitter.designation || "Engineer",
+        month: monthName,
+        year: yearVal,
+        amount: pl.request_type === "AUTO" ? parseFloat(pl.requested_value || 0) : 0.0,
+        status: pl.status.toLowerCase(),
+        category: "Limit Request",
+        travel_mode: pl.request_type,
+        date: reqDate,
+        purpose: `Limit Extension Request: +${parseFloat(pl.requested_value || 0).toFixed(1)} ${pl.request_type}`,
+        created_at: pl.created_at,
+        total_km: pl.request_type === "KM" ? parseFloat(pl.requested_value || 0) : 0.0,
+        total_auto: pl.request_type === "AUTO" ? parseFloat(pl.requested_value || 0) : 0.0,
+        bike_amount: 0.0,
+        car_amount: 0.0,
+        auto_amount: pl.request_type === "AUTO" ? parseFloat(pl.requested_value || 0) : 0.0,
+        da_amount: 0.0,
+        hotel_amount: 0.0,
+        other_expense_amount: 0.0,
+        local_purchase_amount: 0.0,
+        district: submitter.district || "Ganganar",
+        zone: submitter.zone || "Bikaner"
+      });
+    }
+  }
+
+  // Sort result by created_at desc
+  result.sort((a, b) => new Date(b.created_at || 0) - new Date(a.created_at || 0));
+
+  return jsonResponse(result);
 }
 
 /**
