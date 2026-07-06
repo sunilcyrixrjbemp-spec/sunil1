@@ -39,8 +39,11 @@ const WORKER_BACKEND_URL = "https://fieldops-secondary-api.sunnybishnoi.workers.
 // Inject bearer token into request headers if exists
 api.interceptors.request.use(
   async (config) => {
-    // Dynamically route GET requests (reads) directly to Cloudflare Workers edge for maximum speed
-    if (config.method?.toUpperCase() === "GET") {
+    // Route GET requests (reads), login, and token refresh directly to Cloudflare Workers edge by default
+    const isLoginOrRefresh = config.url?.includes("/auth/login") || config.url?.includes("/auth/refresh");
+    const isGet = config.method?.toUpperCase() === "GET";
+
+    if (isGet || isLoginOrRefresh) {
       config.baseURL = `${WORKER_BACKEND_URL}/api`;
     } else {
       config.baseURL = API_BASE_URL;
@@ -103,13 +106,34 @@ const processQueue = (error: any, token: string | null = null) => {
   failedQueue = [];
 };
 
-// Response interceptor for handling token expiry
+// Response interceptor for handling failover & token expiry
 api.interceptors.response.use(
   (response) => response,
   async (error: AxiosError) => {
     const originalRequest = error.config;
+    if (!originalRequest) return Promise.reject(error);
+
+    // 1. DUAL FAILOVER LOGIC: If a request fails due to network error or server error (>= 500)
+    const isNetworkError = !error.response;
+    const isServerError = error.response && error.response.status >= 500;
     
-    // Only handle 401 Unauthorized status codes
+    if ((isNetworkError || isServerError) && !(originalRequest as any)._failoverRetry) {
+      (originalRequest as any)._failoverRetry = true;
+      
+      // Toggle baseURL between Cloudflare Worker and Render
+      if (originalRequest.baseURL?.includes("workers.dev")) {
+        console.warn(`Cloudflare Worker failed. Falling back to Render: ${originalRequest.url}`);
+        originalRequest.baseURL = API_BASE_URL;
+      } else {
+        console.warn(`Render server failed. Falling back to Cloudflare Worker: ${originalRequest.url}`);
+        originalRequest.baseURL = `${WORKER_BACKEND_URL}/api`;
+      }
+      
+      // Retry the request with the new baseURL
+      return api(originalRequest);
+    }
+    
+    // 2. Token expiry logic (401 Unauthorized)
     if (error.response?.status === 401) {
       const refreshToken = localStorage.getItem("refresh_token");
       
@@ -132,7 +156,8 @@ api.interceptors.response.use(
         isRefreshing = true;
         
         try {
-          const response = await axios.post(`${API_BASE_URL}/auth/refresh`, {
+          // Use default Axios so it routes correctly based on the updated logic
+          const response = await axios.post(`${WORKER_BACKEND_URL}/api/auth/refresh`, {
             refresh_token: refreshToken
           });
           
