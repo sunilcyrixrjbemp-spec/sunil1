@@ -1,4 +1,7 @@
 import { verifyPassword, signJwt, verifyJwt } from "../utils/security.js";
+import { DESIGNATIONS, ZONE_DISTRICTS, ROLES } from "../utils/constants.js";
+import { getExpenseInitData } from "./expense.js";
+import { fetchPendingApprovals } from "./approval.js";
 
 /**
  * Helper to build JSON responses in routes
@@ -26,6 +29,120 @@ async function logLogin(db, userId, ipAddress, userAgent, status) {
 }
 
 /**
+ * Resolves manager, zonal_manager, and coordinator e_codes/user_ids to actual User Names.
+ */
+async function resolveUserHierarchyNames(env, user) {
+  const fields = ["manager", "zonal_manager", "coordinator"];
+  for (const field of fields) {
+    const val = user[field];
+    if (!val || !val.trim()) continue;
+    const valLower = val.trim().toLowerCase();
+    
+    const resolved = await env.DB.prepare(`
+      SELECT name FROM users 
+      WHERE LOWER(user_id) = ? OR LOWER(e_code) = ? OR LOWER(name) = ?
+      LIMIT 1
+    `).bind(valLower, valLower, valLower).first();
+    
+    if (resolved && resolved.name) {
+      user[field] = resolved.name;
+    }
+  }
+}
+
+/**
+ * Pre-fetches bootstrap dashboard parameters concurrently
+ */
+export async function getBootstrapDataHelper(env, user) {
+  const allowedWindows = user.allowed_windows ? user.allowed_windows.split(",").map(w => w.trim().toLowerCase()) : [];
+  
+  const nameClean = (user.name || "").trim();
+  const uidClean = (user.user_id || "").trim();
+  
+  // Check direct reports
+  const hasDirectReportsResult = await env.DB.prepare(`
+    SELECT id FROM users
+    WHERE LOWER(manager) = ? OR LOWER(manager) = ?
+       OR LOWER(coordinator) = ? OR LOWER(coordinator) = ?
+       OR LOWER(zonal_manager) = ? OR LOWER(zonal_manager) = ?
+    LIMIT 1
+  `).bind(nameClean.toLowerCase(), uidClean.toLowerCase(), nameClean.toLowerCase(), uidClean.toLowerCase(), nameClean.toLowerCase(), uidClean.toLowerCase()).first();
+  const hasDirectReports = !!hasDirectReportsResult;
+
+  // Check hierarchy approver
+  const isHierarchyApproverResult = await env.DB.prepare(`
+    SELECT id FROM hierarchy_approvers WHERE approver_id = ? LIMIT 1
+  `).bind(user.id).first();
+  const isHierarchyApprover = !!isHierarchyApproverResult;
+
+  const isTeamLead = user.role === "Admin" || allowedWindows.includes("approval") || hasDirectReports || isHierarchyApprover;
+
+  // 1. Dropdown lists setup
+  const gradesRows = await env.DB.prepare("SELECT DISTINCT grade FROM allowance_masters").all();
+  const grades = (gradesRows.results || []).map(r => r.grade).filter(Boolean).sort();
+  const dropdowns = {
+    designations: DESIGNATIONS,
+    zones: ZONE_DISTRICTS,
+    roles: ROLES,
+    grades: grades.length ? grades : ["A", "B", "C", "D"]
+  };
+
+  // 2. Fetch expense init data
+  const monthStr = new Date().toISOString().slice(0, 7); // YYYY-MM
+  const expenseInit = await getExpenseInitData(env, user, monthStr);
+
+  // 3. Fetch my expenses
+  const myExpensesResult = await env.DB.prepare("SELECT * FROM expenses WHERE user_id = ? ORDER BY id DESC").bind(user.id).all();
+  const myExpenses = myExpensesResult.results || [];
+
+  // 4. Fetch team expenses and pending approvals
+  let teamExpenses = [];
+  let pendingApprovals = [];
+  if (isTeamLead) {
+    if (user.role === "Admin") {
+      const teamRes = await env.DB.prepare("SELECT e.*, u.name as employee_name FROM expenses e JOIN users u ON e.user_id = u.id ORDER BY e.id DESC").all();
+      teamExpenses = teamRes.results || [];
+    } else {
+      const teamRes = await env.DB.prepare(`
+        SELECT DISTINCT e.*, u.name as employee_name 
+        FROM expenses e
+        JOIN approvals a ON e.id = a.expense_id
+        JOIN users u ON e.user_id = u.id
+        WHERE a.approver_id = ?
+        ORDER BY e.id DESC
+      `).bind(user.id).all();
+      teamExpenses = teamRes.results || [];
+    }
+    pendingApprovals = await fetchPendingApprovals(env, user);
+  }
+
+  // 5. Compile allowance stats
+  let allowanceStats = null;
+  if (expenseInit && expenseInit.allowance) {
+    const allowance = expenseInit.allowance;
+    allowanceStats = {
+      currentKm: allowance.current_month_km || 0.0,
+      maxKm: (allowance.max_km_per_month || 2000.0) + (expenseInit.approved_km || 0.0),
+      currentAuto: allowance.current_month_auto || 0.0,
+      maxAuto: (allowance.max_auto_per_month || 1000.0) + (expenseInit.approved_auto || 0.0),
+      vehicleType: allowance.vehicle_type || "Bike",
+      rateBike: allowance.rate_bike || 4.5,
+      rateCar: allowance.rate_car || 9.0
+    };
+  }
+
+  return {
+    dropdowns,
+    expense_init: expenseInit,
+    my_expenses: myExpenses,
+    allowance_stats: allowanceStats,
+    team_expenses: teamExpenses,
+    pending_approvals: pendingApprovals,
+    pending_approvals_count: pendingApprovals.length
+  };
+}
+
+/**
  * POST /api/auth/login
  */
 export async function handleLogin(request, env, params, query) {
@@ -37,12 +154,12 @@ export async function handleLogin(request, env, params, query) {
   }
 
   const { user_id, password, force } = body;
-  if (!user_id || !password) {
-    return jsonResponse({ error: "user_id and password are required" }, 400);
-  }
+  const ipAddress = request.headers.get("CF-Connecting-IP") || "127.0.0.1";
+  const userAgent = request.headers.get("User-Agent") || "";
 
-  const ipAddress = request.headers.get("cf-connecting-ip") || "127.0.0.1";
-  const userAgent = request.headers.get("user-agent") || "Unknown";
+  if (!user_id || !password) {
+    return jsonResponse({ error: "User ID and Password are required" }, 400);
+  }
 
   // 1. Fetch user from DB
   const user = await env.DB.prepare("SELECT * FROM users WHERE user_id = ?").bind(user_id).first();
@@ -103,6 +220,13 @@ export async function handleLogin(request, env, params, query) {
 
   // Fetch role
   const roleRow = await env.DB.prepare("SELECT role FROM user_roles WHERE user_id = ?").bind(user_id).first();
+  user.role = roleRow?.role || "user";
+
+  // Resolve manager/zonal_manager/coordinator names if they contain e_codes
+  await resolveUserHierarchyNames(env, user);
+
+  // Prefetch bootstrap data for instant frontend load
+  const bootstrapData = await getBootstrapDataHelper(env, user);
 
   return jsonResponse({
     access_token: accessToken,
@@ -112,8 +236,9 @@ export async function handleLogin(request, env, params, query) {
       user_id: user.user_id,
       name: user.name,
       e_code: user.e_code,
-      role: roleRow?.role || "user"
-    }
+      role: user.role
+    },
+    bootstrap_data: bootstrapData
   });
 }
 
@@ -158,4 +283,12 @@ export async function handleRefresh(request, env, params, query) {
     refresh_token: newRefreshToken,
     token_type: "bearer"
   });
+}
+
+/**
+ * GET /api/auth/bootstrap
+ */
+export async function handleBootstrap(request, env, params, query, user) {
+  const bootstrapData = await getBootstrapDataHelper(env, user);
+  return jsonResponse(bootstrapData);
 }

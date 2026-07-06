@@ -7,21 +7,137 @@ function jsonResponse(data, status = 200) {
   });
 }
 
+export async function getLegacyExpenseHashId(expId) {
+  const msgUint8 = new TextEncoder().encode(String(expId));
+  const hashBuffer = await crypto.subtle.digest("MD5", msgUint8);
+  const hashArray = Array.from(new Uint8Array(hashBuffer));
+  const hashHex = hashArray.map(b => b.toString(16).padStart(2, "0")).join("");
+  const val = parseInt(hashHex.substring(0, 7), 16);
+  return -200000 - val;
+}
+
+export async function fetchPendingApprovals(env, user) {
+  const result = [];
+
+  // 1. Fetch pending limit requests
+  const pendingLimits = await env.DB.prepare(`
+    SELECT * FROM limit_approval_requests
+    WHERE manager_id = ? AND status = 'Pending'
+  `).bind(user.user_id).all();
+
+  for (const pl of (pendingLimits.results || [])) {
+    const submitter = await env.DB.prepare("SELECT name FROM users WHERE user_id = ?").bind(pl.user_id).first();
+    result.push({
+      id: -pl.id,
+      expense_id: -pl.id,
+      approver_id: user.id,
+      level_number: 1,
+      status: "pending",
+      comments: "",
+      created_at: pl.created_at,
+      updated_at: pl.updated_at,
+      expense_code: `LIMIT-${pl.request_type}-${pl.id}`,
+      employeeName: submitter?.name || `Employee ${pl.user_id}`,
+      eCode: pl.user_id,
+      purpose: `Request additional ${parseFloat(pl.requested_value).toFixed(1)} ${pl.request_type} limit for month ${pl.for_month}`,
+      category: "Limit Request",
+      amount: parseFloat(pl.requested_value),
+      date: pl.for_month,
+      itinerariesCount: 0
+    });
+  }
+
+  // 2. Fetch normal approvals
+  const approvals = await env.DB.prepare(`
+    SELECT a.*, e.expense_code, e.amount, e.description, e.travel_mode, e.itinerary, e.user_id as submitter_user_id
+    FROM approvals a
+    JOIN expenses e ON a.expense_id = e.id
+    WHERE a.approver_id = ? AND a.status = 'pending'
+    ORDER BY a.level_number ASC, a.created_at DESC
+  `).bind(user.id).all();
+
+  for (const app of (approvals.results || [])) {
+    const submitter = await env.DB.prepare("SELECT name, user_id FROM users WHERE id = ?").bind(app.submitter_user_id).first();
+    
+    // Count itineraries
+    const countResult = await env.DB.prepare("SELECT COUNT(*) as cnt FROM expense_itineraries WHERE exp_id = ?").bind(app.expense_code).first();
+    const itiCount = countResult?.cnt || 0;
+
+    result.push({
+      id: app.id,
+      expense_id: app.expense_id,
+      approver_id: app.approver_id,
+      level_number: app.level_number,
+      status: app.status,
+      comments: app.comments || "",
+      created_at: app.created_at,
+      updated_at: app.updated_at,
+      expense_code: app.expense_code,
+      employeeName: submitter?.name || "Unknown Employee",
+      eCode: submitter?.user_id || "N/A",
+      purpose: app.description || "",
+      category: app.travel_mode || "Travel",
+      amount: parseFloat(app.amount || 0),
+      date: app.itinerary,
+      itinerariesCount: itiCount
+    });
+  }
+
+  // 3. Fetch legacy pending claims
+  const legacyRows = await env.DB.prepare(`
+    SELECT m.exp_id, m.user_id, m.expense_date, m.total_amount, m.status, m.visit_purpose, u.full_name, u.e_code
+    FROM expense_master m
+    JOIN user u ON LOWER(m.user_id) = LOWER(u.user_id)
+    WHERE 
+      ((m.status = 'Pending L1' OR m.status = 'Pending') AND LOWER(m.level_first_approver) = LOWER(?))
+      OR
+      (m.status = 'Pending L2' AND LOWER(m.level_second_approver) = LOWER(?))
+  `).bind(user.user_id, user.user_id).all();
+
+  for (const row of (legacyRows.results || [])) {
+    const mockId = await getLegacyExpenseHashId(row.exp_id);
+    const levelNumber = row.status === "Pending L2" ? 2 : 1;
+
+    // Fetch count of itineraries for this legacy claim
+    const countResult = await env.DB.prepare("SELECT COUNT(*) as cnt FROM expense_itinerary WHERE exp_id = ?").bind(row.exp_id).first();
+    const itiCount = countResult?.cnt || 0;
+
+    // Fetch first travel mode
+    const firstLeg = await env.DB.prepare(`
+      SELECT travel_mode FROM expense_itinerary WHERE exp_id = ? ORDER BY leg_number ASC LIMIT 1
+    `).bind(row.exp_id).first();
+    const category = firstLeg?.travel_mode || "Travel";
+
+    result.push({
+      id: mockId,
+      expense_id: mockId,
+      approver_id: user.id,
+      level_number: levelNumber,
+      status: "pending",
+      comments: "",
+      created_at: row.expense_date,
+      updated_at: row.expense_date,
+      expense_code: row.exp_id,
+      employeeName: row.full_name || "Unknown Employee",
+      eCode: row.e_code || row.user_id,
+      purpose: row.visit_purpose || "",
+      category: category,
+      amount: parseFloat(row.total_amount || 0),
+      date: row.expense_date,
+      itinerariesCount: itiCount
+    });
+  }
+
+  return result;
+}
+
 /**
  * GET /api/approvals
  * Retrieve pending approvals for a user
  */
 export async function handleGetApprovals(request, env, params, query, user) {
-  const pending = await env.DB.prepare(`
-    SELECT a.*, e.expense_code, e.amount, e.claim_month, u.name as submitter_name
-    FROM approvals a
-    JOIN expenses e ON a.expense_id = e.id
-    JOIN users u ON e.user_id = u.id
-    WHERE a.approver_id = ? AND a.status = 'pending'
-    ORDER BY a.level_number ASC, a.created_at DESC
-  `).bind(user.id).all();
-
-  return jsonResponse(pending.results || []);
+  const pending = await fetchPendingApprovals(env, user);
+  return jsonResponse(pending);
 }
 
 /**

@@ -5,7 +5,7 @@
 import { verifyJwt } from "./utils/security.js";
 
 // Import Auth handlers
-import { handleLogin, handleRefresh } from "./routes/auth.js";
+import { handleLogin, handleRefresh, handleBootstrap } from "./routes/auth.js";
 // Import User handlers
 import { handleGetProfile, handleUpdateProfile, handleChangePassword } from "./routes/users.js";
 // Import Approval handlers
@@ -112,6 +112,7 @@ router.get("/api/health", async (req, env, params, query) => {
 // --- Auth Endpoints ---
 router.post("/api/auth/login", handleLogin);
 router.post("/api/auth/refresh", handleRefresh);
+router.get("/api/auth/bootstrap", handleBootstrap, true);
 
 // --- User Profile Endpoints (Requires Auth) ---
 router.get("/api/users/profile", handleGetProfile, true);

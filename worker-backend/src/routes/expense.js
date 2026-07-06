@@ -28,22 +28,14 @@ export async function handleListExpenses(request, env, params, query, user) {
 /**
  * GET /api/expense/init
  */
-export async function handleExpenseInit(request, env, params, query, user) {
-  const targetUserId = query.get("user_id") || user.user_id;
-  const monthStr = query.get("month"); // Format: YYYY-MM
-  if (!monthStr) return jsonResponse({ error: "month parameter is required" }, 400);
-
+export async function getExpenseInitData(env, targetUser, monthStr) {
   const parts = monthStr.split("-");
   const yearVal = parseInt(parts[0], 10);
   const monthInt = parseInt(parts[1], 10);
   const monthNames = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
   const monthName = monthNames[monthInt - 1];
 
-  // 1. Fetch user limits and configuration
-  const targetUser = await env.DB.prepare("SELECT * FROM users WHERE user_id = ?").bind(targetUserId).first();
-  if (!targetUser) return jsonResponse({ error: "User not found" }, 404);
-
-  // 2. Fetch distinct districts and facilities mapped
+  // Fetch distinct districts and facilities mapped
   const facilitiesRows = await env.DB.prepare(`
     SELECT DISTINCT district_name, facility_name FROM facility_details
   `).all();
@@ -53,28 +45,28 @@ export async function handleExpenseInit(request, env, params, query, user) {
     facilities[f.district_name].push(f.facility_name);
   }
 
-  // 3. Submitted dates this month
+  // Submitted dates this month
   const submittedRows = await env.DB.prepare(`
     SELECT itinerary FROM expenses WHERE user_id = ? AND month = ? AND year = ?
   `).bind(targetUser.id, monthName, yearVal).all();
   const submittedDates = (submittedRows.results || []).map(r => r.itinerary).filter(Boolean);
 
-  // 4. Approved limit extensions
+  // Approved limit extensions
   const limits = await env.DB.prepare(`
     SELECT 
       SUM(CASE WHEN request_type = 'KM' THEN COALESCE(approved_value, requested_value) ELSE 0.0 END) as approved_km,
       SUM(CASE WHEN request_type = 'AUTO' THEN COALESCE(approved_value, requested_value) ELSE 0.0 END) as approved_auto
     FROM limit_approval_requests
     WHERE user_id = ? AND LOWER(status) = 'approved' AND for_month = ?
-  `).bind(targetUserId, monthStr).first();
+  `).bind(targetUser.user_id, monthStr).first();
 
   const approvedKm = limits?.approved_km || 0.0;
   const approvedAuto = limits?.approved_auto || 0.0;
 
-  // 5. Existing requests status
+  // Existing requests status
   const limitReqs = await env.DB.prepare(`
     SELECT * FROM limit_approval_requests WHERE user_id = ? AND for_month = ?
-  `).bind(targetUserId, monthStr).all();
+  `).bind(targetUser.user_id, monthStr).all();
 
   const kmReqs = (limitReqs.results || []).filter(r => r.request_type === "KM").sort((a, b) => b.id - a.id);
   const autoReqs = (limitReqs.results || []).filter(r => r.request_type === "AUTO").sort((a, b) => b.id - a.id);
@@ -82,7 +74,7 @@ export async function handleExpenseInit(request, env, params, query, user) {
   const existingKmReq = kmReqs.length > 0 ? { status: kmReqs[0].status, requested_value: kmReqs[0].requested_value } : null;
   const existingAutoReq = autoReqs.length > 0 ? { status: autoReqs[0].status, requested_value: autoReqs[0].requested_value } : null;
 
-  // 6. Allowance rules
+  // Allowance rules
   const gradeToLookup = (targetUser.designation || "").toLowerCase().includes("specialist") ? "O1" : targetUser.grade;
   const allowance = await env.DB.prepare("SELECT * FROM allowance_masters WHERE grade = ?").bind(gradeToLookup).first();
 
@@ -104,7 +96,7 @@ export async function handleExpenseInit(request, env, params, query, user) {
     vehicle_type: allowance?.vehicle_type ?? "Bike"
   };
 
-  // 7. Month-wise accumulated aggregates
+  // Month-wise accumulated aggregates
   const claims = await env.DB.prepare(`
     SELECT SUM(total_distance) as total_km, SUM(auto_allowance) as total_auto
     FROM expenses WHERE user_id = ? AND month = ? AND year = ? AND status != 'rejected'
@@ -122,7 +114,7 @@ export async function handleExpenseInit(request, env, params, query, user) {
   const mm = String(monthInt).padStart(2, "0");
   const yy = String(yearVal).substring(2);
 
-  return jsonResponse({
+  return {
     success: true,
     user: {
       full_name: targetUser.name,
@@ -140,7 +132,22 @@ export async function handleExpenseInit(request, env, params, query, user) {
     existing_km_req: existingKmReq,
     existing_auto_req: existingAutoReq,
     next_exp_id: `RJ-${mm}/${yy}-PENDING`
-  });
+  };
+}
+
+/**
+ * GET /api/expense/init
+ */
+export async function handleExpenseInit(request, env, params, query, user) {
+  const targetUserId = query.get("user_id") || user.user_id;
+  const monthStr = query.get("month"); // Format: YYYY-MM
+  if (!monthStr) return jsonResponse({ error: "month parameter is required" }, 400);
+
+  const targetUser = await env.DB.prepare("SELECT * FROM users WHERE user_id = ?").bind(targetUserId).first();
+  if (!targetUser) return jsonResponse({ error: "User not found" }, 404);
+
+  const data = await getExpenseInitData(env, targetUser, monthStr);
+  return jsonResponse(data);
 }
 
 /**
