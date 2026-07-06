@@ -84,6 +84,11 @@ class D1Cursor:
         self.lastrowid = None
         self._idx = 0
 
+    def executemany(self, sql, seq_of_parameters):
+        for parameters in seq_of_parameters:
+            self.execute(sql, parameters)
+        return self
+
     def execute(self, sql, parameters=None):
         if parameters is None:
             parameters = []
