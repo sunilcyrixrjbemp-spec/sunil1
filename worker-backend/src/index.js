@@ -87,6 +87,16 @@ class Router {
 
 const router = new Router();
 
+// --- Root Welcome ---
+router.get("/", async (req, env, params, query) => {
+  return jsonResponse({
+    status: "ok",
+    message: "Welcome to FieldOps Secondary API Server (Cloudflare Worker)",
+    version: "1.0.0",
+    docs: "/api/health"
+  });
+});
+
 // --- Health Check ---
 router.get("/api/health", async (req, env, params, query) => {
   const result = await env.DB.prepare("SELECT COUNT(*) as cnt FROM users").first();
