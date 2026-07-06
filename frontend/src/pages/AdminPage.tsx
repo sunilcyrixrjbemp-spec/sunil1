@@ -167,6 +167,9 @@ export default function AdminPage() {
   const [editECode, setEditECode] = useState("");
   const [editUserPassword, setEditUserPassword] = useState("");
   const [editAdminPassword, setEditAdminPassword] = useState("");
+  const [showUnlockModal, setShowUnlockModal] = useState(false);
+  const [unlockPassword, setUnlockPassword] = useState("");
+  const [isSensitiveSectionUnlocked, setIsSensitiveSectionUnlocked] = useState(false);
   const [editUserLoading, setEditUserLoading] = useState(false);
   const [editUserError, setEditUserError] = useState<string | null>(null);
 
@@ -405,9 +408,25 @@ export default function AdminPage() {
     setEditECode(u.e_code || "");
     setEditUserPassword("");
     setEditAdminPassword("");
+    setShowUnlockModal(false);
+    setUnlockPassword("");
+    setIsSensitiveSectionUnlocked(false);
     
     setEditUserError(null);
     setShowEditUserModal(true);
+  };
+
+  const handleUnlockSensitiveSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (unlockPassword.trim() === "012001@Sunil") {
+      setIsSensitiveSectionUnlocked(true);
+      setEditAdminPassword("012001@Sunil");
+      setShowUnlockModal(false);
+      setUnlockPassword("");
+      toast.success("Credentials fields unlocked successfully!");
+    } else {
+      toast.error("Invalid Admin Security Password.");
+    }
   };
 
   const handleUpdateUserSubmit = async (e: React.FormEvent) => {
@@ -1905,8 +1924,31 @@ export default function AdminPage() {
       {showEditUserModal && editingUser && (
         <div className="modal-lte-overlay z-[9999]">
           <div className="modal-lte-content max-w-4xl p-6 max-h-[90vh] flex flex-col">
-            <h3 className="text-sm font-bold uppercase tracking-wider border-b border-gray-200 pb-3 text-gray-800">
-              Update Employee: <span className="text-blue-600 font-mono font-bold">{editingUser.user_id}</span>
+            <h3 className="text-sm font-bold uppercase tracking-wider border-b border-gray-200 pb-3 text-gray-800 flex items-center justify-between">
+              <span>
+                Update Employee:{" "}
+                <button
+                  type="button"
+                  onClick={() => setShowUnlockModal(true)}
+                  title="Click to change ID/Code/Password"
+                  className="text-blue-600 font-mono font-bold hover:underline"
+                >
+                  {editingUser.user_id}
+                </button>
+              </span>
+              {!isSensitiveSectionUnlocked ? (
+                <button
+                  type="button"
+                  onClick={() => setShowUnlockModal(true)}
+                  className="text-[9px] bg-red-50 text-red-600 border border-red-200 px-2 py-0.5 rounded font-bold uppercase hover:bg-red-100 transition duration-150"
+                >
+                  🔒 Unlock credentials
+                </button>
+              ) : (
+                <span className="text-[9px] bg-green-50 text-green-700 border border-green-200 px-2 py-0.5 rounded font-bold uppercase">
+                  🔓 Unlocked
+                </span>
+              )}
             </h3>
             
             <form onSubmit={handleUpdateUserSubmit} className="flex-1 flex flex-col overflow-hidden mt-4 space-y-4">
@@ -1917,57 +1959,44 @@ export default function AdminPage() {
                 </div>
               )}
 
-              {/* Grid 0 - User ID and Employee Code */}
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <div>
-                  <label className="label-lte">User ID * (Requires password to change)</label>
-                  <input
-                    type="text"
-                    value={editUserId}
-                    onChange={(e) => setEditUserId(e.target.value)}
-                    className="input-lte font-mono border-blue-200 focus:border-blue-500"
-                    required
-                  />
-                </div>
-                <div>
-                  <label className="label-lte">Employee Code * (Requires password to change)</label>
-                  <input
-                    type="text"
-                    value={editECode}
-                    onChange={(e) => setEditECode(e.target.value)}
-                    className="input-lte font-mono border-blue-200 focus:border-blue-500"
-                    required
-                  />
-                </div>
-              </div>
+              {/* Sensitive Fields (User ID, Employee Code, Password) — Shown only when unlocked */}
+              {isSensitiveSectionUnlocked && (
+                <div className="p-4 bg-amber-50/15 border border-amber-200 rounded-lg space-y-4 text-left">
+                  <span className="text-[10px] font-bold text-amber-850 uppercase tracking-wider block">🔓 Edit Credentials (Unlocked)</span>
+                  
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div>
+                      <label className="label-lte font-bold">User ID *</label>
+                      <input
+                        type="text"
+                        value={editUserId}
+                        onChange={(e) => setEditUserId(e.target.value)}
+                        className="input-lte font-mono bg-white"
+                        required
+                      />
+                    </div>
+                    <div>
+                      <label className="label-lte font-bold">Employee Code *</label>
+                      <input
+                        type="text"
+                        value={editECode}
+                        onChange={(e) => setEditECode(e.target.value)}
+                        className="input-lte font-mono bg-white"
+                        required
+                      />
+                    </div>
+                  </div>
 
-              {/* Grid 0.5 - New Password */}
-              <div className="grid grid-cols-1 gap-4">
-                <div>
-                  <label className="label-lte">New Password (Leave blank to keep current password - Requires password to change)</label>
-                  <input
-                    type="password"
-                    value={editUserPassword}
-                    onChange={(e) => setEditUserPassword(e.target.value)}
-                    className="input-lte border-blue-200 focus:border-blue-500"
-                    placeholder="Enter new password for this user"
-                  />
-                </div>
-              </div>
-
-              {/* Password field - conditional based on modification */}
-              {(editUserId.trim() !== editingUser.user_id || editECode.trim() !== (editingUser.e_code || "") || editUserPassword.trim() !== "") && (
-                <div className="p-3.5 border border-amber-200 bg-amber-50/20 rounded-lg space-y-2 text-left">
-                  <span className="text-[10px] font-bold text-amber-800 uppercase tracking-wider block">⚠️ ID, Employee Code, or Password change detected</span>
-                  <label className="label-lte text-amber-700 font-bold">Enter Admin Security Password *</label>
-                  <input
-                    type="password"
-                    value={editAdminPassword}
-                    onChange={(e) => setEditAdminPassword(e.target.value)}
-                    className="input-lte border-amber-300 focus:border-amber-500 focus:ring-1 focus:ring-amber-500 bg-white"
-                    placeholder="Enter security password to authorize changes"
-                    required
-                  />
+                  <div>
+                    <label className="label-lte font-bold">New Password (Leave blank to keep current password)</label>
+                    <input
+                      type="password"
+                      value={editUserPassword}
+                      onChange={(e) => setEditUserPassword(e.target.value)}
+                      className="input-lte bg-white"
+                      placeholder="Enter new password for this user"
+                    />
+                  </div>
                 </div>
               )}
 
@@ -2624,6 +2653,47 @@ export default function AdminPage() {
                 </button>
               </div>
             </div>
+          </div>
+        </div>
+      {/* ================= MODAL: UNLOCK SENSITIVE FIELDS ================= */}
+      {showUnlockModal && (
+        <div className="modal-lte-overlay z-[99999]">
+          <div className="modal-lte-content max-w-md p-6">
+            <h3 className="text-sm font-bold uppercase tracking-wider border-b border-gray-200 pb-3 text-gray-800">
+              Enter Admin Security Password
+            </h3>
+            <form onSubmit={handleUnlockSensitiveSubmit} className="mt-4 space-y-4">
+              <div>
+                <label className="label-lte">Admin Security Password *</label>
+                <input
+                  type="password"
+                  value={unlockPassword}
+                  onChange={(e) => setUnlockPassword(e.target.value)}
+                  className="input-lte"
+                  placeholder="Enter security password to unlock fields"
+                  required
+                  autoFocus
+                />
+              </div>
+              <div className="flex justify-end gap-3 pt-2">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setShowUnlockModal(false);
+                    setUnlockPassword("");
+                  }}
+                  className="btn-lte-secondary"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  className="btn-lte-primary"
+                >
+                  Unlock
+                </button>
+              </div>
+            </form>
           </div>
         </div>
       )}
