@@ -87,8 +87,58 @@ def replicate_to_secondary(sql: str, params: list = None):
 
 
 def replicate_batch(statements: List[Tuple[str, list]]):
-    """Replicate a batch of SQL statements to the Secondary DB.
-    Each item is (sql, params). Executed sequentially in order."""
+    """Replicate a batch of SQL statements to the Secondary DB in a single API call."""
+    if not statements:
+        return
+
+    config = _get_secondary_config()
+    if not config["account_id"] or not config["database_id"] or not config["token"]:
+        return
+
+    url = f"https://api.cloudflare.com/client/v4/accounts/{config['account_id']}/d1/database/{config['database_id']}/query"
+    headers = {
+        "Content-Type": "application/json",
+    }
+
+    # Use legacy API key format
+    if config["token"].startswith("cfk_"):
+        headers["X-Auth-Key"] = config["token"]
+        headers["X-Auth-Email"] = config.get("email", "suniljani012@gmail.com")
+    else:
+        headers["Authorization"] = f"Bearer {config['token']}"
+
+    # Build the batch payload (array of query objects)
+    payload = []
+    for sql, params in statements:
+        payload.append({
+            "sql": sql,
+            "params": params or []
+        })
+
+    session = _get_repl_session()
+    try:
+        response = session.post(url, headers=headers, json=payload, timeout=20)
+        if response.status_code != 200:
+            logger.error(f"DualWrite: Batch HTTP {response.status_code} - {response.text[:200]}")
+            _replicate_sequential_fallback(statements)
+            return
+
+        res_json = response.json()
+        if not res_json.get("success"):
+            errors = res_json.get("errors", [])
+            err_msg = errors[0].get("message") if errors else "Unknown"
+            logger.error(f"DualWrite: Batch replication failed: {err_msg}. Falling back to sequential.")
+            _replicate_sequential_fallback(statements)
+            return
+
+        logger.info(f"DualWrite: Batch replication: {len(statements)} statements replicated successfully in one request")
+    except Exception as e:
+        logger.error(f"DualWrite: Batch replication error: {e}. Falling back to sequential.")
+        _replicate_sequential_fallback(statements)
+
+
+def _replicate_sequential_fallback(statements: List[Tuple[str, list]]):
+    """Fallback to sequential replication if batch fails."""
     success_count = 0
     fail_count = 0
 
@@ -99,9 +149,9 @@ def replicate_batch(statements: List[Tuple[str, list]]):
             fail_count += 1
 
     if fail_count > 0:
-        logger.warning(f"DualWrite: Batch replication: {success_count} ok, {fail_count} failed")
+        logger.warning(f"DualWrite: Sequential fallback: {success_count} ok, {fail_count} failed")
     else:
-        logger.info(f"DualWrite: Batch replication: {success_count} statements replicated successfully")
+        logger.info(f"DualWrite: Sequential fallback: all {success_count} statements replicated successfully")
 
 
 def replicate_batch_in_background(statements: List[Tuple[str, list]]):

@@ -1,5 +1,6 @@
 import os
 from typing import Optional
+from datetime import datetime, timedelta, timezone
 import re
 import json
 import requests
@@ -386,11 +387,44 @@ def get_db():
     finally:
         db.close()
 
-# Dependency to get DB session (Secondary - for reads, with fallback to Primary)
+# ─── Date-Based Read Routing ─────────────────────────────────────────────
+# Before Aug 3, 2026: All reads → Secondary DB only
+# After Aug 3, 2026:  50/50 round-robin between Primary and Secondary
+import itertools as _itertools
+_read_round_robin = _itertools.cycle([0, 1])  # 0=Secondary, 1=Primary
+_ROUND_ROBIN_START_DATE = datetime(2026, 8, 3)
+
+# Dependency to get DB session (Smart read routing with fallback)
 def get_read_db():
-    """Returns a session connected to the Secondary (read replica) DB.
-    Falls back to Primary DB if Secondary is unavailable."""
-    if _SecondarySessionLocal:
+    """Returns a session for read operations.
+    - Before Aug 3, 2026: Always uses Secondary DB (to offload Primary reads)
+    - After Aug 3, 2026: Round-robin 50/50 split between Primary and Secondary
+    - Falls back to Primary if Secondary is unavailable."""
+    if not _SecondarySessionLocal:
+        # No secondary configured, use primary
+        db = SessionLocal()
+        try:
+            yield db
+        finally:
+            db.close()
+        return
+
+    # Decide which DB to use based on date
+    now = datetime.now(timezone.utc) + timedelta(hours=5, minutes=30)  # IST
+    use_primary = False
+
+    if now >= _ROUND_ROBIN_START_DATE:
+        # After Aug 3: alternate between Primary (1) and Secondary (0)
+        choice = next(_read_round_robin)
+        use_primary = (choice == 1)
+
+    if use_primary:
+        db = SessionLocal()
+        try:
+            yield db
+        finally:
+            db.close()
+    else:
         db = _SecondarySessionLocal()
         try:
             yield db
@@ -404,18 +438,10 @@ def get_read_db():
                 db.close()
         else:
             db.close()
-    else:
-        # No secondary configured, use primary
-        db = SessionLocal()
-        try:
-            yield db
-        finally:
-            db.close()
 
 # Global event listeners to enforce IST for created_at and updated_at on all models
 from sqlalchemy import event
 from sqlalchemy.orm import Mapper
-from datetime import datetime, timedelta, timezone
 
 def get_ist_now():
     return (datetime.now(timezone.utc) + timedelta(hours=5, minutes=30)).replace(tzinfo=None)

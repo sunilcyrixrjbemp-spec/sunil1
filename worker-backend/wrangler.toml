@@ -1,0 +1,12 @@
+name = "fieldops-secondary-api"
+main = "src/index.js"
+compatibility_date = "2024-09-25"
+
+[[d1_databases]]
+binding = "DB"
+database_name = "expense_management_db_new"
+database_id = "6ee33815-4d7e-4eb4-8a60-c001d5a8331f"
+
+[vars]
+CORS_ORIGIN = "*"
+API_SECRET = "012001@Sunil"
