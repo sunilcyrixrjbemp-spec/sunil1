@@ -39,15 +39,8 @@ const WORKER_BACKEND_URL = "https://fieldops-secondary-api.sunnybishnoi.workers.
 // Inject bearer token into request headers if exists
 api.interceptors.request.use(
   async (config) => {
-    // Route GET requests (reads), login, and token refresh directly to Cloudflare Workers edge by default
-    const isLoginOrRefresh = config.url?.includes("/auth/login") || config.url?.includes("/auth/refresh");
-    const isGet = config.method?.toUpperCase() === "GET";
-
-    if (isGet || isLoginOrRefresh) {
-      config.baseURL = `${WORKER_BACKEND_URL}/api`;
-    } else {
-      config.baseURL = API_BASE_URL;
-    }
+    // Route all requests directly to Cloudflare Workers edge by default
+    config.baseURL = `${WORKER_BACKEND_URL}/api`;
 
     // Do not inject tokens or restore them for public auth endpoints
     const isPublicEndpoint = config.url?.includes("/auth/login") || 
