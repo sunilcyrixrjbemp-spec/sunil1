@@ -132,6 +132,16 @@ export default function DashboardLayout() {
     } else {
       setUser(currentUser);
       fetchNotifications(currentUser);
+
+      // Auto-sync profile to get fresh permissions and details
+      authService.getProfile()
+        .then(freshProfile => {
+          if (freshProfile) {
+            localStorage.setItem("user", JSON.stringify(freshProfile));
+            setUser(freshProfile);
+          }
+        })
+        .catch(err => console.warn("Failed to sync profile on mount:", err));
     }
   }, [navigate]);
 

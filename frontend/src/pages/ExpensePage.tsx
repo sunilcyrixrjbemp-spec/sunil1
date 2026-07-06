@@ -814,7 +814,7 @@ export default function ExpensePage() {
         district: data.user?.district || data.user?.home_district
       };
       setUser(normalizedUser);
-      setAllowance(data.allowance);
+      setAllowance(data.allowance || {});
       setFacilities(data.facilities);
       setSubmittedDates(data.submitted_dates || []);
       setNextExpId(data.next_exp_id);

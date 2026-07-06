@@ -1,4 +1,5 @@
 import { runWrite } from "../utils/db.js";
+import { getLegacyExpenseHashId } from "./approval.js";
 
 function jsonResponse(data, status = 200) {
   return new Response(JSON.stringify(data), {
@@ -596,55 +597,719 @@ export async function handleGetAssetValueMaster(request, env, params, query, use
 /**
  * GET /api/expense/:id
  */
+export async function getUserMonthlyStatsHelper(env, userDbId, month, year, excludeDate = null) {
+  let monthStr = String(month).strip();
+  let yearVal = year ? parseInt(year, 10) : null;
+
+  if (monthStr.includes("-")) {
+    const parts = monthStr.split("-");
+    if (parts.length >= 2) {
+      try {
+        const y = parseInt(parts[0], 10);
+        const mNum = parseInt(parts[1], 10);
+        const monthNames = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
+        monthStr = monthNames[mNum - 1];
+        yearVal = y;
+      } catch (e) {}
+    }
+  } else if (/^\d+$/.test(monthStr)) {
+    try {
+      const mNum = parseInt(monthStr, 10);
+      const monthNames = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
+      monthStr = monthNames[mNum - 1];
+    } catch (e) {}
+  } else {
+    monthStr = monthStr.charAt(0).toUpperCase() + monthStr.slice(1).toLowerCase();
+  }
+
+  let querySql = `
+    SELECT * FROM expenses 
+    WHERE user_id = ? AND month = ? AND year = ? AND LOWER(status) NOT IN ('draft', 'rejected')
+  `;
+  const binds = [userDbId, monthStr, yearVal];
+
+  if (excludeDate) {
+    querySql += " AND itinerary < ?";
+    binds.push(excludeDate);
+  }
+
+  const res = await env.DB.prepare(querySql).bind(...binds).all();
+  const expenses = res.results || [];
+
+  const approvedExpCodes = expenses
+    .filter(e => e.expense_code && e.status && ["approved", "partially_approved"].includes(e.status.trim().toLowerCase()))
+    .map(e => e.expense_code);
+
+  const allExpCodes = expenses
+    .filter(e => e.expense_code)
+    .map(e => e.expense_code);
+
+  let approvedLegs = [];
+  if (approvedExpCodes.length > 0) {
+    const placeholders = approvedExpCodes.map(() => "?").join(",");
+    const legsRes = await env.DB.prepare(`
+      SELECT * FROM expense_itineraries WHERE exp_id IN (${placeholders})
+    `).bind(...approvedExpCodes).all();
+    approvedLegs = legsRes.results || [];
+  }
+
+  let allLegs = [];
+  if (allExpCodes.length > 0) {
+    const placeholders = allExpCodes.map(() => "?").join(",");
+    const legsRes = await env.DB.prepare(`
+      SELECT * FROM expense_itineraries WHERE exp_id IN (${placeholders})
+    `).bind(...allExpCodes).all();
+    allLegs = legsRes.results || [];
+  }
+
+  function getLegStats(leg) {
+    let legCalls = leg.calls_completed || 0;
+    let legPms = leg.pms_count || 0;
+    let legAsset = leg.asset_tagging || 0;
+    let legMobilise = leg.mobilise_count || 0;
+    let legCalibration = leg.calibration_count || 0;
+
+    if (leg.activity_details) {
+      try {
+        const act = JSON.parse(leg.activity_details);
+        if (act && typeof act === "object") {
+          const selectedActs = act.selected_activities || [];
+          if (selectedActs.includes("Calls")) {
+            const list = act.calls_list || [];
+            legCalls = list.filter(c => c && typeof c === "object" && c.barcode).length;
+          }
+          if (selectedActs.includes("PMS")) {
+            const list = act.pms_list || [];
+            legPms = list.filter(p => p && typeof p === "object" && p.barcode).length;
+          }
+          if (selectedActs.includes("Asset Tagging")) {
+            const list = act.assets_list || [];
+            let sumQty = 0;
+            for (const item of list) {
+              if (item && typeof item === "object") {
+                sumQty += parseInt(item.quantity || 0, 10) || 0;
+              }
+            }
+            legAsset = sumQty;
+          }
+          if (act.mobilise_asset_count !== undefined) {
+            legMobilise = parseInt(act.mobilise_asset_count, 10) || 0;
+          }
+          if (act.calibration_count !== undefined) {
+            legCalibration = parseInt(act.calibration_count, 10) || 0;
+          }
+        }
+      } catch (e) {}
+    }
+    return [legCalls, legPms, legAsset, legMobilise, legCalibration];
+  }
+
+  // 1. Approved stats
+  let approvedDa = 0.0;
+  let approvedBikeKm = 0.0;
+  let approvedAuto = 0.0;
+  let approvedBus = 0.0;
+  let approvedTrain = 0.0;
+  let approvedHotel = 0.0;
+  let approvedLocalPurchase = 0.0;
+  let approvedKmUsed = 0.0;
+
+  let approvedCalls = 0;
+  let approvedPms = 0;
+  let approvedAsset = 0;
+  let approvedMobilise = 0;
+  let approvedCalibration = 0;
+
+  for (const leg of approvedLegs) {
+    approvedDa += parseFloat(leg.da_amount || 0.0);
+    approvedHotel += parseFloat(leg.hotel_amount || 0.0);
+    approvedLocalPurchase += parseFloat(leg.local_purchase || 0.0);
+
+    const mode = (leg.travel_mode || "").trim().toLowerCase();
+    if (mode === "bike") {
+      approvedBikeKm += parseFloat(leg.distance_km || 0.0);
+      approvedKmUsed += parseFloat(leg.distance_km || 0.0);
+    } else if (mode === "car") {
+      approvedKmUsed += parseFloat(leg.distance_km || 0.0);
+    } else if (mode === "auto") {
+      approvedAuto += parseFloat(leg.travel_amount || 0.0);
+    } else if (mode === "bus") {
+      approvedBus += parseFloat(leg.travel_amount || 0.0);
+    } else if (mode === "train") {
+      approvedTrain += parseFloat(leg.travel_amount || 0.0);
+    }
+
+    const subMode = (leg.sub_mode || "").trim().toLowerCase();
+    if (subMode === "auto") {
+      approvedAuto += parseFloat(leg.sub_amount || 0.0);
+    } else if (subMode === "bus") {
+      approvedBus += parseFloat(leg.sub_amount || 0.0);
+    } else if (subMode === "train") {
+      approvedTrain += parseFloat(leg.sub_amount || 0.0);
+    }
+
+    const [legCalls, legPms, legAsset, legMobilise, legCalibration] = getLegStats(leg);
+    approvedCalls += legCalls;
+    approvedPms += legPms;
+    approvedAsset += legAsset;
+    approvedMobilise += legMobilise;
+    approvedCalibration += legCalibration;
+  }
+
+  // 2. Claimed stats
+  let claimedDa = 0.0;
+  let claimedBikeKm = 0.0;
+  let claimedAuto = 0.0;
+  let claimedBus = 0.0;
+  let claimedTrain = 0.0;
+  let claimedHotel = 0.0;
+  let claimedLocalPurchase = 0.0;
+  let claimedKmUsed = 0.0;
+
+  let claimedCalls = 0;
+  let claimedPms = 0;
+  let claimedAsset = 0;
+  let claimedMobilise = 0;
+  let claimedCalibration = 0;
+
+  for (const leg of allLegs) {
+    const origDa = (leg.original_da_amount !== null && leg.original_da_amount > 0) ? parseFloat(leg.original_da_amount) : parseFloat(leg.da_amount || 0.0);
+    const origHotel = (leg.original_hotel_amount !== null && leg.original_hotel_amount > 0) ? parseFloat(leg.original_hotel_amount) : parseFloat(leg.hotel_amount || 0.0);
+    const origLp = (leg.original_local_purchase !== null && leg.original_local_purchase > 0) ? parseFloat(leg.original_local_purchase) : parseFloat(leg.local_purchase || 0.0);
+
+    claimedDa += origDa;
+    claimedHotel += origHotel;
+    claimedLocalPurchase += origLp;
+
+    const mode = (leg.travel_mode || "").trim().toLowerCase();
+    const origKm = (leg.original_distance_km !== null && leg.original_distance_km > 0) ? parseFloat(leg.original_distance_km) : parseFloat(leg.distance_km || 0.0);
+    const origTravelAmt = (leg.original_travel_amount !== null && leg.original_travel_amount > 0) ? parseFloat(leg.original_travel_amount) : parseFloat(leg.travel_amount || 0.0);
+
+    if (mode === "bike") {
+      claimedBikeKm += origKm;
+      claimedKmUsed += origKm;
+    } else if (mode === "car") {
+      claimedKmUsed += origKm;
+    } else if (mode === "auto") {
+      claimedAuto += origTravelAmt;
+    } else if (mode === "bus") {
+      claimedBus += origTravelAmt;
+    } else if (mode === "train") {
+      claimedTrain += origTravelAmt;
+    }
+
+    const origSubAmt = (leg.original_sub_amount !== null && leg.original_sub_amount > 0) ? parseFloat(leg.original_sub_amount) : parseFloat(leg.sub_amount || 0.0);
+    const subMode = (leg.sub_mode || "").trim().toLowerCase();
+    if (subMode === "auto") {
+      claimedAuto += origSubAmt;
+    } else if (subMode === "bus") {
+      claimedBus += origSubAmt;
+    } else if (subMode === "train") {
+      claimedTrain += origSubAmt;
+    }
+
+    const [legCalls, legPms, legAsset, legMobilise, legCalibration] = getLegStats(leg);
+    claimedCalls += legCalls;
+    claimedPms += legPms;
+    claimedAsset += legAsset;
+    claimedMobilise += legMobilise;
+    claimedCalibration += legCalibration;
+  }
+
+  return {
+    km_used_so_far_approved: approvedKmUsed,
+    km_used_so_far_claimed: claimedKmUsed,
+    total_da_approved: approvedDa,
+    total_da_claimed: claimedDa,
+    total_bike_km_approved: approvedBikeKm,
+    total_bike_km_claimed: claimedBikeKm,
+    total_auto_approved: approvedAuto,
+    total_auto_claimed: claimedAuto,
+    total_bus_approved: approvedBus,
+    total_bus_claimed: claimedBus,
+    total_train_approved: approvedTrain,
+    total_train_claimed: claimedTrain,
+    total_hotel_approved: approvedHotel,
+    total_hotel_claimed: claimedHotel,
+    total_local_purchase_approved: approvedLocalPurchase,
+    total_local_purchase_claimed: claimedLocalPurchase,
+    calls_completed_approved: approvedCalls,
+    calls_completed_claimed: claimedCalls,
+    pms_count_approved: approvedPms,
+    pms_count_claimed: claimedPms,
+    asset_tagging_approved: approvedAsset,
+    asset_tagging_claimed: claimedAsset,
+    mobilise_count_approved: approvedMobilise,
+    mobilise_count_claimed: claimedMobilise,
+    calibration_count_approved: approvedCalibration,
+    calibration_count_claimed: claimedCalibration,
+    
+    // Legacy backward-compatible keys
+    km_used_so_far: claimedKmUsed,
+    total_da: approvedDa,
+    total_bike_km: approvedBikeKm,
+    total_auto: approvedAuto,
+    total_bus: approvedBus,
+    total_train: approvedTrain,
+    total_hotel: approvedHotel,
+    total_local_purchase: approvedLocalPurchase,
+    calls_completed: approvedCalls,
+    pms_count: approvedPms,
+    asset_tagging: approvedAsset,
+    mobilise_count: approvedMobilise,
+    calibration_count: approvedCalibration
+  };
+}
+
+/**
+ * GET /api/expense/:id
+ */
 export async function handleGetExpenseDetails(request, env, params, query, user) {
-  const expenseId = parseInt(params.id, 10);
-  const expense = await env.DB.prepare("SELECT * FROM expenses WHERE id = ?").bind(expenseId).first();
+  const expenseId = params.id;
+
+  if (expenseId.startsWith("-")) {
+    const val = parseInt(expenseId, 10);
+    if (val <= -200000) {
+      // Legacy expense_master claim!
+      try {
+        const allRows = await env.DB.prepare("SELECT exp_id FROM expense_master").all();
+        let matchingExpId = null;
+        for (const row of (allRows.results || [])) {
+          const hashId = await getLegacyExpenseHashId(row.exp_id);
+          if (hashId === val) {
+            matchingExpId = row.exp_id;
+            break;
+          }
+        }
+
+        if (!matchingExpId) return jsonResponse({ error: "Legacy claim not found" }, 404);
+
+        const masterRow = await env.DB.prepare(`
+          SELECT * FROM expense_master WHERE exp_id = ?
+        `).bind(matchingExpId).first();
+        if (!masterRow) return jsonResponse({ error: "Legacy claim details not found" }, 404);
+
+        const submitter = await env.DB.prepare("SELECT * FROM users WHERE user_id = ?").bind(masterRow.user_id).first();
+        
+        let rateBike = 4.5;
+        let rateCar = 9.0;
+        if (submitter) {
+          const gradeToLookup = (submitter.designation || "").toLowerCase().includes("specialist") ? "O1" : (submitter.grade || "O1");
+          const allowance = await env.DB.prepare("SELECT * FROM allowance_master WHERE grade = ?").bind(gradeToLookup).first();
+          const defaultBike = await env.DB.prepare("SELECT rate_per_km FROM allowance_master WHERE vehicle_type = 'Bike' LIMIT 1").first();
+          const defaultCar = await env.DB.prepare("SELECT rate_per_km FROM allowance_master WHERE vehicle_type = 'Car' LIMIT 1").first();
+          const fallbackBikeRate = defaultBike?.rate_per_km || 4.5;
+          const fallbackCarRate = defaultCar?.rate_per_km || 9.0;
+
+          if (allowance) {
+            rateBike = allowance.vehicle_type === "Bike" ? allowance.rate_per_km : fallbackBikeRate;
+            rateCar = allowance.vehicle_type === "Car" ? allowance.rate_per_km : fallbackCarRate;
+          } else {
+            rateBike = fallbackBikeRate;
+            rateCar = fallbackCarRate;
+          }
+        }
+
+        const itiRows = await env.DB.prepare(`
+          SELECT * FROM expense_itinerary WHERE exp_id = ? ORDER BY leg_number
+        `).bind(matchingExpId).all();
+
+        const itinerariesList = (itiRows.results || []).map(r => ({
+          leg: r.leg_number,
+          from_district: r.from_district,
+          to_district: r.to_district,
+          from: r.from_location || "",
+          to: r.to_location || "",
+          mode: r.travel_mode,
+          km: parseFloat(r.distance_km || 0.0),
+          amount: parseFloat(r.travel_amount || 0.0),
+          sub_mode: r.sub_mode || "",
+          sub_amount: parseFloat(r.sub_amount || 0.0),
+          da: parseFloat(r.da_amount || 0.0),
+          hotel: parseFloat(r.hotel_amount || 0.0),
+          local_purchase: 0.0,
+          oth_desc: r.other_desc || "",
+          oth_amount: parseFloat(r.other_amount || 0.0),
+          ws_assigned: r.calls_assigned || 0,
+          calls_assigned: r.calls_assigned || 0,
+          ws_closed: r.calls_completed || 0,
+          calls_completed: r.calls_completed || 0,
+          ws_pms: r.pms_count || 0,
+          pms_count: r.pms_count || 0,
+          ws_asset: r.asset_tagging || 0,
+          asset_tagging: r.asset_tagging || 0,
+          calibration_count: 0,
+          mobilise_count: 0,
+          mobilise_asset_count: 0,
+          visit_purpose: r.visit_purpose || "",
+          activity_details: "",
+          original_km: parseFloat(r.distance_km || 0.0),
+          original_amount: parseFloat(r.travel_amount || 0.0),
+          original_sub_amount: parseFloat(r.sub_amount || 0.0),
+          original_da: parseFloat(r.da_amount || 0.0),
+          original_hotel: parseFloat(r.hotel_amount || 0.0),
+          original_oth_amount: parseFloat(r.other_amount || 0.0),
+          original_local_purchase: 0.0
+        }));
+
+        const attRows = await env.DB.prepare(`
+          SELECT file_url, itinerary_id, bill_type FROM expense_attachments WHERE exp_id = ?
+        `).bind(matchingExpId).all();
+        const attachmentsList = (attRows.results || []).map(r => r.file_url);
+        const attachmentsDetailed = (attRows.results || []).map(r => ({
+          file_url: r.file_url,
+          itinerary_id: r.itinerary_id,
+          bill_type: r.bill_type
+        }));
+
+        // Mock approvals list
+        const approvalsList = [];
+        const l1App = masterRow.level_first_approver;
+        const l2App = masterRow.level_second_approver;
+        const statusVal = masterRow.status;
+        const approvedBy = masterRow.approved_by;
+
+        const l1User = l1App ? await env.DB.prepare("SELECT * FROM users WHERE user_id = ?").bind(l1App).first() : null;
+        const l2User = l2App ? await env.DB.prepare("SELECT * FROM users WHERE user_id = ?").bind(l2App).first() : null;
+
+        const l1Status = ["Pending L2", "Approved"].includes(statusVal) ? "approved" : ((statusVal === "Rejected" && approvedBy === "L1") ? "rejected" : "pending");
+        approvalsList.push({
+          id: val,
+          level_number: 1,
+          approver_name: l1User?.name || l1App || "N/A",
+          approver_code: l1App || "",
+          approver_role: l1User?.role || "Manager",
+          status: l1Status,
+          comments: (statusVal === "Rejected" && approvedBy === "L1") ? (masterRow.reject_reason || "") : "",
+          updated_at: masterRow.created_at
+        });
+
+        if (l2App) {
+          const l2Status = statusVal === "Approved" ? "approved" : ((statusVal === "Rejected" && approvedBy === "L2") ? "rejected" : (statusVal === "Pending L2" ? "pending" : "waiting"));
+          approvalsList.push({
+            id: val - 1,
+            level_number: 2,
+            approver_name: l2User?.name || l2App || "N/A",
+            approver_code: l2App || "",
+            approver_role: l2User?.role || "HOD",
+            status: l2Status,
+            comments: (statusVal === "Rejected" && approvedBy === "L2") ? (masterRow.reject_reason || "") : "",
+            updated_at: masterRow.created_at
+          });
+        }
+
+        const dateStr = masterRow.expense_date;
+        let monthName = "January";
+        let yearVal = new Date().getFullYear();
+        if (dateStr) {
+          try {
+            const parts = dateStr.split("-");
+            yearVal = parseInt(parts[0], 10);
+            const monNum = parseInt(parts[1], 10);
+            const monthNames = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
+            monthName = monthNames[monNum - 1];
+          } catch (e) {}
+        }
+
+        const monthlyStats = await getUserMonthlyStatsHelper(env, submitter?.id || 0, monthName, yearVal, dateStr);
+
+        return jsonResponse({
+          id: val,
+          expense_code: matchingExpId,
+          user_id: submitter?.id || 0,
+          submitter_name: submitter?.name || masterRow.user_id,
+          submitter_code: masterRow.user_id,
+          month: monthName,
+          year: yearVal,
+          amount: parseFloat(masterRow.total_amount || 0.0),
+          status: statusVal === "Approved" ? "approved" : (statusVal === "Rejected" ? "rejected" : "submitted"),
+          category: itinerariesList[0]?.mode || "Travel",
+          date: dateStr,
+          purpose: masterRow.visit_purpose || "",
+          original_amount: parseFloat(masterRow.original_amount || masterRow.total_amount || 0.0),
+          original_da_amount: parseFloat(masterRow.da_amount || 0.0),
+          original_hotel_amount: parseFloat(masterRow.hotel_amount || 0.0),
+          original_other_expense_amount: parseFloat(masterRow.other_expense_amount || 0.0),
+          original_local_purchase_amount: parseFloat(masterRow.local_purchase_amount || 0.0),
+          attachments: attachmentsList,
+          attachments_detailed: attachmentsDetailed,
+          itineraries: itinerariesList,
+          created_at: masterRow.created_at,
+          updated_at: masterRow.created_at,
+          approvals: approvalsList,
+          edit_history: [],
+          user_monthly_stats: monthlyStats,
+          rate_bike: rateBike,
+          rate_car: rateCar
+        });
+      } catch (e) {
+        return jsonResponse({ error: "Legacy table query failed: " + e.message }, 500);
+      }
+    }
+
+    // Limit approval request
+    const limitId = -val;
+    const pl = await env.DB.prepare("SELECT * FROM limit_approval_requests WHERE id = ?").bind(limitId).first();
+    if (!pl) return jsonResponse({ error: "Limit request not found" }, 404);
+
+    const submitter = await env.DB.prepare("SELECT * FROM users WHERE user_id = ?").bind(pl.user_id).first();
+    
+    let limitYear = new Date().getFullYear();
+    if (pl.for_month && pl.for_month.includes("-")) {
+      limitYear = parseInt(pl.for_month.split("-")[0], 10);
+    }
+
+    let rateBike = 4.5;
+    let rateCar = 9.0;
+    if (submitter) {
+      const gradeToLookup = (submitter.designation || "").toLowerCase().includes("specialist") ? "O1" : (submitter.grade || "O1");
+      const allowance = await env.DB.prepare("SELECT * FROM allowance_master WHERE grade = ?").bind(gradeToLookup).first();
+      const defaultBike = await env.DB.prepare("SELECT rate_per_km FROM allowance_master WHERE vehicle_type = 'Bike' LIMIT 1").first();
+      const defaultCar = await env.DB.prepare("SELECT rate_per_km FROM allowance_master WHERE vehicle_type = 'Car' LIMIT 1").first();
+      const fallbackBikeRate = defaultBike?.rate_per_km || 4.5;
+      const fallbackCarRate = defaultCar?.rate_per_km || 9.0;
+
+      if (allowance) {
+        rateBike = allowance.vehicle_type === "Bike" ? allowance.rate_per_km : fallbackBikeRate;
+        rateCar = allowance.vehicle_type === "Car" ? allowance.rate_per_km : fallbackCarRate;
+      } else {
+        rateBike = fallbackBikeRate;
+        rateCar = fallbackCarRate;
+      }
+    }
+
+    const monthlyStats = submitter ? await getUserMonthlyStatsHelper(env, submitter.id, pl.for_month, limitYear) : null;
+    const managerUser = await env.DB.prepare("SELECT * FROM users WHERE user_id = ?").bind(pl.manager_id).first();
+
+    return jsonResponse({
+      id: -pl.id,
+      expense_code: `LIMIT-${pl.request_type}-${pl.id}`,
+      user_id: submitter?.id || 0,
+      submitter_name: submitter?.name || `Employee ${pl.user_id}`,
+      submitter_code: pl.user_id,
+      month: pl.for_month,
+      year: limitYear,
+      amount: pl.status === "Approved" ? (pl.approved_value !== null ? parseFloat(pl.approved_value) : (pl.request_type === "AUTO" ? parseFloat(pl.requested_value) : 0.0)) : (pl.request_type === "AUTO" ? parseFloat(pl.requested_value) : 0.0),
+      requested_value: parseFloat(pl.requested_value),
+      approved_value: pl.approved_value !== null ? parseFloat(pl.approved_value) : null,
+      status: pl.status,
+      category: "Limit Request",
+      date: pl.for_month,
+      purpose: `Request additional ${parseFloat(pl.requested_value).toFixed(1)} ${pl.request_type} limit extension for month ${pl.for_month}.`,
+      original_amount: pl.request_type === "AUTO" ? parseFloat(pl.requested_value) : 0.0,
+      original_da_amount: 0.0,
+      original_hotel_amount: 0.0,
+      original_other_expense_amount: 0.0,
+      original_local_purchase_amount: 0.0,
+      attachments: [],
+      attachments_detailed: [],
+      user_monthly_stats: monthlyStats,
+      rate_bike: rateBike,
+      rate_car: rateCar,
+      itineraries: [
+        {
+          leg: 1,
+          from_district: submitter?.district || "N/A",
+          to_district: "N/A",
+          from: "N/A",
+          to: "N/A",
+          mode: pl.request_type,
+          km: pl.request_type === "KM" ? parseFloat(pl.requested_value) : 0.0,
+          amount: pl.request_type === "AUTO" ? parseFloat(pl.requested_value) : 0.0,
+          approved_km: (pl.status === "Approved" && pl.request_type === "KM") ? (pl.approved_value !== null ? parseFloat(pl.approved_value) : parseFloat(pl.requested_value)) : 0.0,
+          approved_amount: (pl.status === "Approved" && pl.request_type === "AUTO") ? (pl.approved_value !== null ? parseFloat(pl.approved_value) : parseFloat(pl.requested_value)) : 0.0,
+          sub_mode: "",
+          sub_amount: 0.0,
+          da: 0.0,
+          hotel: 0.0,
+          local_purchase: 0.0,
+          oth_desc: "",
+          oth_amount: 0.0,
+          ws_assigned: 0,
+          calls_assigned: 0,
+          ws_closed: 0,
+          calls_completed: 0,
+          ws_pms: 0,
+          pms_count: 0,
+          ws_asset: 0,
+          asset_tagging: 0,
+          calibration_count: 0,
+          mobilise_count: 0,
+          mobilise_asset_count: 0,
+          visit_purpose: `Request additional ${parseFloat(pl.requested_value).toFixed(1)} ${pl.request_type} limit extension for month ${pl.for_month}.`,
+          activity_details: "",
+          original_km: pl.request_type === "KM" ? parseFloat(pl.requested_value) : 0.0,
+          original_amount: pl.request_type === "AUTO" ? parseFloat(pl.requested_value) : 0.0,
+          original_sub_amount: 0.0,
+          original_da: 0.0,
+          original_hotel: 0.0,
+          original_oth_amount: 0.0,
+          original_local_purchase: 0.0
+        }
+      ],
+      created_at: pl.created_at,
+      updated_at: pl.updated_at,
+      approvals: [
+        {
+          id: -pl.id,
+          level_number: 1,
+          approver_name: managerUser?.name || pl.manager_id,
+          approver_code: pl.manager_id,
+          approver_role: managerUser?.role || "Manager",
+          status: pl.status.toLowerCase(),
+          comments: "",
+          updated_at: pl.updated_at
+        }
+      ],
+      edit_history: []
+    });
+  }
+
+  // Normal expense
+  let expense = null;
+  if (/^\d+$/.test(expenseId)) {
+    expense = await env.DB.prepare("SELECT * FROM expenses WHERE id = ? OR expense_code = ?").bind(parseInt(expenseId, 10), expenseId).first();
+  } else {
+    expense = await env.DB.prepare("SELECT * FROM expenses WHERE expense_code = ?").bind(expenseId).first();
+  }
+
   if (!expense) return jsonResponse({ error: "Expense claim not found" }, 404);
 
-  // Fetch related itineraries
-  const itineraries = await env.DB.prepare(`
-    SELECT * FROM expense_itineraries WHERE exp_id = ? ORDER BY leg_number ASC
-  `).bind(expense.expense_code).all();
+  const approvals = await env.DB.prepare("SELECT * FROM approvals WHERE expense_id = ? ORDER BY level_number").bind(expense.id).all();
+  const approverIds = Array.from(new Set((approvals.results || []).map(a => a.approver_id)));
+  
+  let approverUsers = {};
+  if (approverIds.length > 0) {
+    const placeholders = approverIds.map(() => "?").join(",");
+    const usersRes = await env.DB.prepare(`SELECT * FROM users WHERE id IN (${placeholders})`).bind(...approverIds).all();
+    for (const u of (usersRes.results || [])) {
+      approverUsers[u.id] = u;
+    }
+  }
 
-  // Fetch edit logs
-  const editLogs = await env.DB.prepare(`
-    SELECT * FROM expense_edit_logs WHERE expense_id = ? ORDER BY created_at DESC
-  `).bind(expenseId).all();
+  const approvalsList = (approvals.results || []).map(a => {
+    const approverUser = approverUsers[a.approver_id] || null;
+    return {
+      id: a.id,
+      level_number: a.level_number,
+      approver_name: approverUser?.name || `Approver ID ${a.approver_id}`,
+      approver_code: approverUser?.user_id || "",
+      approver_role: approverUser?.role || "",
+      status: a.status,
+      comments: a.comments || "",
+      updated_at: a.updated_at
+    };
+  });
 
-  // Fetch breakdown calls
-  const breakdowns = await env.DB.prepare(`
-    SELECT * FROM expense_breakdown_calls WHERE expense_id = ?
-  `).bind(expenseId).all();
+  const submitter = await env.DB.prepare("SELECT * FROM users WHERE id = ?").bind(expense.user_id).first();
+  
+  let rateBike = 4.5;
+  let rateCar = 9.0;
+  if (submitter) {
+    const gradeToLookup = (submitter.designation || "").toLowerCase().includes("specialist") ? "O1" : (submitter.grade || "O1");
+    const allowance = await env.DB.prepare("SELECT * FROM allowance_master WHERE grade = ?").bind(gradeToLookup).first();
+    const defaultBike = await env.DB.prepare("SELECT rate_per_km FROM allowance_master WHERE vehicle_type = 'Bike' LIMIT 1").first();
+    const defaultCar = await env.DB.prepare("SELECT rate_per_km FROM allowance_master WHERE vehicle_type = 'Car' LIMIT 1").first();
+    const fallbackBikeRate = defaultBike?.rate_per_km || 4.5;
+    const fallbackCarRate = defaultCar?.rate_per_km || 9.0;
 
-  // Fetch pms calls
-  const pmsCalls = await env.DB.prepare(`
-    SELECT * FROM expense_pms_calls WHERE expense_id = ?
-  `).bind(expenseId).all();
+    if (allowance) {
+      rateBike = allowance.vehicle_type === "Bike" ? allowance.rate_per_km : fallbackBikeRate;
+      rateCar = allowance.vehicle_type === "Car" ? allowance.rate_per_km : fallbackCarRate;
+    } else {
+      rateBike = fallbackBikeRate;
+      rateCar = fallbackCarRate;
+    }
+  }
 
-  // Fetch calibrates
-  const calibrates = await env.DB.prepare(`
-    SELECT * FROM expense_calibrations WHERE expense_id = ?
-  `).bind(expenseId).all();
+  const itineraries = await env.DB.prepare("SELECT * FROM expense_itineraries WHERE exp_id = ? ORDER BY leg_number ASC").bind(expense.expense_code).all();
+  const attachments = await env.DB.prepare("SELECT * FROM expense_attachments WHERE exp_id = ?").bind(expense.expense_code).all();
+  const editLogs = await env.DB.prepare("SELECT * FROM expense_edit_logs WHERE expense_id = ? ORDER BY created_at DESC").bind(expense.id).all();
 
-  // Fetch mobilises
-  const mobilises = await env.DB.prepare(`
-    SELECT * FROM expense_asset_mobilises WHERE expense_id = ?
-  `).bind(expenseId).all();
+  const editHistoryList = (editLogs.results || []).map(el => ({
+    id: el.id,
+    editor_name: el.editor_name,
+    editor_role: el.editor_role,
+    leg_number: el.leg_number,
+    field_name: el.field_name,
+    old_value: el.old_value,
+    new_value: el.new_value,
+    comment: el.comment || "",
+    created_at: el.created_at
+  }));
 
-  // Fetch taggings
-  const taggings = await env.DB.prepare(`
-    SELECT * FROM expense_asset_taggings WHERE expense_id = ?
-  `).bind(expenseId).all();
+  const monthlyStats = await getUserMonthlyStatsHelper(env, expense.user_id, expense.month, expense.year, expense.itinerary);
 
   return jsonResponse({
-    expense,
-    itineraries: itineraries.results || [],
-    edit_logs: editLogs.results || [],
-    breakdowns: breakdowns.results || [],
-    pms: pmsCalls.results || [],
-    calibrates: calibrates.results || [],
-    mobilises: mobilises.results || [],
-    taggings: taggings.results || []
+    id: expense.id,
+    expense_code: expense.expense_code,
+    user_id: expense.user_id,
+    submitter_name: submitter?.name || "",
+    submitter_code: submitter?.user_id || "",
+    month: expense.month,
+    year: expense.year,
+    amount: parseFloat(expense.amount || 0.0),
+    status: expense.status,
+    category: expense.travel_mode,
+    date: expense.itinerary,
+    purpose: expense.description || "",
+    ai_analysis: expense.ai_analysis || null,
+    is_anomaly: expense.is_anomaly || 0,
+    original_amount: parseFloat(expense.original_amount || expense.amount || 0.0),
+    original_da_amount: parseFloat(expense.original_da_amount || expense.da_amount || 0.0),
+    original_hotel_amount: parseFloat(expense.original_hotel_amount || expense.hotel_amount || 0.0),
+    original_other_expense_amount: parseFloat(expense.original_other_expense_amount || expense.other_expense_amount || 0.0),
+    original_local_purchase_amount: parseFloat(expense.original_local_purchase_amount || expense.local_purchase_amount || 0.0),
+    attachments: (attachments.results || []).map(a => a.file_url),
+    attachments_detailed: (attachments.results || []).map(a => ({
+      file_url: a.file_url,
+      itinerary_id: a.itinerary_id,
+      bill_type: a.bill_type
+    })),
+    itineraries: (itineraries.results || []).map(i => ({
+      leg: i.leg_number,
+      from_district: i.from_district,
+      to_district: i.to_district,
+      from: i.from_location || "",
+      to: i.to_location || "",
+      mode: i.travel_mode,
+      km: parseFloat(i.distance_km || 0.0),
+      amount: parseFloat(i.travel_amount || 0.0),
+      sub_mode: i.sub_mode || "",
+      sub_amount: parseFloat(i.sub_amount || 0.0),
+      da: parseFloat(i.da_amount || 0.0),
+      hotel: parseFloat(i.hotel_amount || 0.0),
+      local_purchase: parseFloat(i.local_purchase || 0.0),
+      oth_desc: i.other_desc || "",
+      oth_amount: parseFloat(i.other_amount || 0.0),
+      ws_assigned: i.calls_assigned || 0,
+      calls_assigned: i.calls_assigned || 0,
+      ws_closed: i.calls_completed || 0,
+      calls_completed: i.calls_completed || 0,
+      ws_pms: i.pms_count || 0,
+      pms_count: i.pms_count || 0,
+      ws_asset: i.asset_tagging || 0,
+      asset_tagging: i.asset_tagging || 0,
+      calibration_count: i.calibration_count || 0,
+      mobilise_count: i.mobilise_count || 0,
+      mobilise_asset_count: i.mobilise_count || 0,
+      visit_purpose: i.visit_purpose || "",
+      activity_details: i.activity_details || "",
+      original_km: parseFloat(i.original_distance_km || i.distance_km || 0.0),
+      original_amount: parseFloat(i.original_travel_amount || i.travel_amount || 0.0),
+      original_sub_amount: parseFloat(i.original_sub_amount || i.sub_amount || 0.0),
+      original_da: parseFloat(i.original_da_amount || i.da_amount || 0.0),
+      original_hotel: parseFloat(i.original_hotel_amount || i.hotel_amount || 0.0),
+      original_oth_amount: parseFloat(i.original_other_amount || i.other_amount || 0.0),
+      original_local_purchase: parseFloat(i.original_local_purchase || i.local_purchase || 0.0)
+    })),
+    created_at: expense.created_at,
+    updated_at: expense.updated_at,
+    approvals: approvalsList,
+    edit_history: editHistoryList,
+    user_monthly_stats: monthlyStats,
+    rate_bike: rateBike,
+    rate_car: rateCar
   });
 }
 
