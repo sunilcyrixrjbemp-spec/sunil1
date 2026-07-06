@@ -1,10 +1,7 @@
-/**
- * Security & Cryptography Utilities for Cloudflare Workers
- * Uses native Web Crypto API (zero external dependencies)
- */
+import bcrypt from "./bcrypt.js";
 
 /**
- * Verify a plain text password against a PBKDF2 SHA256 hashed password
+ * Verify a plain text password against a PBKDF2 SHA256 or bcrypt hashed password
  */
 export async function verifyPassword(plainPassword, hashedPassword) {
   try {
@@ -41,6 +38,9 @@ export async function verifyPassword(plainPassword, hashedPassword) {
 
       return newKeyHex === keyHex;
     }
+
+    // Default fallback to bcryptjs verification
+    return bcrypt.compareSync(plainPassword, hashedPassword);
   } catch (e) {
     console.error("verifyPassword error:", e);
   }
