@@ -1341,52 +1341,7 @@ export async function handleDeleteExpense(request, env, params, query, user) {
   return jsonResponse({ status: "success", message: "Expense claim deleted successfully." });
 }
 
-/**
- * GET /api/expense/engineer-advance
- */
-export async function handleGetEngineerAdvance(request, env, params, query, user) {
-  const userCode = query.get("user_code");
-  const month = query.get("month");
-  const year = parseInt(query.get("year") || "0", 10);
 
-  const adv = await env.DB.prepare(`
-    SELECT * FROM engineer_advances WHERE user_code = ? AND month = ? AND year = ?
-  `).bind(userCode, month, year).first();
-
-  return jsonResponse(adv || { advance_amount: 0.0 });
-}
-
-/**
- * POST /api/expense/engineer-advance
- */
-export async function handleSaveEngineerAdvance(request, env, params, query, user) {
-  let body;
-  try {
-    body = await request.json();
-  } catch (e) {
-    return jsonResponse({ error: "Invalid JSON body" }, 400);
-  }
-
-  const { user_code, month, year, advance_amount } = body;
-  const timestamp = new Date().toISOString();
-
-  const existing = await env.DB.prepare(`
-    SELECT * FROM engineer_advances WHERE user_code = ? AND month = ? AND year = ?
-  `).bind(user_code, month, year).first();
-
-  if (existing) {
-    await runWrite(env, `
-      UPDATE engineer_advances SET advance_amount = ?, updated_at = ? WHERE id = ?
-    `, [advance_amount, timestamp, existing.id]);
-  } else {
-    await runWrite(env, `
-      INSERT INTO engineer_advances (user_code, month, year, advance_amount, created_at, updated_at)
-      VALUES (?, ?, ?, ?, ?, ?)
-    `, [user_code, month, year, advance_amount, timestamp, timestamp]);
-  }
-
-  return jsonResponse({ status: "success", message: "Advance updated successfully." });
-}
 
 /**
  * POST /api/expense/
