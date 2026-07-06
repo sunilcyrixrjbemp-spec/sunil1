@@ -165,6 +165,7 @@ export default function AdminPage() {
   const [editAllowedWindows, setEditAllowedWindows] = useState<string[]>([]);
   const [editUserId, setEditUserId] = useState("");
   const [editECode, setEditECode] = useState("");
+  const [editUserPassword, setEditUserPassword] = useState("");
   const [editAdminPassword, setEditAdminPassword] = useState("");
   const [editUserLoading, setEditUserLoading] = useState(false);
   const [editUserError, setEditUserError] = useState<string | null>(null);
@@ -402,6 +403,7 @@ export default function AdminPage() {
     );
     setEditUserId(u.user_id || "");
     setEditECode(u.e_code || "");
+    setEditUserPassword("");
     setEditAdminPassword("");
     
     setEditUserError(null);
@@ -427,10 +429,11 @@ export default function AdminPage() {
 
     const isUserIdModified = editUserId.trim() !== editingUser.user_id;
     const isECodeModified = editECode.trim() !== (editingUser.e_code || "");
+    const isPasswordModified = editUserPassword.trim() !== "";
 
-    if (isUserIdModified || isECodeModified) {
+    if (isUserIdModified || isECodeModified || isPasswordModified) {
       if (!editAdminPassword.trim()) {
-        setEditUserError("Changing User ID or Employee Code requires the Admin Security Password.");
+        setEditUserError("Changing User ID, Employee Code, or Password requires the Admin Security Password.");
         return;
       }
     }
@@ -456,7 +459,8 @@ export default function AdminPage() {
       allowed_windows: editAllowedWindows.join(","),
       new_user_id: isUserIdModified ? editUserId.trim() : undefined,
       new_e_code: isECodeModified ? editECode.trim() : undefined,
-      admin_update_password: (isUserIdModified || isECodeModified) ? editAdminPassword.trim() : undefined
+      password: isPasswordModified ? editUserPassword.trim() : undefined,
+      admin_update_password: (isUserIdModified || isECodeModified || isPasswordModified) ? editAdminPassword.trim() : undefined
     };
 
     try {
@@ -1937,10 +1941,24 @@ export default function AdminPage() {
                 </div>
               </div>
 
+              {/* Grid 0.5 - New Password */}
+              <div className="grid grid-cols-1 gap-4">
+                <div>
+                  <label className="label-lte">New Password (Leave blank to keep current password - Requires password to change)</label>
+                  <input
+                    type="password"
+                    value={editUserPassword}
+                    onChange={(e) => setEditUserPassword(e.target.value)}
+                    className="input-lte border-blue-200 focus:border-blue-500"
+                    placeholder="Enter new password for this user"
+                  />
+                </div>
+              </div>
+
               {/* Password field - conditional based on modification */}
-              {(editUserId.trim() !== editingUser.user_id || editECode.trim() !== (editingUser.e_code || "")) && (
+              {(editUserId.trim() !== editingUser.user_id || editECode.trim() !== (editingUser.e_code || "") || editUserPassword.trim() !== "") && (
                 <div className="p-3.5 border border-amber-200 bg-amber-50/20 rounded-lg space-y-2 text-left">
-                  <span className="text-[10px] font-bold text-amber-800 uppercase tracking-wider block">⚠️ ID or Employee Code change detected</span>
+                  <span className="text-[10px] font-bold text-amber-800 uppercase tracking-wider block">⚠️ ID, Employee Code, or Password change detected</span>
                   <label className="label-lte text-amber-700 font-bold">Enter Admin Security Password *</label>
                   <input
                     type="password"

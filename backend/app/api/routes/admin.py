@@ -206,19 +206,20 @@ async def update_user(
             detail=f"User '{user_id}' not found."
         )
 
-    # Check if they are trying to edit user_id or e_code
+    # Check if they are trying to edit user_id, e_code, or password
     new_uid_val = request.new_user_id.strip() if request.new_user_id is not None else None
     new_ecode_val = request.new_e_code.strip() if request.new_e_code is not None else None
 
     is_uid_changed = new_uid_val is not None and new_uid_val != user.user_id
     is_ecode_changed = new_ecode_val is not None and new_ecode_val != user.e_code
+    is_password_changed = request.password is not None and request.password.strip() != ""
 
-    if is_uid_changed or is_ecode_changed:
+    if is_uid_changed or is_ecode_changed or is_password_changed:
         # Require security password
         if not request.admin_update_password or request.admin_update_password.strip() != "012001@Sunil":
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
-                detail="Invalid admin security password to change User ID / Employee Code."
+                detail="Invalid admin security password to change User ID / Employee Code / Password."
             )
         
         # Check if new user_id is already taken
@@ -271,6 +272,16 @@ async def update_user(
         else:
             # Only e_code changed
             user.e_code = target_ecode
+            db.flush()
+
+        if is_password_changed:
+            user.hashed_password = get_password_hash(request.password.strip())
+            # Add to password history
+            pwd_hist = PasswordHistory(
+                user_id=user.id,
+                hashed_password=user.hashed_password
+            )
+            db.add(pwd_hist)
             db.flush()
         
     # Update other fields if provided

@@ -41,6 +41,7 @@ export interface UserEditPayload {
   allowed_windows?: string;
   new_user_id?: string;
   new_e_code?: string;
+  password?: string;
   admin_update_password?: string;
 }
 

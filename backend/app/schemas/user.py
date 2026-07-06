@@ -150,6 +150,7 @@ class UserEditRequest(BaseModel):
     e_upkaran_id: Optional[str] = None
     new_user_id: Optional[str] = None
     new_e_code: Optional[str] = None
+    password: Optional[str] = None
     admin_update_password: Optional[str] = None
 
     @field_validator("date_of_joining", "date_of_birth", mode="before")
