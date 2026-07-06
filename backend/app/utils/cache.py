@@ -14,7 +14,7 @@ API_TOKEN = settings.CLOUDFLARE_API_TOKEN
 NAMESPACE_ID = settings.CLOUDFLARE_KV_NAMESPACE_ID
 
 # Check if KV caching is active
-IS_KV_ENABLED = False
+IS_KV_ENABLED = True
 
 if IS_KV_ENABLED:
     logger.info(f"Cloudflare KV Caching is ENABLED using Namespace: {NAMESPACE_ID}")
