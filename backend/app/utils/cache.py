@@ -275,40 +275,40 @@ def clear_user_and_managers_cache(db, user_id_val):
             affected_ids.add(app_usr.user_id)
             
     # Clear specific keys in local RAM cache and KV case-insensitively
-     keys_to_clear = []
-     for k in list(_cache.keys()):
-         for affected_id in affected_ids:
-             aff_lower = affected_id.lower()
-             k_lower = k.lower()
-             if (k_lower.startswith("user_init:") and f":{aff_lower}:" in k_lower) or \
-                k_lower.startswith(f"user_expenses:{aff_lower}") or \
-                k_lower.startswith(f"team_expenses:{aff_lower}") or \
-                k_lower == f"pending_approvals:{aff_lower}":
-                 keys_to_clear.append(k)
-                 break
-                 
-     for k in keys_to_clear:
-         delete(k)
-         
-     # Surgically delete known keys from Cloudflare KV directly
-     if IS_KV_ENABLED:
-         for affected_id in affected_ids:
-             # Delete direct pending approvals key
-             delete(f"pending_approvals:{affected_id}")
-             
-             # List user_expenses keys for this user and delete them
-             user_exp_keys = _list_kv_keys(f"user_expenses:{affected_id}")
-             if user_exp_keys:
-                 _bulk_delete_kv_keys(user_exp_keys)
-                 
-             # List team_expenses keys for this user and delete them
-             team_exp_keys = _list_kv_keys(f"team_expenses:{affected_id}")
-             if team_exp_keys:
-                 _bulk_delete_kv_keys(team_exp_keys)
-             
-             # List user_init keys for this user and delete them
-             user_init_keys = _list_kv_keys(f"user_init:{affected_id}:")
-             if user_init_keys:
-                 _bulk_delete_kv_keys(user_init_keys)
-                 
-     logger.info(f"Surgically cleared cache for user {user.user_id} and managers/approvers (RAM & KV).")
+    keys_to_clear = []
+    for k in list(_cache.keys()):
+        for affected_id in affected_ids:
+            aff_lower = affected_id.lower()
+            k_lower = k.lower()
+            if (k_lower.startswith("user_init:") and f":{aff_lower}:" in k_lower) or \
+               k_lower.startswith(f"user_expenses:{aff_lower}") or \
+               k_lower.startswith(f"team_expenses:{aff_lower}") or \
+               k_lower == f"pending_approvals:{aff_lower}":
+                keys_to_clear.append(k)
+                break
+                
+    for k in keys_to_clear:
+        delete(k)
+        
+    # Surgically delete known keys from Cloudflare KV directly
+    if IS_KV_ENABLED:
+        for affected_id in affected_ids:
+            # Delete direct pending approvals key
+            delete(f"pending_approvals:{affected_id}")
+            
+            # List user_expenses keys for this user and delete them
+            user_exp_keys = _list_kv_keys(f"user_expenses:{affected_id}")
+            if user_exp_keys:
+                _bulk_delete_kv_keys(user_exp_keys)
+                
+            # List team_expenses keys for this user and delete them
+            team_exp_keys = _list_kv_keys(f"team_expenses:{affected_id}")
+            if team_exp_keys:
+                _bulk_delete_kv_keys(team_exp_keys)
+            
+            # List user_init keys for this user and delete them
+            user_init_keys = _list_kv_keys(f"user_init:{affected_id}:")
+            if user_init_keys:
+                _bulk_delete_kv_keys(user_init_keys)
+                
+    logger.info(f"Surgically cleared cache for user {user.user_id} and managers/approvers (RAM & KV).")

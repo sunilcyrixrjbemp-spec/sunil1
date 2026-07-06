@@ -108,6 +108,10 @@ WINDOW_SIZE = 60  # seconds
 
 @app.middleware("http")
 async def security_and_rate_limiting_middleware(request: Request, call_next):
+    # Bypass OPTIONS requests to avoid preflight CORS blockage
+    if request.method == "OPTIONS":
+        return await call_next(request)
+
     # 1. IP Blocklist validation
     ip = request.client.host if request.client else "unknown"
     now = datetime.utcnow()
@@ -117,7 +121,12 @@ async def security_and_rate_limiting_middleware(request: Request, call_next):
         if now < expiry:
             return JSONResponse(
                 status_code=403,
-                content={"detail": "Your IP is temporarily banned due to suspicious traffic patterns. Try again later."}
+                content={"detail": "Your IP is temporarily banned due to suspicious traffic patterns. Try again later."},
+                headers={
+                    "Access-Control-Allow-Origin": "*",
+                    "Access-Control-Allow-Methods": "*",
+                    "Access-Control-Allow-Headers": "*",
+                }
             )
         else:
             del banned_ips[ip]
@@ -158,14 +167,24 @@ async def security_and_rate_limiting_middleware(request: Request, call_next):
             logger.warning(f"Suspect IP {ip} banned for 15 minutes due to aggressive request rates on {path}.")
         return JSONResponse(
             status_code=429,
-            content={"detail": "Rate limit exceeded. Suspicious request sequence detected."}
+            content={"detail": "Rate limit exceeded. Suspicious request sequence detected."},
+            headers={
+                "Access-Control-Allow-Origin": "*",
+                "Access-Control-Allow-Methods": "*",
+                "Access-Control-Allow-Headers": "*",
+            }
         )
 
     # Check User session limits to prevent account spam
     if user_id and len(user_history) >= GENERAL_LIMIT:
         return JSONResponse(
             status_code=429,
-            content={"detail": "Account session rate limit exceeded. Connection throttled."}
+            content={"detail": "Account session rate limit exceeded. Connection throttled."},
+            headers={
+                "Access-Control-Allow-Origin": "*",
+                "Access-Control-Allow-Methods": "*",
+                "Access-Control-Allow-Headers": "*",
+            }
         )
 
     # Log current hits
@@ -192,12 +211,44 @@ async def security_and_rate_limiting_middleware(request: Request, call_next):
     )
     return response
 
+from fastapi.exceptions import RequestValidationError
+from starlette.exceptions import HTTPException as StarletteHTTPException
+
 @app.exception_handler(SQLAlchemyError)
 async def sqlalchemy_exception_handler(request: Request, exc: SQLAlchemyError):
     logger.error(f"SQLAlchemy Database Error on {request.url.path}: {str(exc)}", exc_info=True)
     return JSONResponse(
         status_code=500,
-        content={"detail": "A secure database transaction error occurred. Raw query details have been logged."}
+        content={"detail": "A secure database transaction error occurred. Raw query details have been logged."},
+        headers={
+            "Access-Control-Allow-Origin": "*",
+            "Access-Control-Allow-Methods": "*",
+            "Access-Control-Allow-Headers": "*",
+        }
+    )
+
+@app.exception_handler(StarletteHTTPException)
+async def http_exception_handler(request: Request, exc: StarletteHTTPException):
+    return JSONResponse(
+        status_code=exc.status_code,
+        content={"detail": exc.detail},
+        headers={
+            "Access-Control-Allow-Origin": "*",
+            "Access-Control-Allow-Methods": "*",
+            "Access-Control-Allow-Headers": "*",
+        }
+    )
+
+@app.exception_handler(RequestValidationError)
+async def validation_exception_handler(request: Request, exc: RequestValidationError):
+    return JSONResponse(
+        status_code=422,
+        content={"detail": exc.errors()},
+        headers={
+            "Access-Control-Allow-Origin": "*",
+            "Access-Control-Allow-Methods": "*",
+            "Access-Control-Allow-Headers": "*",
+        }
     )
 
 @app.exception_handler(Exception)
@@ -205,8 +256,14 @@ async def general_exception_handler(request: Request, exc: Exception):
     logger.error(f"Unhandled Server Error on {request.url.path}: {str(exc)}", exc_info=True)
     return JSONResponse(
         status_code=500,
-        content={"detail": "An internal server error occurred. System paths and tracebacks are secured."}
+        content={"detail": "An internal server error occurred. System paths and tracebacks are secured."},
+        headers={
+            "Access-Control-Allow-Origin": "*",
+            "Access-Control-Allow-Methods": "*",
+            "Access-Control-Allow-Headers": "*",
+        }
     )
+
 
 # Mount static uploads directory
 static_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "static")
