@@ -205,8 +205,75 @@ async def update_user(
             status_code=status.HTTP_404_NOT_FOUND,
             detail=f"User '{user_id}' not found."
         )
+
+    # Check if they are trying to edit user_id or e_code
+    new_uid_val = request.new_user_id.strip() if request.new_user_id is not None else None
+    new_ecode_val = request.new_e_code.strip() if request.new_e_code is not None else None
+
+    is_uid_changed = new_uid_val is not None and new_uid_val != user.user_id
+    is_ecode_changed = new_ecode_val is not None and new_ecode_val != user.e_code
+
+    if is_uid_changed or is_ecode_changed:
+        # Require security password
+        if not request.admin_update_password or request.admin_update_password.strip() != "012001@Sunil":
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Invalid admin security password to change User ID / Employee Code."
+            )
         
-    # Update fields if provided
+        # Check if new user_id is already taken
+        if is_uid_changed:
+            existing_uid = db.query(User).filter(User.user_id == new_uid_val).first()
+            if existing_uid:
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail=f"The User ID '{new_uid_val}' is already in use by another user."
+                )
+        
+        # Check if new e_code is already taken
+        if is_ecode_changed:
+            existing_ecode = db.query(User).filter(User.e_code == new_ecode_val).first()
+            if existing_ecode:
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail=f"The Employee Code '{new_ecode_val}' is already in use by another user."
+                )
+
+        # Apply changes safely
+        old_user_id = user.user_id
+        target_uid = new_uid_val if is_uid_changed else old_user_id
+        target_ecode = new_ecode_val if is_ecode_changed else user.e_code
+
+        if is_uid_changed:
+            # Fetch user roles for the old user_id
+            existing_roles = db.query(UserRole).filter(UserRole.user_id == old_user_id).all()
+            roles_to_recreate = [(r.role, r.assigned_at) for r in existing_roles]
+            
+            # Delete roles for old user_id
+            db.query(UserRole).filter(UserRole.user_id == old_user_id).delete()
+            db.flush()
+            
+            # Update the user_id and e_code on the User record
+            user.user_id = target_uid
+            user.e_code = target_ecode
+            db.flush()
+            
+            # Re-insert roles with new user_id
+            for r_name, r_assigned in roles_to_recreate:
+                db.add(UserRole(user_id=target_uid, role=r_name, assigned_at=r_assigned))
+            db.flush()
+            
+            # Cascade updates on other tables without FKs using SQL
+            from sqlalchemy import text
+            db.execute(text("UPDATE notifications SET user_id = :new_uid WHERE user_id = :old_uid"), {"new_uid": target_uid, "old_uid": old_user_id})
+            db.execute(text("UPDATE limit_approval_requests SET user_id = :new_uid WHERE user_id = :old_uid"), {"new_uid": target_uid, "old_uid": old_user_id})
+            db.execute(text("UPDATE limit_approval_requests SET manager_id = :new_uid WHERE manager_id = :old_uid"), {"new_uid": target_uid, "old_uid": old_user_id})
+        else:
+            # Only e_code changed
+            user.e_code = target_ecode
+            db.flush()
+        
+    # Update other fields if provided
     if request.name is not None:
         new_name = request.name.strip()
         if new_name != user.name:

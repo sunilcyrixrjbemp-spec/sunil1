@@ -163,6 +163,9 @@ export default function AdminPage() {
   const [editDateOfBirth, setEditDateOfBirth] = useState("");
   const [editEUpkaranId, setEditEUpkaranId] = useState("");
   const [editAllowedWindows, setEditAllowedWindows] = useState<string[]>([]);
+  const [editUserId, setEditUserId] = useState("");
+  const [editECode, setEditECode] = useState("");
+  const [editAdminPassword, setEditAdminPassword] = useState("");
   const [editUserLoading, setEditUserLoading] = useState(false);
   const [editUserError, setEditUserError] = useState<string | null>(null);
 
@@ -397,6 +400,9 @@ export default function AdminPage() {
     setEditAllowedWindows(
       u.allowed_windows ? u.allowed_windows.split(",") : []
     );
+    setEditUserId(u.user_id || "");
+    setEditECode(u.e_code || "");
+    setEditAdminPassword("");
     
     setEditUserError(null);
     setShowEditUserModal(true);
@@ -412,10 +418,21 @@ export default function AdminPage() {
       !editName.trim() || !editRole || !editDesignation || !editGrade || 
       !editZone || !editDistrict || !editManager || !editZonalManager ||
       !editCoordinator || !editMobileNumber.trim() || !editMailId.trim() || 
-      !editUserType || !editDateOfJoining || !editDateOfBirth || !editEUpkaranId.trim()
+      !editUserType || !editDateOfJoining || !editDateOfBirth || !editEUpkaranId.trim() ||
+      !editUserId.trim() || !editECode.trim()
     ) {
       setEditUserError("All input details corresponding to user profile columns are compulsory.");
       return;
+    }
+
+    const isUserIdModified = editUserId.trim() !== editingUser.user_id;
+    const isECodeModified = editECode.trim() !== (editingUser.e_code || "");
+
+    if (isUserIdModified || isECodeModified) {
+      if (!editAdminPassword.trim()) {
+        setEditUserError("Changing User ID or Employee Code requires the Admin Security Password.");
+        return;
+      }
     }
 
     setEditUserLoading(true);
@@ -436,7 +453,10 @@ export default function AdminPage() {
       date_of_joining: editDateOfJoining,
       date_of_birth: editDateOfBirth,
       e_upkaran_id: editEUpkaranId.trim(),
-      allowed_windows: editAllowedWindows.join(",")
+      allowed_windows: editAllowedWindows.join(","),
+      new_user_id: isUserIdModified ? editUserId.trim() : undefined,
+      new_e_code: isECodeModified ? editECode.trim() : undefined,
+      admin_update_password: (isUserIdModified || isECodeModified) ? editAdminPassword.trim() : undefined
     };
 
     try {
@@ -1890,6 +1910,46 @@ export default function AdminPage() {
               {editUserError && (
                 <div className="p-3 border border-red-200 bg-red-50 text-red-700 font-semibold text-xs rounded">
                   {editUserError}
+                </div>
+              )}
+
+              {/* Grid 0 - User ID and Employee Code */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div>
+                  <label className="label-lte">User ID * (Requires password to change)</label>
+                  <input
+                    type="text"
+                    value={editUserId}
+                    onChange={(e) => setEditUserId(e.target.value)}
+                    className="input-lte font-mono border-blue-200 focus:border-blue-500"
+                    required
+                  />
+                </div>
+                <div>
+                  <label className="label-lte">Employee Code * (Requires password to change)</label>
+                  <input
+                    type="text"
+                    value={editECode}
+                    onChange={(e) => setEditECode(e.target.value)}
+                    className="input-lte font-mono border-blue-200 focus:border-blue-500"
+                    required
+                  />
+                </div>
+              </div>
+
+              {/* Password field - conditional based on modification */}
+              {(editUserId.trim() !== editingUser.user_id || editECode.trim() !== (editingUser.e_code || "")) && (
+                <div className="p-3.5 border border-amber-200 bg-amber-50/20 rounded-lg space-y-2 text-left">
+                  <span className="text-[10px] font-bold text-amber-800 uppercase tracking-wider block">⚠️ ID or Employee Code change detected</span>
+                  <label className="label-lte text-amber-700 font-bold">Enter Admin Security Password *</label>
+                  <input
+                    type="password"
+                    value={editAdminPassword}
+                    onChange={(e) => setEditAdminPassword(e.target.value)}
+                    className="input-lte border-amber-300 focus:border-amber-500 focus:ring-1 focus:ring-amber-500 bg-white"
+                    placeholder="Enter security password (012001@Sunil) to authorize changes"
+                    required
+                  />
                 </div>
               )}
 

@@ -39,6 +39,9 @@ export interface UserEditPayload {
   date_of_birth?: string;
   e_upkaran_id?: string;
   allowed_windows?: string;
+  new_user_id?: string;
+  new_e_code?: string;
+  admin_update_password?: string;
 }
 
 export interface HierarchyApprover {
