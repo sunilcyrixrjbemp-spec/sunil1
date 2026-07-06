@@ -113,25 +113,33 @@ export async function handleExpenseInit(request, env, params, query, user) {
   const accumulatedKm = claims?.total_km || 0.0;
   const accumulatedAuto = claims?.total_auto || 0.0;
 
+  // Append monthly totals inside allowanceDict exactly as Python does
+  allowanceDict.current_month_km = accumulatedKm;
+  allowanceDict.current_month_auto = accumulatedAuto;
+  allowanceDict.max_auto_per_month = 1000;
+
+  // Generate next expense ID code format
+  const mm = String(monthInt).padStart(2, "0");
+  const yy = String(yearVal).substring(2);
+
   return jsonResponse({
-    facilities,
-    submitted_dates,
-    approved_km_extension: approvedKm,
-    approved_auto_extension: approvedAuto,
-    existing_km_request: existingKmReq,
-    existing_auto_request: existingAutoReq,
-    allowance: allowanceDict,
-    accumulated_km: accumulatedKm,
-    accumulated_auto: accumulatedAuto,
-    target_user: {
-      id: targetUser.id,
-      user_id: targetUser.user_id,
-      name: targetUser.name,
+    success: true,
+    user: {
+      full_name: targetUser.name,
+      e_code: targetUser.user_id,
       grade: targetUser.grade,
-      designation: targetUser.designation,
-      district: targetUser.district,
-      zone: targetUser.zone
-    }
+      home_district: targetUser.district || "Jodhpur",
+      level_first_approver: targetUser.manager || "Admin",
+      level_second_approver: targetUser.zonal_manager || "Admin"
+    },
+    allowance: allowanceDict,
+    facilities,
+    submitted_dates: submittedDates,
+    approved_km: approvedKm,
+    approved_auto: approvedAuto,
+    existing_km_req: existingKmReq,
+    existing_auto_req: existingAutoReq,
+    next_exp_id: `RJ-${mm}/${yy}-PENDING`
   });
 }
 
