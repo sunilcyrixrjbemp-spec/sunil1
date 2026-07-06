@@ -242,7 +242,7 @@ async def get_pending_approvals(
             SELECT m.exp_id, m.user_id, m.expense_date, m.total_amount, m.status,
                    m.da_amount, m.hotel_amount, m.other_expense_amount,
                    m.level_first_approver, m.level_second_approver,
-                   u.full_name, u.e_code
+                   u.full_name, u.e_code, m.visit_purpose
             FROM expense_master m
             JOIN user u ON m.user_id = u.user_id
             WHERE 
@@ -251,57 +251,76 @@ async def get_pending_approvals(
                 (m.status = 'Pending L2' AND m.level_second_approver = :user_id)
         """)
         legacy_rows = db.execute(legacy_query, {"user_id": current_user.user_id}).fetchall()
-        for row in legacy_rows:
-            exp_id = row[0]
-            user_id_str = row[1]
-            expense_date = row[2]
-            total_amount = float(row[3]) if row[3] else 0.0
-            status_val = row[4]
-            full_name = row[10]
-            e_code = row[11]
+        
+        if legacy_rows:
+            exp_ids = [row[0] for row in legacy_rows]
+            in_placeholder = ",".join(f":id_{i}" for i in range(len(exp_ids)))
+            iti_binds = {f"id_{i}": exp_id for i, exp_id in enumerate(exp_ids)}
             
-            level_number = 2 if status_val == "Pending L2" else 1
-            mock_id = get_legacy_expense_hash_id(exp_id)
+            # Batch fetch counts
+            iti_counts_q = text(f"""
+                SELECT exp_id, COUNT(itinerary_id) 
+                FROM expense_itinerary 
+                WHERE exp_id IN ({in_placeholder}) 
+                GROUP BY exp_id
+            """)
+            iti_rows = db.execute(iti_counts_q, iti_binds).fetchall()
+            iti_counts = {r[0]: r[1] for r in iti_rows}
             
-            # Fetch itineraries count for this legacy expense
-            iti_count_query = text("SELECT COUNT(itinerary_id) FROM expense_itinerary WHERE exp_id = :exp_id")
-            iti_count = db.execute(iti_count_query, {"exp_id": exp_id}).scalar() or 0
+            # Batch fetch travel modes for first leg of each expense
+            mode_q = text(f"""
+                SELECT exp_id, travel_mode 
+                FROM expense_itinerary 
+                WHERE (exp_id || '_' || leg_number) IN (
+                    SELECT exp_id || '_' || MIN(leg_number) 
+                    FROM expense_itinerary 
+                    WHERE exp_id IN ({in_placeholder}) 
+                    GROUP BY exp_id
+                )
+            """)
+            mode_rows = db.execute(mode_q, iti_binds).fetchall()
+            travel_modes = {r[0]: r[1] for r in mode_rows}
             
-            # Get category (travel_mode) and purpose (visit_purpose)
-            purpose = ""
-            category = "Travel"
-            master_info = db.execute(text("SELECT visit_purpose FROM expense_master WHERE exp_id = :exp_id"), {"exp_id": exp_id}).first()
-            if master_info and master_info[0]:
-                purpose = master_info[0]
+            for row in legacy_rows:
+                exp_id = row[0]
+                user_id_str = row[1]
+                expense_date = row[2]
+                total_amount = float(row[3]) if row[3] else 0.0
+                status_val = row[4]
+                full_name = row[10]
+                e_code = row[11]
+                visit_purpose = row[12]
                 
-            first_iti = db.execute(text("SELECT travel_mode FROM expense_itinerary WHERE exp_id = :exp_id ORDER BY leg_number LIMIT 1"), {"exp_id": exp_id}).first()
-            if first_iti and first_iti[0]:
-                category = first_iti[0]
+                level_number = 2 if status_val == "Pending L2" else 1
+                mock_id = get_legacy_expense_hash_id(exp_id)
                 
-            try:
-                created_dt = datetime.strptime(expense_date, "%Y-%m-%d")
-            except Exception:
-                created_dt = datetime.now()
+                iti_count = iti_counts.get(exp_id, 0)
+                category = travel_modes.get(exp_id, "Travel")
                 
-            mock_app = Approval(
-                id=mock_id,
-                expense_id=mock_id,
-                approver_id=current_user.id,
-                level_number=level_number,
-                status="pending",
-                comments="",
-                created_at=created_dt,
-                updated_at=created_dt
-            )
-            mock_app.expense_code = exp_id
-            mock_app.employeeName = full_name if full_name else "Unknown Employee"
-            mock_app.eCode = e_code if e_code else "N/A"
-            mock_app.purpose = purpose if purpose else "Legacy Mobile Claim"
-            mock_app.category = category
-            mock_app.amount = total_amount
-            mock_app.date = expense_date
-            mock_app.itinerariesCount = iti_count
-            result.append(mock_app)
+                try:
+                    created_dt = datetime.strptime(expense_date, "%Y-%m-%d")
+                except Exception:
+                    created_dt = datetime.now()
+                    
+                mock_app = Approval(
+                    id=mock_id,
+                    expense_id=mock_id,
+                    approver_id=current_user.id,
+                    level_number=level_number,
+                    status="pending",
+                    comments="",
+                    created_at=created_dt,
+                    updated_at=created_dt
+                )
+                mock_app.expense_code = exp_id
+                mock_app.employeeName = full_name if full_name else "Unknown Employee"
+                mock_app.eCode = e_code if e_code else "N/A"
+                mock_app.purpose = visit_purpose if visit_purpose else "Legacy Mobile Claim"
+                mock_app.category = category
+                mock_app.amount = total_amount
+                mock_app.date = expense_date
+                mock_app.itinerariesCount = iti_count
+                result.append(mock_app)
     except Exception as e:
         logger.error(f"Error querying legacy pending approvals: {e}")
             
