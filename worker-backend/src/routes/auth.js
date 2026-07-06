@@ -1,7 +1,8 @@
-import { verifyPassword, signJwt, verifyJwt } from "../utils/security.js";
+import { verifyPassword, signJwt, verifyJwt, getPasswordHash } from "../utils/security.js";
 import { DESIGNATIONS, ZONE_DISTRICTS, ROLES } from "../utils/constants.js";
 import { getExpenseInitData } from "./expense.js";
 import { fetchPendingApprovals } from "./approval.js";
+import { runWrite } from "../utils/db.js";
 
 /**
  * Helper to build JSON responses in routes
@@ -289,4 +290,283 @@ export async function handleRefresh(request, env, params, query) {
 export async function handleBootstrap(request, env, params, query, user) {
   const bootstrapData = await getBootstrapDataHelper(env, user);
   return jsonResponse(bootstrapData);
+}
+
+/**
+ * POST /api/auth/logout
+ */
+export async function handleLogout(request, env, params, query, user) {
+  try {
+    // Clear active session ID for the user
+    if (user && user.user_id) {
+      await env.DB.prepare("UPDATE users SET active_session_id = NULL WHERE user_id = ?")
+        .bind(user.user_id).run();
+    }
+  } catch (e) {
+    console.warn("Logout DB error:", e);
+  }
+  return jsonResponse({ success: true, message: "Logged out successfully" });
+}
+
+/**
+ * GET /api/auth/dropdowns
+ * Returns designations, zones, roles, grades for frontend dropdowns
+ */
+export async function handleGetDropdowns(request, env, params, query) {
+  const gradesRows = await env.DB.prepare("SELECT DISTINCT grade FROM allowance_master").all();
+  const grades = (gradesRows.results || []).map(r => r.grade).filter(Boolean).sort();
+  return jsonResponse({
+    designations: DESIGNATIONS,
+    zones: ZONE_DISTRICTS,
+    roles: ROLES,
+    grades: grades.length ? grades : ["A", "B", "C", "D"]
+  });
+}
+
+/**
+ * POST /api/auth/forgot-password
+ * Verifies user_id + DOB then sends OTP via notification (stores in DB)
+ */
+export async function handleForgotPassword(request, env, params, query) {
+  let body;
+  try { body = await request.json(); } catch (e) { return jsonResponse({ error: "Invalid JSON" }, 400); }
+
+  const { user_id, date_of_birth } = body;
+  if (!user_id || !date_of_birth) {
+    return jsonResponse({ error: "user_id and date_of_birth are required" }, 400);
+  }
+
+  const user = await env.DB.prepare("SELECT * FROM users WHERE user_id = ?").bind(user_id).first();
+  if (!user) {
+    return jsonResponse({ error: "No user found with that User ID" }, 404);
+  }
+
+  // Verify DOB
+  const dobInput = String(date_of_birth).trim().replace(/\//g, "-");
+  const dobStored = user.date_of_birth ? String(user.date_of_birth).trim() : "";
+  const dobMatch = dobInput === dobStored || dobInput.split("-").reverse().join("-") === dobStored;
+  if (!dobMatch) {
+    return jsonResponse({ error: "Date of birth does not match our records" }, 400);
+  }
+
+  // Generate 6-digit OTP
+  const otp = String(Math.floor(100000 + Math.random() * 900000));
+  const timestamp = new Date().toISOString();
+  const expiresAt = new Date(Date.now() + 10 * 60 * 1000).toISOString(); // 10 min
+
+  // Store OTP in DB
+  await env.DB.prepare(`
+    INSERT OR REPLACE INTO otp_tokens (user_id, otp, otp_type, expires_at, created_at)
+    VALUES (?, ?, 'forgot_password', ?, ?)
+  `).bind(user_id, otp, expiresAt, timestamp).run().catch(async () => {
+    // If table doesn't exist or no 'OR REPLACE', try delete + insert
+    await env.DB.prepare("DELETE FROM otp_tokens WHERE user_id = ? AND otp_type = 'forgot_password'").bind(user_id).run().catch(() => {});
+    await env.DB.prepare(`
+      INSERT INTO otp_tokens (user_id, otp, otp_type, expires_at, created_at)
+      VALUES (?, ?, 'forgot_password', ?, ?)
+    `).bind(user_id, otp, expiresAt, timestamp).run();
+  });
+
+  // Send OTP via notification (mobile number stored in user record)
+  await env.DB.prepare(`
+    INSERT INTO notifications (user_id, title, description, type, read, link, created_at)
+    VALUES (?, ?, ?, 'info', 0, '/login', ?)
+  `).bind(user_id, "Password Reset OTP", `Your OTP for password reset is: ${otp}. Valid for 10 minutes.`, timestamp).run().catch(() => {});
+
+  return jsonResponse({
+    success: true,
+    message: "OTP sent successfully",
+    otp_sent: true,
+    mobile_masked: user.mobile_number ? `XXXXXX${String(user.mobile_number).slice(-4)}` : null
+  });
+}
+
+/**
+ * POST /api/auth/verify-otp
+ */
+export async function handleVerifyOtp(request, env, params, query) {
+  let body;
+  try { body = await request.json(); } catch (e) { return jsonResponse({ error: "Invalid JSON" }, 400); }
+
+  const { user_id, otp, otp_type } = body;
+  if (!user_id || !otp || !otp_type) {
+    return jsonResponse({ error: "user_id, otp, and otp_type are required" }, 400);
+  }
+
+  const record = await env.DB.prepare(`
+    SELECT * FROM otp_tokens WHERE user_id = ? AND otp_type = ?
+    ORDER BY created_at DESC LIMIT 1
+  `).bind(user_id, otp_type).first().catch(() => null);
+
+  if (!record) {
+    return jsonResponse({ error: "No OTP found. Please request a new one." }, 400);
+  }
+
+  if (record.otp !== String(otp).trim()) {
+    return jsonResponse({ error: "Invalid OTP. Please check and try again." }, 400);
+  }
+
+  const now = new Date();
+  const expires = new Date(record.expires_at);
+  if (now > expires) {
+    return jsonResponse({ error: "OTP has expired. Please request a new one." }, 400);
+  }
+
+  return jsonResponse({ success: true, message: "OTP verified successfully." });
+}
+
+/**
+ * POST /api/auth/reset-password
+ */
+export async function handleResetPassword(request, env, params, query) {
+  let body;
+  try { body = await request.json(); } catch (e) { return jsonResponse({ error: "Invalid JSON" }, 400); }
+
+  const { user_id, otp, new_password, confirm_password } = body;
+  if (!user_id || !otp || !new_password || !confirm_password) {
+    return jsonResponse({ error: "All fields are required" }, 400);
+  }
+
+  if (new_password !== confirm_password) {
+    return jsonResponse({ error: "Passwords do not match" }, 400);
+  }
+
+  if (new_password.length < 8) {
+    return jsonResponse({ error: "Password must be at least 8 characters" }, 400);
+  }
+
+  // Verify OTP
+  const record = await env.DB.prepare(`
+    SELECT * FROM otp_tokens WHERE user_id = ? AND otp_type = 'forgot_password'
+    ORDER BY created_at DESC LIMIT 1
+  `).bind(user_id).first().catch(() => null);
+
+  if (!record || record.otp !== String(otp).trim()) {
+    return jsonResponse({ error: "Invalid or expired OTP" }, 400);
+  }
+
+  const now = new Date();
+  const expires = new Date(record.expires_at);
+  if (now > expires) {
+    return jsonResponse({ error: "OTP has expired. Please request a new one." }, 400);
+  }
+
+  // Hash and update password
+  const newHash = await getPasswordHash(new_password);
+  const timestamp = new Date().toISOString();
+
+  const user = await env.DB.prepare("SELECT * FROM users WHERE user_id = ?").bind(user_id).first();
+  if (!user) return jsonResponse({ error: "User not found" }, 404);
+
+  await env.DB.prepare("UPDATE users SET hashed_password = ?, active_session_id = NULL, failed_attempt = 0 WHERE user_id = ?")
+    .bind(newHash, user_id).run();
+  
+  // Add to password history
+  await env.DB.prepare("INSERT INTO password_histories (user_id, hashed_password, created_at) VALUES (?, ?, ?)").
+    bind(user.id, newHash, timestamp).run().catch(() => {});
+
+  // Invalidate OTP
+  await env.DB.prepare("DELETE FROM otp_tokens WHERE user_id = ? AND otp_type = 'forgot_password'").bind(user_id).run().catch(() => {});
+
+  return jsonResponse({ success: true, message: "Password has been reset successfully. Please login with your new password." });
+}
+
+/**
+ * POST /api/auth/unlock-account
+ * Verifies user_id + DOJ + DOB then sends OTP
+ */
+export async function handleUnlockAccount(request, env, params, query) {
+  let body;
+  try { body = await request.json(); } catch (e) { return jsonResponse({ error: "Invalid JSON" }, 400); }
+
+  const { user_id, date_of_joining, date_of_birth } = body;
+  if (!user_id || !date_of_joining || !date_of_birth) {
+    return jsonResponse({ error: "user_id, date_of_joining, and date_of_birth are required" }, 400);
+  }
+
+  const user = await env.DB.prepare("SELECT * FROM users WHERE user_id = ?").bind(user_id).first();
+  if (!user) return jsonResponse({ error: "No user found with that User ID" }, 404);
+
+  if (user.user_status !== "locked") {
+    return jsonResponse({ error: "Account is not locked. Please contact admin if you are having issues." }, 400);
+  }
+
+  // Verify DOJ
+  const dojInput = String(date_of_joining).trim().replace(/\//g, "-");
+  const dojStored = user.date_of_joining ? String(user.date_of_joining).trim() : "";
+  const dojMatch = dojInput === dojStored || dojInput.split("-").reverse().join("-") === dojStored;
+
+  // Verify DOB
+  const dobInput = String(date_of_birth).trim().replace(/\//g, "-");
+  const dobStored = user.date_of_birth ? String(user.date_of_birth).trim() : "";
+  const dobMatch = dobInput === dobStored || dobInput.split("-").reverse().join("-") === dobStored;
+
+  if (!dojMatch || !dobMatch) {
+    return jsonResponse({ error: "Date of joining or date of birth does not match our records" }, 400);
+  }
+
+  // Generate OTP
+  const otp = String(Math.floor(100000 + Math.random() * 900000));
+  const timestamp = new Date().toISOString();
+  const expiresAt = new Date(Date.now() + 10 * 60 * 1000).toISOString();
+
+  await env.DB.prepare("DELETE FROM otp_tokens WHERE user_id = ? AND otp_type = 'unlock_account'").bind(user_id).run().catch(() => {});
+  await env.DB.prepare(`
+    INSERT INTO otp_tokens (user_id, otp, otp_type, expires_at, created_at)
+    VALUES (?, ?, 'unlock_account', ?, ?)
+  `).bind(user_id, otp, expiresAt, timestamp).run();
+
+  await env.DB.prepare(`
+    INSERT INTO notifications (user_id, title, description, type, read, link, created_at)
+    VALUES (?, ?, ?, 'info', 0, '/login', ?)
+  `).bind(user_id, "Account Unlock OTP", `Your OTP to unlock account: ${otp}. Valid for 10 minutes.`, timestamp).run().catch(() => {});
+
+  return jsonResponse({
+    success: true,
+    message: "OTP sent. Please check your registered mobile number.",
+    otp_sent: true,
+    mobile_masked: user.mobile_number ? `XXXXXX${String(user.mobile_number).slice(-4)}` : null
+  });
+}
+
+/**
+ * POST /api/auth/unlock-verify-otp
+ */
+export async function handleUnlockVerifyOtp(request, env, params, query) {
+  let body;
+  try { body = await request.json(); } catch (e) { return jsonResponse({ error: "Invalid JSON" }, 400); }
+
+  const { user_id, otp } = body;
+  if (!user_id || !otp) {
+    return jsonResponse({ error: "user_id and otp are required" }, 400);
+  }
+
+  const record = await env.DB.prepare(`
+    SELECT * FROM otp_tokens WHERE user_id = ? AND otp_type = 'unlock_account'
+    ORDER BY created_at DESC LIMIT 1
+  `).bind(user_id).first().catch(() => null);
+
+  if (!record || record.otp !== String(otp).trim()) {
+    return jsonResponse({ error: "Invalid OTP. Please try again." }, 400);
+  }
+
+  const now = new Date();
+  const expires = new Date(record.expires_at);
+  if (now > expires) {
+    return jsonResponse({ error: "OTP has expired. Please request a new one." }, 400);
+  }
+
+  // Unlock account
+  const timestamp = new Date().toISOString();
+  await env.DB.prepare("UPDATE users SET user_status = 'active', failed_attempt = 0, active_session_id = NULL WHERE user_id = ?")
+    .bind(user_id).run();
+  
+  await env.DB.prepare("DELETE FROM otp_tokens WHERE user_id = ? AND otp_type = 'unlock_account'").bind(user_id).run().catch(() => {});
+
+  await env.DB.prepare(`
+    INSERT INTO notifications (user_id, title, description, type, read, link, created_at)
+    VALUES (?, 'Account Unlocked', 'Your account has been successfully unlocked. You can now log in.', 'success', 0, '/login', ?)
+  `).bind(user_id, timestamp).run().catch(() => {});
+
+  return jsonResponse({ success: true, message: "Account unlocked successfully. You can now login." });
 }

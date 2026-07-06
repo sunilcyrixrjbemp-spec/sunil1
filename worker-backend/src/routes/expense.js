@@ -1518,3 +1518,346 @@ export async function handleSubmitExpense(request, env, params, query, user) {
     expense_code: expenseCode
   });
 }
+
+/**
+ * GET /api/expense/month-summary
+ * Returns per-engineer summary for a given month (Managers/Admins see team; Engineers see self)
+ */
+export async function handleGetMonthSummary(request, env, params, query, user) {
+  const month = query.get("month");    // e.g. "January"
+  const year = parseInt(query.get("year") || "0", 10) || new Date().getFullYear();
+  const district = query.get("district");
+  const engineer = query.get("engineer");
+
+  // Build filters for new expenses table
+  const whereClauses = ["1=1"];
+  const bindings = [];
+
+  if (month) {
+    whereClauses.push("UPPER(e.month_name) = UPPER(?)");
+    bindings.push(month);
+  }
+  if (year) {
+    whereClauses.push("e.year = ?");
+    bindings.push(year);
+  }
+
+  // Row-level access control
+  const role = (user.role || "").trim();
+  if (role === "Engineer") {
+    whereClauses.push("u.user_id = ?");
+    bindings.push(user.user_id);
+  } else if (district) {
+    whereClauses.push("LOWER(u.district) = LOWER(?)");
+    bindings.push(district);
+  }
+  if (engineer) {
+    whereClauses.push("(LOWER(u.name) LIKE ? OR LOWER(u.user_id) = LOWER(?))");
+    bindings.push(`%${engineer.toLowerCase()}%`, engineer.toLowerCase());
+  }
+
+  const whereStr = whereClauses.join(" AND ");
+
+  // Fetch new-style expense summaries
+  const result = await env.DB.prepare(`
+    SELECT 
+      u.user_id, u.name, u.district, u.zone, u.designation, u.grade,
+      e.month_name as month, e.year,
+      COUNT(e.id) as total_claims,
+      SUM(e.amount) as total_amount,
+      SUM(CASE WHEN e.status = 'approved' THEN e.amount ELSE 0 END) as approved_amount,
+      SUM(CASE WHEN e.status IN ('pending', 'submitted', 'submitted_l1', 'submitted_l2') THEN e.amount ELSE 0 END) as pending_amount,
+      SUM(CASE WHEN e.status = 'rejected' THEN 1 ELSE 0 END) as rejected_count,
+      SUM(CASE WHEN e.status = 'approved' THEN 1 ELSE 0 END) as approved_count
+    FROM expenses e
+    JOIN users u ON e.user_id = u.id
+    WHERE ${whereStr}
+    GROUP BY u.user_id, u.name, e.month_name, e.year
+    ORDER BY u.name ASC
+  `).bind(...bindings).all();
+
+  // Also fetch from legacy expense_master if it exists
+  let legacyRows = [];
+  try {
+    const legacyWhereClauses = ["1=1"];
+    const legacyBindings = [];
+
+    if (month) {
+      // Legacy has expense_date; match by month name
+      legacyWhereClauses.push("strftime('%m', expense_date) = ?");
+      const monthNum = ["january","february","march","april","may","june","july","august","september","october","november","december"].indexOf(month.toLowerCase()) + 1;
+      legacyBindings.push(String(monthNum).padStart(2, "0"));
+    }
+    if (year) {
+      legacyWhereClauses.push("strftime('%Y', expense_date) = ?");
+      legacyBindings.push(String(year));
+    }
+    if (role === "Engineer") {
+      legacyWhereClauses.push("LOWER(m.user_id) = LOWER(?)");
+      legacyBindings.push(user.user_id);
+    }
+
+    const legacyRes = await env.DB.prepare(`
+      SELECT 
+        m.user_id, u.name, u.district, u.zone, u.designation, u.grade,
+        COUNT(*) as total_claims,
+        SUM(m.total_amount) as total_amount,
+        SUM(CASE WHEN m.status = 'Approved' THEN m.total_amount ELSE 0 END) as approved_amount,
+        SUM(CASE WHEN m.status IN ('Pending', 'Pending L1', 'Pending L2') THEN m.total_amount ELSE 0 END) as pending_amount,
+        SUM(CASE WHEN m.status = 'Rejected' THEN 1 ELSE 0 END) as rejected_count,
+        SUM(CASE WHEN m.status = 'Approved' THEN 1 ELSE 0 END) as approved_count
+      FROM expense_master m
+      JOIN users u ON LOWER(m.user_id) = LOWER(u.user_id)
+      WHERE ${legacyWhereClauses.join(" AND ")}
+      GROUP BY m.user_id, u.name, u.district, u.zone
+      ORDER BY u.name ASC
+    `).bind(...legacyBindings).all();
+    legacyRows = legacyRes.results || [];
+  } catch (e) {
+    // Legacy table may not exist
+  }
+
+  const summaryMap = {};
+  for (const row of (result.results || [])) {
+    summaryMap[row.user_id] = row;
+  }
+  // Merge legacy (de-duplicate by user_id)
+  for (const row of legacyRows) {
+    if (!summaryMap[row.user_id]) {
+      summaryMap[row.user_id] = { ...row, month: month || "", year };
+    } else {
+      summaryMap[row.user_id].total_claims += row.total_claims || 0;
+      summaryMap[row.user_id].total_amount = (parseFloat(summaryMap[row.user_id].total_amount) || 0) + (parseFloat(row.total_amount) || 0);
+      summaryMap[row.user_id].approved_amount = (parseFloat(summaryMap[row.user_id].approved_amount) || 0) + (parseFloat(row.approved_amount) || 0);
+      summaryMap[row.user_id].pending_amount = (parseFloat(summaryMap[row.user_id].pending_amount) || 0) + (parseFloat(row.pending_amount) || 0);
+    }
+  }
+
+  return jsonResponse(Object.values(summaryMap));
+}
+
+/**
+ * GET /api/expense/engineer-month-claims
+ * Returns all detailed claims (with legs) for a specific engineer in a given month/year
+ */
+export async function handleGetEngineerMonthClaims(request, env, params, query, user) {
+  const userCode = query.get("user_code");
+  const month = query.get("month");
+  const year = parseInt(query.get("year") || "0", 10) || new Date().getFullYear();
+
+  if (!userCode || !month) {
+    return jsonResponse({ error: "user_code and month are required" }, 400);
+  }
+
+  const claims = [];
+
+  // Fetch from new expenses table
+  try {
+    const monthNum = ["january","february","march","april","may","june","july","august","september","october","november","december"].indexOf(month.toLowerCase()) + 1;
+    const targetUser = await env.DB.prepare("SELECT * FROM users WHERE user_id = ?").bind(userCode).first();
+    if (targetUser) {
+      const expenses = await env.DB.prepare(`
+        SELECT * FROM expenses 
+        WHERE user_id = ? AND UPPER(month_name) = UPPER(?) AND year = ?
+        ORDER BY created_at ASC
+      `).bind(targetUser.id, month, year).all();
+
+      for (const exp of (expenses.results || [])) {
+        const legs = await env.DB.prepare("SELECT * FROM expense_itineraries WHERE exp_id = ? ORDER BY id ASC").bind(exp.expense_code).all();
+        claims.push({
+          expense_code: exp.expense_code,
+          date: exp.itinerary || exp.created_at,
+          month: exp.month_name,
+          year: exp.year,
+          status: exp.status,
+          amount: parseFloat(exp.amount || 0),
+          description: exp.description || "",
+          visit_purpose: exp.description || "",
+          legs: (legs.results || []).map(l => ({
+            ...l,
+            ta_amount: parseFloat(l.travel_amount || 0),
+            bike_amount: l.travel_mode === "Bike" ? parseFloat(l.travel_amount || 0) : 0,
+            car_amount: l.travel_mode === "Car" ? parseFloat(l.travel_amount || 0) : 0,
+            auto_amount: (l.travel_mode === "Auto" || l.sub_mode === "Auto") ? parseFloat(l.travel_amount || l.sub_amount || 0) : 0,
+            da_amount: parseFloat(l.da_amount || 0),
+            local_purchase: parseFloat(l.local_purchase || 0),
+            distance_km: parseFloat(l.distance_km || 0)
+          }))
+        });
+      }
+    }
+  } catch (e) {
+    console.warn("Engineer month claims from expenses table failed:", e.message);
+  }
+
+  // Also fetch from legacy expense_master
+  try {
+    const legacyExp = await env.DB.prepare(`
+      SELECT * FROM expense_master
+      WHERE LOWER(user_id) = LOWER(?)
+        AND strftime('%m', expense_date) = ?
+        AND strftime('%Y', expense_date) = ?
+      ORDER BY expense_date ASC
+    `).bind(userCode,
+      String(["january","february","march","april","may","june","july","august","september","october","november","december"].indexOf(month.toLowerCase()) + 1).padStart(2, "0"),
+      String(year)
+    ).all();
+
+    for (const exp of (legacyExp.results || [])) {
+      const legs = await env.DB.prepare("SELECT * FROM expense_itinerary WHERE exp_id = ? ORDER BY leg_number ASC").bind(exp.exp_id).all();
+      claims.push({
+        expense_code: exp.exp_id,
+        date: exp.expense_date,
+        month,
+        year,
+        status: exp.status,
+        amount: parseFloat(exp.total_amount || 0),
+        description: exp.visit_purpose || "",
+        visit_purpose: exp.visit_purpose || "",
+        legs: (legs.results || []).map(l => ({
+          ...l,
+          ta_amount: parseFloat(l.ta_amount || 0),
+          bike_amount: parseFloat(l.bike_amount || 0),
+          car_amount: parseFloat(l.car_amount || 0),
+          auto_amount: parseFloat(l.auto_amount || 0),
+          da_amount: parseFloat(l.da_amount || 0),
+          local_purchase: parseFloat(l.local_purchase || 0),
+          distance_km: parseFloat(l.distance_km || 0)
+        }))
+      });
+    }
+  } catch (e) {
+    console.warn("Legacy expense_itinerary fetch failed:", e.message);
+  }
+
+  return jsonResponse(claims);
+}
+
+/**
+ * GET /api/expense/engineer-advance
+ * Returns the advance amount for an engineer for a specific month/year
+ */
+export async function handleGetEngineerAdvance(request, env, params, query, user) {
+  const userCode = query.get("user_code");
+  const month = query.get("month");
+  const year = parseInt(query.get("year") || "0", 10) || new Date().getFullYear();
+
+  if (!userCode || !month) {
+    return jsonResponse({ error: "user_code and month are required" }, 400);
+  }
+
+  const record = await env.DB.prepare(`
+    SELECT * FROM engineer_advances
+    WHERE LOWER(user_code) = LOWER(?) AND LOWER(month) = LOWER(?) AND year = ?
+    LIMIT 1
+  `).bind(userCode, month, year).first().catch(() => null);
+
+  return jsonResponse({
+    user_code: userCode,
+    month,
+    year,
+    advance_amount: parseFloat(record?.advance_amount || 0)
+  });
+}
+
+/**
+ * POST /api/expense/engineer-advance
+ * Save/update the advance amount for an engineer for a specific month/year
+ */
+export async function handleSaveEngineerAdvance(request, env, params, query, user) {
+  let body;
+  try { body = await request.json(); } catch (e) { return jsonResponse({ error: "Invalid JSON body" }, 400); }
+
+  const { user_code, month, year, advance_amount } = body;
+  if (!user_code || !month || !year) {
+    return jsonResponse({ error: "user_code, month, and year are required" }, 400);
+  }
+
+  const timestamp = new Date().toISOString();
+  const amount = parseFloat(advance_amount || 0);
+
+  // Upsert the advance record
+  const existing = await env.DB.prepare(`
+    SELECT id FROM engineer_advances
+    WHERE LOWER(user_code) = LOWER(?) AND LOWER(month) = LOWER(?) AND year = ?
+  `).bind(user_code, month, year).first().catch(() => null);
+
+  if (existing) {
+    await runWrite(env, "UPDATE engineer_advances SET advance_amount = ?, updated_at = ? WHERE id = ?", [amount, timestamp, existing.id]);
+  } else {
+    await runWrite(env, `
+      INSERT INTO engineer_advances (user_code, month, year, advance_amount, created_at, updated_at)
+      VALUES (?, ?, ?, ?, ?, ?)
+    `, [user_code, month, year, amount, timestamp, timestamp]).catch(async () => {
+      // Table may not have updated_at column, try simpler version
+      await runWrite(env, `
+        INSERT INTO engineer_advances (user_code, month, year, advance_amount, created_at)
+        VALUES (?, ?, ?, ?, ?)
+      `, [user_code, month, year, amount, timestamp]);
+    });
+  }
+
+  return jsonResponse({ status: "success", message: "Advance saved successfully", advance_amount: amount });
+}
+
+/**
+ * GET /api/expense/consolidated-report
+ * Returns a consolidated summary for all engineers in a month/year
+ */
+export async function handleGetConsolidatedReport(request, env, params, query, user) {
+  const month = query.get("month");
+  const year = parseInt(query.get("year") || "0", 10) || new Date().getFullYear();
+
+  if (!month) {
+    return jsonResponse({ error: "month is required" }, 400);
+  }
+
+  // Get all engineers and their monthly totals from new expenses table
+  const newExpenses = await env.DB.prepare(`
+    SELECT 
+      u.user_id, u.name, u.district, u.zone, u.designation, u.grade,
+      SUM(CASE WHEN e.status = 'approved' THEN e.amount ELSE 0 END) as approved_amount,
+      SUM(e.amount) as total_claimed,
+      COUNT(e.id) as claim_count
+    FROM expenses e
+    JOIN users u ON e.user_id = u.id
+    WHERE UPPER(e.month_name) = UPPER(?) AND e.year = ?
+    GROUP BY u.user_id, u.name, u.district, u.zone
+    ORDER BY u.name ASC
+  `).bind(month, year).all().catch(() => ({ results: [] }));
+
+  // Also get advances
+  const advances = await env.DB.prepare(`
+    SELECT user_code, advance_amount FROM engineer_advances
+    WHERE LOWER(month) = LOWER(?) AND year = ?
+  `).bind(month, year).all().catch(() => ({ results: [] }));
+
+  const advanceMap = {};
+  for (const a of (advances.results || [])) {
+    advanceMap[(a.user_code || "").toLowerCase()] = parseFloat(a.advance_amount || 0);
+  }
+
+  const report = (newExpenses.results || []).map(r => ({
+    user_id: r.user_id,
+    name: r.name,
+    district: r.district,
+    zone: r.zone,
+    designation: r.designation,
+    grade: r.grade,
+    approved_amount: parseFloat(r.approved_amount || 0),
+    total_claimed: parseFloat(r.total_claimed || 0),
+    claim_count: r.claim_count || 0,
+    advance_amount: advanceMap[(r.user_id || "").toLowerCase()] || 0,
+    net_payable: Math.max(0, parseFloat(r.approved_amount || 0) - (advanceMap[(r.user_id || "").toLowerCase()] || 0))
+  }));
+
+  return jsonResponse({
+    month,
+    year,
+    total_engineers: report.length,
+    total_approved: report.reduce((s, r) => s + r.approved_amount, 0),
+    total_claimed: report.reduce((s, r) => s + r.total_claimed, 0),
+    report
+  });
+}
+

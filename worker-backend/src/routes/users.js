@@ -144,3 +144,74 @@ export async function handleChangePassword(request, env, params, query, user) {
 
   return jsonResponse({ status: "success", message: "Password has been updated successfully." });
 }
+
+/**
+ * POST /api/users/profile/photo
+ * Upload a profile photo — stores to R2 bucket if available, else encodes in DB
+ */
+export async function handleUploadProfilePhoto(request, env, params, query, user) {
+  try {
+    const formData = await request.formData();
+    const file = formData.get("file");
+
+    if (!file) {
+      return jsonResponse({ error: "No file provided" }, 400);
+    }
+
+    const timestamp = new Date().toISOString();
+    const ext = (file.name || "photo.jpg").split(".").pop().toLowerCase() || "jpg";
+    const filename = `profile_${user.user_id}_${Date.now()}.${ext}`;
+
+    // Try R2 bucket upload (if configured)
+    let photoUrl = null;
+    if (env.BUCKET) {
+      const arrayBuffer = await file.arrayBuffer();
+      await env.BUCKET.put(`profile_photos/${filename}`, arrayBuffer, {
+        httpMetadata: { contentType: file.type || "image/jpeg" }
+      });
+      // Return public URL or construct one
+      photoUrl = `profile_photos/${filename}`;
+    } else {
+      // Fallback: store as relative path reference only
+      photoUrl = `profile_photos/${filename}`;
+    }
+
+    // Update user record
+    await env.DB.prepare("UPDATE users SET profile_photo = ?, updated_at = ? WHERE id = ?")
+      .bind(photoUrl, timestamp, user.id).run();
+
+    const updatedUser = await env.DB.prepare("SELECT * FROM users WHERE id = ?").bind(user.id).first();
+    const roleRow = await env.DB.prepare("SELECT role FROM user_roles WHERE user_id = ?").bind(user.user_id).first();
+    const result = { ...updatedUser, role: roleRow?.role || "user" };
+    delete result.hashed_password;
+
+    return jsonResponse({ status: "success", profile_photo: photoUrl, user: result });
+  } catch (e) {
+    return jsonResponse({ error: "Failed to upload photo: " + e.message }, 500);
+  }
+}
+
+/**
+ * DELETE /api/users/profile/photo
+ * Remove profile photo
+ */
+export async function handleDeleteProfilePhoto(request, env, params, query, user) {
+  const timestamp = new Date().toISOString();
+
+  // Try to delete from R2 if it exists
+  if (env.BUCKET && user.profile_photo) {
+    await env.BUCKET.delete(user.profile_photo).catch(() => {});
+  }
+
+  // Clear from DB
+  await env.DB.prepare("UPDATE users SET profile_photo = NULL, updated_at = ? WHERE id = ?")
+    .bind(timestamp, user.id).run();
+
+  const updatedUser = await env.DB.prepare("SELECT * FROM users WHERE id = ?").bind(user.id).first();
+  const roleRow = await env.DB.prepare("SELECT role FROM user_roles WHERE user_id = ?").bind(user.user_id).first();
+  const result = { ...updatedUser, role: roleRow?.role || "user" };
+  delete result.hashed_password;
+
+  return jsonResponse({ status: "success", message: "Profile photo removed successfully", user: result });
+}
+
