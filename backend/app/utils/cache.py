@@ -1,12 +1,14 @@
 import logging
 import json
 import requests
+import time
 from app.config.settings import settings
 
 logger = logging.getLogger(__name__)
 
 # Global in-memory cache for fallback or local speedups
 _cache = {}
+_cache_expires = {}
 
 # Cloudflare KV Config
 ACCOUNT_ID = settings.CLOUDFLARE_ACCOUNT_ID
@@ -77,10 +79,15 @@ def get(key):
     # Check if key is transactional
     is_transactional = any(key.startswith(prefix) for prefix in ["user_init:", "user_expenses:", "team_expenses:", "pending_approvals:"])
     
-    # 1. Try local RAM cache first (only for non-transactional data to prevent multi-instance mismatch)
-    if not is_transactional:
-        if key in _cache:
+    # 1. Try local RAM cache first
+    if key in _cache:
+        expire_at = _cache_expires.get(key, 0)
+        if time.time() < expire_at:
             return _cache[key]
+        else:
+            # Clean up expired item
+            _cache.pop(key, None)
+            _cache_expires.pop(key, None)
             
     # 2. Try Cloudflare KV if enabled
     if IS_KV_ENABLED:
@@ -101,9 +108,9 @@ def get(key):
                 except Exception:
                     pass
 
-                # Store in RAM cache to avoid constant HTTP calls (only for non-transactional)
-                if not is_transactional:
-                    _cache[key] = val
+                # Store in RAM cache with a default 10 seconds TTL
+                _cache[key] = val
+                _cache_expires[key] = time.time() + 10
                 return val
             elif res.status_code == 404:
                 return None
@@ -112,19 +119,22 @@ def get(key):
         except Exception as e:
             logger.error(f"Error reading from Cloudflare KV: {str(e)}")
             
-    # 3. Fallback to RAM cache for transactional keys ONLY if KV is not enabled (development fallback)
-    if is_transactional and not IS_KV_ENABLED:
-        return _cache.get(key)
-        
     return None
 
 def set(key, value, ttl=None):
     """Set item in cache."""
     is_transactional = any(key.startswith(prefix) for prefix in ["user_init:", "user_expenses:", "team_expenses:", "pending_approvals:"])
     
-    # 1. Save in local RAM (only if not transactional OR if KV is disabled as a fallback)
-    if not is_transactional or not IS_KV_ENABLED:
-        _cache[key] = value
+    # Define a safe RAM TTL:
+    # Transactional data (pending_approvals, user_expenses etc.) -> 5 seconds TTL to prevent multi-worker stale data
+    # Non-transactional data -> 300 seconds (5 mins) or custom ttl
+    if ttl is None:
+        ram_ttl = 5 if is_transactional else 300
+    else:
+        ram_ttl = min(ttl, 5) if is_transactional else ttl
+
+    _cache[key] = value
+    _cache_expires[key] = time.time() + ram_ttl
         
     # 2. Save in Cloudflare KV
     if IS_KV_ENABLED:
@@ -153,6 +163,7 @@ def delete(key):
     """Delete a specific key from cache."""
     # Delete from RAM
     _cache.pop(key, None)
+    _cache_expires.pop(key, None)
     
     # Delete from KV
     if IS_KV_ENABLED:
@@ -171,6 +182,7 @@ def clear_prefix(prefix):
     keys_to_delete = [k for k in _cache.keys() if k.startswith(prefix)]
     for k in keys_to_delete:
         _cache.pop(k, None)
+        _cache_expires.pop(k, None)
         
     # Clear matching keys from Cloudflare KV
     if IS_KV_ENABLED:
@@ -184,8 +196,11 @@ def clear_prefix(prefix):
 def clear_static_caches():
     """Clear static dropdown, facility and allowance caches."""
     _cache.pop("global_dropdowns", None)
+    _cache_expires.pop("global_dropdowns", None)
     _cache.pop("facilities_list", None)
+    _cache_expires.pop("facilities_list", None)
     _cache.pop("allowances_list", None)
+    _cache_expires.pop("allowances_list", None)
     
     delete("global_dropdowns")
     delete("facilities_list")
@@ -224,6 +239,7 @@ def clear_all_transactional_caches():
             keys_to_delete.append(k)
     for k in keys_to_delete:
         _cache.pop(k, None)
+        _cache_expires.pop(k, None)
         
     # Clear matching keys from Cloudflare KV
     if IS_KV_ENABLED:
