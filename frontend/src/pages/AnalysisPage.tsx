@@ -444,7 +444,7 @@ export default function AnalysisPage() {
 
   if (isMobile) {
     return (
-      <div className="space-y-4 text-gray-800 p-3 pb-20" style={{ fontFamily: "'Plus Jakarta Sans', sans-serif" }}>
+      <div className="space-y-4 text-gray-800 p-3 pb-36" style={{ fontFamily: "'Plus Jakarta Sans', sans-serif" }}>
         {/* Page Header */}
         <div className="flex justify-between items-center pb-1">
           <div>
@@ -637,7 +637,7 @@ export default function AnalysisPage() {
   }
 
   return (
-    <div className="space-y-5 text-gray-800 p-4 lg:p-6 pb-28 lg:pb-6" style={{ fontFamily: "'Plus Jakarta Sans', sans-serif" }}>
+    <div className="space-y-5 text-gray-800 p-4 lg:p-6 pb-40 lg:pb-8" style={{ fontFamily: "'Plus Jakarta Sans', sans-serif" }}>
       
       {/* Page Header */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 pb-1">

@@ -565,14 +565,14 @@ export default function HomePage() {
       <div className="space-y-6 animate-fadeIn text-[#212529]">
         
         {/* Welcome Banner - Clean Premium Card */}
-        <div className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-indigo-600 via-indigo-700 to-indigo-800 p-5 text-white shadow-lg">
-          <div className="absolute -right-8 -top-8 h-24 w-24 rounded-full bg-white/5 blur-2xl"></div>
-          <div className="absolute -left-8 -bottom-8 h-24 w-24 rounded-full bg-white/5 blur-2xl"></div>
+        <div className="relative overflow-hidden rounded-xl bg-gradient-to-br from-indigo-600 via-indigo-700 to-indigo-800 py-3 px-4 text-white shadow-md">
+          <div className="absolute -right-8 -top-8 h-20 w-20 rounded-full bg-white/5 blur-xl"></div>
+          <div className="absolute -left-8 -bottom-8 h-20 w-20 rounded-full bg-white/5 blur-xl"></div>
           
           <div className="relative">
-            <span className="text-indigo-200 font-black text-[10px] uppercase tracking-widest block mb-1">Operations Hub</span>
-            <h2 className="text-xl font-bold tracking-tight text-white">Hi, {user.name} 👋</h2>
-            <p className="text-indigo-200 text-xs font-medium mt-0.5">Claims summary &amp; operations management hub.</p>
+            <span className="text-indigo-200 font-black text-[9px] uppercase tracking-widest block mb-0.5">Operations Hub</span>
+            <h2 className="text-lg font-bold tracking-tight text-white leading-tight">Hi, {user.name} 👋</h2>
+            <p className="text-indigo-200 text-[11px] font-medium mt-0.5">Claims summary &amp; operations management hub.</p>
           </div>
         </div>
 

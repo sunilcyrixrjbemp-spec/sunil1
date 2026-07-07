@@ -3314,6 +3314,11 @@ export default function ExpensePage() {
                                           ? "btn-verify-barcode"
                                           : "btn-verify-barcode-disabled"
                                       }
+                                      style={
+                                        String(leg.calls_barcode || '').replace(/\D/g, '').length === 8
+                                          ? { backgroundColor: '#10b981', color: '#ffffff' }
+                                          : { backgroundColor: '#e2e8f0', color: '#94a3b8' }
+                                      }
                                     >
                                       Verify
                                     </button>
@@ -3523,6 +3528,11 @@ export default function ExpensePage() {
                                         String(leg.pms_barcode || '').replace(/\D/g, '').length === 8
                                           ? "btn-verify-barcode"
                                           : "btn-verify-barcode-disabled"
+                                      }
+                                      style={
+                                        String(leg.pms_barcode || '').replace(/\D/g, '').length === 8
+                                          ? { backgroundColor: '#10b981', color: '#ffffff' }
+                                          : { backgroundColor: '#e2e8f0', color: '#94a3b8' }
                                       }
                                     >
                                       Verify

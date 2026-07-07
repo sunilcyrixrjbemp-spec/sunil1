@@ -286,8 +286,8 @@ svg, path, g, sector, .recharts-pie-sector, .recharts-sector, .recharts-pie, .re
   }
 
   /* 2. Top Navigation Header (Premium Android-Style Deep Slate Action Bar) */
-  header.h-28 {
-    height: 112px !important;
+  header.h-14 {
+    height: 56px !important;
     box-shadow: 0 2px 6px rgba(0, 0, 0, 0.08) !important;
     border-bottom: none !important;
     background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%) !important; /* Premium Slate-900/800 Indigo gradient */
@@ -299,23 +299,23 @@ svg, path, g, sector, .recharts-pie-sector, .recharts-sector, .recharts-pie, .re
   }
 
   /* Enforce white text and icons in deep slate header */
-  header.h-28 span,
-  header.h-28 button,
-  header.h-28 svg,
-  header.h-28 i,
-  header.h-28 a {
+  header.h-14 span,
+  header.h-14 button,
+  header.h-14 svg,
+  header.h-14 i,
+  header.h-14 a {
     color: #ffffff !important;
     fill: #ffffff !important;
   }
 
-  header.h-28 img {
+  header.h-14 img {
     background-color: #ffffff !important;
     border-color: rgba(255, 255, 255, 0.25) !important;
   }
 
   /* 2b. Align mobile navigation menu header design with the action bar */
   div[class*="z-[999]"] div[class*="border-b"] {
-    height: 112px !important;
+    height: 56px !important;
     background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%) !important;
     border-bottom: none !important;
     box-shadow: 0 2px 6px rgba(0, 0, 0, 0.08) !important;
@@ -515,7 +515,8 @@ svg, path, g, sector, .recharts-pie-sector, .recharts-sector, .recharts-pie, .re
 
   /* Verify button: emerald highlight preserved on mobile */
   button.bg-emerald-500,
-  button[class*="bg-emerald-500"] {
+  button[class*="bg-emerald-500"],
+  button.btn-verify-barcode {
     background-color: #10b981 !important;
     color: #ffffff !important;
     border: none !important;
