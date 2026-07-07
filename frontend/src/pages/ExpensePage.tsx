@@ -3358,57 +3358,61 @@ export default function ExpensePage() {
                                   </select>
                                 </div>
 
-                                {/* Photo Upload/Status Button */}
-                                <div className="sm:col-span-2">
-                                  <label className="label-lte font-extrabold text-[8px] text-gray-500 uppercase">Service Report <span className="text-rose-500">*</span></label>
-                                  {leg.calls_photo_url ? (
-                                    <div className="flex gap-1 h-7 items-center justify-between bg-blue-50 border border-blue-200 px-1.5 rounded text-[9px] font-bold">
-                                      <span className="text-blue-700 cursor-pointer underline truncate max-w-[40px]" onClick={() => {
-                                        const fullUrl = `${API_BASE}${leg.calls_photo_url}`;
-                                        setLightboxImage(fullUrl);
-                                      }}>View</span>
-                                      <button 
-                                        type="button" 
-                                        onClick={() => {
-                                          handleItineraryChange(leg.leg, "calls_photo_url", "");
-                                          handleItineraryChange(leg.leg, "calls_photo_name", "");
-                                        }} 
-                                        className="text-rose-600 border-0 bg-transparent font-black cursor-pointer text-[9px]"
-                                      >
-                                        ✕
-                                      </button>
-                                    </div>
-                                  ) : (
-                                    <label className="cursor-pointer bg-gray-900 hover:bg-gray-800 text-white border border-gray-900 rounded h-7 px-2 flex items-center justify-center gap-1 text-[10px] font-bold shadow-xs">
-                                      <Camera className="w-3 h-3 text-white" />
-                                      <span>Add</span>
-                                      <input
-                                        type="file"
-                                        accept="*/*"
-                                        onChange={(e) => {
-                                          const file = e.target.files?.[0];
-                                          if (file) uploadActivityPhoto(leg.leg, "Calls", file);
-                                        }}
-                                        className="hidden"
-                                      />
-                                    </label>
-                                  )}
-                                  {leg.calls_photo_loading && <span className="text-[8px] text-blue-600 font-semibold block animate-pulse mt-0.5">Uploading...</span>}
-                                </div>
+                                {/* Service Report + Add Button (side-by-side on all screens) */}
+                                <div className="sm:col-span-3 flex items-end gap-2">
+                                  {/* Photo Upload */}
+                                  <div className="flex-1">
+                                    <label className="label-lte font-extrabold text-[8px] text-gray-500 uppercase">Service Report <span className="text-rose-500">*</span></label>
+                                    {leg.calls_photo_url ? (
+                                      <div className="flex gap-1 h-8 items-center justify-between bg-blue-50 border border-blue-200 px-1.5 rounded text-[9px] font-bold">
+                                        <span className="text-blue-700 cursor-pointer underline truncate max-w-[60px]" onClick={() => {
+                                          const fullUrl = `${API_BASE}${leg.calls_photo_url}`;
+                                          setLightboxImage(fullUrl);
+                                        }}>View</span>
+                                        <button 
+                                          type="button" 
+                                          onClick={() => {
+                                            handleItineraryChange(leg.leg, "calls_photo_url", "");
+                                            handleItineraryChange(leg.leg, "calls_photo_name", "");
+                                          }} 
+                                          className="text-rose-600 border-0 bg-transparent font-black cursor-pointer text-[9px]"
+                                        >
+                                          ✕
+                                        </button>
+                                      </div>
+                                    ) : (
+                                      <label className="cursor-pointer bg-gray-900 hover:bg-gray-800 text-white border border-gray-900 rounded h-8 px-2 flex items-center justify-center gap-1 text-[10px] font-bold shadow-xs w-full">
+                                        <Camera className="w-3 h-3 text-white" />
+                                        <span>Add</span>
+                                        <input
+                                          type="file"
+                                          accept="*/*"
+                                          onChange={(e) => {
+                                            const file = e.target.files?.[0];
+                                            if (file) uploadActivityPhoto(leg.leg, "Calls", file);
+                                          }}
+                                          className="hidden"
+                                        />
+                                      </label>
+                                    )}
+                                    {leg.calls_photo_loading && <span className="text-[8px] text-blue-600 font-semibold block animate-pulse mt-0.5">Uploading...</span>}
+                                  </div>
 
-                                {/* Action Add Button */}
-                                <div className="sm:col-span-1 flex justify-center">
-                                  <button
-                                    type="button"
-                                    onClick={() => addVerifiedBarcode(leg.leg, "Calls")}
-                                    disabled={!leg.calls_verified}
-                                    className={`w-full h-8 flex items-center justify-center rounded-lg shadow-sm transition-all ${
-                                      leg.calls_verified ? "btn-add-verified-barcode" : "btn-add-verified-barcode-disabled"
-                                    }`}
-                                    title="Add Verified Entry"
-                                  >
-                                    <Plus className="w-4 h-4" />
-                                  </button>
+                                  {/* + Add Entry Button */}
+                                  <div className="shrink-0">
+                                    <label className="label-lte font-extrabold text-[8px] text-gray-500 uppercase invisible block">Add</label>
+                                    <button
+                                      type="button"
+                                      onClick={() => addVerifiedBarcode(leg.leg, "Calls")}
+                                      disabled={!leg.calls_verified}
+                                      className={`w-10 h-8 flex items-center justify-center rounded-lg shadow-sm transition-all font-black text-lg ${
+                                        leg.calls_verified ? "btn-add-verified-barcode" : "btn-add-verified-barcode-disabled"
+                                      }`}
+                                      title="Add Verified Entry"
+                                    >
+                                      <Plus className="w-5 h-5" />
+                                    </button>
+                                  </div>
                                 </div>
                               </div>
 
@@ -3558,57 +3562,61 @@ export default function ExpensePage() {
                                   </select>
                                 </div>
 
-                                {/* Photo Upload/Status Button */}
-                                <div className="sm:col-span-2">
-                                  <label className="label-lte font-extrabold text-[8px] text-gray-500 uppercase">Photo</label>
-                                  {leg.pms_photo_url ? (
-                                    <div className="flex gap-1 h-7 items-center justify-between bg-blue-50 border border-blue-200 px-1.5 rounded text-[9px] font-bold">
-                                      <span className="text-blue-700 cursor-pointer underline truncate max-w-[40px]" onClick={() => {
-                                        const fullUrl = `${API_BASE}${leg.pms_photo_url}`;
-                                        setLightboxImage(fullUrl);
-                                      }}>View</span>
-                                      <button 
-                                        type="button" 
-                                        onClick={() => {
-                                          handleItineraryChange(leg.leg, "pms_photo_url", "");
-                                          handleItineraryChange(leg.leg, "pms_photo_name", "");
-                                        }} 
-                                        className="text-rose-600 border-0 bg-transparent font-black cursor-pointer text-[9px]"
-                                      >
-                                        ✕
-                                      </button>
-                                    </div>
-                                  ) : (
-                                    <label className="cursor-pointer bg-gray-900 hover:bg-gray-800 text-white border border-gray-900 rounded h-7 px-2 flex items-center justify-center gap-1 text-[10px] font-bold shadow-xs">
-                                      <Camera className="w-3 h-3 text-white" />
-                                      <span>Add</span>
-                                      <input
-                                        type="file"
-                                        accept="*/*"
-                                        onChange={(e) => {
-                                          const file = e.target.files?.[0];
-                                          if (file) uploadActivityPhoto(leg.leg, "PMS", file);
-                                        }}
-                                        className="hidden"
-                                      />
-                                    </label>
-                                  )}
-                                  {leg.pms_photo_loading && <span className="text-[8px] text-blue-600 font-semibold block animate-pulse mt-0.5">Uploading...</span>}
-                                </div>
+                                {/* Photo + Add Button (side-by-side on all screens) */}
+                                <div className="sm:col-span-3 flex items-end gap-2">
+                                  {/* Photo Upload */}
+                                  <div className="flex-1">
+                                    <label className="label-lte font-extrabold text-[8px] text-gray-500 uppercase">Photo</label>
+                                    {leg.pms_photo_url ? (
+                                      <div className="flex gap-1 h-8 items-center justify-between bg-blue-50 border border-blue-200 px-1.5 rounded text-[9px] font-bold">
+                                        <span className="text-blue-700 cursor-pointer underline truncate max-w-[60px]" onClick={() => {
+                                          const fullUrl = `${API_BASE}${leg.pms_photo_url}`;
+                                          setLightboxImage(fullUrl);
+                                        }}>View</span>
+                                        <button 
+                                          type="button" 
+                                          onClick={() => {
+                                            handleItineraryChange(leg.leg, "pms_photo_url", "");
+                                            handleItineraryChange(leg.leg, "pms_photo_name", "");
+                                          }} 
+                                          className="text-rose-600 border-0 bg-transparent font-black cursor-pointer text-[9px]"
+                                        >
+                                          ✕
+                                        </button>
+                                      </div>
+                                    ) : (
+                                      <label className="cursor-pointer bg-gray-900 hover:bg-gray-800 text-white border border-gray-900 rounded h-8 px-2 flex items-center justify-center gap-1 text-[10px] font-bold shadow-xs w-full">
+                                        <Camera className="w-3 h-3 text-white" />
+                                        <span>Add</span>
+                                        <input
+                                          type="file"
+                                          accept="*/*"
+                                          onChange={(e) => {
+                                            const file = e.target.files?.[0];
+                                            if (file) uploadActivityPhoto(leg.leg, "PMS", file);
+                                          }}
+                                          className="hidden"
+                                        />
+                                      </label>
+                                    )}
+                                    {leg.pms_photo_loading && <span className="text-[8px] text-blue-600 font-semibold block animate-pulse mt-0.5">Uploading...</span>}
+                                  </div>
 
-                                {/* Action Add Button */}
-                                <div className="sm:col-span-1 flex justify-center">
-                                  <button
-                                    type="button"
-                                    onClick={() => addVerifiedBarcode(leg.leg, "PMS")}
-                                    disabled={!leg.pms_verified}
-                                    className={`w-full h-8 flex items-center justify-center rounded-lg shadow-sm transition-all ${
-                                      leg.pms_verified ? "btn-add-verified-barcode" : "btn-add-verified-barcode-disabled"
-                                    }`}
-                                    title="Add Verified Entry"
-                                  >
-                                    <Plus className="w-4 h-4" />
-                                  </button>
+                                  {/* + Add Entry Button */}
+                                  <div className="shrink-0">
+                                    <label className="label-lte font-extrabold text-[8px] text-gray-500 uppercase invisible block">Add</label>
+                                    <button
+                                      type="button"
+                                      onClick={() => addVerifiedBarcode(leg.leg, "PMS")}
+                                      disabled={!leg.pms_verified}
+                                      className={`w-10 h-8 flex items-center justify-center rounded-lg shadow-sm transition-all font-black text-lg ${
+                                        leg.pms_verified ? "btn-add-verified-barcode" : "btn-add-verified-barcode-disabled"
+                                      }`}
+                                      title="Add Verified Entry"
+                                    >
+                                      <Plus className="w-5 h-5" />
+                                    </button>
+                                  </div>
                                 </div>
                               </div>
 
