@@ -108,11 +108,7 @@ export async function handleUploadImage(request, env, params, query, user) {
   const file = formData.get("file");
   if (!file) return jsonResponse({ error: "No file uploaded" }, 400);
 
-  const ext = file.name.split(".").pop().toLowerCase();
-  const allowed = ["jpg", "jpeg", "png", "pdf", "heic", "heif", "webp"];
-  if (!allowed.includes(ext)) {
-    return jsonResponse({ error: "Only JPG, JPEG, PNG, PDF, HEIC, HEIF, and WEBP files are allowed for receipts." }, 400);
-  }
+  // Accept any file format/extension uploaded by the client
 
   const fileBuffer = await file.arrayBuffer();
   if (fileBuffer.byteLength > 10 * 1024 * 1024) {

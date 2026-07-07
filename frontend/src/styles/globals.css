@@ -1247,9 +1247,9 @@ svg, path, g, sector, .recharts-pie-sector, .recharts-sector, .recharts-pie, .re
 
 /* ================= HOME DASHBOARD TABS EXPLICIT STYLING ================= */
 .dashboard-tabs-header {
-  background-color: #f1f5f9 !important; /* light grey capsule container */
+  background-color: #f1f5f9 !important; /* light grey container */
   padding: 4px !important;
-  border-radius: 9999px !important; /* capsule pill shape! */
+  border-radius: 12px !important; /* Rounded square (not capsule pill) */
   border: none !important;
   display: inline-flex !important; /* inline-flex so it wraps nicely as a capsule switch */
   gap: 4px !important;
@@ -1257,7 +1257,7 @@ svg, path, g, sector, .recharts-pie-sector, .recharts-sector, .recharts-pie, .re
 
 .dashboard-tab-btn {
   flex: unset !important;
-  border-radius: 9999px !important; /* capsule pill shape! */
+  border-radius: 8px !important; /* Rounded square tab button */
   font-size: 11px !important;
   font-weight: 750 !important;
   padding: 8px 18px !important;
@@ -1276,7 +1276,7 @@ svg, path, g, sector, .recharts-pie-sector, .recharts-sector, .recharts-pie, .re
 }
 
 .dashboard-tab-btn.active {
-  background-color: #a5f3fc !important; /* light sky blue / cyan capsule switch active */
+  background-color: #a5f3fc !important; /* light sky blue / cyan switch active */
   color: #0f172a !important; /* dark text */
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.06) !important;
   font-weight: 800 !important;

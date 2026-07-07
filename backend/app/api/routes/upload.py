@@ -84,12 +84,7 @@ def save_uploaded_file(file: UploadFile, subfolder: str) -> str:
 @router.post("/image")
 async def upload_image(file: UploadFile = File(...)):
     """Upload receipts/images for reimbursement proof"""
-    ext = os.path.splitext(file.filename)[1].lower()
-    if ext not in [".jpg", ".jpeg", ".png", ".pdf", ".heic", ".heif", ".webp"]:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Only JPG, JPEG, PNG, PDF, HEIC, HEIF, and WEBP files are allowed for receipts."
-        )
+    # Any file extension/format is allowed
         
     # Validate file size
     file.file.seek(0, 2)

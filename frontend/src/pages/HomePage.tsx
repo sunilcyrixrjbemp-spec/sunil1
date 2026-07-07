@@ -715,31 +715,30 @@ export default function HomePage() {
                 )}
               </div>
             </div>
-
             {/* Contextual Filters Row — matches ExpensePage compact filter style */}
-            <div className="border-b border-slate-100 px-3 sm:px-4 py-2.5 sm:py-3">
+            <div className="border-b border-slate-100 px-3 sm:px-4 py-2 sm:py-2.5">
               {activeTab === "my-claims" ? (
                 /* My Self Tab Filters */
-                <div className="bg-slate-50/50 border border-slate-100 rounded-xl sm:rounded-2xl p-2.5 sm:p-3.5 flex flex-col gap-2.5 sm:gap-3 text-[10px] font-bold text-slate-700">
+                <div className="bg-slate-50/50 border border-slate-100 rounded-lg p-2 sm:p-3 flex flex-col gap-2 text-[10px] font-bold text-slate-700">
                   {/* Row 1: Month dropdown */}
-                  <div className="flex flex-col gap-1 max-w-[160px]">
+                  <div className="flex flex-col gap-1 max-w-[130px]">
                     <span className="text-[8px] font-black uppercase text-slate-400">Month</span>
                     <input 
                       type="month"
                       value={selectMonth}
                       onChange={(e) => setSelectMonth(e.target.value)}
-                      className="bg-white border border-slate-200 rounded-xl px-2.5 py-1.5 text-[10px] font-black text-slate-800 cursor-pointer focus:outline-none focus:border-indigo-500 w-full"
+                      className="bg-white border border-slate-200 rounded-md px-2 py-1 text-[10px] font-black text-slate-800 cursor-pointer focus:outline-none focus:border-indigo-500 w-full"
                     />
                   </div>
-                  {/* Row 2: Status pill buttons */}
-                  <div className="flex items-center gap-2 overflow-x-auto no-scrollbar py-0.5 border-t border-slate-100 pt-3">
+                  {/* Row 2: Status buttons */}
+                  <div className="flex items-center gap-1.5 overflow-x-auto no-scrollbar py-0.5 border-t border-slate-100 pt-2">
                     {(["all", "pending", "approved", "rejected"] as const).map((status) => (
                       <button
                         key={status}
                         onClick={() => setHomeStatusFilter(status)}
-                        className={`px-3 py-1 rounded-full text-[9px] font-black uppercase tracking-wider transition-all cursor-pointer border whitespace-nowrap ${
+                        className={`px-2 py-0.5 rounded text-[8px] font-black uppercase tracking-wider transition-all cursor-pointer border whitespace-nowrap ${
                           homeStatusFilter === status
-                            ? "bg-indigo-600 text-white border-indigo-600 font-extrabold shadow-sm"
+                            ? "bg-indigo-650 text-white border-indigo-650 font-extrabold shadow-sm"
                             : "bg-white text-slate-500 border-slate-200 hover:bg-slate-50 hover:text-slate-800"
                         }`}
                       >
@@ -750,16 +749,16 @@ export default function HomePage() {
                 </div>
               ) : (
                 /* Team / Engineer Claims Tab Filters */
-                <div className="bg-slate-50/50 border border-slate-100 rounded-xl sm:rounded-2xl p-2.5 sm:p-3.5 flex flex-col gap-2.5 sm:gap-3 text-[10px] font-bold text-slate-700">
+                <div className="bg-slate-50/50 border border-slate-100 rounded-lg p-2 sm:p-3 flex flex-col gap-2 text-[10px] font-bold text-slate-700">
                   {/* Row 1: Month and Engineer dropdowns with labels on top */}
-                  <div className="grid grid-cols-2 gap-3 w-full">
+                  <div className="grid grid-cols-2 gap-2.5 w-full">
                     <div className="flex flex-col gap-1">
                       <span className="text-[8px] font-black uppercase text-slate-400">Month</span>
                       <input 
                         type="month"
                         value={selectMonth}
                         onChange={(e) => setSelectMonth(e.target.value)}
-                        className="bg-white border border-slate-200 rounded-xl px-2.5 py-1.5 text-[10px] font-black text-slate-800 cursor-pointer focus:outline-none focus:border-indigo-500 w-full"
+                        className="bg-white border border-slate-200 rounded-md px-2 py-1 text-[10px] font-black text-slate-800 cursor-pointer focus:outline-none focus:border-indigo-500 w-full"
                       />
                     </div>
 
@@ -768,7 +767,7 @@ export default function HomePage() {
                       <select 
                         value={filterEmployee} 
                         onChange={(e) => setFilterEmployee(e.target.value)}
-                        className="bg-white border border-slate-200 rounded-xl px-2.5 py-1.5 text-[10px] font-black text-slate-800 cursor-pointer focus:outline-none focus:border-indigo-500 w-full"
+                        className="bg-white border border-slate-200 rounded-md px-2 py-1 text-[10px] font-black text-slate-800 cursor-pointer focus:outline-none focus:border-indigo-500 w-full"
                       >
                         <option value="all">All Members</option>
                         {uniqueEmployees.map(emp => (
@@ -778,15 +777,15 @@ export default function HomePage() {
                     </div>
                   </div>
 
-                  {/* Row 2: Status pill buttons */}
-                  <div className="flex items-center gap-2 overflow-x-auto no-scrollbar py-0.5 border-t border-slate-100 pt-3">
+                  {/* Row 2: Status buttons */}
+                  <div className="flex items-center gap-1.5 overflow-x-auto no-scrollbar py-0.5 border-t border-slate-100 pt-2">
                     {(["all", "pending", "approved", "rejected"] as const).map((status) => (
                       <button
                         key={status}
                         onClick={() => setHomeStatusFilter(status)}
-                        className={`px-3 py-1 rounded-full text-[9px] font-black uppercase tracking-wider transition-all cursor-pointer border whitespace-nowrap ${
+                        className={`px-2 py-0.5 rounded text-[8px] font-black uppercase tracking-wider transition-all cursor-pointer border whitespace-nowrap ${
                           homeStatusFilter === status
-                            ? "bg-indigo-600 text-white border-indigo-600 font-extrabold shadow-sm"
+                            ? "bg-indigo-650 text-white border-indigo-650 font-extrabold shadow-sm"
                             : "bg-white text-slate-500 border-slate-200 hover:bg-slate-50 hover:text-slate-800"
                         }`}
                       >

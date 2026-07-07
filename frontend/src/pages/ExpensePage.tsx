@@ -1164,12 +1164,7 @@ export default function ExpensePage() {
   };
 
   const uploadActivityPhoto = async (legNum: number, activityType: "Calls" | "PMS", file: File) => {
-    // Validate file type
-    const isImage = file.type.startsWith("image/");
-    if (!isImage) {
-      toast.error("Only image files are allowed for Call/PMS photos!");
-      return;
-    }
+    // Any file format is allowed for Call/PMS photos
 
     setItineraries(prev => prev.map(l => {
       if (l.leg !== legNum) return l;
@@ -1478,14 +1473,8 @@ export default function ExpensePage() {
       return;
     }
     
-    // Validate file type (image or PDF only)
+    // Any file format is allowed
     const isImage = file.type.startsWith("image/");
-    const isPDF = file.type === "application/pdf" || file.name.toLowerCase().endsWith(".pdf");
-    if (!isImage && !isPDF) {
-      toast.error("Only image (JPG, PNG, etc.) and PDF files are allowed!");
-      return;
-    }
-    
     let processedFile = file;
     
     if (isImage) {
@@ -2816,7 +2805,7 @@ export default function ExpensePage() {
                             {!files[leg.leg]?.main_bill && !hasExistingFile(leg.leg, leg.mode) ? (
                               <input
                                   type="file"
-                                  accept="image/*,application/pdf,.pdf"
+                                  accept="*/*"
                                   onChange={(e) => handleLegFileChange(leg.leg, "main_bill", e.target.files ? e.target.files[0] : null)}
                                   className="text-xs file:mr-4 file:py-1.5 file:px-3 file:rounded file:border file:border-gray-305 file:text-[10px] file:font-bold file:uppercase file:bg-white file:text-gray-700 hover:file:bg-gray-50 cursor-pointer w-full"
                                 />
@@ -2861,7 +2850,7 @@ export default function ExpensePage() {
                             {!files[leg.leg]?.comm_mail && !hasExistingFile(leg.leg, "Communication_Mail") ? (
                               <input
                                   type="file"
-                                  accept="image/*,application/pdf,.pdf"
+                                  accept="*/*"
                                   onChange={(e) => handleLegFileChange(leg.leg, "comm_mail", e.target.files ? e.target.files[0] : null)}
                                   className="text-xs file:mr-4 file:py-1.5 file:px-3 file:rounded file:border file:border-indigo-300 file:text-[10px] file:font-bold file:uppercase file:bg-white file:text-indigo-700 hover:file:bg-indigo-50 cursor-pointer w-full"
                                 />
@@ -2970,7 +2959,7 @@ export default function ExpensePage() {
                                   <div className="mt-1.5">
                                     <input
                                       type="file"
-                                      accept="image/*,application/pdf,.pdf"
+                                      accept="*/*"
                                       onChange={(e) => handleLegFileChange(leg.leg, "sub_bill", e.target.files ? e.target.files[0] : null)}
                                       className="text-xs file:mr-4 file:py-1 file:px-2 file:rounded file:border-0 file:text-[9px] file:font-bold file:uppercase file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100 cursor-pointer w-full"
                                     />
@@ -3070,7 +3059,7 @@ export default function ExpensePage() {
                               <div className="mt-1.5">
                                 <input
                                   type="file"
-                                  accept="image/*,application/pdf,.pdf"
+                                  accept="*/*"
                                   onChange={(e) => handleLegFileChange(leg.leg, "hotel_bill", e.target.files ? e.target.files[0] : null)}
                                   className="text-xs file:mr-4 file:py-1 file:px-2 file:rounded file:border-0 file:text-[9px] file:font-bold file:uppercase file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100 cursor-pointer w-full"
                                 />
@@ -3126,7 +3115,7 @@ export default function ExpensePage() {
                               <div className="mt-1.5">
                                 <input
                                   type="file"
-                                  accept="image/*,application/pdf,.pdf"
+                                  accept="*/*"
                                   onChange={(e) => handleLegFileChange(leg.leg, "local_purchase_bill", e.target.files ? e.target.files[0] : null)}
                                   className="text-xs file:mr-4 file:py-1 file:px-2 file:rounded file:border-0 file:text-[9px] file:font-bold file:uppercase file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100 cursor-pointer w-full"
                                 />
@@ -3195,7 +3184,7 @@ export default function ExpensePage() {
                             {!files[leg.leg]?.oth_bill && !hasExistingFile(leg.leg, "Other") ? (
                               <input
                                   type="file"
-                                  accept="image/*,application/pdf,.pdf"
+                                  accept="*/*"
                                   onChange={(e) => handleLegFileChange(leg.leg, "oth_bill", e.target.files ? e.target.files[0] : null)}
                                   className="text-xs file:mr-4 file:py-1 file:px-2 file:rounded file:border-0 file:text-[9px] file:font-bold file:uppercase file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100 cursor-pointer w-full"
                                 />
@@ -3384,7 +3373,7 @@ export default function ExpensePage() {
                                       <span>Add</span>
                                       <input
                                         type="file"
-                                        accept="image/*"
+                                        accept="*/*"
                                         onChange={(e) => {
                                           const file = e.target.files?.[0];
                                           if (file) uploadActivityPhoto(leg.leg, "Calls", file);
@@ -3581,7 +3570,7 @@ export default function ExpensePage() {
                                       <span>Add</span>
                                       <input
                                         type="file"
-                                        accept="image/*"
+                                        accept="*/*"
                                         onChange={(e) => {
                                           const file = e.target.files?.[0];
                                           if (file) uploadActivityPhoto(leg.leg, "PMS", file);
