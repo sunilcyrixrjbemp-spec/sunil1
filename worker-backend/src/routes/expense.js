@@ -2362,3 +2362,40 @@ export async function handleServeExpenseAttachment(request, env, params, query, 
   return new Response("Storage not configured", { status: 500 });
 }
 
+export async function handleTestDb(request, env) {
+  const info = {};
+  
+  // 1. Check env vars
+  info.PRIMARY_ACCOUNT = env.PRIMARY_CLOUDFLARE_ACCOUNT_ID ? `present (${env.PRIMARY_CLOUDFLARE_ACCOUNT_ID.substring(0, 4)}...)` : "missing";
+  info.PRIMARY_DB = env.PRIMARY_CLOUDFLARE_DATABASE_ID ? `present (${env.PRIMARY_CLOUDFLARE_DATABASE_ID.substring(0, 4)}...)` : "missing";
+  info.PRIMARY_TOKEN = env.PRIMARY_CLOUDFLARE_API_TOKEN ? `present (len: ${env.PRIMARY_CLOUDFLARE_API_TOKEN.length}, prefix: ${env.PRIMARY_CLOUDFLARE_API_TOKEN.substring(0, 8)})` : "missing";
+  
+  const originalDB = env._originalDB || env.DB;
+  
+  // 2. Query available tables in edge DB
+  try {
+    const tables = await originalDB.prepare("SELECT name FROM sqlite_master WHERE type='table'").all();
+    info.edge_tables = (tables.results || []).map(r => r.name);
+  } catch (err) {
+    info.edge_tables_error = err.message;
+  }
+  
+  // 3. Query row count of assets_inventory on edge DB
+  try {
+    const count = await originalDB.prepare("SELECT count(*) as count FROM assets_inventory").first();
+    info.edge_assets_count = count ? count.count : 0;
+  } catch (err) {
+    info.edge_assets_count_error = err.message;
+  }
+
+  // 4. Test runRead query directly
+  try {
+    const res = await runRead(env, "SELECT count(*) as count FROM assets_inventory", [], request);
+    info.run_read_test = res;
+  } catch (err) {
+    info.run_read_test_error = err.message;
+  }
+  
+  return jsonResponse(info);
+}
+
