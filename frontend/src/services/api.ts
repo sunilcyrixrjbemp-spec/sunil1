@@ -39,6 +39,10 @@ const WORKER_BACKEND_URL = "https://fieldops-secondary-api.sunnybishnoi.workers.
 // Active server state: default to Cloudflare Worker, but swaps globally if any request fails
 let activeBaseURL = `${WORKER_BACKEND_URL}/api`;
 
+export function getActiveBaseURL() {
+  return activeBaseURL;
+}
+
 // Inject bearer token into request headers if exists
 api.interceptors.request.use(
   async (config) => {

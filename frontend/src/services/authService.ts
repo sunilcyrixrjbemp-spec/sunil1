@@ -1,4 +1,4 @@
-import api from "./api";
+import api, { getActiveBaseURL } from "./api";
 import { 
   LoginCredentials, 
   AuthResponse, 
@@ -200,10 +200,7 @@ export const authService = {
     if (url.startsWith("http://") || url.startsWith("https://") || url.startsWith("data:")) {
       return url;
     }
-    let baseUrl = import.meta.env.VITE_API_BASE_URL || "";
-    if (!baseUrl) {
-      baseUrl = "https://expense-backend-zio8.onrender.com/api";
-    }
+    const baseUrl = getActiveBaseURL();
     const host = baseUrl.replace(/\/api\/?$/, "").replace(/\/$/, "");
     const relative = url.startsWith("/") ? url : `/${url}`;
     return `${host}${relative}`;
