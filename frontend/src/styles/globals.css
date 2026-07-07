@@ -518,8 +518,8 @@ svg, path, g, sector, .recharts-pie-sector, .recharts-sector, .recharts-pie, .re
   button[class*="bg-emerald-500"],
   button.btn-verify-barcode {
     background-color: #10b981 !important;
-    color: #ffffff !important;
-    border: none !important;
+    color: #000000 !important;
+    border: 1.5px solid #0f172a !important;
   }
   button.bg-emerald-500:hover,
   button[class*="hover:bg-emerald-600"]:not(:disabled) {
@@ -1171,7 +1171,7 @@ svg, path, g, sector, .recharts-pie-sector, .recharts-sector, .recharts-pie, .re
 /* ================= COMPACT BARCODE VERIFY & ADD BUTTON OVERRIDES ================= */
 .btn-verify-barcode {
   background-color: #10b981 !important;
-  color: #ffffff !important;
+  color: #000000 !important;
   border-radius: 8px !important;
   height: 28px !important;
   min-height: 28px !important;
@@ -1180,7 +1180,7 @@ svg, path, g, sector, .recharts-pie-sector, .recharts-sector, .recharts-pie, .re
   padding: 0 12px !important;
   cursor: pointer !important;
   box-shadow: 0 2px 6px rgba(16, 185, 129, 0.25) !important;
-  border: none !important;
+  border: 1.5px solid #0f172a !important;
   text-transform: uppercase !important;
   display: inline-flex !important;
   align-items: center !important;

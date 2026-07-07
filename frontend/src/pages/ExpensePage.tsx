@@ -3317,8 +3317,8 @@ export default function ExpensePage() {
                                       }
                                       style={
                                         String(leg.calls_barcode || '').replace(/\D/g, '').length === 8
-                                          ? { backgroundColor: '#10b981', color: '#ffffff' }
-                                          : { backgroundColor: '#e2e8f0', color: '#94a3b8' }
+                                          ? { backgroundColor: '#10b981', color: '#000000', border: '1.5px solid #0f172a' }
+                                          : { backgroundColor: '#e2e8f0', color: '#94a3b8', border: '1px solid #cbd5e1' }
                                       }
                                     >
                                       Verify
@@ -3532,8 +3532,8 @@ export default function ExpensePage() {
                                       }
                                       style={
                                         String(leg.pms_barcode || '').replace(/\D/g, '').length === 8
-                                          ? { backgroundColor: '#10b981', color: '#ffffff' }
-                                          : { backgroundColor: '#e2e8f0', color: '#94a3b8' }
+                                          ? { backgroundColor: '#10b981', color: '#000000', border: '1.5px solid #0f172a' }
+                                          : { backgroundColor: '#e2e8f0', color: '#94a3b8', border: '1px solid #cbd5e1' }
                                       }
                                     >
                                       Verify
