@@ -648,6 +648,62 @@ export default function AnalysisPage() {
           border-color: rgba(99, 102, 241, 0.35) !important;
           box-shadow: 0 10px 30px -5px rgba(99, 102, 241, 0.05);
         }
+        .custom-filter-panel {
+          display: flex !important;
+          flex-direction: row !important;
+          flex-wrap: wrap !important;
+          align-items: center !important;
+          justify-content: flex-start !important;
+          gap: 10px !important;
+          background-color: rgba(15, 23, 42, 0.45) !important;
+          border: 1px solid rgba(30, 41, 59, 0.8) !important;
+          border-radius: 16px !important;
+          padding: 12px 16px !important;
+        }
+        .custom-filter-select {
+          min-height: 36px !important;
+          height: 36px !important;
+          padding: 4px 10px !important;
+          background-color: #0f172a !important;
+          color: #f1f5f9 !important;
+          border: 1px solid #1e293b !important;
+          border-radius: 10px !important;
+          font-size: 11px !important;
+          font-weight: 600 !important;
+          cursor: pointer !important;
+          display: inline-block !important;
+        }
+        .custom-select-district { width: 140px !important; }
+        .custom-select-engineer { width: 160px !important; }
+        .custom-select-month { width: 110px !important; }
+        .custom-select-year { width: 90px !important; }
+        .custom-select-status { width: 125px !important; }
+        
+        .custom-date-container {
+          display: inline-flex !important;
+          flex-direction: row !important;
+          align-items: center !important;
+          gap: 6px !important;
+          background-color: #0f172a !important;
+          border: 1px solid #1e293b !important;
+          border-radius: 10px !important;
+          padding: 4px 10px !important;
+          min-height: 36px !important;
+          height: 36px !important;
+          box-sizing: border-box !important;
+        }
+        .custom-date-input {
+          min-height: 20px !important;
+          height: 20px !important;
+          background-color: transparent !important;
+          color: #f1f5f9 !important;
+          border: 0 !important;
+          outline: none !important;
+          font-size: 11px !important;
+          font-weight: 650 !important;
+          width: 105px !important;
+          padding: 0 !important;
+        }
       `}</style>
 
       {/* Page Header */}
@@ -687,7 +743,7 @@ export default function AnalysisPage() {
       </div>
 
       {/* Glass Filter Panel */}
-      <div className="bg-slate-900/40 backdrop-blur-md border border-slate-800/80 rounded-2xl p-4 flex flex-wrap items-center gap-3 text-xs shadow-xl shadow-black/10">
+      <div className="custom-filter-panel shadow-xl shadow-black/10">
         <div className="flex items-center gap-2 text-indigo-400 font-extrabold mr-2 shrink-0">
           <i className="fas fa-filter text-xs"></i>
           <span className="text-[10px] uppercase tracking-widest">Filters</span>
@@ -698,7 +754,7 @@ export default function AnalysisPage() {
             <select
               value={selectedDistrict}
               onChange={(e) => setSelectedDistrict(e.target.value)}
-              className="!min-h-0 !h-9 !py-1 !w-40 !bg-slate-900 !text-slate-200 border !border-slate-800/80 rounded-xl px-3 text-xs cursor-pointer focus:outline-none focus:border-indigo-500 transition-all font-semibold"
+              className="custom-filter-select custom-select-district"
             >
               <option value="all">All Districts</option>
               {filterOptions.districts.map(d => (
@@ -709,7 +765,7 @@ export default function AnalysisPage() {
             <select
               value={selectedEngineer}
               onChange={(e) => setSelectedEngineer(e.target.value)}
-              className="!min-h-0 !h-9 !py-1 !w-44 !bg-slate-900 !text-slate-200 border !border-slate-800/80 rounded-xl px-3 text-xs cursor-pointer focus:outline-none focus:border-indigo-500 transition-all font-semibold"
+              className="custom-filter-select custom-select-engineer"
             >
               <option value="all">All Engineers</option>
               {filterOptions.engineers.map(name => (
@@ -723,7 +779,7 @@ export default function AnalysisPage() {
           value={selectedMonth}
           onChange={(e) => setSelectedMonth(Number(e.target.value))}
           disabled={!!startDate || !!endDate}
-          className={`!min-h-0 !h-9 !py-1 !w-32 !bg-slate-900 !text-slate-200 border !border-slate-800/80 rounded-xl px-3 text-xs cursor-pointer focus:outline-none focus:border-indigo-500 transition-all font-semibold ${
+          className={`custom-filter-select custom-select-month ${
             (!!startDate || !!endDate) ? "opacity-40 cursor-not-allowed" : ""
           }`}
         >
@@ -735,7 +791,7 @@ export default function AnalysisPage() {
           value={selectedYear}
           onChange={(e) => setSelectedYear(Number(e.target.value))}
           disabled={!!startDate || !!endDate}
-          className={`!min-h-0 !h-9 !py-1 !w-24 !bg-slate-900 !text-slate-200 border !border-slate-800/80 rounded-xl px-3 text-xs cursor-pointer focus:outline-none focus:border-indigo-500 transition-all font-semibold ${
+          className={`custom-filter-select custom-select-year ${
             (!!startDate || !!endDate) ? "opacity-40 cursor-not-allowed" : ""
           }`}
         >
@@ -747,7 +803,7 @@ export default function AnalysisPage() {
         <select
           value={selectedStatus}
           onChange={(e) => setSelectedStatus(e.target.value)}
-          className="!min-h-0 !h-9 !py-1 !w-36 !bg-slate-900 !text-slate-200 border !border-slate-800/80 rounded-xl px-3 text-xs cursor-pointer focus:outline-none focus:border-indigo-500 transition-all font-semibold"
+          className="custom-filter-select custom-select-status"
         >
           <option value="all">All Statuses</option>
           <option value="approved">Approved</option>
@@ -756,29 +812,29 @@ export default function AnalysisPage() {
         </select>
 
         {/* Date Range Picker */}
-        <div className="flex items-center gap-2 border border-slate-800 rounded-xl bg-slate-900 px-3 py-1.5 flex-wrap shrink-0">
-          <span className="text-[10px] text-slate-400 font-extrabold uppercase">From:</span>
+        <div className="custom-date-container">
+          <span className="text-[10px] text-slate-400 font-extrabold uppercase shrink-0">From:</span>
           <input
             type="date"
             value={startDate}
             min={minDateStr}
             max={maxDateStr}
             onChange={(e) => setStartDate(e.target.value)}
-            className="!min-h-0 !h-6 !py-0 !w-28 !bg-transparent !text-slate-200 outline-none border-0 text-xs cursor-pointer focus:ring-0 p-0 font-semibold"
+            className="custom-date-input"
           />
-          <span className="text-[10px] text-slate-400 font-extrabold uppercase">To:</span>
+          <span className="text-[10px] text-slate-400 font-extrabold uppercase shrink-0">To:</span>
           <input
             type="date"
             value={endDate}
             min={minDateStr}
             max={maxDateStr}
             onChange={(e) => setEndDate(e.target.value)}
-            className="!min-h-0 !h-6 !py-0 !w-28 !bg-transparent !text-slate-200 outline-none border-0 text-xs cursor-pointer focus:ring-0 p-0 font-semibold"
+            className="custom-date-input"
           />
           {(startDate || endDate) && (
             <button
               onClick={() => { setStartDate(""); setEndDate(""); }}
-              className="p-1 text-slate-400 hover:text-rose-500 rounded bg-transparent border-0 cursor-pointer flex items-center justify-center transition-colors"
+              className="p-0.5 text-slate-400 hover:text-rose-500 rounded bg-transparent border-0 cursor-pointer flex items-center justify-center transition-colors shrink-0"
               title="Clear Dates"
             >
               <i className="fas fa-times"></i>
