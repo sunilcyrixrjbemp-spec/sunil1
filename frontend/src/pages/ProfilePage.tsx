@@ -962,22 +962,22 @@ export default function ProfilePage() {
  
         {/* Right Column - Work Area Card with Tabs */}
         <div className="lg:col-span-2">
-          <div className="card-lte flex flex-col min-h-[500px] bg-white border border-slate-200/80 rounded-2xl shadow-sm overflow-hidden">
+          <div className="card border border-slate-100 flex flex-col min-h-[500px] bg-white rounded-3xl shadow-sm overflow-hidden">
             
             {/* Header Tabs */}
-            <div className="border-b border-slate-250 bg-slate-50 flex flex-row items-stretch rounded-t-2xl overflow-hidden">
+            <div className="border-b border-slate-100 bg-slate-50/50 flex flex-row items-stretch rounded-t-3xl overflow-hidden">
               <button
                 onClick={() => {
                   setNotice(null);
                   handleTabChange("info");
                 }}
-                className={`flex-1 py-3 px-6 text-center text-xs font-black uppercase tracking-widest transition-all flex items-center justify-center gap-2 cursor-pointer border-0 bg-transparent ${
+                className={`flex-1 py-3.5 px-6 text-center text-xs font-black uppercase tracking-widest transition-all flex items-center justify-center gap-2 cursor-pointer border-0 bg-transparent ${
                   activeTab === "info"
-                    ? "bg-white text-slate-900 border-b-2 border-b-[#a5d8e8]"
-                    : "text-slate-500 hover:text-slate-900 hover:bg-slate-100"
+                    ? "bg-white text-indigo-700 border-b-2 border-b-indigo-600 font-extrabold"
+                    : "text-slate-500 hover:text-slate-900 hover:bg-slate-50"
                 }`}
               >
-                <i className="fas fa-user-circle text-[#a5d8e8]"></i>
+                <i className="fas fa-user-circle text-indigo-500"></i>
                 <span>Personal Info</span>
               </button>
               <button
@@ -985,9 +985,9 @@ export default function ProfilePage() {
                   setPassNotice(null);
                   handleTabChange("password");
                 }}
-                className={`flex-1 py-3 px-6 text-center text-xs font-black uppercase tracking-widest transition-all flex items-center justify-center gap-2 cursor-pointer border-0 bg-transparent border-l border-slate-200 ${
+                className={`flex-1 py-3.5 px-6 text-center text-xs font-black uppercase tracking-widest transition-all flex items-center justify-center gap-2 cursor-pointer border-0 bg-transparent border-l border-slate-100 ${
                   activeTab === "password"
-                    ? "bg-white text-slate-900 border-b-2 border-b-[#a5d8e8]"
+                    ? "bg-white text-indigo-700 border-b-2 border-b-indigo-600 font-extrabold"
                     : "text-slate-500 hover:text-slate-900 hover:bg-slate-100"
                 }`}
               >

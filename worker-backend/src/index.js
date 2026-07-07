@@ -57,7 +57,8 @@ import {
   handleListExpenses, handleExpenseInit, handleCreateLimitRequest, handleSubmitExpense,
   handleGetTeamExpenses, handleVerifyBarcode, handleGetAssetValueMaster,
   handleGetEngineerAdvance, handleSaveEngineerAdvance, handleGetExpenseDetails, handleDeleteExpense,
-  handleGetMonthSummary, handleGetEngineerMonthClaims, handleGetConsolidatedReport
+  handleGetMonthSummary, handleGetEngineerMonthClaims, handleGetConsolidatedReport,
+  handleServeExpenseAttachment
 } from "./routes/expense.js";
 
 // CORS Headers Configuration
@@ -217,6 +218,7 @@ router.post("/api/upload/image", handleUploadImage, true);
 router.post("/api/upload/document", handleUploadDocument, true);
 router.get("/api/upload/file/images/:filename", handleServeFile, true);
 router.get("/api/upload/file/documents/:filename", handleServeFile, true);
+router.get("/uploads/expense_attachments/:filename", handleServeExpenseAttachment, false);
 
 // ─── Reports Endpoints (Requires Auth) ────────────────────────────────────────
 router.get("/api/reports/mis-dashboard", handleGetMisDashboard, true);

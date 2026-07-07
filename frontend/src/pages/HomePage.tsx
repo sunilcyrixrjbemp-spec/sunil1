@@ -566,104 +566,106 @@ export default function HomePage() {
     <>
       <div className="space-y-6 animate-fadeIn text-[#212529]">
         
-        {/* Page Header */}
-        <div>
-          <h2 className="text-2xl font-black text-gray-900 uppercase tracking-wide">
-            Dashboard Home
-          </h2>
-          <p className="text-gray-500 text-xs mt-1">Access claims summary statistics and operations management hub.</p>
-        </div>
-      
-        {/* Welcome Banner - AdminLTE card style with gradient border top */}
-      <div className="bg-white border-2 border-blue-200 rounded-lg shadow-md p-4 hover:shadow-lg transition-shadow relative overflow-hidden">
-        <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-blue-600 via-indigo-500 to-blue-600"></div>
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-          <div className="space-y-0.5 flex-1">
-            <span className="text-blue-600 font-extrabold text-[9px] uppercase tracking-widest block">Operations Hub</span>
-            <h2 className="text-base font-extrabold text-gray-800">Hi, {user.name}</h2>
-          </div>
-          <img src={brandLogo} alt="Cyrix Logo" className="h-14 w-auto object-contain shrink-0 hidden sm:block bg-white p-1.5 rounded border border-gray-300 shadow-xs" />
-        </div>
-      </div>
-
-      {/* ⚡ Quick Actions Navigation Bar */}
-      <div className="hidden md:block bg-white border-t-4 border-t-blue-500 rounded shadow-xs p-3 mb-4">
-        <h4 className="text-[10px] font-black uppercase text-gray-500 tracking-wider mb-2.5 flex items-center gap-1.5">
-          <Compass className="w-4 h-4 text-blue-600" />
-          Quick Actions Shortcuts
-        </h4>
-        <div className="flex flex-wrap gap-2.5">
-          <Link
-            to="/submit-expense"
-            className="flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold px-3.5 py-2 rounded no-underline shadow-sm transition-all duration-200"
-          >
-            <Plus className="w-4 h-4" />
-            Submit New Expense
-          </Link>
+        {/* Welcome Banner - Modern Premium Gradient Card */}
+        <div className="relative overflow-hidden rounded-3xl bg-gradient-to-r from-slate-900 via-indigo-950 to-slate-900 p-6 text-white shadow-xl border border-slate-800/80">
+          <div className="absolute -right-10 -top-10 h-32 w-32 rounded-full bg-indigo-500/10 blur-2xl"></div>
+          <div className="absolute -left-10 -bottom-10 h-32 w-32 rounded-full bg-blue-500/10 blur-2xl"></div>
           
-          {(() => {
-            const allowed = (user?.allowed_windows || "").toLowerCase();
-            const isReviewer = allowed.includes("approval");
-            if (isReviewer) {
-              return (
-                <Link
-                  to="/approval-center"
-                  className="flex items-center gap-2 bg-green-600 hover:bg-green-700 text-white text-xs font-bold px-3.5 py-2 rounded no-underline shadow-sm transition-all duration-200"
-                >
-                  <ShieldCheck className="w-4 h-4" />
-                  Approval Center
-                </Link>
-              );
-            }
-            return null;
-          })()}
-
-          {(() => {
-            const allowed = (user?.allowed_windows || "").toLowerCase();
-            if (allowed.includes("consolidated_report")) {
-              return (
-                <Link
-                  to="/consolidated-report"
-                  className="flex items-center gap-2 bg-cyan-600 hover:bg-cyan-700 text-white text-xs font-bold px-3.5 py-2 rounded no-underline shadow-sm transition-all duration-200"
-                >
-                  <FileSpreadsheet className="w-4 h-4" />
-                  Consolidated Report
-                </Link>
-              );
-            }
-            return null;
-          })()}
-
-          {(() => {
-            const allowed = (user?.allowed_windows || "").toLowerCase();
-            if (allowed.includes("analysis")) {
-              return (
-                <Link
-                  to="/analysis"
-                  className="flex items-center gap-2 bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold px-3.5 py-2 rounded no-underline shadow-sm transition-all duration-200"
-                >
-                  <BarChart3 className="w-4 h-4" />
-                  Analysis Dashboard
-                </Link>
-              );
-            }
-            return null;
-          })()}
-
-          {(user?.allowed_windows || "").toLowerCase().includes("admin") && (
-            <Link
-              to="/admin"
-              className="flex items-center gap-2 bg-gray-800 hover:bg-gray-900 text-white text-xs font-bold px-3.5 py-2 rounded no-underline shadow-sm transition-all duration-200"
-            >
-              <Users className="w-4 h-4" />
-              Admin Panel
-            </Link>
-          )}
+          <div className="relative flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+            <div className="space-y-1">
+              <span className="text-indigo-400 font-black text-[10px] uppercase tracking-widest block">Operations Hub</span>
+              <h2 className="text-2xl font-bold tracking-tight text-white">Hi, {user.name}</h2>
+              <p className="text-slate-300 text-xs font-medium">Access claims summary statistics and operations management hub.</p>
+            </div>
+            
+            <div className="flex items-center gap-3">
+              <img 
+                src={brandLogo} 
+                alt="Cyrix Logo" 
+                className="h-12 w-auto object-contain shrink-0 bg-white/10 backdrop-blur-md p-2 rounded-2xl border border-white/10 shadow-lg" 
+              />
+            </div>
+          </div>
         </div>
-      </div>
+
+        {/* Quick Actions Shortcuts */}
+        <div className="bg-white border border-slate-100 rounded-3xl p-5 shadow-sm space-y-3">
+          <h4 className="text-[10px] font-black uppercase text-slate-400 tracking-wider flex items-center gap-2">
+            <Compass className="w-4 h-4 text-indigo-500" />
+            Quick Access Shortcuts
+          </h4>
+          <div className="flex flex-wrap gap-3">
+            <Link
+              to="/submit-expense"
+              className="group flex items-center gap-2 bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold px-4 py-2.5 rounded-2xl no-underline shadow-sm hover:shadow transition-all duration-200 transform hover:-translate-y-0.5"
+            >
+              <Plus className="w-4 h-4 transition-transform group-hover:rotate-90" />
+              Submit New Expense
+            </Link>
+            
+            {(() => {
+              const allowed = (user?.allowed_windows || "").toLowerCase();
+              const isReviewer = allowed.includes("approval");
+              if (isReviewer) {
+                return (
+                  <Link
+                    to="/approval-center"
+                    className="flex items-center gap-2 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold px-4 py-2.5 rounded-2xl no-underline shadow-sm hover:shadow transition-all duration-200 transform hover:-translate-y-0.5"
+                  >
+                    <ShieldCheck className="w-4 h-4" />
+                    Approval Center
+                  </Link>
+                );
+              }
+              return null;
+            })()}
+
+            {(() => {
+              const allowed = (user?.allowed_windows || "").toLowerCase();
+              if (allowed.includes("consolidated_report")) {
+                return (
+                  <Link
+                    to="/consolidated-report"
+                    className="flex items-center gap-2 bg-teal-600 hover:bg-teal-700 text-white text-xs font-bold px-4 py-2.5 rounded-2xl no-underline shadow-sm hover:shadow transition-all duration-200 transform hover:-translate-y-0.5"
+                  >
+                    <FileSpreadsheet className="w-4 h-4" />
+                    Consolidated Report
+                  </Link>
+                );
+              }
+              return null;
+            })()}
+
+            {(() => {
+              const allowed = (user?.allowed_windows || "").toLowerCase();
+              if (allowed.includes("analysis")) {
+                return (
+                  <Link
+                    to="/analysis"
+                    className="flex items-center gap-2 bg-violet-600 hover:bg-violet-700 text-white text-xs font-bold px-4 py-2.5 rounded-2xl no-underline shadow-sm hover:shadow transition-all duration-200 transform hover:-translate-y-0.5"
+                  >
+                    <BarChart3 className="w-4 h-4" />
+                    Analysis Dashboard
+                  </Link>
+                );
+              }
+              return null;
+            })()}
+
+            {(user?.allowed_windows || "").toLowerCase().includes("admin") && (
+              <Link
+                to="/admin"
+                className="flex items-center gap-2 bg-slate-800 hover:bg-slate-900 text-white text-xs font-bold px-4 py-2.5 rounded-2xl no-underline shadow-sm hover:shadow transition-all duration-200 transform hover:-translate-y-0.5"
+              >
+                <Users className="w-4 h-4" />
+                Admin Panel
+              </Link>
+            )}
+          </div>
+        </div>
 
       {isReviewerRole && pendingLimitRequestsCount > 0 && (
-        <div className="bg-amber-50 border-l-4 border-amber-500 p-4 rounded shadow-sm flex items-center justify-between animate-fadeIn mb-4">
+        <div className="bg-amber-50/50 border border-amber-250 p-4 rounded-3xl shadow-sm flex items-center justify-between animate-fadeIn mb-4">
           <div className="flex items-center gap-3">
             <AlertTriangle className="w-5 h-5 text-amber-600 shrink-0" />
             <div>
@@ -675,7 +677,7 @@ export default function HomePage() {
           </div>
           <Link 
             to="/approval-center" 
-            className="btn-lte-warning px-3 py-1.5 flex items-center gap-1.5 text-[10px] font-black uppercase tracking-wider shadow-xs no-underline"
+            className="bg-amber-600 hover:bg-amber-700 text-white px-3.5 py-2 rounded-2xl text-[10px] font-black uppercase tracking-wider shadow-sm transition-all duration-200 no-underline"
           >
             Review Now
           </Link>
@@ -685,79 +687,81 @@ export default function HomePage() {
       {/* Navigation Quick Cards replaced by Stats Cards */}
       <div className="space-y-3">
         <div className="flex items-center justify-between">
-          <h3 className="text-xs font-bold text-gray-650 uppercase tracking-wider">
+          <h3 className="text-xs font-bold text-slate-500 uppercase tracking-wider">
             {activeTab === "my-claims" ? "My Expense Summary" : "Team Expense Summary"}
           </h3>
           
           {/* Month selector element */}
           <div className="flex items-center gap-2">
-            <span className="text-[9px] font-black uppercase text-gray-400 tracking-wider">Select Month:</span>
+            <span className="text-[9px] font-black uppercase text-slate-400 tracking-wider">Select Month:</span>
             <input 
               type="month"
               value={selectMonth}
               onChange={(e) => setSelectMonth(e.target.value)}
-              className="bg-white border border-gray-300 rounded px-2.5 py-1 text-[10px] font-bold text-gray-800 focus:outline-none focus:border-blue-500 shadow-xs cursor-pointer"
+              className="bg-white border border-slate-200 rounded-2xl px-3 py-1.5 text-[10px] font-bold text-slate-800 focus:outline-none focus:border-indigo-500 shadow-sm cursor-pointer transition-colors"
             />
           </div>
         </div>
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
+        
+        {/* Metric Cards Grid */}
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
           {/* Card 1: Total Claimed */}
           <div 
             onClick={() => handleOpenStatsModal("Total Claimed", statsTotalClaims)}
-            className="info-box-lte cursor-pointer animate-fadeIn"
+            className="group bg-white border border-slate-100 rounded-3xl p-4 flex items-center gap-4 cursor-pointer hover:shadow-md hover:-translate-y-1 transition-all duration-300 animate-fadeIn"
           >
-            <div className="info-box-icon bg-[#007bff]">
-              <FileSpreadsheet className="w-5 h-5 text-white" />
+            <div className="w-12 h-12 rounded-2xl flex items-center justify-center bg-blue-50 text-blue-600 group-hover:bg-blue-600 group-hover:text-white transition-colors duration-300 shrink-0">
+              <FileSpreadsheet className="w-5 h-5" />
             </div>
-            <div className="info-box-content">
-              <span className="text-[9px] font-bold uppercase tracking-wider text-gray-400 block">Total Claimed</span>
-              <span className="text-base font-extrabold text-gray-800 font-mono block mt-0.5">₹{(totalAmount || 0).toLocaleString()}</span>
-              <span className="text-[9px] text-[#007bff] font-bold uppercase block mt-1">{statsTotalClaims.length} Claims Filed</span>
+            <div className="min-w-0">
+              <span className="text-[10px] font-black uppercase tracking-wider text-slate-400 block">Total Claimed</span>
+              <span className="text-lg font-black text-slate-800 font-mono block mt-0.5">₹{(totalAmount || 0).toLocaleString()}</span>
+              <span className="text-[10px] text-blue-600 font-extrabold block mt-0.5">{statsTotalClaims.length} Claims Filed</span>
             </div>
           </div>
 
           {/* Card 2: Approved */}
           <div 
             onClick={() => handleOpenStatsModal("Approved", statsApprovedClaims)}
-            className="info-box-lte cursor-pointer animate-fadeIn"
+            className="group bg-white border border-slate-100 rounded-3xl p-4 flex items-center gap-4 cursor-pointer hover:shadow-md hover:-translate-y-1 transition-all duration-300 animate-fadeIn"
           >
-            <div className="info-box-icon bg-[#28a745]">
-              <CheckCircle2 className="w-5 h-5 text-white" />
+            <div className="w-12 h-12 rounded-2xl flex items-center justify-center bg-emerald-50 text-emerald-600 group-hover:bg-emerald-600 group-hover:text-white transition-colors duration-300 shrink-0">
+              <CheckCircle2 className="w-5 h-5" />
             </div>
-            <div className="info-box-content">
-              <span className="text-[9px] font-bold uppercase tracking-wider text-gray-400 block">Approved Claim</span>
-              <span className="text-base font-extrabold text-gray-800 font-mono block mt-0.5">₹{(approvedAmount || 0).toLocaleString()}</span>
-              <span className="text-[9px] text-[#28a745] font-bold uppercase block mt-1">{statsApprovedClaims.length} Approved</span>
+            <div className="min-w-0">
+              <span className="text-[10px] font-black uppercase tracking-wider text-slate-400 block">Approved</span>
+              <span className="text-lg font-black text-slate-800 font-mono block mt-0.5">₹{(approvedAmount || 0).toLocaleString()}</span>
+              <span className="text-[10px] text-emerald-600 font-extrabold block mt-0.5">{statsApprovedClaims.length} Approved</span>
             </div>
           </div>
 
           {/* Card 3: Pending */}
           <div 
             onClick={() => handleOpenStatsModal("Pending", statsPendingClaims)}
-            className="info-box-lte cursor-pointer animate-fadeIn"
+            className="group bg-white border border-slate-100 rounded-3xl p-4 flex items-center gap-4 cursor-pointer hover:shadow-md hover:-translate-y-1 transition-all duration-300 animate-fadeIn"
           >
-            <div className="info-box-icon bg-[#ffc107]">
-              <Clock className="w-5 h-5 text-white" />
+            <div className="w-12 h-12 rounded-2xl flex items-center justify-center bg-amber-50 text-amber-600 group-hover:bg-amber-600 group-hover:text-white transition-colors duration-300 shrink-0">
+              <Clock className="w-5 h-5" />
             </div>
-            <div className="info-box-content">
-              <span className="text-[9px] font-bold uppercase tracking-wider text-gray-400 block">Pending Claims</span>
-              <span className="text-base font-extrabold text-gray-800 font-mono block mt-0.5">₹{(pendingAmount || 0).toLocaleString()}</span>
-              <span className="text-[9px] text-amber-600 font-bold uppercase block mt-1">{statsPendingClaims.length} Pending Review</span>
+            <div className="min-w-0">
+              <span className="text-[10px] font-black uppercase tracking-wider text-slate-400 block">Pending Review</span>
+              <span className="text-lg font-black text-slate-800 font-mono block mt-0.5">₹{(pendingAmount || 0).toLocaleString()}</span>
+              <span className="text-[10px] text-amber-600 font-extrabold block mt-0.5">{statsPendingClaims.length} Pending</span>
             </div>
           </div>
 
           {/* Card 4: Rejected */}
           <div 
             onClick={() => handleOpenStatsModal("Rejected", statsRejectedClaims)}
-            className="info-box-lte cursor-pointer animate-fadeIn"
+            className="group bg-white border border-slate-100 rounded-3xl p-4 flex items-center gap-4 cursor-pointer hover:shadow-md hover:-translate-y-1 transition-all duration-300 animate-fadeIn"
           >
-            <div className="info-box-icon bg-[#dc3545]">
-              <XCircle className="w-5 h-5 text-white" />
+            <div className="w-12 h-12 rounded-2xl flex items-center justify-center bg-rose-50 text-rose-600 group-hover:bg-rose-600 group-hover:text-white transition-colors duration-300 shrink-0">
+              <XCircle className="w-5 h-5" />
             </div>
-            <div className="info-box-content">
-              <span className="text-[9px] font-bold uppercase tracking-wider text-gray-400 block">Rejected Claim</span>
-              <span className="text-base font-extrabold text-gray-800 font-mono block mt-0.5">₹{(rejectedAmount || 0).toLocaleString()}</span>
-              <span className="text-[9px] text-[#dc3545] font-bold uppercase block mt-1">{statsRejectedClaims.length} Rejected</span>
+            <div className="min-w-0">
+              <span className="text-[10px] font-black uppercase tracking-wider text-slate-400 block">Rejected</span>
+              <span className="text-lg font-black text-slate-800 font-mono block mt-0.5">₹{(rejectedAmount || 0).toLocaleString()}</span>
+              <span className="text-[10px] text-rose-600 font-extrabold block mt-0.5">{statsRejectedClaims.length} Rejected</span>
             </div>
           </div>
         </div>
@@ -770,23 +774,19 @@ export default function HomePage() {
         <div className="lg:col-span-2 space-y-6">
 
           {/* TAB SYSTEM: My Claims vs Team Claims */}
-          <div className="bg-white border border-gray-200 rounded shadow-sm overflow-hidden flex flex-col">
+          <div className="bg-white border border-slate-100 rounded-3xl shadow-sm overflow-hidden flex flex-col">
             {/* Tab Header bar */}
-            <div className="bg-[#e9eff6] flex items-center justify-start p-1.5 gap-2" style={{ borderBottom: '1px solid #e2e8f0' }}>
+            <div className="bg-slate-50 border-b border-slate-100 flex items-center justify-start p-2 gap-2">
               <button
                 type="button"
                 onClick={() => handleTabChange("my-claims")}
-                style={{
-                  minHeight: 'auto',
-                  backgroundColor: activeTab === "my-claims" ? "#a5d8e8" : undefined
-                }}
-                className={`py-1 px-4 font-black text-xs uppercase tracking-wider rounded-lg transition-all flex items-center gap-1.5 cursor-pointer whitespace-nowrap border-0 ${
+                className={`py-2 px-5 font-black text-xs uppercase tracking-wider rounded-2xl transition-all flex items-center gap-1.5 cursor-pointer border-0 ${
                   activeTab === "my-claims"
-                    ? "text-slate-900 font-extrabold shadow-sm"
-                    : "text-slate-600 bg-transparent hover:text-slate-900 hover:bg-slate-200/50"
+                    ? "bg-indigo-600 text-white shadow-sm font-extrabold"
+                    : "text-slate-500 bg-transparent hover:text-slate-850 hover:bg-slate-100"
                 }`}
               >
-                <Layers className="w-3.5 h-3.5" />
+                <Layers className="w-4 h-4" />
                 My Claims ({filteredPersonalExpenses.length})
               </button>
 
@@ -794,47 +794,43 @@ export default function HomePage() {
                 <button
                   type="button"
                   onClick={() => handleTabChange("team-claims")}
-                  style={{
-                    minHeight: 'auto',
-                    backgroundColor: activeTab === "team-claims" ? "#a5d8e8" : undefined
-                  }}
-                  className={`py-1 px-4 font-black text-xs uppercase tracking-wider rounded-lg transition-all flex items-center gap-1.5 cursor-pointer whitespace-nowrap border-0 ${
+                  className={`py-2 px-5 font-black text-xs uppercase tracking-wider rounded-2xl transition-all flex items-center gap-1.5 cursor-pointer border-0 ${
                     activeTab === "team-claims"
-                      ? "text-slate-900 font-extrabold shadow-sm"
-                      : "text-slate-600 bg-transparent hover:text-slate-900 hover:bg-slate-200/50"
+                      ? "bg-indigo-600 text-white shadow-sm font-extrabold"
+                      : "text-slate-500 bg-transparent hover:text-slate-850 hover:bg-slate-100"
                   }`}
                 >
-                  <Users className="w-3.5 h-3.5" />
+                  <Users className="w-4 h-4" />
                   Team Claims ({filteredTeamExpenses.length})
                 </button>
               )}
             </div>
 
             {/* Contextual Filters Row — matches ExpensePage compact filter style */}
-            <div className="border-b border-gray-200 px-3 py-2.5">
+            <div className="border-b border-slate-100 px-4 py-3">
               {activeTab === "my-claims" ? (
                 /* My Self Tab Filters */
-                <div className="bg-slate-50 border border-gray-200 rounded p-2.5 flex flex-col gap-2 text-[10px] font-bold text-gray-700">
+                <div className="bg-slate-50/50 border border-slate-100 rounded-2xl p-3.5 flex flex-col gap-3 text-[10px] font-bold text-slate-700">
                   {/* Row 1: Month dropdown */}
-                  <div className="flex flex-col gap-1 max-w-[150px]">
-                    <span className="text-[8px] font-black uppercase text-gray-400">Month</span>
+                  <div className="flex flex-col gap-1 max-w-[160px]">
+                    <span className="text-[8px] font-black uppercase text-slate-400">Month</span>
                     <input 
                       type="month"
                       value={selectMonth}
                       onChange={(e) => setSelectMonth(e.target.value)}
-                      className="bg-white border border-gray-300 rounded px-2 py-1 text-[10px] font-black text-gray-800 cursor-pointer focus:outline-none focus:border-blue-500 w-full"
+                      className="bg-white border border-slate-200 rounded-xl px-2.5 py-1.5 text-[10px] font-black text-slate-800 cursor-pointer focus:outline-none focus:border-indigo-500 w-full"
                     />
                   </div>
                   {/* Row 2: Status pill buttons */}
-                  <div className="flex items-center gap-1.5 overflow-x-auto no-scrollbar py-0.5 border-t border-gray-200/50 pt-1.5">
+                  <div className="flex items-center gap-2 overflow-x-auto no-scrollbar py-0.5 border-t border-slate-100 pt-3">
                     {(["all", "pending", "approved", "rejected"] as const).map((status) => (
                       <button
                         key={status}
                         onClick={() => setHomeStatusFilter(status)}
-                        className={`px-2.5 py-0.5 rounded text-[9px] font-black uppercase tracking-wider transition-all cursor-pointer border whitespace-nowrap ${
+                        className={`px-3 py-1 rounded-full text-[9px] font-black uppercase tracking-wider transition-all cursor-pointer border whitespace-nowrap ${
                           homeStatusFilter === status
-                            ? "bg-[#a5d8e8] text-slate-800 border-[#a5d8e8] font-extrabold shadow-sm"
-                            : "bg-white text-gray-600 border-gray-300 hover:bg-slate-100 hover:text-gray-800"
+                            ? "bg-indigo-600 text-white border-indigo-600 font-extrabold shadow-sm"
+                            : "bg-white text-slate-500 border-slate-200 hover:bg-slate-50 hover:text-slate-800"
                         }`}
                       >
                         {status === "all" ? "All" : status}
@@ -844,25 +840,25 @@ export default function HomePage() {
                 </div>
               ) : (
                 /* Team / Engineer Claims Tab Filters */
-                <div className="bg-slate-50 border border-gray-200 rounded p-2.5 flex flex-col gap-2 text-[10px] font-bold text-gray-700">
+                <div className="bg-slate-50/50 border border-slate-100 rounded-2xl p-3.5 flex flex-col gap-3 text-[10px] font-bold text-slate-700">
                   {/* Row 1: Month and Engineer dropdowns with labels on top */}
-                  <div className="grid grid-cols-2 gap-2.5 w-full">
+                  <div className="grid grid-cols-2 gap-3 w-full">
                     <div className="flex flex-col gap-1">
-                      <span className="text-[8px] font-black uppercase text-gray-400">Month</span>
+                      <span className="text-[8px] font-black uppercase text-slate-400">Month</span>
                       <input 
                         type="month"
                         value={selectMonth}
                         onChange={(e) => setSelectMonth(e.target.value)}
-                        className="bg-white border border-gray-300 rounded px-2 py-1 text-[10px] font-black text-gray-800 cursor-pointer focus:outline-none focus:border-blue-500 w-full"
+                        className="bg-white border border-slate-200 rounded-xl px-2.5 py-1.5 text-[10px] font-black text-slate-800 cursor-pointer focus:outline-none focus:border-indigo-500 w-full"
                       />
                     </div>
 
                     <div className="flex flex-col gap-1">
-                      <span className="text-[8px] font-black uppercase text-gray-400">Engineer</span>
+                      <span className="text-[8px] font-black uppercase text-slate-400">Engineer</span>
                       <select 
                         value={filterEmployee} 
                         onChange={(e) => setFilterEmployee(e.target.value)}
-                        className="bg-white border border-gray-300 rounded px-2 py-1 text-[10px] font-black text-gray-800 cursor-pointer focus:outline-none focus:border-blue-500 w-full"
+                        className="bg-white border border-slate-200 rounded-xl px-2.5 py-1.5 text-[10px] font-black text-slate-800 cursor-pointer focus:outline-none focus:border-indigo-500 w-full"
                       >
                         <option value="all">All Members</option>
                         {uniqueEmployees.map(emp => (
@@ -873,15 +869,15 @@ export default function HomePage() {
                   </div>
 
                   {/* Row 2: Status pill buttons */}
-                  <div className="flex items-center gap-1.5 overflow-x-auto no-scrollbar py-0.5 border-t border-gray-200/50 pt-1.5">
+                  <div className="flex items-center gap-2 overflow-x-auto no-scrollbar py-0.5 border-t border-slate-100 pt-3">
                     {(["all", "pending", "approved", "rejected"] as const).map((status) => (
                       <button
                         key={status}
                         onClick={() => setHomeStatusFilter(status)}
-                        className={`px-2.5 py-0.5 rounded text-[9px] font-black uppercase tracking-wider transition-all cursor-pointer border whitespace-nowrap ${
+                        className={`px-3 py-1 rounded-full text-[9px] font-black uppercase tracking-wider transition-all cursor-pointer border whitespace-nowrap ${
                           homeStatusFilter === status
-                            ? "bg-[#a5d8e8] text-slate-800 border-[#a5d8e8] font-extrabold shadow-sm"
-                            : "bg-white text-gray-600 border-gray-300 hover:bg-[#a5d8e8]/20 hover:text-slate-800"
+                            ? "bg-indigo-600 text-white border-indigo-600 font-extrabold shadow-sm"
+                            : "bg-white text-slate-500 border-slate-200 hover:bg-slate-50 hover:text-slate-800"
                         }`}
                       >
                         {status === "all" ? "All" : status}
@@ -1115,16 +1111,16 @@ export default function HomePage() {
         <div className="hidden lg:block space-y-4 font-sans">
           {activeTab === "my-claims" ? (
             /* PERSONAL CLAIMS CHART BOX */
-            <div className="bg-white border border-gray-200 border-t-4 border-t-blue-600 rounded shadow-sm p-5 space-y-4">
+            <div className="bg-white border border-slate-100 rounded-3xl p-5 shadow-sm space-y-4">
               <div className="space-y-1">
-                <span className="text-blue-600 font-extrabold text-[9px] uppercase tracking-widest block">Claims Analytics</span>
-                <h3 className="text-xs font-bold text-gray-800 uppercase tracking-wider flex items-center gap-1.5">
-                  <BarChart3 className="w-4 h-4 text-blue-605" />
+                <span className="text-indigo-650 font-extrabold text-[9px] uppercase tracking-widest block">Claims Analytics</span>
+                <h3 className="text-xs font-bold text-slate-800 uppercase tracking-wider flex items-center gap-1.5">
+                  <BarChart3 className="w-4 h-4 text-indigo-500" />
                   Personal Mode Breakdown
                 </h3>
               </div>
               {safeMyExpenses.length === 0 ? (
-                <div className="py-8 text-center text-gray-400 text-[10px] font-semibold uppercase tracking-wider">
+                <div className="py-8 text-center text-slate-450 text-[10px] font-bold uppercase tracking-wider">
                   No claims to analyze
                 </div>
               ) : (
@@ -1132,7 +1128,7 @@ export default function HomePage() {
                   <ResponsiveContainer width="100%" height="100%">
                     <PieChart>
                       <Pie
-                        data={getPersonalChartData().map(c => ({ name: c.label, value: c.amount }))}
+                         data={getPersonalChartData().map(c => ({ name: c.label, value: c.amount }))}
                         cx="50%" cy="50%"
                         innerRadius={45}
                         outerRadius={65}
@@ -1149,7 +1145,7 @@ export default function HomePage() {
                     </PieChart>
                   </ResponsiveContainer>
                   <div className="absolute flex flex-col items-center justify-center pointer-events-none" style={{ top: '40%', left: '50%', transform: 'translate(-50%, -50%)' }}>
-                    <span className="text-[8px] text-gray-400 font-bold uppercase tracking-wider">Total Claimed</span>
+                    <span className="text-[8px] text-slate-400 font-bold uppercase tracking-wider">Total Claimed</span>
                     <span className="text-xs font-black text-slate-800 font-mono">
                       ₹{getPersonalChartData().reduce((sum, item) => sum + item.amount, 0).toLocaleString()}
                     </span>
@@ -1159,25 +1155,25 @@ export default function HomePage() {
             </div>
           ) : (
             /* TEAM CLAIMS ANALYTICS & CHART BOX */
-            <div className="bg-white border border-gray-200 border-t-4 border-t-indigo-600 rounded shadow-sm p-5 space-y-4">
+            <div className="bg-white border border-slate-100 rounded-3xl p-5 shadow-sm space-y-4">
               <div className="space-y-1">
                 <span className="text-indigo-600 font-extrabold text-[9px] uppercase tracking-widest block">Team Performance</span>
-                <h3 className="text-xs font-bold text-gray-800 uppercase tracking-wider flex items-center gap-1.5">
-                  <BarChart3 className="w-4 h-4 text-indigo-605" />
+                <h3 className="text-xs font-bold text-slate-800 uppercase tracking-wider flex items-center gap-1.5">
+                  <BarChart3 className="w-4 h-4 text-indigo-500" />
                   Team Claims Analytics
                 </h3>
               </div>
 
               {/* Filters Panel */}
-              <div className="space-y-3 p-3.5 bg-slate-50 rounded border border-slate-100 text-[10px] font-bold text-gray-650">
-                <span className="uppercase tracking-widest text-[9px] block text-slate-500">Filter Controls</span>
+              <div className="space-y-3 p-4 bg-slate-50/50 rounded-2xl border border-slate-100 text-[10px] font-bold text-slate-700">
+                <span className="uppercase tracking-widest text-[8px] font-black text-slate-400 block">Filter Controls</span>
                 <div className="space-y-2">
                   <div className="space-y-0.5">
-                    <label className="block text-[8px] uppercase tracking-wider text-gray-400">Employee</label>
+                    <label className="block text-[8px] uppercase tracking-wider text-slate-400">Employee</label>
                     <select 
                       value={filterEmployee} 
                       onChange={(e) => setFilterEmployee(e.target.value)}
-                      className="w-full bg-white border border-gray-200 rounded px-2.5 py-1 text-[10px] font-bold text-gray-800 focus:outline-none focus:border-indigo-500"
+                      className="w-full bg-white border border-slate-200 rounded-xl px-2.5 py-1.5 text-[10px] font-bold text-slate-800 focus:outline-none focus:border-indigo-500 transition-colors"
                     >
                       <option value="all">All Team Members</option>
                       {uniqueEmployees.map(emp => (
@@ -1186,11 +1182,11 @@ export default function HomePage() {
                     </select>
                   </div>
                   <div className="space-y-0.5">
-                    <label className="block text-[8px] uppercase tracking-wider text-gray-400">Travel Mode</label>
+                    <label className="block text-[8px] uppercase tracking-wider text-slate-400">Travel Mode</label>
                     <select 
                       value={filterMode} 
                       onChange={(e) => setFilterMode(e.target.value)}
-                      className="w-full bg-white border border-gray-200 rounded px-2.5 py-1 text-[10px] font-bold text-gray-800 focus:outline-none focus:border-indigo-500"
+                      className="w-full bg-white border border-slate-200 rounded-xl px-2.5 py-1.5 text-[10px] font-bold text-slate-800 focus:outline-none focus:border-indigo-500 transition-colors"
                     >
                       <option value="all">All Modes</option>
                       {uniqueModes.map(m => (
@@ -1199,32 +1195,32 @@ export default function HomePage() {
                     </select>
                   </div>
                   <div className="space-y-0.5">
-                    <label className="block text-[8px] uppercase tracking-wider text-gray-400">Claim Month</label>
+                    <label className="block text-[8px] uppercase tracking-wider text-slate-400">Claim Month</label>
                     <input 
                       type="month" 
                       value={filterMonth}
                       onChange={(e) => setFilterMonth(e.target.value)}
-                      className="w-full bg-white border border-gray-200 rounded px-2.5 py-1 text-[10px] font-bold text-gray-800 focus:outline-none focus:border-indigo-500"
+                      className="w-full bg-white border border-slate-200 rounded-xl px-2.5 py-1.5 text-[10px] font-bold text-slate-800 focus:outline-none focus:border-indigo-500 transition-colors"
                     />
                   </div>
                 </div>
               </div>
 
-              {/* Dynamic Filter Metrics box (like My Expense caps) */}
-              <div className="border border-blue-150 p-3.5 bg-blue-50/20 rounded space-y-2.5">
-                <h4 className="text-[9px] font-bold text-blue-800 uppercase tracking-widest leading-none">Filtered Team Totals</h4>
+              {/* Dynamic Filter Metrics box */}
+              <div className="border border-indigo-50 p-4 bg-indigo-50/20 rounded-2xl space-y-3">
+                <h4 className="text-[9px] font-black text-indigo-800 uppercase tracking-widest leading-none">Filtered Team Totals</h4>
                 <div className="grid grid-cols-2 gap-2.5">
-                  <div className="bg-white p-2.5 border border-blue-100 rounded text-center space-y-0.5 shadow-sm">
-                    <span className="text-gray-400 font-bold uppercase tracking-wider block text-[7px] leading-none">Total Distance</span>
-                    <span className="text-xs font-black text-blue-700 font-mono leading-none">{totalFilteredKm.toFixed(1)} KM</span>
+                  <div className="bg-white p-2.5 border border-slate-100 rounded-xl text-center space-y-0.5 shadow-sm">
+                    <span className="text-slate-400 font-bold uppercase tracking-wider block text-[7px] leading-none">Total Distance</span>
+                    <span className="text-xs font-black text-indigo-650 font-mono leading-none">{totalFilteredKm.toFixed(1)} KM</span>
                   </div>
-                  <div className="bg-white p-2.5 border border-blue-100 rounded text-center space-y-0.5 shadow-sm">
-                    <span className="text-gray-400 font-bold uppercase tracking-wider block text-[7px] leading-none">Auto Expense</span>
-                    <span className="text-xs font-black text-blue-700 font-mono leading-none">₹{totalFilteredAuto.toLocaleString()}</span>
+                  <div className="bg-white p-2.5 border border-slate-100 rounded-xl text-center space-y-0.5 shadow-sm">
+                    <span className="text-slate-400 font-bold uppercase tracking-wider block text-[7px] leading-none">Auto Expense</span>
+                    <span className="text-xs font-black text-indigo-650 font-mono leading-none">₹{totalFilteredAuto.toLocaleString()}</span>
                   </div>
                 </div>
-                <div className="bg-white p-2 border border-blue-100 rounded text-center shadow-sm">
-                  <span className="text-gray-450 font-bold uppercase tracking-wider block text-[7px] leading-none">Aggregate Reimbursement</span>
+                <div className="bg-white p-2 border border-slate-100 rounded-xl text-center shadow-sm">
+                  <span className="text-slate-400 font-bold uppercase tracking-wider block text-[7px] leading-none">Aggregate Reimbursement</span>
                   <span className="text-sm font-black text-indigo-700 font-mono">₹{totalFilteredAmount.toLocaleString()}</span>
                 </div>
               </div>

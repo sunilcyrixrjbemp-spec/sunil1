@@ -194,100 +194,100 @@ export default function ConsolidatedReportPage() {
   return (
     <div className="w-full mx-auto px-1 sm:px-2 lg:px-4 space-y-6 animate-fadeIn font-sans pb-12">
       {/* AdminLTE Content Header */}
-      <div className="flex items-center justify-between border-b border-gray-200 pb-3 mb-4 bg-gray-50/10 px-1">
+      <div className="flex items-center justify-between border-b border-slate-100 pb-3 mb-4 px-1">
         <div>
-          <h1 className="text-xl font-bold text-[#212529] flex items-center gap-2 tracking-tight">
-            <FileSpreadsheet className="w-5.5 h-5.5 text-green-700" />
+          <h1 className="text-xl font-bold text-slate-800 flex items-center gap-2 tracking-tight">
+            <FileSpreadsheet className="w-5.5 h-5.5 text-indigo-650" />
             Consolidated Monthly Report
-            <span className="text-xs font-normal text-gray-500 hidden sm:inline-block ml-1">Excel Export & Reconciliation</span>
+            <span className="text-xs font-normal text-slate-400 hidden sm:inline-block ml-1">Excel Export & Reconciliation</span>
           </h1>
         </div>
-        <div className="text-[11px] font-semibold text-[#6c757d] flex items-center gap-1.5">
-          <Link to="/home" className="text-[#007bff] hover:underline">Home</Link>
-          <span className="text-gray-400">/</span>
-          <span className="text-[#6c757d]">Consolidated Report</span>
+        <div className="text-[11px] font-bold text-slate-400 flex items-center gap-1.5">
+          <Link to="/home" className="text-indigo-600 hover:underline">Home</Link>
+          <span className="text-slate-300">/</span>
+          <span className="text-slate-500">Consolidated Report</span>
         </div>
       </div>
 
       {/* Info Boxes */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
         {/* Card 1: Total Claims */}
-        <div className="info-box-lte animate-fadeIn">
-          <div className="info-box-icon bg-[#007bff]">
-            <Users className="w-5 h-5 text-white" />
+        <div className="group bg-white border border-slate-100 rounded-3xl p-4 flex items-center gap-4 hover:shadow-md transition-all duration-300 animate-fadeIn">
+          <div className="w-12 h-12 rounded-2xl flex items-center justify-center bg-indigo-50 text-indigo-600 shrink-0">
+            <Users className="w-5 h-5" />
           </div>
-          <div className="info-box-content">
-            <span className="text-[9px] font-bold uppercase tracking-wider text-gray-400 block">Total Claims</span>
-            <span className="text-base font-extrabold text-gray-800 font-mono block mt-0.5">{data.length}</span>
-            <span className="text-[9px] text-[#007bff] font-bold uppercase block mt-1">Engineers Listed</span>
+          <div className="min-w-0 flex-1">
+            <span className="text-[9px] font-black uppercase tracking-wider text-slate-400 block">Total Claims</span>
+            <span className="text-base font-extrabold text-slate-800 font-mono block mt-0.5">{data.length}</span>
+            <span className="text-[9px] text-indigo-600 font-extrabold uppercase block mt-1">Engineers Listed</span>
           </div>
         </div>
 
         {/* Card 2: Claimed Amount */}
-        <div className="info-box-lte animate-fadeIn">
-          <div className="info-box-icon bg-[#ffc107]">
-            <IndianRupee className="w-5 h-5 text-white" />
+        <div className="group bg-white border border-slate-100 rounded-3xl p-4 flex items-center gap-4 hover:shadow-md transition-all duration-300 animate-fadeIn">
+          <div className="w-12 h-12 rounded-2xl flex items-center justify-center bg-amber-50 text-amber-600 shrink-0">
+            <IndianRupee className="w-5 h-5" />
           </div>
-          <div className="info-box-content">
-            <span className="text-[9px] font-bold uppercase tracking-wider text-gray-400 block">Claimed Amount</span>
-            <span className="text-base font-extrabold text-gray-800 font-mono block mt-0.5">{fmt(totalClaimed)}</span>
-            <span className="text-[9px] text-amber-600 font-bold uppercase block mt-1">Before Deductions</span>
+          <div className="min-w-0 flex-1">
+            <span className="text-[9px] font-black uppercase tracking-wider text-slate-400 block">Claimed Amount</span>
+            <span className="text-base font-extrabold text-slate-800 font-mono block mt-0.5">{fmt(totalClaimed)}</span>
+            <span className="text-[9px] text-amber-600 font-extrabold uppercase block mt-1">Before Deductions</span>
           </div>
         </div>
 
         {/* Card 3: Total Advances */}
-        <div className="info-box-lte animate-fadeIn">
-          <div className="info-box-icon bg-[#dc3545]">
-            <ShieldAlert className="w-5 h-5 text-white" />
+        <div className="group bg-white border border-slate-100 rounded-3xl p-4 flex items-center gap-4 hover:shadow-md transition-all duration-300 animate-fadeIn">
+          <div className="w-12 h-12 rounded-2xl flex items-center justify-center bg-rose-50 text-rose-600 shrink-0">
+            <ShieldAlert className="w-5 h-5" />
           </div>
-          <div className="info-box-content">
-            <span className="text-[9px] font-bold uppercase tracking-wider text-gray-400 block">Total Advances</span>
-            <span className="text-base font-extrabold text-gray-800 font-mono block mt-0.5">{fmt(totalAdvances)}</span>
-            <span className="text-[9px] text-[#dc3545] font-bold uppercase block mt-1">Paid in Advance</span>
+          <div className="min-w-0 flex-1">
+            <span className="text-[9px] font-black uppercase tracking-wider text-slate-400 block">Total Advances</span>
+            <span className="text-base font-extrabold text-slate-800 font-mono block mt-0.5">{fmt(totalAdvances)}</span>
+            <span className="text-[9px] text-rose-600 font-extrabold uppercase block mt-1">Paid in Advance</span>
           </div>
         </div>
 
         {/* Card 4: Net Payable */}
-        <div className="info-box-lte animate-fadeIn">
-          <div className="info-box-icon bg-[#28a745]">
-            <CheckCircle2 className="w-5 h-5 text-white" />
+        <div className="group bg-white border border-slate-100 rounded-3xl p-4 flex items-center gap-4 hover:shadow-md transition-all duration-300 animate-fadeIn">
+          <div className="w-12 h-12 rounded-2xl flex items-center justify-center bg-emerald-50 text-emerald-600 shrink-0">
+            <CheckCircle2 className="w-5 h-5" />
           </div>
-          <div className="info-box-content">
-            <span className="text-[9px] font-bold uppercase tracking-wider text-gray-400 block">Net Payable</span>
-            <span className="text-base font-extrabold text-gray-800 font-mono block mt-0.5">{fmt(totalNet)}</span>
-            <span className="text-[9px] text-[#28a745] font-bold uppercase block mt-1">Net Reimbursement</span>
+          <div className="min-w-0 flex-1">
+            <span className="text-[9px] font-black uppercase tracking-wider text-slate-400 block">Net Payable</span>
+            <span className="text-base font-extrabold text-slate-800 font-mono block mt-0.5">{fmt(totalNet)}</span>
+            <span className="text-[9px] text-emerald-650 font-extrabold uppercase block mt-1">Net Reimbursement</span>
           </div>
         </div>
       </div>
 
       {/* Filter Card */}
-      <div className="card border-t-3 border-primary bg-white shadow-sm border border-gray-200 rounded-sm">
-        <div className="card-header border-b border-gray-150 px-4 py-2.5 flex items-center justify-between bg-gray-50/40">
-          <h3 className="card-title text-xs font-bold text-gray-700 uppercase tracking-wider flex items-center gap-1.5">
-            <Calendar className="w-4 h-4 text-blue-600" />
+      <div className="card border border-slate-100 bg-white shadow-sm rounded-3xl overflow-hidden">
+        <div className="card-header border-b border-slate-100 px-5 py-3.5 flex items-center justify-between bg-slate-50/20">
+          <h3 className="card-title text-xs font-bold text-slate-700 uppercase tracking-wider flex items-center gap-1.5">
+            <Calendar className="w-4 h-4 text-indigo-600" />
             Select Billing Period
           </h3>
           <button 
             onClick={fetchReport} 
             disabled={loading}
-            className="flex items-center gap-1.5 px-2.5 py-1 rounded bg-white hover:bg-gray-100 border border-gray-300 text-gray-700 text-[10px] font-bold transition-all cursor-pointer disabled:opacity-60"
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-full border border-slate-200 bg-white hover:bg-slate-50 text-slate-700 text-[10px] font-bold transition-all cursor-pointer disabled:opacity-60"
           >
             <RefreshCw className={`w-3 h-3 ${loading ? "animate-spin" : ""}`} /> Refresh
           </button>
         </div>
-        <div className="card-body p-4">
+        <div className="card-body p-5">
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-4">
             <div>
-              <label className="block text-[10px] font-bold text-gray-500 uppercase tracking-wider mb-1">Select Month</label>
+              <label className="block text-[10px] font-bold text-slate-450 uppercase tracking-wider mb-1">Select Month</label>
               <select value={month} onChange={(e) => setMonth(e.target.value)}
-                className="w-full border border-gray-300 rounded px-2.5 py-1.5 text-xs font-semibold text-gray-700 focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 cursor-pointer">
+                className="w-full border border-slate-200 rounded-xl px-2.5 py-1.5 text-xs font-semibold text-slate-700 focus:outline-none focus:border-indigo-500 cursor-pointer">
                 {MONTHS.slice(1).map((m) => <option key={m} value={m}>{m}</option>)}
               </select>
             </div>
             <div>
-              <label className="block text-[10px] font-bold text-gray-500 uppercase tracking-wider mb-1">Select Year</label>
+              <label className="block text-[10px] font-bold text-slate-450 uppercase tracking-wider mb-1">Select Year</label>
               <select value={year} onChange={(e) => setYear(parseInt(e.target.value))}
-                className="w-full border border-gray-300 rounded px-2.5 py-1.5 text-xs font-semibold text-gray-700 focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 cursor-pointer">
+                className="w-full border border-slate-200 rounded-xl px-2.5 py-1.5 text-xs font-semibold text-slate-700 focus:outline-none focus:border-indigo-500 cursor-pointer">
                 {[2024, 2025, 2026, 2027].map((y) => <option key={y} value={y}>{y}</option>)}
               </select>
             </div>
@@ -295,7 +295,7 @@ export default function ConsolidatedReportPage() {
               <button 
                 onClick={fetchReport} 
                 disabled={loading}
-                className="w-full flex items-center justify-center gap-1.5 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold rounded-sm shadow-sm transition-colors disabled:opacity-60 cursor-pointer"
+                className="w-full flex items-center justify-center gap-1.5 px-4 py-2 bg-indigo-650 hover:bg-indigo-750 text-white text-xs font-bold rounded-2xl shadow-sm transition-colors disabled:opacity-60 cursor-pointer min-h-[38px]"
               >
                 <Search className="w-3.5 h-3.5" /> Fetch Consolidated Data
               </button>

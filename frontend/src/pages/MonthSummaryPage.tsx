@@ -844,105 +844,105 @@ export default function MonthSummaryPage() {
   return (
     <div className="space-y-4 animate-fadeIn font-sans pb-10">
       {/* AdminLTE Content Header */}
-      <div className="flex items-center justify-between border-b border-gray-250 pb-3 mb-4 bg-gray-50/20 px-1">
+      <div className="flex items-center justify-between border-b border-slate-100 pb-3 mb-4 px-1">
         <div>
-          <h1 className="text-xl font-bold text-[#333] flex items-center gap-2 tracking-tight">
-            <Users className="w-5.5 h-5.5 text-blue-600" />
+          <h1 className="text-xl font-bold text-slate-800 flex items-center gap-2 tracking-tight">
+            <Users className="w-5.5 h-5.5 text-indigo-650" />
             Month Summary
-            <span className="text-xs font-normal text-gray-500 hidden sm:inline-block ml-1">Reports &amp; Billing</span>
+            <span className="text-xs font-normal text-slate-400 hidden sm:inline-block ml-1">Reports &amp; Billing</span>
           </h1>
         </div>
-        <div className="text-[11px] font-semibold text-[#666] flex items-center gap-1.5">
-          <span className="text-blue-600 cursor-pointer hover:underline">Home</span>
-          <span className="text-gray-400">/</span>
-          <span className="text-blue-600 cursor-pointer hover:underline">Reports</span>
-          <span className="text-gray-400">/</span>
-          <span className="text-[#888]">Month Summary</span>
+        <div className="text-[11px] font-bold text-slate-400 flex items-center gap-1.5">
+          <span className="text-indigo-600 cursor-pointer hover:underline">Home</span>
+          <span className="text-slate-300">/</span>
+          <span className="text-indigo-600 cursor-pointer hover:underline">Reports</span>
+          <span className="text-slate-300">/</span>
+          <span className="text-slate-500">Month Summary</span>
         </div>
       </div>
 
       {/* AdminLTE Info Boxes (Stats) */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
         {/* Box 1 */}
-        <div className="info-box-lte animate-fadeIn">
-          <div className="info-box-icon bg-[#007bff]">
-            <Users className="w-5 h-5 text-white" />
+        <div className="group bg-white border border-slate-100 rounded-3xl p-4 flex items-center gap-4 hover:shadow-md transition-all duration-300 animate-fadeIn">
+          <div className="w-12 h-12 rounded-2xl flex items-center justify-center bg-indigo-50 text-indigo-600 shrink-0">
+            <Users className="w-5 h-5" />
           </div>
-          <div className="info-box-content">
-            <span className="text-[9px] font-bold uppercase tracking-wider text-gray-400 block">Engineers</span>
-            <span className="text-base font-extrabold text-gray-800 font-mono block mt-0.5">{totalEngineers}</span>
-            <span className="text-[9px] text-[#007bff] font-bold uppercase block mt-1">Active Staff</span>
+          <div className="min-w-0 flex-1">
+            <span className="text-[9px] font-black uppercase tracking-wider text-slate-400 block">Engineers</span>
+            <span className="text-base font-extrabold text-slate-800 font-mono block mt-0.5">{totalEngineers}</span>
+            <span className="text-[9px] text-indigo-600 font-extrabold uppercase block mt-1">Active Staff</span>
           </div>
         </div>
         {/* Box 2 */}
-        <div className="info-box-lte animate-fadeIn">
-          <div className="info-box-icon bg-[#28a745]">
-            <CheckCircle className="w-5 h-5 text-white" />
+        <div className="group bg-white border border-slate-100 rounded-3xl p-4 flex items-center gap-4 hover:shadow-md transition-all duration-300 animate-fadeIn">
+          <div className="w-12 h-12 rounded-2xl flex items-center justify-center bg-emerald-50 text-emerald-600 shrink-0">
+            <CheckCircle className="w-5 h-5" />
           </div>
-          <div className="info-box-content">
-            <span className="text-[9px] font-bold uppercase tracking-wider text-gray-400 block">Approved Claims</span>
-            <span className="text-base font-extrabold text-gray-800 font-mono block mt-0.5">{totalClaims}</span>
-            <span className="text-[9px] text-[#28a745] font-bold uppercase block mt-1">Processed</span>
+          <div className="min-w-0 flex-1">
+            <span className="text-[9px] font-black uppercase tracking-wider text-slate-400 block">Approved Claims</span>
+            <span className="text-base font-extrabold text-slate-800 font-mono block mt-0.5">{totalClaims}</span>
+            <span className="text-[9px] text-emerald-650 font-extrabold uppercase block mt-1">Processed</span>
           </div>
         </div>
         {/* Box 3 */}
-        <div className="info-box-lte animate-fadeIn">
-          <div className="info-box-icon bg-[#ffc107]">
-            <IndianRupee className="w-5 h-5 text-white" />
+        <div className="group bg-white border border-slate-100 rounded-3xl p-4 flex items-center gap-4 hover:shadow-md transition-all duration-300 animate-fadeIn">
+          <div className="w-12 h-12 rounded-2xl flex items-center justify-center bg-amber-50 text-amber-600 shrink-0">
+            <IndianRupee className="w-5 h-5" />
           </div>
-          <div className="info-box-content">
-            <span className="text-[9px] font-bold uppercase tracking-wider text-gray-400 block">Total Amount</span>
-            <span className="text-base font-extrabold text-gray-800 font-mono block mt-0.5">{fmt(totalAmount)}</span>
-            <span className="text-[9px] text-amber-600 font-bold uppercase block mt-1">Disbursed</span>
+          <div className="min-w-0 flex-1">
+            <span className="text-[9px] font-black uppercase tracking-wider text-slate-400 block">Total Amount</span>
+            <span className="text-base font-extrabold text-slate-800 font-mono block mt-0.5">{fmt(totalAmount)}</span>
+            <span className="text-[9px] text-amber-600 font-extrabold uppercase block mt-1">Disbursed</span>
           </div>
         </div>
         {/* Box 4 */}
-        <div className="info-box-lte animate-fadeIn">
-          <div className="info-box-icon bg-[#605ca8]">
-            <MapPin className="w-5 h-5 text-white" />
+        <div className="group bg-white border border-slate-100 rounded-3xl p-4 flex items-center gap-4 hover:shadow-md transition-all duration-300 animate-fadeIn">
+          <div className="w-12 h-12 rounded-2xl flex items-center justify-center bg-purple-50 text-purple-650 shrink-0">
+            <MapPin className="w-5 h-5" />
           </div>
-          <div className="info-box-content">
-            <span className="text-[9px] font-bold uppercase tracking-wider text-gray-400 block">Total Distance</span>
-            <span className="text-base font-extrabold text-gray-800 font-mono block mt-0.5">{fmtN(totalKM)} km</span>
-            <span className="text-[9px] text-[#605ca8] font-bold uppercase block mt-1">Travelled</span>
+          <div className="min-w-0 flex-1">
+            <span className="text-[9px] font-black uppercase tracking-wider text-slate-400 block">Total Distance</span>
+            <span className="text-base font-extrabold text-slate-800 font-mono block mt-0.5">{fmtN(totalKM)} km</span>
+            <span className="text-[9px] text-purple-600 font-extrabold uppercase block mt-1">Travelled</span>
           </div>
         </div>
       </div>
 
       {/* AdminLTE Card: Filters */}
-      <div className="card border-t-3 border-primary bg-white shadow-sm border border-gray-200 rounded-sm">
-        <div className="card-header border-b border-gray-150 px-4 py-2.5 flex items-center justify-between bg-gray-50/40">
-          <h3 className="card-title text-xs font-bold text-gray-700 uppercase tracking-wider flex items-center gap-1.5">
-            <Filter className="w-4 h-4 text-blue-600" />
+      <div className="card border border-slate-100 bg-white shadow-sm rounded-3xl overflow-hidden">
+        <div className="card-header border-b border-slate-100 px-5 py-3.5 flex items-center justify-between bg-slate-50/20">
+          <h3 className="card-title text-xs font-bold text-slate-700 uppercase tracking-wider flex items-center gap-1.5">
+            <Filter className="w-4 h-4 text-indigo-600" />
             Filter Month Report
           </h3>
           <button onClick={() => fetchData(appliedFilters)} disabled={loading}
-            className="flex items-center gap-1.5 px-2.5 py-1 rounded bg-white hover:bg-gray-100 border border-gray-300 text-gray-700 text-[10px] font-bold transition-all cursor-pointer disabled:opacity-60">
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-full border border-slate-200 bg-white hover:bg-slate-50 text-slate-700 text-[10px] font-bold transition-all cursor-pointer disabled:opacity-60">
             <RefreshCw className={`w-3 h-3 ${loading ? "animate-spin" : ""}`} /> Refresh
           </button>
         </div>
-        <div className="card-body p-4">
+        <div className="card-body p-5">
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 mb-4">
             <div>
-              <label className="block text-[10px] font-bold text-gray-500 uppercase tracking-wider mb-1">Select Month</label>
+              <label className="block text-[10px] font-bold text-slate-450 uppercase tracking-wider mb-1">Select Month</label>
               <select value={filterMonth} onChange={(e) => setFilterMonth(e.target.value)}
-                className="w-full border border-gray-300 rounded px-2.5 py-1.5 text-xs font-semibold text-gray-700 focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 cursor-pointer">
+                className="w-full border border-slate-200 rounded-xl px-2.5 py-1.5 text-xs font-semibold text-slate-700 focus:outline-none focus:border-indigo-500 cursor-pointer">
                 <option value="">All Months</option>
                 {MONTHS.slice(1).map((m) => <option key={m} value={m}>{m}</option>)}
               </select>
             </div>
             <div>
-              <label className="block text-[10px] font-bold text-gray-500 uppercase tracking-wider mb-1">Select Year</label>
+              <label className="block text-[10px] font-bold text-slate-450 uppercase tracking-wider mb-1">Select Year</label>
               <select value={filterYear || ""} onChange={(e) => setFilterYear(e.target.value ? parseInt(e.target.value) : 0)}
-                className="w-full border border-gray-300 rounded px-2.5 py-1.5 text-xs font-semibold text-gray-700 focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 cursor-pointer">
+                className="w-full border border-slate-200 rounded-xl px-2.5 py-1.5 text-xs font-semibold text-slate-700 focus:outline-none focus:border-indigo-500 cursor-pointer">
                 <option value="">All Years</option>
                 {[2024, 2025, 2026, 2027].map((y) => <option key={y} value={y}>{y}</option>)}
               </select>
             </div>
             <div>
-              <label className="block text-[10px] font-bold text-gray-500 uppercase tracking-wider mb-1">District Location</label>
+              <label className="block text-[10px] font-bold text-slate-450 uppercase tracking-wider mb-1">District Location</label>
               <select value={filterDistrict} onChange={(e) => setFilterDistrict(e.target.value)}
-                className="w-full border border-gray-300 rounded px-2.5 py-1.5 text-xs font-semibold text-gray-700 focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 cursor-pointer">
+                className="w-full border border-slate-200 rounded-xl px-2.5 py-1.5 text-xs font-semibold text-slate-700 focus:outline-none focus:border-indigo-500 cursor-pointer">
                 <option value="">All Districts</option>
                 {districts.map((d) => <option key={d} value={d}>{d}</option>)}
               </select>

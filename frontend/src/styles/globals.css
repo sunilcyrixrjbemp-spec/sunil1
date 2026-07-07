@@ -5,11 +5,8 @@
 @tailwind utilities;
 
 @layer base {
-  * {
-    border-radius: 0px !important;
-  }
   body {
-    @apply bg-[#f4f6f9] text-[#212529] antialiased font-sans min-h-screen overflow-x-hidden;
+    @apply bg-slate-50 text-slate-800 antialiased font-sans min-h-screen overflow-x-hidden;
     font-family: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif !important;
   }
 
@@ -43,27 +40,27 @@
 
 /* AdminLTE Card Helpers */
 .card-lte {
-  @apply bg-white border border-gray-200 rounded shadow-sm overflow-hidden;
+  @apply bg-white border border-slate-100 rounded-3xl shadow-sm overflow-hidden flex flex-col;
 }
 
 .card-lte-primary {
-  @apply card-lte border-t-4 border-t-[#007bff];
+  @apply card-lte border-t-4 border-t-indigo-600;
 }
 
 .card-lte-success {
-  @apply card-lte border-t-4 border-t-[#28a745];
+  @apply card-lte border-t-4 border-t-emerald-600;
 }
 
 .card-lte-warning {
-  @apply card-lte border-t-4 border-t-[#ffc107];
+  @apply card-lte border-t-4 border-t-amber-500;
 }
 
 .card-lte-danger {
-  @apply card-lte border-t-4 border-t-[#dc3545];
+  @apply card-lte border-t-4 border-t-rose-600;
 }
 
 .card-lte-info {
-  @apply card-lte border-t-4 border-t-[#17a2b8];
+  @apply card-lte border-t-4 border-t-sky-500;
 }
 
 .card-lte-gold {
@@ -72,7 +69,7 @@
 
 /* AdminLTE Input Styles */
 .input-lte {
-  @apply w-full bg-white border border-gray-300 rounded px-3 py-2 text-xs text-gray-800 placeholder-gray-400 focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500/50 transition-all;
+  @apply w-full bg-white border border-slate-200 rounded-2xl px-3.5 py-2.5 text-xs text-slate-800 placeholder-slate-400 focus:outline-none focus:border-indigo-600 focus:ring-1 focus:ring-indigo-600/20 transition-all shadow-sm;
 }
 
 select.input-lte {
@@ -86,17 +83,17 @@ select.input-lte option {
 }
 
 .input-lte-icon {
-  @apply w-full bg-white border border-gray-300 rounded pl-11 pr-3 py-2 text-xs text-gray-800 placeholder-gray-400 focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500/50 transition-all;
+  @apply w-full bg-white border border-slate-200 rounded-2xl pl-11 pr-3 py-2.5 text-xs text-slate-800 placeholder-slate-400 focus:outline-none focus:border-indigo-600 focus:ring-1 focus:ring-indigo-600/20 transition-all shadow-sm;
 }
 
 /* Custom Verify Button Highlights */
 .btn-verify-highlighted {
   background-color: #10b981 !important;
   color: #ffffff !important;
-  border-radius: 6px !important;
-  min-height: 28px !important;
-  height: 28px !important;
-  padding: 0 12px !important;
+  border-radius: 12px !important;
+  min-height: 32px !important;
+  height: 32px !important;
+  padding: 0 16px !important;
   font-weight: 900 !important;
   font-size: 10px !important;
   cursor: pointer !important;
@@ -111,10 +108,10 @@ select.input-lte option {
 .btn-verify-normal-disabled {
   background-color: #e2e8f0 !important;
   color: #94a3b8 !important;
-  border-radius: 6px !important;
-  min-height: 28px !important;
-  height: 28px !important;
-  padding: 0 12px !important;
+  border-radius: 12px !important;
+  min-height: 32px !important;
+  height: 32px !important;
+  padding: 0 16px !important;
   font-weight: 900 !important;
   font-size: 10px !important;
   cursor: not-allowed !important;
@@ -126,32 +123,32 @@ select.input-lte option {
 }
 
 .label-lte {
-  @apply text-xs font-bold text-gray-700 block mb-1.5;
+  @apply text-xs font-bold text-slate-600 block mb-1.5;
 }
 
 /* AdminLTE Buttons */
 .btn-lte-primary {
-  @apply bg-[#007bff] hover:bg-[#0069d9] active:bg-[#0062cc] text-white font-semibold py-2 px-4 rounded text-xs transition-colors flex items-center justify-center gap-1.5 shadow-sm;
+  @apply bg-indigo-600 hover:bg-indigo-700 active:bg-indigo-800 text-white font-bold py-2.5 px-4 rounded-2xl text-xs transition-colors flex items-center justify-center gap-1.5 shadow-sm;
 }
 
 .btn-lte-success {
-  @apply bg-[#28a745] hover:bg-[#218838] active:bg-[#1e7e34] text-white font-semibold py-2 px-4 rounded text-xs transition-colors flex items-center justify-center gap-1.5 shadow-sm;
+  @apply bg-emerald-600 hover:bg-emerald-700 active:bg-emerald-800 text-white font-bold py-2.5 px-4 rounded-2xl text-xs transition-colors flex items-center justify-center gap-1.5 shadow-sm;
 }
 
 .btn-lte-danger {
-  @apply bg-[#dc3545] hover:bg-[#c82333] active:bg-[#bd2130] text-white font-semibold py-2 px-4 rounded text-xs transition-colors flex items-center justify-center gap-1.5 shadow-sm;
+  @apply bg-rose-600 hover:bg-rose-700 active:bg-rose-800 text-white font-bold py-2.5 px-4 rounded-2xl text-xs transition-colors flex items-center justify-center gap-1.5 shadow-sm;
 }
 
 .btn-lte-warning {
-  @apply bg-[#ffc107] hover:bg-[#e0a800] active:bg-[#d39e00] text-gray-900 font-semibold py-2 px-4 rounded text-xs transition-colors flex items-center justify-center gap-1.5 shadow-sm;
+  @apply bg-amber-500 hover:bg-amber-600 active:bg-amber-700 text-slate-900 font-bold py-2.5 px-4 rounded-2xl text-xs transition-colors flex items-center justify-center gap-1.5 shadow-sm;
 }
 
 .btn-lte-secondary {
-  @apply bg-[#6c757d] hover:bg-[#5a6268] active:bg-[#545b62] text-white font-semibold py-2 px-4 rounded text-xs transition-colors flex items-center justify-center gap-1.5 shadow-sm;
+  @apply bg-slate-600 hover:bg-slate-700 active:bg-slate-800 text-white font-bold py-2.5 px-4 rounded-2xl text-xs transition-colors flex items-center justify-center gap-1.5 shadow-sm;
 }
 
 .btn-lte-outline {
-  @apply border border-gray-300 bg-white hover:bg-gray-50 active:bg-gray-100 text-gray-700 font-semibold py-2 px-4 rounded text-xs transition-all flex items-center justify-center gap-1.5 shadow-sm;
+  @apply border border-slate-200 bg-white hover:bg-slate-50 active:bg-slate-100 text-slate-700 font-bold py-2.5 px-4 rounded-2xl text-xs transition-all flex items-center justify-center gap-1.5 shadow-sm;
 }
 
 /* ECG / Pulse animation placeholder in AdminLTE styled reports if needed */
@@ -439,10 +436,10 @@ svg, path, g, sector, .recharts-pie-sector, .recharts-sector, .recharts-pie, .re
   input[type="month"],
   select,
   textarea {
-    min-height: 42px !important;
-    padding: 0.5rem 0.75rem !important;
+    min-height: 44px !important;
+    padding: 0.6rem 1rem !important;
     font-size: 13px !important;
-    border-radius: 8px !important;
+    border-radius: 16px !important;
     border: 1px solid #cbd5e1 !important; /* Clean neutral border */
     background-color: #ffffff !important; /* Pure white background for editing clarity */
     font-weight: 500 !important;
@@ -465,14 +462,14 @@ svg, path, g, sector, .recharts-pie-sector, .recharts-sector, .recharts-pie, .re
   input:focus,
   select:focus,
   textarea:focus {
-    border-color: #3b82f6 !important;
-    box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.08) !important;
+    border-color: #4f46e5 !important;
+    box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.08) !important;
   }
 
   /* Labels */
   .label-lte, label {
-    font-size: 11px !important;
-    font-weight: 600 !important;
+    font-size: 10px !important;
+    font-weight: 750 !important;
     color: #64748b !important;
     text-transform: uppercase !important;
     letter-spacing: 0.03em !important;
@@ -484,14 +481,15 @@ svg, path, g, sector, .recharts-pie-sector, .recharts-sector, .recharts-pie, .re
   .btn-lte-success, 
   .btn-lte-danger, 
   .btn-lte-warning, 
+  .btn-slate-lte,
   .btn-lte-secondary,
   .btn-lte-outline,
   button[type="submit"],
   button[type="button"] {
-    min-height: 40px !important;
-    border-radius: 8px !important;
+    min-height: 44px !important;
+    border-radius: 16px !important;
     font-size: 12px !important;
-    font-weight: 700 !important;
+    font-weight: 750 !important;
     letter-spacing: 0.02em !important;
     text-transform: uppercase !important;
     box-shadow: none !important;
@@ -499,7 +497,7 @@ svg, path, g, sector, .recharts-pie-sector, .recharts-sector, .recharts-pie, .re
   }
 
   .btn-lte-primary {
-    background-color: #2563eb !important;
+    background-color: #4f46e5 !important;
     border-style: none !important;
     color: #ffffff !important;
   }
@@ -511,7 +509,7 @@ svg, path, g, sector, .recharts-pie-sector, .recharts-sector, .recharts-pie, .re
   }
 
   .btn-lte-danger {
-    background-color: #ef4444 !important;
+    background-color: #f43f5e !important;
     border-style: none !important;
     color: #ffffff !important;
   }

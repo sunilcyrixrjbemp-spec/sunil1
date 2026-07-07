@@ -1,4 +1,5 @@
 import { verifyPassword, getPasswordHash } from "../utils/security.js";
+import { uploadToGoogleDrive, deleteFromGoogleDrive } from "./upload.js";
 
 function jsonResponse(data, status = 200) {
   return new Response(JSON.stringify(data), {
@@ -147,7 +148,7 @@ export async function handleChangePassword(request, env, params, query, user) {
 
 /**
  * POST /api/users/profile/photo
- * Upload a profile photo — stores to R2 bucket if available, else encodes in DB
+ * Upload a profile photo to Google Drive
  */
 export async function handleUploadProfilePhoto(request, env, params, query, user) {
   try {
@@ -162,18 +163,13 @@ export async function handleUploadProfilePhoto(request, env, params, query, user
     const ext = (file.name || "photo.jpg").split(".").pop().toLowerCase() || "jpg";
     const filename = `profile_${user.user_id}_${Date.now()}.${ext}`;
 
-    // Try R2 bucket upload (if configured)
     let photoUrl = null;
-    if (env.BUCKET) {
-      const arrayBuffer = await file.arrayBuffer();
-      await env.BUCKET.put(`profile_photos/${filename}`, arrayBuffer, {
-        httpMetadata: { contentType: file.type || "image/jpeg" }
-      });
-      // Return public URL or construct one
-      photoUrl = `profile_photos/${filename}`;
-    } else {
-      // Fallback: store as relative path reference only
-      photoUrl = `profile_photos/${filename}`;
+    try {
+      const fileId = await uploadToGoogleDrive(env, file, "Profile_Pictures", filename);
+      photoUrl = `/api/upload/file/gdrive/${fileId}`;
+    } catch (e) {
+      console.error("Profile photo upload failed:", e);
+      return jsonResponse({ error: "Failed to upload photo to Google Drive: " + e.message }, 500);
     }
 
     // Update user record
@@ -193,14 +189,15 @@ export async function handleUploadProfilePhoto(request, env, params, query, user
 
 /**
  * DELETE /api/users/profile/photo
- * Remove profile photo
+ * Remove profile photo from Google Drive
  */
 export async function handleDeleteProfilePhoto(request, env, params, query, user) {
   const timestamp = new Date().toISOString();
 
-  // Try to delete from R2 if it exists
-  if (env.BUCKET && user.profile_photo) {
-    await env.BUCKET.delete(user.profile_photo).catch(() => {});
+  // Try to delete from Google Drive if it exists
+  if (user.profile_photo && user.profile_photo.includes("/gdrive/")) {
+    const fileId = user.profile_photo.split("/gdrive/").pop();
+    await deleteFromGoogleDrive(env, fileId).catch(() => {});
   }
 
   // Clear from DB

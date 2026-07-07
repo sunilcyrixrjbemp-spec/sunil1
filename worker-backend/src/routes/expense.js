@@ -1,5 +1,6 @@
 import { runWrite, runBatchWrite } from "../utils/db.js";
 import { getLegacyExpenseHashId } from "./approval.js";
+import { uploadToGoogleDrive } from "./upload.js";
 
 function jsonResponse(data, status = 200) {
   return new Response(JSON.stringify(data), {
@@ -1579,23 +1580,25 @@ export async function handleSubmitExpense(request, env, params, query, user) {
 
   if (!newExpId) return jsonResponse({ error: "Failed to save expense claim" }, 500);
 
-  // Helper for attachments upload to R2
+  // Helper for attachments upload to Google Drive
   const handleAttachment = async (fileKey, billType, legNum) => {
     const file = formData.get(fileKey);
     if (file && typeof file === "object" && file.name) {
       const ext = file.name.split(".").pop().toLowerCase() || "jpg";
       const filename = `${expenseCode}_leg${legNum}_${billType}_${Date.now()}.${ext}`;
-      const fileUrl = `/uploads/expense_attachments/${filename}`;
       
-      if (env.BUCKET) {
-        try {
-          const arrayBuffer = await file.arrayBuffer();
-          await env.BUCKET.put(`expense_attachments/${filename}`, arrayBuffer, {
-            httpMetadata: { contentType: file.type || "image/jpeg" }
-          });
-        } catch (err) {
-          console.error(`Failed to upload ${fileKey} to R2:`, err);
-        }
+      const now = new Date();
+      const monthName = now.toLocaleString("en-US", { month: "long" });
+      const yearVal = now.getFullYear();
+      const folderName = `${monthName}_${yearVal}`;
+      
+      let fileUrl = "";
+      try {
+        const fileId = await uploadToGoogleDrive(env, file, folderName, filename);
+        fileUrl = `/api/upload/file/gdrive/${fileId}`;
+      } catch (err) {
+        console.error(`Failed to upload ${fileKey} to Google Drive:`, err);
+        return;
       }
       
       await runWrite(env, `
@@ -2254,5 +2257,77 @@ export async function handleGetConsolidatedReport(request, env, params, query, u
   }
 
   return jsonResponse({ success: true, data: reportRows });
+}
+
+export async function handleServeExpenseAttachment(request, env, params, query, user) {
+  const filename = params.filename;
+  if (!filename) {
+    return new Response("Filename is required", { status: 400 });
+  }
+
+  const key = `expense_attachments/${filename}`;
+
+  // 1. If Cloudflare R2 bucket binding is available on env.BUCKET
+  if (env.BUCKET) {
+    try {
+      const object = await env.BUCKET.get(key);
+      if (object === null) {
+        return new Response("File not found in R2 bucket", { status: 404 });
+      }
+      
+      const headers = new Headers();
+      object.writeHttpMetadata(headers);
+      headers.set("etag", object.httpEtag);
+      headers.set("Cache-Control", "public, max-age=31536000");
+      
+      return new Response(object.body, {
+        headers
+      });
+    } catch (e) {
+      console.error("Error reading from env.BUCKET:", e);
+    }
+  }
+
+  // 2. Fallback: If BUCKET is not bound directly but PRIMARY_CLOUDFLARE_ACCOUNT_ID is available (REST API)
+  if (env.PRIMARY_CLOUDFLARE_ACCOUNT_ID) {
+    const accountId = env.PRIMARY_CLOUDFLARE_ACCOUNT_ID;
+    const bucketName = "fieldops-uploads";
+    const url = `https://api.cloudflare.com/client/v4/accounts/${accountId}/r2/buckets/${bucketName}/objects/${key}`;
+
+    try {
+      const token = env.PRIMARY_CLOUDFLARE_API_TOKEN;
+      const email = env.PRIMARY_CLOUDFLARE_EMAIL;
+      const headers = {};
+
+      if (token && token.startsWith("cfk_")) {
+        headers["X-Auth-Key"] = token;
+        headers["X-Auth-Email"] = email || "Sunil.cyrixrjbemp@gmail.com";
+      } else if (token) {
+        headers["Authorization"] = `Bearer ${token}`;
+      }
+
+      const res = await fetch(url, {
+        method: "GET",
+        headers: headers
+      });
+
+      if (res.status === 200) {
+        const contentType = res.headers.get("Content-Type") || "application/octet-stream";
+        return new Response(res.body, {
+          status: 200,
+          headers: {
+            "Content-Type": contentType,
+            "Cache-Control": "public, max-age=31536000"
+          }
+        });
+      } else {
+        return new Response("File not found in fallback R2", { status: 404 });
+      }
+    } catch (e) {
+      console.error("Error serving R2 object via fallback:", e);
+    }
+  }
+
+  return new Response("Storage not configured", { status: 500 });
 }
 

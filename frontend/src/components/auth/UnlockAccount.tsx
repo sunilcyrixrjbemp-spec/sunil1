@@ -164,23 +164,23 @@ export default function UnlockAccount({ onBackToLogin }: UnlockAccountProps) {
   };
 
   return (
-    <div className="p-6 sm:p-8 space-y-5">
+    <div className="p-6 sm:p-8 space-y-6">
       {/* Header Back Button */}
-      <div className="text-center pb-2 border-b border-gray-200 flex justify-between items-center">
+      <div className="text-center pb-3.5 border-b border-slate-800/80 flex justify-between items-center">
         <button
           onClick={onBackToLogin}
-          className="text-gray-500 hover:text-gray-800 flex items-center gap-1 text-xs cursor-pointer font-bold uppercase tracking-wider bg-transparent border-0 outline-none"
+          className="text-slate-400 hover:text-white flex items-center gap-1.5 text-[10px] cursor-pointer font-black uppercase tracking-wider bg-transparent border-0 outline-none"
         >
-          <ArrowLeft size={14} /> Back
+          <ArrowLeft size={12} /> Back
         </button>
-        <span className="text-gray-500 text-xs font-bold uppercase tracking-wider">Unlock Account</span>
+        <span className="text-slate-400 text-[10px] font-black uppercase tracking-widest">Unlock Account</span>
       </div>
 
       {statusMessage && (
-        <div className={`p-3 border rounded text-xs font-semibold ${
+        <div className={`p-3.5 border rounded-xl text-xs font-bold leading-relaxed ${
           statusMessage.type === "success" 
-            ? "bg-green-50 border-green-200 text-green-700" 
-            : "bg-red-50 border-red-200 text-red-700"
+            ? "bg-emerald-500/10 border-emerald-500/30 text-emerald-400" 
+            : "bg-rose-500/10 border-rose-500/30 text-rose-450"
         }`}>
           {statusMessage.text}
         </div>
@@ -188,18 +188,18 @@ export default function UnlockAccount({ onBackToLogin }: UnlockAccountProps) {
 
       {/* STEP 1 - VERIFY IDENTITY */}
       {step === 1 && (
-        <div className="space-y-4">
+        <div className="space-y-5">
           <div className="text-center">
-            <div className="h-12 w-12 rounded-full bg-blue-50 flex items-center justify-center mx-auto mb-2.5 border border-blue-200 text-blue-600">
-              <Unlock size={20} />
+            <div className="h-12 w-12 rounded-xl bg-indigo-500/10 flex items-center justify-center mx-auto mb-3 border border-indigo-500/20 text-indigo-400 shadow-sm">
+              <Unlock size={18} />
             </div>
-            <h3 className="text-sm font-bold text-gray-800 uppercase tracking-wide">Identity Check</h3>
-            <p className="text-gray-500 text-[10px] mt-0.5 uppercase tracking-wider font-semibold">Provide your details to unlock</p>
+            <h3 className="text-xs font-black text-slate-100 uppercase tracking-widest">Identity Check</h3>
+            <p className="text-slate-400 text-[9px] mt-1.5 uppercase tracking-wider font-extrabold">Provide your details to unlock</p>
           </div>
 
-          <form onSubmit={handleVerifyIdentity} className="space-y-3.5">
+          <form onSubmit={handleVerifyIdentity} className="space-y-4">
             <div>
-              <label htmlFor="unlockUserId" className="label-lte">User ID</label>
+              <label htmlFor="unlockUserId" className="text-slate-400 font-extrabold uppercase tracking-widest text-[9px] mb-1.5 block">User ID</label>
               <input
                 id="unlockUserId"
                 type="text"
@@ -210,13 +210,13 @@ export default function UnlockAccount({ onBackToLogin }: UnlockAccountProps) {
                   setStatusMessage(null);
                 }}
                 disabled={loading}
-                className="input-lte"
+                className="w-full bg-slate-950/50 border border-slate-800 rounded-xl px-3.5 py-3 text-xs text-white placeholder-slate-600 focus:outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20 transition-all font-semibold shadow-inner"
                 required
               />
             </div>
 
             <div>
-              <label htmlFor="doj" className="label-lte">Date of Joining</label>
+              <label htmlFor="doj" className="text-slate-400 font-extrabold uppercase tracking-widest text-[9px] mb-1.5 block">Date of Joining</label>
               <input
                 id="doj"
                 type="date"
@@ -226,13 +226,13 @@ export default function UnlockAccount({ onBackToLogin }: UnlockAccountProps) {
                   setStatusMessage(null);
                 }}
                 disabled={loading}
-                className="input-lte [color-scheme:light]"
+                className="w-full bg-slate-950/50 border border-slate-800 rounded-xl px-3.5 py-3 text-xs text-white placeholder-slate-600 focus:outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20 transition-all font-semibold shadow-inner [color-scheme:dark]"
                 required
               />
             </div>
 
             <div>
-              <label htmlFor="dob" className="label-lte">Date of Birth</label>
+              <label htmlFor="dob" className="text-slate-400 font-extrabold uppercase tracking-widest text-[9px] mb-1.5 block">Date of Birth</label>
               <input
                 id="dob"
                 type="date"
@@ -242,7 +242,7 @@ export default function UnlockAccount({ onBackToLogin }: UnlockAccountProps) {
                   setStatusMessage(null);
                 }}
                 disabled={loading}
-                className="input-lte [color-scheme:light]"
+                className="w-full bg-slate-950/50 border border-slate-800 rounded-xl px-3.5 py-3 text-xs text-white placeholder-slate-600 focus:outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20 transition-all font-semibold shadow-inner [color-scheme:dark]"
                 required
               />
             </div>
@@ -251,7 +251,7 @@ export default function UnlockAccount({ onBackToLogin }: UnlockAccountProps) {
               <button
                 type="submit"
                 disabled={loading}
-                className="btn-lte-primary w-full h-9"
+                className="w-full h-11 bg-indigo-600 hover:bg-indigo-700 text-white font-extrabold uppercase tracking-wider rounded-xl transition-all shadow-md shadow-indigo-600/10 hover:shadow-indigo-600/25 flex items-center justify-center gap-2 border-0 cursor-pointer text-xs"
               >
                 {loading ? (
                   <>
@@ -269,11 +269,11 @@ export default function UnlockAccount({ onBackToLogin }: UnlockAccountProps) {
 
       {/* STEP 2 - ENTER OTP */}
       {step === 2 && (
-        <div className="space-y-4">
+        <div className="space-y-5">
           <div className="text-center">
-            <h3 className="text-sm font-bold text-gray-800 uppercase tracking-wide">Enter Verification Code</h3>
-            <p className="text-gray-500 text-xs mt-1">
-              We sent a 6-digit OTP code to your registered email address <strong className="text-gray-700">{maskedEmail}</strong>.
+            <h3 className="text-xs font-black text-slate-100 uppercase tracking-widest">Enter Verification Code</h3>
+            <p className="text-slate-400 text-[10px] mt-1.5 leading-relaxed font-semibold">
+              We sent a 6-digit OTP code to your registered email address <strong className="text-slate-200">{maskedEmail}</strong>.
             </p>
           </div>
 
@@ -288,15 +288,15 @@ export default function UnlockAccount({ onBackToLogin }: UnlockAccountProps) {
                   ref={(el) => (otpInputsRef.current[idx] = el as HTMLInputElement)}
                   onChange={(e) => handleOtpChange(e.target, idx)}
                   onKeyDown={(e) => handleOtpKeyDown(e, idx)}
-                  className="w-10 h-10 bg-white border border-gray-300 rounded text-center text-lg text-gray-800 font-semibold focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500/50"
+                  className="w-10 h-10 bg-slate-950/50 border border-slate-800 rounded-xl text-center text-lg text-white font-bold focus:outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20 shadow-inner"
                   disabled={loading}
                 />
               ))}
             </div>
 
-            <div className="text-center space-y-2 bg-gray-50 p-2.5 rounded border border-gray-200">
-              <p className="text-[10px] text-gray-500 font-semibold uppercase tracking-wider">
-                OTP Expiration: <span className="font-bold text-red-500">{formatTime(timeLeft)}</span>
+            <div className="text-center space-y-2 bg-slate-950/40 p-3 rounded-xl border border-slate-850/60">
+              <p className="text-[10px] text-slate-400 font-extrabold uppercase tracking-wider">
+                OTP Expiration: <span className="font-black text-rose-450">{formatTime(timeLeft)}</span>
               </p>
               
               <div className="text-[10px]">
@@ -304,14 +304,14 @@ export default function UnlockAccount({ onBackToLogin }: UnlockAccountProps) {
                   <button
                     type="button"
                     onClick={handleResendOtp}
-                    className="text-blue-600 hover:underline font-bold uppercase tracking-wider bg-transparent border-0 outline-none"
+                    className="text-indigo-400 hover:text-indigo-300 font-extrabold uppercase tracking-wider border-0 bg-transparent cursor-pointer outline-none"
                     disabled={loading}
                   >
                     Resend Code
                   </button>
                 ) : (
-                  <span className="text-gray-400 font-semibold uppercase tracking-wider">
-                    Resend in <span className="font-bold text-gray-600">{resendCooldown}s</span>
+                  <span className="text-slate-500 font-extrabold uppercase tracking-wider">
+                    Resend in <span className="font-black text-slate-350">{resendCooldown}s</span>
                   </span>
                 )}
               </div>
@@ -321,7 +321,7 @@ export default function UnlockAccount({ onBackToLogin }: UnlockAccountProps) {
               <button
                 type="submit"
                 disabled={loading}
-                className="btn-lte-primary w-full h-9"
+                className="w-full h-11 bg-indigo-600 hover:bg-indigo-700 text-white font-extrabold uppercase tracking-wider rounded-xl transition-all shadow-md shadow-indigo-600/10 hover:shadow-indigo-600/25 flex items-center justify-center gap-2 border-0 cursor-pointer text-xs"
               >
                 {loading ? (
                   <>
@@ -339,39 +339,40 @@ export default function UnlockAccount({ onBackToLogin }: UnlockAccountProps) {
 
       {/* STEP 3 - SUCCESS */}
       {step === 3 && (
-        <div className="space-y-4 text-center py-4">
-          <div className={`h-12 w-12 rounded-full border flex items-center justify-center mx-auto ${
+        <div className="space-y-5 text-center py-4">
+          <div className={`h-12 w-12 rounded-xl border flex items-center justify-center mx-auto ${
             isAlreadyActive 
-              ? "bg-blue-50 border-blue-200 text-blue-600"
-              : "bg-green-50 border-green-200 text-green-600"
+              ? "bg-indigo-500/10 border-indigo-500/20 text-indigo-400"
+              : "bg-emerald-500/10 border-emerald-500/20 text-emerald-400"
           }`}>
             {isAlreadyActive ? (
-              <Unlock size={20} className="animate-pulse" />
+              <Unlock size={18} className="animate-pulse" />
             ) : (
-              <CheckCircle2 size={20} className="animate-pulse" />
+              <CheckCircle2 size={18} className="animate-pulse" />
             )}
           </div>
           
-          <div className="space-y-1">
-            <h3 className="text-sm font-bold text-gray-800 uppercase tracking-wide">
+          <div className="space-y-2">
+            <h3 className="text-xs font-black text-slate-100 uppercase tracking-widest">
               {isAlreadyActive ? "Account Already Active" : "Account Unlocked Successfully"}
             </h3>
-            <p className="text-gray-500 text-xs px-2">
+            <p className="text-slate-400 text-[10px] leading-relaxed font-semibold px-2">
               {isAlreadyActive 
                 ? "Your account is already active and unlocked. You can sign in directly."
                 : "Your Expense Management Account has been unlocked. You can now sign in using your credentials."}
             </p>
           </div>
 
-          <div className="pt-2">
+          <div className="pt-3">
             <button
               onClick={onBackToLogin}
-              className="btn-lte-primary px-6 mx-auto h-9"
+              className="px-5 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white font-extrabold uppercase tracking-wider rounded-xl transition-all text-[10px] border-0 cursor-pointer shadow-md shadow-indigo-600/10"
             >
               {isAlreadyActive ? "Go to Sign In" : "Back to Sign In"}
             </button>
           </div>
         </div>
-      )}    </div>
+      )}
+    </div>
   );
 }

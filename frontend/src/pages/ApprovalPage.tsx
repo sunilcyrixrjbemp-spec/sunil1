@@ -586,22 +586,22 @@ export default function ApprovalPage() {
       {/* Header Info */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <h2 className="text-xl font-extrabold text-gray-800 uppercase tracking-wide">
+          <h2 className="text-xl font-extrabold text-slate-800 uppercase tracking-wide">
             Approval Center
           </h2>
-          <p className="text-gray-500 text-xs mt-1">Review operational, local purchase, and travel claims submitted by staff.</p>
+          <p className="text-slate-500 text-xs mt-1">Review operational, local purchase, and travel claims submitted by staff.</p>
         </div>
         <div className="flex items-center gap-2.5 flex-wrap">
-          <span className="px-3 py-1.5 rounded bg-blue-50 border border-blue-200 text-blue-700 text-xs font-bold uppercase tracking-wider">
+          <span className="px-3.5 py-1.5 rounded-full bg-indigo-50 border border-indigo-100 text-indigo-700 text-xs font-black uppercase tracking-wider shadow-sm">
             Pending Claims: <strong>{claimRequests.length}</strong>
           </span>
           {limitRequests.length > 0 && (
-            <span className="px-3 py-1.5 rounded bg-cyan-50 border border-cyan-200 text-cyan-700 text-xs font-bold uppercase tracking-wider">
+            <span className="px-3.5 py-1.5 rounded-full bg-cyan-50 border border-cyan-100 text-cyan-700 text-xs font-black uppercase tracking-wider shadow-sm">
               Limit Extensions: <strong>{limitRequests.length}</strong>
             </span>
           )}
           {selectedIds.length > 0 && (
-            <span className="px-3 py-1.5 rounded bg-amber-50 border border-amber-250 text-amber-800 text-xs font-bold uppercase tracking-wider animate-pulse">
+            <span className="px-3.5 py-1.5 rounded-full bg-amber-50 border border-amber-200 text-amber-800 text-xs font-black uppercase tracking-wider animate-pulse shadow-sm">
               Selected: <strong>{selectedIds.length}</strong>
             </span>
           )}
@@ -612,15 +612,15 @@ export default function ApprovalPage() {
       <div className="card-lte-primary p-5 space-y-4">
         
         {/* Contextual Two-Line Compact Filters Row */}
-        <div className="bg-slate-50 border border-gray-200 rounded p-2.5 flex flex-col gap-2 text-[10px] font-bold text-gray-700">
+        <div className="bg-slate-50/50 border border-slate-100 rounded-2xl p-3.5 flex flex-col gap-3 text-[10px] font-bold text-slate-700">
           {/* Row 1: Dropdown and Search filters with labels on top */}
-          <div className="grid grid-cols-2 gap-2.5 w-full">
+          <div className="grid grid-cols-2 gap-3 w-full">
             <div className="flex flex-col gap-1">
-              <span className="text-[8px] font-black uppercase text-gray-400">Month</span>
+              <span className="text-[8px] font-black uppercase text-slate-400">Month</span>
               <select 
                 value={filterMonth} 
                 onChange={(e) => setFilterMonth(e.target.value)}
-                className="bg-white border border-gray-300 rounded px-2 py-1 text-[10px] font-black text-gray-800 cursor-pointer focus:outline-none focus:border-blue-500 w-full"
+                className="bg-white border border-slate-200 rounded-xl px-2.5 py-1.5 text-[10px] font-black text-slate-800 cursor-pointer focus:outline-none focus:border-indigo-500 w-full"
               >
                 <option value="">All Months</option>
                 {["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"].map(m => (
@@ -630,20 +630,20 @@ export default function ApprovalPage() {
             </div>
 
             <div className="flex flex-col gap-1">
-              <span className="text-[8px] font-black uppercase text-gray-400">Search</span>
+              <span className="text-[8px] font-black uppercase text-slate-400">Search</span>
               <input 
                 type="text" 
                 value={filterEngineer} 
                 onChange={(e) => setFilterEngineer(e.target.value)}
                 placeholder="Name or Code..."
-                className="bg-white border border-gray-300 rounded px-2 py-1 text-[10px] font-black text-gray-800 focus:outline-none focus:border-blue-500 w-full"
+                className="bg-white border border-slate-200 rounded-xl px-2.5 py-1.5 text-[10px] font-black text-slate-800 focus:outline-none focus:border-indigo-500 w-full"
               />
             </div>
           </div>
 
           {/* Row 2: Active filter status indicator only */}
-          <div className="flex items-center gap-1.5 py-0.5 border-t border-gray-200/50 pt-1.5">
-            <span className="px-2.5 py-0.5 rounded text-[9px] font-black uppercase tracking-wider border bg-blue-600 text-white border-blue-600 font-extrabold shadow-sm">
+          <div className="flex items-center gap-1.5 py-0.5 border-t border-slate-100 pt-3">
+            <span className="px-3 py-1 rounded-full text-[9px] font-black uppercase tracking-wider border bg-indigo-600 text-white border-indigo-650 font-extrabold shadow-sm">
               Pending / Claimed Reviews
             </span>
           </div>

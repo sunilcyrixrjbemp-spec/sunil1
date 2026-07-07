@@ -16,22 +16,82 @@ function makeSafeFilename(filename) {
   return `${name}_${randomSuffix}.${ext}`;
 }
 
-/**
- * Helper to build headers for Cloudflare REST API (R2 operations)
- */
-function buildR2Headers(env) {
-  const token = env.PRIMARY_CLOUDFLARE_API_TOKEN;
-  const email = env.PRIMARY_CLOUDFLARE_EMAIL;
-  const headers = {};
-
-  if (token.startsWith("cfk_")) {
-    headers["X-Auth-Key"] = token;
-    headers["X-Auth-Email"] = email || "Sunil.cyrixrjbemp@gmail.com";
-  } else {
-    headers["Authorization"] = `Bearer ${token}`;
+async function arrayBufferToBase64(buffer) {
+  let binary = '';
+  const bytes = new Uint8Array(buffer);
+  const len = bytes.byteLength;
+  for (let i = 0; i < len; i++) {
+    binary += String.fromCharCode(bytes[i]);
   }
+  return btoa(binary);
+}
 
-  return headers;
+/**
+ * Helper to upload file to Google Drive via Google Apps Script Web App
+ */
+export async function uploadToGoogleDrive(env, file, folderName, filename) {
+  const gasUrl = env.GAS_WEB_APP_URL || "https://script.google.com/macros/s/AKfycbwxh5LQLCGtwGflfF7V5HKyL7viFNlAkAbsgz5xEDQo8Eg_f1kw47EjxrzSAC891sm1/exec";
+  const parentFolderId = "1oiX3ZTlnMQ9RYn8uXhLx2mrmzz_K98Nu"; // Default parent folder ID from settings
+
+  const arrayBuffer = await file.arrayBuffer();
+  const base64Content = await arrayBufferToBase64(arrayBuffer);
+
+  const payload = {
+    action: "upload_file",
+    folderId: parentFolderId,
+    folderName: folderName,
+    filename: filename,
+    fileBase64: base64Content,
+    mimeType: file.type || "application/octet-stream"
+  };
+
+  const response = await fetch(gasUrl, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json"
+    },
+    body: JSON.stringify(payload)
+  });
+
+  if (response.status === 200) {
+    const result = await response.json();
+    if (result.success) {
+      return result.fileId;
+    } else {
+      throw new Error("GAS Upload returned failure: " + result.error);
+    }
+  } else {
+    const errText = await response.text();
+    throw new Error(`GAS Upload returned HTTP ${response.status}: ${errText}`);
+  }
+}
+
+/**
+ * Helper to delete file from Google Drive via Google Apps Script Web App
+ */
+export async function deleteFromGoogleDrive(env, fileId) {
+  const gasUrl = env.GAS_WEB_APP_URL || "https://script.google.com/macros/s/AKfycbwxh5LQLCGtwGflfF7V5HKyL7viFNlAkAbsgz5xEDQo8Eg_f1kw47EjxrzSAC891sm1/exec";
+  const payload = {
+    action: "delete_file",
+    fileId: fileId
+  };
+
+  try {
+    const response = await fetch(gasUrl, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json"
+      },
+      body: JSON.stringify(payload)
+    });
+    if (response.status === 200) {
+      const result = await response.json();
+      return !!result.success;
+    }
+  } catch (e) {
+    console.error("Failed to delete from GDrive:", e);
+  }
+  return false;
 }
 
 /**
@@ -60,36 +120,20 @@ export async function handleUploadImage(request, env, params, query, user) {
   }
 
   const safeName = makeSafeFilename(file.name);
-  const key = `images/${safeName}`;
-
-  // Upload to Primary Cloudflare R2 Bucket via REST API
-  const accountId = env.PRIMARY_CLOUDFLARE_ACCOUNT_ID;
-  const bucketName = "fieldops-uploads";
-  const url = `https://api.cloudflare.com/client/v4/accounts/${accountId}/r2/buckets/${bucketName}/objects/${key}`;
+  const now = new Date();
+  const monthName = now.toLocaleString("en-US", { month: "long" });
+  const yearVal = now.getFullYear();
+  const folderName = `${monthName}_${yearVal}`;
 
   try {
-    const res = await fetch(url, {
-      method: "PUT",
-      headers: {
-        ...buildR2Headers(env),
-        "Content-Type": file.type || "application/octet-stream"
-      },
-      body: fileBuffer
+    const fileId = await uploadToGoogleDrive(env, file, folderName, safeName);
+    return jsonResponse({
+      filename: file.name,
+      url: `/api/upload/file/gdrive/${fileId}`
     });
-
-    if (res.status === 200) {
-      return jsonResponse({
-        filename: file.name,
-        url: `/api/upload/file/${key}`
-      });
-    } else {
-      const errText = await res.text();
-      console.error(`R2 Upload failed with status ${res.status}: ${errText}`);
-      return jsonResponse({ error: "R2 Upload failed" }, 500);
-    }
   } catch (e) {
-    console.error("R2 connection error:", e);
-    return jsonResponse({ error: "R2 Connection error" }, 500);
+    console.error("GDrive Upload failed:", e);
+    return jsonResponse({ error: "Google Drive Upload failed: " + e.message }, 500);
   }
 }
 
@@ -107,43 +151,27 @@ export async function handleUploadDocument(request, env, params, query, user) {
   const file = formData.get("file");
   if (!file) return jsonResponse({ error: "No file uploaded" }, 400);
 
-  const fileBuffer = await file.arrayBuffer();
   const safeName = makeSafeFilename(file.name);
-  const key = `documents/${safeName}`;
-
-  const accountId = env.PRIMARY_CLOUDFLARE_ACCOUNT_ID;
-  const bucketName = "fieldops-uploads";
-  const url = `https://api.cloudflare.com/client/v4/accounts/${accountId}/r2/buckets/${bucketName}/objects/${key}`;
+  const now = new Date();
+  const monthName = now.toLocaleString("en-US", { month: "long" });
+  const yearVal = now.getFullYear();
+  const folderName = `${monthName}_${yearVal}`;
 
   try {
-    const res = await fetch(url, {
-      method: "PUT",
-      headers: {
-        ...buildR2Headers(env),
-        "Content-Type": file.type || "application/octet-stream"
-      },
-      body: fileBuffer
+    const fileId = await uploadToGoogleDrive(env, file, folderName, safeName);
+    return jsonResponse({
+      filename: file.name,
+      url: `/api/upload/file/gdrive/${fileId}`
     });
-
-    if (res.status === 200) {
-      return jsonResponse({
-        filename: file.name,
-        url: `/api/upload/file/${key}`
-      });
-    } else {
-      const errText = await res.text();
-      console.error(`R2 Upload failed with status ${res.status}: ${errText}`);
-      return jsonResponse({ error: "R2 Upload failed" }, 500);
-    }
   } catch (e) {
-    console.error("R2 connection error:", e);
-    return jsonResponse({ error: "R2 Connection error" }, 500);
+    console.error("GDrive Upload failed:", e);
+    return jsonResponse({ error: "Google Drive Upload failed: " + e.message }, 500);
   }
 }
 
 /**
  * GET /api/upload/file/*
- * Serve objects from Primary R2 Bucket
+ * Serve objects from Google Drive or Cloudflare R2 fallback
  */
 export async function handleServeFile(request, env, params, query, user) {
   // Extract file path from URL
@@ -151,14 +179,78 @@ export async function handleServeFile(request, env, params, query, user) {
   const pathPrefix = "/api/upload/file/";
   const key = decodeURIComponent(urlObj.pathname.substring(urlObj.pathname.indexOf(pathPrefix) + pathPrefix.length));
 
+  // 1. Google Drive Fetch Proxy
+  if (key.startsWith("gdrive/")) {
+    const fileId = key.replace("gdrive/", "");
+    const gasUrl = env.GAS_WEB_APP_URL || "https://script.google.com/macros/s/AKfycbwxh5LQLCGtwGflfF7V5HKyL7viFNlAkAbsgz5xEDQo8Eg_f1kw47EjxrzSAC891sm1/exec";
+    
+    try {
+      const payload = {
+        action: "download_file",
+        fileId: fileId
+      };
+      
+      const response = await fetch(gasUrl, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json"
+        },
+        body: JSON.stringify(payload)
+      });
+      
+      if (response.status === 200) {
+        const result = await response.json();
+        if (result.success) {
+          const fileBase64 = result.fileBase64;
+          const contentType = result.mimeType || "application/octet-stream";
+          
+          // Convert base64 to binary bytes
+          const binaryStr = atob(fileBase64);
+          const len = binaryStr.length;
+          const bytes = new Uint8Array(len);
+          for (let i = 0; i < len; i++) {
+            bytes[i] = binaryStr.charCodeAt(i);
+          }
+          
+          return new Response(bytes, {
+            status: 200,
+            headers: {
+              "Content-Type": contentType,
+              "Cache-Control": "public, max-age=31536000"
+            }
+          });
+        } else {
+          return new Response("File not found in Google Drive: " + result.error, { status: 404 });
+        }
+      } else {
+        return new Response("Failed to fetch from Google Drive proxy", { status: response.status });
+      }
+    } catch (e) {
+      console.error("Error serving from Google Drive:", e);
+      return new Response("Internal Server Error serving Google Drive file", { status: 500 });
+    }
+  }
+
+  // 2. Cloudflare R2 serving fallback
   const accountId = env.PRIMARY_CLOUDFLARE_ACCOUNT_ID;
   const bucketName = "fieldops-uploads";
   const url = `https://api.cloudflare.com/client/v4/accounts/${accountId}/r2/buckets/${bucketName}/objects/${key}`;
 
   try {
+    const token = env.PRIMARY_CLOUDFLARE_API_TOKEN;
+    const email = env.PRIMARY_CLOUDFLARE_EMAIL;
+    const headers = {};
+
+    if (token && token.startsWith("cfk_")) {
+      headers["X-Auth-Key"] = token;
+      headers["X-Auth-Email"] = email || "Sunil.cyrixrjbemp@gmail.com";
+    } else if (token) {
+      headers["Authorization"] = `Bearer ${token}`;
+    }
+
     const res = await fetch(url, {
       method: "GET",
-      headers: buildR2Headers(env)
+      headers: headers
     });
 
     if (res.status === 200) {

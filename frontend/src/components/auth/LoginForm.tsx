@@ -240,12 +240,12 @@ export default function LoginForm({ onForgotPassword, onUnlockAccount }: LoginFo
   }, [showDiagnostics]);
 
   return (
-    <div className="p-6 sm:p-8 space-y-5">
-      <div className="text-center py-2 border-b border-gray-200">
+    <div className="p-6 sm:p-8 space-y-6">
+      <div className="text-center py-2 border-b border-slate-800/80">
         <img 
           src="/brand.png" 
           alt="Logo" 
-          className="h-14 w-auto mx-auto object-contain cursor-pointer active:scale-95 transition-transform" 
+          className="h-14 w-auto mx-auto object-contain cursor-pointer active:scale-95 transition-transform bg-white/5 rounded-lg p-1.5 shadow-sm" 
           onClick={() => {
             const clicks = logoClicks + 1;
             setLogoClicks(clicks);
@@ -255,14 +255,14 @@ export default function LoginForm({ onForgotPassword, onUnlockAccount }: LoginFo
             }
           }}
         />
-        <p className="text-gray-500 text-xs mt-1.5 font-bold uppercase tracking-wider">Account Sign In</p>
+        <p className="text-slate-400 text-[10px] mt-2 font-black uppercase tracking-widest">Account Sign In</p>
       </div>
 
       {statusMessage && (
-        <div className={`p-3 border rounded text-xs font-semibold ${
+        <div className={`p-3.5 border rounded-xl text-xs font-bold leading-relaxed ${
           statusMessage.type === "success" 
-            ? "bg-green-50 border-green-200 text-green-700" 
-            : "bg-red-50 border-red-200 text-red-700"
+            ? "bg-emerald-500/10 border-emerald-500/30 text-emerald-400" 
+            : "bg-rose-500/10 border-rose-500/30 text-rose-450"
         }`}>
           {statusMessage.text}
         </div>
@@ -270,9 +270,9 @@ export default function LoginForm({ onForgotPassword, onUnlockAccount }: LoginFo
 
       <form onSubmit={handleSubmit} className="space-y-4">
         <div>
-          <label htmlFor="userId" className="label-lte">User ID</label>
+          <label htmlFor="userId" className="text-slate-400 font-extrabold uppercase tracking-widest text-[9px] mb-1.5 block">User ID</label>
           <div className="relative">
-            <span className="absolute inset-y-0 left-0 pl-3 flex items-center text-gray-400">
+            <span className="absolute inset-y-0 left-0 pl-3.5 flex items-center text-slate-500">
               <User size={14} />
             </span>
             <input
@@ -285,7 +285,7 @@ export default function LoginForm({ onForgotPassword, onUnlockAccount }: LoginFo
                 setStatusMessage(null);
               }}
               disabled={loading}
-              className="input-lte-icon !pl-11"
+              className="w-full bg-slate-950/50 border border-slate-800 rounded-xl pr-3.5 py-3 text-xs text-white placeholder-slate-600 focus:outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20 transition-all font-semibold shadow-inner"
               style={{ paddingLeft: '2.75rem' }}
               required
             />
@@ -293,9 +293,9 @@ export default function LoginForm({ onForgotPassword, onUnlockAccount }: LoginFo
         </div>
 
         <div>
-          <label htmlFor="password" className="label-lte">Password</label>
+          <label htmlFor="password" className="text-slate-400 font-extrabold uppercase tracking-widest text-[9px] mb-1.5 block">Password</label>
           <div className="relative">
-            <span className="absolute inset-y-0 left-0 pl-3 flex items-center text-gray-400">
+            <span className="absolute inset-y-0 left-0 pl-3.5 flex items-center text-slate-500">
               <Lock size={14} />
             </span>
             <input
@@ -308,14 +308,14 @@ export default function LoginForm({ onForgotPassword, onUnlockAccount }: LoginFo
                 setStatusMessage(null);
               }}
               disabled={loading}
-              className="input-lte-icon !pl-11"
+              className="w-full bg-slate-950/50 border border-slate-800 rounded-xl pr-10 py-3 text-xs text-white placeholder-slate-600 focus:outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20 transition-all font-semibold shadow-inner"
               style={{ paddingLeft: '2.75rem' }}
               required
             />
             <button
               type="button"
               onClick={() => setShowPassword(!showPassword)}
-              className="absolute inset-y-0 right-0 pr-3 flex items-center text-gray-400 hover:text-gray-600 transition-colors"
+              className="absolute inset-y-0 right-0 pr-3.5 flex items-center text-slate-500 hover:text-slate-350 transition-colors border-0 bg-transparent cursor-pointer"
             >
               {showPassword ? <EyeOff size={14} /> : <Eye size={14} />}
             </button>
@@ -326,7 +326,7 @@ export default function LoginForm({ onForgotPassword, onUnlockAccount }: LoginFo
           <button
             type="submit"
             disabled={loading}
-            className="btn-lte-primary w-full h-9"
+            className="w-full h-11 bg-indigo-600 hover:bg-indigo-700 text-white font-extrabold uppercase tracking-wider rounded-xl transition-all shadow-md shadow-indigo-600/10 hover:shadow-indigo-600/25 flex items-center justify-center gap-2 border-0 cursor-pointer text-xs"
           >
             {loading ? (
               <>
@@ -353,24 +353,24 @@ export default function LoginForm({ onForgotPassword, onUnlockAccount }: LoginFo
               if (success) navigate("/home");
             }}
             disabled={loading}
-            className="w-full h-10 flex items-center justify-center gap-2 border-2 border-blue-500 text-blue-600 rounded font-bold text-xs hover:bg-blue-50 transition-all"
+            className="w-full h-11 flex items-center justify-center gap-2 border border-slate-800 bg-slate-850 hover:bg-slate-800 text-slate-200 rounded-xl font-extrabold uppercase tracking-wider text-[10px] transition-all cursor-pointer"
           >
-            <Fingerprint size={18} />
+            <Fingerprint size={16} className="text-indigo-400" />
             <span>{biometryType === 'face' ? 'Login with Face ID' : 'Login with Fingerprint'}</span>
           </button>
         )}
       </form>
 
-      <div className="flex items-center justify-between text-xs pt-3 border-t border-gray-100 text-gray-500">
+      <div className="flex items-center justify-between text-[11px] pt-4 border-t border-slate-800/80 text-slate-550 font-bold uppercase tracking-wider">
         <button
           onClick={onForgotPassword}
-          className="hover:text-blue-600 transition-all font-semibold hover:underline"
+          className="hover:text-indigo-400 transition-all border-0 bg-transparent cursor-pointer"
         >
           Forgot Password?
         </button>
         <button
           onClick={onUnlockAccount}
-          className="hover:text-blue-600 transition-all font-semibold hover:underline"
+          className="hover:text-indigo-400 transition-all border-0 bg-transparent cursor-pointer"
         >
           Unlock Account
         </button>
@@ -378,46 +378,46 @@ export default function LoginForm({ onForgotPassword, onUnlockAccount }: LoginFo
 
       {/* Already Logged In Overlay Modal */}
       {showAlreadyLoggedInModal && (
-        <div className="fixed inset-0 bg-black/50 backdrop-blur-[1px] flex items-center justify-center p-4 z-50 animate-fadeIn text-gray-800">
-          <div className="bg-white border border-gray-300 rounded shadow-xl w-full max-w-sm overflow-hidden animate-scaleIn">
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-xs flex items-center justify-center p-4 z-50 animate-fadeIn text-slate-300">
+          <div className="bg-slate-900 border border-slate-800 rounded-2xl shadow-2xl w-full max-w-sm overflow-hidden animate-scaleIn">
             
             {/* Modal Header */}
-            <div className="px-4 py-3 bg-amber-50 border-b border-amber-200 flex items-center justify-between">
-              <h3 className="text-xs font-bold uppercase tracking-wider text-amber-800 flex items-center gap-1.5">
-                <AlertTriangle className="w-4 h-4 text-amber-600" />
+            <div className="px-4 py-3 bg-amber-500/10 border-b border-amber-500/20 flex items-center justify-between">
+              <h3 className="text-[10px] font-black uppercase tracking-widest text-amber-500 flex items-center gap-2">
+                <AlertTriangle className="w-4 h-4 text-amber-500" />
                 Active Session Detected
               </h3>
               <button 
                 onClick={() => setShowAlreadyLoggedInModal(false)}
-                className="p-1 hover:bg-amber-100 rounded text-amber-600 hover:text-amber-800 border-0 bg-transparent cursor-pointer"
+                className="p-1 hover:bg-slate-800 rounded text-slate-400 hover:text-white border-0 bg-transparent cursor-pointer"
               >
                 <X className="w-4 h-4" />
               </button>
             </div>
 
             {/* Modal Body */}
-            <div className="p-4 text-xs space-y-3">
-              <p className="font-semibold text-gray-700 leading-relaxed">
+            <div className="p-5 text-xs space-y-3 leading-relaxed">
+              <p className="font-bold text-slate-200">
                 You are currently logged in on another device or browser tab. 
               </p>
-              <p className="text-gray-500 font-medium">
+              <p className="text-slate-400">
                 Logging in here will automatically terminate your session on the other device. Do you want to proceed?
               </p>
             </div>
 
             {/* Modal Footer */}
-            <div className="px-4 py-3 bg-gray-50 border-t border-gray-200 flex items-center justify-end gap-2">
+            <div className="px-4 py-3 bg-slate-950/40 border-t border-slate-850/60 flex items-center justify-end gap-2">
               <button
                 type="button"
                 onClick={() => setShowAlreadyLoggedInModal(false)}
-                className="px-3 py-1.5 bg-gray-200 hover:bg-gray-300 text-gray-700 rounded text-[11px] font-bold border-0 cursor-pointer transition-all"
+                className="px-3.5 py-2 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-xl text-[10px] font-extrabold uppercase tracking-wider border-0 cursor-pointer transition-all"
               >
                 Cancel
               </button>
               <button
                 type="button"
                 onClick={handleForceLogin}
-                className="px-3 py-1.5 bg-blue-600 hover:bg-blue-700 text-white rounded text-[11px] font-bold border-0 cursor-pointer shadow-sm transition-all"
+                className="px-3.5 py-2 bg-indigo-650 hover:bg-indigo-700 text-white rounded-xl text-[10px] font-extrabold uppercase tracking-wider border-0 cursor-pointer shadow-md shadow-indigo-600/10 transition-all"
               >
                 Yes, Log In Here
               </button>
@@ -429,25 +429,25 @@ export default function LoginForm({ onForgotPassword, onUnlockAccount }: LoginFo
 
       {/* Biometric Enable Prompt */}
       {showBiometricPrompt && (
-        <div className="fixed inset-0 bg-black/50 backdrop-blur-[1px] flex items-center justify-center p-4 z-50 animate-fadeIn">
-          <div className="bg-white border border-gray-300 rounded shadow-xl w-full max-w-sm overflow-hidden animate-scaleIn">
-            <div className="px-4 py-3 bg-blue-50 border-b border-blue-200">
-              <h3 className="text-xs font-bold uppercase tracking-wider text-blue-800 flex items-center gap-1.5">
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-xs flex items-center justify-center p-4 z-50 animate-fadeIn">
+          <div className="bg-slate-900 border border-slate-800 rounded-2xl shadow-2xl w-full max-w-sm overflow-hidden animate-scaleIn">
+            <div className="px-4 py-3 bg-indigo-500/10 border-b border-indigo-500/20">
+              <h3 className="text-[10px] font-black uppercase tracking-widest text-indigo-400 flex items-center gap-2">
                 <Fingerprint className="w-4 h-4" />
                 Enable {biometryType === 'face' ? 'Face ID' : 'Fingerprint'} Login
               </h3>
             </div>
-            <div className="p-4 text-xs space-y-3">
-              <p className="font-semibold text-gray-700">
+            <div className="p-5 text-xs space-y-3 leading-relaxed text-slate-300">
+              <p className="font-bold text-slate-200">
                 Would you like to use {biometryType === 'face' ? 'Face ID' : 'Fingerprint'} for faster login next time?
               </p>
-              <p className="text-gray-500">You can disable this anytime from Profile settings.</p>
+              <p className="text-slate-400">You can disable this anytime from Profile settings.</p>
             </div>
-            <div className="px-4 py-3 bg-gray-50 border-t border-gray-200 flex items-center justify-end gap-2">
+            <div className="px-4 py-3 bg-slate-950/40 border-t border-slate-850/60 flex items-center justify-end gap-2">
               <button
                 type="button"
                 onClick={() => { setShowBiometricPrompt(false); navigate("/home"); }}
-                className="px-3 py-1.5 bg-gray-200 hover:bg-gray-300 text-gray-700 rounded text-[11px] font-bold border-0 cursor-pointer transition-all"
+                className="px-3.5 py-2 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-xl text-[10px] font-extrabold uppercase tracking-wider border-0 cursor-pointer transition-all"
               >
                 Skip
               </button>
@@ -458,7 +458,7 @@ export default function LoginForm({ onForgotPassword, onUnlockAccount }: LoginFo
                   setShowBiometricPrompt(false);
                   navigate("/home");
                 }}
-                className="px-3 py-1.5 bg-blue-600 hover:bg-blue-700 text-white rounded text-[11px] font-bold border-0 cursor-pointer shadow-sm transition-all flex items-center gap-1"
+                className="px-3.5 py-2 bg-indigo-650 hover:bg-indigo-700 text-white rounded-xl text-[10px] font-extrabold uppercase tracking-wider border-0 cursor-pointer shadow-md shadow-indigo-600/10 transition-all flex items-center gap-1"
               >
                 <Fingerprint size={12} /> Enable
               </button>
@@ -469,54 +469,54 @@ export default function LoginForm({ onForgotPassword, onUnlockAccount }: LoginFo
 
       {/* Developer Storage Diagnostic Modal */}
       {showDiagnostics && (
-        <div className="fixed inset-0 bg-black/60 backdrop-blur-[2px] flex items-center justify-center p-4 z-50 overflow-y-auto">
-          <div className="bg-slate-900 border border-slate-700 text-slate-100 rounded-lg shadow-2xl w-full max-w-md overflow-hidden my-8">
-            <div className="px-4 py-3 bg-slate-800 border-b border-slate-700 flex items-center justify-between">
-              <h3 className="text-sm font-bold uppercase tracking-wider text-blue-400 flex items-center gap-1.5">
+        <div className="fixed inset-0 bg-black/70 backdrop-blur-xs flex items-center justify-center p-4 z-50 overflow-y-auto">
+          <div className="bg-slate-955 border border-slate-800 text-slate-100 rounded-2xl shadow-2xl w-full max-w-md overflow-hidden my-8">
+            <div className="px-4 py-3.5 bg-slate-900 border-b border-slate-800 flex items-center justify-between">
+              <h3 className="text-xs font-black uppercase tracking-widest text-indigo-400 flex items-center gap-2">
                 Developer Diagnostic Panel
               </h3>
               <button 
                 type="button" 
                 onClick={() => setShowDiagnostics(false)} 
-                className="text-slate-400 hover:text-slate-100 bg-transparent border-0 cursor-pointer text-lg font-bold"
+                className="text-slate-400 hover:text-white bg-transparent border-0 cursor-pointer text-lg font-bold"
               >
                 &times;
               </button>
             </div>
-            <div className="p-4 text-xs space-y-4 font-mono max-h-[60vh] overflow-y-auto">
+            <div className="p-5 text-[11px] space-y-4 font-mono max-h-[60vh] overflow-y-auto bg-slate-950 text-slate-300">
               <div className="space-y-1">
-                <span className="text-gray-400 block font-semibold">[LocalStorage Token]</span>
-                <span className="text-green-400 break-all bg-slate-950 p-1.5 rounded block">{diagData.localStorageToken}</span>
+                <span className="text-slate-500 block font-bold">[LocalStorage Token]</span>
+                <span className="text-emerald-400 break-all bg-slate-900 p-2.5 rounded-lg block border border-slate-850 shadow-inner">{diagData.localStorageToken}</span>
               </div>
               <div className="space-y-1">
-                <span className="text-gray-400 block font-semibold">[Preferences Token]</span>
-                <span className="text-green-400 break-all bg-slate-950 p-1.5 rounded block">{diagData.prefToken}</span>
+                <span className="text-slate-500 block font-bold">[Preferences Token]</span>
+                <span className="text-emerald-400 break-all bg-slate-900 p-2.5 rounded-lg block border border-slate-850 shadow-inner">{diagData.prefToken}</span>
               </div>
               <div className="space-y-1">
-                <span className="text-gray-400 block font-semibold">[Directory.Data Session File]</span>
-                <span className="text-yellow-400 break-all bg-slate-950 p-1.5 rounded block">{diagData.fileDataToken}</span>
+                <span className="text-slate-500 block font-bold">[Directory.Data Session File]</span>
+                <span className="text-amber-450 break-all bg-slate-900 p-2.5 rounded-lg block border border-slate-850 shadow-inner">{diagData.fileDataToken}</span>
               </div>
               <div className="space-y-1">
-                <span className="text-gray-400 block font-semibold">[Directory.External Session File]</span>
-                <span className="text-yellow-400 break-all bg-slate-950 p-1.5 rounded block">{diagData.fileExternalToken}</span>
+                <span className="text-slate-500 block font-bold">[Directory.External Session File]</span>
+                <span className="text-amber-450 break-all bg-slate-900 p-2.5 rounded-lg block border border-slate-850 shadow-inner">{diagData.fileExternalToken}</span>
               </div>
-              <div className="space-y-1 border-t border-slate-700 pt-3">
-                <span className="text-gray-400 block font-semibold">[Test Write Status]</span>
-                <span className="text-cyan-400 break-all bg-slate-950 p-1.5 rounded block">{diagData.writeTestResult || "Click Test Write to start"}</span>
+              <div className="space-y-1 border-t border-slate-800 pt-3">
+                <span className="text-slate-500 block font-bold">[Test Write Status]</span>
+                <span className="text-cyan-400 break-all bg-slate-900 p-2.5 rounded-lg block border border-slate-850 shadow-inner">{diagData.writeTestResult || "Click Test Write to start"}</span>
               </div>
             </div>
-            <div className="px-4 py-3 bg-slate-800 border-t border-slate-700 flex items-center justify-between gap-2">
+            <div className="px-4 py-3 bg-slate-900 border-t border-slate-800 flex items-center justify-between gap-2">
               <button
                 type="button"
                 onClick={testWrite}
-                className="px-3 py-1.5 bg-cyan-600 hover:bg-cyan-700 text-white rounded text-[11px] font-bold border-0 cursor-pointer transition-all"
+                className="px-3.5 py-2 bg-cyan-600 hover:bg-cyan-700 text-white rounded-xl text-[10px] font-extrabold uppercase tracking-wider border-0 cursor-pointer transition-all shadow-md shadow-cyan-600/10"
               >
                 Run Write Test
               </button>
               <button
                 type="button"
                 onClick={runDiagnostics}
-                className="px-3 py-1.5 bg-slate-700 hover:bg-slate-600 text-slate-100 rounded text-[11px] font-bold border-0 cursor-pointer transition-all"
+                className="px-3.5 py-2 bg-slate-800 hover:bg-slate-700 text-slate-100 rounded-xl text-[10px] font-extrabold uppercase tracking-wider border-0 cursor-pointer transition-all"
               >
                 Refresh Data
               </button>
@@ -524,7 +524,6 @@ export default function LoginForm({ onForgotPassword, onUnlockAccount }: LoginFo
           </div>
         </div>
       )}
-
     </div>
   );
 }

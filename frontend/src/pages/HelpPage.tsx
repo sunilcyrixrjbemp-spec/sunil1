@@ -533,17 +533,17 @@ export default function HelpPage() {
       {/* Header Info */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <h2 className="text-2xl font-black text-gray-900 uppercase tracking-wide flex items-center gap-2">
-            <i className="fas fa-headset text-blue-600 animate-pulse"></i>
+          <h2 className="text-2xl font-black text-slate-800 uppercase tracking-wide flex items-center gap-2">
+            <i className="fas fa-headset text-indigo-600 animate-pulse"></i>
             FieldOps Help Desk
           </h2>
-          <p className="text-gray-500 text-xs mt-0.5">
+          <p className="text-slate-550 text-xs mt-0.5">
             Log technical concerns, track Turn Around Time (TAT), and manage resolution logs with supervisor mapping.
           </p>
         </div>
         <button
           onClick={fetchInitialData}
-          className="px-3 py-1.5 bg-gray-150 hover:bg-gray-200 text-gray-700 text-xs font-bold uppercase tracking-wider rounded border border-gray-300 cursor-pointer flex items-center gap-1.5 self-start transition-all"
+          className="px-3.5 py-2 bg-white hover:bg-slate-50 text-slate-700 text-xs font-bold uppercase tracking-wider rounded-full border border-slate-200 cursor-pointer flex items-center gap-1.5 self-start transition-all shadow-sm"
         >
           <i className="fas fa-sync-alt"></i>
           Refresh desk
@@ -554,14 +554,14 @@ export default function HelpPage() {
       <div className="hidden lg:grid grid-cols-1 lg:grid-cols-3 gap-6">
         
         {/* Bar Chart 1: Category */}
-        <div className="card-lte-primary p-4 bg-white shadow-sm">
-          <span className="text-[10px] font-bold text-gray-500 uppercase tracking-wider block border-b border-gray-100 pb-1.5 mb-2">Concerns by Category</span>
+        <div className="card border border-slate-100 p-4 bg-white shadow-sm rounded-3xl">
+          <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest block border-b border-slate-100 pb-2 mb-3">Concerns by Category</span>
           <div style={{ height: 160 }}>
             <ResponsiveContainer width="100%" height="100%">
               <BarChart data={analytics.categoryChart} layout="vertical" margin={{ left: 5, right: 10, top: 5, bottom: 5 }}>
-                <CartesianGrid strokeDasharray="3 3" stroke="#f3f4f6" horizontal={true} vertical={false} />
-                <XAxis type="number" tick={{ fontSize: 9 }} allowDecimals={false} />
-                <YAxis type="category" dataKey="label" tick={{ fontSize: 9 }} width={80} />
+                <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" horizontal={true} vertical={false} />
+                <XAxis type="number" tick={{ fontSize: 9, fontWeight: 'bold' }} allowDecimals={false} stroke="#94a3b8" />
+                <YAxis type="category" dataKey="label" tick={{ fontSize: 9, fontWeight: 'bold' }} width={80} stroke="#94a3b8" />
                 <Tooltip content={<CustomTooltip />} />
                 <Bar dataKey="amount" radius={[0, 6, 6, 0]} maxBarSize={16}>
                   {analytics.categoryChart.map((_, index) => (
@@ -574,14 +574,14 @@ export default function HelpPage() {
         </div>
 
         {/* Bar Chart 2: Priority */}
-        <div className="card-lte-primary p-4 bg-white shadow-sm" style={{ borderTopColor: "#6610f2" }}>
-          <span className="text-[10px] font-bold text-gray-500 uppercase tracking-wider block border-b border-gray-100 pb-1.5 mb-2">Concerns by Priority</span>
+        <div className="card border border-slate-100 p-4 bg-white shadow-sm rounded-3xl">
+          <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest block border-b border-slate-100 pb-2 mb-3">Concerns by Priority</span>
           <div style={{ height: 160 }}>
             <ResponsiveContainer width="100%" height="100%">
               <BarChart data={analytics.priorityChart} layout="vertical" margin={{ left: 5, right: 10, top: 5, bottom: 5 }}>
-                <CartesianGrid strokeDasharray="3 3" stroke="#f3f4f6" horizontal={true} vertical={false} />
-                <XAxis type="number" tick={{ fontSize: 9 }} allowDecimals={false} />
-                <YAxis type="category" dataKey="label" tick={{ fontSize: 9 }} width={70} />
+                <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" horizontal={true} vertical={false} />
+                <XAxis type="number" tick={{ fontSize: 9, fontWeight: 'bold' }} allowDecimals={false} stroke="#94a3b8" />
+                <YAxis type="category" dataKey="label" tick={{ fontSize: 9, fontWeight: 'bold' }} width={70} stroke="#94a3b8" />
                 <Tooltip content={<CustomTooltip />} />
                 <Bar dataKey="amount" radius={[0, 6, 6, 0]} maxBarSize={16}>
                   {analytics.priorityChart.map((_, index) => (
@@ -594,14 +594,14 @@ export default function HelpPage() {
         </div>
 
         {/* Bar Chart 3: Status */}
-        <div className="card-lte-warning p-4 bg-white shadow-sm">
-          <span className="text-[10px] font-bold text-gray-500 uppercase tracking-wider block border-b border-gray-100 pb-1.5 mb-2">Concerns by Status</span>
+        <div className="card border border-slate-100 p-4 bg-white shadow-sm rounded-3xl">
+          <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest block border-b border-slate-100 pb-2 mb-3">Concerns by Status</span>
           <div style={{ height: 160 }}>
             <ResponsiveContainer width="100%" height="100%">
               <BarChart data={analytics.statusChart} layout="vertical" margin={{ left: 5, right: 10, top: 5, bottom: 5 }}>
-                <CartesianGrid strokeDasharray="3 3" stroke="#f3f4f6" horizontal={true} vertical={false} />
-                <XAxis type="number" tick={{ fontSize: 9 }} allowDecimals={false} />
-                <YAxis type="category" dataKey="label" tick={{ fontSize: 9 }} width={85} />
+                <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" horizontal={true} vertical={false} />
+                <XAxis type="number" tick={{ fontSize: 9, fontWeight: 'bold' }} allowDecimals={false} stroke="#94a3b8" />
+                <YAxis type="category" dataKey="label" tick={{ fontSize: 9, fontWeight: 'bold' }} width={85} stroke="#94a3b8" />
                 <Tooltip content={<CustomTooltip />} />
                 <Bar dataKey="amount" radius={[0, 6, 6, 0]} maxBarSize={16}>
                   {analytics.statusChart.map((_, index) => (
@@ -616,18 +616,14 @@ export default function HelpPage() {
       </div>
 
       {/* Standalone Mobile Tab Selector */}
-      <div className="xl:hidden bg-slate-100 p-1 flex rounded-xl gap-1 shadow-inner mb-3">
+      <div className="xl:hidden bg-slate-50 border border-slate-100 p-1.5 flex rounded-2xl gap-1 shadow-sm mb-3">
         <button
           type="button"
           onClick={() => { handleTabChange("my-tickets"); setSelectedTicket(null); }}
-          style={{
-            minHeight: 'auto',
-            backgroundColor: activeTab === "my-tickets" ? "#a5d8e8" : undefined
-          }}
-          className={`flex-1 py-2 text-center font-black text-[10px] uppercase rounded-lg border-0 cursor-pointer transition-all ${
+          className={`flex-1 py-2.5 text-center font-black text-[10px] uppercase rounded-xl border-0 cursor-pointer transition-all ${
             activeTab === "my-tickets"
-              ? "text-slate-900 shadow-xs font-extrabold"
-              : "bg-transparent text-slate-450 hover:text-slate-700"
+              ? "bg-indigo-600 text-white shadow-sm font-extrabold"
+              : "bg-transparent text-slate-500 hover:text-slate-700 hover:bg-slate-100/50"
           }`}
         >
           My Tickets ({myRaisedTickets.length})
@@ -635,14 +631,10 @@ export default function HelpPage() {
         <button
           type="button"
           onClick={() => { handleTabChange("raise"); setSelectedTicket(null); }}
-          style={{
-            minHeight: 'auto',
-            backgroundColor: activeTab === "raise" ? "#a5d8e8" : undefined
-          }}
-          className={`flex-1 py-2 text-center font-black text-[10px] uppercase rounded-lg border-0 cursor-pointer transition-all ${
+          className={`flex-1 py-2.5 text-center font-black text-[10px] uppercase rounded-xl border-0 cursor-pointer transition-all ${
             activeTab === "raise"
-              ? "text-slate-900 shadow-xs font-extrabold"
-              : "bg-transparent text-slate-450 hover:text-slate-700"
+              ? "bg-indigo-600 text-white shadow-sm font-extrabold"
+              : "bg-transparent text-slate-500 hover:text-slate-700 hover:bg-slate-100/50"
           }`}
         >
           File Ticket
@@ -651,14 +643,10 @@ export default function HelpPage() {
           <button
             type="button"
             onClick={() => { handleTabChange("assigned-tickets"); setSelectedTicket(null); }}
-            style={{
-              minHeight: 'auto',
-              backgroundColor: activeTab === "assigned-tickets" ? "#a5d8e8" : undefined
-            }}
-            className={`flex-1 py-2 text-center font-black text-[10px] uppercase rounded-lg border-0 cursor-pointer transition-all ${
+            className={`flex-1 py-2.5 text-center font-black text-[10px] uppercase rounded-xl border-0 cursor-pointer transition-all ${
               activeTab === "assigned-tickets"
-                ? "text-slate-900 shadow-xs font-extrabold"
-                : "bg-transparent text-slate-450 hover:text-slate-700"
+                ? "bg-indigo-600 text-white shadow-sm font-extrabold"
+                : "bg-transparent text-slate-500 hover:text-slate-700 hover:bg-slate-100/50"
             }`}
           >
             Assigned ({assignedTickets.length})

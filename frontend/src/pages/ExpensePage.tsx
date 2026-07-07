@@ -2343,87 +2343,87 @@ export default function ExpensePage() {
       <div className="space-y-6 animate-fadeIn text-[#212529] pb-24 text-xs font-sans">
       
       {/* Header Info */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between border-b border-gray-200 pb-3 gap-2">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between border-b border-slate-100 pb-3 gap-2">
         <div>
-          <h2 className="text-base font-bold text-gray-800 uppercase tracking-tight flex items-center gap-1.5">
-            <FileText className="w-5 h-5 text-blue-600" />
+          <h2 className="text-base font-bold text-slate-800 uppercase tracking-tight flex items-center gap-2">
+            <FileText className="w-5 h-5 text-indigo-650" />
             Submit Daily Expense
           </h2>
-          <p className="text-gray-500 text-xs mt-0.5">Fill out your travel details and work report for the day</p>
+          <p className="text-slate-450 text-xs mt-0.5">Fill out your travel details and work report for the day</p>
         </div>
         <div className="flex items-center gap-2 self-start sm:self-center">
-          <span className="text-[10px] text-gray-400 font-bold uppercase">Expense ID:</span>
-          <span className="bg-blue-600 text-white font-extrabold py-1 px-3 rounded text-[11px] font-mono shadow-sm">
+          <span className="text-[10px] text-slate-400 font-bold uppercase">Expense ID:</span>
+          <span className="bg-indigo-600 text-white font-extrabold py-1 px-3.5 rounded-2xl text-[11px] font-mono shadow-sm">
             {nextExpId}
           </span>
         </div>
       </div>
 
       {/* 4 Info-Box Widgets (Unified Mobile/Desktop) */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
         {/* Profile Card */}
-        <div className="info-box-lte animate-fadeIn">
-          <div className="info-box-icon bg-[#a5d8e8]">
-            <User className="w-5 h-5 text-slate-800" />
+        <div className="group bg-white border border-slate-100 rounded-3xl p-4 flex items-center gap-4 hover:shadow-md transition-all duration-300 animate-fadeIn">
+          <div className="w-12 h-12 rounded-2xl flex items-center justify-center bg-indigo-50 text-indigo-650 shrink-0">
+            <User className="w-5 h-5" />
           </div>
-          <div className="info-box-content">
-            <span className="text-[9px] font-bold uppercase tracking-wider text-gray-400 block mb-0.5">
+          <div className="min-w-0 flex-1">
+            <span className="text-[9px] font-black uppercase tracking-wider text-slate-400 block mb-0.5">
               Employee Profile
             </span>
-            <span className="text-xs font-bold text-gray-800 block truncate" title={user.name || "—"}>
+            <span className="text-xs font-bold text-slate-800 block truncate" title={user.name || "—"}>
               {user.name || "—"}
             </span>
-            <span className="text-[10px] text-gray-505 block truncate font-mono mt-0.5">
-              Code: {user.e_code || "—"} | Grade: {user.grade || "—"}
+            <span className="text-[10px] text-slate-500 block truncate font-mono mt-0.5">
+              {user.e_code || "—"} | Grade: {user.grade || "—"}
             </span>
           </div>
         </div>
 
         {/* Assigned Home District Card */}
-        <div className="info-box-lte animate-fadeIn">
-          <div className="info-box-icon bg-[#a5d8e8]">
-            <MapPin className="w-5 h-5 text-slate-800" />
+        <div className="group bg-white border border-slate-100 rounded-3xl p-4 flex items-center gap-4 hover:shadow-md transition-all duration-300 animate-fadeIn">
+          <div className="w-12 h-12 rounded-2xl flex items-center justify-center bg-emerald-50 text-emerald-600 shrink-0">
+            <MapPin className="w-5 h-5" />
           </div>
-          <div className="info-box-content">
-            <span className="text-[9px] font-bold uppercase tracking-wider text-gray-400 block mb-0.5">
+          <div className="min-w-0 flex-1">
+            <span className="text-[9px] font-black uppercase tracking-wider text-slate-400 block mb-0.5">
               Assigned District
             </span>
-            <span className="text-xs font-bold text-gray-800 block truncate">
+            <span className="text-xs font-bold text-slate-800 block truncate">
               {user.district || "—"}
             </span>
-            <span className="text-[10px] text-blue-600 font-extrabold block mt-0.5">
-              In-District travel boundary
+            <span className="text-[10px] text-emerald-600 font-extrabold block mt-0.5">
+              In-District Boundary
             </span>
           </div>
         </div>
 
         {/* Monthly Distance Limit Card */}
-        <div className="info-box-lte animate-fadeIn">
-          <div className="info-box-icon bg-[#a5d8e8]">
+        <div className="group bg-white border border-slate-100 rounded-3xl p-4 flex items-center gap-4 hover:shadow-md transition-all duration-300 animate-fadeIn">
+          <div className="w-12 h-12 rounded-2xl flex items-center justify-center bg-blue-50 text-blue-600 shrink-0">
             {allowance.vehicle_type === "Car" ? (
-              <Car className="w-5 h-5 text-slate-800" />
+              <Car className="w-5 h-5" />
             ) : allowance.vehicle_type === "Bike" ? (
-              <Bike className="w-5 h-5 text-slate-800" />
+              <Bike className="w-5 h-5" />
             ) : (
-              <Navigation className="w-5 h-5 text-slate-800" />
+              <Navigation className="w-5 h-5" />
             )}
           </div>
-          <div className="info-box-content">
-            <span className="text-[9px] font-bold uppercase tracking-wider text-gray-400 block mb-0.5">
+          <div className="min-w-0 flex-1">
+            <span className="text-[9px] font-black uppercase tracking-wider text-slate-400 block mb-0.5">
               {limitPillLabel}
             </span>
-            <span className="text-xs font-bold text-gray-800 block font-mono">
+            <span className="text-xs font-bold text-slate-800 block font-mono">
               {allowance.current_month_km || 0} / {((allowance.max_km_per_month || 2000) + approvedKm)} KM
             </span>
-            <div className="w-full bg-gray-200 rounded-full h-1 mt-1.5 overflow-hidden">
+            <div className="w-full bg-slate-100 rounded-full h-1 mt-1.5 overflow-hidden">
               <div 
-                className="bg-[#a5d8e8] h-1 rounded-full transition-all duration-300"
+                className="bg-blue-650 h-1 rounded-full transition-all duration-300"
                 style={{ width: `${getProgressPercentage(allowance.current_month_km || 0, ((allowance.max_km_per_month || 2000) + approvedKm))}%` }}
               ></div>
             </div>
             {existingKmReq && (
-              <div className="mt-1.5 pt-1.5 border-t border-gray-100 flex items-center justify-between text-[9px] font-bold shrink-0">
-                <span className="text-gray-400">Request:</span>
+              <div className="mt-1.5 pt-1.5 border-t border-slate-100 flex items-center justify-between text-[9px] font-bold shrink-0">
+                <span className="text-slate-400">Request:</span>
                 <span className={
                   existingKmReq.status === "Approved" ? "text-green-600 font-black" :
                   existingKmReq.status === "Rejected" ? "text-red-650 font-black" :
@@ -2439,26 +2439,26 @@ export default function ExpensePage() {
         </div>
 
         {/* Monthly Auto Cap Card */}
-        <div className="info-box-lte animate-fadeIn">
-          <div className="info-box-icon bg-[#a5d8e8]">
-            <Navigation className="w-5 h-5 text-slate-800" />
+        <div className="group bg-white border border-slate-100 rounded-3xl p-4 flex items-center gap-4 hover:shadow-md transition-all duration-300 animate-fadeIn">
+          <div className="w-12 h-12 rounded-2xl flex items-center justify-center bg-amber-50 text-amber-600 shrink-0">
+            <Navigation className="w-5 h-5" />
           </div>
-          <div className="info-box-content">
-            <span className="text-[9px] font-bold uppercase tracking-wider text-gray-400 block mb-0.5">
+          <div className="min-w-0 flex-1">
+            <span className="text-[9px] font-black uppercase tracking-wider text-slate-400 block mb-0.5">
               Monthly Auto Cap
             </span>
-            <span className="text-xs font-bold text-gray-800 block font-mono">
+            <span className="text-xs font-bold text-slate-800 block font-mono">
               ₹{(allowance.current_month_auto || 0).toLocaleString()} / ₹{(1000 + approvedAuto).toLocaleString()}
             </span>
-            <div className="w-full bg-gray-200 rounded-full h-1 mt-1.5 overflow-hidden">
+            <div className="w-full bg-slate-100 rounded-full h-1 mt-1.5 overflow-hidden">
               <div 
                 className="bg-amber-500 h-1 rounded-full transition-all duration-300"
                 style={{ width: `${getProgressPercentage(allowance.current_month_auto || 0, (1000 + approvedAuto))}%` }}
               ></div>
             </div>
             {existingAutoReq && (
-              <div className="mt-1.5 pt-1.5 border-t border-gray-100 flex items-center justify-between text-[9px] font-bold shrink-0">
-                <span className="text-gray-400">Request:</span>
+              <div className="mt-1.5 pt-1.5 border-t border-slate-100 flex items-center justify-between text-[9px] font-bold shrink-0">
+                <span className="text-slate-400">Request:</span>
                 <span className={
                   existingAutoReq.status === "Approved" ? "text-green-600 font-black" :
                   existingAutoReq.status === "Rejected" ? "text-red-650 font-black" :
