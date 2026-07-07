@@ -36,11 +36,16 @@ const api: AxiosInstance = axios.create({
 
 const WORKER_BACKEND_URL = "https://fieldops-secondary-api.sunnybishnoi.workers.dev";
 
+// Active server state: default to Cloudflare Worker, but swaps globally if any request fails
+let activeBaseURL = `${WORKER_BACKEND_URL}/api`;
+
 // Inject bearer token into request headers if exists
 api.interceptors.request.use(
   async (config) => {
-    // Route all requests directly to Cloudflare Workers edge by default
-    config.baseURL = `${WORKER_BACKEND_URL}/api`;
+    // Route all requests directly to active backend by default, unless this is a failover retry
+    if (!(config as any)._failoverRetry) {
+      config.baseURL = activeBaseURL;
+    }
 
     // Do not inject tokens or restore them for public auth endpoints
     const isPublicEndpoint = config.url?.includes("/auth/login") || 
@@ -113,14 +118,16 @@ api.interceptors.response.use(
     if ((isNetworkError || isServerError) && !(originalRequest as any)._failoverRetry) {
       (originalRequest as any)._failoverRetry = true;
       
-      // Toggle baseURL between Cloudflare Worker and Render
-      if (originalRequest.baseURL?.includes("workers.dev")) {
-        console.warn(`Cloudflare Worker failed. Falling back to Render: ${originalRequest.url}`);
-        originalRequest.baseURL = API_BASE_URL;
+      // Toggle activeBaseURL between Cloudflare Worker and Render globally
+      if (activeBaseURL.includes("workers.dev")) {
+        console.warn(`Cloudflare Worker failed. Globally swapping primary backend to Render: ${originalRequest.url}`);
+        activeBaseURL = API_BASE_URL;
       } else {
-        console.warn(`Render server failed. Falling back to Cloudflare Worker: ${originalRequest.url}`);
-        originalRequest.baseURL = `${WORKER_BACKEND_URL}/api`;
+        console.warn(`Render server failed. Globally swapping primary backend to Cloudflare Worker: ${originalRequest.url}`);
+        activeBaseURL = `${WORKER_BACKEND_URL}/api`;
       }
+      
+      originalRequest.baseURL = activeBaseURL;
       
       // Retry the request with the new baseURL
       return api(originalRequest);

@@ -598,7 +598,7 @@ export async function handleGetAssetValueMaster(request, env, params, query, use
  * GET /api/expense/:id
  */
 export async function getUserMonthlyStatsHelper(env, userDbId, month, year, excludeDate = null) {
-  let monthStr = String(month).strip();
+  let monthStr = String(month).trim();
   let yearVal = year ? parseInt(year, 10) : null;
 
   if (monthStr.includes("-")) {
