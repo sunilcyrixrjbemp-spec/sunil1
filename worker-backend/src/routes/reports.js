@@ -323,33 +323,71 @@ export async function handleGetAssetsStats(request, env, params, query, user) {
   const monthlyValue = (verified_out_of_warranty_value * 6.08 / 100) / 12;
   const totalBilling = monthlyValue + arrearBilling;
 
-  // Status Distribution
+  // 3. Chart 1: Status Distribution
   const statusRows = await env.DB.prepare(`
     SELECT equipment_status, COUNT(*) as cnt 
     FROM assets_inventory 
     WHERE ${whereSql} 
     GROUP BY equipment_status
   `).bind(...bindings).all();
-
   const statusList = (statusRows.results || []).map(r => ({
     name: r.equipment_status || "Unknown",
     value: r.cnt
   }));
 
+  // 4. Chart 2: Top 5 Types
+  const typeRows = await env.DB.prepare(`
+    SELECT equipment_type, COUNT(*) as cnt 
+    FROM assets_inventory 
+    WHERE ${whereSql} 
+    GROUP BY equipment_type 
+    ORDER BY cnt DESC 
+    LIMIT 5
+  `).bind(...bindings).all();
+  const topTypes = (typeRows.results || []).map(r => ({
+    name: r.equipment_type || "Other",
+    value: r.cnt
+  }));
+
+  // 5. Chart 3: Warranty Breakdown
+  const warrantyRows = await env.DB.prepare(`
+    SELECT warranty_expired, COUNT(*) as cnt 
+    FROM assets_inventory 
+    WHERE ${whereSql} 
+    GROUP BY warranty_expired
+  `).bind(...bindings).all();
+  
+  let underWarranty = 0;
+  let outOfWarranty = 0;
+  for (const r of (warrantyRows.results || [])) {
+    if (parseInt(r.warranty_expired || "0", 10) === 1) {
+      outOfWarranty = r.cnt;
+    } else {
+      underWarranty = r.cnt;
+    }
+  }
+  const warrantyList = [
+    { name: "Under Warranty", value: underWarranty },
+    { name: "Out of Warranty", value: outOfWarranty }
+  ];
+
   return jsonResponse({
     success: true,
     total_equipment,
-    verified_count,
-    under_warranty_count,
-    out_of_warranty_count,
-    total_value,
-    verified_value,
-    billing: {
-      monthly_billing: monthlyValue,
-      arrear_billing: arrearBilling,
-      total_billing: totalBilling
-    },
-    status_distribution: statusList
+    verified_equipment: verified_count,
+    under_warranty: under_warranty_count,
+    out_of_warranty: out_of_warranty_count,
+    total_value: Math.round(total_value * 100) / 100,
+    verified_value: Math.round(verified_value * 100) / 100,
+    verified_out_of_warranty_value: Math.round(verified_out_of_warranty_value * 100) / 100,
+    monthly_value: Math.round(monthlyValue * 100) / 100,
+    arrear_billing: Math.round(arrearBilling * 100) / 100,
+    total_billing: Math.round(totalBilling * 100) / 100,
+    charts: {
+      top_types: topTypes,
+      status_list: statusList,
+      warranty_list: warrantyList
+    }
   });
 }
 
