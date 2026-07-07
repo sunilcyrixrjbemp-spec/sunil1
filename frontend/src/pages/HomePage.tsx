@@ -5,6 +5,7 @@ import { expenseService } from "../services/expenseService";
 import { approvalService } from "../services/approvalService";
 import toast from "react-hot-toast";
 import Loader from "../components/common/Loader";
+import { checkIsHeic, convertHeicToJpegUrl } from "../utils/heic";
 import { PieChart, Pie, Cell, Tooltip, Legend, ResponsiveContainer } from "recharts";
 import ExpenseCalendar from "../components/common/ExpenseCalendar";
 import brandLogo from "../assets/images/brand.png";
@@ -149,6 +150,51 @@ export default function HomePage() {
 
   // In-app Lightbox state
   const [lightboxImage, setLightboxImage] = useState<string | null>(null);
+  const [displayImageUrl, setDisplayImageUrl] = useState<string | null>(null);
+  const [isConvertingHeic, setIsConvertingHeic] = useState(false);
+
+  useEffect(() => {
+    let active = true;
+    let localUrl: string | null = null;
+
+    if (!lightboxImage) {
+      setDisplayImageUrl(null);
+      setIsConvertingHeic(false);
+      return;
+    }
+
+    checkIsHeic(lightboxImage).then(isHeicImg => {
+      if (!active) return;
+      if (isHeicImg) {
+        setIsConvertingHeic(true);
+        convertHeicToJpegUrl(lightboxImage)
+          .then((url) => {
+            if (!active) {
+              URL.revokeObjectURL(url);
+              return;
+            }
+            localUrl = url;
+            setDisplayImageUrl(url);
+            setIsConvertingHeic(false);
+          })
+          .catch(() => {
+            if (active) {
+              setDisplayImageUrl(lightboxImage);
+              setIsConvertingHeic(false);
+            }
+          });
+      } else {
+        setDisplayImageUrl(lightboxImage);
+      }
+    });
+
+    return () => {
+      active = false;
+      if (localUrl) {
+        URL.revokeObjectURL(localUrl);
+      }
+    };
+  }, [lightboxImage]);
 
   // Filters state for team claims tab
   const [filterEmployee, setFilterEmployee] = useState<string>("all");
@@ -2141,12 +2187,19 @@ export default function HomePage() {
             >
               ✕ Close Preview
             </button>
-            <img 
-              src={lightboxImage} 
-              alt="Receipt Invoice Lightbox" 
-              className="max-w-full max-h-[80vh] rounded shadow-2xl border border-white/10 object-contain select-none pointer-events-auto"
-              onClick={(e) => e.stopPropagation()}
-            />
+            {isConvertingHeic ? (
+              <div className="text-white flex flex-col items-center justify-center gap-3 p-8 rounded bg-slate-900/50 border border-slate-700/50 shadow-lg select-none pointer-events-auto" onClick={(e) => e.stopPropagation()}>
+                <Loader2 className="w-10 h-10 animate-spin text-blue-500" />
+                <span className="text-sm font-bold tracking-wide">Converting Apple HEIC image...</span>
+              </div>
+            ) : (
+              <img 
+                src={displayImageUrl || lightboxImage} 
+                alt="Receipt Invoice Lightbox" 
+                className="max-w-full max-h-[80vh] rounded shadow-2xl border border-white/10 object-contain select-none pointer-events-auto"
+                onClick={(e) => e.stopPropagation()}
+              />
+            )}
           </div>
         </div>
       )}
