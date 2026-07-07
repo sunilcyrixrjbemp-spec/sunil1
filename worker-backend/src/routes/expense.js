@@ -579,7 +579,20 @@ export async function handleVerifyBarcode(request, env, params, query, user) {
   const asset = queryResult && queryResult.results && queryResult.results[0] ? queryResult.results[0] : null;
 
   if (!asset) {
-    return jsonResponse({ success: false, valid: false, message: "Asset QR/Serial number not found in master database." });
+    const t = env.PRIMARY_CLOUDFLARE_API_TOKEN || "";
+    const hasPrimary = !!(env.PRIMARY_CLOUDFLARE_ACCOUNT_ID && env.PRIMARY_CLOUDFLARE_DATABASE_ID && env.PRIMARY_CLOUDFLARE_API_TOKEN);
+    return jsonResponse({
+      success: false,
+      valid: false,
+      message: "Asset QR/Serial number not found in master database.",
+      debug: {
+        has_primary: hasPrimary,
+        token_len: t.length,
+        token_prefix: t.substring(0, 8),
+        account: env.PRIMARY_CLOUDFLARE_ACCOUNT_ID,
+        db: env.PRIMARY_CLOUDFLARE_DATABASE_ID
+      }
+    });
   }
 
   return jsonResponse({
