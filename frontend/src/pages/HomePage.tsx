@@ -934,8 +934,8 @@ export default function HomePage() {
                             className="hover:bg-blue-50/20 transition-colors cursor-pointer"
                           >
                             <td className="py-3 px-3 whitespace-nowrap">
-                              <p className="font-bold text-gray-800 leading-none">{exp.submitter_name}</p>
-                              <span className="text-[8px] font-mono uppercase text-blue-600 block mt-0.5">{exp.submitter_code}</span>
+                              <p className="font-bold text-slate-800 leading-none" style={{ color: '#1e293b' }}>{exp.submitter_name}</p>
+                              <span className="text-[8px] font-mono uppercase text-blue-600 block mt-0.5" style={{ color: '#2563eb' }}>{exp.submitter_code}</span>
                             </td>
                             <td className="py-3 px-3 font-semibold font-mono text-blue-600 uppercase whitespace-nowrap">{exp.expense_code}</td>
                             <td className="py-3 px-3 text-slate-600 whitespace-nowrap">{exp.itinerary || exp.date || exp.created_at}</td>
@@ -2039,20 +2039,20 @@ export default function HomePage() {
                         >
                           {activeTab === "team-claims" && (
                             <td className="py-3 px-3">
-                              <p className="font-bold text-gray-800 leading-none">{exp.submitter_name}</p>
-                              <span className="text-[8px] font-mono uppercase text-blue-600 block mt-0.5">{exp.submitter_code}</span>
+                              <p className="font-bold text-slate-800 leading-none" style={{ color: '#1e293b' }}>{exp.submitter_name}</p>
+                              <span className="text-[8px] font-mono uppercase text-blue-600 block mt-0.5" style={{ color: '#2563eb' }}>{exp.submitter_code}</span>
                             </td>
                           )}
-                          <td className="py-3 px-3 font-semibold font-mono text-blue-605 uppercase">{exp.expense_code}</td>
-                          <td className="py-3 px-3 text-gray-500">{exp.itinerary || exp.date}</td>
-                          <td className="py-3 px-3 font-semibold text-gray-800 truncate max-w-[150px]" title={exp.description || exp.purpose}>{exp.description || exp.purpose}</td>
+                          <td className="py-3 px-3 font-semibold font-mono text-blue-600 uppercase">{exp.expense_code}</td>
+                          <td className="py-3 px-3 text-slate-500">{exp.itinerary || exp.date}</td>
+                          <td className="py-3 px-3 font-semibold text-slate-800 truncate max-w-[150px]" title={exp.description || exp.purpose}>{exp.description || exp.purpose}</td>
                           <td className="py-3 px-3">
-                            <span className="inline-block border border-blue-200 bg-blue-50 text-blue-705 font-bold px-1.5 py-0.5 rounded text-[8px] uppercase tracking-wider">
+                            <span className="inline-block border border-blue-200 bg-blue-50 text-blue-700 font-bold px-1.5 py-0.5 rounded text-[8px] uppercase tracking-wider">
                               {exp.travel_mode || exp.category}
                             </span>
                           </td>
-                          <td className="py-3 px-3 font-mono font-semibold text-gray-650">{exp.total_km ? `${exp.total_km.toFixed(1)} KM` : "—"}</td>
-                          <td className="py-3 px-3 font-mono font-semibold text-gray-650">{exp.total_auto ? `₹${exp.total_auto.toLocaleString()}` : "—"}</td>
+                          <td className="py-3 px-3 font-mono font-semibold text-slate-700">{exp.total_km ? `${exp.total_km.toFixed(1)} KM` : "—"}</td>
+                          <td className="py-3 px-3 font-mono font-semibold text-slate-700">{exp.total_auto ? `₹${exp.total_auto.toLocaleString()}` : "—"}</td>
                           <td className="py-3 px-3 font-bold text-gray-900">₹{(exp.amount || 0).toLocaleString()}</td>
                           <td className="py-3 px-3 text-right">
                             <span className={`inline-flex items-center px-2 py-0.5 rounded border text-[9px] font-bold uppercase tracking-wider ${getStatusBadgeClass(exp.status)}`}>
