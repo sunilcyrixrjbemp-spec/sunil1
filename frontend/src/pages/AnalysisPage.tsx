@@ -637,30 +637,47 @@ export default function AnalysisPage() {
   }
 
   return (
-    <div className="space-y-5 text-gray-800 p-4 lg:p-6 pb-40 lg:pb-8" style={{ fontFamily: "'Plus Jakarta Sans', sans-serif" }}>
-      
+    <div className="space-y-6 text-slate-100 p-4 lg:p-8 min-h-screen bg-slate-950 pb-40 lg:pb-12" style={{ fontFamily: "'Outfit', 'Plus Jakarta Sans', sans-serif" }}>
+      <style>{`
+        @import url('https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800;900&display=swap');
+        .custom-chart-card {
+          box-shadow: 0 10px 30px -10px rgba(0, 0, 0, 0.5);
+          transition: border-color 0.3s ease, box-shadow 0.3s ease;
+        }
+        .custom-chart-card:hover {
+          border-color: rgba(99, 102, 241, 0.35) !important;
+          box-shadow: 0 10px 30px -5px rgba(99, 102, 241, 0.05);
+        }
+      `}</style>
+
       {/* Page Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 pb-1">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 pb-4 border-b border-slate-800/80">
         <div>
-          <h2 className="text-base font-bold text-gray-900 uppercase tracking-wide">Expense Analysis</h2>
-          <p className="text-gray-500 text-[10px]">Real-time expense data visualization & insights</p>
+          <h2 className="text-xl lg:text-2xl font-black bg-clip-text text-transparent bg-gradient-to-r from-indigo-400 via-purple-400 to-pink-400 uppercase tracking-wider">
+            Expense Analytics
+          </h2>
+          <p className="text-slate-400 text-xs mt-1">Real-time expense data visualization & operational insights</p>
         </div>
 
-        {/* View Mode Toggle (only for managers) */}
+        {/* View Mode Toggle */}
         {isReviewer && (
-          <div className="flex border border-gray-300 rounded overflow-hidden text-[11px] bg-white self-start sm:self-auto shadow-sm">
+          <div className="flex border border-slate-800 rounded-xl overflow-hidden text-xs bg-slate-900/80 p-1 shadow-lg shadow-black/20 backdrop-blur-md self-start sm:self-auto">
             <button
               onClick={() => setViewMode("my")}
-              className={`px-3 py-1.5 flex items-center gap-1 font-semibold transition-colors border-0 cursor-pointer ${
-                viewMode === "my" ? "bg-blue-600 text-white" : "bg-white text-gray-600 hover:bg-gray-50"
+              className={`px-4 py-2 flex items-center gap-2 font-bold rounded-lg transition-all border-0 cursor-pointer ${
+                viewMode === "my" 
+                  ? "bg-gradient-to-r from-indigo-600 to-purple-600 text-white shadow-md shadow-indigo-600/20" 
+                  : "bg-transparent text-slate-400 hover:text-slate-200"
               }`}
             >
               <i className="fas fa-user text-xs"></i> My Data
             </button>
             <button
               onClick={() => setViewMode("team")}
-              className={`px-3 py-1.5 flex items-center gap-1 font-semibold transition-colors border-0 cursor-pointer ${
-                viewMode === "team" ? "bg-blue-600 text-white" : "bg-white text-gray-600 hover:bg-gray-50"
+              className={`px-4 py-2 flex items-center gap-2 font-bold rounded-lg transition-all border-0 cursor-pointer ${
+                viewMode === "team" 
+                  ? "bg-gradient-to-r from-indigo-600 to-purple-600 text-white shadow-md shadow-indigo-600/20" 
+                  : "bg-transparent text-slate-400 hover:text-slate-200"
               }`}
             >
               <i className="fas fa-users text-xs"></i> Team Data
@@ -669,20 +686,19 @@ export default function AnalysisPage() {
         )}
       </div>
 
-      {/* Dedicated Compact Filter Panel Bar */}
-      <div className="card-lte p-2 flex flex-wrap items-center gap-2 text-xs bg-white">
-        <div className="flex items-center gap-1 text-gray-400 font-semibold mr-1 shrink-0">
-          <i className="fas fa-filter text-[10px] uppercase tracking-wider"></i>
-          <span className="text-[10px] uppercase tracking-wider">Filters:</span>
+      {/* Glass Filter Panel */}
+      <div className="bg-slate-900/40 backdrop-blur-md border border-slate-800/80 rounded-2xl p-4 flex flex-wrap items-center gap-3 text-xs shadow-xl shadow-black/10">
+        <div className="flex items-center gap-2 text-indigo-400 font-extrabold mr-2 shrink-0">
+          <i className="fas fa-filter text-xs"></i>
+          <span className="text-[10px] uppercase tracking-widest">Filters</span>
         </div>
         
-        {/* Team Specific Filters */}
         {viewMode === "team" && isReviewer && (
           <>
             <select
               value={selectedDistrict}
               onChange={(e) => setSelectedDistrict(e.target.value)}
-              className="border border-gray-300 rounded px-2 py-1 text-[11px] bg-white text-gray-700 cursor-pointer focus:outline-none focus:border-blue-500"
+              className="!min-h-0 !h-9 !py-1 !w-40 !bg-slate-900 !text-slate-200 border !border-slate-800/80 rounded-xl px-3 text-xs cursor-pointer focus:outline-none focus:border-indigo-500 transition-all font-semibold"
             >
               <option value="all">All Districts</option>
               {filterOptions.districts.map(d => (
@@ -693,7 +709,7 @@ export default function AnalysisPage() {
             <select
               value={selectedEngineer}
               onChange={(e) => setSelectedEngineer(e.target.value)}
-              className="border border-gray-300 rounded px-2 py-1 text-[11px] bg-white text-gray-700 cursor-pointer focus:outline-none focus:border-blue-500"
+              className="!min-h-0 !h-9 !py-1 !w-44 !bg-slate-900 !text-slate-200 border !border-slate-800/80 rounded-xl px-3 text-xs cursor-pointer focus:outline-none focus:border-indigo-500 transition-all font-semibold"
             >
               <option value="all">All Engineers</option>
               {filterOptions.engineers.map(name => (
@@ -707,8 +723,8 @@ export default function AnalysisPage() {
           value={selectedMonth}
           onChange={(e) => setSelectedMonth(Number(e.target.value))}
           disabled={!!startDate || !!endDate}
-          className={`border border-gray-300 rounded px-2 py-1 text-[11px] bg-white text-gray-700 cursor-pointer focus:outline-none focus:border-blue-500 ${
-            (!!startDate || !!endDate) ? "opacity-50 cursor-not-allowed bg-gray-50" : ""
+          className={`!min-h-0 !h-9 !py-1 !w-32 !bg-slate-900 !text-slate-200 border !border-slate-800/80 rounded-xl px-3 text-xs cursor-pointer focus:outline-none focus:border-indigo-500 transition-all font-semibold ${
+            (!!startDate || !!endDate) ? "opacity-40 cursor-not-allowed" : ""
           }`}
         >
           {months.map((m, i) => (
@@ -719,8 +735,8 @@ export default function AnalysisPage() {
           value={selectedYear}
           onChange={(e) => setSelectedYear(Number(e.target.value))}
           disabled={!!startDate || !!endDate}
-          className={`border border-gray-300 rounded px-2 py-1 text-[11px] bg-white text-gray-700 cursor-pointer focus:outline-none focus:border-blue-500 ${
-            (!!startDate || !!endDate) ? "opacity-50 cursor-not-allowed bg-gray-50" : ""
+          className={`!min-h-0 !h-9 !py-1 !w-24 !bg-slate-900 !text-slate-200 border !border-slate-800/80 rounded-xl px-3 text-xs cursor-pointer focus:outline-none focus:border-indigo-500 transition-all font-semibold ${
+            (!!startDate || !!endDate) ? "opacity-40 cursor-not-allowed" : ""
           }`}
         >
           {availableYears.map(y => (
@@ -728,11 +744,10 @@ export default function AnalysisPage() {
           ))}
         </select>
 
-        {/* Status Filter */}
         <select
           value={selectedStatus}
           onChange={(e) => setSelectedStatus(e.target.value)}
-          className="border border-gray-300 rounded px-2 py-1 text-[11px] bg-white text-gray-700 cursor-pointer focus:outline-none focus:border-blue-500"
+          className="!min-h-0 !h-9 !py-1 !w-36 !bg-slate-900 !text-slate-200 border !border-slate-800/80 rounded-xl px-3 text-xs cursor-pointer focus:outline-none focus:border-indigo-500 transition-all font-semibold"
         >
           <option value="all">All Statuses</option>
           <option value="approved">Approved</option>
@@ -741,29 +756,29 @@ export default function AnalysisPage() {
         </select>
 
         {/* Date Range Picker */}
-        <div className="flex items-center gap-1.5 border border-gray-300 rounded bg-white px-2 py-0.5 flex-wrap">
-          <span className="text-[9px] text-gray-400 font-bold uppercase">From:</span>
+        <div className="flex items-center gap-2 border border-slate-800 rounded-xl bg-slate-900 px-3 py-1.5 flex-wrap shrink-0">
+          <span className="text-[10px] text-slate-400 font-extrabold uppercase">From:</span>
           <input
             type="date"
             value={startDate}
             min={minDateStr}
             max={maxDateStr}
             onChange={(e) => setStartDate(e.target.value)}
-            className="bg-transparent text-gray-700 outline-none border-0 text-[11px] w-24 cursor-pointer focus:ring-0 p-0"
+            className="!min-h-0 !h-6 !py-0 !w-28 !bg-transparent !text-slate-200 outline-none border-0 text-xs cursor-pointer focus:ring-0 p-0 font-semibold"
           />
-          <span className="text-[9px] text-gray-400 font-bold uppercase">To:</span>
+          <span className="text-[10px] text-slate-400 font-extrabold uppercase">To:</span>
           <input
             type="date"
             value={endDate}
             min={minDateStr}
             max={maxDateStr}
             onChange={(e) => setEndDate(e.target.value)}
-            className="bg-transparent text-gray-700 outline-none border-0 text-[11px] w-24 cursor-pointer focus:ring-0 p-0"
+            className="!min-h-0 !h-6 !py-0 !w-28 !bg-transparent !text-slate-200 outline-none border-0 text-xs cursor-pointer focus:ring-0 p-0 font-semibold"
           />
           {(startDate || endDate) && (
             <button
               onClick={() => { setStartDate(""); setEndDate(""); }}
-              className="p-0.5 text-gray-400 hover:text-red-500 rounded bg-transparent border-0 cursor-pointer flex items-center justify-center"
+              className="p-1 text-slate-400 hover:text-rose-500 rounded bg-transparent border-0 cursor-pointer flex items-center justify-center transition-colors"
               title="Clear Dates"
             >
               <i className="fas fa-times"></i>
@@ -772,113 +787,118 @@ export default function AnalysisPage() {
         </div>
       </div>
 
-      {/* Summary Stats */}
-      <div className="flex overflow-x-auto pb-1.5 lg:grid lg:grid-cols-7 gap-3 w-full scrollbar-none">
+      {/* Summary KPI Cards Grid */}
+      <div className="flex overflow-x-auto pb-2 lg:grid lg:grid-cols-7 gap-4 w-full scrollbar-none">
         {/* Card 1: Total Claims */}
-        <div className="info-box-lte animate-fadeIn">
-          <div className="info-box-icon bg-[#007bff]">
-            <i className="fas fa-file-excel text-white text-sm"></i>
+        <div className="bg-slate-900/50 backdrop-blur-md border border-slate-800/80 rounded-2xl p-4 flex items-center gap-3.5 min-w-[150px] shadow-lg hover:border-indigo-500/40 transition-all group duration-300">
+          <div className="w-11 h-11 rounded-xl bg-indigo-500/10 text-indigo-400 flex items-center justify-center group-hover:scale-110 transition-transform duration-300">
+            <i className="fas fa-file-excel text-lg"></i>
           </div>
-          <div className="info-box-content">
-            <span className="text-[9px] font-bold uppercase tracking-wider text-gray-400 block">Total Claims</span>
-            <span className="text-base font-extrabold text-gray-800 font-mono block mt-0.5">{count}</span>
+          <div>
+            <span className="text-[9px] font-black uppercase tracking-widest text-slate-400 block">Total Claims</span>
+            <span className="text-xl font-extrabold text-white font-mono block mt-0.5">{count}</span>
           </div>
         </div>
 
         {/* Card 2: Total Amount */}
-        <div className="info-box-lte animate-fadeIn">
-          <div className="info-box-icon bg-[#28a745]">
-            <i className="fas fa-rupee-sign text-white text-sm"></i>
+        <div className="bg-slate-900/50 backdrop-blur-md border border-slate-800/80 rounded-2xl p-4 flex items-center gap-3.5 min-w-[150px] shadow-lg hover:border-emerald-500/40 transition-all group duration-300">
+          <div className="w-11 h-11 rounded-xl bg-emerald-500/10 text-emerald-400 flex items-center justify-center group-hover:scale-110 transition-transform duration-300">
+            <i className="fas fa-rupee-sign text-lg"></i>
           </div>
-          <div className="info-box-content">
-            <span className="text-[9px] font-bold uppercase tracking-wider text-gray-400 block">Total Amount</span>
-            <span className="text-base font-extrabold text-gray-800 font-mono block mt-0.5">₹{totalAmount.toLocaleString()}</span>
+          <div>
+            <span className="text-[9px] font-black uppercase tracking-widest text-slate-400 block">Total Spend</span>
+            <span className="text-xl font-extrabold text-white font-mono block mt-0.5">₹{totalAmount.toLocaleString()}</span>
           </div>
         </div>
 
         {/* Card 3: Average Claim */}
-        <div className="info-box-lte animate-fadeIn">
-          <div className="info-box-icon bg-[#ffc107]">
-            <i className="fas fa-chart-line text-white text-sm"></i>
+        <div className="bg-slate-900/50 backdrop-blur-md border border-slate-800/80 rounded-2xl p-4 flex items-center gap-3.5 min-w-[150px] shadow-lg hover:border-amber-500/40 transition-all group duration-300">
+          <div className="w-11 h-11 rounded-xl bg-amber-500/10 text-amber-400 flex items-center justify-center group-hover:scale-110 transition-transform duration-300">
+            <i className="fas fa-chart-line text-lg"></i>
           </div>
-          <div className="info-box-content">
-            <span className="text-[9px] font-bold uppercase tracking-wider text-gray-400 block">Average Claim</span>
-            <span className="text-base font-extrabold text-gray-800 font-mono block mt-0.5">₹{avgValue.toLocaleString()}</span>
+          <div>
+            <span className="text-[9px] font-black uppercase tracking-widest text-slate-400 block">Avg Claim</span>
+            <span className="text-xl font-extrabold text-white font-mono block mt-0.5">₹{avgValue.toLocaleString()}</span>
           </div>
         </div>
 
-        {/* Card 4: Calls Done / Assigned */}
-        <div className="info-box-lte animate-fadeIn">
-          <div className="info-box-icon bg-[#605ca8]">
-            <i className="fas fa-phone text-white text-sm"></i>
+        {/* Card 4: Calls Completed */}
+        <div className="bg-slate-900/50 backdrop-blur-md border border-slate-800/80 rounded-2xl p-4 flex items-center gap-3.5 min-w-[150px] shadow-lg hover:border-purple-500/40 transition-all group duration-300">
+          <div className="w-11 h-11 rounded-xl bg-purple-500/10 text-purple-400 flex items-center justify-center group-hover:scale-110 transition-transform duration-300">
+            <i className="fas fa-phone text-lg"></i>
           </div>
-          <div className="info-box-content">
-            <span className="text-[9px] font-bold uppercase tracking-wider text-gray-400 block">Calls Done / Assigned</span>
-            <span className="text-base font-extrabold text-gray-800 font-mono block mt-0.5">{activityStats.callsCompleted} / {activityStats.callsAssigned}</span>
+          <div>
+            <span className="text-[9px] font-black uppercase tracking-widest text-slate-400 block">Calls Closed</span>
+            <span className="text-xl font-extrabold text-white font-mono block mt-0.5">{activityStats.callsCompleted} / {activityStats.callsAssigned}</span>
           </div>
         </div>
 
         {/* Card 5: PMS Completed */}
-        <div className="info-box-lte animate-fadeIn">
-          <div className="info-box-icon bg-[#20c997]">
-            <i className="fas fa-shield-alt text-white text-sm"></i>
+        <div className="bg-slate-900/50 backdrop-blur-md border border-slate-800/80 rounded-2xl p-4 flex items-center gap-3.5 min-w-[150px] shadow-lg hover:border-teal-500/40 transition-all group duration-300">
+          <div className="w-11 h-11 rounded-xl bg-teal-500/10 text-teal-400 flex items-center justify-center group-hover:scale-110 transition-transform duration-300">
+            <i className="fas fa-shield-alt text-lg"></i>
           </div>
-          <div className="info-box-content">
-            <span className="text-[9px] font-bold uppercase tracking-wider text-gray-400 block">PMS Completed</span>
-            <span className="text-base font-extrabold text-gray-800 font-mono block mt-0.5">{activityStats.pmsCount}</span>
+          <div>
+            <span className="text-[9px] font-black uppercase tracking-widest text-slate-400 block">PMS Done</span>
+            <span className="text-xl font-extrabold text-white font-mono block mt-0.5">{activityStats.pmsCount}</span>
           </div>
         </div>
 
-        {/* Card 6: Tag & Calib Done */}
-        <div className="info-box-lte animate-fadeIn">
-          <div className="info-box-icon bg-[#17a2b8]">
-            <i className="fas fa-chart-line text-white text-sm"></i>
+        {/* Card 6: Tag & Calib */}
+        <div className="bg-slate-900/50 backdrop-blur-md border border-slate-800/80 rounded-2xl p-4 flex items-center gap-3.5 min-w-[150px] shadow-lg hover:border-cyan-500/40 transition-all group duration-300">
+          <div className="w-11 h-11 rounded-xl bg-cyan-500/10 text-cyan-400 flex items-center justify-center group-hover:scale-110 transition-transform duration-300">
+            <i className="fas fa-qrcode text-lg"></i>
           </div>
-          <div className="info-box-content">
-            <span className="text-[9px] font-bold uppercase tracking-wider text-gray-400 block">Tag & Calib Done</span>
-            <span className="text-base font-extrabold text-gray-800 font-mono block mt-0.5">{activityStats.assetTaggingCount + activityStats.calibrationCount}</span>
+          <div>
+            <span className="text-[9px] font-black uppercase tracking-widest text-slate-400 block">Tag & Calib</span>
+            <span className="text-xl font-extrabold text-white font-mono block mt-0.5">{activityStats.assetTaggingCount + activityStats.calibrationCount}</span>
           </div>
         </div>
 
         {/* Card 7: Scope */}
-        <div className="info-box-lte animate-fadeIn">
-          <div className="info-box-icon bg-[#6f42c1]">
-            {viewMode === "team" ? <i className="fas fa-users text-white text-sm"></i> : <i className="fas fa-user text-white text-sm"></i>}
+        <div className="bg-slate-900/50 backdrop-blur-md border border-slate-800/80 rounded-2xl p-4 flex items-center gap-3.5 min-w-[150px] shadow-lg hover:border-pink-500/40 transition-all group duration-300">
+          <div className="w-11 h-11 rounded-xl bg-pink-500/10 text-pink-400 flex items-center justify-center group-hover:scale-110 transition-transform duration-300">
+            {viewMode === "team" ? <i className="fas fa-users text-lg"></i> : <i className="fas fa-user text-lg"></i>}
           </div>
-          <div className="info-box-content">
-            <span className="text-[9px] font-bold uppercase tracking-wider text-gray-400 block">Scope</span>
-            <span className="text-xs font-bold text-gray-800 block truncate mt-0.5" title={viewMode === "team" ? "Team" : "My Data"}>{viewMode === "team" ? "Team" : "My Data"}</span>
+          <div>
+            <span className="text-[9px] font-black uppercase tracking-widest text-slate-400 block">Scope</span>
+            <span className="text-xs font-black text-white block mt-1 truncate" title={viewMode === "team" ? "Team" : "My Data"}>
+              {viewMode === "team" ? "Team" : "My Data"}
+            </span>
           </div>
         </div>
       </div>
 
       {/* No Data State */}
       {count === 0 && (
-        <div className="card-lte p-10 text-center bg-white shadow-sm">
-          <i className="fas fa-chart-bar fa-2x text-gray-300 mx-auto mb-3 block"></i>
-          <p className="text-sm font-bold text-gray-500">No expense data found for {months[selectedMonth]} {selectedYear}</p>
-          <p className="text-xs text-gray-400 mt-1">Try selecting a different month or year from the filter above</p>
+        <div className="bg-slate-900/40 border border-slate-800 rounded-2xl p-16 text-center shadow-xl">
+          <i className="fas fa-chart-bar fa-3x text-slate-700 mx-auto mb-4 block animate-pulse"></i>
+          <p className="text-base font-bold text-slate-400">No expense data found for {months[selectedMonth]} {selectedYear}</p>
+          <p className="text-xs text-slate-500 mt-1.5">Try selecting a different month, year, or adjust filters above</p>
         </div>
       )}
 
+      {/* Charts Grid */}
       {count > 0 && (
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
 
-          {/* Chart 1: Top Spenders (User-wise) */}
-          <div className="bg-white border border-gray-200 rounded shadow-sm">
-            <div className="px-4 py-3 border-b border-gray-200 bg-gray-50">
-              <h3 className="text-xs font-bold text-gray-700 uppercase tracking-wider">
-                Top Spenders — User Wise Breakdown
-              </h3>
-              <p className="text-[10px] text-gray-400 mt-0.5">Highest claim amounts by employee</p>
+          {/* Chart 1: Top Spenders */}
+          <div className="bg-slate-900/40 border border-slate-800/60 rounded-2xl overflow-hidden custom-chart-card">
+            <div className="px-5 py-4 border-b border-slate-800/60 bg-slate-900/80 flex items-center justify-between">
+              <div>
+                <h3 className="text-xs font-black text-slate-200 uppercase tracking-widest">
+                  Top Spenders — User Wise
+                </h3>
+                <p className="text-[10px] text-slate-400 mt-0.5">Highest claim amounts by engineer</p>
+              </div>
             </div>
-            <div className="p-4" style={{ height: 280 }}>
+            <div className="p-5" style={{ height: 290 }}>
               {userWiseData.length > 0 ? (
                 <ResponsiveContainer width="100%" height="100%">
                   <BarChart data={userWiseData} layout="vertical" margin={{ left: 10, right: 20 }}>
-                    <CartesianGrid strokeDasharray="3 3" stroke="#f3f4f6" horizontal={false} vertical={true} />
-                    <XAxis type="number" tick={{ fontSize: 10 }} tickFormatter={(v) => `₹${(v / 1000).toFixed(0)}k`} />
-                    <YAxis type="category" dataKey="name" tick={{ fontSize: 10 }} width={90} />
+                    <CartesianGrid strokeDasharray="3 3" stroke="#1e293b" horizontal={false} vertical={true} />
+                    <XAxis type="number" tick={{ fontSize: 9, fill: '#94a3b8', fontWeight: 600 }} tickFormatter={(v) => `₹${(v / 1000).toFixed(0)}k`} />
+                    <YAxis type="category" dataKey="name" tick={{ fontSize: 9, fill: '#94a3b8', fontWeight: 600 }} width={90} />
                     <Tooltip content={<CustomMoneyTooltip />} />
                     <Bar dataKey="amount" radius={[0, 6, 6, 0]} maxBarSize={16}>
                       {userWiseData.map((_, index) => (
@@ -888,20 +908,22 @@ export default function AnalysisPage() {
                   </BarChart>
                 </ResponsiveContainer>
               ) : (
-                <div className="flex items-center justify-center h-full text-gray-400 text-xs">No user data</div>
+                <div className="flex items-center justify-center h-full text-slate-500 text-xs font-semibold">No data available</div>
               )}
             </div>
           </div>
 
           {/* Chart 2: Claim Status Distribution */}
-          <div className="bg-white border border-gray-200 rounded shadow-sm">
-            <div className="px-4 py-3 border-b border-gray-200 bg-gray-50">
-              <h3 className="text-xs font-bold text-gray-700 uppercase tracking-wider">
-                Claim Status Distribution
-              </h3>
-              <p className="text-[10px] text-gray-400 mt-0.5">Approved vs Pending vs Rejected amounts</p>
+          <div className="bg-slate-900/40 border border-slate-800/60 rounded-2xl overflow-hidden custom-chart-card">
+            <div className="px-5 py-4 border-b border-slate-800/60 bg-slate-900/80 flex items-center justify-between">
+              <div>
+                <h3 className="text-xs font-black text-slate-200 uppercase tracking-widest">
+                  Claim Status Distribution
+                </h3>
+                <p className="text-[10px] text-slate-400 mt-0.5">Approved, Pending, and Rejected totals</p>
+              </div>
             </div>
-            <div className="p-4" style={{ height: 280 }}>
+            <div className="p-5" style={{ height: 290 }}>
               {statusWiseData.length > 0 ? (
                 <div className="relative flex justify-center items-center h-full">
                   <ResponsiveContainer width="100%" height="100%">
@@ -912,47 +934,50 @@ export default function AnalysisPage() {
                         cy="50%"
                         innerRadius={45}
                         outerRadius={65}
-                        paddingAngle={3}
+                        paddingAngle={4}
                         dataKey="value"
-                        stroke="#ffffff"
-                        strokeWidth={2}
+                        stroke="#0f172a"
+                        strokeWidth={3}
                       >
-                        {statusWiseData.map((_, i) => (
-                          <Cell key={i} fill={i === 0 ? "#2b7d50" : i === 1 ? "#d28b2a" : "#d83b01"} />
-                        ))}
+                        {statusWiseData.map((d) => {
+                          const fill = d.name === "Approved" ? "#10b981" : d.name === "Rejected" ? "#f43f5e" : "#f59e0b";
+                          return <Cell key={d.name} fill={fill} />;
+                        })}
                       </Pie>
                       <Tooltip content={<CustomMoneyTooltip />} />
-                      <Legend verticalAlign="bottom" height={36} iconType="circle" wrapperStyle={{ fontSize: 9, fontWeight: 'bold' }} />
+                      <Legend verticalAlign="bottom" height={36} iconType="circle" wrapperStyle={{ fontSize: 9, fontWeight: 'bold', fill: '#94a3b8' }} />
                     </PieChart>
                   </ResponsiveContainer>
                   <div className="absolute flex flex-col items-center justify-center pointer-events-none" style={{ top: '40%', left: '50%', transform: 'translate(-50%, -50%)' }}>
-                    <span className="text-[8px] text-gray-400 font-bold uppercase tracking-wider">Total Claims</span>
-                    <span className="text-[10px] font-black text-slate-800 font-mono">
+                    <span className="text-[8px] text-slate-450 font-black uppercase tracking-widest">Total</span>
+                    <span className="text-[11px] font-black text-white font-mono mt-0.5">
                       ₹{statusWiseData.reduce((sum, item) => sum + item.value, 0).toLocaleString()}
                     </span>
                   </div>
                 </div>
               ) : (
-                <div className="flex items-center justify-center h-full text-gray-400 text-xs">No status data</div>
+                <div className="flex items-center justify-center h-full text-slate-500 text-xs font-semibold">No data available</div>
               )}
             </div>
           </div>
 
-          {/* Chart 3: District-wise Expenditure */}
-          <div className="bg-white border border-gray-200 rounded shadow-sm">
-            <div className="px-4 py-3 border-b border-gray-200 bg-gray-50">
-              <h3 className="text-xs font-bold text-gray-700 uppercase tracking-wider">
-                District Wise Expenditure
-              </h3>
-              <p className="text-[10px] text-gray-400 mt-0.5">Expense distribution across districts</p>
+          {/* Chart 3: District Wise Expenditure */}
+          <div className="bg-slate-900/40 border border-slate-800/60 rounded-2xl overflow-hidden custom-chart-card">
+            <div className="px-5 py-4 border-b border-slate-800/60 bg-slate-900/80 flex items-center justify-between">
+              <div>
+                <h3 className="text-xs font-black text-slate-200 uppercase tracking-widest">
+                  District Wise Spend
+                </h3>
+                <p className="text-[10px] text-slate-400 mt-0.5">Expense distribution across operational districts</p>
+              </div>
             </div>
-            <div className="p-4" style={{ height: 280 }}>
+            <div className="p-5" style={{ height: 290 }}>
               {districtWiseData.length > 0 ? (
                 <ResponsiveContainer width="100%" height="100%">
                   <BarChart data={districtWiseData} margin={{ bottom: 5 }}>
-                    <CartesianGrid strokeDasharray="3 3" stroke="#f3f4f6" horizontal={true} vertical={false} />
-                    <XAxis dataKey="name" tick={{ fontSize: 10 }} />
-                    <YAxis tick={{ fontSize: 10 }} tickFormatter={(v) => `₹${(v / 1000).toFixed(0)}k`} />
+                    <CartesianGrid strokeDasharray="3 3" stroke="#1e293b" horizontal={true} vertical={false} />
+                    <XAxis dataKey="name" tick={{ fontSize: 9, fill: '#94a3b8', fontWeight: 600 }} />
+                    <YAxis tick={{ fontSize: 9, fill: '#94a3b8', fontWeight: 600 }} tickFormatter={(v) => `₹${(v / 1000).toFixed(0)}k`} />
                     <Tooltip content={<CustomMoneyTooltip />} />
                     <Bar dataKey="amount" radius={[6, 6, 0, 0]} maxBarSize={30}>
                       {districtWiseData.map((_, index) => (
@@ -962,51 +987,55 @@ export default function AnalysisPage() {
                   </BarChart>
                 </ResponsiveContainer>
               ) : (
-                <div className="flex items-center justify-center h-full text-gray-400 text-xs">No district data</div>
+                <div className="flex items-center justify-center h-full text-slate-500 text-xs font-semibold">No data available</div>
               )}
             </div>
           </div>
 
           {/* Chart 4: Date-wise Expense Trend */}
-          <div className="bg-white border border-gray-200 rounded shadow-sm">
-            <div className="px-4 py-3 border-b border-gray-200 bg-gray-50">
-              <h3 className="text-xs font-bold text-gray-700 uppercase tracking-wider">
-                Date Wise Expense Trend
-              </h3>
-              <p className="text-[10px] text-gray-400 mt-0.5">Daily spending pattern for last active dates</p>
+          <div className="bg-slate-900/40 border border-slate-800/60 rounded-2xl overflow-hidden custom-chart-card">
+            <div className="px-5 py-4 border-b border-slate-800/60 bg-slate-900/80 flex items-center justify-between">
+              <div>
+                <h3 className="text-xs font-black text-slate-200 uppercase tracking-widest">
+                  Daily Spending Pattern
+                </h3>
+                <p className="text-[10px] text-slate-400 mt-0.5">Spend trends across last active dates</p>
+              </div>
             </div>
-            <div className="p-4" style={{ height: 280 }}>
+            <div className="p-5" style={{ height: 290 }}>
               {last5DaysData.length > 0 ? (
                 <ResponsiveContainer width="100%" height="100%">
                   <AreaChart data={last5DaysData}>
                     <defs>
                       <linearGradient id="colorAmount" x1="0" y1="0" x2="0" y2="1">
-                        <stop offset="5%" stopColor="#007bff" stopOpacity={0.3} />
-                        <stop offset="95%" stopColor="#007bff" stopOpacity={0.02} />
+                        <stop offset="5%" stopColor="#6366f1" stopOpacity={0.4} />
+                        <stop offset="95%" stopColor="#6366f1" stopOpacity={0.01} />
                       </linearGradient>
                     </defs>
-                    <CartesianGrid strokeDasharray="3 3" stroke="#f3f4f6" />
-                    <XAxis dataKey="date" tick={{ fontSize: 10 }} />
-                    <YAxis tick={{ fontSize: 10 }} tickFormatter={(v) => `₹${(v / 1000).toFixed(0)}k`} />
+                    <CartesianGrid strokeDasharray="3 3" stroke="#1e293b" />
+                    <XAxis dataKey="date" tick={{ fontSize: 9, fill: '#94a3b8', fontWeight: 600 }} />
+                    <YAxis tick={{ fontSize: 9, fill: '#94a3b8', fontWeight: 600 }} tickFormatter={(v) => `₹${(v / 1000).toFixed(0)}k`} />
                     <Tooltip content={<CustomMoneyTooltip />} />
-                    <Area type="monotone" dataKey="amount" stroke="#007bff" strokeWidth={2} fill="url(#colorAmount)" />
+                    <Area type="monotone" dataKey="amount" stroke="#6366f1" strokeWidth={3} fill="url(#colorAmount)" />
                   </AreaChart>
                 </ResponsiveContainer>
               ) : (
-                <div className="flex items-center justify-center h-full text-gray-400 text-xs">No date data</div>
+                <div className="flex items-center justify-center h-full text-slate-500 text-xs font-semibold">No data available</div>
               )}
             </div>
           </div>
 
-          {/* Chart 5: Zone-wise Distribution */}
-          <div className="bg-white border border-gray-200 rounded shadow-sm">
-            <div className="px-4 py-3 border-b border-gray-200 bg-gray-50">
-              <h3 className="text-xs font-bold text-gray-700 uppercase tracking-wider">
-                Zone Wise Distribution
-              </h3>
-              <p className="text-[10px] text-gray-400 mt-0.5">Expenses grouped by operational zone</p>
+          {/* Chart 5: Zone wise Distribution */}
+          <div className="bg-slate-900/40 border border-slate-800/60 rounded-2xl overflow-hidden custom-chart-card">
+            <div className="px-5 py-4 border-b border-slate-800/60 bg-slate-900/80 flex items-center justify-between">
+              <div>
+                <h3 className="text-xs font-black text-slate-200 uppercase tracking-widest">
+                  Zone Distribution
+                </h3>
+                <p className="text-[10px] text-slate-400 mt-0.5">Expenditure breakdown by operations zone</p>
+              </div>
             </div>
-            <div className="p-4" style={{ height: 280 }}>
+            <div className="p-5" style={{ height: 290 }}>
               {zoneWiseData.length > 0 ? (
                 <div className="relative flex justify-center items-center h-full">
                   <ResponsiveContainer width="100%" height="100%">
@@ -1017,47 +1046,49 @@ export default function AnalysisPage() {
                         cy="50%"
                         innerRadius={45}
                         outerRadius={65}
-                        paddingAngle={3}
+                        paddingAngle={4}
                         dataKey="value"
-                        stroke="#ffffff"
-                        strokeWidth={2}
+                        stroke="#0f172a"
+                        strokeWidth={3}
                       >
                         {zoneWiseData.map((_, i) => (
                           <Cell key={i} fill={GALLERY_COLORS[i % GALLERY_COLORS.length]} />
                         ))}
                       </Pie>
                       <Tooltip content={<CustomMoneyTooltip />} />
-                      <Legend verticalAlign="bottom" height={36} iconType="circle" wrapperStyle={{ fontSize: 9, fontWeight: 'bold' }} />
+                      <Legend verticalAlign="bottom" height={36} iconType="circle" wrapperStyle={{ fontSize: 9, fontWeight: 'bold', fill: '#94a3b8' }} />
                     </PieChart>
                   </ResponsiveContainer>
                   <div className="absolute flex flex-col items-center justify-center pointer-events-none" style={{ top: '40%', left: '50%', transform: 'translate(-50%, -50%)' }}>
-                    <span className="text-[8px] text-gray-400 font-bold uppercase tracking-wider">Total Zone</span>
-                    <span className="text-[10px] font-black text-slate-800 font-mono">
+                    <span className="text-[8px] text-slate-450 font-black uppercase tracking-widest">Zones</span>
+                    <span className="text-[11px] font-black text-white font-mono mt-0.5">
                       ₹{zoneWiseData.reduce((sum, item) => sum + item.value, 0).toLocaleString()}
                     </span>
                   </div>
                 </div>
               ) : (
-                <div className="flex items-center justify-center h-full text-gray-400 text-xs">No zone data</div>
+                <div className="flex items-center justify-center h-full text-slate-500 text-xs font-semibold">No data available</div>
               )}
             </div>
           </div>
 
-          {/* Chart 6: Travel Mode / Category Breakdown */}
-          <div className="bg-white border border-gray-200 rounded shadow-sm">
-            <div className="px-4 py-3 border-b border-gray-200 bg-gray-50">
-              <h3 className="text-xs font-bold text-gray-700 uppercase tracking-wider">
-                Travel Mode / Category Breakdown
-              </h3>
-              <p className="text-[10px] text-gray-400 mt-0.5">Expenditure by travel mode (Bike, Car, Auto, etc.)</p>
+          {/* Chart 6: Category Breakdown */}
+          <div className="bg-slate-900/40 border border-slate-800/60 rounded-2xl overflow-hidden custom-chart-card">
+            <div className="px-5 py-4 border-b border-slate-800/60 bg-slate-900/80 flex items-center justify-between">
+              <div>
+                <h3 className="text-xs font-black text-slate-200 uppercase tracking-widest">
+                  Travel Mode Breakdown
+                </h3>
+                <p className="text-[10px] text-slate-400 mt-0.5">Expenditure by travel categories</p>
+              </div>
             </div>
-            <div className="p-4" style={{ height: 280 }}>
+            <div className="p-5" style={{ height: 290 }}>
               {categoryData.length > 0 ? (
                 <ResponsiveContainer width="100%" height="100%">
                   <BarChart data={categoryData} margin={{ bottom: 5 }}>
-                    <CartesianGrid strokeDasharray="3 3" stroke="#f3f4f6" horizontal={true} vertical={false} />
-                    <XAxis dataKey="name" tick={{ fontSize: 10 }} />
-                    <YAxis tick={{ fontSize: 10 }} tickFormatter={(v) => `₹${(v / 1000).toFixed(0)}k`} />
+                    <CartesianGrid strokeDasharray="3 3" stroke="#1e293b" horizontal={true} vertical={false} />
+                    <XAxis dataKey="name" tick={{ fontSize: 9, fill: '#94a3b8', fontWeight: 600 }} />
+                    <YAxis tick={{ fontSize: 9, fill: '#94a3b8', fontWeight: 600 }} tickFormatter={(v) => `₹${(v / 1000).toFixed(0)}k`} />
                     <Tooltip content={<CustomMoneyTooltip />} />
                     <Bar dataKey="amount" radius={[6, 6, 0, 0]} maxBarSize={30}>
                       {categoryData.map((_, index) => (
@@ -1067,33 +1098,33 @@ export default function AnalysisPage() {
                   </BarChart>
                 </ResponsiveContainer>
               ) : (
-                <div className="flex items-center justify-center h-full text-gray-400 text-xs">No category data</div>
+                <div className="flex items-center justify-center h-full text-slate-500 text-xs font-semibold">No data available</div>
               )}
             </div>
           </div>
 
           {/* Chart 7: Operations Activity Metrics */}
-          <div className="bg-white border border-gray-200 rounded shadow-sm lg:col-span-2">
-            <div className="px-4 py-3 border-b border-gray-200 bg-gray-50 flex items-center justify-between">
+          <div className="bg-slate-900/40 border border-slate-800/60 rounded-2xl overflow-hidden custom-chart-card lg:col-span-2">
+            <div className="px-5 py-4 border-b border-slate-800/60 bg-slate-900/80 flex items-center justify-between">
               <div>
-                <h3 className="text-xs font-bold text-gray-700 uppercase tracking-wider">
+                <h3 className="text-xs font-black text-slate-200 uppercase tracking-widest">
                   Operations Activity Metrics
                 </h3>
-                <p className="text-[10px] text-gray-400 mt-0.5">Calls, PMS, calibrations, and asset tagging totals</p>
+                <p className="text-[10px] text-slate-400 mt-0.5">Calls closed, PMS done, calibrations, and asset tagging totals</p>
               </div>
-              <span className="bg-blue-50 text-blue-700 border border-blue-200 text-[10px] font-bold px-2 py-0.5 rounded">
+              <span className="bg-indigo-500/10 text-indigo-400 border border-indigo-500/20 text-[10px] font-bold px-3 py-1 rounded-lg">
                 Operational KPIs
               </span>
             </div>
-            <div className="p-4" style={{ height: 320 }}>
+            <div className="p-5" style={{ height: 320 }}>
               {activityChartData.some(d => d.count > 0) ? (
                 <ResponsiveContainer width="100%" height="100%">
                   <BarChart data={activityChartData} margin={{ bottom: 15, top: 10 }}>
-                    <CartesianGrid strokeDasharray="3 3" stroke="#f3f4f6" horizontal={true} vertical={false} />
-                    <XAxis dataKey="name" tick={{ fontSize: 10, fontWeight: "bold" }} />
-                    <YAxis tick={{ fontSize: 10 }} allowDecimals={false} />
+                    <CartesianGrid strokeDasharray="3 3" stroke="#1e293b" horizontal={true} vertical={false} />
+                    <XAxis dataKey="name" tick={{ fontSize: 9, fill: '#94a3b8', fontWeight: "bold" }} />
+                    <YAxis tick={{ fontSize: 9, fill: '#94a3b8', fontWeight: 600 }} allowDecimals={false} />
                     <Tooltip content={<CustomCountTooltip />} />
-                    <Bar dataKey="count" radius={[6, 6, 0, 0]} maxBarSize={60}>
+                    <Bar dataKey="count" radius={[6, 6, 0, 0]} maxBarSize={50}>
                       {activityChartData.map((_, idx) => (
                         <Cell key={idx} fill={GALLERY_COLORS[idx % GALLERY_COLORS.length]} />
                       ))}
@@ -1101,7 +1132,7 @@ export default function AnalysisPage() {
                   </BarChart>
                 </ResponsiveContainer>
               ) : (
-                <div className="flex items-center justify-center h-full text-gray-400 text-xs font-bold">
+                <div className="flex items-center justify-center h-full text-slate-500 text-xs font-bold">
                   No operational activities recorded in this selection
                 </div>
               )}

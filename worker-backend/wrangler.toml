@@ -11,7 +11,13 @@ database_id = "34e085d8-c078-4f2f-b240-9bf8f4cf9301"
 CORS_ORIGIN = "*"
 API_SECRET = "012001@Sunil"
 SKIP_PRIMARY_SYNC = "true"
+RESEND_API_KEY = "re_i7WRWahS_GbcGT7C65PH4fkAvez4DyYiS"
 
 # Primary DB sync credentials (replicate writes back to Primary)
 PRIMARY_CLOUDFLARE_ACCOUNT_ID = "befbd2e0ff580a1d0d0865f011002053"
 PRIMARY_CLOUDFLARE_DATABASE_ID = "34e085d8-c078-4f2f-b240-9bf8f4cf9301"
+
+[[kv_namespaces]]
+binding = "OTPS_KV"
+id = "7a00b8d26638473384d2d99f92417fee"
+

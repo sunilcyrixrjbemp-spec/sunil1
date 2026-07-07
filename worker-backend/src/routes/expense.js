@@ -36,6 +36,30 @@ export async function serializeExpenses(env, expenses, submittersMap) {
     const submitter = submittersMap[exp.user_id] || null;
     const legs = legsByCode[exp.expense_code] || [];
 
+    const totCallsAssigned = legs.length > 0
+      ? legs.reduce((sum, l) => sum + (parseInt(l.calls_assigned) || 0), 0)
+      : (parseInt(exp.calls_assigned) || 0);
+
+    const totCallsCompleted = legs.length > 0
+      ? legs.reduce((sum, l) => sum + (parseInt(l.calls_completed) || 0), 0)
+      : (parseInt(exp.calls_completed) || 0);
+
+    const totPmsCount = legs.length > 0
+      ? legs.reduce((sum, l) => sum + (parseInt(l.pms_count) || 0), 0)
+      : (parseInt(exp.pms_count) || 0);
+
+    const totAssetTagging = legs.length > 0
+      ? legs.reduce((sum, l) => sum + (parseInt(l.asset_tagging) || 0), 0)
+      : (parseInt(exp.asset_tagging) || 0);
+
+    const totCalibrationCount = legs.length > 0
+      ? legs.reduce((sum, l) => sum + (parseInt(l.calibration_count) || 0), 0)
+      : (parseInt(exp.calibration_count) || 0);
+
+    const totMobiliseCount = legs.length > 0
+      ? legs.reduce((sum, l) => sum + (parseInt(l.mobilise_count) || 0), 0)
+      : (parseInt(exp.mobilise_count) || 0);
+
     const totKm = legs
       .filter(l => ["bike", "car"].includes((l.travel_mode || "").trim().toLowerCase()))
       .reduce((sum, l) => sum + (parseFloat(l.distance_km) || 0.0), 0.0);
@@ -71,10 +95,12 @@ export async function serializeExpenses(env, expenses, submittersMap) {
       hotel_amount: parseFloat(exp.hotel_amount || 0.0),
       other_expense_amount: parseFloat(exp.other_expense_amount || 0.0),
       local_purchase_amount: parseFloat(exp.local_purchase_amount || 0.0),
-      calls_assigned: exp.calls_assigned || 0,
-      calls_completed: exp.calls_completed || 0,
-      pms_count: exp.pms_count || 0,
-      asset_tagging: exp.asset_tagging || 0,
+      calls_assigned: totCallsAssigned,
+      calls_completed: totCallsCompleted,
+      pms_count: totPmsCount,
+      asset_tagging: totAssetTagging,
+      calibration_count: totCalibrationCount,
+      mobilise_count: totMobiliseCount,
       created_at: exp.created_at,
       updated_at: exp.updated_at,
       total_km: totKm,
@@ -467,6 +493,30 @@ export async function handleGetTeamExpenses(request, env, params, query, user) {
         .filter(l => (l.travel_mode || "").trim().toLowerCase() === "car")
         .reduce((sum, l) => sum + (parseFloat(l.travel_amount) || 0.0), 0.0);
 
+      const totCallsAssigned = legs.length > 0
+        ? legs.reduce((sum, l) => sum + (parseInt(l.calls_assigned) || 0), 0)
+        : (parseInt(exp.calls_assigned) || 0);
+
+      const totCallsCompleted = legs.length > 0
+        ? legs.reduce((sum, l) => sum + (parseInt(l.calls_completed) || 0), 0)
+        : (parseInt(exp.calls_completed) || 0);
+
+      const totPmsCount = legs.length > 0
+        ? legs.reduce((sum, l) => sum + (parseInt(l.pms_count) || 0), 0)
+        : (parseInt(exp.pms_count) || 0);
+
+      const totAssetTagging = legs.length > 0
+        ? legs.reduce((sum, l) => sum + (parseInt(l.asset_tagging) || 0), 0)
+        : (parseInt(exp.asset_tagging) || 0);
+
+      const totCalibrationCount = legs.length > 0
+        ? legs.reduce((sum, l) => sum + (parseInt(l.calibration_count) || 0), 0)
+        : (parseInt(exp.calibration_count) || 0);
+
+      const totMobiliseCount = legs.length > 0
+        ? legs.reduce((sum, l) => sum + (parseInt(l.mobilise_count) || 0), 0)
+        : (parseInt(exp.mobilise_count) || 0);
+
       result.push({
         id: exp.id,
         expense_code: exp.expense_code,
@@ -491,7 +541,13 @@ export async function handleGetTeamExpenses(request, env, params, query, user) {
         other_expense_amount: parseFloat(exp.other_expense_amount || 0.0),
         local_purchase_amount: parseFloat(exp.local_purchase_amount || 0.0),
         district: submitter?.district || "Ganganar",
-        zone: submitter?.zone || "Bikaner"
+        zone: submitter?.zone || "Bikaner",
+        calls_assigned: totCallsAssigned,
+        calls_completed: totCallsCompleted,
+        pms_count: totPmsCount,
+        asset_tagging: totAssetTagging,
+        calibration_count: totCalibrationCount,
+        mobilise_count: totMobiliseCount
       });
     }
   }
@@ -2033,88 +2089,280 @@ export async function handleGetEngineerMonthClaims(request, env, params, query, 
     return jsonResponse({ error: "user_code and month are required" }, 400);
   }
 
+  const targetUser = await env.DB.prepare("SELECT * FROM users WHERE user_id = ? OR e_code = ?").bind(userCode, userCode).first();
+  if (!targetUser) {
+    return jsonResponse({ error: "Engineer not found" }, 404);
+  }
+
   const claims = [];
 
-  // Fetch from new expenses table
+  // Fetch asset value master into a dictionary: equipment_name -> tender_cost
+  const assetCosts = {};
   try {
-    const monthNum = ["january","february","march","april","may","june","july","august","september","october","november","december"].indexOf(month.toLowerCase()) + 1;
-    const targetUser = await env.DB.prepare("SELECT * FROM users WHERE user_id = ?").bind(userCode).first();
-    if (targetUser) {
-      const expenses = await env.DB.prepare(`
-        SELECT * FROM expenses 
-        WHERE user_id = ? AND UPPER(month) = UPPER(?) AND year = ?
-        ORDER BY created_at ASC
-      `).bind(targetUser.id, month, year).all();
-
-      for (const exp of (expenses.results || [])) {
-        const legs = await env.DB.prepare("SELECT * FROM expense_itineraries WHERE exp_id = ? ORDER BY id ASC").bind(exp.expense_code).all();
-        claims.push({
-          expense_code: exp.expense_code,
-          date: exp.itinerary || exp.created_at,
-          month: exp.month,
-          year: exp.year,
-          status: exp.status,
-          amount: parseFloat(exp.amount || 0),
-          description: exp.description || "",
-          visit_purpose: exp.description || "",
-          legs: (legs.results || []).map(l => ({
-            ...l,
-            ta_amount: parseFloat(l.travel_amount || 0),
-            bike_amount: l.travel_mode === "Bike" ? parseFloat(l.travel_amount || 0) : 0,
-            car_amount: l.travel_mode === "Car" ? parseFloat(l.travel_amount || 0) : 0,
-            auto_amount: (l.travel_mode === "Auto" || l.sub_mode === "Auto") ? parseFloat(l.travel_amount || l.sub_amount || 0) : 0,
-            da_amount: parseFloat(l.da_amount || 0),
-            local_purchase: parseFloat(l.local_purchase || 0),
-            distance_km: parseFloat(l.distance_km || 0)
-          }))
-        });
+    const assetCostsRes = await env.DB.prepare("SELECT equipment_name, rmsc_tender_cost FROM asset_value_master").all();
+    for (const r of (assetCostsRes.results || [])) {
+      if (r.equipment_name) {
+        assetCosts[r.equipment_name.trim().toLowerCase()] = parseFloat(r.rmsc_tender_cost || 0.0);
       }
     }
   } catch (e) {
-    console.warn("Engineer month claims from expenses table failed:", e.message);
+    console.warn("Failed to load asset costs:", e.message);
   }
 
-  // Also fetch from legacy expense_master
+  // Fetch from new expenses table
+  let expenses = [];
   try {
-    const legacyExp = await env.DB.prepare(`
+    const expensesRes = await env.DB.prepare(`
+      SELECT * FROM expenses 
+      WHERE user_id = ? AND UPPER(month) = UPPER(?) AND year = ? AND status = 'approved'
+      ORDER BY itinerary ASC
+    `).bind(targetUser.id, month, year).all();
+    expenses = expensesRes.results || [];
+
+    for (const exp of expenses) {
+      let legs = [];
+      try {
+        const legsRes = await env.DB.prepare("SELECT * FROM expense_itineraries WHERE exp_id = ? ORDER BY leg_number ASC").bind(exp.expense_code).all();
+        legs = legsRes.results || [];
+      } catch (e) {
+        console.warn("Legs fetch failed:", e.message);
+      }
+
+      const legData = [];
+      for (const leg of legs) {
+        let barcodes = [];
+        if (leg.activity_details) {
+          try {
+            const act = typeof leg.activity_details === 'string' ? JSON.parse(leg.activity_details) : leg.activity_details;
+            if (act && typeof act === 'object') {
+              for (const item of (act.calls_list || [])) {
+                if (item.barcode) barcodes.push(item.barcode);
+              }
+              for (const item of (act.pms_list || [])) {
+                if (item.barcode && !barcodes.includes(item.barcode)) {
+                  barcodes.push(item.barcode);
+                }
+              }
+            }
+          } catch (err) {}
+        }
+
+        // Calculate total asset tagging qty and value
+        let totalTagQty = 0;
+        let totalTagVal = 0;
+        try {
+          const tagRes = await env.DB.prepare("SELECT * FROM expense_asset_taggings WHERE itinerary_id = ?").bind(leg.itinerary_id).all();
+          for (const t of (tagRes.results || [])) {
+            const qty = t.quantity || 0;
+            totalTagQty += qty;
+            const eqName = (t.equipment_name || "").trim().toLowerCase();
+            const cost = assetCosts[eqName] || 0.0;
+            totalTagVal += qty * cost;
+          }
+        } catch (e) {
+          console.warn("Taggings fetch failed for leg:", leg.itinerary_id, e.message);
+        }
+
+        let tagInfo = "";
+        if (totalTagQty > 0) {
+          tagInfo = `Qty: ${totalTagQty} | ₹${totalTagVal.toLocaleString('en-IN', { maximumFractionDigits: 0 })}`;
+        }
+
+        let barcodeTicketStr = barcodes.join(", ");
+        if (tagInfo) {
+          barcodeTicketStr = barcodeTicketStr ? `${barcodeTicketStr} | ${tagInfo}` : tagInfo;
+        }
+
+        const autoAmt = (leg.travel_mode === "Auto" ? parseFloat(leg.travel_amount || 0) : 0) +
+                        (leg.sub_mode === "Auto" ? parseFloat(leg.sub_amount || 0) : 0);
+
+        legData.push({
+          leg_number: leg.leg_number,
+          from_location: leg.from_location || leg.from_district || "—",
+          to_location: leg.to_location || leg.to_district || "—",
+          travel_mode: leg.travel_mode || "—",
+          distance_km: parseFloat(leg.distance_km || 0.0),
+          bike_km: leg.travel_mode === "Bike" ? parseFloat(leg.distance_km || 0.0) : 0.0,
+          car_km: leg.travel_mode === "Car" ? parseFloat(leg.distance_km || 0.0) : 0.0,
+          bike_amount: leg.travel_mode === "Bike" ? parseFloat(leg.travel_amount || 0.0) : 0.0,
+          car_amount: leg.travel_mode === "Car" ? parseFloat(leg.travel_amount || 0.0) : 0.0,
+          auto_amount: autoAmt,
+          da_amount: parseFloat(leg.da_amount || 0.0),
+          hotel_amount: parseFloat(leg.hotel_amount || 0.0),
+          local_purchase: parseFloat(leg.local_purchase || 0.0),
+          other_amount: parseFloat(leg.other_amount || 0.0),
+          other_desc: leg.other_desc || "",
+          visit_purpose: leg.visit_purpose || "",
+          calls_assigned: leg.calls_assigned || 0,
+          ws_assigned: leg.calls_assigned || 0,
+          calls_completed: leg.calls_completed || 0,
+          ws_closed: leg.calls_completed || 0,
+          pms_count: leg.pms_count || 0,
+          ws_pms: leg.pms_count || 0,
+          ws_asset: leg.asset_tagging || 0,
+          asset_tagging: leg.asset_tagging || 0,
+          calibration_count: leg.calibration_count || 0,
+          mobilise_count: leg.mobilise_count || 0,
+          mobilise_asset_count: leg.mobilise_count || 0,
+          worked_district: leg.to_district || leg.from_district || "",
+          ta_amount: ["Train", "Bus"].includes(leg.travel_mode) ? parseFloat(leg.travel_amount || 0.0) : 0.0,
+          sub_mode: leg.sub_mode || "",
+          sub_amount: parseFloat(leg.sub_amount || 0.0),
+          barcode_ticket: barcodeTicketStr,
+          asset_tagging_qty: totalTagQty,
+          asset_tagging_val: totalTagVal,
+          activity_details: leg.activity_details || "",
+        });
+      }
+
+      claims.push({
+        expense_code: exp.expense_code,
+        date: exp.itinerary,
+        amount: parseFloat(exp.amount || 0.0),
+        da_amount: parseFloat(exp.da_amount || 0.0),
+        hotel_amount: parseFloat(exp.hotel_amount || 0.0),
+        other_amount: parseFloat(exp.other_expense_amount || 0.0),
+        local_purchase_amount: parseFloat(exp.local_purchase_amount || 0.0),
+        legs: legData,
+      });
+    }
+  } catch (e) {
+    console.warn("New expenses fetch failed:", e.message);
+  }
+
+  // Fetch from legacy expense_master
+  let legacyExpenses = [];
+  try {
+    const legacyRes = await env.DB.prepare(`
       SELECT * FROM expense_master
       WHERE LOWER(user_id) = LOWER(?)
         AND strftime('%m', expense_date) = ?
         AND strftime('%Y', expense_date) = ?
+        AND status = 'Approved'
       ORDER BY expense_date ASC
     `).bind(userCode,
       String(["january","february","march","april","may","june","july","august","september","october","november","december"].indexOf(month.toLowerCase()) + 1).padStart(2, "0"),
       String(year)
     ).all();
+    legacyExpenses = legacyRes.results || [];
 
-    for (const exp of (legacyExp.results || [])) {
-      const legs = await env.DB.prepare("SELECT * FROM expense_itinerary WHERE exp_id = ? ORDER BY leg_number ASC").bind(exp.exp_id).all();
+    for (const exp of legacyExpenses) {
+      let legs = [];
+      try {
+        const legsRes = await env.DB.prepare("SELECT * FROM expense_itinerary WHERE exp_id = ? ORDER BY leg_number ASC").bind(exp.exp_id).all();
+        legs = legsRes.results || [];
+      } catch (e) {
+        console.warn("Legacy legs fetch failed:", e.message);
+      }
+
+      const legData = [];
+      for (const leg of legs) {
+        legData.push({
+          leg_number: leg.leg_number,
+          from_location: leg.from_location || "—",
+          to_location: leg.to_location || "—",
+          travel_mode: leg.travel_mode || "—",
+          distance_km: parseFloat(leg.distance_km || 0.0),
+          bike_km: leg.travel_mode === "Bike" ? parseFloat(leg.distance_km || 0.0) : 0.0,
+          car_km: leg.travel_mode === "Car" ? parseFloat(leg.distance_km || 0.0) : 0.0,
+          bike_amount: parseFloat(leg.bike_amount || 0.0),
+          car_amount: parseFloat(leg.car_amount || 0.0),
+          auto_amount: parseFloat(leg.auto_amount || 0.0),
+          da_amount: parseFloat(leg.da_amount || 0.0),
+          hotel_amount: parseFloat(leg.hotel_amount || 0.0),
+          local_purchase: parseFloat(leg.local_purchase || 0.0),
+          other_amount: parseFloat(leg.other_amount || 0.0),
+          other_desc: leg.other_desc || "",
+          visit_purpose: leg.visit_purpose || "",
+          calls_assigned: leg.calls_assigned || 0,
+          ws_assigned: leg.calls_assigned || 0,
+          calls_completed: leg.calls_completed || 0,
+          ws_closed: leg.calls_completed || 0,
+          pms_count: leg.pms_count || 0,
+          ws_pms: leg.pms_count || 0,
+          ws_asset: leg.asset_tagging || 0,
+          asset_tagging: leg.asset_tagging || 0,
+          calibration_count: leg.calibration_count || 0,
+          mobilise_count: leg.mobilise_count || 0,
+          mobilise_asset_count: leg.mobilise_count || 0,
+          worked_district: leg.worked_district || "",
+          ta_amount: parseFloat(leg.ta_amount || 0.0),
+          sub_mode: leg.sub_mode || "",
+          sub_amount: parseFloat(leg.sub_amount || 0.0),
+          barcode_ticket: leg.barcode_ticket || "",
+          asset_tagging_qty: leg.asset_tagging_qty || 0,
+          asset_tagging_val: leg.asset_tagging_val || 0.0,
+          activity_details: leg.activity_details || "",
+        });
+      }
+
       claims.push({
         expense_code: exp.exp_id,
         date: exp.expense_date,
-        month,
-        year,
-        status: exp.status,
-        amount: parseFloat(exp.total_amount || 0),
-        description: exp.visit_purpose || "",
-        visit_purpose: exp.visit_purpose || "",
-        legs: (legs.results || []).map(l => ({
-          ...l,
-          ta_amount: parseFloat(l.ta_amount || 0),
-          bike_amount: parseFloat(l.bike_amount || 0),
-          car_amount: parseFloat(l.car_amount || 0),
-          auto_amount: parseFloat(l.auto_amount || 0),
-          da_amount: parseFloat(l.da_amount || 0),
-          local_purchase: parseFloat(l.local_purchase || 0),
-          distance_km: parseFloat(l.distance_km || 0)
-        }))
+        amount: parseFloat(exp.total_amount || 0.0),
+        da_amount: parseFloat(exp.da_amount || 0.0),
+        hotel_amount: parseFloat(exp.hotel_amount || 0.0),
+        other_amount: parseFloat(exp.other_amount || 0.0),
+        local_purchase_amount: parseFloat(exp.local_purchase || 0.0),
+        legs: legData,
       });
     }
   } catch (e) {
-    console.warn("Legacy expense_itinerary fetch failed:", e.message);
+    console.warn("Legacy expense_master fetch failed:", e.message);
   }
 
-  return jsonResponse(claims);
+  const defaultUserObj = {
+    name: targetUser.name,
+    user_id: targetUser.user_id,
+    e_code: targetUser.e_code || targetUser.user_id,
+    grade: targetUser.grade || "",
+    designation: targetUser.designation || "Engineer",
+    district: targetUser.district || "",
+    zone: targetUser.zone || "",
+    manager: targetUser.manager || "",
+    coordinator: targetUser.coordinator || "",
+    mobile: targetUser.mobile_number || "",
+    type: targetUser.type || (targetUser.zone || ""),
+    month: month,
+    year: year
+  };
+
+  // Query all attachments for these expenses
+  const expenseCodes = claims.map(c => c.expense_code);
+  const validAttachments = [];
+  if (expenseCodes.length > 0) {
+    try {
+      const placeholders = expenseCodes.map(() => "?").join(",");
+      const attachRes = await env.DB.prepare(`
+        SELECT * FROM expense_attachments 
+        WHERE exp_id IN (${placeholders})
+      `).bind(...expenseCodes).all();
+
+      const expenseDateMap = {};
+      for (const c of claims) {
+        expenseDateMap[c.expense_code] = c.date;
+      }
+
+      for (const a of (attachRes.results || [])) {
+        const billType = (a.bill_type || "").toLowerCase();
+        if (a.file_url && !billType.includes("pms") && !billType.includes("call")) {
+          validAttachments.push({
+            file_url: a.file_url,
+            date: expenseDateMap[a.exp_id] || ""
+          });
+        }
+      }
+    } catch (e) {
+      console.warn("Attachments fetch failed:", e.message);
+    }
+  }
+
+  return jsonResponse({
+    success: true,
+    user: defaultUserObj,
+    claims: claims,
+    attachments: validAttachments
+  });
 }
 
 /**

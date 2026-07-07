@@ -166,18 +166,18 @@ export async function handleLogin(request, env, params, query) {
   const user = await env.DB.prepare("SELECT * FROM users WHERE user_id = ?").bind(user_id).first();
   if (!user) {
     await logLogin(env.DB, user_id, ipAddress, userAgent, "failed");
-    return jsonResponse({ error: "Invalid User ID or Password" }, 401);
+    return jsonResponse({ error: "Invalid User ID or Password", detail: "Invalid User ID or Password" }, 401);
   }
 
   // 2. Check user status
   if (user.user_status === "disabled") {
     await logLogin(env.DB, user_id, ipAddress, userAgent, "failed");
-    return jsonResponse({ error: "Your account is disabled. Please contact the administrator." }, 403);
+    return jsonResponse({ error: "Your account is disabled. Please contact the administrator.", detail: "Your account is disabled. Please contact the administrator." }, 403);
   }
 
   if (user.user_status === "locked") {
     await logLogin(env.DB, user_id, ipAddress, userAgent, "locked");
-    return jsonResponse({ error: "Your account is locked. Please use the Unlock Account option." }, 403);
+    return jsonResponse({ error: "Your account is locked. Please use the Unlock Account option.", detail: "Your account is locked. Please use the Unlock Account option." }, 403);
   }
 
   // 3. Verify password
@@ -188,12 +188,12 @@ export async function handleLogin(request, env, params, query) {
     if (failedAttempts >= 5) {
       await runWrite(env, "UPDATE users SET failed_attempt = ?, user_status = 'locked' WHERE user_id = ?", [failedAttempts, user_id]);
       await logLogin(env.DB, user_id, ipAddress, userAgent, "locked");
-      return jsonResponse({ error: "Your account has been locked due to 5 failed login attempts." }, 403);
+      return jsonResponse({ error: "Your account has been locked due to 5 failed login attempts.", detail: "Your account has been locked due to 5 failed login attempts." }, 403);
     } else {
       await runWrite(env, "UPDATE users SET failed_attempt = ? WHERE user_id = ?", [failedAttempts, user_id]);
       await logLogin(env.DB, user_id, ipAddress, userAgent, "failed");
       const attemptsLeft = 5 - failedAttempts;
-      return jsonResponse({ error: `Invalid User ID or Password. ${attemptsLeft} attempts remaining.` }, 401);
+      return jsonResponse({ error: `Invalid User ID or Password. ${attemptsLeft} attempts remaining.`, detail: `Invalid User ID or Password. ${attemptsLeft} attempts remaining.` }, 401);
     }
   }
 
@@ -320,8 +320,33 @@ export async function handleGetDropdowns(request, env, params, query) {
 }
 
 /**
+ * Helper to send email via Resend
+ */
+async function sendEmail(to, subject, body, apiKey) {
+  const key = apiKey || "re_i7WRWahS_GbcGT7C65PH4fkAvez4DyYiS";
+  const res = await fetch("https://api.resend.com/emails", {
+    method: "POST",
+    headers: {
+      "Authorization": `Bearer ${key}`,
+      "Content-Type": "application/json"
+    },
+    body: JSON.stringify({
+      from: "Sunil Bishnoi <rjbemp-bikaner@cyrix.in>",
+      to: [to],
+      subject: subject,
+      html: body
+    })
+  });
+  if (!res.ok) {
+    const errText = await res.text();
+    console.error("Resend API error:", errText);
+    throw new Error("Email dispatch failed: " + errText);
+  }
+}
+
+/**
  * POST /api/auth/forgot-password
- * Verifies user_id + DOB then sends OTP via notification (stores in DB)
+ * Verifies user_id + DOB then sends OTP via email and notification (stores in KV)
  */
 export async function handleForgotPassword(request, env, params, query) {
   try {
@@ -349,37 +374,61 @@ export async function handleForgotPassword(request, env, params, query) {
     // Generate 6-digit OTP
     const otp = String(Math.floor(100000 + Math.random() * 900000));
     const timestamp = new Date().toISOString();
-    const expiresAt = new Date(Date.now() + 10 * 60 * 1000).toISOString(); // 10 min
 
-    // Store OTP in DB
-    try {
-      await env.DB.prepare(`
-        INSERT INTO otps (user_id, otp_code, otp_type, expires_at, created_at)
-        VALUES (?, ?, 'forgot_password', ?, ?)
-      `).bind(user_id, otp, expiresAt, timestamp).run();
-    } catch (dbErr) {
-      // If insert fails (or schema constraint), try delete + insert
-      await env.DB.prepare("DELETE FROM otps WHERE user_id = ? AND otp_type = 'forgot_password'").bind(user_id).run().catch(() => {});
-      await env.DB.prepare(`
-        INSERT INTO otps (user_id, otp_code, otp_type, expires_at, created_at)
-        VALUES (?, ?, 'forgot_password', ?, ?)
-      `).bind(user_id, otp, expiresAt, timestamp).run();
+    // Store OTP in Cloudflare KV: otp:${user_id}:forgot_password
+    const kvKey = `otp:${user_id}:forgot_password`;
+    if (env.OTPS_KV) {
+      await env.OTPS_KV.put(kvKey, otp, { expirationTtl: 600 });
+    } else {
+      console.warn("env.OTPS_KV is not bound! Falling back to console logging.");
     }
 
-    // Send OTP via notification (mobile number stored in user record)
+    // Also insert a notification record in D1 DB for compatibility
     await env.DB.prepare(`
       INSERT INTO notifications (user_id, title, description, type, read, link, created_at)
       VALUES (?, ?, ?, 'info', 0, '/login', ?)
     `).bind(user_id, "Password Reset OTP", `Your OTP for password reset is: ${otp}. Valid for 10 minutes.`, timestamp).run().catch(() => {});
 
+    // Send OTP via Resend email
+    const email = user.mail_id || "";
+    if (email) {
+      const emailTemplate = `
+        <div style="font-family: 'Segoe UI', Tahoma, sans-serif; max-width: 550px; margin: auto; border: 1px solid #e2e8f0; border-radius: 12px; overflow: hidden; box-shadow: 0 4px 12px rgba(0,0,0,0.08);">
+            <div style="background-color: #1e3a8a; padding: 25px; text-align: center;"><h1 style="color: #ffffff; margin: 0; font-size: 22px; font-weight: 600;">Cyrix Healthcare</h1></div>
+            <div style="padding: 40px; background-color: #ffffff;">
+                <p style="font-size: 16px; color: #1e293b;">Dear <b>${user.name}</b>,</p>
+                <p style="font-size: 15px; color: #475569; line-height: 1.6;">To proceed with your <b>Password Reset</b> request, please use the following verification code:</p>
+                <div style="text-align: center; margin: 35px 0;">
+                    <div style="display: inline-block; background-color: #f8fafc; border: 1px solid #cbd5e1; padding: 18px 35px; border-radius: 10px;">
+                        <span style="font-size: 34px; font-weight: 700; color: #2563eb; letter-spacing: 8px;">${otp}</span>
+                    </div>
+                    <p style="font-size: 13px; color: #94a3b8; margin-top: 15px;">Valid for 10 minutes only.</p>
+                </div>
+                <p style="font-size: 14px; color: #64748b;">If you did not request this code, please ignore this email.</p>
+                <hr style="border: 0; border-top: 1px solid #f1f5f9; margin: 30px 0;">
+                <div style="text-align: center; font-size: 11px; color: #94a3b8;">&copy; 2026 Cyrix Healthcare Pvt. Ltd. | Secure Access</div>
+            </div>
+        </div>`;
+      
+      try {
+        await sendEmail(email, "Security Verification - Account Recovery", emailTemplate, env.RESEND_API_KEY);
+      } catch (emailErr) {
+        console.error("Failed to send OTP email:", emailErr);
+      }
+    }
+
+    const [namePart, domainPart] = email.split("@");
+    const maskedEmail = namePart ? `${namePart.slice(0, 3)}***@${domainPart}` : null;
+
     return jsonResponse({
       success: true,
       message: "OTP sent successfully",
       otp_sent: true,
+      masked_email: maskedEmail,
       mobile_masked: user.mobile_number ? `XXXXXX${String(user.mobile_number).slice(-4)}` : null
     });
   } catch (err) {
-    return jsonResponse({ error: `Internal server error: ${err.message}. Stack: ${err.stack}` }, 500);
+    return jsonResponse({ error: `Internal server error: ${err.message}` }, 500);
   }
 }
 
@@ -395,23 +444,26 @@ export async function handleVerifyOtp(request, env, params, query) {
     return jsonResponse({ error: "user_id, otp, and otp_type are required" }, 400);
   }
 
-  const record = await env.DB.prepare(`
-    SELECT * FROM otps WHERE user_id = ? AND otp_type = ?
-    ORDER BY created_at DESC LIMIT 1
-  `).bind(user_id, otp_type).first().catch(() => null);
-
-  if (!record) {
-    return jsonResponse({ error: "No OTP found. Please request a new one." }, 400);
+  // Normalize otp_type for compatibility
+  let normalizedType = otp_type;
+  if (normalizedType === "reset_password") {
+    normalizedType = "forgot_password";
   }
 
-  if (record.otp_code !== String(otp).trim()) {
+  const kvKey = `otp:${user_id}:${normalizedType}`;
+  let storedOtp = null;
+  if (env.OTPS_KV) {
+    storedOtp = await env.OTPS_KV.get(kvKey);
+  } else {
+    return jsonResponse({ error: "KV store not configured. Cannot verify OTP." }, 500);
+  }
+
+  if (!storedOtp) {
+    return jsonResponse({ error: "Invalid or expired OTP. Please request a new one." }, 400);
+  }
+
+  if (storedOtp.trim() !== String(otp).trim()) {
     return jsonResponse({ error: "Invalid OTP. Please check and try again." }, 400);
-  }
-
-  const now = new Date();
-  const expires = new Date(record.expires_at);
-  if (now > expires) {
-    return jsonResponse({ error: "OTP has expired. Please request a new one." }, 400);
   }
 
   return jsonResponse({ success: true, message: "OTP verified successfully." });
@@ -437,20 +489,17 @@ export async function handleResetPassword(request, env, params, query) {
     return jsonResponse({ error: "Password must be at least 8 characters" }, 400);
   }
 
-  // Verify OTP
-  const record = await env.DB.prepare(`
-    SELECT * FROM otps WHERE user_id = ? AND otp_type = 'forgot_password'
-    ORDER BY created_at DESC LIMIT 1
-  `).bind(user_id).first().catch(() => null);
-
-  if (!record || record.otp_code !== String(otp).trim()) {
-    return jsonResponse({ error: "Invalid or expired OTP" }, 400);
+  // Verify OTP from KV
+  const kvKey = `otp:${user_id}:forgot_password`;
+  let storedOtp = null;
+  if (env.OTPS_KV) {
+    storedOtp = await env.OTPS_KV.get(kvKey);
+  } else {
+    return jsonResponse({ error: "KV store not configured." }, 500);
   }
 
-  const now = new Date();
-  const expires = new Date(record.expires_at);
-  if (now > expires) {
-    return jsonResponse({ error: "OTP has expired. Please request a new one." }, 400);
+  if (!storedOtp || storedOtp.trim() !== String(otp).trim()) {
+    return jsonResponse({ error: "Invalid or expired OTP" }, 400);
   }
 
   // Hash and update password
@@ -460,21 +509,23 @@ export async function handleResetPassword(request, env, params, query) {
   const user = await env.DB.prepare("SELECT * FROM users WHERE user_id = ?").bind(user_id).first();
   if (!user) return jsonResponse({ error: "User not found" }, 404);
 
-  await runWrite(env, "UPDATE users SET hashed_password = ?, active_session_id = NULL, failed_attempt = 0 WHERE user_id = ?", [newHash, user_id]);
+  await runWrite(env, "UPDATE users SET hashed_password = ?, active_session_id = NULL, failed_attempt = 0, user_status = 'active' WHERE user_id = ?", [newHash, user_id]);
   
   // Add to password history
-  await env.DB.prepare("INSERT INTO password_histories (user_id, hashed_password, created_at) VALUES (?, ?, ?)").
-    bind(user.id, newHash, timestamp).run().catch(() => {});
+  await env.DB.prepare("INSERT INTO password_histories (user_id, hashed_password, created_at) VALUES (?, ?, ?)")
+    .bind(user.id, newHash, timestamp).run().catch(() => {});
 
-  // Invalidate OTP
-  await env.DB.prepare("DELETE FROM otps WHERE user_id = ? AND otp_type = 'forgot_password'").bind(user_id).run().catch(() => {});
+  // Invalidate OTP in KV
+  if (env.OTPS_KV) {
+    await env.OTPS_KV.delete(kvKey);
+  }
 
   return jsonResponse({ success: true, message: "Password has been reset successfully. Please login with your new password." });
 }
 
 /**
  * POST /api/auth/unlock-account
- * Verifies user_id + DOJ + DOB then sends OTP
+ * Verifies user_id + DOJ + DOB then sends OTP via email
  */
 export async function handleUnlockAccount(request, env, params, query) {
   try {
@@ -510,27 +561,59 @@ export async function handleUnlockAccount(request, env, params, query) {
     // Generate OTP
     const otp = String(Math.floor(100000 + Math.random() * 900000));
     const timestamp = new Date().toISOString();
-    const expiresAt = new Date(Date.now() + 10 * 60 * 1000).toISOString();
 
-    await env.DB.prepare("DELETE FROM otps WHERE user_id = ? AND otp_type = 'unlock_account'").bind(user_id).run().catch(() => {});
-    await env.DB.prepare(`
-      INSERT INTO otps (user_id, otp_code, otp_type, expires_at, created_at)
-      VALUES (?, ?, 'unlock_account', ?, ?)
-    `).bind(user_id, otp, expiresAt, timestamp).run();
+    // Store OTP in KV
+    const kvKey = `otp:${user_id}:unlock_account`;
+    if (env.OTPS_KV) {
+      await env.OTPS_KV.put(kvKey, otp, { expirationTtl: 600 });
+    }
 
+    // Compatibility DB log
     await env.DB.prepare(`
       INSERT INTO notifications (user_id, title, description, type, read, link, created_at)
       VALUES (?, ?, ?, 'info', 0, '/login', ?)
     `).bind(user_id, "Account Unlock OTP", `Your OTP to unlock account: ${otp}. Valid for 10 minutes.`, timestamp).run().catch(() => {});
 
+    // Send email via Resend
+    const email = user.mail_id || "";
+    if (email) {
+      const emailTemplate = `
+        <div style="font-family: 'Segoe UI', Tahoma, sans-serif; max-width: 550px; margin: auto; border: 1px solid #e2e8f0; border-radius: 12px; overflow: hidden; box-shadow: 0 4px 12px rgba(0,0,0,0.08);">
+            <div style="background-color: #1e3a8a; padding: 25px; text-align: center;"><h1 style="color: #ffffff; margin: 0; font-size: 22px; font-weight: 600;">Cyrix Healthcare</h1></div>
+            <div style="padding: 40px; background-color: #ffffff;">
+                <p style="font-size: 16px; color: #1e293b;">Dear <b>${user.name}</b>,</p>
+                <p style="font-size: 15px; color: #475569; line-height: 1.6;">Use the following verification code to <b>Unlock</b> your account access:</p>
+                <div style="text-align: center; margin: 35px 0;">
+                    <div style="display: inline-block; background-color: #f8fafc; border: 1px solid #cbd5e1; padding: 18px 35px; border-radius: 10px;">
+                        <span style="font-size: 34px; font-weight: 700; color: #2563eb; letter-spacing: 8px;">${otp}</span>
+                    </div>
+                    <p style="font-size: 13px; color: #94a3b8; margin-top: 15px;">Valid for 10 minutes only.</p>
+                </div>
+                <p style="font-size: 14px; color: #64748b;">If you did not request this, please contact support.</p>
+                <hr style="border: 0; border-top: 1px solid #f1f5f9; margin: 30px 0;">
+                <div style="text-align: center; font-size: 11px; color: #94a3b8;">&copy; 2026 Cyrix Healthcare Pvt. Ltd. | Account Security</div>
+            </div>
+        </div>`;
+      
+      try {
+        await sendEmail(email, "Action Required: Account Unlock Request", emailTemplate, env.RESEND_API_KEY);
+      } catch (emailErr) {
+        console.error("Failed to send unlock email:", emailErr);
+      }
+    }
+
+    const [namePart, domainPart] = email.split("@");
+    const maskedEmail = namePart ? `${namePart.slice(0, 3)}***@${domainPart}` : null;
+
     return jsonResponse({
       success: true,
-      message: "OTP sent. Please check your registered mobile number.",
+      message: "OTP sent. Please check your registered email.",
       otp_sent: true,
+      masked_email: maskedEmail,
       mobile_masked: user.mobile_number ? `XXXXXX${String(user.mobile_number).slice(-4)}` : null
     });
   } catch (err) {
-    return jsonResponse({ error: `Internal server error: ${err.message}. Stack: ${err.stack}` }, 500);
+    return jsonResponse({ error: `Internal server error: ${err.message}` }, 500);
   }
 }
 
@@ -546,26 +629,27 @@ export async function handleUnlockVerifyOtp(request, env, params, query) {
     return jsonResponse({ error: "user_id and otp are required" }, 400);
   }
 
-  const record = await env.DB.prepare(`
-    SELECT * FROM otps WHERE user_id = ? AND otp_type = 'unlock_account'
-    ORDER BY created_at DESC LIMIT 1
-  `).bind(user_id).first().catch(() => null);
-
-  if (!record || record.otp_code !== String(otp).trim()) {
-    return jsonResponse({ error: "Invalid OTP. Please try again." }, 400);
+  // Verify OTP from KV
+  const kvKey = `otp:${user_id}:unlock_account`;
+  let storedOtp = null;
+  if (env.OTPS_KV) {
+    storedOtp = await env.OTPS_KV.get(kvKey);
+  } else {
+    return jsonResponse({ error: "KV store not configured." }, 500);
   }
 
-  const now = new Date();
-  const expires = new Date(record.expires_at);
-  if (now > expires) {
-    return jsonResponse({ error: "OTP has expired. Please request a new one." }, 400);
+  if (!storedOtp || storedOtp.trim() !== String(otp).trim()) {
+    return jsonResponse({ error: "Invalid or expired OTP. Please try again." }, 400);
   }
 
   // Unlock account
   const timestamp = new Date().toISOString();
   await runWrite(env, "UPDATE users SET user_status = 'active', failed_attempt = 0, active_session_id = NULL WHERE user_id = ?", [user_id]);
   
-  await env.DB.prepare("DELETE FROM otps WHERE user_id = ? AND otp_type = 'unlock_account'").bind(user_id).run().catch(() => {});
+  // Invalidate OTP in KV
+  if (env.OTPS_KV) {
+    await env.OTPS_KV.delete(kvKey);
+  }
 
   await env.DB.prepare(`
     INSERT INTO notifications (user_id, title, description, type, read, link, created_at)
