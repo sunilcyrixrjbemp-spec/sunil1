@@ -160,6 +160,22 @@ export async function runRead(env, sql, params = [], request = null) {
   const hasPrimary = !!(primaryAccount && primaryDb && primaryToken);
   let usePrimary = false;
 
+  // Force routing to Primary DB for master/setup tables that are not written to by edge worker,
+  // ensuring consistent asset, allowance, hierarchy, and user credentials reads.
+  const lowerSql = sql.toLowerCase();
+  const isMasterTableQuery = 
+    lowerSql.includes("assets_inventory") || 
+    lowerSql.includes("allowance_master") || 
+    lowerSql.includes("facility_detail") || 
+    lowerSql.includes("asset_value_master") ||
+    lowerSql.includes("users") ||
+    lowerSql.includes("hierarchy_") ||
+    lowerSql.includes("user_approval_chains");
+    
+  if (hasPrimary && isMasterTableQuery) {
+    usePrimary = true;
+  }
+
   // 1. Header-based override
   if (request && hasPrimary) {
     const headerVal = request.headers.get("x-read-db");

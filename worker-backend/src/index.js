@@ -299,39 +299,50 @@ export default {
     if (env.DB && !env._originalDB) {
       env._originalDB = env.DB;
       const originalDB = env.DB;
+      
       env.DB = {
         prepare(sql) {
           const stmt = originalDB.prepare(sql);
-          let boundParams = [];
           
-          const originalBind = stmt.bind;
-          stmt.bind = function(...params) {
-            boundParams = params;
-            return originalBind.apply(stmt, params);
-          };
+          function wrapStmt(s, params) {
+            const originalAll = s.all;
+            const originalFirst = s.first;
+            const originalRun = s.run;
+            
+            s.all = async function() {
+              const isSelect = sql.trim().toLowerCase().startsWith("select") || sql.trim().toLowerCase().startsWith("with");
+              if (isSelect) {
+                return await runRead(env, sql, params, request);
+              }
+              return await originalAll.call(s);
+            };
+            
+            s.first = async function(column) {
+              const isSelect = sql.trim().toLowerCase().startsWith("select") || sql.trim().toLowerCase().startsWith("with");
+              if (isSelect) {
+                const res = await runRead(env, sql, params, request);
+                const row = res.results && res.results[0];
+                if (!row) return null;
+                if (column) return row[column];
+                return row;
+              }
+              return await originalFirst.call(s, column);
+            };
+            
+            s.run = async function() {
+              return await originalRun.call(s);
+            };
+            
+            const originalBind = s.bind;
+            s.bind = function(...newParams) {
+              const newStmt = originalBind.apply(s, newParams);
+              return wrapStmt(newStmt, newParams);
+            };
+            
+            return s;
+          }
           
-          stmt.all = async function() {
-            const isSelect = sql.trim().toLowerCase().startsWith("select") || sql.trim().toLowerCase().startsWith("with");
-            if (isSelect) {
-              return await runRead(env, sql, boundParams, request);
-            }
-            return await stmt.run();
-          };
-
-          stmt.first = async function(column) {
-            const isSelect = sql.trim().toLowerCase().startsWith("select") || sql.trim().toLowerCase().startsWith("with");
-            if (isSelect) {
-              const res = await runRead(env, sql, boundParams, request);
-              const row = res.results && res.results[0];
-              if (!row) return null;
-              if (column) return row[column];
-              return row;
-            }
-            const res = await stmt.run();
-            return res;
-          };
-          
-          return stmt;
+          return wrapStmt(stmt, []);
         },
         batch(statements) {
           return originalDB.batch(statements);
