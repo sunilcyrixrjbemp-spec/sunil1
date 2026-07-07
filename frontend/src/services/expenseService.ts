@@ -42,6 +42,16 @@ export const expenseService = {
     return response.data;
   },
 
+  getKpiAppraisal: async (userId: string, month: string, year: number): Promise<any> => {
+    const response = await api.get(`/expense/kpi-appraisal?user_id=${encodeURIComponent(userId)}&month=${encodeURIComponent(month)}&year=${year}`);
+    return response.data;
+  },
+
+  saveKpiAppraisal: async (payload: any): Promise<any> => {
+    const response = await api.post("/expense/kpi-appraisal", payload);
+    return response.data;
+  },
+
   getExpenseDetails: async (expenseId: number | string): Promise<any> => {
     const response = await api.get(`/expense/${expenseId}`);
     return response.data;

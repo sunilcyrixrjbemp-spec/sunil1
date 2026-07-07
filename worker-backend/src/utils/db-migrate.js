@@ -37,6 +37,19 @@ export async function runMigrations(db) {
       link TEXT,
       created_at TEXT DEFAULT CURRENT_TIMESTAMP
     )`,
+    // KPI Appraisals table (to store performance appraisal data)
+    `CREATE TABLE IF NOT EXISTS kpi_appraisals (
+      user_id TEXT NOT NULL,
+      month TEXT NOT NULL,
+      year INTEGER NOT NULL,
+      self_achieved_values TEXT,
+      manager_achieved_values TEXT,
+      core_ratings TEXT,
+      submitted_by_self INTEGER DEFAULT 0,
+      submitted_by_manager INTEGER DEFAULT 0,
+      updated_at TEXT DEFAULT CURRENT_TIMESTAMP,
+      PRIMARY KEY (user_id, month, year)
+    )`
   ];
 
   for (const sql of migrations) {

@@ -2776,3 +2776,163 @@ export async function handleGetTeamUsers(request, env, params, query, user) {
   return jsonResponse(teamUsers);
 }
 
+/**
+ * GET /api/expense/kpi-appraisal
+ * Query parameter user_id, month, year.
+ */
+export async function handleGetKpiAppraisal(request, env, params, query, user) {
+  const targetUserId = query.user_id;
+  const month = query.month;
+  const yearStr = query.year;
+  
+  if (!targetUserId || !month || !yearStr) {
+    return jsonResponse({ error: "Missing required parameters: user_id, month, year" }, 400);
+  }
+  const year = parseInt(yearStr);
+
+  // Authorization check: User can read their own. Managers can read their reports.
+  if (targetUserId !== "self" && targetUserId !== user.user_id) {
+    const isAllowed = await isManagerOfUser(user, targetUserId, env);
+    if (!isAllowed) {
+      return jsonResponse({ error: "Access denied" }, 403);
+    }
+  }
+
+  const eCode = targetUserId === "self" ? user.user_id : targetUserId;
+
+  const appraisal = await env.DB.prepare(`
+    SELECT * FROM kpi_appraisals WHERE user_id = ? AND month = ? AND year = ?
+  `).bind(eCode, month, year).first();
+
+  if (!appraisal) {
+    return jsonResponse({
+      user_id: eCode,
+      month,
+      year,
+      self_achieved_values: "{}",
+      manager_achieved_values: "{}",
+      core_ratings: "{}",
+      submitted_by_self: 0,
+      submitted_by_manager: 0
+    });
+  }
+
+  return jsonResponse(appraisal);
+}
+
+/**
+ * POST /api/expense/kpi-appraisal
+ */
+export async function handleSaveKpiAppraisal(request, env, params, query, user) {
+  let body;
+  try {
+    body = await request.json();
+  } catch (e) {
+    return jsonResponse({ error: "Invalid JSON body" }, 400);
+  }
+
+  const { user_id, month, year: yearVal, self_achieved_values, manager_achieved_values, core_ratings, type } = body;
+
+  if (!user_id || !month || !yearVal || !type) {
+    return jsonResponse({ error: "Missing required fields: user_id, month, year, type" }, 400);
+  }
+
+  const year = parseInt(yearVal);
+  const targetCode = user_id === "self" ? user.user_id : user_id;
+
+  // Authorization check
+  if (type === "self") {
+    if (targetCode !== user.user_id) {
+      return jsonResponse({ error: "Access denied. Cannot submit self assessment for another user." }, 403);
+    }
+  } else if (type === "manager") {
+    const isAllowed = await isManagerOfUser(user, targetCode, env);
+    if (!isAllowed) {
+      return jsonResponse({ error: "Access denied. You are not a manager of this user." }, 403);
+    }
+  } else {
+    return jsonResponse({ error: "Invalid submission type" }, 400);
+  }
+
+  // Check if appraisal record exists
+  const existing = await env.DB.prepare(`
+    SELECT user_id FROM kpi_appraisals WHERE user_id = ? AND month = ? AND year = ?
+  `).bind(targetCode, month, year).first();
+
+  if (existing) {
+    if (type === "self") {
+      await env.DB.prepare(`
+        UPDATE kpi_appraisals
+        SET self_achieved_values = ?, submitted_by_self = 1, updated_at = CURRENT_TIMESTAMP
+        WHERE user_id = ? AND month = ? AND year = ?
+      `).bind(JSON.stringify(self_achieved_values || {}), targetCode, month, year).run();
+    } else {
+      await env.DB.prepare(`
+        UPDATE kpi_appraisals
+        SET manager_achieved_values = ?, core_ratings = ?, submitted_by_manager = 1, updated_at = CURRENT_TIMESTAMP
+        WHERE user_id = ? AND month = ? AND year = ?
+      `).bind(JSON.stringify(manager_achieved_values || {}), JSON.stringify(core_ratings || {}), targetCode, month, year).run();
+    }
+  } else {
+    if (type === "self") {
+      await env.DB.prepare(`
+        INSERT INTO kpi_appraisals (user_id, month, year, self_achieved_values, manager_achieved_values, core_ratings, submitted_by_self, submitted_by_manager)
+        VALUES (?, ?, ?, ?, ?, ?, 1, 0)
+      `).bind(targetCode, month, year, JSON.stringify(self_achieved_values || {}), "{}", "{}").run();
+    } else {
+      await env.DB.prepare(`
+        INSERT INTO kpi_appraisals (user_id, month, year, self_achieved_values, manager_achieved_values, core_ratings, submitted_by_self, submitted_by_manager)
+        VALUES (?, ?, ?, ?, ?, ?, 0, 1)
+      `).bind(targetCode, month, year, "{}", JSON.stringify(manager_achieved_values || {}), JSON.stringify(core_ratings || {})).run();
+    }
+  }
+
+  return jsonResponse({ success: true, message: "Appraisal saved successfully." });
+}
+
+// Helper: check hierarchy
+async function isManagerOfUser(managerUser, targetUserId, env) {
+  const managerRoleClean = (managerUser.role || "").trim().toLowerCase();
+  if (["admin", "mis", "vp", "accountant"].includes(managerRoleClean)) {
+    return true;
+  }
+  
+  const nameClean = (managerUser.name || "").trim();
+  const uidClean = (managerUser.user_id || "").trim();
+  
+  const directReport = await env.DB.prepare(`
+    SELECT id FROM users
+    WHERE user_id = ? AND (
+      LOWER(manager) = ? OR LOWER(manager) = ?
+      OR LOWER(coordinator) = ? OR LOWER(coordinator) = ?
+      OR LOWER(zonal_manager) = ? OR LOWER(zonal_manager) = ?
+    )
+  `).bind(
+    targetUserId,
+    nameClean.toLowerCase(), uidClean.toLowerCase(),
+    nameClean.toLowerCase(), uidClean.toLowerCase(),
+    nameClean.toLowerCase(), uidClean.toLowerCase()
+  ).first();
+  
+  if (directReport) return true;
+
+  // Check hierarchy
+  const hierarchyApprovals = await env.DB.prepare(`
+    SELECT hierarchy_id FROM hierarchy_approvers WHERE approver_id = ?
+  `).bind(managerUser.id).all();
+
+  if (hierarchyApprovals.results && hierarchyApprovals.results.length > 0) {
+    const hIds = hierarchyApprovals.results.map(h => h.hierarchy_id);
+    const placeholders = hIds.map(() => "?").join(",");
+    const req = await env.DB.prepare(`
+      SELECT u.id FROM users u
+      JOIN hierarchy_requesters hr ON u.id = hr.user_id
+      WHERE u.user_id = ? AND hr.hierarchy_id IN (${placeholders})
+    `).bind(targetUserId, ...hIds).first();
+    if (req) return true;
+  }
+
+  return false;
+}
+
+

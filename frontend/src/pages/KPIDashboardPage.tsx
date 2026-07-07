@@ -307,8 +307,14 @@ export default function KPIDashboardPage() {
   const currentUser = authService.getCurrentUser();
   const [teamUsers, setTeamUsers] = useState<any[]>([]);
   const [selectedUserId, setSelectedUserId] = useState<string>("self");
+  
+  // Date states
+  const months = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
+  const [selectedMonth, setSelectedMonth] = useState<string>("July"); // Default to July matching mockups
+  const [selectedYear, setSelectedYear] = useState<number>(2026); // Default to 2026 matching mockups
+  const [isLoading, setIsLoading] = useState(false);
 
-  // Fetch team users if manager
+  // Fetch team list
   useEffect(() => {
     const fetchTeam = async () => {
       try {
@@ -378,22 +384,64 @@ export default function KPIDashboardPage() {
     speed_of_response: ""
   });
 
-  // Reset/Clear scoring matrices when template or active user changes
+  // Fetch saved KPI assessment from database when selections change
   useEffect(() => {
-    const defaultVals: Record<string, number | string> = {};
-    rows.forEach(r => {
-      defaultVals[r.kra] = "";
-    });
-    setSelfAchievedValues(defaultVals);
-    setManagerAchievedValues(defaultVals);
-    setCoreRatings({
-      continuous_learning: "",
-      building_relationships: "",
-      trust: "",
-      care: "",
-      speed_of_response: ""
-    });
-  }, [rows, selectedUserId]);
+    const loadAppraisal = async () => {
+      setIsLoading(true);
+      try {
+        const data = await expenseService.getKpiAppraisal(selectedUserId, selectedMonth, selectedYear);
+        
+        let selfVals: Record<string, number | string> = {};
+        let managerVals: Record<string, number | string> = {};
+        let ratings: Record<string, string> = {
+          continuous_learning: "",
+          building_relationships: "",
+          trust: "",
+          care: "",
+          speed_of_response: ""
+        };
+
+        // Initialize default empty values
+        rows.forEach(r => {
+          selfVals[r.kra] = "";
+          managerVals[r.kra] = "";
+        });
+
+        if (data) {
+          try {
+            const parsedSelf = JSON.parse(data.self_achieved_values || "{}");
+            Object.keys(parsedSelf).forEach(k => {
+              selfVals[k] = parsedSelf[k];
+            });
+          } catch(e) {}
+
+          try {
+            const parsedMgr = JSON.parse(data.manager_achieved_values || "{}");
+            Object.keys(parsedMgr).forEach(k => {
+              managerVals[k] = parsedMgr[k];
+            });
+          } catch(e) {}
+
+          try {
+            const parsedRatings = JSON.parse(data.core_ratings || "{}");
+            Object.keys(parsedRatings).forEach(k => {
+              ratings[k] = parsedRatings[k];
+            });
+          } catch(e) {}
+        }
+
+        setSelfAchievedValues(selfVals);
+        setManagerAchievedValues(managerVals);
+        setCoreRatings(ratings);
+      } catch (e) {
+        console.error("Failed to load saved KPI appraisal data", e);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    loadAppraisal();
+  }, [selectedUserId, selectedMonth, selectedYear, rows]);
 
   // Translate ratings to scores
   const getPointsFromRating = (rating: string) => {
@@ -471,11 +519,31 @@ export default function KPIDashboardPage() {
     return `${num.toFixed(2)}%`;
   };
 
-  const handleSaveAssessment = () => {
-    toast.success("KPI appraisal details saved successfully!");
+  // Submit appraisal details to the backend database
+  const handleSaveAppraisal = async () => {
+    setIsLoading(true);
+    try {
+      const payload = {
+        user_id: selectedUserId,
+        month: selectedMonth,
+        year: selectedYear,
+        type: isSelfWritable ? "self" : "manager",
+        self_achieved_values: selfAchievedValues,
+        manager_achieved_values: managerAchievedValues,
+        core_ratings: coreRatings
+      };
+      
+      await expenseService.saveKpiAppraisal(payload);
+      toast.success("KPI appraisal details saved to database successfully!");
+    } catch (e) {
+      toast.error("Failed to save KPI appraisal details");
+      console.error(e);
+    } finally {
+      setIsLoading(false);
+    }
   };
 
-  // Recharts chart data (based on the active user assessment role)
+  // Recharts chart data
   const chartData = useMemo(() => {
     return CORE_VALUE_METRICS.map(m => ({
       name: m.name,
@@ -494,12 +562,41 @@ export default function KPIDashboardPage() {
             Performance Appraisal KPI Sheet
           </h2>
           <p className="text-slate-500 text-xs font-semibold">
-            Standard corporate performance scorecards with direct Manager assessment portals.
+            Hierarchical corporate performance scorecards integrated with Cloudflare D1 query chains.
           </p>
         </div>
 
         {/* Dynamic team selector or edit control */}
-        <div className="flex items-center gap-3">
+        <div className="flex flex-wrap items-center gap-3">
+          
+          {/* Month selector */}
+          <div className="flex items-center gap-1.5 bg-slate-100 px-3 py-1.5 rounded-xl border border-slate-200">
+            <select
+              value={selectedMonth}
+              onChange={(e) => setSelectedMonth(e.target.value)}
+              className="bg-transparent text-xs font-bold text-slate-700 outline-none cursor-pointer"
+            >
+              {months.map(m => (
+                <option key={m} value={m}>{m}</option>
+              ))}
+            </select>
+          </div>
+
+          {/* Year selector */}
+          <div className="flex items-center gap-1.5 bg-slate-100 px-3 py-1.5 rounded-xl border border-slate-200">
+            <select
+              value={selectedYear}
+              onChange={(e) => setSelectedYear(parseInt(e.target.value))}
+              className="bg-transparent text-xs font-bold text-slate-700 outline-none cursor-pointer"
+            >
+              <option value={2024}>2024</option>
+              <option value={2025}>2025</option>
+              <option value={2026}>2026</option>
+              <option value={2027}>2027</option>
+            </select>
+          </div>
+
+          {/* Team selector (if manager) */}
           {teamUsers.length > 0 && (
             <div className="flex items-center gap-2 bg-slate-100 px-3 py-1.5 rounded-xl border border-slate-200">
               <Users className="w-4 h-4 text-slate-500" />
@@ -519,11 +616,12 @@ export default function KPIDashboardPage() {
           )}
 
           <button
-            onClick={handleSaveAssessment}
-            className="flex items-center gap-1.5 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-xs font-bold tracking-wide uppercase shadow-sm transition-all"
+            onClick={handleSaveAppraisal}
+            disabled={isLoading}
+            className="flex items-center gap-1.5 px-4 py-2 bg-blue-600 hover:bg-blue-700 disabled:bg-slate-400 text-white rounded-xl text-xs font-bold tracking-wide uppercase shadow-sm transition-all"
           >
             <Save className="w-4 h-4" />
-            Save Appraisal
+            {isLoading ? "Saving..." : "Save Appraisal"}
           </button>
         </div>
       </div>
@@ -543,7 +641,13 @@ export default function KPIDashboardPage() {
       </div>
 
       {/* DYNAMIC KRA & KPI TABLE MATRIX */}
-      <div className="bg-white border border-slate-300 rounded shadow-sm overflow-hidden">
+      <div className="bg-white border border-slate-300 rounded shadow-sm overflow-hidden relative">
+        {isLoading && (
+          <div className="absolute inset-0 bg-white/50 backdrop-blur-[1px] flex items-center justify-center z-10 font-bold text-slate-600 text-xs">
+            Loading Appraisal Sheet...
+          </div>
+        )}
+        
         <div className="overflow-x-auto">
           <table className="w-full border-collapse text-left font-sans text-xs">
             <thead>
