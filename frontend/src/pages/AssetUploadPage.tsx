@@ -576,9 +576,9 @@ export default function AssetUploadPage() {
 
       {/* ====== Upload Tab ====== */}
       {activeTab === "upload" && (
-        <div className="grid grid-cols-1 lg:grid-cols-5 gap-5">
+        <div className={selectedFile ? "grid grid-cols-1 lg:grid-cols-5 gap-5 animate-fadeIn" : "max-w-md mx-auto space-y-4 animate-fadeIn"}>
           {/* Left: Upload Form */}
-          <div className="lg:col-span-2 bg-white border border-gray-200 border-t-[3px] border-t-indigo-600 rounded shadow-sm p-4 space-y-4">
+          <div className={selectedFile ? "lg:col-span-2 bg-white border border-gray-200 border-t-[3px] border-t-indigo-600 rounded-lg shadow-sm p-4 space-y-4" : "bg-white border border-gray-200 border-t-[3px] border-t-indigo-600 rounded-lg shadow-sm p-6 space-y-5"}>
             <h3 className="text-xs font-bold uppercase tracking-wider text-gray-400 flex items-center gap-1.5">
               <Zap className="w-3.5 h-3.5" />
               Import CSV File
@@ -600,9 +600,9 @@ export default function AssetUploadPage() {
               <input type="file" ref={fileInputRef} onChange={handleFileChange} accept=".csv" className="hidden" />
               {selectedFile ? (
                 <>
-                  <FileSpreadsheet className="w-12 h-12 text-green-600" />
+                  <FileSpreadsheet className="w-12 h-12 text-green-600 animate-bounce-slow" />
                   <p className="text-xs font-bold text-gray-800 break-all">{selectedFile.name}</p>
-                  <p className="text-[10px] text-gray-500">
+                  <p className="text-[10px] text-gray-500 font-mono">
                     {(selectedFile.size / 1024).toFixed(1)} KB • {parsedRows.length} valid rows
                   </p>
                   {skippedCount > 0 && (
@@ -618,9 +618,9 @@ export default function AssetUploadPage() {
                 <>
                   <UploadCloud className="w-12 h-12 text-gray-400" />
                   <p className="text-xs font-bold text-gray-700">Drag & drop CSV file here</p>
-                  <p className="text-[10px] text-gray-455">or click to browse local files</p>
+                  <p className="text-[10px] text-gray-450">or click to browse local files</p>
                   <span className="text-[8px] bg-gray-100 text-gray-600 px-2 py-0.5 rounded uppercase font-bold tracking-wider">
-                    Safe Upload • Chunks of 5000 rows
+                    Safe Upload • Chunks of 500 rows
                   </span>
                 </>
               )}
@@ -682,35 +682,29 @@ export default function AssetUploadPage() {
               <ul className="list-disc list-inside space-y-0.5">
                 <li>Rows with QR Code = "<span className="font-mono font-bold">--</span>" are automatically skipped</li>
                 <li>Rows with empty or whitespace-only QR Code are skipped</li>
-                <li>Duplicate QR codes are overwritten (latest wins)</li>
-                <li>Sequential chunk uploads protect against network timeouts</li>
-                <li>Previous data is fully replaced on each import</li>
+                <li>Duplicate QR codes are skipped to preserve existing data</li>
+                <li>Optimized read engine operates with zero DB lookups</li>
+                <li>Replicates immediately to edge and primary nodes</li>
               </ul>
             </div>
           </div>
 
           {/* Right: Preview Table */}
-          <div className="lg:col-span-3 bg-white border border-gray-200 rounded-lg shadow-sm overflow-hidden">
-            <div className="p-4 border-b border-gray-200 bg-gray-50 flex items-center justify-between">
-              <h3 className="text-xs font-bold uppercase tracking-wider text-gray-400 flex items-center gap-1.5">
-                <FileSpreadsheet className="w-3.5 h-3.5" />
-                CSV Preview {parsedRows.length > 0 && `(${parsedRows.length} rows)`}
-              </h3>
-              {parsedRows.length > 0 && (
-                <span className="text-[9px] font-bold text-indigo-600 uppercase flex items-center gap-1">
-                  <QrCode className="w-3 h-3" />
-                  {parsedRows.length} Valid QR Codes
-                </span>
-              )}
-            </div>
-
-            {parsedRows.length === 0 ? (
-              <div className="flex flex-col items-center justify-center py-16 text-center text-gray-400">
-                <FileSpreadsheet className="w-12 h-12 mb-3 opacity-30" />
-                <p className="text-xs font-bold">No CSV loaded yet</p>
-                <p className="text-[10px] mt-1">Upload a CSV file to preview asset data</p>
+          {selectedFile && (
+            <div className="lg:col-span-3 bg-white border border-gray-200 rounded-lg shadow-sm overflow-hidden">
+              <div className="p-4 border-b border-gray-200 bg-gray-50 flex items-center justify-between">
+                <h3 className="text-xs font-bold uppercase tracking-wider text-gray-400 flex items-center gap-1.5">
+                  <FileSpreadsheet className="w-3.5 h-3.5" />
+                  CSV Preview {parsedRows.length > 0 && `(${parsedRows.length} rows)`}
+                </h3>
+                {parsedRows.length > 0 && (
+                  <span className="text-[9px] font-bold text-indigo-600 uppercase flex items-center gap-1">
+                    <QrCode className="w-3 h-3" />
+                    {parsedRows.length} Valid QR Codes
+                  </span>
+                )}
               </div>
-            ) : (
+
               <div className="overflow-x-auto max-h-[420px] overflow-y-auto">
                 <table className="w-full text-left text-[10px] border-collapse min-w-[900px]">
                   <thead>
@@ -752,8 +746,8 @@ export default function AssetUploadPage() {
                   </div>
                 )}
               </div>
-            )}
-          </div>
+            </div>
+          )}
         </div>
       )}
 
