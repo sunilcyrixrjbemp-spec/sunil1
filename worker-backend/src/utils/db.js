@@ -8,6 +8,9 @@
  * Execute a single write query (INSERT/UPDATE/DELETE) locally and replicate to primary DB.
  */
 export async function runWrite(env, sql, params = []) {
+  if (sql.toLowerCase().includes("notifications")) {
+    return { success: true, meta: { changes: 0 } };
+  }
   // 1. Execute locally on D1 binding
   const result = await env.DB.prepare(sql).bind(...params).run();
   
@@ -32,7 +35,9 @@ export async function runWrite(env, sql, params = []) {
  * Execute a batch of write queries locally and replicate them to primary DB.
  */
 export async function runBatchWrite(env, statements) {
-  if (!statements || statements.length === 0) return [];
+  // Filter out any notification queries to prevent D1 database reads/writes
+  statements = (statements || []).filter(s => !s.sql.toLowerCase().includes("notifications"));
+  if (statements.length === 0) return [];
   
   // 1. Map to D1 prepared statements
   const batch = statements.map(s => {
@@ -136,6 +141,10 @@ const ROUND_ROBIN_START_DATE = new Date("2026-08-03T00:00:00+05:30"); // IST
  * Matches Python backend date-based round-robin routing logic.
  */
 export async function runRead(env, sql, params = [], request = null) {
+  if (sql.toLowerCase().includes("notifications")) {
+    return { results: [], success: true };
+  }
+
   const primaryAccount = env.PRIMARY_CLOUDFLARE_ACCOUNT_ID;
   const primaryDb = env.PRIMARY_CLOUDFLARE_DATABASE_ID;
   const primaryToken = env.PRIMARY_CLOUDFLARE_API_TOKEN;

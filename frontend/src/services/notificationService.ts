@@ -13,22 +13,18 @@ export interface NotificationItem {
 
 export const notificationService = {
   getNotifications: async (): Promise<NotificationItem[]> => {
-    const response = await api.get("/notifications/");
-    return response.data;
+    return [];
   },
 
   markAsRead: async (id: number): Promise<any> => {
-    const response = await api.post(`/notifications/${id}/read`);
-    return response.data;
+    return { success: true };
   },
 
   markAllAsRead: async (): Promise<any> => {
-    const response = await api.post("/notifications/read-all");
-    return response.data;
+    return { success: true };
   },
 
   deleteNotification: async (id: number): Promise<any> => {
-    const response = await api.delete(`/notifications/${id}`);
-    return response.data;
+    return { success: true };
   }
 };
