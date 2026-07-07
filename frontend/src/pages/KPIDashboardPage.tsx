@@ -55,15 +55,15 @@ const CORE_VALUE_METRICS: CoreValueMetric[] = [
   }
 ];
 
-// Dropdown options for Core Values
+// Dropdown options for Core Values (exactly matching image values)
 const CORE_VALUE_OPTIONS = [
-  { label: "-- Select Rating --", value: "", points: 0 },
-  { label: "Excellent (20 pts)", value: "Excellent", points: 20 },
-  { label: "Very Good (16 pts)", value: "Very Good", points: 16 },
-  { label: "Good (12 pts)", value: "Good", points: 12 },
-  { label: "Satisfactory (8 pts)", value: "Satisfactory", points: 8 },
-  { label: "Poor (4 pts)", value: "Poor", points: 4 },
-  { label: "Bad (0 pts)", value: "Bad", points: 0 }
+  { label: "", value: "", points: 0 },
+  { label: "Excellent", value: "Excellent", points: 20 },
+  { label: "Very Good", value: "Very Good", points: 16 },
+  { label: "Good", value: "Good", points: 12 },
+  { label: "Satisfactory", value: "Satisfactory", points: 8 },
+  { label: "Poor", value: "Poor", points: 4 },
+  { label: "Bad", value: "Bad", points: 0 }
 ];
 
 interface KpiRow {
@@ -72,7 +72,7 @@ interface KpiRow {
   kpi: string;
   weightage: number; // percentage (e.g. 25 for 25%)
   targetKpi: number;
-  calculateAchievedWt: (achieved: number | string | undefined, target: number, weight: number) => number | string;
+  calculateAchievedWt: (achieved: number | string | undefined, target: number, weight: number) => number;
 }
 
 // 1. ENGINEER KPI FORMAT
@@ -84,7 +84,7 @@ const ENGINEER_KPIS: KpiRow[] = [
     weightage: 25,
     targetKpi: 80,
     calculateAchievedWt: (achieved, target, weight) => {
-      if (achieved === undefined || achieved === "") return "";
+      if (achieved === undefined || achieved === "") return 0;
       const val = parseFloat(String(achieved)) || 0;
       if (val >= target) return weight;
       return parseFloat(((val / target) * weight).toFixed(2));
@@ -97,7 +97,7 @@ const ENGINEER_KPIS: KpiRow[] = [
     weightage: 20,
     targetKpi: 150,
     calculateAchievedWt: (achieved, target, weight) => {
-      if (achieved === undefined || achieved === "") return "";
+      if (achieved === undefined || achieved === "") return 0;
       const val = parseFloat(String(achieved)) || 0;
       if (val >= target) return weight;
       return parseFloat(((val / target) * weight).toFixed(2));
@@ -110,7 +110,7 @@ const ENGINEER_KPIS: KpiRow[] = [
     weightage: 20,
     targetKpi: 80,
     calculateAchievedWt: (achieved, target, weight) => {
-      if (achieved === undefined || achieved === "") return "";
+      if (achieved === undefined || achieved === "") return 0;
       const val = parseFloat(String(achieved)) || 0;
       if (val >= target) return weight;
       return parseFloat(((val / target) * weight).toFixed(2));
@@ -123,7 +123,7 @@ const ENGINEER_KPIS: KpiRow[] = [
     weightage: 15,
     targetKpi: 0,
     calculateAchievedWt: (achieved, _target, weight) => {
-      if (achieved === undefined || achieved === "") return "";
+      if (achieved === undefined || achieved === "") return 0;
       const val = parseFloat(String(achieved)) || 0;
       if (val <= 0) return weight;
       return Math.max(0, parseFloat((weight - (val * 5)).toFixed(2)));
@@ -136,7 +136,7 @@ const ENGINEER_KPIS: KpiRow[] = [
     weightage: 20,
     targetKpi: 100,
     calculateAchievedWt: (achieved, target, weight) => {
-      if (achieved === undefined || achieved === "") return "";
+      if (achieved === undefined || achieved === "") return 0;
       const val = parseFloat(String(achieved)) || 0;
       return parseFloat(((val / target) * weight).toFixed(2));
     }
@@ -152,7 +152,7 @@ const TL_KPIS: KpiRow[] = [
     weightage: 30,
     targetKpi: 20,
     calculateAchievedWt: (achieved, target, weight) => {
-      if (achieved === undefined || achieved === "") return "";
+      if (achieved === undefined || achieved === "") return 0;
       const val = parseFloat(String(achieved)) || 0;
       if (val <= target) return weight;
       const penalty = (val - target) * 1.5;
@@ -166,7 +166,7 @@ const TL_KPIS: KpiRow[] = [
     weightage: 15,
     targetKpi: 150,
     calculateAchievedWt: (achieved, target, weight) => {
-      if (achieved === undefined || achieved === "") return "";
+      if (achieved === undefined || achieved === "") return 0;
       const val = parseFloat(String(achieved)) || 0;
       if (val >= target) return weight;
       return parseFloat(((val / target) * weight).toFixed(2));
@@ -179,7 +179,7 @@ const TL_KPIS: KpiRow[] = [
     weightage: 20,
     targetKpi: 80,
     calculateAchievedWt: (achieved, target, weight) => {
-      if (achieved === undefined || achieved === "") return "";
+      if (achieved === undefined || achieved === "") return 0;
       const val = parseFloat(String(achieved)) || 0;
       if (val >= target) return weight;
       return parseFloat(((val / target) * weight).toFixed(2));
@@ -192,7 +192,7 @@ const TL_KPIS: KpiRow[] = [
     weightage: 15,
     targetKpi: 100,
     calculateAchievedWt: (achieved, target, weight) => {
-      if (achieved === undefined || achieved === "") return "";
+      if (achieved === undefined || achieved === "") return 0;
       const val = parseFloat(String(achieved)) || 0;
       if (val >= target) return weight;
       return parseFloat(((val / target) * weight).toFixed(2));
@@ -205,7 +205,7 @@ const TL_KPIS: KpiRow[] = [
     weightage: 20,
     targetKpi: 100,
     calculateAchievedWt: (achieved, target, weight) => {
-      if (achieved === undefined || achieved === "") return "";
+      if (achieved === undefined || achieved === "") return 0;
       const val = parseFloat(String(achieved)) || 0;
       return parseFloat(((val / target) * weight).toFixed(2));
     }
@@ -221,7 +221,7 @@ const DIV_MGR_KPIS: KpiRow[] = [
     weightage: 40,
     targetKpi: 30,
     calculateAchievedWt: (achieved, target, weight) => {
-      if (achieved === undefined || achieved === "") return "";
+      if (achieved === undefined || achieved === "") return 0;
       const val = parseFloat(String(achieved)) || 0;
       if (val <= target) return weight;
       const penalty = (val - target) * 2;
@@ -235,7 +235,7 @@ const DIV_MGR_KPIS: KpiRow[] = [
     weightage: 20,
     targetKpi: 80,
     calculateAchievedWt: (achieved, target, weight) => {
-      if (achieved === undefined || achieved === "") return "";
+      if (achieved === undefined || achieved === "") return 0;
       const val = parseFloat(String(achieved)) || 0;
       if (val >= target) return weight;
       return parseFloat(((val / target) * weight).toFixed(2));
@@ -248,7 +248,7 @@ const DIV_MGR_KPIS: KpiRow[] = [
     weightage: 10,
     targetKpi: 100,
     calculateAchievedWt: (achieved, target, weight) => {
-      if (achieved === undefined || achieved === "") return "";
+      if (achieved === undefined || achieved === "") return 0;
       const val = parseFloat(String(achieved)) || 0;
       if (val >= target) return weight;
       return parseFloat(((val / target) * weight).toFixed(2));
@@ -261,7 +261,7 @@ const DIV_MGR_KPIS: KpiRow[] = [
     weightage: 10,
     targetKpi: 100,
     calculateAchievedWt: (achieved, target, weight) => {
-      if (achieved === undefined || achieved === "") return "";
+      if (achieved === undefined || achieved === "") return 0;
       const val = parseFloat(String(achieved)) || 0;
       if (val >= target) return weight;
       return parseFloat(((val / target) * weight).toFixed(2));
@@ -274,7 +274,7 @@ const DIV_MGR_KPIS: KpiRow[] = [
     weightage: 20,
     targetKpi: 100,
     calculateAchievedWt: (achieved, target, weight) => {
-      if (achieved === undefined || achieved === "") return "";
+      if (achieved === undefined || achieved === "") return 0;
       const val = parseFloat(String(achieved)) || 0;
       return parseFloat(((val / target) * weight).toFixed(2));
     }
@@ -394,25 +394,18 @@ export default function KPIDashboardPage() {
     return match ? match.points : 0;
   };
 
-  // Check if at least one core rating is set
-  const isAnySelfRatingSet = useMemo(() => {
-    return Object.values(selfCoreRatings).some(v => v !== "");
-  }, [selfCoreRatings]);
-
-  const isAnyManagerRatingSet = useMemo(() => {
-    return Object.values(managerCoreRatings).some(v => v !== "");
-  }, [managerCoreRatings]);
-
   // Dynamic sum of core value points
   const selfDelightTotal = useMemo(() => {
-    if (!isAnySelfRatingSet) return "";
+    const isAnySelected = Object.values(selfCoreRatings).some(v => v !== "");
+    if (!isAnySelected) return 0;
     return Object.values(selfCoreRatings).reduce((sum, r) => sum + getPointsFromRating(r), 0);
-  }, [selfCoreRatings, isAnySelfRatingSet]);
+  }, [selfCoreRatings]);
 
   const managerDelightTotal = useMemo(() => {
-    if (!isAnyManagerRatingSet) return "";
+    const isAnySelected = Object.values(managerCoreRatings).some(v => v !== "");
+    if (!isAnySelected) return 0;
     return Object.values(managerCoreRatings).reduce((sum, r) => sum + getPointsFromRating(r), 0);
-  }, [managerCoreRatings, isAnyManagerRatingSet]);
+  }, [managerCoreRatings]);
 
   // Synchronize Core Values rating totals to Customer Delight KRA
   useEffect(() => {
@@ -433,13 +426,9 @@ export default function KPIDashboardPage() {
   const tableData = useMemo(() => {
     let jobRoleSelfWtSum = 0;
     let jobRoleManagerWtSum = 0;
-    let hasAnyJobSelf = false;
-    let hasAnyJobManager = false;
 
     let valuesSelfWtSum = 0;
     let valuesManagerWtSum = 0;
-    let hasAnyValSelf = false;
-    let hasAnyValManager = false;
 
     const mapped = rows.map(r => {
       const selfVal = selfAchievedValues[r.kra];
@@ -449,23 +438,11 @@ export default function KPIDashboardPage() {
       const managerWt = r.calculateAchievedWt(managerVal, r.targetKpi, r.weightage);
 
       if (r.section === "Job Role") {
-        if (selfWt !== "") {
-          jobRoleSelfWtSum += parseFloat(String(selfWt)) || 0;
-          hasAnyJobSelf = true;
-        }
-        if (managerWt !== "") {
-          jobRoleManagerWtSum += parseFloat(String(managerWt)) || 0;
-          hasAnyJobManager = true;
-        }
+        jobRoleSelfWtSum += selfWt;
+        jobRoleManagerWtSum += managerWt;
       } else {
-        if (selfWt !== "") {
-          valuesSelfWtSum += parseFloat(String(selfWt)) || 0;
-          hasAnyValSelf = true;
-        }
-        if (managerWt !== "") {
-          valuesManagerWtSum += parseFloat(String(managerWt)) || 0;
-          hasAnyValManager = true;
-        }
+        valuesSelfWtSum += selfWt;
+        valuesManagerWtSum += managerWt;
       }
 
       return {
@@ -477,15 +454,15 @@ export default function KPIDashboardPage() {
       };
     });
 
-    const overallSelf = (hasAnyJobSelf || hasAnyValSelf) ? (jobRoleSelfWtSum + valuesSelfWtSum) : "";
-    const overallManager = (hasAnyJobManager || hasAnyValManager) ? (jobRoleManagerWtSum + valuesManagerWtSum) : "";
+    const overallSelf = jobRoleSelfWtSum + valuesSelfWtSum;
+    const overallManager = jobRoleManagerWtSum + valuesManagerWtSum;
 
     return {
       rows: mapped,
-      jobRoleSelfWtSum: hasAnyJobSelf ? jobRoleSelfWtSum : "",
-      jobRoleManagerWtSum: hasAnyJobManager ? jobRoleManagerWtSum : "",
-      valuesSelfWtSum: hasAnyValSelf ? valuesSelfWtSum : "",
-      valuesManagerWtSum: hasAnyValManager ? valuesManagerWtSum : "",
+      jobRoleSelfWtSum,
+      jobRoleManagerWtSum,
+      valuesSelfWtSum,
+      valuesManagerWtSum,
       totalSelfScore: overallSelf,
       totalManagerScore: overallManager
     };
@@ -493,12 +470,12 @@ export default function KPIDashboardPage() {
 
   // Format display helper for weights/percentages in Excel style
   const formatPercent = (val: number | string | undefined) => {
-    if (val === undefined || val === "") return "";
-    return `${parseFloat(String(val)).toFixed(2)}%`;
+    const num = parseFloat(String(val)) || 0;
+    return `${num.toFixed(2)}%`;
   };
 
   const handleSaveAssessment = () => {
-    toast.success("KPI Sheet details saved successfully!");
+    toast.success("KPI appraisal details saved successfully!");
   };
 
   // Recharts chart data
@@ -555,102 +532,82 @@ export default function KPIDashboardPage() {
         </div>
       </div>
 
-      {/* METADATA EXCEL TOP BAR */}
-      <div className="bg-slate-800 text-white rounded-2xl p-5 border border-slate-700 shadow-sm grid grid-cols-2 md:grid-cols-5 gap-4 text-xs font-bold font-mono">
-        <div className="space-y-1">
-          <span className="text-[10px] text-slate-400 uppercase tracking-widest block">E-Code</span>
-          <div className="bg-slate-900 border border-slate-700 rounded px-3 py-2 text-white font-extrabold text-xs">
-            {profile.ecode}
-          </div>
-        </div>
-        <div className="space-y-1">
-          <span className="text-[10px] text-slate-400 uppercase tracking-widest block">Employee Name</span>
-          <div className="bg-slate-900 border border-slate-700 rounded px-3 py-2 text-white font-extrabold text-xs">
-            {profile.name}
-          </div>
-        </div>
-        <div className="space-y-1">
-          <span className="text-[10px] text-slate-400 uppercase tracking-widest block">Designation</span>
-          <div className="bg-slate-900 border border-slate-700 rounded px-3 py-2 text-white font-extrabold text-xs">
-            {profile.role}
-          </div>
-        </div>
-        <div className="space-y-1">
-          <span className="text-[10px] text-slate-400 uppercase tracking-widest block">Zone</span>
-          <div className="bg-slate-900 border border-slate-700 rounded px-3 py-2 text-white font-extrabold text-xs">
-            {profile.zone}
-          </div>
-        </div>
-        <div className="space-y-1 col-span-2 md:col-span-1">
-          <span className="text-[10px] text-slate-400 uppercase tracking-widest block">District</span>
-          <div className="bg-slate-900 border border-slate-700 rounded px-3 py-2 text-white font-extrabold text-xs">
-            {profile.district}
-          </div>
-        </div>
+      {/* METADATA EXCEL TOP BAR (EXACT EXCEL REPRESENTATION) */}
+      <div className="overflow-x-auto">
+        <table className="min-w-full border-collapse border border-slate-400 bg-white font-mono text-xs">
+          <tbody>
+            <tr className="bg-[#404040] text-white font-bold">
+              <td className="px-3 py-1.5 border border-slate-400 w-24">Ecode :</td>
+              <td className="px-3 py-1.5 border border-slate-400 bg-white text-slate-800 font-extrabold w-48">{profile.ecode}</td>
+              <td className="px-3 py-1.5 border border-slate-400 w-24">Name :</td>
+              <td className="px-3 py-1.5 border border-slate-400 bg-white text-slate-800 font-extrabold">{profile.name}</td>
+            </tr>
+          </tbody>
+        </table>
       </div>
 
       {/* DYNAMIC KRA & KPI TABLE MATRIX */}
-      <div className="bg-white border border-slate-200 rounded-2xl shadow-sm overflow-hidden">
+      <div className="bg-white border border-slate-300 rounded shadow-sm overflow-hidden">
         <div className="overflow-x-auto">
           <table className="w-full border-collapse text-left font-sans text-xs">
             <thead>
               {/* Header row 1 */}
-              <tr className="bg-slate-800 text-white font-bold uppercase tracking-wider text-[10px] border-b border-slate-700 text-center">
-                <th colSpan={5} className="border-r border-slate-700 py-3.5">KPI Formulation Parameters</th>
-                <th colSpan={4} className="border-r border-slate-700 py-3 bg-amber-600 text-white">Self Assessment</th>
-                <th colSpan={4} className="border-r border-slate-700 py-3 bg-rose-600 text-white">Assessment by Manager</th>
-                <th rowSpan={2} className="border-r border-slate-700 py-3.5 bg-teal-800 text-white align-middle px-3">Total KRA Wt</th>
-                <th rowSpan={2} className="py-3.5 bg-red-800 text-white align-middle px-3">Total Wt</th>
+              <tr className="bg-[#404040] text-white font-bold uppercase tracking-wider text-[10px] text-center border-b border-slate-400">
+                <th colSpan={5} className="border-r border-slate-400 py-3">KPI Formulation Parameters</th>
+                <th colSpan={4} className="border-r border-slate-400 py-3 bg-[#ffd966] text-slate-900 font-black">Self Assessment</th>
+                <th colSpan={4} className="border-r border-slate-400 py-3 bg-[#c00000] text-white font-black">Assessment by Manager</th>
+                <th rowSpan={2} className="border-r border-slate-400 py-3.5 bg-[#1f4e78] text-white align-middle px-3">Total KRA Wt</th>
+                <th rowSpan={2} className="py-3.5 bg-[#1f4e78] text-white align-middle px-3">Total Wt</th>
               </tr>
               {/* Sub headers */}
-              <tr className="bg-slate-100 text-slate-700 font-extrabold uppercase border-b border-slate-200 text-center">
-                <th className="px-4 py-2.5 border-r border-slate-200 text-left min-w-[120px]">KRA & Weightage</th>
-                <th className="px-4 py-2.5 border-r border-slate-200 text-left min-w-[120px]">KRA</th>
-                <th className="px-4 py-2.5 border-r border-slate-200 text-left min-w-[260px]">KPI (Mesurable Parameter)</th>
-                <th className="px-2 py-2.5 border-r border-slate-200 w-16">Weightage</th>
-                <th className="px-2 py-2.5 border-r border-slate-200 w-16">Target KPI</th>
+              <tr className="text-slate-700 font-black uppercase text-center border-b border-slate-400 text-[9px]">
+                <th className="px-3 py-2 border-r border-slate-300 text-left min-w-[120px] bg-slate-100">KRA& Weightage</th>
+                <th className="px-3 py-2 border-r border-slate-300 text-left min-w-[100px] bg-slate-100">KRA</th>
+                <th className="px-3 py-2 border-r border-slate-300 text-left min-w-[240px] bg-slate-100">KPI (Mesurable Parameter)</th>
+                <th className="px-2 py-2 border-r border-slate-300 w-16 bg-slate-100 text-center">Weightage</th>
+                <th className="px-2 py-2 border-r border-slate-300 w-16 bg-slate-100 text-center">Target KPI</th>
                 
                 {/* Self */}
-                <th className="px-2 py-2.5 border-r border-slate-200 bg-amber-50 text-amber-900 w-20">Target Achieved</th>
-                <th className="px-2 py-2.5 border-r border-slate-200 bg-amber-50 text-amber-900 w-24">Achieved Weightage</th>
-                <th className="px-2 py-2.5 border-r border-slate-200 bg-amber-50 text-amber-900 w-20">Total Wt</th>
-                <th className="px-2 py-2.5 border-r border-slate-200 bg-amber-50 text-amber-900 w-24">Total Wt Sum</th>
+                <th className="px-2 py-2 border-r border-slate-300 bg-[#fff2cc] text-amber-900 w-20 text-center">Target Achieved</th>
+                <th className="px-2 py-2 border-r border-slate-300 bg-[#fff2cc] text-amber-900 w-24 text-center">Achieved Weightage</th>
+                <th className="px-2 py-2 border-r border-slate-300 bg-[#fff2cc] text-amber-900 w-20 text-center">Total Wt</th>
+                <th className="px-2 py-2 border-r border-slate-400 bg-[#fff2cc] text-amber-900 w-24 text-center">Total Wt Sum</th>
 
                 {/* Manager */}
-                <th className="px-2 py-2.5 border-r border-slate-200 bg-rose-50 text-rose-900 w-20">Target Achieved</th>
-                <th className="px-2 py-2.5 border-r border-slate-200 bg-rose-50 text-rose-900 w-24">Achieved Weightage</th>
-                <th className="px-2 py-2.5 border-r border-slate-200 bg-rose-50 text-rose-900 w-20">Total Wt</th>
-                <th className="px-2 py-2.5 border-r border-slate-200 bg-rose-50 text-rose-900 w-24">Total Wt Sum</th>
+                <th className="px-2 py-2 border-r border-slate-300 bg-[#fce4d6] text-rose-900 w-20 text-center">Target Achieved</th>
+                <th className="px-2 py-2 border-r border-slate-300 bg-[#fce4d6] text-rose-900 w-24 text-center">Achieved Weightage</th>
+                <th className="px-2 py-2 border-r border-slate-300 bg-[#fce4d6] text-rose-900 w-20 text-center">Total Wt</th>
+                <th className="px-2 py-2 border-r border-slate-400 bg-[#fce4d6] text-rose-900 w-24 text-center">Total Wt Sum</th>
               </tr>
             </thead>
-            <tbody className="font-semibold text-slate-700 divide-y divide-slate-200">
+            <tbody className="font-semibold text-slate-700 divide-y divide-slate-300">
               
               {/* RENDER GROUP: JOB ROLE (80%) */}
               {tableData.rows.filter(r => r.section === "Job Role").map((row, idx, filteredRows) => (
-                <tr key={`job-role-${idx}`} className="hover:bg-slate-50/50">
+                <tr key={`job-role-${idx}`} className="divide-x divide-slate-300">
                   {idx === 0 && (
                     <td 
                       rowSpan={filteredRows.length} 
-                      className="px-4 py-3 border-r border-slate-200 align-middle bg-slate-50/80 font-black text-slate-800 text-[11px] text-center border-b"
+                      className="px-3 py-3 align-middle bg-[#2f3c24] text-white font-black text-[10px] text-center border-r border-slate-300"
                     >
                       Job Role -<br/>80%
                     </td>
                   )}
-                  <td className="px-4 py-3 border-r border-slate-200 align-middle font-bold text-slate-900">
+                  <td className="px-3 py-3 align-middle font-bold text-slate-900 border-r border-slate-300 bg-white">
                     {row.kra}
                   </td>
-                  <td className="px-4 py-3 border-r border-slate-200 align-middle text-[11px] leading-relaxed text-slate-500">
+                  <td className="px-3 py-3 align-middle text-[11px] leading-relaxed text-slate-500 border-r border-slate-300 bg-white">
                     {row.kpi}
                   </td>
-                  <td className="px-2 py-3 border-r border-slate-200 text-center font-mono font-bold">
+                  <td className="px-2 py-3 text-center font-mono font-bold border-r border-slate-300 bg-white">
                     {row.weightage}%
                   </td>
-                  <td className="px-2 py-3 border-r border-slate-200 text-center font-mono font-bold">
+                  <td className="px-2 py-3 text-center font-mono font-bold border-r border-slate-300 bg-[#e2efda]">
                     {row.targetKpi}
                   </td>
 
                   {/* SELF ASSESSMENT (Target Achieved) */}
-                  <td className="px-2 py-3 border-r border-slate-200 bg-amber-50/10 text-center">
+                  <td className="px-2 py-3 text-center bg-white border-r border-slate-300">
                     <input 
                       type="text"
                       disabled={!isSelfWritable}
@@ -662,29 +619,34 @@ export default function KPIDashboardPage() {
                           [row.kra]: val === "" ? "" : isNaN(Number(val)) ? val : parseFloat(val) 
                         }));
                       }}
-                      className={`w-full bg-white border border-slate-200 rounded px-1.5 py-1 text-center font-mono font-bold text-slate-800 outline-none shadow-sm focus:border-amber-500 ${
-                        !isSelfWritable ? "opacity-75 cursor-not-allowed bg-slate-50" : ""
+                      className={`w-full bg-white text-center font-mono font-black text-slate-800 outline-none ${
+                        !isSelfWritable ? "opacity-75 cursor-not-allowed" : ""
                       }`}
                       placeholder=""
                     />
                   </td>
-                  <td className="px-2 py-3 border-r border-slate-200 bg-amber-50/10 text-center font-mono font-bold text-amber-700">
+                  <td className="px-2 py-3 text-center font-mono font-bold text-slate-800 bg-white border-r border-slate-300">
                     {formatPercent(row.selfAchievedWt)}
                   </td>
-                  <td className="px-2 py-3 border-r border-slate-200 bg-amber-50/10 text-center font-mono font-bold text-amber-700">
-                    {formatPercent(row.selfAchievedWt)}
-                  </td>
-                  {idx === 0 && (
+                  {idx === 0 ? (
                     <td 
                       rowSpan={filteredRows.length}
-                      className="px-2 py-3 border-r border-slate-200 bg-amber-100/30 text-center font-mono font-black text-amber-950 text-xs align-middle"
+                      className="px-2 py-3 bg-[#d9e1f2] text-center font-mono font-black text-slate-900 text-xs align-middle border-r border-slate-300"
                     >
                       {formatPercent(tableData.jobRoleSelfWtSum)}
                     </td>
-                  )}
+                  ) : null}
+                  {idx === 0 ? (
+                    <td 
+                      rowSpan={filteredRows.length}
+                      className="px-2 py-3 bg-white text-center font-mono font-black text-slate-900 text-xs align-middle border-r border-slate-400"
+                    >
+                      {formatPercent(tableData.jobRoleSelfWtSum)}
+                    </td>
+                  ) : null}
 
                   {/* MANAGER ASSESSMENT (Target Achieved) */}
-                  <td className="px-2 py-3 border-r border-slate-200 bg-rose-50/10 text-center">
+                  <td className="px-2 py-3 text-center bg-white border-r border-slate-300">
                     <input 
                       type="text"
                       disabled={!isManagerWritable}
@@ -696,119 +658,105 @@ export default function KPIDashboardPage() {
                           [row.kra]: val === "" ? "" : isNaN(Number(val)) ? val : parseFloat(val) 
                         }));
                       }}
-                      className={`w-full bg-white border border-slate-200 rounded px-1.5 py-1 text-center font-mono font-bold text-slate-800 outline-none shadow-sm focus:border-rose-500 ${
-                        !isManagerWritable ? "opacity-75 cursor-not-allowed bg-slate-50" : ""
+                      className={`w-full bg-white text-center font-mono font-black text-slate-800 outline-none ${
+                        !isManagerWritable ? "opacity-75 cursor-not-allowed" : ""
                       }`}
                       placeholder=""
                     />
                   </td>
-                  <td className="px-2 py-3 border-r border-slate-200 bg-rose-50/10 text-center font-mono font-bold text-rose-700">
+                  <td className="px-2 py-3 text-center font-mono font-bold text-slate-800 bg-white border-r border-slate-300">
                     {formatPercent(row.managerAchievedWt)}
                   </td>
-                  <td className="px-2 py-3 border-r border-slate-200 bg-rose-50/10 text-center font-mono font-bold text-rose-700">
-                    {formatPercent(row.managerAchievedWt)}
-                  </td>
-                  {idx === 0 && (
+                  {idx === 0 ? (
                     <td 
                       rowSpan={filteredRows.length}
-                      className="px-2 py-3 border-r border-slate-200 bg-rose-100/30 text-center font-mono font-black text-rose-950 text-xs align-middle"
+                      className="px-2 py-3 bg-[#d9e1f2] text-center font-mono font-black text-slate-900 text-xs align-middle border-r border-slate-300"
                     >
                       {formatPercent(tableData.jobRoleManagerWtSum)}
+                    </td>
+                  ) : null}
+                  {idx === 0 ? (
+                    <td 
+                      rowSpan={filteredRows.length}
+                      className="px-2 py-3 bg-white text-center font-mono font-black text-slate-900 text-xs align-middle border-r border-slate-400"
+                    >
+                      {formatPercent(tableData.jobRoleManagerWtSum)}
+                    </td>
+                  ) : null}
+
+                  {/* TOTAL KRA WT */}
+                  <td className="px-2 py-3 text-center font-mono font-bold text-slate-800 bg-[#b4c6e7] border-r border-slate-400">
+                    {formatPercent(row.managerAchievedWt)}
+                  </td>
+
+                  {/* FINAL MERGED TOTAL WT COLUMN (O) */}
+                  {idx === 0 && (
+                    <td 
+                      rowSpan={rows.length}
+                      className="px-2 py-3 bg-[#f8cbad] text-center font-mono font-black text-red-900 text-xs align-middle"
+                    >
+                      {formatPercent(tableData.totalManagerScore)}
                     </td>
                   )}
                 </tr>
               ))}
 
               {/* RENDER GROUP: CORE VALUES (20%) */}
-              {tableData.rows.filter(r => r.section === "Alignment to Core Values").map((row, idx, filteredRows) => (
-                <tr key={`core-values-${idx}`} className="hover:bg-slate-50/50 bg-slate-50/30">
-                  {idx === 0 && (
-                    <td 
-                      rowSpan={filteredRows.length} 
-                      className="px-4 py-3 border-r border-slate-200 align-middle bg-slate-100/80 font-black text-slate-800 text-[11px] text-center"
-                    >
-                      Alignment To<br/>Core Values -<br/>20%
-                    </td>
-                  )}
-                  <td className="px-4 py-3 border-r border-slate-200 align-middle font-bold text-slate-900">
+              {tableData.rows.filter(r => r.section === "Alignment to Core Values").map((row, idx) => (
+                <tr key={`core-values-${idx}`} className="divide-x divide-slate-300 bg-white">
+                  <td 
+                    className="px-3 py-3 align-middle bg-[#2f3c24] text-white font-black text-[10px] text-center border-r border-slate-300"
+                  >
+                    Alignment To<br/>Core Values -<br/>20%
+                  </td>
+                  <td className="px-3 py-3 align-middle font-bold text-slate-900 border-r border-slate-300 bg-white">
                     {row.kra}
                   </td>
-                  <td className="px-4 py-3 border-r border-slate-200 align-middle text-[11px] leading-relaxed text-slate-500">
+                  <td className="px-3 py-3 align-middle text-[11px] leading-relaxed text-slate-500 border-r border-slate-300 bg-white">
                     {row.kpi}
                   </td>
-                  <td className="px-2 py-3 border-r border-slate-200 text-center font-mono font-bold">
+                  <td className="px-2 py-3 text-center font-mono font-bold border-r border-slate-300 bg-white">
                     {row.weightage}%
                   </td>
-                  <td className="px-2 py-3 border-r border-slate-200 text-center font-mono font-bold">
+                  <td className="px-2 py-3 text-center font-mono font-bold border-r border-slate-300 bg-[#e2efda]">
                     {row.targetKpi}
                   </td>
 
-                  {/* SELF CORE VALUE WEIGHT (derived from dropdown scorecard total) */}
-                  <td className="px-2 py-3 border-r border-slate-200 bg-amber-50/10 text-center font-mono font-black text-slate-700">
+                  {/* SELF CORE VALUE WEIGHT */}
+                  <td className="px-2 py-3 text-center font-mono font-black text-slate-800 bg-white border-r border-slate-300">
                     {row.selfAchieved}
                   </td>
-                  <td className="px-2 py-3 border-r border-slate-200 bg-amber-50/10 text-center font-mono font-bold text-amber-700">
+                  <td className="px-2 py-3 text-center font-mono font-bold text-slate-800 bg-white border-r border-slate-300">
                     {formatPercent(row.selfAchievedWt)}
                   </td>
-                  <td className="px-2 py-3 border-r border-slate-200 bg-amber-50/10 text-center font-mono font-bold text-amber-700">
+                  <td className="px-2 py-3 bg-[#d9e1f2] text-center font-mono font-black text-slate-900 text-xs align-middle border-r border-slate-300">
                     {formatPercent(row.selfAchievedWt)}
                   </td>
-                  {idx === 0 && (
-                    <td 
-                      rowSpan={filteredRows.length}
-                      className="px-2 py-3 border-r border-slate-200 bg-amber-100/30 text-center font-mono font-black text-amber-950 text-xs align-middle"
-                    >
-                      {formatPercent(tableData.valuesSelfWtSum)}
-                    </td>
-                  )}
+                  <td className="px-2 py-3 bg-white border-r border-slate-400">
+                    {/* Blank in spreadsheet */}
+                  </td>
 
-                  {/* MANAGER CORE VALUE WEIGHT (derived) */}
-                  <td className="px-2 py-3 border-r border-slate-200 bg-rose-50/10 text-center font-mono font-black text-slate-700">
+                  {/* MANAGER CORE VALUE WEIGHT */}
+                  <td className="px-2 py-3 text-center font-mono font-black text-slate-800 bg-white border-r border-slate-300">
                     {row.managerAchieved}
                   </td>
-                  <td className="px-2 py-3 border-r border-slate-200 bg-rose-50/10 text-center font-mono font-bold text-rose-700">
+                  <td className="px-2 py-3 text-center font-mono font-bold text-slate-800 bg-white border-r border-slate-300">
                     {formatPercent(row.managerAchievedWt)}
                   </td>
-                  <td className="px-2 py-3 border-r border-slate-200 bg-rose-50/10 text-center font-mono font-bold text-rose-700">
+                  <td className="px-2 py-3 bg-[#d9e1f2] text-center font-mono font-black text-slate-900 text-xs align-middle border-r border-slate-300">
                     {formatPercent(row.managerAchievedWt)}
                   </td>
-                  {idx === 0 && (
-                    <td 
-                      rowSpan={filteredRows.length}
-                      className="px-2 py-3 border-r border-slate-200 bg-rose-100/30 text-center font-mono font-black text-rose-950 text-xs align-middle"
-                    >
-                      {formatPercent(tableData.valuesManagerWtSum)}
-                    </td>
-                  )}
+                  <td className="px-2 py-3 bg-white border-r border-slate-400">
+                    {/* Blank in spreadsheet */}
+                  </td>
+
+                  {/* TOTAL KRA WT */}
+                  <td className="px-2 py-3 text-center font-mono font-bold text-slate-800 bg-[#b4c6e7] border-r border-slate-400">
+                    {formatPercent(row.managerAchievedWt)}
+                  </td>
                 </tr>
               ))}
             </tbody>
-            {/* Table total footer */}
-            <tfoot className="border-t-2 border-slate-800 text-[11px] font-black uppercase text-center bg-slate-900 text-white">
-              <tr className="divide-x divide-slate-800">
-                <td colSpan={5} className="py-3.5 px-4 text-left font-black tracking-wide text-xs">
-                  Overall Weighted Totals Matrix
-                </td>
-                
-                {/* Self Total Weight */}
-                <td colSpan={3} className="bg-amber-700 py-3.5 text-center font-mono text-xs">Self Score</td>
-                <td className="bg-amber-800 font-mono text-xs py-3.5 px-1">{formatPercent(tableData.totalSelfScore)}</td>
-                
-                {/* Manager Total Weight */}
-                <td colSpan={3} className="bg-rose-700 py-3.5 text-center font-mono text-xs">Mgr Score</td>
-                <td className="bg-rose-800 font-mono text-xs py-3.5 px-1">{formatPercent(tableData.totalManagerScore)}</td>
-
-                {/* Final Total KRA Weight (Green Accent) */}
-                <td className="bg-teal-900 font-mono text-xs py-3.5 px-1">
-                  {formatPercent(tableData.totalSelfScore)}
-                </td>
-
-                {/* Final Total Weight (Red/Crimson Accent) */}
-                <td className="bg-red-950 font-mono text-xs py-3.5 px-1">
-                  {formatPercent(tableData.totalManagerScore)}
-                </td>
-              </tr>
-            </tfoot>
           </table>
         </div>
       </div>
@@ -817,101 +765,79 @@ export default function KPIDashboardPage() {
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
         
         {/* Core Values Dropdowns scorecard table */}
-        <div className="lg:col-span-7 bg-white border border-slate-200 rounded-2xl shadow-sm overflow-hidden flex flex-col justify-between">
-          <div className="p-4 border-b border-slate-100 bg-slate-50 flex items-center justify-between">
-            <h3 className="text-xs font-extrabold uppercase tracking-wider text-slate-800 flex items-center gap-1.5">
-              <Award className="w-4 h-4 text-amber-500" />
-              Core Value Assessment: Customer Delight
+        <div className="lg:col-span-7 bg-white border border-slate-300 rounded shadow-sm overflow-hidden flex flex-col justify-between">
+          <div className="p-3 border-b border-slate-300 bg-[#385723] text-white flex items-center justify-between">
+            <h3 className="text-xs font-extrabold uppercase tracking-wider flex items-center gap-1.5">
+              <Award className="w-4 h-4" />
+              Customer Delight
             </h3>
-            <span className="text-[10px] font-bold text-slate-400 uppercase">Max Score Sum: 100</span>
+            <span className="text-[10px] font-bold uppercase">Max score: 100</span>
           </div>
 
           <div className="overflow-x-auto flex-1">
-            <table className="w-full border-collapse text-left font-sans text-xs">
+            <table className="w-full border-collapse text-left font-sans text-xs border-slate-300">
               <thead>
-                <tr className="bg-slate-100 text-slate-700 font-extrabold uppercase border-b border-slate-200">
-                  <th className="px-4 py-3 border-r border-slate-200">Core Value Parameter</th>
-                  <th className="px-4 py-3 border-r border-slate-200">Measurable Core Standard Definition</th>
-                  <th className="px-2 py-3 border-r border-slate-200 text-center w-40 bg-amber-50 text-amber-900">Self Score</th>
-                  <th className="px-2 py-3 text-center w-40 bg-rose-50 text-rose-900">Manager Score</th>
+                <tr className="bg-slate-100 text-slate-700 font-extrabold uppercase border-b border-slate-300">
+                  <th className="px-3 py-2.5 border-r border-slate-300">Core Value Parameter</th>
+                  <th className="px-3 py-2.5 border-r border-slate-300">Measurable Core Standard Definition</th>
+                  <th className="px-2 py-2.5 border-r border-slate-300 text-center w-36 bg-[#fff2cc] text-slate-900">Current State</th>
+                  <th className="px-2 py-2.5 text-center w-20 bg-slate-50">Score</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-slate-150 font-semibold text-slate-600">
-                {CORE_VALUE_METRICS.map((metric) => (
-                  <tr key={metric.id} className="hover:bg-slate-50/30">
-                    <td className="px-4 py-3.5 border-r border-slate-200 font-bold text-slate-800 whitespace-nowrap">
-                      {metric.name}
-                    </td>
-                    <td className="px-4 py-3.5 border-r border-slate-200 text-[11px] leading-relaxed text-slate-500">
-                      {metric.description}
-                    </td>
-                    
-                    {/* Self select dropdown */}
-                    <td className="px-2 py-3.5 border-r border-slate-200 bg-amber-50/10 text-center">
-                      <select
-                        disabled={!isSelfWritable}
-                        value={selfCoreRatings[metric.id] || ""}
-                        onChange={(e) => {
-                          const val = e.target.value;
-                          setSelfCoreRatings(prev => ({ ...prev, [metric.id]: val }));
-                        }}
-                        className={`w-full bg-white border border-slate-200 rounded px-2 py-1.5 text-xs font-bold text-slate-700 outline-none shadow-sm focus:border-amber-500 cursor-pointer ${
-                          !isSelfWritable ? "opacity-75 cursor-not-allowed bg-slate-50" : ""
-                        }`}
-                      >
-                        {CORE_VALUE_OPTIONS.map((opt) => (
-                          <option key={opt.value} value={opt.value}>
-                            {opt.label}
-                          </option>
-                        ))}
-                      </select>
-                    </td>
+              <tbody className="divide-y divide-slate-300 font-semibold text-slate-600 bg-white">
+                {CORE_VALUE_METRICS.map((metric) => {
+                  const activeRating = isSelfWritable ? selfCoreRatings[metric.id] : managerCoreRatings[metric.id];
+                  const activeScore = getPointsFromRating(activeRating || "");
+                  
+                  return (
+                    <tr key={metric.id} className="hover:bg-slate-50/30">
+                      <td className="px-3 py-3 border-r border-slate-300 font-bold text-slate-800 whitespace-nowrap">
+                        {metric.name}
+                      </td>
+                      <td className="px-3 py-3 border-r border-slate-300 text-[11px] leading-relaxed text-slate-500">
+                        {metric.description}
+                      </td>
+                      
+                      {/* Dropdown Ratings (EXACT values as in Excel validation: Excellent, Very Good, Good, Satisfactory, Poor, Bad) */}
+                      <td className="px-2 py-3 border-r border-slate-300 bg-[#fff2cc]/20 text-center">
+                        <select
+                          disabled={!isSelfWritable && !isManagerWritable}
+                          value={isSelfWritable ? (selfCoreRatings[metric.id] || "") : (managerCoreRatings[metric.id] || "")}
+                          onChange={(e) => {
+                            const val = e.target.value;
+                            if (isSelfWritable) {
+                              setSelfCoreRatings(prev => ({ ...prev, [metric.id]: val }));
+                            } else {
+                              setManagerCoreRatings(prev => ({ ...prev, [metric.id]: val }));
+                            }
+                          }}
+                          className="w-full bg-white border border-slate-300 rounded px-1.5 py-1 text-xs font-bold text-slate-800 outline-none cursor-pointer text-center"
+                        >
+                          {CORE_VALUE_OPTIONS.map((opt) => (
+                            <option key={opt.value} value={opt.value}>
+                              {opt.label || "-- Select --"}
+                            </option>
+                          ))}
+                        </select>
+                      </td>
 
-                    {/* Manager select dropdown */}
-                    <td className="px-2 py-3.5 bg-rose-50/10 text-center">
-                      <select
-                        disabled={!isManagerWritable}
-                        value={managerCoreRatings[metric.id] || ""}
-                        onChange={(e) => {
-                          const val = e.target.value;
-                          setManagerCoreRatings(prev => ({ ...prev, [metric.id]: val }));
-                        }}
-                        className={`w-full bg-white border border-slate-200 rounded px-2 py-1.5 text-xs font-bold text-slate-700 outline-none shadow-sm focus:border-rose-500 cursor-pointer ${
-                          !isManagerWritable ? "opacity-75 cursor-not-allowed bg-slate-50" : ""
-                        }`}
-                      >
-                        {CORE_VALUE_OPTIONS.map((opt) => (
-                          <option key={opt.value} value={opt.value}>
-                            {opt.label}
-                          </option>
-                        ))}
-                      </select>
-                    </td>
-                  </tr>
-                ))}
+                      {/* Numeric Score mapping (0 by default) */}
+                      <td className="px-2 py-3 text-center bg-slate-50 font-mono font-bold text-slate-800 text-sm">
+                        {activeScore}
+                      </td>
+                    </tr>
+                  );
+                })}
               </tbody>
-              <tfoot className="border-t border-slate-200 bg-slate-50 font-black text-slate-800">
-                <tr>
-                  <td colSpan={2} className="px-4 py-3 text-right text-[10px] uppercase tracking-wider">
-                    Total Customer Delight Score Target:
-                  </td>
-                  <td className="px-2 py-3 text-center bg-amber-100/30 font-mono text-sm text-amber-950 border-r border-slate-200">
-                    {selfDelightTotal !== "" ? `${selfDelightTotal} / 100` : "-"}
-                  </td>
-                  <td className="px-2 py-3 text-center bg-rose-100/30 font-mono text-sm text-rose-950">
-                    {managerDelightTotal !== "" ? `${managerDelightTotal} / 100` : "-"}
-                  </td>
-                </tr>
-              </tfoot>
             </table>
           </div>
         </div>
 
         {/* Recharts chart representation */}
-        <div className="lg:col-span-5 bg-white border border-slate-200 rounded-2xl shadow-sm p-4 flex flex-col justify-between">
-          <div className="border-b border-slate-100 pb-2 mb-4">
-            <h3 className="text-xs font-extrabold uppercase tracking-wider text-slate-800 flex items-center gap-1.5">
-              <TrendingUp className="w-4 h-4 text-blue-500" />
+        <div className="lg:col-span-5 bg-[#404040] border border-slate-300 rounded shadow-sm p-4 flex flex-col justify-between">
+          <div className="border-b border-[#555] pb-2 mb-4">
+            <h3 className="text-xs font-extrabold uppercase tracking-wider text-white flex items-center gap-1.5">
+              <TrendingUp className="w-4 h-4 text-[#ffd966]" />
               Core Values Performance Chart
             </h3>
           </div>
@@ -922,17 +848,17 @@ export default function KPIDashboardPage() {
                 data={chartData}
                 margin={{ top: 10, right: 10, left: -25, bottom: 5 }}
               >
-                <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
+                <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#555" />
                 <XAxis 
                   dataKey="name" 
-                  tick={{ fill: "#64748b", fontSize: 8, fontWeight: 700 }}
-                  axisLine={{ stroke: "#e2e8f0" }}
+                  tick={{ fill: "#ccc", fontSize: 7, fontWeight: 700 }}
+                  axisLine={{ stroke: "#666" }}
                   tickLine={false}
                 />
                 <YAxis 
-                  domain={[0, 20]} 
-                  tick={{ fill: "#64748b", fontSize: 9, fontWeight: 700 }}
-                  axisLine={{ stroke: "#e2e8f0" }}
+                  domain={[0, 100]} 
+                  tick={{ fill: "#ccc", fontSize: 8, fontWeight: 700 }}
+                  axisLine={{ stroke: "#666" }}
                   tickLine={false}
                 />
                 <Tooltip 
@@ -940,19 +866,19 @@ export default function KPIDashboardPage() {
                   itemStyle={{ color: "#fff", fontSize: "10px", fontWeight: "bold" }}
                   labelStyle={{ color: "#94a3b8", fontSize: "9px", fontWeight: "extrabold", textTransform: "uppercase" }}
                 />
-                <Bar dataKey="Self" fill="#d97706" radius={[4, 4, 0, 0]} barSize={12} />
-                <Bar dataKey="Manager" fill="#e11d48" radius={[4, 4, 0, 0]} barSize={12} />
+                <Bar dataKey="Self" fill="#ffd966" radius={[2, 2, 0, 0]} barSize={12} />
+                <Bar dataKey="Manager" fill="#c00000" radius={[2, 2, 0, 0]} barSize={12} />
               </BarChart>
             </ResponsiveContainer>
           </div>
 
-          <div className="flex items-center justify-center gap-4 text-[10px] font-black uppercase mt-3 pt-3 border-t border-slate-100">
-            <div className="flex items-center gap-1.5">
-              <span className="w-2.5 h-2.5 rounded bg-amber-600 inline-block" />
+          <div className="flex items-center justify-center gap-4 text-[9px] font-black uppercase mt-3 pt-3 border-t border-[#555]">
+            <div className="flex items-center gap-1.5 text-white">
+              <span className="w-2.5 h-2.5 rounded bg-[#ffd966] inline-block" />
               <span>Self Rating</span>
             </div>
-            <div className="flex items-center gap-1.5">
-              <span className="w-2.5 h-2.5 rounded bg-rose-600 inline-block" />
+            <div className="flex items-center gap-1.5 text-white">
+              <span className="w-2.5 h-2.5 rounded bg-[#c00000] inline-block" />
               <span>Manager Rating</span>
             </div>
           </div>
