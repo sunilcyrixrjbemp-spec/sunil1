@@ -305,7 +305,7 @@ export default function ConsolidatedReportPage() {
       </div>
 
       {/* Report Table Card */}
-      <div className="card border-t-3 border-green-500 bg-white shadow-sm border border-gray-200 rounded-sm">
+      <div className="card border-t-3 border-green-500 bg-white shadow-sm border border-slate-200 rounded-xl sm:rounded-2xl overflow-hidden">
         <div className="card-header border-b border-gray-150 px-4 py-3 flex items-center justify-between bg-gray-50/40">
           <div className="flex items-center gap-2">
             <FileSpreadsheet className="w-4 h-4 text-green-600 flex-shrink-0" />
@@ -331,79 +331,79 @@ export default function ConsolidatedReportPage() {
               No approved claims found for this month/year.
             </div>
           ) : (
-            <table className="w-full text-[11px] border-collapse min-w-[1600px]">
+            <table className="w-full text-[10px] border-collapse min-w-[1600px] border border-slate-200">
               <thead>
-                <tr className="bg-gray-100 text-gray-700 font-bold uppercase tracking-wider text-left border-b border-gray-200">
-                  <th className="py-2.5 px-3 border-r border-gray-200 text-center font-bold">Zone</th>
-                  <th className="py-2.5 px-3 border-r border-gray-200 text-center font-bold">EE Code</th>
-                  <th className="py-2.5 px-3 border-r border-gray-200 text-center font-bold">Grade</th>
-                  <th className="py-2.5 px-3 border-r border-gray-200 text-center font-bold">CC</th>
-                  <th className="py-2.5 px-3 border-r border-gray-200 text-left font-bold">EE Name</th>
-                  <th className="py-2.5 px-3 border-r border-gray-200 text-center font-bold">DOJ</th>
-                  <th className="py-2.5 px-3 border-r border-gray-200 text-right font-bold">Travel Exp</th>
-                  <th className="py-2.5 px-3 border-r border-gray-200 text-right font-bold">DA</th>
-                  <th className="py-2.5 px-3 border-r border-gray-200 text-right font-bold">Spare Cost</th>
-                  <th className="py-2.5 px-3 border-r border-gray-200 text-right font-bold">Courier</th>
-                  <th className="py-2.5 px-3 border-r border-gray-200 text-right font-bold">Hotel</th>
-                  <th className="py-2.5 px-3 border-r border-gray-200 text-right font-bold">Print/Stat</th>
-                  <th className="py-2.5 px-3 border-r border-gray-200 text-right font-bold">Misc</th>
-                  <th className="py-2.5 px-3 border-r border-gray-200 text-right font-bold">Fuel</th>
-                  <th className="py-2.5 px-3 border-r border-gray-200 text-right font-bold bg-gray-50">Total</th>
-                  <th className="py-2.5 px-3 border-r border-gray-200 text-right font-bold text-red-700 bg-red-50/10">Advance</th>
-                  <th className="py-2.5 px-3 border-r border-gray-200 text-right font-bold text-green-700 bg-green-50/10">Net Payable</th>
-                  <th className="py-2.5 px-3 border-r border-gray-200 text-left font-bold">GST Bills</th>
-                  <th className="py-2.5 px-3 border-r border-gray-200 text-left font-bold max-w-[200px] truncate">Deduction Reason</th>
-                  <th className="py-2.5 px-3 border-r border-gray-200 text-left font-bold">Remarks</th>
-                  <th className="py-2.5 px-3 text-right font-bold">Claimed Amt</th>
+                <tr className="bg-slate-100 text-slate-700 font-bold uppercase tracking-wider text-left">
+                  <th className="py-1 px-1.5 border border-slate-200 text-center font-bold">Zone</th>
+                  <th className="py-1 px-1.5 border border-slate-200 text-center font-bold">EE Code</th>
+                  <th className="py-1 px-1.5 border border-slate-200 text-center font-bold">Grade</th>
+                  <th className="py-1 px-1.5 border border-slate-200 text-center font-bold">CC</th>
+                  <th className="py-1 px-1.5 border border-slate-200 text-left font-bold">EE Name</th>
+                  <th className="py-1 px-1.5 border border-slate-200 text-center font-bold">DOJ</th>
+                  <th className="py-1 px-1.5 border border-slate-200 text-right font-bold">Travel Exp</th>
+                  <th className="py-1 px-1.5 border border-slate-200 text-right font-bold">DA</th>
+                  <th className="py-1 px-1.5 border border-slate-200 text-right font-bold">Spare Cost</th>
+                  <th className="py-1 px-1.5 border border-slate-200 text-right font-bold">Courier</th>
+                  <th className="py-1 px-1.5 border border-slate-200 text-right font-bold">Hotel</th>
+                  <th className="py-1 px-1.5 border border-slate-200 text-right font-bold">Print/Stat</th>
+                  <th className="py-1 px-1.5 border border-slate-200 text-right font-bold">Misc</th>
+                  <th className="py-1 px-1.5 border border-slate-200 text-right font-bold">Fuel</th>
+                  <th className="py-1 px-1.5 border border-slate-200 text-right font-bold bg-slate-50">Total</th>
+                  <th className="py-1 px-1.5 border border-slate-200 text-right font-bold text-red-700 bg-red-50/10">Advance</th>
+                  <th className="py-1 px-1.5 border border-slate-200 text-right font-bold text-green-700 bg-green-50/10">Net Payable</th>
+                  <th className="py-1 px-1.5 border border-slate-200 text-left font-bold">GST Bills</th>
+                  <th className="py-1 px-1.5 border border-slate-200 text-left font-bold max-w-[200px] truncate">Deduction Reason</th>
+                  <th className="py-1 px-1.5 border border-slate-200 text-left font-bold">Remarks</th>
+                  <th className="py-1 px-1.5 border border-slate-200 text-right font-bold">Claimed Amt</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-gray-150">
+              <tbody className="divide-y divide-slate-100">
                 {data.map((r, idx) => (
-                  <tr key={idx} className="hover:bg-gray-50/60 transition-colors text-gray-700">
-                    <td className="py-2.5 px-3 text-center font-semibold border-r border-gray-150">{r.zone || "—"}</td>
-                    <td className="py-2.5 px-3 text-center border-r border-gray-150 font-mono font-bold text-blue-700 bg-blue-50/20">{r.ee_code}</td>
-                    <td className="py-2.5 px-3 text-center font-medium border-r border-gray-150">{r.grade || "—"}</td>
-                    <td className="py-2.5 px-3 text-center font-medium border-r border-gray-150">{r.cc || "—"}</td>
-                    <td className="py-2.5 px-3 font-semibold border-r border-gray-150">{r.ee_name}</td>
-                    <td className="py-2.5 px-3 text-center font-mono border-r border-gray-150">{r.doj || "—"}</td>
-                    <td className="py-2.5 px-3 text-right border-r border-gray-150 font-mono">{r.travel_expense > 0 ? fmt(r.travel_expense) : "—"}</td>
-                    <td className="py-2.5 px-3 text-right border-r border-gray-150 font-mono">{r.da_allowance > 0 ? fmt(r.da_allowance) : "—"}</td>
-                    <td className="py-2.5 px-3 text-right border-r border-gray-150 font-mono">{r.spare_purchase > 0 ? fmt(r.spare_purchase) : "—"}</td>
-                    <td className="py-2.5 px-3 text-right border-r border-gray-150 font-mono">{r.courier_charges > 0 ? fmt(r.courier_charges) : "—"}</td>
-                    <td className="py-2.5 px-3 text-right border-r border-gray-150 font-mono">{r.boarding_lodging > 0 ? fmt(r.boarding_lodging) : "—"}</td>
-                    <td className="py-2.5 px-3 text-right border-r border-gray-150 font-mono">{r.printing_stationery > 0 ? fmt(r.printing_stationery) : "—"}</td>
-                    <td className="py-2.5 px-3 text-right border-r border-gray-150 font-mono">—</td>
-                    <td className="py-2.5 px-3 text-right border-r border-gray-150 font-mono">—</td>
-                    <td className="py-2.5 px-3 text-right border-r border-gray-150 font-mono font-bold bg-gray-50">{fmt(r.total)}</td>
-                    <td className="py-2.5 px-3 text-right border-r border-gray-150 font-mono font-bold text-red-700 bg-red-50/10">{r.advance > 0 ? fmt(r.advance) : "—"}</td>
-                    <td className="py-2.5 px-3 text-right border-r border-gray-150 font-mono font-bold text-green-700 bg-green-50/10">{fmt(r.net_payable)}</td>
-                    <td className="py-2.5 px-3 border-r border-gray-150">—</td>
-                    <td className="py-2.5 px-3 border-r border-gray-150 max-w-[200px] truncate" title={r.deduction_reason}>{r.deduction_reason || "—"}</td>
-                    <td className="py-2.5 px-3 border-r border-gray-150">—</td>
-                    <td className="py-2.5 px-3 text-right font-mono font-semibold">{fmt(r.claimed_amount)}</td>
+                  <tr key={idx} className="hover:bg-slate-50/50 transition-colors text-slate-700">
+                    <td className="py-1 px-1.5 text-center font-semibold border border-slate-200">{r.zone || "—"}</td>
+                    <td className="py-1 px-1.5 text-center border border-slate-200 font-mono font-bold text-blue-700 bg-blue-50/20">{r.ee_code}</td>
+                    <td className="py-1 px-1.5 text-center font-medium border border-slate-200">{r.grade || "—"}</td>
+                    <td className="py-1 px-1.5 text-center font-medium border border-slate-200">{r.cc || "—"}</td>
+                    <td className="py-1 px-1.5 font-semibold border border-slate-200">{r.ee_name}</td>
+                    <td className="py-1 px-1.5 text-center font-mono border border-slate-200">{r.doj || "—"}</td>
+                    <td className="py-1 px-1.5 text-right border border-slate-200 font-mono">{r.travel_expense > 0 ? fmt(r.travel_expense) : "—"}</td>
+                    <td className="py-1 px-1.5 text-right border border-slate-200 font-mono">{r.da_allowance > 0 ? fmt(r.da_allowance) : "—"}</td>
+                    <td className="py-1 px-1.5 text-right border border-slate-200 font-mono">{r.spare_purchase > 0 ? fmt(r.spare_purchase) : "—"}</td>
+                    <td className="py-1 px-1.5 text-right border border-slate-200 font-mono">{r.courier_charges > 0 ? fmt(r.courier_charges) : "—"}</td>
+                    <td className="py-1 px-1.5 text-right border border-slate-200 font-mono">{r.boarding_lodging > 0 ? fmt(r.boarding_lodging) : "—"}</td>
+                    <td className="py-1 px-1.5 text-right border border-slate-200 font-mono">{r.printing_stationery > 0 ? fmt(r.printing_stationery) : "—"}</td>
+                    <td className="py-1 px-1.5 text-right border border-slate-200 font-mono">—</td>
+                    <td className="py-1 px-1.5 text-right border border-slate-200 font-mono">—</td>
+                    <td className="py-1 px-1.5 text-right border border-slate-200 font-mono font-bold bg-slate-50">{fmt(r.total)}</td>
+                    <td className="py-1 px-1.5 text-right border border-slate-200 font-mono font-bold text-red-700 bg-red-50/10">{r.advance > 0 ? fmt(r.advance) : "—"}</td>
+                    <td className="py-1 px-1.5 text-right border border-slate-200 font-mono font-bold text-green-700 bg-green-50/10">{fmt(r.net_payable)}</td>
+                    <td className="py-1 px-1.5 border border-slate-200">—</td>
+                    <td className="py-1 px-1.5 border border-slate-200 max-w-[200px] truncate" title={r.deduction_reason}>{r.deduction_reason || "—"}</td>
+                    <td className="py-1 px-1.5 border border-slate-200">—</td>
+                    <td className="py-1 px-1.5 border border-slate-200 text-right font-mono font-semibold">{fmt(r.claimed_amount)}</td>
                   </tr>
                 ))}
               </tbody>
               <tfoot>
-                <tr className="bg-yellow-50/50 border-t-2 border-yellow-250 text-[11px] font-bold text-gray-800">
-                  <td colSpan={6} className="py-2.5 px-3 border-r border-gray-150 text-center uppercase tracking-wider text-gray-600 font-sans">
+                <tr className="bg-amber-50/30 border-t-2 border-slate-200 text-[10px] font-bold text-slate-800">
+                  <td colSpan={6} className="py-1.5 px-2 border border-slate-200 text-center uppercase tracking-wider text-slate-650 font-sans">
                     Grand Total
                   </td>
-                  <td className="py-2.5 px-3 text-right border-r border-gray-150 font-mono">{fmt(data.reduce((s, r) => s + r.travel_expense, 0))}</td>
-                  <td className="py-2.5 px-3 text-right border-r border-gray-150 font-mono">{fmt(data.reduce((s, r) => s + r.da_allowance, 0))}</td>
-                  <td className="py-2.5 px-3 text-right border-r border-gray-150 font-mono">{fmt(data.reduce((s, r) => s + r.spare_purchase, 0))}</td>
-                  <td className="py-2.5 px-3 text-right border-r border-gray-150 font-mono">{fmt(data.reduce((s, r) => s + r.courier_charges, 0))}</td>
-                  <td className="py-2.5 px-3 text-right border-r border-gray-150 font-mono">{fmt(data.reduce((s, r) => s + r.boarding_lodging, 0))}</td>
-                  <td className="py-2.5 px-3 text-right border-r border-gray-150 font-mono">{fmt(data.reduce((s, r) => s + r.printing_stationery, 0))}</td>
-                  <td className="py-2.5 px-3 text-right border-r border-gray-150 font-mono">—</td>
-                  <td className="py-2.5 px-3 text-right border-r border-gray-150 font-mono">—</td>
-                  <td className="py-2.5 px-3 text-right border-r border-gray-150 font-mono bg-gray-50">{fmt(data.reduce((s, r) => s + r.total, 0))}</td>
-                  <td className="py-2.5 px-3 text-right border-r border-gray-150 font-mono text-red-700 bg-red-50/10">{fmt(totalAdvances)}</td>
-                  <td className="py-2.5 px-3 text-right border-r border-gray-150 font-mono text-green-700 bg-green-50/10">{fmt(totalNet)}</td>
-                  <td className="border-r border-gray-150" />
-                  <td className="border-r border-gray-150" />
-                  <td className="border-r border-gray-150" />
-                  <td className="text-right font-mono">{fmt(totalClaimed)}</td>
+                  <td className="py-1.5 px-2 text-right border border-slate-200 font-mono">{fmt(data.reduce((s, r) => s + r.travel_expense, 0))}</td>
+                  <td className="py-1.5 px-2 text-right border border-slate-200 font-mono">{fmt(data.reduce((s, r) => s + r.da_allowance, 0))}</td>
+                  <td className="py-1.5 px-2 text-right border border-slate-200 font-mono">{fmt(data.reduce((s, r) => s + r.spare_purchase, 0))}</td>
+                  <td className="py-1.5 px-2 text-right border border-slate-200 font-mono">{fmt(data.reduce((s, r) => s + r.courier_charges, 0))}</td>
+                  <td className="py-1.5 px-2 text-right border border-slate-200 font-mono">{fmt(data.reduce((s, r) => s + r.boarding_lodging, 0))}</td>
+                  <td className="py-1.5 px-2 text-right border border-slate-200 font-mono">{fmt(data.reduce((s, r) => s + r.printing_stationery, 0))}</td>
+                  <td className="py-1.5 px-2 text-right border border-slate-200 font-mono">—</td>
+                  <td className="py-1.5 px-2 text-right border border-slate-200 font-mono">—</td>
+                  <td className="py-1.5 px-2 text-right border border-slate-200 font-mono bg-slate-50">{fmt(data.reduce((s, r) => s + r.total, 0))}</td>
+                  <td className="py-1.5 px-2 text-right border border-slate-200 font-mono text-red-700 bg-red-50/10">{fmt(totalAdvances)}</td>
+                  <td className="py-1.5 px-2 text-right border border-slate-200 font-mono text-green-700 bg-green-50/10">{fmt(totalNet)}</td>
+                  <td className="border border-slate-200" />
+                  <td className="border border-slate-200" />
+                  <td className="border border-slate-200" />
+                  <td className="py-1.5 px-2 text-right border border-slate-200 font-mono">{fmt(totalClaimed)}</td>
                 </tr>
               </tfoot>
             </table>

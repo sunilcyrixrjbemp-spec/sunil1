@@ -216,8 +216,9 @@ router.post("/api/tickets/:ticket_id/followup", handleToggleFollowup, true);
 // ─── Uploads Endpoints (Requires Auth) ────────────────────────────────────────
 router.post("/api/upload/image", handleUploadImage, true);
 router.post("/api/upload/document", handleUploadDocument, true);
-router.get("/api/upload/file/images/:filename", handleServeFile, true);
-router.get("/api/upload/file/documents/:filename", handleServeFile, true);
+router.get("/api/upload/file/images/:filename", handleServeFile, false);
+router.get("/api/upload/file/documents/:filename", handleServeFile, false);
+router.get("/api/upload/file/gdrive/:filename", handleServeFile, false);
 router.get("/uploads/expense_attachments/:filename", handleServeExpenseAttachment, false);
 
 // ─── Reports Endpoints (Requires Auth) ────────────────────────────────────────
