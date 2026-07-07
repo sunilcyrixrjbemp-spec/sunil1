@@ -3405,10 +3405,15 @@ export default function ExpensePage() {
                                     type="button"
                                     onClick={() => addVerifiedBarcode(leg.leg, "Calls")}
                                     disabled={!leg.calls_verified}
-                                    className="w-full h-8 flex items-center justify-center rounded-lg border cursor-pointer transition-all bg-emerald-600 hover:bg-emerald-700 text-white border-emerald-700 shadow-sm disabled:bg-slate-200 disabled:text-slate-500 disabled:border-slate-300 disabled:cursor-not-allowed"
+                                    className="w-full h-8 flex items-center justify-center rounded-lg shadow-sm transition-all disabled:cursor-not-allowed"
+                                    style={
+                                      leg.calls_verified
+                                        ? { backgroundColor: '#059669', color: '#ffffff', border: '1.5px solid #047857', cursor: 'pointer' }
+                                        : { backgroundColor: '#cbd5e1', color: '#64748b', border: '1.5px solid #94a3b8', cursor: 'not-allowed' }
+                                    }
                                     title="Add Verified Entry"
                                   >
-                                    <Plus className="w-4 h-4" />
+                                    <Plus className="w-4 h-4" style={{ color: leg.calls_verified ? '#ffffff' : '#64748b' }} />
                                   </button>
                                 </div>
                               </div>
@@ -3603,10 +3608,15 @@ export default function ExpensePage() {
                                     type="button"
                                     onClick={() => addVerifiedBarcode(leg.leg, "PMS")}
                                     disabled={!leg.pms_verified}
-                                    className="w-full h-8 flex items-center justify-center rounded-lg border cursor-pointer transition-all bg-emerald-600 hover:bg-emerald-700 text-white border-emerald-700 shadow-sm disabled:bg-slate-200 disabled:text-slate-500 disabled:border-slate-300 disabled:cursor-not-allowed"
+                                    className="w-full h-8 flex items-center justify-center rounded-lg shadow-sm transition-all disabled:cursor-not-allowed"
+                                    style={
+                                      leg.pms_verified
+                                        ? { backgroundColor: '#059669', color: '#ffffff', border: '1.5px solid #047857', cursor: 'pointer' }
+                                        : { backgroundColor: '#cbd5e1', color: '#64748b', border: '1.5px solid #94a3b8', cursor: 'not-allowed' }
+                                    }
                                     title="Add Verified Entry"
                                   >
-                                    <Plus className="w-4 h-4" />
+                                    <Plus className="w-4 h-4" style={{ color: leg.pms_verified ? '#ffffff' : '#64748b' }} />
                                   </button>
                                 </div>
                               </div>
