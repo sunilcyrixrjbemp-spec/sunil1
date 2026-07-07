@@ -241,11 +241,11 @@ export default function LoginForm({ onForgotPassword, onUnlockAccount }: LoginFo
 
   return (
     <div className="p-6 sm:p-8 space-y-6">
-      <div className="text-center py-2 border-b border-slate-800/80">
+      <div className="text-center py-2 border-b border-slate-100">
         <img 
           src="/brand.png" 
           alt="Logo" 
-          className="h-14 w-auto mx-auto object-contain cursor-pointer active:scale-95 transition-transform bg-white/5 rounded-lg p-1.5 shadow-sm" 
+          className="h-14 w-auto mx-auto object-contain cursor-pointer active:scale-95 transition-transform bg-white rounded-lg p-1.5 shadow-sm" 
           onClick={() => {
             const clicks = logoClicks + 1;
             setLogoClicks(clicks);
@@ -255,14 +255,14 @@ export default function LoginForm({ onForgotPassword, onUnlockAccount }: LoginFo
             }
           }}
         />
-        <p className="text-slate-400 text-[10px] mt-2 font-black uppercase tracking-widest">Account Sign In</p>
+        <p className="text-slate-500 text-[10px] mt-2 font-black uppercase tracking-widest">Account Sign In</p>
       </div>
 
       {statusMessage && (
         <div className={`p-3.5 border rounded-xl text-xs font-bold leading-relaxed ${
           statusMessage.type === "success" 
-            ? "bg-emerald-500/10 border-emerald-500/30 text-emerald-400" 
-            : "bg-rose-500/10 border-rose-500/30 text-rose-450"
+            ? "bg-emerald-50 border-emerald-200 text-emerald-700" 
+            : "bg-rose-50 border-rose-200 text-rose-700"
         }`}>
           {statusMessage.text}
         </div>
@@ -270,9 +270,9 @@ export default function LoginForm({ onForgotPassword, onUnlockAccount }: LoginFo
 
       <form onSubmit={handleSubmit} className="space-y-4">
         <div>
-          <label htmlFor="userId" className="text-slate-400 font-extrabold uppercase tracking-widest text-[9px] mb-1.5 block">User ID</label>
+          <label htmlFor="userId" className="text-slate-500 font-extrabold uppercase tracking-widest text-[9px] mb-1.5 block">User ID</label>
           <div className="relative">
-            <span className="absolute inset-y-0 left-0 pl-3.5 flex items-center text-slate-500">
+            <span className="absolute inset-y-0 left-0 pl-3.5 flex items-center text-slate-400">
               <User size={14} />
             </span>
             <input
@@ -285,7 +285,7 @@ export default function LoginForm({ onForgotPassword, onUnlockAccount }: LoginFo
                 setStatusMessage(null);
               }}
               disabled={loading}
-              className="w-full bg-slate-950/50 border border-slate-800 rounded-xl pr-3.5 py-3 text-xs text-white placeholder-slate-600 focus:outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20 transition-all font-semibold shadow-inner"
+              className="w-full bg-white border border-slate-350 rounded-xl pr-3.5 py-3 text-xs text-slate-800 placeholder-slate-400 focus:outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20 transition-all font-semibold shadow-inner"
               style={{ paddingLeft: '2.75rem' }}
               required
             />
@@ -293,9 +293,9 @@ export default function LoginForm({ onForgotPassword, onUnlockAccount }: LoginFo
         </div>
 
         <div>
-          <label htmlFor="password" className="text-slate-400 font-extrabold uppercase tracking-widest text-[9px] mb-1.5 block">Password</label>
+          <label htmlFor="password" className="text-slate-500 font-extrabold uppercase tracking-widest text-[9px] mb-1.5 block">Password</label>
           <div className="relative">
-            <span className="absolute inset-y-0 left-0 pl-3.5 flex items-center text-slate-500">
+            <span className="absolute inset-y-0 left-0 pl-3.5 flex items-center text-slate-400">
               <Lock size={14} />
             </span>
             <input
@@ -308,14 +308,14 @@ export default function LoginForm({ onForgotPassword, onUnlockAccount }: LoginFo
                 setStatusMessage(null);
               }}
               disabled={loading}
-              className="w-full bg-slate-950/50 border border-slate-800 rounded-xl pr-10 py-3 text-xs text-white placeholder-slate-600 focus:outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20 transition-all font-semibold shadow-inner"
+              className="w-full bg-white border border-slate-350 rounded-xl pr-10 py-3 text-xs text-slate-800 placeholder-slate-400 focus:outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20 transition-all font-semibold shadow-inner"
               style={{ paddingLeft: '2.75rem' }}
               required
             />
             <button
               type="button"
               onClick={() => setShowPassword(!showPassword)}
-              className="absolute inset-y-0 right-0 pr-3.5 flex items-center text-slate-500 hover:text-slate-350 transition-colors border-0 bg-transparent cursor-pointer"
+              className="absolute inset-y-0 right-0 pr-3.5 flex items-center text-slate-400 hover:text-slate-650 transition-colors border-0 bg-transparent cursor-pointer"
             >
               {showPassword ? <EyeOff size={14} /> : <Eye size={14} />}
             </button>
@@ -353,24 +353,24 @@ export default function LoginForm({ onForgotPassword, onUnlockAccount }: LoginFo
               if (success) navigate("/home");
             }}
             disabled={loading}
-            className="w-full h-11 flex items-center justify-center gap-2 border border-slate-800 bg-slate-850 hover:bg-slate-800 text-slate-200 rounded-xl font-extrabold uppercase tracking-wider text-[10px] transition-all cursor-pointer"
+            className="w-full h-11 flex items-center justify-center gap-2 border border-slate-250 bg-slate-50 hover:bg-slate-100 text-slate-700 rounded-xl font-extrabold uppercase tracking-wider text-[10px] transition-all cursor-pointer"
           >
-            <Fingerprint size={16} className="text-indigo-400" />
+            <Fingerprint size={16} className="text-indigo-600" />
             <span>{biometryType === 'face' ? 'Login with Face ID' : 'Login with Fingerprint'}</span>
           </button>
         )}
       </form>
 
-      <div className="flex items-center justify-between text-[11px] pt-4 border-t border-slate-800/80 text-slate-550 font-bold uppercase tracking-wider">
+      <div className="flex items-center justify-between text-[11px] pt-4 border-t border-slate-100 text-slate-500 font-bold uppercase tracking-wider">
         <button
           onClick={onForgotPassword}
-          className="hover:text-indigo-400 transition-all border-0 bg-transparent cursor-pointer"
+          className="hover:text-indigo-600 text-slate-500 transition-all border-0 bg-transparent cursor-pointer"
         >
           Forgot Password?
         </button>
         <button
           onClick={onUnlockAccount}
-          className="hover:text-indigo-400 transition-all border-0 bg-transparent cursor-pointer"
+          className="hover:text-indigo-600 text-slate-500 transition-all border-0 bg-transparent cursor-pointer"
         >
           Unlock Account
         </button>
@@ -378,18 +378,18 @@ export default function LoginForm({ onForgotPassword, onUnlockAccount }: LoginFo
 
       {/* Already Logged In Overlay Modal */}
       {showAlreadyLoggedInModal && (
-        <div className="fixed inset-0 bg-black/60 backdrop-blur-xs flex items-center justify-center p-4 z-50 animate-fadeIn text-slate-300">
-          <div className="bg-slate-900 border border-slate-800 rounded-2xl shadow-2xl w-full max-w-sm overflow-hidden animate-scaleIn">
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-xs flex items-center justify-center p-4 z-50 animate-fadeIn text-slate-800">
+          <div className="bg-white border border-slate-200 rounded-2xl shadow-2xl w-full max-w-sm overflow-hidden animate-scaleIn">
             
             {/* Modal Header */}
-            <div className="px-4 py-3 bg-amber-500/10 border-b border-amber-500/20 flex items-center justify-between">
-              <h3 className="text-[10px] font-black uppercase tracking-widest text-amber-500 flex items-center gap-2">
-                <AlertTriangle className="w-4 h-4 text-amber-500" />
+            <div className="px-4 py-3 bg-amber-50 border-b border-amber-100 flex items-center justify-between">
+              <h3 className="text-[10px] font-black uppercase tracking-widest text-amber-600 flex items-center gap-2">
+                <AlertTriangle className="w-4 h-4 text-amber-650" />
                 Active Session Detected
               </h3>
               <button 
                 onClick={() => setShowAlreadyLoggedInModal(false)}
-                className="p-1 hover:bg-slate-800 rounded text-slate-400 hover:text-white border-0 bg-transparent cursor-pointer"
+                className="p-1 hover:bg-slate-100 rounded text-slate-400 hover:text-slate-700 border-0 bg-transparent cursor-pointer"
               >
                 <X className="w-4 h-4" />
               </button>
@@ -397,27 +397,27 @@ export default function LoginForm({ onForgotPassword, onUnlockAccount }: LoginFo
 
             {/* Modal Body */}
             <div className="p-5 text-xs space-y-3 leading-relaxed">
-              <p className="font-bold text-slate-200">
+              <p className="font-bold text-slate-700">
                 You are currently logged in on another device or browser tab. 
               </p>
-              <p className="text-slate-400">
+              <p className="text-slate-500">
                 Logging in here will automatically terminate your session on the other device. Do you want to proceed?
               </p>
             </div>
 
             {/* Modal Footer */}
-            <div className="px-4 py-3 bg-slate-950/40 border-t border-slate-850/60 flex items-center justify-end gap-2">
+            <div className="px-4 py-3 bg-slate-50 border-t border-slate-100 flex items-center justify-end gap-2">
               <button
                 type="button"
                 onClick={() => setShowAlreadyLoggedInModal(false)}
-                className="px-3.5 py-2 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-xl text-[10px] font-extrabold uppercase tracking-wider border-0 cursor-pointer transition-all"
+                className="px-3.5 py-2 bg-slate-100 hover:bg-slate-200 text-slate-750 rounded-xl text-[10px] font-extrabold uppercase tracking-wider border-0 cursor-pointer transition-all"
               >
                 Cancel
               </button>
               <button
                 type="button"
                 onClick={handleForceLogin}
-                className="px-3.5 py-2 bg-indigo-650 hover:bg-indigo-700 text-white rounded-xl text-[10px] font-extrabold uppercase tracking-wider border-0 cursor-pointer shadow-md shadow-indigo-600/10 transition-all"
+                className="px-3.5 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-[10px] font-extrabold uppercase tracking-wider border-0 cursor-pointer shadow-md shadow-indigo-600/10 transition-all"
               >
                 Yes, Log In Here
               </button>

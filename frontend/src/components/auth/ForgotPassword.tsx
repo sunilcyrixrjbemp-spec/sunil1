@@ -216,21 +216,21 @@ export default function ForgotPassword({ onBackToLogin }: ForgotPasswordProps) {
   return (
     <div className="p-6 sm:p-8 space-y-6">
       {/* Header Logo */}
-      <div className="text-center pb-3.5 border-b border-slate-800/80 flex justify-between items-center">
+      <div className="text-center pb-3.5 border-b border-slate-100 flex justify-between items-center">
         <button
           onClick={onBackToLogin}
-          className="text-slate-400 hover:text-white flex items-center gap-1.5 text-[10px] cursor-pointer font-black uppercase tracking-wider border-0 bg-transparent"
+          className="text-slate-500 hover:text-indigo-650 flex items-center gap-1.5 text-[10px] cursor-pointer font-black uppercase tracking-wider border-0 bg-transparent"
         >
           <ArrowLeft size={12} /> Back
         </button>
-        <span className="text-slate-400 text-[10px] font-black uppercase tracking-widest">Reset Credentials</span>
+        <span className="text-slate-500 text-[10px] font-black uppercase tracking-widest">Reset Credentials</span>
       </div>
 
       {statusMessage && (
         <div className={`p-3.5 border rounded-xl text-xs font-bold leading-relaxed ${
           statusMessage.type === "success" 
-            ? "bg-emerald-500/10 border-emerald-500/30 text-emerald-400" 
-            : "bg-rose-500/10 border-rose-500/30 text-rose-450"
+            ? "bg-emerald-50 border-emerald-200 text-emerald-700" 
+            : "bg-rose-50 border-rose-200 text-rose-700"
         }`}>
           {statusMessage.text}
         </div>
@@ -240,16 +240,16 @@ export default function ForgotPassword({ onBackToLogin }: ForgotPasswordProps) {
       {step === 1 && (
         <div className="space-y-5">
           <div className="text-center">
-            <div className="h-12 w-12 rounded-xl bg-indigo-500/10 flex items-center justify-center mx-auto mb-3 border border-indigo-500/20 text-indigo-400 shadow-sm">
+            <div className="h-12 w-12 rounded-xl bg-indigo-50 flex items-center justify-center mx-auto mb-3 border border-indigo-100 text-indigo-600 shadow-sm">
               <Key size={18} />
             </div>
-            <h3 className="text-xs font-black text-slate-100 uppercase tracking-widest">Identity Check</h3>
-            <p className="text-slate-400 text-[9px] mt-1.5 uppercase tracking-wider font-extrabold">Verify details to receive verification code</p>
+            <h3 className="text-xs font-black text-slate-800 uppercase tracking-widest">Identity Check</h3>
+            <p className="text-slate-500 text-[9px] mt-1.5 uppercase tracking-wider font-extrabold">Verify details to receive verification code</p>
           </div>
 
           <form onSubmit={handleSendOtp} className="space-y-4">
             <div>
-              <label htmlFor="resetUserId" className="text-slate-400 font-extrabold uppercase tracking-widest text-[9px] mb-1.5 block">User ID</label>
+              <label htmlFor="resetUserId" className="text-slate-500 font-extrabold uppercase tracking-widest text-[9px] mb-1.5 block">User ID</label>
               <input
                 id="resetUserId"
                 type="text"
@@ -260,13 +260,13 @@ export default function ForgotPassword({ onBackToLogin }: ForgotPasswordProps) {
                   setStatusMessage(null);
                 }}
                 disabled={loading}
-                className="w-full bg-slate-950/50 border border-slate-800 rounded-xl px-3.5 py-3 text-xs text-white placeholder-slate-600 focus:outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20 transition-all font-semibold shadow-inner"
+                className="w-full bg-white border border-slate-350 rounded-xl px-3.5 py-3 text-xs text-slate-800 placeholder-slate-400 focus:outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20 transition-all font-semibold shadow-inner"
                 required
               />
             </div>
 
             <div>
-              <label htmlFor="resetDob" className="text-slate-400 font-extrabold uppercase tracking-widest text-[9px] mb-1.5 block">Date of Birth</label>
+              <label htmlFor="resetDob" className="text-slate-500 font-extrabold uppercase tracking-widest text-[9px] mb-1.5 block">Date of Birth</label>
               <input
                 id="resetDob"
                 type="date"
@@ -276,7 +276,7 @@ export default function ForgotPassword({ onBackToLogin }: ForgotPasswordProps) {
                   setStatusMessage(null);
                 }}
                 disabled={loading}
-                className="w-full bg-slate-950/50 border border-slate-800 rounded-xl px-3.5 py-3 text-xs text-white placeholder-slate-600 focus:outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20 transition-all font-semibold shadow-inner [color-scheme:dark]"
+                className="w-full bg-white border border-slate-350 rounded-xl px-3.5 py-3 text-xs text-slate-800 placeholder-slate-400 focus:outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20 transition-all font-semibold shadow-inner [color-scheme:light]"
                 required
               />
             </div>
