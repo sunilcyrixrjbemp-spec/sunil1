@@ -1788,7 +1788,7 @@ export async function handleGetMonthSummary(request, env, params, query, user) {
   const bindings = [];
 
   if (month) {
-    whereClauses.push("UPPER(e.month_name) = UPPER(?)");
+    whereClauses.push("UPPER(e.month) = UPPER(?)");
     bindings.push(month);
   }
   if (year) {
@@ -1816,7 +1816,7 @@ export async function handleGetMonthSummary(request, env, params, query, user) {
   const result = await env.DB.prepare(`
     SELECT 
       u.user_id, u.name, u.district, u.zone, u.designation, u.grade,
-      e.month_name as month, e.year,
+      e.month as month, e.year,
       COUNT(e.id) as total_claims,
       SUM(e.amount) as total_amount,
       SUM(e.amount) as approved_amount,
@@ -1826,7 +1826,7 @@ export async function handleGetMonthSummary(request, env, params, query, user) {
     FROM expenses e
     JOIN users u ON e.user_id = u.id
     WHERE ${whereStr} AND e.status = 'approved'
-    GROUP BY u.user_id, u.name, e.month_name, e.year
+    GROUP BY u.user_id, u.name, e.month, e.year
     ORDER BY u.name ASC
   `).bind(...bindings).all();
 
@@ -1912,7 +1912,7 @@ export async function handleGetEngineerMonthClaims(request, env, params, query, 
     if (targetUser) {
       const expenses = await env.DB.prepare(`
         SELECT * FROM expenses 
-        WHERE user_id = ? AND UPPER(month_name) = UPPER(?) AND year = ?
+        WHERE user_id = ? AND UPPER(month) = UPPER(?) AND year = ?
         ORDER BY created_at ASC
       `).bind(targetUser.id, month, year).all();
 
@@ -1921,7 +1921,7 @@ export async function handleGetEngineerMonthClaims(request, env, params, query, 
         claims.push({
           expense_code: exp.expense_code,
           date: exp.itinerary || exp.created_at,
-          month: exp.month_name,
+          month: exp.month,
           year: exp.year,
           status: exp.status,
           amount: parseFloat(exp.amount || 0),
@@ -2081,7 +2081,7 @@ export async function handleGetConsolidatedReport(request, env, params, query, u
   // 2. Fetch all approved expenses
   const expensesRes = await env.DB.prepare(`
     SELECT id, user_id, expense_code, amount, original_amount, status FROM expenses
-    WHERE UPPER(month_name) = UPPER(?) AND e.year = ? AND e.status = 'approved'
+    WHERE UPPER(month) = UPPER(?) AND year = ? AND status = 'approved'
   `).bind(month, year).all().catch(() => ({ results: [] }));
   const expenses = expensesRes.results || [];
 

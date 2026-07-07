@@ -740,7 +740,7 @@ export default function HomePage() {
                         onClick={() => setHomeStatusFilter(status)}
                         className={`px-2 py-0.5 rounded text-[8px] font-black uppercase tracking-wider transition-all cursor-pointer border whitespace-nowrap ${
                           homeStatusFilter === status
-                            ? "bg-indigo-650 text-white border-indigo-650 font-extrabold shadow-sm"
+                            ? "bg-indigo-600 text-white border-indigo-600 font-extrabold shadow-sm"
                             : "bg-white text-slate-500 border-slate-200 hover:bg-slate-50 hover:text-slate-800"
                         }`}
                       >
@@ -787,7 +787,7 @@ export default function HomePage() {
                         onClick={() => setHomeStatusFilter(status)}
                         className={`px-2 py-0.5 rounded text-[8px] font-black uppercase tracking-wider transition-all cursor-pointer border whitespace-nowrap ${
                           homeStatusFilter === status
-                            ? "bg-indigo-650 text-white border-indigo-650 font-extrabold shadow-sm"
+                            ? "bg-indigo-600 text-white border-indigo-600 font-extrabold shadow-sm"
                             : "bg-white text-slate-500 border-slate-200 hover:bg-slate-50 hover:text-slate-800"
                         }`}
                       >
@@ -833,11 +833,11 @@ export default function HomePage() {
                             className="hover:bg-blue-50/20 transition-colors cursor-pointer"
                           >
                             <td className="py-3 px-3 font-semibold font-mono text-blue-600 uppercase whitespace-nowrap">{exp.expense_code}</td>
-                            <td className="py-3 px-3 text-gray-550 whitespace-nowrap">{exp.itinerary}</td>
+                            <td className="py-3 px-3 text-slate-600 whitespace-nowrap">{exp.itinerary}</td>
                             <td className="py-3 px-3 font-semibold text-gray-800 truncate max-w-[150px] whitespace-nowrap" title={exp.description}>{exp.description}</td>
                             <td className="py-3 px-3 text-gray-500 whitespace-nowrap">{exp.travel_mode}</td>
-                            <td className="py-3 px-3 font-mono font-semibold text-gray-650 whitespace-nowrap">{exp.total_km ? `${exp.total_km.toFixed(1)} KM` : "—"}</td>
-                            <td className="py-3 px-3 font-mono font-semibold text-gray-650 whitespace-nowrap">{exp.total_auto ? `₹${exp.total_auto.toLocaleString()}` : "—"}</td>
+                            <td className="py-3 px-3 font-mono font-semibold text-slate-700 whitespace-nowrap">{exp.total_km ? `${exp.total_km.toFixed(1)} KM` : "—"}</td>
+                            <td className="py-3 px-3 font-mono font-semibold text-slate-700 whitespace-nowrap">{exp.total_auto ? `₹${exp.total_auto.toLocaleString()}` : "—"}</td>
                             <td className="py-3 px-3 font-bold text-gray-900 whitespace-nowrap">₹{exp.amount.toLocaleString()}</td>
                             <td className="py-3 px-3 text-right whitespace-nowrap">
                               <span className={`inline-flex items-center px-2 py-0.5 rounded border text-[9px] font-bold uppercase tracking-wider ${getStatusBadgeClass(exp.status)}`}>
@@ -938,15 +938,15 @@ export default function HomePage() {
                               <span className="text-[8px] font-mono uppercase text-blue-600 block mt-0.5">{exp.submitter_code}</span>
                             </td>
                             <td className="py-3 px-3 font-semibold font-mono text-blue-600 uppercase whitespace-nowrap">{exp.expense_code}</td>
-                            <td className="py-3 px-3 text-gray-550 whitespace-nowrap">{exp.date}</td>
-                            <td className="py-3 px-3 font-semibold text-gray-800 truncate max-w-[120px] whitespace-nowrap" title={exp.purpose}>{exp.purpose}</td>
+                            <td className="py-3 px-3 text-slate-600 whitespace-nowrap">{exp.itinerary || exp.date || exp.created_at}</td>
+                            <td className="py-3 px-3 font-semibold text-gray-800 truncate max-w-[120px] whitespace-nowrap" title={exp.description || exp.purpose}>{exp.description || exp.purpose}</td>
                             <td className="py-3 px-3 whitespace-nowrap">
-                              <span className="inline-block border border-blue-200 bg-blue-50 text-blue-705 font-bold px-1.5 py-0.5 rounded text-[8px] uppercase tracking-wider">
-                                {exp.category}
+                              <span className="inline-block border border-blue-200 bg-blue-50 text-blue-700 font-bold px-1.5 py-0.5 rounded text-[8px] uppercase tracking-wider">
+                                {exp.travel_mode || exp.category}
                               </span>
                             </td>
-                            <td className="py-3 px-3 font-mono font-semibold text-gray-655 whitespace-nowrap">{exp.total_km ? `${exp.total_km.toFixed(1)} KM` : "—"}</td>
-                            <td className="py-3 px-3 font-mono font-semibold text-gray-655 whitespace-nowrap">{exp.total_auto ? `₹${exp.total_auto.toLocaleString()}` : "—"}</td>
+                            <td className="py-3 px-3 font-mono font-semibold text-slate-700 whitespace-nowrap">{exp.total_km ? `${exp.total_km.toFixed(1)} KM` : "—"}</td>
+                            <td className="py-3 px-3 font-mono font-semibold text-slate-700 whitespace-nowrap">{exp.total_auto ? `₹${exp.total_auto.toLocaleString()}` : "—"}</td>
                             <td className="py-3 px-3 font-bold text-gray-900 whitespace-nowrap">₹{exp.amount.toLocaleString()}</td>
                             <td className="py-3 px-3 text-right whitespace-nowrap">
                               <span className={`inline-flex items-center px-2 py-0.5 rounded border text-[9px] font-bold uppercase tracking-wider ${getStatusBadgeClass(exp.status)}`}>
@@ -1024,7 +1024,7 @@ export default function HomePage() {
             /* PERSONAL CLAIMS CHART BOX */
             <div className="bg-white border border-slate-100 rounded-3xl p-5 shadow-sm space-y-4">
               <div className="space-y-1">
-                <span className="text-indigo-650 font-extrabold text-[9px] uppercase tracking-widest block">Claims Analytics</span>
+                <span className="text-indigo-600 font-extrabold text-[9px] uppercase tracking-widest block">Claims Analytics</span>
                 <h3 className="text-xs font-bold text-slate-800 uppercase tracking-wider flex items-center gap-1.5">
                   <BarChart3 className="w-4 h-4 text-indigo-500" />
                   Personal Mode Breakdown
@@ -1123,11 +1123,11 @@ export default function HomePage() {
                 <div className="grid grid-cols-2 gap-2.5">
                   <div className="bg-white p-2.5 border border-slate-100 rounded-xl text-center space-y-0.5 shadow-sm">
                     <span className="text-slate-400 font-bold uppercase tracking-wider block text-[7px] leading-none">Total Distance</span>
-                    <span className="text-xs font-black text-indigo-650 font-mono leading-none">{totalFilteredKm.toFixed(1)} KM</span>
+                    <span className="text-xs font-black text-indigo-600 font-mono leading-none">{totalFilteredKm.toFixed(1)} KM</span>
                   </div>
                   <div className="bg-white p-2.5 border border-slate-100 rounded-xl text-center space-y-0.5 shadow-sm">
                     <span className="text-slate-400 font-bold uppercase tracking-wider block text-[7px] leading-none">Auto Expense</span>
-                    <span className="text-xs font-black text-indigo-650 font-mono leading-none">₹{totalFilteredAuto.toLocaleString()}</span>
+                    <span className="text-xs font-black text-indigo-600 font-mono leading-none">₹{totalFilteredAuto.toLocaleString()}</span>
                   </div>
                 </div>
                 <div className="bg-white p-2 border border-slate-100 rounded-xl text-center shadow-sm">
