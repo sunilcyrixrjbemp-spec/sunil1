@@ -1408,7 +1408,7 @@ export async function handleDeleteExpense(request, env, params, query, user) {
   const expense = await env.DB.prepare("SELECT * FROM expenses WHERE id = ?").bind(expenseId).first();
   if (!expense) return jsonResponse({ error: "Expense claim not found" }, 404);
 
-  if (expense.user_id !== user.id && user.role !== "Admin") {
+  if (expense.user_id !== user.id && (user.role || "").trim().toLowerCase() !== "admin") {
     return jsonResponse({ error: "Access denied" }, 403);
   }
 
@@ -1752,7 +1752,7 @@ export async function handleSubmitExpense(request, env, params, query, user) {
       });
     }
   } else {
-    if (user.role !== "Admin") {
+    if ((user.role || "").trim().toLowerCase() !== "admin") {
       return jsonResponse({ error: "You are not assigned to any approval hierarchy team. Please contact the administrator." }, 400);
     }
   }
@@ -1995,8 +1995,8 @@ export async function handleGetMonthSummary(request, env, params, query, user) {
   }
 
   // Row-level access control
-  const role = (user.role || "").trim();
-  if (role === "Engineer") {
+  const role = (user.role || "").trim().toLowerCase();
+  if (role === "engineer") {
     whereClauses.push("u.user_id = ?");
     bindings.push(user.user_id);
   } else if (district) {
