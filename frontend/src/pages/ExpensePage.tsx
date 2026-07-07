@@ -3311,23 +3311,21 @@ export default function ExpensePage() {
                                       }}
                                       className="input-lte font-mono h-7 py-0.5 text-xs"
                                     />
-                                    <button
-                                      type="button"
-                                      onClick={() => verifyLegBarcode(leg.leg, "Calls")}
-                                      disabled={String(leg.calls_barcode || '').replace(/\D/g, '').length !== 8}
-                                      className={
-                                        String(leg.calls_barcode || '').replace(/\D/g, '').length === 8
-                                          ? "btn-verify-barcode"
-                                          : "btn-verify-barcode-disabled"
-                                      }
+                                    <div
+                                      onClick={() => {
+                                        if (String(leg.calls_barcode || '').replace(/\D/g, '').length === 8) {
+                                          verifyLegBarcode(leg.leg, "Calls");
+                                        }
+                                      }}
+                                      className="h-7 px-3 flex items-center justify-center rounded-lg text-[10px] font-extrabold uppercase select-none transition-colors"
                                       style={
                                         String(leg.calls_barcode || '').replace(/\D/g, '').length === 8
-                                          ? { backgroundColor: '#10b981', color: '#000000', border: '1.5px solid #0f172a' }
-                                          : { backgroundColor: '#e2e8f0', color: '#94a3b8', border: '1px solid #cbd5e1' }
+                                          ? { backgroundColor: '#10b981', color: '#000000', borderColor: '#0f172a', borderWidth: '1.5px', borderStyle: 'solid', cursor: 'pointer' }
+                                          : { backgroundColor: '#e2e8f0', color: '#94a3b8', borderColor: '#cbd5e1', borderWidth: '1px', borderStyle: 'solid', cursor: 'not-allowed' }
                                       }
                                     >
                                       Verify
-                                    </button>
+                                    </div>
                                   </div>
                                 </div>
 
@@ -3401,20 +3399,18 @@ export default function ExpensePage() {
                                   {/* + Add Entry Button */}
                                   <div className="shrink-0">
                                     <label className="label-lte font-extrabold text-[8px] text-gray-500 uppercase invisible block">Add</label>
-                                    <button
-                                      type="button"
-                                      onClick={() => addVerifiedBarcode(leg.leg, "Calls")}
-                                      disabled={!leg.calls_verified}
+                                    <div
+                                      onClick={() => leg.calls_verified && addVerifiedBarcode(leg.leg, "Calls")}
                                       className="w-10 h-8 flex items-center justify-center rounded-lg shadow-sm transition-colors"
                                       style={
                                         leg.calls_verified
-                                          ? { backgroundColor: '#111827', color: '#ffffff', border: '1.5px solid #000000', cursor: 'pointer' }
-                                          : { backgroundColor: '#e2e8f0', color: '#94a3b8', border: '1.5px solid #cbd5e1', cursor: 'not-allowed' }
+                                          ? { backgroundColor: '#111827', color: '#ffffff', borderColor: '#000000', borderWidth: '1.5px', borderStyle: 'solid', cursor: 'pointer' }
+                                          : { backgroundColor: '#e2e8f0', color: '#94a3b8', borderColor: '#cbd5e1', borderWidth: '1.5px', borderStyle: 'solid', cursor: 'not-allowed' }
                                       }
                                       title="Add Verified Entry"
                                     >
                                       <Plus className="w-5 h-5" />
-                                    </button>
+                                    </div>
                                   </div>
                                 </div>
                               </div>
@@ -3531,23 +3527,21 @@ export default function ExpensePage() {
                                       }}
                                       className="input-lte font-mono h-7 py-0.5 text-xs"
                                     />
-                                    <button
-                                      type="button"
-                                      onClick={() => verifyLegBarcode(leg.leg, "PMS")}
-                                      disabled={String(leg.pms_barcode || '').replace(/\D/g, '').length !== 8}
-                                      className={
-                                        String(leg.pms_barcode || '').replace(/\D/g, '').length === 8
-                                          ? "btn-verify-barcode"
-                                          : "btn-verify-barcode-disabled"
-                                      }
+                                    <div
+                                      onClick={() => {
+                                        if (String(leg.pms_barcode || '').replace(/\D/g, '').length === 8) {
+                                          verifyLegBarcode(leg.leg, "PMS");
+                                        }
+                                      }}
+                                      className="h-7 px-3 flex items-center justify-center rounded-lg text-[10px] font-extrabold uppercase select-none transition-colors"
                                       style={
                                         String(leg.pms_barcode || '').replace(/\D/g, '').length === 8
-                                          ? { backgroundColor: '#10b981', color: '#000000', border: '1.5px solid #0f172a' }
-                                          : { backgroundColor: '#e2e8f0', color: '#94a3b8', border: '1px solid #cbd5e1' }
+                                          ? { backgroundColor: '#10b981', color: '#000000', borderColor: '#0f172a', borderWidth: '1.5px', borderStyle: 'solid', cursor: 'pointer' }
+                                          : { backgroundColor: '#e2e8f0', color: '#94a3b8', borderColor: '#cbd5e1', borderWidth: '1px', borderStyle: 'solid', cursor: 'not-allowed' }
                                       }
                                     >
                                       Verify
-                                    </button>
+                                    </div>
                                   </div>
                                 </div>
 
@@ -3608,20 +3602,18 @@ export default function ExpensePage() {
                                   {/* + Add Entry Button */}
                                   <div className="shrink-0">
                                     <label className="label-lte font-extrabold text-[8px] text-gray-500 uppercase invisible block">Add</label>
-                                    <button
-                                      type="button"
-                                      onClick={() => addVerifiedBarcode(leg.leg, "PMS")}
-                                      disabled={!leg.pms_verified}
+                                    <div
+                                      onClick={() => leg.pms_verified && addVerifiedBarcode(leg.leg, "PMS")}
                                       className="w-10 h-8 flex items-center justify-center rounded-lg shadow-sm transition-colors"
                                       style={
                                         leg.pms_verified
-                                          ? { backgroundColor: '#111827', color: '#ffffff', border: '1.5px solid #000000', cursor: 'pointer' }
-                                          : { backgroundColor: '#e2e8f0', color: '#94a3b8', border: '1.5px solid #cbd5e1', cursor: 'not-allowed' }
+                                          ? { backgroundColor: '#111827', color: '#ffffff', borderColor: '#000000', borderWidth: '1.5px', borderStyle: 'solid', cursor: 'pointer' }
+                                          : { backgroundColor: '#e2e8f0', color: '#94a3b8', borderColor: '#cbd5e1', borderWidth: '1.5px', borderStyle: 'solid', cursor: 'not-allowed' }
                                       }
                                       title="Add Verified Entry"
                                     >
                                       <Plus className="w-5 h-5" />
-                                    </button>
+                                    </div>
                                   </div>
                                 </div>
                               </div>
