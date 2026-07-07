@@ -369,16 +369,8 @@ export default function KPIDashboardPage() {
   const [selfAchievedValues, setSelfAchievedValues] = useState<Record<string, number | string>>({});
   const [managerAchievedValues, setManagerAchievedValues] = useState<Record<string, number | string>>({});
 
-  // Core Value ratings (empty selection "" by default!)
-  const [selfCoreRatings, setSelfCoreRatings] = useState<Record<string, string>>({
-    continuous_learning: "",
-    building_relationships: "",
-    trust: "",
-    care: "",
-    speed_of_response: ""
-  });
-
-  const [managerCoreRatings, setManagerCoreRatings] = useState<Record<string, string>>({
+  // Core Value ratings (decided solely by the manager - shared rating state)
+  const [coreRatings, setCoreRatings] = useState<Record<string, string>>({
     continuous_learning: "",
     building_relationships: "",
     trust: "",
@@ -394,14 +386,7 @@ export default function KPIDashboardPage() {
     });
     setSelfAchievedValues(defaultVals);
     setManagerAchievedValues(defaultVals);
-    setSelfCoreRatings({
-      continuous_learning: "",
-      building_relationships: "",
-      trust: "",
-      care: "",
-      speed_of_response: ""
-    });
-    setManagerCoreRatings({
+    setCoreRatings({
       continuous_learning: "",
       building_relationships: "",
       trust: "",
@@ -417,30 +402,22 @@ export default function KPIDashboardPage() {
   };
 
   // Dynamic average sum of core value points (Sum of 5 parameters / 5 = average out of 100)
-  const selfDelightTotal = useMemo(() => {
-    const sum = Object.values(selfCoreRatings).reduce((acc, r) => acc + getPointsFromRating(r), 0);
+  const delightTotal = useMemo(() => {
+    const sum = Object.values(coreRatings).reduce((acc, r) => acc + getPointsFromRating(r), 0);
     return Math.round(sum / 5);
-  }, [selfCoreRatings]);
+  }, [coreRatings]);
 
-  const managerDelightTotal = useMemo(() => {
-    const sum = Object.values(managerCoreRatings).reduce((acc, r) => acc + getPointsFromRating(r), 0);
-    return Math.round(sum / 5);
-  }, [managerCoreRatings]);
-
-  // Synchronize Core Values rating average to Customer Delight KRA
+  // Synchronize Core Values rating average to BOTH Self & Manager Customer Delight KRA
   useEffect(() => {
     setSelfAchievedValues(prev => ({
       ...prev,
-      "Customer Delight": selfDelightTotal
+      "Customer Delight": delightTotal
     }));
-  }, [selfDelightTotal]);
-
-  useEffect(() => {
     setManagerAchievedValues(prev => ({
       ...prev,
-      "Customer Delight": managerDelightTotal
+      "Customer Delight": delightTotal
     }));
-  }, [managerDelightTotal]);
+  }, [delightTotal]);
 
   // Compute achieved weightage and total matrix sums
   const tableData = useMemo(() => {
@@ -500,12 +477,11 @@ export default function KPIDashboardPage() {
 
   // Recharts chart data (based on the active user assessment role)
   const chartData = useMemo(() => {
-    const activeRatings = isSelfWritable ? selfCoreRatings : managerCoreRatings;
     return CORE_VALUE_METRICS.map(m => ({
       name: m.name,
-      Score: getPointsFromRating(activeRatings[m.id])
+      Score: getPointsFromRating(coreRatings[m.id])
     }));
-  }, [selfCoreRatings, managerCoreRatings, isSelfWritable]);
+  }, [coreRatings]);
 
   return (
     <div className="space-y-6 animate-fadeIn text-slate-800 font-sans pb-10">
@@ -661,7 +637,7 @@ export default function KPIDashboardPage() {
                       rowSpan={filteredRows.length}
                       className="px-2 py-3 bg-white text-center font-mono font-black text-slate-900 text-xs align-middle border-r border-slate-400"
                     >
-                      {formatPercent(tableData.jobRoleSelfWtSum)}
+                      {formatPercent(tableData.totalSelfScore)}
                     </td>
                   ) : null}
 
@@ -700,7 +676,7 @@ export default function KPIDashboardPage() {
                       rowSpan={filteredRows.length}
                       className="px-2 py-3 bg-white text-center font-mono font-black text-slate-900 text-xs align-middle border-r border-slate-400"
                     >
-                      {formatPercent(tableData.jobRoleManagerWtSum)}
+                      {formatPercent(tableData.totalManagerScore)}
                     </td>
                   ) : null}
 
@@ -806,7 +782,7 @@ export default function KPIDashboardPage() {
               </thead>
               <tbody className="divide-y divide-slate-300 font-semibold text-slate-600 bg-white">
                 {CORE_VALUE_METRICS.map((metric) => {
-                  const ratingVal = isSelfWritable ? (selfCoreRatings[metric.id] || "") : (managerCoreRatings[metric.id] || "");
+                  const ratingVal = coreRatings[metric.id] || "";
                   const activeScore = getPointsFromRating(ratingVal);
                   const ratingStyleClass = getRatingStyleClass(ratingVal);
                   
@@ -819,22 +795,18 @@ export default function KPIDashboardPage() {
                         {metric.description}
                       </td>
                       
-                      {/* Excel-style dropdown cell with conditional background coloring */}
+                      {/* Excel-style dropdown cell: Only writable by the manager (isManagerWritable) */}
                       <td className={`px-2 py-3 border-r border-slate-300 text-center transition-all ${ratingStyleClass}`}>
                         <select
-                          disabled={!isSelfWritable && !isManagerWritable}
+                          disabled={!isManagerWritable}
                           value={ratingVal}
                           onChange={(e) => {
                             const val = e.target.value;
-                            if (isSelfWritable) {
-                              setSelfCoreRatings(prev => ({ ...prev, [metric.id]: val }));
-                            } else {
-                              setManagerCoreRatings(prev => ({ ...prev, [metric.id]: val }));
-                            }
+                            setCoreRatings(prev => ({ ...prev, [metric.id]: val }));
                           }}
-                          className={`w-full bg-transparent border-0 outline-none text-xs font-bold cursor-pointer text-center ${
+                          className={`w-full bg-transparent border-0 outline-none text-xs font-bold text-center ${
                             ratingVal ? "text-inherit" : "text-slate-400"
-                          }`}
+                          } ${!isManagerWritable ? "cursor-not-allowed" : "cursor-pointer"}`}
                         >
                           {CORE_VALUE_OPTIONS.map((opt) => (
                             <option key={opt.value} value={opt.value} className="bg-white text-slate-800 font-semibold">
