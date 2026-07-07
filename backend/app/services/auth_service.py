@@ -117,15 +117,31 @@ class AuthService:
                 detail="User ID not registered"
             )
             
-        try:
-            input_dob = datetime.strptime(dob_str, "%d-%m-%Y").date()
-        except ValueError:
+        input_dob = None
+        cleaned_dob = dob_str.strip().replace("/", "-")
+        for fmt in ("%d-%m-%Y", "%Y-%m-%d"):
+            try:
+                input_dob = datetime.strptime(cleaned_dob, fmt).date()
+                break
+            except ValueError:
+                continue
+        if not input_dob:
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
                 detail="Invalid Date of Birth format. Use DD-MM-YYYY format."
             )
 
-        if user.date_of_birth != input_dob:
+        stored_dob = user.date_of_birth
+        if isinstance(stored_dob, str):
+            try:
+                stored_dob = datetime.strptime(stored_dob.strip().replace("/", "-"), "%Y-%m-%d").date()
+            except ValueError:
+                try:
+                    stored_dob = datetime.strptime(stored_dob.strip().replace("/", "-"), "%d-%m-%Y").date()
+                except ValueError:
+                    pass
+
+        if stored_dob != input_dob:
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
                 detail="Verification failed. Provided Date of Birth does not match our records."
@@ -301,16 +317,51 @@ class AuthService:
             )
 
         # Parse and verify DOJ & DOB
-        try:
-            input_doj = datetime.strptime(doj_str, "%d-%m-%Y").date()
-            input_dob = datetime.strptime(dob_str, "%d-%m-%Y").date()
-        except ValueError:
+        input_doj = None
+        cleaned_doj = doj_str.strip().replace("/", "-")
+        for fmt in ("%d-%m-%Y", "%Y-%m-%d"):
+            try:
+                input_doj = datetime.strptime(cleaned_doj, fmt).date()
+                break
+            except ValueError:
+                continue
+
+        input_dob = None
+        cleaned_dob = dob_str.strip().replace("/", "-")
+        for fmt in ("%d-%m-%Y", "%Y-%m-%d"):
+            try:
+                input_dob = datetime.strptime(cleaned_dob, fmt).date()
+                break
+            except ValueError:
+                continue
+
+        if not input_doj or not input_dob:
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
                 detail="Invalid date format. Use DD-MM-YYYY format."
             )
 
-        if user.date_of_joining != input_doj or user.date_of_birth != input_dob:
+        stored_doj = user.date_of_joining
+        if isinstance(stored_doj, str):
+            try:
+                stored_doj = datetime.strptime(stored_doj.strip().replace("/", "-"), "%Y-%m-%d").date()
+            except ValueError:
+                try:
+                    stored_doj = datetime.strptime(stored_doj.strip().replace("/", "-"), "%d-%m-%Y").date()
+                except ValueError:
+                    pass
+
+        stored_dob = user.date_of_birth
+        if isinstance(stored_dob, str):
+            try:
+                stored_dob = datetime.strptime(stored_dob.strip().replace("/", "-"), "%Y-%m-%d").date()
+            except ValueError:
+                try:
+                    stored_dob = datetime.strptime(stored_dob.strip().replace("/", "-"), "%d-%m-%Y").date()
+                except ValueError:
+                    pass
+
+        if stored_doj != input_doj or stored_dob != input_dob:
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
                 detail="Verification failed. Provided Date of Joining or Date of Birth does not match our records."

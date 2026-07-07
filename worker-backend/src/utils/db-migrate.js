@@ -5,15 +5,15 @@
 
 export async function runMigrations(db) {
   const migrations = [
-    // OTP Tokens table (required for forgot_password and unlock_account flows)
-    `CREATE TABLE IF NOT EXISTS otp_tokens (
+    // OTPs table (required for forgot_password and unlock_account flows, matches FastAPI schema)
+    `CREATE TABLE IF NOT EXISTS otps (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
-      user_id INTEGER NOT NULL,
-      otp TEXT NOT NULL,
-      otp_type TEXT NOT NULL DEFAULT 'forgot_password',
+      user_id TEXT NOT NULL,
+      otp_code TEXT NOT NULL,
+      otp_type TEXT NOT NULL,
       expires_at TEXT NOT NULL,
-      created_at TEXT NOT NULL,
-      UNIQUE(user_id, otp_type)
+      is_used INTEGER DEFAULT 0,
+      created_at TEXT DEFAULT CURRENT_TIMESTAMP
     )`,
 
     // Login logs table (required for audit trail)

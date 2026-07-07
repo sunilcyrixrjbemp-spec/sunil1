@@ -352,13 +352,13 @@ export async function handleForgotPassword(request, env, params, query) {
 
   // Store OTP in DB
   await env.DB.prepare(`
-    INSERT OR REPLACE INTO otp_tokens (user_id, otp, otp_type, expires_at, created_at)
+    INSERT INTO otps (user_id, otp_code, otp_type, expires_at, created_at)
     VALUES (?, ?, 'forgot_password', ?, ?)
   `).bind(user_id, otp, expiresAt, timestamp).run().catch(async () => {
-    // If table doesn't exist or no 'OR REPLACE', try delete + insert
-    await env.DB.prepare("DELETE FROM otp_tokens WHERE user_id = ? AND otp_type = 'forgot_password'").bind(user_id).run().catch(() => {});
+    // If insert fails (or schema constraint), try delete + insert
+    await env.DB.prepare("DELETE FROM otps WHERE user_id = ? AND otp_type = 'forgot_password'").bind(user_id).run().catch(() => {});
     await env.DB.prepare(`
-      INSERT INTO otp_tokens (user_id, otp, otp_type, expires_at, created_at)
+      INSERT INTO otps (user_id, otp_code, otp_type, expires_at, created_at)
       VALUES (?, ?, 'forgot_password', ?, ?)
     `).bind(user_id, otp, expiresAt, timestamp).run();
   });
@@ -390,7 +390,7 @@ export async function handleVerifyOtp(request, env, params, query) {
   }
 
   const record = await env.DB.prepare(`
-    SELECT * FROM otp_tokens WHERE user_id = ? AND otp_type = ?
+    SELECT * FROM otps WHERE user_id = ? AND otp_type = ?
     ORDER BY created_at DESC LIMIT 1
   `).bind(user_id, otp_type).first().catch(() => null);
 
@@ -398,7 +398,7 @@ export async function handleVerifyOtp(request, env, params, query) {
     return jsonResponse({ error: "No OTP found. Please request a new one." }, 400);
   }
 
-  if (record.otp !== String(otp).trim()) {
+  if (record.otp_code !== String(otp).trim()) {
     return jsonResponse({ error: "Invalid OTP. Please check and try again." }, 400);
   }
 
@@ -433,11 +433,11 @@ export async function handleResetPassword(request, env, params, query) {
 
   // Verify OTP
   const record = await env.DB.prepare(`
-    SELECT * FROM otp_tokens WHERE user_id = ? AND otp_type = 'forgot_password'
+    SELECT * FROM otps WHERE user_id = ? AND otp_type = 'forgot_password'
     ORDER BY created_at DESC LIMIT 1
   `).bind(user_id).first().catch(() => null);
 
-  if (!record || record.otp !== String(otp).trim()) {
+  if (!record || record.otp_code !== String(otp).trim()) {
     return jsonResponse({ error: "Invalid or expired OTP" }, 400);
   }
 
@@ -461,7 +461,7 @@ export async function handleResetPassword(request, env, params, query) {
     bind(user.id, newHash, timestamp).run().catch(() => {});
 
   // Invalidate OTP
-  await env.DB.prepare("DELETE FROM otp_tokens WHERE user_id = ? AND otp_type = 'forgot_password'").bind(user_id).run().catch(() => {});
+  await env.DB.prepare("DELETE FROM otps WHERE user_id = ? AND otp_type = 'forgot_password'").bind(user_id).run().catch(() => {});
 
   return jsonResponse({ success: true, message: "Password has been reset successfully. Please login with your new password." });
 }
@@ -505,9 +505,9 @@ export async function handleUnlockAccount(request, env, params, query) {
   const timestamp = new Date().toISOString();
   const expiresAt = new Date(Date.now() + 10 * 60 * 1000).toISOString();
 
-  await env.DB.prepare("DELETE FROM otp_tokens WHERE user_id = ? AND otp_type = 'unlock_account'").bind(user_id).run().catch(() => {});
+  await env.DB.prepare("DELETE FROM otps WHERE user_id = ? AND otp_type = 'unlock_account'").bind(user_id).run().catch(() => {});
   await env.DB.prepare(`
-    INSERT INTO otp_tokens (user_id, otp, otp_type, expires_at, created_at)
+    INSERT INTO otps (user_id, otp_code, otp_type, expires_at, created_at)
     VALUES (?, ?, 'unlock_account', ?, ?)
   `).bind(user_id, otp, expiresAt, timestamp).run();
 
@@ -537,11 +537,11 @@ export async function handleUnlockVerifyOtp(request, env, params, query) {
   }
 
   const record = await env.DB.prepare(`
-    SELECT * FROM otp_tokens WHERE user_id = ? AND otp_type = 'unlock_account'
+    SELECT * FROM otps WHERE user_id = ? AND otp_type = 'unlock_account'
     ORDER BY created_at DESC LIMIT 1
   `).bind(user_id).first().catch(() => null);
 
-  if (!record || record.otp !== String(otp).trim()) {
+  if (!record || record.otp_code !== String(otp).trim()) {
     return jsonResponse({ error: "Invalid OTP. Please try again." }, 400);
   }
 
@@ -555,7 +555,7 @@ export async function handleUnlockVerifyOtp(request, env, params, query) {
   const timestamp = new Date().toISOString();
   await runWrite(env, "UPDATE users SET user_status = 'active', failed_attempt = 0, active_session_id = NULL WHERE user_id = ?", [user_id]);
   
-  await env.DB.prepare("DELETE FROM otp_tokens WHERE user_id = ? AND otp_type = 'unlock_account'").bind(user_id).run().catch(() => {});
+  await env.DB.prepare("DELETE FROM otps WHERE user_id = ? AND otp_type = 'unlock_account'").bind(user_id).run().catch(() => {});
 
   await env.DB.prepare(`
     INSERT INTO notifications (user_id, title, description, type, read, link, created_at)
