@@ -2720,3 +2720,59 @@ export async function handleServeExpenseAttachment(request, env, params, query, 
 
   return new Response("Storage not configured", { status: 500 });
 }
+
+/**
+ * GET /api/expense/team-users
+ * Returns list of team members for whom the current user is a manager, coordinator, or zonal manager.
+ */
+export async function handleGetTeamUsers(request, env, params, query, user) {
+  let teamUsers = [];
+  const userRoleClean = (user.role || "").trim().toLowerCase();
+  const isAdminOrReportViewer = ["admin", "mis", "vp", "accountant"].includes(userRoleClean);
+
+  if (isAdminOrReportViewer) {
+    const res = await env.DB.prepare("SELECT id, user_id, name, role, zone, district, designation, manager FROM users ORDER BY name ASC").all();
+    teamUsers = res.results || [];
+  } else {
+    const nameClean = (user.name || "").trim();
+    const uidClean = (user.user_id || "").trim();
+
+    // Query direct reports
+    const directReportsRes = await env.DB.prepare(`
+      SELECT id, user_id, name, role, zone, district, designation, manager FROM users
+      WHERE LOWER(manager) = ? OR LOWER(manager) = ?
+         OR LOWER(coordinator) = ? OR LOWER(coordinator) = ?
+         OR LOWER(zonal_manager) = ? OR LOWER(zonal_manager) = ?
+      ORDER BY name ASC
+    `).bind(nameClean.toLowerCase(), uidClean.toLowerCase(), nameClean.toLowerCase(), uidClean.toLowerCase(), nameClean.toLowerCase(), uidClean.toLowerCase()).all();
+    const directReports = directReportsRes.results || [];
+
+    // Query hierarchy reports
+    const hierarchyApprovals = await env.DB.prepare(`
+      SELECT hierarchy_id FROM hierarchy_approvers WHERE approver_id = ?
+    `).bind(user.id).all();
+    
+    let hierarchyReports = [];
+    if (hierarchyApprovals.results && hierarchyApprovals.results.length > 0) {
+      const hIds = hierarchyApprovals.results.map(h => h.hierarchy_id);
+      const placeholders = hIds.map(() => "?").join(",");
+      const reqsRes = await env.DB.prepare(`
+        SELECT u.id, u.user_id, u.name, u.role, u.zone, u.district, u.designation, u.manager FROM users u
+        JOIN hierarchy_requesters hr ON u.id = hr.user_id
+        WHERE hr.hierarchy_id IN (${placeholders})
+        ORDER BY u.name ASC
+      `).bind(...hIds).all();
+      hierarchyReports = reqsRes.results || [];
+    }
+
+    // Merge and de-duplicate team users
+    const reportsMap = {};
+    for (const u of [...directReports, ...hierarchyReports]) {
+      reportsMap[u.id] = u;
+    }
+    teamUsers = Object.values(reportsMap);
+  }
+
+  return jsonResponse(teamUsers);
+}
+

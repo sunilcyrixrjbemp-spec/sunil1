@@ -37,6 +37,11 @@ export const expenseService = {
     return response.data;
   },
 
+  getTeamUsers: async (): Promise<any[]> => {
+    const response = await api.get("/expense/team-users");
+    return response.data;
+  },
+
   getExpenseDetails: async (expenseId: number | string): Promise<any> => {
     const response = await api.get(`/expense/${expenseId}`);
     return response.data;

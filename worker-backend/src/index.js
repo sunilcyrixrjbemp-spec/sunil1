@@ -59,7 +59,7 @@ import {
   handleGetTeamExpenses, handleVerifyBarcode, handleGetAssetValueMaster,
   handleGetEngineerAdvance, handleSaveEngineerAdvance, handleGetExpenseDetails, handleDeleteExpense,
   handleGetMonthSummary, handleGetEngineerMonthClaims, handleGetConsolidatedReport,
-  handleServeExpenseAttachment
+  handleServeExpenseAttachment, handleGetTeamUsers
 } from "./routes/expense.js";
 
 // CORS Headers Configuration
@@ -249,6 +249,7 @@ router.post("/api/reports/upload-assets-chunk", handleUploadAssetsChunk, true);
 router.get("/api/expense/init", handleExpenseInit, true);
 router.post("/api/expense/limit-request", handleCreateLimitRequest, true);
 router.get("/api/expense/team", handleGetTeamExpenses, true);
+router.get("/api/expense/team-users", handleGetTeamUsers, true);
 router.get("/api/expense/verify-barcode", handleVerifyBarcode, true);
 router.get("/api/expense/asset-value-master", handleGetAssetValueMaster, true);
 router.get("/api/expense/month-summary", handleGetMonthSummary, true);
