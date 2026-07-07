@@ -202,7 +202,8 @@ select.input-lte option {
 }
 
 .info-box-icon {
-  @apply flex items-center justify-center w-12 text-white text-base shrink-0;
+  @apply flex items-center justify-center w-12 text-base shrink-0;
+  color: inherit !important;
 }
 
 .info-box-content {
@@ -646,7 +647,7 @@ svg, path, g, sector, .recharts-pie-sector, .recharts-sector, .recharts-pie, .re
     display: flex !important;
     align-items: center !important;
     justify-content: center !important;
-    color: #ffffff !important;
+    color: inherit !important;
     flex-shrink: 0 !important;
     box-shadow: none !important;
   }
@@ -1318,9 +1319,9 @@ svg, path, g, sector, .recharts-pie-sector, .recharts-sector, .recharts-pie, .re
 table thead tr th,
 .table-lte tr.bg-slate-800 th,
 tr.bg-slate-800 th {
-  background-color: #1e293b !important;
-  color: #f8fafc !important;
-  border-bottom: 2px solid #334155 !important;
+  background-color: #f8fafc !important;
+  color: #1e293b !important;
+  border-bottom: 1.5px solid #cbd5e1 !important;
   font-weight: 900 !important;
   letter-spacing: 0.05em !important;
 }
