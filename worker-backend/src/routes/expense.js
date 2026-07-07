@@ -1348,7 +1348,6 @@ export async function handleDeleteExpense(request, env, params, query, user) {
  * Submit itinerary expense claim
  */
 export async function handleSubmitExpense(request, env, params, query, user) {
-  // Since multipart/form-data processing is complex, we extract form values
   let formData;
   try {
     formData = await request.formData();
@@ -1357,82 +1356,372 @@ export async function handleSubmitExpense(request, env, params, query, user) {
   }
 
   const payloadStr = formData.get("payload");
-  if (!payloadStr) return jsonResponse({ error: "payload is required" }, 400);
-
-  let payload;
-  try {
-    payload = JSON.parse(payloadStr);
-  } catch (e) {
-    return jsonResponse({ error: "Invalid payload JSON" }, 400);
+  let date, amount, itineraries, claim_month, claim_year, description = "";
+  let editExpenseId = formData.get("edit_expense_id") || null;
+  
+  if (payloadStr) {
+    let payload;
+    try {
+      payload = JSON.parse(payloadStr);
+    } catch (e) {
+      return jsonResponse({ error: "Invalid payload JSON" }, 400);
+    }
+    date = payload.date;
+    amount = payload.amount;
+    itineraries = payload.itinerary_legs || payload.itineraries || [];
+    claim_month = payload.claim_month;
+    claim_year = payload.claim_year;
+    description = payload.description || "";
+    if (payload.edit_expense_id) editExpenseId = payload.edit_expense_id;
+  } else {
+    // Read from individual form fields sent by frontend
+    date = formData.get("exp_date");
+    amount = parseFloat(formData.get("total_amount") || "0.0");
+    const itinerariesStr = formData.get("itineraries");
+    if (!date || !itinerariesStr) {
+      return jsonResponse({ error: "exp_date and itineraries are required" }, 400);
+    }
+    try {
+      itineraries = JSON.parse(itinerariesStr);
+    } catch (e) {
+      return jsonResponse({ error: "Invalid itineraries JSON" }, 400);
+    }
+    
+    // Parse claim month and year from exp_date (format YYYY-MM-DD)
+    const dt = new Date(date);
+    const months = [
+      "January", "February", "March", "April", "May", "June",
+      "July", "August", "September", "October", "November", "December"
+    ];
+    claim_month = months[dt.getMonth()];
+    claim_year = dt.getFullYear();
+    description = formData.get("description") || "";
   }
-
-  const {
-    claim_month, claim_year, date, travel_mode, amount, description,
-    total_distance, auto_allowance, itinerary_legs, breakdown_calls, pms_calls, calibrates, mobilises, taggings
-  } = payload;
 
   const timestamp = new Date().toISOString();
-  
-  // Generate expense code EXP-YYYYMMDD-XXXX
-  const todayStr = new Date().toISOString().slice(0, 10).replace(/-/g, "");
-  const countResult = await env.DB.prepare("SELECT COUNT(*) as cnt FROM expenses WHERE expense_code LIKE ?").bind(`EXP-${todayStr}-%`).first();
-  const count = countResult?.cnt || 0;
-  const expenseCode = `EXP-${todayStr}-${String(count + 1).padStart(4, "0")}`;
+  let existingExpense = null;
+  let expenseCode = null;
+  let newExpId = null;
 
-  // Insert main expense
-  const expRes = await runWrite(env, `
-    INSERT INTO expenses (user_id, claim_month, claim_year, expense_code, amount, description, status, itinerary, travel_mode, total_distance, auto_allowance, month, year, created_at, updated_at)
-    VALUES (?, ?, ?, ?, ?, ?, 'submitted_l1', ?, ?, ?, ?, ?, ?, ?, ?)
-  `, [
-    user.id, claim_month, claim_year, expenseCode, amount, description || "",
-    date, travel_mode || "Bike", total_distance || 0.0, auto_allowance || 0.0,
-    claim_month, claim_year, timestamp, timestamp
-  ]);
-
-  const newExpId = expRes.meta?.last_row_id;
-  if (!newExpId) return jsonResponse({ error: "Failed to save expense claim" }, 500);
-
-  // Insert itinerary legs
-  if (itinerary_legs && itinerary_legs.length > 0) {
-    for (const leg of itinerary_legs) {
-      await runWrite(env, `
-        INSERT INTO expense_itineraries (exp_id, leg_number, start_point, end_point, travel_mode, distance_km, travel_amount, sub_amount, hotel_amount, other_amount, da_amount, local_purchase)
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-      `, [
-        expenseCode, leg.leg_number, leg.start_point, leg.end_point, leg.travel_mode,
-        leg.distance_km || 0.0, leg.travel_amount || 0.0, leg.sub_amount || 0.0,
-        leg.hotel_amount || 0.0, leg.other_amount || 0.0, leg.da_amount || 0.0, leg.local_purchase || 0.0
-      ]);
+  if (editExpenseId) {
+    existingExpense = await env.DB.prepare("SELECT * FROM expenses WHERE id = ? AND user_id = ?").bind(editExpenseId, user.id).first();
+    if (!existingExpense) {
+      return jsonResponse({ error: "Expense claim to edit not found." }, 404);
     }
-  }
+    expenseCode = existingExpense.expense_code;
+    newExpId = existingExpense.id;
 
-  // Helper function to insert sub-details
-  const insertSubDetails = async (array, table, columns, valuesExpr) => {
-    if (array && array.length > 0) {
-      for (const item of array) {
-        const cols = ["expense_id", ...columns];
-        const placeholders = cols.map(() => "?").join(", ");
-        const binds = [newExpId, ...valuesExpr(item)];
-        await runWrite(env, `INSERT INTO ${table} (${cols.join(", ")}) VALUES (${placeholders})`, binds);
+    // Delete old sub-entries
+    const oldItis = await env.DB.prepare("SELECT itinerary_id FROM expense_itineraries WHERE exp_id = ?").bind(expenseCode).all();
+    if (oldItis.results && oldItis.results.length > 0) {
+      for (const r of oldItis.results) {
+        const id = r.itinerary_id;
+        await runWrite(env, "DELETE FROM expense_breakdown_calls WHERE itinerary_id = ?", [id]);
+        await runWrite(env, "DELETE FROM expense_pms_calls WHERE itinerary_id = ?", [id]);
+        await runWrite(env, "DELETE FROM expense_asset_taggings WHERE itinerary_id = ?", [id]);
+        await runWrite(env, "DELETE FROM expense_asset_mobilises WHERE itinerary_id = ?", [id]);
+        await runWrite(env, "DELETE FROM expense_calibrations WHERE itinerary_id = ?", [id]);
+        await runWrite(env, "DELETE FROM expense_other_activities WHERE itinerary_id = ?", [id]);
       }
     }
-  };
+    await runWrite(env, "DELETE FROM expense_attachments WHERE exp_id = ?", [expenseCode]);
+    await runWrite(env, "DELETE FROM expense_itineraries WHERE exp_id = ?", [expenseCode]);
+    await runWrite(env, "DELETE FROM approvals WHERE expense_id = ?", [newExpId]);
+  } else {
+    // Generate expense code RJ-MM/YY-XXXXXX
+    const dt = new Date(date);
+    const padTwo = (n) => String(n).padStart(2, "0");
+    const monthPrefix = `${padTwo(dt.getMonth() + 1)}/${String(dt.getFullYear()).slice(-2)}`;
+    
+    const seqRows = await env.DB.prepare("SELECT expense_code FROM expenses WHERE expense_code LIKE ?")
+      .bind(`RJ-${monthPrefix}-%`).all();
+    
+    let maxSeq = 0;
+    if (seqRows.results && seqRows.results.length > 0) {
+      for (const r of seqRows.results) {
+        const parts = r.expense_code.split("-");
+        if (parts.length === 3) {
+          const num = parseInt(parts[2], 10);
+          if (!isNaN(num) && num > maxSeq) {
+            maxSeq = num;
+          }
+        }
+      }
+    }
+    const nextSeq = maxSeq + 1;
+    expenseCode = `RJ-${monthPrefix}-${String(nextSeq).padStart(6, "0")}`;
+  }
 
-  await insertSubDetails(breakdown_calls, "expense_breakdown_calls", ["call_no", "hospital_name", "equipment_name", "photo_url"], item => [item.call_no, item.hospital_name, item.equipment_name, item.photo_url || ""]);
-  await insertSubDetails(pms_calls, "expense_pms_calls", ["pms_no", "hospital_name", "equipment_name", "photo_url"], item => [item.pms_no, item.hospital_name, item.equipment_name, item.photo_url || ""]);
-  await insertSubDetails(calibrates, "expense_calibrations", ["calibration_no", "hospital_name", "equipment_name", "photo_url"], item => [item.calibration_no, item.hospital_name, item.equipment_name, item.photo_url || ""]);
-  await insertSubDetails(mobilises, "expense_asset_mobilises", ["mobilise_no", "hospital_name", "equipment_name", "photo_url"], item => [item.mobilise_no, item.hospital_name, item.equipment_name, item.photo_url || ""]);
-  await insertSubDetails(taggings, "expense_asset_taggings", ["tagging_no", "hospital_name", "equipment_name", "photo_url"], item => [item.tagging_no, item.hospital_name, item.equipment_name, item.photo_url || ""]);
+  // Calculate totals and activity metrics
+  let totalDa = 0.0;
+  let totalHotel = 0.0;
+  let totalOther = 0.0;
+  let totalLocalPurchase = 0.0;
+  let totalAssigned = 0;
+  let totalCompleted = 0;
+  let totalPms = 0;
+  let totalAsset = 0;
+  let totalCalibration = 0;
+  let totalMobilise = 0;
+
+  for (const iti of itineraries) {
+    totalDa += parseFloat(iti.da || "0.0");
+    totalHotel += parseFloat(iti.hotel || "0.0");
+    totalOther += parseFloat(iti.oth_amount || "0.0");
+    totalLocalPurchase += parseFloat(iti.local_purchase || "0.0");
+
+    let actDetails = null;
+    if (iti.activity_details) {
+      try {
+        actDetails = typeof iti.activity_details === "string" ? JSON.parse(iti.activity_details) : iti.activity_details;
+      } catch (e) {}
+    }
+
+    let itiAssigned = parseInt(iti.ws_assigned || "0", 10);
+    let itiCompleted = parseInt(iti.ws_closed || "0", 10);
+    let itiPms = parseInt(iti.ws_pms || "0", 10);
+    let itiAsset = parseInt(iti.ws_asset || "0", 10);
+    let itiCalibration = parseInt(iti.calibration_count || "0", 10);
+    let itiMobilise = parseInt(iti.mobilise_asset_count || "0", 10);
+
+    if (actDetails) {
+      const selectedActs = actDetails.selected_activities || [];
+      if (selectedActs.includes("Calls")) {
+        const callsList = actDetails.calls_list || [];
+        itiAssigned = callsList.length;
+        itiCompleted = callsList.filter(c => c.barcode).length;
+      } else {
+        itiAssigned = 0;
+        itiCompleted = 0;
+      }
+
+      if (selectedActs.includes("PMS")) {
+        const pmsList = actDetails.pms_list || [];
+        itiPms = pmsList.filter(p => p.barcode).length;
+      } else {
+        itiPms = 0;
+      }
+
+      if (selectedActs.includes("Asset Tagging")) {
+        const assetsList = actDetails.assets_list || [];
+        itiAsset = assetsList.reduce((sum, item) => sum + (parseInt(item.quantity || "0", 10) || 0), 0);
+      } else {
+        itiAsset = 0;
+      }
+    }
+
+    totalAssigned += itiAssigned;
+    totalCompleted += itiCompleted;
+    totalPms += itiPms;
+    totalAsset += itiAsset;
+    totalCalibration += itiCalibration;
+    totalMobilise += itiMobilise;
+  }
+
+  const majorMode = itineraries[0]?.mode || "Other";
+  const firstPurpose = itineraries[0]?.visit_purpose || "Field visit";
 
   // Create approvals level sequence
   const approvalChain = await env.DB.prepare(`
     SELECT a.* 
     FROM hierarchy_approvers a
     JOIN user_approval_chains c ON a.hierarchy_id = c.id
-    WHERE LOWER(c.requester_designation) = LOWER(?)
+    JOIN hierarchy_requesters hr ON hr.hierarchy_id = c.id
+    WHERE hr.user_id = ?
     ORDER BY a.level_number ASC
-  `).bind(user.designation || "").all();
+  `).bind(user.id).all();
 
+  const status = (approvalChain.results && approvalChain.results.length > 0) ? "submitted" : "approved";
+
+  if (existingExpense) {
+    await runWrite(env, `
+      UPDATE expenses 
+      SET month = ?, year = ?, amount = ?, status = ?, travel_mode = ?, itinerary = ?, description = ?,
+          da_amount = ?, hotel_amount = ?, other_expense_amount = ?, calls_assigned = ?, calls_completed = ?, 
+          pms_count = ?, asset_tagging = ?, local_purchase_amount = ?, original_amount = ?, original_da_amount = ?, 
+          original_hotel_amount = ?, original_other_expense_amount = ?, original_local_purchase_amount = ?, 
+          calibration_count = ?, mobilise_count = ?, updated_at = ?
+      WHERE id = ?
+    `, [
+      claim_month, claim_year, amount, status, majorMode, date, firstPurpose,
+      totalDa, totalHotel, totalOther, totalAssigned, totalCompleted, totalPms,
+      totalAsset, totalLocalPurchase, amount, totalDa, totalHotel, 
+      totalOther, totalLocalPurchase, totalCalibration, totalMobilise,
+      timestamp, newExpId
+    ]);
+  } else {
+    const expRes = await runWrite(env, `
+      INSERT INTO expenses (
+        user_id, month, year, amount, status, travel_mode, itinerary, description, expense_code, 
+        da_amount, hotel_amount, other_expense_amount, calls_assigned, calls_completed, pms_count, 
+        asset_tagging, local_purchase_amount, original_amount, original_da_amount, original_hotel_amount, 
+        original_other_expense_amount, original_local_purchase_amount, calibration_count, mobilise_count, 
+        created_at, updated_at
+      )
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    `, [
+      user.id, claim_month, claim_year, amount, status, majorMode, date, firstPurpose, expenseCode,
+      totalDa, totalHotel, totalOther, totalAssigned, totalCompleted, totalPms,
+      totalAsset, totalLocalPurchase, amount, totalDa, totalHotel, 
+      totalOther, totalLocalPurchase, totalCalibration, totalMobilise,
+      timestamp, timestamp
+    ]);
+    newExpId = expRes.meta?.last_row_id;
+  }
+
+  if (!newExpId) return jsonResponse({ error: "Failed to save expense claim" }, 500);
+
+  // Helper for attachments upload to R2
+  const handleAttachment = async (fileKey, billType, legNum) => {
+    const file = formData.get(fileKey);
+    if (file && typeof file === "object" && file.name) {
+      const ext = file.name.split(".").pop().toLowerCase() || "jpg";
+      const filename = `${expenseCode}_leg${legNum}_${billType}_${Date.now()}.${ext}`;
+      const fileUrl = `/uploads/expense_attachments/${filename}`;
+      
+      if (env.BUCKET) {
+        try {
+          const arrayBuffer = await file.arrayBuffer();
+          await env.BUCKET.put(`expense_attachments/${filename}`, arrayBuffer, {
+            httpMetadata: { contentType: file.type || "image/jpeg" }
+          });
+        } catch (err) {
+          console.error(`Failed to upload ${fileKey} to R2:`, err);
+        }
+      }
+      
+      await runWrite(env, `
+        INSERT INTO expense_attachments (exp_id, itinerary_id, bill_type, file_url)
+        VALUES (?, ?, ?, ?)
+      `, [expenseCode, `${expenseCode}-${legNum}`, billType, fileUrl]);
+    }
+  };
+
+  // Insert itinerary legs and process details
+  for (let idx = 0; idx < itineraries.length; idx++) {
+    const iti = itineraries[idx];
+    const legNum = parseInt(iti.leg || (idx + 1), 10);
+    const itiId = `${expenseCode}-${legNum}`;
+    const fromDist = iti.district_from || user.district || "Jodhpur";
+    const toDist = iti.district || "Jodhpur";
+    
+    await runWrite(env, `
+      INSERT INTO expense_itineraries (
+        itinerary_id, exp_id, leg_number, from_district, to_district, from_location, to_location, 
+        travel_mode, distance_km, travel_amount, sub_mode, sub_km, sub_amount, da_amount, hotel_amount, 
+        other_desc, other_amount, calls_assigned, calls_completed, pms_count, asset_tagging, visit_purpose, 
+        activity_details, original_distance_km, original_travel_amount, original_sub_amount, original_da_amount, 
+        original_hotel_amount, original_other_amount, original_local_purchase, calibration_count, mobilise_count
+      )
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 0.0, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    `, [
+      itiId, expenseCode, legNum, fromDist, toDist, iti.from || "", iti.to || "",
+      iti.mode || "Bike", parseFloat(iti.km || "0.0"), parseFloat(iti.amount || "0.0"),
+      iti.sub_mode || null, parseFloat(iti.sub_amount || "0.0"), parseFloat(iti.da || "0.0"),
+      parseFloat(iti.hotel || "0.0"), iti.oth_desc || null, parseFloat(iti.oth_amount || "0.0"),
+      parseInt(iti.ws_assigned || "0", 10), parseInt(iti.ws_closed || "0", 10),
+      parseInt(iti.ws_pms || "0", 10), parseInt(iti.ws_asset || "0", 10),
+      iti.visit_purpose || "Field visit", 
+      typeof iti.activity_details === "string" ? iti.activity_details : JSON.stringify(iti.activity_details || {}),
+      parseFloat(iti.km || "0.0"), parseFloat(iti.amount || "0.0"), parseFloat(iti.sub_amount || "0.0"),
+      parseFloat(iti.da || "0.0"), parseFloat(iti.hotel || "0.0"), parseFloat(iti.oth_amount || "0.0"),
+      parseFloat(iti.local_purchase || "0.0"), parseInt(iti.calibration_count || "0", 10),
+      parseInt(iti.mobilise_asset_count || "0", 10)
+    ]);
+
+    let actDetails = null;
+    if (iti.activity_details) {
+      try {
+        actDetails = typeof iti.activity_details === "string" ? JSON.parse(iti.activity_details) : iti.activity_details;
+      } catch (e) {}
+    }
+    if (actDetails) {
+      const selectedActs = actDetails.selected_activities || [];
+      
+      if (selectedActs.includes("Calls")) {
+        for (const call of actDetails.calls_list || []) {
+          const asset = call.asset_details || {};
+          await runWrite(env, `
+            INSERT INTO expense_breakdown_calls (
+              itinerary_id, barcode, call_type, call_status, district_name, hospital_name, 
+              equipment_name, model_name, inventory_status, photo_url
+            )
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+          `, [
+            itiId, call.barcode, call.type, call.status, asset.district_name, asset.hospital_name,
+            asset.equipment_name, asset.model_name, asset.inventory_status, call.photo_url || ""
+          ]);
+        }
+      }
+
+      if (selectedActs.includes("PMS")) {
+        for (const pms of actDetails.pms_list || []) {
+          const asset = pms.asset_details || {};
+          await runWrite(env, `
+            INSERT INTO expense_pms_calls (
+              itinerary_id, barcode, pms_frequency, district_name, hospital_name, 
+              equipment_name, model_name, inventory_status, photo_url
+            )
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+          `, [
+            itiId, pms.barcode, pms.frequency, asset.district_name, asset.hospital_name,
+            asset.equipment_name, asset.model_name, asset.inventory_status, pms.photo_url || ""
+          ]);
+        }
+      }
+
+      if (selectedActs.includes("Asset Tagging")) {
+        for (const asset of actDetails.assets_list || []) {
+          await runWrite(env, `
+            INSERT INTO expense_asset_taggings (itinerary_id, equipment_name, quantity)
+            VALUES (?, ?, ?)
+          `, [itiId, asset.equipment_name, parseInt(asset.quantity || "0", 10)]);
+        }
+      }
+
+      if (selectedActs.includes("Mobilise Asset Update")) {
+        const qty = parseInt(actDetails.mobilise_asset_count || "0", 10);
+        if (qty > 0) {
+          await runWrite(env, `
+            INSERT INTO expense_asset_mobilises (itinerary_id, quantity)
+            VALUES (?, ?)
+          `, [itiId, qty]);
+        }
+      }
+
+      if (selectedActs.includes("Calibration")) {
+        const qty = parseInt(actDetails.calibration_count || "0", 10);
+        if (qty > 0) {
+          await runWrite(env, `
+            INSERT INTO expense_calibrations (itinerary_id, quantity)
+            VALUES (?, ?)
+          `, [itiId, qty]);
+        }
+      }
+
+      if (selectedActs.includes("Other")) {
+        const otherDesc = actDetails.activity_other_desc || "";
+        if (otherDesc && otherDesc.trim()) {
+          await runWrite(env, `
+            INSERT INTO expense_other_activities (itinerary_id, description)
+            VALUES (?, ?)
+          `, [itiId, otherDesc.trim()]);
+        }
+      }
+    }
+
+    // Process file attachments
+    await handleAttachment(`main_bill_${legNum}`, iti.mode || "Bill", legNum);
+    if (iti.sub_mode) {
+      await handleAttachment(`sub_bill_${legNum}`, iti.sub_mode, legNum);
+    }
+    await handleAttachment(`comm_mail_${legNum}`, "Communication_Mail", legNum);
+    await handleAttachment(`oth_bill_${legNum}`, "Other", legNum);
+    await handleAttachment(`hotel_bill_${legNum}`, "Hotel", legNum);
+    await handleAttachment(`local_purchase_bill_${legNum}`, "Local_Purchase", legNum);
+  }
+
+  // Create approvals level sequence records
   if (approvalChain.results && approvalChain.results.length > 0) {
     for (const step of approvalChain.results) {
       const stepStatus = step.level_number === 1 ? "pending" : "waiting";
@@ -1451,7 +1740,6 @@ export async function handleSubmitExpense(request, env, params, query, user) {
       }
     }
   } else {
-    // If no chain matches, auto approve or assign to manager
     const managerId = user.manager || "Admin";
     const manager = await env.DB.prepare("SELECT * FROM users WHERE user_id = ?").bind(managerId).first();
     if (manager) {
