@@ -50,7 +50,7 @@ import { handleUploadImage, handleUploadDocument, handleServeFile } from "./rout
 // Import Reports handlers
 import {
   handleGetMisDashboard, handleGetAssetsInventory, handleGetAssetsFilters, handleGetAssetsStats,
-  handleUploadAssetsCSV
+  handleUploadAssetsCSV, handleUploadAssetsChunk
 } from "./routes/reports.js";
 
 // Import Expense handlers
@@ -241,6 +241,7 @@ router.get("/api/reports/assets-inventory", handleGetAssetsInventory, true);
 router.get("/api/reports/assets-filters", handleGetAssetsFilters, true);
 router.get("/api/reports/assets-stats", handleGetAssetsStats, true);
 router.post("/api/reports/upload-assets-csv", handleUploadAssetsCSV, true);
+router.post("/api/reports/upload-assets-chunk", handleUploadAssetsChunk, true);
 
 // ─── Expense Endpoints (Requires Auth) ────────────────────────────────────────
 // NOTE: Specific named routes BEFORE wildcard :id routes to avoid conflicts

@@ -636,3 +636,123 @@ export async function handleUploadAssetsCSV(request, env, params, query, user) {
     message: `Successfully processed CSV file. Inserted ${insertedCount} new assets, skipped ${skippedCount} duplicate/invalid entries.`
   });
 }
+
+/**
+ * POST /api/reports/upload-assets-chunk
+ * Accepts parsed JSON rows and uploads them in high-speed parallel batches,
+ * skipping existing qr_code duplicates.
+ */
+export async function handleUploadAssetsChunk(request, env, params, query, user) {
+  if (user.role !== "Admin") {
+    return jsonResponse({ error: "Access denied" }, 403);
+  }
+
+  let body;
+  try {
+    body = await request.json();
+  } catch (e) {
+    return jsonResponse({ error: "Invalid JSON body" }, 400);
+  }
+
+  const rows = body.rows || [];
+  if (!Array.isArray(rows) || rows.length === 0) {
+    return jsonResponse({
+      success: true,
+      inserted: 0,
+      skipped: 0,
+      message: "No rows to process"
+    });
+  }
+
+  // De-duplicate rows in-memory by qr_code to prevent self-collision
+  const seenQrCodes = new Set();
+  const uniqueRecords = [];
+  
+  for (const record of rows) {
+    const qr = (record.qr_code || "").trim();
+    if (!qr || qr === "--" || qr === "") {
+      continue;
+    }
+
+    if (seenQrCodes.has(qr)) {
+      continue;
+    }
+    seenQrCodes.add(qr);
+    uniqueRecords.push(record);
+  }
+
+  const totalInputRows = rows.length;
+  const insertStatements = [];
+
+  for (const record of uniqueRecords) {
+    let assetVal = 0.0;
+    try {
+      assetVal = parseFloat(String(record.asset_value || "0").replace(/,/g, "").trim()) || 0.0;
+    } catch (err) {}
+
+    const moicDate = parseDateFlexible(record.moic_verified_date);
+    const isVerified = moicDate ? 1 : 0;
+    const moicYear = moicDate ? moicDate.getFullYear() : null;
+    const moicMonth = moicDate ? moicDate.getMonth() + 1 : null;
+
+    const installDate = parseDateFlexible(record.installation_date);
+    const installYear = installDate ? installDate.getFullYear() : null;
+    const installMonth = installDate ? installDate.getMonth() + 1 : null;
+
+    const expired = isWarrantyExpired(record.warranty_details) ? 1 : 0;
+
+    insertStatements.push({
+      sql: `
+        INSERT OR IGNORE INTO assets_inventory (
+          district_name, hospital_name, department_name, group_name,
+          equipment_name, model_name, serial_no, equipment_category,
+          qr_code, stock_register_page_no, received_date, installation_date,
+          inventory_entry_date, moic_verified_date, po_date, po_cost,
+          inventory_status, equipment_status, supplier, warranty_details,
+          asset_value, di_name, dm_name, coordinator_name, zone_name,
+          hospital_type, facility_type, equipment_type,
+          is_verified, warranty_expired, parsed_asset_value,
+          moic_year, moic_month, install_year, install_month
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      `,
+      params: [
+        record.district_name || "", record.hospital_name || "", record.department_name || "", record.group_name || "",
+        record.equipment_name || "", record.model_name || "", record.serial_no || "", record.equipment_category || "",
+        record.qr_code, record.stock_register_page_no || "", record.received_date || "", record.installation_date || "",
+        record.inventory_entry_date || "", record.moic_verified_date || "", record.po_date || "", record.po_cost || "",
+        record.inventory_status || "", record.equipment_status || "", record.supplier || "", record.warranty_details || "",
+        record.asset_value || "", record.di_name || "", record.dm_name || "", record.coordinator_name || "", record.zone_name || "",
+        record.hospital_type || "", record.facility_type || "", record.equipment_type || "",
+        isVerified, expired, assetVal,
+        moicYear, moicMonth, installYear, installMonth
+      ]
+    });
+  }
+
+  let insertedCount = 0;
+  if (insertStatements.length > 0) {
+    const chunkSize = 1000;
+    const allBatches = [];
+    for (let idx = 0; idx < insertStatements.length; idx += chunkSize) {
+      const chunk = insertStatements.slice(idx, idx + chunkSize);
+      allBatches.push(runBatchWrite(env, chunk));
+    }
+    
+    // Execute all batch writes concurrently for maximum performance
+    const batchResults = await Promise.all(allBatches);
+    for (const batchRes of batchResults) {
+      for (const statementRes of (batchRes || [])) {
+        insertedCount += (statementRes.meta?.changes || 0);
+      }
+    }
+  }
+
+  const skippedCount = totalInputRows - insertedCount;
+
+  return jsonResponse({
+    success: true,
+    inserted: insertedCount,
+    skipped: skippedCount,
+    message: `Successfully processed chunk. Inserted ${insertedCount} new assets, skipped ${skippedCount} duplicate/invalid entries.`
+  });
+}
