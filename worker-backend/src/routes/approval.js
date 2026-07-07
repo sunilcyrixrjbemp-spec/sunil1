@@ -275,6 +275,10 @@ export async function handleApprove(request, env, params, query, user) {
     const isL1 = (l1App === user.user_id);
     const isL2 = (l2App === user.user_id);
 
+    if (submitterId && user.user_id && submitterId.toLowerCase() === user.user_id.toLowerCase()) {
+      return jsonResponse({ error: "Self-approval of legacy expense claims is not permitted" }, 400);
+    }
+
     if (!isL1 && !isL2 && user.role !== "Admin") {
       return jsonResponse({ error: "Access denied to approve this claim" }, 403);
     }
@@ -321,7 +325,17 @@ export async function handleApprove(request, env, params, query, user) {
     const pl = await env.DB.prepare("SELECT * FROM limit_approval_requests WHERE id = ?").bind(limitId).first();
     if (!pl) return jsonResponse({ error: "Limit approval request not found" }, 404);
 
-    if (pl.manager_id !== user.user_id && user.role !== "Admin") {
+    if (pl.user_id && user.user_id && pl.user_id.toLowerCase() === user.user_id.toLowerCase()) {
+      return jsonResponse({ error: "Self-approval of limit requests is not permitted" }, 400);
+    }
+
+    const isManager = pl.manager_id && (
+      pl.manager_id.toLowerCase() === user.user_id.toLowerCase() ||
+      (user.e_code && pl.manager_id.toLowerCase() === user.e_code.toLowerCase()) ||
+      pl.manager_id.toLowerCase() === user.name.toLowerCase()
+    );
+
+    if (!isManager && user.role !== "Admin") {
       return jsonResponse({ error: "Access denied to approve this request" }, 403);
     }
 
@@ -348,6 +362,10 @@ export async function handleApprove(request, env, params, query, user) {
 
   const expense = await env.DB.prepare("SELECT * FROM expenses WHERE id = ?").bind(expenseId).first();
   if (!expense) return jsonResponse({ error: "Expense claim not found" }, 404);
+
+  if (expense.user_id === user.id) {
+    return jsonResponse({ error: "Self-approval of expense claims is not permitted" }, 400);
+  }
 
   if (itinerary_edits && itinerary_edits.length > 0) {
     await applyItineraryEditsAndLog(env, expense, itinerary_edits, user, comments);
@@ -443,6 +461,10 @@ export async function handleReject(request, env, params, query, user) {
     const isL1 = (l1App === user.user_id);
     const isL2 = (l2App === user.user_id);
 
+    if (submitterId && user.user_id && submitterId.toLowerCase() === user.user_id.toLowerCase()) {
+      return jsonResponse({ error: "Self-rejection of legacy expense claims is not permitted" }, 400);
+    }
+
     if (!isL1 && !isL2 && user.role !== "Admin") {
       return jsonResponse({ error: "Access denied to reject this claim" }, 403);
     }
@@ -472,7 +494,17 @@ export async function handleReject(request, env, params, query, user) {
     const pl = await env.DB.prepare("SELECT * FROM limit_approval_requests WHERE id = ?").bind(limitId).first();
     if (!pl) return jsonResponse({ error: "Limit approval request not found" }, 404);
 
-    if (pl.manager_id !== user.user_id && user.role !== "Admin") {
+    if (pl.user_id && user.user_id && pl.user_id.toLowerCase() === user.user_id.toLowerCase()) {
+      return jsonResponse({ error: "Self-rejection of limit requests is not permitted" }, 400);
+    }
+
+    const isManager = pl.manager_id && (
+      pl.manager_id.toLowerCase() === user.user_id.toLowerCase() ||
+      (user.e_code && pl.manager_id.toLowerCase() === user.e_code.toLowerCase()) ||
+      pl.manager_id.toLowerCase() === user.name.toLowerCase()
+    );
+
+    if (!isManager && user.role !== "Admin") {
       return jsonResponse({ error: "Access denied to reject this request" }, 403);
     }
 
@@ -498,6 +530,10 @@ export async function handleReject(request, env, params, query, user) {
 
   const expense = await env.DB.prepare("SELECT * FROM expenses WHERE id = ?").bind(expenseId).first();
   if (!expense) return jsonResponse({ error: "Expense claim not found" }, 404);
+
+  if (expense.user_id === user.id) {
+    return jsonResponse({ error: "Self-rejection of expense claims is not permitted" }, 400);
+  }
 
   if (itinerary_edits && itinerary_edits.length > 0) {
     await applyItineraryEditsAndLog(env, expense, itinerary_edits, user, comments);

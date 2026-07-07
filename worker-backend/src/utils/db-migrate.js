@@ -25,6 +25,18 @@ export async function runMigrations(db) {
       status TEXT,
       created_at TEXT
     )`,
+
+    // Notifications table (required for alerts)
+    `CREATE TABLE IF NOT EXISTS notifications (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      user_id TEXT NOT NULL,
+      title TEXT NOT NULL,
+      description TEXT NOT NULL,
+      type TEXT DEFAULT 'info',
+      read INTEGER DEFAULT 0,
+      link TEXT,
+      created_at TEXT DEFAULT CURRENT_TIMESTAMP
+    )`,
   ];
 
   for (const sql of migrations) {

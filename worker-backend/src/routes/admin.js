@@ -603,7 +603,7 @@ export async function handleBulkImportHierarchies(request, env, params, query, a
 
     try {
       // Check if hierarchy already exists
-      let existingH = await env.DB.prepare("SELECT id FROM user_approval_chains WHERE name = ?").bind(hierarchyName).first();
+      let existingH = await env.DB.prepare("SELECT id FROM user_approval_chains WHERE chain_name = ?").bind(hierarchyName).first();
       let hId;
 
       if (existingH) {
@@ -611,7 +611,7 @@ export async function handleBulkImportHierarchies(request, env, params, query, a
         await runWrite(env, "DELETE FROM hierarchy_requesters WHERE hierarchy_id = ?", [hId]);
         await runWrite(env, "DELETE FROM hierarchy_approvers WHERE hierarchy_id = ?", [hId]);
       } else {
-        const hResult = await runWrite(env, "INSERT INTO user_approval_chains (name, chain_name) VALUES (?, ?)", [hierarchyName, hierarchyName]);
+        const hResult = await runWrite(env, "INSERT INTO user_approval_chains (chain_name) VALUES (?)", [hierarchyName]);
         hId = hResult.meta?.last_row_id;
         if (!hId) throw new Error("Failed to create hierarchy");
       }

@@ -1521,11 +1521,36 @@ export async function handleSubmitExpense(request, env, params, query, user) {
   let totalCalibration = 0;
   let totalMobilise = 0;
 
+  let newKm = 0.0;
+  let newAuto = 0.0;
+  let calculatedTotal = 0.0;
+
   for (const iti of itineraries) {
-    totalDa += parseFloat(iti.da || "0.0");
-    totalHotel += parseFloat(iti.hotel || "0.0");
-    totalOther += parseFloat(iti.oth_amount || "0.0");
-    totalLocalPurchase += parseFloat(iti.local_purchase || "0.0");
+    const travelAmt = parseFloat(iti.amount || "0.0");
+    const subAmt = parseFloat(iti.sub_amount || "0.0");
+    const daAmt = parseFloat(iti.da || "0.0");
+    const hotelAmt = parseFloat(iti.hotel || "0.0");
+    const otherAmt = parseFloat(iti.oth_amount || "0.0");
+    const lpAmt = parseFloat(iti.local_purchase || "0.0");
+
+    totalDa += daAmt;
+    totalHotel += hotelAmt;
+    totalOther += otherAmt;
+    totalLocalPurchase += lpAmt;
+
+    calculatedTotal += travelAmt + subAmt + daAmt + hotelAmt + otherAmt + lpAmt;
+
+    const mode = (iti.mode || "").trim().toLowerCase();
+    if (["bike", "car"].includes(mode)) {
+      newKm += parseFloat(iti.km || "0.0");
+    } else if (mode === "auto") {
+      newAuto += travelAmt;
+    }
+
+    const subMode = (iti.sub_mode || "").trim().toLowerCase();
+    if (subMode === "auto") {
+      newAuto += subAmt;
+    }
 
     let actDetails = null;
     if (iti.activity_details) {
@@ -1573,6 +1598,65 @@ export async function handleSubmitExpense(request, env, params, query, user) {
     totalAsset += itiAsset;
     totalCalibration += itiCalibration;
     totalMobilise += itiMobilise;
+  }
+
+  if (calculatedTotal <= 0) {
+    return jsonResponse({ error: "Total claim amount must be greater than zero." }, 400);
+  }
+  amount = calculatedTotal;
+
+  // Backend Limit Validation
+  const gradeToLookup = (user.designation || "").toLowerCase().includes("specialist") ? "O1" : user.grade;
+  const allowance = await env.DB.prepare("SELECT * FROM allowance_master WHERE grade = ?").bind(gradeToLookup).first();
+  const maxKmPerMonth = allowance?.max_km_per_month ?? 2000;
+  const maxAutoPerMonth = 1000;
+
+  // Format month string YYYY-MM
+  const monthNames = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
+  const mIdx = monthNames.indexOf(claim_month);
+  const mmNum = String(mIdx !== -1 ? mIdx + 1 : 1).padStart(2, "0");
+  const monthStr = `${claim_year}-${mmNum}`;
+
+  const limits = await env.DB.prepare(`
+    SELECT 
+      SUM(CASE WHEN request_type = 'KM' THEN COALESCE(approved_value, requested_value) ELSE 0.0 END) as approved_km,
+      SUM(CASE WHEN request_type = 'AUTO' THEN COALESCE(approved_value, requested_value) ELSE 0.0 END) as approved_auto
+    FROM limit_approval_requests
+    WHERE user_id = ? AND LOWER(status) = 'approved' AND for_month = ?
+  `).bind(user.user_id, monthStr).first();
+
+  const approvedKm = limits?.approved_km || 0.0;
+  const approvedAuto = limits?.approved_auto || 0.0;
+
+  let statsQuery = `
+    SELECT 
+      SUM(CASE WHEN LOWER(TRIM(i.travel_mode)) IN ('bike', 'car') THEN COALESCE(i.distance_km, 0.0) ELSE 0.0 END) as total_km,
+      SUM(CASE WHEN LOWER(TRIM(i.travel_mode)) = 'auto' THEN COALESCE(i.travel_amount, 0.0) ELSE 0.0 END) +
+      SUM(CASE WHEN LOWER(TRIM(i.sub_mode)) = 'auto' THEN COALESCE(i.sub_amount, 0.0) ELSE 0.0 END) as total_auto
+    FROM expense_itineraries i
+    JOIN expenses e ON i.exp_id = e.expense_code
+    WHERE e.user_id = ? AND e.month = ? AND e.year = ? AND e.status != 'rejected'
+  `;
+  const statsBinds = [user.id, claim_month, claim_year];
+  if (editExpenseId) {
+    statsQuery += " AND e.id != ?";
+    statsBinds.push(editExpenseId);
+  }
+  const statsRes = await env.DB.prepare(statsQuery).bind(...statsBinds).first();
+
+  const accumulatedKm = statsRes?.total_km || 0.0;
+  const accumulatedAuto = statsRes?.total_auto || 0.0;
+
+  if ((accumulatedKm + newKm) > (maxKmPerMonth + approvedKm)) {
+    return jsonResponse({
+      error: `KM Limit Exceeded! Monthly allowance is ${maxKmPerMonth} KM. Approved extension: ${approvedKm} KM. Already claimed: ${accumulatedKm.toFixed(1)} KM. Attempted: +${newKm.toFixed(1)} KM. Total: ${(accumulatedKm + newKm).toFixed(1)} KM. Please request a limit extension first.`
+    }, 400);
+  }
+
+  if ((accumulatedAuto + newAuto) > (maxAutoPerMonth + approvedAuto)) {
+    return jsonResponse({
+      error: `Auto Expense Limit Exceeded! Monthly allowance is ₹${maxAutoPerMonth}. Approved extension: ₹${approvedAuto}. Already claimed: ₹${accumulatedAuto.toFixed(1)}. Attempted: +₹${newAuto.toFixed(1)}. Total: ₹${(accumulatedAuto + newAuto).toFixed(1)}. Please request a limit extension first.`
+    }, 400);
   }
 
   const majorMode = itineraries[0]?.mode || "Other";
