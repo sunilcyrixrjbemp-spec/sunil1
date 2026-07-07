@@ -242,7 +242,7 @@ export default function UnlockAccount({ onBackToLogin }: UnlockAccountProps) {
                   setStatusMessage(null);
                 }}
                 disabled={loading}
-                className="w-full bg-slate-950/50 border border-slate-800 rounded-xl px-3.5 py-3 text-xs text-white placeholder-slate-600 focus:outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20 transition-all font-semibold shadow-inner [color-scheme:dark]"
+                className="w-full bg-white border border-slate-350 rounded-xl px-3.5 py-3 text-xs text-slate-800 placeholder-slate-400 focus:outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20 transition-all font-semibold shadow-inner [color-scheme:light]"
                 required
               />
             </div>
@@ -271,9 +271,9 @@ export default function UnlockAccount({ onBackToLogin }: UnlockAccountProps) {
       {step === 2 && (
         <div className="space-y-5">
           <div className="text-center">
-            <h3 className="text-xs font-black text-slate-100 uppercase tracking-widest">Enter Verification Code</h3>
-            <p className="text-slate-400 text-[10px] mt-1.5 leading-relaxed font-semibold">
-              We sent a 6-digit OTP code to your registered email address <strong className="text-slate-200">{maskedEmail}</strong>.
+            <h3 className="text-xs font-black text-slate-800 uppercase tracking-widest">Enter Verification Code</h3>
+            <p className="text-slate-550 text-[10px] mt-1.5 leading-relaxed font-semibold">
+              We sent a 6-digit OTP code to your registered email address <strong className="text-slate-800 font-bold">{maskedEmail}</strong>.
             </p>
           </div>
 
@@ -288,15 +288,15 @@ export default function UnlockAccount({ onBackToLogin }: UnlockAccountProps) {
                   ref={(el) => (otpInputsRef.current[idx] = el as HTMLInputElement)}
                   onChange={(e) => handleOtpChange(e.target, idx)}
                   onKeyDown={(e) => handleOtpKeyDown(e, idx)}
-                  className="w-10 h-10 bg-slate-950/50 border border-slate-800 rounded-xl text-center text-lg text-white font-bold focus:outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20 shadow-inner"
+                  className="w-10 h-10 bg-white border border-slate-350 rounded-xl text-center text-lg text-slate-800 font-bold focus:outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20 shadow-inner"
                   disabled={loading}
                 />
               ))}
             </div>
 
-            <div className="text-center space-y-2 bg-slate-950/40 p-3 rounded-xl border border-slate-850/60">
-              <p className="text-[10px] text-slate-400 font-extrabold uppercase tracking-wider">
-                OTP Expiration: <span className="font-black text-rose-450">{formatTime(timeLeft)}</span>
+            <div className="text-center space-y-2 bg-slate-50 p-3 rounded-xl border border-slate-100">
+              <p className="text-[10px] text-slate-500 font-extrabold uppercase tracking-wider">
+                OTP Expiration: <span className="font-black text-rose-600">{formatTime(timeLeft)}</span>
               </p>
               
               <div className="text-[10px]">
@@ -304,14 +304,14 @@ export default function UnlockAccount({ onBackToLogin }: UnlockAccountProps) {
                   <button
                     type="button"
                     onClick={handleResendOtp}
-                    className="text-indigo-400 hover:text-indigo-300 font-extrabold uppercase tracking-wider border-0 bg-transparent cursor-pointer outline-none"
+                    className="text-indigo-600 hover:text-indigo-750 font-extrabold uppercase tracking-wider border-0 bg-transparent cursor-pointer outline-none"
                     disabled={loading}
                   >
                     Resend Code
                   </button>
                 ) : (
                   <span className="text-slate-500 font-extrabold uppercase tracking-wider">
-                    Resend in <span className="font-black text-slate-350">{resendCooldown}s</span>
+                    Resend in <span className="font-black text-slate-600">{resendCooldown}s</span>
                   </span>
                 )}
               </div>
@@ -342,21 +342,21 @@ export default function UnlockAccount({ onBackToLogin }: UnlockAccountProps) {
         <div className="space-y-5 text-center py-4">
           <div className={`h-12 w-12 rounded-xl border flex items-center justify-center mx-auto ${
             isAlreadyActive 
-              ? "bg-indigo-500/10 border-indigo-500/20 text-indigo-400"
-              : "bg-emerald-500/10 border-emerald-500/20 text-emerald-400"
+              ? "bg-indigo-50 border border-indigo-100 text-indigo-650"
+              : "bg-emerald-50 border border-emerald-100 text-emerald-650"
           }`}>
             {isAlreadyActive ? (
-              <Unlock size={18} className="animate-pulse" />
+              <Unlock size={18} className="animate-pulse text-indigo-600" />
             ) : (
-              <CheckCircle2 size={18} className="animate-pulse" />
+              <CheckCircle2 size={18} className="animate-pulse text-emerald-600" />
             )}
           </div>
           
           <div className="space-y-2">
-            <h3 className="text-xs font-black text-slate-100 uppercase tracking-widest">
+            <h3 className="text-xs font-black text-slate-800 uppercase tracking-widest">
               {isAlreadyActive ? "Account Already Active" : "Account Unlocked Successfully"}
             </h3>
-            <p className="text-slate-400 text-[10px] leading-relaxed font-semibold px-2">
+            <p className="text-slate-500 text-[10px] leading-relaxed font-semibold px-2">
               {isAlreadyActive 
                 ? "Your account is already active and unlocked. You can sign in directly."
                 : "Your Expense Management Account has been unlocked. You can now sign in using your credentials."}

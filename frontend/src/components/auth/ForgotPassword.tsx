@@ -305,9 +305,9 @@ export default function ForgotPassword({ onBackToLogin }: ForgotPasswordProps) {
       {step === 2 && (
         <div className="space-y-5">
           <div className="text-center">
-            <h3 className="text-xs font-black text-slate-100 uppercase tracking-widest">Enter Verification Code</h3>
-            <p className="text-slate-400 text-[10px] mt-1.5 leading-relaxed font-semibold">
-              We sent a 6-digit OTP code to your registered email address <strong className="text-slate-200">{maskedEmail}</strong>.
+            <h3 className="text-xs font-black text-slate-800 uppercase tracking-widest">Enter Verification Code</h3>
+            <p className="text-slate-500 text-[10px] mt-1.5 leading-relaxed font-semibold">
+              We sent a 6-digit OTP code to your registered email address <strong className="text-slate-800 font-bold">{maskedEmail}</strong>.
             </p>
           </div>
 
@@ -322,15 +322,15 @@ export default function ForgotPassword({ onBackToLogin }: ForgotPasswordProps) {
                   ref={(el) => (otpInputsRef.current[idx] = el as HTMLInputElement)}
                   onChange={(e) => handleOtpChange(e.target, idx)}
                   onKeyDown={(e) => handleOtpKeyDown(e, idx)}
-                  className="w-10 h-10 bg-slate-950/50 border border-slate-800 rounded-xl text-center text-lg text-white font-bold focus:outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20 shadow-inner"
+                  className="w-10 h-10 bg-white border border-slate-350 rounded-xl text-center text-lg text-slate-800 font-bold focus:outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20 shadow-inner"
                   disabled={loading}
                 />
               ))}
             </div>
 
-            <div className="text-center space-y-2 bg-slate-950/40 p-3 rounded-xl border border-slate-850/60">
-              <p className="text-[10px] text-slate-400 font-extrabold uppercase tracking-wider">
-                OTP Expiration: <span className="font-black text-rose-450">{formatTime(timeLeft)}</span>
+            <div className="text-center space-y-2 bg-slate-50 p-3 rounded-xl border border-slate-100">
+              <p className="text-[10px] text-slate-500 font-extrabold uppercase tracking-wider">
+                OTP Expiration: <span className="font-black text-rose-600">{formatTime(timeLeft)}</span>
               </p>
               
               <div className="text-[10px]">
@@ -338,14 +338,14 @@ export default function ForgotPassword({ onBackToLogin }: ForgotPasswordProps) {
                   <button
                     type="button"
                     onClick={handleResendOtp}
-                    className="text-indigo-400 hover:text-indigo-300 font-extrabold uppercase tracking-wider border-0 bg-transparent cursor-pointer"
+                    className="text-indigo-600 hover:text-indigo-750 font-extrabold uppercase tracking-wider border-0 bg-transparent cursor-pointer"
                     disabled={loading}
                   >
                     Resend Code
                   </button>
                 ) : (
                   <span className="text-slate-500 font-extrabold uppercase tracking-wider">
-                    Resend in <span className="font-black text-slate-350">{resendCooldown}s</span>
+                    Resend in <span className="font-black text-slate-600">{resendCooldown}s</span>
                   </span>
                 )}
               </div>
@@ -375,13 +375,13 @@ export default function ForgotPassword({ onBackToLogin }: ForgotPasswordProps) {
       {step === 3 && (
         <div className="space-y-5">
           <div className="text-center">
-            <h3 className="text-xs font-black text-slate-100 uppercase tracking-widest">Create New Password</h3>
-            <p className="text-slate-400 text-[10px] mt-1.5 font-semibold">Set a highly secure password that you have not used recently</p>
+            <h3 className="text-xs font-black text-slate-800 uppercase tracking-widest">Create New Password</h3>
+            <p className="text-slate-500 text-[10px] mt-1.5 font-semibold">Set a highly secure password that you have not used recently</p>
           </div>
 
           <form onSubmit={handleResetPassword} className="space-y-4">
             <div>
-              <label htmlFor="newPassword" className="text-slate-400 font-extrabold uppercase tracking-widest text-[9px] mb-1.5 block">New Password</label>
+              <label htmlFor="newPassword" className="text-slate-550 font-extrabold uppercase tracking-widest text-[9px] mb-1.5 block">New Password</label>
               <div className="relative">
                 <input
                   id="newPassword"
@@ -393,13 +393,13 @@ export default function ForgotPassword({ onBackToLogin }: ForgotPasswordProps) {
                      setStatusMessage(null);
                   }}
                   disabled={loading}
-                  className="w-full bg-slate-950/50 border border-slate-800 rounded-xl pr-10 pl-3.5 py-3 text-xs text-white placeholder-slate-600 focus:outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20 transition-all font-semibold shadow-inner"
+                  className="w-full bg-white border border-slate-350 rounded-xl pr-10 pl-3.5 py-3 text-xs text-slate-800 placeholder-slate-400 focus:outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20 transition-all font-semibold shadow-inner"
                   required
                 />
                 <button
                   type="button"
                   onClick={() => setShowPass(!showPass)}
-                  className="absolute inset-y-0 right-0 pr-3.5 flex items-center text-slate-500 hover:text-slate-350 transition-colors border-0 bg-transparent cursor-pointer"
+                  className="absolute inset-y-0 right-0 pr-3.5 flex items-center text-slate-400 hover:text-slate-650 transition-colors border-0 bg-transparent cursor-pointer"
                 >
                   {showPass ? <EyeOff size={14} /> : <Eye size={14} />}
                 </button>
@@ -407,7 +407,7 @@ export default function ForgotPassword({ onBackToLogin }: ForgotPasswordProps) {
             </div>
 
             <div>
-              <label htmlFor="confirmPassword" className="text-slate-400 font-extrabold uppercase tracking-widest text-[9px] mb-1.5 block">Confirm Password</label>
+              <label htmlFor="confirmPassword" className="text-slate-550 font-extrabold uppercase tracking-widest text-[9px] mb-1.5 block">Confirm Password</label>
               <input
                 id="confirmPassword"
                 type="password"
@@ -418,37 +418,37 @@ export default function ForgotPassword({ onBackToLogin }: ForgotPasswordProps) {
                   setStatusMessage(null);
                 }}
                 disabled={loading}
-                className="w-full bg-slate-950/50 border border-slate-800 rounded-xl px-3.5 py-3 text-xs text-white placeholder-slate-600 focus:outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20 transition-all font-semibold shadow-inner"
+                className="w-full bg-white border border-slate-350 rounded-xl px-3.5 py-3 text-xs text-slate-800 placeholder-slate-400 focus:outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20 transition-all font-semibold shadow-inner"
                 required
               />
             </div>
 
             {/* Password security constraints block */}
-            <div className="bg-slate-950/40 border border-slate-850/60 rounded-xl p-3 text-[10px] space-y-2 text-slate-450 font-semibold">
-              <p className="text-[10px] font-black text-slate-300 uppercase tracking-widest border-b border-slate-800 pb-1.5 mb-1.5">Constraints Checklist</p>
+            <div className="bg-slate-50 border border-slate-100 rounded-xl p-3 text-[10px] space-y-2 text-slate-500 font-semibold">
+              <p className="text-[10px] font-black text-slate-700 uppercase tracking-widest border-b border-slate-100 pb-1.5 mb-1.5">Constraints Checklist</p>
               <div className="grid grid-cols-2 gap-2">
                 <div className="flex items-center gap-1.5">
-                  {strength.hasMinLength ? <span className="text-emerald-450 font-bold">✓</span> : <span className="text-slate-600">✗</span>}
+                  {strength.hasMinLength ? <span className="text-emerald-600 font-bold">✓</span> : <span className="text-slate-400">✗</span>}
                   <span>Min 8 characters</span>
                 </div>
                 <div className="flex items-center gap-1.5">
-                  {strength.hasUpper ? <span className="text-emerald-450 font-bold">✓</span> : <span className="text-slate-600">✗</span>}
+                  {strength.hasUpper ? <span className="text-emerald-600 font-bold">✓</span> : <span className="text-slate-400">✗</span>}
                   <span>1 Uppercase</span>
                 </div>
                 <div className="flex items-center gap-1.5">
-                  {strength.hasLower ? <span className="text-emerald-450 font-bold">✓</span> : <span className="text-slate-600">✗</span>}
+                  {strength.hasLower ? <span className="text-emerald-600 font-bold">✓</span> : <span className="text-slate-400">✗</span>}
                   <span>1 Lowercase</span>
                 </div>
                 <div className="flex items-center gap-1.5">
-                  {strength.hasNumber ? <span className="text-emerald-450 font-bold">✓</span> : <span className="text-slate-600">✗</span>}
+                  {strength.hasNumber ? <span className="text-emerald-600 font-bold">✓</span> : <span className="text-slate-400">✗</span>}
                   <span>1 Number</span>
                 </div>
                 <div className="flex items-center gap-1.5">
-                  {strength.hasSpecial ? <span className="text-emerald-450 font-bold">✓</span> : <span className="text-slate-600">✗</span>}
+                  {strength.hasSpecial ? <span className="text-emerald-600 font-bold">✓</span> : <span className="text-slate-400">✗</span>}
                   <span>1 Special char</span>
                 </div>
                 <div className="flex items-center gap-1.5">
-                  {passwordsMatch ? <span className="text-emerald-450 font-bold">✓</span> : <span className="text-slate-600">✗</span>}
+                  {passwordsMatch ? <span className="text-emerald-600 font-bold">✓</span> : <span className="text-slate-400">✗</span>}
                   <span>Passwords match</span>
                 </div>
               </div>
@@ -477,12 +477,12 @@ export default function ForgotPassword({ onBackToLogin }: ForgotPasswordProps) {
       {/* STEP 4 - SUCCESS */}
       {step === 4 && (
         <div className="space-y-5 text-center py-4">
-          <div className="h-12 w-12 rounded-xl bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 flex items-center justify-center mx-auto">
-            <CheckCircle2 className="w-6 h-6 animate-pulse text-emerald-400" />
+          <div className="h-12 w-12 rounded-xl bg-emerald-50 border border-emerald-100 text-emerald-650 flex items-center justify-center mx-auto">
+            <CheckCircle2 className="w-6 h-6 animate-pulse text-emerald-600" />
           </div>
           <div className="space-y-2">
-            <h3 className="text-xs font-black text-slate-100 uppercase tracking-widest">Password Reset Successfully</h3>
-            <p className="text-slate-400 text-[10px] leading-relaxed font-semibold">Your credential configuration has been updated. Redirecting to login shortly...</p>
+            <h3 className="text-xs font-black text-slate-800 uppercase tracking-widest">Password Reset Successfully</h3>
+            <p className="text-slate-500 text-[10px] leading-relaxed font-semibold">Your credential configuration has been updated. Redirecting to login shortly...</p>
           </div>
           <div className="pt-3">
             <button
