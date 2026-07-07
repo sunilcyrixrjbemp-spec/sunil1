@@ -1,5 +1,3 @@
-import api from "./api";
-
 export interface NotificationItem {
   id: number;
   user_id: string;
@@ -16,7 +14,7 @@ export const notificationService = {
     return [];
   },
 
-  markAsRead: async (id: number): Promise<any> => {
+  markAsRead: async (_id: number): Promise<any> => {
     return { success: true };
   },
 
@@ -24,7 +22,7 @@ export const notificationService = {
     return { success: true };
   },
 
-  deleteNotification: async (id: number): Promise<any> => {
+  deleteNotification: async (_id: number): Promise<any> => {
     return { success: true };
   }
 };

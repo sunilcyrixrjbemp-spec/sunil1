@@ -16,7 +16,6 @@ import {
   LogOut, 
   Settings,
   Menu,
-  Bell,
   Lock,
   X,
   FileSpreadsheet,
@@ -348,7 +347,6 @@ export default function DashboardLayout() {
     ["home", "profile", "help"].includes(currentActiveItem.id.toLowerCase()) ||
     allowedWindows.includes(currentActiveItem.id.toLowerCase());
   const safeNotifications = Array.isArray(notifications) ? notifications : [];
-  const unreadCount = safeNotifications.filter(n => n && !n.read).length;
 
   return (
     <div className="min-h-screen bg-[#f4f6f9] text-[#212529] flex flex-col lg:flex-row antialiased">

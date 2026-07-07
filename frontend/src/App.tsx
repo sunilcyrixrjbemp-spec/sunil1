@@ -46,7 +46,38 @@ function AppInner() {
 function App() {
   // Non-blocking ping to wake up free-tier backend server instantly on app startup
   useEffect(() => {
-    fetch("https://expense-backend-zio8.onrender.com/api/health").catch(() => {});
+    fetch("https://fieldops-secondary-api.sunnybishnoi.workers.dev/api/health").catch(() => {});
+  }, []);
+
+  // Prevent background body scrolling when any modal, popup, or lightbox is open
+  useEffect(() => {
+    const handleScrollLock = () => {
+      // Find modal overlays (custom LTE class or Tailwind classes representing a full-screen overlay)
+      const hasModal = document.querySelector('.modal-lte-overlay, [class*="fixed"][class*="inset-0"][class*="bg-black/"]');
+      if (hasModal) {
+        document.body.style.overflow = 'hidden';
+      } else {
+        document.body.style.overflow = '';
+      }
+    };
+
+    handleScrollLock();
+
+    const observer = new MutationObserver(() => {
+      handleScrollLock();
+    });
+
+    observer.observe(document.body, {
+      childList: true,
+      subtree: true,
+      attributes: true,
+      attributeFilter: ['class', 'style']
+    });
+
+    return () => {
+      observer.disconnect();
+      document.body.style.overflow = '';
+    };
   }, []);
 
   const [isAppLocked, setIsAppLocked] = useState(false);

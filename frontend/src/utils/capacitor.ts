@@ -139,7 +139,7 @@ export const biometricAuth = {
 };
 
 // ─── FCM Push Notifications via Capacitor ────────────────────────────────────
-const API_BASE = (import.meta.env.VITE_API_URL as string) || 'https://expense-backend-zio8.onrender.com';
+const API_BASE = (import.meta.env.VITE_API_URL as string) || 'https://fieldops-secondary-api.sunnybishnoi.workers.dev';
 
 const saveFCMToken = async (token: string): Promise<void> => {
   try {

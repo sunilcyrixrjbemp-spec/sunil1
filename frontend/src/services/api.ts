@@ -3,29 +3,8 @@ import { tokenPersistence } from "../utils/persistence";
 import { Capacitor } from "@capacitor/core";
 import { Preferences } from "@capacitor/preferences";
 
-// Define the production fallback URL for mobile and web apps
-const PROD_BACKEND_URL = "https://expense-backend-zio8.onrender.com";
-
-let API_BASE_URL = import.meta.env.VITE_API_BASE_URL || "";
-
-// If no VITE_API_BASE_URL is set, determine it dynamically based on environment
-if (!API_BASE_URL) {
-  if (Capacitor.isNativePlatform()) {
-    API_BASE_URL = `${PROD_BACKEND_URL}/api`;
-  } else if (import.meta.env.DEV) {
-    API_BASE_URL = "http://localhost:8000/api";
-  } else {
-    // Production web deployment fallback (direct calling to wake up and fetch data)
-    API_BASE_URL = `${PROD_BACKEND_URL}/api`;
-  }
-}
-
-if (API_BASE_URL !== "/api") {
-  API_BASE_URL = API_BASE_URL.replace(/\/$/, "");
-  if (!API_BASE_URL.endsWith("/api")) {
-    API_BASE_URL = `${API_BASE_URL}/api`;
-  }
-}
+const WORKER_BACKEND_URL = "https://fieldops-secondary-api.sunnybishnoi.workers.dev";
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || `${WORKER_BACKEND_URL}/api`;
 
 const api: AxiosInstance = axios.create({
   baseURL: API_BASE_URL,
@@ -34,10 +13,7 @@ const api: AxiosInstance = axios.create({
   },
 });
 
-const WORKER_BACKEND_URL = "https://fieldops-secondary-api.sunnybishnoi.workers.dev";
-
-// Active server state: default to Cloudflare Worker, but swaps globally if any request fails
-let activeBaseURL = `${WORKER_BACKEND_URL}/api`;
+let activeBaseURL = API_BASE_URL;
 
 export function getActiveBaseURL() {
   return activeBaseURL;
@@ -115,31 +91,7 @@ api.interceptors.response.use(
     const originalRequest = error.config;
     if (!originalRequest) return Promise.reject(error);
 
-    // 1. DUAL FAILOVER LOGIC: If a request fails due to network error or server error (>= 500)
-    const isNetworkError = !error.response;
-    const isServerError = error.response && error.response.status >= 500;
-    
-    if ((isNetworkError || isServerError) && !(originalRequest as any)._failoverRetry) {
-      (originalRequest as any)._failoverRetry = true;
-      
-      // Toggle activeBaseURL between Cloudflare Worker and Render globally
-      if (activeBaseURL.includes("workers.dev")) {
-        console.warn(`Cloudflare Worker failed. Globally swapping primary backend to Render: ${originalRequest.url}`);
-        activeBaseURL = API_BASE_URL;
-      } else {
-        console.warn(`Render server failed. Globally swapping primary backend to Cloudflare Worker: ${originalRequest.url}`);
-        activeBaseURL = `${WORKER_BACKEND_URL}/api`;
-      }
-      
-      originalRequest.baseURL = activeBaseURL;
-      
-      if (typeof window !== "undefined") {
-        window.dispatchEvent(new CustomEvent("backend-server-swap", { detail: { baseURL: activeBaseURL } }));
-      }
-      
-      // Retry the request with the new baseURL
-      return api(originalRequest);
-    }
+
     
     // 2. Token expiry logic (401 Unauthorized)
     if (error.response?.status === 401) {

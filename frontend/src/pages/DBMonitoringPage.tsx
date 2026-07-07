@@ -5,7 +5,7 @@ import {
 } from "recharts";
 import toast from "react-hot-toast";
 
-const BASE = "https://expense-backend-zio8.onrender.com";
+const BASE = "https://fieldops-secondary-api.sunnybishnoi.workers.dev";
 const getHeaders = () => ({
   Authorization: `Bearer ${localStorage.getItem("access_token")}`,
   "Content-Type": "application/json",

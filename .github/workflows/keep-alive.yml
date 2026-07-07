@@ -1,8 +1,8 @@
-name: Keep Render Awake
+name: Keep Cloudflare Worker Active
 
 on:
   schedule:
-    # Runs every 10 minutes to prevent Render's free tier from going to sleep
+    # Runs every 10 minutes to keep worker databases warm
     - cron: '*/10 * * * *'
   workflow_dispatch:
 
@@ -12,4 +12,4 @@ jobs:
     steps:
       - name: Ping API Health Endpoint
         run: |
-          curl -I -s https://expense-backend-zio8.onrender.com/api/health || echo "Ping failed, but server should be waking up/awake!"
+          curl -I -s https://fieldops-secondary-api.sunnybishnoi.workers.dev/api/health || echo "Ping failed!"
