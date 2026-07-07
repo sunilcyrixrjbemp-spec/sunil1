@@ -637,103 +637,82 @@ export default function AnalysisPage() {
   }
 
   return (
-    <div className="space-y-6 text-slate-100 p-4 lg:p-8 min-h-screen bg-slate-950 pb-40 lg:pb-12" style={{ fontFamily: "'Outfit', 'Plus Jakarta Sans', sans-serif" }}>
+    <div className="space-y-5 text-gray-800 p-4 lg:p-6 pb-40 lg:pb-8" style={{ fontFamily: "'Plus Jakarta Sans', sans-serif" }}>
       <style>{`
-        @import url('https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800;900&display=swap');
-        .custom-chart-card {
-          box-shadow: 0 10px 30px -10px rgba(0, 0, 0, 0.5);
-          transition: border-color 0.3s ease, box-shadow 0.3s ease;
-        }
-        .custom-chart-card:hover {
-          border-color: rgba(99, 102, 241, 0.35) !important;
-          box-shadow: 0 10px 30px -5px rgba(99, 102, 241, 0.05);
-        }
-        .custom-filter-panel {
+        .custom-desktop-filters {
           display: flex !important;
           flex-direction: row !important;
           flex-wrap: wrap !important;
           align-items: center !important;
-          justify-content: flex-start !important;
-          gap: 10px !important;
-          background-color: rgba(15, 23, 42, 0.45) !important;
-          border: 1px solid rgba(30, 41, 59, 0.8) !important;
-          border-radius: 16px !important;
-          padding: 12px 16px !important;
+          gap: 8px !important;
+          width: 100% !important;
+          background-color: #ffffff !important;
+          box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.05), 0 1px 2px -1px rgba(0, 0, 0, 0.05) !important;
         }
-        .custom-filter-select {
-          min-height: 36px !important;
-          height: 36px !important;
-          padding: 4px 10px !important;
-          background-color: #0f172a !important;
-          color: #f1f5f9 !important;
-          border: 1px solid #1e293b !important;
-          border-radius: 10px !important;
+        .custom-desktop-filters select {
+          width: auto !important;
+          min-width: 110px !important;
+          max-width: 180px !important;
+          min-height: 28px !important;
+          height: 28px !important;
+          padding: 2px 8px !important;
           font-size: 11px !important;
-          font-weight: 600 !important;
-          cursor: pointer !important;
+          border-radius: 6px !important;
+          border: 1px solid #cbd5e1 !important;
           display: inline-block !important;
+          background-color: #ffffff !important;
+          color: #1e293b !important;
         }
-        .custom-select-district { width: 140px !important; }
-        .custom-select-engineer { width: 160px !important; }
-        .custom-select-month { width: 110px !important; }
-        .custom-select-year { width: 90px !important; }
-        .custom-select-status { width: 125px !important; }
-        
-        .custom-date-container {
+        .custom-desktop-filters .date-picker-wrapper {
           display: inline-flex !important;
           flex-direction: row !important;
           align-items: center !important;
           gap: 6px !important;
-          background-color: #0f172a !important;
-          border: 1px solid #1e293b !important;
-          border-radius: 10px !important;
-          padding: 4px 10px !important;
-          min-height: 36px !important;
-          height: 36px !important;
+          border: 1px solid #cbd5e1 !important;
+          border-radius: 6px !important;
+          padding: 2px 8px !important;
+          min-height: 28px !important;
+          height: 28px !important;
+          background-color: #ffffff !important;
           box-sizing: border-box !important;
         }
-        .custom-date-input {
+        .custom-desktop-filters .custom-date-input {
+          width: 90px !important;
           min-height: 20px !important;
           height: 20px !important;
-          background-color: transparent !important;
-          color: #f1f5f9 !important;
+          padding: 0 !important;
+          display: inline-block !important;
           border: 0 !important;
           outline: none !important;
           font-size: 11px !important;
-          font-weight: 650 !important;
-          width: 105px !important;
-          padding: 0 !important;
+          font-weight: 600 !important;
+          color: #1e293b !important;
+          background-color: transparent !important;
         }
       `}</style>
-
+      
       {/* Page Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 pb-4 border-b border-slate-800/80">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 pb-1">
         <div>
-          <h2 className="text-xl lg:text-2xl font-black bg-clip-text text-transparent bg-gradient-to-r from-indigo-400 via-purple-400 to-pink-400 uppercase tracking-wider">
-            Expense Analytics
-          </h2>
-          <p className="text-slate-400 text-xs mt-1">Real-time expense data visualization & operational insights</p>
+          <h2 className="text-base font-bold text-gray-900 uppercase tracking-wide">Expense Analysis</h2>
+          <p className="text-gray-500 text-[10px]">Real-time expense data visualization & insights</p>
         </div>
 
-        {/* View Mode Toggle */}
+        {/* View Mode Toggle (only for managers) */}
         {isReviewer && (
-          <div className="flex border border-slate-800 rounded-xl overflow-hidden text-xs bg-slate-900/80 p-1 shadow-lg shadow-black/20 backdrop-blur-md self-start sm:self-auto">
+          <div className="flex border border-gray-300 rounded overflow-hidden text-[11px] bg-white self-start sm:self-auto shadow-sm">
             <button
               onClick={() => setViewMode("my")}
-              className={`px-4 py-2 flex items-center gap-2 font-bold rounded-lg transition-all border-0 cursor-pointer ${
-                viewMode === "my" 
-                  ? "bg-gradient-to-r from-indigo-600 to-purple-600 text-white shadow-md shadow-indigo-600/20" 
-                  : "bg-transparent text-slate-400 hover:text-slate-200"
+              className={`px-3 py-1.5 flex items-center gap-1 font-semibold transition-colors border-0 cursor-pointer ${
+                viewMode === "my" ? "bg-blue-600 text-white" : "bg-white text-gray-600 hover:bg-gray-50"
               }`}
             >
               <i className="fas fa-user text-xs"></i> My Data
             </button>
             <button
               onClick={() => setViewMode("team")}
-              className={`px-4 py-2 flex items-center gap-2 font-bold rounded-lg transition-all border-0 cursor-pointer ${
-                viewMode === "team" 
-                  ? "bg-gradient-to-r from-indigo-600 to-purple-600 text-white shadow-md shadow-indigo-600/20" 
-                  : "bg-transparent text-slate-400 hover:text-slate-200"
+              className={`px-3 py-1.5 flex items-center gap-1 font-semibold transition-colors border-0 cursor-pointer ${
+                viewMode === "team" ? "bg-blue-600 text-white" : "bg-white text-gray-600 hover:bg-gray-50"
               }`}
             >
               <i className="fas fa-users text-xs"></i> Team Data
@@ -742,19 +721,20 @@ export default function AnalysisPage() {
         )}
       </div>
 
-      {/* Glass Filter Panel */}
-      <div className="custom-filter-panel shadow-xl shadow-black/10">
-        <div className="flex items-center gap-2 text-indigo-400 font-extrabold mr-2 shrink-0">
-          <i className="fas fa-filter text-xs"></i>
-          <span className="text-[10px] uppercase tracking-widest">Filters</span>
+      {/* Dedicated Compact Filter Panel Bar */}
+      <div className="card-lte p-2 custom-desktop-filters">
+        <div className="flex items-center gap-1 text-gray-400 font-semibold mr-1 shrink-0">
+          <i className="fas fa-filter text-[10px] uppercase tracking-wider"></i>
+          <span className="text-[10px] uppercase tracking-wider">Filters:</span>
         </div>
         
+        {/* Team Specific Filters */}
         {viewMode === "team" && isReviewer && (
           <>
             <select
               value={selectedDistrict}
               onChange={(e) => setSelectedDistrict(e.target.value)}
-              className="custom-filter-select custom-select-district"
+              className="border border-gray-300 rounded px-2 py-1 text-[11px] bg-white text-gray-700 cursor-pointer focus:outline-none focus:border-blue-500"
             >
               <option value="all">All Districts</option>
               {filterOptions.districts.map(d => (
@@ -765,7 +745,7 @@ export default function AnalysisPage() {
             <select
               value={selectedEngineer}
               onChange={(e) => setSelectedEngineer(e.target.value)}
-              className="custom-filter-select custom-select-engineer"
+              className="border border-gray-300 rounded px-2 py-1 text-[11px] bg-white text-gray-700 cursor-pointer focus:outline-none focus:border-blue-500"
             >
               <option value="all">All Engineers</option>
               {filterOptions.engineers.map(name => (
@@ -779,8 +759,8 @@ export default function AnalysisPage() {
           value={selectedMonth}
           onChange={(e) => setSelectedMonth(Number(e.target.value))}
           disabled={!!startDate || !!endDate}
-          className={`custom-filter-select custom-select-month ${
-            (!!startDate || !!endDate) ? "opacity-40 cursor-not-allowed" : ""
+          className={`border border-gray-300 rounded px-2 py-1 text-[11px] bg-white text-gray-700 cursor-pointer focus:outline-none focus:border-blue-500 ${
+            (!!startDate || !!endDate) ? "opacity-50 cursor-not-allowed bg-gray-50" : ""
           }`}
         >
           {months.map((m, i) => (
@@ -791,8 +771,8 @@ export default function AnalysisPage() {
           value={selectedYear}
           onChange={(e) => setSelectedYear(Number(e.target.value))}
           disabled={!!startDate || !!endDate}
-          className={`custom-filter-select custom-select-year ${
-            (!!startDate || !!endDate) ? "opacity-40 cursor-not-allowed" : ""
+          className={`border border-gray-300 rounded px-2 py-1 text-[11px] bg-white text-gray-700 cursor-pointer focus:outline-none focus:border-blue-500 ${
+            (!!startDate || !!endDate) ? "opacity-50 cursor-not-allowed bg-gray-50" : ""
           }`}
         >
           {availableYears.map(y => (
@@ -800,10 +780,11 @@ export default function AnalysisPage() {
           ))}
         </select>
 
+        {/* Status Filter */}
         <select
           value={selectedStatus}
           onChange={(e) => setSelectedStatus(e.target.value)}
-          className="custom-filter-select custom-select-status"
+          className="border border-gray-300 rounded px-2 py-1 text-[11px] bg-white text-gray-700 cursor-pointer focus:outline-none focus:border-blue-500"
         >
           <option value="all">All Statuses</option>
           <option value="approved">Approved</option>
@@ -812,8 +793,8 @@ export default function AnalysisPage() {
         </select>
 
         {/* Date Range Picker */}
-        <div className="custom-date-container">
-          <span className="text-[10px] text-slate-400 font-extrabold uppercase shrink-0">From:</span>
+        <div className="date-picker-wrapper">
+          <span className="text-[9px] text-gray-400 font-bold uppercase">From:</span>
           <input
             type="date"
             value={startDate}
@@ -822,7 +803,7 @@ export default function AnalysisPage() {
             onChange={(e) => setStartDate(e.target.value)}
             className="custom-date-input"
           />
-          <span className="text-[10px] text-slate-400 font-extrabold uppercase shrink-0">To:</span>
+          <span className="text-[9px] text-gray-400 font-bold uppercase">To:</span>
           <input
             type="date"
             value={endDate}
@@ -834,7 +815,7 @@ export default function AnalysisPage() {
           {(startDate || endDate) && (
             <button
               onClick={() => { setStartDate(""); setEndDate(""); }}
-              className="p-0.5 text-slate-400 hover:text-rose-500 rounded bg-transparent border-0 cursor-pointer flex items-center justify-center transition-colors shrink-0"
+              className="p-0.5 text-gray-400 hover:text-red-500 rounded bg-transparent border-0 cursor-pointer flex items-center justify-center"
               title="Clear Dates"
             >
               <i className="fas fa-times"></i>
@@ -843,118 +824,113 @@ export default function AnalysisPage() {
         </div>
       </div>
 
-      {/* Summary KPI Cards Grid */}
-      <div className="flex overflow-x-auto pb-2 lg:grid lg:grid-cols-7 gap-4 w-full scrollbar-none">
+      {/* Summary Stats */}
+      <div className="flex overflow-x-auto pb-1.5 lg:grid lg:grid-cols-7 gap-3 w-full scrollbar-none">
         {/* Card 1: Total Claims */}
-        <div className="bg-slate-900/50 backdrop-blur-md border border-slate-800/80 rounded-2xl p-4 flex items-center gap-3.5 min-w-[150px] shadow-lg hover:border-indigo-500/40 transition-all group duration-300">
-          <div className="w-11 h-11 rounded-xl bg-indigo-500/10 text-indigo-400 flex items-center justify-center group-hover:scale-110 transition-transform duration-300">
-            <i className="fas fa-file-excel text-lg"></i>
+        <div className="info-box-lte animate-fadeIn">
+          <div className="info-box-icon bg-[#007bff]">
+            <i className="fas fa-file-excel text-white text-sm"></i>
           </div>
-          <div>
-            <span className="text-[9px] font-black uppercase tracking-widest text-slate-400 block">Total Claims</span>
-            <span className="text-xl font-extrabold text-white font-mono block mt-0.5">{count}</span>
+          <div className="info-box-content">
+            <span className="text-[9px] font-bold uppercase tracking-wider text-gray-400 block">Total Claims</span>
+            <span className="text-base font-extrabold text-gray-800 font-mono block mt-0.5">{count}</span>
           </div>
         </div>
 
         {/* Card 2: Total Amount */}
-        <div className="bg-slate-900/50 backdrop-blur-md border border-slate-800/80 rounded-2xl p-4 flex items-center gap-3.5 min-w-[150px] shadow-lg hover:border-emerald-500/40 transition-all group duration-300">
-          <div className="w-11 h-11 rounded-xl bg-emerald-500/10 text-emerald-400 flex items-center justify-center group-hover:scale-110 transition-transform duration-300">
-            <i className="fas fa-rupee-sign text-lg"></i>
+        <div className="info-box-lte animate-fadeIn">
+          <div className="info-box-icon bg-[#28a745]">
+            <i className="fas fa-rupee-sign text-white text-sm"></i>
           </div>
-          <div>
-            <span className="text-[9px] font-black uppercase tracking-widest text-slate-400 block">Total Spend</span>
-            <span className="text-xl font-extrabold text-white font-mono block mt-0.5">₹{totalAmount.toLocaleString()}</span>
+          <div className="info-box-content">
+            <span className="text-[9px] font-bold uppercase tracking-wider text-gray-400 block">Total Amount</span>
+            <span className="text-base font-extrabold text-gray-800 font-mono block mt-0.5">₹{totalAmount.toLocaleString()}</span>
           </div>
         </div>
 
         {/* Card 3: Average Claim */}
-        <div className="bg-slate-900/50 backdrop-blur-md border border-slate-800/80 rounded-2xl p-4 flex items-center gap-3.5 min-w-[150px] shadow-lg hover:border-amber-500/40 transition-all group duration-300">
-          <div className="w-11 h-11 rounded-xl bg-amber-500/10 text-amber-400 flex items-center justify-center group-hover:scale-110 transition-transform duration-300">
-            <i className="fas fa-chart-line text-lg"></i>
+        <div className="info-box-lte animate-fadeIn">
+          <div className="info-box-icon bg-[#ffc107]">
+            <i className="fas fa-chart-line text-white text-sm"></i>
           </div>
-          <div>
-            <span className="text-[9px] font-black uppercase tracking-widest text-slate-400 block">Avg Claim</span>
-            <span className="text-xl font-extrabold text-white font-mono block mt-0.5">₹{avgValue.toLocaleString()}</span>
+          <div className="info-box-content">
+            <span className="text-[9px] font-bold uppercase tracking-wider text-gray-400 block">Average Claim</span>
+            <span className="text-base font-extrabold text-gray-800 font-mono block mt-0.5">₹{avgValue.toLocaleString()}</span>
           </div>
         </div>
 
-        {/* Card 4: Calls Completed */}
-        <div className="bg-slate-900/50 backdrop-blur-md border border-slate-800/80 rounded-2xl p-4 flex items-center gap-3.5 min-w-[150px] shadow-lg hover:border-purple-500/40 transition-all group duration-300">
-          <div className="w-11 h-11 rounded-xl bg-purple-500/10 text-purple-400 flex items-center justify-center group-hover:scale-110 transition-transform duration-300">
-            <i className="fas fa-phone text-lg"></i>
+        {/* Card 4: Calls Done / Assigned */}
+        <div className="info-box-lte animate-fadeIn">
+          <div className="info-box-icon bg-[#605ca8]">
+            <i className="fas fa-phone text-white text-sm"></i>
           </div>
-          <div>
-            <span className="text-[9px] font-black uppercase tracking-widest text-slate-400 block">Calls Closed</span>
-            <span className="text-xl font-extrabold text-white font-mono block mt-0.5">{activityStats.callsCompleted} / {activityStats.callsAssigned}</span>
+          <div className="info-box-content">
+            <span className="text-[9px] font-bold uppercase tracking-wider text-gray-400 block">Calls Done / Assigned</span>
+            <span className="text-base font-extrabold text-gray-800 font-mono block mt-0.5">{activityStats.callsCompleted} / {activityStats.callsAssigned}</span>
           </div>
         </div>
 
         {/* Card 5: PMS Completed */}
-        <div className="bg-slate-900/50 backdrop-blur-md border border-slate-800/80 rounded-2xl p-4 flex items-center gap-3.5 min-w-[150px] shadow-lg hover:border-teal-500/40 transition-all group duration-300">
-          <div className="w-11 h-11 rounded-xl bg-teal-500/10 text-teal-400 flex items-center justify-center group-hover:scale-110 transition-transform duration-300">
-            <i className="fas fa-shield-alt text-lg"></i>
+        <div className="info-box-lte animate-fadeIn">
+          <div className="info-box-icon bg-[#20c997]">
+            <i className="fas fa-shield-alt text-white text-sm"></i>
           </div>
-          <div>
-            <span className="text-[9px] font-black uppercase tracking-widest text-slate-400 block">PMS Done</span>
-            <span className="text-xl font-extrabold text-white font-mono block mt-0.5">{activityStats.pmsCount}</span>
+          <div className="info-box-content">
+            <span className="text-[9px] font-bold uppercase tracking-wider text-gray-400 block">PMS Completed</span>
+            <span className="text-base font-extrabold text-gray-800 font-mono block mt-0.5">{activityStats.pmsCount}</span>
           </div>
         </div>
 
-        {/* Card 6: Tag & Calib */}
-        <div className="bg-slate-900/50 backdrop-blur-md border border-slate-800/80 rounded-2xl p-4 flex items-center gap-3.5 min-w-[150px] shadow-lg hover:border-cyan-500/40 transition-all group duration-300">
-          <div className="w-11 h-11 rounded-xl bg-cyan-500/10 text-cyan-400 flex items-center justify-center group-hover:scale-110 transition-transform duration-300">
-            <i className="fas fa-qrcode text-lg"></i>
+        {/* Card 6: Tag & Calib Done */}
+        <div className="info-box-lte animate-fadeIn">
+          <div className="info-box-icon bg-[#17a2b8]">
+            <i className="fas fa-chart-line text-white text-sm"></i>
           </div>
-          <div>
-            <span className="text-[9px] font-black uppercase tracking-widest text-slate-400 block">Tag & Calib</span>
-            <span className="text-xl font-extrabold text-white font-mono block mt-0.5">{activityStats.assetTaggingCount + activityStats.calibrationCount}</span>
+          <div className="info-box-content">
+            <span className="text-[9px] font-bold uppercase tracking-wider text-gray-400 block">Tag & Calib Done</span>
+            <span className="text-base font-extrabold text-gray-800 font-mono block mt-0.5">{activityStats.assetTaggingCount + activityStats.calibrationCount}</span>
           </div>
         </div>
 
         {/* Card 7: Scope */}
-        <div className="bg-slate-900/50 backdrop-blur-md border border-slate-800/80 rounded-2xl p-4 flex items-center gap-3.5 min-w-[150px] shadow-lg hover:border-pink-500/40 transition-all group duration-300">
-          <div className="w-11 h-11 rounded-xl bg-pink-500/10 text-pink-400 flex items-center justify-center group-hover:scale-110 transition-transform duration-300">
-            {viewMode === "team" ? <i className="fas fa-users text-lg"></i> : <i className="fas fa-user text-lg"></i>}
+        <div className="info-box-lte animate-fadeIn">
+          <div className="info-box-icon bg-[#6f42c1]">
+            {viewMode === "team" ? <i className="fas fa-users text-white text-sm"></i> : <i className="fas fa-user text-white text-sm"></i>}
           </div>
-          <div>
-            <span className="text-[9px] font-black uppercase tracking-widest text-slate-400 block">Scope</span>
-            <span className="text-xs font-black text-white block mt-1 truncate" title={viewMode === "team" ? "Team" : "My Data"}>
-              {viewMode === "team" ? "Team" : "My Data"}
-            </span>
+          <div className="info-box-content">
+            <span className="text-[9px] font-bold uppercase tracking-wider text-gray-400 block">Scope</span>
+            <span className="text-xs font-bold text-gray-800 block truncate mt-0.5" title={viewMode === "team" ? "Team" : "My Data"}>{viewMode === "team" ? "Team" : "My Data"}</span>
           </div>
         </div>
       </div>
 
       {/* No Data State */}
       {count === 0 && (
-        <div className="bg-slate-900/40 border border-slate-800 rounded-2xl p-16 text-center shadow-xl">
-          <i className="fas fa-chart-bar fa-3x text-slate-700 mx-auto mb-4 block animate-pulse"></i>
-          <p className="text-base font-bold text-slate-400">No expense data found for {months[selectedMonth]} {selectedYear}</p>
-          <p className="text-xs text-slate-500 mt-1.5">Try selecting a different month, year, or adjust filters above</p>
+        <div className="card-lte p-10 text-center bg-white shadow-sm">
+          <i className="fas fa-chart-bar fa-2x text-gray-300 mx-auto mb-3 block"></i>
+          <p className="text-sm font-bold text-gray-500">No expense data found for {months[selectedMonth]} {selectedYear}</p>
+          <p className="text-xs text-gray-400 mt-1">Try selecting a different month or year from the filter above</p>
         </div>
       )}
 
-      {/* Charts Grid */}
       {count > 0 && (
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
 
-          {/* Chart 1: Top Spenders */}
-          <div className="bg-slate-900/40 border border-slate-800/60 rounded-2xl overflow-hidden custom-chart-card">
-            <div className="px-5 py-4 border-b border-slate-800/60 bg-slate-900/80 flex items-center justify-between">
-              <div>
-                <h3 className="text-xs font-black text-slate-200 uppercase tracking-widest">
-                  Top Spenders — User Wise
-                </h3>
-                <p className="text-[10px] text-slate-400 mt-0.5">Highest claim amounts by engineer</p>
-              </div>
+          {/* Chart 1: Top Spenders (User-wise) */}
+          <div className="bg-white border border-gray-200 rounded shadow-sm">
+            <div className="px-4 py-3 border-b border-gray-200 bg-gray-50">
+              <h3 className="text-xs font-bold text-gray-700 uppercase tracking-wider">
+                Top Spenders — User Wise Breakdown
+              </h3>
+              <p className="text-[10px] text-gray-400 mt-0.5">Highest claim amounts by employee</p>
             </div>
-            <div className="p-5" style={{ height: 290 }}>
+            <div className="p-4" style={{ height: 280 }}>
               {userWiseData.length > 0 ? (
                 <ResponsiveContainer width="100%" height="100%">
                   <BarChart data={userWiseData} layout="vertical" margin={{ left: 10, right: 20 }}>
-                    <CartesianGrid strokeDasharray="3 3" stroke="#1e293b" horizontal={false} vertical={true} />
-                    <XAxis type="number" tick={{ fontSize: 9, fill: '#94a3b8', fontWeight: 600 }} tickFormatter={(v) => `₹${(v / 1000).toFixed(0)}k`} />
-                    <YAxis type="category" dataKey="name" tick={{ fontSize: 9, fill: '#94a3b8', fontWeight: 600 }} width={90} />
+                    <CartesianGrid strokeDasharray="3 3" stroke="#f3f4f6" horizontal={false} vertical={true} />
+                    <XAxis type="number" tick={{ fontSize: 10 }} tickFormatter={(v) => `₹${(v / 1000).toFixed(0)}k`} />
+                    <YAxis type="category" dataKey="name" tick={{ fontSize: 10 }} width={90} />
                     <Tooltip content={<CustomMoneyTooltip />} />
                     <Bar dataKey="amount" radius={[0, 6, 6, 0]} maxBarSize={16}>
                       {userWiseData.map((_, index) => (
@@ -964,22 +940,20 @@ export default function AnalysisPage() {
                   </BarChart>
                 </ResponsiveContainer>
               ) : (
-                <div className="flex items-center justify-center h-full text-slate-500 text-xs font-semibold">No data available</div>
+                <div className="flex items-center justify-center h-full text-gray-400 text-xs">No user data</div>
               )}
             </div>
           </div>
 
           {/* Chart 2: Claim Status Distribution */}
-          <div className="bg-slate-900/40 border border-slate-800/60 rounded-2xl overflow-hidden custom-chart-card">
-            <div className="px-5 py-4 border-b border-slate-800/60 bg-slate-900/80 flex items-center justify-between">
-              <div>
-                <h3 className="text-xs font-black text-slate-200 uppercase tracking-widest">
-                  Claim Status Distribution
-                </h3>
-                <p className="text-[10px] text-slate-400 mt-0.5">Approved, Pending, and Rejected totals</p>
-              </div>
+          <div className="bg-white border border-gray-200 rounded shadow-sm">
+            <div className="px-4 py-3 border-b border-gray-200 bg-gray-50">
+              <h3 className="text-xs font-bold text-gray-700 uppercase tracking-wider">
+                Claim Status Distribution
+              </h3>
+              <p className="text-[10px] text-gray-400 mt-0.5">Approved vs Pending vs Rejected amounts</p>
             </div>
-            <div className="p-5" style={{ height: 290 }}>
+            <div className="p-4" style={{ height: 280 }}>
               {statusWiseData.length > 0 ? (
                 <div className="relative flex justify-center items-center h-full">
                   <ResponsiveContainer width="100%" height="100%">
@@ -990,50 +964,47 @@ export default function AnalysisPage() {
                         cy="50%"
                         innerRadius={45}
                         outerRadius={65}
-                        paddingAngle={4}
+                        paddingAngle={3}
                         dataKey="value"
-                        stroke="#0f172a"
-                        strokeWidth={3}
+                        stroke="#ffffff"
+                        strokeWidth={2}
                       >
-                        {statusWiseData.map((d) => {
-                          const fill = d.name === "Approved" ? "#10b981" : d.name === "Rejected" ? "#f43f5e" : "#f59e0b";
-                          return <Cell key={d.name} fill={fill} />;
-                        })}
+                        {statusWiseData.map((_, i) => (
+                          <Cell key={i} fill={i === 0 ? "#2b7d50" : i === 1 ? "#d28b2a" : "#d83b01"} />
+                        ))}
                       </Pie>
                       <Tooltip content={<CustomMoneyTooltip />} />
-                      <Legend verticalAlign="bottom" height={36} iconType="circle" wrapperStyle={{ fontSize: 9, fontWeight: 'bold', fill: '#94a3b8' }} />
+                      <Legend verticalAlign="bottom" height={36} iconType="circle" wrapperStyle={{ fontSize: 9, fontWeight: 'bold' }} />
                     </PieChart>
                   </ResponsiveContainer>
                   <div className="absolute flex flex-col items-center justify-center pointer-events-none" style={{ top: '40%', left: '50%', transform: 'translate(-50%, -50%)' }}>
-                    <span className="text-[8px] text-slate-450 font-black uppercase tracking-widest">Total</span>
-                    <span className="text-[11px] font-black text-white font-mono mt-0.5">
+                    <span className="text-[8px] text-gray-400 font-bold uppercase tracking-wider">Total Claims</span>
+                    <span className="text-[10px] font-black text-slate-800 font-mono">
                       ₹{statusWiseData.reduce((sum, item) => sum + item.value, 0).toLocaleString()}
                     </span>
                   </div>
                 </div>
               ) : (
-                <div className="flex items-center justify-center h-full text-slate-500 text-xs font-semibold">No data available</div>
+                <div className="flex items-center justify-center h-full text-gray-400 text-xs">No status data</div>
               )}
             </div>
           </div>
 
-          {/* Chart 3: District Wise Expenditure */}
-          <div className="bg-slate-900/40 border border-slate-800/60 rounded-2xl overflow-hidden custom-chart-card">
-            <div className="px-5 py-4 border-b border-slate-800/60 bg-slate-900/80 flex items-center justify-between">
-              <div>
-                <h3 className="text-xs font-black text-slate-200 uppercase tracking-widest">
-                  District Wise Spend
-                </h3>
-                <p className="text-[10px] text-slate-400 mt-0.5">Expense distribution across operational districts</p>
-              </div>
+          {/* Chart 3: District-wise Expenditure */}
+          <div className="bg-white border border-gray-200 rounded shadow-sm">
+            <div className="px-4 py-3 border-b border-gray-200 bg-gray-50">
+              <h3 className="text-xs font-bold text-gray-700 uppercase tracking-wider">
+                District Wise Expenditure
+              </h3>
+              <p className="text-[10px] text-gray-400 mt-0.5">Expense distribution across districts</p>
             </div>
-            <div className="p-5" style={{ height: 290 }}>
+            <div className="p-4" style={{ height: 280 }}>
               {districtWiseData.length > 0 ? (
                 <ResponsiveContainer width="100%" height="100%">
                   <BarChart data={districtWiseData} margin={{ bottom: 5 }}>
-                    <CartesianGrid strokeDasharray="3 3" stroke="#1e293b" horizontal={true} vertical={false} />
-                    <XAxis dataKey="name" tick={{ fontSize: 9, fill: '#94a3b8', fontWeight: 600 }} />
-                    <YAxis tick={{ fontSize: 9, fill: '#94a3b8', fontWeight: 600 }} tickFormatter={(v) => `₹${(v / 1000).toFixed(0)}k`} />
+                    <CartesianGrid strokeDasharray="3 3" stroke="#f3f4f6" horizontal={true} vertical={false} />
+                    <XAxis dataKey="name" tick={{ fontSize: 10 }} />
+                    <YAxis tick={{ fontSize: 10 }} tickFormatter={(v) => `₹${(v / 1000).toFixed(0)}k`} />
                     <Tooltip content={<CustomMoneyTooltip />} />
                     <Bar dataKey="amount" radius={[6, 6, 0, 0]} maxBarSize={30}>
                       {districtWiseData.map((_, index) => (
@@ -1043,55 +1014,51 @@ export default function AnalysisPage() {
                   </BarChart>
                 </ResponsiveContainer>
               ) : (
-                <div className="flex items-center justify-center h-full text-slate-500 text-xs font-semibold">No data available</div>
+                <div className="flex items-center justify-center h-full text-gray-400 text-xs">No district data</div>
               )}
             </div>
           </div>
 
           {/* Chart 4: Date-wise Expense Trend */}
-          <div className="bg-slate-900/40 border border-slate-800/60 rounded-2xl overflow-hidden custom-chart-card">
-            <div className="px-5 py-4 border-b border-slate-800/60 bg-slate-900/80 flex items-center justify-between">
-              <div>
-                <h3 className="text-xs font-black text-slate-200 uppercase tracking-widest">
-                  Daily Spending Pattern
-                </h3>
-                <p className="text-[10px] text-slate-400 mt-0.5">Spend trends across last active dates</p>
-              </div>
+          <div className="bg-white border border-gray-200 rounded shadow-sm">
+            <div className="px-4 py-3 border-b border-gray-200 bg-gray-50">
+              <h3 className="text-xs font-bold text-gray-700 uppercase tracking-wider">
+                Date Wise Expense Trend
+              </h3>
+              <p className="text-[10px] text-gray-400 mt-0.5">Daily spending pattern for last active dates</p>
             </div>
-            <div className="p-5" style={{ height: 290 }}>
+            <div className="p-4" style={{ height: 280 }}>
               {last5DaysData.length > 0 ? (
                 <ResponsiveContainer width="100%" height="100%">
                   <AreaChart data={last5DaysData}>
                     <defs>
                       <linearGradient id="colorAmount" x1="0" y1="0" x2="0" y2="1">
-                        <stop offset="5%" stopColor="#6366f1" stopOpacity={0.4} />
-                        <stop offset="95%" stopColor="#6366f1" stopOpacity={0.01} />
+                        <stop offset="5%" stopColor="#007bff" stopOpacity={0.3} />
+                        <stop offset="95%" stopColor="#007bff" stopOpacity={0.02} />
                       </linearGradient>
                     </defs>
-                    <CartesianGrid strokeDasharray="3 3" stroke="#1e293b" />
-                    <XAxis dataKey="date" tick={{ fontSize: 9, fill: '#94a3b8', fontWeight: 600 }} />
-                    <YAxis tick={{ fontSize: 9, fill: '#94a3b8', fontWeight: 600 }} tickFormatter={(v) => `₹${(v / 1000).toFixed(0)}k`} />
+                    <CartesianGrid strokeDasharray="3 3" stroke="#f3f4f6" />
+                    <XAxis dataKey="date" tick={{ fontSize: 10 }} />
+                    <YAxis tick={{ fontSize: 10 }} tickFormatter={(v) => `₹${(v / 1000).toFixed(0)}k`} />
                     <Tooltip content={<CustomMoneyTooltip />} />
-                    <Area type="monotone" dataKey="amount" stroke="#6366f1" strokeWidth={3} fill="url(#colorAmount)" />
+                    <Area type="monotone" dataKey="amount" stroke="#007bff" strokeWidth={2} fill="url(#colorAmount)" />
                   </AreaChart>
                 </ResponsiveContainer>
               ) : (
-                <div className="flex items-center justify-center h-full text-slate-500 text-xs font-semibold">No data available</div>
+                <div className="flex items-center justify-center h-full text-gray-400 text-xs">No date data</div>
               )}
             </div>
           </div>
 
-          {/* Chart 5: Zone wise Distribution */}
-          <div className="bg-slate-900/40 border border-slate-800/60 rounded-2xl overflow-hidden custom-chart-card">
-            <div className="px-5 py-4 border-b border-slate-800/60 bg-slate-900/80 flex items-center justify-between">
-              <div>
-                <h3 className="text-xs font-black text-slate-200 uppercase tracking-widest">
-                  Zone Distribution
-                </h3>
-                <p className="text-[10px] text-slate-400 mt-0.5">Expenditure breakdown by operations zone</p>
-              </div>
+          {/* Chart 5: Zone-wise Distribution */}
+          <div className="bg-white border border-gray-200 rounded shadow-sm">
+            <div className="px-4 py-3 border-b border-gray-200 bg-gray-50">
+              <h3 className="text-xs font-bold text-gray-700 uppercase tracking-wider">
+                Zone Wise Distribution
+              </h3>
+              <p className="text-[10px] text-gray-400 mt-0.5">Expenses grouped by operational zone</p>
             </div>
-            <div className="p-5" style={{ height: 290 }}>
+            <div className="p-4" style={{ height: 280 }}>
               {zoneWiseData.length > 0 ? (
                 <div className="relative flex justify-center items-center h-full">
                   <ResponsiveContainer width="100%" height="100%">
@@ -1102,49 +1069,47 @@ export default function AnalysisPage() {
                         cy="50%"
                         innerRadius={45}
                         outerRadius={65}
-                        paddingAngle={4}
+                        paddingAngle={3}
                         dataKey="value"
-                        stroke="#0f172a"
-                        strokeWidth={3}
+                        stroke="#ffffff"
+                        strokeWidth={2}
                       >
                         {zoneWiseData.map((_, i) => (
                           <Cell key={i} fill={GALLERY_COLORS[i % GALLERY_COLORS.length]} />
                         ))}
                       </Pie>
                       <Tooltip content={<CustomMoneyTooltip />} />
-                      <Legend verticalAlign="bottom" height={36} iconType="circle" wrapperStyle={{ fontSize: 9, fontWeight: 'bold', fill: '#94a3b8' }} />
+                      <Legend verticalAlign="bottom" height={36} iconType="circle" wrapperStyle={{ fontSize: 9, fontWeight: 'bold' }} />
                     </PieChart>
                   </ResponsiveContainer>
                   <div className="absolute flex flex-col items-center justify-center pointer-events-none" style={{ top: '40%', left: '50%', transform: 'translate(-50%, -50%)' }}>
-                    <span className="text-[8px] text-slate-450 font-black uppercase tracking-widest">Zones</span>
-                    <span className="text-[11px] font-black text-white font-mono mt-0.5">
+                    <span className="text-[8px] text-gray-400 font-bold uppercase tracking-wider">Total Zone</span>
+                    <span className="text-[10px] font-black text-slate-800 font-mono">
                       ₹{zoneWiseData.reduce((sum, item) => sum + item.value, 0).toLocaleString()}
                     </span>
                   </div>
                 </div>
               ) : (
-                <div className="flex items-center justify-center h-full text-slate-500 text-xs font-semibold">No data available</div>
+                <div className="flex items-center justify-center h-full text-gray-400 text-xs">No zone data</div>
               )}
             </div>
           </div>
 
-          {/* Chart 6: Category Breakdown */}
-          <div className="bg-slate-900/40 border border-slate-800/60 rounded-2xl overflow-hidden custom-chart-card">
-            <div className="px-5 py-4 border-b border-slate-800/60 bg-slate-900/80 flex items-center justify-between">
-              <div>
-                <h3 className="text-xs font-black text-slate-200 uppercase tracking-widest">
-                  Travel Mode Breakdown
-                </h3>
-                <p className="text-[10px] text-slate-400 mt-0.5">Expenditure by travel categories</p>
-              </div>
+          {/* Chart 6: Travel Mode / Category Breakdown */}
+          <div className="bg-white border border-gray-200 rounded shadow-sm">
+            <div className="px-4 py-3 border-b border-gray-200 bg-gray-50">
+              <h3 className="text-xs font-bold text-gray-700 uppercase tracking-wider">
+                Travel Mode / Category Breakdown
+              </h3>
+              <p className="text-[10px] text-gray-400 mt-0.5">Expenditure by travel mode (Bike, Car, Auto, etc.)</p>
             </div>
-            <div className="p-5" style={{ height: 290 }}>
+            <div className="p-4" style={{ height: 280 }}>
               {categoryData.length > 0 ? (
                 <ResponsiveContainer width="100%" height="100%">
                   <BarChart data={categoryData} margin={{ bottom: 5 }}>
-                    <CartesianGrid strokeDasharray="3 3" stroke="#1e293b" horizontal={true} vertical={false} />
-                    <XAxis dataKey="name" tick={{ fontSize: 9, fill: '#94a3b8', fontWeight: 600 }} />
-                    <YAxis tick={{ fontSize: 9, fill: '#94a3b8', fontWeight: 600 }} tickFormatter={(v) => `₹${(v / 1000).toFixed(0)}k`} />
+                    <CartesianGrid strokeDasharray="3 3" stroke="#f3f4f6" horizontal={true} vertical={false} />
+                    <XAxis dataKey="name" tick={{ fontSize: 10 }} />
+                    <YAxis tick={{ fontSize: 10 }} tickFormatter={(v) => `₹${(v / 1000).toFixed(0)}k`} />
                     <Tooltip content={<CustomMoneyTooltip />} />
                     <Bar dataKey="amount" radius={[6, 6, 0, 0]} maxBarSize={30}>
                       {categoryData.map((_, index) => (
@@ -1154,33 +1119,33 @@ export default function AnalysisPage() {
                   </BarChart>
                 </ResponsiveContainer>
               ) : (
-                <div className="flex items-center justify-center h-full text-slate-500 text-xs font-semibold">No data available</div>
+                <div className="flex items-center justify-center h-full text-gray-400 text-xs">No category data</div>
               )}
             </div>
           </div>
 
           {/* Chart 7: Operations Activity Metrics */}
-          <div className="bg-slate-900/40 border border-slate-800/60 rounded-2xl overflow-hidden custom-chart-card lg:col-span-2">
-            <div className="px-5 py-4 border-b border-slate-800/60 bg-slate-900/80 flex items-center justify-between">
+          <div className="bg-white border border-gray-200 rounded shadow-sm lg:col-span-2">
+            <div className="px-4 py-3 border-b border-gray-200 bg-gray-50 flex items-center justify-between">
               <div>
-                <h3 className="text-xs font-black text-slate-200 uppercase tracking-widest">
+                <h3 className="text-xs font-bold text-gray-700 uppercase tracking-wider">
                   Operations Activity Metrics
                 </h3>
-                <p className="text-[10px] text-slate-400 mt-0.5">Calls closed, PMS done, calibrations, and asset tagging totals</p>
+                <p className="text-[10px] text-gray-400 mt-0.5">Calls, PMS, calibrations, and asset tagging totals</p>
               </div>
-              <span className="bg-indigo-500/10 text-indigo-400 border border-indigo-500/20 text-[10px] font-bold px-3 py-1 rounded-lg">
+              <span className="bg-blue-50 text-blue-700 border border-blue-200 text-[10px] font-bold px-2 py-0.5 rounded">
                 Operational KPIs
               </span>
             </div>
-            <div className="p-5" style={{ height: 320 }}>
+            <div className="p-4" style={{ height: 320 }}>
               {activityChartData.some(d => d.count > 0) ? (
                 <ResponsiveContainer width="100%" height="100%">
                   <BarChart data={activityChartData} margin={{ bottom: 15, top: 10 }}>
-                    <CartesianGrid strokeDasharray="3 3" stroke="#1e293b" horizontal={true} vertical={false} />
-                    <XAxis dataKey="name" tick={{ fontSize: 9, fill: '#94a3b8', fontWeight: "bold" }} />
-                    <YAxis tick={{ fontSize: 9, fill: '#94a3b8', fontWeight: 600 }} allowDecimals={false} />
+                    <CartesianGrid strokeDasharray="3 3" stroke="#f3f4f6" horizontal={true} vertical={false} />
+                    <XAxis dataKey="name" tick={{ fontSize: 10, fontWeight: "bold" }} />
+                    <YAxis tick={{ fontSize: 10 }} allowDecimals={false} />
                     <Tooltip content={<CustomCountTooltip />} />
-                    <Bar dataKey="count" radius={[6, 6, 0, 0]} maxBarSize={50}>
+                    <Bar dataKey="count" radius={[6, 6, 0, 0]} maxBarSize={60}>
                       {activityChartData.map((_, idx) => (
                         <Cell key={idx} fill={GALLERY_COLORS[idx % GALLERY_COLORS.length]} />
                       ))}
@@ -1188,7 +1153,7 @@ export default function AnalysisPage() {
                   </BarChart>
                 </ResponsiveContainer>
               ) : (
-                <div className="flex items-center justify-center h-full text-slate-500 text-xs font-bold">
+                <div className="flex items-center justify-center h-full text-gray-400 text-xs font-bold">
                   No operational activities recorded in this selection
                 </div>
               )}
