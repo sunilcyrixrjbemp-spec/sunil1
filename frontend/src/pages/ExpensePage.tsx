@@ -3405,9 +3405,12 @@ export default function ExpensePage() {
                                       type="button"
                                       onClick={() => addVerifiedBarcode(leg.leg, "Calls")}
                                       disabled={!leg.calls_verified}
-                                      className={`w-10 h-8 flex items-center justify-center rounded-lg shadow-sm transition-all font-black text-lg ${
-                                        leg.calls_verified ? "btn-add-verified-barcode" : "btn-add-verified-barcode-disabled"
-                                      }`}
+                                      className="w-10 h-8 flex items-center justify-center rounded-lg shadow-sm transition-colors"
+                                      style={
+                                        leg.calls_verified
+                                          ? { backgroundColor: '#111827', color: '#ffffff', border: '1.5px solid #000000', cursor: 'pointer' }
+                                          : { backgroundColor: '#e2e8f0', color: '#94a3b8', border: '1.5px solid #cbd5e1', cursor: 'not-allowed' }
+                                      }
                                       title="Add Verified Entry"
                                     >
                                       <Plus className="w-5 h-5" />
@@ -3609,9 +3612,12 @@ export default function ExpensePage() {
                                       type="button"
                                       onClick={() => addVerifiedBarcode(leg.leg, "PMS")}
                                       disabled={!leg.pms_verified}
-                                      className={`w-10 h-8 flex items-center justify-center rounded-lg shadow-sm transition-all font-black text-lg ${
-                                        leg.pms_verified ? "btn-add-verified-barcode" : "btn-add-verified-barcode-disabled"
-                                      }`}
+                                      className="w-10 h-8 flex items-center justify-center rounded-lg shadow-sm transition-colors"
+                                      style={
+                                        leg.pms_verified
+                                          ? { backgroundColor: '#111827', color: '#ffffff', border: '1.5px solid #000000', cursor: 'pointer' }
+                                          : { backgroundColor: '#e2e8f0', color: '#94a3b8', border: '1.5px solid #cbd5e1', cursor: 'not-allowed' }
+                                      }
                                       title="Add Verified Entry"
                                     >
                                       <Plus className="w-5 h-5" />
