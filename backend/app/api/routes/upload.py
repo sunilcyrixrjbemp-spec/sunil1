@@ -122,35 +122,38 @@ async def serve_file(filename: str):
             from fastapi.responses import FileResponse
             from app.utils.gdrive import download_file_from_drive
             
-            # Setup local cache folder
-            cache_dir = os.path.join(tempfile.gettempdir(), "gdrive_cache")
-            os.makedirs(cache_dir, exist_ok=True)
+            cache_path = None
+            mime_path = None
             
-            cache_path = os.path.join(cache_dir, file_id)
-            mime_path = cache_path + ".mime"
-            
-            # Serve from local cache if it exists to make click-preview super fast
-            if os.path.exists(cache_path) and os.path.exists(mime_path):
-                try:
+            # Setup local cache folder (wrapped in try-except for read-only systems)
+            try:
+                cache_dir = os.path.join(tempfile.gettempdir(), "gdrive_cache")
+                os.makedirs(cache_dir, exist_ok=True)
+                cache_path = os.path.join(cache_dir, file_id)
+                mime_path = cache_path + ".mime"
+                
+                # Serve from local cache if it exists to make click-preview super fast
+                if os.path.exists(cache_path) and os.path.exists(mime_path):
                     with open(mime_path, "r", encoding="utf-8") as f:
                         mime_type = f.read().strip()
                     logger.info(f"GDrive Cache: Serving file ID {file_id} from local cache.")
                     return FileResponse(cache_path, media_type=mime_type)
-                except Exception as cache_err:
-                    logger.warning(f"GDrive Cache: Failed to read cache for ID {file_id}: {str(cache_err)}")
+            except Exception as cache_setup_err:
+                logger.warning(f"GDrive Cache: Failed to setup/read cache for ID {file_id}: {str(cache_setup_err)}")
             
             # Otherwise, download from Google Drive (first-time fetch)
             file_bytes, mime_type = download_file_from_drive(file_id)
             
             # Save downloaded file in the local cache folder
-            try:
-                with open(cache_path, "wb") as f:
-                    f.write(file_bytes)
-                with open(mime_path, "w", encoding="utf-8") as f:
-                    f.write(mime_type)
-                logger.info(f"GDrive Cache: Saved file ID {file_id} in local cache.")
-            except Exception as cache_write_err:
-                logger.warning(f"GDrive Cache: Failed to write cache for ID {file_id}: {str(cache_write_err)}")
+            if cache_path and mime_path:
+                try:
+                    with open(cache_path, "wb") as f:
+                        f.write(file_bytes)
+                    with open(mime_path, "w", encoding="utf-8") as f:
+                        f.write(mime_type)
+                    logger.info(f"GDrive Cache: Saved file ID {file_id} in local cache.")
+                except Exception as cache_write_err:
+                    logger.warning(f"GDrive Cache: Failed to write cache for ID {file_id}: {str(cache_write_err)}")
                 
             return Response(content=file_bytes, media_type=mime_type)
         except Exception as e:

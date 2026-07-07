@@ -43,11 +43,11 @@ jobs:
           else
             export CLOUDFLARE_API_TOKEN="${{ secrets.CF_API_TOKEN }}"
           fi
-          echo "${{ secrets.CF_API_TOKEN }}" | npx wrangler secret put CLOUDFLARE_API_TOKEN
-          echo "${{ secrets.CF_ACCOUNT_ID }}" | npx wrangler secret put CLOUDFLARE_ACCOUNT_ID
-          echo "${{ secrets.CF_DATABASE_ID }}" | npx wrangler secret put CLOUDFLARE_DATABASE_ID
+          echo "${{ secrets.CF_API_TOKEN }}" | npx wrangler secret put CLOUDFLARE_API_TOKEN || true
+          echo "${{ secrets.CF_ACCOUNT_ID }}" | npx wrangler secret put CLOUDFLARE_ACCOUNT_ID || true
+          echo "${{ secrets.CF_DATABASE_ID }}" | npx wrangler secret put CLOUDFLARE_DATABASE_ID || true
           if [ -n "${{ secrets.CF_KV_NAMESPACE_ID }}" ]; then
-            echo "${{ secrets.CF_KV_NAMESPACE_ID }}" | npx wrangler secret put CLOUDFLARE_KV_NAMESPACE_ID
+            echo "${{ secrets.CF_KV_NAMESPACE_ID }}" | npx wrangler secret put CLOUDFLARE_KV_NAMESPACE_ID || true
           fi
         env:
           CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CF_ACCOUNT_ID }}
@@ -76,7 +76,7 @@ jobs:
           else
             export CLOUDFLARE_API_TOKEN="${{ secrets.CF_API_TOKEN }}"
           fi
-          echo "${{ secrets.CF_API_TOKEN }}" | npx wrangler secret put PRIMARY_CLOUDFLARE_API_TOKEN
+          echo "${{ secrets.CF_API_TOKEN }}" | npx wrangler secret put PRIMARY_CLOUDFLARE_API_TOKEN || true
         env:
           CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CF_ACCOUNT_ID }}
 
