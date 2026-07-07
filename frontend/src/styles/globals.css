@@ -1342,3 +1342,14 @@ tr.bg-slate-800 th {
 .info-box-content span[class*="text-slate-800"] {
   color: #0f172a !important; /* Make amounts bold and black */
 }
+
+/* ================= EMPLOYEE/SUBMITTER DETAILS TEXT CONTRAST FORCE ================= */
+.submitter-name-text,
+p.submitter-name-text {
+  color: #0f172a !important; /* Force deep black-slate text for readability */
+}
+
+.submitter-code-text,
+span.submitter-code-text {
+  color: #2563eb !important; /* Force deep blue for the employee code */
+}

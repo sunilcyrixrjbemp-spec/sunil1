@@ -934,8 +934,8 @@ export default function HomePage() {
                             className="hover:bg-blue-50/20 transition-colors cursor-pointer"
                           >
                             <td className="py-3 px-3 whitespace-nowrap">
-                              <p className="font-bold text-slate-800 leading-none" style={{ color: '#1e293b' }}>{exp.submitter_name}</p>
-                              <span className="text-[8px] font-mono uppercase text-blue-600 block mt-0.5" style={{ color: '#2563eb' }}>{exp.submitter_code}</span>
+                              <p className="font-bold text-slate-800 leading-none submitter-name-text">{exp.submitter_name}</p>
+                              <span className="text-[8px] font-mono uppercase text-blue-600 block mt-0.5 submitter-code-text">{exp.submitter_code}</span>
                             </td>
                             <td className="py-3 px-3 font-semibold font-mono text-blue-600 uppercase whitespace-nowrap">{exp.expense_code}</td>
                             <td className="py-3 px-3 text-slate-600 whitespace-nowrap">{exp.itinerary || exp.date || exp.created_at}</td>
@@ -2039,8 +2039,8 @@ export default function HomePage() {
                         >
                           {activeTab === "team-claims" && (
                             <td className="py-3 px-3">
-                              <p className="font-bold text-slate-800 leading-none" style={{ color: '#1e293b' }}>{exp.submitter_name}</p>
-                              <span className="text-[8px] font-mono uppercase text-blue-600 block mt-0.5" style={{ color: '#2563eb' }}>{exp.submitter_code}</span>
+                              <p className="font-bold text-slate-800 leading-none submitter-name-text">{exp.submitter_name}</p>
+                              <span className="text-[8px] font-mono uppercase text-blue-600 block mt-0.5 submitter-code-text">{exp.submitter_code}</span>
                             </td>
                           )}
                           <td className="py-3 px-3 font-semibold font-mono text-blue-600 uppercase">{exp.expense_code}</td>
