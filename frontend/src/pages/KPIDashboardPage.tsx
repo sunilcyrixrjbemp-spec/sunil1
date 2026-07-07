@@ -14,7 +14,8 @@ import {
   YAxis, 
   CartesianGrid, 
   Tooltip, 
-  ResponsiveContainer
+  ResponsiveContainer,
+  Cell
 } from "recharts";
 import { authService } from "../services/authService";
 import { expenseService } from "../services/expenseService";
@@ -55,16 +56,37 @@ const CORE_VALUE_METRICS: CoreValueMetric[] = [
   }
 ];
 
-// Dropdown options for Core Values (exactly matching image values)
+// Dropdown options for Core Values (exactly matching image values & scores out of 100)
 const CORE_VALUE_OPTIONS = [
   { label: "", value: "", points: 0 },
-  { label: "Excellent", value: "Excellent", points: 20 },
-  { label: "Very Good", value: "Very Good", points: 16 },
-  { label: "Good", value: "Good", points: 12 },
-  { label: "Satisfactory", value: "Satisfactory", points: 8 },
-  { label: "Poor", value: "Poor", points: 4 },
+  { label: "Excellent", value: "Excellent", points: 100 },
+  { label: "Very Good", value: "Very Good", points: 80 },
+  { label: "Good", value: "Good", points: 60 },
+  { label: "Satisfactory", value: "Satisfactory", points: 40 },
+  { label: "Poor", value: "Poor", points: 20 },
   { label: "Bad", value: "Bad", points: 0 }
 ];
+
+// Conditional formatting colors for Excel-style Current State cells
+const getRatingStyleClass = (rating: string) => {
+  switch (rating) {
+    case "Excellent":
+    case "Very Good":
+      return "bg-[#e2efda] text-[#375623] font-bold";
+    case "Good":
+      return "bg-[#fff2cc] text-[#7f6000] font-bold";
+    case "Satisfactory":
+      return "bg-[#ffe699] text-[#7f6000] font-bold";
+    case "Poor":
+    case "Bad":
+      return "bg-[#f8cbad] text-[#c00000] font-bold";
+    default:
+      return "bg-white text-slate-800";
+  }
+};
+
+// Unique color palette matching Excel series colors for the 5 bars
+const BAR_COLORS = ["#c55a11", "#70ad47", "#ffc000", "#4472c4", "#7030a0"];
 
 interface KpiRow {
   section: "Job Role" | "Alignment to Core Values";
@@ -394,20 +416,18 @@ export default function KPIDashboardPage() {
     return match ? match.points : 0;
   };
 
-  // Dynamic sum of core value points
+  // Dynamic average sum of core value points (Sum of 5 parameters / 5 = average out of 100)
   const selfDelightTotal = useMemo(() => {
-    const isAnySelected = Object.values(selfCoreRatings).some(v => v !== "");
-    if (!isAnySelected) return 0;
-    return Object.values(selfCoreRatings).reduce((sum, r) => sum + getPointsFromRating(r), 0);
+    const sum = Object.values(selfCoreRatings).reduce((acc, r) => acc + getPointsFromRating(r), 0);
+    return Math.round(sum / 5);
   }, [selfCoreRatings]);
 
   const managerDelightTotal = useMemo(() => {
-    const isAnySelected = Object.values(managerCoreRatings).some(v => v !== "");
-    if (!isAnySelected) return 0;
-    return Object.values(managerCoreRatings).reduce((sum, r) => sum + getPointsFromRating(r), 0);
+    const sum = Object.values(managerCoreRatings).reduce((acc, r) => acc + getPointsFromRating(r), 0);
+    return Math.round(sum / 5);
   }, [managerCoreRatings]);
 
-  // Synchronize Core Values rating totals to Customer Delight KRA
+  // Synchronize Core Values rating average to Customer Delight KRA
   useEffect(() => {
     setSelfAchievedValues(prev => ({
       ...prev,
@@ -478,14 +498,14 @@ export default function KPIDashboardPage() {
     toast.success("KPI appraisal details saved successfully!");
   };
 
-  // Recharts chart data
+  // Recharts chart data (based on the active user assessment role)
   const chartData = useMemo(() => {
+    const activeRatings = isSelfWritable ? selfCoreRatings : managerCoreRatings;
     return CORE_VALUE_METRICS.map(m => ({
       name: m.name,
-      Self: getPointsFromRating(selfCoreRatings[m.id]),
-      Manager: getPointsFromRating(managerCoreRatings[m.id])
+      Score: getPointsFromRating(activeRatings[m.id])
     }));
-  }, [selfCoreRatings, managerCoreRatings]);
+  }, [selfCoreRatings, managerCoreRatings, isSelfWritable]);
 
   return (
     <div className="space-y-6 animate-fadeIn text-slate-800 font-sans pb-10">
@@ -777,17 +797,18 @@ export default function KPIDashboardPage() {
           <div className="overflow-x-auto flex-1">
             <table className="w-full border-collapse text-left font-sans text-xs border-slate-300">
               <thead>
-                <tr className="bg-slate-100 text-slate-700 font-extrabold uppercase border-b border-slate-300">
-                  <th className="px-3 py-2.5 border-r border-slate-300">Core Value Parameter</th>
-                  <th className="px-3 py-2.5 border-r border-slate-300">Measurable Core Standard Definition</th>
-                  <th className="px-2 py-2.5 border-r border-slate-300 text-center w-36 bg-[#fff2cc] text-slate-900">Current State</th>
-                  <th className="px-2 py-2.5 text-center w-20 bg-slate-50">Score</th>
+                <tr className="bg-slate-100 text-slate-700 font-extrabold uppercase border-b border-slate-300 text-center">
+                  <th className="px-3 py-2.5 border-r border-slate-300 text-left">Core Value Parameter</th>
+                  <th className="px-3 py-2.5 border-r border-slate-300 text-left">Measurable Core Standard Definition</th>
+                  <th className="px-2 py-2.5 border-r border-slate-300 w-36 text-center">Current State</th>
+                  <th className="px-2 py-2.5 w-20 text-center">Score</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-300 font-semibold text-slate-600 bg-white">
                 {CORE_VALUE_METRICS.map((metric) => {
-                  const activeRating = isSelfWritable ? selfCoreRatings[metric.id] : managerCoreRatings[metric.id];
-                  const activeScore = getPointsFromRating(activeRating || "");
+                  const ratingVal = isSelfWritable ? (selfCoreRatings[metric.id] || "") : (managerCoreRatings[metric.id] || "");
+                  const activeScore = getPointsFromRating(ratingVal);
+                  const ratingStyleClass = getRatingStyleClass(ratingVal);
                   
                   return (
                     <tr key={metric.id} className="hover:bg-slate-50/30">
@@ -798,11 +819,11 @@ export default function KPIDashboardPage() {
                         {metric.description}
                       </td>
                       
-                      {/* Dropdown Ratings (EXACT values as in Excel validation: Excellent, Very Good, Good, Satisfactory, Poor, Bad) */}
-                      <td className="px-2 py-3 border-r border-slate-300 bg-[#fff2cc]/20 text-center">
+                      {/* Excel-style dropdown cell with conditional background coloring */}
+                      <td className={`px-2 py-3 border-r border-slate-300 text-center transition-all ${ratingStyleClass}`}>
                         <select
                           disabled={!isSelfWritable && !isManagerWritable}
-                          value={isSelfWritable ? (selfCoreRatings[metric.id] || "") : (managerCoreRatings[metric.id] || "")}
+                          value={ratingVal}
                           onChange={(e) => {
                             const val = e.target.value;
                             if (isSelfWritable) {
@@ -811,17 +832,19 @@ export default function KPIDashboardPage() {
                               setManagerCoreRatings(prev => ({ ...prev, [metric.id]: val }));
                             }
                           }}
-                          className="w-full bg-white border border-slate-300 rounded px-1.5 py-1 text-xs font-bold text-slate-800 outline-none cursor-pointer text-center"
+                          className={`w-full bg-transparent border-0 outline-none text-xs font-bold cursor-pointer text-center ${
+                            ratingVal ? "text-inherit" : "text-slate-400"
+                          }`}
                         >
                           {CORE_VALUE_OPTIONS.map((opt) => (
-                            <option key={opt.value} value={opt.value}>
+                            <option key={opt.value} value={opt.value} className="bg-white text-slate-800 font-semibold">
                               {opt.label || "-- Select --"}
                             </option>
                           ))}
                         </select>
                       </td>
 
-                      {/* Numeric Score mapping (0 by default) */}
+                      {/* Score cell (default 0) */}
                       <td className="px-2 py-3 text-center bg-slate-50 font-mono font-bold text-slate-800 text-sm">
                         {activeScore}
                       </td>
@@ -833,7 +856,7 @@ export default function KPIDashboardPage() {
           </div>
         </div>
 
-        {/* Recharts chart representation */}
+        {/* Recharts chart representation with custom colored bars */}
         <div className="lg:col-span-5 bg-[#404040] border border-slate-300 rounded shadow-sm p-4 flex flex-col justify-between">
           <div className="border-b border-[#555] pb-2 mb-4">
             <h3 className="text-xs font-extrabold uppercase tracking-wider text-white flex items-center gap-1.5">
@@ -866,21 +889,17 @@ export default function KPIDashboardPage() {
                   itemStyle={{ color: "#fff", fontSize: "10px", fontWeight: "bold" }}
                   labelStyle={{ color: "#94a3b8", fontSize: "9px", fontWeight: "extrabold", textTransform: "uppercase" }}
                 />
-                <Bar dataKey="Self" fill="#ffd966" radius={[2, 2, 0, 0]} barSize={12} />
-                <Bar dataKey="Manager" fill="#c00000" radius={[2, 2, 0, 0]} barSize={12} />
+                <Bar dataKey="Score" radius={[2, 2, 0, 0]} barSize={20}>
+                  {chartData.map((_entry, index) => (
+                    <Cell key={`cell-${index}`} fill={BAR_COLORS[index % BAR_COLORS.length]} />
+                  ))}
+                </Bar>
               </BarChart>
             </ResponsiveContainer>
           </div>
 
-          <div className="flex items-center justify-center gap-4 text-[9px] font-black uppercase mt-3 pt-3 border-t border-[#555]">
-            <div className="flex items-center gap-1.5 text-white">
-              <span className="w-2.5 h-2.5 rounded bg-[#ffd966] inline-block" />
-              <span>Self Rating</span>
-            </div>
-            <div className="flex items-center gap-1.5 text-white">
-              <span className="w-2.5 h-2.5 rounded bg-[#c00000] inline-block" />
-              <span>Manager Rating</span>
-            </div>
+          <div className="flex items-center justify-center gap-2 text-[9px] font-black uppercase mt-3 pt-3 border-t border-[#555]">
+            <span className="text-white tracking-widest">Excel Chart Series Representation</span>
           </div>
         </div>
 
