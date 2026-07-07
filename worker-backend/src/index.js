@@ -247,6 +247,27 @@ router.delete("/api/expense/:id", handleDeleteExpense, true);
 // --- Main Entry point ---
 export default {
   async fetch(request, env, ctx) {
+    // Store ctx on env for background tasks access (e.g. replication)
+    env.ctx = ctx;
+
+    // Self-healing migration to create indexes on queried tables asynchronously
+    if (env.DB) {
+      ctx.waitUntil((async () => {
+        try {
+          const dbObj = env._originalDB || env.DB;
+          await dbObj.exec(`
+            CREATE INDEX IF NOT EXISTS idx_expenses_user_id ON expenses(user_id);
+            CREATE INDEX IF NOT EXISTS idx_approvals_expense_id ON approvals(expense_id);
+            CREATE INDEX IF NOT EXISTS idx_approvals_approver_id ON approvals(approver_id);
+            CREATE INDEX IF NOT EXISTS idx_hierarchy_requesters_user_id ON hierarchy_requesters(user_id);
+            CREATE INDEX IF NOT EXISTS idx_hierarchy_approvers_approver_id ON hierarchy_approvers(approver_id);
+          `);
+        } catch (e) {
+          console.error("Self-healing indexes migration failed:", e);
+        }
+      })());
+    }
+
     // Intercept D1 database connection for read control routing
     if (env.DB && !env._originalDB) {
       env._originalDB = env.DB;

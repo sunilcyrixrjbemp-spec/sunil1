@@ -21,9 +21,12 @@ export async function runWrite(env, sql, params = []) {
   const primaryEmail = env.PRIMARY_CLOUDFLARE_EMAIL;
 
   if (primaryAccount && primaryDb && primaryToken) {
-    // We trigger replication asynchronously
-    replicateToPrimary(primaryAccount, primaryDb, primaryToken, primaryEmail, sql, params)
-      .catch(err => console.error("Replication background error:", err));
+    const promise = replicateToPrimary(primaryAccount, primaryDb, primaryToken, primaryEmail, sql, params);
+    if (env.ctx && typeof env.ctx.waitUntil === "function") {
+      env.ctx.waitUntil(promise);
+    } else {
+      promise.catch(err => console.error("Replication background error:", err));
+    }
   } else {
     console.warn("Primary DB replication credentials missing. Local write succeeded but did not replicate.");
   }
@@ -54,8 +57,12 @@ export async function runBatchWrite(env, statements) {
   const primaryEmail = env.PRIMARY_CLOUDFLARE_EMAIL;
 
   if (primaryAccount && primaryDb && primaryToken) {
-    replicateBatchToPrimary(primaryAccount, primaryDb, primaryToken, primaryEmail, statements)
-      .catch(err => console.error("Batch replication background error:", err));
+    const promise = replicateBatchToPrimary(primaryAccount, primaryDb, primaryToken, primaryEmail, statements);
+    if (env.ctx && typeof env.ctx.waitUntil === "function") {
+      env.ctx.waitUntil(promise);
+    } else {
+      promise.catch(err => console.error("Batch replication background error:", err));
+    }
   }
 
   return results;
