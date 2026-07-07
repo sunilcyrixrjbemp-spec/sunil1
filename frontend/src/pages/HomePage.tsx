@@ -688,30 +688,32 @@ export default function HomePage() {
           {/* TAB SYSTEM: My Claims vs Team Claims */}
           <div className="bg-white border border-slate-100 rounded-xl sm:rounded-3xl shadow-sm overflow-hidden flex flex-col">
             {/* Tab Header bar */}
-            <div className="bg-slate-50 border-b border-slate-100 flex items-center justify-start p-2 gap-2 dashboard-tabs-header">
-              <button
-                type="button"
-                onClick={() => handleTabChange("my-claims")}
-                className={`dashboard-tab-btn py-2 px-4 sm:px-5 font-black text-xs uppercase tracking-wider rounded-xl sm:rounded-2xl transition-all flex items-center gap-1.5 cursor-pointer border-0 ${
-                  activeTab === "my-claims" ? "active" : ""
-                }`}
-              >
-                <Layers className="w-4 h-4" />
-                My Claims ({filteredPersonalExpenses.length})
-              </button>
-
-              {isReviewerRole && (
+            <div className="px-4 pt-4 pb-2 border-b-0 flex">
+              <div className="dashboard-tabs-header">
                 <button
                   type="button"
-                  onClick={() => handleTabChange("team-claims")}
-                  className={`dashboard-tab-btn py-2 px-4 sm:px-5 font-black text-xs uppercase tracking-wider rounded-xl sm:rounded-2xl transition-all flex items-center gap-1.5 cursor-pointer border-0 ${
-                    activeTab === "team-claims" ? "active" : ""
+                  onClick={() => handleTabChange("my-claims")}
+                  className={`dashboard-tab-btn ${
+                    activeTab === "my-claims" ? "active" : ""
                   }`}
                 >
-                  <Users className="w-4 h-4" />
-                  Team Claims ({filteredTeamExpenses.length})
+                  <Layers className="w-3.5 h-3.5" />
+                  My Claims ({filteredPersonalExpenses.length})
                 </button>
-              )}
+
+                {isReviewerRole && (
+                  <button
+                    type="button"
+                    onClick={() => handleTabChange("team-claims")}
+                    className={`dashboard-tab-btn ${
+                      activeTab === "team-claims" ? "active" : ""
+                    }`}
+                  >
+                    <Users className="w-3.5 h-3.5" />
+                    Team Claims ({filteredTeamExpenses.length})
+                  </button>
+                )}
+              </div>
             </div>
 
             {/* Contextual Filters Row — matches ExpensePage compact filter style */}

@@ -3426,7 +3426,7 @@ export default function ExpensePage() {
 
                               {/* Added Barcodes Table */}
                               {(leg.calls_list || []).length > 0 && (
-                                <div className="border border-gray-200 rounded overflow-hidden mt-2 bg-white">
+                                <div className="border border-gray-200 rounded overflow-x-auto mt-2 bg-white w-full max-w-full block scrollbar-thin">
                                   <table className="table-lte text-xs w-full text-left border-collapse">
                                     <thead>
                                       <tr className="bg-gray-100 border-b border-gray-200 text-gray-700 font-bold uppercase text-[9px] tracking-wider">
@@ -3623,7 +3623,7 @@ export default function ExpensePage() {
 
                               {/* Added PMS Barcodes Table */}
                               {(leg.pms_list || []).length > 0 && (
-                                <div className="border border-gray-200 rounded overflow-hidden mt-2 bg-white">
+                                <div className="border border-gray-200 rounded overflow-x-auto mt-2 bg-white w-full max-w-full block scrollbar-thin">
                                   <table className="table-lte text-xs w-full text-left border-collapse">
                                     <thead>
                                       <tr className="bg-gray-100 border-b border-gray-200 text-gray-700 font-bold uppercase text-[9px] tracking-wider">
@@ -3734,7 +3734,7 @@ export default function ExpensePage() {
 
                               {/* Added Assets Table */}
                               {(leg.assets_list || []).length > 0 && (
-                                <div className="border border-gray-200 rounded overflow-hidden mt-2 bg-white">
+                                <div className="border border-gray-200 rounded overflow-x-auto mt-2 bg-white w-full max-w-full block scrollbar-thin">
                                   <table className="table-lte text-xs w-full text-left border-collapse">
                                     <thead>
                                       <tr className="bg-gray-100 border-b border-gray-200 text-gray-700 font-bold uppercase text-[9px] tracking-wider">

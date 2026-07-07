@@ -286,8 +286,8 @@ svg, path, g, sector, .recharts-pie-sector, .recharts-sector, .recharts-pie, .re
   }
 
   /* 2. Top Navigation Header (Premium Android-Style Deep Slate Action Bar) */
-  header.h-14 {
-    height: 56px !important;
+  header.h-28 {
+    height: 112px !important;
     box-shadow: 0 2px 6px rgba(0, 0, 0, 0.08) !important;
     border-bottom: none !important;
     background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%) !important; /* Premium Slate-900/800 Indigo gradient */
@@ -299,23 +299,23 @@ svg, path, g, sector, .recharts-pie-sector, .recharts-sector, .recharts-pie, .re
   }
 
   /* Enforce white text and icons in deep slate header */
-  header.h-14 span,
-  header.h-14 button,
-  header.h-14 svg,
-  header.h-14 i,
-  header.h-14 a {
+  header.h-28 span,
+  header.h-28 button,
+  header.h-28 svg,
+  header.h-28 i,
+  header.h-28 a {
     color: #ffffff !important;
     fill: #ffffff !important;
   }
 
-  header.h-14 img {
+  header.h-28 img {
     background-color: #ffffff !important;
     border-color: rgba(255, 255, 255, 0.25) !important;
   }
 
   /* 2b. Align mobile navigation menu header design with the action bar */
   div[class*="z-[999]"] div[class*="border-b"] {
-    height: 56px !important;
+    height: 112px !important;
     background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%) !important;
     border-bottom: none !important;
     box-shadow: 0 2px 6px rgba(0, 0, 0, 0.08) !important;
@@ -323,7 +323,9 @@ svg, path, g, sector, .recharts-pie-sector, .recharts-sector, .recharts-pie, .re
 
   div[class*="z-[999]"] div[class*="border-b"] span,
   div[class*="z-[999]"] div[class*="border-b"] button,
-  div[class*="z-[999]"] div[class*="border-b"] svg {
+  div[class*="z-[999]"] div[class*="border-b"] svg,
+  div[class*="z-[999]"] div[class*="border-b"] i,
+  div[class*="z-[999]"] div[class*="border-b"] a {
     color: #ffffff !important;
     fill: #ffffff !important;
   }
@@ -1245,36 +1247,66 @@ svg, path, g, sector, .recharts-pie-sector, .recharts-sector, .recharts-pie, .re
 
 /* ================= HOME DASHBOARD TABS EXPLICIT STYLING ================= */
 .dashboard-tabs-header {
-  background-color: #f1f5f9 !important;
+  background-color: #f1f5f9 !important; /* light grey capsule container */
   padding: 4px !important;
-  border-radius: 12px !important;
+  border-radius: 9999px !important; /* capsule pill shape! */
   border: none !important;
-  margin-bottom: 0.75rem !important;
-  display: flex !important;
-  gap: 8px !important;
+  display: inline-flex !important; /* inline-flex so it wraps nicely as a capsule switch */
+  gap: 4px !important;
 }
 
 .dashboard-tab-btn {
-  flex: 1 0 auto !important;
-  border-radius: 8px !important;
-  font-size: 10.5px !important;
+  flex: unset !important;
+  border-radius: 9999px !important; /* capsule pill shape! */
+  font-size: 11px !important;
   font-weight: 750 !important;
-  padding: 6px 12px !important;
+  padding: 8px 18px !important;
   border: none !important;
   background-color: transparent !important;
-  color: #64748b !important;
+  color: #475569 !important; /* inactive tab text color */
   box-shadow: none !important;
   min-height: auto !important;
+  cursor: pointer !important;
   transition: all 0.15s ease !important;
+  text-transform: uppercase !important;
+  letter-spacing: 0.02em !important;
+  display: flex !important;
+  align-items: center !important;
+  gap: 6px !important;
 }
 
 .dashboard-tab-btn.active {
-  background-color: #4f46e5 !important;
-  color: #ffffff !important;
-  box-shadow: 0 2px 8px rgba(79, 70, 229, 0.25) !important;
+  background-color: #a5f3fc !important; /* light sky blue / cyan capsule switch active */
+  color: #0f172a !important; /* dark text */
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.06) !important;
+  font-weight: 800 !important;
 }
 
 .dashboard-tab-btn:not(.active):hover {
-  background-color: #e2e8f0 !important;
-  color: #1e293b !important;
+  background-color: rgba(0, 0, 0, 0.04) !important;
+  color: #0f172a !important;
+}
+
+/* ================= PREMIUM TABLE HEADERS CONTRACT CONTRAST OVERRIDE ================= */
+.table-lte thead tr th,
+table thead tr th,
+.table-lte tr.bg-slate-800 th,
+tr.bg-slate-800 th {
+  background-color: #1e293b !important;
+  color: #f8fafc !important;
+  border-bottom: 2px solid #334155 !important;
+  font-weight: 900 !important;
+  letter-spacing: 0.05em !important;
+}
+
+/* ================= PREMIUM INFO BOXES CONTRACT CONTRAST OVERRIDE ================= */
+.info-box-content span.text-slate-400,
+.info-box-content span[class*="text-slate-400"] {
+  color: #475569 !important; /* Make labels much darker and readable */
+  font-weight: 800 !important;
+}
+
+.info-box-content span.text-slate-800,
+.info-box-content span[class*="text-slate-800"] {
+  color: #0f172a !important; /* Make amounts bold and black */
 }
