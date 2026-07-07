@@ -278,7 +278,7 @@ export default {
       }
 
       user = await env.DB.prepare("SELECT * FROM users WHERE user_id = ?").bind(payload.sub).first();
-      if (!user || user.active_session_id !== payload.sid) {
+      if (!user) {
         return jsonResponse({ error: "Invalid session" }, 401, origin);
       }
       if (user.user_status !== "active") {

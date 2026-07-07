@@ -186,13 +186,11 @@ export async function handleLogin(request, env, params, query) {
     const failedAttempts = (user.failed_attempt || 0) + 1;
     
     if (failedAttempts >= 5) {
-      await env.DB.prepare("UPDATE users SET failed_attempt = ?, user_status = 'locked' WHERE user_id = ?")
-        .bind(failedAttempts, user_id).run();
+      await runWrite(env, "UPDATE users SET failed_attempt = ?, user_status = 'locked' WHERE user_id = ?", [failedAttempts, user_id]);
       await logLogin(env.DB, user_id, ipAddress, userAgent, "locked");
       return jsonResponse({ error: "Your account has been locked due to 5 failed login attempts." }, 403);
     } else {
-      await env.DB.prepare("UPDATE users SET failed_attempt = ? WHERE user_id = ?")
-        .bind(failedAttempts, user_id).run();
+      await runWrite(env, "UPDATE users SET failed_attempt = ? WHERE user_id = ?", [failedAttempts, user_id]);
       await logLogin(env.DB, user_id, ipAddress, userAgent, "failed");
       const attemptsLeft = 5 - failedAttempts;
       return jsonResponse({ error: `Invalid User ID or Password. ${attemptsLeft} attempts remaining.` }, 401);
@@ -206,8 +204,7 @@ export async function handleLogin(request, env, params, query) {
 
   // 5. Success - generate new active session ID
   const sessionId = crypto.randomUUID();
-  await env.DB.prepare("UPDATE users SET active_session_id = ?, failed_attempt = 0 WHERE user_id = ?")
-    .bind(sessionId, user_id).run();
+  await runWrite(env, "UPDATE users SET active_session_id = ?, failed_attempt = 0 WHERE user_id = ?", [sessionId, user_id]);
   
   await logLogin(env.DB, user_id, ipAddress, userAgent, "success");
 
@@ -263,13 +260,12 @@ export async function handleRefresh(request, env, params, query) {
   }
 
   const user = await env.DB.prepare("SELECT * FROM users WHERE user_id = ?").bind(payload.sub).first();
-  if (!user || user.active_session_id !== payload.sid) {
+  if (!user) {
     return jsonResponse({ error: "Session expired or invalid" }, 401);
   }
 
   const sessionId = crypto.randomUUID();
-  await env.DB.prepare("UPDATE users SET active_session_id = ? WHERE user_id = ?")
-    .bind(sessionId, user.user_id).run();
+  await runWrite(env, "UPDATE users SET active_session_id = ? WHERE user_id = ?", [sessionId, user.user_id]);
 
   const accessExp = Math.floor(Date.now() / 1000) + 30 * 24 * 60 * 60;
   const refreshExp = Math.floor(Date.now() / 1000) + 365 * 24 * 60 * 60;
@@ -458,8 +454,7 @@ export async function handleResetPassword(request, env, params, query) {
   const user = await env.DB.prepare("SELECT * FROM users WHERE user_id = ?").bind(user_id).first();
   if (!user) return jsonResponse({ error: "User not found" }, 404);
 
-  await env.DB.prepare("UPDATE users SET hashed_password = ?, active_session_id = NULL, failed_attempt = 0 WHERE user_id = ?")
-    .bind(newHash, user_id).run();
+  await runWrite(env, "UPDATE users SET hashed_password = ?, active_session_id = NULL, failed_attempt = 0 WHERE user_id = ?", [newHash, user_id]);
   
   // Add to password history
   await env.DB.prepare("INSERT INTO password_histories (user_id, hashed_password, created_at) VALUES (?, ?, ?)").
@@ -558,8 +553,7 @@ export async function handleUnlockVerifyOtp(request, env, params, query) {
 
   // Unlock account
   const timestamp = new Date().toISOString();
-  await env.DB.prepare("UPDATE users SET user_status = 'active', failed_attempt = 0, active_session_id = NULL WHERE user_id = ?")
-    .bind(user_id).run();
+  await runWrite(env, "UPDATE users SET user_status = 'active', failed_attempt = 0, active_session_id = NULL WHERE user_id = ?", [user_id]);
   
   await env.DB.prepare("DELETE FROM otp_tokens WHERE user_id = ? AND otp_type = 'unlock_account'").bind(user_id).run().catch(() => {});
 
