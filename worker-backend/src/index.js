@@ -56,7 +56,7 @@ import {
 // Import Expense handlers
 import {
   handleListExpenses, handleExpenseInit, handleCreateLimitRequest, handleSubmitExpense,
-  handleGetTeamExpenses, handleVerifyBarcode, handleGetAssetValueMaster, handleTestDb,
+  handleGetTeamExpenses, handleVerifyBarcode, handleGetAssetValueMaster,
   handleGetEngineerAdvance, handleSaveEngineerAdvance, handleGetExpenseDetails, handleDeleteExpense,
   handleGetMonthSummary, handleGetEngineerMonthClaims, handleGetConsolidatedReport,
   handleServeExpenseAttachment
@@ -247,7 +247,6 @@ router.post("/api/reports/upload-assets-csv", handleUploadAssetsCSV, true);
 router.get("/api/expense/init", handleExpenseInit, true);
 router.post("/api/expense/limit-request", handleCreateLimitRequest, true);
 router.get("/api/expense/team", handleGetTeamExpenses, true);
-router.get("/api/expense/test-db", handleTestDb, false);
 router.get("/api/expense/verify-barcode", handleVerifyBarcode, true);
 router.get("/api/expense/asset-value-master", handleGetAssetValueMaster, true);
 router.get("/api/expense/month-summary", handleGetMonthSummary, true);
