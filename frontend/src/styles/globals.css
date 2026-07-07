@@ -1356,13 +1356,13 @@ span.submitter-code-text {
 
 /* ================= CUSTOM ADD BARCODE BUTTON CONTRAST OVERRIDES ================= */
 .btn-add-verified-barcode {
-  background-color: #059669 !important;
+  background-color: #111827 !important;
   color: #ffffff !important;
-  border: 1.5px solid #047857 !important;
+  border: 1.5px solid #000000 !important;
   cursor: pointer !important;
 }
 .btn-add-verified-barcode:hover {
-  background-color: #047857 !important;
+  background-color: #1f2937 !important;
 }
 .btn-add-verified-barcode-disabled {
   background-color: #cbd5e1 !important;
