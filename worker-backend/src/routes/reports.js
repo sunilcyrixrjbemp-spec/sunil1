@@ -536,10 +536,10 @@ export async function handleUploadAssetsCSV(request, env, params, query, user) {
     return jsonResponse({ error: "CSV missing mandatory 'qr_code' column header" }, 400);
   }
 
-  let insertedCount = 0;
-  let skippedCount = 0;
-
-  const chunkRows = [];
+  // De-duplicate CSV rows in-memory by qr_code to prevent self-collision
+  const seenQrCodes = new Set();
+  const uniqueRecords = [];
+  
   for (let i = 1; i < parsedRows.length; i++) {
     const row = parsedRows[i];
     if (row.length === 1 && row[0] === "") continue;
@@ -551,82 +551,83 @@ export async function handleUploadAssetsCSV(request, env, params, query, user) {
 
     const qr = record["qr_code"];
     if (!qr || qr === "--" || qr === "") {
-      skippedCount++;
       continue;
     }
 
-    chunkRows.push(record);
+    if (seenQrCodes.has(qr)) {
+      continue;
+    }
+    seenQrCodes.add(qr);
+    uniqueRecords.push(record);
   }
 
-  const chunkSize = 500;
-  for (let idx = 0; idx < chunkRows.length; idx += chunkSize) {
-    const chunk = chunkRows.slice(idx, idx + chunkSize);
-    const qrCodes = chunk.map(r => r.qr_code);
+  const totalInputRows = parsedRows.length - 1; // excluding header
+  const insertStatements = [];
 
-    // Optimized select to query existing QR codes in one call
-    const placeholders = qrCodes.map(() => "?").join(",");
-    const existingRows = await env.DB.prepare(`
-      SELECT qr_code FROM assets_inventory WHERE qr_code IN (${placeholders})
-    `).bind(...qrCodes).all();
+  for (const record of uniqueRecords) {
+    let assetVal = 0.0;
+    try {
+      assetVal = parseFloat(String(record.asset_value || "0").replace(/,/g, "").trim()) || 0.0;
+    } catch (err) {}
 
-    const existingSet = new Set((existingRows.results || []).map(r => r.qr_code));
+    const moicDate = parseDateFlexible(record.moic_verified_date);
+    const isVerified = moicDate ? 1 : 0;
+    const moicYear = moicDate ? moicDate.getFullYear() : null;
+    const moicMonth = moicDate ? moicDate.getMonth() + 1 : null;
 
-    const insertStatements = [];
-    for (const record of chunk) {
-      if (existingSet.has(record.qr_code)) {
-        skippedCount++;
-        continue;
+    const installDate = parseDateFlexible(record.installation_date);
+    const installYear = installDate ? installDate.getFullYear() : null;
+    const installMonth = installDate ? installDate.getMonth() + 1 : null;
+
+    const expired = isWarrantyExpired(record.warranty_details) ? 1 : 0;
+
+    insertStatements.push({
+      sql: `
+        INSERT OR IGNORE INTO assets_inventory (
+          district_name, hospital_name, department_name, group_name,
+          equipment_name, model_name, serial_no, equipment_category,
+          qr_code, stock_register_page_no, received_date, installation_date,
+          inventory_entry_date, moic_verified_date, po_date, po_cost,
+          inventory_status, equipment_status, supplier, warranty_details,
+          asset_value, di_name, dm_name, coordinator_name, zone_name,
+          hospital_type, facility_type, equipment_type,
+          is_verified, warranty_expired, parsed_asset_value,
+          moic_year, moic_month, install_year, install_month
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      `,
+      params: [
+        record.district_name || "", record.hospital_name || "", record.department_name || "", record.group_name || "",
+        record.equipment_name || "", record.model_name || "", record.serial_no || "", record.equipment_category || "",
+        record.qr_code, record.stock_register_page_no || "", record.received_date || "", record.installation_date || "",
+        record.inventory_entry_date || "", record.moic_verified_date || "", record.po_date || "", record.po_cost || "",
+        record.inventory_status || "", record.equipment_status || "", record.supplier || "", record.warranty_details || "",
+        record.asset_value || "", record.di_name || "", record.dm_name || "", record.coordinator_name || "", record.zone_name || "",
+        record.hospital_type || "", record.facility_type || "", record.equipment_type || "",
+        isVerified, expired, assetVal,
+        moicYear, moicMonth, installYear, installMonth
+      ]
+    });
+  }
+
+  let insertedCount = 0;
+  if (insertStatements.length > 0) {
+    const chunkSize = 1000;
+    const allBatches = [];
+    for (let idx = 0; idx < insertStatements.length; idx += chunkSize) {
+      const chunk = insertStatements.slice(idx, idx + chunkSize);
+      allBatches.push(runBatchWrite(env, chunk));
+    }
+    
+    // Execute all batch writes concurrently for maximum performance
+    const batchResults = await Promise.all(allBatches);
+    for (const batchRes of batchResults) {
+      for (const statementRes of (batchRes || [])) {
+        insertedCount += (statementRes.meta?.changes || 0);
       }
-
-      let assetVal = 0.0;
-      try {
-        assetVal = parseFloat(String(record.asset_value || "0").replace(/,/g, "").trim()) || 0.0;
-      } catch (err) {}
-
-      const moicDate = parseDateFlexible(record.moic_verified_date);
-      const isVerified = moicDate ? 1 : 0;
-      const moicYear = moicDate ? moicDate.getFullYear() : null;
-      const moicMonth = moicDate ? moicDate.getMonth() + 1 : null;
-
-      const installDate = parseDateFlexible(record.installation_date);
-      const installYear = installDate ? installDate.getFullYear() : null;
-      const installMonth = installDate ? installDate.getMonth() + 1 : null;
-
-      const expired = isWarrantyExpired(record.warranty_details) ? 1 : 0;
-
-      insertStatements.push({
-        sql: `
-          INSERT INTO assets_inventory (
-            district_name, hospital_name, department_name, group_name,
-            equipment_name, model_name, serial_no, equipment_category,
-            qr_code, stock_register_page_no, received_date, installation_date,
-            inventory_entry_date, moic_verified_date, po_date, po_cost,
-            inventory_status, equipment_status, supplier, warranty_details,
-            asset_value, di_name, dm_name, coordinator_name, zone_name,
-            hospital_type, facility_type, equipment_type,
-            is_verified, warranty_expired, parsed_asset_value,
-            moic_year, moic_month, install_year, install_month
-          ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-        `,
-        params: [
-          record.district_name || "", record.hospital_name || "", record.department_name || "", record.group_name || "",
-          record.equipment_name || "", record.model_name || "", record.serial_no || "", record.equipment_category || "",
-          record.qr_code, record.stock_register_page_no || "", record.received_date || "", record.installation_date || "",
-          record.inventory_entry_date || "", record.moic_verified_date || "", record.po_date || "", record.po_cost || "",
-          record.inventory_status || "", record.equipment_status || "", record.supplier || "", record.warranty_details || "",
-          record.asset_value || "", record.di_name || "", record.dm_name || "", record.coordinator_name || "", record.zone_name || "",
-          record.hospital_type || "", record.facility_type || "", record.equipment_type || "",
-          isVerified, expired, assetVal,
-          moicYear, moicMonth, installYear, installMonth
-        ]
-      });
-    }
-
-    if (insertStatements.length > 0) {
-      await runBatchWrite(env, insertStatements);
-      insertedCount += insertStatements.length;
     }
   }
+
+  const skippedCount = totalInputRows - insertedCount;
 
   return jsonResponse({
     success: true,
