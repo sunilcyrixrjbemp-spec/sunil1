@@ -408,7 +408,9 @@ export async function handleGetTeamExpenses(request, env, params, query, user) {
 
   if (teamUsers.length === 0) return jsonResponse([]);
 
-  const teamUserIds = teamUsers.map(u => u.id).filter(id => id !== user.id);
+  const teamUserIds = ["Admin", "MIS", "VP", "Accountant"].includes(user.role)
+    ? teamUsers.map(u => u.id)
+    : teamUsers.map(u => u.id).filter(id => id !== user.id);
   if (teamUserIds.length === 0) return jsonResponse([]);
 
   const submittersById = {};
@@ -553,7 +555,9 @@ export async function handleGetTeamExpenses(request, env, params, query, user) {
   }
 
   // 3. Fetch team members' limit requests
-  const teamUserCodes = teamUsers.map(u => u.user_id).filter(uc => uc !== user.user_id);
+  const teamUserCodes = ["Admin", "MIS", "VP", "Accountant"].includes(user.role)
+    ? teamUsers.map(u => u.user_id)
+    : teamUsers.map(u => u.user_id).filter(uc => uc !== user.user_id);
   if (teamUserCodes.length > 0) {
     const codePlaceholders = teamUserCodes.map(() => "?").join(",");
     const limitReqsRes = await env.DB.prepare(`
