@@ -1493,6 +1493,22 @@ export async function handleSubmitExpense(request, env, params, query, user) {
     expenseCode = `RJ-${monthPrefix}-${String(nextSeq).padStart(6, "0")}`;
   }
 
+  // Defensive self-healing cleanup: delete any existing orphan entries matching expenseCode
+  const oldItis = await env.DB.prepare("SELECT itinerary_id FROM expense_itineraries WHERE exp_id = ?").bind(expenseCode).all();
+  if (oldItis.results && oldItis.results.length > 0) {
+    for (const r of oldItis.results) {
+      const id = r.itinerary_id;
+      await runWrite(env, "DELETE FROM expense_breakdown_calls WHERE itinerary_id = ?", [id]);
+      await runWrite(env, "DELETE FROM expense_pms_calls WHERE itinerary_id = ?", [id]);
+      await runWrite(env, "DELETE FROM expense_asset_taggings WHERE itinerary_id = ?", [id]);
+      await runWrite(env, "DELETE FROM expense_asset_mobilises WHERE itinerary_id = ?", [id]);
+      await runWrite(env, "DELETE FROM expense_calibrations WHERE itinerary_id = ?", [id]);
+      await runWrite(env, "DELETE FROM expense_other_activities WHERE itinerary_id = ?", [id]);
+    }
+  }
+  await runWrite(env, "DELETE FROM expense_attachments WHERE exp_id = ?", [expenseCode]);
+  await runWrite(env, "DELETE FROM expense_itineraries WHERE exp_id = ?", [expenseCode]);
+
   // Calculate totals and activity metrics
   let totalDa = 0.0;
   let totalHotel = 0.0;
