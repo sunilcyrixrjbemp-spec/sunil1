@@ -355,11 +355,25 @@ export default function HomePage() {
   const isReviewerRole = userRole === "Admin" || allowedWindows.includes("approval");
 
   const getStatusBadgeClass = (status: string) => {
-    const s = status.toLowerCase();
+    const s = (status || "").toLowerCase();
     if (s === "approved") return "bg-green-50 border-green-200 text-green-700";
     if (s === "rejected") return "bg-red-50 border-red-200 text-red-700";
     if (s.startsWith("submitted")) return "bg-yellow-50 border-yellow-250 text-yellow-750 font-bold";
     return "bg-gray-50 border-gray-200 text-gray-600";
+  };
+
+  const getStatusLabel = (status: string) => {
+    const s = (status || "").toLowerCase();
+    if (s === "approved") return "Approved";
+    if (s === "rejected") return "Rejected";
+    if (s === "submitted") return "Pending L1";
+    if (s.startsWith("submitted_l")) {
+      const lvl = s.replace("submitted_l", "");
+      return `Pending L${lvl}`;
+    }
+    if (s === "draft") return "Draft";
+    if (s === "pending") return "Pending";
+    return (status || "").toUpperCase();
   };
 
   const handleOpenClaimDetails = async (claimId: number | string) => {
@@ -845,7 +859,7 @@ export default function HomePage() {
                             <td className="py-3 px-3 font-bold text-gray-900 whitespace-nowrap">₹{exp.amount.toLocaleString()}</td>
                             <td className="py-3 px-3 text-right whitespace-nowrap">
                               <span className={`inline-flex items-center px-2 py-0.5 rounded border text-[9px] font-bold uppercase tracking-wider ${getStatusBadgeClass(exp.status)}`}>
-                                {exp.status}
+                                {getStatusLabel(exp.status)}
                               </span>
                             </td>
                           </tr>
@@ -864,7 +878,7 @@ export default function HomePage() {
                           <div className="flex justify-between items-center pb-2.5 border-b border-gray-100">
                             <span className="font-bold font-mono text-blue-600 text-xs uppercase">{exp.expense_code}</span>
                             <span className={`inline-flex items-center px-2 py-0.5 rounded border text-[8px] font-bold uppercase tracking-wider ${getStatusBadgeClass(exp.status)}`}>
-                              {exp.status}
+                              {getStatusLabel(exp.status)}
                             </span>
                           </div>
                           
@@ -954,7 +968,7 @@ export default function HomePage() {
                             <td className="py-3 px-3 font-bold text-gray-900 whitespace-nowrap">₹{exp.amount.toLocaleString()}</td>
                             <td className="py-3 px-3 text-right whitespace-nowrap">
                               <span className={`inline-flex items-center px-2 py-0.5 rounded border text-[9px] font-bold uppercase tracking-wider ${getStatusBadgeClass(exp.status)}`}>
-                                {exp.status}
+                                {getStatusLabel(exp.status)}
                               </span>
                             </td>
                           </tr>
@@ -976,7 +990,7 @@ export default function HomePage() {
                               <span className="text-[8px] font-mono font-bold uppercase block mt-1 submitter-code-text" style={{ color: '#2563eb' }}>{exp.submitter_code}</span>
                             </div>
                             <span className={`inline-flex items-center px-2 py-0.5 rounded border text-[8px] font-bold uppercase tracking-wider ${getStatusBadgeClass(exp.status)}`}>
-                              {exp.status}
+                              {getStatusLabel(exp.status)}
                             </span>
                           </div>
                           
@@ -1241,7 +1255,7 @@ export default function HomePage() {
                     <div className="p-3 bg-gray-50 border border-gray-200 rounded">
                       <span className="text-[9px] text-gray-400 font-bold uppercase block">Status</span>
                       <span className={`inline-flex items-center px-2 py-0.5 rounded border text-[9px] font-bold uppercase tracking-wider mt-1 ${getStatusBadgeClass(claimDetails.status)}`}>
-                        {claimDetails.status}
+                        {getStatusLabel(claimDetails.status)}
                       </span>
                     </div>
                   </div>
@@ -2060,7 +2074,7 @@ export default function HomePage() {
                           <td className="py-3 px-3 font-bold text-gray-900">₹{(exp.amount || 0).toLocaleString()}</td>
                           <td className="py-3 px-3 text-right">
                             <span className={`inline-flex items-center px-2 py-0.5 rounded border text-[9px] font-bold uppercase tracking-wider ${getStatusBadgeClass(exp.status)}`}>
-                              {exp.status}
+                              {getStatusLabel(exp.status)}
                             </span>
                           </td>
                         </tr>

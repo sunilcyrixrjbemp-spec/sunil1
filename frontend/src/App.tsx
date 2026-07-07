@@ -49,12 +49,23 @@ function App() {
     fetch("https://fieldops-secondary-api.sunnybishnoi.workers.dev/api/health").catch(() => {});
   }, []);
 
-  // Prevent background body scrolling when any modal, popup, or lightbox is open
+  // Prevent background body scrolling when any modal is open
+  // AND auto-scroll all modal scrollable containers back to top when modal opens
   useEffect(() => {
+    // Track which modals we have already reset scroll for (to avoid re-triggering)
+    const resetScrollForModal = (modal: Element) => {
+      // Reset the overlay itself (if it is the scroll container)
+      modal.scrollTop = 0;
+      // Reset every inner scrollable area: flex-1 overflow-y-auto, overflow-y-auto, etc.
+      const scrollables = modal.querySelectorAll('[class*="overflow-y-auto"], [class*="overflow-y-scroll"]');
+      scrollables.forEach((el) => {
+        (el as HTMLElement).scrollTop = 0;
+      });
+    };
+
     const handleScrollLock = () => {
-      // Find modal overlays (custom LTE class or Tailwind classes representing a full-screen overlay)
-      const hasModal = document.querySelector('.modal-lte-overlay, [class*="fixed"][class*="inset-0"][class*="bg-black/"]');
-      if (hasModal) {
+      const modals = document.querySelectorAll('.modal-lte-overlay, [class*="fixed"][class*="inset-0"][class*="bg-black/"]');
+      if (modals.length > 0) {
         document.body.style.overflow = 'hidden';
       } else {
         document.body.style.overflow = '';
@@ -63,8 +74,25 @@ function App() {
 
     handleScrollLock();
 
-    const observer = new MutationObserver(() => {
+    const observer = new MutationObserver((mutations) => {
       handleScrollLock();
+      // For every newly ADDED node, check if it is a modal overlay or contains one
+      for (const mutation of mutations) {
+        for (const node of Array.from(mutation.addedNodes)) {
+          if (!(node instanceof Element)) continue;
+          // Check if the added node itself is a modal overlay
+          if (
+            node.classList.contains('modal-lte-overlay') ||
+            (node.className && typeof node.className === 'string' &&
+              node.className.includes('fixed') && node.className.includes('inset-0'))
+          ) {
+            resetScrollForModal(node);
+          }
+          // Also check children
+          const innerModals = node.querySelectorAll?.('.modal-lte-overlay');
+          innerModals?.forEach(resetScrollForModal);
+        }
+      }
     });
 
     observer.observe(document.body, {
