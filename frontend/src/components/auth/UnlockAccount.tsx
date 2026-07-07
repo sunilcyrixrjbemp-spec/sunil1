@@ -65,7 +65,7 @@ export default function UnlockAccount({ onBackToLogin }: UnlockAccountProps) {
       setTimeLeft(600);
       setResendCooldown(30);
     } catch (err: any) {
-      const errMsg = err.response?.data?.detail || "Verification failed";
+      const errMsg = err.response?.data?.error || err.response?.data?.detail || err.response?.data?.message || "Verification failed";
       if (errMsg.toLowerCase().includes("already active")) {
         setIsAlreadyActive(true);
         setStep(3);
@@ -95,7 +95,7 @@ export default function UnlockAccount({ onBackToLogin }: UnlockAccountProps) {
     } catch (err: any) {
       setStatusMessage({
         type: "error",
-        text: err.response?.data?.detail || "OTP verification failed"
+        text: err.response?.data?.error || err.response?.data?.detail || err.response?.data?.message || "OTP verification failed"
       });
     } finally {
       setLoading(false);
@@ -150,7 +150,7 @@ export default function UnlockAccount({ onBackToLogin }: UnlockAccountProps) {
     } catch (err: any) {
       setStatusMessage({
         type: "error",
-        text: err.response?.data?.detail || "Failed to resend OTP"
+        text: err.response?.data?.error || err.response?.data?.detail || err.response?.data?.message || "Failed to resend OTP"
       });
     } finally {
       setLoading(false);

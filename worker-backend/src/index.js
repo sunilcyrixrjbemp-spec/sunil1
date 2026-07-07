@@ -254,14 +254,21 @@ export default {
     // Store ctx on env for background tasks access (e.g. replication)
     env.ctx = ctx;
 
-    // Self-healing migration to create tables + indexes asynchronously
+    // Eagerly run migrations BEFORE the DB intercept so tables exist for all handlers
+    if (env.DB && !env._migrationsRun) {
+      try {
+        await runMigrations(env.DB);
+        env._migrationsRun = true; // flag so we only run once per worker instance
+      } catch (e) {
+        console.error("Migration error:", e);
+      }
+    }
+
+    // Background index creation (non-blocking, safe to run async)
     if (env.DB) {
       ctx.waitUntil((async () => {
         try {
           const dbObj = env._originalDB || env.DB;
-          // Create missing tables (otp_tokens, login_logs)
-          await runMigrations(dbObj);
-          // Create performance indexes
           await dbObj.exec(`
             CREATE INDEX IF NOT EXISTS idx_expenses_user_id ON expenses(user_id);
             CREATE INDEX IF NOT EXISTS idx_approvals_expense_id ON approvals(expense_id);
@@ -270,7 +277,7 @@ export default {
             CREATE INDEX IF NOT EXISTS idx_hierarchy_approvers_approver_id ON hierarchy_approvers(approver_id);
           `);
         } catch (e) {
-          console.error("Self-healing migration failed:", e);
+          console.error("Self-healing indexes failed:", e);
         }
       })());
     }

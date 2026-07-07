@@ -484,25 +484,30 @@ export default function DashboardLayout() {
         <header className="h-14 bg-slate-900 border-b border-slate-800 flex items-center justify-between px-4 sticky top-0 z-40 shrink-0 shadow-md">
           
           {/* Left Actions */}
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-2">
             <button
               onClick={() => setIsSidebarCollapsed(!isSidebarCollapsed)}
               className="hidden lg:flex h-9 w-9 items-center justify-center text-slate-300 hover:text-white hover:bg-slate-800 transition-colors"
             >
               <Menu className="w-5 h-5" />
             </button>
-            <h1 className="text-lg md:text-xl font-black text-white uppercase tracking-wider ml-2 md:ml-6">
+            {/* Logo visible on mobile since sidebar is hidden */}
+            <img
+              src={brandLogo}
+              alt="Cyrix"
+              className="lg:hidden h-8 w-auto object-contain bg-white rounded-lg px-1.5 py-0.5 shadow-sm shrink-0"
+            />
+            <h1 className="text-sm md:text-xl font-black text-white uppercase tracking-wider lg:ml-6 truncate max-w-[180px] md:max-w-none">
               {currentActiveItem ? currentActiveItem.name : "Dashboard"}
             </h1>
           </div>
 
-          {/* Right Actions */}
+          {/* Right Actions — logo on desktop */}
           <div className="flex items-center gap-3">
-
             <img 
               src={brandLogo} 
               alt="Cyrix" 
-              className="h-9 w-auto max-w-[120px] rounded border border-gray-200 object-contain bg-white px-2 py-0.5 shadow-sm" 
+              className="hidden lg:block h-9 w-auto max-w-[120px] rounded border border-gray-200 object-contain bg-white px-2 py-0.5 shadow-sm" 
             />
           </div>
         </header>

@@ -75,7 +75,7 @@ export default function ForgotPassword({ onBackToLogin }: ForgotPasswordProps) {
     } catch (err: any) {
       setStatusMessage({
         type: "error",
-        text: err.response?.data?.detail || "Failed to request OTP code"
+        text: err.response?.data?.error || err.response?.data?.detail || err.response?.data?.message || "Failed to request OTP code"
       });
     } finally {
       setLoading(false);
@@ -99,7 +99,7 @@ export default function ForgotPassword({ onBackToLogin }: ForgotPasswordProps) {
     } catch (err: any) {
       setStatusMessage({
         type: "error",
-        text: err.response?.data?.detail || "Invalid or expired OTP"
+        text: err.response?.data?.error || err.response?.data?.detail || err.response?.data?.message || "Invalid or expired OTP"
       });
     } finally {
       setLoading(false);
@@ -129,7 +129,7 @@ export default function ForgotPassword({ onBackToLogin }: ForgotPasswordProps) {
     } catch (err: any) {
       setStatusMessage({
         type: "error",
-        text: err.response?.data?.detail || "Failed to reset password"
+        text: err.response?.data?.error || err.response?.data?.detail || err.response?.data?.message || "Failed to reset password"
       });
     } finally {
       setLoading(false);
@@ -180,7 +180,7 @@ export default function ForgotPassword({ onBackToLogin }: ForgotPasswordProps) {
     } catch (err: any) {
       setStatusMessage({
         type: "error",
-        text: err.response?.data?.detail || "Failed to resend OTP"
+        text: err.response?.data?.error || err.response?.data?.detail || err.response?.data?.message || "Failed to resend OTP"
       });
     } finally {
       setLoading(false);

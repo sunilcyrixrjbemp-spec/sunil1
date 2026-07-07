@@ -688,14 +688,12 @@ export default function HomePage() {
           {/* TAB SYSTEM: My Claims vs Team Claims */}
           <div className="bg-white border border-slate-100 rounded-xl sm:rounded-3xl shadow-sm overflow-hidden flex flex-col">
             {/* Tab Header bar */}
-            <div className="bg-slate-50 border-b border-slate-100 flex items-center justify-start p-2 gap-2">
+            <div className="bg-slate-50 border-b border-slate-100 flex items-center justify-start p-2 gap-2 dashboard-tabs-header">
               <button
                 type="button"
                 onClick={() => handleTabChange("my-claims")}
-                className={`py-2 px-4 sm:px-5 font-black text-xs uppercase tracking-wider rounded-xl sm:rounded-2xl transition-all flex items-center gap-1.5 cursor-pointer border-0 ${
-                  activeTab === "my-claims"
-                    ? "bg-indigo-600 text-white shadow-sm font-extrabold"
-                    : "text-slate-500 bg-transparent hover:text-slate-850 hover:bg-slate-100"
+                className={`dashboard-tab-btn py-2 px-4 sm:px-5 font-black text-xs uppercase tracking-wider rounded-xl sm:rounded-2xl transition-all flex items-center gap-1.5 cursor-pointer border-0 ${
+                  activeTab === "my-claims" ? "active" : ""
                 }`}
               >
                 <Layers className="w-4 h-4" />
@@ -706,10 +704,8 @@ export default function HomePage() {
                 <button
                   type="button"
                   onClick={() => handleTabChange("team-claims")}
-                  className={`py-2 px-4 sm:px-5 font-black text-xs uppercase tracking-wider rounded-xl sm:rounded-2xl transition-all flex items-center gap-1.5 cursor-pointer border-0 ${
-                    activeTab === "team-claims"
-                      ? "bg-indigo-600 text-white shadow-sm font-extrabold"
-                      : "text-slate-500 bg-transparent hover:text-slate-850 hover:bg-slate-100"
+                  className={`dashboard-tab-btn py-2 px-4 sm:px-5 font-black text-xs uppercase tracking-wider rounded-xl sm:rounded-2xl transition-all flex items-center gap-1.5 cursor-pointer border-0 ${
+                    activeTab === "team-claims" ? "active" : ""
                   }`}
                 >
                   <Users className="w-4 h-4" />

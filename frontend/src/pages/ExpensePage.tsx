@@ -3320,11 +3320,11 @@ export default function ExpensePage() {
                                       type="button"
                                       onClick={() => verifyLegBarcode(leg.leg, "Calls")}
                                       disabled={String(leg.calls_barcode || '').replace(/\D/g, '').length !== 8}
-                                      className={`h-7 min-h-[28px] px-3 rounded-lg font-black text-[10px] uppercase border-0 flex items-center justify-center transition-all ${
+                                      className={
                                         String(leg.calls_barcode || '').replace(/\D/g, '').length === 8
-                                          ? "bg-emerald-500 text-white cursor-pointer hover:bg-emerald-600 shadow-md shadow-emerald-500/20 active:scale-95"
-                                          : "bg-slate-200 text-slate-400 cursor-not-allowed"
-                                      }`}
+                                          ? "btn-verify-barcode"
+                                          : "btn-verify-barcode-disabled"
+                                      }
                                     >
                                       Verify
                                     </button>
@@ -3402,7 +3402,11 @@ export default function ExpensePage() {
                                     type="button"
                                     onClick={() => addVerifiedBarcode(leg.leg, "Calls")}
                                     disabled={!leg.calls_verified}
-                                    className="w-full h-7 bg-green-600 hover:bg-green-700 text-white rounded border-0 cursor-pointer disabled:bg-gray-200 disabled:text-gray-400 flex items-center justify-center shrink-0 shadow-sm"
+                                    className={
+                                      leg.calls_verified
+                                        ? "btn-add-barcode w-full"
+                                        : "btn-add-barcode-disabled w-full"
+                                    }
                                     title="Add Verified Entry"
                                   >
                                     <Plus className="w-4 h-4" />
@@ -3526,11 +3530,11 @@ export default function ExpensePage() {
                                       type="button"
                                       onClick={() => verifyLegBarcode(leg.leg, "PMS")}
                                       disabled={String(leg.pms_barcode || '').replace(/\D/g, '').length !== 8}
-                                      className={`h-7 min-h-[28px] px-3 rounded-lg font-black text-[10px] uppercase border-0 flex items-center justify-center transition-all ${
+                                      className={
                                         String(leg.pms_barcode || '').replace(/\D/g, '').length === 8
-                                          ? "bg-emerald-500 text-white cursor-pointer hover:bg-emerald-600 shadow-md shadow-emerald-500/20 active:scale-95"
-                                          : "bg-slate-200 text-slate-400 cursor-not-allowed"
-                                      }`}
+                                          ? "btn-verify-barcode"
+                                          : "btn-verify-barcode-disabled"
+                                      }
                                     >
                                       Verify
                                     </button>
@@ -3595,7 +3599,11 @@ export default function ExpensePage() {
                                     type="button"
                                     onClick={() => addVerifiedBarcode(leg.leg, "PMS")}
                                     disabled={!leg.pms_verified}
-                                    className="w-full h-7 bg-green-600 hover:bg-green-700 text-white rounded border-0 cursor-pointer disabled:bg-gray-200 disabled:text-gray-400 flex items-center justify-center shrink-0 shadow-sm"
+                                    className={
+                                      leg.pms_verified
+                                        ? "btn-add-barcode w-full"
+                                        : "btn-add-barcode-disabled w-full"
+                                    }
                                     title="Add Verified Entry"
                                   >
                                     <Plus className="w-4 h-4" />

@@ -449,6 +449,13 @@ svg, path, g, sector, .recharts-pie-sector, .recharts-sector, .recharts-pie, .re
     width: 100% !important;
   }
 
+  /* CRITICAL: Inputs with icon prefix must keep left padding so text doesn't overlap icon */
+  /* This targets inputs that have an inline paddingLeft style set (icon inputs) */
+  input[type="text"][style*="paddingLeft"],
+  input[type="password"][style*="paddingLeft"] {
+    padding-left: 2.75rem !important;
+  }
+
   /* Prevent typed text from overlapping prefix/suffix icons inside User/Password fields */
   .input-lte-icon,
   input[type="text"].input-lte-icon,
@@ -1051,12 +1058,20 @@ svg, path, g, sector, .recharts-pie-sector, .recharts-sector, .recharts-pie, .re
     font-weight: 750 !important;
     padding: 6px 12px !important;
     border: none !important;
-    color: #64748b !important;
+    /* NOTE: do NOT override color here -- active tab sets text-white via className */
     background-color: transparent !important;
     box-shadow: none !important;
     min-height: auto !important;
   }
   
+  /* Active tab capsule buttons (bg-indigo-600 text-white) */
+  div[class*="border-b"][class*="p-2"][class*="gap-2"] button[class*="bg-indigo-600"] {
+    background-color: #4f46e5 !important;
+    color: #ffffff !important;
+    box-shadow: 0 2px 8px rgba(79, 70, 229, 0.25) !important;
+  }
+  
+  /* Inactive tab capsule buttons (border-blue-600 pattern) */
   div[class*="border-b"][class*="p-2"][class*="gap-2"] button[class*="border-blue-600"] {
     background-color: #ffffff !important;
     color: #4f46e5 !important;
@@ -1148,4 +1163,118 @@ svg, path, g, sector, .recharts-pie-sector, .recharts-sector, .recharts-pie, .re
   -webkit-text-fill-color: #1e293b !important;
   transition: background-color 5000s ease-in-out 0s !important;
   box-shadow: inset 0 0 20px 20px #ffffff !important;
+}
+
+/* ================= COMPACT BARCODE VERIFY & ADD BUTTON OVERRIDES ================= */
+.btn-verify-barcode {
+  background-color: #10b981 !important;
+  color: #ffffff !important;
+  border-radius: 8px !important;
+  height: 28px !important;
+  min-height: 28px !important;
+  font-weight: 900 !important;
+  font-size: 10.5px !important;
+  padding: 0 12px !important;
+  cursor: pointer !important;
+  box-shadow: 0 2px 6px rgba(16, 185, 129, 0.25) !important;
+  border: none !important;
+  text-transform: uppercase !important;
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  transition: all 0.15s ease !important;
+}
+.btn-verify-barcode:hover {
+  background-color: #059669 !important;
+}
+.btn-verify-barcode:active {
+  transform: scale(0.95) !important;
+}
+
+.btn-verify-barcode-disabled {
+  background-color: #e2e8f0 !important;
+  color: #94a3b8 !important;
+  border-radius: 8px !important;
+  height: 28px !important;
+  min-height: 28px !important;
+  font-weight: 900 !important;
+  font-size: 10.5px !important;
+  padding: 0 12px !important;
+  cursor: not-allowed !important;
+  border: none !important;
+  text-transform: uppercase !important;
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+}
+
+.btn-add-barcode {
+  background-color: #10b981 !important;
+  color: #ffffff !important;
+  border-radius: 8px !important;
+  height: 28px !important;
+  min-height: 28px !important;
+  font-weight: 900 !important;
+  cursor: pointer !important;
+  box-shadow: 0 2px 6px rgba(16, 185, 129, 0.25) !important;
+  border: none !important;
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  transition: all 0.15s ease !important;
+}
+.btn-add-barcode:hover {
+  background-color: #059669 !important;
+}
+.btn-add-barcode:active {
+  transform: scale(0.95) !important;
+}
+
+.btn-add-barcode-disabled {
+  background-color: #e2e8f0 !important;
+  color: #94a3b8 !important;
+  border-radius: 8px !important;
+  height: 28px !important;
+  min-height: 28px !important;
+  cursor: not-allowed !important;
+  border: none !important;
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+}
+
+/* ================= HOME DASHBOARD TABS EXPLICIT STYLING ================= */
+.dashboard-tabs-header {
+  background-color: #f1f5f9 !important;
+  padding: 4px !important;
+  border-radius: 12px !important;
+  border: none !important;
+  margin-bottom: 0.75rem !important;
+  display: flex !important;
+  gap: 8px !important;
+}
+
+.dashboard-tab-btn {
+  flex: 1 0 auto !important;
+  border-radius: 8px !important;
+  font-size: 10.5px !important;
+  font-weight: 750 !important;
+  padding: 6px 12px !important;
+  border: none !important;
+  background-color: transparent !important;
+  color: #64748b !important;
+  box-shadow: none !important;
+  min-height: auto !important;
+  transition: all 0.15s ease !important;
+}
+
+.dashboard-tab-btn.active {
+  background-color: #4f46e5 !important;
+  color: #ffffff !important;
+  box-shadow: 0 2px 8px rgba(79, 70, 229, 0.25) !important;
+}
+
+.dashboard-tab-btn:not(.active):hover {
+  background-color: #e2e8f0 !important;
+  color: #1e293b !important;
 }
