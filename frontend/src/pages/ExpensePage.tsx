@@ -3405,11 +3405,7 @@ export default function ExpensePage() {
                                     type="button"
                                     onClick={() => addVerifiedBarcode(leg.leg, "Calls")}
                                     disabled={!leg.calls_verified}
-                                    className={
-                                      leg.calls_verified
-                                        ? "btn-add-barcode w-full"
-                                        : "btn-add-barcode-disabled w-full"
-                                    }
+                                    className="w-full h-8 flex items-center justify-center rounded-lg border cursor-pointer transition-all bg-emerald-600 hover:bg-emerald-700 text-white border-emerald-700 shadow-sm disabled:bg-slate-50 disabled:text-slate-400 disabled:border-slate-300 disabled:cursor-not-allowed"
                                     title="Add Verified Entry"
                                   >
                                     <Plus className="w-4 h-4" />
@@ -3607,11 +3603,7 @@ export default function ExpensePage() {
                                     type="button"
                                     onClick={() => addVerifiedBarcode(leg.leg, "PMS")}
                                     disabled={!leg.pms_verified}
-                                    className={
-                                      leg.pms_verified
-                                        ? "btn-add-barcode w-full"
-                                        : "btn-add-barcode-disabled w-full"
-                                    }
+                                    className="w-full h-8 flex items-center justify-center rounded-lg border cursor-pointer transition-all bg-emerald-600 hover:bg-emerald-700 text-white border-emerald-700 shadow-sm disabled:bg-slate-50 disabled:text-slate-400 disabled:border-slate-300 disabled:cursor-not-allowed"
                                     title="Add Verified Entry"
                                   >
                                     <Plus className="w-4 h-4" />
