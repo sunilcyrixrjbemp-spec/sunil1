@@ -15,10 +15,10 @@ export async function runWrite(env, sql, params = []) {
   const result = await env.DB.prepare(sql).bind(...params).run();
   
   // 2. Queue replication to Primary D1 in background (do not block client response)
-  const primaryAccount = env.PRIMARY_CLOUDFLARE_ACCOUNT_ID;
-  const primaryDb = env.PRIMARY_CLOUDFLARE_DATABASE_ID;
-  const primaryToken = env.PRIMARY_CLOUDFLARE_API_TOKEN;
-  const primaryEmail = env.PRIMARY_CLOUDFLARE_EMAIL;
+  const primaryAccount = env.PRIMARY_CLOUDFLARE_ACCOUNT_ID ? env.PRIMARY_CLOUDFLARE_ACCOUNT_ID.trim() : "";
+  const primaryDb = env.PRIMARY_CLOUDFLARE_DATABASE_ID ? env.PRIMARY_CLOUDFLARE_DATABASE_ID.trim() : "";
+  const primaryToken = env.PRIMARY_CLOUDFLARE_API_TOKEN ? env.PRIMARY_CLOUDFLARE_API_TOKEN.trim() : "";
+  const primaryEmail = env.PRIMARY_CLOUDFLARE_EMAIL ? env.PRIMARY_CLOUDFLARE_EMAIL.trim() : "";
 
   if (primaryAccount && primaryDb && primaryToken) {
     const promise = replicateToPrimary(primaryAccount, primaryDb, primaryToken, primaryEmail, sql, params);
@@ -51,10 +51,10 @@ export async function runBatchWrite(env, statements) {
   const results = await env.DB.batch(batch);
 
   // 3. Replicate batch to Primary D1
-  const primaryAccount = env.PRIMARY_CLOUDFLARE_ACCOUNT_ID;
-  const primaryDb = env.PRIMARY_CLOUDFLARE_DATABASE_ID;
-  const primaryToken = env.PRIMARY_CLOUDFLARE_API_TOKEN;
-  const primaryEmail = env.PRIMARY_CLOUDFLARE_EMAIL;
+  const primaryAccount = env.PRIMARY_CLOUDFLARE_ACCOUNT_ID ? env.PRIMARY_CLOUDFLARE_ACCOUNT_ID.trim() : "";
+  const primaryDb = env.PRIMARY_CLOUDFLARE_DATABASE_ID ? env.PRIMARY_CLOUDFLARE_DATABASE_ID.trim() : "";
+  const primaryToken = env.PRIMARY_CLOUDFLARE_API_TOKEN ? env.PRIMARY_CLOUDFLARE_API_TOKEN.trim() : "";
+  const primaryEmail = env.PRIMARY_CLOUDFLARE_EMAIL ? env.PRIMARY_CLOUDFLARE_EMAIL.trim() : "";
 
   if (primaryAccount && primaryDb && primaryToken) {
     const promise = replicateBatchToPrimary(primaryAccount, primaryDb, primaryToken, primaryEmail, statements);
@@ -152,10 +152,10 @@ export async function runRead(env, sql, params = [], request = null) {
     return { results: [], success: true };
   }
 
-  const primaryAccount = env.PRIMARY_CLOUDFLARE_ACCOUNT_ID;
-  const primaryDb = env.PRIMARY_CLOUDFLARE_DATABASE_ID;
-  const primaryToken = env.PRIMARY_CLOUDFLARE_API_TOKEN;
-  const primaryEmail = env.PRIMARY_CLOUDFLARE_EMAIL;
+  const primaryAccount = env.PRIMARY_CLOUDFLARE_ACCOUNT_ID ? env.PRIMARY_CLOUDFLARE_ACCOUNT_ID.trim() : "";
+  const primaryDb = env.PRIMARY_CLOUDFLARE_DATABASE_ID ? env.PRIMARY_CLOUDFLARE_DATABASE_ID.trim() : "";
+  const primaryToken = env.PRIMARY_CLOUDFLARE_API_TOKEN ? env.PRIMARY_CLOUDFLARE_API_TOKEN.trim() : "";
+  const primaryEmail = env.PRIMARY_CLOUDFLARE_EMAIL ? env.PRIMARY_CLOUDFLARE_EMAIL.trim() : "";
 
   const hasPrimary = !!(primaryAccount && primaryDb && primaryToken);
   let usePrimary = false;
