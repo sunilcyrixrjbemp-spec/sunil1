@@ -618,7 +618,7 @@ export default function HomePage() {
         </div>
         
         {/* Metric Cards Grid */}
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-2 sm:gap-4">
+        <div className="grid grid-cols-4 gap-1.5 sm:gap-4">
           {/* Card 1: Total Claimed */}
           <div 
             onClick={() => handleOpenStatsModal("Total Claimed", statsTotalClaims)}

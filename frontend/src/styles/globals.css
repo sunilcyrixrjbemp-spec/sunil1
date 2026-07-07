@@ -629,21 +629,24 @@ svg, path, g, sector, .recharts-pie-sector, .recharts-sector, .recharts-pie, .re
   .info-box-lte {
     border-style: none !important;
     background-color: #ffffff !important; /* White background for widgets */
-    padding: 0.5rem !important;
+    padding: 4px !important;
     display: flex !important;
+    flex-direction: column !important;
     align-items: center !important;
-    gap: 0.5rem !important;
+    justify-content: center !important;
+    text-align: center !important;
+    gap: 2px !important;
     margin-bottom: 0 !important;
-    border-radius: 12px !important;
-    min-height: 52px !important;
+    border-radius: 10px !important;
+    min-height: 76px !important;
     border: 1px solid #e2e8f0 !important;
     box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05) !important;
   }
 
   .info-box-icon {
-    width: 32px !important;
-    height: 32px !important;
-    border-radius: 8px !important;
+    width: 24px !important;
+    height: 24px !important;
+    border-radius: 6px !important;
     display: flex !important;
     align-items: center !important;
     justify-content: center !important;
@@ -653,8 +656,8 @@ svg, path, g, sector, .recharts-pie-sector, .recharts-sector, .recharts-pie, .re
   }
 
   .info-box-icon svg {
-    width: 16px !important;
-    height: 16px !important;
+    width: 12px !important;
+    height: 12px !important;
   }
 
   .info-box-content {
@@ -662,8 +665,10 @@ svg, path, g, sector, .recharts-pie-sector, .recharts-sector, .recharts-pie, .re
     display: flex !important;
     flex-direction: column !important;
     justify-content: center !important;
+    align-items: center !important;
     flex-grow: 1 !important;
     min-width: 0 !important;
+    width: 100% !important;
   }
 
   /* 8. Unified Typography Scaling (No color enforcement to let Tailwind custom colors like text-white/text-blue-600 shine) */
