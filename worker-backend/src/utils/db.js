@@ -14,6 +14,10 @@ export async function runWrite(env, sql, params = []) {
   // 1. Execute locally on D1 binding
   const result = await env.DB.prepare(sql).bind(...params).run();
   
+  if (env.SKIP_PRIMARY_SYNC === "true") {
+    return result;
+  }
+
   // 2. Queue replication to Primary D1 in background (do not block client response)
   const primaryAccount = env.PRIMARY_CLOUDFLARE_ACCOUNT_ID ? env.PRIMARY_CLOUDFLARE_ACCOUNT_ID.trim() : "";
   const primaryDb = env.PRIMARY_CLOUDFLARE_DATABASE_ID ? env.PRIMARY_CLOUDFLARE_DATABASE_ID.trim() : "";
@@ -49,6 +53,10 @@ export async function runBatchWrite(env, statements) {
 
   // 2. Execute locally
   const results = await env.DB.batch(batch);
+
+  if (env.SKIP_PRIMARY_SYNC === "true") {
+    return results;
+  }
 
   // 3. Replicate batch to Primary D1
   const primaryAccount = env.PRIMARY_CLOUDFLARE_ACCOUNT_ID ? env.PRIMARY_CLOUDFLARE_ACCOUNT_ID.trim() : "";

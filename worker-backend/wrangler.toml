@@ -10,6 +10,7 @@ database_id = "34e085d8-c078-4f2f-b240-9bf8f4cf9301"
 [vars]
 CORS_ORIGIN = "*"
 API_SECRET = "012001@Sunil"
+SKIP_PRIMARY_SYNC = "true"
 
 # Primary DB sync credentials (replicate writes back to Primary)
 PRIMARY_CLOUDFLARE_ACCOUNT_ID = "befbd2e0ff580a1d0d0865f011002053"
