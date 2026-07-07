@@ -21,6 +21,9 @@ import {
   Loader2
 } from "lucide-react";
 
+const rawApiUrl = import.meta.env.VITE_API_URL || "";
+const API_BASE = (rawApiUrl && !rawApiUrl.includes("onrender.com")) ? rawApiUrl : "https://fieldops-secondary-api.sunnybishnoi.workers.dev";
+
 const getAttachmentsArray = (attachments: any): string[] => {
   if (!attachments) return [];
   if (Array.isArray(attachments)) return attachments.filter(Boolean);
@@ -297,7 +300,6 @@ export default function ApprovalPage() {
       return aLegNum === legNum && a.bill_type === billType;
     });
     if (!found) return null;
-    const API_BASE = import.meta.env.VITE_API_URL || "https://fieldops-secondary-api.sunnybishnoi.workers.dev";
     return found.file_url.startsWith("http") ? found.file_url : `${API_BASE}${found.file_url}`;
   };
 
@@ -1735,7 +1737,7 @@ export default function ApprovalPage() {
                                               <td className="py-1 px-2 text-center">
                                                 {c.photo_url ? (
                                                   <a
-                                                    href={`${import.meta.env.VITE_API_URL || "https://fieldops-secondary-api.sunnybishnoi.workers.dev"}${c.photo_url}`}
+                                                    href={`${API_BASE}${c.photo_url}`}
                                                     target="_blank"
                                                     rel="noreferrer"
                                                     className="text-xs text-blue-600 font-bold hover:underline"
@@ -1775,14 +1777,14 @@ export default function ApprovalPage() {
                                             <div className="pt-2">
                                               <div className="relative rounded overflow-hidden border border-blue-100 bg-white">
                                                 <img
-                                                  src={`${import.meta.env.VITE_API_URL || "https://fieldops-secondary-api.sunnybishnoi.workers.dev"}${c.photo_url}`}
+                                                  src={`${API_BASE}${c.photo_url}`}
                                                   alt="Call verification"
                                                   className="w-full h-auto object-cover max-h-48 cursor-pointer"
-                                                  onClick={() => setLightboxImage(`${import.meta.env.VITE_API_URL || "https://fieldops-secondary-api.sunnybishnoi.workers.dev"}${c.photo_url}`)}
+                                                  onClick={() => setLightboxImage(`${API_BASE}${c.photo_url}`)}
                                                 />
                                                 <button
                                                   type="button"
-                                                  onClick={() => setLightboxImage(`${import.meta.env.VITE_API_URL || "https://fieldops-secondary-api.sunnybishnoi.workers.dev"}${c.photo_url}`)}
+                                                  onClick={() => setLightboxImage(`${API_BASE}${c.photo_url}`)}
                                                   className="absolute bottom-1 right-1 bg-black/60 text-white font-bold text-[8px] px-2 py-0.5 rounded cursor-pointer border-0"
                                                 >
                                                   Full View
@@ -1833,7 +1835,7 @@ export default function ApprovalPage() {
                                               <td className="py-1 px-2 text-center">
                                                 {p.photo_url ? (
                                                   <a
-                                                    href={`${import.meta.env.VITE_API_URL || "https://fieldops-secondary-api.sunnybishnoi.workers.dev"}${p.photo_url}`}
+                                                    href={`${API_BASE}${p.photo_url}`}
                                                     target="_blank"
                                                     rel="noreferrer"
                                                     className="text-xs text-blue-600 font-bold hover:underline"
@@ -1873,14 +1875,14 @@ export default function ApprovalPage() {
                                             <div className="pt-2">
                                               <div className="relative rounded overflow-hidden border border-amber-100 bg-white">
                                                 <img
-                                                  src={`${import.meta.env.VITE_API_URL || "https://fieldops-secondary-api.sunnybishnoi.workers.dev"}${p.photo_url}`}
+                                                  src={`${API_BASE}${p.photo_url}`}
                                                   alt="PMS verification"
                                                   className="w-full h-auto object-cover max-h-48 cursor-pointer"
-                                                  onClick={() => setLightboxImage(`${import.meta.env.VITE_API_URL || "https://fieldops-secondary-api.sunnybishnoi.workers.dev"}${p.photo_url}`)}
+                                                  onClick={() => setLightboxImage(`${API_BASE}${p.photo_url}`)}
                                                 />
                                                 <button
                                                   type="button"
-                                                  onClick={() => setLightboxImage(`${import.meta.env.VITE_API_URL || "https://fieldops-secondary-api.sunnybishnoi.workers.dev"}${p.photo_url}`)}
+                                                  onClick={() => setLightboxImage(`${API_BASE}${p.photo_url}`)}
                                                   className="absolute bottom-1 right-1 bg-black/60 text-white font-bold text-[8px] px-2 py-0.5 rounded cursor-pointer border-0"
                                                 >
                                                   Full View
@@ -2001,7 +2003,6 @@ export default function ApprovalPage() {
                           else if (url.includes("_Communication_Mail_")) cleanType = "Approval Mail Screenshot";
                           else if (url.includes("_Other_Expense_")) cleanType = "Local Purchase Invoice";
 
-                          const API_BASE = import.meta.env.VITE_API_URL || "https://fieldops-secondary-api.sunnybishnoi.workers.dev";
                           const fullUrl = url.startsWith("http") ? url : `${API_BASE}${url}`;
                           return (
                             <button

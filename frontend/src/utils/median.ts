@@ -10,7 +10,8 @@
  * Median.co docs: https://median.co/docs
  */
 
-const API_BASE = (import.meta.env.VITE_API_URL as string) || "";
+const rawApiUrl = import.meta.env.VITE_API_URL as string || "";
+const API_BASE = (rawApiUrl && !rawApiUrl.includes("onrender.com")) ? rawApiUrl : "https://fieldops-secondary-api.sunnybishnoi.workers.dev";
 
 /**
  * Detect if running inside Median.co WebView wrapper

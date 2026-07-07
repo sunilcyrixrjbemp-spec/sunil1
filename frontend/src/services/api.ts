@@ -4,7 +4,8 @@ import { Capacitor } from "@capacitor/core";
 import { Preferences } from "@capacitor/preferences";
 
 const WORKER_BACKEND_URL = "https://fieldops-secondary-api.sunnybishnoi.workers.dev";
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || `${WORKER_BACKEND_URL}/api`;
+const rawBaseUrl = import.meta.env.VITE_API_BASE_URL || "";
+const API_BASE_URL = (rawBaseUrl && !rawBaseUrl.includes("onrender.com")) ? rawBaseUrl : `${WORKER_BACKEND_URL}/api`;
 
 const api: AxiosInstance = axios.create({
   baseURL: API_BASE_URL,

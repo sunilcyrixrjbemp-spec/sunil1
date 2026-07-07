@@ -430,15 +430,15 @@ export default function DashboardLayout() {
 
         {/* Sidebar Footer System Status */}
         {isSidebarCollapsed ? (
-          <div className="flex justify-center py-2.5 border-t border-gray-700 shrink-0" title={`Server: ${currentBaseURL.includes("workers.dev") ? "Cloudflare Worker" : "Render (Fallback)"}\nRead DB: ${currentBaseURL.includes("workers.dev") ? "Secondary D1 (Replica)" : "Primary D1 (Direct)"}`}>
-            <span className={`h-2 w-2 rounded-full ${currentBaseURL.includes("workers.dev") ? "bg-emerald-400 animate-pulse" : "bg-purple-400"}`}></span>
+          <div className="flex justify-center py-2.5 border-t border-gray-700 shrink-0" title={`Server: ${!currentBaseURL.includes("onrender.com") ? "Cloudflare Worker" : "Render (Fallback)"}\nRead DB: ${!currentBaseURL.includes("onrender.com") ? "Secondary D1 (Replica)" : "Primary D1 (Direct)"}`}>
+            <span className={`h-2 w-2 rounded-full ${!currentBaseURL.includes("onrender.com") ? "bg-emerald-400 animate-pulse" : "bg-purple-400"}`}></span>
           </div>
         ) : (
           <div className="mx-3 my-2 p-2.5 rounded bg-gray-800/40 border border-gray-700/50 text-[10px] space-y-1.5 font-semibold text-gray-400 select-none shrink-0">
             <div className="flex items-center justify-between">
               <span className="text-[8px] uppercase tracking-wider text-gray-500 font-bold">System status</span>
               <span className={`inline-flex items-center px-1.5 py-0.5 rounded-full text-[8px] font-bold uppercase tracking-wider ${
-                currentBaseURL.includes("workers.dev") ? "bg-emerald-500/15 text-emerald-400" : "bg-purple-500/15 text-purple-400"
+                !currentBaseURL.includes("onrender.com") ? "bg-emerald-500/15 text-emerald-400" : "bg-purple-500/15 text-purple-400"
               }`}>
                 ● Active
               </span>
@@ -448,7 +448,7 @@ export default function DashboardLayout() {
               <Server className="w-3.5 h-3.5 text-gray-500 shrink-0" />
               <div className="truncate">
                 <p className="text-gray-500 text-[8px] uppercase tracking-wide leading-none">Active Server</p>
-                <p className="text-white font-bold text-[9px] truncate leading-tight mt-0.5">{currentBaseURL.includes("workers.dev") ? "Cloudflare Worker" : "Render (Fallback)"}</p>
+                <p className="text-white font-bold text-[9px] truncate leading-tight mt-0.5">{!currentBaseURL.includes("onrender.com") ? "Cloudflare Worker" : "Render (Fallback)"}</p>
               </div>
             </div>
             
@@ -457,7 +457,7 @@ export default function DashboardLayout() {
               <div className="truncate">
                 <p className="text-gray-500 text-[8px] uppercase tracking-wide leading-none">Database (Reads)</p>
                 <p className="text-gray-300 font-bold text-[9px] truncate leading-tight mt-0.5">
-                  {currentBaseURL.includes("workers.dev") ? "Secondary D1 (Replica)" : "Primary D1 (Direct)"}
+                  {!currentBaseURL.includes("onrender.com") ? "Secondary D1 (Replica)" : "Primary D1 (Direct)"}
                 </p>
               </div>
             </div>

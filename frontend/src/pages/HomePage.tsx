@@ -25,6 +25,9 @@ import {
   AlertTriangle
 } from "lucide-react";
 
+const rawApiUrl = import.meta.env.VITE_API_URL || "";
+const API_BASE = (rawApiUrl && !rawApiUrl.includes("onrender.com")) ? rawApiUrl : "https://fieldops-secondary-api.sunnybishnoi.workers.dev";
+
 const getAttachmentsArray = (attachments: any): string[] => {
   if (!attachments) return [];
   if (Array.isArray(attachments)) return attachments.filter(Boolean);
@@ -1430,7 +1433,7 @@ export default function HomePage() {
                                                     </div>
                                                     {c.photo_url && (
                                                       <button 
-                                                        onClick={() => setLightboxImage(`${import.meta.env.VITE_API_URL || "https://fieldops-secondary-api.sunnybishnoi.workers.dev"}${c.photo_url}`)}
+                                                        onClick={() => setLightboxImage(`${API_BASE}${c.photo_url}`)}
                                                         className="mt-1.5 w-full bg-slate-50 hover:bg-slate-100 py-1 text-center font-bold text-slate-700 rounded border border-gray-300 cursor-pointer text-[8px] uppercase"
                                                       >
                                                         View Photo
@@ -1460,7 +1463,7 @@ export default function HomePage() {
                                                     </div>
                                                     {p.photo_url && (
                                                       <button 
-                                                        onClick={() => setLightboxImage(`${import.meta.env.VITE_API_URL || "https://fieldops-secondary-api.sunnybishnoi.workers.dev"}${p.photo_url}`)}
+                                                        onClick={() => setLightboxImage(`${API_BASE}${p.photo_url}`)}
                                                         className="mt-1.5 w-full bg-slate-50 hover:bg-slate-100 py-1 text-center font-bold text-slate-700 rounded border border-gray-300 cursor-pointer text-[8px] uppercase"
                                                       >
                                                         View Photo
@@ -1661,14 +1664,14 @@ export default function HomePage() {
                                               <span className="text-gray-400 text-[8px] uppercase block mb-1">Attachment Photo</span>
                                               <div className="relative rounded overflow-hidden border border-blue-100 bg-white">
                                                 <img
-                                                  src={`${import.meta.env.VITE_API_URL || "https://fieldops-secondary-api.sunnybishnoi.workers.dev"}${c.photo_url}`}
+                                                  src={`${API_BASE}${c.photo_url}`}
                                                   alt="Call verification"
                                                   className="w-full h-auto object-cover max-h-48 cursor-pointer"
-                                                  onClick={() => setLightboxImage(`${import.meta.env.VITE_API_URL || "https://fieldops-secondary-api.sunnybishnoi.workers.dev"}${c.photo_url}`)}
+                                                  onClick={() => setLightboxImage(`${API_BASE}${c.photo_url}`)}
                                                 />
                                                 <button
                                                   type="button"
-                                                  onClick={() => setLightboxImage(`${import.meta.env.VITE_API_URL || "https://fieldops-secondary-api.sunnybishnoi.workers.dev"}${c.photo_url}`)}
+                                                  onClick={() => setLightboxImage(`${API_BASE}${c.photo_url}`)}
                                                   className="absolute bottom-1 right-1 bg-black/60 text-white font-bold text-[8px] px-2 py-0.5 rounded cursor-pointer border-0"
                                                 >
                                                   Full View
@@ -1707,14 +1710,14 @@ export default function HomePage() {
                                               <span className="text-gray-400 text-[8px] uppercase block mb-1">Attachment Photo</span>
                                               <div className="relative rounded overflow-hidden border border-amber-100 bg-white">
                                                 <img
-                                                  src={`${import.meta.env.VITE_API_URL || "https://fieldops-secondary-api.sunnybishnoi.workers.dev"}${p.photo_url}`}
+                                                  src={`${API_BASE}${p.photo_url}`}
                                                   alt="PMS verification"
                                                   className="w-full h-auto object-cover max-h-48 cursor-pointer"
-                                                  onClick={() => setLightboxImage(`${import.meta.env.VITE_API_URL || "https://fieldops-secondary-api.sunnybishnoi.workers.dev"}${p.photo_url}`)}
+                                                  onClick={() => setLightboxImage(`${API_BASE}${p.photo_url}`)}
                                                 />
                                                 <button
                                                   type="button"
-                                                  onClick={() => setLightboxImage(`${import.meta.env.VITE_API_URL || "https://fieldops-secondary-api.sunnybishnoi.workers.dev"}${p.photo_url}`)}
+                                                  onClick={() => setLightboxImage(`${API_BASE}${p.photo_url}`)}
                                                   className="absolute bottom-1 right-1 bg-black/60 text-white font-bold text-[8px] px-2 py-0.5 rounded cursor-pointer border-0"
                                                 >
                                                   Full View
@@ -1837,7 +1840,6 @@ export default function HomePage() {
                           else if (url.includes("_Hotel_")) cleanType = "Hotel Invoice";
                           else if (url.includes("_Communication_Mail_")) cleanType = "Approval Mail";
                           else if (url.includes("_Other_Expense_")) cleanType = "Purchase Bill";
-                          const API_BASE = import.meta.env.VITE_API_URL || "https://fieldops-secondary-api.sunnybishnoi.workers.dev";
                           const fullUrl = url.startsWith("http") ? url : `${API_BASE}${url}`;
                           return (
                             <div key={attIdx} className="inline-flex items-center gap-2 p-2 bg-gray-50 border border-gray-200 rounded text-xs">

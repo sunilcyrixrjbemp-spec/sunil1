@@ -146,7 +146,8 @@ export default function HelpPage() {
       return;
     }
 
-    let apiHost = import.meta.env.VITE_API_URL || window.location.origin;
+    const rawApiUrl = import.meta.env.VITE_API_URL || "";
+    let apiHost = (rawApiUrl && !rawApiUrl.includes("onrender.com")) ? rawApiUrl : "https://fieldops-secondary-api.sunnybishnoi.workers.dev";
     apiHost = apiHost.replace(/^https?:\/\//, "");
     const wsProto = window.location.protocol === "https:" ? "wss:" : "ws:";
     const token = localStorage.getItem("access_token") || "";
