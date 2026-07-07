@@ -1611,6 +1611,19 @@ export async function handleSubmitExpense(request, env, params, query, user) {
         status: "pending"
       });
     }
+
+    const zonalManagerId = user.zonal_manager;
+    if (zonalManagerId) {
+      const zonalManager = await env.DB.prepare("SELECT * FROM users WHERE name = ? OR user_id = ?").bind(zonalManagerId, zonalManagerId).first();
+      if (zonalManager) {
+        status = "submitted";
+        approvalsToInsert.push({
+          approver_id: zonalManager.id,
+          level_number: 2,
+          status: manager ? "waiting" : "pending"
+        });
+      }
+    }
   }
 
   if (existingExpense) {
