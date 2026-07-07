@@ -91,10 +91,16 @@ export default function AnalysisPage() {
     const key = `cache_my_expenses_${currentUser.user_id}_${y}-${monthStr}`;
     const hasMyCache = !!localStorage.getItem(key);
     return !hasMyCache;
-  });
-  const [viewMode, setViewMode] = useState<"my" | "team">(() => {
+  });  const [viewMode, setViewMode] = useState<"my" | "team">(() => {
     const saved = localStorage.getItem("analysis_viewMode");
-    return (saved === "my" || saved === "team") ? saved : "my";
+    if (saved === "my" || saved === "team") return saved;
+    const currentUser = authService.getCurrentUser();
+    const role = currentUser?.role || "Engineer";
+    const allowed = (currentUser?.allowed_windows || "").split(",").map((w: string) => w.trim().toLowerCase());
+    if (role === "Admin" || role === "MIS" || role === "VP" || role === "Accountant" || allowed.includes("approval")) {
+      return "team";
+    }
+    return "my";
   });
   
   // Filter state
@@ -431,6 +437,60 @@ export default function AnalysisPage() {
     return Array.from(years).sort((a, b) => b - a);
   }, [myExpenses, teamExpenses]);
 
+  // CSV Downloader
+  const downloadCSV = () => {
+    if (activeExpenses.length === 0) {
+      alert("No data available to download");
+      return;
+    }
+
+    const headers = [
+      "Date", "Submitter Name", "Submitter Code", "Designation", "District", "Zone",
+      "Purpose/Description", "Status", "Amount", "Category/Mode", "KM Travelled",
+      "DA Amount", "Hotel Amount", "Other Amount", "Local Purchase",
+      "Calls Assigned", "Calls Completed", "PMS Count", "Calibration Count", "Asset Tagging", "Asset Mobilised"
+    ];
+
+    const csvRows = [headers.join(",")];
+
+    activeExpenses.forEach(e => {
+      const purposeClean = String(e.purpose || "").replace(/"/g, '""').replace(/\n/g, " ");
+      const values = [
+        `"${e.date || e.created_at || ""}"`,
+        `"${e.submitter_name || ""}"`,
+        `"${e.submitter_code || ""}"`,
+        `"${e.submitter_designation || ""}"`,
+        `"${e.district || ""}"`,
+        `"${e.zone || ""}"`,
+        `"${purposeClean}"`,
+        `"${e.status || ""}"`,
+        e.amount || 0,
+        `"${e.category || ""}"`,
+        e.total_km || 0,
+        e.da_amount || 0,
+        e.hotel_amount || 0,
+        e.other_expense_amount || 0,
+        e.local_purchase_amount || 0,
+        e.calls_assigned || 0,
+        e.calls_completed || 0,
+        e.pms_count || 0,
+        e.calibration_count || 0,
+        e.asset_tagging || 0,
+        e.mobilise_count || 0
+      ];
+      csvRows.push(values.join(","));
+    });
+
+    const blob = new Blob([csvRows.join("\n")], { type: "text/csv;charset=utf-8;" });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.setAttribute("href", url);
+    const monthName = months[selectedMonth];
+    link.setAttribute("download", `Expense_Analysis_Report_${monthName}_${selectedYear}.csv`);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
 
   console.log("AnalysisPage activeExpenses:", activeExpenses);
 
@@ -453,13 +513,23 @@ export default function AnalysisPage() {
           </div>
           
           {isReviewer && (
-            <button
-              type="button"
-              onClick={() => setViewMode(viewMode === "my" ? "team" : "my")}
-              className="px-2.5 py-1 text-[9px] font-black uppercase rounded border border-[#a5d8e8] bg-[#a5d8e8]/10 text-slate-700 cursor-pointer shadow-xs"
-            >
-              {viewMode === "my" ? "View Team" : "View Self"}
-            </button>
+            <div className="flex items-center gap-1.5">
+              <button
+                type="button"
+                onClick={downloadCSV}
+                className="px-2 py-1 text-[9px] font-black uppercase rounded border border-green-300 bg-green-50 text-green-700 cursor-pointer shadow-xs flex items-center justify-center gap-1"
+                title="Download CSV Report"
+              >
+                <i className="fas fa-file-excel"></i> CSV
+              </button>
+              <button
+                type="button"
+                onClick={() => setViewMode(viewMode === "my" ? "team" : "my")}
+                className="px-2 py-1 text-[9px] font-black uppercase rounded border border-[#a5d8e8] bg-[#a5d8e8]/10 text-slate-700 cursor-pointer shadow-xs"
+              >
+                {viewMode === "my" ? "Team" : "Self"}
+              </button>
+            </div>
           )}
         </div>
 
@@ -698,25 +768,34 @@ export default function AnalysisPage() {
           <p className="text-gray-500 text-[10px]">Real-time expense data visualization & insights</p>
         </div>
 
-        {/* View Mode Toggle (only for managers) */}
+        {/* View Mode & Download Actions */}
         {isReviewer && (
-          <div className="flex border border-gray-300 rounded overflow-hidden text-[11px] bg-white self-start sm:self-auto shadow-sm">
+          <div className="flex items-center gap-2 self-start sm:self-auto">
             <button
-              onClick={() => setViewMode("my")}
-              className={`px-3 py-1.5 flex items-center gap-1 font-semibold transition-colors border-0 cursor-pointer ${
-                viewMode === "my" ? "bg-blue-600 text-white" : "bg-white text-gray-600 hover:bg-gray-50"
-              }`}
+              onClick={downloadCSV}
+              className="flex items-center gap-1.5 px-3 py-1.5 border border-green-600 rounded bg-green-50 hover:bg-green-100 text-green-700 text-[11px] font-semibold transition-colors cursor-pointer shadow-sm border-0"
+              title="Download filtered analysis data as CSV"
             >
-              <i className="fas fa-user text-xs"></i> My Data
+              <i className="fas fa-file-excel text-sm"></i> Export CSV
             </button>
-            <button
-              onClick={() => setViewMode("team")}
-              className={`px-3 py-1.5 flex items-center gap-1 font-semibold transition-colors border-0 cursor-pointer ${
-                viewMode === "team" ? "bg-blue-600 text-white" : "bg-white text-gray-600 hover:bg-gray-50"
-              }`}
-            >
-              <i className="fas fa-users text-xs"></i> Team Data
-            </button>
+            <div className="flex border border-gray-300 rounded overflow-hidden text-[11px] bg-white shadow-sm">
+              <button
+                onClick={() => setViewMode("my")}
+                className={`px-3 py-1.5 flex items-center gap-1 font-semibold transition-colors border-0 cursor-pointer ${
+                  viewMode === "my" ? "bg-blue-600 text-white" : "bg-white text-gray-600 hover:bg-gray-50"
+                }`}
+              >
+                <i className="fas fa-user text-xs"></i> My Data
+              </button>
+              <button
+                onClick={() => setViewMode("team")}
+                className={`px-3 py-1.5 flex items-center gap-1 font-semibold transition-colors border-0 cursor-pointer ${
+                  viewMode === "team" ? "bg-blue-600 text-white" : "bg-white text-gray-600 hover:bg-gray-50"
+                }`}
+              >
+                <i className="fas fa-users text-xs"></i> Team Data
+              </button>
+            </div>
           </div>
         )}
       </div>
