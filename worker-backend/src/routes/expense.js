@@ -366,7 +366,10 @@ export async function handleGetTeamExpenses(request, env, params, query, user) {
   
   // 1. Fetch team users
   let teamUsers = [];
-  if (["Admin", "MIS", "VP", "Accountant"].includes(user.role)) {
+  const userRoleClean = (user.role || "").trim().toLowerCase();
+  const isAdminOrReportViewer = ["admin", "mis", "vp", "accountant"].includes(userRoleClean);
+
+  if (isAdminOrReportViewer) {
     const res = await env.DB.prepare("SELECT * FROM users").all();
     teamUsers = res.results || [];
     console.log("DEBUG: fetched all users, count =", teamUsers.length);
@@ -410,7 +413,7 @@ export async function handleGetTeamExpenses(request, env, params, query, user) {
 
   if (teamUsers.length === 0) return jsonResponse([]);
 
-  const teamUserIds = ["Admin", "MIS", "VP", "Accountant"].includes(user.role)
+  const teamUserIds = isAdminOrReportViewer
     ? teamUsers.map(u => u.id)
     : teamUsers.map(u => u.id).filter(id => id !== user.id);
   console.log("DEBUG: teamUserIds =", JSON.stringify(teamUserIds));
@@ -560,7 +563,7 @@ export async function handleGetTeamExpenses(request, env, params, query, user) {
   }
 
   // 3. Fetch team members' limit requests
-  const teamUserCodes = ["Admin", "MIS", "VP", "Accountant"].includes(user.role)
+  const teamUserCodes = isAdminOrReportViewer
     ? teamUsers.map(u => u.user_id)
     : teamUsers.map(u => u.user_id).filter(uc => uc !== user.user_id);
   if (teamUserCodes.length > 0) {

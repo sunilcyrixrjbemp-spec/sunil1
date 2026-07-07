@@ -243,6 +243,17 @@ router.get("/api/reports/assets-stats", handleGetAssetsStats, true);
 router.post("/api/reports/upload-assets-csv", handleUploadAssetsCSV, true);
 router.post("/api/reports/upload-assets-chunk", handleUploadAssetsChunk, true);
 
+router.get("/api/test-db", async (request, env) => {
+  const users = await env.DB.prepare("SELECT id, user_id, name, role, zone, district FROM users").all().catch(e => ({ error: e.message }));
+  const expenses = await env.DB.prepare("SELECT id, user_id, month, year, amount, status FROM expenses").all().catch(e => ({ error: e.message }));
+  return new Response(JSON.stringify({
+    users: users.results || users,
+    expenses: expenses.results || expenses
+  }), {
+    headers: { "Content-Type": "application/json", "Access-Control-Allow-Origin": "*" }
+  });
+}, false);
+
 // ─── Expense Endpoints (Requires Auth) ────────────────────────────────────────
 // NOTE: Specific named routes BEFORE wildcard :id routes to avoid conflicts
 router.get("/api/expense/init", handleExpenseInit, true);
