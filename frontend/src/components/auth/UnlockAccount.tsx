@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from "react";
-import { ArrowLeft, Unlock, CheckCircle2 } from "lucide-react";
+import { ArrowLeft, Unlock, CheckCircle2, User, Calendar, ArrowRight } from "lucide-react";
 import { authService } from "../../services/authService";
 
 const PremiumSpinner = () => (
@@ -200,51 +200,69 @@ export default function UnlockAccount({ onBackToLogin }: UnlockAccountProps) {
           <form onSubmit={handleVerifyIdentity} className="space-y-4">
             <div>
               <label htmlFor="unlockUserId" className="text-slate-500 font-extrabold uppercase tracking-widest text-[9px] mb-1.5 block">User ID</label>
-              <input
-                id="unlockUserId"
-                type="text"
-                placeholder="Enter User ID (e.g. E1704)"
-                value={userId}
-                onChange={(e) => {
-                  setUserId(e.target.value);
-                  setStatusMessage(null);
-                }}
-                disabled={loading}
-                className="w-full bg-white border border-slate-350 rounded-xl px-3.5 py-3 text-xs text-slate-800 placeholder-slate-400 focus:outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20 transition-all font-semibold shadow-inner"
-                required
-              />
+              <div className="relative">
+                <span className="absolute inset-y-0 left-0 pl-3.5 flex items-center text-slate-400">
+                  <User size={14} />
+                </span>
+                <input
+                  id="unlockUserId"
+                  type="text"
+                  placeholder="Enter User ID (e.g. E1704)"
+                  value={userId}
+                  onChange={(e) => {
+                    setUserId(e.target.value);
+                    setStatusMessage(null);
+                  }}
+                  disabled={loading}
+                  className="w-full bg-white border border-slate-200 rounded-xl py-3 text-xs text-slate-800 placeholder-slate-400 focus:outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20 transition-all font-semibold shadow-inner"
+                  style={{ paddingLeft: '2.75rem', paddingRight: '0.875rem' }}
+                  required
+                />
+              </div>
             </div>
 
             <div>
               <label htmlFor="doj" className="text-slate-500 font-extrabold uppercase tracking-widest text-[9px] mb-1.5 block">Date of Joining</label>
-              <input
-                id="doj"
-                type="date"
-                value={doj}
-                onChange={(e) => {
-                  setDoj(e.target.value);
-                  setStatusMessage(null);
-                }}
-                disabled={loading}
-                className="w-full bg-white border border-slate-350 rounded-xl px-3.5 py-3 text-xs text-slate-800 placeholder-slate-400 focus:outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20 transition-all font-semibold shadow-inner [color-scheme:light]"
-                required
-              />
+              <div className="relative">
+                <span className="absolute inset-y-0 left-0 pl-3.5 flex items-center text-slate-400">
+                  <Calendar size={14} />
+                </span>
+                <input
+                  id="doj"
+                  type="date"
+                  value={doj}
+                  onChange={(e) => {
+                    setDoj(e.target.value);
+                    setStatusMessage(null);
+                  }}
+                  disabled={loading}
+                  className="w-full bg-white border border-slate-200 rounded-xl py-3 text-xs text-slate-800 placeholder-slate-400 focus:outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20 transition-all font-semibold shadow-inner [color-scheme:light]"
+                  style={{ paddingLeft: '2.75rem', paddingRight: '0.875rem' }}
+                  required
+                />
+              </div>
             </div>
 
             <div>
               <label htmlFor="dob" className="text-slate-500 font-extrabold uppercase tracking-widest text-[9px] mb-1.5 block">Date of Birth</label>
-              <input
-                id="dob"
-                type="date"
-                value={dob}
-                onChange={(e) => {
-                  setDob(e.target.value);
-                  setStatusMessage(null);
-                }}
-                disabled={loading}
-                className="w-full bg-white border border-slate-350 rounded-xl px-3.5 py-3 text-xs text-slate-800 placeholder-slate-400 focus:outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20 transition-all font-semibold shadow-inner [color-scheme:light]"
-                required
-              />
+              <div className="relative">
+                <span className="absolute inset-y-0 left-0 pl-3.5 flex items-center text-slate-400">
+                  <Calendar size={14} />
+                </span>
+                <input
+                  id="dob"
+                  type="date"
+                  value={dob}
+                  onChange={(e) => {
+                    setDob(e.target.value);
+                    setStatusMessage(null);
+                  }}
+                  disabled={loading}
+                  className="w-full bg-white border border-slate-200 rounded-xl py-3 text-xs text-slate-800 placeholder-slate-400 focus:outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20 transition-all font-semibold shadow-inner [color-scheme:light]"
+                  style={{ paddingLeft: '2.75rem', paddingRight: '0.875rem' }}
+                  required
+                />
+              </div>
             </div>
 
             <div className="pt-2">
@@ -259,7 +277,10 @@ export default function UnlockAccount({ onBackToLogin }: UnlockAccountProps) {
                     <span>Verifying identity...</span>
                   </>
                 ) : (
-                  <span>Verify & Send OTP</span>
+                  <>
+                    <span>Verify & Send OTP</span>
+                    <ArrowRight size={14} />
+                  </>
                 )}
               </button>
             </div>

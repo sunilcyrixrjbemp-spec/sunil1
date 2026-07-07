@@ -1,6 +1,6 @@
 import { runWrite, runBatchWrite } from "../utils/db.js";
 import { getLegacyExpenseHashId } from "./approval.js";
-import { uploadToGoogleDrive } from "./upload.js";
+import { uploadFileWithFallback } from "./upload.js";
 
 function jsonResponse(data, status = 200) {
   return new Response(JSON.stringify(data), {
@@ -37,22 +37,22 @@ export async function serializeExpenses(env, expenses, submittersMap) {
     const legs = legsByCode[exp.expense_code] || [];
 
     const totKm = legs
-      .filter(l => ["Bike", "Car"].includes(l.travel_mode))
+      .filter(l => ["bike", "car"].includes((l.travel_mode || "").trim().toLowerCase()))
       .reduce((sum, l) => sum + (parseFloat(l.distance_km) || 0.0), 0.0);
 
     const totAuto = legs
-      .filter(l => l.travel_mode === "Auto")
+      .filter(l => (l.travel_mode || "").trim().toLowerCase() === "auto")
       .reduce((sum, l) => sum + (parseFloat(l.travel_amount) || 0.0), 0.0) +
       legs
-      .filter(l => l.sub_mode === "Auto")
+      .filter(l => (l.sub_mode || "").trim().toLowerCase() === "auto")
       .reduce((sum, l) => sum + (parseFloat(l.sub_amount) || 0.0), 0.0);
 
     const bikeAmount = legs
-      .filter(l => l.travel_mode === "Bike")
+      .filter(l => (l.travel_mode || "").trim().toLowerCase() === "bike")
       .reduce((sum, l) => sum + (parseFloat(l.travel_amount) || 0.0), 0.0);
 
     const carAmount = legs
-      .filter(l => l.travel_mode === "Car")
+      .filter(l => (l.travel_mode || "").trim().toLowerCase() === "car")
       .reduce((sum, l) => sum + (parseFloat(l.travel_amount) || 0.0), 0.0);
 
     result.push({
@@ -230,9 +230,9 @@ export async function getExpenseInitData(env, targetUser, monthStr) {
   // Month-wise accumulated aggregates
   const statsRes = await env.DB.prepare(`
     SELECT 
-      SUM(CASE WHEN i.travel_mode IN ('Bike', 'Car') THEN COALESCE(i.distance_km, 0.0) ELSE 0.0 END) as total_km,
-      SUM(CASE WHEN i.travel_mode = 'Auto' THEN COALESCE(i.travel_amount, 0.0) ELSE 0.0 END) +
-      SUM(CASE WHEN i.sub_mode = 'Auto' THEN COALESCE(i.sub_amount, 0.0) ELSE 0.0 END) as total_auto
+      SUM(CASE WHEN LOWER(TRIM(i.travel_mode)) IN ('bike', 'car') THEN COALESCE(i.distance_km, 0.0) ELSE 0.0 END) as total_km,
+      SUM(CASE WHEN LOWER(TRIM(i.travel_mode)) = 'auto' THEN COALESCE(i.travel_amount, 0.0) ELSE 0.0 END) +
+      SUM(CASE WHEN LOWER(TRIM(i.sub_mode)) = 'auto' THEN COALESCE(i.sub_amount, 0.0) ELSE 0.0 END) as total_auto
     FROM expense_itineraries i
     JOIN expenses e ON i.exp_id = e.expense_code
     WHERE e.user_id = ? AND e.month = ? AND e.year = ? AND e.status != 'rejected'
@@ -449,22 +449,22 @@ export async function handleGetTeamExpenses(request, env, params, query, user) {
       const legs = legsByCode[exp.expense_code] || [];
 
       const totKm = legs
-        .filter(l => ["Bike", "Car"].includes(l.travel_mode))
+        .filter(l => ["bike", "car"].includes((l.travel_mode || "").trim().toLowerCase()))
         .reduce((sum, l) => sum + (parseFloat(l.distance_km) || 0.0), 0.0);
 
       const totAuto = legs
-        .filter(l => l.travel_mode === "Auto")
+        .filter(l => (l.travel_mode || "").trim().toLowerCase() === "auto")
         .reduce((sum, l) => sum + (parseFloat(l.travel_amount) || 0.0), 0.0) +
         legs
-        .filter(l => l.sub_mode === "Auto")
+        .filter(l => (l.sub_mode || "").trim().toLowerCase() === "auto")
         .reduce((sum, l) => sum + (parseFloat(l.sub_amount) || 0.0), 0.0);
 
       const bikeAmount = legs
-        .filter(l => l.travel_mode === "Bike")
+        .filter(l => (l.travel_mode || "").trim().toLowerCase() === "bike")
         .reduce((sum, l) => sum + (parseFloat(l.travel_amount) || 0.0), 0.0);
 
       const carAmount = legs
-        .filter(l => l.travel_mode === "Car")
+        .filter(l => (l.travel_mode || "").trim().toLowerCase() === "car")
         .reduce((sum, l) => sum + (parseFloat(l.travel_amount) || 0.0), 0.0);
 
       result.push({
@@ -565,20 +565,33 @@ export async function handleVerifyBarcode(request, env, params, query, user) {
   const barcode = query.get("barcode");
   if (!barcode) return jsonResponse({ error: "barcode parameter is required" }, 400);
 
+  const last8 = barcode.length >= 8 ? barcode.slice(-8) : barcode;
+
   const asset = await env.DB.prepare(`
-    SELECT * FROM assets_inventory WHERE qr_code = ? OR serial_no = ? LIMIT 1
-  `).bind(barcode, barcode).first();
+    SELECT * FROM assets_inventory 
+    WHERE qr_code = ? OR serial_no = ? OR SUBSTR(qr_code, -8) = ? 
+    LIMIT 1
+  `).bind(barcode, barcode, last8).first();
 
   if (!asset) {
-    return jsonResponse({ valid: false, message: "Asset QR/Serial number not found in master database." });
+    return jsonResponse({ success: false, valid: false, message: "Asset QR/Serial number not found in master database." });
   }
 
   return jsonResponse({
+    success: true,
     valid: true,
     asset_name: asset.equipment_name,
     hospital_name: asset.hospital_name,
     district_name: asset.district_name,
-    serial_no: asset.serial_no
+    serial_no: asset.serial_no,
+    data: {
+      district_name: asset.district_name,
+      hospital_name: asset.hospital_name,
+      equipment_name: asset.equipment_name,
+      model_name: asset.model_name || "",
+      qr_code: asset.qr_code,
+      inventory_status: asset.inventory_status || "Active"
+    }
   });
 }
 
@@ -1408,6 +1421,19 @@ export async function handleSubmitExpense(request, env, params, query, user) {
   }
 
   const timestamp = new Date().toISOString();
+
+  // Duplicate Date Check (prevent submitting twice for the same date unless rejected)
+  let dupQuery = "SELECT id FROM expenses WHERE user_id = ? AND itinerary = ? AND status != 'rejected'";
+  let dupParams = [user.id, date];
+  if (editExpenseId) {
+    dupQuery += " AND id != ?";
+    dupParams.push(editExpenseId);
+  }
+  const existingDup = await env.DB.prepare(dupQuery).bind(...dupParams).first();
+  if (existingDup) {
+    return jsonResponse({ error: `An expense claim for ${date} has already been submitted.` }, 400);
+  }
+
   let existingExpense = null;
   let expenseCode = null;
   let newExpId = null;
@@ -1580,7 +1606,7 @@ export async function handleSubmitExpense(request, env, params, query, user) {
 
   if (!newExpId) return jsonResponse({ error: "Failed to save expense claim" }, 500);
 
-  // Helper for attachments upload to Google Drive
+  // Helper for attachments upload with fallback
   const handleAttachment = async (fileKey, billType, legNum) => {
     const file = formData.get(fileKey);
     if (file && typeof file === "object" && file.name) {
@@ -1594,10 +1620,9 @@ export async function handleSubmitExpense(request, env, params, query, user) {
       
       let fileUrl = "";
       try {
-        const fileId = await uploadToGoogleDrive(env, file, folderName, filename);
-        fileUrl = `/api/upload/file/gdrive/${fileId}`;
+        fileUrl = await uploadFileWithFallback(env, file, folderName, filename);
       } catch (err) {
-        console.error(`Failed to upload ${fileKey} to Google Drive:`, err);
+        console.error(`Failed to upload ${fileKey} with fallback:`, err);
         return;
       }
       

@@ -94,6 +94,61 @@ export async function deleteFromGoogleDrive(env, fileId) {
   return false;
 }
 
+async function uploadToR2(env, file, key) {
+  const accountId = env.PRIMARY_CLOUDFLARE_ACCOUNT_ID || "befbd2e0ff580a1d0d0865f011002053";
+  const bucketName = "fieldops-uploads";
+  const url = `https://api.cloudflare.com/client/v4/accounts/${accountId}/r2/buckets/${bucketName}/objects/${key}`;
+  
+  const token = env.PRIMARY_CLOUDFLARE_API_TOKEN;
+  const email = env.PRIMARY_CLOUDFLARE_EMAIL;
+  const headers = {
+    "Content-Type": file.type || "application/octet-stream"
+  };
+
+  if (token && token.startsWith("cfk_")) {
+    headers["X-Auth-Key"] = token;
+    headers["X-Auth-Email"] = email || "Sunil.cyrixrjbemp@gmail.com";
+  } else if (token) {
+    headers["Authorization"] = `Bearer ${token}`;
+  }
+
+  const arrayBuffer = await file.arrayBuffer();
+
+  const response = await fetch(url, {
+    method: "PUT",
+    headers: headers,
+    body: arrayBuffer
+  });
+
+  if (response.status === 200) {
+    return `/api/upload/file/${key}`;
+  } else {
+    const text = await response.text();
+    throw new Error(`R2 Upload returned status ${response.status}: ${text}`);
+  }
+}
+
+export async function uploadFileWithFallback(env, file, subfolder, filename) {
+  const safeName = makeSafeFilename(filename);
+  const key = `${subfolder}/${safeName}`;
+
+  // 1. Try Google Drive Upload First
+  try {
+    const fileId = await uploadToGoogleDrive(env, file, subfolder, safeName);
+    return `/api/upload/file/gdrive/${fileId}`;
+  } catch (driveErr) {
+    console.error("GDrive upload failed, trying R2 fallback...", driveErr);
+  }
+
+  // 2. Try R2 fallback
+  try {
+    return await uploadToR2(env, file, key);
+  } catch (r2Err) {
+    console.error("R2 upload failed:", r2Err);
+    throw new Error("Upload failed on both Google Drive and R2 fallback. Detail: " + r2Err.message);
+  }
+}
+
 /**
  * POST /api/upload/image
  */
@@ -122,14 +177,14 @@ export async function handleUploadImage(request, env, params, query, user) {
   const folderName = `${monthName}_${yearVal}`;
 
   try {
-    const fileId = await uploadToGoogleDrive(env, file, folderName, safeName);
+    const fileUrl = await uploadFileWithFallback(env, file, folderName, file.name);
     return jsonResponse({
       filename: file.name,
-      url: `/api/upload/file/gdrive/${fileId}`
+      url: fileUrl
     });
   } catch (e) {
-    console.error("GDrive Upload failed:", e);
-    return jsonResponse({ error: "Google Drive Upload failed: " + e.message }, 500);
+    console.error("Upload failed with fallback:", e);
+    return jsonResponse({ error: "Upload failed: " + e.message }, 500);
   }
 }
 
@@ -154,14 +209,14 @@ export async function handleUploadDocument(request, env, params, query, user) {
   const folderName = `${monthName}_${yearVal}`;
 
   try {
-    const fileId = await uploadToGoogleDrive(env, file, folderName, safeName);
+    const fileUrl = await uploadFileWithFallback(env, file, folderName, file.name);
     return jsonResponse({
       filename: file.name,
-      url: `/api/upload/file/gdrive/${fileId}`
+      url: fileUrl
     });
   } catch (e) {
-    console.error("GDrive Upload failed:", e);
-    return jsonResponse({ error: "Google Drive Upload failed: " + e.message }, 500);
+    console.error("Upload failed with fallback:", e);
+    return jsonResponse({ error: "Upload failed: " + e.message }, 500);
   }
 }
 

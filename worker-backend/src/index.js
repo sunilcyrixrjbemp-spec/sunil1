@@ -97,6 +97,19 @@ class Router {
     for (const route of this.routes) {
       if (route.method !== method) continue;
 
+      // Handle wildcard route like /api/upload/file/*
+      if (route.path.endsWith("/*")) {
+        const prefix = route.path.slice(0, -2);
+        if (pathname.startsWith(prefix)) {
+          const wildcardVal = pathname.substring(prefix.length);
+          return {
+            handler: route.handler,
+            requiresAuth: route.requiresAuth,
+            params: { "*": wildcardVal, filename: wildcardVal }
+          };
+        }
+      }
+
       const routeParts = route.path.split("/");
       const pathParts = pathname.split("/");
 

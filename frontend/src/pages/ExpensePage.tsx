@@ -547,6 +547,7 @@ export default function ExpensePage() {
   const [myClaimsPage, setMyClaimsPage] = useState(1);
   
   const [showConfirmModal, setShowConfirmModal] = useState(false);
+  const [submitStatus, setSubmitStatus] = useState<{ type: "success" | "error"; title: string; message: string; claimCode?: string } | null>(null);
   const [showApprovalModal, setShowApprovalModal] = useState(false);
   const [exceededType, setExceededType] = useState<"KM" | "AUTO">("KM");
   const [reqAdditional, setReqAdditional] = useState("0");
@@ -2089,7 +2090,12 @@ export default function ExpensePage() {
 
       const res = await expenseService.submitItineraryExpense(formData);
       if (res.success) {
-        toast.success(res.message || "Claim submitted successfully!");
+        setSubmitStatus({
+          type: "success",
+          title: "Claim Submitted",
+          message: res.message || "Your expense claim has been submitted to your manager for review.",
+          claimCode: res.expense_code
+        });
         setShowConfirmModal(false);
         
         // Reset form
@@ -2102,13 +2108,15 @@ export default function ExpensePage() {
         
         await fetchMonthLimits(targetMonth, false);
         await fetchClaims();
-        
-        if (editExpenseId) {
-          navigate("/home");
-        }
       }
     } catch (err: any) {
-      toast.error(err.response?.data?.detail || err.message || "Failed to submit claim.");
+      const errMsg = err.response?.data?.detail || err.response?.data?.error || err.message || "Failed to submit claim.";
+      setSubmitStatus({
+        type: "error",
+        title: "Submission Failed",
+        message: errMsg
+      });
+      setShowConfirmModal(false);
     } finally {
       setSubmitting(false);
     }
@@ -4433,6 +4441,58 @@ export default function ExpensePage() {
                   <span>Confirm Submit</span>
                 </button>
               </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ================= SUBMISSION STATUS MODAL (SUCCESS/ERROR) ================= */}
+      {submitStatus && (
+        <div className="modal-lte-overlay">
+          <div className="modal-lte-content max-w-sm text-center p-6 rounded-2xl shadow-xl border border-gray-100">
+            <div className="mx-auto flex items-center justify-center h-12 w-12 rounded-full mb-4">
+              {submitStatus.type === "success" ? (
+                <div className="bg-emerald-50 text-emerald-600 p-3 rounded-full border border-emerald-100">
+                  <ShieldCheck className="h-6 w-6" />
+                </div>
+              ) : (
+                <div className="bg-rose-50 text-rose-600 p-3 rounded-full border border-rose-100">
+                  <AlertTriangle className="h-6 w-6" />
+                </div>
+              )}
+            </div>
+            
+            <h3 className={`text-base font-extrabold uppercase tracking-wider ${submitStatus.type === "success" ? "text-emerald-700" : "text-rose-700"}`}>
+              {submitStatus.title}
+            </h3>
+            
+            <div className="mt-3 text-xs text-gray-500 font-semibold leading-relaxed">
+              {submitStatus.type === "success" && submitStatus.claimCode && (
+                <p className="mb-2 bg-slate-50 border border-slate-100 py-1 px-2.5 rounded font-mono font-bold text-slate-700 inline-block uppercase text-[10px]">
+                  Claim Code: {submitStatus.claimCode}
+                </p>
+              )}
+              <p>{submitStatus.message}</p>
+            </div>
+            
+            <div className="mt-6">
+              <button
+                type="button"
+                onClick={() => {
+                  const wasSuccess = submitStatus.type === "success";
+                  setSubmitStatus(null);
+                  if (wasSuccess) {
+                    navigate("/home");
+                  }
+                }}
+                className={`w-full py-2.5 px-4 rounded-xl text-xs font-bold uppercase tracking-wider transition-all border-0 cursor-pointer shadow-md ${
+                  submitStatus.type === "success" 
+                    ? "bg-emerald-600 hover:bg-emerald-700 text-white shadow-emerald-600/10 hover:shadow-emerald-600/20" 
+                    : "bg-rose-600 hover:bg-rose-700 text-white shadow-rose-600/10 hover:shadow-rose-600/20"
+                }`}
+              >
+                Okay, Got it
+              </button>
             </div>
           </div>
         </div>

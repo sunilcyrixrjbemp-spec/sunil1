@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from "react";
-import { ArrowLeft, Key, Eye, EyeOff, CheckCircle2 } from "lucide-react";
+import { ArrowLeft, Key, Eye, EyeOff, CheckCircle2, User, Calendar, Lock, ArrowRight } from "lucide-react";
 import { authService } from "../../services/authService";
 
 const PremiumSpinner = () => (
@@ -21,6 +21,7 @@ export default function ForgotPassword({ onBackToLogin }: ForgotPasswordProps) {
   const [newPassword, setNewPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [showPass, setShowPass] = useState(false);
+  const [showConfirmPass, setShowConfirmPass] = useState(false);
   const [loading, setLoading] = useState(false);
   const [statusMessage, setStatusMessage] = useState<{ type: "success" | "error"; text: string } | null>(null);
 
@@ -250,35 +251,47 @@ export default function ForgotPassword({ onBackToLogin }: ForgotPasswordProps) {
           <form onSubmit={handleSendOtp} className="space-y-4">
             <div>
               <label htmlFor="resetUserId" className="text-slate-500 font-extrabold uppercase tracking-widest text-[9px] mb-1.5 block">User ID</label>
-              <input
-                id="resetUserId"
-                type="text"
-                placeholder="Enter User ID (e.g. E1704)"
-                value={userId}
-                onChange={(e) => {
-                  setUserId(e.target.value);
-                  setStatusMessage(null);
-                }}
-                disabled={loading}
-                className="w-full bg-white border border-slate-350 rounded-xl px-3.5 py-3 text-xs text-slate-800 placeholder-slate-400 focus:outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20 transition-all font-semibold shadow-inner"
-                required
-              />
+              <div className="relative">
+                <span className="absolute inset-y-0 left-0 pl-3.5 flex items-center text-slate-400">
+                  <User size={14} />
+                </span>
+                <input
+                  id="resetUserId"
+                  type="text"
+                  placeholder="Enter User ID (e.g. E1704)"
+                  value={userId}
+                  onChange={(e) => {
+                    setUserId(e.target.value);
+                    setStatusMessage(null);
+                  }}
+                  disabled={loading}
+                  className="w-full bg-white border border-slate-200 rounded-xl py-3 text-xs text-slate-800 placeholder-slate-400 focus:outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20 transition-all font-semibold shadow-inner"
+                  style={{ paddingLeft: '2.75rem', paddingRight: '0.875rem' }}
+                  required
+                />
+              </div>
             </div>
 
             <div>
               <label htmlFor="resetDob" className="text-slate-500 font-extrabold uppercase tracking-widest text-[9px] mb-1.5 block">Date of Birth</label>
-              <input
-                id="resetDob"
-                type="date"
-                value={dob}
-                onChange={(e) => {
-                  setDob(e.target.value);
-                  setStatusMessage(null);
-                }}
-                disabled={loading}
-                className="w-full bg-white border border-slate-350 rounded-xl px-3.5 py-3 text-xs text-slate-800 placeholder-slate-400 focus:outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20 transition-all font-semibold shadow-inner [color-scheme:light]"
-                required
-              />
+              <div className="relative">
+                <span className="absolute inset-y-0 left-0 pl-3.5 flex items-center text-slate-400">
+                  <Calendar size={14} />
+                </span>
+                <input
+                  id="resetDob"
+                  type="date"
+                  value={dob}
+                  onChange={(e) => {
+                    setDob(e.target.value);
+                    setStatusMessage(null);
+                  }}
+                  disabled={loading}
+                  className="w-full bg-white border border-slate-200 rounded-xl py-3 text-xs text-slate-800 placeholder-slate-400 focus:outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20 transition-all font-semibold shadow-inner [color-scheme:light]"
+                  style={{ paddingLeft: '2.75rem', paddingRight: '0.875rem' }}
+                  required
+                />
+              </div>
             </div>
 
             <div className="pt-2">
@@ -293,7 +306,10 @@ export default function ForgotPassword({ onBackToLogin }: ForgotPasswordProps) {
                     <span>Requesting OTP...</span>
                   </>
                 ) : (
-                  <span>Request OTP Code</span>
+                  <>
+                    <span>Request OTP Code</span>
+                    <ArrowRight size={14} />
+                  </>
                 )}
               </button>
             </div>
@@ -383,6 +399,9 @@ export default function ForgotPassword({ onBackToLogin }: ForgotPasswordProps) {
             <div>
               <label htmlFor="newPassword" className="text-slate-550 font-extrabold uppercase tracking-widest text-[9px] mb-1.5 block">New Password</label>
               <div className="relative">
+                <span className="absolute inset-y-0 left-0 pl-3.5 flex items-center text-slate-400">
+                  <Lock size={14} />
+                </span>
                 <input
                   id="newPassword"
                   type={showPass ? "text" : "password"}
@@ -393,7 +412,8 @@ export default function ForgotPassword({ onBackToLogin }: ForgotPasswordProps) {
                      setStatusMessage(null);
                   }}
                   disabled={loading}
-                  className="w-full bg-white border border-slate-350 rounded-xl pr-10 pl-3.5 py-3 text-xs text-slate-800 placeholder-slate-400 focus:outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20 transition-all font-semibold shadow-inner"
+                  className="w-full bg-white border border-slate-200 rounded-xl pr-10 py-3 text-xs text-slate-800 placeholder-slate-400 focus:outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20 transition-all font-semibold shadow-inner"
+                  style={{ paddingLeft: '2.75rem' }}
                   required
                 />
                 <button
@@ -408,19 +428,32 @@ export default function ForgotPassword({ onBackToLogin }: ForgotPasswordProps) {
 
             <div>
               <label htmlFor="confirmPassword" className="text-slate-550 font-extrabold uppercase tracking-widest text-[9px] mb-1.5 block">Confirm Password</label>
-              <input
-                id="confirmPassword"
-                type="password"
-                placeholder="Confirm password"
-                value={confirmPassword}
-                onChange={(e) => {
-                  setConfirmPassword(e.target.value);
-                  setStatusMessage(null);
-                }}
-                disabled={loading}
-                className="w-full bg-white border border-slate-350 rounded-xl px-3.5 py-3 text-xs text-slate-800 placeholder-slate-400 focus:outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20 transition-all font-semibold shadow-inner"
-                required
-              />
+              <div className="relative">
+                <span className="absolute inset-y-0 left-0 pl-3.5 flex items-center text-slate-400">
+                  <Lock size={14} />
+                </span>
+                <input
+                  id="confirmPassword"
+                  type={showConfirmPass ? "text" : "password"}
+                  placeholder="Confirm password"
+                  value={confirmPassword}
+                  onChange={(e) => {
+                    setConfirmPassword(e.target.value);
+                    setStatusMessage(null);
+                  }}
+                  disabled={loading}
+                  className="w-full bg-white border border-slate-200 rounded-xl pr-10 py-3 text-xs text-slate-800 placeholder-slate-400 focus:outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20 transition-all font-semibold shadow-inner"
+                  style={{ paddingLeft: '2.75rem' }}
+                  required
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowConfirmPass(!showConfirmPass)}
+                  className="absolute inset-y-0 right-0 pr-3.5 flex items-center text-slate-400 hover:text-slate-650 transition-colors border-0 bg-transparent cursor-pointer"
+                >
+                  {showConfirmPass ? <EyeOff size={14} /> : <Eye size={14} />}
+                </button>
+              </div>
             </div>
 
             {/* Password security constraints block */}

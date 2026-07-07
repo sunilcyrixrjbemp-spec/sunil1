@@ -1640,12 +1640,12 @@ async def get_expenses(
                 submitter_cache[exp.user_id] = sub_obj
         
         legs = legs_by_code.get(exp.expense_code, [])
-        tot_km = sum(l.distance_km or 0.0 for l in legs if l.travel_mode in ["Bike", "Car"])
-        tot_auto = sum(l.travel_amount or 0.0 for l in legs if l.travel_mode == "Auto") + \
-                   sum(l.sub_amount or 0.0 for l in legs if l.sub_mode == "Auto")
+        tot_km = sum(l.distance_km or 0.0 for l in legs if (l.travel_mode or "").strip().lower() in ["bike", "car"])
+        tot_auto = sum(l.travel_amount or 0.0 for l in legs if (l.travel_mode or "").strip().lower() == "auto") + \
+                   sum(l.sub_amount or 0.0 for l in legs if (l.sub_mode or "").strip().lower() == "auto")
         
-        bike_amount = sum(l.travel_amount or 0.0 for l in legs if l.travel_mode == "Bike")
-        car_amount = sum(l.travel_amount or 0.0 for l in legs if l.travel_mode == "Car")
+        bike_amount = sum(l.travel_amount or 0.0 for l in legs if (l.travel_mode or "").strip().lower() == "bike")
+        car_amount = sum(l.travel_amount or 0.0 for l in legs if (l.travel_mode or "").strip().lower() == "car")
         
         result.append({
             "id": exp.id,
@@ -1895,12 +1895,12 @@ async def get_team_expenses(
             if submitter:
                 submitters_by_id[exp.user_id] = submitter
         legs = legs_by_code.get(exp.expense_code, [])
-        tot_km = sum(l.distance_km or 0.0 for l in legs if l.travel_mode in ["Bike", "Car"])
-        tot_auto = sum(l.travel_amount or 0.0 for l in legs if l.travel_mode == "Auto") + \
-                   sum(l.sub_amount or 0.0 for l in legs if l.sub_mode == "Auto")
+        tot_km = sum(l.distance_km or 0.0 for l in legs if (l.travel_mode or "").strip().lower() in ["bike", "car"])
+        tot_auto = sum(l.travel_amount or 0.0 for l in legs if (l.travel_mode or "").strip().lower() == "auto") + \
+                   sum(l.sub_amount or 0.0 for l in legs if (l.sub_mode or "").strip().lower() == "auto")
         
-        bike_amount = sum(l.travel_amount or 0.0 for l in legs if l.travel_mode == "Bike")
-        car_amount = sum(l.travel_amount or 0.0 for l in legs if l.travel_mode == "Car")
+        bike_amount = sum(l.travel_amount or 0.0 for l in legs if (l.travel_mode or "").strip().lower() == "bike")
+        car_amount = sum(l.travel_amount or 0.0 for l in legs if (l.travel_mode or "").strip().lower() == "car")
         
         result.append({
             "id": exp.id,

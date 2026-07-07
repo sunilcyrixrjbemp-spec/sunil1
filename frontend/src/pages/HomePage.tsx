@@ -198,7 +198,7 @@ export default function HomePage() {
   // Filters state for team claims tab
   const [filterEmployee, setFilterEmployee] = useState<string>("all");
   const [filterMode, setFilterMode] = useState<string>("all");
-  const [filterMonth, setFilterMonth] = useState<string>("");
+
   const [selectMonth, setSelectMonth] = useState<string>(() => {
     return new Date().toISOString().substring(0, 7); // Default current month YYYY-MM
   });
@@ -435,7 +435,11 @@ export default function HomePage() {
     new Set(
       safeTeamExpenses
         .filter((e): e is any => !!e && !!e.category)
-        .map(e => String(e.category))
+        .map(e => {
+          const raw = String(e.category).trim();
+          if (raw.toLowerCase() === "limit request") return "Limit Request";
+          return raw.charAt(0).toUpperCase() + raw.slice(1).toLowerCase();
+        })
     )
   );
 
@@ -465,8 +469,8 @@ export default function HomePage() {
     return safeTeamExpenses.filter(exp => {
       const rawDate = exp.date || exp.itinerary;
       if (rawDate && !rawDate.startsWith(selectMonth)) return false;
-      if (filterEmployee !== "all" && exp.submitter_code !== filterEmployee) return false;
-      if (filterMode !== "all" && exp.category !== filterMode) return false;
+      if (filterEmployee !== "all" && String(exp.submitter_code || "").trim().toLowerCase() !== filterEmployee.trim().toLowerCase()) return false;
+      if (filterMode !== "all" && String(exp.category || "").trim().toLowerCase() !== filterMode.trim().toLowerCase()) return false;
       if (homeStatusFilter !== "all") {
         const s = (exp.status || "").toLowerCase();
         if (homeStatusFilter === "pending") {
@@ -934,8 +938,8 @@ export default function HomePage() {
                             className="hover:bg-blue-50/20 transition-colors cursor-pointer"
                           >
                             <td className="py-3 px-3 whitespace-nowrap">
-                              <p className="font-bold text-slate-800 leading-none submitter-name-text">{exp.submitter_name}</p>
-                              <span className="text-[8px] font-mono uppercase text-blue-600 block mt-0.5 submitter-code-text">{exp.submitter_code}</span>
+                              <p className="font-bold leading-none submitter-name-text" style={{ color: '#0f172a' }}>{exp.submitter_name}</p>
+                              <span className="text-[8px] font-mono uppercase block mt-0.5 submitter-code-text" style={{ color: '#2563eb' }}>{exp.submitter_code}</span>
                             </td>
                             <td className="py-3 px-3 font-semibold font-mono text-blue-600 uppercase whitespace-nowrap">{exp.expense_code}</td>
                             <td className="py-3 px-3 text-slate-600 whitespace-nowrap">{exp.itinerary || exp.date || exp.created_at}</td>
@@ -968,8 +972,8 @@ export default function HomePage() {
                         >
                           <div className="flex justify-between items-center pb-2.5 border-b border-gray-100">
                             <div>
-                              <p className="font-bold text-gray-800 text-xs leading-none">{exp.submitter_name}</p>
-                              <span className="text-[8px] font-mono font-bold uppercase text-blue-600 block mt-1">{exp.submitter_code}</span>
+                              <p className="font-bold text-xs leading-none submitter-name-text" style={{ color: '#0f172a' }}>{exp.submitter_name}</p>
+                              <span className="text-[8px] font-mono font-bold uppercase block mt-1 submitter-code-text" style={{ color: '#2563eb' }}>{exp.submitter_code}</span>
                             </div>
                             <span className={`inline-flex items-center px-2 py-0.5 rounded border text-[8px] font-bold uppercase tracking-wider ${getStatusBadgeClass(exp.status)}`}>
                               {exp.status}
@@ -1109,8 +1113,8 @@ export default function HomePage() {
                     <label className="block text-[8px] uppercase tracking-wider text-slate-400">Claim Month</label>
                     <input 
                       type="month" 
-                      value={filterMonth}
-                      onChange={(e) => setFilterMonth(e.target.value)}
+                      value={selectMonth}
+                      onChange={(e) => setSelectMonth(e.target.value)}
                       className="w-full bg-white border border-slate-200 rounded-xl px-2.5 py-1.5 text-[10px] font-bold text-slate-800 focus:outline-none focus:border-indigo-500 transition-colors"
                     />
                   </div>
@@ -2039,8 +2043,8 @@ export default function HomePage() {
                         >
                           {activeTab === "team-claims" && (
                             <td className="py-3 px-3">
-                              <p className="font-bold text-slate-800 leading-none submitter-name-text">{exp.submitter_name}</p>
-                              <span className="text-[8px] font-mono uppercase text-blue-600 block mt-0.5 submitter-code-text">{exp.submitter_code}</span>
+                              <p className="font-bold leading-none submitter-name-text" style={{ color: '#0f172a' }}>{exp.submitter_name}</p>
+                              <span className="text-[8px] font-mono uppercase block mt-0.5 submitter-code-text" style={{ color: '#2563eb' }}>{exp.submitter_code}</span>
                             </td>
                           )}
                           <td className="py-3 px-3 font-semibold font-mono text-blue-600 uppercase">{exp.expense_code}</td>
