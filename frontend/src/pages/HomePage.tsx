@@ -12,7 +12,6 @@ import brandLogo from "../assets/images/brand.png";
 import { 
   FileSpreadsheet, 
   BarChart3, 
-  Plus, 
   Clock, 
   CheckCircle2, 
   XCircle, 
@@ -588,82 +587,6 @@ export default function HomePage() {
           </div>
         </div>
 
-        {/* Quick Actions Shortcuts */}
-        <div className="bg-white border border-slate-100 rounded-3xl p-5 shadow-sm space-y-3">
-          <h4 className="text-[10px] font-black uppercase text-slate-400 tracking-wider flex items-center gap-2">
-            <Compass className="w-4 h-4 text-indigo-500" />
-            Quick Access Shortcuts
-          </h4>
-          <div className="flex flex-wrap gap-3">
-            <Link
-              to="/submit-expense"
-              className="group flex items-center gap-2 bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold px-4 py-2.5 rounded-2xl no-underline shadow-sm hover:shadow transition-all duration-200 transform hover:-translate-y-0.5"
-            >
-              <Plus className="w-4 h-4 transition-transform group-hover:rotate-90" />
-              Submit New Expense
-            </Link>
-            
-            {(() => {
-              const allowed = (user?.allowed_windows || "").toLowerCase();
-              const isReviewer = allowed.includes("approval");
-              if (isReviewer) {
-                return (
-                  <Link
-                    to="/approval-center"
-                    className="flex items-center gap-2 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold px-4 py-2.5 rounded-2xl no-underline shadow-sm hover:shadow transition-all duration-200 transform hover:-translate-y-0.5"
-                  >
-                    <ShieldCheck className="w-4 h-4" />
-                    Approval Center
-                  </Link>
-                );
-              }
-              return null;
-            })()}
-
-            {(() => {
-              const allowed = (user?.allowed_windows || "").toLowerCase();
-              if (allowed.includes("consolidated_report")) {
-                return (
-                  <Link
-                    to="/consolidated-report"
-                    className="flex items-center gap-2 bg-teal-600 hover:bg-teal-700 text-white text-xs font-bold px-4 py-2.5 rounded-2xl no-underline shadow-sm hover:shadow transition-all duration-200 transform hover:-translate-y-0.5"
-                  >
-                    <FileSpreadsheet className="w-4 h-4" />
-                    Consolidated Report
-                  </Link>
-                );
-              }
-              return null;
-            })()}
-
-            {(() => {
-              const allowed = (user?.allowed_windows || "").toLowerCase();
-              if (allowed.includes("analysis")) {
-                return (
-                  <Link
-                    to="/analysis"
-                    className="flex items-center gap-2 bg-violet-600 hover:bg-violet-700 text-white text-xs font-bold px-4 py-2.5 rounded-2xl no-underline shadow-sm hover:shadow transition-all duration-200 transform hover:-translate-y-0.5"
-                  >
-                    <BarChart3 className="w-4 h-4" />
-                    Analysis Dashboard
-                  </Link>
-                );
-              }
-              return null;
-            })()}
-
-            {(user?.allowed_windows || "").toLowerCase().includes("admin") && (
-              <Link
-                to="/admin"
-                className="flex items-center gap-2 bg-slate-800 hover:bg-slate-900 text-white text-xs font-bold px-4 py-2.5 rounded-2xl no-underline shadow-sm hover:shadow transition-all duration-200 transform hover:-translate-y-0.5"
-              >
-                <Users className="w-4 h-4" />
-                Admin Panel
-              </Link>
-            )}
-          </div>
-        </div>
-
       {isReviewerRole && pendingLimitRequestsCount > 0 && (
         <div className="bg-amber-50/50 border border-amber-250 p-4 rounded-3xl shadow-sm flex items-center justify-between animate-fadeIn mb-4">
           <div className="flex items-center gap-3">
@@ -704,64 +627,64 @@ export default function HomePage() {
         </div>
         
         {/* Metric Cards Grid */}
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-2 sm:gap-4">
           {/* Card 1: Total Claimed */}
           <div 
             onClick={() => handleOpenStatsModal("Total Claimed", statsTotalClaims)}
-            className="group bg-white border border-slate-100 rounded-3xl p-4 flex items-center gap-4 cursor-pointer hover:shadow-md hover:-translate-y-1 transition-all duration-300 animate-fadeIn"
+            className="group bg-white border border-slate-100 rounded-xl sm:rounded-3xl p-2.5 sm:p-4 flex items-center gap-2.5 sm:gap-4 cursor-pointer hover:shadow-md hover:-translate-y-1 transition-all duration-300 animate-fadeIn"
           >
-            <div className="w-12 h-12 rounded-2xl flex items-center justify-center bg-blue-50 text-blue-600 group-hover:bg-blue-600 group-hover:text-white transition-colors duration-300 shrink-0">
-              <FileSpreadsheet className="w-5 h-5" />
+            <div className="w-9 h-9 sm:w-12 sm:h-12 rounded-xl sm:rounded-2xl flex items-center justify-center bg-blue-50 text-blue-600 group-hover:bg-blue-600 group-hover:text-white transition-colors duration-300 shrink-0">
+              <FileSpreadsheet className="w-4 h-4 sm:w-5 sm:h-5" />
             </div>
             <div className="min-w-0">
-              <span className="text-[10px] font-black uppercase tracking-wider text-slate-400 block">Total Claimed</span>
-              <span className="text-lg font-black text-slate-800 font-mono block mt-0.5">₹{(totalAmount || 0).toLocaleString()}</span>
-              <span className="text-[10px] text-blue-600 font-extrabold block mt-0.5">{statsTotalClaims.length} Claims Filed</span>
+              <span className="text-[9px] sm:text-[10px] font-black uppercase tracking-wider text-slate-400 block leading-none">Total Claimed</span>
+              <span className="text-xs sm:text-lg font-black text-slate-800 font-mono block mt-0.5 sm:mt-1">₹{(totalAmount || 0).toLocaleString()}</span>
+              <span className="text-[8px] sm:text-[10px] text-blue-600 font-extrabold block mt-0.5">{statsTotalClaims.length} Claims</span>
             </div>
           </div>
 
           {/* Card 2: Approved */}
           <div 
             onClick={() => handleOpenStatsModal("Approved", statsApprovedClaims)}
-            className="group bg-white border border-slate-100 rounded-3xl p-4 flex items-center gap-4 cursor-pointer hover:shadow-md hover:-translate-y-1 transition-all duration-300 animate-fadeIn"
+            className="group bg-white border border-slate-100 rounded-xl sm:rounded-3xl p-2.5 sm:p-4 flex items-center gap-2.5 sm:gap-4 cursor-pointer hover:shadow-md hover:-translate-y-1 transition-all duration-300 animate-fadeIn"
           >
-            <div className="w-12 h-12 rounded-2xl flex items-center justify-center bg-emerald-50 text-emerald-600 group-hover:bg-emerald-600 group-hover:text-white transition-colors duration-300 shrink-0">
-              <CheckCircle2 className="w-5 h-5" />
+            <div className="w-9 h-9 sm:w-12 sm:h-12 rounded-xl sm:rounded-2xl flex items-center justify-center bg-emerald-50 text-emerald-600 group-hover:bg-emerald-600 group-hover:text-white transition-colors duration-300 shrink-0">
+              <CheckCircle2 className="w-4 h-4 sm:w-5 sm:h-5" />
             </div>
             <div className="min-w-0">
-              <span className="text-[10px] font-black uppercase tracking-wider text-slate-400 block">Approved</span>
-              <span className="text-lg font-black text-slate-800 font-mono block mt-0.5">₹{(approvedAmount || 0).toLocaleString()}</span>
-              <span className="text-[10px] text-emerald-600 font-extrabold block mt-0.5">{statsApprovedClaims.length} Approved</span>
+              <span className="text-[9px] sm:text-[10px] font-black uppercase tracking-wider text-slate-400 block leading-none">Approved</span>
+              <span className="text-xs sm:text-lg font-black text-slate-800 font-mono block mt-0.5 sm:mt-1">₹{(approvedAmount || 0).toLocaleString()}</span>
+              <span className="text-[8px] sm:text-[10px] text-emerald-600 font-extrabold block mt-0.5">{statsApprovedClaims.length} Approved</span>
             </div>
           </div>
 
           {/* Card 3: Pending */}
           <div 
             onClick={() => handleOpenStatsModal("Pending", statsPendingClaims)}
-            className="group bg-white border border-slate-100 rounded-3xl p-4 flex items-center gap-4 cursor-pointer hover:shadow-md hover:-translate-y-1 transition-all duration-300 animate-fadeIn"
+            className="group bg-white border border-slate-100 rounded-xl sm:rounded-3xl p-2.5 sm:p-4 flex items-center gap-2.5 sm:gap-4 cursor-pointer hover:shadow-md hover:-translate-y-1 transition-all duration-300 animate-fadeIn"
           >
-            <div className="w-12 h-12 rounded-2xl flex items-center justify-center bg-amber-50 text-amber-600 group-hover:bg-amber-600 group-hover:text-white transition-colors duration-300 shrink-0">
-              <Clock className="w-5 h-5" />
+            <div className="w-9 h-9 sm:w-12 sm:h-12 rounded-xl sm:rounded-2xl flex items-center justify-center bg-amber-50 text-amber-600 group-hover:bg-amber-600 group-hover:text-white transition-colors duration-300 shrink-0">
+              <Clock className="w-4 h-4 sm:w-5 sm:h-5" />
             </div>
             <div className="min-w-0">
-              <span className="text-[10px] font-black uppercase tracking-wider text-slate-400 block">Pending Review</span>
-              <span className="text-lg font-black text-slate-800 font-mono block mt-0.5">₹{(pendingAmount || 0).toLocaleString()}</span>
-              <span className="text-[10px] text-amber-600 font-extrabold block mt-0.5">{statsPendingClaims.length} Pending</span>
+              <span className="text-[9px] sm:text-[10px] font-black uppercase tracking-wider text-slate-400 block leading-none">Pending Review</span>
+              <span className="text-xs sm:text-lg font-black text-slate-800 font-mono block mt-0.5 sm:mt-1">₹{(pendingAmount || 0).toLocaleString()}</span>
+              <span className="text-[8px] sm:text-[10px] text-amber-600 font-extrabold block mt-0.5">{statsPendingClaims.length} Pending</span>
             </div>
           </div>
 
           {/* Card 4: Rejected */}
           <div 
             onClick={() => handleOpenStatsModal("Rejected", statsRejectedClaims)}
-            className="group bg-white border border-slate-100 rounded-3xl p-4 flex items-center gap-4 cursor-pointer hover:shadow-md hover:-translate-y-1 transition-all duration-300 animate-fadeIn"
+            className="group bg-white border border-slate-100 rounded-xl sm:rounded-3xl p-2.5 sm:p-4 flex items-center gap-2.5 sm:gap-4 cursor-pointer hover:shadow-md hover:-translate-y-1 transition-all duration-300 animate-fadeIn"
           >
-            <div className="w-12 h-12 rounded-2xl flex items-center justify-center bg-rose-50 text-rose-600 group-hover:bg-rose-600 group-hover:text-white transition-colors duration-300 shrink-0">
-              <XCircle className="w-5 h-5" />
+            <div className="w-9 h-9 sm:w-12 sm:h-12 rounded-xl sm:rounded-2xl flex items-center justify-center bg-rose-50 text-rose-600 group-hover:bg-rose-600 group-hover:text-white transition-colors duration-300 shrink-0">
+              <XCircle className="w-4 h-4 sm:w-5 sm:h-5" />
             </div>
             <div className="min-w-0">
-              <span className="text-[10px] font-black uppercase tracking-wider text-slate-400 block">Rejected</span>
-              <span className="text-lg font-black text-slate-800 font-mono block mt-0.5">₹{(rejectedAmount || 0).toLocaleString()}</span>
-              <span className="text-[10px] text-rose-600 font-extrabold block mt-0.5">{statsRejectedClaims.length} Rejected</span>
+              <span className="text-[9px] sm:text-[10px] font-black uppercase tracking-wider text-slate-400 block leading-none">Rejected</span>
+              <span className="text-xs sm:text-lg font-black text-slate-800 font-mono block mt-0.5 sm:mt-1">₹{(rejectedAmount || 0).toLocaleString()}</span>
+              <span className="text-[8px] sm:text-[10px] text-rose-600 font-extrabold block mt-0.5">{statsRejectedClaims.length} Rejected</span>
             </div>
           </div>
         </div>
@@ -774,13 +697,13 @@ export default function HomePage() {
         <div className="lg:col-span-2 space-y-6">
 
           {/* TAB SYSTEM: My Claims vs Team Claims */}
-          <div className="bg-white border border-slate-100 rounded-3xl shadow-sm overflow-hidden flex flex-col">
+          <div className="bg-white border border-slate-100 rounded-xl sm:rounded-3xl shadow-sm overflow-hidden flex flex-col">
             {/* Tab Header bar */}
             <div className="bg-slate-50 border-b border-slate-100 flex items-center justify-start p-2 gap-2">
               <button
                 type="button"
                 onClick={() => handleTabChange("my-claims")}
-                className={`py-2 px-5 font-black text-xs uppercase tracking-wider rounded-2xl transition-all flex items-center gap-1.5 cursor-pointer border-0 ${
+                className={`py-2 px-4 sm:px-5 font-black text-xs uppercase tracking-wider rounded-xl sm:rounded-2xl transition-all flex items-center gap-1.5 cursor-pointer border-0 ${
                   activeTab === "my-claims"
                     ? "bg-indigo-600 text-white shadow-sm font-extrabold"
                     : "text-slate-500 bg-transparent hover:text-slate-850 hover:bg-slate-100"
@@ -794,7 +717,7 @@ export default function HomePage() {
                 <button
                   type="button"
                   onClick={() => handleTabChange("team-claims")}
-                  className={`py-2 px-5 font-black text-xs uppercase tracking-wider rounded-2xl transition-all flex items-center gap-1.5 cursor-pointer border-0 ${
+                  className={`py-2 px-4 sm:px-5 font-black text-xs uppercase tracking-wider rounded-xl sm:rounded-2xl transition-all flex items-center gap-1.5 cursor-pointer border-0 ${
                     activeTab === "team-claims"
                       ? "bg-indigo-600 text-white shadow-sm font-extrabold"
                       : "text-slate-500 bg-transparent hover:text-slate-850 hover:bg-slate-100"
@@ -807,10 +730,10 @@ export default function HomePage() {
             </div>
 
             {/* Contextual Filters Row — matches ExpensePage compact filter style */}
-            <div className="border-b border-slate-100 px-4 py-3">
+            <div className="border-b border-slate-100 px-3 sm:px-4 py-2.5 sm:py-3">
               {activeTab === "my-claims" ? (
                 /* My Self Tab Filters */
-                <div className="bg-slate-50/50 border border-slate-100 rounded-2xl p-3.5 flex flex-col gap-3 text-[10px] font-bold text-slate-700">
+                <div className="bg-slate-50/50 border border-slate-100 rounded-xl sm:rounded-2xl p-2.5 sm:p-3.5 flex flex-col gap-2.5 sm:gap-3 text-[10px] font-bold text-slate-700">
                   {/* Row 1: Month dropdown */}
                   <div className="flex flex-col gap-1 max-w-[160px]">
                     <span className="text-[8px] font-black uppercase text-slate-400">Month</span>
@@ -840,7 +763,7 @@ export default function HomePage() {
                 </div>
               ) : (
                 /* Team / Engineer Claims Tab Filters */
-                <div className="bg-slate-50/50 border border-slate-100 rounded-2xl p-3.5 flex flex-col gap-3 text-[10px] font-bold text-slate-700">
+                <div className="bg-slate-50/50 border border-slate-100 rounded-xl sm:rounded-2xl p-2.5 sm:p-3.5 flex flex-col gap-2.5 sm:gap-3 text-[10px] font-bold text-slate-700">
                   {/* Row 1: Month and Engineer dropdowns with labels on top */}
                   <div className="grid grid-cols-2 gap-3 w-full">
                     <div className="flex flex-col gap-1">
