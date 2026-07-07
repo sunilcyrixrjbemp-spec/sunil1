@@ -647,7 +647,7 @@ export default function DashboardLayout() {
           to="/home"
           onMouseEnter={() => preloadRoute("/home")}
           className={`flex flex-col items-center justify-center w-16 h-12 rounded-xl transition-all relative ${
-            currentActiveItem?.id === "home" ? "bg-indigo-50/50 text-indigo-600 font-extrabold" : "text-gray-400 hover:text-gray-700"
+            currentActiveItem?.id === "home" ? "bg-indigo-50/50 text-indigo-600 font-extrabold" : "text-slate-500 hover:text-slate-700"
           }`}
         >
           <Home className={`w-5 h-5 transition-all ${currentActiveItem?.id === "home" ? "text-indigo-600 scale-110" : ""}`} />
@@ -663,7 +663,7 @@ export default function DashboardLayout() {
             to="/submit-expense"
             onMouseEnter={() => preloadRoute("/submit-expense")}
             className={`flex flex-col items-center justify-center w-16 h-12 rounded-xl transition-all relative ${
-              currentActiveItem?.id === "expense" ? "bg-indigo-50/50 text-indigo-600 font-extrabold" : "text-gray-400 hover:text-gray-700"
+              currentActiveItem?.id === "expense" ? "bg-indigo-50/50 text-indigo-600 font-extrabold" : "text-slate-500 hover:text-slate-700"
             }`}
           >
             <Plus className={`w-5 h-5 transition-all ${currentActiveItem?.id === "expense" ? "text-indigo-600 scale-110" : ""}`} />
@@ -680,7 +680,7 @@ export default function DashboardLayout() {
             to="/approval-center"
             onMouseEnter={() => preloadRoute("/approval-center")}
             className={`flex flex-col items-center justify-center w-16 h-12 rounded-xl transition-all relative ${
-              currentActiveItem?.id === "approval" ? "bg-indigo-50/50 text-indigo-600 font-extrabold" : "text-gray-400 hover:text-gray-700"
+              currentActiveItem?.id === "approval" ? "bg-indigo-50/50 text-indigo-600 font-extrabold" : "text-slate-500 hover:text-slate-700"
             }`}
           >
             <CheckSquare className={`w-5 h-5 transition-all ${currentActiveItem?.id === "approval" ? "text-indigo-600 scale-110" : ""}`} />
@@ -696,7 +696,7 @@ export default function DashboardLayout() {
           to="/profile"
           onMouseEnter={() => preloadRoute("/profile")}
           className={`flex flex-col items-center justify-center w-16 h-12 rounded-xl transition-all relative ${
-            currentActiveItem?.id === "profile" ? "bg-indigo-50/50 text-indigo-600 font-extrabold" : "text-gray-400 hover:text-gray-700"
+            currentActiveItem?.id === "profile" ? "bg-indigo-50/50 text-indigo-600 font-extrabold" : "text-slate-500 hover:text-slate-700"
           }`}
         >
           <User className={`w-5 h-5 transition-all ${currentActiveItem?.id === "profile" ? "text-indigo-600 scale-110" : ""}`} />
@@ -710,7 +710,7 @@ export default function DashboardLayout() {
         <button
           onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
           className={`flex flex-col items-center justify-center w-16 h-12 rounded-xl transition-all border-0 bg-transparent cursor-pointer relative ${
-            isMobileMenuOpen ? "bg-indigo-50/50 text-indigo-600 font-extrabold" : "text-gray-400 hover:text-gray-700"
+            isMobileMenuOpen ? "bg-indigo-50/50 text-indigo-600 font-extrabold" : "text-slate-500 hover:text-slate-700"
           }`}
         >
           <MenuGridIcon />

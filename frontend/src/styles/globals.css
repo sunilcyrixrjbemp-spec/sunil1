@@ -1220,13 +1220,13 @@ svg, path, g, sector, .recharts-pie-sector, .recharts-sector, .recharts-pie, .re
 .btn-add-barcode {
   background-color: #10b981 !important;
   color: #ffffff !important;
+  border: 1px solid #059669 !important;
   border-radius: 8px !important;
   height: 28px !important;
   min-height: 28px !important;
   font-weight: 900 !important;
   cursor: pointer !important;
   box-shadow: 0 2px 6px rgba(16, 185, 129, 0.25) !important;
-  border: none !important;
   display: inline-flex !important;
   align-items: center !important;
   justify-content: center !important;
@@ -1240,13 +1240,13 @@ svg, path, g, sector, .recharts-pie-sector, .recharts-sector, .recharts-pie, .re
 }
 
 .btn-add-barcode-disabled {
-  background-color: #e2e8f0 !important;
-  color: #94a3b8 !important;
+  background-color: #f8fafc !important;
+  color: #64748b !important;
+  border: 1px solid #cbd5e1 !important;
   border-radius: 8px !important;
   height: 28px !important;
   min-height: 28px !important;
   cursor: not-allowed !important;
-  border: none !important;
   display: inline-flex !important;
   align-items: center !important;
   justify-content: center !important;
