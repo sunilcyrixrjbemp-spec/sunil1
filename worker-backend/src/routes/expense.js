@@ -565,13 +565,16 @@ export async function handleVerifyBarcode(request, env, params, query, user) {
   const barcode = query.get("barcode");
   if (!barcode) return jsonResponse({ error: "barcode parameter is required" }, 400);
 
-  const last8 = barcode.length >= 8 ? barcode.slice(-8) : barcode;
+  const barcode8 = barcode.length >= 8 ? barcode.slice(-8) : barcode;
 
   const queryResult = await runRead(env, `
     SELECT * FROM assets_inventory 
-    WHERE qr_code = ? OR serial_no = ? OR SUBSTR(qr_code, -8) = ? 
+    WHERE LOWER(SUBSTR(qr_code, -8)) = LOWER(?) 
+       OR LOWER(SUBSTR(serial_no, -8)) = LOWER(?) 
+       OR LOWER(qr_code) = LOWER(?) 
+       OR LOWER(serial_no) = LOWER(?) 
     LIMIT 1
-  `, [barcode, barcode, last8], request);
+  `, [barcode8, barcode8, barcode, barcode], request);
 
   const asset = queryResult && queryResult.results && queryResult.results[0] ? queryResult.results[0] : null;
 
