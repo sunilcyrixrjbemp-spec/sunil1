@@ -39,7 +39,7 @@ export const checkIsHeic = async (fileOrUrl: string | File | Blob | null | undef
         const blob = await response.blob();
         return blob.type === "image/heic" || blob.type === "image/heif" || 
                blob.type === "image/heic-sequence" || blob.type === "image/heif-sequence" ||
-               (blob.type === "application/octet-stream" && (blob.name?.toLowerCase()?.endsWith(".heic") || false));
+               (blob.type === "application/octet-stream" && (((blob as any).name || "").toLowerCase().endsWith(".heic")));
       } catch (_) {
         return false;
       }

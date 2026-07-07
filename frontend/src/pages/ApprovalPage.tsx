@@ -195,6 +195,7 @@ export default function ApprovalPage() {
     try {
       await approvalService.approveExpense(expenseId, "Approved limit extension", undefined, approvedValue);
       toast.success("Limit extension request approved successfully!");
+      setPendingApprovals(prev => prev.filter((a: any) => a.expense_id !== expenseId));
       fetchPendingApprovals();
     } catch (err: any) {
       console.error("Failed to approve limit", err);
@@ -213,6 +214,7 @@ export default function ApprovalPage() {
     try {
       await approvalService.rejectExpense(expenseId, "Limit extension rejected");
       toast.success("Limit extension request rejected.");
+      setPendingApprovals(prev => prev.filter((a: any) => a.expense_id !== expenseId));
       fetchPendingApprovals();
     } catch (err: any) {
       console.error("Failed to reject limit", err);
@@ -461,6 +463,8 @@ export default function ApprovalPage() {
       }
 
       setShowDetailModal(false);
+      const processedId = selectedApproval.expense_id;
+      setPendingApprovals(prev => prev.filter((a: any) => a.expense_id !== processedId));
       setSelectedApproval(null);
       setExpenseDetails(null);
       setEditedLegs([]);
@@ -543,6 +547,8 @@ export default function ApprovalPage() {
     }
 
     setShowBulkModal(false);
+    const processedIds = [...selectedIds];
+    setPendingApprovals(prev => prev.filter((a: any) => !processedIds.includes(a.expense_id)));
     setBulkActionType(null);
     setBulkComments("");
     setSelectedIds([]);
