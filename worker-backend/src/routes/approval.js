@@ -7,6 +7,91 @@ function jsonResponse(data, status = 200) {
   });
 }
 
+async function applyItineraryEditsAndLog(env, expense, itineraryEdits, currentUser, comments) {
+  if (!itineraryEdits || itineraryEdits.length === 0) return;
+
+  for (const edit of itineraryEdits) {
+    const legNum = edit.leg_number;
+    const leg = await env.DB.prepare("SELECT * FROM expense_itineraries WHERE exp_id = ? AND leg_number = ?")
+      .bind(expense.expense_code, legNum).first();
+
+    if (leg) {
+      let isKmModified = false;
+      if (edit.distance_km !== undefined && edit.distance_km !== null) {
+        const oldKm = parseFloat(leg.distance_km || "0.0");
+        const newKm = parseFloat(edit.distance_km || "0.0");
+        if (Math.round(oldKm * 100) !== Math.round(newKm * 100)) {
+          isKmModified = true;
+        }
+      }
+
+      const fieldsToCheck = [
+        ["travel_amount", edit.travel_amount],
+        ["sub_amount", edit.sub_amount],
+        ["hotel_amount", edit.hotel_amount],
+        ["other_amount", edit.other_amount || edit.oth_amount],
+        ["distance_km", edit.distance_km || edit.km],
+        ["da_amount", edit.da_amount || edit.da],
+        ["local_purchase", edit.local_purchase]
+      ];
+
+      for (const [field, newValRaw] of fieldsToCheck) {
+        if (newValRaw !== undefined && newValRaw !== null) {
+          const newVal = parseFloat(newValRaw);
+          let skipLog = false;
+          if (field === "travel_amount" && isKmModified && ["bike", "car"].includes((leg.travel_mode || "").trim().toLowerCase())) {
+            skipLog = true;
+          }
+
+          const oldVal = parseFloat(leg[field] || "0.0");
+          if (Math.round(oldVal * 100) !== Math.round(newVal * 100)) {
+            if (!skipLog) {
+              let fieldRemark = null;
+              if (edit.remarks && typeof edit.remarks === "object") {
+                fieldRemark = edit.remarks[field];
+                if (!fieldRemark && field === "da_amount") {
+                  fieldRemark = edit.remarks.da || edit.remarks.da_amount;
+                } else if (!fieldRemark && field === "distance_km") {
+                  fieldRemark = edit.remarks.km || edit.remarks.distance_km;
+                }
+              }
+
+              await runWrite(env, `
+                INSERT INTO expense_edit_logs (expense_id, leg_number, field_name, old_value, new_value, comment, editor_name, editor_role, editor_id)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+              `, [
+                expense.id, legNum, field, String(oldVal), String(newVal),
+                fieldRemark || comments || "Adjusted during approval",
+                currentUser.name, currentUser.role, currentUser.id
+              ]);
+            }
+
+            await runWrite(env, `UPDATE expense_itineraries SET ${field} = ? WHERE id = ?`, [newVal, leg.id]);
+          }
+        }
+      }
+    }
+  }
+
+  const legsRows = await env.DB.prepare("SELECT * FROM expense_itineraries WHERE exp_id = ?").bind(expense.expense_code).all();
+  const legs = legsRows.results || [];
+  
+  const totalDa = legs.reduce((sum, l) => sum + parseFloat(l.da_amount || "0.0"), 0);
+  const totalHotel = legs.reduce((sum, l) => sum + parseFloat(l.hotel_amount || "0.0"), 0);
+  const totalOther = legs.reduce((sum, l) => sum + parseFloat(l.other_amount || "0.0"), 0);
+  const totalTravel = legs.reduce((sum, l) => sum + parseFloat(l.travel_amount || "0.0"), 0);
+  const totalSub = legs.reduce((sum, l) => sum + parseFloat(l.sub_amount || "0.0"), 0);
+  const totalLp = legs.reduce((sum, l) => sum + parseFloat(l.local_purchase || "0.0"), 0);
+
+  const totalAmount = totalTravel + totalSub + totalDa + totalHotel + totalOther + totalLp;
+
+  await runWrite(env, `
+    UPDATE expenses 
+    SET da_amount = ?, hotel_amount = ?, other_expense_amount = ?, local_purchase_amount = ?, amount = ?
+    WHERE id = ?
+  `, [totalDa, totalHotel, totalOther, totalLp, totalAmount, expense.id]);
+}
+
 export async function getLegacyExpenseHashId(expId) {
   const msgUint8 = new TextEncoder().encode(String(expId));
   const hashBuffer = await crypto.subtle.digest("MD5", msgUint8);
@@ -162,7 +247,7 @@ export async function handleApprove(request, env, params, query, user) {
     body = {};
   }
 
-  const { comments, approved_value, client_timestamp } = body;
+  const { comments, approved_value, client_timestamp, itinerary_edits } = body;
   const timestamp = client_timestamp || new Date().toISOString();
 
   // 1. Handle Legacy Expense (expenseId < 0 and <= -200000)
@@ -264,6 +349,10 @@ export async function handleApprove(request, env, params, query, user) {
   const expense = await env.DB.prepare("SELECT * FROM expenses WHERE id = ?").bind(expenseId).first();
   if (!expense) return jsonResponse({ error: "Expense claim not found" }, 404);
 
+  if (itinerary_edits && itinerary_edits.length > 0) {
+    await applyItineraryEditsAndLog(env, expense, itinerary_edits, user, comments);
+  }
+
   // Update active approval
   await runWrite(env, "UPDATE approvals SET status = 'approved', comments = ?, updated_at = ? WHERE id = ?", [
     comments || "", timestamp, activeApproval.id
@@ -329,7 +418,7 @@ export async function handleReject(request, env, params, query, user) {
     return jsonResponse({ error: "Invalid JSON body" }, 400);
   }
 
-  const { comments, client_timestamp } = body;
+  const { comments, client_timestamp, itinerary_edits } = body;
   if (!comments || !comments.trim()) {
     return jsonResponse({ error: "Rejection comments/remark is mandatory" }, 400);
   }
@@ -409,6 +498,10 @@ export async function handleReject(request, env, params, query, user) {
 
   const expense = await env.DB.prepare("SELECT * FROM expenses WHERE id = ?").bind(expenseId).first();
   if (!expense) return jsonResponse({ error: "Expense claim not found" }, 404);
+
+  if (itinerary_edits && itinerary_edits.length > 0) {
+    await applyItineraryEditsAndLog(env, expense, itinerary_edits, user, comments);
+  }
 
   // Update current approval
   await runWrite(env, "UPDATE approvals SET status = 'rejected', comments = ?, updated_at = ? WHERE id = ?", [
