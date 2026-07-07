@@ -3379,8 +3379,8 @@ export default function ExpensePage() {
                                       </button>
                                     </div>
                                   ) : (
-                                    <label className="cursor-pointer bg-white hover:bg-gray-50 text-gray-700 border border-gray-300 rounded h-7 px-2 flex items-center justify-center gap-1 text-[10px] font-bold shadow-xs">
-                                      <Camera className="w-3 h-3 text-gray-400" />
+                                    <label className="cursor-pointer bg-gray-900 hover:bg-gray-800 text-white border border-gray-900 rounded h-7 px-2 flex items-center justify-center gap-1 text-[10px] font-bold shadow-xs">
+                                      <Camera className="w-3 h-3 text-white" />
                                       <span>Add</span>
                                       <input
                                         type="file"
@@ -3579,8 +3579,8 @@ export default function ExpensePage() {
                                       </button>
                                     </div>
                                   ) : (
-                                    <label className="cursor-pointer bg-white hover:bg-gray-50 text-gray-700 border border-gray-300 rounded h-7 px-2 flex items-center justify-center gap-1 text-[10px] font-bold shadow-xs">
-                                      <Camera className="w-3 h-3 text-gray-400" />
+                                    <label className="cursor-pointer bg-gray-900 hover:bg-gray-800 text-white border border-gray-900 rounded h-7 px-2 flex items-center justify-center gap-1 text-[10px] font-bold shadow-xs">
+                                      <Camera className="w-3 h-3 text-white" />
                                       <span>Add</span>
                                       <input
                                         type="file"
