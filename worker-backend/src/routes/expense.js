@@ -1,4 +1,4 @@
-import { runWrite } from "../utils/db.js";
+import { runWrite, runBatchWrite } from "../utils/db.js";
 import { getLegacyExpenseHashId } from "./approval.js";
 
 function jsonResponse(data, status = 200) {
@@ -1325,18 +1325,26 @@ export async function handleDeleteExpense(request, env, params, query, user) {
     return jsonResponse({ error: "Access denied" }, 403);
   }
 
-  // Delete everything in a batch
-  await env.DB.batch([
-    env.DB.prepare("DELETE FROM approvals WHERE expense_id = ?").bind(expenseId),
-    env.DB.prepare("DELETE FROM expense_edit_logs WHERE expense_id = ?").bind(expenseId),
-    env.DB.prepare("DELETE FROM expense_breakdown_calls WHERE expense_id = ?").bind(expenseId),
-    env.DB.prepare("DELETE FROM expense_pms_calls WHERE expense_id = ?").bind(expenseId),
-    env.DB.prepare("DELETE FROM expense_calibrations WHERE expense_id = ?").bind(expenseId),
-    env.DB.prepare("DELETE FROM expense_asset_mobilises WHERE expense_id = ?").bind(expenseId),
-    env.DB.prepare("DELETE FROM expense_asset_taggings WHERE expense_id = ?").bind(expenseId),
-    env.DB.prepare("DELETE FROM expense_itineraries WHERE exp_id = ?").bind(expense.expense_code),
-    env.DB.prepare("DELETE FROM expenses WHERE id = ?").bind(expenseId)
-  ]);
+  const itis = await env.DB.prepare("SELECT itinerary_id FROM expense_itineraries WHERE exp_id = ?").bind(expense.expense_code).all();
+  const itineraryIds = (itis.results || []).map(r => r.itinerary_id);
+
+  const statements = [];
+  for (const id of itineraryIds) {
+    statements.push({ sql: "DELETE FROM expense_breakdown_calls WHERE itinerary_id = ?", params: [id] });
+    statements.push({ sql: "DELETE FROM expense_pms_calls WHERE itinerary_id = ?", params: [id] });
+    statements.push({ sql: "DELETE FROM expense_asset_taggings WHERE itinerary_id = ?", params: [id] });
+    statements.push({ sql: "DELETE FROM expense_asset_mobilises WHERE itinerary_id = ?", params: [id] });
+    statements.push({ sql: "DELETE FROM expense_calibrations WHERE itinerary_id = ?", params: [id] });
+    statements.push({ sql: "DELETE FROM expense_other_activities WHERE itinerary_id = ?", params: [id] });
+  }
+
+  statements.push({ sql: "DELETE FROM approvals WHERE expense_id = ?", params: [expenseId] });
+  statements.push({ sql: "DELETE FROM expense_edit_logs WHERE expense_id = ?", params: [expenseId] });
+  statements.push({ sql: "DELETE FROM expense_attachments WHERE exp_id = ?", params: [expense.expense_code] });
+  statements.push({ sql: "DELETE FROM expense_itineraries WHERE exp_id = ?", params: [expense.expense_code] });
+  statements.push({ sql: "DELETE FROM expenses WHERE id = ?", params: [expenseId] });
+
+  await runBatchWrite(env, statements);
 
   return jsonResponse({ status: "success", message: "Expense claim deleted successfully." });
 }
