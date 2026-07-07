@@ -3,6 +3,7 @@ import toast from "react-hot-toast";
 import { ticketService, TicketCreatePayload } from "../services/ticketService";
 import { expenseService } from "../services/expenseService";
 import Loader from "../components/common/Loader";
+import api from "../services/api";
 import { BarChart, Bar, Cell, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from "recharts";
 
 const GALLERY_COLORS = ["#2f5bb7", "#2b7d50", "#d28b2a", "#854aa5", "#d83b01", "#00a2ad", "#e81123"];
@@ -146,9 +147,7 @@ export default function HelpPage() {
       return;
     }
 
-    const rawApiUrl = import.meta.env.VITE_API_URL || "";
-    let apiHost = (rawApiUrl && !rawApiUrl.includes("onrender.com")) ? rawApiUrl : "https://fieldops-secondary-api.sunnybishnoi.workers.dev";
-    apiHost = apiHost.replace(/^https?:\/\//, "");
+    let apiHost = (api.defaults.baseURL || "").replace(/\/api$/, "").replace(/^https?:\/\//, "");
     const wsProto = window.location.protocol === "https:" ? "wss:" : "ws:";
     const token = localStorage.getItem("access_token") || "";
     const wsUrl = `${wsProto}//${apiHost}/api/ticket/ws/${selectedTicket.id}?token=${token}`;

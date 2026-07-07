@@ -21,7 +21,9 @@ import {
   Car,
   Bike
 } from "lucide-react";
+import api from "../services/api";
 
+const API_BASE = (api.defaults.baseURL || "").replace(/\/api$/, "");
 
 const getAttachmentsArray = (attachments: any): string[] => {
   if (!attachments) return [];
@@ -3362,7 +3364,7 @@ export default function ExpensePage() {
                                   {leg.calls_photo_url ? (
                                     <div className="flex gap-1 h-7 items-center justify-between bg-blue-50 border border-blue-200 px-1.5 rounded text-[9px] font-bold">
                                       <span className="text-blue-700 cursor-pointer underline truncate max-w-[40px]" onClick={() => {
-                                        const fullUrl = `${import.meta.env.VITE_API_URL || "https://fieldops-secondary-api.sunnybishnoi.workers.dev"}${leg.calls_photo_url}`;
+                                        const fullUrl = `${API_BASE}${leg.calls_photo_url}`;
                                         setLightboxImage(fullUrl);
                                       }}>View</span>
                                       <button 
@@ -3464,7 +3466,7 @@ export default function ExpensePage() {
                                               <button
                                                 type="button"
                                                 onClick={() => {
-                                                  const fullUrl = `${import.meta.env.VITE_API_URL || "https://fieldops-secondary-api.sunnybishnoi.workers.dev"}${item.photo_url}`;
+                                                  const fullUrl = `${API_BASE}${item.photo_url}`;
                                                   setLightboxImage(fullUrl);
                                                 }}
                                                 className="text-xs text-blue-600 font-bold hover:underline border-0 bg-transparent cursor-pointer"
@@ -3555,7 +3557,7 @@ export default function ExpensePage() {
                                   {leg.pms_photo_url ? (
                                     <div className="flex gap-1 h-7 items-center justify-between bg-blue-50 border border-blue-200 px-1.5 rounded text-[9px] font-bold">
                                       <span className="text-blue-700 cursor-pointer underline truncate max-w-[40px]" onClick={() => {
-                                        const fullUrl = `${import.meta.env.VITE_API_URL || "https://fieldops-secondary-api.sunnybishnoi.workers.dev"}${leg.pms_photo_url}`;
+                                        const fullUrl = `${API_BASE}${leg.pms_photo_url}`;
                                         setLightboxImage(fullUrl);
                                       }}>View</span>
                                       <button 
@@ -3647,7 +3649,7 @@ export default function ExpensePage() {
                                               <button
                                                 type="button"
                                                 onClick={() => {
-                                                  const fullUrl = `${import.meta.env.VITE_API_URL || "https://fieldops-secondary-api.sunnybishnoi.workers.dev"}${item.photo_url}`;
+                                                  const fullUrl = `${API_BASE}${item.photo_url}`;
                                                   setLightboxImage(fullUrl);
                                                 }}
                                                 className="text-xs text-blue-600 font-bold hover:underline border-0 bg-transparent cursor-pointer"
@@ -4712,7 +4714,7 @@ export default function ExpensePage() {
                                                     </div>
                                                     {c.photo_url && (
                                                       <button 
-                                                        onClick={() => setLightboxImage(`${import.meta.env.VITE_API_URL || "https://fieldops-secondary-api.sunnybishnoi.workers.dev"}${c.photo_url}`)}
+                                                        onClick={() => setLightboxImage(`${API_BASE}${c.photo_url}`)}
                                                         className="mt-1.5 w-full bg-slate-50 hover:bg-slate-100 py-1 text-center font-bold text-slate-700 rounded border border-gray-300 cursor-pointer text-[8px] uppercase"
                                                       >
                                                         View Photo
@@ -4742,7 +4744,7 @@ export default function ExpensePage() {
                                                     </div>
                                                     {p.photo_url && (
                                                       <button 
-                                                        onClick={() => setLightboxImage(`${import.meta.env.VITE_API_URL || "https://fieldops-secondary-api.sunnybishnoi.workers.dev"}${p.photo_url}`)}
+                                                        onClick={() => setLightboxImage(`${API_BASE}${p.photo_url}`)}
                                                         className="mt-1.5 w-full bg-slate-50 hover:bg-slate-100 py-1 text-center font-bold text-slate-700 rounded border border-gray-300 cursor-pointer text-[8px] uppercase"
                                                       >
                                                         View Photo
@@ -4962,14 +4964,14 @@ export default function ExpensePage() {
                                               <span className="text-gray-400 text-[8px] uppercase block mb-1">Attachment Photo</span>
                                               <div className="relative rounded overflow-hidden border border-blue-100 bg-white">
                                                 <img
-                                                  src={`${import.meta.env.VITE_API_URL || "https://fieldops-secondary-api.sunnybishnoi.workers.dev"}${c.photo_url}`}
+                                                  src={`${API_BASE}${c.photo_url}`}
                                                   alt="Call verification"
                                                   className="w-full h-auto object-cover max-h-48 cursor-pointer"
-                                                  onClick={() => setLightboxImage(`${import.meta.env.VITE_API_URL || "https://fieldops-secondary-api.sunnybishnoi.workers.dev"}${c.photo_url}`)}
+                                                  onClick={() => setLightboxImage(`${API_BASE}${c.photo_url}`)}
                                                 />
                                                 <button
                                                   type="button"
-                                                  onClick={() => setLightboxImage(`${import.meta.env.VITE_API_URL || "https://fieldops-secondary-api.sunnybishnoi.workers.dev"}${c.photo_url}`)}
+                                                  onClick={() => setLightboxImage(`${API_BASE}${c.photo_url}`)}
                                                   className="absolute bottom-1 right-1 bg-black/60 text-white font-bold text-[8px] px-2 py-0.5 rounded cursor-pointer border-0"
                                                 >
                                                   Full View
@@ -5008,14 +5010,14 @@ export default function ExpensePage() {
                                               <span className="text-gray-400 text-[8px] uppercase block mb-1">Attachment Photo</span>
                                               <div className="relative rounded overflow-hidden border border-amber-100 bg-white">
                                                 <img
-                                                  src={`${import.meta.env.VITE_API_URL || "https://fieldops-secondary-api.sunnybishnoi.workers.dev"}${p.photo_url}`}
+                                                  src={`${API_BASE}${p.photo_url}`}
                                                   alt="PMS verification"
                                                   className="w-full h-auto object-cover max-h-48 cursor-pointer"
-                                                  onClick={() => setLightboxImage(`${import.meta.env.VITE_API_URL || "https://fieldops-secondary-api.sunnybishnoi.workers.dev"}${p.photo_url}`)}
+                                                  onClick={() => setLightboxImage(`${API_BASE}${p.photo_url}`)}
                                                 />
                                                 <button
                                                   type="button"
-                                                  onClick={() => setLightboxImage(`${import.meta.env.VITE_API_URL || "https://fieldops-secondary-api.sunnybishnoi.workers.dev"}${p.photo_url}`)}
+                                                  onClick={() => setLightboxImage(`${API_BASE}${p.photo_url}`)}
                                                   className="absolute bottom-1 right-1 bg-black/60 text-white font-bold text-[8px] px-2 py-0.5 rounded cursor-pointer border-0"
                                                 >
                                                   Full View
@@ -5157,7 +5159,6 @@ export default function ExpensePage() {
                           else if (url.includes("_Hotel_")) cleanType = "Hotel Invoice";
                           else if (url.includes("_Communication_Mail_")) cleanType = "Approval Mail";
                           else if (url.includes("_Other_Expense_")) cleanType = "Purchase Bill";
-                          const API_BASE = import.meta.env.VITE_API_URL || "https://fieldops-secondary-api.sunnybishnoi.workers.dev";
                           const fullUrl = url.startsWith("http") ? url : `${API_BASE}${url}`;
                           return (
                             <div key={attIdx} className="inline-flex items-center gap-2 p-2 bg-gray-50 border border-gray-200 rounded text-xs">

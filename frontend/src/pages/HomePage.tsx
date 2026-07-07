@@ -26,8 +26,9 @@ import {
   AlertTriangle
 } from "lucide-react";
 
-const rawApiUrl = import.meta.env.VITE_API_URL || "";
-const API_BASE = (rawApiUrl && !rawApiUrl.includes("onrender.com")) ? rawApiUrl : "https://fieldops-secondary-api.sunnybishnoi.workers.dev";
+import api from "../services/api";
+
+const API_BASE = (api.defaults.baseURL || "").replace(/\/api$/, "");
 
 const getAttachmentsArray = (attachments: any): string[] => {
   if (!attachments) return [];

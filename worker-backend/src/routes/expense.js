@@ -1816,13 +1816,13 @@ export async function handleGetMonthSummary(request, env, params, query, user) {
       e.month_name as month, e.year,
       COUNT(e.id) as total_claims,
       SUM(e.amount) as total_amount,
-      SUM(CASE WHEN e.status = 'approved' THEN e.amount ELSE 0 END) as approved_amount,
-      SUM(CASE WHEN e.status IN ('pending', 'submitted', 'submitted_l1', 'submitted_l2') THEN e.amount ELSE 0 END) as pending_amount,
-      SUM(CASE WHEN e.status = 'rejected' THEN 1 ELSE 0 END) as rejected_count,
-      SUM(CASE WHEN e.status = 'approved' THEN 1 ELSE 0 END) as approved_count
+      SUM(e.amount) as approved_amount,
+      0 as pending_amount,
+      0 as rejected_count,
+      COUNT(e.id) as approved_count
     FROM expenses e
     JOIN users u ON e.user_id = u.id
-    WHERE ${whereStr}
+    WHERE ${whereStr} AND e.status = 'approved'
     GROUP BY u.user_id, u.name, e.month_name, e.year
     ORDER BY u.name ASC
   `).bind(...bindings).all();
@@ -1853,13 +1853,13 @@ export async function handleGetMonthSummary(request, env, params, query, user) {
         m.user_id, u.name, u.district, u.zone, u.designation, u.grade,
         COUNT(*) as total_claims,
         SUM(m.total_amount) as total_amount,
-        SUM(CASE WHEN m.status = 'Approved' THEN m.total_amount ELSE 0 END) as approved_amount,
-        SUM(CASE WHEN m.status IN ('Pending', 'Pending L1', 'Pending L2') THEN m.total_amount ELSE 0 END) as pending_amount,
-        SUM(CASE WHEN m.status = 'Rejected' THEN 1 ELSE 0 END) as rejected_count,
-        SUM(CASE WHEN m.status = 'Approved' THEN 1 ELSE 0 END) as approved_count
+        SUM(m.total_amount) as approved_amount,
+        0 as pending_amount,
+        0 as rejected_count,
+        COUNT(*) as approved_count
       FROM expense_master m
       JOIN users u ON LOWER(m.user_id) = LOWER(u.user_id)
-      WHERE ${legacyWhereClauses.join(" AND ")}
+      WHERE ${legacyWhereClauses.join(" AND ")} AND m.status = 'Approved'
       GROUP BY m.user_id, u.name, u.district, u.zone
       ORDER BY u.name ASC
     `).bind(...legacyBindings).all();
@@ -2063,52 +2063,196 @@ export async function handleGetConsolidatedReport(request, env, params, query, u
     return jsonResponse({ error: "month is required" }, 400);
   }
 
-  // Get all engineers and their monthly totals from new expenses table
-  const newExpenses = await env.DB.prepare(`
-    SELECT 
-      u.user_id, u.name, u.district, u.zone, u.designation, u.grade,
-      SUM(CASE WHEN e.status = 'approved' THEN e.amount ELSE 0 END) as approved_amount,
-      SUM(e.amount) as total_claimed,
-      COUNT(e.id) as claim_count
-    FROM expenses e
-    JOIN users u ON e.user_id = u.id
-    WHERE UPPER(e.month_name) = UPPER(?) AND e.year = ?
-    GROUP BY u.user_id, u.name, u.district, u.zone
-    ORDER BY u.name ASC
-  `).bind(month, year).all().catch(() => ({ results: [] }));
+  // 1. Fetch all users
+  const usersRes = await env.DB.prepare(`
+    SELECT id, user_id, name, district, zone, grade, designation, date_of_joining, e_code FROM users
+  `).all().catch(() => ({ results: [] }));
+  const users = usersRes.results || [];
+  const userMap = {};
+  const userByCode = {};
+  for (const u of users) {
+    userMap[u.id] = u;
+    userByCode[u.user_id] = u;
+  }
 
-  // Also get advances
-  const advances = await env.DB.prepare(`
+  // 2. Fetch all approved expenses
+  const expensesRes = await env.DB.prepare(`
+    SELECT id, user_id, expense_code, amount, original_amount, status FROM expenses
+    WHERE UPPER(month_name) = UPPER(?) AND e.year = ? AND e.status = 'approved'
+  `).bind(month, year).all().catch(() => ({ results: [] }));
+  const expenses = expensesRes.results || [];
+
+  if (expenses.length === 0) {
+    return jsonResponse({ success: true, data: [] });
+  }
+
+  // 3. Fetch all itineraries for these expenses
+  const expenseCodes = expenses.map(e => e.expense_code).filter(Boolean);
+  let legs = [];
+  if (expenseCodes.length > 0) {
+    const placeholders = expenseCodes.map(() => "?").join(",");
+    const legsRes = await env.DB.prepare(`
+      SELECT exp_id, travel_mode, sub_mode, distance_km, travel_amount, sub_amount, da_amount, local_purchase, hotel_amount, other_desc, other_amount
+      FROM expense_itinerary
+      WHERE exp_id IN (${placeholders})
+    `).bind(...expenseCodes).all().catch(() => ({ results: [] }));
+    legs = legsRes.results || [];
+  }
+
+  const legsByCode = {};
+  for (const leg of legs) {
+    if (!legsByCode[leg.exp_id]) legsByCode[leg.exp_id] = [];
+    legsByCode[leg.exp_id].push(leg);
+  }
+
+  // 4. Fetch advances
+  const advancesRes = await env.DB.prepare(`
     SELECT user_code, advance_amount FROM engineer_advances
     WHERE LOWER(month) = LOWER(?) AND year = ?
   `).bind(month, year).all().catch(() => ({ results: [] }));
-
-  const advanceMap = {};
-  for (const a of (advances.results || [])) {
-    advanceMap[(a.user_code || "").toLowerCase()] = parseFloat(a.advance_amount || 0);
+  const advances = advancesRes.results || [];
+  const advancesMap = {};
+  for (const adv of advances) {
+    advancesMap[(adv.user_code || "").toLowerCase()] = parseFloat(adv.advance_amount || 0);
   }
 
-  const report = (newExpenses.results || []).map(r => ({
-    user_id: r.user_id,
-    name: r.name,
-    district: r.district,
-    zone: r.zone,
-    designation: r.designation,
-    grade: r.grade,
-    approved_amount: parseFloat(r.approved_amount || 0),
-    total_claimed: parseFloat(r.total_claimed || 0),
-    claim_count: r.claim_count || 0,
-    advance_amount: advanceMap[(r.user_id || "").toLowerCase()] || 0,
-    net_payable: Math.max(0, parseFloat(r.approved_amount || 0) - (advanceMap[(r.user_id || "").toLowerCase()] || 0))
-  }));
+  // 5. Fetch edit logs for comments
+  const expenseIds = expenses.map(e => e.id);
+  let editLogs = [];
+  if (expenseIds.length > 0) {
+    const placeholders = expenseIds.map(() => "?").join(",");
+    const logsRes = await env.DB.prepare(`
+      SELECT expense_id, comment FROM expense_edit_log
+      WHERE expense_id IN (${placeholders})
+    `).bind(...expenseIds).all().catch(() => ({ results: [] }));
+    editLogs = logsRes.results || [];
+  }
 
-  return jsonResponse({
-    month,
-    year,
-    total_engineers: report.length,
-    total_approved: report.reduce((s, r) => s + r.approved_amount, 0),
-    total_claimed: report.reduce((s, r) => s + r.total_claimed, 0),
-    report
-  });
+  const commentsByExpense = {};
+  for (const log of editLogs) {
+    if (log.comment && log.comment.trim()) {
+      if (!commentsByExpense[log.expense_id]) commentsByExpense[log.expense_id] = [];
+      commentsByExpense[log.expense_id].push(log.comment.trim());
+    }
+  }
+
+  // 6. Group expenses by user
+  const expensesByUser = {};
+  for (const exp of expenses) {
+    const usr = userMap[exp.user_id];
+    if (!usr) continue;
+    if (!expensesByUser[usr.user_id]) expensesByUser[usr.user_id] = [];
+    expensesByUser[usr.user_id].push(exp);
+  }
+
+  // 7. Compile report rows
+  const reportRows = [];
+  for (const [user_code, userExps] of Object.entries(expensesByUser)) {
+    const usr = userByCode[user_code];
+    if (!usr) continue;
+
+    let travel_expense = 0;
+    let bike_km = 0;
+    let car_km = 0;
+    let auto_amount = 0;
+    let train_bus_amount = 0;
+    let da_allowance = 0;
+    let spare_purchase = 0;
+    let courier_charges = 0;
+    let boarding_lodging = 0;
+    let printing_stationery = 0;
+    let claimed_amount = 0;
+    const allComments = [];
+
+    for (const exp of userExps) {
+      claimed_amount += parseFloat(exp.original_amount || exp.amount || 0);
+      
+      const expComments = commentsByExpense[exp.id] || [];
+      allComments.push(...expComments);
+
+      const expLegs = legsByCode[exp.expense_code] || [];
+      for (const leg of expLegs) {
+        const mode = (leg.travel_mode || "").trim().toLowerCase();
+        const sub_mode = (leg.sub_mode || "").trim().toLowerCase();
+
+        let km_part = 0;
+        if (mode === "bike") {
+          km_part = parseFloat(leg.distance_km || 0) * 4.5;
+          bike_km += parseFloat(leg.distance_km || 0);
+        } else if (mode === "car") {
+          km_part = parseFloat(leg.distance_km || 0) * 9.0;
+          car_km += parseFloat(leg.distance_km || 0);
+        }
+
+        let auto_part = 0;
+        if (mode === "auto") {
+          auto_part += parseFloat(leg.travel_amount || 0);
+          auto_amount += parseFloat(leg.travel_amount || 0);
+        }
+        if (sub_mode === "auto") {
+          auto_part += parseFloat(leg.sub_amount || 0);
+          auto_amount += parseFloat(leg.sub_amount || 0);
+        }
+
+        let ta_part = 0;
+        if (mode === "train" || mode === "bus") {
+          ta_part += parseFloat(leg.travel_amount || 0);
+          train_bus_amount += parseFloat(leg.travel_amount || 0);
+        }
+
+        travel_expense += (km_part + auto_part + ta_part);
+        da_allowance += parseFloat(leg.da_amount || 0);
+        spare_purchase += parseFloat(leg.local_purchase || 0);
+        boarding_lodging += parseFloat(leg.hotel_amount || 0);
+
+        const oth_desc = (leg.other_desc || "").trim().toLowerCase();
+        const oth_amt = parseFloat(leg.other_amount || 0);
+        if (oth_amt > 0) {
+          if (oth_desc.includes("courier") || oth_desc.includes("courrier")) {
+            courier_charges += oth_amt;
+          } else if (["print", "stationery", "photocopy", "photo copy", "xerox", "copy"].some(k => oth_desc.includes(k))) {
+            printing_stationery += oth_amt;
+          } else {
+            printing_stationery += oth_amt;
+          }
+        }
+      }
+    }
+
+    const user_advance = advancesMap[(usr.user_id || "").toLowerCase()] || 0;
+    const row_total = travel_expense + da_allowance + spare_purchase + courier_charges + boarding_lodging + printing_stationery;
+    const net_payable = row_total - user_advance;
+    const deduction_reason = Array.from(new Set(allComments)).join("; ");
+
+    reportRows.push({
+      zone: usr.zone || "",
+      ee_code: usr.e_code || usr.user_id,
+      grade: usr.grade || "",
+      cc: usr.district || "",
+      ee_name: usr.name,
+      doj: usr.date_of_joining || "",
+      travel_expense: Math.round(travel_expense * 100) / 100,
+      bike_km: Math.round(bike_km * 100) / 100,
+      car_km: Math.round(car_km * 100) / 100,
+      auto_amount: Math.round(auto_amount * 100) / 100,
+      train_bus_amount: Math.round(train_bus_amount * 100) / 100,
+      da_allowance: Math.round(da_allowance * 100) / 100,
+      spare_purchase: Math.round(spare_purchase * 100) / 100,
+      courier_charges: Math.round(courier_charges * 100) / 100,
+      boarding_lodging: Math.round(boarding_lodging * 100) / 100,
+      printing_stationery: Math.round(printing_stationery * 100) / 100,
+      misc_expenses: 0.0,
+      fuel_expenses: 0.0,
+      total: Math.round(row_total * 100) / 100,
+      advance: Math.round(user_advance * 100) / 100,
+      net_payable: Math.round(net_payable * 100) / 100,
+      gst_bills: "",
+      deduction_reason: deduction_reason,
+      remarks: "",
+      claimed_amount: Math.round(claimed_amount * 100) / 100
+    });
+  }
+
+  return jsonResponse({ success: true, data: reportRows });
 }
 
