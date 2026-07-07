@@ -324,57 +324,63 @@ export async function handleGetDropdowns(request, env, params, query) {
  * Verifies user_id + DOB then sends OTP via notification (stores in DB)
  */
 export async function handleForgotPassword(request, env, params, query) {
-  let body;
-  try { body = await request.json(); } catch (e) { return jsonResponse({ error: "Invalid JSON" }, 400); }
+  try {
+    let body;
+    try { body = await request.json(); } catch (e) { return jsonResponse({ error: "Invalid JSON" }, 400); }
 
-  const { user_id, date_of_birth } = body;
-  if (!user_id || !date_of_birth) {
-    return jsonResponse({ error: "user_id and date_of_birth are required" }, 400);
-  }
+    const { user_id, date_of_birth } = body;
+    if (!user_id || !date_of_birth) {
+      return jsonResponse({ error: "user_id and date_of_birth are required" }, 400);
+    }
 
-  const user = await env.DB.prepare("SELECT * FROM users WHERE user_id = ?").bind(user_id).first();
-  if (!user) {
-    return jsonResponse({ error: "No user found with that User ID" }, 404);
-  }
+    const user = await env.DB.prepare("SELECT * FROM users WHERE user_id = ?").bind(user_id).first();
+    if (!user) {
+      return jsonResponse({ error: "No user found with that User ID" }, 404);
+    }
 
-  // Verify DOB
-  const dobInput = String(date_of_birth).trim().replace(/\//g, "-");
-  const dobStored = user.date_of_birth ? String(user.date_of_birth).trim() : "";
-  const dobMatch = dobInput === dobStored || dobInput.split("-").reverse().join("-") === dobStored;
-  if (!dobMatch) {
-    return jsonResponse({ error: "Date of birth does not match our records" }, 400);
-  }
+    // Verify DOB
+    const dobInput = String(date_of_birth).trim().replace(/\//g, "-");
+    const dobStored = user.date_of_birth ? String(user.date_of_birth).trim() : "";
+    const dobMatch = dobInput === dobStored || dobInput.split("-").reverse().join("-") === dobStored;
+    if (!dobMatch) {
+      return jsonResponse({ error: "Date of birth does not match our records" }, 400);
+    }
 
-  // Generate 6-digit OTP
-  const otp = String(Math.floor(100000 + Math.random() * 900000));
-  const timestamp = new Date().toISOString();
-  const expiresAt = new Date(Date.now() + 10 * 60 * 1000).toISOString(); // 10 min
+    // Generate 6-digit OTP
+    const otp = String(Math.floor(100000 + Math.random() * 900000));
+    const timestamp = new Date().toISOString();
+    const expiresAt = new Date(Date.now() + 10 * 60 * 1000).toISOString(); // 10 min
 
-  // Store OTP in DB
-  await env.DB.prepare(`
-    INSERT INTO otps (user_id, otp_code, otp_type, expires_at, created_at)
-    VALUES (?, ?, 'forgot_password', ?, ?)
-  `).bind(user_id, otp, expiresAt, timestamp).run().catch(async () => {
-    // If insert fails (or schema constraint), try delete + insert
-    await env.DB.prepare("DELETE FROM otps WHERE user_id = ? AND otp_type = 'forgot_password'").bind(user_id).run().catch(() => {});
+    // Store OTP in DB
+    try {
+      await env.DB.prepare(`
+        INSERT INTO otps (user_id, otp_code, otp_type, expires_at, created_at)
+        VALUES (?, ?, 'forgot_password', ?, ?)
+      `).bind(user_id, otp, expiresAt, timestamp).run();
+    } catch (dbErr) {
+      // If insert fails (or schema constraint), try delete + insert
+      await env.DB.prepare("DELETE FROM otps WHERE user_id = ? AND otp_type = 'forgot_password'").bind(user_id).run().catch(() => {});
+      await env.DB.prepare(`
+        INSERT INTO otps (user_id, otp_code, otp_type, expires_at, created_at)
+        VALUES (?, ?, 'forgot_password', ?, ?)
+      `).bind(user_id, otp, expiresAt, timestamp).run();
+    }
+
+    // Send OTP via notification (mobile number stored in user record)
     await env.DB.prepare(`
-      INSERT INTO otps (user_id, otp_code, otp_type, expires_at, created_at)
-      VALUES (?, ?, 'forgot_password', ?, ?)
-    `).bind(user_id, otp, expiresAt, timestamp).run();
-  });
+      INSERT INTO notifications (user_id, title, description, type, read, link, created_at)
+      VALUES (?, ?, ?, 'info', 0, '/login', ?)
+    `).bind(user_id, "Password Reset OTP", `Your OTP for password reset is: ${otp}. Valid for 10 minutes.`, timestamp).run().catch(() => {});
 
-  // Send OTP via notification (mobile number stored in user record)
-  await env.DB.prepare(`
-    INSERT INTO notifications (user_id, title, description, type, read, link, created_at)
-    VALUES (?, ?, ?, 'info', 0, '/login', ?)
-  `).bind(user_id, "Password Reset OTP", `Your OTP for password reset is: ${otp}. Valid for 10 minutes.`, timestamp).run().catch(() => {});
-
-  return jsonResponse({
-    success: true,
-    message: "OTP sent successfully",
-    otp_sent: true,
-    mobile_masked: user.mobile_number ? `XXXXXX${String(user.mobile_number).slice(-4)}` : null
-  });
+    return jsonResponse({
+      success: true,
+      message: "OTP sent successfully",
+      otp_sent: true,
+      mobile_masked: user.mobile_number ? `XXXXXX${String(user.mobile_number).slice(-4)}` : null
+    });
+  } catch (err) {
+    return jsonResponse({ error: `Internal server error: ${err.message}. Stack: ${err.stack}` }, 500);
+  }
 }
 
 /**
@@ -471,57 +477,61 @@ export async function handleResetPassword(request, env, params, query) {
  * Verifies user_id + DOJ + DOB then sends OTP
  */
 export async function handleUnlockAccount(request, env, params, query) {
-  let body;
-  try { body = await request.json(); } catch (e) { return jsonResponse({ error: "Invalid JSON" }, 400); }
+  try {
+    let body;
+    try { body = await request.json(); } catch (e) { return jsonResponse({ error: "Invalid JSON" }, 400); }
 
-  const { user_id, date_of_joining, date_of_birth } = body;
-  if (!user_id || !date_of_joining || !date_of_birth) {
-    return jsonResponse({ error: "user_id, date_of_joining, and date_of_birth are required" }, 400);
+    const { user_id, date_of_joining, date_of_birth } = body;
+    if (!user_id || !date_of_joining || !date_of_birth) {
+      return jsonResponse({ error: "user_id, date_of_joining, and date_of_birth are required" }, 400);
+    }
+
+    const user = await env.DB.prepare("SELECT * FROM users WHERE user_id = ?").bind(user_id).first();
+    if (!user) return jsonResponse({ error: "No user found with that User ID" }, 404);
+
+    if (user.user_status !== "locked") {
+      return jsonResponse({ error: "Account is not locked. Please contact admin if you are having issues." }, 400);
+    }
+
+    // Verify DOJ
+    const dojInput = String(date_of_joining).trim().replace(/\//g, "-");
+    const dojStored = user.date_of_joining ? String(user.date_of_joining).trim() : "";
+    const dojMatch = dojInput === dojStored || dojInput.split("-").reverse().join("-") === dojStored;
+
+    // Verify DOB
+    const dobInput = String(date_of_birth).trim().replace(/\//g, "-");
+    const dobStored = user.date_of_birth ? String(user.date_of_birth).trim() : "";
+    const dobMatch = dobInput === dobStored || dobInput.split("-").reverse().join("-") === dobStored;
+
+    if (!dojMatch || !dobMatch) {
+      return jsonResponse({ error: "Date of joining or date of birth does not match our records" }, 400);
+    }
+
+    // Generate OTP
+    const otp = String(Math.floor(100000 + Math.random() * 900000));
+    const timestamp = new Date().toISOString();
+    const expiresAt = new Date(Date.now() + 10 * 60 * 1000).toISOString();
+
+    await env.DB.prepare("DELETE FROM otps WHERE user_id = ? AND otp_type = 'unlock_account'").bind(user_id).run().catch(() => {});
+    await env.DB.prepare(`
+      INSERT INTO otps (user_id, otp_code, otp_type, expires_at, created_at)
+      VALUES (?, ?, 'unlock_account', ?, ?)
+    `).bind(user_id, otp, expiresAt, timestamp).run();
+
+    await env.DB.prepare(`
+      INSERT INTO notifications (user_id, title, description, type, read, link, created_at)
+      VALUES (?, ?, ?, 'info', 0, '/login', ?)
+    `).bind(user_id, "Account Unlock OTP", `Your OTP to unlock account: ${otp}. Valid for 10 minutes.`, timestamp).run().catch(() => {});
+
+    return jsonResponse({
+      success: true,
+      message: "OTP sent. Please check your registered mobile number.",
+      otp_sent: true,
+      mobile_masked: user.mobile_number ? `XXXXXX${String(user.mobile_number).slice(-4)}` : null
+    });
+  } catch (err) {
+    return jsonResponse({ error: `Internal server error: ${err.message}. Stack: ${err.stack}` }, 500);
   }
-
-  const user = await env.DB.prepare("SELECT * FROM users WHERE user_id = ?").bind(user_id).first();
-  if (!user) return jsonResponse({ error: "No user found with that User ID" }, 404);
-
-  if (user.user_status !== "locked") {
-    return jsonResponse({ error: "Account is not locked. Please contact admin if you are having issues." }, 400);
-  }
-
-  // Verify DOJ
-  const dojInput = String(date_of_joining).trim().replace(/\//g, "-");
-  const dojStored = user.date_of_joining ? String(user.date_of_joining).trim() : "";
-  const dojMatch = dojInput === dojStored || dojInput.split("-").reverse().join("-") === dojStored;
-
-  // Verify DOB
-  const dobInput = String(date_of_birth).trim().replace(/\//g, "-");
-  const dobStored = user.date_of_birth ? String(user.date_of_birth).trim() : "";
-  const dobMatch = dobInput === dobStored || dobInput.split("-").reverse().join("-") === dobStored;
-
-  if (!dojMatch || !dobMatch) {
-    return jsonResponse({ error: "Date of joining or date of birth does not match our records" }, 400);
-  }
-
-  // Generate OTP
-  const otp = String(Math.floor(100000 + Math.random() * 900000));
-  const timestamp = new Date().toISOString();
-  const expiresAt = new Date(Date.now() + 10 * 60 * 1000).toISOString();
-
-  await env.DB.prepare("DELETE FROM otps WHERE user_id = ? AND otp_type = 'unlock_account'").bind(user_id).run().catch(() => {});
-  await env.DB.prepare(`
-    INSERT INTO otps (user_id, otp_code, otp_type, expires_at, created_at)
-    VALUES (?, ?, 'unlock_account', ?, ?)
-  `).bind(user_id, otp, expiresAt, timestamp).run();
-
-  await env.DB.prepare(`
-    INSERT INTO notifications (user_id, title, description, type, read, link, created_at)
-    VALUES (?, ?, ?, 'info', 0, '/login', ?)
-  `).bind(user_id, "Account Unlock OTP", `Your OTP to unlock account: ${otp}. Valid for 10 minutes.`, timestamp).run().catch(() => {});
-
-  return jsonResponse({
-    success: true,
-    message: "OTP sent. Please check your registered mobile number.",
-    otp_sent: true,
-    mobile_masked: user.mobile_number ? `XXXXXX${String(user.mobile_number).slice(-4)}` : null
-  });
 }
 
 /**
