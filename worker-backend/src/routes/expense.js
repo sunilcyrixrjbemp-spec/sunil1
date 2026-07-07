@@ -360,6 +360,7 @@ export async function handleCreateLimitRequest(request, env, params, query, user
  */
 export async function handleGetTeamExpenses(request, env, params, query, user) {
   const month = query.get("month");
+  console.log("DEBUG: handleGetTeamExpenses user =", JSON.stringify(user));
 
   const allowedWindows = user.allowed_windows ? user.allowed_windows.split(",").map(w => w.trim().toLowerCase()) : [];
   
@@ -368,6 +369,7 @@ export async function handleGetTeamExpenses(request, env, params, query, user) {
   if (["Admin", "MIS", "VP", "Accountant"].includes(user.role)) {
     const res = await env.DB.prepare("SELECT * FROM users").all();
     teamUsers = res.results || [];
+    console.log("DEBUG: fetched all users, count =", teamUsers.length);
   } else {
     const nameClean = (user.name || "").trim();
     const uidClean = (user.user_id || "").trim();
@@ -411,6 +413,7 @@ export async function handleGetTeamExpenses(request, env, params, query, user) {
   const teamUserIds = ["Admin", "MIS", "VP", "Accountant"].includes(user.role)
     ? teamUsers.map(u => u.id)
     : teamUsers.map(u => u.id).filter(id => id !== user.id);
+  console.log("DEBUG: teamUserIds =", JSON.stringify(teamUserIds));
   if (teamUserIds.length === 0) return jsonResponse([]);
 
   const submittersById = {};
@@ -449,9 +452,11 @@ export async function handleGetTeamExpenses(request, env, params, query, user) {
   }
 
   querySql += " ORDER BY created_at DESC";
+  console.log("DEBUG: querySql =", querySql, "binds =", JSON.stringify(binds));
 
   const expensesRows = await env.DB.prepare(querySql).bind(...binds).all();
   const expenses = expensesRows.results || [];
+  console.log("DEBUG: fetched expenses count =", expenses.length);
 
   // Fetch legs & serialize team expenses
   const result = [];
