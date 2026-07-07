@@ -4,6 +4,7 @@
  * Complete Implementation — All Endpoints Matching Python Backend
  */
 import { verifyJwt } from "./utils/security.js";
+import { runRead } from "./utils/db.js";
 
 // Import Auth handlers
 import {
@@ -47,7 +48,8 @@ import { handleUploadImage, handleUploadDocument, handleServeFile } from "./rout
 
 // Import Reports handlers
 import {
-  handleGetMisDashboard, handleGetAssetsInventory, handleGetAssetsFilters, handleGetAssetsStats
+  handleGetMisDashboard, handleGetAssetsInventory, handleGetAssetsFilters, handleGetAssetsStats,
+  handleUploadAssetsCSV
 } from "./routes/reports.js";
 
 // Import Expense handlers
@@ -221,6 +223,7 @@ router.get("/api/reports/mis-dashboard", handleGetMisDashboard, true);
 router.get("/api/reports/assets-inventory", handleGetAssetsInventory, true);
 router.get("/api/reports/assets-filters", handleGetAssetsFilters, true);
 router.get("/api/reports/assets-stats", handleGetAssetsStats, true);
+router.post("/api/reports/upload-assets-csv", handleUploadAssetsCSV, true);
 
 // ─── Expense Endpoints (Requires Auth) ────────────────────────────────────────
 // NOTE: Specific named routes BEFORE wildcard :id routes to avoid conflicts
@@ -244,6 +247,53 @@ router.delete("/api/expense/:id", handleDeleteExpense, true);
 // --- Main Entry point ---
 export default {
   async fetch(request, env, ctx) {
+    // Intercept D1 database connection for read control routing
+    if (env.DB && !env._originalDB) {
+      env._originalDB = env.DB;
+      const originalDB = env.DB;
+      env.DB = {
+        prepare(sql) {
+          const stmt = originalDB.prepare(sql);
+          let boundParams = [];
+          
+          const originalBind = stmt.bind;
+          stmt.bind = function(...params) {
+            boundParams = params;
+            return originalBind.apply(stmt, params);
+          };
+          
+          stmt.all = async function() {
+            const isSelect = sql.trim().toLowerCase().startsWith("select") || sql.trim().toLowerCase().startsWith("with");
+            if (isSelect) {
+              return await runRead(env, sql, boundParams, request);
+            }
+            return await stmt.run();
+          };
+
+          stmt.first = async function(column) {
+            const isSelect = sql.trim().toLowerCase().startsWith("select") || sql.trim().toLowerCase().startsWith("with");
+            if (isSelect) {
+              const res = await runRead(env, sql, boundParams, request);
+              const row = res.results && res.results[0];
+              if (!row) return null;
+              if (column) return row[column];
+              return row;
+            }
+            const res = await stmt.run();
+            return res;
+          };
+          
+          return stmt;
+        },
+        batch(statements) {
+          return originalDB.batch(statements);
+        },
+        exec(sql) {
+          return originalDB.exec(sql);
+        }
+      };
+    }
+
     const url = new URL(request.url);
     let pathname = url.pathname;
     if (pathname.endsWith("/") && pathname !== "/") {

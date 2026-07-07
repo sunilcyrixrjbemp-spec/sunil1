@@ -8,6 +8,7 @@ import {
   Clock 
 } from "lucide-react";
 import toast from "react-hot-toast";
+import api from "../services/api";
 
 interface UploadLog {
   id: string;
@@ -69,7 +70,7 @@ export default function UploadDataPage() {
     fileInputRef.current?.click();
   };
 
-  const handleUploadSubmit = (e: React.FormEvent) => {
+  const handleUploadSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!selectedFile) {
       toast.error("Please choose a file to upload first.");
@@ -77,27 +78,59 @@ export default function UploadDataPage() {
     }
 
     setUploading(true);
-    toast.loading("Analyzing spreadsheet column headers and validating entries...");
+    const toastId = toast.loading("Uploading and importing asset records on the edge server...");
 
-    setTimeout(() => {
+    try {
+      if (dataType === "assets") {
+        const formData = new FormData();
+        formData.append("file", selectedFile);
+        
+        const response = await api.post("/reports/upload-assets-csv", formData, {
+          headers: { "Content-Type": "multipart/form-data" }
+        });
+        
+        toast.dismiss(toastId);
+        toast.success(response.data.message || "Asset data imported successfully!");
+        
+        const newLog: UploadLog = {
+          id: (logs.length + 1).toString(),
+          dataType: "Asset Inventory Database",
+          fileName: selectedFile.name,
+          uploadedBy: "E1704 (Sunil Kumar)",
+          timestamp: new Date().toISOString().replace("T", " ").substring(0, 19),
+          recordsCount: response.data.inserted + response.data.skipped,
+          status: "Success"
+        };
+        setLogs(prev => [newLog, ...prev]);
+        setSelectedFile(null);
+      } else {
+        // Simulated logic for other types
+        setTimeout(() => {
+          setUploading(false);
+          toast.dismiss(toastId);
+
+          const newLog: UploadLog = {
+            id: (logs.length + 1).toString(),
+            dataType: dataType === "facilities" ? "Hospitals/Facilities" : dataType === "targets" ? "Monthly Targets" : "Penalty Master Data",
+            fileName: selectedFile.name,
+            uploadedBy: "E1704 (Sunil Kumar)",
+            timestamp: new Date().toISOString().replace("T", " ").substring(0, 19),
+            recordsCount: Math.floor(Math.random() * 120) + 15,
+            status: "Success"
+          };
+
+          setLogs(prev => [newLog, ...prev]);
+          setSelectedFile(null);
+          toast.success("Spreadsheet data parsed, verified, and uploaded successfully!");
+        }, 2000);
+        return; // skip setting upload false at the end since setTimeout does it
+      }
+    } catch (err: any) {
+      toast.dismiss(toastId);
+      toast.error(err.response?.data?.error || "Failed to upload asset data.");
+    } finally {
       setUploading(false);
-      toast.dismiss();
-
-      // Add to simulated log
-      const newLog: UploadLog = {
-        id: (logs.length + 1).toString(),
-        dataType: dataType === "facilities" ? "Hospitals/Facilities" : dataType === "targets" ? "Monthly Targets" : "Penalty Master Data",
-        fileName: selectedFile.name,
-        uploadedBy: "E1704 (Sunil Kumar)",
-        timestamp: new Date().toISOString().replace("T", " ").substring(0, 19),
-        recordsCount: Math.floor(Math.random() * 120) + 15,
-        status: "Success"
-      };
-
-      setLogs(prev => [newLog, ...prev]);
-      setSelectedFile(null);
-      toast.success("Spreadsheet data parsed, verified, and uploaded successfully!");
-    }, 2000);
+    }
   };
 
   return (
@@ -129,6 +162,7 @@ export default function UploadDataPage() {
                 className="w-full bg-white border border-gray-300 rounded px-3 py-2 text-xs text-gray-800 focus:outline-none focus:border-blue-500 outline-none font-bold"
               >
                 <option value="facilities">Hospital Facilities Database</option>
+                <option value="assets">Asset Inventory Database</option>
                 <option value="targets">Monthly Target Matrix</option>
                 <option value="penalty">Penalty Rules Config</option>
               </select>
