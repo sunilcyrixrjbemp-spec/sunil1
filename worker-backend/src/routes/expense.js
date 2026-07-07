@@ -1582,13 +1582,36 @@ export async function handleSubmitExpense(request, env, params, query, user) {
   const approvalChain = await env.DB.prepare(`
     SELECT a.* 
     FROM hierarchy_approvers a
-    JOIN user_approval_chains c ON a.hierarchy_id = c.id
-    JOIN hierarchy_requesters hr ON hr.hierarchy_id = c.id
+    JOIN hierarchy_requesters hr ON a.hierarchy_id = hr.hierarchy_id
     WHERE hr.user_id = ?
     ORDER BY a.level_number ASC
   `).bind(user.id).all();
 
-  const status = (approvalChain.results && approvalChain.results.length > 0) ? "submitted" : "approved";
+  let status = "approved";
+  let approvalsToInsert = [];
+
+  if (approvalChain.results && approvalChain.results.length > 0) {
+    status = "submitted";
+    for (const step of approvalChain.results) {
+      approvalsToInsert.push({
+        approver_id: step.approver_id,
+        level_number: step.level_number,
+        status: step.level_number === 1 ? "pending" : "waiting"
+      });
+    }
+  } else {
+    // Fallback to user manager
+    const managerId = user.manager || "Admin";
+    const manager = await env.DB.prepare("SELECT * FROM users WHERE name = ? OR user_id = ?").bind(managerId, managerId).first();
+    if (manager) {
+      status = "submitted";
+      approvalsToInsert.push({
+        approver_id: manager.id,
+        level_number: 1,
+        status: "pending"
+      });
+    }
+  }
 
   if (existingExpense) {
     await runWrite(env, `
@@ -1780,35 +1803,19 @@ export async function handleSubmitExpense(request, env, params, query, user) {
   }
 
   // Create approvals level sequence records
-  if (approvalChain.results && approvalChain.results.length > 0) {
-    for (const step of approvalChain.results) {
-      const stepStatus = step.level_number === 1 ? "pending" : "waiting";
-      await runWrite(env, `
-        INSERT INTO approvals (expense_id, approver_id, level_number, status, comments, created_at, updated_at)
-        VALUES (?, ?, ?, ?, '', ?, ?)
-      `, [newExpId, step.approver_id, step.level_number, stepStatus, timestamp, timestamp]);
+  for (const step of approvalsToInsert) {
+    await runWrite(env, `
+      INSERT INTO approvals (expense_id, approver_id, level_number, status, comments, created_at, updated_at)
+      VALUES (?, ?, ?, ?, '', ?, ?)
+    `, [newExpId, step.approver_id, step.level_number, step.status, timestamp, timestamp]);
 
-      if (stepStatus === "pending") {
-        const approverUser = await env.DB.prepare("SELECT * FROM users WHERE id = ?").bind(step.approver_id).first();
-        if (approverUser) {
-          await runWrite(env, "INSERT INTO notifications (user_id, title, description, type, read, link, created_at) VALUES (?, '📥 New Claim for Approval', ?, 'warning', 0, '/approval-center', ?)", [
-            approverUser.user_id, `${user.name} submitted a new claim ${expenseCode} (₹${amount}) for your review.`, timestamp
-          ]);
-        }
+    if (step.status === "pending") {
+      const approverUser = await env.DB.prepare("SELECT * FROM users WHERE id = ?").bind(step.approver_id).first();
+      if (approverUser) {
+        await runWrite(env, "INSERT INTO notifications (user_id, title, description, type, read, link, created_at) VALUES (?, '📥 New Claim for Approval', ?, 'warning', 0, '/approval-center', ?)", [
+          approverUser.user_id, `${user.name} submitted a new claim ${expenseCode} (₹${amount}) for your review.`, timestamp
+        ]);
       }
-    }
-  } else {
-    const managerId = user.manager || "Admin";
-    const manager = await env.DB.prepare("SELECT * FROM users WHERE user_id = ?").bind(managerId).first();
-    if (manager) {
-      await runWrite(env, `
-        INSERT INTO approvals (expense_id, approver_id, level_number, status, comments, created_at, updated_at)
-        VALUES (?, ?, 1, 'pending', '', ?, ?)
-      `, [newExpId, manager.id, timestamp, timestamp]);
-
-      await runWrite(env, "INSERT INTO notifications (user_id, title, description, type, read, link, created_at) VALUES (?, '📥 New Claim for Approval', ?, 'warning', 0, '/approval-center', ?)", [
-        managerId, `${user.name} submitted a new claim ${expenseCode} (₹${amount}) for your review.`, timestamp
-      ]);
     }
   }
 
