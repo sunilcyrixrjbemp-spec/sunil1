@@ -133,6 +133,10 @@ api.interceptors.response.use(
       
       originalRequest.baseURL = activeBaseURL;
       
+      if (typeof window !== "undefined") {
+        window.dispatchEvent(new CustomEvent("backend-server-swap", { detail: { baseURL: activeBaseURL } }));
+      }
+      
       // Retry the request with the new baseURL
       return api(originalRequest);
     }
