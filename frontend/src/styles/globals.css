@@ -484,8 +484,7 @@ svg, path, g, sector, .recharts-pie-sector, .recharts-sector, .recharts-pie, .re
   .btn-slate-lte,
   .btn-lte-secondary,
   .btn-lte-outline,
-  button[type="submit"],
-  button[type="button"] {
+  button[type="submit"] {
     min-height: 44px !important;
     border-radius: 16px !important;
     font-size: 12px !important;
@@ -494,6 +493,27 @@ svg, path, g, sector, .recharts-pie-sector, .recharts-sector, .recharts-pie, .re
     text-transform: uppercase !important;
     box-shadow: none !important;
     transition: all 0.15s ease !important;
+  }
+
+  /* Explicit-height buttons (verify/small action buttons) must NOT be overridden */
+  button.h-7, button[class*="h-7"],
+  button.h-8, button[class*="h-8"] {
+    min-height: unset !important;
+    border-radius: 10px !important;
+    font-size: 10px !important;
+    padding: 0 10px !important;
+  }
+
+  /* Verify button: emerald highlight preserved on mobile */
+  button.bg-emerald-500,
+  button[class*="bg-emerald-500"] {
+    background-color: #10b981 !important;
+    color: #ffffff !important;
+    border: none !important;
+  }
+  button.bg-emerald-500:hover,
+  button[class*="hover:bg-emerald-600"]:not(:disabled) {
+    background-color: #059669 !important;
   }
 
   .btn-lte-primary {
@@ -877,72 +897,77 @@ svg, path, g, sector, .recharts-pie-sector, .recharts-sector, .recharts-pie, .re
     border-style: none !important;
   }
 
-  /* clean active highlight */
-  nav.lg\:hidden a.text-blue-600 svg,
-  nav.lg\:hidden button.text-blue-600 svg {
-    color: #2563eb !important;
-    background-color: #e2e8f0 !important;
+  /* ===== BOTTOM NAV ACTIVE STATE ===== */
+  /* Active tab: indigo text + colored icon pill */
+  nav.lg\:hidden a[class*="text-indigo-600"] svg,
+  nav.lg\:hidden button[class*="text-indigo-600"] svg {
+    color: #4f46e5 !important;
+    background-color: #eef2ff !important;
     border-radius: 12px !important;
     padding: 3px 10px !important;
     box-sizing: content-box !important;
   }
-
-  nav.lg\:hidden span {
-    font-size: 9px !important;
-    font-weight: 700 !important;
-    margin-top: 2px !important;
-    color: #475569 !important;
-  }
-
-  nav.lg\:hidden a.text-blue-600 span,
-  nav.lg\:hidden button.text-blue-600 span {
+  nav.lg\:hidden a[class*="text-indigo-600"] span,
+  nav.lg\:hidden button[class*="text-indigo-600"] span {
     color: #4f46e5 !important;
     font-weight: 850 !important;
   }
+  /* Inactive tab text */
+  nav.lg\:hidden a span,
+  nav.lg\:hidden button span {
+    color: #64748b !important;
+    font-size: 9px !important;
+    font-weight: 700 !important;
+    margin-top: 2px !important;
+  }
 
-  /* ================= MODERN DEVELOPER-GRADE COLOR THEME OVERRIDES (SLATE/INDIGO/EMERALD) ================= */
-  .bg-blue-600, .bg-blue-500, .btn-primary, .bg-indigo-600 {
-    background-color: #4f46e5 !important; /* Premium Indigo-600 */
+  /* ================= MODERN DEVELOPER-GRADE COLOR THEME ================= */
+  /* Indigo brand color — primary actions */
+  .bg-indigo-600 { background-color: #4f46e5 !important; }
+  .bg-blue-600 { background-color: #4f46e5 !important; }
+  .text-indigo-600, .text-blue-600 { color: #4f46e5 !important; }
+  .text-indigo-700, .text-blue-700 { color: #4338ca !important; }
+  .text-indigo-200, .text-blue-200 { color: #c7d2fe !important; }
+  .border-indigo-600, .border-blue-600 { border-color: #4f46e5 !important; }
+  .bg-indigo-50, .bg-blue-50 { background-color: #eef2ff !important; }
+
+  /* Emerald — success/verified state; must NOT be overridden by broad patterns */
+  .bg-emerald-600 { background-color: #059669 !important; }
+  .bg-emerald-500 { background-color: #10b981 !important; }
+  .text-emerald-700, .text-green-700 { color: #047857 !important; }
+  .text-emerald-600, .text-green-600 { color: #059669 !important; }
+  .bg-emerald-50, .bg-green-50 { background-color: #ecfdf5 !important; }
+  .border-emerald-200, .border-green-200 { border-color: #a7f3d0 !important; }
+
+  /* Rose — danger/error */
+  .bg-rose-600 { background-color: #e11d48 !important; }
+  .bg-red-600 { background-color: #dc2626 !important; }
+  .text-rose-700, .text-red-700 { color: #be123c !important; }
+  .text-rose-600, .text-red-600 { color: #e11d48 !important; }
+  .bg-rose-50, .bg-red-50 { background-color: #fff1f2 !important; }
+
+  /* Amber — warning */
+  .bg-amber-500 { background-color: #f59e0b !important; }
+  .text-amber-700 { color: #b45309 !important; }
+  .text-amber-600 { color: #d97706 !important; }
+  .bg-amber-50 { background-color: #fffbeb !important; }
+
+  /* CRITICAL: table th headers in dark slate — preserve readability */
+  thead tr.bg-slate-800 th,
+  tr.bg-slate-800 th {
+    background-color: #1e293b !important;
+    color: #f1f5f9 !important;
   }
-  .text-blue-700, .text-blue-600, .text-blue-500, .text-indigo-650, .text-indigo-600 {
-    color: #4f46e5 !important; /* Premium Indigo-600 */
+  thead tr th {
+    background-color: #f8fafc !important;
+    color: #475569 !important;
   }
-  .border-blue-600, .border-blue-500, .border-blue-200, .border-blue-300, .border-indigo-100 {
-    border-color: #e0e7ff !important; /* Indigo-100/200 */
-  }
-  .bg-blue-50, .bg-indigo-50 {
-    background-color: #f5f3ff !important; /* Violet-50 */
-  }
+  thead tr.bg-slate-800 th { background-color: #1e293b !important; color: #f1f5f9 !important; }
   
-  .bg-green-600, .bg-green-500, .bg-emerald-600 {
-    background-color: #059669 !important; /* Emerald-600 */
-  }
-  .text-green-700, .text-green-600, .text-green-500, .text-emerald-700, .text-emerald-600 {
-    color: #059669 !important; /* Emerald-600 */
-  }
-  .bg-green-50, .bg-emerald-50 {
-    background-color: #ecfdf5 !important; /* Emerald-50 */
-  }
-
-  .bg-red-600, .bg-red-500, .bg-rose-600 {
-    background-color: #e11d48 !important; /* Rose-600 */
-  }
-  .text-red-750, .text-red-650, .text-red-600, .text-red-500, .text-rose-700, .text-rose-600 {
-    color: #e11d48 !important; /* Rose-600 */
-  }
-  .bg-red-50, .bg-rose-50 {
-    background-color: #fff1f2 !important; /* Rose-50 */
-  }
-
-  .bg-yellow-600, .bg-yellow-500, .bg-amber-500 {
-    background-color: #d97706 !important; /* Amber-600 */
-  }
-  .text-yellow-750, .text-yellow-600, .text-yellow-500, .text-amber-700, .text-amber-600 {
-    color: #b45309 !important; /* Amber-700 */
-  }
-  .bg-yellow-50, .bg-amber-50 {
-    background-color: #fffbeb !important; /* Amber-50 */
-  }
+  /* Table body rows */
+  tbody td { color: #334155 !important; }
+  tbody tr { background-color: #ffffff !important; }
+  tbody tr:hover td { background-color: #f8fafc !important; }
 
   /* ================= PROFILE PAGE MOBILE ADJ. ================= */
   .lg\:col-span-1 .card-lte-primary {

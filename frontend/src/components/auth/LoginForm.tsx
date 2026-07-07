@@ -285,8 +285,8 @@ export default function LoginForm({ onForgotPassword, onUnlockAccount }: LoginFo
                 setStatusMessage(null);
               }}
               disabled={loading}
-              className="w-full bg-white border border-slate-350 rounded-xl pr-3.5 py-3 text-xs text-slate-800 placeholder-slate-400 focus:outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20 transition-all font-semibold shadow-inner"
-              style={{ paddingLeft: '2.75rem' }}
+              className="w-full bg-white border border-slate-200 rounded-xl py-3 text-xs text-slate-800 placeholder-slate-400 focus:outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20 transition-all font-semibold shadow-inner"
+              style={{ paddingLeft: '2.75rem', paddingRight: '0.875rem' }}
               required
             />
           </div>

@@ -8,7 +8,6 @@ import Loader from "../components/common/Loader";
 import { checkIsHeic, convertHeicToJpegUrl } from "../utils/heic";
 import { PieChart, Pie, Cell, Tooltip, Legend, ResponsiveContainer } from "recharts";
 import ExpenseCalendar from "../components/common/ExpenseCalendar";
-import brandLogo from "../assets/images/brand.png";
 import { 
   FileSpreadsheet, 
   BarChart3, 
@@ -565,25 +564,15 @@ export default function HomePage() {
     <>
       <div className="space-y-6 animate-fadeIn text-[#212529]">
         
-        {/* Welcome Banner - Modern Premium Gradient Card */}
-        <div className="relative overflow-hidden rounded-3xl bg-gradient-to-r from-slate-900 via-indigo-950 to-slate-900 p-6 text-white shadow-xl border border-slate-800/80">
-          <div className="absolute -right-10 -top-10 h-32 w-32 rounded-full bg-indigo-500/10 blur-2xl"></div>
-          <div className="absolute -left-10 -bottom-10 h-32 w-32 rounded-full bg-blue-500/10 blur-2xl"></div>
+        {/* Welcome Banner - Clean Premium Card */}
+        <div className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-indigo-600 via-indigo-700 to-indigo-800 p-5 text-white shadow-lg">
+          <div className="absolute -right-8 -top-8 h-24 w-24 rounded-full bg-white/5 blur-2xl"></div>
+          <div className="absolute -left-8 -bottom-8 h-24 w-24 rounded-full bg-white/5 blur-2xl"></div>
           
-          <div className="relative flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-            <div className="space-y-1">
-              <span className="text-indigo-400 font-black text-[10px] uppercase tracking-widest block">Operations Hub</span>
-              <h2 className="text-2xl font-bold tracking-tight text-white">Hi, {user.name}</h2>
-              <p className="text-slate-300 text-xs font-medium">Access claims summary statistics and operations management hub.</p>
-            </div>
-            
-            <div className="flex items-center gap-3">
-              <img 
-                src={brandLogo} 
-                alt="Cyrix Logo" 
-                className="h-12 w-auto object-contain shrink-0 bg-white/10 backdrop-blur-md p-2 rounded-2xl border border-white/10 shadow-lg" 
-              />
-            </div>
+          <div className="relative">
+            <span className="text-indigo-200 font-black text-[10px] uppercase tracking-widest block mb-1">Operations Hub</span>
+            <h2 className="text-xl font-bold tracking-tight text-white">Hi, {user.name} 👋</h2>
+            <p className="text-indigo-200 text-xs font-medium mt-0.5">Claims summary &amp; operations management hub.</p>
           </div>
         </div>
 

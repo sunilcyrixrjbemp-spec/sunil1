@@ -5,6 +5,7 @@
  */
 import { verifyJwt } from "./utils/security.js";
 import { runRead } from "./utils/db.js";
+import { runMigrations } from "./utils/db-migrate.js";
 
 // Import Auth handlers
 import {
@@ -253,11 +254,14 @@ export default {
     // Store ctx on env for background tasks access (e.g. replication)
     env.ctx = ctx;
 
-    // Self-healing migration to create indexes on queried tables asynchronously
+    // Self-healing migration to create tables + indexes asynchronously
     if (env.DB) {
       ctx.waitUntil((async () => {
         try {
           const dbObj = env._originalDB || env.DB;
+          // Create missing tables (otp_tokens, login_logs)
+          await runMigrations(dbObj);
+          // Create performance indexes
           await dbObj.exec(`
             CREATE INDEX IF NOT EXISTS idx_expenses_user_id ON expenses(user_id);
             CREATE INDEX IF NOT EXISTS idx_approvals_expense_id ON approvals(expense_id);
@@ -266,7 +270,7 @@ export default {
             CREATE INDEX IF NOT EXISTS idx_hierarchy_approvers_approver_id ON hierarchy_approvers(approver_id);
           `);
         } catch (e) {
-          console.error("Self-healing indexes migration failed:", e);
+          console.error("Self-healing migration failed:", e);
         }
       })());
     }
