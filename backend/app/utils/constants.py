@@ -178,6 +178,7 @@ ZONE_DISTRICTS = {
     "All": ["All"],
     "Ajmer": ["Ajmer", "Beawer", "Bhilwara", "Nagaur", "Tonk"],
     "Bikaner": ["Bikaner", "Churu", "Ganganar", "Hanumangarh"],
+    "Jaipur": ["Jaipur"],
     "Jodhpur": ["Barmer", "Balotra", "Jaisalmer", "Jalore", "Jodhpur", "Pali", "Phalodi", "Sirohi"],
     "Udaipur": ["Banswara", "Chittorgarh", "Dungarpur", "Rajsamand", "Pratapgarh", "Udaipur"]
 }

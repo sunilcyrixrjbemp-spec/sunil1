@@ -2519,10 +2519,7 @@ export default function ExpensePage() {
                   "Banswara", "Chittorgarh", "Dungarpur", "Rajsamand", "Pratapgarh", "Udaipur"
                 ];
                 const hDist = user.district || user.home_district || "Jodhpur";
-                const distOpts = [...rawDistOpts];
-                if (hDist && hDist !== "All" && !distOpts.includes(hDist)) {
-                  distOpts.push(hDist);
-                }
+                const distOpts = Array.from(new Set([...rawDistOpts, hDist, "Jaipur", "Kota"])).filter(Boolean).filter(d => d !== "All");
 
                 return (
                   <div key={leg.leg} className={`card-lte bg-white animate-fadeIn text-xs mb-6 shadow-sm border-t-4 ${
@@ -3405,15 +3402,12 @@ export default function ExpensePage() {
                                     type="button"
                                     onClick={() => addVerifiedBarcode(leg.leg, "Calls")}
                                     disabled={!leg.calls_verified}
-                                    className="w-full h-8 flex items-center justify-center rounded-lg shadow-sm transition-all disabled:cursor-not-allowed"
-                                    style={
-                                      leg.calls_verified
-                                        ? { backgroundColor: '#059669', color: '#ffffff', border: '1.5px solid #047857', cursor: 'pointer' }
-                                        : { backgroundColor: '#cbd5e1', color: '#64748b', border: '1.5px solid #94a3b8', cursor: 'not-allowed' }
-                                    }
+                                    className={`w-full h-8 flex items-center justify-center rounded-lg shadow-sm transition-all ${
+                                      leg.calls_verified ? "btn-add-verified-barcode" : "btn-add-verified-barcode-disabled"
+                                    }`}
                                     title="Add Verified Entry"
                                   >
-                                    <Plus className="w-4 h-4" style={{ color: leg.calls_verified ? '#ffffff' : '#64748b' }} />
+                                    <Plus className="w-4 h-4" />
                                   </button>
                                 </div>
                               </div>
@@ -3608,15 +3602,12 @@ export default function ExpensePage() {
                                     type="button"
                                     onClick={() => addVerifiedBarcode(leg.leg, "PMS")}
                                     disabled={!leg.pms_verified}
-                                    className="w-full h-8 flex items-center justify-center rounded-lg shadow-sm transition-all disabled:cursor-not-allowed"
-                                    style={
-                                      leg.pms_verified
-                                        ? { backgroundColor: '#059669', color: '#ffffff', border: '1.5px solid #047857', cursor: 'pointer' }
-                                        : { backgroundColor: '#cbd5e1', color: '#64748b', border: '1.5px solid #94a3b8', cursor: 'not-allowed' }
-                                    }
+                                    className={`w-full h-8 flex items-center justify-center rounded-lg shadow-sm transition-all ${
+                                      leg.pms_verified ? "btn-add-verified-barcode" : "btn-add-verified-barcode-disabled"
+                                    }`}
                                     title="Add Verified Entry"
                                   >
-                                    <Plus className="w-4 h-4" style={{ color: leg.pms_verified ? '#ffffff' : '#64748b' }} />
+                                    <Plus className="w-4 h-4" />
                                   </button>
                                 </div>
                               </div>

@@ -1353,3 +1353,21 @@ p.submitter-name-text {
 span.submitter-code-text {
   color: #2563eb !important; /* Force deep blue for the employee code */
 }
+
+/* ================= CUSTOM ADD BARCODE BUTTON CONTRAST OVERRIDES ================= */
+.btn-add-verified-barcode {
+  background-color: #059669 !important;
+  color: #ffffff !important;
+  border: 1.5px solid #047857 !important;
+  cursor: pointer !important;
+}
+.btn-add-verified-barcode:hover {
+  background-color: #047857 !important;
+}
+.btn-add-verified-barcode-disabled {
+  background-color: #cbd5e1 !important;
+  color: #64748b !important;
+  border: 1.5px solid #94a3b8 !important;
+  cursor: not-allowed !important;
+}
+

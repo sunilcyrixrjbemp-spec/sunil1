@@ -1684,29 +1684,8 @@ export async function handleSubmitExpense(request, env, params, query, user) {
       });
     }
   } else {
-    // Fallback to user manager
-    const managerId = user.manager || "Admin";
-    const manager = await env.DB.prepare("SELECT * FROM users WHERE name = ? OR user_id = ?").bind(managerId, managerId).first();
-    if (manager) {
-      status = "submitted";
-      approvalsToInsert.push({
-        approver_id: manager.id,
-        level_number: 1,
-        status: "pending"
-      });
-    }
-
-    const zonalManagerId = user.zonal_manager;
-    if (zonalManagerId) {
-      const zonalManager = await env.DB.prepare("SELECT * FROM users WHERE name = ? OR user_id = ?").bind(zonalManagerId, zonalManagerId).first();
-      if (zonalManager) {
-        status = "submitted";
-        approvalsToInsert.push({
-          approver_id: zonalManager.id,
-          level_number: 2,
-          status: manager ? "waiting" : "pending"
-        });
-      }
+    if (user.role !== "Admin") {
+      return jsonResponse({ error: "You are not assigned to any approval hierarchy team. Please contact the administrator." }, 400);
     }
   }
 
