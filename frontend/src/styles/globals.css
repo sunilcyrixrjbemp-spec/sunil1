@@ -1101,3 +1101,27 @@ svg, path, g, sector, .recharts-pie-sector, .recharts-sector, .recharts-pie, .re
     box-shadow: 0 2px 8px rgba(0, 0, 0, 0.02) !important;
   }
 }
+
+/* Auth Page Inputs Override on Mobile and Desktop to ensure they match */
+.auth-page-container input {
+  background-color: rgba(2, 6, 23, 0.55) !important;
+  color: #ffffff !important;
+  border: 1px solid #1e293b !important;
+  border-radius: 12px !important;
+}
+.auth-page-container input:focus {
+  border-color: #6366f1 !important;
+  box-shadow: 0 0 0 2px rgba(99, 102, 241, 0.2) !important;
+}
+.auth-page-container input::placeholder {
+  color: #475569 !important;
+}
+.auth-page-container input:-webkit-autofill,
+.auth-page-container input:-webkit-autofill:hover, 
+.auth-page-container input:-webkit-autofill:focus, 
+.auth-page-container input:-webkit-autofill:active {
+  -webkit-background-clip: text !important;
+  -webkit-text-fill-color: #ffffff !important;
+  transition: background-color 5000s ease-in-out 0s !important;
+  box-shadow: inset 0 0 20px 20px rgba(2, 6, 23, 0.95) !important;
+}

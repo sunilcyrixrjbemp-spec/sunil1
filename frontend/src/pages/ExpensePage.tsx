@@ -2362,11 +2362,11 @@ export default function ExpensePage() {
       {/* 4 Info-Box Widgets (Unified Mobile/Desktop) */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
         {/* Profile Card */}
-        <div className="group bg-white border border-slate-100 rounded-3xl p-4 flex items-center gap-4 hover:shadow-md transition-all duration-300 animate-fadeIn">
-          <div className="w-12 h-12 rounded-2xl flex items-center justify-center bg-indigo-50 text-indigo-650 shrink-0">
-            <User className="w-5 h-5" />
+        <div className="info-box-lte animate-fadeIn">
+          <div className="info-box-icon bg-indigo-50 text-indigo-655 shrink-0">
+            <User className="w-5 h-5 text-indigo-600" />
           </div>
-          <div className="min-w-0 flex-1">
+          <div className="info-box-content min-w-0">
             <span className="text-[9px] font-black uppercase tracking-wider text-slate-400 block mb-0.5">
               Employee Profile
             </span>
@@ -2380,11 +2380,11 @@ export default function ExpensePage() {
         </div>
 
         {/* Assigned Home District Card */}
-        <div className="group bg-white border border-slate-100 rounded-3xl p-4 flex items-center gap-4 hover:shadow-md transition-all duration-300 animate-fadeIn">
-          <div className="w-12 h-12 rounded-2xl flex items-center justify-center bg-emerald-50 text-emerald-600 shrink-0">
+        <div className="info-box-lte animate-fadeIn">
+          <div className="info-box-icon bg-emerald-50 text-emerald-600 shrink-0">
             <MapPin className="w-5 h-5" />
           </div>
-          <div className="min-w-0 flex-1">
+          <div className="info-box-content min-w-0">
             <span className="text-[9px] font-black uppercase tracking-wider text-slate-400 block mb-0.5">
               Assigned District
             </span>
@@ -2398,8 +2398,8 @@ export default function ExpensePage() {
         </div>
 
         {/* Monthly Distance Limit Card */}
-        <div className="group bg-white border border-slate-100 rounded-3xl p-4 flex items-center gap-4 hover:shadow-md transition-all duration-300 animate-fadeIn">
-          <div className="w-12 h-12 rounded-2xl flex items-center justify-center bg-blue-50 text-blue-600 shrink-0">
+        <div className="info-box-lte animate-fadeIn">
+          <div className="info-box-icon bg-blue-50 text-blue-600 shrink-0">
             {allowance.vehicle_type === "Car" ? (
               <Car className="w-5 h-5" />
             ) : allowance.vehicle_type === "Bike" ? (
@@ -2408,7 +2408,7 @@ export default function ExpensePage() {
               <Navigation className="w-5 h-5" />
             )}
           </div>
-          <div className="min-w-0 flex-1">
+          <div className="info-box-content min-w-0">
             <span className="text-[9px] font-black uppercase tracking-wider text-slate-400 block mb-0.5">
               {limitPillLabel}
             </span>
@@ -2439,11 +2439,11 @@ export default function ExpensePage() {
         </div>
 
         {/* Monthly Auto Cap Card */}
-        <div className="group bg-white border border-slate-100 rounded-3xl p-4 flex items-center gap-4 hover:shadow-md transition-all duration-300 animate-fadeIn">
-          <div className="w-12 h-12 rounded-2xl flex items-center justify-center bg-amber-50 text-amber-600 shrink-0">
+        <div className="info-box-lte animate-fadeIn">
+          <div className="info-box-icon bg-amber-50 text-amber-600 shrink-0">
             <Navigation className="w-5 h-5" />
           </div>
-          <div className="min-w-0 flex-1">
+          <div className="info-box-content min-w-0">
             <span className="text-[9px] font-black uppercase tracking-wider text-slate-400 block mb-0.5">
               Monthly Auto Cap
             </span>

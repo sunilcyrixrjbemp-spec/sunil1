@@ -415,11 +415,11 @@ export default function DashboardLayout() {
                 title={isSidebarCollapsed ? item.name : undefined}
                 className={`flex items-center gap-3 px-3 py-2.5 text-xs font-semibold uppercase tracking-wider transition-all duration-150 border-l-4 group ${
                   isActive
-                    ? "bg-[#a5d8e8] text-slate-900 font-bold border-l-[#ffc107] shadow-sm"
-                    : "border-l-transparent text-[#c2c7d0] hover:bg-emerald-950/30 hover:text-emerald-300"
+                    ? "bg-indigo-600 text-white font-bold border-l-indigo-400 shadow-sm"
+                    : "border-l-transparent text-[#c2c7d0] hover:bg-indigo-950/40 hover:text-indigo-300"
                 }`}
               >
-                <div className={`${isActive ? "text-slate-900" : "text-[#c2c7d0] group-hover:text-emerald-300"} shrink-0`}>
+                <div className={`${isActive ? "text-white" : "text-[#c2c7d0] group-hover:text-indigo-300"} shrink-0`}>
                   <Icon className="w-4 h-4" />
                 </div>
                 {!isSidebarCollapsed && <span>{item.name}</span>}
@@ -648,13 +648,13 @@ export default function DashboardLayout() {
           to="/home"
           onMouseEnter={() => preloadRoute("/home")}
           className={`flex flex-col items-center justify-center w-16 h-12 rounded-xl transition-all relative ${
-            currentActiveItem?.id === "home" ? "text-slate-900 font-extrabold" : "text-gray-400 hover:text-gray-700"
+            currentActiveItem?.id === "home" ? "bg-indigo-50/50 text-indigo-600 font-extrabold" : "text-gray-400 hover:text-gray-700"
           }`}
         >
-          <Home className={`w-5 h-5 transition-all ${currentActiveItem?.id === "home" ? "text-slate-800 scale-110" : ""}`} />
-          <span className={`text-[8px] font-bold uppercase tracking-wider mt-0.5 ${currentActiveItem?.id === "home" ? "text-slate-800" : ""}`}>Home</span>
+          <Home className={`w-5 h-5 transition-all ${currentActiveItem?.id === "home" ? "text-indigo-600 scale-110" : ""}`} />
+          <span className={`text-[8px] font-bold uppercase tracking-wider mt-0.5 ${currentActiveItem?.id === "home" ? "text-indigo-600" : ""}`}>Home</span>
           {currentActiveItem?.id === "home" && (
-            <span className="absolute bottom-0 left-1/2 -translate-x-1/2 h-[3px] w-8 rounded-full bg-[#a5d8e8]"></span>
+            <span className="absolute bottom-0 left-1/2 -translate-x-1/2 h-[3px] w-8 rounded-full bg-indigo-600"></span>
           )}
         </Link>
 
@@ -664,13 +664,13 @@ export default function DashboardLayout() {
             to="/submit-expense"
             onMouseEnter={() => preloadRoute("/submit-expense")}
             className={`flex flex-col items-center justify-center w-16 h-12 rounded-xl transition-all relative ${
-              currentActiveItem?.id === "expense" ? "text-slate-900 font-extrabold" : "text-gray-400 hover:text-gray-700"
+              currentActiveItem?.id === "expense" ? "bg-indigo-50/50 text-indigo-600 font-extrabold" : "text-gray-400 hover:text-gray-700"
             }`}
           >
-            <Plus className={`w-5 h-5 transition-all ${currentActiveItem?.id === "expense" ? "text-slate-800 scale-110" : ""}`} />
-            <span className={`text-[8px] font-bold uppercase tracking-wider mt-0.5 ${currentActiveItem?.id === "expense" ? "text-slate-800" : ""}`}>Claim</span>
+            <Plus className={`w-5 h-5 transition-all ${currentActiveItem?.id === "expense" ? "text-indigo-600 scale-110" : ""}`} />
+            <span className={`text-[8px] font-bold uppercase tracking-wider mt-0.5 ${currentActiveItem?.id === "expense" ? "text-indigo-600" : ""}`}>Claim</span>
             {currentActiveItem?.id === "expense" && (
-              <span className="absolute bottom-0 left-1/2 -translate-x-1/2 h-[3px] w-8 rounded-full bg-[#a5d8e8]"></span>
+              <span className="absolute bottom-0 left-1/2 -translate-x-1/2 h-[3px] w-8 rounded-full bg-indigo-600"></span>
             )}
           </Link>
         )}
@@ -681,13 +681,13 @@ export default function DashboardLayout() {
             to="/approval-center"
             onMouseEnter={() => preloadRoute("/approval-center")}
             className={`flex flex-col items-center justify-center w-16 h-12 rounded-xl transition-all relative ${
-              currentActiveItem?.id === "approval" ? "text-slate-900 font-extrabold" : "text-gray-400 hover:text-gray-700"
+              currentActiveItem?.id === "approval" ? "bg-indigo-50/50 text-indigo-600 font-extrabold" : "text-gray-400 hover:text-gray-700"
             }`}
           >
-            <CheckSquare className={`w-5 h-5 transition-all ${currentActiveItem?.id === "approval" ? "text-slate-800 scale-110" : ""}`} />
-            <span className={`text-[8px] font-bold uppercase tracking-wider mt-0.5 ${currentActiveItem?.id === "approval" ? "text-slate-800" : ""}`}>Approval</span>
+            <CheckSquare className={`w-5 h-5 transition-all ${currentActiveItem?.id === "approval" ? "text-indigo-600 scale-110" : ""}`} />
+            <span className={`text-[8px] font-bold uppercase tracking-wider mt-0.5 ${currentActiveItem?.id === "approval" ? "text-indigo-600" : ""}`}>Approval</span>
             {currentActiveItem?.id === "approval" && (
-              <span className="absolute bottom-0 left-1/2 -translate-x-1/2 h-[3px] w-8 rounded-full bg-[#a5d8e8]"></span>
+              <span className="absolute bottom-0 left-1/2 -translate-x-1/2 h-[3px] w-8 rounded-full bg-indigo-600"></span>
             )}
           </Link>
         )}
@@ -697,13 +697,13 @@ export default function DashboardLayout() {
           to="/profile"
           onMouseEnter={() => preloadRoute("/profile")}
           className={`flex flex-col items-center justify-center w-16 h-12 rounded-xl transition-all relative ${
-            currentActiveItem?.id === "profile" ? "text-slate-900 font-extrabold" : "text-gray-400 hover:text-gray-700"
+            currentActiveItem?.id === "profile" ? "bg-indigo-50/50 text-indigo-600 font-extrabold" : "text-gray-400 hover:text-gray-700"
           }`}
         >
-          <User className={`w-5 h-5 transition-all ${currentActiveItem?.id === "profile" ? "text-slate-800 scale-110" : ""}`} />
-          <span className={`text-[8px] font-bold uppercase tracking-wider mt-0.5 ${currentActiveItem?.id === "profile" ? "text-slate-800" : ""}`}>Profile</span>
+          <User className={`w-5 h-5 transition-all ${currentActiveItem?.id === "profile" ? "text-indigo-600 scale-110" : ""}`} />
+          <span className={`text-[8px] font-bold uppercase tracking-wider mt-0.5 ${currentActiveItem?.id === "profile" ? "text-indigo-600" : ""}`}>Profile</span>
           {currentActiveItem?.id === "profile" && (
-            <span className="absolute bottom-0 left-1/2 -translate-x-1/2 h-[3px] w-8 rounded-full bg-[#a5d8e8]"></span>
+            <span className="absolute bottom-0 left-1/2 -translate-x-1/2 h-[3px] w-8 rounded-full bg-indigo-600"></span>
           )}
         </Link>
 
@@ -711,13 +711,13 @@ export default function DashboardLayout() {
         <button
           onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
           className={`flex flex-col items-center justify-center w-16 h-12 rounded-xl transition-all border-0 bg-transparent cursor-pointer relative ${
-            isMobileMenuOpen ? "text-slate-900 font-extrabold" : "text-gray-400 hover:text-gray-700"
+            isMobileMenuOpen ? "bg-indigo-50/50 text-indigo-600 font-extrabold" : "text-gray-400 hover:text-gray-700"
           }`}
         >
           <MenuGridIcon />
-          <span className={`text-[8px] font-bold uppercase tracking-wider mt-0.5 ${isMobileMenuOpen ? "text-slate-800" : ""}`}>More</span>
+          <span className={`text-[8px] font-bold uppercase tracking-wider mt-0.5 ${isMobileMenuOpen ? "text-indigo-600" : ""}`}>More</span>
           {isMobileMenuOpen && (
-            <span className="absolute bottom-0 left-1/2 -translate-x-1/2 h-[3px] w-8 rounded-full bg-[#a5d8e8]"></span>
+            <span className="absolute bottom-0 left-1/2 -translate-x-1/2 h-[3px] w-8 rounded-full bg-indigo-600"></span>
           )}
         </button>
       </nav>

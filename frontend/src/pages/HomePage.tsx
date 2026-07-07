@@ -631,60 +631,60 @@ export default function HomePage() {
           {/* Card 1: Total Claimed */}
           <div 
             onClick={() => handleOpenStatsModal("Total Claimed", statsTotalClaims)}
-            className="group bg-white border border-slate-100 rounded-xl sm:rounded-3xl p-2.5 sm:p-4 flex items-center gap-2.5 sm:gap-4 cursor-pointer hover:shadow-md hover:-translate-y-1 transition-all duration-300 animate-fadeIn"
+            className="info-box-lte cursor-pointer animate-fadeIn"
           >
-            <div className="w-9 h-9 sm:w-12 sm:h-12 rounded-xl sm:rounded-2xl flex items-center justify-center bg-blue-50 text-blue-600 group-hover:bg-blue-600 group-hover:text-white transition-colors duration-300 shrink-0">
-              <FileSpreadsheet className="w-4 h-4 sm:w-5 sm:h-5" />
+            <div className="info-box-icon bg-blue-50 text-blue-600 shrink-0">
+              <FileSpreadsheet className="w-5 h-5" />
             </div>
-            <div className="min-w-0">
+            <div className="info-box-content min-w-0">
               <span className="text-[9px] sm:text-[10px] font-black uppercase tracking-wider text-slate-400 block leading-none">Total Claimed</span>
               <span className="text-xs sm:text-lg font-black text-slate-800 font-mono block mt-0.5 sm:mt-1">₹{(totalAmount || 0).toLocaleString()}</span>
-              <span className="text-[8px] sm:text-[10px] text-blue-600 font-extrabold block mt-0.5">{statsTotalClaims.length} Claims</span>
+              <span className="text-[8px] sm:text-[9px] text-blue-600 font-black block mt-0.5">{statsTotalClaims.length} Claims</span>
             </div>
           </div>
 
           {/* Card 2: Approved */}
           <div 
             onClick={() => handleOpenStatsModal("Approved", statsApprovedClaims)}
-            className="group bg-white border border-slate-100 rounded-xl sm:rounded-3xl p-2.5 sm:p-4 flex items-center gap-2.5 sm:gap-4 cursor-pointer hover:shadow-md hover:-translate-y-1 transition-all duration-300 animate-fadeIn"
+            className="info-box-lte cursor-pointer animate-fadeIn"
           >
-            <div className="w-9 h-9 sm:w-12 sm:h-12 rounded-xl sm:rounded-2xl flex items-center justify-center bg-emerald-50 text-emerald-600 group-hover:bg-emerald-600 group-hover:text-white transition-colors duration-300 shrink-0">
-              <CheckCircle2 className="w-4 h-4 sm:w-5 sm:h-5" />
+            <div className="info-box-icon bg-emerald-50 text-emerald-600 shrink-0">
+              <CheckCircle2 className="w-5 h-5" />
             </div>
-            <div className="min-w-0">
+            <div className="info-box-content min-w-0">
               <span className="text-[9px] sm:text-[10px] font-black uppercase tracking-wider text-slate-400 block leading-none">Approved</span>
               <span className="text-xs sm:text-lg font-black text-slate-800 font-mono block mt-0.5 sm:mt-1">₹{(approvedAmount || 0).toLocaleString()}</span>
-              <span className="text-[8px] sm:text-[10px] text-emerald-600 font-extrabold block mt-0.5">{statsApprovedClaims.length} Approved</span>
+              <span className="text-[8px] sm:text-[9px] text-emerald-600 font-black block mt-0.5">{statsApprovedClaims.length} Approved</span>
             </div>
           </div>
 
           {/* Card 3: Pending */}
           <div 
             onClick={() => handleOpenStatsModal("Pending", statsPendingClaims)}
-            className="group bg-white border border-slate-100 rounded-xl sm:rounded-3xl p-2.5 sm:p-4 flex items-center gap-2.5 sm:gap-4 cursor-pointer hover:shadow-md hover:-translate-y-1 transition-all duration-300 animate-fadeIn"
+            className="info-box-lte cursor-pointer animate-fadeIn"
           >
-            <div className="w-9 h-9 sm:w-12 sm:h-12 rounded-xl sm:rounded-2xl flex items-center justify-center bg-amber-50 text-amber-600 group-hover:bg-amber-600 group-hover:text-white transition-colors duration-300 shrink-0">
-              <Clock className="w-4 h-4 sm:w-5 sm:h-5" />
+            <div className="info-box-icon bg-amber-50 text-amber-600 shrink-0">
+              <Clock className="w-5 h-5" />
             </div>
-            <div className="min-w-0">
+            <div className="info-box-content min-w-0">
               <span className="text-[9px] sm:text-[10px] font-black uppercase tracking-wider text-slate-400 block leading-none">Pending Review</span>
               <span className="text-xs sm:text-lg font-black text-slate-800 font-mono block mt-0.5 sm:mt-1">₹{(pendingAmount || 0).toLocaleString()}</span>
-              <span className="text-[8px] sm:text-[10px] text-amber-600 font-extrabold block mt-0.5">{statsPendingClaims.length} Pending</span>
+              <span className="text-[8px] sm:text-[9px] text-amber-600 font-black block mt-0.5">{statsPendingClaims.length} Pending</span>
             </div>
           </div>
 
           {/* Card 4: Rejected */}
           <div 
             onClick={() => handleOpenStatsModal("Rejected", statsRejectedClaims)}
-            className="group bg-white border border-slate-100 rounded-xl sm:rounded-3xl p-2.5 sm:p-4 flex items-center gap-2.5 sm:gap-4 cursor-pointer hover:shadow-md hover:-translate-y-1 transition-all duration-300 animate-fadeIn"
+            className="info-box-lte cursor-pointer animate-fadeIn"
           >
-            <div className="w-9 h-9 sm:w-12 sm:h-12 rounded-xl sm:rounded-2xl flex items-center justify-center bg-rose-50 text-rose-600 group-hover:bg-rose-600 group-hover:text-white transition-colors duration-300 shrink-0">
-              <XCircle className="w-4 h-4 sm:w-5 sm:h-5" />
+            <div className="info-box-icon bg-rose-50 text-rose-600 shrink-0">
+              <XCircle className="w-5 h-5" />
             </div>
-            <div className="min-w-0">
+            <div className="info-box-content min-w-0">
               <span className="text-[9px] sm:text-[10px] font-black uppercase tracking-wider text-slate-400 block leading-none">Rejected</span>
               <span className="text-xs sm:text-lg font-black text-slate-800 font-mono block mt-0.5 sm:mt-1">₹{(rejectedAmount || 0).toLocaleString()}</span>
-              <span className="text-[8px] sm:text-[10px] text-rose-600 font-extrabold block mt-0.5">{statsRejectedClaims.length} Rejected</span>
+              <span className="text-[8px] sm:text-[9px] text-rose-600 font-black block mt-0.5">{statsRejectedClaims.length} Rejected</span>
             </div>
           </div>
         </div>
