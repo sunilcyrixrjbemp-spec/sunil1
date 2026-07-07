@@ -1494,10 +1494,11 @@ export default function ExpensePage() {
     
     // Validate final size (maximum 2MB)
     if (processedFile.size > 2 * 1024 * 1024) {
+      const isPDF = processedFile.type === "application/pdf" || processedFile.name.toLowerCase().endsWith(".pdf");
       if (isPDF) {
         toast.error("PDF file size cannot exceed 2MB!");
       } else {
-        toast.error("Compressed image size still exceeds the 2MB limit. Please upload a smaller photo.");
+        toast.error("File size exceeds the 2MB limit. Please upload a smaller file.");
       }
       return;
     }
