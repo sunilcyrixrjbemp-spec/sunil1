@@ -1,4 +1,4 @@
-import { runWrite, runBatchWrite } from "../utils/db.js";
+import { runWrite, runBatchWrite, runRead } from "../utils/db.js";
 import { getLegacyExpenseHashId } from "./approval.js";
 import { uploadFileWithFallback } from "./upload.js";
 
@@ -567,11 +567,13 @@ export async function handleVerifyBarcode(request, env, params, query, user) {
 
   const last8 = barcode.length >= 8 ? barcode.slice(-8) : barcode;
 
-  const asset = await env.DB.prepare(`
+  const queryResult = await runRead(env, `
     SELECT * FROM assets_inventory 
     WHERE qr_code = ? OR serial_no = ? OR SUBSTR(qr_code, -8) = ? 
     LIMIT 1
-  `).bind(barcode, barcode, last8).first();
+  `, [barcode, barcode, last8], request);
+
+  const asset = queryResult && queryResult.results && queryResult.results[0] ? queryResult.results[0] : null;
 
   if (!asset) {
     return jsonResponse({ success: false, valid: false, message: "Asset QR/Serial number not found in master database." });
@@ -1429,7 +1431,8 @@ export async function handleSubmitExpense(request, env, params, query, user) {
     dupQuery += " AND id != ?";
     dupParams.push(editExpenseId);
   }
-  const existingDup = await env.DB.prepare(dupQuery).bind(...dupParams).first();
+  const dupResult = await runRead(env, dupQuery, dupParams, request);
+  const existingDup = dupResult && dupResult.results && dupResult.results[0] ? dupResult.results[0] : null;
   if (existingDup) {
     return jsonResponse({ error: `An expense claim for ${date} has already been submitted.` }, 400);
   }
