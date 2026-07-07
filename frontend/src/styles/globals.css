@@ -1249,19 +1249,19 @@ svg, path, g, sector, .recharts-pie-sector, .recharts-sector, .recharts-pie, .re
 /* ================= HOME DASHBOARD TABS EXPLICIT STYLING ================= */
 .dashboard-tabs-header {
   background-color: #f1f5f9 !important; /* light grey container */
-  padding: 4px !important;
-  border-radius: 12px !important; /* Rounded square (not capsule pill) */
+  padding: 2px !important;
+  border-radius: 8px !important; /* Rounded square */
   border: none !important;
   display: inline-flex !important; /* inline-flex so it wraps nicely as a capsule switch */
-  gap: 4px !important;
+  gap: 2px !important;
 }
 
 .dashboard-tab-btn {
   flex: unset !important;
-  border-radius: 8px !important; /* Rounded square tab button */
-  font-size: 11px !important;
-  font-weight: 750 !important;
-  padding: 8px 18px !important;
+  border-radius: 6px !important; /* Rounded square tab button */
+  font-size: 9px !important;
+  font-weight: 800 !important;
+  padding: 4px 10px !important;
   border: none !important;
   background-color: transparent !important;
   color: #475569 !important; /* inactive tab text color */
@@ -1273,19 +1273,44 @@ svg, path, g, sector, .recharts-pie-sector, .recharts-sector, .recharts-pie, .re
   letter-spacing: 0.02em !important;
   display: flex !important;
   align-items: center !important;
-  gap: 6px !important;
+  gap: 4px !important;
 }
 
 .dashboard-tab-btn.active {
   background-color: #a5f3fc !important; /* light sky blue / cyan switch active */
   color: #0f172a !important; /* dark text */
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.06) !important;
-  font-weight: 800 !important;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.06) !important;
+  font-weight: 900 !important;
 }
 
 .dashboard-tab-btn:not(.active):hover {
   background-color: rgba(0, 0, 0, 0.04) !important;
   color: #0f172a !important;
+}
+
+/* Compact dashboard filters box overrides */
+.dashboard-filters-box {
+  padding: 8px !important;
+}
+.dashboard-filters-box input[type="month"],
+.dashboard-filters-box select {
+  min-height: 24px !important;
+  height: 24px !important;
+  padding: 2px 8px !important;
+  font-size: 9.5px !important;
+  font-weight: 750 !important;
+  border-radius: 6px !important;
+  border: 1px solid #cbd5e1 !important;
+}
+.dashboard-filters-box button {
+  height: 18px !important;
+  min-height: 18px !important;
+  font-size: 8px !important;
+  padding: 0 8px !important;
+  border-radius: 4px !important;
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
 }
 
 /* ================= PREMIUM TABLE HEADERS CONTRACT CONTRAST OVERRIDE ================= */

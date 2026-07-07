@@ -690,7 +690,7 @@ export default function HomePage() {
           {/* TAB SYSTEM: My Claims vs Team Claims */}
           <div className="bg-white border border-slate-100 rounded-xl sm:rounded-3xl shadow-sm overflow-hidden flex flex-col">
             {/* Tab Header bar */}
-            <div className="px-4 pt-4 pb-2 border-b-0 flex">
+            <div className="px-3 pt-3 pb-1 border-b-0 flex">
               <div className="dashboard-tabs-header">
                 <button
                   type="button"
@@ -699,7 +699,7 @@ export default function HomePage() {
                     activeTab === "my-claims" ? "active" : ""
                   }`}
                 >
-                  <Layers className="w-3.5 h-3.5" />
+                  <Layers className="w-3 h-3" />
                   My Claims ({filteredPersonalExpenses.length})
                 </button>
 
@@ -711,34 +711,34 @@ export default function HomePage() {
                       activeTab === "team-claims" ? "active" : ""
                     }`}
                   >
-                    <Users className="w-3.5 h-3.5" />
+                    <Users className="w-3 h-3" />
                     Team Claims ({filteredTeamExpenses.length})
                   </button>
                 )}
               </div>
             </div>
             {/* Contextual Filters Row — matches ExpensePage compact filter style */}
-            <div className="border-b border-slate-100 px-3 sm:px-4 py-2 sm:py-2.5">
+            <div className="border-b border-slate-100 px-3 sm:px-4 py-1.5 sm:py-2">
               {activeTab === "my-claims" ? (
                 /* My Self Tab Filters */
-                <div className="bg-slate-50/50 border border-slate-100 rounded-lg p-2 sm:p-3 flex flex-col gap-2 text-[10px] font-bold text-slate-700">
+                <div className="dashboard-filters-box bg-slate-50/50 border border-slate-100 rounded-lg p-2 flex flex-col gap-1.5 text-[10px] font-bold text-slate-700">
                   {/* Row 1: Month dropdown */}
-                  <div className="flex flex-col gap-1 max-w-[130px]">
-                    <span className="text-[8px] font-black uppercase text-slate-400">Month</span>
+                  <div className="flex flex-col gap-0.5 max-w-[130px]">
+                    <span className="text-[7.5px] font-black uppercase text-slate-400">Month</span>
                     <input 
                       type="month"
                       value={selectMonth}
                       onChange={(e) => setSelectMonth(e.target.value)}
-                      className="bg-white border border-slate-200 rounded-md px-2 py-1 text-[10px] font-black text-slate-800 cursor-pointer focus:outline-none focus:border-indigo-500 w-full"
+                      className="bg-white border border-slate-200 rounded-md px-2 py-0.5 text-[9.5px] font-black text-slate-800 cursor-pointer focus:outline-none focus:border-indigo-500 w-full"
                     />
                   </div>
                   {/* Row 2: Status buttons */}
-                  <div className="flex items-center gap-1.5 overflow-x-auto no-scrollbar py-0.5 border-t border-slate-100 pt-2">
+                  <div className="flex items-center gap-1 overflow-x-auto no-scrollbar py-0.5 border-t border-slate-100 pt-1.5">
                     {(["all", "pending", "approved", "rejected"] as const).map((status) => (
                       <button
                         key={status}
                         onClick={() => setHomeStatusFilter(status)}
-                        className={`px-2 py-0.5 rounded text-[8px] font-black uppercase tracking-wider transition-all cursor-pointer border whitespace-nowrap ${
+                        className={`px-1.5 py-0.5 rounded text-[7.5px] font-black uppercase tracking-wider transition-all cursor-pointer border whitespace-nowrap ${
                           homeStatusFilter === status
                             ? "bg-indigo-600 text-white border-indigo-600 font-extrabold shadow-sm"
                             : "bg-white text-slate-500 border-slate-200 hover:bg-slate-50 hover:text-slate-800"
@@ -751,25 +751,25 @@ export default function HomePage() {
                 </div>
               ) : (
                 /* Team / Engineer Claims Tab Filters */
-                <div className="bg-slate-50/50 border border-slate-100 rounded-lg p-2 sm:p-3 flex flex-col gap-2 text-[10px] font-bold text-slate-700">
+                <div className="dashboard-filters-box bg-slate-50/50 border border-slate-100 rounded-lg p-2 flex flex-col gap-1.5 text-[10px] font-bold text-slate-700">
                   {/* Row 1: Month and Engineer dropdowns with labels on top */}
-                  <div className="grid grid-cols-2 gap-2.5 w-full">
-                    <div className="flex flex-col gap-1">
-                      <span className="text-[8px] font-black uppercase text-slate-400">Month</span>
+                  <div className="grid grid-cols-2 gap-2 w-full">
+                    <div className="flex flex-col gap-0.5">
+                      <span className="text-[7.5px] font-black uppercase text-slate-400">Month</span>
                       <input 
                         type="month"
                         value={selectMonth}
                         onChange={(e) => setSelectMonth(e.target.value)}
-                        className="bg-white border border-slate-200 rounded-md px-2 py-1 text-[10px] font-black text-slate-800 cursor-pointer focus:outline-none focus:border-indigo-500 w-full"
+                        className="bg-white border border-slate-200 rounded-md px-2 py-0.5 text-[9.5px] font-black text-slate-800 cursor-pointer focus:outline-none focus:border-indigo-500 w-full"
                       />
                     </div>
 
-                    <div className="flex flex-col gap-1">
-                      <span className="text-[8px] font-black uppercase text-slate-400">Engineer</span>
+                    <div className="flex flex-col gap-0.5">
+                      <span className="text-[7.5px] font-black uppercase text-slate-400">Engineer</span>
                       <select 
                         value={filterEmployee} 
                         onChange={(e) => setFilterEmployee(e.target.value)}
-                        className="bg-white border border-slate-200 rounded-md px-2 py-1 text-[10px] font-black text-slate-800 cursor-pointer focus:outline-none focus:border-indigo-500 w-full"
+                        className="bg-white border border-slate-200 rounded-md px-2 py-0.5 text-[9.5px] font-black text-slate-800 cursor-pointer focus:outline-none focus:border-indigo-500 w-full"
                       >
                         <option value="all">All Members</option>
                         {uniqueEmployees.map(emp => (
@@ -780,12 +780,12 @@ export default function HomePage() {
                   </div>
 
                   {/* Row 2: Status buttons */}
-                  <div className="flex items-center gap-1.5 overflow-x-auto no-scrollbar py-0.5 border-t border-slate-100 pt-2">
+                  <div className="flex items-center gap-1 overflow-x-auto no-scrollbar py-0.5 border-t border-slate-100 pt-1.5">
                     {(["all", "pending", "approved", "rejected"] as const).map((status) => (
                       <button
                         key={status}
                         onClick={() => setHomeStatusFilter(status)}
-                        className={`px-2 py-0.5 rounded text-[8px] font-black uppercase tracking-wider transition-all cursor-pointer border whitespace-nowrap ${
+                        className={`px-1.5 py-0.5 rounded text-[7.5px] font-black uppercase tracking-wider transition-all cursor-pointer border whitespace-nowrap ${
                           homeStatusFilter === status
                             ? "bg-indigo-600 text-white border-indigo-600 font-extrabold shadow-sm"
                             : "bg-white text-slate-500 border-slate-200 hover:bg-slate-50 hover:text-slate-800"
