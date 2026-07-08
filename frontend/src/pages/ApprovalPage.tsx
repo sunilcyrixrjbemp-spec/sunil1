@@ -2088,20 +2088,45 @@ export default function ApprovalPage() {
                           else if (url.includes("_Other_Expense_")) cleanType = "Local Purchase Invoice";
 
                           const fullUrl = url.startsWith("http") ? url : `${API_BASE}${url}`;
-                          return (
-                            <button
-                              key={attIdx}
-                              type="button"
-                              onClick={() => setLightboxImage(fullUrl)}
-                              className="inline-flex items-center gap-2 p-2 bg-gray-50 border border-gray-205 rounded text-xs font-bold text-blue-600 hover:bg-blue-50 transition-colors shadow-sm cursor-pointer border-0"
-                            >
-                              <div className="h-6 w-6 bg-red-100 text-red-600 rounded flex items-center justify-center text-[10px] font-extrabold shrink-0">IMG</div>
-                              <div className="text-left leading-tight pr-1">
-                                <p className="text-gray-800 text-[10px] font-bold">{cleanType}</p>
-                                <span className="text-[8px] text-gray-400 font-mono truncate block max-w-[130px]">{filename}</span>
+                          const isRemoved = removedAttachments.includes(url);
+                          if (isRemoved) {
+                            return (
+                              <div key={attIdx} className="inline-flex items-center gap-1.5 p-2 bg-red-50 border border-red-200 rounded text-xs font-bold shadow-sm">
+                                <span className="text-[9px] text-red-600 font-extrabold uppercase">Removed</span>
+                                <button
+                                  type="button"
+                                  onClick={() => setRemovedAttachments(prev => prev.filter(item => item !== url))}
+                                  className="text-[9px] text-green-700 hover:underline font-extrabold bg-transparent border-0 cursor-pointer p-0"
+                                >
+                                  Undo
+                                </button>
                               </div>
-                              <ExternalLink className="w-3.5 h-3.5 text-gray-400 shrink-0" />
-                            </button>
+                            );
+                          }
+
+                          return (
+                            <div key={attIdx} className="relative">
+                              <button
+                                type="button"
+                                onClick={() => setLightboxImage(fullUrl)}
+                                className="inline-flex items-center gap-2 p-2 bg-gray-50 border border-gray-205 rounded text-xs font-bold text-blue-600 hover:bg-blue-50 transition-colors shadow-sm cursor-pointer border-0"
+                              >
+                                <div className="h-6 w-6 bg-red-100 text-red-600 rounded flex items-center justify-center text-[10px] font-extrabold shrink-0">IMG</div>
+                                <div className="text-left leading-tight pr-1">
+                                  <p className="text-gray-800 text-[10px] font-bold">{cleanType}</p>
+                                  <span className="text-[8px] text-gray-400 font-mono truncate block max-w-[130px]">{filename}</span>
+                                </div>
+                                <ExternalLink className="w-3.5 h-3.5 text-gray-400 shrink-0" />
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => setRemovedAttachments(prev => [...prev, url])}
+                                className="absolute -top-1.5 -right-1.5 h-4 w-4 bg-red-650 hover:bg-red-800 text-white rounded-full flex items-center justify-center text-[8px] font-bold shadow cursor-pointer border border-white"
+                                title="Remove this attachment"
+                              >
+                                ✕
+                              </button>
+                            </div>
                           );
                         })}
                       </div>
