@@ -41,6 +41,37 @@ const getErrorMessage = (err: any, fallback: string): string => {
   return typeof detail === "object" ? JSON.stringify(detail) : String(detail);
 };
 
+const normalizeDateToYYYYMMDD = (dateStr: any): string => {
+  if (!dateStr) return "";
+  const s = String(dateStr).trim();
+  if (!s) return "";
+
+  // If already YYYY-MM-DD
+  if (/^\d{4}-\d{2}-\d{2}/.test(s)) {
+    return s.slice(0, 10);
+  }
+
+  // Handle DD/MM/YYYY or DD-MM-YYYY
+  const match = s.match(/^(\d{1,2})[\/\-](\d{1,2})[\/\-](\d{4})/);
+  if (match) {
+    const day = match[1].padStart(2, "0");
+    const month = match[2].padStart(2, "0");
+    const year = match[3];
+    return `${year}-${month}-${day}`;
+  }
+
+  // Handle YYYY/MM/DD
+  const matchY = s.match(/^(\d{4})[\/\-](\d{1,2})[\/\-](\d{1,2})/);
+  if (matchY) {
+    const year = matchY[1];
+    const month = matchY[2].padStart(2, "0");
+    const day = matchY[3].padStart(2, "0");
+    return `${year}-${month}-${day}`;
+  }
+
+  return s;
+};
+
 const GALLERY_COLORS = ["#2f5bb7", "#2b7d50", "#d28b2a", "#854aa5", "#d83b01", "#00a2ad", "#e81123"];
 
 const ALL_WINDOWS = [
@@ -398,8 +429,8 @@ export default function AdminPage() {
     setEditMailId(u.mail_id || "");
     setEditUserStatus(u.user_status || "active");
     setEditUserType(u.type || "Employee");
-    setEditDateOfJoining(u.date_of_joining || "");
-    setEditDateOfBirth(u.date_of_birth || "");
+    setEditDateOfJoining(normalizeDateToYYYYMMDD(u.date_of_joining));
+    setEditDateOfBirth(normalizeDateToYYYYMMDD(u.date_of_birth));
     setEditEUpkaranId(u.e_upkaran_id || "");
     setEditAllowedWindows(
       u.allowed_windows ? u.allowed_windows.split(",") : []
