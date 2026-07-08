@@ -1020,6 +1020,11 @@ export default function ExpensePage() {
     const leg = itineraries.find(l => l.leg === legNum);
     if (!leg) return;
     
+    if (!leg.to || !leg.to.trim()) {
+      toast.error("Please select or enter the Destination Location (To) facility first.");
+      return;
+    }
+    
     const rawBarcode = activityType === "Calls" ? leg.calls_barcode : leg.pms_barcode;
     if (!rawBarcode) {
       toast.error("Barcode must be exactly 8 digits.");
@@ -1056,15 +1061,14 @@ export default function ExpensePage() {
     }
 
     try {
-      const res = await expenseService.verifyBarcode(barcode);
+      const res = await expenseService.verifyBarcode(barcode, leg.to);
       if (res.success && res.data) {
         const hospitalName = res.data.hospital_name;
-        // Check matching with From/To
-        const fromMatch = (leg.from || "").toLowerCase().trim() === hospitalName.toLowerCase().trim();
+        // Check matching with To facility
         const toMatch = (leg.to || "").toLowerCase().trim() === hospitalName.toLowerCase().trim();
         
-        if (!fromMatch && !toMatch) {
-          toast.error(`Verification Failed: This barcode belongs to "${hospitalName}", which does not match either the Starting Location (From) or Destination Location (To) facility of this leg!`);
+        if (!toMatch) {
+          toast.error("This barcode was not fetched for this hospital.");
           return;
         }
 

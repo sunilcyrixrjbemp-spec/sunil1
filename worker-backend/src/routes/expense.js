@@ -639,46 +639,95 @@ export async function handleGetTeamExpenses(request, env, params, query, user) {
   return jsonResponse(result);
 }
 
-/**
- * GET /api/expense/verify-barcode
- */
 export async function handleVerifyBarcode(request, env, params, query, user) {
   const barcode = query.get("barcode");
   if (!barcode) return jsonResponse({ error: "barcode parameter is required" }, 400);
 
+  const hospital = query.get("hospital");
   const barcode8 = barcode.length >= 8 ? barcode.slice(-8) : barcode;
 
-  const queryResult = await runRead(env, `
-    SELECT * FROM assets_inventory 
-    WHERE LOWER(SUBSTR(qr_code, -8)) = LOWER(?) 
-       OR LOWER(SUBSTR(serial_no, -8)) = LOWER(?) 
-       OR LOWER(qr_code) = LOWER(?) 
-       OR LOWER(serial_no) = LOWER(?) 
-    LIMIT 1
-  `, [barcode8, barcode8, barcode, barcode], request);
+  if (hospital) {
+    const queryResult = await runRead(env, `
+      SELECT * FROM assets_inventory 
+      WHERE (LOWER(SUBSTR(qr_code, -8)) = LOWER(?) 
+         OR LOWER(SUBSTR(serial_no, -8)) = LOWER(?) 
+         OR LOWER(qr_code) = LOWER(?) 
+         OR LOWER(serial_no) = LOWER(?))
+         AND LOWER(TRIM(hospital_name)) = LOWER(TRIM(?))
+      LIMIT 1
+    `, [barcode8, barcode8, barcode, barcode, hospital], request);
 
-  const asset = queryResult && queryResult.results && queryResult.results[0] ? queryResult.results[0] : null;
+    const asset = queryResult && queryResult.results && queryResult.results[0] ? queryResult.results[0] : null;
 
-  if (!asset) {
-    return jsonResponse({ success: false, valid: false, message: "Asset QR/Serial number not found in master database." });
-  }
-
-  return jsonResponse({
-    success: true,
-    valid: true,
-    asset_name: asset.equipment_name,
-    hospital_name: asset.hospital_name,
-    district_name: asset.district_name,
-    serial_no: asset.serial_no,
-    data: {
-      district_name: asset.district_name,
-      hospital_name: asset.hospital_name,
-      equipment_name: asset.equipment_name,
-      model_name: asset.model_name || "",
-      qr_code: asset.qr_code,
-      inventory_status: asset.inventory_status || "Active"
+    if (asset) {
+      return jsonResponse({
+        success: true,
+        valid: true,
+        asset_name: asset.equipment_name,
+        hospital_name: asset.hospital_name,
+        district_name: asset.district_name,
+        serial_no: asset.serial_no,
+        data: {
+          district_name: asset.district_name,
+          hospital_name: asset.hospital_name,
+          equipment_name: asset.equipment_name,
+          model_name: asset.model_name || "",
+          qr_code: asset.qr_code,
+          inventory_status: asset.inventory_status || "Active"
+        }
+      });
     }
-  });
+
+    // Check if barcode exists anywhere in database
+    const queryAnyResult = await runRead(env, `
+      SELECT hospital_name FROM assets_inventory 
+      WHERE LOWER(SUBSTR(qr_code, -8)) = LOWER(?) 
+         OR LOWER(SUBSTR(serial_no, -8)) = LOWER(?) 
+         OR LOWER(qr_code) = LOWER(?) 
+         OR LOWER(serial_no) = LOWER(?) 
+      LIMIT 1
+    `, [barcode8, barcode8, barcode, barcode], request);
+
+    const anyAsset = queryAnyResult && queryAnyResult.results && queryAnyResult.results[0] ? queryAnyResult.results[0] : null;
+
+    if (anyAsset) {
+      return jsonResponse({ success: false, valid: false, message: "This barcode was not fetched for this hospital." });
+    } else {
+      return jsonResponse({ success: false, valid: false, message: "Asset QR/Serial number not found in master database." });
+    }
+  } else {
+    const queryResult = await runRead(env, `
+      SELECT * FROM assets_inventory 
+      WHERE LOWER(SUBSTR(qr_code, -8)) = LOWER(?) 
+         OR LOWER(SUBSTR(serial_no, -8)) = LOWER(?) 
+         OR LOWER(qr_code) = LOWER(?) 
+         OR LOWER(serial_no) = LOWER(?) 
+      LIMIT 1
+    `, [barcode8, barcode8, barcode, barcode], request);
+
+    const asset = queryResult && queryResult.results && queryResult.results[0] ? queryResult.results[0] : null;
+
+    if (!asset) {
+      return jsonResponse({ success: false, valid: false, message: "Asset QR/Serial number not found in master database." });
+    }
+
+    return jsonResponse({
+      success: true,
+      valid: true,
+      asset_name: asset.equipment_name,
+      hospital_name: asset.hospital_name,
+      district_name: asset.district_name,
+      serial_no: asset.serial_no,
+      data: {
+        district_name: asset.district_name,
+        hospital_name: asset.hospital_name,
+        equipment_name: asset.equipment_name,
+        model_name: asset.model_name || "",
+        qr_code: asset.qr_code,
+        inventory_status: asset.inventory_status || "Active"
+      }
+    });
+  }
 }
 
 /**

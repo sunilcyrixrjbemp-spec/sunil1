@@ -1989,6 +1989,7 @@ async def get_team_expenses(
 @router.get("/verify-barcode")
 async def verify_barcode(
     barcode: str,
+    hospital: Optional[str] = None,
     db: Session = Depends(get_read_db),
     current_user: User = Depends(get_current_user)
 ):
@@ -1996,31 +1997,74 @@ async def verify_barcode(
         raise HTTPException(status_code=400, detail="Barcode must be exactly 8 digits.")
     
     barcode_val = barcode.lower()
-    # Query assets_inventory matching right-most 8 characters or full values of qr_code or serial_no
-    sql = text("""
-        SELECT district_name, hospital_name, equipment_name, model_name, qr_code, inventory_status 
-        FROM assets_inventory 
-        WHERE LOWER(SUBSTR(qr_code, -8)) = :barcode 
-           OR LOWER(SUBSTR(serial_no, -8)) = :barcode 
-           OR LOWER(qr_code) = :barcode 
-           OR LOWER(serial_no) = :barcode
-        LIMIT 1
-    """)
-    result = db.execute(sql, {"barcode": barcode_val}).fetchone()
-    if not result:
-        return {"success": False, "message": "Barcode not found in assets inventory."}
     
-    return {
-        "success": True,
-        "data": {
-            "district_name": result[0],
-            "hospital_name": result[1],
-            "equipment_name": result[2],
-            "model_name": result[3],
-            "qr_code": result[4],
-            "inventory_status": result[5]
+    if hospital:
+        # Query assets_inventory matching barcode AND specific hospital (case-insensitive, trimmed)
+        sql = text("""
+            SELECT district_name, hospital_name, equipment_name, model_name, qr_code, inventory_status 
+            FROM assets_inventory 
+            WHERE (LOWER(SUBSTR(qr_code, -8)) = :barcode 
+               OR LOWER(SUBSTR(serial_no, -8)) = :barcode 
+               OR LOWER(qr_code) = :barcode 
+               OR LOWER(serial_no) = :barcode)
+               AND LOWER(TRIM(hospital_name)) = LOWER(TRIM(:hospital))
+            LIMIT 1
+        """)
+        result = db.execute(sql, {"barcode": barcode_val, "hospital": hospital}).fetchone()
+        if result:
+            return {
+                "success": True,
+                "data": {
+                    "district_name": result[0],
+                    "hospital_name": result[1],
+                    "equipment_name": result[2],
+                    "model_name": result[3],
+                    "qr_code": result[4],
+                    "inventory_status": result[5]
+                }
+            }
+        
+        # If not found for this hospital, check if the barcode exists at all in the DB
+        sql_any = text("""
+            SELECT hospital_name FROM assets_inventory 
+            WHERE LOWER(SUBSTR(qr_code, -8)) = :barcode 
+               OR LOWER(SUBSTR(serial_no, -8)) = :barcode 
+               OR LOWER(qr_code) = :barcode 
+               OR LOWER(serial_no) = :barcode
+            LIMIT 1
+        """)
+        any_result = db.execute(sql_any, {"barcode": barcode_val}).fetchone()
+        if any_result:
+            return {"success": False, "message": "This barcode was not fetched for this hospital."}
+        else:
+            return {"success": False, "message": "Barcode not found in assets inventory."}
+    else:
+        # Existing query without hospital filter
+        sql = text("""
+            SELECT district_name, hospital_name, equipment_name, model_name, qr_code, inventory_status 
+            FROM assets_inventory 
+            WHERE LOWER(SUBSTR(qr_code, -8)) = :barcode 
+               OR LOWER(SUBSTR(serial_no, -8)) = :barcode 
+               OR LOWER(qr_code) = :barcode 
+               OR LOWER(serial_no) = :barcode
+            LIMIT 1
+        """)
+        result = db.execute(sql, {"barcode": barcode_val}).fetchone()
+        if not result:
+            return {"success": False, "message": "Barcode not found in assets inventory."}
+        
+        return {
+            "success": True,
+            "data": {
+                "district_name": result[0],
+                "hospital_name": result[1],
+                "equipment_name": result[2],
+                "model_name": result[3],
+                "qr_code": result[4],
+                "inventory_status": result[5]
+            }
         }
-    }
+
 
 @router.get("/asset-value-master")
 async def get_asset_value_master(

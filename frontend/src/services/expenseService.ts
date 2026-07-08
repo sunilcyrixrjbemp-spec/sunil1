@@ -62,8 +62,11 @@ export const expenseService = {
     return response.data;
   },
 
-  verifyBarcode: async (barcode: string): Promise<any> => {
-    const response = await api.get(`/expense/verify-barcode?barcode=${barcode}`);
+  verifyBarcode: async (barcode: string, hospital?: string): Promise<any> => {
+    const url = hospital 
+      ? `/expense/verify-barcode?barcode=${barcode}&hospital=${encodeURIComponent(hospital)}` 
+      : `/expense/verify-barcode?barcode=${barcode}`;
+    const response = await api.get(url);
     return response.data;
   },
 
