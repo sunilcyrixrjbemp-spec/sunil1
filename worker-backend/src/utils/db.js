@@ -170,7 +170,8 @@ export async function runRead(env, sql, params = [], request = null) {
     lowerSql.includes("asset_value_master") ||
     lowerSql.includes("users") ||
     lowerSql.includes("hierarchy_") ||
-    lowerSql.includes("user_approval_chains");
+    lowerSql.includes("user_approval_chains") ||
+    lowerSql.includes("approval_hierarchies");
     
   if (hasPrimary && isMasterTableQuery) {
     usePrimary = true;

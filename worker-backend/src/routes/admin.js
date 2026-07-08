@@ -173,8 +173,8 @@ export async function handleListHierarchies(request, env, params, query, adminUs
     return jsonResponse({ error: "Access denied" }, 403);
   }
 
-  // Fetch all approval chains
-  const chainsRes = await env.DB.prepare("SELECT * FROM user_approval_chains ORDER BY id ASC").all();
+  // Fetch all approval hierarchies
+  const chainsRes = await env.DB.prepare("SELECT * FROM approval_hierarchies ORDER BY id ASC").all();
   const chains = chainsRes.results || [];
 
   if (chains.length === 0) {
@@ -223,8 +223,7 @@ export async function handleListHierarchies(request, env, params, query, adminUs
 
     return {
       id: chain.id,
-      name: chain.chain_name || "",
-      requester_designation: chain.requester_designation || "",
+      name: chain.name || "",
       requesters: chainRequesters,
       approvers: chainApprovers,
       created_at: chain.created_at,
@@ -251,40 +250,53 @@ export async function handleSaveHierarchy(request, env, params, query, adminUser
     return jsonResponse({ error: "Invalid JSON body" }, 400);
   }
 
-  const { id, chain_name, requester_designation, levels } = body;
+  // Frontend payload: { id?, name, requester_ids: number[], approvers: { level_number, approver_id }[] }
+  const { id, name, requester_ids, approvers } = body;
+  if (!name || !name.trim()) {
+    return jsonResponse({ error: "Hierarchy name is required" }, 400);
+  }
+
   const timestamp = new Date().toISOString();
+  let hId = id;
 
   if (id) {
     // UPDATE
-    await runWrite(env, "UPDATE user_approval_chains SET chain_name = ?, requester_designation = ? WHERE id = ?", [
-      chain_name, requester_designation, id
-    ]);
+    const existing = await env.DB.prepare("SELECT 1 FROM approval_hierarchies WHERE id = ?").bind(id).first();
+    if (!existing) return jsonResponse({ error: "Hierarchy not found" }, 404);
+
+    await runWrite(env, "UPDATE approval_hierarchies SET name = ? WHERE id = ?", [name.trim(), id]);
     
-    // Clear and update levels
+    // Clear old mappings
+    await runWrite(env, "DELETE FROM hierarchy_requesters WHERE hierarchy_id = ?", [id]);
     await runWrite(env, "DELETE FROM hierarchy_approvers WHERE hierarchy_id = ?", [id]);
-    if (levels && levels.length > 0) {
-      for (const lvl of levels) {
-        await runWrite(env, "INSERT INTO hierarchy_approvers (hierarchy_id, level_number, approver_id) VALUES (?, ?, ?)", [
-          id, lvl.level_number, lvl.approver_id
-        ]);
-      }
-    }
   } else {
     // CREATE
-    const result = await runWrite(env, "INSERT INTO user_approval_chains (chain_name, requester_designation) VALUES (?, ?)", [
-      chain_name, requester_designation
-    ]);
-    const newId = result.meta?.last_row_id;
-    if (newId && levels && levels.length > 0) {
-      for (const lvl of levels) {
-        await runWrite(env, "INSERT INTO hierarchy_approvers (hierarchy_id, level_number, approver_id) VALUES (?, ?, ?)", [
-          newId, lvl.level_number, lvl.approver_id
-        ]);
+    const result = await runWrite(env, "INSERT INTO approval_hierarchies (name) VALUES (?)", [name.trim()]);
+    hId = result.meta?.last_row_id;
+    if (!hId) {
+      return jsonResponse({ error: "Failed to create hierarchy" }, 500);
+    }
+  }
+
+  // Insert new requesters
+  if (requester_ids && Array.isArray(requester_ids)) {
+    for (const reqId of requester_ids) {
+      if (reqId) {
+        await runWrite(env, "INSERT INTO hierarchy_requesters (hierarchy_id, user_id) VALUES (?, ?)", [hId, reqId]);
       }
     }
   }
 
-  return jsonResponse({ status: "success", message: "Approval chain saved successfully" });
+  // Insert new approvers
+  if (approvers && Array.isArray(approvers)) {
+    for (const app of approvers) {
+      if (app && app.approver_id && app.level_number) {
+        await runWrite(env, "INSERT INTO hierarchy_approvers (hierarchy_id, level_number, approver_id) VALUES (?, ?, ?)", [hId, app.level_number, app.approver_id]);
+      }
+    }
+  }
+
+  return jsonResponse({ status: "success", message: "Hierarchy mappings saved successfully" });
 }
 
 /**
@@ -606,12 +618,12 @@ export async function handleDeleteHierarchy(request, env, params, query, adminUs
   const hierarchyId = parseInt(params.id, 10);
   if (!hierarchyId) return jsonResponse({ error: "Invalid hierarchy ID" }, 400);
 
-  const existing = await env.DB.prepare("SELECT 1 FROM user_approval_chains WHERE id = ?").bind(hierarchyId).first();
+  const existing = await env.DB.prepare("SELECT 1 FROM approval_hierarchies WHERE id = ?").bind(hierarchyId).first();
   if (!existing) return jsonResponse({ error: "Hierarchy not found" }, 404);
 
   await runWrite(env, "DELETE FROM hierarchy_approvers WHERE hierarchy_id = ?", [hierarchyId]);
   await runWrite(env, "DELETE FROM hierarchy_requesters WHERE hierarchy_id = ?", [hierarchyId]);
-  await runWrite(env, "DELETE FROM user_approval_chains WHERE id = ?", [hierarchyId]);
+  await runWrite(env, "DELETE FROM approval_hierarchies WHERE id = ?", [hierarchyId]);
 
   return jsonResponse({ status: "success", message: "Hierarchy deleted successfully" });
 }
@@ -652,7 +664,7 @@ export async function handleExportHierarchies(request, env, params, query, admin
     return jsonResponse({ error: "Access denied" }, 403);
   }
 
-  const hierarchies = await env.DB.prepare("SELECT * FROM user_approval_chains ORDER BY id ASC").all();
+  const hierarchies = await env.DB.prepare("SELECT * FROM approval_hierarchies ORDER BY id ASC").all();
   const rows = [];
   rows.push(["hierarchy_name", "requester_e_codes", "level_1_approver", "level_2_approver", "level_3_approver", "level_4_approver", "level_5_approver"]);
 
@@ -725,7 +737,7 @@ export async function handleBulkImportHierarchies(request, env, params, query, a
 
     try {
       // Check if hierarchy already exists
-      let existingH = await env.DB.prepare("SELECT id FROM user_approval_chains WHERE chain_name = ?").bind(hierarchyName).first();
+      let existingH = await env.DB.prepare("SELECT id FROM approval_hierarchies WHERE name = ?").bind(hierarchyName).first();
       let hId;
 
       if (existingH) {
@@ -733,7 +745,7 @@ export async function handleBulkImportHierarchies(request, env, params, query, a
         await runWrite(env, "DELETE FROM hierarchy_requesters WHERE hierarchy_id = ?", [hId]);
         await runWrite(env, "DELETE FROM hierarchy_approvers WHERE hierarchy_id = ?", [hId]);
       } else {
-        const hResult = await runWrite(env, "INSERT INTO user_approval_chains (chain_name) VALUES (?)", [hierarchyName]);
+        const hResult = await runWrite(env, "INSERT INTO approval_hierarchies (name) VALUES (?)", [hierarchyName]);
         hId = hResult.meta?.last_row_id;
         if (!hId) throw new Error("Failed to create hierarchy");
       }
