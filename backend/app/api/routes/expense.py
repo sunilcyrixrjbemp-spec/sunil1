@@ -1995,13 +1995,18 @@ async def verify_barcode(
     if len(barcode) != 8:
         raise HTTPException(status_code=400, detail="Barcode must be exactly 8 digits.")
     
-    # Query assets_inventory matching right-most 8 characters of qr_code
+    barcode_val = barcode.lower()
+    # Query assets_inventory matching right-most 8 characters or full values of qr_code or serial_no
     sql = text("""
         SELECT district_name, hospital_name, equipment_name, model_name, qr_code, inventory_status 
         FROM assets_inventory 
-        WHERE substr(qr_code, -8) = :barcode
+        WHERE LOWER(SUBSTR(qr_code, -8)) = :barcode 
+           OR LOWER(SUBSTR(serial_no, -8)) = :barcode 
+           OR LOWER(qr_code) = :barcode 
+           OR LOWER(serial_no) = :barcode
+        LIMIT 1
     """)
-    result = db.execute(sql, {"barcode": barcode}).fetchone()
+    result = db.execute(sql, {"barcode": barcode_val}).fetchone()
     if not result:
         return {"success": False, "message": "Barcode not found in assets inventory."}
     

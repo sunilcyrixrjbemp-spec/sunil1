@@ -672,13 +672,46 @@ export async function handleVerifyBarcode(request, env, params, query, user) {
  * GET /api/expense/asset-value-master
  */
 export async function handleGetAssetValueMaster(request, env, params, query, user) {
-  const result = await env.DB.prepare(`
-    SELECT DISTINCT equipment_name as equipment_name, CAST(parsed_asset_value AS REAL) as asset_value 
-    FROM assets_inventory 
-    WHERE parsed_asset_value IS NOT NULL AND parsed_asset_value > 0
-    ORDER BY equipment_name ASC
-  `).all();
-  return jsonResponse(result.results || []);
+  try {
+    // Try querying the dedicated asset_value_master table first
+    const result = await env.DB.prepare(`
+      SELECT DISTINCT equipment_name, CAST(rmsc_tender_cost AS REAL) as asset_value 
+      FROM asset_value_master 
+      ORDER BY equipment_name ASC
+    `).all();
+    if (result.results && result.results.length > 0) {
+      return jsonResponse(result.results);
+    }
+  } catch (e) {
+    console.warn("Failed to query asset_value_master table, falling back to assets_inventory:", e.message);
+  }
+
+  // Fallback 1: Query assets_inventory using parsed_asset_value
+  try {
+    const result = await env.DB.prepare(`
+      SELECT DISTINCT equipment_name, CAST(parsed_asset_value AS REAL) as asset_value 
+      FROM assets_inventory 
+      WHERE parsed_asset_value IS NOT NULL AND parsed_asset_value > 0
+      ORDER BY equipment_name ASC
+    `).all();
+    return jsonResponse(result.results || []);
+  } catch (e) {
+    console.warn("Failed to query parsed_asset_value, falling back to asset_value replacement casting:", e.message);
+    
+    // Fallback 2: Query assets_inventory using asset_value
+    try {
+      const result = await env.DB.prepare(`
+        SELECT DISTINCT equipment_name, CAST(REPLACE(REPLACE(asset_value, ',', ''), '₹', '') AS REAL) as asset_value 
+        FROM assets_inventory 
+        WHERE asset_value IS NOT NULL AND asset_value != '' AND asset_value != '0'
+        ORDER BY equipment_name ASC
+      `).all();
+      return jsonResponse(result.results || []);
+    } catch (err) {
+      console.error("All asset master queries failed:", err.message);
+      return jsonResponse([]);
+    }
+  }
 }
 
 /**
