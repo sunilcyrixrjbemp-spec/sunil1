@@ -1765,7 +1765,7 @@ export default function ExpensePage() {
           });
           return false;
         }
-      } else if (leg.mode !== "Bike") {
+      } else if (leg.mode !== "Bike" && leg.mode !== "Car") {
         if (mainAmt >= 300 && !hasMainAttachment) {
           setValidationModal({
             show: true,
@@ -1811,7 +1811,7 @@ export default function ExpensePage() {
             });
             return false;
           }
-        } else if (leg.sub_mode !== "Bike") {
+        } else if (leg.sub_mode !== "Bike" && leg.sub_mode !== "Car") {
           if (subAmt >= 300 && !hasSubAttachment) {
             setValidationModal({
               show: true,
