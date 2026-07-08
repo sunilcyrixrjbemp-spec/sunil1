@@ -2124,7 +2124,7 @@ export default function ExpensePage() {
       formData.append("deleted_attachments", JSON.stringify(deletedAttachments));
 
       const res = await expenseService.submitItineraryExpense(formData);
-      if (res.success) {
+      if (res.success || res.status === "success") {
         setSubmitStatus({
           type: "success",
           title: "Claim Submitted",
@@ -2170,7 +2170,7 @@ export default function ExpensePage() {
         parseFloat(reqAdditional),
         date.slice(0, 7)
       );
-      if (res.success) {
+      if (res.success || res.status === "success") {
         toast.success(res.message);
         setShowApprovalModal(false);
         if (exceededType === "KM") {
