@@ -1,4 +1,5 @@
 import { runWrite, runBatchWrite } from "../utils/db.js";
+import { deleteFromGoogleDrive } from "./upload.js";
 
 function jsonResponse(data, status = 200) {
   return new Response(JSON.stringify(data), {
@@ -670,28 +671,49 @@ async function processRemovedAttachments(env, removedAttachments) {
 
 async function deleteAttachmentFromStorage(env, fileUrl) {
   try {
-    const match = fileUrl.match(/\/expense_attachments\/[^\/]+$/);
-    if (!match) return;
-    const key = match[0].substring(1); // "expense_attachments/filename.jpg"
-    
-    if (env.BUCKET && typeof env.BUCKET.delete === "function") {
-      await env.BUCKET.delete(key);
-      console.log("Deleted object from R2:", key);
-    } else if (env.PRIMARY_CLOUDFLARE_ACCOUNT_ID && env.CLOUDFLARE_API_TOKEN) {
-      const accountId = env.PRIMARY_CLOUDFLARE_ACCOUNT_ID;
-      const apiToken = env.CLOUDFLARE_API_TOKEN;
-      const bucketName = "fieldops-uploads";
-      const url = `https://api.cloudflare.com/client/v4/accounts/${accountId}/r2/buckets/${bucketName}/objects/${key}`;
-      await fetch(url, {
-        method: "DELETE",
-        headers: {
-          "Authorization": `Bearer ${apiToken}`
-        }
-      });
-      console.log("Deleted object from R2 via REST API:", key);
+    if (!fileUrl) return;
+
+    // 1. Google Drive deletion
+    if (fileUrl.includes("/gdrive/")) {
+      const fileId = fileUrl.split("/gdrive/").pop();
+      if (fileId) {
+        console.log("Deleting attachment from GDrive:", fileId);
+        await deleteFromGoogleDrive(env, fileId);
+      }
+      return;
+    }
+
+    // 2. R2 / Cloudflare bucket deletion
+    let key = "";
+    if (fileUrl.includes("/file/")) {
+      key = fileUrl.split("/file/").pop();
+    } else {
+      const match = fileUrl.match(/\/expense_attachments\/[^\/]+$/);
+      if (match) {
+        key = match[0].substring(1);
+      }
+    }
+
+    if (key) {
+      if (env.BUCKET && typeof env.BUCKET.delete === "function") {
+        await env.BUCKET.delete(key);
+        console.log("Deleted object from R2:", key);
+      } else if (env.PRIMARY_CLOUDFLARE_ACCOUNT_ID && env.CLOUDFLARE_API_TOKEN) {
+        const accountId = env.PRIMARY_CLOUDFLARE_ACCOUNT_ID;
+        const apiToken = env.CLOUDFLARE_API_TOKEN;
+        const bucketName = "fieldops-uploads";
+        const url = `https://api.cloudflare.com/client/v4/accounts/${accountId}/r2/buckets/${bucketName}/objects/${key}`;
+        await fetch(url, {
+          method: "DELETE",
+          headers: {
+            "Authorization": `Bearer ${apiToken}`
+          }
+        });
+        console.log("Deleted object from R2 via REST API:", key);
+      }
     }
   } catch (e) {
-    console.error("Failed to delete attachment from R2 storage:", e.message);
+    console.error("Failed to delete attachment from storage:", e.message);
   }
 }
 
