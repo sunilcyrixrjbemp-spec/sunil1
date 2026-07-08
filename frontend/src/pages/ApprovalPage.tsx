@@ -19,7 +19,8 @@ import {
   CheckSquare,
   ThumbsUp,
   ThumbsDown,
-  Loader2
+  Loader2,
+  RotateCcw
 } from "lucide-react";
 
 import api from "../services/api";
@@ -106,6 +107,14 @@ export default function ApprovalPage() {
   const [showDetailModal, setShowDetailModal] = useState(false);
   const [processingLimitId, setProcessingLimitId] = useState<number | null>(null);
   const [processingLimitType, setProcessingLimitType] = useState<"approve" | "reject" | null>(null);
+
+  const [showReturnModal, setShowReturnModal] = useState(false);
+  const [returnComments, setReturnComments] = useState("");
+  const [returnLoading, setReturnLoading] = useState(false);
+  const [returnExpenseId, setReturnExpenseId] = useState<number | null>(null);
+
+  const currentUser = JSON.parse(localStorage.getItem("user") || "{}");
+  const isCoordinator = (currentUser.role || "").trim() === "Coordinator" || (currentUser.role || "").trim() === "Admin";
 
   // Edit single itineraries state
   const [editedLegs, setEditedLegs] = useState<any[]>([]);
@@ -474,6 +483,41 @@ export default function ApprovalPage() {
       toast.error(err.response?.data?.detail || "Action failed.");
     } finally {
       setActionLoading(false);
+    }
+  };
+
+  const handleOpenReturnModal = (expenseId: number) => {
+    setReturnExpenseId(expenseId);
+    setReturnComments("");
+    setShowReturnModal(true);
+  };
+
+  const handleReturnToDraft = async () => {
+    if (!returnExpenseId) return;
+    if (!returnComments.trim()) {
+      toast.error("Please provide a reason for returning this claim.");
+      return;
+    }
+
+    setReturnLoading(true);
+    try {
+      await approvalService.returnToDraft(returnExpenseId, returnComments.trim());
+      toast.success("Claim returned to engineer for corrections.");
+      setShowReturnModal(false);
+      setPendingApprovals(prev => prev.filter((a: any) => a.expense_id !== returnExpenseId));
+      setReturnExpenseId(null);
+      setReturnComments("");
+      if (selectedApproval && selectedApproval.expense_id === returnExpenseId) {
+        setShowDetailModal(false);
+        setSelectedApproval(null);
+        setExpenseDetails(null);
+        setEditedLegs([]);
+      }
+      await fetchPendingApprovals();
+    } catch (err: any) {
+      toast.error(err.response?.data?.error || "Failed to return claim.");
+    } finally {
+      setReturnLoading(false);
     }
   };
 
@@ -2230,6 +2274,17 @@ export default function ApprovalPage() {
                   )}
                   <span>{actionLoading && _actionType === "reject" ? "Rejecting..." : "Reject Claim"}</span>
                 </button>
+                {isCoordinator && selectedApproval && selectedApproval.category !== "Limit Request" && (
+                  <button
+                    type="button"
+                    onClick={() => handleOpenReturnModal(selectedApproval.expense_id)}
+                    disabled={actionLoading || loadingDetails}
+                    className="w-full sm:w-auto px-5 py-2.5 bg-orange-600 hover:bg-orange-700 active:bg-orange-800 text-white font-bold rounded-lg text-xs uppercase tracking-wider transition-all cursor-pointer border-0 shadow-sm flex items-center justify-center gap-1.5 min-w-[145px]"
+                  >
+                    <RotateCcw className="w-3.5 h-3.5" />
+                    <span>Return to Draft</span>
+                  </button>
+                )}
                 <button
                   type="button"
                   onClick={() => handleProcessAction("approve")}
@@ -2353,6 +2408,53 @@ export default function ApprovalPage() {
                 onClick={(e) => e.stopPropagation()}
               />
             )}
+          </div>
+        </div>
+      )}
+
+      {/* Return to Draft Modal */}
+      {showReturnModal && (
+        <div className="fixed inset-0 z-[110] flex items-center justify-center bg-black/40 p-4" onClick={() => setShowReturnModal(false)}>
+          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md p-6 space-y-4" onClick={(e) => e.stopPropagation()}>
+            <h3 className="text-sm font-extrabold text-orange-850 uppercase tracking-wider flex items-center gap-2">
+              <RotateCcw className="w-5 h-5 text-orange-600" />
+              Return Claim to Draft
+            </h3>
+            <p className="text-xs text-slate-600">
+              This will return the expense claim back to the engineer for corrections. They can edit and resubmit it, or delete it and create a new one.
+            </p>
+            <div>
+              <label className="block text-[10px] font-bold text-slate-500 uppercase mb-1">Reason / Comments *</label>
+              <textarea
+                value={returnComments}
+                onChange={(e) => setReturnComments(e.target.value)}
+                placeholder="Please explain why this claim needs corrections..."
+                rows={3}
+                className="w-full border border-slate-200 rounded-xl px-3 py-2 text-xs text-slate-800 focus:outline-none focus:border-orange-400 resize-none"
+              />
+            </div>
+            <div className="flex gap-3">
+              <button
+                type="button"
+                onClick={() => setShowReturnModal(false)}
+                className="flex-1 py-2.5 rounded-xl font-bold text-xs uppercase tracking-wider bg-slate-100 border border-slate-200 text-slate-600 hover:bg-slate-200 transition-all cursor-pointer border-none"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={handleReturnToDraft}
+                disabled={returnLoading || !returnComments.trim()}
+                className="flex-1 py-2.5 rounded-xl font-bold text-xs uppercase tracking-wider bg-orange-600 text-white hover:bg-orange-700 transition-all disabled:opacity-50 flex items-center justify-center gap-2 cursor-pointer border-none"
+              >
+                {returnLoading ? (
+                  <span className="w-4 h-4 rounded-full border-2 border-white/35 border-t-white animate-spin" />
+                ) : (
+                  <RotateCcw className="w-4 h-4" />
+                )}
+                Confirm Return
+              </button>
+            </div>
           </div>
         </div>
       )}

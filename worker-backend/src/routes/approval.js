@@ -564,3 +564,77 @@ export async function handleReject(request, env, params, query, user) {
 
   return jsonResponse({ status: "success", message: "Expense claim has been rejected." });
 }
+
+/**
+ * POST /api/approvals/:expense_id/return-to-draft
+ * Coordinator returns an expense to draft so the engineer can edit/resubmit
+ */
+export async function handleReturnToDraft(request, env, params, query, user) {
+  // Only Coordinator role can return to draft (or Admin)
+  const userRole = (user.role || "").trim();
+  if (userRole !== "Coordinator" && userRole !== "Admin") {
+    return jsonResponse({ error: "Only Coordinators can return expenses to draft." }, 403);
+  }
+
+  const expenseId = parseInt(params.expense_id, 10);
+  let body;
+  try {
+    body = await request.json();
+  } catch (e) {
+    return jsonResponse({ error: "Invalid JSON body" }, 400);
+  }
+
+  const { comments, client_timestamp } = body;
+  if (!comments || !comments.trim()) {
+    return jsonResponse({ error: "Comments/reason for returning is mandatory" }, 400);
+  }
+
+  const timestamp = client_timestamp || new Date().toISOString();
+
+  // Verify coordinator has a pending approval on this expense
+  const activeApproval = await env.DB.prepare(`
+    SELECT * FROM approvals WHERE expense_id = ? AND approver_id = ? AND status = 'pending'
+  `).bind(expenseId, user.id).first();
+
+  if (!activeApproval) {
+    return jsonResponse({ error: "No pending approval task found for you on this claim" }, 400);
+  }
+
+  const expense = await env.DB.prepare("SELECT * FROM expenses WHERE id = ?").bind(expenseId).first();
+  if (!expense) return jsonResponse({ error: "Expense claim not found" }, 404);
+
+  if (expense.user_id === user.id) {
+    return jsonResponse({ error: "Cannot return your own expense claim" }, 400);
+  }
+
+  // Reset all approval records for this expense
+  await runWrite(env, "UPDATE approvals SET status = 'returned', comments = ?, updated_at = ? WHERE id = ?", [
+    comments, timestamp, activeApproval.id
+  ]);
+
+  // Cancel all other approval levels (both approved prior levels and waiting future levels)
+  await runWrite(env, "UPDATE approvals SET status = 'cancelled', updated_at = ? WHERE expense_id = ? AND id != ? AND status IN ('approved', 'waiting', 'pending')", [
+    timestamp, expenseId, activeApproval.id
+  ]);
+
+  // Set expense status to returned_to_draft
+  await runWrite(env, "UPDATE expenses SET status = 'returned_to_draft', updated_at = ? WHERE id = ?", [
+    timestamp, expenseId
+  ]);
+
+  // Notify the engineer
+  const submitter = await env.DB.prepare("SELECT * FROM users WHERE id = ?").bind(expense.user_id).first();
+  if (submitter) {
+    await runWrite(env, "INSERT INTO notifications (user_id, title, description, type, read, link, created_at) VALUES (?, ?, ?, ?, 0, ?, ?)", [
+      submitter.user_id,
+      "🔄 Claim Returned for Corrections",
+      `Your claim ${expense.expense_code} has been returned by ${user.name} for corrections. Reason: ${comments.slice(0, 100)}`,
+      "warning",
+      "/submit-expense",
+      timestamp
+    ]);
+  }
+
+  return jsonResponse({ status: "success", message: "Expense claim has been returned to draft for corrections." });
+}
+

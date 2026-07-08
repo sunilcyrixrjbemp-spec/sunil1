@@ -358,6 +358,7 @@ export default function HomePage() {
     const s = (status || "").toLowerCase();
     if (s === "approved") return "bg-green-50 border-green-200 text-green-700";
     if (s === "rejected") return "bg-red-50 border-red-200 text-red-700";
+    if (s === "returned_to_draft") return "bg-orange-50 border-orange-200 text-orange-700";
     if (s.startsWith("submitted")) return "bg-yellow-50 border-yellow-250 text-yellow-750 font-bold";
     return "bg-gray-50 border-gray-200 text-gray-600";
   };
@@ -366,6 +367,7 @@ export default function HomePage() {
     const s = (status || "").toLowerCase();
     if (s === "approved") return "Approved";
     if (s === "rejected") return "Rejected";
+    if (s === "returned_to_draft") return "Returned";
     if (s === "submitted") return "Pending L1";
     if (s.startsWith("submitted_l")) {
       const lvl = s.replace("submitted_l", "");

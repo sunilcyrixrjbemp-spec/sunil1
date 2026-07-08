@@ -271,7 +271,7 @@ export async function getExpenseInitData(env, targetUser, monthStr) {
       SUM(CASE WHEN LOWER(TRIM(i.sub_mode)) = 'auto' THEN COALESCE(i.sub_amount, 0.0) ELSE 0.0 END) as total_auto
     FROM expense_itineraries i
     JOIN expenses e ON i.exp_id = e.expense_code
-    WHERE e.user_id = ? AND e.month = ? AND e.year = ? AND e.status != 'rejected'
+    WHERE e.user_id = ? AND e.month = ? AND e.year = ? AND e.status NOT IN ('rejected', 'returned_to_draft')
   `).bind(targetUser.id, monthName, yearVal).first();
 
   const accumulatedKm = statsRes?.total_km || 0.0;
@@ -757,7 +757,7 @@ export async function getUserMonthlyStatsHelper(env, userDbId, month, year, excl
 
   let querySql = `
     SELECT * FROM expenses 
-    WHERE user_id = ? AND month = ? AND year = ? AND LOWER(status) NOT IN ('draft', 'rejected')
+    WHERE user_id = ? AND month = ? AND year = ? AND LOWER(status) NOT IN ('draft', 'rejected', 'returned_to_draft')
   `;
   const binds = [userDbId, monthStr, yearVal];
 
@@ -1542,7 +1542,7 @@ export async function handleSubmitExpense(request, env, params, query, user) {
   const timestamp = new Date().toISOString();
 
   // Duplicate Date Check (prevent submitting twice for the same date unless rejected)
-  let dupQuery = "SELECT id FROM expenses WHERE user_id = ? AND itinerary = ? AND status != 'rejected'";
+  let dupQuery = "SELECT id FROM expenses WHERE user_id = ? AND itinerary = ? AND status NOT IN ('rejected', 'returned_to_draft')";
   let dupParams = [user.id, date];
   if (editExpenseId) {
     dupQuery += " AND id != ?";
@@ -1749,7 +1749,7 @@ export async function handleSubmitExpense(request, env, params, query, user) {
       SUM(CASE WHEN LOWER(TRIM(i.sub_mode)) = 'auto' THEN COALESCE(i.sub_amount, 0.0) ELSE 0.0 END) as total_auto
     FROM expense_itineraries i
     JOIN expenses e ON i.exp_id = e.expense_code
-    WHERE e.user_id = ? AND e.month = ? AND e.year = ? AND e.status != 'rejected'
+    WHERE e.user_id = ? AND e.month = ? AND e.year = ? AND e.status NOT IN ('rejected', 'returned_to_draft')
   `;
   const statsBinds = [user.id, claim_month, claim_year];
   if (editExpenseId) {

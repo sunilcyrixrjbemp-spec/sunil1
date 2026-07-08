@@ -22,7 +22,7 @@ import {
 } from "./routes/users.js";
 
 // Import Approval handlers
-import { handleGetApprovals, handleApprove, handleReject } from "./routes/approval.js";
+import { handleGetApprovals, handleApprove, handleReject, handleReturnToDraft } from "./routes/approval.js";
 
 // Import Admin handlers
 import {
@@ -181,10 +181,12 @@ router.post("/api/users/change-password", handleChangePassword, true);
 router.get("/api/approval", handleGetApprovals, true);
 router.post("/api/approval/:expense_id/approve", handleApprove, true);
 router.post("/api/approval/:expense_id/reject", handleReject, true);
+router.post("/api/approval/:expense_id/return-to-draft", handleReturnToDraft, true);
 // Also handle /api/approvals (worker-style)
 router.get("/api/approvals", handleGetApprovals, true);
 router.post("/api/approvals/:expense_id/approve", handleApprove, true);
 router.post("/api/approvals/:expense_id/reject", handleReject, true);
+router.post("/api/approvals/:expense_id/return-to-draft", handleReturnToDraft, true);
 
 // ─── Admin Endpoints (Requires Auth) ──────────────────────────────────────────
 // NOTE: Specific routes BEFORE wildcard :user_id routes to avoid conflicts

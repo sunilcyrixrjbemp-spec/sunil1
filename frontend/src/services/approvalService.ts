@@ -29,5 +29,13 @@ export const approvalService = {
       client_timestamp: getLocalTimestamp()
     });
     return response.data;
+  },
+
+  returnToDraft: async (expenseId: number, comments: string): Promise<any> => {
+    const response = await api.post(`/approval/${expenseId}/return-to-draft`, {
+      comments,
+      client_timestamp: getLocalTimestamp()
+    });
+    return response.data;
   }
 };

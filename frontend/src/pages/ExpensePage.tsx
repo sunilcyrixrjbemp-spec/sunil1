@@ -2348,6 +2348,7 @@ export default function ExpensePage() {
     const s = status.toLowerCase();
     if (s === "approved") return "bg-green-50 border-green-200 text-green-700";
     if (s === "rejected") return "bg-red-50 border-red-200 text-red-700";
+    if (s === "returned_to_draft") return "bg-orange-50 border-orange-200 text-orange-700";
     if (s.startsWith("submitted_l")) {
       return "bg-blue-50 border-blue-200 text-blue-700";
     }
@@ -2357,6 +2358,7 @@ export default function ExpensePage() {
   const getStatusLabel = (status: string) => {
     if (status === "approved") return "Approved";
     if (status === "rejected") return "Rejected";
+    if (status === "returned_to_draft") return "Returned";
     if (status === "submitted") return "Pending L1";
     if (status.startsWith("submitted_l")) {
       const lvl = status.replace("submitted_l", "");
@@ -4189,26 +4191,24 @@ export default function ExpensePage() {
                               </span>
                             </td>
                             <td className="py-3 px-3 text-right whitespace-nowrap" onClick={(e) => e.stopPropagation()}>
-                              <div className="flex items-center justify-end gap-1">
-                                {(exp.status === "draft" || exp.status === "submitted") && (
-                                  <>
-                                    <button
-                                      onClick={() => handleEditFromModal(exp.id)}
-                                      className="p-1.5 text-amber-600 hover:text-amber-800 rounded-lg hover:bg-amber-50 border border-transparent hover:border-amber-200 cursor-pointer transition-all active:scale-95"
-                                      title="Edit Claim"
-                                    >
-                                      <Pencil className="w-3.5 h-3.5" />
-                                    </button>
-                                    <button
-                                      onClick={() => handleDeleteClaim(exp.id)}
-                                      className="p-1.5 text-rose-600 hover:text-rose-800 rounded-lg hover:bg-rose-50 border border-transparent hover:border-rose-200 cursor-pointer transition-all active:scale-95"
-                                      title="Delete Claim Draft"
-                                    >
-                                      <Trash2 className="w-3.5 h-3.5" />
-                                    </button>
-                                  </>
-                                )}
-                              </div>
+                              {(exp.status === "draft" || exp.status === "submitted" || exp.status === "returned_to_draft") && (
+                                <div className="flex items-center justify-end gap-1">
+                                  <button
+                                    onClick={() => handleEditFromModal(exp.id)}
+                                    className="p-1.5 text-amber-600 hover:text-amber-800 rounded-lg hover:bg-amber-50 border border-transparent hover:border-amber-200 cursor-pointer transition-all active:scale-95"
+                                    title="Edit Claim"
+                                  >
+                                    <Pencil className="w-3.5 h-3.5" />
+                                  </button>
+                                  <button
+                                    onClick={() => handleDeleteClaim(exp.id)}
+                                    className="p-1.5 text-rose-600 hover:text-rose-800 rounded-lg hover:bg-rose-50 border border-transparent hover:border-rose-200 cursor-pointer transition-all active:scale-95"
+                                    title="Delete Claim Draft"
+                                  >
+                                    <Trash2 className="w-3.5 h-3.5" />
+                                  </button>
+                                </div>
+                              )}
                             </td>
                           </tr>
                         ))}
@@ -4244,7 +4244,7 @@ export default function ExpensePage() {
                               <span className="text-gray-900 font-extrabold text-xs">₹{exp.amount.toLocaleString()}</span>
                             </div>
                             <div className="flex items-center justify-end" onClick={(e) => e.stopPropagation()}>
-                              {(exp.status === "draft" || exp.status === "submitted") && (
+                              {(exp.status === "draft" || exp.status === "submitted" || exp.status === "returned_to_draft") && (
                                 <div className="flex gap-1.5">
                                   <button
                                     onClick={() => handleEditFromModal(exp.id)}
