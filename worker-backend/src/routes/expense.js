@@ -390,9 +390,9 @@ export async function handleGetTeamExpenses(request, env, params, query, user) {
     // Query direct reports
     const directReportsRes = await env.DB.prepare(`
       SELECT * FROM users
-      WHERE LOWER(manager) = ? OR LOWER(manager) = ?
-         OR LOWER(coordinator) = ? OR LOWER(coordinator) = ?
-         OR LOWER(zonal_manager) = ? OR LOWER(zonal_manager) = ?
+      WHERE LOWER(TRIM(manager)) = ? OR LOWER(TRIM(manager)) = ?
+         OR LOWER(TRIM(coordinator)) = ? OR LOWER(TRIM(coordinator)) = ?
+         OR LOWER(TRIM(zonal_manager)) = ? OR LOWER(TRIM(zonal_manager)) = ?
     `).bind(nameClean.toLowerCase(), uidClean.toLowerCase(), nameClean.toLowerCase(), uidClean.toLowerCase(), nameClean.toLowerCase(), uidClean.toLowerCase()).all();
     const directReports = directReportsRes.results || [];
 
@@ -2835,9 +2835,9 @@ export async function handleGetTeamUsers(request, env, params, query, user) {
     // Query direct reports
     const directReportsRes = await env.DB.prepare(`
       SELECT id, user_id, name, role, zone, district, designation, manager FROM users
-      WHERE LOWER(manager) = ? OR LOWER(manager) = ?
-         OR LOWER(coordinator) = ? OR LOWER(coordinator) = ?
-         OR LOWER(zonal_manager) = ? OR LOWER(zonal_manager) = ?
+      WHERE LOWER(TRIM(manager)) = ? OR LOWER(TRIM(manager)) = ?
+         OR LOWER(TRIM(coordinator)) = ? OR LOWER(TRIM(coordinator)) = ?
+         OR LOWER(TRIM(zonal_manager)) = ? OR LOWER(TRIM(zonal_manager)) = ?
       ORDER BY name ASC
     `).bind(nameClean.toLowerCase(), uidClean.toLowerCase(), nameClean.toLowerCase(), uidClean.toLowerCase(), nameClean.toLowerCase(), uidClean.toLowerCase()).all();
     const directReports = directReportsRes.results || [];
@@ -2998,9 +2998,9 @@ async function isManagerOfUser(managerUser, targetUserId, env) {
   const directReport = await env.DB.prepare(`
     SELECT id FROM users
     WHERE user_id = ? AND (
-      LOWER(manager) = ? OR LOWER(manager) = ?
-      OR LOWER(coordinator) = ? OR LOWER(coordinator) = ?
-      OR LOWER(zonal_manager) = ? OR LOWER(zonal_manager) = ?
+      LOWER(TRIM(manager)) = ? OR LOWER(TRIM(manager)) = ?
+      OR LOWER(TRIM(coordinator)) = ? OR LOWER(TRIM(coordinator)) = ?
+      OR LOWER(TRIM(zonal_manager)) = ? OR LOWER(TRIM(zonal_manager)) = ?
     )
   `).bind(
     targetUserId,

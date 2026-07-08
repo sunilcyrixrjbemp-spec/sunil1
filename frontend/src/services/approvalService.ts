@@ -12,29 +12,32 @@ export const approvalService = {
     return response.data;
   },
 
-  approveExpense: async (expenseId: number, comments: string, itineraryEdits?: any[], approvedValue?: number): Promise<any> => {
+  approveExpense: async (expenseId: number, comments: string, itineraryEdits?: any[], approvedValue?: number, removedAttachments?: string[]): Promise<any> => {
     const response = await api.post(`/approval/${expenseId}/approve`, {
       comments,
       itinerary_edits: itineraryEdits,
       client_timestamp: getLocalTimestamp(),
-      approved_value: approvedValue
+      approved_value: approvedValue,
+      removed_attachments: removedAttachments
     });
     return response.data;
   },
 
-  rejectExpense: async (expenseId: number, comments: string, itineraryEdits?: any[]): Promise<any> => {
+  rejectExpense: async (expenseId: number, comments: string, itineraryEdits?: any[], removedAttachments?: string[]): Promise<any> => {
     const response = await api.post(`/approval/${expenseId}/reject`, {
       comments,
       itinerary_edits: itineraryEdits,
-      client_timestamp: getLocalTimestamp()
+      client_timestamp: getLocalTimestamp(),
+      removed_attachments: removedAttachments
     });
     return response.data;
   },
 
-  returnToDraft: async (expenseId: number, comments: string): Promise<any> => {
+  returnToDraft: async (expenseId: number, comments: string, removedAttachments?: string[]): Promise<any> => {
     const response = await api.post(`/approval/${expenseId}/return-to-draft`, {
       comments,
-      client_timestamp: getLocalTimestamp()
+      client_timestamp: getLocalTimestamp(),
+      removed_attachments: removedAttachments
     });
     return response.data;
   }

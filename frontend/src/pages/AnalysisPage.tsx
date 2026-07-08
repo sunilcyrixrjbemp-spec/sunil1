@@ -221,21 +221,44 @@ export default function AnalysisPage() {
     const source = viewMode === "team" && isReviewer ? teamExpenses : myExpenses;
     const monthlyList = filterByMonth(source);
     
-    const districts = new Set<string>();
+    // 1. Filter engineers based on selectedDistrict
     const engineers = new Set<string>();
-    
     monthlyList.forEach(e => {
       const dist = e.district || e.submitter_district || e.home_district || "Ganganagar";
       const name = e.submitter_name || "Self";
-      districts.add(dist);
-      engineers.add(name);
+      if (selectedDistrict === "all" || dist.toLowerCase() === selectedDistrict.toLowerCase()) {
+        engineers.add(name);
+      }
+    });
+
+    // 2. Filter districts based on selectedEngineer
+    const districts = new Set<string>();
+    monthlyList.forEach(e => {
+      const dist = e.district || e.submitter_district || e.home_district || "Ganganagar";
+      const name = e.submitter_name || "Self";
+      if (selectedEngineer === "all" || name.toLowerCase() === selectedEngineer.toLowerCase()) {
+        districts.add(dist);
+      }
     });
 
     return {
       districts: Array.from(districts),
       engineers: Array.from(engineers)
     };
-  }, [viewMode, myExpenses, teamExpenses, selectedMonth, selectedYear]);
+  }, [viewMode, myExpenses, teamExpenses, selectedMonth, selectedYear, selectedDistrict, selectedEngineer]);
+
+  // Safety resets for dependent dropdowns
+  useEffect(() => {
+    if (selectedEngineer !== "all" && !filterOptions.engineers.includes(selectedEngineer)) {
+      setSelectedEngineer("all");
+    }
+  }, [selectedDistrict, filterOptions.engineers]);
+
+  useEffect(() => {
+    if (selectedDistrict !== "all" && !filterOptions.districts.includes(selectedDistrict)) {
+      setSelectedDistrict("all");
+    }
+  }, [selectedEngineer, filterOptions.districts]);
 
   const activeExpenses = useMemo(() => {
     const source = viewMode === "team" && isReviewer ? teamExpenses : myExpenses;

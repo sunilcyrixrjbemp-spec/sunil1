@@ -132,12 +132,18 @@ export async function fetchPendingApprovals(env, user) {
     });
   }
 
-  // 2. Fetch normal approvals
+  // 2. Fetch normal approvals (only show if they are currently mapped in active hierarchy)
   const approvals = await env.DB.prepare(`
     SELECT a.*, e.expense_code, e.amount, e.description, e.travel_mode, e.itinerary, e.user_id as submitter_user_id
     FROM approvals a
     JOIN expenses e ON a.expense_id = e.id
     WHERE a.approver_id = ? AND a.status = 'pending'
+      AND EXISTS (
+        SELECT 1 
+        FROM hierarchy_requesters hr 
+        JOIN hierarchy_approvers ha ON hr.hierarchy_id = ha.hierarchy_id 
+        WHERE hr.user_id = e.user_id AND ha.approver_id = a.approver_id
+      )
     ORDER BY a.level_number ASC, a.created_at DESC
   `).bind(user.id).all();
 
@@ -247,7 +253,7 @@ export async function handleApprove(request, env, params, query, user) {
     body = {};
   }
 
-  const { comments, approved_value, client_timestamp, itinerary_edits } = body;
+  const { comments, approved_value, client_timestamp, itinerary_edits, removed_attachments } = body;
   const timestamp = client_timestamp || new Date().toISOString();
 
   // 1. Handle Legacy Expense (expenseId < 0 and <= -200000)
@@ -371,6 +377,10 @@ export async function handleApprove(request, env, params, query, user) {
     await applyItineraryEditsAndLog(env, expense, itinerary_edits, user, comments);
   }
 
+  if (removed_attachments && Array.isArray(removed_attachments)) {
+    await processRemovedAttachments(env, removed_attachments);
+  }
+
   // Update active approval
   await runWrite(env, "UPDATE approvals SET status = 'approved', comments = ?, updated_at = ? WHERE id = ?", [
     comments || "", timestamp, activeApproval.id
@@ -436,7 +446,7 @@ export async function handleReject(request, env, params, query, user) {
     return jsonResponse({ error: "Invalid JSON body" }, 400);
   }
 
-  const { comments, client_timestamp, itinerary_edits } = body;
+  const { comments, client_timestamp, itinerary_edits, removed_attachments } = body;
   if (!comments || !comments.trim()) {
     return jsonResponse({ error: "Rejection comments/remark is mandatory" }, 400);
   }
@@ -539,6 +549,10 @@ export async function handleReject(request, env, params, query, user) {
     await applyItineraryEditsAndLog(env, expense, itinerary_edits, user, comments);
   }
 
+  if (removed_attachments && Array.isArray(removed_attachments)) {
+    await processRemovedAttachments(env, removed_attachments);
+  }
+
   // Update current approval
   await runWrite(env, "UPDATE approvals SET status = 'rejected', comments = ?, updated_at = ? WHERE id = ?", [
     comments, timestamp, activeApproval.id
@@ -584,7 +598,7 @@ export async function handleReturnToDraft(request, env, params, query, user) {
     return jsonResponse({ error: "Invalid JSON body" }, 400);
   }
 
-  const { comments, client_timestamp } = body;
+  const { comments, client_timestamp, removed_attachments } = body;
   if (!comments || !comments.trim()) {
     return jsonResponse({ error: "Comments/reason for returning is mandatory" }, 400);
   }
@@ -612,6 +626,10 @@ export async function handleReturnToDraft(request, env, params, query, user) {
     comments, timestamp, activeApproval.id
   ]);
 
+  if (removed_attachments && Array.isArray(removed_attachments)) {
+    await processRemovedAttachments(env, removed_attachments);
+  }
+
   // Cancel all other approval levels (both approved prior levels and waiting future levels)
   await runWrite(env, "UPDATE approvals SET status = 'cancelled', updated_at = ? WHERE expense_id = ? AND id != ? AND status IN ('approved', 'waiting', 'pending')", [
     timestamp, expenseId, activeApproval.id
@@ -636,5 +654,44 @@ export async function handleReturnToDraft(request, env, params, query, user) {
   }
 
   return jsonResponse({ status: "success", message: "Expense claim has been returned to draft for corrections." });
+}
+
+async function processRemovedAttachments(env, removedAttachments) {
+  if (!removedAttachments || !Array.isArray(removedAttachments) || removedAttachments.length === 0) {
+    return;
+  }
+  for (const url of removedAttachments) {
+    if (!url) continue;
+    console.log("Removing attachment from DB:", url);
+    await runWrite(env, "DELETE FROM expense_attachments WHERE file_url = ?", [url]);
+    await deleteAttachmentFromStorage(env, url);
+  }
+}
+
+async function deleteAttachmentFromStorage(env, fileUrl) {
+  try {
+    const match = fileUrl.match(/\/expense_attachments\/[^\/]+$/);
+    if (!match) return;
+    const key = match[0].substring(1); // "expense_attachments/filename.jpg"
+    
+    if (env.BUCKET && typeof env.BUCKET.delete === "function") {
+      await env.BUCKET.delete(key);
+      console.log("Deleted object from R2:", key);
+    } else if (env.PRIMARY_CLOUDFLARE_ACCOUNT_ID && env.CLOUDFLARE_API_TOKEN) {
+      const accountId = env.PRIMARY_CLOUDFLARE_ACCOUNT_ID;
+      const apiToken = env.CLOUDFLARE_API_TOKEN;
+      const bucketName = "fieldops-uploads";
+      const url = `https://api.cloudflare.com/client/v4/accounts/${accountId}/r2/buckets/${bucketName}/objects/${key}`;
+      await fetch(url, {
+        method: "DELETE",
+        headers: {
+          "Authorization": `Bearer ${apiToken}`
+        }
+      });
+      console.log("Deleted object from R2 via REST API:", key);
+    }
+  } catch (e) {
+    console.error("Failed to delete attachment from R2 storage:", e.message);
+  }
 }
 

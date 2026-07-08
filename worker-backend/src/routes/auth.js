@@ -63,9 +63,9 @@ export async function getBootstrapDataHelper(env, user) {
   // Check direct reports
   const hasDirectReportsResult = await env.DB.prepare(`
     SELECT id FROM users
-    WHERE LOWER(manager) = ? OR LOWER(manager) = ?
-       OR LOWER(coordinator) = ? OR LOWER(coordinator) = ?
-       OR LOWER(zonal_manager) = ? OR LOWER(zonal_manager) = ?
+    WHERE LOWER(TRIM(manager)) = ? OR LOWER(TRIM(manager)) = ?
+       OR LOWER(TRIM(coordinator)) = ? OR LOWER(TRIM(coordinator)) = ?
+       OR LOWER(TRIM(zonal_manager)) = ? OR LOWER(TRIM(zonal_manager)) = ?
     LIMIT 1
   `).bind(nameClean.toLowerCase(), uidClean.toLowerCase(), nameClean.toLowerCase(), uidClean.toLowerCase(), nameClean.toLowerCase(), uidClean.toLowerCase()).first();
   const hasDirectReports = !!hasDirectReportsResult;

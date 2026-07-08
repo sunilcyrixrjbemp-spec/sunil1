@@ -118,6 +118,45 @@ export default function ApprovalPage() {
 
   // Edit single itineraries state
   const [editedLegs, setEditedLegs] = useState<any[]>([]);
+  const [removedAttachments, setRemovedAttachments] = useState<string[]>([]);
+
+  const renderAttachmentControls = (receiptUrl: string | null | undefined, previewLabel: string = "👁 Preview Receipt") => {
+    if (!receiptUrl) return null;
+    const isRemoved = removedAttachments.includes(receiptUrl);
+    if (isRemoved) {
+      return (
+        <div className="flex items-center gap-1.5 mt-1 bg-red-50 border border-red-250 rounded px-1.5 py-0.5 w-max">
+          <span className="text-[9px] text-red-600 font-extrabold uppercase tracking-wide">🗑 Removed</span>
+          <button
+            type="button"
+            onClick={() => setRemovedAttachments(prev => prev.filter(url => url !== receiptUrl))}
+            className="text-[9px] text-green-700 hover:text-green-800 hover:underline font-extrabold bg-transparent border-0 cursor-pointer p-0"
+          >
+            Undo
+          </button>
+        </div>
+      );
+    }
+    return (
+      <div className="flex items-center gap-2 mt-1">
+        <button 
+          type="button" 
+          onClick={() => setLightboxImage(receiptUrl)} 
+          className="text-[9px] text-blue-600 hover:text-blue-800 hover:underline font-bold bg-transparent border-0 cursor-pointer p-0 text-left"
+        >
+          {previewLabel}
+        </button>
+        <button
+          type="button"
+          onClick={() => setRemovedAttachments(prev => [...prev, receiptUrl])}
+          className="text-[9px] text-red-600 hover:text-red-750 hover:underline font-bold bg-transparent border-0 cursor-pointer p-0"
+          title="Remove this attachment"
+        >
+          🗑 Remove
+        </button>
+      </div>
+    );
+  };
 
   // Bulk actions selection state
   const [selectedIds, setSelectedIds] = useState<number[]>([]); // holds selected expense_ids
@@ -287,6 +326,7 @@ export default function ApprovalPage() {
     setShowDetailModal(true);
     setComments("");
     setActionType(null);
+    setRemovedAttachments([]);
 
     const initLegs = (details: any) => {
       if (details.itineraries) {
@@ -464,10 +504,10 @@ export default function ApprovalPage() {
         }
       } else {
         if (type === "approve") {
-          await approvalService.approveExpense(selectedApproval.expense_id, comments.trim(), itineraryEdits);
+          await approvalService.approveExpense(selectedApproval.expense_id, comments.trim(), itineraryEdits, undefined, removedAttachments);
           toast.success(`Claim ${selectedApproval.expense_code} approved!`);
         } else {
-          await approvalService.rejectExpense(selectedApproval.expense_id, comments.trim(), itineraryEdits);
+          await approvalService.rejectExpense(selectedApproval.expense_id, comments.trim(), itineraryEdits, removedAttachments);
           toast.error(`Claim ${selectedApproval.expense_code} rejected.`);
         }
       }
@@ -478,6 +518,7 @@ export default function ApprovalPage() {
       setSelectedApproval(null);
       setExpenseDetails(null);
       setEditedLegs([]);
+      setRemovedAttachments([]);
       await fetchPendingApprovals();
     } catch (err: any) {
       toast.error(err.response?.data?.detail || "Action failed.");
@@ -501,7 +542,7 @@ export default function ApprovalPage() {
 
     setReturnLoading(true);
     try {
-      await approvalService.returnToDraft(returnExpenseId, returnComments.trim());
+      await approvalService.returnToDraft(returnExpenseId, returnComments.trim(), removedAttachments);
       toast.success("Claim returned to engineer for corrections.");
       setShowReturnModal(false);
       setPendingApprovals(prev => prev.filter((a: any) => a.expense_id !== returnExpenseId));
@@ -512,6 +553,7 @@ export default function ApprovalPage() {
         setSelectedApproval(null);
         setExpenseDetails(null);
         setEditedLegs([]);
+        setRemovedAttachments([]);
       }
       await fetchPendingApprovals();
     } catch (err: any) {
@@ -1441,15 +1483,7 @@ export default function ApprovalPage() {
                                       />
                                     </div>
                                     <span className="text-[9px] text-gray-500 block font-semibold">Amt: ₹{leg.travel_amount} (Orig: {originalLeg.km || 0} KM)</span>
-                                    {travelReceiptUrl && (
-                                      <button 
-                                        type="button" 
-                                        onClick={() => setLightboxImage(travelReceiptUrl)} 
-                                        className="text-[9px] text-blue-600 hover:underline font-bold mt-1 block bg-transparent border-0 cursor-pointer p-0 text-left"
-                                      >
-                                        👁 Preview Receipt
-                                      </button>
-                                    )}
+                                    {renderAttachmentControls(travelReceiptUrl)}
                                   </div>
                                 ) : (
                                   <div className="space-y-1">
@@ -1467,15 +1501,7 @@ export default function ApprovalPage() {
                                       />
                                     </div>
                                     <span className="text-[9px] text-gray-455 block font-semibold">Original: ₹{originalLeg.amount || 0}</span>
-                                    {travelReceiptUrl && (
-                                      <button 
-                                        type="button" 
-                                        onClick={() => setLightboxImage(travelReceiptUrl)} 
-                                        className="text-[9px] text-blue-600 hover:underline font-bold mt-1 block bg-transparent border-0 cursor-pointer p-0 text-left"
-                                      >
-                                        👁 Preview Receipt
-                                      </button>
-                                    )}
+                                    {renderAttachmentControls(travelReceiptUrl)}
                                   </div>
                                 )}
 
@@ -1496,15 +1522,7 @@ export default function ApprovalPage() {
                                     />
                                   </div>
                                   <span className="text-[9px] text-gray-455 block font-semibold">Original: ₹{originalLeg.sub_amount || 0}</span>
-                                  {subReceiptUrl && (
-                                    <button 
-                                      type="button" 
-                                      onClick={() => setLightboxImage(subReceiptUrl)} 
-                                      className="text-[9px] text-blue-600 hover:underline font-bold mt-1 block bg-transparent border-0 cursor-pointer p-0 text-left"
-                                    >
-                                      👁 Preview Receipt
-                                    </button>
-                                  )}
+                                  {renderAttachmentControls(subReceiptUrl)}
                                 </div>
 
                                 {/* Hotel stay amount */}
@@ -1523,24 +1541,8 @@ export default function ApprovalPage() {
                                     />
                                   </div>
                                   <span className="text-[9px] text-gray-455 block font-semibold">Original: ₹{originalLeg.hotel || 0}</span>
-                                  {hotelReceiptUrl && (
-                                    <button 
-                                      type="button" 
-                                      onClick={() => setLightboxImage(hotelReceiptUrl)} 
-                                      className="text-[9px] text-blue-600 hover:underline font-bold mt-1 block bg-transparent border-0 cursor-pointer p-0 text-left"
-                                    >
-                                      👁 Preview Hotel Receipt
-                                    </button>
-                                  )}
-                                  {mailReceiptUrl && (
-                                    <button 
-                                      type="button" 
-                                      onClick={() => setLightboxImage(mailReceiptUrl)} 
-                                      className="text-[9px] text-purple-600 hover:underline font-bold mt-1 block bg-transparent border-0 cursor-pointer p-0 text-left"
-                                    >
-                                      ✉ Preview Approval Mail
-                                    </button>
-                                  )}
+                                  {renderAttachmentControls(hotelReceiptUrl, "👁 Preview Hotel Receipt")}
+                                  {renderAttachmentControls(mailReceiptUrl, "✉ Preview Approval Mail")}
                                 </div>
 
                                 {/* Local purchase */}
@@ -1559,15 +1561,7 @@ export default function ApprovalPage() {
                                     />
                                   </div>
                                   <span className="text-[9px] text-gray-455 block font-semibold">Original: ₹{originalLeg.local_purchase || 0}</span>
-                                  {lpReceiptUrl && (
-                                    <button 
-                                      type="button" 
-                                      onClick={() => setLightboxImage(lpReceiptUrl)} 
-                                      className="text-[9px] text-blue-600 hover:underline font-bold mt-1 block bg-transparent border-0 cursor-pointer p-0 text-left"
-                                    >
-                                      👁 Preview Receipt
-                                    </button>
-                                  )}
+                                  {renderAttachmentControls(lpReceiptUrl)}
                                 </div>
 
                                 {/* Other / Misc amount */}
@@ -1588,15 +1582,7 @@ export default function ApprovalPage() {
                                   <span className="text-[9px] text-gray-455 block font-semibold truncate" title={leg.oth_desc || "No Description"}>
                                     Orig: ₹{originalLeg.oth_amount || 0} ({leg.oth_desc || "Other"})
                                   </span>
-                                  {otherReceiptUrl && (
-                                    <button 
-                                      type="button" 
-                                      onClick={() => setLightboxImage(otherReceiptUrl)} 
-                                      className="text-[9px] text-blue-600 hover:underline font-bold mt-1 block bg-transparent border-0 cursor-pointer p-0 text-left"
-                                    >
-                                      👁 Preview Receipt
-                                    </button>
-                                  )}
+                                  {renderAttachmentControls(otherReceiptUrl)}
                                 </div>
                               </div>
 
