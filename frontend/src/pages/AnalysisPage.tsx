@@ -1047,8 +1047,8 @@ export default function AnalysisPage() {
                         stroke="#ffffff"
                         strokeWidth={2}
                       >
-                        {statusWiseData.map((_, i) => (
-                          <Cell key={i} fill={i === 0 ? "#2b7d50" : i === 1 ? "#d28b2a" : "#d83b01"} />
+                        {statusWiseData.map((entry, i) => (
+                          <Cell key={i} fill={entry.name === "Approved" ? "#2e7d32" : entry.name === "Rejected" ? "#d32f2f" : "#f57c00"} />
                         ))}
                       </Pie>
                       <Tooltip content={<CustomMoneyTooltip />} />
