@@ -2121,7 +2121,8 @@ export default function ApprovalPage() {
                               <button
                                 type="button"
                                 onClick={() => setRemovedAttachments(prev => [...prev, url])}
-                                className="absolute -top-1.5 -right-1.5 h-4 w-4 bg-red-650 hover:bg-red-800 text-white rounded-full flex items-center justify-center text-[8px] font-bold shadow cursor-pointer border border-white"
+                                className="absolute -top-1.5 -right-1.5 h-4.5 w-4.5 text-white rounded-full flex items-center justify-center text-[9px] font-extrabold shadow cursor-pointer border border-white"
+                                style={{ backgroundColor: "#dc2626" }}
                                 title="Remove this attachment"
                               >
                                 ✕
