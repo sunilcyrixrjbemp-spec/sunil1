@@ -2414,7 +2414,11 @@ export default function ApprovalPage() {
 
       {/* Return to Draft Modal */}
       {showReturnModal && (
-        <div className="fixed inset-0 z-[110] flex items-center justify-center bg-black/40 p-4" onClick={() => setShowReturnModal(false)}>
+        <div 
+          className="fixed inset-0 flex items-center justify-center bg-black/40 p-4 animate-fadeIn" 
+          style={{ zIndex: 1100 }}
+          onClick={() => setShowReturnModal(false)}
+        >
           <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md p-6 space-y-4" onClick={(e) => e.stopPropagation()}>
             <h3 className="text-sm font-extrabold text-orange-850 uppercase tracking-wider flex items-center gap-2">
               <RotateCcw className="w-5 h-5 text-orange-600" />
