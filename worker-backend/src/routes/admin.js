@@ -319,6 +319,9 @@ export async function handleUpdateUser(request, env, params, query, adminUser) {
   const updates = [];
   const bindings = [];
 
+  const batchStatements = [];
+  batchStatements.push({ sql: "PRAGMA foreign_keys = OFF", params: [] });
+
   // Handle sensitive fields: new_user_id, new_e_code, password
   const newUserId = body.new_user_id?.trim();
   const newECode = body.new_e_code?.trim();
@@ -342,14 +345,45 @@ export async function handleUpdateUser(request, env, params, query, adminUser) {
     if (isPasswordChanged) {
       const newHash = await getPasswordHash(body.password.trim());
       updates.push("hashed_password = ?"); bindings.push(newHash);
-      await runWrite(env, "INSERT INTO password_histories (user_id, hashed_password, created_at) VALUES (?, ?, ?)", [user.id, newHash, timestamp]);
+      batchStatements.push({
+        sql: "INSERT INTO password_histories (user_id, hashed_password, created_at) VALUES (?, ?, ?)",
+        params: [user.id, newHash, timestamp]
+      });
     }
     if (isUidChanged) {
-      // Update user_roles to reflect new user_id
-      await runWrite(env, "UPDATE user_roles SET user_id = ? WHERE user_id = ?", [newUserId, user.user_id]);
-      await runWrite(env, "UPDATE notifications SET user_id = ? WHERE user_id = ?", [newUserId, user.user_id]);
-      await runWrite(env, "UPDATE limit_approval_requests SET user_id = ? WHERE user_id = ?", [newUserId, user.user_id]);
-      await runWrite(env, "UPDATE limit_approval_requests SET manager_id = ? WHERE manager_id = ?", [newUserId, user.user_id]);
+      // Cascading updates for all tables storing user_id
+      batchStatements.push({
+        sql: "UPDATE user_roles SET user_id = ? WHERE user_id = ?",
+        params: [newUserId, user.user_id]
+      });
+      batchStatements.push({
+        sql: "UPDATE notifications SET user_id = ? WHERE user_id = ?",
+        params: [newUserId, user.user_id]
+      });
+      batchStatements.push({
+        sql: "UPDATE limit_approval_requests SET user_id = ? WHERE user_id = ?",
+        params: [newUserId, user.user_id]
+      });
+      batchStatements.push({
+        sql: "UPDATE limit_approval_requests SET manager_id = ? WHERE manager_id = ?",
+        params: [newUserId, user.user_id]
+      });
+      batchStatements.push({
+        sql: "UPDATE kpi_appraisals SET user_id = ? WHERE user_id = ?",
+        params: [newUserId, user.user_id]
+      });
+      batchStatements.push({
+        sql: "UPDATE engineer_advances SET user_id = ? WHERE user_id = ?",
+        params: [newUserId, user.user_id]
+      });
+      batchStatements.push({
+        sql: "UPDATE login_logs SET user_id = ? WHERE user_id = ?",
+        params: [newUserId, user.user_id]
+      });
+      batchStatements.push({
+        sql: "UPDATE otps SET user_id = ? WHERE user_id = ?",
+        params: [newUserId, user.user_id]
+      });
       updates.push("user_id = ?"); bindings.push(newUserId);
     }
     if (isEcodeChanged || isUidChanged) {
@@ -385,11 +419,15 @@ export async function handleUpdateUser(request, env, params, query, adminUser) {
   if (body.role !== undefined) {
     const oldRole = user.role;
     if (oldRole !== body.role) {
-      await runWrite(env, "DELETE FROM user_roles WHERE user_id = ? AND role = ?", [user.user_id, oldRole]);
-      const existingRole = await env.DB.prepare("SELECT 1 FROM user_roles WHERE user_id = ? AND role = ?").bind(user.user_id, body.role).first();
-      if (!existingRole) {
-        await runWrite(env, "INSERT INTO user_roles (user_id, role, assigned_at) VALUES (?, ?, ?)", [user.user_id, body.role, timestamp]);
-      }
+      batchStatements.push({
+        sql: "DELETE FROM user_roles WHERE user_id = ? AND role = ?",
+        params: [user.user_id, oldRole]
+      });
+      const roleUserId = isUidChanged ? newUserId : user.user_id;
+      batchStatements.push({
+        sql: "INSERT INTO user_roles (user_id, role, assigned_at) VALUES (?, ?, ?)",
+        params: [roleUserId, body.role, timestamp]
+      });
     }
     updates.push("role = ?"); bindings.push(body.role);
   }
@@ -397,7 +435,16 @@ export async function handleUpdateUser(request, env, params, query, adminUser) {
   if (updates.length > 0) {
     bindings.push(timestamp);
     bindings.push(user.id);
-    await runWrite(env, `UPDATE users SET ${updates.join(", ")}, updated_at = ? WHERE id = ?`, bindings);
+    batchStatements.push({
+      sql: `UPDATE users SET ${updates.join(", ")}, updated_at = ? WHERE id = ?`,
+      params: bindings
+    });
+  }
+
+  batchStatements.push({ sql: "PRAGMA foreign_keys = ON", params: [] });
+
+  if (batchStatements.length > 2) { // more than just enabling/disabling foreign keys
+    await runBatchWrite(env, batchStatements);
   }
 
   // Return updated user
