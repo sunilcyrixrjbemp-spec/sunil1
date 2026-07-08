@@ -134,4 +134,17 @@ export async function runMigrations(db) {
   } catch (err) {
     console.error("Failed to seed assets_inventory:", err.message);
   }
+
+  // Self-healing database repair: Set local_purchase to original_local_purchase if it is 0/null and original is > 0
+  try {
+    await db.prepare(`
+      UPDATE expense_itineraries 
+      SET local_purchase = original_local_purchase 
+      WHERE (local_purchase = 0 OR local_purchase IS NULL) 
+        AND original_local_purchase > 0
+    `).run();
+    console.log("Successfully executed local_purchase self-healing query.");
+  } catch (err) {
+    console.error("Failed to execute local_purchase self-healing query:", err.message);
+  }
 }

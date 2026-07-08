@@ -9,6 +9,20 @@ function jsonResponse(data, status = 200) {
   });
 }
 
+async function queryInChunks(db, queryTemplate, ids, chunkSize = 50) {
+  let allResults = [];
+  for (let i = 0; i < ids.length; i += chunkSize) {
+    const chunk = ids.slice(i, i + chunkSize);
+    const placeholders = chunk.map(() => "?").join(",");
+    const sql = queryTemplate.replace("?", placeholders);
+    const res = await db.prepare(sql).bind(...chunk).all();
+    if (res.results) {
+      allResults = allResults.concat(res.results);
+    }
+  }
+  return allResults;
+}
+
 export async function serializeExpenses(env, expenses, submittersMap) {
   if (!expenses || expenses.length === 0) return [];
 
@@ -17,11 +31,7 @@ export async function serializeExpenses(env, expenses, submittersMap) {
   // Batch fetch itineraries for all these expenses
   let allLegs = [];
   if (expenseCodes.length > 0) {
-    const placeholders = expenseCodes.map(() => "?").join(",");
-    const legsResult = await env.DB.prepare(`
-      SELECT * FROM expense_itineraries WHERE exp_id IN (${placeholders})
-    `).bind(...expenseCodes).all();
-    allLegs = legsResult.results || [];
+    allLegs = await queryInChunks(env.DB, "SELECT * FROM expense_itineraries WHERE exp_id IN (?)", expenseCodes);
   }
 
   // Group legs by exp_id
@@ -425,9 +435,16 @@ export async function handleGetTeamExpenses(request, env, params, query, user) {
   }
 
   // 2. Fetch expenses of team members
-  const placeholders = teamUserIds.map(() => "?").join(",");
-  let querySql = `SELECT * FROM expenses WHERE user_id IN (${placeholders})`;
-  const binds = [...teamUserIds];
+  let querySql = "";
+  let binds = [];
+
+  if (isAdminOrReportViewer) {
+    querySql = "SELECT * FROM expenses WHERE 1=1";
+  } else {
+    const placeholders = teamUserIds.map(() => "?").join(",");
+    querySql = `SELECT * FROM expenses WHERE user_id IN (${placeholders})`;
+    binds = [...teamUserIds];
+  }
 
   if (month) {
     if (month.includes("-") && month.length === 7) {
@@ -467,11 +484,7 @@ export async function handleGetTeamExpenses(request, env, params, query, user) {
     const expenseCodes = expenses.map(e => e.expense_code).filter(Boolean);
     let allLegs = [];
     if (expenseCodes.length > 0) {
-      const legPlaceholders = expenseCodes.map(() => "?").join(",");
-      const legsResult = await env.DB.prepare(`
-        SELECT * FROM expense_itineraries WHERE exp_id IN (${legPlaceholders})
-      `).bind(...expenseCodes).all();
-      allLegs = legsResult.results || [];
+      allLegs = await queryInChunks(env.DB, "SELECT * FROM expense_itineraries WHERE exp_id IN (?)", expenseCodes);
     }
 
     const legsByCode = {};
@@ -1867,16 +1880,16 @@ export async function handleSubmitExpense(request, env, params, query, user) {
       INSERT INTO expense_itineraries (
         itinerary_id, exp_id, leg_number, from_district, to_district, from_location, to_location, 
         travel_mode, distance_km, travel_amount, sub_mode, sub_km, sub_amount, da_amount, hotel_amount, 
-        other_desc, other_amount, calls_assigned, calls_completed, pms_count, asset_tagging, visit_purpose, 
+        local_purchase, other_desc, other_amount, calls_assigned, calls_completed, pms_count, asset_tagging, visit_purpose, 
         activity_details, original_distance_km, original_travel_amount, original_sub_amount, original_da_amount, 
         original_hotel_amount, original_other_amount, original_local_purchase, calibration_count, mobilise_count
       )
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 0.0, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 0.0, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     `, [
       itiId, expenseCode, legNum, fromDist, toDist, iti.from || "", iti.to || "",
       iti.mode || "Bike", parseFloat(iti.km || "0.0"), parseFloat(iti.amount || "0.0"),
       iti.sub_mode || null, parseFloat(iti.sub_amount || "0.0"), parseFloat(iti.da || "0.0"),
-      parseFloat(iti.hotel || "0.0"), iti.oth_desc || null, parseFloat(iti.oth_amount || "0.0"),
+      parseFloat(iti.hotel || "0.0"), parseFloat(iti.local_purchase || "0.0"), iti.oth_desc || null, parseFloat(iti.oth_amount || "0.0"),
       parseInt(iti.ws_assigned || "0", 10), parseInt(iti.ws_closed || "0", 10),
       parseInt(iti.ws_pms || "0", 10), parseInt(iti.ws_asset || "0", 10),
       iti.visit_purpose || "Field visit", 
