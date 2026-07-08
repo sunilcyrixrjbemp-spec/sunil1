@@ -345,7 +345,34 @@ export async function handleCreateLimitRequest(request, env, params, query, user
   if (!requester) return jsonResponse({ error: "Requester not found" }, 404);
 
   // We find their coordinator or zonal manager to assign
-  const managerId = requester.manager || requester.zonal_manager || "Admin";
+  const managerName = requester.manager || requester.zonal_manager || requester.coordinator;
+  let managerId = "Admin"; // Default fallback
+
+  if (managerName && managerName !== "None") {
+    // Look up manager's user_id by name
+    const mgrUser = await env.DB.prepare("SELECT user_id FROM users WHERE LOWER(TRIM(name)) = ?").bind(managerName.trim().toLowerCase()).first();
+    if (mgrUser) {
+      managerId = mgrUser.user_id;
+    }
+  }
+
+  // Self-healing migration for existing broken manager_id strings (names instead of user_ids)
+  try {
+    await env.DB.prepare(`
+      UPDATE limit_approval_requests 
+      SET manager_id = (
+        SELECT user_id FROM users 
+        WHERE LOWER(TRIM(users.name)) = LOWER(TRIM(limit_approval_requests.manager_id))
+        LIMIT 1
+      )
+      WHERE EXISTS (
+        SELECT 1 FROM users 
+        WHERE LOWER(TRIM(users.name)) = LOWER(TRIM(limit_approval_requests.manager_id))
+      )
+    `).run();
+  } catch (migErr) {
+    console.error("Migration error for limit requests:", migErr);
+  }
 
   await runWrite(env, `
     INSERT INTO limit_approval_requests (user_id, request_type, requested_value, status, for_month, manager_id, created_at, updated_at)
