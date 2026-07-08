@@ -172,8 +172,67 @@ export async function handleListHierarchies(request, env, params, query, adminUs
   if (adminUser.role !== "Admin") {
     return jsonResponse({ error: "Access denied" }, 403);
   }
-  const result = await env.DB.prepare("SELECT * FROM user_approval_chains ORDER BY id ASC").all();
-  return jsonResponse(result.results || []);
+
+  // Fetch all approval chains
+  const chainsRes = await env.DB.prepare("SELECT * FROM user_approval_chains ORDER BY id ASC").all();
+  const chains = chainsRes.results || [];
+
+  if (chains.length === 0) {
+    return jsonResponse([]);
+  }
+
+  // Fetch all requesters
+  const requestersRes = await env.DB.prepare(`
+    SELECT hr.id, hr.hierarchy_id, hr.user_id, u.name AS user_name, u.user_id AS user_code
+    FROM hierarchy_requesters hr
+    JOIN users u ON hr.user_id = u.id
+  `).all();
+  const requesters = requestersRes.results || [];
+
+  // Fetch all approvers
+  const approversRes = await env.DB.prepare(`
+    SELECT ha.id, ha.hierarchy_id, ha.level_number, ha.approver_id, u.name AS approver_name, u.user_id AS approver_code, ur.role AS approver_role
+    FROM hierarchy_approvers ha
+    JOIN users u ON ha.approver_id = u.id
+    LEFT JOIN user_roles ur ON u.user_id = ur.user_id
+  `).all();
+  const approvers = approversRes.results || [];
+
+  // Map them together
+  const list = chains.map(chain => {
+    const chainRequesters = requesters
+      .filter(r => r.hierarchy_id === chain.id)
+      .map(r => ({
+        id: r.id,
+        user_id: r.user_id,
+        user_name: r.user_name,
+        user_code: r.user_code
+      }));
+
+    const chainApprovers = approvers
+      .filter(a => a.hierarchy_id === chain.id)
+      .map(a => ({
+        id: a.id,
+        level_number: a.level_number,
+        approver_id: a.approver_id,
+        approver_name: a.approver_name,
+        approver_code: a.approver_code,
+        approver_role: a.approver_role || "user"
+      }))
+      .sort((a, b) => a.level_number - b.level_number);
+
+    return {
+      id: chain.id,
+      name: chain.chain_name || "",
+      requester_designation: chain.requester_designation || "",
+      requesters: chainRequesters,
+      approvers: chainApprovers,
+      created_at: chain.created_at,
+      updated_at: chain.updated_at
+    };
+  });
+
+  return jsonResponse(list);
 }
 
 /**
