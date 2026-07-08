@@ -104,15 +104,50 @@ export async function getBootstrapDataHelper(env, user) {
       const teamRes = await env.DB.prepare("SELECT e.*, u.name as employee_name FROM expenses e JOIN users u ON e.user_id = u.id ORDER BY e.id DESC").all();
       teamExpenses = teamRes.results || [];
     } else {
-      const teamRes = await env.DB.prepare(`
-        SELECT DISTINCT e.*, u.name as employee_name 
-        FROM expenses e
-        JOIN approvals a ON e.id = a.expense_id
-        JOIN users u ON e.user_id = u.id
-        WHERE a.approver_id = ?
-        ORDER BY e.id DESC
+      // Find team user IDs exactly like handleGetTeamExpenses does
+      // 1. Direct reports
+      const directReportsRes = await env.DB.prepare(`
+        SELECT id FROM users
+        WHERE LOWER(TRIM(manager)) = ? OR LOWER(TRIM(manager)) = ?
+           OR LOWER(TRIM(coordinator)) = ? OR LOWER(TRIM(coordinator)) = ?
+           OR LOWER(TRIM(zonal_manager)) = ? OR LOWER(TRIM(zonal_manager)) = ?
+      `).bind(nameClean.toLowerCase(), uidClean.toLowerCase(), nameClean.toLowerCase(), uidClean.toLowerCase(), nameClean.toLowerCase(), uidClean.toLowerCase()).all();
+      const directReportsIds = (directReportsRes.results || []).map(r => r.id);
+
+      // 2. Hierarchy reports
+      const hierarchyApprovals = await env.DB.prepare(`
+        SELECT hierarchy_id FROM hierarchy_approvers WHERE approver_id = ?
       `).bind(user.id).all();
-      teamExpenses = teamRes.results || [];
+      
+      let hierarchyReportsIds = [];
+      if (hierarchyApprovals.results && hierarchyApprovals.results.length > 0) {
+        const hIds = hierarchyApprovals.results.map(h => h.hierarchy_id);
+        const placeholders = hIds.map(() => "?").join(",");
+        const reqsRes = await env.DB.prepare(`
+          SELECT hr.user_id FROM hierarchy_requesters hr
+          WHERE hr.hierarchy_id IN (${placeholders})
+        `).bind(...hIds).all();
+        hierarchyReportsIds = (reqsRes.results || []).map(r => r.user_id);
+      }
+
+      // Merge and de-duplicate
+      const teamUserIdsSet = new Set([...directReportsIds, ...hierarchyReportsIds]);
+      teamUserIdsSet.delete(user.id);
+      const teamUserIds = Array.from(teamUserIdsSet);
+
+      if (teamUserIds.length > 0) {
+        const placeholders = teamUserIds.map(() => "?").join(",");
+        const teamRes = await env.DB.prepare(`
+          SELECT e.*, u.name as employee_name 
+          FROM expenses e
+          JOIN users u ON e.user_id = u.id
+          WHERE e.user_id IN (${placeholders})
+          ORDER BY e.id DESC
+        `).bind(...teamUserIds).all();
+        teamExpenses = teamRes.results || [];
+      } else {
+        teamExpenses = [];
+      }
     }
     pendingApprovals = await fetchPendingApprovals(env, user);
   }

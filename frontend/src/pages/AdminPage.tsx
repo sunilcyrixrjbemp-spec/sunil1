@@ -337,8 +337,7 @@ export default function AdminPage() {
     // Verify all fields are compulsory
     if (
       !eCode.trim() || !userName.trim() || !password.trim() || !role || !designation ||
-      !grade || !zone || !district || !manager || !zonalManager ||
-      !coordinator || !mobileNumber.trim() || !mailId.trim() || !userType ||
+      !grade || !zone || !district || !mobileNumber.trim() || !mailId.trim() || !userType ||
       !dateOfJoining || !dateOfBirth || !eUpkaranId.trim()
     ) {
       setSingleUserError("All input details corresponding to user profile columns are compulsory.");
@@ -468,8 +467,7 @@ export default function AdminPage() {
     // Verify compulsory edits
     if (
       !editName.trim() || !editRole || !editDesignation || !editGrade || 
-      !editZone || !editDistrict || !editManager || !editZonalManager ||
-      !editCoordinator || !editMobileNumber.trim() || !editMailId.trim() || 
+      !editZone || !editDistrict || !editMobileNumber.trim() || !editMailId.trim() || 
       !editUserType || !editDateOfJoining || !editDateOfBirth || !editEUpkaranId.trim() ||
       !editUserId.trim() || !editECode.trim()
     ) {
@@ -1799,14 +1797,13 @@ export default function AdminPage() {
               {/* Grid 4 - Hierarchy Reporting Managers (Dynamic select dropdowns showing user names instead of text input ID strings) */}
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                 <div>
-                  <label className="label-lte">Reporting Manager *</label>
+                  <label className="label-lte">Reporting Manager</label>
                   <select
                     value={manager}
                     onChange={(e) => setManager(e.target.value)}
                     className="input-lte"
-                    required
                   >
-                    <option value="" disabled>-- Select Reporting Manager --</option>
+                    <option value="">-- None / Select Reporting Manager --</option>
                     {mList.map((u) => (
                       <option key={u.id} value={u.name}>
                         {u.name} ({u.e_code || u.user_id})
@@ -1815,14 +1812,13 @@ export default function AdminPage() {
                   </select>
                 </div>
                 <div>
-                  <label className="label-lte">Zonal Manager *</label>
+                  <label className="label-lte">Zonal Manager</label>
                   <select
                     value={zonalManager}
                     onChange={(e) => setZonalManager(e.target.value)}
                     className="input-lte"
-                    required
                   >
-                    <option value="" disabled>-- Select Zonal Manager --</option>
+                    <option value="">-- None / Select Zonal Manager --</option>
                     {zmList.map((u) => (
                       <option key={u.id} value={u.name}>
                         {u.name} ({u.e_code || u.user_id})
@@ -1831,14 +1827,13 @@ export default function AdminPage() {
                   </select>
                 </div>
                 <div>
-                  <label className="label-lte">Coordinator *</label>
+                  <label className="label-lte">Coordinator</label>
                   <select
                     value={coordinator}
                     onChange={(e) => setCoordinator(e.target.value)}
                     className="input-lte"
-                    required
                   >
-                    <option value="" disabled>-- Select Coordinator --</option>
+                    <option value="">-- None / Select Coordinator --</option>
                     {cList.map((u) => (
                       <option key={u.id} value={u.name}>
                         {u.name} ({u.e_code || u.user_id})
@@ -2142,14 +2137,13 @@ export default function AdminPage() {
               {/* Grid 4 - Reporting Managers (Dropdown selection showing names) */}
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                 <div>
-                  <label className="label-lte">Reporting Manager *</label>
+                  <label className="label-lte">Reporting Manager</label>
                   <select
                     value={editManager}
                     onChange={(e) => setEditManager(e.target.value)}
                     className="input-lte"
-                    required
                   >
-                    <option value="" disabled>-- Select Reporting Manager --</option>
+                    <option value="">-- None / Clear Reporting Manager --</option>
                     {mList.map((u) => (
                       <option key={u.id} value={u.name}>
                         {u.name} ({u.e_code || u.user_id})
@@ -2161,14 +2155,13 @@ export default function AdminPage() {
                   </select>
                 </div>
                 <div>
-                  <label className="label-lte">Zonal Manager *</label>
+                  <label className="label-lte">Zonal Manager</label>
                   <select
                     value={editZonalManager}
                     onChange={(e) => setEditZonalManager(e.target.value)}
                     className="input-lte"
-                    required
                   >
-                    <option value="" disabled>-- Select Zonal Manager --</option>
+                    <option value="">-- None / Clear Zonal Manager --</option>
                     {zmList.map((u) => (
                       <option key={u.id} value={u.name}>
                         {u.name} ({u.e_code || u.user_id})
@@ -2180,14 +2173,13 @@ export default function AdminPage() {
                   </select>
                 </div>
                 <div>
-                  <label className="label-lte">Coordinator *</label>
+                  <label className="label-lte">Coordinator</label>
                   <select
                     value={editCoordinator}
                     onChange={(e) => setEditCoordinator(e.target.value)}
                     className="input-lte"
-                    required
                   >
-                    <option value="" disabled>-- Select Coordinator --</option>
+                    <option value="">-- None / Clear Coordinator --</option>
                     {cList.map((u) => (
                       <option key={u.id} value={u.name}>
                         {u.name} ({u.e_code || u.user_id})
