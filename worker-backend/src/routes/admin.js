@@ -68,6 +68,14 @@ export async function handleSaveUser(request, env, params, query, adminUser) {
     if (mail_id !== undefined) { updates.push("mail_id = ?"); bindings.push(mail_id || null); }
     if (user_status) { updates.push("user_status = ?"); bindings.push(user_status); }
 
+    // Support additional fields in save/update
+    if (body.grade !== undefined) { updates.push("grade = ?"); bindings.push(body.grade); }
+    if (body.type !== undefined) { updates.push("type = ?"); bindings.push(body.type); }
+    if (body.date_of_joining !== undefined) { updates.push("date_of_joining = ?"); bindings.push(body.date_of_joining || null); }
+    if (body.date_of_birth !== undefined) { updates.push("date_of_birth = ?"); bindings.push(body.date_of_birth || null); }
+    if (body.e_upkaran_id !== undefined) { updates.push("e_upkaran_id = ?"); bindings.push(body.e_upkaran_id); }
+    if (body.allowed_windows !== undefined) { updates.push("allowed_windows = ?"); bindings.push(body.allowed_windows); }
+
     if (password) {
       const newHash = await getPasswordHash(password);
       updates.push("hashed_password = ?");
@@ -99,11 +107,11 @@ export async function handleSaveUser(request, env, params, query, adminUser) {
     return jsonResponse({ status: "success", message: "User updated successfully" });
   } else {
     // CREATE new user
-    if (!user_id || !password || !name) {
-      return jsonResponse({ error: "user_id, password, and name are required" }, 400);
+    const cleanUserId = (user_id || body.e_code || "").trim();
+    if (!cleanUserId || !password || !name) {
+      return jsonResponse({ error: "user_id/e_code, password, and name are required" }, 400);
     }
 
-    const cleanUserId = user_id.trim();
     const existing = await env.DB.prepare("SELECT 1 FROM users WHERE user_id = ?").bind(cleanUserId).first();
     if (existing) {
       return jsonResponse({ error: "User ID already exists" }, 400);
@@ -111,12 +119,18 @@ export async function handleSaveUser(request, env, params, query, adminUser) {
 
     const hashed = await getPasswordHash(password);
     await runWrite(env, `
-      INSERT INTO users (user_id, e_code, name, hashed_password, user_status, designation, zone, district, manager, zonal_manager, coordinator, mobile_number, mail_id, created_at, updated_at)
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      INSERT INTO users (
+        user_id, e_code, name, hashed_password, user_status, designation, 
+        zone, district, manager, zonal_manager, coordinator, mobile_number, 
+        mail_id, grade, type, date_of_joining, date_of_birth, e_upkaran_id, 
+        allowed_windows, created_at, updated_at
+      )
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     `, [
-      cleanUserId, cleanUserId, name.trim(), hashed, user_status || "active",
-      designation || "", zone || "", district || "", manager || null, zonal_manager || null,
-      coordinator || null, mobile_number || null, mail_id || null, timestamp, timestamp
+      cleanUserId, cleanUserId, name.trim(), hashed, user_status || "active", designation || "", 
+      zone || "", district || "", manager || null, zonal_manager || null, coordinator || null, mobile_number || null, 
+      mail_id || null, body.grade || "", body.type || "", body.date_of_joining || null, body.date_of_birth || null, body.e_upkaran_id || "", 
+      body.allowed_windows || "home,expense,help,profile", timestamp, timestamp
     ]);
 
     await runWrite(env, "INSERT INTO user_roles (user_id, role, assigned_at) VALUES (?, ?, ?)", [
