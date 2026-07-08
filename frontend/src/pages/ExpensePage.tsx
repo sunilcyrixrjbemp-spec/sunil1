@@ -1741,21 +1741,39 @@ export default function ExpensePage() {
 
       const mainBill = files[legNum]?.main_bill;
       const hasMainAttachment = mainBill || hasExistingFile(legNum, leg.mode);
-      if (leg.mode === "Train" && !hasMainAttachment) {
-        setValidationModal({
-          show: true,
-          title: `Visit ${legNum}: Missing Train Ticket`,
-          message: "Please upload your train ticket receipt."
-        });
-        return false;
-      }
-      if ((leg.mode === "Bus" || leg.mode === "Auto") && (parseFloat(leg.amount) || 0) >= 305 && !hasMainAttachment) {
-        setValidationModal({
-          show: true,
-          title: `Visit ${legNum}: Missing Ticket Receipt`,
-          message: "Please upload a receipt screenshot since the fare is ₹300 or more."
-        });
-        return false;
+      const mainAmt = parseFloat(leg.amount) || 0;
+
+      if (leg.mode === "Train") {
+        if (mainAmt >= 1 && !hasMainAttachment) {
+          setValidationModal({
+            show: true,
+            title: `Visit ${legNum}: Missing Train Ticket`,
+            message: "Please upload your train ticket receipt since the amount is ₹1 or more."
+          });
+          return false;
+        }
+      } else if (leg.mode === "Company Provided") {
+        const isJodhpur = (leg.district_from || "").toLowerCase().includes("jodhpur") || 
+                          (leg.district || "").toLowerCase().includes("jodhpur") ||
+                          (leg.from || "").toLowerCase().includes("jodhpur") ||
+                          (leg.to || "").toLowerCase().includes("jodhpur");
+        if (!isJodhpur && mainAmt >= 300 && !hasMainAttachment) {
+          setValidationModal({
+            show: true,
+            title: `Visit ${legNum}: Missing Attachment`,
+            message: "Please upload a receipt for company provided travel since the amount is ₹300 or more."
+          });
+          return false;
+        }
+      } else if (leg.mode !== "Bike") {
+        if (mainAmt >= 300 && !hasMainAttachment) {
+          setValidationModal({
+            show: true,
+            title: `Visit ${legNum}: Missing Ticket Receipt`,
+            message: `Please upload a receipt screenshot for travel mode "${leg.mode}" since the fare is ₹300 or more.`
+          });
+          return false;
+        }
       }
 
       if (leg.sub_mode) {
@@ -1770,21 +1788,38 @@ export default function ExpensePage() {
         }
         const subBill = files[legNum]?.sub_bill;
         const hasSubAttachment = subBill || hasExistingFile(legNum, leg.sub_mode);
-        if (leg.sub_mode === "Train" && !hasSubAttachment) {
-          setValidationModal({
-            show: true,
-            title: `Visit ${legNum}: Missing Sub-connection Ticket`,
-            message: "Please upload the sub-connection train ticket receipt."
-          });
-          return false;
-        }
-        if ((leg.sub_mode === "Bus" || leg.sub_mode === "Auto") && subAmt >= 305 && !hasSubAttachment) {
-          setValidationModal({
-            show: true,
-            title: `Visit ${legNum}: Missing Sub-connection Receipt`,
-            message: "Please upload a sub-connection receipt screenshot since the fare is ₹300 or more."
-          });
-          return false;
+
+        if (leg.sub_mode === "Train") {
+          if (subAmt >= 1 && !hasSubAttachment) {
+            setValidationModal({
+              show: true,
+              title: `Visit ${legNum}: Missing Sub-connection Train Ticket`,
+              message: "Please upload the sub-connection train ticket receipt since the amount is ₹1 or more."
+            });
+            return false;
+          }
+        } else if (leg.sub_mode === "Company Provided") {
+          const isJodhpur = (leg.district_from || "").toLowerCase().includes("jodhpur") || 
+                            (leg.district || "").toLowerCase().includes("jodhpur") ||
+                            (leg.from || "").toLowerCase().includes("jodhpur") ||
+                            (leg.to || "").toLowerCase().includes("jodhpur");
+          if (!isJodhpur && subAmt >= 300 && !hasSubAttachment) {
+            setValidationModal({
+              show: true,
+              title: `Visit ${legNum}: Missing Sub-connection Attachment`,
+              message: "Please upload a receipt for sub-connection company provided travel since the amount is ₹300 or more."
+            });
+            return false;
+          }
+        } else if (leg.sub_mode !== "Bike") {
+          if (subAmt >= 300 && !hasSubAttachment) {
+            setValidationModal({
+              show: true,
+              title: `Visit ${legNum}: Missing Sub-connection Receipt`,
+              message: `Please upload a sub-connection receipt screenshot since the fare is ₹300 or more.`
+            });
+            return false;
+          }
         }
       }
 
@@ -1819,7 +1854,7 @@ export default function ExpensePage() {
         const hotelAmt = parseFloat(leg.hotel) || 0;
         const hotelBill = files[1]?.hotel_bill;
         const hasHotelAttachment = hotelBill || hasExistingFile(1, "Hotel");
-        if (hotelAmt > 0 && !hasHotelAttachment) {
+        if (hotelAmt >= 1 && !hasHotelAttachment) {
           setValidationModal({
             show: true,
             title: "Visit 1: Missing Hotel stay receipt",
@@ -1831,7 +1866,7 @@ export default function ExpensePage() {
         const lpAmt = parseFloat(leg.local_purchase) || 0;
         const lpBill = files[1]?.local_purchase_bill;
         const hasLpAttachment = lpBill || hasExistingFile(1, "Local_Purchase");
-        if (lpAmt >= 305 && !hasLpAttachment) {
+        if (lpAmt >= 300 && !hasLpAttachment) {
           setValidationModal({
             show: true,
             title: "Visit 1: Missing Local Purchase receipt",
@@ -1853,7 +1888,7 @@ export default function ExpensePage() {
         }
         const othBill = files[legNum]?.oth_bill;
         const hasOthAttachment = othBill || hasExistingFile(legNum, "Other_Expense");
-        if (othAmt >= 305 && !hasOthAttachment) {
+        if (othAmt >= 300 && !hasOthAttachment) {
           setValidationModal({
             show: true,
             title: `Visit ${legNum}: Missing Other Receipt`,
