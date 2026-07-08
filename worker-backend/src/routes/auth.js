@@ -414,6 +414,15 @@ export async function handleForgotPassword(request, env, params, query) {
         await sendEmail(email, "Security Verification - Account Recovery", emailTemplate, env.RESEND_API_KEY);
       } catch (emailErr) {
         console.error("Failed to send OTP email:", emailErr);
+        let userMessage = emailErr.message;
+        try {
+          const cleanMsg = emailErr.message.replace("Email dispatch failed: ", "");
+          const parsed = JSON.parse(cleanMsg);
+          if (parsed.message) {
+            userMessage = parsed.message;
+          }
+        } catch (e) {}
+        return jsonResponse({ error: `Email delivery failed: ${userMessage}. Please verify Resend domain configuration.` }, 400);
       }
     }
 
@@ -599,6 +608,15 @@ export async function handleUnlockAccount(request, env, params, query) {
         await sendEmail(email, "Action Required: Account Unlock Request", emailTemplate, env.RESEND_API_KEY);
       } catch (emailErr) {
         console.error("Failed to send unlock email:", emailErr);
+        let userMessage = emailErr.message;
+        try {
+          const cleanMsg = emailErr.message.replace("Email dispatch failed: ", "");
+          const parsed = JSON.parse(cleanMsg);
+          if (parsed.message) {
+            userMessage = parsed.message;
+          }
+        } catch (e) {}
+        return jsonResponse({ error: `Email delivery failed: ${userMessage}. Please verify Resend domain configuration.` }, 400);
       }
     }
 

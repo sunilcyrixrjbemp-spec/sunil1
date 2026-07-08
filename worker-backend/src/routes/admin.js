@@ -1,5 +1,5 @@
 import { runWrite, runBatchWrite } from "../utils/db.js";
-import { getPasswordHash } from "../utils/security.js";
+import { getPasswordHash, verifyPassword } from "../utils/security.js";
 
 function jsonResponse(data, status = 200) {
   return new Response(JSON.stringify(data), {
@@ -394,34 +394,83 @@ export async function handleBulkCreateUsers(request, env, params, query, adminUs
 
     try {
       if (existing) {
+        let passwordChanged = false;
+        let newPasswordHash = null;
+        if (item.password) {
+          const plainPwd = String(item.password).trim();
+          const isSamePassword = await verifyPassword(plainPwd, existing.hashed_password);
+          if (!isSamePassword) {
+            passwordChanged = true;
+            newPasswordHash = await getPasswordHash(plainPwd);
+          }
+        }
+
         const fieldUpdates = [];
         const fieldBinds = [];
-        if (item.designation) { fieldUpdates.push("designation = ?"); fieldBinds.push(String(item.designation).trim()); }
-        if (item.grade) { fieldUpdates.push("grade = ?"); fieldBinds.push(String(item.grade).trim()); }
-        if (item.district) { fieldUpdates.push("district = ?"); fieldBinds.push(String(item.district).trim()); }
-        if (item.zone) { fieldUpdates.push("zone = ?"); fieldBinds.push(String(item.zone).trim()); }
-        if (item.mobile_number) { fieldUpdates.push("mobile_number = ?"); fieldBinds.push(String(item.mobile_number).trim()); }
-        if (item.mail_id) { fieldUpdates.push("mail_id = ?"); fieldBinds.push(String(item.mail_id).trim()); }
-        if (item.date_of_joining) { fieldUpdates.push("date_of_joining = ?"); fieldBinds.push(String(item.date_of_joining).trim()); }
-        if (item.date_of_birth) { fieldUpdates.push("date_of_birth = ?"); fieldBinds.push(String(item.date_of_birth).trim()); }
-        if (item.e_upkaran_id) { fieldUpdates.push("e_upkaran_id = ?"); fieldBinds.push(String(item.e_upkaran_id).trim()); }
-        if (managerCl !== undefined) { fieldUpdates.push("manager = ?"); fieldBinds.push(managerCl); }
-        if (zonalMgrCl !== undefined) { fieldUpdates.push("zonal_manager = ?"); fieldBinds.push(zonalMgrCl); }
-        if (coordCl !== undefined) { fieldUpdates.push("coordinator = ?"); fieldBinds.push(coordCl); }
-        if (roleCl) { fieldUpdates.push("role = ?"); fieldBinds.push(roleCl); }
-        if (typeCl) { fieldUpdates.push("type = ?"); fieldBinds.push(typeCl); }
-        if (item.allowed_windows) { fieldUpdates.push("allowed_windows = ?"); fieldBinds.push(String(item.allowed_windows).trim()); }
-        else if (roleCl) { fieldUpdates.push("allowed_windows = ?"); fieldBinds.push(autoWindows); }
-        if (item.password) {
-          const h = await getPasswordHash(String(item.password).trim());
-          fieldUpdates.push("hashed_password = ?"); fieldBinds.push(h);
-          await runWrite(env, "INSERT INTO password_histories (user_id, hashed_password, created_at) VALUES (?, ?, ?)", [existing.id, h, timestamp]);
+
+        const isDiff = (val1, val2) => {
+          const v1 = val1 === undefined || val1 === null ? "" : String(val1).trim();
+          const v2 = val2 === undefined || val2 === null ? "" : String(val2).trim();
+          return v1 !== v2;
+        };
+
+        if (item.designation !== undefined && isDiff(item.designation, existing.designation)) {
+          fieldUpdates.push("designation = ?"); fieldBinds.push(String(item.designation).trim());
+        }
+        if (item.grade !== undefined && isDiff(item.grade, existing.grade)) {
+          fieldUpdates.push("grade = ?"); fieldBinds.push(String(item.grade).trim());
+        }
+        if (item.district !== undefined && isDiff(item.district, existing.district)) {
+          fieldUpdates.push("district = ?"); fieldBinds.push(String(item.district).trim());
+        }
+        if (item.zone !== undefined && isDiff(item.zone, existing.zone)) {
+          fieldUpdates.push("zone = ?"); fieldBinds.push(String(item.zone).trim());
+        }
+        if (item.mobile_number !== undefined && isDiff(item.mobile_number, existing.mobile_number)) {
+          fieldUpdates.push("mobile_number = ?"); fieldBinds.push(String(item.mobile_number).trim());
+        }
+        if (item.mail_id !== undefined && isDiff(item.mail_id, existing.mail_id)) {
+          fieldUpdates.push("mail_id = ?"); fieldBinds.push(String(item.mail_id).trim());
+        }
+        if (item.date_of_joining !== undefined && isDiff(item.date_of_joining, existing.date_of_joining)) {
+          fieldUpdates.push("date_of_joining = ?"); fieldBinds.push(String(item.date_of_joining).trim() || null);
+        }
+        if (item.date_of_birth !== undefined && isDiff(item.date_of_birth, existing.date_of_birth)) {
+          fieldUpdates.push("date_of_birth = ?"); fieldBinds.push(String(item.date_of_birth).trim() || null);
+        }
+        if (item.e_upkaran_id !== undefined && isDiff(item.e_upkaran_id, existing.e_upkaran_id)) {
+          fieldUpdates.push("e_upkaran_id = ?"); fieldBinds.push(String(item.e_upkaran_id).trim());
+        }
+        if (managerCl !== undefined && isDiff(managerCl, existing.manager)) {
+          fieldUpdates.push("manager = ?"); fieldBinds.push(managerCl || null);
+        }
+        if (zonalMgrCl !== undefined && isDiff(zonalMgrCl, existing.zonal_manager)) {
+          fieldUpdates.push("zonal_manager = ?"); fieldBinds.push(zonalMgrCl || null);
+        }
+        if (coordCl !== undefined && isDiff(coordCl, existing.coordinator)) {
+          fieldUpdates.push("coordinator = ?"); fieldBinds.push(coordCl || null);
+        }
+        if (roleCl && isDiff(roleCl, existing.role)) {
+          fieldUpdates.push("role = ?"); fieldBinds.push(roleCl);
+        }
+        if (typeCl && isDiff(typeCl, existing.type)) {
+          fieldUpdates.push("type = ?"); fieldBinds.push(typeCl);
+        }
+
+        const targetWindows = item.allowed_windows ? String(item.allowed_windows).trim() : (roleCl ? autoWindows : existing.allowed_windows);
+        if (targetWindows !== undefined && isDiff(targetWindows, existing.allowed_windows)) {
+          fieldUpdates.push("allowed_windows = ?"); fieldBinds.push(targetWindows);
+        }
+
+        if (passwordChanged && newPasswordHash) {
+          fieldUpdates.push("hashed_password = ?"); fieldBinds.push(newPasswordHash);
+          await runWrite(env, "INSERT INTO password_histories (user_id, hashed_password, created_at) VALUES (?, ?, ?)", [existing.id, newPasswordHash, timestamp]);
         }
 
         if (fieldUpdates.length > 0) {
           fieldBinds.push(timestamp); fieldBinds.push(existing.id);
           await runWrite(env, `UPDATE users SET ${fieldUpdates.join(", ")}, updated_at = ? WHERE id = ?`, fieldBinds);
-          if (roleCl) {
+          if (roleCl && isDiff(roleCl, existing.role)) {
             await runWrite(env, "DELETE FROM user_roles WHERE user_id = ?", [existing.user_id]);
             await runWrite(env, "INSERT INTO user_roles (user_id, role, assigned_at) VALUES (?, ?, ?)", [existing.user_id, roleCl, timestamp]);
           }
