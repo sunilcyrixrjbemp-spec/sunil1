@@ -345,14 +345,13 @@ export default function HomePage() {
 
   if (!user) return null;
 
-  const userRole = user.role || "Engineer";
   const allowedWindows = user.allowed_windows
     ? user.allowed_windows.split(",").map((w: string) => w.trim().toLowerCase())
     : ["home", "profile", "help"];
 
 
 
-  const isReviewerRole = userRole === "Admin" || allowedWindows.includes("approval");
+  const isReviewerRole = allowedWindows.includes("approval");
 
   const getStatusBadgeClass = (status: string) => {
     const s = (status || "").toLowerCase();

@@ -162,9 +162,8 @@ export default function AnalysisPage() {
   }, [endDate]);
 
   const user = authService.getCurrentUser();
-  const userRole = user?.role || "Engineer";
-  const allowedWindows = (user?.allowed_windows || "").split(",").map((w: string) => w.trim());
-  const isReviewer = userRole === "Admin" || allowedWindows.includes("approval");
+  const allowedWindows = (user?.allowed_windows || "").split(",").map((w: string) => w.trim().toLowerCase());
+  const isReviewer = allowedWindows.includes("approval");
 
   useEffect(() => {
     const currentUser = authService.getCurrentUser();

@@ -295,32 +295,32 @@ export default function DashboardLayout() {
 
   const userRole = user.role || "Engineer";
 
-  let allowedWindows: string[] = ["home", "profile", "help", "expense"];
-  try {
-    if (user && user.allowed_windows) {
-      if (Array.isArray(user.allowed_windows)) {
-        const parsed = user.allowed_windows.map((w: any) => String(w).trim().toLowerCase());
-        parsed.forEach((w: string) => {
-          if (!allowedWindows.includes(w)) allowedWindows.push(w);
-        });
-      } else if (typeof user.allowed_windows === "string") {
-        const parsed = user.allowed_windows.split(",").map((w: string) => w.trim().toLowerCase());
-        parsed.forEach((w: string) => {
-          if (!allowedWindows.includes(w)) allowedWindows.push(w);
-        });
-      }
-    }
-  } catch (_) {}
-
-  // Check if user has permission for menu items based on allowed_windows
   const isAdmin = ["Admin", "admin", "Super Admin", "super_admin"].includes(userRole);
 
+  let allowedWindows: string[] = [];
+  try {
+    if (user && user.allowed_windows !== undefined && user.allowed_windows !== null && user.allowed_windows !== "") {
+      if (Array.isArray(user.allowed_windows)) {
+        allowedWindows = user.allowed_windows.map((w: any) => String(w).trim().toLowerCase()).filter(Boolean);
+      } else if (typeof user.allowed_windows === "string") {
+        allowedWindows = user.allowed_windows.split(",").map((w: string) => w.trim().toLowerCase()).filter(Boolean);
+      }
+    } else {
+      if (isAdmin) {
+        allowedWindows = MENU_ITEMS.map(item => item.id.toLowerCase());
+      } else {
+        allowedWindows = ["home", "profile", "help", "expense"];
+      }
+    }
+  } catch (_) {
+    allowedWindows = ["home", "profile", "help", "expense"];
+  }
+
+  // Check if user has permission for menu items based on allowed_windows
   const allowedMenuItems = MENU_ITEMS.filter((item) => {
     if (isMobileScreen && ["report", "consolidated_report", "mis_report"].includes(item.id.toLowerCase())) {
       return false;
     }
-    if (isAdmin) return true;  // Admin sees all menu items
-    if (["home", "profile", "help", "expense"].includes(item.id.toLowerCase())) return true;
     return allowedWindows.includes(item.id.toLowerCase());
   });
 
@@ -343,8 +343,6 @@ export default function DashboardLayout() {
 
   const hasAccess = 
     !currentActiveItem || 
-    isAdmin ||  // Admin always has full access
-    ["home", "profile", "help"].includes(currentActiveItem.id.toLowerCase()) ||
     allowedWindows.includes(currentActiveItem.id.toLowerCase());
   const safeNotifications = Array.isArray(notifications) ? notifications : [];
 
