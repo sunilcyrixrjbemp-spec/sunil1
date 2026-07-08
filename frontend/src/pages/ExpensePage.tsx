@@ -5377,7 +5377,7 @@ export default function ExpensePage() {
             {/* Modal Footer */}
             <div className="px-4 py-3 border-t border-gray-200 bg-gray-50 flex items-center justify-between shrink-0">
               <div className="flex gap-2">
-                {selectedClaim && selectedClaim.category !== "Limit Request" && ["draft", "submitted"].includes(selectedClaim.status?.toLowerCase()) && (
+                {selectedClaim && selectedClaim.category !== "Limit Request" && ["draft", "submitted", "returned_to_draft"].includes(selectedClaim.status?.toLowerCase()) && (
                   <>
                     <button
                       type="button"

@@ -468,7 +468,7 @@ export default function HomePage() {
       if (homeStatusFilter !== "all") {
         const s = (exp.status || "").toLowerCase();
         if (homeStatusFilter === "pending") {
-          if (!(s.startsWith("submitted") || s === "pending" || s === "draft")) return false;
+          if (!(s.startsWith("submitted") || s === "pending" || s === "draft" || s === "returned_to_draft")) return false;
         } else if (homeStatusFilter === "approved") {
           if (s !== "approved") return false;
         } else if (homeStatusFilter === "rejected") {
@@ -490,7 +490,7 @@ export default function HomePage() {
       if (homeStatusFilter !== "all") {
         const s = (exp.status || "").toLowerCase();
         if (homeStatusFilter === "pending") {
-          if (!(s.startsWith("submitted") || s === "pending" || s === "draft")) return false;
+          if (!(s.startsWith("submitted") || s === "pending" || s === "draft" || s === "returned_to_draft")) return false;
         } else if (homeStatusFilter === "approved") {
           if (s !== "approved") return false;
         } else if (homeStatusFilter === "rejected") {
@@ -564,7 +564,7 @@ export default function HomePage() {
   const statsRejectedClaims = currentClaimsList.filter(c => c.status?.toLowerCase() === "rejected");
   const statsPendingClaims = currentClaimsList.filter(c => {
     const s = c.status?.toLowerCase() || "";
-    return s.startsWith("submitted") || s === "pending" || s === "draft";
+    return s.startsWith("submitted") || s === "pending" || s === "draft" || s === "returned_to_draft";
   });
 
   const getStatsSums = (list: any[]) => list.filter(c => c.category !== "Limit Request").reduce((sum, c) => sum + (c.amount || 0), 0);
@@ -1972,7 +1972,7 @@ export default function HomePage() {
             {/* Modal Footer */}
             <div className="px-4 py-3 border-t border-gray-200 bg-gray-50 flex items-center justify-between shrink-0">
               <div className="flex gap-2">
-                {claimDetails && (claimDetails.submitter_code === user.user_id || claimDetails.user_id === user.id) && ["draft", "submitted"].includes(claimDetails.status?.toLowerCase()) && (
+                {claimDetails && (claimDetails.submitter_code === user.user_id || claimDetails.user_id === user.id) && ["draft", "submitted", "returned_to_draft"].includes(claimDetails.status?.toLowerCase()) && (
                   <>
                     <button
                       type="button"
