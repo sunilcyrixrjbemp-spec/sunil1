@@ -1844,14 +1844,15 @@ export default function ExpensePage() {
           });
           return false;
         }
-        if (leg.district_from === leg.district) {
-          setValidationModal({
-            show: true,
-            title: `Visit ${legNum}: Same Districts`,
-            message: "The starting and destination districts must be different for outdoor travel."
-          });
-          return false;
-        }
+        // Allowed user to choose any district (including the same district) for starting and destination locations during outdoor travel
+        // if (leg.district_from === leg.district) {
+        //   setValidationModal({
+        //     show: true,
+        //     title: `Visit ${legNum}: Same Districts`,
+        //     message: "The starting and destination districts must be different for outdoor travel."
+        //   });
+        //   return false;
+        // }
       }
 
       if (legNum === 1) {
