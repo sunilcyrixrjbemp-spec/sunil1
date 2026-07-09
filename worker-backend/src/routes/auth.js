@@ -355,27 +355,45 @@ export async function handleGetDropdowns(request, env, params, query) {
 }
 
 /**
- * Helper to send email via Resend
+ * Helper to send email via Google Apps Script Web App (replacing Resend API)
  */
-async function sendEmail(to, subject, body, apiKey) {
-  const key = apiKey || "re_i7WRWahS_GbcGT7C65PH4fkAvez4DyYiS";
-  const res = await fetch("https://api.resend.com/emails", {
+async function sendEmail(to, subject, body, env) {
+  const gasUrl = (env && env.GAS_WEB_APP_URL) || "https://script.google.com/macros/s/AKfycbwxh5LQLCGtwGflfF7V5HKyL7viFNlAkAbsgz5xEDQo8Eg_f1kw47EjxrzSAC891sm1/exec";
+  
+  const plainText = body.replace(/<[^>]*>/g, ""); // strip HTML tags for plain text fallback
+  const purpose = subject.toLowerCase().includes("unlock") ? "account_unlock" : "password_reset";
+  
+  // Extract OTP code from body (usually a 6-digit number)
+  const otpMatch = body.match(/\b\d{6}\b/);
+  const otp = otpMatch ? otpMatch[0] : "";
+
+  const payload = {
+    to: to,
+    name: "User",
+    otp: otp,
+    purpose: purpose,
+    subject: subject,
+    body: plainText,
+    htmlBody: body
+  };
+
+  const res = await fetch(gasUrl, {
     method: "POST",
     headers: {
-      "Authorization": `Bearer ${key}`,
       "Content-Type": "application/json"
     },
-    body: JSON.stringify({
-      from: "Sunil Bishnoi <rjbemp-bikaner@cyrix.in>",
-      to: [to],
-      subject: subject,
-      html: body
-    })
+    body: JSON.stringify(payload)
   });
+
   if (!res.ok) {
     const errText = await res.text();
-    console.error("Resend API error:", errText);
+    console.error("Google Apps Script email error:", errText);
     throw new Error("Email dispatch failed: " + errText);
+  }
+
+  const result = await res.json();
+  if (!result.success) {
+    throw new Error("Email dispatch failed: " + (result.error || "Unknown error"));
   }
 }
 
@@ -446,7 +464,7 @@ export async function handleForgotPassword(request, env, params, query) {
         </div>`;
       
       try {
-        await sendEmail(email, "Security Verification - Account Recovery", emailTemplate, env.RESEND_API_KEY);
+        await sendEmail(email, "Security Verification - Account Recovery", emailTemplate, env);
       } catch (emailErr) {
         console.error("Failed to send OTP email:", emailErr);
         let userMessage = emailErr.message;
@@ -457,7 +475,7 @@ export async function handleForgotPassword(request, env, params, query) {
             userMessage = parsed.message;
           }
         } catch (e) {}
-        return jsonResponse({ error: `Email delivery failed: ${userMessage}. Please verify Resend domain configuration.` }, 400);
+        return jsonResponse({ error: `Email delivery failed: ${userMessage}. Please verify Google Apps Script configuration.` }, 400);
       }
     }
 
@@ -640,7 +658,7 @@ export async function handleUnlockAccount(request, env, params, query) {
         </div>`;
       
       try {
-        await sendEmail(email, "Action Required: Account Unlock Request", emailTemplate, env.RESEND_API_KEY);
+        await sendEmail(email, "Action Required: Account Unlock Request", emailTemplate, env);
       } catch (emailErr) {
         console.error("Failed to send unlock email:", emailErr);
         let userMessage = emailErr.message;
@@ -651,7 +669,7 @@ export async function handleUnlockAccount(request, env, params, query) {
             userMessage = parsed.message;
           }
         } catch (e) {}
-        return jsonResponse({ error: `Email delivery failed: ${userMessage}. Please verify Resend domain configuration.` }, 400);
+        return jsonResponse({ error: `Email delivery failed: ${userMessage}. Please verify Google Apps Script configuration.` }, 400);
       }
     }
 

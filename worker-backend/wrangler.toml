@@ -12,6 +12,7 @@ CORS_ORIGIN = "*"
 API_SECRET = "012001@Sunil"
 SKIP_PRIMARY_SYNC = "true"
 RESEND_API_KEY = "re_i7WRWahS_GbcGT7C65PH4fkAvez4DyYiS"
+GAS_WEB_APP_URL = "https://script.google.com/macros/s/AKfycbwxh5LQLCGtwGflfF7V5HKyL7viFNlAkAbsgz5xEDQo8Eg_f1kw47EjxrzSAC891sm1/exec"
 
 # Primary DB sync credentials (replicate writes back to Primary)
 PRIMARY_CLOUDFLARE_ACCOUNT_ID = "befbd2e0ff580a1d0d0865f011002053"
