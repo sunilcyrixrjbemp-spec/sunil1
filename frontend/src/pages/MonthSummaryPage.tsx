@@ -571,18 +571,117 @@ export default function MonthSummaryPage() {
     });
   };
 
-  const waitForImages = (element: HTMLElement): Promise<void> => {
-    const images = Array.from(element.getElementsByTagName("img"));
-    if (images.length === 0) return Promise.resolve();
-    const promises = images.map((img) => {
-      if (img.complete) return Promise.resolve();
-      return new Promise<void>((resolve) => {
-        img.onload = () => resolve();
-        img.onerror = () => resolve();
+  // Renders a full HTML document inside a hidden iframe, captures it with
+  // html2canvas + jsPDF, and returns the PDF as a Blob.
+  const renderHTMLToPDFBlob = (html: string, filename: string): Promise<Blob> => {
+    return new Promise((resolve, reject) => {
+      const iframe = document.createElement("iframe");
+      iframe.style.position = "fixed";
+      iframe.style.top = "0";
+      iframe.style.left = "0";
+      iframe.style.width = "1122px";   // A4 landscape at 96dpi ≈ 1123px
+      iframe.style.height = "794px";
+      iframe.style.opacity = "0";
+      iframe.style.pointerEvents = "none";
+      iframe.style.border = "none";
+      iframe.style.zIndex = "-9999";
+      document.body.appendChild(iframe);
+
+      const iDoc = iframe.contentDocument || iframe.contentWindow?.document;
+      if (!iDoc) { document.body.removeChild(iframe); reject(new Error("No iframe document")); return; }
+
+      iDoc.open();
+      iDoc.write(html);
+      iDoc.close();
+
+      // Wait for images inside the iframe to load
+      const waitIframeImages = () => new Promise<void>((res) => {
+        const imgs = Array.from(iDoc.getElementsByTagName("img"));
+        if (imgs.length === 0) { setTimeout(res, 300); return; }
+        let done = 0;
+        const check = () => { done++; if (done >= imgs.length) setTimeout(res, 300); };
+        imgs.forEach((img) => {
+          if ((img as HTMLImageElement).complete) check();
+          else { img.onload = check; img.onerror = check; }
+        });
       });
-    });
-    return Promise.all(promises).then(() => {
-      return new Promise<void>((r) => setTimeout(r, 250));
+
+      const doCapture = async () => {
+        try {
+          await waitIframeImages();
+          const h2c = (window as any).html2canvas;
+          const jsPDF = (window as any).jspdf?.jsPDF || (window as any).jsPDF;
+
+          // Capture the full scrollable body
+          const body = iDoc.body;
+          const totalHeight = body.scrollHeight;
+          const totalWidth = body.scrollWidth || 1122;
+
+          const canvas = await h2c(body, {
+            scale: 2,
+            useCORS: true,
+            allowTaint: false,
+            logging: false,
+            width: totalWidth,
+            height: totalHeight,
+            scrollX: 0,
+            scrollY: 0,
+            windowWidth: totalWidth,
+            windowHeight: totalHeight,
+          });
+
+          document.body.removeChild(iframe);
+
+          // A4 landscape dimensions in mm
+          const pageW = 297;
+          const pageH = 210;
+          const margin = 5;
+          const contentW = pageW - margin * 2;
+          const contentH = pageH - margin * 2;
+
+          // Scale image width to fit page content width
+          const imgWidthMM = contentW;
+          const imgHeightMM = (canvas.height / canvas.width) * contentW;
+
+          const pdf = new jsPDF({ unit: "mm", format: "a4", orientation: "landscape" });
+          let yOffset = 0;
+          let firstPage = true;
+
+          while (yOffset < imgHeightMM) {
+            if (!firstPage) pdf.addPage();
+            firstPage = false;
+
+            // Source slice in px on the canvas
+            const srcY = (yOffset / imgHeightMM) * canvas.height;
+            const srcH = (contentH / imgHeightMM) * canvas.height;
+
+            const sliceCanvas = document.createElement("canvas");
+            sliceCanvas.width = canvas.width;
+            sliceCanvas.height = Math.min(srcH, canvas.height - srcY);
+            const ctx = sliceCanvas.getContext("2d")!;
+            ctx.drawImage(canvas, 0, srcY, canvas.width, sliceCanvas.height, 0, 0, canvas.width, sliceCanvas.height);
+            const sliceData = sliceCanvas.toDataURL("image/jpeg", 0.95);
+            const sliceHeightMM = (sliceCanvas.height / canvas.width) * contentW;
+
+            pdf.addImage(sliceData, "JPEG", margin, margin, imgWidthMM, sliceHeightMM);
+            yOffset += contentH;
+          }
+
+          resolve(pdf.output("blob"));
+        } catch (e) {
+          document.body.removeChild(iframe);
+          reject(e);
+        }
+      };
+
+      // Give the iframe time to fully render layout
+      if (iframe.contentWindow) {
+        iframe.contentWindow.onload = () => doCapture();
+      }
+      // Fallback if onload already fired
+      setTimeout(() => {
+        if (iDoc.readyState === "complete") doCapture();
+      }, 800);
     });
   };
 
@@ -610,8 +709,10 @@ export default function MonthSummaryPage() {
       setPdfLoadingId(key);
       const downloadTid = toast.loading(`Generating PDF for ${row.name}...`);
       try {
-        await loadScript("https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js");
-        
+        // Load html2canvas + jsPDF from CDN
+        await loadScript("https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js");
+        await loadScript("https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js");
+
         const res = await expenseService.getEngineerMonthClaims(row.user_id, row.month, row.year);
         const userObj = res.user || row;
         const claims = res.claims || [];
@@ -622,32 +723,15 @@ export default function MonthSummaryPage() {
         }
 
         const html = buildExcelPrintHTML(userObj, claims, attachments, amount, false);
-        const wrapper = document.createElement("div");
-        wrapper.style.position = "absolute";
-        wrapper.style.left = "-9999px";
-        wrapper.style.top = "-9999px";
-        wrapper.style.width = "1120px";
-        wrapper.style.background = "white";
+        const filename = `${(userObj.name || "Engineer").replace(/[^a-zA-Z0-9]/g, "_")}_Form_CYKL01.pdf`;
+        const pdfBlob = await renderHTMLToPDFBlob(html, filename);
 
-        const inner = document.createElement("div");
-        inner.style.width = "100%";
-        inner.innerHTML = html;
-
-        wrapper.appendChild(inner);
-        document.body.appendChild(wrapper);
-
-        await waitForImages(inner);
-
-        const opt = {
-          margin:       [10, 10, 10, 10],
-          filename:     `${(userObj.name || "Engineer").replace(/[^a-zA-Z0-9]/g, "_")}_Form_CYKL01.pdf`,
-          image:        { type: 'jpeg', quality: 0.98 },
-          html2canvas:  { scale: 2, useCORS: true, logging: false },
-          jsPDF:        { unit: 'mm', format: 'a4', orientation: 'landscape' }
-        };
-
-        await (window as any).html2pdf().from(inner).set(opt).save();
-        document.body.removeChild(wrapper);
+        const link = document.createElement("a");
+        link.href = URL.createObjectURL(pdfBlob);
+        link.download = filename;
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
         toast.success(`PDF downloaded successfully!`);
       } catch (err) {
         toast.error("PDF download failed");
@@ -933,34 +1017,10 @@ export default function MonthSummaryPage() {
         const advance = advancesMap[key] || 0;
 
         const html = buildExcelPrintHTML(userObj, claims, attachments, advance, false);
-        const wrapper = document.createElement("div");
-        wrapper.style.position = "absolute";
-        wrapper.style.left = "-9999px";
-        wrapper.style.top = "-9999px";
-        wrapper.style.width = "1120px";
-        wrapper.style.background = "white";
-
-        const inner = document.createElement("div");
-        inner.style.width = "100%";
-        inner.innerHTML = html;
-
-        wrapper.appendChild(inner);
-        document.body.appendChild(wrapper);
-
-        await waitForImages(inner);
-
-        const opt = {
-          margin:       [10, 10, 10, 10],
-          image:        { type: 'jpeg', quality: 0.98 },
-          html2canvas:  { scale: 2, useCORS: true, logging: false },
-          jsPDF:        { unit: 'mm', format: 'a4', orientation: 'landscape' }
-        };
-
-        const pdfBlob = await (window as any).html2pdf().from(inner).set(opt).toPdf().outputPdf('blob');
-        document.body.removeChild(wrapper);
         const safeName = (userObj.name || "Engineer").replace(/[^a-zA-Z0-9]/g, "_");
         const safeMonth = (userObj.month || "Month").replace(/[^a-zA-Z0-9]/g, "_");
         const fileName = `${safeName}_${userObj.e_code || userObj.user_id}_${safeMonth}_${userObj.year}.pdf`;
+        const pdfBlob = await renderHTMLToPDFBlob(html, fileName);
         zip.file(fileName, pdfBlob);
       }
 
@@ -986,8 +1046,9 @@ export default function MonthSummaryPage() {
     const tid = toast.loading(`Preparing ZIP package and fetching claims data...`);
     try {
       await Promise.all([
-        loadScript("https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"),
-        loadScript("https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js")
+        loadScript("https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"),
+        loadScript("https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"),
+        loadScript("https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js")
       ]);
 
       const fetched: any[] = [];
