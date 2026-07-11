@@ -129,7 +129,7 @@ We have completed the implementation of the core features and enhancements reque
 *   **Exact Custom Headers**: Ensure headers match the specific format and columns requested by the user.
 
 ### 2. 🛠️ Implemented Fixes in [ConsolidatedReportPage.tsx](file:///c:/Users/Cyrix%20HealthCare/Desktop/Sunil%20React.tsx/frontend/src/pages/ConsolidatedReportPage.tsx)
-*   **Header Customization**: Validated and updated the exported Excel table headers to match the exact list requested.
+*   **Header Customization**: Validated and updated both the exported Excel headers and the UI grid table headers to match the exact list requested word-for-word (including specific custom casings like `differenece` and spelling like `Hold Reson`). This ensures that copy-pasting the table directly from the browser yields identical headers.
 *   **Removed Currency and Dash Symbols from Numeric Cells**:
     *   Excel exports now output pure numeric values (e.g. `0.00` or numeric string values) instead of empty strings or dashes, making calculations smooth.
     *   UI table body rows and footer cells display raw formatted numbers without the `₹` prefix and show `0.00` instead of `—`.
