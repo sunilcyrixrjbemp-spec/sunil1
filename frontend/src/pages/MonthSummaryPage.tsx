@@ -637,8 +637,13 @@ export default function MonthSummaryPage() {
           // ── Also snap at the bottom of the main .wrap form div ──
           // This prevents footer/totals/signatures spilling onto a new near-blank page
           const wrapEl = iDoc.querySelector(".wrap");
+          // Pre-calculate wrapBottomPx HERE while iframe is still in DOM
+          // (after removeChild, getBoundingClientRect returns 0 on detached elements)
+          const wrapBottomPx = wrapEl
+            ? Math.ceil((wrapEl as HTMLElement).getBoundingClientRect().bottom)
+            : totalHeight;
           if (wrapEl) {
-            rowBottomsPx.push(Math.ceil((wrapEl as HTMLElement).getBoundingClientRect().bottom));
+            rowBottomsPx.push(wrapBottomPx);
           }
           rowBottomsPx.sort((a, b) => a - b);
 
@@ -647,7 +652,7 @@ export default function MonthSummaryPage() {
           const attachTopsPx: number[] = attachEls.map(el =>
             Math.floor((el as HTMLElement).getBoundingClientRect().top)
           );
-          // The effective end of content = bottom of last attachment (or end of wrap)
+          // Pre-calculate lastAttachBottom while iframe is still in DOM
           const lastAttachBottom = attachEls.length > 0
             ? Math.ceil((attachEls[attachEls.length - 1] as HTMLElement).getBoundingClientRect().bottom)
             : null;
@@ -666,12 +671,13 @@ export default function MonthSummaryPage() {
             windowHeight: totalHeight,
           });
 
+          // Remove iframe now — all DOM queries are done above
           if (document.body.contains(iframe)) document.body.removeChild(iframe);
 
-          // The true end of meaningful content in canvas pixels
+          // The true end of meaningful content in canvas pixels (using pre-calculated values)
           const contentEndPx = lastAttachBottom !== null
             ? Math.min(lastAttachBottom * SCALE, canvas.height)
-            : (wrapEl ? Math.min(Math.ceil((wrapEl as HTMLElement).getBoundingClientRect().bottom) * SCALE, canvas.height) : canvas.height);
+            : Math.min(wrapBottomPx * SCALE, canvas.height);
 
           // ── PDF page dimensions ──
           const margin = 5;        // mm
@@ -745,13 +751,17 @@ export default function MonthSummaryPage() {
         }
       };
 
+      // Guard: ensure doCapture only runs once even if both onload + setTimeout fire
+      let _captured = false;
+      const onceCaptured = () => { if (!_captured) { _captured = true; doCapture(); } };
+
       // Trigger capture once iframe is fully rendered
       if (iframe.contentWindow) {
-        iframe.contentWindow.onload = () => doCapture();
+        iframe.contentWindow.onload = onceCaptured;
       }
       // Fallback: if onload already fired before we could attach
       setTimeout(() => {
-        if (iDoc.readyState === "complete") doCapture();
+        if (iDoc.readyState === "complete") onceCaptured();
       }, 1000);
     });
   };
