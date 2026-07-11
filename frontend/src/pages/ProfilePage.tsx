@@ -1,6 +1,9 @@
 import React, { useEffect, useState } from "react";
 import { authService } from "../services/authService";
 import api from "../services/api";
+import { adminService } from "../services/adminService";
+import toast from "react-hot-toast";
+
 
 const LteSpinner = () => (
   <span className="animate-spin rounded-full h-3.5 w-3.5 border-2 border-slate-200 border-t-blue-600 inline-block mr-1.5 shrink-0"></span>
@@ -34,6 +37,11 @@ export default function ProfilePage() {
   const [photoLoading, setPhotoLoading] = useState(false);
   const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
   const [avatarError, setAvatarError] = useState(false);
+
+  // System Maintenance
+  const [migrationLoading, setMigrationLoading] = useState(false);
+  const [migrationResult, setMigrationResult] = useState<{ success: boolean; message: string } | null>(null);
+
 
   // Check screen size for mobile view
   const [isMobile, setIsMobile] = useState(window.innerWidth < 1024);
@@ -472,6 +480,24 @@ export default function ProfilePage() {
     setNotice(null);
   };
 
+  // Handler: Run DB Migrations (Admin only)
+  const handleRunMigrations = async () => {
+    if (!window.confirm("⚠️ Run DB Migrations?\n\nThis will update the DB schema and create/rebuild 22 performance indexes.\n\nContinue?")) return;
+    setMigrationLoading(true);
+    setMigrationResult(null);
+    try {
+      const result = await adminService.runMigrations();
+      setMigrationResult({ success: true, message: result.message || "Migrations completed!" });
+      toast.success("✅ DB Migrations completed successfully!");
+    } catch (err: any) {
+      const msg = err?.response?.data?.error || err?.message || "Migration failed";
+      setMigrationResult({ success: false, message: msg });
+      toast.error("❌ Migration failed: " + msg);
+    } finally {
+      setMigrationLoading(false);
+    }
+  };
+
   const handlePasswordChange = async (e: React.FormEvent) => {
     e.preventDefault();
     setPassNotice(null);
@@ -804,6 +830,51 @@ export default function ProfilePage() {
                   {passLoading ? "Updating..." : "Change Password"}
                 </button>
               </form>
+
+              {user && user.role === "Admin" && (
+                <div className="mt-5 pt-5 border-t border-slate-200 space-y-2.5 animate-fadeIn">
+                  <div className="text-center">
+                    <h5 className="text-[10px] font-black text-rose-600 uppercase tracking-widest flex items-center justify-center gap-1.5">
+                      <i className="fas fa-exclamation-triangle"></i> System Maintenance
+                    </h5>
+                    <p className="text-[9px] text-slate-400 mt-0.5">
+                      Update database schema and rebuild all performance indexes.
+                    </p>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={handleRunMigrations}
+                    disabled={migrationLoading}
+                    className="w-full h-8 rounded font-extrabold text-[10px] uppercase border-0 cursor-pointer flex items-center justify-center gap-2 transition-all duration-200 text-white"
+                    style={{
+                      background: migrationLoading ? "#cbd5e1" : "linear-gradient(135deg, #e11d48, #be123c)",
+                      boxShadow: migrationLoading ? "none" : "0 2px 6px rgba(225,29,72,0.25)",
+                      cursor: migrationLoading ? "not-allowed" : "pointer"
+                    }}
+                  >
+                    {migrationLoading ? (
+                      <>
+                        <LteSpinner />
+                        <span>Running...</span>
+                      </>
+                    ) : (
+                      <>
+                        <i className="fas fa-database text-[10px]"></i>
+                        <span>Run DB Migrations</span>
+                      </>
+                    )}
+                  </button>
+                  {migrationResult && (
+                    <div className={`p-2 rounded text-[10px] font-bold text-center ${
+                      migrationResult.success 
+                        ? "bg-green-50 border border-green-200 text-green-700" 
+                        : "bg-red-50 border border-red-200 text-red-700"
+                    }`}>
+                      {migrationResult.success ? "✅" : "❌"} {migrationResult.message}
+                    </div>
+                  )}
+                </div>
+              )}
             </div>
           )}
 
@@ -1312,6 +1383,51 @@ export default function ProfilePage() {
                       </button>
                     </div>
                   </form>
+
+                  {user && user.role === "Admin" && (
+                    <div className="mt-6 pt-6 border-t border-slate-200 space-y-3 animate-fadeIn">
+                      <div className="text-center">
+                        <h5 className="text-[10px] font-black text-rose-600 uppercase tracking-widest flex items-center justify-center gap-1.5">
+                          <i className="fas fa-exclamation-triangle"></i> System Maintenance
+                        </h5>
+                        <p className="text-[9px] text-slate-400 mt-1">
+                          Update database schema and rebuild all performance indexes.
+                        </p>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={handleRunMigrations}
+                        disabled={migrationLoading}
+                        className="w-full h-8.5 rounded font-extrabold text-[10px] uppercase border-0 cursor-pointer flex items-center justify-center gap-2 transition-all duration-200 text-white"
+                        style={{
+                          background: migrationLoading ? "#cbd5e1" : "linear-gradient(135deg, #e11d48, #be123c)",
+                          boxShadow: migrationLoading ? "none" : "0 2px 6px rgba(225,29,72,0.25)",
+                          cursor: migrationLoading ? "not-allowed" : "pointer"
+                        }}
+                      >
+                        {migrationLoading ? (
+                          <>
+                            <LteSpinner />
+                            <span>Running...</span>
+                          </>
+                        ) : (
+                          <>
+                            <i className="fas fa-database text-[10px]"></i>
+                            <span>Run DB Migrations</span>
+                          </>
+                        )}
+                      </button>
+                      {migrationResult && (
+                        <div className={`p-2 rounded text-[10px] font-bold text-center ${
+                          migrationResult.success 
+                            ? "bg-green-50 border border-green-200 text-green-700" 
+                            : "bg-red-50 border border-red-200 text-red-700"
+                        }`}>
+                          {migrationResult.success ? "✅" : "❌"} {migrationResult.message}
+                        </div>
+                      )}
+                    </div>
+                  )}
                 </div>
               )}
 
