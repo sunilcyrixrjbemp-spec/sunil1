@@ -63,7 +63,7 @@ function fmtDate(d: string): string {
 
 // ─── PDF — EXACT CYRIX EXCEL FORMAT ──────────────────────────────────────────
 
-function buildExcelPrintHTML(user: any, claims: any[], attachments: string[] = [], advance: number = 0): string {
+function buildExcelPrintHTML(user: any, claims: any[], attachments: any[] = [], advance: number = 0, autoPrint: boolean = false): string {
   // Flatten: one row per leg
   const allLegs: { date: string; expCode: string; leg: any }[] = [];
   for (const claim of claims) {
@@ -407,6 +407,40 @@ function buildExcelPrintHTML(user: any, claims: any[], attachments: string[] = [
   <!-- ══ ATTACHED RECEIPTS SECTION ══ -->
   ${attachmentsSection}
 
+  ${autoPrint ? `
+  <script>
+    window.onload = function() {
+      const images = Array.from(document.getElementsByTagName('img'));
+      let loadedCount = 0;
+      
+      function doPrint() {
+        setTimeout(function() {
+          window.print();
+        }, 300);
+      }
+      
+      if (images.length === 0) {
+        doPrint();
+      } else {
+        images.forEach(function(img) {
+          if (img.complete) {
+            loadedCount++;
+            if (loadedCount === images.length) doPrint();
+          } else {
+            img.onload = function() {
+              loadedCount++;
+              if (loadedCount === images.length) doPrint();
+            };
+            img.onerror = function() {
+              loadedCount++;
+              if (loadedCount === images.length) doPrint();
+            };
+          }
+        });
+      }
+    };
+  </script>
+  ` : ""}
 </div>
 </body>
 </html>`;
@@ -501,12 +535,23 @@ export default function MonthSummaryPage() {
       const claims = res.claims || [];
       const attachments = res.attachments || [];
       if (claims.length === 0) { toast.dismiss(tid); toast.error("No approved claim data found"); return; }
-      const html = buildExcelPrintHTML(user, claims, attachments, advance);
+      const html = buildExcelPrintHTML(user, claims, attachments, advance, true);
       const win = window.open("", "_blank", "width=1400,height=900");
       if (!win) { toast.dismiss(tid); toast.error("Allow popups to download PDF"); return; }
       win.document.write(html);
       win.document.close();
-      win.onload = () => setTimeout(() => win.print(), 600);
+      
+      // Fallback print trigger directly on the popup window instance
+      setTimeout(() => {
+        try {
+          if (win && !win.closed) {
+            win.print();
+          }
+        } catch (e) {
+          console.warn("Direct popup print failed:", e);
+        }
+      }, 1000);
+
       toast.dismiss(tid);
       toast.success(`PDF ready — ${row.name} (${row.month} ${row.year})`);
     } catch (err: any) {
@@ -652,6 +697,38 @@ export default function MonthSummaryPage() {
 </head>
 <body>
   ${combinedBody}
+  <script>
+    window.onload = function() {
+      const images = Array.from(document.getElementsByTagName('img'));
+      let loadedCount = 0;
+      
+      function doPrint() {
+        setTimeout(function() {
+          window.print();
+        }, 500);
+      }
+      
+      if (images.length === 0) {
+        doPrint();
+      } else {
+        images.forEach(function(img) {
+          if (img.complete) {
+            loadedCount++;
+            if (loadedCount === images.length) doPrint();
+          } else {
+            img.onload = function() {
+              loadedCount++;
+              if (loadedCount === images.length) doPrint();
+            };
+            img.onerror = function() {
+              loadedCount++;
+              if (loadedCount === images.length) doPrint();
+            };
+          }
+        });
+      }
+    };
+  </script>
 </body>
 </html>`;
 
@@ -659,7 +736,18 @@ export default function MonthSummaryPage() {
     if (!win) { toast.error("Allow popups to print"); return; }
     win.document.write(combinedHTML);
     win.document.close();
-    win.onload = () => setTimeout(() => win.print(), 800);
+    
+    // Fallback print trigger directly on the popup window instance
+    setTimeout(() => {
+      try {
+        if (win && !win.closed) {
+          win.print();
+        }
+      } catch (e) {
+        console.warn("Direct popup print failed:", e);
+      }
+    }, 1200);
+
     toast.success(`Print preview loaded for ${fetched.length} claims`);
   };
 
