@@ -622,16 +622,21 @@ export default function MonthSummaryPage() {
         }
 
         const html = buildExcelPrintHTML(userObj, claims, attachments, amount, false);
-        const element = document.createElement("div");
-        element.style.position = "absolute";
-        element.style.left = "-9999px";
-        element.style.top = "-9999px";
-        element.style.width = "1120px";
-        element.style.background = "white";
-        element.innerHTML = html;
-        document.body.appendChild(element);
+        const wrapper = document.createElement("div");
+        wrapper.style.position = "absolute";
+        wrapper.style.left = "-9999px";
+        wrapper.style.top = "-9999px";
+        wrapper.style.width = "1120px";
+        wrapper.style.background = "white";
 
-        await waitForImages(element);
+        const inner = document.createElement("div");
+        inner.style.width = "100%";
+        inner.innerHTML = html;
+
+        wrapper.appendChild(inner);
+        document.body.appendChild(wrapper);
+
+        await waitForImages(inner);
 
         const opt = {
           margin:       [10, 10, 10, 10],
@@ -641,8 +646,8 @@ export default function MonthSummaryPage() {
           jsPDF:        { unit: 'mm', format: 'a4', orientation: 'landscape' }
         };
 
-        await (window as any).html2pdf().from(element).set(opt).save();
-        document.body.removeChild(element);
+        await (window as any).html2pdf().from(inner).set(opt).save();
+        document.body.removeChild(wrapper);
         toast.success(`PDF downloaded successfully!`);
       } catch (err) {
         toast.error("PDF download failed");
@@ -928,16 +933,21 @@ export default function MonthSummaryPage() {
         const advance = advancesMap[key] || 0;
 
         const html = buildExcelPrintHTML(userObj, claims, attachments, advance, false);
-        const element = document.createElement("div");
-        element.style.position = "absolute";
-        element.style.left = "-9999px";
-        element.style.top = "-9999px";
-        element.style.width = "1120px";
-        element.style.background = "white";
-        element.innerHTML = html;
-        document.body.appendChild(element);
+        const wrapper = document.createElement("div");
+        wrapper.style.position = "absolute";
+        wrapper.style.left = "-9999px";
+        wrapper.style.top = "-9999px";
+        wrapper.style.width = "1120px";
+        wrapper.style.background = "white";
 
-        await waitForImages(element);
+        const inner = document.createElement("div");
+        inner.style.width = "100%";
+        inner.innerHTML = html;
+
+        wrapper.appendChild(inner);
+        document.body.appendChild(wrapper);
+
+        await waitForImages(inner);
 
         const opt = {
           margin:       [10, 10, 10, 10],
@@ -946,8 +956,8 @@ export default function MonthSummaryPage() {
           jsPDF:        { unit: 'mm', format: 'a4', orientation: 'landscape' }
         };
 
-        const pdfBlob = await (window as any).html2pdf().from(element).set(opt).toPdf().outputPdf('blob');
-        document.body.removeChild(element);
+        const pdfBlob = await (window as any).html2pdf().from(inner).set(opt).toPdf().outputPdf('blob');
+        document.body.removeChild(wrapper);
         const safeName = (userObj.name || "Engineer").replace(/[^a-zA-Z0-9]/g, "_");
         const safeMonth = (userObj.month || "Month").replace(/[^a-zA-Z0-9]/g, "_");
         const fileName = `${safeName}_${userObj.e_code || userObj.user_id}_${safeMonth}_${userObj.year}.pdf`;
