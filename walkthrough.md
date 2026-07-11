@@ -154,18 +154,16 @@ We have completed the implementation of the core features and enhancements reque
 ## 🛡️ Rule-Based Policy Lookup / Non-AI RAG System (July 12, 2026 - Update 5)
 
 ### 1. 🔄 Objectives
-*   **Context Augmentation (Non-AI RAG)**: Provide engineers and managers with an inline, searchable guide to active company expense policies right on the dashboard. This prevents policy confusion and flags potential auto-deduction thresholds beforehand.
-*   **Determinism**: Avoid the costs, latency, and hallucination risks of LLMs by storing rules in a structured database table and querying it directly.
+*   **Context Augmentation (Non-AI RAG)**: Provide engineers and managers with an inline, searchable guide to active company expense policies right on the dashboard.
+*   **Allowance Master Integration**: Query the production `allowance_master` table directly to fetch real employee grades and limits, ensuring 100% data consistency with the core backend logic.
+*   **Determinism**: Avoid LLM latency and hallucination risks by querying structured database columns directly.
 
 ### 2. 🛠️ Implemented Fixes & Components
-*   **Database Table & Migration ([db-migrate.js](file:///c:/Users/Cyrix%20HealthCare/Desktop/Sunil%20React.tsx/worker-backend/src/utils/db-migrate.js))**:
-    *   Created table `expense_policy_rules` with fields: `id`, `grade`, `expense_type`, `limit_amount`, and `description`.
-    *   Seeded rules for Grades A, B, C, D, and E for all key claim types (DA, Hotel, Spares, Courier, Printing, Bike, Car).
-    *   Created performance index `idx_expense_policy_rules_grade` on the `grade` column.
 *   **Backend API Endpoint ([expense.js](file:///c:/Users/Cyrix%20HealthCare/Desktop/Sunil%20React.tsx/worker-backend/src/routes/expense.js) & [index.js](file:///c:/Users/Cyrix%20HealthCare/Desktop/Sunil%20React.tsx/worker-backend/src/index.js))**:
-    *   Registered `/api/expense/policy-rules` (requires auth), which retrieves policy limits and descriptions. It supports an optional `grade` query parameter to filter by employee grade.
+    *   Registered `/api/expense/policy-rules` (requires auth), which queries the `allowance_master` table dynamically. It supports returning all configurations or filtering by a specific `grade`.
 *   **API Client Method ([expenseService.ts](file:///c:/Users/Cyrix%20HealthCare/Desktop/Sunil%20React.tsx/frontend/src/services/expenseService.ts))**:
     *   Added `getPolicyRules` client method to fetch rules from the worker backend.
 *   **Collapsible UI Widget ([ConsolidatedReportPage.tsx](file:///c:/Users/Cyrix%20HealthCare/Desktop/Sunil%20React.tsx/frontend/src/pages/ConsolidatedReportPage.tsx))**:
     *   Implemented a premium, collapsible panel "Company Expense Policies" under the summary cards.
-    *   Equipped it with a grade selector dropdown to load policy limits instantly in a grid of card blocks. It details each category's maximum limit or rate (e.g. `₹1,500.00 Max` or `₹4.50 / KM`).
+    *   It fetches all policies, extracts the distinct grades dynamically (preventing hardcoding), and renders a select dropdown of actual database grades.
+    *   Renders a grid displaying In-District DA, Out-District DA, Hotel DA, Out-of-State DA, In-State Hotel Rent limit, Out-of-State Hotel Rent limit, Bike reimbursement rate, Car reimbursement rate, Monthly Distance limit, Monthly Auto cap, and Authorized Vehicle type for the selected grade.
