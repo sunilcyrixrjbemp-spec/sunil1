@@ -212,3 +212,4 @@ We have completed the implementation of the core features and enhancements reque
     *   Dynamically loads `html2pdf.js` and `jszip` from CDN on-demand to generate high-quality PDFs client-side without bloat.
     *   Replaced `handlePDF` to download the engineer's Form CYKL01 PDF directly.
     *   Replaced the bulk download handler with `handleBulkDownloadZIP`, which generates separate PDFs for each selected engineer and bundles them into a download-ready ZIP archive.
+    *   Bypassed the default advance prompt popup during bulk ZIP generation, automatically using `0` for any missing database advance records to streamline the export flow and prevent validation/write errors.
