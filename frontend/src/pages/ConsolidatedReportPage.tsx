@@ -56,24 +56,31 @@ export default function ConsolidatedReportPage() {
       // Row index in Excel sheet starts at 2 (since row 1 is headers)
       const R = idx + 2;
       
-      // Travelling Expense formula
-      const travelFormula = `=(${r.bike_km || 0}*4.5)+(${r.car_km || 0}*9)+${r.auto_amount || 0}+${r.train_bus_amount || 0}`;
+      // Travelling Expense formulas
+      const privateTravelFormula = `=(${r.bike_km || 0}*4.5)+(${r.car_km || 0}*9)`;
+      const publicTravelFormula = `=${r.auto_amount || 0}+${r.train_bus_amount || 0}`;
       
-      // Total formula (Sum columns G to N)
-      const totalFormula = `=SUM(G${R}:N${R})`;
+      // Total formula (Sum columns I to Q)
+      const totalFormula = `=SUM(I${R}:Q${R})`;
       
-      // Net Payable formula (Total column O minus Advance column P)
-      const netPayableFormula = `=O${R}-P${R}`;
+      // Net Payable formula (Total Column R minus Advance Column S)
+      const netPayableFormula = `=R${R}-S${R}`;
+
+      // Difference formula (Claimed Column AC minus Approved Total Column R)
+      const diffFormula = `=AC${R}-R${R}`;
 
       rowsHtml += `
         <tr>
-          <td>${r.zone}</td>
-          <td>${r.ee_code}</td>
-          <td>${r.grade}</td>
-          <td>${r.cc}</td>
+          <td>${idx + 1}</td>
+          <td>${r.submitted_date || "—"}</td>
+          <td></td>
+          <td style="mso-number-format:'\\@';">${r.ee_code}</td>
+          <td>${r.grade || "—"}</td>
+          <td>${r.designation || "—"}</td>
+          <td>${r.cc || "—"}</td>
           <td>${r.ee_name}</td>
-          <td>${r.doj}</td>
-          <td style="text-align:right;">${travelFormula}</td>
+          <td style="text-align:right;">${privateTravelFormula}</td>
+          <td style="text-align:right;">${publicTravelFormula}</td>
           <td style="text-align:right;">${r.da_allowance > 0 ? r.da_allowance.toFixed(2) : "0.00"}</td>
           <td style="text-align:right;">${r.spare_purchase > 0 ? r.spare_purchase.toFixed(2) : "0.00"}</td>
           <td style="text-align:right;">${r.courier_charges > 0 ? r.courier_charges.toFixed(2) : "0.00"}</td>
@@ -85,9 +92,15 @@ export default function ConsolidatedReportPage() {
           <td style="text-align:right; color:red;">${r.advance > 0 ? r.advance.toFixed(2) : "0.00"}</td>
           <td style="text-align:right; font-weight:bold; color:green;">${netPayableFormula}</td>
           <td></td>
-          <td>${r.deduction_reason}</td>
-          <td></td>
-          <td style="text-align:right;">${r.claimed_amount.toFixed(2)}</td>
+          <td>Approved</td>
+          <td>${r.deduction_reason || ""}</td>
+          <td>${r.month || ""}</td>
+          <td>${r.hold_reason || "No"}</td>
+          <td>${r.remarks || ""}</td>
+          <td>${r.manager || ""}</td>
+          <td>${r.state || "Rajasthan"}</td>
+          <td style="text-align:right;">${r.claimed_amount > 0 ? r.claimed_amount.toFixed(2) : "0.00"}</td>
+          <td style="text-align:right; font-weight:bold; color:red;">${diffFormula}</td>
         </tr>
       `;
     });
@@ -95,22 +108,29 @@ export default function ConsolidatedReportPage() {
     // Summary row
     rowsHtml += `
       <tr style="background-color:#e8f5e9; font-weight:bold; border-top:2px solid #1b5e20;">
-        <td colspan="6" style="text-align:center; font-family:'Aptos', sans-serif;">GRAND TOTAL</td>
-        <td style="text-align:right;">=SUM(G2:G${data.length + 1})</td>
-        <td style="text-align:right;">=SUM(H2:H${data.length + 1})</td>
+        <td colspan="8" style="text-align:center; font-family:'Aptos', sans-serif;">GRAND TOTAL</td>
         <td style="text-align:right;">=SUM(I2:I${data.length + 1})</td>
         <td style="text-align:right;">=SUM(J2:J${data.length + 1})</td>
         <td style="text-align:right;">=SUM(K2:K${data.length + 1})</td>
         <td style="text-align:right;">=SUM(L2:L${data.length + 1})</td>
-        <td style="text-align:right;">0.00</td>
-        <td style="text-align:right;">0.00</td>
+        <td style="text-align:right;">=SUM(M2:M${data.length + 1})</td>
+        <td style="text-align:right;">=SUM(N2:N${data.length + 1})</td>
         <td style="text-align:right;">=SUM(O2:O${data.length + 1})</td>
-        <td style="text-align:right;">=SUM(P2:P${data.length + 1})</td>
-        <td style="text-align:right;">=SUM(Q2:Q${data.length + 1})</td>
+        <td style="text-align:right;">0.00</td>
+        <td style="text-align:right;">0.00</td>
+        <td style="text-align:right;">=SUM(R2:R${data.length + 1})</td>
+        <td style="text-align:right;">=SUM(S2:S${data.length + 1})</td>
+        <td style="text-align:right;">=SUM(T2:T${data.length + 1})</td>
         <td></td>
         <td></td>
         <td></td>
-        <td style="text-align:right;">=SUM(U2:U${data.length + 1})</td>
+        <td></td>
+        <td></td>
+        <td></td>
+        <td></td>
+        <td></td>
+        <td style="text-align:right;">=SUM(AC2:AC${data.length + 1})</td>
+        <td style="text-align:right;">=SUM(AD2:AD${data.length + 1})</td>
       </tr>
     `;
 
@@ -122,12 +142,12 @@ export default function ConsolidatedReportPage() {
           table { border-collapse: collapse; }
           th { 
             background-color: #1b5e20; 
-            color: #a5d6a7; 
+            color: #ffffff; 
             font-weight: bold; 
             border: 1px solid #1b5e20; 
-            padding: 6px 8px; 
+            padding: 6px 8.5px; 
             font-family: 'Aptos', 'Segoe UI', sans-serif; 
-            font-size: 11pt; 
+            font-size: 10.5pt; 
             text-align: center;
           }
           td { 
@@ -142,14 +162,17 @@ export default function ConsolidatedReportPage() {
         <table>
           <thead>
             <tr>
-              <th>Zone</th>
+              <th>Sl No</th>
+              <th>Submitted Date</th>
+              <th>Mail / Hard Copy</th>
               <th>EE Code</th>
               <th>Grade</th>
+              <th>Designation</th>
               <th>CC</th>
               <th>EE Name</th>
-              <th>DOJ</th>
-              <th>5314101 - Exp Travelling Expense</th>
-              <th>5314102 - Exp Dearness Allowances</th>
+              <th>5314101 - Exp Travelling Expense - Private Transport (Bike and personal car)</th>
+              <th>5314101 - Exp Travelling Expense - public Transport (Bus, Train, Auto, uber, Rapido etc)</th>
+              <th>5314102 - Exp Daily Allowances</th>
               <th>5314108 - Exp Spare Purchase Cost - Non GST</th>
               <th>5314103 - Exp Courier Charges</th>
               <th>5314104 - Exp Boarding & Lodging</th>
@@ -157,12 +180,18 @@ export default function ConsolidatedReportPage() {
               <th>5314106 - Exp Miscellaneous Expenses</th>
               <th>5314107 - Exp Fuel Expenses</th>
               <th>Total</th>
-              <th>ADVANCE</th>
+              <th>Advances</th>
               <th>Net Payable</th>
               <th>GST Bills</th>
+              <th>Status</th>
               <th>Reason for deduction</th>
+              <th>Month</th>
+              <th>Hold Reson</th>
               <th>Remarks</th>
-              <th>Team member claimed amount</th>
+              <th>Manager</th>
+              <th>State</th>
+              <th>total claimed amount</th>
+              <th>differenece</th>
             </tr>
           </thead>
           <tbody>
@@ -331,65 +360,89 @@ export default function ConsolidatedReportPage() {
               No approved claims found for this month/year.
             </div>
           ) : (
-            <table className="w-full text-[10px] border-collapse min-w-[1600px] border border-slate-200">
+            <table className="w-full text-[10px] border-collapse min-w-[2200px] border border-slate-200">
               <thead>
                 <tr className="bg-slate-100 text-slate-700 font-bold uppercase tracking-wider text-left">
-                  <th className="py-1 px-1.5 border border-slate-200 text-center font-bold">Zone</th>
-                  <th className="py-1 px-1.5 border border-slate-200 text-center font-bold">EE Code</th>
-                  <th className="py-1 px-1.5 border border-slate-200 text-center font-bold">Grade</th>
-                  <th className="py-1 px-1.5 border border-slate-200 text-center font-bold">CC</th>
-                  <th className="py-1 px-1.5 border border-slate-200 text-left font-bold">EE Name</th>
-                  <th className="py-1 px-1.5 border border-slate-200 text-center font-bold">DOJ</th>
-                  <th className="py-1 px-1.5 border border-slate-200 text-right font-bold">Travel Exp</th>
-                  <th className="py-1 px-1.5 border border-slate-200 text-right font-bold">DA</th>
-                  <th className="py-1 px-1.5 border border-slate-200 text-right font-bold">Spare Cost</th>
-                  <th className="py-1 px-1.5 border border-slate-200 text-right font-bold">Courier</th>
-                  <th className="py-1 px-1.5 border border-slate-200 text-right font-bold">Hotel</th>
-                  <th className="py-1 px-1.5 border border-slate-200 text-right font-bold">Print/Stat</th>
-                  <th className="py-1 px-1.5 border border-slate-200 text-right font-bold">Misc</th>
-                  <th className="py-1 px-1.5 border border-slate-200 text-right font-bold">Fuel</th>
-                  <th className="py-1 px-1.5 border border-slate-200 text-right font-bold bg-slate-50">Total</th>
-                  <th className="py-1 px-1.5 border border-slate-200 text-right font-bold text-red-700 bg-red-50/10">Advance</th>
-                  <th className="py-1 px-1.5 border border-slate-200 text-right font-bold text-green-700 bg-green-50/10">Net Payable</th>
-                  <th className="py-1 px-1.5 border border-slate-200 text-left font-bold">GST Bills</th>
-                  <th className="py-1 px-1.5 border border-slate-200 text-left font-bold max-w-[200px] truncate">Deduction Reason</th>
-                  <th className="py-1 px-1.5 border border-slate-200 text-left font-bold">Remarks</th>
-                  <th className="py-1 px-1.5 border border-slate-200 text-right font-bold">Claimed Amt</th>
+                  <th className="py-1.5 px-1.5 border border-slate-200 text-center font-bold">Sl No</th>
+                  <th className="py-1.5 px-1.5 border border-slate-200 text-center font-bold">Submitted Date</th>
+                  <th className="py-1.5 px-1.5 border border-slate-200 text-center font-bold">Mail/Hard Copy</th>
+                  <th className="py-1.5 px-1.5 border border-slate-200 text-center font-bold">EE Code</th>
+                  <th className="py-1.5 px-1.5 border border-slate-200 text-center font-bold">Grade</th>
+                  <th className="py-1.5 px-1.5 border border-slate-200 text-center font-bold">Designation</th>
+                  <th className="py-1.5 px-1.5 border border-slate-200 text-center font-bold">CC</th>
+                  <th className="py-1.5 px-1.5 border border-slate-200 text-left font-bold">EE Name</th>
+                  <th className="py-1.5 px-1.5 border border-slate-200 text-right font-bold">Travel (Private)</th>
+                  <th className="py-1.5 px-1.5 border border-slate-200 text-right font-bold">Travel (Public)</th>
+                  <th className="py-1.5 px-1.5 border border-slate-200 text-right font-bold">DA</th>
+                  <th className="py-1.5 px-1.5 border border-slate-200 text-right font-bold">Spare Cost</th>
+                  <th className="py-1.5 px-1.5 border border-slate-200 text-right font-bold">Courier</th>
+                  <th className="py-1.5 px-1.5 border border-slate-200 text-right font-bold">Hotel</th>
+                  <th className="py-1.5 px-1.5 border border-slate-200 text-right font-bold">Print/Stat</th>
+                  <th className="py-1.5 px-1.5 border border-slate-200 text-right font-bold">Misc</th>
+                  <th className="py-1.5 px-1.5 border border-slate-200 text-right font-bold">Fuel</th>
+                  <th className="py-1.5 px-1.5 border border-slate-200 text-right font-bold bg-slate-50">Total</th>
+                  <th className="py-1.5 px-1.5 border border-slate-200 text-right font-bold text-red-700 bg-red-50/10">Advance</th>
+                  <th className="py-1.5 px-1.5 border border-slate-200 text-right font-bold text-green-700 bg-green-50/10">Net Payable</th>
+                  <th className="py-1.5 px-1.5 border border-slate-200 text-left font-bold">GST Bills</th>
+                  <th className="py-1.5 px-1.5 border border-slate-200 text-center font-bold">Status</th>
+                  <th className="py-1.5 px-1.5 border border-slate-200 text-left font-bold max-w-[200px] truncate">Deduction Reason</th>
+                  <th className="py-1.5 px-1.5 border border-slate-200 text-center font-bold">Month</th>
+                  <th className="py-1.5 px-1.5 border border-slate-200 text-center font-bold">Hold Reason</th>
+                  <th className="py-1.5 px-1.5 border border-slate-200 text-left font-bold">Remarks</th>
+                  <th className="py-1.5 px-1.5 border border-slate-200 text-left font-bold">Manager</th>
+                  <th className="py-1.5 px-1.5 border border-slate-200 text-center font-bold">State</th>
+                  <th className="py-1.5 px-1.5 border border-slate-200 text-right font-bold">Claimed Amt</th>
+                  <th className="py-1.5 px-1.5 border border-slate-200 text-right font-bold">Difference</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100">
-                {data.map((r, idx) => (
-                  <tr key={idx} className="hover:bg-slate-50/50 transition-colors text-slate-700">
-                    <td className="py-1 px-1.5 text-center font-semibold border border-slate-200">{r.zone || "—"}</td>
-                    <td className="py-1 px-1.5 text-center border border-slate-200 font-mono font-bold text-blue-700 bg-blue-50/20">{r.ee_code}</td>
-                    <td className="py-1 px-1.5 text-center font-medium border border-slate-200">{r.grade || "—"}</td>
-                    <td className="py-1 px-1.5 text-center font-medium border border-slate-200">{r.cc || "—"}</td>
-                    <td className="py-1 px-1.5 font-semibold border border-slate-200">{r.ee_name}</td>
-                    <td className="py-1 px-1.5 text-center font-mono border border-slate-200">{r.doj || "—"}</td>
-                    <td className="py-1 px-1.5 text-right border border-slate-200 font-mono">{r.travel_expense > 0 ? fmt(r.travel_expense) : "—"}</td>
-                    <td className="py-1 px-1.5 text-right border border-slate-200 font-mono">{r.da_allowance > 0 ? fmt(r.da_allowance) : "—"}</td>
-                    <td className="py-1 px-1.5 text-right border border-slate-200 font-mono">{r.spare_purchase > 0 ? fmt(r.spare_purchase) : "—"}</td>
-                    <td className="py-1 px-1.5 text-right border border-slate-200 font-mono">{r.courier_charges > 0 ? fmt(r.courier_charges) : "—"}</td>
-                    <td className="py-1 px-1.5 text-right border border-slate-200 font-mono">{r.boarding_lodging > 0 ? fmt(r.boarding_lodging) : "—"}</td>
-                    <td className="py-1 px-1.5 text-right border border-slate-200 font-mono">{r.printing_stationery > 0 ? fmt(r.printing_stationery) : "—"}</td>
-                    <td className="py-1 px-1.5 text-right border border-slate-200 font-mono">—</td>
-                    <td className="py-1 px-1.5 text-right border border-slate-200 font-mono">—</td>
-                    <td className="py-1 px-1.5 text-right border border-slate-200 font-mono font-bold bg-slate-50">{fmt(r.total)}</td>
-                    <td className="py-1 px-1.5 text-right border border-slate-200 font-mono font-bold text-red-700 bg-red-50/10">{r.advance > 0 ? fmt(r.advance) : "—"}</td>
-                    <td className="py-1 px-1.5 text-right border border-slate-200 font-mono font-bold text-green-700 bg-green-50/10">{fmt(r.net_payable)}</td>
-                    <td className="py-1 px-1.5 border border-slate-200">—</td>
-                    <td className="py-1 px-1.5 border border-slate-200 max-w-[200px] truncate" title={r.deduction_reason}>{r.deduction_reason || "—"}</td>
-                    <td className="py-1 px-1.5 border border-slate-200">—</td>
-                    <td className="py-1 px-1.5 border border-slate-200 text-right font-mono font-semibold">{fmt(r.claimed_amount)}</td>
-                  </tr>
-                ))}
+                {data.map((r, idx) => {
+                  const privateTravel = (r.bike_km || 0) * 4.5 + (r.car_km || 0) * 9.0;
+                  const publicTravel = (r.auto_amount || 0) + (r.train_bus_amount || 0);
+                  const rowDiff = r.claimed_amount - r.total;
+                  return (
+                    <tr key={idx} className="hover:bg-slate-50/50 transition-colors text-slate-700">
+                      <td className="py-1.5 px-1.5 text-center font-semibold border border-slate-200">{idx + 1}</td>
+                      <td className="py-1.5 px-1.5 text-center font-mono border border-slate-200 whitespace-nowrap">{r.submitted_date || "—"}</td>
+                      <td className="py-1.5 px-1.5 border border-slate-200"></td>
+                      <td className="py-1.5 px-1.5 text-center border border-slate-200 font-mono font-bold text-blue-700 bg-blue-50/20">{r.ee_code}</td>
+                      <td className="py-1.5 px-1.5 text-center font-medium border border-slate-200">{r.grade || "—"}</td>
+                      <td className="py-1.5 px-1.5 font-medium border border-slate-200 truncate max-w-[150px]" title={r.designation}>{r.designation || "—"}</td>
+                      <td className="py-1.5 px-1.5 text-center font-medium border border-slate-200">{r.cc || "—"}</td>
+                      <td className="py-1.5 px-1.5 font-semibold border border-slate-200">{r.ee_name}</td>
+                      <td className="py-1.5 px-1.5 text-right border border-slate-200 font-mono">{privateTravel > 0 ? fmt(privateTravel) : "—"}</td>
+                      <td className="py-1.5 px-1.5 text-right border border-slate-200 font-mono">{publicTravel > 0 ? fmt(publicTravel) : "—"}</td>
+                      <td className="py-1.5 px-1.5 text-right border border-slate-200 font-mono">{r.da_allowance > 0 ? fmt(r.da_allowance) : "—"}</td>
+                      <td className="py-1.5 px-1.5 text-right border border-slate-200 font-mono">{r.spare_purchase > 0 ? fmt(r.spare_purchase) : "—"}</td>
+                      <td className="py-1.5 px-1.5 text-right border border-slate-200 font-mono">{r.courier_charges > 0 ? fmt(r.courier_charges) : "—"}</td>
+                      <td className="py-1.5 px-1.5 text-right border border-slate-200 font-mono">{r.boarding_lodging > 0 ? fmt(r.boarding_lodging) : "—"}</td>
+                      <td className="py-1.5 px-1.5 text-right border border-slate-200 font-mono">{r.printing_stationery > 0 ? fmt(r.printing_stationery) : "—"}</td>
+                      <td className="py-1.5 px-1.5 text-right border border-slate-200 font-mono">—</td>
+                      <td className="py-1.5 px-1.5 text-right border border-slate-200 font-mono">—</td>
+                      <td className="py-1.5 px-1.5 text-right border border-slate-200 font-mono font-bold bg-slate-50">{fmt(r.total)}</td>
+                      <td className="py-1.5 px-1.5 text-right border border-slate-200 font-mono font-bold text-red-700 bg-red-50/10">{r.advance > 0 ? fmt(r.advance) : "—"}</td>
+                      <td className="py-1.5 px-1.5 text-right border border-slate-200 font-mono font-bold text-green-700 bg-green-50/10">{fmt(r.net_payable)}</td>
+                      <td className="py-1.5 px-1.5 border border-slate-200">—</td>
+                      <td className="py-1.5 px-1.5 text-center font-bold text-green-600 border border-slate-200">Approved</td>
+                      <td className="py-1.5 px-1.5 border border-slate-200 max-w-[200px] truncate" title={r.deduction_reason}>{r.deduction_reason || "—"}</td>
+                      <td className="py-1.5 px-1.5 text-center border border-slate-200 font-mono">{r.month || "—"}</td>
+                      <td className="py-1.5 px-1.5 text-center border border-slate-200 font-semibold text-slate-500">{r.hold_reason || "No"}</td>
+                      <td className="py-1.5 px-1.5 border border-slate-200">{r.remarks || "—"}</td>
+                      <td className="py-1.5 px-1.5 border border-slate-200 truncate max-w-[120px]" title={r.manager}>{r.manager || "—"}</td>
+                      <td className="py-1.5 px-1.5 text-center border border-slate-200">{r.state || "Rajasthan"}</td>
+                      <td className="py-1.5 px-1.5 border border-slate-200 text-right font-mono font-semibold">{fmt(r.claimed_amount)}</td>
+                      <td className="py-1.5 px-1.5 border border-slate-200 text-right font-mono font-semibold text-red-650 bg-red-50/5">{fmt(rowDiff)}</td>
+                    </tr>
+                  );
+                })}
               </tbody>
               <tfoot>
                 <tr className="bg-amber-50/30 border-t-2 border-slate-200 text-[10px] font-bold text-slate-800">
-                  <td colSpan={6} className="py-1.5 px-2 border border-slate-200 text-center uppercase tracking-wider text-slate-650 font-sans">
+                  <td colSpan={8} className="py-1.5 px-2 border border-slate-200 text-center uppercase tracking-wider text-slate-650 font-sans">
                     Grand Total
                   </td>
-                  <td className="py-1.5 px-2 text-right border border-slate-200 font-mono">{fmt(data.reduce((s, r) => s + r.travel_expense, 0))}</td>
+                  <td className="py-1.5 px-2 text-right border border-slate-200 font-mono">{fmt(data.reduce((s, r) => s + ((r.bike_km || 0) * 4.5 + (r.car_km || 0) * 9.0), 0))}</td>
+                  <td className="py-1.5 px-2 text-right border border-slate-200 font-mono">{fmt(data.reduce((s, r) => s + ((r.auto_amount || 0) + (r.train_bus_amount || 0)), 0))}</td>
                   <td className="py-1.5 px-2 text-right border border-slate-200 font-mono">{fmt(data.reduce((s, r) => s + r.da_allowance, 0))}</td>
                   <td className="py-1.5 px-2 text-right border border-slate-200 font-mono">{fmt(data.reduce((s, r) => s + r.spare_purchase, 0))}</td>
                   <td className="py-1.5 px-2 text-right border border-slate-200 font-mono">{fmt(data.reduce((s, r) => s + r.courier_charges, 0))}</td>
@@ -403,7 +456,11 @@ export default function ConsolidatedReportPage() {
                   <td className="border border-slate-200" />
                   <td className="border border-slate-200" />
                   <td className="border border-slate-200" />
+                  <td className="border border-slate-200" />
+                  <td className="border border-slate-200" />
+                  <td className="border border-slate-200" />
                   <td className="py-1.5 px-2 text-right border border-slate-200 font-mono">{fmt(totalClaimed)}</td>
+                  <td className="py-1.5 px-2 text-right border border-slate-200 font-mono text-red-700">{fmt(totalClaimed - data.reduce((s, r) => s + r.total, 0))}</td>
                 </tr>
               </tfoot>
             </table>

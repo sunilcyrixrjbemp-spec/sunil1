@@ -2564,9 +2564,9 @@ export async function handleGetConsolidatedReport(request, env, params, query, u
     userByCode[u.user_id] = u;
   }
 
-  // 2. Fetch all approved expenses
+  // 2. Fetch all approved expenses (with itinerary and created_at for date/deduction tracking)
   const expensesRes = await env.DB.prepare(`
-    SELECT id, user_id, expense_code, amount, original_amount, status FROM expenses
+    SELECT id, user_id, expense_code, amount, original_amount, status, itinerary, created_at FROM expenses
     WHERE UPPER(month) = UPPER(?) AND year = ? AND LOWER(status) = 'approved'
   `).bind(month, year).all().catch(() => ({ results: [] }));
   const expenses = expensesRes.results || [];
@@ -2582,7 +2582,7 @@ export async function handleGetConsolidatedReport(request, env, params, query, u
     try {
       legs = await queryInChunks(
         env.DB,
-        "SELECT exp_id, travel_mode, sub_mode, distance_km, travel_amount, sub_amount, da_amount, local_purchase, hotel_amount, other_desc, other_amount FROM expense_itineraries WHERE exp_id IN (?)",
+        "SELECT exp_id, travel_mode, sub_mode, distance_km, travel_amount, sub_amount, da_amount, local_purchase, hotel_amount, other_desc, other_amount, original_distance_km, original_travel_amount, original_sub_amount, original_da_amount, original_local_purchase, original_hotel_amount, original_other_amount FROM expense_itineraries WHERE exp_id IN (?)",
         expenseCodes
       );
     } catch (e) {
@@ -2660,14 +2660,51 @@ export async function handleGetConsolidatedReport(request, env, params, query, u
     let claimed_amount = 0;
     const allComments = [];
 
+    const claimDates = [];
+    const kmDeductions = {};
+    const autoDeductions = {};
+    const daDeductions = {};
+    const hotelDeductions = {};
+    const spareDeductions = {};
+    const otherDeductions = {};
+
     for (const exp of userExps) {
       claimed_amount += parseFloat(exp.original_amount || exp.amount || 0);
       
+      // Save claim date
+      if (exp.itinerary) {
+        // Format to DD-MM-YYYY
+        const parts = exp.itinerary.split("-");
+        if (parts.length === 3) {
+          claimDates.push(`${parts[2]}-${parts[1]}-${parts[0]}`);
+        } else {
+          claimDates.push(exp.itinerary);
+        }
+      } else if (exp.created_at) {
+        // Fallback to created_at date
+        const datePart = exp.created_at.split(" ")[0];
+        const parts = datePart.split("-");
+        if (parts.length === 3) {
+          claimDates.push(`${parts[2]}-${parts[1]}-${parts[0]}`);
+        } else {
+          claimDates.push(datePart);
+        }
+      }
+
       const expComments = commentsByExpense[exp.id] || [];
       allComments.push(...expComments);
 
       const expLegs = legsByCode[(exp.expense_code || "").trim().toUpperCase()] || [];
       for (const leg of expLegs) {
+        // Get day of month for deduction tracking
+        let day = 0;
+        if (exp.itinerary) {
+          day = parseInt(exp.itinerary.split("-")[2], 10) || 0;
+        } else if (exp.created_at) {
+          const datePart = exp.created_at.split(" ")[0];
+          day = parseInt(datePart.split("-")[2], 10) || 0;
+        }
+
         const mode = (leg.travel_mode || "").trim().toLowerCase();
         const sub_mode = (leg.sub_mode || "").trim().toLowerCase();
 
@@ -2706,19 +2743,101 @@ export async function handleGetConsolidatedReport(request, env, params, query, u
         if (oth_amt > 0) {
           if (oth_desc.includes("courier") || oth_desc.includes("courrier")) {
             courier_charges += oth_amt;
-          } else if (["print", "stationery", "photocopy", "photo copy", "xerox", "copy"].some(k => oth_desc.includes(k))) {
-            printing_stationery += oth_amt;
           } else {
             printing_stationery += oth_amt;
           }
         }
+
+        // Deductions calculation per leg (claimed vs approved)
+        const kmDiff = parseFloat(leg.original_distance_km || 0) - parseFloat(leg.distance_km || 0);
+        const autoDiff = (
+          ((leg.travel_mode || "").trim().toLowerCase() === "auto" ? (parseFloat(leg.original_travel_amount || 0) - parseFloat(leg.travel_amount || 0)) : 0) +
+          ((leg.sub_mode || "").trim().toLowerCase() === "auto" ? (parseFloat(leg.original_sub_amount || 0) - parseFloat(leg.sub_amount || 0)) : 0)
+        );
+        const daDiff = parseFloat(leg.original_da_amount || 0) - parseFloat(leg.da_amount || 0);
+        const hotelDiff = parseFloat(leg.original_hotel_amount || 0) - parseFloat(leg.hotel_amount || 0);
+        const spareDiff = parseFloat(leg.original_local_purchase || 0) - parseFloat(leg.local_purchase || 0);
+        const otherDiff = parseFloat(leg.original_other_amount || 0) - parseFloat(leg.other_amount || 0);
+
+        if (day > 0) {
+          if (kmDiff > 0) kmDeductions[day] = (kmDeductions[day] || 0) + kmDiff;
+          if (autoDiff > 0) autoDeductions[day] = (autoDeductions[day] || 0) + autoDiff;
+          if (daDiff > 0) daDeductions[day] = (daDeductions[day] || 0) + daDiff;
+          if (hotelDiff > 0) hotelDeductions[day] = (hotelDeductions[day] || 0) + hotelDiff;
+          if (spareDiff > 0) spareDeductions[day] = (spareDeductions[day] || 0) + spareDiff;
+          if (otherDiff > 0) otherDeductions[day] = (otherDeductions[day] || 0) + otherDiff;
+        }
       }
+    }
+
+    // Build automated deduction strings with dates
+    const categoryTexts = [];
+    
+    // KM
+    const kmDays = Object.keys(kmDeductions).map(Number).sort((a,b)=>a-b);
+    if (kmDays.length > 0) {
+      const totalKm = kmDays.reduce((sum, d) => sum + kmDeductions[d], 0);
+      if (kmDays.length === 1) {
+        categoryTexts.push(`On ${kmDays[0]}: ${totalKm} km deducted`);
+      } else {
+        categoryTexts.push(`On Dates ${kmDays.join(", ")}: total ${totalKm} km deducted`);
+      }
+    }
+
+    // Auto
+    const autoDays = Object.keys(autoDeductions).map(Number).sort((a,b)=>a-b);
+    if (autoDays.length > 0) {
+      const totalAuto = autoDays.reduce((sum, d) => sum + autoDeductions[d], 0);
+      if (autoDays.length === 1) {
+        categoryTexts.push(`On ${autoDays[0]}: ${totalAuto} auto deducted`);
+      } else {
+        categoryTexts.push(`On Dates ${autoDays.join(", ")}: total ${totalAuto} auto deducted`);
+      }
+    }
+
+    // DA
+    const daDays = Object.keys(daDeductions).map(Number).sort((a,b)=>a-b);
+    if (daDays.length > 0) {
+      const totalDa = daDays.reduce((sum, d) => sum + daDeductions[d], 0);
+      categoryTexts.push(`On ${daDays.length === 1 ? daDays[0] : "Dates " + daDays.join(", ")}: ${totalDa} DA deducted`);
+    }
+
+    // Hotel
+    const hotelDays = Object.keys(hotelDeductions).map(Number).sort((a,b)=>a-b);
+    if (hotelDays.length > 0) {
+      const totalHotel = hotelDays.reduce((sum, d) => sum + hotelDeductions[d], 0);
+      categoryTexts.push(`On ${hotelDays.length === 1 ? hotelDays[0] : "Dates " + hotelDays.join(", ")}: ${totalHotel} Hotel deducted`);
+    }
+
+    // Spare
+    const spareDays = Object.keys(spareDeductions).map(Number).sort((a,b)=>a-b);
+    if (spareDays.length > 0) {
+      const totalSpare = spareDays.reduce((sum, d) => sum + spareDeductions[d], 0);
+      categoryTexts.push(`On ${spareDays.length === 1 ? spareDays[0] : "Dates " + spareDays.join(", ")}: ${totalSpare} Spare deducted`);
+    }
+
+    // Other
+    const otherDays = Object.keys(otherDeductions).map(Number).sort((a,b)=>a-b);
+    if (otherDays.length > 0) {
+      const totalOther = otherDays.reduce((sum, d) => sum + otherDeductions[d], 0);
+      categoryTexts.push(`On ${otherDays.length === 1 ? otherDays[0] : "Dates " + otherDays.join(", ")}: ${totalOther} other exp deducted`);
     }
 
     const user_advance = advancesMap[(usr.user_id || "").toLowerCase()] || 0;
     const row_total = travel_expense + da_allowance + spare_purchase + courier_charges + boarding_lodging + printing_stationery;
     const net_payable = row_total - user_advance;
-    const deduction_reason = Array.from(new Set(allComments)).join("; ");
+
+    // Unique list of dates sorted chronologically
+    const sortedClaimDates = Array.from(new Set(claimDates)).sort((a, b) => {
+      const parseDate = (dStr) => {
+        const p = dStr.split("-");
+        if (p.length === 3) return new Date(parseInt(p[2]), parseInt(p[1]) - 1, parseInt(p[0])).getTime();
+        return new Date(dStr).getTime();
+      };
+      return parseDate(a) - parseDate(b);
+    });
+
+    const deduction_reason = Array.from(new Set([...categoryTexts, ...allComments])).join("; ");
 
     reportRows.push({
       zone: usr.zone || "",
@@ -2727,6 +2846,9 @@ export async function handleGetConsolidatedReport(request, env, params, query, u
       cc: usr.district || "",
       ee_name: usr.name,
       doj: usr.date_of_joining || "",
+      submitted_date: sortedClaimDates.join(", ") || "",
+      mail_hard_copy: "",
+      designation: usr.designation || "",
       travel_expense: Math.round(travel_expense * 100) / 100,
       bike_km: Math.round(bike_km * 100) / 100,
       car_km: Math.round(car_km * 100) / 100,
@@ -2743,8 +2865,13 @@ export async function handleGetConsolidatedReport(request, env, params, query, u
       advance: Math.round(user_advance * 100) / 100,
       net_payable: Math.round(net_payable * 100) / 100,
       gst_bills: "",
+      status: "Approved",
       deduction_reason: deduction_reason,
+      month: month,
+      hold_reason: "No",
       remarks: "",
+      manager: usr.manager || "",
+      state: "Rajasthan",
       claimed_amount: Math.round(claimed_amount * 100) / 100
     });
   }
