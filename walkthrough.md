@@ -167,3 +167,6 @@ We have completed the implementation of the core features and enhancements reque
     *   Implemented a premium, collapsible panel "Company Expense Policies" under the summary cards.
     *   It fetches all policies, extracts the distinct grades dynamically (preventing hardcoding), and renders a select dropdown of actual database grades.
     *   Renders a grid displaying In-District DA, Out-District DA, Hotel DA, Out-of-State DA, In-State Hotel Rent limit, Out-of-State Hotel Rent limit, Bike reimbursement rate (defaulting to `₹4.50 / KM`), Car reimbursement rate (defaulting to `₹9.00 / KM`), Monthly Distance limit (defaulting to `2000 KM`), Monthly Auto cap (defaulting to `₹1000.00`), and Authorized Vehicle type for the selected grade.
+*   **Expense Submission Form Integration ([ExpensePage.tsx](file:///c:/Users/Cyrix%20HealthCare/Desktop/Sunil%20React.tsx/frontend/src/pages/ExpensePage.tsx))**:
+    *   Integrated a collapsible panel "Your Grade Allowances & Policies" directly on the daily claim submission page.
+    *   This dynamically displays the engineer's specific grade-level allowances (loaded from `/api/expense/init` rules), giving them real-time reference guidance as they input their travel and expense legs.
