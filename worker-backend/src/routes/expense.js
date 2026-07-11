@@ -2557,9 +2557,41 @@ export async function handleGetEngineerMonthClaims(request, env, params, query, 
         expenseDateMap[c.expense_code] = c.date;
       }
 
+      // Map legs for fast lookup by itinerary_id (exp_id + "-" + leg_number)
+      const legsMap = {};
+      for (const c of claims) {
+        for (const leg of (c.legs || [])) {
+          const key = `${c.expense_code}-${leg.leg_number}`.toLowerCase();
+          legsMap[key] = leg;
+        }
+      }
+
       for (const a of (attachRes.results || [])) {
         const billType = (a.bill_type || "").toLowerCase();
         if (a.file_url && !billType.includes("pms") && !billType.includes("call")) {
+          // Check if the approved amount for this attachment type is zero
+          const legKey = `${a.exp_id}-${a.itinerary_id.split("-").pop()}`.toLowerCase();
+          const leg = legsMap[legKey];
+          if (leg) {
+            let isApprovedAmountZero = false;
+            if (billType === "hotel") {
+              isApprovedAmountZero = (parseFloat(leg.hotel_amount) || 0) === 0;
+            } else if (billType === "local_purchase") {
+              isApprovedAmountZero = (parseFloat(leg.local_purchase) || 0) === 0;
+            } else if (billType === "other" || billType === "other_expense") {
+              isApprovedAmountZero = (parseFloat(leg.other_amount) || 0) === 0;
+            } else if (leg.travel_mode && billType === leg.travel_mode.toLowerCase()) {
+              isApprovedAmountZero = (parseFloat(leg.travel_amount) || 0) === 0;
+            } else if (leg.sub_mode && billType === leg.sub_mode.toLowerCase()) {
+              isApprovedAmountZero = (parseFloat(leg.sub_amount) || 0) === 0;
+            }
+            
+            if (isApprovedAmountZero) {
+              // Skip zeroed-out attachment
+              continue;
+            }
+          }
+
           validAttachments.push({
             file_url: a.file_url,
             date: expenseDateMap[a.exp_id] || ""

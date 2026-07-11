@@ -546,87 +546,21 @@ export default function MonthSummaryPage() {
     setAppliedFilters(f); fetchData(f);
   };
 
-  const openBlankWindow = () => {
-    const win = window.open("about:blank", "_blank", "width=1400,height=900");
-    if (win) {
-      win.document.write(`
-        <html>
-        <head>
-          <title>Generating PDF...</title>
-          <style>
-            body { font-family: sans-serif; display: flex; flex-direction: column; align-items: center; justify-content: center; height: 80vh; color: #475569; }
-            .spinner { border: 4px solid #e2e8f0; border-top: 4px solid #4f46e5; border-radius: 50%; width: 40px; height: 40px; animation: spin 1s linear infinite; margin-bottom: 16px; }
-            @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
-          </style>
-        </head>
-        <body>
-          <div class="spinner"></div>
-          <h2>Generating PDF Report</h2>
-          <p>Please wait while we compile the claims data...</p>
-        </body>
-        </html>
-      `);
-      win.document.close();
-    }
-    return win;
-  };
-
-  const generateSinglePDF = async (row: any, advance: number, win: Window | null) => {
-    const key = `${row.user_id}-${row.month}-${row.year}`;
-    setPdfLoadingId(key);
-    const tid = toast.loading(`Fetching data for ${row.name}…`);
-    try {
-      const res = await expenseService.getEngineerMonthClaims(row.user_id, row.month, row.year);
-      const user = res.user || row;
-      const claims = res.claims || [];
-      const attachments = res.attachments || [];
-      if (claims.length === 0) { 
-        toast.dismiss(tid); 
-        toast.error("No approved claim data found"); 
-        if (win) win.close();
-        return; 
-      }
-      const html = buildExcelPrintHTML(user, claims, attachments, advance, true);
-      if (!win || win.closed) {
-        toast.dismiss(tid);
-        toast.error("PDF window was closed or blocked");
+  const loadScript = (src: string): Promise<void> => {
+    return new Promise((resolve, reject) => {
+      if (document.querySelector(`script[src="${src}"]`)) {
+        resolve();
         return;
       }
-      win.document.open();
-      win.document.write(html);
-      win.document.close();
-      
-      // Fallback print trigger directly on the popup window instance
-      setTimeout(() => {
-        try {
-          if (win && !win.closed) {
-            win.focus();
-            win.print();
-          }
-        } catch (e) {
-          console.warn("Direct popup print failed:", e);
-        }
-      }, 1500);
-
-      toast.dismiss(tid);
-      toast.success(`PDF ready — ${row.name} (${row.month} ${row.year})`);
-    } catch (err: any) {
-      toast.dismiss(tid);
-      toast.error(err?.response?.data?.detail || "PDF generation failed");
-      if (win) win.close();
-    } finally {
-      setPdfLoadingId(null);
-    }
+      const script = document.createElement("script");
+      script.src = src;
+      script.onload = () => resolve();
+      script.onerror = () => reject(new Error(`Failed to load script: ${src}`));
+      document.head.appendChild(script);
+    });
   };
 
   const handlePDF = async (row: any) => {
-    // Open blank window immediately to satisfy browser user gesture requirements
-    const win = openBlankWindow();
-    if (!win) {
-      toast.error("Allow popups to download PDF");
-      return;
-    }
-
     const key = `${row.user_id}-${row.month}-${row.year}`;
     setPdfLoadingId(key);
     const tid = toast.loading("Checking advance details...");
@@ -646,12 +580,47 @@ export default function MonthSummaryPage() {
       setPdfLoadingId(null);
     }
 
+    const downloadPDF = async (amount: number) => {
+      setPdfLoadingId(key);
+      const downloadTid = toast.loading(`Generating PDF for ${row.name}...`);
+      try {
+        await loadScript("https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js");
+        
+        const res = await expenseService.getEngineerMonthClaims(row.user_id, row.month, row.year);
+        const userObj = res.user || row;
+        const claims = res.claims || [];
+        const attachments = res.attachments || [];
+        if (claims.length === 0) {
+          toast.error("No approved claim data found");
+          return;
+        }
+
+        const html = buildExcelPrintHTML(userObj, claims, attachments, amount, false);
+        const element = document.createElement("div");
+        element.innerHTML = html;
+
+        const opt = {
+          margin:       [10, 10, 10, 10],
+          filename:     `${(userObj.name || "Engineer").replace(/[^a-zA-Z0-9]/g, "_")}_Form_CYKL01.pdf`,
+          image:        { type: 'jpeg', quality: 0.98 },
+          html2canvas:  { scale: 2, useCORS: true, logging: false },
+          jsPDF:        { unit: 'mm', format: 'a4', orientation: 'portrait' }
+        };
+
+        await (window as any).html2pdf().from(element).set(opt).save();
+        toast.success(`PDF downloaded successfully!`);
+      } catch (err) {
+        toast.error("PDF download failed");
+        console.error(err);
+      } finally {
+        toast.dismiss(downloadTid);
+        setPdfLoadingId(null);
+      }
+    };
+
     if (exists || !isAllowedAdvance) {
-      await generateSinglePDF(row, savedAdvance, win);
+      await downloadPDF(savedAdvance);
     } else {
-      // If we need to prompt the user, close the blank window we opened
-      win.close();
-      
       setAdvanceAmountInput("0");
       setAdvanceModalConfig({
         title: "Set Monthly Advance",
@@ -661,8 +630,6 @@ export default function MonthSummaryPage() {
         month: row.month,
         year: row.year,
         onSave: async (amount: number) => {
-          // Open a new blank window synchronously on the modal Save button user gesture
-          const modalWin = openBlankWindow();
           const saveTid = toast.loading("Saving advance amount...");
           try {
             await expenseService.saveEngineerAdvance(row.user_id, row.month, row.year, amount);
@@ -672,7 +639,7 @@ export default function MonthSummaryPage() {
           } finally {
             toast.dismiss(saveTid);
           }
-          await generateSinglePDF(row, amount, modalWin);
+          await downloadPDF(amount);
         }
       });
       setShowAdvanceModal(true);
@@ -911,38 +878,64 @@ export default function MonthSummaryPage() {
     }
   };
 
-  const generateBulkDownloadIndividual = (fetched: any[], advancesMap: Record<string, number>) => {
-    fetched.forEach((item, index) => {
-      setTimeout(() => {
-        const user = item.res.user || item.row;
+  const generateZIPBlob = async (fetched: any[], advancesMap: Record<string, number>) => {
+    const tid = toast.loading("Generating PDFs and packing ZIP...");
+    try {
+      const zip = new (window as any).JSZip();
+      
+      for (const item of fetched) {
+        const userObj = item.res.user || item.row;
         const claims = item.res.claims || [];
         const attachments = item.res.attachments || [];
-        if (claims.length === 0) return;
+        if (claims.length === 0) continue;
 
         const key = `${item.row.user_id}-${item.row.month}-${item.row.year}`;
         const advance = advancesMap[key] || 0;
 
-        const html = buildExcelPrintHTML(user, claims, attachments, advance);
-        const blob = new Blob([html], { type: "text/html" });
-        const url = URL.createObjectURL(blob);
-        const a = document.createElement("a");
-        a.href = url;
-        const safeName = (user.name || "Engineer").replace(/[^a-zA-Z0-9]/g, "_");
-        const safeMonth = (user.month || "Month").replace(/[^a-zA-Z0-9]/g, "_");
-        a.download = `${safeName}_${user.e_code || user.user_id}_${safeMonth}_${user.year}.html`;
-        document.body.appendChild(a);
-        a.click();
-        document.body.removeChild(a);
-        URL.revokeObjectURL(url);
-      }, index * 350);
-    });
-    toast.success(`Started downloading ${fetched.length} files successfully!`);
+        const html = buildExcelPrintHTML(userObj, claims, attachments, advance, false);
+        const element = document.createElement("div");
+        element.innerHTML = html;
+
+        const opt = {
+          margin:       [10, 10, 10, 10],
+          image:        { type: 'jpeg', quality: 0.98 },
+          html2canvas:  { scale: 2, useCORS: true, logging: false },
+          jsPDF:        { unit: 'mm', format: 'a4', orientation: 'portrait' }
+        };
+
+        const pdfBlob = await (window as any).html2pdf().from(element).set(opt).output('blob');
+        const safeName = (userObj.name || "Engineer").replace(/[^a-zA-Z0-9]/g, "_");
+        const safeMonth = (userObj.month || "Month").replace(/[^a-zA-Z0-9]/g, "_");
+        const fileName = `${safeName}_${userObj.e_code || userObj.user_id}_${safeMonth}_${userObj.year}.pdf`;
+        zip.file(fileName, pdfBlob);
+      }
+
+      const zipBlob = await zip.generateAsync({ type: "blob" });
+      const link = document.createElement("a");
+      link.href = URL.createObjectURL(zipBlob);
+      link.download = `Claims_Reports_${appliedFilters.month || "Selected"}_${appliedFilters.year || "2026"}.zip`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+
+      toast.dismiss(tid);
+      toast.success("ZIP folder downloaded successfully!");
+    } catch (e) {
+      toast.dismiss(tid);
+      toast.error("Failed to generate ZIP");
+      console.error(e);
+    }
   };
 
-  const handleBulkDownloadIndividual = async () => {
+  const handleBulkDownloadZIP = async () => {
     if (selectedKeys.length === 0) return;
-    const tid = toast.loading(`Checking advance details and fetching data…`);
+    const tid = toast.loading(`Preparing ZIP package and fetching claims data...`);
     try {
+      await Promise.all([
+        loadScript("https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"),
+        loadScript("https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js")
+      ]);
+
       const fetched: any[] = [];
       const advancesMap: Record<string, number> = {};
       const keysWithNoAdvance: any[] = [];
@@ -1001,16 +994,16 @@ export default function MonthSummaryPage() {
             } finally {
               toast.dismiss(saveTid);
             }
-            generateBulkDownloadIndividual(fetched, advancesMap);
+            generateZIPBlob(fetched, advancesMap);
           }
         });
         setShowAdvanceModal(true);
       } else {
-        generateBulkDownloadIndividual(fetched, advancesMap);
+        generateZIPBlob(fetched, advancesMap);
       }
     } catch (err) {
       toast.dismiss(tid);
-      toast.error("Bulk download failed");
+      toast.error("Bulk ZIP generation failed");
     }
   };
 
@@ -1164,9 +1157,9 @@ export default function MonthSummaryPage() {
                   className="flex items-center gap-1 px-2.5 py-1 rounded bg-blue-600 hover:bg-blue-700 text-white text-[10px] font-bold shadow-sm cursor-pointer transition-all">
                   <Printer className="w-3 h-3" /> Print Combined
                 </button>
-                <button onClick={handleBulkDownloadIndividual}
+                <button onClick={handleBulkDownloadZIP}
                   className="flex items-center gap-1 px-2.5 py-1 rounded bg-green-600 hover:bg-green-700 text-white text-[10px] font-bold shadow-sm cursor-pointer transition-all">
-                  <Download className="w-3 h-3" /> Download HTMLs
+                  <Download className="w-3 h-3" /> Download PDFs (ZIP)
                 </button>
               </div>
             )}
@@ -1262,7 +1255,7 @@ export default function MonthSummaryPage() {
                           className="inline-flex items-center gap-1 px-2 py-1 rounded bg-red-600 hover:bg-red-700 text-white text-[10px] font-bold shadow-sm transition-all cursor-pointer disabled:opacity-60"
                           title={`Download Reimbursement PDF Form CYKL01 for ${row.name}`}>
                           {isLoading ? <Loader2 className="w-3 h-3 animate-spin" /> : <Download className="w-3 h-3" />}
-                          {isLoading ? "..." : "Form PDF"}
+                          {isLoading ? "..." : "Download PDF"}
                         </button>
                       </td>
                     </tr>
