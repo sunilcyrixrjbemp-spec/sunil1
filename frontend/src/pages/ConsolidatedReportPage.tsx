@@ -250,7 +250,9 @@ export default function ConsolidatedReportPage() {
             <span className="text-base font-extrabold text-slate-800 font-mono block mt-0.5">{data.length}</span>
             <span className="text-[9px] text-indigo-600 font-extrabold uppercase block mt-1">Engineers Listed</span>
           </div>
-              {/* Card 2: Claimed Amount */}
+        </div>
+
+        {/* Card 2: Claimed Amount */}
         <div className="group bg-white border border-slate-100 rounded-3xl p-4 flex items-center gap-4 hover:shadow-md transition-all duration-300 animate-fadeIn">
           <div className="w-12 h-12 rounded-2xl flex items-center justify-center bg-amber-50 text-amber-600 shrink-0">
             <IndianRupee className="w-5 h-5" />
@@ -284,7 +286,7 @@ export default function ConsolidatedReportPage() {
             <span className="text-base font-extrabold text-slate-800 font-mono block mt-0.5">₹{fmt(totalNet)}</span>
             <span className="text-[9px] text-emerald-650 font-extrabold uppercase block mt-1">Net Reimbursement</span>
           </div>
-        </div>    </div>
+        </div>
       </div>
 
       {/* Filter Card */}
