@@ -251,14 +251,14 @@ function buildExcelPrintHTML(user: any, claims: any[], attachments: any[] = [], 
     th,td{border:1px solid #222!important;padding:3.5px 4px;vertical-align:middle;word-wrap:break-word;overflow-wrap:break-word;}
     tbody tr{page-break-inside:avoid!important;break-inside:avoid!important;}
     .main-hdr{background:#1565C0!important;color:#fff!important;text-align:center;font-size:13pt!important;
-      font-weight:900!important;letter-spacing:1px;padding:6px!important;border:1px solid #0d3f7a!important;}
+      font-weight:900!important;word-spacing:normal!important;letter-spacing:normal!important;padding:6px!important;border:1px solid #0d3f7a!important;}
     .month-hdr{background:#1565C0!important;color:#fff!important;font-size:7.5pt!important;
       font-weight:800!important;text-align:right;padding:4px 8px!important;border:1px solid #0d3f7a!important;white-space:nowrap;}
     .form-no{background:#1565C0!important;color:#FFE082!important;font-size:7.5pt!important;
       font-weight:800!important;text-align:right;padding:4px 8px!important;border:1px solid #0d3f7a!important;white-space:nowrap;}
     .info-tbl{margin-bottom:0; border:1px solid #222!important; border-top: none!important;}
-    .info-lbl{font-weight:800; background:#F5F5F5!important; color:#000; border-right:1px solid #222!important; font-size:7pt; text-align:left; padding:4px 6px; text-transform:uppercase; white-space:nowrap;}
-    .info-val{background:#fff!important; color:#1565C0!important; border-right:1px solid #222!important; font-size:7pt; text-align:left; padding:4px 6px; font-weight:900;}
+    .info-lbl{font-weight:800; background:#F5F5F5!important; color:#000; border-right:1px solid #222!important; font-size:7pt; text-align:left; padding:4px 6px; text-transform:uppercase; white-space:nowrap; word-spacing:normal!important;}
+    .info-val{background:#fff!important; color:#1565C0!important; border-right:1px solid #222!important; font-size:7pt; text-align:left; padding:4px 6px; font-weight:900; white-space:pre-wrap; word-spacing:normal!important; letter-spacing:normal!important;}
     .col-h1{background:#1565C0!important;color:#fff!important;font-size:7pt!important;
       font-weight:800!important;text-align:center!important;padding:4.5px 2px!important;
       border:1px solid #0d3f7a!important;line-height:1.2;vertical-align:middle;}
@@ -269,11 +269,11 @@ function buildExcelPrintHTML(user: any, claims: any[], attachments: any[] = [], 
     .tot-num{border:1px solid #222!important;padding:4px 5px;font-size:7pt;font-weight:900;color:#000;background:#FFF9C4!important;vertical-align:middle;text-align:right;}
     .net-lbl{border:1px solid #222!important;padding:5px 6px;font-size:7.5pt;font-weight:900;color:#000;background:#CFD8DC!important;text-align:center;text-transform:uppercase;}
     .net-val{border:1px solid #222!important;padding:5px 6px;font-size:8pt;font-weight:900;color:#000;background:#fff!important;text-align:center;}
-    .awords-box{border:1px solid #222!important;border-top:none!important;padding:5px 8px;font-size:7pt;font-weight:600;color:#000;background:#fff!important;}
-    .remarks-box{border:1px solid #222!important;border-top:none!important;padding:4px 8px;font-size:7pt;font-weight:800;color:#000;background:#fff!important;}
+    .awords-box{border:1px solid #222!important;border-top:none!important;padding:5px 8px;font-size:7pt;font-weight:600;color:#000;background:#fff!important;white-space:pre-wrap;word-spacing:normal!important;}
+    .remarks-box{border:1px solid #222!important;border-top:none!important;padding:4px 8px;font-size:7pt;font-weight:800;color:#000;background:#fff!important;word-spacing:normal!important;}
     .sig-tbl{border:1px solid #222!important;border-top:none!important;}
-    .sig-lbl{border-right:1px solid #222!important;padding:4px 6px;font-size:7pt;font-weight:700;color:#000;background:#fff!important;height:32px;vertical-align:top;}
-    .sig-val{border-right:1px solid #222!important;padding:4px 6px;font-size:7pt;font-weight:600;color:#000;background:#fff!important;height:32px;vertical-align:bottom;}
+    .sig-lbl{border-right:1px solid #222!important;padding:4px 6px;font-size:7pt;font-weight:700;color:#000;background:#fff!important;height:32px;vertical-align:top;white-space:pre-wrap;word-spacing:normal!important;}
+    .sig-val{border-right:1px solid #222!important;padding:4px 6px;font-size:7pt;font-weight:600;color:#000;background:#fff!important;height:32px;vertical-align:bottom;word-spacing:normal!important;}
     .attachment-page{width:1122px!important;height:793px!important;overflow:hidden!important;}
     @page{size:A4 landscape;margin:6mm 7mm;}
     @media print{
