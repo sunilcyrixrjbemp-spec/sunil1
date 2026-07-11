@@ -19,7 +19,10 @@ import {
   Camera,
   ShieldCheck,
   Car,
-  Bike
+  Bike,
+  BookOpen,
+  ChevronDown,
+  ChevronUp
 } from "lucide-react";
 import api from "../services/api";
 
@@ -144,6 +147,7 @@ export default function ExpensePage() {
 
   // Date State
   const [date, setDate] = useState(() => new Date().toLocaleDateString('sv'));
+  const [showPolicyPanel, setShowPolicyPanel] = useState<boolean>(false);
 
   // Init default helpers
   const createDefaultLeg = (num: number): ItineraryLeg => {
@@ -2517,6 +2521,112 @@ export default function ExpensePage() {
           </div>
         </div>
       </div>
+
+      {/* Policy Guide Panel */}
+      <div className="card border border-slate-100 bg-white shadow-sm rounded-3xl overflow-hidden mb-6">
+        <div 
+          onClick={() => setShowPolicyPanel(!showPolicyPanel)}
+          className="card-header border-b border-slate-100 px-5 py-3.5 flex items-center justify-between bg-slate-50/20 cursor-pointer hover:bg-slate-50/40 transition-colors"
+        >
+          <h3 className="card-title text-xs font-bold text-slate-700 uppercase tracking-wider flex items-center gap-1.5">
+            <BookOpen className="w-4 h-4 text-indigo-650" />
+            Your Grade Allowances & Policies ({user.grade || "—"})
+          </h3>
+          <div className="flex items-center gap-2">
+            <span className="text-[10px] text-slate-400 font-semibold sm:inline hidden">Quick policy reference</span>
+            {showPolicyPanel ? <ChevronUp className="w-4 h-4 text-slate-400" /> : <ChevronDown className="w-4 h-4 text-slate-400" />}
+          </div>
+        </div>
+        
+        {showPolicyPanel && (
+          <div className="card-body p-5 space-y-4 animate-fadeIn">
+            <div className="flex items-center gap-2 text-indigo-600 bg-indigo-50/50 p-2.5 rounded-2xl border border-indigo-100/30">
+              <Info className="w-4 h-4 shrink-0 text-indigo-500" />
+              <p className="text-[10px] font-semibold leading-relaxed text-slate-655">
+                These are the active reimbursement rules for your grade loaded dynamically from the database. Claims exceeding these limits are auto-flagged and subject to deduction.
+              </p>
+            </div>
+
+            <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 animate-fadeIn">
+              {/* 1. Daily Allowance In-District */}
+              <div className="p-3.5 bg-slate-50/40 border border-slate-100/70 rounded-2xl">
+                <span className="text-[9px] font-black uppercase tracking-wider text-indigo-650 block mb-0.5">DA (In-District)</span>
+                <span className="text-sm font-extrabold text-slate-800 block mb-1 font-mono">₹{(allowance.daily_in_district || 0).toFixed(2)}</span>
+                <p className="text-[9px] text-slate-450 leading-normal font-medium">Daily allowance for travel within headquarters district.</p>
+              </div>
+
+              {/* 2. Daily Allowance Out-District */}
+              <div className="p-3.5 bg-slate-50/40 border border-slate-100/70 rounded-2xl">
+                <span className="text-[9px] font-black uppercase tracking-wider text-indigo-650 block mb-0.5">DA (Out-District)</span>
+                <span className="text-sm font-extrabold text-slate-800 block mb-1 font-mono">₹{(allowance.daily_out_district || 0).toFixed(2)}</span>
+                <p className="text-[9px] text-slate-450 leading-normal font-medium">Daily allowance for travel outside headquarters district.</p>
+              </div>
+
+              {/* 3. Daily Allowance Hotel */}
+              <div className="p-3.5 bg-slate-50/40 border border-slate-100/70 rounded-2xl">
+                <span className="text-[9px] font-black uppercase tracking-wider text-indigo-650 block mb-0.5">DA (Hotel Stay)</span>
+                <span className="text-sm font-extrabold text-slate-800 block mb-1 font-mono">₹{(allowance.daily_hotel || 0).toFixed(2)}</span>
+                <p className="text-[9px] text-slate-450 leading-normal font-medium">Daily allowance when staying overnight at a hotel.</p>
+              </div>
+
+              {/* 4. Daily Allowance Out-State */}
+              <div className="p-3.5 bg-slate-50/40 border border-slate-100/70 rounded-2xl">
+                <span className="text-[9px] font-black uppercase tracking-wider text-indigo-650 block mb-0.5">DA (Out-of-State)</span>
+                <span className="text-sm font-extrabold text-slate-800 block mb-1 font-mono">₹{(allowance.daily_out_state || 0).toFixed(2)}</span>
+                <p className="text-[9px] text-slate-450 leading-normal font-medium">Daily allowance when traveling outside parent state.</p>
+              </div>
+
+              {/* 5. In-State Hotel Room Rent */}
+              <div className="p-3.5 bg-slate-50/40 border border-slate-100/70 rounded-2xl">
+                <span className="text-[9px] font-black uppercase tracking-wider text-indigo-650 block mb-0.5">Hotel Rent (In-State)</span>
+                <span className="text-sm font-extrabold text-slate-800 block mb-1 font-mono">₹{(allowance.hotel_in_state_s || 1000).toFixed(2)} / Night</span>
+                <p className="text-[9px] text-slate-450 leading-normal font-medium">Maximum reimbursement per night for in-state hotel boarding/lodging.</p>
+              </div>
+
+              {/* 6. Out-of-State Hotel Room Rent */}
+              <div className="p-3.5 bg-slate-50/40 border border-slate-100/70 rounded-2xl">
+                <span className="text-[9px] font-black uppercase tracking-wider text-indigo-650 block mb-0.5">Hotel Rent (Out-State)</span>
+                <span className="text-sm font-extrabold text-slate-800 block mb-1 font-mono">₹{(allowance.hotel_out_state_s || 2000).toFixed(2)} / Night</span>
+                <p className="text-[9px] text-slate-450 leading-normal font-medium">Maximum reimbursement per night for out-of-state hotel boarding/lodging.</p>
+              </div>
+
+              {/* 7. Bike Rate */}
+              <div className="p-3.5 bg-slate-50/40 border border-slate-100/70 rounded-2xl">
+                <span className="text-[9px] font-black uppercase tracking-wider text-indigo-650 block mb-0.5">Bike Travel Rate</span>
+                <span className="text-sm font-extrabold text-slate-800 block mb-1 font-mono">₹{(allowance.rate_bike || 4.5).toFixed(2)} / KM</span>
+                <p className="text-[9px] text-slate-450 leading-normal font-medium">Reimbursement rate per kilometer when using personal motorcycle.</p>
+              </div>
+
+              {/* 8. Car Rate */}
+              <div className="p-3.5 bg-slate-50/40 border border-slate-100/70 rounded-2xl">
+                <span className="text-[9px] font-black uppercase tracking-wider text-indigo-650 block mb-0.5">Car Travel Rate</span>
+                <span className="text-sm font-extrabold text-slate-800 block mb-1 font-mono">₹{(allowance.rate_car || 9.0).toFixed(2)} / KM</span>
+                <p className="text-[9px] text-slate-450 leading-normal font-medium">Reimbursement rate per kilometer when using personal car.</p>
+              </div>
+
+              {/* 9. Max KM per month */}
+              <div className="p-3.5 bg-slate-50/40 border border-slate-100/70 rounded-2xl">
+                <span className="text-[9px] font-black uppercase tracking-wider text-indigo-650 block mb-0.5">Monthly Travel Cap</span>
+                <span className="text-sm font-extrabold text-slate-800 block mb-1 font-mono">{allowance.max_km_per_month || 2000} KM</span>
+                <p className="text-[9px] text-slate-450 leading-normal font-medium">Maximum reimbursable distance allowed per month.</p>
+              </div>
+
+              {/* 10. Max Auto per month */}
+              <div className="p-3.5 bg-slate-50/40 border border-slate-100/70 rounded-2xl">
+                <span className="text-[9px] font-black uppercase tracking-wider text-indigo-650 block mb-0.5">Monthly Auto Cap</span>
+                <span className="text-sm font-extrabold text-slate-800 block mb-1 font-mono">₹{(allowance.max_auto_per_month || 1000).toFixed(2)}</span>
+                <p className="text-[9px] text-slate-450 leading-normal font-medium">Maximum reimbursable amount allowed for auto/cab fares per month.</p>
+              </div>
+
+              {/* 11. Vehicle Type */}
+              <div className="p-3.5 bg-slate-50/40 border border-slate-100/70 rounded-2xl">
+                <span className="text-[9px] font-black uppercase tracking-wider text-indigo-650 block mb-0.5">Approved Vehicle</span>
+                <span className="text-sm font-extrabold text-slate-800 block mb-1 font-mono">{allowance.vehicle_type || "None"}</span>
+                <p className="text-[9px] text-slate-450 leading-normal font-medium">The standard vehicle type authorized for your grade.</p>
+              </div>
+            </div>
+          </div>
+        )}
 
       {/* Main Form container supporting dual layout */}
       <form onSubmit={handleFormSubmit} className="space-y-6">
