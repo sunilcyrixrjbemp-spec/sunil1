@@ -112,5 +112,10 @@ export const expenseService = {
   getConsolidatedReport: async (month: string, year: number): Promise<any> => {
     const response = await api.get(`/expense/consolidated-report?month=${encodeURIComponent(month)}&year=${year}`);
     return response.data;
+  },
+
+  getPolicyRules: async (grade: string): Promise<any> => {
+    const response = await api.get(`/expense/policy-rules?grade=${encodeURIComponent(grade)}`);
+    return response.data;
   }
 };

@@ -1,7 +1,8 @@
 import { useState, useEffect } from "react";
 import { 
   FileSpreadsheet, Calendar, Search, RefreshCw, 
-  Download, Users, IndianRupee, ShieldAlert, CheckCircle2 
+  Download, Users, IndianRupee, ShieldAlert, CheckCircle2,
+  BookOpen, Info, ChevronDown, ChevronUp
 } from "lucide-react";
 import { Link } from "react-router-dom";
 import toast from "react-hot-toast";
@@ -18,6 +19,30 @@ export default function ConsolidatedReportPage() {
   const [year, setYear] = useState<number>(currentDate.getFullYear());
   const [loading, setLoading] = useState(false);
   const [data, setData] = useState<any[]>([]);
+  const [selectedPolicyGrade, setSelectedPolicyGrade] = useState<string>("Grade A");
+  const [policyRules, setPolicyRules] = useState<any[]>([]);
+  const [loadingPolicies, setLoadingPolicies] = useState<boolean>(false);
+  const [showPolicyPanel, setShowPolicyPanel] = useState<boolean>(false);
+
+  const fetchPolicies = async () => {
+    setLoadingPolicies(true);
+    try {
+      const res = await expenseService.getPolicyRules(selectedPolicyGrade);
+      if (res && res.success) {
+        setPolicyRules(res.data || []);
+      }
+    } catch (err) {
+      console.error("Failed to load policy rules", err);
+    } finally {
+      setLoadingPolicies(false);
+    }
+  };
+
+  useEffect(() => {
+    if (showPolicyPanel) {
+      fetchPolicies();
+    }
+  }, [selectedPolicyGrade, showPolicyPanel]);
 
   useEffect(() => {
     fetchReport();
@@ -287,6 +312,74 @@ export default function ConsolidatedReportPage() {
             <span className="text-[9px] text-emerald-650 font-extrabold uppercase block mt-1">Net Reimbursement</span>
           </div>
         </div>
+      </div>
+
+      {/* Policy Guide Panel */}
+      <div className="card border border-slate-100 bg-white shadow-sm rounded-3xl overflow-hidden">
+        <div 
+          onClick={() => setShowPolicyPanel(!showPolicyPanel)}
+          className="card-header border-b border-slate-100 px-5 py-3.5 flex items-center justify-between bg-slate-50/20 cursor-pointer hover:bg-slate-50/40 transition-colors"
+        >
+          <h3 className="card-title text-xs font-bold text-slate-700 uppercase tracking-wider flex items-center gap-1.5">
+            <BookOpen className="w-4 h-4 text-indigo-650" />
+            Company Expense Policies (Non-AI Policy Guide)
+          </h3>
+          <div className="flex items-center gap-2">
+            <span className="text-[10px] text-slate-400 font-semibold sm:inline hidden">Quick policy limits lookup</span>
+            {showPolicyPanel ? <ChevronUp className="w-4 h-4 text-slate-400" /> : <ChevronDown className="w-4 h-4 text-slate-400" />}
+          </div>
+        </div>
+        
+        {showPolicyPanel && (
+          <div className="card-body p-5 space-y-4 animate-fadeIn">
+            <div className="flex flex-col sm:flex-row sm:items-center gap-4 border-b border-slate-100 pb-4">
+              <div className="w-full sm:w-1/3 max-w-[240px]">
+                <label className="block text-[10px] font-bold text-slate-455 uppercase tracking-wider mb-1">Select Grade</label>
+                <select 
+                  value={selectedPolicyGrade} 
+                  onChange={(e) => setSelectedPolicyGrade(e.target.value)}
+                  className="w-full border border-slate-200 rounded-xl px-2.5 py-1.5 text-xs font-semibold text-slate-700 focus:outline-none focus:border-indigo-500 cursor-pointer"
+                >
+                  {["Grade A", "Grade B", "Grade C", "Grade D", "Grade E"].map((g) => (
+                    <option key={g} value={g}>{g}</option>
+                  ))}
+                </select>
+              </div>
+              <div className="flex-1 flex items-center gap-2 text-indigo-600 bg-indigo-50/50 p-2.5 rounded-2xl border border-indigo-100/30">
+                <Info className="w-4 h-4 shrink-0 text-indigo-500" />
+                <p className="text-[10px] font-semibold leading-relaxed text-slate-650">
+                  Select a grade to see the active reimbursement limits and rates. Claims that exceed these thresholds are flagged for audit and may be automatically deducted.
+                </p>
+              </div>
+            </div>
+
+            {loadingPolicies ? (
+              <div className="flex items-center justify-center py-6 gap-2 text-slate-400 text-xs font-semibold">
+                <RefreshCw className="w-4 h-4 animate-spin text-indigo-600" /> Loading policies...
+              </div>
+            ) : policyRules.length === 0 ? (
+              <div className="text-center py-6 text-slate-400 font-medium italic text-xs">
+                No policy rules configured for this grade.
+              </div>
+            ) : (
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+                {policyRules.map((rule) => {
+                  const isKmRate = rule.expense_type.includes("Transport");
+                  const displayLimit = isKmRate 
+                    ? `₹${rule.limit_amount.toFixed(2)} / KM` 
+                    : `₹${rule.limit_amount.toLocaleString("en-IN", { minimumFractionDigits: 2 })} Max`;
+                  return (
+                    <div key={rule.id} className="p-3.5 bg-slate-50/40 hover:bg-slate-50 border border-slate-100/70 rounded-2xl transition-all duration-200">
+                      <span className="text-[9px] font-black uppercase tracking-wider text-indigo-650 block mb-0.5">{rule.expense_type}</span>
+                      <span className="text-sm font-extrabold text-slate-800 block mb-1 font-mono">{displayLimit}</span>
+                      <p className="text-[9.5px] text-slate-450 leading-normal font-medium">{rule.description || "No description provided."}</p>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+          </div>
+        )}
       </div>
 
       {/* Filter Card */}

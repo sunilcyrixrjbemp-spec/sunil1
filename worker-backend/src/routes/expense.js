@@ -3202,4 +3202,48 @@ async function isManagerOfUser(managerUser, targetUserId, env) {
   return false;
 }
 
+export async function handleGetPolicyRules(req, env, params, query) {
+  try {
+    const grade = query.grade ? decodeURIComponent(query.grade).trim() : null;
+    let results;
+    if (grade) {
+      results = await env.DB.prepare(
+        "SELECT * FROM expense_policy_rules WHERE LOWER(grade) = ? ORDER BY id ASC"
+      ).bind(grade.toLowerCase()).all();
+    } else {
+      results = await env.DB.prepare(
+        "SELECT * FROM expense_policy_rules ORDER BY grade ASC, id ASC"
+      ).all();
+    }
+
+    return new Response(
+      JSON.stringify({
+        success: true,
+        data: results.results || []
+      }),
+      {
+        status: 200,
+        headers: {
+          "Content-Type": "application/json",
+          "Access-Control-Allow-Origin": "*"
+        }
+      }
+    );
+  } catch (err) {
+    return new Response(
+      JSON.stringify({
+        success: false,
+        detail: `Failed to fetch policy rules: ${err.message}`
+      }),
+      {
+        status: 500,
+        headers: {
+          "Content-Type": "application/json",
+          "Access-Control-Allow-Origin": "*"
+        }
+      }
+    );
+  }
+}
+
 

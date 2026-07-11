@@ -87,8 +87,15 @@ export async function runMigrations(db) {
       zone_name TEXT,
       hospital_type TEXT,
       facility_type TEXT,
-      equipment_type TEXT,
       uploaded_at TEXT DEFAULT CURRENT_TIMESTAMP
+    )`,
+    `CREATE TABLE IF NOT EXISTS expense_policy_rules (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      grade TEXT NOT NULL,
+      expense_type TEXT NOT NULL,
+      limit_amount REAL NOT NULL,
+      description TEXT,
+      created_at TEXT DEFAULT CURRENT_TIMESTAMP
     )`
   ];
 
@@ -133,6 +140,63 @@ export async function runMigrations(db) {
     }
   } catch (err) {
     console.error("Failed to seed assets_inventory:", err.message);
+  }
+
+  // Seed local expense_policy_rules if empty
+  try {
+    const policyCountRes = await db.prepare("SELECT COUNT(*) as count FROM expense_policy_rules").first();
+    if (policyCountRes && policyCountRes.count === 0) {
+      const defaultPolicies = [
+        ["Grade A", "Daily Allowances (DA)", 500.0, "Maximum daily allowance for food and local expenses"],
+        ["Grade A", "Boarding & Lodging (Hotel)", 3000.0, "Maximum room rent per day"],
+        ["Grade A", "Spare Purchase Cost", 5000.0, "Maximum amount for purchasing equipment spares"],
+        ["Grade A", "Courier Charges", 500.0, "Courier expense limit"],
+        ["Grade A", "Printing & Stationery", 1000.0, "Printing and stationery limit"],
+        ["Grade A", "Private Transport (Bike)", 4.5, "Per KM reimbursement rate for bike"],
+        ["Grade A", "Private Transport (Car)", 9.0, "Per KM reimbursement rate for car"],
+
+        ["Grade B", "Daily Allowances (DA)", 400.0, "Maximum daily allowance for food and local expenses"],
+        ["Grade B", "Boarding & Lodging (Hotel)", 2000.0, "Maximum room rent per day"],
+        ["Grade B", "Spare Purchase Cost", 4000.0, "Maximum amount for purchasing equipment spares"],
+        ["Grade B", "Courier Charges", 500.0, "Courier expense limit"],
+        ["Grade B", "Printing & Stationery", 1000.0, "Printing and stationery limit"],
+        ["Grade B", "Private Transport (Bike)", 4.5, "Per KM reimbursement rate for bike"],
+        ["Grade B", "Private Transport (Car)", 9.0, "Per KM reimbursement rate for car"],
+
+        ["Grade C", "Daily Allowances (DA)", 300.0, "Maximum daily allowance for food and local expenses"],
+        ["Grade C", "Boarding & Lodging (Hotel)", 1500.0, "Maximum room rent per day"],
+        ["Grade C", "Spare Purchase Cost", 3000.0, "Maximum amount for purchasing equipment spares"],
+        ["Grade C", "Courier Charges", 500.0, "Courier expense limit"],
+        ["Grade C", "Printing & Stationery", 1000.0, "Printing and stationery limit"],
+        ["Grade C", "Private Transport (Bike)", 4.5, "Per KM reimbursement rate for bike"],
+        ["Grade C", "Private Transport (Car)", 9.0, "Per KM reimbursement rate for car"],
+
+        ["Grade D", "Daily Allowances (DA)", 200.0, "Maximum daily allowance for food and local expenses"],
+        ["Grade D", "Boarding & Lodging (Hotel)", 1000.0, "Maximum room rent per day"],
+        ["Grade D", "Spare Purchase Cost", 2000.0, "Maximum amount for purchasing equipment spares"],
+        ["Grade D", "Courier Charges", 500.0, "Courier expense limit"],
+        ["Grade D", "Printing & Stationery", 1000.0, "Printing and stationery limit"],
+        ["Grade D", "Private Transport (Bike)", 4.5, "Per KM reimbursement rate for bike"],
+        ["Grade D", "Private Transport (Car)", 9.0, "Per KM reimbursement rate for car"],
+
+        ["Grade E", "Daily Allowances (DA)", 150.0, "Maximum daily allowance for food and local expenses"],
+        ["Grade E", "Boarding & Lodging (Hotel)", 800.0, "Maximum room rent per day"],
+        ["Grade E", "Spare Purchase Cost", 1000.0, "Maximum amount for purchasing equipment spares"],
+        ["Grade E", "Courier Charges", 500.0, "Courier expense limit"],
+        ["Grade E", "Printing & Stationery", 1000.0, "Printing and stationery limit"],
+        ["Grade E", "Private Transport (Bike)", 4.5, "Per KM reimbursement rate for bike"],
+        ["Grade E", "Private Transport (Car)", 9.0, "Per KM reimbursement rate for car"]
+      ];
+
+      for (const [grade, type, amt, desc] of defaultPolicies) {
+        await db.prepare(
+          "INSERT INTO expense_policy_rules (grade, expense_type, limit_amount, description) VALUES (?, ?, ?, ?)"
+        ).bind(grade, type, amt, desc).run();
+      }
+      console.log("Successfully seeded expense_policy_rules.");
+    }
+  } catch (err) {
+    console.error("Failed to seed expense_policy_rules:", err.message);
   }
 
   // Self-healing database repair: Set local_purchase to original_local_purchase if it is 0/null and original is > 0
@@ -181,6 +245,7 @@ export async function runMigrations(db) {
     `CREATE INDEX IF NOT EXISTS idx_assets_hospital ON assets_inventory(LOWER(TRIM(hospital_name)))`,
     // Login logs (audit trail queries)
     `CREATE INDEX IF NOT EXISTS idx_login_logs_user ON login_logs(user_id)`,
+    `CREATE INDEX IF NOT EXISTS idx_expense_policy_rules_grade ON expense_policy_rules(grade)`,
   ];
 
   for (const idxSql of indexes) {
