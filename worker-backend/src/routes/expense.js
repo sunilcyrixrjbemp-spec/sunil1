@@ -2779,57 +2779,49 @@ export async function handleGetConsolidatedReport(request, env, params, query, u
       }
     }
 
-    // Build automated deduction strings with dates
+    // Build automated deduction strings with dates (concise format)
     const categoryTexts = [];
     
     // KM
     const kmDays = Object.keys(kmDeductions).map(Number).sort((a,b)=>a-b);
     if (kmDays.length > 0) {
       const totalKm = kmDays.reduce((sum, d) => sum + kmDeductions[d], 0);
-      if (kmDays.length === 1) {
-        categoryTexts.push(`On ${kmDays[0]}: ${totalKm} km deducted`);
-      } else {
-        categoryTexts.push(`On Dates ${kmDays.join(", ")}: total ${totalKm} km deducted`);
-      }
+      categoryTexts.push(`KM: ${totalKm}km (${kmDays.length} days: ${kmDays.join(",")})`);
     }
 
     // Auto
     const autoDays = Object.keys(autoDeductions).map(Number).sort((a,b)=>a-b);
     if (autoDays.length > 0) {
       const totalAuto = autoDays.reduce((sum, d) => sum + autoDeductions[d], 0);
-      if (autoDays.length === 1) {
-        categoryTexts.push(`On ${autoDays[0]}: ${totalAuto} auto deducted`);
-      } else {
-        categoryTexts.push(`On Dates ${autoDays.join(", ")}: total ${totalAuto} auto deducted`);
-      }
+      categoryTexts.push(`Auto: ${totalAuto} (${autoDays.length} days: ${autoDays.join(",")})`);
     }
 
     // DA
     const daDays = Object.keys(daDeductions).map(Number).sort((a,b)=>a-b);
     if (daDays.length > 0) {
       const totalDa = daDays.reduce((sum, d) => sum + daDeductions[d], 0);
-      categoryTexts.push(`On ${daDays.length === 1 ? daDays[0] : "Dates " + daDays.join(", ")}: ${totalDa} DA deducted`);
+      categoryTexts.push(`DA: ${totalDa} (${daDays.length} days: ${daDays.join(",")})`);
     }
 
     // Hotel
     const hotelDays = Object.keys(hotelDeductions).map(Number).sort((a,b)=>a-b);
     if (hotelDays.length > 0) {
       const totalHotel = hotelDays.reduce((sum, d) => sum + hotelDeductions[d], 0);
-      categoryTexts.push(`On ${hotelDays.length === 1 ? hotelDays[0] : "Dates " + hotelDays.join(", ")}: ${totalHotel} Hotel deducted`);
+      categoryTexts.push(`Hotel: ${totalHotel} (${hotelDays.length} days: ${hotelDays.join(",")})`);
     }
 
     // Spare
     const spareDays = Object.keys(spareDeductions).map(Number).sort((a,b)=>a-b);
     if (spareDays.length > 0) {
       const totalSpare = spareDays.reduce((sum, d) => sum + spareDeductions[d], 0);
-      categoryTexts.push(`On ${spareDays.length === 1 ? spareDays[0] : "Dates " + spareDays.join(", ")}: ${totalSpare} Spare deducted`);
+      categoryTexts.push(`Spare: ${totalSpare} (${spareDays.length} days: ${spareDays.join(",")})`);
     }
 
     // Other
     const otherDays = Object.keys(otherDeductions).map(Number).sort((a,b)=>a-b);
     if (otherDays.length > 0) {
       const totalOther = otherDays.reduce((sum, d) => sum + otherDeductions[d], 0);
-      categoryTexts.push(`On ${otherDays.length === 1 ? otherDays[0] : "Dates " + otherDays.join(", ")}: ${totalOther} other exp deducted`);
+      categoryTexts.push(`Other: ${totalOther} (${otherDays.length} days: ${otherDays.join(",")})`);
     }
 
     const user_advance = advancesMap[(usr.user_id || "").toLowerCase()] || 0;
