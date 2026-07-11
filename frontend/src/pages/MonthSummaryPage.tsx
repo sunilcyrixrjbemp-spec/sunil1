@@ -947,14 +947,12 @@ export default function MonthSummaryPage() {
           const [claimRes, advRes] = await Promise.all([
             expenseService.getEngineerMonthClaims(row.user_id, row.month, row.year),
             expenseService.getEngineerAdvance(row.user_id, row.month, row.year)
+          const [claimRes, advRes] = await Promise.all([
+            expenseService.getEngineerMonthClaims(row.user_id, row.month, row.year),
+            expenseService.getEngineerAdvance(row.user_id, row.month, row.year)
           ]);
           fetched.push({ row, res: claimRes });
-          const amt = advRes?.advance_amount || 0;
-          const exists = !!advRes?.exists;
-          advancesMap[key] = amt;
-          if (!exists) {
-            keysWithNoAdvance.push({ row, key });
-          }
+          advancesMap[key] = advRes?.advance_amount || 0;
         } catch (e) {
           console.error(e);
         }
@@ -968,39 +966,7 @@ export default function MonthSummaryPage() {
         return;
       }
 
-      if (keysWithNoAdvance.length > 0 && isAllowedAdvance) {
-        setAdvanceAmountInput("0");
-        setAdvanceModalConfig({
-          title: "Set Default Advance",
-          description: `You selected ${selectedKeys.length} claims, and ${keysWithNoAdvance.length} of them have no saved advance. Enter a default advance (₹) to save in the database for these ${keysWithNoAdvance.length} engineers:`,
-          initialValue: 0,
-          userCode: "BULK",
-          month: "",
-          year: 0,
-          onSave: async (amount: number) => {
-            const saveTid = toast.loading("Saving advances...");
-            try {
-              const savePromises = keysWithNoAdvance.map(item => 
-                expenseService.saveEngineerAdvance(item.row.user_id, item.row.month, item.row.year, amount)
-              );
-              await Promise.all(savePromises);
-              keysWithNoAdvance.forEach(item => {
-                advancesMap[item.key] = amount;
-              });
-              toast.success("Advances saved successfully");
-            } catch (err) {
-              console.error(err);
-              toast.error("Failed to save default advances");
-            } finally {
-              toast.dismiss(saveTid);
-            }
-            generateZIPBlob(fetched, advancesMap);
-          }
-        });
-        setShowAdvanceModal(true);
-      } else {
-        generateZIPBlob(fetched, advancesMap);
-      }
+      generateZIPBlob(fetched, advancesMap);
     } catch (err) {
       toast.dismiss(tid);
       toast.error("Bulk ZIP generation failed");
