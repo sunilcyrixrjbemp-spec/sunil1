@@ -135,3 +135,18 @@ We have completed the implementation of the core features and enhancements reque
     *   UI table body rows and footer cells display raw formatted numbers without the `₹` prefix and show `0.00` instead of `—`.
 *   **Excel Formulas Optimization**: Standardized mathematical cells (Private Travel, Public Travel, Total, Net Payable, Difference) in the exported sheet to always write valid Excel formulas (e.g. `=R2-S2` or `=(0*4.5)+(0*9)`). This ensures cells are initialized with formula values rather than blank text.
 *   **Summary Cards Styling Preservation**: Prepend `₹` directly in the UI summary cards to preserve visual aesthetics for the dashboard stats while ensuring the data grid stays clean for calculation purposes.
+
+## 📄 Concise Deduction Reason Format (July 12, 2026 - Update 4)
+
+### 1. 🔄 Objectives
+*   **Space Optimization**: Condense the verbose day-by-day deduction sentences into a compact, structured format to fit comfortably in a single column while still showing category name, total amount/quantity, number of days, and all specific days affected.
+
+### 2. 🛠️ Implemented Fixes in [expense.js](file:///c:/Users/Cyrix%20HealthCare/Desktop/Sunil%20React.tsx/worker-backend/src/routes/expense.js)
+*   **Concise Deduction Summary Generation**: Replaced verbose templates with structured summaries:
+    *   **KM**: `KM: 30km (2 days: 10,11)`
+    *   **Auto**: `Auto: 100 (2 days: 10,11)`
+    *   **DA**: `DA: 400 (2 days: 10,11)`
+    *   **Hotel/Boarding**: `Hotel: 2000 (2 days: 10,11)`
+    *   **Spare**: `Spare: 1000 (2 days: 10,11)`
+    *   **Other**: `Other: 600 (2 days: 10,11)`
+    This summarizes all deduction metadata elegantly and clearly in minimum space.
