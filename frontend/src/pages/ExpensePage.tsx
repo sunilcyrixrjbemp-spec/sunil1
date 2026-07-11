@@ -2627,6 +2627,7 @@ export default function ExpensePage() {
             </div>
           </div>
         )}
+      </div>
 
       {/* Main Form container supporting dual layout */}
       <form onSubmit={handleFormSubmit} className="space-y-6">
