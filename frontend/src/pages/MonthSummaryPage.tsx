@@ -947,9 +947,6 @@ export default function MonthSummaryPage() {
           const [claimRes, advRes] = await Promise.all([
             expenseService.getEngineerMonthClaims(row.user_id, row.month, row.year),
             expenseService.getEngineerAdvance(row.user_id, row.month, row.year)
-          const [claimRes, advRes] = await Promise.all([
-            expenseService.getEngineerMonthClaims(row.user_id, row.month, row.year),
-            expenseService.getEngineerAdvance(row.user_id, row.month, row.year)
           ]);
           fetched.push({ row, res: claimRes });
           advancesMap[key] = advRes?.advance_amount || 0;
