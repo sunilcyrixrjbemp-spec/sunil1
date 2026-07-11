@@ -118,7 +118,7 @@ api.interceptors.response.use(
         
         try {
           // Use default Axios so it routes correctly based on the updated logic
-          const response = await axios.post(`${WORKER_BACKEND_URL}/api/auth/refresh`, {
+          const response = await axios.post(`${activeBaseURL}/auth/refresh`, {
             refresh_token: refreshToken
           });
           

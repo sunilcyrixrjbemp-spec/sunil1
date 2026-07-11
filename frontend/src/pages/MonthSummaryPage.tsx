@@ -525,7 +525,32 @@ export default function MonthSummaryPage() {
     setAppliedFilters(f); fetchData(f);
   };
 
-  const generateSinglePDF = async (row: any, advance: number) => {
+  const openBlankWindow = () => {
+    const win = window.open("about:blank", "_blank", "width=1400,height=900");
+    if (win) {
+      win.document.write(`
+        <html>
+        <head>
+          <title>Generating PDF...</title>
+          <style>
+            body { font-family: sans-serif; display: flex; flex-direction: column; align-items: center; justify-content: center; height: 80vh; color: #475569; }
+            .spinner { border: 4px solid #e2e8f0; border-top: 4px solid #4f46e5; border-radius: 50%; width: 40px; height: 40px; animation: spin 1s linear infinite; margin-bottom: 16px; }
+            @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+          </style>
+        </head>
+        <body>
+          <div class="spinner"></div>
+          <h2>Generating PDF Report</h2>
+          <p>Please wait while we compile the claims data...</p>
+        </body>
+        </html>
+      `);
+      win.document.close();
+    }
+    return win;
+  };
+
+  const generateSinglePDF = async (row: any, advance: number, win: Window | null) => {
     const key = `${row.user_id}-${row.month}-${row.year}`;
     setPdfLoadingId(key);
     const tid = toast.loading(`Fetching data for ${row.name}…`);
@@ -534,10 +559,19 @@ export default function MonthSummaryPage() {
       const user = res.user || row;
       const claims = res.claims || [];
       const attachments = res.attachments || [];
-      if (claims.length === 0) { toast.dismiss(tid); toast.error("No approved claim data found"); return; }
+      if (claims.length === 0) { 
+        toast.dismiss(tid); 
+        toast.error("No approved claim data found"); 
+        if (win) win.close();
+        return; 
+      }
       const html = buildExcelPrintHTML(user, claims, attachments, advance, true);
-      const win = window.open("", "_blank", "width=1400,height=900");
-      if (!win) { toast.dismiss(tid); toast.error("Allow popups to download PDF"); return; }
+      if (!win || win.closed) {
+        toast.dismiss(tid);
+        toast.error("PDF window was closed or blocked");
+        return;
+      }
+      win.document.open();
       win.document.write(html);
       win.document.close();
       
@@ -557,12 +591,20 @@ export default function MonthSummaryPage() {
     } catch (err: any) {
       toast.dismiss(tid);
       toast.error(err?.response?.data?.detail || "PDF generation failed");
+      if (win) win.close();
     } finally {
       setPdfLoadingId(null);
     }
   };
 
   const handlePDF = async (row: any) => {
+    // Open blank window immediately to satisfy browser user gesture requirements
+    const win = openBlankWindow();
+    if (!win) {
+      toast.error("Allow popups to download PDF");
+      return;
+    }
+
     const key = `${row.user_id}-${row.month}-${row.year}`;
     setPdfLoadingId(key);
     const tid = toast.loading("Checking advance details...");
@@ -583,8 +625,11 @@ export default function MonthSummaryPage() {
     }
 
     if (exists || !isAllowedAdvance) {
-      await generateSinglePDF(row, savedAdvance);
+      await generateSinglePDF(row, savedAdvance, win);
     } else {
+      // If we need to prompt the user, close the blank window we opened
+      win.close();
+      
       setAdvanceAmountInput("0");
       setAdvanceModalConfig({
         title: "Set Monthly Advance",
@@ -594,6 +639,8 @@ export default function MonthSummaryPage() {
         month: row.month,
         year: row.year,
         onSave: async (amount: number) => {
+          // Open a new blank window synchronously on the modal Save button user gesture
+          const modalWin = openBlankWindow();
           const saveTid = toast.loading("Saving advance amount...");
           try {
             await expenseService.saveEngineerAdvance(row.user_id, row.month, row.year, amount);
@@ -603,7 +650,7 @@ export default function MonthSummaryPage() {
           } finally {
             toast.dismiss(saveTid);
           }
-          await generateSinglePDF(row, amount);
+          await generateSinglePDF(row, amount, modalWin);
         }
       });
       setShowAdvanceModal(true);

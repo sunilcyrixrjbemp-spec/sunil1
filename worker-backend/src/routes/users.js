@@ -1,5 +1,6 @@
 import { verifyPassword, getPasswordHash } from "../utils/security.js";
 import { uploadToGoogleDrive, deleteFromGoogleDrive } from "./upload.js";
+import { runWrite, runBatchWrite } from "../utils/db.js";
 
 function jsonResponse(data, status = 200) {
   return new Response(JSON.stringify(data), {
@@ -67,10 +68,10 @@ export async function handleUpdateProfile(request, env, params, query, user) {
 
   if (updates.length > 0) {
     bindings.push(user.id);
-    await env.DB.prepare(`
+    await runWrite(env, `
       UPDATE users SET ${updates.join(", ")}, updated_at = datetime('now')
       WHERE id = ?
-    `).bind(...bindings).run();
+    `, bindings);
   }
 
   const updatedUser = await env.DB.prepare("SELECT * FROM users WHERE id = ?").bind(user.id).first();
@@ -137,11 +138,17 @@ export async function handleChangePassword(request, env, params, query, user) {
   const newHash = await getPasswordHash(new_password);
   const timestamp = new Date().toISOString();
 
-  await env.DB.prepare("UPDATE users SET hashed_password = ? WHERE id = ?").bind(newHash, user.id).run();
-  await env.DB.prepare(`
-    INSERT INTO password_histories (user_id, hashed_password, created_at)
-    VALUES (?, ?, ?)
-  `).bind(user.id, newHash, timestamp).run();
+  const statements = [
+    {
+      sql: "UPDATE users SET hashed_password = ? WHERE id = ?",
+      params: [newHash, user.id]
+    },
+    {
+      sql: "INSERT INTO password_histories (user_id, hashed_password, created_at) VALUES (?, ?, ?)",
+      params: [user.id, newHash, timestamp]
+    }
+  ];
+  await runBatchWrite(env, statements);
 
   return jsonResponse({ status: "success", message: "Password has been updated successfully." });
 }
@@ -173,8 +180,7 @@ export async function handleUploadProfilePhoto(request, env, params, query, user
     }
 
     // Update user record
-    await env.DB.prepare("UPDATE users SET profile_photo = ?, updated_at = ? WHERE id = ?")
-      .bind(photoUrl, timestamp, user.id).run();
+    await runWrite(env, "UPDATE users SET profile_photo = ?, updated_at = ? WHERE id = ?", [photoUrl, timestamp, user.id]);
 
     const updatedUser = await env.DB.prepare("SELECT * FROM users WHERE id = ?").bind(user.id).first();
     const roleRow = await env.DB.prepare("SELECT role FROM user_roles WHERE user_id = ?").bind(user.user_id).first();
@@ -201,8 +207,7 @@ export async function handleDeleteProfilePhoto(request, env, params, query, user
   }
 
   // Clear from DB
-  await env.DB.prepare("UPDATE users SET profile_photo = NULL, updated_at = ? WHERE id = ?")
-    .bind(timestamp, user.id).run();
+  await runWrite(env, "UPDATE users SET profile_photo = NULL, updated_at = ? WHERE id = ?", [timestamp, user.id]);
 
   const updatedUser = await env.DB.prepare("SELECT * FROM users WHERE id = ?").bind(user.id).first();
   const roleRow = await env.DB.prepare("SELECT role FROM user_roles WHERE user_id = ?").bind(user.user_id).first();

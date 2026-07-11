@@ -82,7 +82,32 @@ We have completed the implementation of the core features and enhancements reque
     *   Go to **Environment** settings.
     *   Add a new environment variable:
         *   **Key**: `FIREBASE_SERVICE_ACCOUNT_JSON`
-        *   **Value**: *[Paste the complete text content of your `firebase-service-account.json` file here]*
-    *   Save changes. Render will automatically redeploy the service.
+    *   **Value**: *[Paste the complete text content of your `firebase-service-account.json` file here]*
+    *   **Save changes**. Render will automatically redeploy the service.
 2.  **App Updates**:
     *   The updated code has been successfully pushed to the repository. The build pipelines on Cloudflare and Render will compile the latest build automatically.
+
+---
+
+## 🛡️ Update (July 11, 2026): Transactional Approvals and Stuck Claims Fix
+
+### 1. 🔄 Root Cause & Bug Analysis
+*   **Database Status Inconsistency**: We discovered that two expense claims (`RJ-07/26-000061` and `RJ-07/26-000092`) had their Level 2 approval status marked as `"approved"`, but the main `expenses` table status remained stuck as `"submitted_l2"` (Pending L2).
+*   **Non-Atomic Sequential Queries**: The backend previously executed updates to the `approvals` and `expenses` tables sequentially using separate D1 database connection requests. If a network blip occurred or the worker execution was interrupted between queries, only the `approvals` write succeeded, leaving the claim stuck.
+*   **Rejection Binding Mismatch**: A critical parameter binding mismatch was identified in the `handleReject` query where 3 parameters were passed for only 2 SQL placeholders, causing rejection updates to fail to update the claim status.
+
+### 2. 🛠️ Implemented Fixes
+*   **Database Repair**: Manually resolved the database inconsistency by executing SQL updates to set the status of the stuck claims to `'approved'` in the remote database.
+*   **Transactional Batch Writes**: Refactored the approval, rejection, and return-to-draft endpoints (`handleApprove`, `handleReject`, `handleReturnToDraft` in [approval.js](file:///c:/Users/Cyrix%20HealthCare/Desktop/Sunil%20React.tsx/worker-backend/src/routes/approval.js)) to compile all SQL statements and execute them atomically in a single SQLite transaction using `runBatchWrite(env, statements)`.
+*   **Rejection Query Fix**: Corrected the parameter list in the rejection query to prevent runtime parameter binding errors.
+*   **D1 Batch Wrapper Interception Bypass**: Updated `runWrite` and `runBatchWrite` in [db.js](file:///c:/Users/Cyrix%20HealthCare/Desktop/Sunil%20React.tsx/worker-backend/src/utils/db.js) to bypass the custom `env.DB` read-routing proxy and use the original D1 binding (`env._originalDB || env.DB`) directly. This guarantees that prepared statement parameters are properly bound to native Cloudflare D1 classes, resolving `D1_ERROR: Wrong number of parameter bindings for SQL query` when executing transactional batches.
+*   **User Profile & Auth Writes Replication**: Audited all database modification writes inside [users.js](file:///c:/Users/Cyrix%20HealthCare/Desktop/Sunil%20React.tsx/worker-backend/src/routes/users.js) and [auth.js](file:///c:/Users/Cyrix%20HealthCare/Desktop/Sunil%20React.tsx/worker-backend/src/routes/auth.js). Replaced direct `env.DB.prepare(...).run()` calls (which bypassed replication) with `runWrite` and `runBatchWrite` transactions. This ensures all profile settings updates, password resets, account unlocks, and session logout actions correctly sync to the primary database in a multi-region environment, resolving silent login and configuration desync issues.
+*   **Consolidated Report & PDF Generation Fix**:
+    - **Database Table Typos Fixed**: Corrected references to legacy/incorrect table names `expense_itinerary` and `expense_edit_log` in the monthly details and consolidated report endpoints of [expense.js](file:///c:/Users/Cyrix%20HealthCare/Desktop/Sunil%2520React.tsx/worker-backend/src/routes/expense.js) and [approval.js](file:///c:/Users/Cyrix%2520HealthCare/Desktop/Sunil%2520React.tsx/worker-backend/src/routes/approval.js), renaming them to `expense_itineraries` and `expense_edit_logs` (matching the SQLite schema).
+    - **Case-Insensitive Mode & Status Audit**: Upgraded travel mode and status comparisons to be case-insensitive, preventing claims submitted with mixed casing from returning zeroed values in summaries.
+*   **Database Read Routing & Concurrent Writes**:
+    - **Permanent Secondary Reads before Aug 3**: Updated `runRead` in [db.js](file:///c:/Users/Cyrix%20HealthCare/Desktop/Sunil%20React.tsx/worker-backend/src/utils/db.js) to permanently route 100% of read queries (including master tables) to the local secondary database replica prior to August 3, 2026, transitioning to a 50/50 round-robin load split thereafter.
+    - **Concurrent Parallel Writes**: Refactored `runWrite` and `runBatchWrite` in [db.js](file:///c:/Users/Cyrix%20HealthCare/Desktop/Sunil%20React.tsx/worker-backend/src/utils/db.js) to run local D1 write/batch operations and primary D1 replication writes in parallel (using `Promise.all`), blocking until both are successfully executed. This guarantees absolute data parity between both database servers at the moment of request completion.
+
+
+

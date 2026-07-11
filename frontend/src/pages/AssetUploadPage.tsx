@@ -138,6 +138,7 @@ export default function AssetUploadPage() {
 
   // Search & pagination for existing assets
   const [searchQuery, setSearchQuery] = useState("");
+  const [debouncedSearch, setDebouncedSearch] = useState("");
   const [assets, setAssets] = useState<any[]>([]);
   const [totalAssets, setTotalAssets] = useState(0);
   const [currentPage, setCurrentPage] = useState(1);
@@ -158,8 +159,16 @@ export default function AssetUploadPage() {
   // Tab: "upload" | "inventory" | "analytics"
   const [activeTab, setActiveTab] = useState<"upload" | "inventory" | "analytics">("upload");
 
+  // Debounce search query to prevent hammering the server on every keypress
   useEffect(() => {
-    fetchStats();
+    const handler = setTimeout(() => {
+      setDebouncedSearch(searchQuery);
+    }, 300);
+    return () => clearTimeout(handler);
+  }, [searchQuery]);
+
+  useEffect(() => {
+    // Only fetchFilters on mount, fetchStats is triggered by filter changes (which run on mount automatically)
     fetchFilters();
   }, []);
 
@@ -171,7 +180,7 @@ export default function AssetUploadPage() {
     if (activeTab === "inventory") {
       fetchAssets();
     }
-  }, [activeTab, currentPage, searchQuery, filterZone, filterDistrict, filterDI, filterMonth]);
+  }, [activeTab, currentPage, debouncedSearch, filterZone, filterDistrict, filterDI, filterMonth]);
 
   const fetchFilters = async () => {
     try {
@@ -209,7 +218,7 @@ export default function AssetUploadPage() {
     setLoadingAssets(true);
     try {
       const params: any = { page: currentPage, page_size: pageSize };
-      if (searchQuery.trim()) params.search = searchQuery.trim();
+      if (debouncedSearch.trim()) params.search = debouncedSearch.trim();
       if (filterZone) params.zone = filterZone;
       if (filterDistrict) params.district = filterDistrict;
       if (filterDI) params.di = filterDI;

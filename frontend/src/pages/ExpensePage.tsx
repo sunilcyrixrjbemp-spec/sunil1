@@ -317,11 +317,14 @@ export default function ExpensePage() {
       return;
     }
 
+    let activeStream: MediaStream | null = null;
     let active = true;
+
     navigator.mediaDevices.getUserMedia({
       video: { facingMode: facingMode }
     }).then((stream) => {
       if (active) {
+        activeStream = stream;
         setCameraStream(stream);
         if (videoRef.current) {
           videoRef.current.srcObject = stream;
@@ -338,8 +341,8 @@ export default function ExpensePage() {
 
     return () => {
       active = false;
-      if (cameraStream) {
-        cameraStream.getTracks().forEach(track => track.stop());
+      if (activeStream) {
+        activeStream.getTracks().forEach(track => track.stop());
       }
     };
   }, [activeCameraTarget, activeActivityCameraTarget, facingMode]);
@@ -941,6 +944,7 @@ export default function ExpensePage() {
       }
     } catch (err) {
       console.error("Failed to load month limits", err);
+      setLoadedMonth(monthStr);
       if (!cached) {
         toast.error("Failed to initialize expense rules.");
       }

@@ -2575,23 +2575,27 @@ export async function handleGetConsolidatedReport(request, env, params, query, u
     return jsonResponse({ success: true, data: [] });
   }
 
-  // 3. Fetch all itineraries for these expenses
+  // 3. Fetch all itineraries for these expenses using queryInChunks (to avoid D1 parameter limit)
   const expenseCodes = expenses.map(e => e.expense_code).filter(Boolean);
   let legs = [];
   if (expenseCodes.length > 0) {
-    const placeholders = expenseCodes.map(() => "?").join(",");
-    const legsRes = await env.DB.prepare(`
-      SELECT exp_id, travel_mode, sub_mode, distance_km, travel_amount, sub_amount, da_amount, local_purchase, hotel_amount, other_desc, other_amount
-      FROM expense_itineraries
-      WHERE exp_id IN (${placeholders})
-    `).bind(...expenseCodes).all().catch(() => ({ results: [] }));
-    legs = legsRes.results || [];
+    try {
+      legs = await queryInChunks(
+        env.DB,
+        "SELECT exp_id, travel_mode, sub_mode, distance_km, travel_amount, sub_amount, da_amount, local_purchase, hotel_amount, other_desc, other_amount FROM expense_itineraries WHERE exp_id IN (?)",
+        expenseCodes
+      );
+    } catch (e) {
+      console.error("Consolidated report itineraries query failed:", e.message);
+    }
   }
 
+  // Group legs by exp_id (case-insensitive key normalization)
   const legsByCode = {};
   for (const leg of legs) {
-    if (!legsByCode[leg.exp_id]) legsByCode[leg.exp_id] = [];
-    legsByCode[leg.exp_id].push(leg);
+    const key = (leg.exp_id || "").trim().toUpperCase();
+    if (!legsByCode[key]) legsByCode[key] = [];
+    legsByCode[key].push(leg);
   }
 
   // 4. Fetch advances
@@ -2605,16 +2609,19 @@ export async function handleGetConsolidatedReport(request, env, params, query, u
     advancesMap[(adv.user_code || "").toLowerCase()] = parseFloat(adv.advance_amount || 0);
   }
 
-  // 5. Fetch edit logs for comments
+  // 5. Fetch edit logs for comments using queryInChunks
   const expenseIds = expenses.map(e => e.id);
   let editLogs = [];
   if (expenseIds.length > 0) {
-    const placeholders = expenseIds.map(() => "?").join(",");
-    const logsRes = await env.DB.prepare(`
-      SELECT expense_id, comment FROM expense_edit_logs
-      WHERE expense_id IN (${placeholders})
-    `).bind(...expenseIds).all().catch(() => ({ results: [] }));
-    editLogs = logsRes.results || [];
+    try {
+      editLogs = await queryInChunks(
+        env.DB,
+        "SELECT expense_id, comment FROM expense_edit_logs WHERE expense_id IN (?)",
+        expenseIds
+      );
+    } catch (e) {
+      console.error("Consolidated report edit logs query failed:", e.message);
+    }
   }
 
   const commentsByExpense = {};
@@ -2659,7 +2666,7 @@ export async function handleGetConsolidatedReport(request, env, params, query, u
       const expComments = commentsByExpense[exp.id] || [];
       allComments.push(...expComments);
 
-      const expLegs = legsByCode[exp.expense_code] || [];
+      const expLegs = legsByCode[(exp.expense_code || "").trim().toUpperCase()] || [];
       for (const leg of expLegs) {
         const mode = (leg.travel_mode || "").trim().toLowerCase();
         const sub_mode = (leg.sub_mode || "").trim().toLowerCase();

@@ -175,10 +175,12 @@ function App() {
       syncFCMToken();
     }).catch(() => {});
     
+    let isMounted = true;
     let activeListener: any = null;
     
     // Load @capacitor/app dynamically
     import('@capacitor/app').then(({ App: CapApp }) => {
+      if (!isMounted) return;
       activeListener = CapApp.addListener('appStateChange', ({ isActive }) => {
         if (isActive) {
           checkAppLock();
@@ -187,6 +189,7 @@ function App() {
     });
     
     return () => {
+      isMounted = false;
       if (activeListener) {
         activeListener.remove();
       }
