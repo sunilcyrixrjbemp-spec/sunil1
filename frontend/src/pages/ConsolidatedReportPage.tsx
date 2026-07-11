@@ -413,16 +413,16 @@ export default function ConsolidatedReportPage() {
                 </div>
 
                 {/* 7. Bike Rate */}
-                <div className="p-3.5 bg-slate-50/40 hover:bg-slate-50 border border-slate-100/70 rounded-2xl transition-all duration-200">
+                <div className="p-3.5 bg-slate-50/40 hover:bg-slate-50 border border-slate-100/70 rounded-2xl transition-all duration-200 animate-fadeIn">
                   <span className="text-[9px] font-black uppercase tracking-wider text-indigo-650 block mb-0.5">Bike Travel Rate</span>
-                  <span className="text-sm font-extrabold text-slate-800 block mb-1 font-mono">₹{(selectedPolicy.rate_bike || 0).toFixed(2)} / KM</span>
+                  <span className="text-sm font-extrabold text-slate-800 block mb-1 font-mono">₹{(selectedPolicy.rate_bike || 4.5).toFixed(2)} / KM</span>
                   <p className="text-[9.5px] text-slate-450 leading-normal font-medium">Reimbursement rate per kilometer when using personal motorcycle.</p>
                 </div>
 
                 {/* 8. Car Rate */}
-                <div className="p-3.5 bg-slate-50/40 hover:bg-slate-50 border border-slate-100/70 rounded-2xl transition-all duration-200">
+                <div className="p-3.5 bg-slate-50/40 hover:bg-slate-50 border border-slate-100/70 rounded-2xl transition-all duration-200 animate-fadeIn">
                   <span className="text-[9px] font-black uppercase tracking-wider text-indigo-650 block mb-0.5">Car Travel Rate</span>
-                  <span className="text-sm font-extrabold text-slate-800 block mb-1 font-mono">₹{(selectedPolicy.rate_car || 0).toFixed(2)} / KM</span>
+                  <span className="text-sm font-extrabold text-slate-800 block mb-1 font-mono">₹{(selectedPolicy.rate_car || 9.0).toFixed(2)} / KM</span>
                   <p className="text-[9.5px] text-slate-450 leading-normal font-medium">Reimbursement rate per kilometer when using personal car.</p>
                 </div>
 
