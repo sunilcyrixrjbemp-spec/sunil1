@@ -90,7 +90,10 @@ class Router {
   }
 
   _add(method, path, handler, requiresAuth) {
-    this.routes[method].push({ path, handler, requiresAuth });
+    const isWildcard = path.endsWith("/*");
+    const wildcardPrefix = isWildcard ? path.slice(0, -2) : null;
+    const parts = isWildcard ? [] : path.split("/");
+    this.routes[method].push({ path, handler, requiresAuth, isWildcard, wildcardPrefix, parts });
   }
   get(path, handler, requiresAuth = false) { this._add("GET", path, handler, requiresAuth); }
   post(path, handler, requiresAuth = false) { this._add("POST", path, handler, requiresAuth); }
@@ -99,33 +102,31 @@ class Router {
 
   match(method, pathname) {
     const methodRoutes = this.routes[method] || [];
+    const pathParts = pathname.split("/");
 
     for (const route of methodRoutes) {
       // Handle wildcard route like /api/upload/file/*
-      if (route.path.endsWith("/*")) {
-        const prefix = route.path.slice(0, -2);
-        if (pathname.startsWith(prefix)) {
-          const wildcardVal = pathname.substring(prefix.length);
+      if (route.isWildcard) {
+        if (pathname.startsWith(route.wildcardPrefix)) {
+          const wildcardVal = pathname.substring(route.wildcardPrefix.length);
           return {
             handler: route.handler,
             requiresAuth: route.requiresAuth,
             params: { "*": wildcardVal, filename: wildcardVal }
           };
         }
+        continue;
       }
 
-      const routeParts = route.path.split("/");
-      const pathParts = pathname.split("/");
-
-      if (routeParts.length !== pathParts.length) continue;
+      if (route.parts.length !== pathParts.length) continue;
 
       const params = {};
       let matched = true;
 
-      for (let i = 0; i < routeParts.length; i++) {
-        if (routeParts[i].startsWith(":")) {
-          params[routeParts[i].slice(1)] = pathParts[i];
-        } else if (routeParts[i] !== pathParts[i]) {
+      for (let i = 0; i < route.parts.length; i++) {
+        if (route.parts[i].startsWith(":")) {
+          params[route.parts[i].slice(1)] = pathParts[i];
+        } else if (route.parts[i] !== pathParts[i]) {
           matched = false;
           break;
         }

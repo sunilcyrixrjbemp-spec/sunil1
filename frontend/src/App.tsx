@@ -1,5 +1,5 @@
 import { HashRouter as Router, Routes, Route, Navigate } from "react-router-dom";
-import { Toaster } from "react-hot-toast";
+import { Toaster, toast } from "react-hot-toast";
 import { tokenPersistence, nativeConfig } from "./utils/persistence";
 import { useState, useEffect, useCallback, useRef, lazy, Suspense } from "react";
 import { isNativeApp, biometricAuth } from "./utils/capacitor";
@@ -44,6 +44,44 @@ function AppInner() {
 }
 
 function App() {
+  const [isOffline, setIsOffline] = useState(!navigator.onLine);
+
+  useEffect(() => {
+    const handleOnline = () => {
+      setIsOffline(false);
+      toast.success("Back Online — Synced! 👍", {
+        id: "offline-toast",
+        duration: 3000,
+        style: {
+          background: "#d4edda",
+          color: "#155724",
+          border: "1px solid #c3e6cb",
+        },
+      });
+    };
+
+    const handleOffline = () => {
+      setIsOffline(true);
+      toast.error("You are working offline. Drafts will be saved locally.", {
+        id: "offline-toast",
+        duration: 6000,
+        style: {
+          background: "#fff3cd",
+          color: "#856404",
+          border: "1px solid #ffeeba",
+        },
+      });
+    };
+
+    window.addEventListener("online", handleOnline);
+    window.addEventListener("offline", handleOffline);
+
+    return () => {
+      window.removeEventListener("online", handleOnline);
+      window.removeEventListener("offline", handleOffline);
+    };
+  }, []);
+
   // Non-blocking ping to wake up free-tier backend server instantly on app startup
   useEffect(() => {
     fetch("https://fieldops-secondary-api.sunnybishnoi.workers.dev/api/health").catch(() => {});
@@ -243,7 +281,19 @@ function App() {
   return (
     <ErrorBoundary>
       <Router>
-        <div className="min-h-screen bg-[#f4f6f9] text-[#212529] font-sans antialiased">
+        <div className="min-h-screen bg-[#f4f6f9] text-[#212529] font-sans antialiased relative">
+        {isOffline && (
+          <div 
+            style={{ 
+              background: "linear-gradient(90deg, #f59e0b, #ea580c)",
+              boxShadow: "0 2px 10px rgba(234, 88, 12, 0.25)"
+            }}
+            className="sticky top-0 z-[9999] w-full text-white text-[10px] font-extrabold uppercase tracking-wider py-1.5 px-4 text-center flex items-center justify-center gap-2 transition-all"
+          >
+            <span className="w-1.5 h-1.5 rounded-full bg-white animate-ping shrink-0" />
+            <span>Working Offline — Showing Cached Data</span>
+          </div>
+        )}
         {/* FCM notification system — runs silently in background */}
         <AppInner />
         <Suspense fallback={<PageLoader />}>

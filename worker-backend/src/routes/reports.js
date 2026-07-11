@@ -263,28 +263,6 @@ export async function handleGetAssetsStats(request, env, params, query, user) {
 
   const whereSql = whereClauses.join(" AND ");
 
-  // SQL Aggregations
-  const aggRes = await env.DB.prepare(`
-    SELECT 
-      COUNT(*) as total_equipment,
-      SUM(is_verified) as verified_equipment,
-      SUM(CASE WHEN warranty_expired = 0 THEN 1 ELSE 0 END) as under_warranty,
-      SUM(warranty_expired) as out_of_warranty,
-      SUM(parsed_asset_value) as total_value,
-      SUM(CASE WHEN is_verified = 1 THEN parsed_asset_value ELSE 0 END) as verified_value,
-      SUM(CASE WHEN is_verified = 1 AND warranty_expired = 1 THEN parsed_asset_value ELSE 0 END) as verified_out_of_warranty_value
-    FROM assets_inventory
-    WHERE ${whereSql}
-  `).bind(...bindings).first();
-
-  const total_equipment = aggRes?.total_equipment || 0;
-  const verified_count = aggRes?.verified_equipment || 0;
-  const under_warranty_count = aggRes?.under_warranty || 0;
-  const out_of_warranty_count = aggRes?.out_of_warranty || 0;
-  const total_value = aggRes?.total_value || 0.0;
-  const verified_value = aggRes?.verified_value || 0.0;
-  const verified_out_of_warranty_value = aggRes?.verified_out_of_warranty_value || 0.0;
-
   // Billing calculations
   const now = new Date();
   let targetYear = now.getFullYear();
@@ -298,14 +276,57 @@ export async function handleGetAssetsStats(request, env, params, query, user) {
     }
   }
 
-  const arrearRows = await env.DB.prepare(`
-    SELECT parsed_asset_value, install_year, install_month
-    FROM assets_inventory
-    WHERE is_verified = 1 
-      AND moic_year = ? 
-      AND moic_month = ?
-      AND ${whereSql}
-  `).bind(targetYear, targetMonth, ...bindings).all();
+  // Fetch all 5 queries in PARALLEL — reduces 5 round trips to 1
+  const [aggRes, arrearRows, statusRows, typeRows, warrantyRows] = await Promise.all([
+    env.DB.prepare(`
+      SELECT 
+        COUNT(*) as total_equipment,
+        SUM(is_verified) as verified_equipment,
+        SUM(CASE WHEN warranty_expired = 0 THEN 1 ELSE 0 END) as under_warranty,
+        SUM(warranty_expired) as out_of_warranty,
+        SUM(parsed_asset_value) as total_value,
+        SUM(CASE WHEN is_verified = 1 THEN parsed_asset_value ELSE 0 END) as verified_value,
+        SUM(CASE WHEN is_verified = 1 AND warranty_expired = 1 THEN parsed_asset_value ELSE 0 END) as verified_out_of_warranty_value
+      FROM assets_inventory
+      WHERE ${whereSql}
+    `).bind(...bindings).first(),
+    env.DB.prepare(`
+      SELECT parsed_asset_value, install_year, install_month
+      FROM assets_inventory
+      WHERE is_verified = 1 
+        AND moic_year = ? 
+        AND moic_month = ?
+        AND ${whereSql}
+    `).bind(targetYear, targetMonth, ...bindings).all(),
+    env.DB.prepare(`
+      SELECT equipment_status, COUNT(*) as cnt 
+      FROM assets_inventory 
+      WHERE ${whereSql} 
+      GROUP BY equipment_status
+    `).bind(...bindings).all(),
+    env.DB.prepare(`
+      SELECT equipment_type, COUNT(*) as cnt 
+      FROM assets_inventory 
+      WHERE ${whereSql} 
+      GROUP BY equipment_type 
+      ORDER BY cnt DESC 
+      LIMIT 5
+    `).bind(...bindings).all(),
+    env.DB.prepare(`
+      SELECT warranty_expired, COUNT(*) as cnt 
+      FROM assets_inventory 
+      WHERE ${whereSql} 
+      GROUP BY warranty_expired
+    `).bind(...bindings).all()
+  ]);
+
+  const total_equipment = aggRes?.total_equipment || 0;
+  const verified_count = aggRes?.verified_equipment || 0;
+  const under_warranty_count = aggRes?.under_warranty || 0;
+  const out_of_warranty_count = aggRes?.out_of_warranty || 0;
+  const total_value = aggRes?.total_value || 0.0;
+  const verified_value = aggRes?.verified_value || 0.0;
+  const verified_out_of_warranty_value = aggRes?.verified_out_of_warranty_value || 0.0;
 
   let arrearBilling = 0.0;
   for (const r of (arrearRows.results || [])) {
@@ -321,40 +342,16 @@ export async function handleGetAssetsStats(request, env, params, query, user) {
   const monthlyValue = (verified_out_of_warranty_value * 6.08 / 100) / 12;
   const totalBilling = monthlyValue + arrearBilling;
 
-  // 3. Chart 1: Status Distribution
-  const statusRows = await env.DB.prepare(`
-    SELECT equipment_status, COUNT(*) as cnt 
-    FROM assets_inventory 
-    WHERE ${whereSql} 
-    GROUP BY equipment_status
-  `).bind(...bindings).all();
   const statusList = (statusRows.results || []).map(r => ({
     name: r.equipment_status || "Unknown",
     value: r.cnt
   }));
 
-  // 4. Chart 2: Top 5 Types
-  const typeRows = await env.DB.prepare(`
-    SELECT equipment_type, COUNT(*) as cnt 
-    FROM assets_inventory 
-    WHERE ${whereSql} 
-    GROUP BY equipment_type 
-    ORDER BY cnt DESC 
-    LIMIT 5
-  `).bind(...bindings).all();
   const topTypes = (typeRows.results || []).map(r => ({
     name: r.equipment_type || "Other",
     value: r.cnt
   }));
 
-  // 5. Chart 3: Warranty Breakdown
-  const warrantyRows = await env.DB.prepare(`
-    SELECT warranty_expired, COUNT(*) as cnt 
-    FROM assets_inventory 
-    WHERE ${whereSql} 
-    GROUP BY warranty_expired
-  `).bind(...bindings).all();
-  
   let underWarranty = 0;
   let outOfWarranty = 0;
   for (const r of (warrantyRows.results || [])) {
