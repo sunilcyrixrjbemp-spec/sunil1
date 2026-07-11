@@ -147,4 +147,49 @@ export async function runMigrations(db) {
   } catch (err) {
     console.error("Failed to execute local_purchase self-healing query:", err.message);
   }
+
+  // ─── Performance Indexes ────────────────────────────────────────────────────
+  // These indexes dramatically reduce query time for the most common operations.
+  const indexes = [
+    // User lookups by hierarchy fields (used in team queries every request)
+    `CREATE INDEX IF NOT EXISTS idx_users_manager_lower ON users(LOWER(TRIM(manager)))`,
+    `CREATE INDEX IF NOT EXISTS idx_users_zonal_manager_lower ON users(LOWER(TRIM(zonal_manager)))`,
+    `CREATE INDEX IF NOT EXISTS idx_users_coordinator_lower ON users(LOWER(TRIM(coordinator)))`,
+    `CREATE INDEX IF NOT EXISTS idx_users_name_lower ON users(LOWER(TRIM(name)))`,
+    `CREATE INDEX IF NOT EXISTS idx_users_user_id ON users(user_id)`,
+    `CREATE INDEX IF NOT EXISTS idx_users_status ON users(user_status)`,
+    // Limit requests (used in expense init on every expense form load)
+    `CREATE INDEX IF NOT EXISTS idx_limit_reqs_user_month ON limit_approval_requests(user_id, for_month)`,
+    `CREATE INDEX IF NOT EXISTS idx_limit_reqs_manager ON limit_approval_requests(manager_id, status)`,
+    // Expense itineraries (most queried join table)
+    `CREATE INDEX IF NOT EXISTS idx_itineraries_exp_id ON expense_itineraries(exp_id)`,
+    // Expenses core queries
+    `CREATE INDEX IF NOT EXISTS idx_expenses_user_month_year ON expenses(user_id, month, year)`,
+    `CREATE INDEX IF NOT EXISTS idx_expenses_status ON expenses(status)`,
+    // Approvals — pending lookups
+    `CREATE INDEX IF NOT EXISTS idx_approvals_approver_status ON approvals(approver_id, status)`,
+    `CREATE INDEX IF NOT EXISTS idx_approvals_expense_status ON approvals(expense_id, status)`,
+    // Notifications — unread count (shown on every page)
+    `CREATE INDEX IF NOT EXISTS idx_notifications_user_read ON notifications(user_id, read)`,
+    // Hierarchy tables
+    `CREATE INDEX IF NOT EXISTS idx_hier_approvers_approver ON hierarchy_approvers(approver_id)`,
+    `CREATE INDEX IF NOT EXISTS idx_hier_requesters_user ON hierarchy_requesters(user_id)`,
+    `CREATE INDEX IF NOT EXISTS idx_hier_requesters_hierarchy ON hierarchy_requesters(hierarchy_id)`,
+    // Assets barcode lookup (used on every field visit scan)
+    `CREATE INDEX IF NOT EXISTS idx_assets_qr_code ON assets_inventory(qr_code)`,
+    `CREATE INDEX IF NOT EXISTS idx_assets_serial_no ON assets_inventory(serial_no)`,
+    `CREATE INDEX IF NOT EXISTS idx_assets_hospital ON assets_inventory(LOWER(TRIM(hospital_name)))`,
+    // Login logs (audit trail queries)
+    `CREATE INDEX IF NOT EXISTS idx_login_logs_user ON login_logs(user_id)`,
+  ];
+
+  for (const idxSql of indexes) {
+    try {
+      await db.prepare(idxSql).run();
+    } catch (e) {
+      // Ignore — index may already exist or table may not exist yet
+    }
+  }
+  console.log("Performance indexes created/verified successfully.");
 }
+

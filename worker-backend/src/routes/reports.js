@@ -86,29 +86,27 @@ export async function handleGetMisDashboard(request, env, params, query, user) {
 
   const whereStr = whereClauses.join(" AND ");
 
-  // Fetch dropdown list options dynamically
-  const districts = await env.DB.prepare(`
-    SELECT DISTINCT district_name FROM rj_penalties WHERE ${whereStr} AND district_name IS NOT NULL AND district_name != '' ORDER BY district_name
-  `).bind(...bindings).all();
-
-  const coordinators = await env.DB.prepare(`
-    SELECT DISTINCT coordinator_name FROM rj_penalties WHERE ${whereStr} AND coordinator_name IS NOT NULL AND coordinator_name != '' ORDER BY coordinator_name
-  `).bind(...bindings).all();
-
-  const months = await env.DB.prepare(`
-    SELECT DISTINCT month_text FROM rj_penalties WHERE ${whereStr} AND month_text IS NOT NULL AND month_text != '' ORDER BY month_text
-  `).bind(...bindings).all();
-
-  // Summary Metrics Aggregation
-  const summary = await env.DB.prepare(`
-    SELECT 
-      SUM(CAST(total_penalty AS REAL)) as total_penalty,
-      COUNT(DISTINCT district_name) as districts_count,
-      COUNT(DISTINCT hospital_name) as hospitals_count,
-      COUNT(*) as total_records
-    FROM rj_penalties
-    WHERE ${whereStr}
-  `).bind(...bindings).first();
+  // Fetch all 4 queries in PARALLEL — eliminates 3 unnecessary round trips
+  const [districts, coordinators, months, summary] = await Promise.all([
+    env.DB.prepare(`
+      SELECT DISTINCT district_name FROM rj_penalties WHERE ${whereStr} AND district_name IS NOT NULL AND district_name != '' ORDER BY district_name
+    `).bind(...bindings).all(),
+    env.DB.prepare(`
+      SELECT DISTINCT coordinator_name FROM rj_penalties WHERE ${whereStr} AND coordinator_name IS NOT NULL AND coordinator_name != '' ORDER BY coordinator_name
+    `).bind(...bindings).all(),
+    env.DB.prepare(`
+      SELECT DISTINCT month_text FROM rj_penalties WHERE ${whereStr} AND month_text IS NOT NULL AND month_text != '' ORDER BY month_text
+    `).bind(...bindings).all(),
+    env.DB.prepare(`
+      SELECT 
+        SUM(CAST(total_penalty AS REAL)) as total_penalty,
+        COUNT(DISTINCT district_name) as districts_count,
+        COUNT(DISTINCT hospital_name) as hospitals_count,
+        COUNT(*) as total_records
+      FROM rj_penalties
+      WHERE ${whereStr}
+    `).bind(...bindings).first()
+  ]);
 
   return jsonResponse({
     success: true,

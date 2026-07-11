@@ -11,69 +11,89 @@ function jsonResponse(data, status = 200) {
 async function applyItineraryEditsAndLog(env, expense, itineraryEdits, currentUser, comments) {
   if (!itineraryEdits || itineraryEdits.length === 0) return;
 
+  // Fetch ALL legs in a single query before the loop — eliminates N sequential SELECTs
+  const allLegsRes = await env.DB.prepare(
+    "SELECT * FROM expense_itineraries WHERE exp_id = ?"
+  ).bind(expense.expense_code).all();
+  const legsMap = {};
+  for (const l of (allLegsRes.results || [])) {
+    legsMap[l.leg_number] = l;
+  }
+
+  // Collect all writes to execute in a single batch
+  const batchWrites = [];
+
   for (const edit of itineraryEdits) {
     const legNum = edit.leg_number;
-    const leg = await env.DB.prepare("SELECT * FROM expense_itineraries WHERE exp_id = ? AND leg_number = ?")
-      .bind(expense.expense_code, legNum).first();
+    const leg = legsMap[legNum];
+    if (!leg) continue;
 
-    if (leg) {
-      let isKmModified = false;
-      if (edit.distance_km !== undefined && edit.distance_km !== null) {
-        const oldKm = parseFloat(leg.distance_km || "0.0");
-        const newKm = parseFloat(edit.distance_km || "0.0");
-        if (Math.round(oldKm * 100) !== Math.round(newKm * 100)) {
-          isKmModified = true;
-        }
+    let isKmModified = false;
+    if (edit.distance_km !== undefined && edit.distance_km !== null) {
+      const oldKm = parseFloat(leg.distance_km || "0.0");
+      const newKm = parseFloat(edit.distance_km || "0.0");
+      if (Math.round(oldKm * 100) !== Math.round(newKm * 100)) {
+        isKmModified = true;
       }
+    }
 
-      const fieldsToCheck = [
-        ["travel_amount", edit.travel_amount],
-        ["sub_amount", edit.sub_amount],
-        ["hotel_amount", edit.hotel_amount],
-        ["other_amount", edit.other_amount || edit.oth_amount],
-        ["distance_km", edit.distance_km || edit.km],
-        ["da_amount", edit.da_amount || edit.da],
-        ["local_purchase", edit.local_purchase]
-      ];
+    const fieldsToCheck = [
+      ["travel_amount", edit.travel_amount],
+      ["sub_amount", edit.sub_amount],
+      ["hotel_amount", edit.hotel_amount],
+      ["other_amount", edit.other_amount || edit.oth_amount],
+      ["distance_km", edit.distance_km || edit.km],
+      ["da_amount", edit.da_amount || edit.da],
+      ["local_purchase", edit.local_purchase]
+    ];
 
-      for (const [field, newValRaw] of fieldsToCheck) {
-        if (newValRaw !== undefined && newValRaw !== null) {
-          const newVal = parseFloat(newValRaw);
-          let skipLog = false;
-          if (field === "travel_amount" && isKmModified && ["bike", "car"].includes((leg.travel_mode || "").trim().toLowerCase())) {
-            skipLog = true;
-          }
+    for (const [field, newValRaw] of fieldsToCheck) {
+      if (newValRaw !== undefined && newValRaw !== null) {
+        const newVal = parseFloat(newValRaw);
+        let skipLog = false;
+        if (field === "travel_amount" && isKmModified && ["bike", "car"].includes((leg.travel_mode || "").trim().toLowerCase())) {
+          skipLog = true;
+        }
 
-          const oldVal = parseFloat(leg[field] || "0.0");
-          if (Math.round(oldVal * 100) !== Math.round(newVal * 100)) {
-            if (!skipLog) {
-              let fieldRemark = null;
-              if (edit.remarks && typeof edit.remarks === "object") {
-                fieldRemark = edit.remarks[field];
-                if (!fieldRemark && field === "da_amount") {
-                  fieldRemark = edit.remarks.da || edit.remarks.da_amount;
-                } else if (!fieldRemark && field === "distance_km") {
-                  fieldRemark = edit.remarks.km || edit.remarks.distance_km;
-                }
+        const oldVal = parseFloat(leg[field] || "0.0");
+        if (Math.round(oldVal * 100) !== Math.round(newVal * 100)) {
+          if (!skipLog) {
+            let fieldRemark = null;
+            if (edit.remarks && typeof edit.remarks === "object") {
+              fieldRemark = edit.remarks[field];
+              if (!fieldRemark && field === "da_amount") {
+                fieldRemark = edit.remarks.da || edit.remarks.da_amount;
+              } else if (!fieldRemark && field === "distance_km") {
+                fieldRemark = edit.remarks.km || edit.remarks.distance_km;
               }
+            }
 
-              await runWrite(env, `
-                INSERT INTO expense_edit_logs (expense_id, leg_number, field_name, old_value, new_value, comment, editor_name, editor_role, editor_id)
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
-              `, [
+            batchWrites.push({
+              sql: `INSERT INTO expense_edit_logs (expense_id, leg_number, field_name, old_value, new_value, comment, editor_name, editor_role, editor_id)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+              params: [
                 expense.id, legNum, field, String(oldVal), String(newVal),
                 fieldRemark || comments || "Adjusted during approval",
                 currentUser.name, currentUser.role, currentUser.id
-              ]);
-            }
-
-            await runWrite(env, `UPDATE expense_itineraries SET ${field} = ? WHERE id = ?`, [newVal, leg.id]);
+              ]
+            });
           }
+
+          batchWrites.push({
+            sql: `UPDATE expense_itineraries SET ${field} = ? WHERE id = ?`,
+            params: [newVal, leg.id]
+          });
         }
       }
     }
   }
 
+  // Execute all edits in a single batch
+  if (batchWrites.length > 0) {
+    await runBatchWrite(env, batchWrites);
+  }
+
+  // Refetch legs to recalculate expense totals
   const legsRows = await env.DB.prepare("SELECT * FROM expense_itineraries WHERE exp_id = ?").bind(expense.expense_code).all();
   const legs = legsRows.results || [];
   
@@ -105,14 +125,15 @@ export async function getLegacyExpenseHashId(expId) {
 export async function fetchPendingApprovals(env, user) {
   const result = [];
 
-  // 1. Fetch pending limit requests
+  // 1. Fetch pending limit requests (joining users table to avoid N+1 query loop)
   const pendingLimits = await env.DB.prepare(`
-    SELECT * FROM limit_approval_requests
-    WHERE manager_id = ? AND status = 'Pending'
+    SELECT pl.*, u.name AS submitter_name
+    FROM limit_approval_requests pl
+    LEFT JOIN users u ON u.user_id = pl.user_id
+    WHERE pl.manager_id = ? AND pl.status = 'Pending'
   `).bind(user.user_id).all();
 
   for (const pl of (pendingLimits.results || [])) {
-    const submitter = await env.DB.prepare("SELECT name FROM users WHERE user_id = ?").bind(pl.user_id).first();
     result.push({
       id: -pl.id,
       expense_id: -pl.id,
@@ -123,7 +144,7 @@ export async function fetchPendingApprovals(env, user) {
       created_at: pl.created_at,
       updated_at: pl.updated_at,
       expense_code: `LIMIT-${pl.request_type}-${pl.id}`,
-      employeeName: submitter?.name || `Employee ${pl.user_id}`,
+      employeeName: pl.submitter_name || `Employee ${pl.user_id}`,
       eCode: pl.user_id,
       purpose: `Request additional ${parseFloat(pl.requested_value).toFixed(1)} ${pl.request_type} limit for month ${pl.for_month}`,
       category: "Limit Request",
@@ -133,11 +154,13 @@ export async function fetchPendingApprovals(env, user) {
     });
   }
 
-  // 2. Fetch normal approvals (only show if they are currently mapped in active hierarchy)
+  // 2. Fetch normal approvals (joining users table to avoid N+1 query loop)
   const approvals = await env.DB.prepare(`
-    SELECT a.*, e.expense_code, e.amount, e.description, e.travel_mode, e.itinerary, e.user_id as submitter_user_id
+    SELECT a.*, e.expense_code, e.amount, e.description, e.travel_mode, e.itinerary, e.user_id as submitter_user_id,
+           u.name AS submitter_name, u.user_id AS submitter_code
     FROM approvals a
     JOIN expenses e ON a.expense_id = e.id
+    LEFT JOIN users u ON e.user_id = u.id
     WHERE a.approver_id = ? AND a.status = 'pending'
       AND EXISTS (
         SELECT 1 
@@ -148,12 +171,27 @@ export async function fetchPendingApprovals(env, user) {
     ORDER BY a.level_number ASC, a.created_at DESC
   `).bind(user.id).all();
 
-  for (const app of (approvals.results || [])) {
-    const submitter = await env.DB.prepare("SELECT name, user_id FROM users WHERE id = ?").bind(app.submitter_user_id).first();
-    
-    // Count itineraries
-    const countResult = await env.DB.prepare("SELECT COUNT(*) as cnt FROM expense_itineraries WHERE exp_id = ?").bind(app.expense_code).first();
-    const itiCount = countResult?.cnt || 0;
+  const approvalsList = approvals.results || [];
+  
+  // Batch fetch itineraries count for all approval expense codes in a single query
+  const expenseCodes = approvalsList.map(a => a.expense_code).filter(Boolean);
+  const itiCounts = {};
+  if (expenseCodes.length > 0) {
+    const placeholders = expenseCodes.map(() => "?").join(",");
+    const countQuery = `
+      SELECT exp_id, COUNT(*) as cnt 
+      FROM expense_itineraries 
+      WHERE exp_id IN (${placeholders}) 
+      GROUP BY exp_id
+    `;
+    const countResults = await env.DB.prepare(countQuery).bind(...expenseCodes).all();
+    for (const row of (countResults.results || [])) {
+      itiCounts[row.exp_id] = row.cnt;
+    }
+  }
+
+  for (const app of approvalsList) {
+    const itiCount = itiCounts[app.expense_code] || 0;
 
     result.push({
       id: app.id,
@@ -165,8 +203,8 @@ export async function fetchPendingApprovals(env, user) {
       created_at: app.created_at,
       updated_at: app.updated_at,
       expense_code: app.expense_code,
-      employeeName: submitter?.name || "Unknown Employee",
-      eCode: submitter?.user_id || "N/A",
+      employeeName: app.submitter_name || "Unknown Employee",
+      eCode: app.submitter_code || "N/A",
       purpose: app.description || "",
       category: app.travel_mode || "Travel",
       amount: parseFloat(app.amount || 0),
@@ -187,44 +225,60 @@ export async function fetchPendingApprovals(env, user) {
         (m.status = 'Pending L2' AND LOWER(m.level_second_approver) = LOWER(?))
     `).bind(user.user_id, user.user_id).all();
 
-    for (const row of (legacyRows.results || [])) {
-      const mockId = await getLegacyExpenseHashId(row.exp_id);
-      const levelNumber = row.status === "Pending L2" ? 2 : 1;
+    const legacyList = legacyRows.results || [];
 
-      // Fetch count of itineraries for this legacy claim
-      let itiCount = 0;
-      try {
-        const countResult = await env.DB.prepare("SELECT COUNT(*) as cnt FROM expense_itinerary WHERE exp_id = ?").bind(row.exp_id).first();
-        itiCount = countResult?.cnt || 0;
-      } catch (e) {}
+    if (legacyList.length > 0) {
+      // BATCH fetch itinerary counts + first travel mode — eliminates N+1 queries
+      const legacyCodes = legacyList.map(r => r.exp_id);
+      const placeholders = legacyCodes.map(() => "?").join(",");
 
-      // Fetch first travel mode
-      let category = "Travel";
-      try {
-        const firstLeg = await env.DB.prepare(`
-          SELECT travel_mode FROM expense_itinerary WHERE exp_id = ? ORDER BY leg_number ASC LIMIT 1
-        `).bind(row.exp_id).first();
-        category = firstLeg?.travel_mode || "Travel";
-      } catch (e) {}
+      const [countResults, firstLegs] = await Promise.all([
+        env.DB.prepare(`
+          SELECT exp_id, COUNT(*) as cnt 
+          FROM expense_itineraries 
+          WHERE exp_id IN (${placeholders}) 
+          GROUP BY exp_id
+        `).bind(...legacyCodes).all(),
+        env.DB.prepare(`
+          SELECT exp_id, travel_mode 
+          FROM expense_itineraries 
+          WHERE exp_id IN (${placeholders}) 
+          AND leg_number = (SELECT MIN(leg_number) FROM expense_itineraries ei2 WHERE ei2.exp_id = expense_itineraries.exp_id)
+        `).bind(...legacyCodes).all()
+      ]);
 
-      result.push({
-        id: mockId,
-        expense_id: mockId,
-        approver_id: user.id,
-        level_number: levelNumber,
-        status: "pending",
-        comments: "",
-        created_at: row.expense_date,
-        updated_at: row.expense_date,
-        expense_code: row.exp_id,
-        employeeName: row.full_name || "Unknown Employee",
-        eCode: row.e_code || row.user_id,
-        purpose: row.visit_purpose || "",
-        category: category,
-        amount: parseFloat(row.total_amount || 0),
-        date: row.expense_date,
-        itinerariesCount: itiCount
-      });
+      const countMap = {};
+      for (const r of (countResults.results || [])) countMap[r.exp_id] = r.cnt;
+      const modeMap = {};
+      for (const r of (firstLegs.results || [])) {
+        if (!modeMap[r.exp_id]) modeMap[r.exp_id] = r.travel_mode;
+      }
+
+      for (const row of legacyList) {
+        const mockId = await getLegacyExpenseHashId(row.exp_id);
+        const levelNumber = row.status === "Pending L2" ? 2 : 1;
+        const itiCount = countMap[row.exp_id] || 0;
+        const category = modeMap[row.exp_id] || "Travel";
+
+        result.push({
+          id: mockId,
+          expense_id: mockId,
+          approver_id: user.id,
+          level_number: levelNumber,
+          status: "pending",
+          comments: "",
+          created_at: row.expense_date,
+          updated_at: row.expense_date,
+          expense_code: row.exp_id,
+          employeeName: row.full_name || "Unknown Employee",
+          eCode: row.e_code || row.user_id,
+          purpose: row.visit_purpose || "",
+          category: category,
+          amount: parseFloat(row.total_amount || 0),
+          date: row.expense_date,
+          itinerariesCount: itiCount
+        });
+      }
     }
   } catch (error) {
     console.warn("Legacy table expense_master not found or query failed, skipping legacy pending claims:", error.message);
@@ -382,12 +436,7 @@ export async function handleApprove(request, env, params, query, user) {
     await processRemovedAttachments(env, removed_attachments);
   }
 
-  // Update active approval
-  await runWrite(env, "UPDATE approvals SET status = 'approved', comments = ?, updated_at = ? WHERE id = ?", [
-    comments || "", timestamp, activeApproval.id
-  ]);
-
-  // Find next level
+  // Query all approvals to calculate next level before making any changes
   const allApprovals = await env.DB.prepare("SELECT * FROM approvals WHERE expense_id = ? ORDER BY level_number ASC").bind(expenseId).all();
   let nextApproval = null;
   for (const a of (allApprovals.results || [])) {
@@ -398,16 +447,28 @@ export async function handleApprove(request, env, params, query, user) {
   }
 
   let finalStatus = "approved";
+  const statements = [
+    {
+      sql: "UPDATE approvals SET status = 'approved', comments = ?, updated_at = ? WHERE id = ?",
+      params: [comments || "", timestamp, activeApproval.id]
+    }
+  ];
+
   if (nextApproval) {
     finalStatus = `submitted_l${nextApproval.level_number}`;
-    await runWrite(env, "UPDATE approvals SET status = 'pending', created_at = ?, updated_at = ? WHERE id = ?", [
-      timestamp, timestamp, nextApproval.id
-    ]);
+    statements.push({
+      sql: "UPDATE approvals SET status = 'pending', created_at = ?, updated_at = ? WHERE id = ?",
+      params: [timestamp, timestamp, nextApproval.id]
+    });
   }
 
-  await runWrite(env, "UPDATE expenses SET status = ?, updated_at = ? WHERE id = ?", [
-    finalStatus, timestamp, expenseId
-  ]);
+  statements.push({
+    sql: "UPDATE expenses SET status = ?, updated_at = ? WHERE id = ?",
+    params: [finalStatus, timestamp, expenseId]
+  });
+
+  // Execute atomically in a single batch write transaction to prevent status mismatch on failure
+  await runBatchWrite(env, statements);
 
   // Notifications
   const submitter = await env.DB.prepare("SELECT * FROM users WHERE id = ?").bind(expense.user_id).first();
@@ -554,20 +615,22 @@ export async function handleReject(request, env, params, query, user) {
     await processRemovedAttachments(env, removed_attachments);
   }
 
-  // Update current approval
-  await runWrite(env, "UPDATE approvals SET status = 'rejected', comments = ?, updated_at = ? WHERE id = ?", [
-    comments, timestamp, activeApproval.id
-  ]);
+  const statements = [
+    {
+      sql: "UPDATE approvals SET status = 'rejected', comments = ?, updated_at = ? WHERE id = ?",
+      params: [comments, timestamp, activeApproval.id]
+    },
+    {
+      sql: "UPDATE approvals SET status = 'cancelled', updated_at = ? WHERE expense_id = ? AND level_number > ? AND status = 'waiting'",
+      params: [timestamp, expenseId, activeApproval.level_number]
+    },
+    {
+      sql: "UPDATE expenses SET status = 'rejected', updated_at = ? WHERE id = ?",
+      params: [timestamp, expenseId]
+    }
+  ];
 
-  // Cancel waiting levels
-  await runWrite(env, "UPDATE approvals SET status = 'cancelled', updated_at = ? WHERE expense_id = ? AND level_number > ? AND status = 'waiting'", [
-    timestamp, expenseId, activeApproval.level_number
-  ]);
-
-  // Set expense to rejected
-  await runWrite(env, "UPDATE expenses SET status = 'rejected', updated_at = ? WHERE id = ?", [
-    "rejected", timestamp, expenseId
-  ]);
+  await runBatchWrite(env, statements);
 
   // Notification to submitter
   const submitter = await env.DB.prepare("SELECT * FROM users WHERE id = ?").bind(expense.user_id).first();
@@ -622,24 +685,26 @@ export async function handleReturnToDraft(request, env, params, query, user) {
     return jsonResponse({ error: "Cannot return your own expense claim" }, 400);
   }
 
-  // Reset all approval records for this expense
-  await runWrite(env, "UPDATE approvals SET status = 'returned', comments = ?, updated_at = ? WHERE id = ?", [
-    comments, timestamp, activeApproval.id
-  ]);
-
   if (removed_attachments && Array.isArray(removed_attachments)) {
     await processRemovedAttachments(env, removed_attachments);
   }
 
-  // Cancel all other approval levels (both approved prior levels and waiting future levels)
-  await runWrite(env, "UPDATE approvals SET status = 'cancelled', updated_at = ? WHERE expense_id = ? AND id != ? AND status IN ('approved', 'waiting', 'pending')", [
-    timestamp, expenseId, activeApproval.id
-  ]);
+  const statements = [
+    {
+      sql: "UPDATE approvals SET status = 'returned', comments = ?, updated_at = ? WHERE id = ?",
+      params: [comments, timestamp, activeApproval.id]
+    },
+    {
+      sql: "UPDATE approvals SET status = 'cancelled', updated_at = ? WHERE expense_id = ? AND id != ? AND status IN ('approved', 'waiting', 'pending')",
+      params: [timestamp, expenseId, activeApproval.id]
+    },
+    {
+      sql: "UPDATE expenses SET status = 'returned_to_draft', updated_at = ? WHERE id = ?",
+      params: [timestamp, expenseId]
+    }
+  ];
 
-  // Set expense status to returned_to_draft
-  await runWrite(env, "UPDATE expenses SET status = 'returned_to_draft', updated_at = ? WHERE id = ?", [
-    timestamp, expenseId
-  ]);
+  await runBatchWrite(env, statements);
 
   // Notify the engineer
   const submitter = await env.DB.prepare("SELECT * FROM users WHERE id = ?").bind(expense.user_id).first();

@@ -1,8 +1,8 @@
 import { verifyPassword, signJwt, verifyJwt, getPasswordHash } from "../utils/security.js";
-import { DESIGNATIONS, ZONE_DISTRICTS, ROLES } from "../utils/constants.js";
+import { DESIGNATIONS, ZONE_DISTRICTS, ROLES, MONTH_NAMES } from "../utils/constants.js";
 import { getExpenseInitData } from "./expense.js";
 import { fetchPendingApprovals } from "./approval.js";
-import { runWrite } from "../utils/db.js";
+import { runWrite, runBatchWrite } from "../utils/db.js";
 
 /**
  * Helper to build JSON responses in routes
@@ -16,14 +16,15 @@ function jsonResponse(data, status = 200) {
 
 /**
  * Helper to log login attempts to db
+ * Uses runWrite() to ensure replication to Primary DB
  */
-async function logLogin(db, userId, ipAddress, userAgent, status) {
+async function logLogin(env, userId, ipAddress, userAgent, status) {
   try {
     const timestamp = new Date().toISOString();
-    await db.prepare(`
+    await runWrite(env, `
       INSERT INTO login_logs (user_id, ip_address, user_agent, status, created_at)
       VALUES (?, ?, ?, ?, ?)
-    `).bind(userId, ipAddress, userAgent, status, timestamp).run();
+    `, [userId, ipAddress, userAgent, status, timestamp]);
   } catch (e) {
     console.error("Failed to log login:", e);
   }
@@ -31,22 +32,36 @@ async function logLogin(db, userId, ipAddress, userAgent, status) {
 
 /**
  * Resolves manager, zonal_manager, and coordinator e_codes/user_ids to actual User Names.
+ * OPTIMIZED: Uses a single query instead of 3 sequential queries.
  */
 async function resolveUserHierarchyNames(env, user) {
   const fields = ["manager", "zonal_manager", "coordinator"];
+  const values = fields
+    .map(f => (user[f] || "").trim().toLowerCase())
+    .filter(Boolean);
+
+  if (values.length === 0) return;
+
+  // Fetch all in one query
+  const placeholders = values.map(() => "?").join(",");
+  const allResolved = await env.DB.prepare(`
+    SELECT name, user_id, e_code FROM users 
+    WHERE LOWER(TRIM(user_id)) IN (${placeholders}) 
+       OR LOWER(TRIM(e_code)) IN (${placeholders}) 
+       OR LOWER(TRIM(name)) IN (${placeholders})
+  `).bind(...values, ...values, ...values).all();
+
+  const resolvedMap = {};
+  for (const r of (allResolved.results || [])) {
+    if (r.user_id) resolvedMap[r.user_id.toLowerCase()] = r.name;
+    if (r.e_code) resolvedMap[r.e_code.toLowerCase()] = r.name;
+    if (r.name) resolvedMap[r.name.toLowerCase()] = r.name;
+  }
+
   for (const field of fields) {
-    const val = user[field];
-    if (!val || !val.trim()) continue;
-    const valLower = val.trim().toLowerCase();
-    
-    const resolved = await env.DB.prepare(`
-      SELECT name FROM users 
-      WHERE LOWER(user_id) = ? OR LOWER(e_code) = ? OR LOWER(name) = ?
-      LIMIT 1
-    `).bind(valLower, valLower, valLower).first();
-    
-    if (resolved && resolved.name) {
-      user[field] = resolved.name;
+    const val = (user[field] || "").trim().toLowerCase();
+    if (val && resolvedMap[val]) {
+      user[field] = resolvedMap[val];
     }
   }
 }
@@ -59,27 +74,43 @@ export async function getBootstrapDataHelper(env, user) {
   
   const nameClean = (user.name || "").trim();
   const uidClean = (user.user_id || "").trim();
-  
-  // Check direct reports
-  const hasDirectReportsResult = await env.DB.prepare(`
-    SELECT id FROM users
-    WHERE LOWER(TRIM(manager)) = ? OR LOWER(TRIM(manager)) = ?
-       OR LOWER(TRIM(coordinator)) = ? OR LOWER(TRIM(coordinator)) = ?
-       OR LOWER(TRIM(zonal_manager)) = ? OR LOWER(TRIM(zonal_manager)) = ?
-    LIMIT 1
-  `).bind(nameClean.toLowerCase(), uidClean.toLowerCase(), nameClean.toLowerCase(), uidClean.toLowerCase(), nameClean.toLowerCase(), uidClean.toLowerCase()).first();
-  const hasDirectReports = !!hasDirectReportsResult;
 
-  // Check hierarchy approver
-  const isHierarchyApproverResult = await env.DB.prepare(`
-    SELECT id FROM hierarchy_approvers WHERE approver_id = ? LIMIT 1
-  `).bind(user.id).first();
+  // Check direct reports + hierarchy approver in PARALLEL
+  const [hasDirectReportsResult, isHierarchyApproverResult] = await Promise.all([
+    env.DB.prepare(`
+      SELECT id FROM users
+      WHERE LOWER(TRIM(manager)) = ? OR LOWER(TRIM(manager)) = ?
+         OR LOWER(TRIM(coordinator)) = ? OR LOWER(TRIM(coordinator)) = ?
+         OR LOWER(TRIM(zonal_manager)) = ? OR LOWER(TRIM(zonal_manager)) = ?
+      LIMIT 1
+    `).bind(nameClean.toLowerCase(), uidClean.toLowerCase(), nameClean.toLowerCase(), uidClean.toLowerCase(), nameClean.toLowerCase(), uidClean.toLowerCase()).first(),
+    env.DB.prepare(`
+      SELECT id FROM hierarchy_approvers WHERE approver_id = ? LIMIT 1
+    `).bind(user.id).first()
+  ]);
+
+  const hasDirectReports = !!hasDirectReportsResult;
   const isHierarchyApprover = !!isHierarchyApproverResult;
 
   const isTeamLead = user.role === "Admin" || allowedWindows.includes("approval") || hasDirectReports || isHierarchyApprover;
 
-  // 1. Dropdown lists setup
-  const gradesRows = await env.DB.prepare("SELECT DISTINCT grade FROM allowance_master").all();
+  // Run all independent bootstrap queries in PARALLEL
+  const now = new Date();
+  const currentMonthName = MONTH_NAMES[now.getMonth()];
+  const currentYear = now.getFullYear();
+  const monthStr = now.toISOString().slice(0, 7); // YYYY-MM
+
+  // Limit my_expenses to last 3 months to avoid loading entire history
+  const threeMonthsAgo = new Date(now.getFullYear(), now.getMonth() - 2, 1).toISOString();
+
+  const [gradesRows, myExpensesResult, expenseInit] = await Promise.all([
+    env.DB.prepare("SELECT DISTINCT grade FROM allowance_master").all(),
+    env.DB.prepare(
+      "SELECT * FROM expenses WHERE user_id = ? AND created_at >= ? ORDER BY id DESC LIMIT 50"
+    ).bind(user.id, threeMonthsAgo).all(),
+    getExpenseInitData(env, user, monthStr)
+  ]);
+
   const grades = (gradesRows.results || []).map(r => r.grade).filter(Boolean).sort();
   const dropdowns = {
     designations: DESIGNATIONS,
@@ -88,12 +119,6 @@ export async function getBootstrapDataHelper(env, user) {
     grades: grades.length ? grades : ["A", "B", "C", "D"]
   };
 
-  // 2. Fetch expense init data
-  const monthStr = new Date().toISOString().slice(0, 7); // YYYY-MM
-  const expenseInit = await getExpenseInitData(env, user, monthStr);
-
-  // 3. Fetch my expenses
-  const myExpensesResult = await env.DB.prepare("SELECT * FROM expenses WHERE user_id = ? ORDER BY id DESC").bind(user.id).all();
   const myExpenses = myExpensesResult.results || [];
 
   // 4. Fetch team expenses and pending approvals
@@ -101,23 +126,26 @@ export async function getBootstrapDataHelper(env, user) {
   let pendingApprovals = [];
   if (isTeamLead) {
     if (user.role === "Admin") {
-      const teamRes = await env.DB.prepare("SELECT e.*, u.name as employee_name FROM expenses e JOIN users u ON e.user_id = u.id ORDER BY e.id DESC").all();
+      // Admin: only load current month to avoid massive full-table scan
+      const teamRes = await env.DB.prepare(
+        "SELECT e.*, u.name as employee_name FROM expenses e JOIN users u ON e.user_id = u.id WHERE e.year = ? AND e.month = ? ORDER BY e.id DESC LIMIT 500"
+      ).bind(currentYear, currentMonthName).all();
       teamExpenses = teamRes.results || [];
     } else {
       // Find team user IDs exactly like handleGetTeamExpenses does
-      // 1. Direct reports
-      const directReportsRes = await env.DB.prepare(`
-        SELECT id FROM users
-        WHERE LOWER(TRIM(manager)) = ? OR LOWER(TRIM(manager)) = ?
-           OR LOWER(TRIM(coordinator)) = ? OR LOWER(TRIM(coordinator)) = ?
-           OR LOWER(TRIM(zonal_manager)) = ? OR LOWER(TRIM(zonal_manager)) = ?
-      `).bind(nameClean.toLowerCase(), uidClean.toLowerCase(), nameClean.toLowerCase(), uidClean.toLowerCase(), nameClean.toLowerCase(), uidClean.toLowerCase()).all();
-      const directReportsIds = (directReportsRes.results || []).map(r => r.id);
+      const [directReportsRes, hierarchyApprovals] = await Promise.all([
+        env.DB.prepare(`
+          SELECT id FROM users
+          WHERE LOWER(TRIM(manager)) = ? OR LOWER(TRIM(manager)) = ?
+             OR LOWER(TRIM(coordinator)) = ? OR LOWER(TRIM(coordinator)) = ?
+             OR LOWER(TRIM(zonal_manager)) = ? OR LOWER(TRIM(zonal_manager)) = ?
+        `).bind(nameClean.toLowerCase(), uidClean.toLowerCase(), nameClean.toLowerCase(), uidClean.toLowerCase(), nameClean.toLowerCase(), uidClean.toLowerCase()).all(),
+        env.DB.prepare(`
+          SELECT hierarchy_id FROM hierarchy_approvers WHERE approver_id = ?
+        `).bind(user.id).all()
+      ]);
 
-      // 2. Hierarchy reports
-      const hierarchyApprovals = await env.DB.prepare(`
-        SELECT hierarchy_id FROM hierarchy_approvers WHERE approver_id = ?
-      `).bind(user.id).all();
+      const directReportsIds = (directReportsRes.results || []).map(r => r.id);
       
       let hierarchyReportsIds = [];
       if (hierarchyApprovals.results && hierarchyApprovals.results.length > 0) {
@@ -130,7 +158,6 @@ export async function getBootstrapDataHelper(env, user) {
         hierarchyReportsIds = (reqsRes.results || []).map(r => r.user_id);
       }
 
-      // Merge and de-duplicate
       const teamUserIdsSet = new Set([...directReportsIds, ...hierarchyReportsIds]);
       teamUserIdsSet.delete(user.id);
       const teamUserIds = Array.from(teamUserIdsSet);
@@ -142,8 +169,9 @@ export async function getBootstrapDataHelper(env, user) {
           FROM expenses e
           JOIN users u ON e.user_id = u.id
           WHERE e.user_id IN (${placeholders})
-          ORDER BY e.id DESC
-        `).bind(...teamUserIds).all();
+            AND e.year = ? AND e.month = ?
+          ORDER BY e.id DESC LIMIT 300
+        `).bind(...teamUserIds, currentYear, currentMonthName).all();
         teamExpenses = teamRes.results || [];
       } else {
         teamExpenses = [];
@@ -200,18 +228,18 @@ export async function handleLogin(request, env, params, query) {
   // 1. Fetch user from DB
   const user = await env.DB.prepare("SELECT * FROM users WHERE user_id = ?").bind(user_id).first();
   if (!user) {
-    await logLogin(env.DB, user_id, ipAddress, userAgent, "failed");
+    await logLogin(env, user_id, ipAddress, userAgent, "failed");
     return jsonResponse({ error: "Invalid User ID or Password", detail: "Invalid User ID or Password" }, 401);
   }
 
   // 2. Check user status
   if (user.user_status === "disabled") {
-    await logLogin(env.DB, user_id, ipAddress, userAgent, "failed");
+    await logLogin(env, user_id, ipAddress, userAgent, "failed");
     return jsonResponse({ error: "Your account is disabled. Please contact the administrator.", detail: "Your account is disabled. Please contact the administrator." }, 403);
   }
 
   if (user.user_status === "locked") {
-    await logLogin(env.DB, user_id, ipAddress, userAgent, "locked");
+    await logLogin(env, user_id, ipAddress, userAgent, "locked");
     return jsonResponse({ error: "Your account is locked. Please use the Unlock Account option.", detail: "Your account is locked. Please use the Unlock Account option." }, 403);
   }
 
@@ -222,11 +250,11 @@ export async function handleLogin(request, env, params, query) {
     
     if (failedAttempts >= 5) {
       await runWrite(env, "UPDATE users SET failed_attempt = ?, user_status = 'locked' WHERE user_id = ?", [failedAttempts, user_id]);
-      await logLogin(env.DB, user_id, ipAddress, userAgent, "locked");
+      await logLogin(env, user_id, ipAddress, userAgent, "locked");
       return jsonResponse({ error: "Your account has been locked due to 5 failed login attempts.", detail: "Your account has been locked due to 5 failed login attempts." }, 403);
     } else {
       await runWrite(env, "UPDATE users SET failed_attempt = ? WHERE user_id = ?", [failedAttempts, user_id]);
-      await logLogin(env.DB, user_id, ipAddress, userAgent, "failed");
+      await logLogin(env, user_id, ipAddress, userAgent, "failed");
       const attemptsLeft = 5 - failedAttempts;
       return jsonResponse({ error: `Invalid User ID or Password. ${attemptsLeft} attempts remaining.`, detail: `Invalid User ID or Password. ${attemptsLeft} attempts remaining.` }, 401);
     }
@@ -241,7 +269,7 @@ export async function handleLogin(request, env, params, query) {
   const sessionId = crypto.randomUUID();
   await runWrite(env, "UPDATE users SET active_session_id = ?, failed_attempt = 0 WHERE user_id = ?", [sessionId, user_id]);
   
-  await logLogin(env.DB, user_id, ipAddress, userAgent, "success");
+  await logLogin(env, user_id, ipAddress, userAgent, "success");
 
   // Create access and refresh tokens
   const secretKey = env.API_SECRET;
@@ -330,8 +358,7 @@ export async function handleLogout(request, env, params, query, user) {
   try {
     // Clear active session ID for the user
     if (user && user.user_id) {
-      await env.DB.prepare("UPDATE users SET active_session_id = NULL WHERE user_id = ?")
-        .bind(user.user_id).run();
+      await runWrite(env, "UPDATE users SET active_session_id = NULL WHERE user_id = ?", [user.user_id]);
     }
   } catch (e) {
     console.warn("Logout DB error:", e);
@@ -355,7 +382,7 @@ export async function handleGetDropdowns(request, env, params, query) {
 }
 
 /**
- * Helper to send email via Google Apps Script Web App (replacing Resend API)
+ * Helper to send email via Google Apps Script Web App
  */
 async function sendEmail(to, subject, body, env) {
   const gasUrl = (env && env.GAS_WEB_APP_URL) || "https://script.google.com/macros/s/AKfycbwxh5LQLCGtwGflfF7V5HKyL7viFNlAkAbsgz5xEDQo8Eg_f1kw47EjxrzSAC891sm1/exec";
@@ -437,12 +464,12 @@ export async function handleForgotPassword(request, env, params, query) {
     }
 
     // Also insert a notification record in D1 DB for compatibility
-    await env.DB.prepare(`
+    await runWrite(env, `
       INSERT INTO notifications (user_id, title, description, type, read, link, created_at)
       VALUES (?, ?, ?, 'info', 0, '/login', ?)
-    `).bind(user_id, "Password Reset OTP", `Your OTP for password reset is: ${otp}. Valid for 10 minutes.`, timestamp).run().catch(() => {});
+    `, [user_id, "Password Reset OTP", `Your OTP for password reset is: ${otp}. Valid for 10 minutes.`, timestamp]).catch(() => {});
 
-    // Send OTP via Resend email
+    // Send OTP via Google Apps Script email
     const email = user.mail_id || "";
     if (email) {
       const emailTemplate = `
@@ -513,6 +540,8 @@ export async function handleVerifyOtp(request, env, params, query) {
   }
 
   const kvKey = `otp:${user_id}:${normalizedType}`;
+  const strikeKey = `otp_strikes:${user_id}:${normalizedType}`;
+  
   let storedOtp = null;
   if (env.OTPS_KV) {
     storedOtp = await env.OTPS_KV.get(kvKey);
@@ -524,8 +553,28 @@ export async function handleVerifyOtp(request, env, params, query) {
     return jsonResponse({ error: "Invalid or expired OTP. Please request a new one." }, 400);
   }
 
+  // Check strike limits
+  let strikes = parseInt(await env.OTPS_KV.get(strikeKey) || "0", 10);
+  if (strikes >= 5) {
+    await env.OTPS_KV.delete(kvKey); // invalidate the OTP completely
+    await env.OTPS_KV.delete(strikeKey);
+    return jsonResponse({ error: "OTP blocked due to too many failed attempts. Please request a new code." }, 400);
+  }
+
   if (storedOtp.trim() !== String(otp).trim()) {
-    return jsonResponse({ error: "Invalid OTP. Please check and try again." }, 400);
+    const remaining = 5 - strikes - 1;
+    await env.OTPS_KV.put(strikeKey, String(strikes + 1), { expirationTtl: 600 });
+    if (remaining <= 0) {
+      await env.OTPS_KV.delete(kvKey);
+      await env.OTPS_KV.delete(strikeKey);
+      return jsonResponse({ error: "Invalid OTP. Too many failed attempts. OTP has been invalidated." }, 400);
+    }
+    return jsonResponse({ error: `Invalid OTP. ${remaining} attempts remaining.` }, 400);
+  }
+
+  // Successful verification - clear strikes
+  if (env.OTPS_KV) {
+    await env.OTPS_KV.delete(strikeKey);
   }
 
   return jsonResponse({ success: true, message: "OTP verified successfully." });
@@ -553,6 +602,7 @@ export async function handleResetPassword(request, env, params, query) {
 
   // Verify OTP from KV
   const kvKey = `otp:${user_id}:forgot_password`;
+  const strikeKey = `otp_strikes:${user_id}:forgot_password`;
   let storedOtp = null;
   if (env.OTPS_KV) {
     storedOtp = await env.OTPS_KV.get(kvKey);
@@ -560,8 +610,27 @@ export async function handleResetPassword(request, env, params, query) {
     return jsonResponse({ error: "KV store not configured." }, 500);
   }
 
-  if (!storedOtp || storedOtp.trim() !== String(otp).trim()) {
+  if (!storedOtp) {
     return jsonResponse({ error: "Invalid or expired OTP" }, 400);
+  }
+
+  // Check strike limits
+  let strikes = parseInt(await env.OTPS_KV.get(strikeKey) || "0", 10);
+  if (strikes >= 5) {
+    await env.OTPS_KV.delete(kvKey);
+    await env.OTPS_KV.delete(strikeKey);
+    return jsonResponse({ error: "OTP blocked due to too many failed attempts. Please request a new code." }, 400);
+  }
+
+  if (storedOtp.trim() !== String(otp).trim()) {
+    const remaining = 5 - strikes - 1;
+    await env.OTPS_KV.put(strikeKey, String(strikes + 1), { expirationTtl: 600 });
+    if (remaining <= 0) {
+      await env.OTPS_KV.delete(kvKey);
+      await env.OTPS_KV.delete(strikeKey);
+      return jsonResponse({ error: "Invalid OTP. Too many failed attempts. OTP has been invalidated." }, 400);
+    }
+    return jsonResponse({ error: `Invalid OTP. ${remaining} attempts remaining.` }, 400);
   }
 
   // Hash and update password
@@ -571,15 +640,22 @@ export async function handleResetPassword(request, env, params, query) {
   const user = await env.DB.prepare("SELECT * FROM users WHERE user_id = ?").bind(user_id).first();
   if (!user) return jsonResponse({ error: "User not found" }, 404);
 
-  await runWrite(env, "UPDATE users SET hashed_password = ?, active_session_id = NULL, failed_attempt = 0, user_status = 'active' WHERE user_id = ?", [newHash, user_id]);
-  
-  // Add to password history
-  await env.DB.prepare("INSERT INTO password_histories (user_id, hashed_password, created_at) VALUES (?, ?, ?)")
-    .bind(user.id, newHash, timestamp).run().catch(() => {});
+  const statements = [
+    {
+      sql: "UPDATE users SET hashed_password = ?, active_session_id = NULL, failed_attempt = 0, user_status = 'active' WHERE user_id = ?",
+      params: [newHash, user_id]
+    },
+    {
+      sql: "INSERT INTO password_histories (user_id, hashed_password, created_at) VALUES (?, ?, ?)",
+      params: [user.id, newHash, timestamp]
+    }
+  ];
+  await runBatchWrite(env, statements).catch(() => {});
 
   // Invalidate OTP in KV
   if (env.OTPS_KV) {
     await env.OTPS_KV.delete(kvKey);
+    await env.OTPS_KV.delete(strikeKey);
   }
 
   return jsonResponse({ success: true, message: "Password has been reset successfully. Please login with your new password." });
@@ -631,12 +707,12 @@ export async function handleUnlockAccount(request, env, params, query) {
     }
 
     // Compatibility DB log
-    await env.DB.prepare(`
+    await runWrite(env, `
       INSERT INTO notifications (user_id, title, description, type, read, link, created_at)
       VALUES (?, ?, ?, 'info', 0, '/login', ?)
-    `).bind(user_id, "Account Unlock OTP", `Your OTP to unlock account: ${otp}. Valid for 10 minutes.`, timestamp).run().catch(() => {});
+    `, [user_id, "Account Unlock OTP", `Your OTP to unlock account: ${otp}. Valid for 10 minutes.`, timestamp]).catch(() => {});
 
-    // Send email via Resend
+    // Send email via Google Apps Script
     const email = user.mail_id || "";
     if (email) {
       const emailTemplate = `
@@ -702,6 +778,7 @@ export async function handleUnlockVerifyOtp(request, env, params, query) {
 
   // Verify OTP from KV
   const kvKey = `otp:${user_id}:unlock_account`;
+  const strikeKey = `otp_strikes:${user_id}:unlock_account`;
   let storedOtp = null;
   if (env.OTPS_KV) {
     storedOtp = await env.OTPS_KV.get(kvKey);
@@ -709,23 +786,48 @@ export async function handleUnlockVerifyOtp(request, env, params, query) {
     return jsonResponse({ error: "KV store not configured." }, 500);
   }
 
-  if (!storedOtp || storedOtp.trim() !== String(otp).trim()) {
+  if (!storedOtp) {
     return jsonResponse({ error: "Invalid or expired OTP. Please try again." }, 400);
+  }
+
+  // Check strike limits
+  let strikes = parseInt(await env.OTPS_KV.get(strikeKey) || "0", 10);
+  if (strikes >= 5) {
+    await env.OTPS_KV.delete(kvKey);
+    await env.OTPS_KV.delete(strikeKey);
+    return jsonResponse({ error: "OTP blocked due to too many failed attempts. Please request a new code." }, 400);
+  }
+
+  if (storedOtp.trim() !== String(otp).trim()) {
+    const remaining = 5 - strikes - 1;
+    await env.OTPS_KV.put(strikeKey, String(strikes + 1), { expirationTtl: 600 });
+    if (remaining <= 0) {
+      await env.OTPS_KV.delete(kvKey);
+      await env.OTPS_KV.delete(strikeKey);
+      return jsonResponse({ error: "Invalid OTP. Too many failed attempts. OTP has been invalidated." }, 400);
+    }
+    return jsonResponse({ error: `Invalid OTP. ${remaining} attempts remaining.` }, 400);
   }
 
   // Unlock account
   const timestamp = new Date().toISOString();
-  await runWrite(env, "UPDATE users SET user_status = 'active', failed_attempt = 0, active_session_id = NULL WHERE user_id = ?", [user_id]);
+  const statements = [
+    {
+      sql: "UPDATE users SET user_status = 'active', failed_attempt = 0, active_session_id = NULL WHERE user_id = ?",
+      params: [user_id]
+    },
+    {
+      sql: "INSERT INTO notifications (user_id, title, description, type, read, link, created_at) VALUES (?, 'Account Unlocked', 'Your account has been successfully unlocked. You can now log in.', 'success', 0, '/login', ?)",
+      params: [user_id, timestamp]
+    }
+  ];
+  await runBatchWrite(env, statements).catch(() => {});
   
   // Invalidate OTP in KV
   if (env.OTPS_KV) {
     await env.OTPS_KV.delete(kvKey);
+    await env.OTPS_KV.delete(strikeKey);
   }
-
-  await env.DB.prepare(`
-    INSERT INTO notifications (user_id, title, description, type, read, link, created_at)
-    VALUES (?, 'Account Unlocked', 'Your account has been successfully unlocked. You can now log in.', 'success', 0, '/login', ?)
-  `).bind(user_id, timestamp).run().catch(() => {});
 
   return jsonResponse({ success: true, message: "Account unlocked successfully. You can now login." });
 }

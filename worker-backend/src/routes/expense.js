@@ -1,6 +1,7 @@
 import { runWrite, runBatchWrite, runRead } from "../utils/db.js";
 import { getLegacyExpenseHashId } from "./approval.js";
 import { uploadFileWithFallback } from "./upload.js";
+import { MONTH_NAMES } from "../utils/constants.js";
 
 function jsonResponse(data, status = 200) {
   return new Response(JSON.stringify(data), {
@@ -154,8 +155,7 @@ export async function handleListExpenses(request, env, params, query, user) {
   if (!month) {
     // Default to current month & year to minimize reads
     const now = new Date();
-    const monthNames = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
-    const currentMonthName = monthNames[now.getMonth()];
+    const currentMonthName = MONTH_NAMES[now.getMonth()];
     const currentYear = now.getFullYear();
 
     const expensesRows = await env.DB.prepare(`
@@ -174,8 +174,7 @@ export async function handleListExpenses(request, env, params, query, user) {
     const parts = month.split("-");
     const yr = parseInt(parts[0], 10);
     const monNum = parseInt(parts[1], 10);
-    const monthNames = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
-    const monName = monthNames[monNum - 1];
+    const monName = MONTH_NAMES[monNum - 1];
 
     querySql += " AND year = ? AND month = ?";
     binds.push(yr, monName);
@@ -199,54 +198,64 @@ export async function getExpenseInitData(env, targetUser, monthStr) {
   const parts = monthStr.split("-");
   const yearVal = parseInt(parts[0], 10);
   const monthInt = parseInt(parts[1], 10);
-  const monthNames = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
-  const monthName = monthNames[monthInt - 1];
+  const monthName = MONTH_NAMES[monthInt - 1];
 
-  // Fetch distinct districts and facilities mapped
-  const facilitiesRows = await env.DB.prepare(`
-    SELECT DISTINCT district_name, facility_name FROM facility_details
-  `).all();
+  const gradeToLookup = (targetUser.designation || "").toLowerCase().includes("specialist") ? "O1" : targetUser.grade;
+
+  // Run all 8 independent DB queries in PARALLEL — reduces 8 round trips to 1
+  const [
+    facilitiesRows,
+    submittedRows,
+    limits,
+    limitReqs,
+    allowance,
+    defaultBike,
+    defaultCar,
+    statsRes
+  ] = await Promise.all([
+    env.DB.prepare(`SELECT DISTINCT district_name, facility_name FROM facility_details`).all(),
+    env.DB.prepare(`SELECT itinerary FROM expenses WHERE user_id = ? AND month = ? AND year = ?`
+    ).bind(targetUser.id, monthName, yearVal).all(),
+    env.DB.prepare(`
+      SELECT 
+        SUM(CASE WHEN request_type = 'KM' THEN COALESCE(approved_value, requested_value) ELSE 0.0 END) as approved_km,
+        SUM(CASE WHEN request_type = 'AUTO' THEN COALESCE(approved_value, requested_value) ELSE 0.0 END) as approved_auto
+      FROM limit_approval_requests
+      WHERE user_id = ? AND LOWER(status) = 'approved' AND for_month = ?
+    `).bind(targetUser.user_id, monthStr).first(),
+    env.DB.prepare(`SELECT * FROM limit_approval_requests WHERE user_id = ? AND for_month = ?`
+    ).bind(targetUser.user_id, monthStr).all(),
+    env.DB.prepare(`SELECT * FROM allowance_master WHERE grade = ?`).bind(gradeToLookup).first(),
+    env.DB.prepare(`SELECT rate_per_km FROM allowance_master WHERE vehicle_type = 'Bike' LIMIT 1`).first(),
+    env.DB.prepare(`SELECT rate_per_km FROM allowance_master WHERE vehicle_type = 'Car' LIMIT 1`).first(),
+    env.DB.prepare(`
+      SELECT 
+        SUM(CASE WHEN LOWER(TRIM(i.travel_mode)) IN ('bike', 'car') THEN COALESCE(i.distance_km, 0.0) ELSE 0.0 END) as total_km,
+        SUM(CASE WHEN LOWER(TRIM(i.travel_mode)) = 'auto' THEN COALESCE(i.travel_amount, 0.0) ELSE 0.0 END) +
+        SUM(CASE WHEN LOWER(TRIM(i.sub_mode)) = 'auto' THEN COALESCE(i.sub_amount, 0.0) ELSE 0.0 END) as total_auto
+      FROM expense_itineraries i
+      JOIN expenses e ON i.exp_id = e.expense_code
+      WHERE e.user_id = ? AND e.month = ? AND e.year = ? AND e.status NOT IN ('rejected', 'returned_to_draft')
+    `).bind(targetUser.id, monthName, yearVal).first()
+  ]);
+
+  // Build facilities map
   const facilities = {};
   for (const f of (facilitiesRows.results || [])) {
     if (!facilities[f.district_name]) facilities[f.district_name] = [];
     facilities[f.district_name].push(f.facility_name);
   }
 
-  // Submitted dates this month
-  const submittedRows = await env.DB.prepare(`
-    SELECT itinerary FROM expenses WHERE user_id = ? AND month = ? AND year = ?
-  `).bind(targetUser.id, monthName, yearVal).all();
   const submittedDates = (submittedRows.results || []).map(r => r.itinerary).filter(Boolean);
-
-  // Approved limit extensions
-  const limits = await env.DB.prepare(`
-    SELECT 
-      SUM(CASE WHEN request_type = 'KM' THEN COALESCE(approved_value, requested_value) ELSE 0.0 END) as approved_km,
-      SUM(CASE WHEN request_type = 'AUTO' THEN COALESCE(approved_value, requested_value) ELSE 0.0 END) as approved_auto
-    FROM limit_approval_requests
-    WHERE user_id = ? AND LOWER(status) = 'approved' AND for_month = ?
-  `).bind(targetUser.user_id, monthStr).first();
 
   const approvedKm = limits?.approved_km || 0.0;
   const approvedAuto = limits?.approved_auto || 0.0;
 
-  // Existing requests status
-  const limitReqs = await env.DB.prepare(`
-    SELECT * FROM limit_approval_requests WHERE user_id = ? AND for_month = ?
-  `).bind(targetUser.user_id, monthStr).all();
-
   const kmReqs = (limitReqs.results || []).filter(r => r.request_type === "KM").sort((a, b) => b.id - a.id);
   const autoReqs = (limitReqs.results || []).filter(r => r.request_type === "AUTO").sort((a, b) => b.id - a.id);
-
   const existingKmReq = kmReqs.length > 0 ? { status: kmReqs[0].status, requested_value: kmReqs[0].requested_value } : null;
   const existingAutoReq = autoReqs.length > 0 ? { status: autoReqs[0].status, requested_value: autoReqs[0].requested_value } : null;
 
-  // Allowance rules
-  const gradeToLookup = (targetUser.designation || "").toLowerCase().includes("specialist") ? "O1" : targetUser.grade;
-  const allowance = await env.DB.prepare("SELECT * FROM allowance_master WHERE grade = ?").bind(gradeToLookup).first();
-
-  const defaultBike = await env.DB.prepare("SELECT rate_per_km FROM allowance_master WHERE vehicle_type = 'Bike' LIMIT 1").first();
-  const defaultCar = await env.DB.prepare("SELECT rate_per_km FROM allowance_master WHERE vehicle_type = 'Car' LIMIT 1").first();
   const fallbackBikeRate = defaultBike?.rate_per_km || 4.5;
   const fallbackCarRate = defaultCar?.rate_per_km || 9.0;
 
@@ -263,26 +272,10 @@ export async function getExpenseInitData(env, targetUser, monthStr) {
     vehicle_type: allowance?.vehicle_type ?? "Bike"
   };
 
-  // Month-wise accumulated aggregates
-  const statsRes = await env.DB.prepare(`
-    SELECT 
-      SUM(CASE WHEN LOWER(TRIM(i.travel_mode)) IN ('bike', 'car') THEN COALESCE(i.distance_km, 0.0) ELSE 0.0 END) as total_km,
-      SUM(CASE WHEN LOWER(TRIM(i.travel_mode)) = 'auto' THEN COALESCE(i.travel_amount, 0.0) ELSE 0.0 END) +
-      SUM(CASE WHEN LOWER(TRIM(i.sub_mode)) = 'auto' THEN COALESCE(i.sub_amount, 0.0) ELSE 0.0 END) as total_auto
-    FROM expense_itineraries i
-    JOIN expenses e ON i.exp_id = e.expense_code
-    WHERE e.user_id = ? AND e.month = ? AND e.year = ? AND e.status NOT IN ('rejected', 'returned_to_draft')
-  `).bind(targetUser.id, monthName, yearVal).first();
-
-  const accumulatedKm = statsRes?.total_km || 0.0;
-  const accumulatedAuto = statsRes?.total_auto || 0.0;
-
-  // Append monthly totals inside allowanceDict exactly as Python does
-  allowanceDict.current_month_km = accumulatedKm;
-  allowanceDict.current_month_auto = accumulatedAuto;
+  allowanceDict.current_month_km = statsRes?.total_km || 0.0;
+  allowanceDict.current_month_auto = statsRes?.total_auto || 0.0;
   allowanceDict.max_auto_per_month = 1000;
 
-  // Generate next expense ID code format
   const mm = String(monthInt).padStart(2, "0");
   const yy = String(yearVal).substring(2);
 
@@ -354,24 +347,6 @@ export async function handleCreateLimitRequest(request, env, params, query, user
     if (mgrUser) {
       managerId = mgrUser.user_id;
     }
-  }
-
-  // Self-healing migration for existing broken manager_id strings (names instead of user_ids)
-  try {
-    await env.DB.prepare(`
-      UPDATE limit_approval_requests 
-      SET manager_id = (
-        SELECT user_id FROM users 
-        WHERE LOWER(TRIM(users.name)) = LOWER(TRIM(limit_approval_requests.manager_id))
-        LIMIT 1
-      )
-      WHERE EXISTS (
-        SELECT 1 FROM users 
-        WHERE LOWER(TRIM(users.name)) = LOWER(TRIM(limit_approval_requests.manager_id))
-      )
-    `).run();
-  } catch (migErr) {
-    console.error("Migration error for limit requests:", migErr);
   }
 
   await runWrite(env, `
@@ -467,6 +442,12 @@ export async function handleGetTeamExpenses(request, env, params, query, user) {
 
   if (isAdminOrReportViewer) {
     querySql = "SELECT * FROM expenses WHERE 1=1";
+    // Default to current month to avoid loading entire expense history
+    if (!month) {
+      const now = new Date();
+      querySql += " AND year = ? AND month = ?";
+      binds.push(now.getFullYear(), MONTH_NAMES[now.getMonth()]);
+    }
   } else {
     const placeholders = teamUserIds.map(() => "?").join(",");
     querySql = `SELECT * FROM expenses WHERE user_id IN (${placeholders})`;
@@ -478,8 +459,7 @@ export async function handleGetTeamExpenses(request, env, params, query, user) {
       const parts = month.split("-");
       const yr = parseInt(parts[0], 10);
       const monNum = parseInt(parts[1], 10);
-      const monthNames = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
-      const monName = monthNames[monNum - 1];
+      const monName = MONTH_NAMES[monNum - 1];
 
       querySql += " AND year = ? AND month = ?";
       binds.push(yr, monName);
@@ -487,15 +467,11 @@ export async function handleGetTeamExpenses(request, env, params, query, user) {
       querySql += " AND LOWER(month) LIKE ?";
       binds.push(`%${month.toLowerCase()}%`);
     }
-  } else {
-    // Default to current month/year
+  } else if (!isAdminOrReportViewer) {
+    // Non-admin without month param: default to current month
     const now = new Date();
-    const monthNames = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
-    const currentMonthName = monthNames[now.getMonth()];
-    const currentYear = now.getFullYear();
-
     querySql += " AND year = ? AND month = ?";
-    binds.push(currentYear, currentMonthName);
+    binds.push(now.getFullYear(), MONTH_NAMES[now.getMonth()]);
   }
 
   querySql += " ORDER BY created_at DESC";
@@ -623,8 +599,7 @@ export async function handleGetTeamExpenses(request, env, params, query, user) {
           const parts = pl.for_month.split("-");
           yearVal = parseInt(parts[0], 10);
           const monNum = parseInt(parts[1], 10);
-          const monthNames = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
-          monthName = monthNames[monNum - 1];
+          monthName = MONTH_NAMES[monNum - 1];
         } catch (e) {}
       }
 
@@ -816,16 +791,14 @@ export async function getUserMonthlyStatsHelper(env, userDbId, month, year, excl
       try {
         const y = parseInt(parts[0], 10);
         const mNum = parseInt(parts[1], 10);
-        const monthNames = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
-        monthStr = monthNames[mNum - 1];
+        monthStr = MONTH_NAMES[mNum - 1];
         yearVal = y;
       } catch (e) {}
     }
   } else if (/^\d+$/.test(monthStr)) {
     try {
       const mNum = parseInt(monthStr, 10);
-      const monthNames = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
-      monthStr = monthNames[mNum - 1];
+      monthStr = MONTH_NAMES[mNum - 1];
     } catch (e) {}
   } else {
     monthStr = monthStr.charAt(0).toUpperCase() + monthStr.slice(1).toLowerCase();
@@ -1120,7 +1093,7 @@ export async function handleGetExpenseDetails(request, env, params, query, user)
         }
 
         const itiRows = await env.DB.prepare(`
-          SELECT * FROM expense_itinerary WHERE exp_id = ? ORDER BY leg_number
+          SELECT * FROM expense_itineraries WHERE exp_id = ? ORDER BY leg_number
         `).bind(matchingExpId).all();
 
         const itinerariesList = (itiRows.results || []).map(r => ({
@@ -1215,8 +1188,7 @@ export async function handleGetExpenseDetails(request, env, params, query, user)
             const parts = dateStr.split("-");
             yearVal = parseInt(parts[0], 10);
             const monNum = parseInt(parts[1], 10);
-            const monthNames = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
-            monthName = monthNames[monNum - 1];
+            monthName = MONTH_NAMES[monNum - 1];
           } catch (e) {}
         }
 
@@ -1802,8 +1774,7 @@ export async function handleSubmitExpense(request, env, params, query, user) {
   const maxAutoPerMonth = 1000;
 
   // Format month string YYYY-MM
-  const monthNames = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
-  const mIdx = monthNames.indexOf(claim_month);
+  const mIdx = MONTH_NAMES.indexOf(claim_month);
   const mmNum = String(mIdx !== -1 ? mIdx + 1 : 1).padStart(2, "0");
   const monthStr = `${claim_year}-${mmNum}`;
 
@@ -2248,7 +2219,7 @@ export async function handleGetEngineerMonthClaims(request, env, params, query, 
   try {
     const expensesRes = await env.DB.prepare(`
       SELECT * FROM expenses 
-      WHERE user_id = ? AND UPPER(month) = UPPER(?) AND year = ? AND status = 'approved'
+      WHERE user_id = ? AND UPPER(month) = UPPER(?) AND year = ? AND LOWER(status) = 'approved'
       ORDER BY itinerary ASC
     `).bind(targetUser.id, month, year).all();
     expenses = expensesRes.results || [];
@@ -2307,8 +2278,11 @@ export async function handleGetEngineerMonthClaims(request, env, params, query, 
           barcodeTicketStr = barcodeTicketStr ? `${barcodeTicketStr} | ${tagInfo}` : tagInfo;
         }
 
-        const autoAmt = (leg.travel_mode === "Auto" ? parseFloat(leg.travel_amount || 0) : 0) +
-                        (leg.sub_mode === "Auto" ? parseFloat(leg.sub_amount || 0) : 0);
+        const mode = (leg.travel_mode || "").trim().toLowerCase();
+        const subMode = (leg.sub_mode || "").trim().toLowerCase();
+
+        const autoAmt = (mode === "auto" ? parseFloat(leg.travel_amount || 0) : 0) +
+                        (subMode === "auto" ? parseFloat(leg.sub_amount || 0) : 0);
 
         legData.push({
           leg_number: leg.leg_number,
@@ -2316,10 +2290,10 @@ export async function handleGetEngineerMonthClaims(request, env, params, query, 
           to_location: leg.to_location || leg.to_district || "—",
           travel_mode: leg.travel_mode || "—",
           distance_km: parseFloat(leg.distance_km || 0.0),
-          bike_km: leg.travel_mode === "Bike" ? parseFloat(leg.distance_km || 0.0) : 0.0,
-          car_km: leg.travel_mode === "Car" ? parseFloat(leg.distance_km || 0.0) : 0.0,
-          bike_amount: leg.travel_mode === "Bike" ? parseFloat(leg.travel_amount || 0.0) : 0.0,
-          car_amount: leg.travel_mode === "Car" ? parseFloat(leg.travel_amount || 0.0) : 0.0,
+          bike_km: mode === "bike" ? parseFloat(leg.distance_km || 0.0) : 0.0,
+          car_km: mode === "car" ? parseFloat(leg.distance_km || 0.0) : 0.0,
+          bike_amount: mode === "bike" ? parseFloat(leg.travel_amount || 0.0) : 0.0,
+          car_amount: mode === "car" ? parseFloat(leg.travel_amount || 0.0) : 0.0,
           auto_amount: autoAmt,
           da_amount: parseFloat(leg.da_amount || 0.0),
           hotel_amount: parseFloat(leg.hotel_amount || 0.0),
@@ -2339,7 +2313,7 @@ export async function handleGetEngineerMonthClaims(request, env, params, query, 
           mobilise_count: leg.mobilise_count || 0,
           mobilise_asset_count: leg.mobilise_count || 0,
           worked_district: leg.to_district || leg.from_district || "",
-          ta_amount: ["Train", "Bus"].includes(leg.travel_mode) ? parseFloat(leg.travel_amount || 0.0) : 0.0,
+          ta_amount: ["train", "bus"].includes(mode) ? parseFloat(leg.travel_amount || 0.0) : 0.0,
           sub_mode: leg.sub_mode || "",
           sub_amount: parseFloat(leg.sub_amount || 0.0),
           barcode_ticket: barcodeTicketStr,
@@ -2383,7 +2357,7 @@ export async function handleGetEngineerMonthClaims(request, env, params, query, 
     for (const exp of legacyExpenses) {
       let legs = [];
       try {
-        const legsRes = await env.DB.prepare("SELECT * FROM expense_itinerary WHERE exp_id = ? ORDER BY leg_number ASC").bind(exp.exp_id).all();
+        const legsRes = await env.DB.prepare("SELECT * FROM expense_itineraries WHERE exp_id = ? ORDER BY leg_number ASC").bind(exp.exp_id).all();
         legs = legsRes.results || [];
       } catch (e) {
         console.warn("Legacy legs fetch failed:", e.message);
@@ -2593,7 +2567,7 @@ export async function handleGetConsolidatedReport(request, env, params, query, u
   // 2. Fetch all approved expenses
   const expensesRes = await env.DB.prepare(`
     SELECT id, user_id, expense_code, amount, original_amount, status FROM expenses
-    WHERE UPPER(month) = UPPER(?) AND year = ? AND status = 'approved'
+    WHERE UPPER(month) = UPPER(?) AND year = ? AND LOWER(status) = 'approved'
   `).bind(month, year).all().catch(() => ({ results: [] }));
   const expenses = expensesRes.results || [];
 
@@ -2608,7 +2582,7 @@ export async function handleGetConsolidatedReport(request, env, params, query, u
     const placeholders = expenseCodes.map(() => "?").join(",");
     const legsRes = await env.DB.prepare(`
       SELECT exp_id, travel_mode, sub_mode, distance_km, travel_amount, sub_amount, da_amount, local_purchase, hotel_amount, other_desc, other_amount
-      FROM expense_itinerary
+      FROM expense_itineraries
       WHERE exp_id IN (${placeholders})
     `).bind(...expenseCodes).all().catch(() => ({ results: [] }));
     legs = legsRes.results || [];
@@ -2637,7 +2611,7 @@ export async function handleGetConsolidatedReport(request, env, params, query, u
   if (expenseIds.length > 0) {
     const placeholders = expenseIds.map(() => "?").join(",");
     const logsRes = await env.DB.prepare(`
-      SELECT expense_id, comment FROM expense_edit_log
+      SELECT expense_id, comment FROM expense_edit_logs
       WHERE expense_id IN (${placeholders})
     `).bind(...expenseIds).all().catch(() => ({ results: [] }));
     editLogs = logsRes.results || [];

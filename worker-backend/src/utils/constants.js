@@ -184,3 +184,21 @@ export const ZONE_DISTRICTS = {
 };
 
 export const ROLES = ["Engineer", "Manager", "Division Manager", "Coordinator", "Accountant", "HR", "Project Head", "Travel Tesk", "MIS", "VP", "Admin"];
+
+// Shared month name array — import this everywhere instead of redeclaring
+export const MONTH_NAMES = [
+  "January", "February", "March", "April", "May", "June",
+  "July", "August", "September", "October", "November", "December"
+];
+
+// Helper: convert YYYY-MM string to { monthName, year }
+export function parseMonthStr(monthStr) {
+  if (!monthStr) return { monthName: null, year: null };
+  if (monthStr.includes("-")) {
+    const parts = monthStr.split("-");
+    const year = parseInt(parts[0], 10);
+    const monNum = parseInt(parts[1], 10);
+    return { monthName: MONTH_NAMES[monNum - 1] || null, year };
+  }
+  return { monthName: monthStr, year: null };
+}

@@ -82,21 +82,25 @@ function jsonResponse(data, status = 200, origin = "*") {
   });
 }
 
-// Custom Zero-Dependency Router
+// Custom Zero-Dependency Router — HashMap-based for O(1) method filtering
 class Router {
   constructor() {
-    this.routes = [];
+    // Separate route arrays per HTTP method — avoids scanning unrelated methods
+    this.routes = { GET: [], POST: [], PUT: [], DELETE: [] };
   }
 
-  get(path, handler, requiresAuth = false) { this.routes.push({ method: "GET", path, handler, requiresAuth }); }
-  post(path, handler, requiresAuth = false) { this.routes.push({ method: "POST", path, handler, requiresAuth }); }
-  put(path, handler, requiresAuth = false) { this.routes.push({ method: "PUT", path, handler, requiresAuth }); }
-  delete(path, handler, requiresAuth = false) { this.routes.push({ method: "DELETE", path, handler, requiresAuth }); }
+  _add(method, path, handler, requiresAuth) {
+    this.routes[method].push({ path, handler, requiresAuth });
+  }
+  get(path, handler, requiresAuth = false) { this._add("GET", path, handler, requiresAuth); }
+  post(path, handler, requiresAuth = false) { this._add("POST", path, handler, requiresAuth); }
+  put(path, handler, requiresAuth = false) { this._add("PUT", path, handler, requiresAuth); }
+  delete(path, handler, requiresAuth = false) { this._add("DELETE", path, handler, requiresAuth); }
 
   match(method, pathname) {
-    for (const route of this.routes) {
-      if (route.method !== method) continue;
+    const methodRoutes = this.routes[method] || [];
 
+    for (const route of methodRoutes) {
       // Handle wildcard route like /api/upload/file/*
       if (route.path.endsWith("/*")) {
         const prefix = route.path.slice(0, -2);
@@ -268,39 +272,24 @@ router.get("/api/expense/:id", handleGetExpenseDetails, true);
 router.delete("/api/expense/:id", handleDeleteExpense, true);
 
 
+// Dedicated migration endpoint — call once after deployment, not on every request
+router.post("/api/admin/run-migrations", async (req, env, params, query, user) => {
+  if (!user || user.role !== "Admin") {
+    return jsonResponse({ error: "Access denied" }, 403);
+  }
+  try {
+    await runMigrations(env._originalDB || env.DB);
+    return jsonResponse({ success: true, message: "Migrations completed successfully" });
+  } catch (e) {
+    return jsonResponse({ error: "Migration error: " + e.message }, 500);
+  }
+}, true);
+
 // --- Main Entry point ---
 export default {
   async fetch(request, env, ctx) {
     // Store ctx on env for background tasks access (e.g. replication)
     env.ctx = ctx;
-
-    // Eagerly run migrations BEFORE the DB intercept so tables exist for all handlers
-    if (env.DB && !env._migrationsRun) {
-      try {
-        await runMigrations(env.DB);
-        env._migrationsRun = true; // flag so we only run once per worker instance
-      } catch (e) {
-        console.error("Migration error:", e);
-      }
-    }
-
-    // Background index creation (non-blocking, safe to run async)
-    if (env.DB) {
-      ctx.waitUntil((async () => {
-        try {
-          const dbObj = env._originalDB || env.DB;
-          await dbObj.exec(`
-            CREATE INDEX IF NOT EXISTS idx_expenses_user_id ON expenses(user_id);
-            CREATE INDEX IF NOT EXISTS idx_approvals_expense_id ON approvals(expense_id);
-            CREATE INDEX IF NOT EXISTS idx_approvals_approver_id ON approvals(approver_id);
-            CREATE INDEX IF NOT EXISTS idx_hierarchy_requesters_user_id ON hierarchy_requesters(user_id);
-            CREATE INDEX IF NOT EXISTS idx_hierarchy_approvers_approver_id ON hierarchy_approvers(approver_id);
-          `);
-        } catch (e) {
-          console.error("Self-healing indexes failed:", e);
-        }
-      })());
-    }
 
     // Intercept D1 database connection for read control routing
     if (env.DB && !env._originalDB) {
@@ -310,6 +299,9 @@ export default {
       env.DB = {
         prepare(sql) {
           const stmt = originalDB.prepare(sql);
+          // Pre-compute isSelect ONCE at prepare() time — avoids repeated trim/toLowerCase on every call
+          const sqlTrimLower = sql.trim().toLowerCase();
+          const isSelect = sqlTrimLower.startsWith("select") || sqlTrimLower.startsWith("with");
           
           function wrapStmt(s, params) {
             const originalAll = s.all;
@@ -317,7 +309,6 @@ export default {
             const originalRun = s.run;
             
             s.all = async function() {
-              const isSelect = sql.trim().toLowerCase().startsWith("select") || sql.trim().toLowerCase().startsWith("with");
               if (isSelect) {
                 return await runRead(env, sql, params, request);
               }
@@ -325,7 +316,6 @@ export default {
             };
             
             s.first = async function(column) {
-              const isSelect = sql.trim().toLowerCase().startsWith("select") || sql.trim().toLowerCase().startsWith("with");
               if (isSelect) {
                 const res = await runRead(env, sql, params, request);
                 const row = res.results && res.results[0];
