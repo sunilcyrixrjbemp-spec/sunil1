@@ -560,6 +560,21 @@ export default function MonthSummaryPage() {
     });
   };
 
+  const waitForImages = (element: HTMLElement): Promise<void> => {
+    const images = Array.from(element.getElementsByTagName("img"));
+    if (images.length === 0) return Promise.resolve();
+    const promises = images.map((img) => {
+      if (img.complete) return Promise.resolve();
+      return new Promise<void>((resolve) => {
+        img.onload = () => resolve();
+        img.onerror = () => resolve();
+      });
+    });
+    return Promise.all(promises).then(() => {
+      return new Promise<void>((r) => setTimeout(r, 250));
+    });
+  };
+
   const handlePDF = async (row: any) => {
     const key = `${row.user_id}-${row.month}-${row.year}`;
     setPdfLoadingId(key);
@@ -597,7 +612,13 @@ export default function MonthSummaryPage() {
 
         const html = buildExcelPrintHTML(userObj, claims, attachments, amount, false);
         const element = document.createElement("div");
+        element.style.position = "absolute";
+        element.style.left = "-9999px";
+        element.style.top = "-9999px";
         element.innerHTML = html;
+        document.body.appendChild(element);
+
+        await waitForImages(element);
 
         const opt = {
           margin:       [10, 10, 10, 10],
@@ -608,6 +629,7 @@ export default function MonthSummaryPage() {
         };
 
         await (window as any).html2pdf().from(element).set(opt).save();
+        document.body.removeChild(element);
         toast.success(`PDF downloaded successfully!`);
       } catch (err) {
         toast.error("PDF download failed");
@@ -894,7 +916,13 @@ export default function MonthSummaryPage() {
 
         const html = buildExcelPrintHTML(userObj, claims, attachments, advance, false);
         const element = document.createElement("div");
+        element.style.position = "absolute";
+        element.style.left = "-9999px";
+        element.style.top = "-9999px";
         element.innerHTML = html;
+        document.body.appendChild(element);
+
+        await waitForImages(element);
 
         const opt = {
           margin:       [10, 10, 10, 10],
@@ -904,6 +932,7 @@ export default function MonthSummaryPage() {
         };
 
         const pdfBlob = await (window as any).html2pdf().from(element).set(opt).output('blob');
+        document.body.removeChild(element);
         const safeName = (userObj.name || "Engineer").replace(/[^a-zA-Z0-9]/g, "_");
         const safeMonth = (userObj.month || "Month").replace(/[^a-zA-Z0-9]/g, "_");
         const fileName = `${safeName}_${userObj.e_code || userObj.user_id}_${safeMonth}_${userObj.year}.pdf`;
