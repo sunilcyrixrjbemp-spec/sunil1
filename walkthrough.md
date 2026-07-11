@@ -170,3 +170,17 @@ We have completed the implementation of the core features and enhancements reque
 *   **Expense Submission Form Integration ([ExpensePage.tsx](file:///c:/Users/Cyrix%20HealthCare/Desktop/Sunil%20React.tsx/frontend/src/pages/ExpensePage.tsx))**:
     *   Integrated a collapsible panel "Your Grade Allowances & Policies" directly on the daily claim submission page.
     *   This dynamically displays the engineer's specific grade-level allowances (loaded from `/api/expense/init` rules), giving them real-time reference guidance as they input their travel and expense legs.
+
+## 📄 Bulletproof PDF Print Lifecycle Fixes (July 12, 2026 - Update 6)
+
+### 1. 🔄 Objectives
+*   **Print Dialog Reliability**: Resolve issues where dynamically writing documents to popup windows (opened via `window.open`) did not trigger `window.print()` in modern browsers (Chrome/Edge/Safari) due to the window `load` event having already fired.
+
+### 2. 🛠️ Implemented Fixes in [MonthSummaryPage.tsx](file:///c:/Users/Cyrix%20HealthCare/Desktop/Sunil%20React.tsx/frontend/src/pages/MonthSummaryPage.tsx)
+*   **Embedded Script Improvements**:
+    *   Supported `document.readyState === 'interactive'` to run printing immediately if the DOM is parsed but images/resources are still loading.
+    *   Added a fallback event listener for `DOMContentLoaded` to handle cases where page-load is completed asynchronously.
+    *   Added a **safety timeout** (`setTimeout(doPrint, 1500)`) inside the popup document itself to force-trigger the print layout even if standard load lifecycles are bypassed by the browser.
+*   **Parent-Context Fallback Focus**:
+    *   Updated the fallback print calls from the main React window context to execute `win.focus()` before invoking `win.print()`. This prevents browsers from ignoring cross-frame print requests.
+    This resolves all blank popups and blocked print dialogues during both single and bulk PDF exports.
