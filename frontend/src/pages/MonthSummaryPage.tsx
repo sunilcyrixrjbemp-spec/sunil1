@@ -938,7 +938,6 @@ export default function MonthSummaryPage() {
 
       const fetched: any[] = [];
       const advancesMap: Record<string, number> = {};
-      const keysWithNoAdvance: any[] = [];
 
       const promises = selectedKeys.map(async (key) => {
         const row = data.find(r => `${r.user_id}-${r.month}-${r.year}` === key);
