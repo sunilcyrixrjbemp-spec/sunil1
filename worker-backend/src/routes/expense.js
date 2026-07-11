@@ -2552,11 +2552,20 @@ export async function handleGetConsolidatedReport(request, env, params, query, u
     return jsonResponse({ error: "month is required" }, 400);
   }
 
-  // 1. Fetch all users
+  // 1. Fetch all users (including manager column)
   const usersRes = await env.DB.prepare(`
-    SELECT id, user_id, name, district, zone, grade, designation, date_of_joining, e_code FROM users
+    SELECT id, user_id, name, district, zone, grade, designation, date_of_joining, e_code, manager FROM users
   `).all().catch(() => ({ results: [] }));
   const users = usersRes.results || [];
+  
+  // Build name resolution map for managers
+  const nameLookupMap = {};
+  for (const u of users) {
+    if (u.user_id) nameLookupMap[u.user_id.toLowerCase().trim()] = u.name;
+    if (u.e_code) nameLookupMap[u.e_code.toLowerCase().trim()] = u.name;
+    if (u.name) nameLookupMap[u.name.toLowerCase().trim()] = u.name;
+  }
+
   const userMap = {};
   const userByCode = {};
   for (const u of users) {
@@ -2827,17 +2836,53 @@ export async function handleGetConsolidatedReport(request, env, params, query, u
     const row_total = travel_expense + da_allowance + spare_purchase + courier_charges + boarding_lodging + printing_stationery;
     const net_payable = row_total - user_advance;
 
-    // Unique list of dates sorted chronologically
-    const sortedClaimDates = Array.from(new Set(claimDates)).sort((a, b) => {
-      const parseDate = (dStr) => {
-        const p = dStr.split("-");
-        if (p.length === 3) return new Date(parseInt(p[2]), parseInt(p[1]) - 1, parseInt(p[0])).getTime();
-        return new Date(dStr).getTime();
-      };
-      return parseDate(a) - parseDate(b);
-    });
+    // Next Month logic (e.g. July expense -> submitted date 5 August)
+    const nextMonthMap = {
+      january: "February",
+      february: "March",
+      march: "April",
+      april: "May",
+      may: "June",
+      june: "July",
+      july: "August",
+      august: "September",
+      september: "October",
+      october: "November",
+      november: "December",
+      december: "January"
+    };
+    const mClean = month.trim().toLowerCase();
+    let nextMonthName = "August";
+    for (const [curr, next] of Object.entries(nextMonthMap)) {
+      if (curr.startsWith(mClean) || mClean.startsWith(curr)) {
+        nextMonthName = next;
+        break;
+      }
+    }
+    const submitted_date_val = `5 ${nextMonthName}`;
 
-    const deduction_reason = Array.from(new Set([...categoryTexts, ...allComments])).join("; ");
+    // Case-insensitively deduplicate deduction reasons and comments
+    const seenReasons = new Set();
+    const uniqueReasons = [];
+    for (const r of [...categoryTexts, ...allComments]) {
+      if (!r) continue;
+      const normalized = r.trim().toLowerCase().replace(/\s+/g, " ");
+      if (!seenReasons.has(normalized)) {
+        seenReasons.add(normalized);
+        uniqueReasons.push(r.trim());
+      }
+    }
+    const deduction_reason = uniqueReasons.join("; ");
+
+    // Format Month as Month-Year (e.g. July-2026)
+    const capitalizedMonth = month.charAt(0).toUpperCase() + month.slice(1).toLowerCase();
+    const month_val = `${capitalizedMonth}-${year}`;
+
+    // Resolve Manager Name
+    const rawManager = (usr.manager || "").trim();
+    const resolvedManager = rawManager && rawManager.toLowerCase() !== "none"
+      ? (nameLookupMap[rawManager.toLowerCase()] || rawManager)
+      : "";
 
     reportRows.push({
       zone: usr.zone || "",
@@ -2846,8 +2891,8 @@ export async function handleGetConsolidatedReport(request, env, params, query, u
       cc: usr.district || "",
       ee_name: usr.name,
       doj: usr.date_of_joining || "",
-      submitted_date: sortedClaimDates.join(", ") || "",
-      mail_hard_copy: "",
+      submitted_date: submitted_date_val,
+      mail_hard_copy: "Soft Copy",
       designation: usr.designation || "",
       travel_expense: Math.round(travel_expense * 100) / 100,
       bike_km: Math.round(bike_km * 100) / 100,
@@ -2867,10 +2912,10 @@ export async function handleGetConsolidatedReport(request, env, params, query, u
       gst_bills: "",
       status: "Approved",
       deduction_reason: deduction_reason,
-      month: month,
+      month: month_val,
       hold_reason: "No",
       remarks: "",
-      manager: usr.manager || "",
+      manager: resolvedManager,
       state: "Rajasthan",
       claimed_amount: Math.round(claimed_amount * 100) / 100
     });

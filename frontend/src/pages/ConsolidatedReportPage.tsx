@@ -57,23 +57,27 @@ export default function ConsolidatedReportPage() {
       const R = idx + 2;
       
       // Travelling Expense formulas
-      const privateTravelFormula = `=(${r.bike_km || 0}*4.5)+(${r.car_km || 0}*9)`;
-      const publicTravelFormula = `=${r.auto_amount || 0}+${r.train_bus_amount || 0}`;
+      const hasPrivate = (r.bike_km || 0) > 0 || (r.car_km || 0) > 0;
+      const privateTravelFormula = hasPrivate ? `=(${r.bike_km || 0}*4.5)+(${r.car_km || 0}*9)` : "";
+
+      const hasPublic = (r.auto_amount || 0) > 0 || (r.train_bus_amount || 0) > 0;
+      const publicTravelFormula = hasPublic ? `=${r.auto_amount || 0}+${r.train_bus_amount || 0}` : "";
       
       // Total formula (Sum columns I to Q)
-      const totalFormula = `=SUM(I${R}:Q${R})`;
+      const hasAnyExpense = hasPrivate || hasPublic || r.da_allowance > 0 || r.spare_purchase > 0 || r.courier_charges > 0 || r.boarding_lodging > 0 || r.printing_stationery > 0;
+      const totalFormula = hasAnyExpense ? `=SUM(I${R}:Q${R})` : "";
       
       // Net Payable formula (Total Column R minus Advance Column S)
-      const netPayableFormula = `=R${R}-S${R}`;
+      const netPayableFormula = (hasAnyExpense || r.advance > 0) ? `=R${R}-S${R}` : "";
 
       // Difference formula (Claimed Column AC minus Approved Total Column R)
-      const diffFormula = `=AC${R}-R${R}`;
+      const diffFormula = (r.claimed_amount > 0 || hasAnyExpense) ? `=AC${R}-R${R}` : "";
 
       rowsHtml += `
         <tr>
           <td>${idx + 1}</td>
           <td>${r.submitted_date || "—"}</td>
-          <td></td>
+          <td>${r.mail_hard_copy || "Soft Copy"}</td>
           <td style="mso-number-format:'\\@';">${r.ee_code}</td>
           <td>${r.grade || "—"}</td>
           <td>${r.designation || "—"}</td>
@@ -81,15 +85,15 @@ export default function ConsolidatedReportPage() {
           <td>${r.ee_name}</td>
           <td style="text-align:right;">${privateTravelFormula}</td>
           <td style="text-align:right;">${publicTravelFormula}</td>
-          <td style="text-align:right;">${r.da_allowance > 0 ? r.da_allowance.toFixed(2) : "0.00"}</td>
-          <td style="text-align:right;">${r.spare_purchase > 0 ? r.spare_purchase.toFixed(2) : "0.00"}</td>
-          <td style="text-align:right;">${r.courier_charges > 0 ? r.courier_charges.toFixed(2) : "0.00"}</td>
-          <td style="text-align:right;">${r.boarding_lodging > 0 ? r.boarding_lodging.toFixed(2) : "0.00"}</td>
-          <td style="text-align:right;">${r.printing_stationery > 0 ? r.printing_stationery.toFixed(2) : "0.00"}</td>
-          <td style="text-align:right;">0.00</td>
-          <td style="text-align:right;">0.00</td>
+          <td style="text-align:right;">${r.da_allowance > 0 ? r.da_allowance.toFixed(2) : ""}</td>
+          <td style="text-align:right;">${r.spare_purchase > 0 ? r.spare_purchase.toFixed(2) : ""}</td>
+          <td style="text-align:right;">${r.courier_charges > 0 ? r.courier_charges.toFixed(2) : ""}</td>
+          <td style="text-align:right;">${r.boarding_lodging > 0 ? r.boarding_lodging.toFixed(2) : ""}</td>
+          <td style="text-align:right;">${r.printing_stationery > 0 ? r.printing_stationery.toFixed(2) : ""}</td>
+          <td style="text-align:right;"></td>
+          <td style="text-align:right;"></td>
           <td style="text-align:right; font-weight:bold;">${totalFormula}</td>
-          <td style="text-align:right; color:red;">${r.advance > 0 ? r.advance.toFixed(2) : "0.00"}</td>
+          <td style="text-align:right; color:red;">${r.advance > 0 ? r.advance.toFixed(2) : ""}</td>
           <td style="text-align:right; font-weight:bold; color:green;">${netPayableFormula}</td>
           <td></td>
           <td>Approved</td>
@@ -99,7 +103,7 @@ export default function ConsolidatedReportPage() {
           <td>${r.remarks || ""}</td>
           <td>${r.manager || ""}</td>
           <td>${r.state || "Rajasthan"}</td>
-          <td style="text-align:right;">${r.claimed_amount > 0 ? r.claimed_amount.toFixed(2) : "0.00"}</td>
+          <td style="text-align:right;">${r.claimed_amount > 0 ? r.claimed_amount.toFixed(2) : ""}</td>
           <td style="text-align:right; font-weight:bold; color:red;">${diffFormula}</td>
         </tr>
       `;
@@ -116,8 +120,8 @@ export default function ConsolidatedReportPage() {
         <td style="text-align:right;">=SUM(M2:M${data.length + 1})</td>
         <td style="text-align:right;">=SUM(N2:N${data.length + 1})</td>
         <td style="text-align:right;">=SUM(O2:O${data.length + 1})</td>
-        <td style="text-align:right;">0.00</td>
-        <td style="text-align:right;">0.00</td>
+        <td style="text-align:right;">=SUM(P2:P${data.length + 1})</td>
+        <td style="text-align:right;">=SUM(Q2:Q${data.length + 1})</td>
         <td style="text-align:right;">=SUM(R2:R${data.length + 1})</td>
         <td style="text-align:right;">=SUM(S2:S${data.length + 1})</td>
         <td style="text-align:right;">=SUM(T2:T${data.length + 1})</td>
@@ -299,7 +303,7 @@ export default function ConsolidatedReportPage() {
           <button 
             onClick={fetchReport} 
             disabled={loading}
-            className="flex items-center gap-1.5 px-3 py-1.5 rounded-full border border-slate-200 bg-white hover:bg-slate-50 text-slate-700 text-[10px] font-bold transition-all cursor-pointer disabled:opacity-60"
+            className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-full border border-slate-200 bg-white hover:bg-slate-50 text-slate-700 text-[10px] font-bold shadow-sm hover:shadow transition-all cursor-pointer disabled:opacity-60 transform hover:-translate-y-0.5 active:translate-y-0 duration-200"
           >
             <RefreshCw className={`w-3 h-3 ${loading ? "animate-spin" : ""}`} /> Refresh
           </button>
@@ -324,7 +328,7 @@ export default function ConsolidatedReportPage() {
               <button 
                 onClick={fetchReport} 
                 disabled={loading}
-                className="w-full flex items-center justify-center gap-1.5 px-4 py-2 bg-indigo-650 hover:bg-indigo-750 text-white text-xs font-bold rounded-2xl shadow-sm transition-colors disabled:opacity-60 cursor-pointer min-h-[38px]"
+                className="w-full flex items-center justify-center gap-2 px-5 py-2.5 bg-gradient-to-r from-indigo-600 to-violet-700 hover:from-indigo-700 hover:to-violet-850 text-white text-xs font-bold rounded-full shadow-md hover:shadow-lg transition-all disabled:opacity-60 cursor-pointer min-h-[38px] transform hover:-translate-y-0.5 active:translate-y-0 duration-200"
               >
                 <Search className="w-3.5 h-3.5" /> Fetch Consolidated Data
               </button>
@@ -345,7 +349,7 @@ export default function ConsolidatedReportPage() {
           <button 
             onClick={downloadExcel} 
             disabled={data.length === 0}
-            className="flex items-center gap-1 px-3 py-1.5 rounded bg-green-600 hover:bg-green-700 text-white text-xs font-bold shadow-sm transition-all cursor-pointer disabled:opacity-60"
+            className="flex items-center gap-1.5 px-4 py-2 rounded-full bg-gradient-to-r from-emerald-600 to-green-650 hover:from-emerald-700 hover:to-green-700 text-white text-xs font-bold shadow-md hover:shadow-lg transition-all cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed transform hover:-translate-y-0.5 active:translate-y-0 duration-205"
           >
             <Download className="w-3.5 h-3.5" /> Export Consolidated Excel
           </button>
@@ -404,7 +408,7 @@ export default function ConsolidatedReportPage() {
                     <tr key={idx} className="hover:bg-slate-50/50 transition-colors text-slate-700">
                       <td className="py-1.5 px-1.5 text-center font-semibold border border-slate-200">{idx + 1}</td>
                       <td className="py-1.5 px-1.5 text-center font-mono border border-slate-200 whitespace-nowrap">{r.submitted_date || "—"}</td>
-                      <td className="py-1.5 px-1.5 border border-slate-200"></td>
+                      <td className="py-1.5 px-1.5 text-center font-medium border border-slate-200">{r.mail_hard_copy || "—"}</td>
                       <td className="py-1.5 px-1.5 text-center border border-slate-200 font-mono font-bold text-blue-700 bg-blue-50/20">{r.ee_code}</td>
                       <td className="py-1.5 px-1.5 text-center font-medium border border-slate-200">{r.grade || "—"}</td>
                       <td className="py-1.5 px-1.5 font-medium border border-slate-200 truncate max-w-[150px]" title={r.designation}>{r.designation || "—"}</td>
