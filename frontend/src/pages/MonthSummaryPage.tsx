@@ -573,7 +573,7 @@ export default function MonthSummaryPage() {
 
   // Renders a full HTML document inside a hidden iframe, captures it with
   // html2canvas + jsPDF, and returns the PDF as a Blob.
-  const renderHTMLToPDFBlob = (html: string, filename: string): Promise<Blob> => {
+  const renderHTMLToPDFBlob = (html: string): Promise<Blob> => {
     return new Promise((resolve, reject) => {
       const iframe = document.createElement("iframe");
       iframe.style.position = "fixed";
@@ -724,7 +724,7 @@ export default function MonthSummaryPage() {
 
         const html = buildExcelPrintHTML(userObj, claims, attachments, amount, false);
         const filename = `${(userObj.name || "Engineer").replace(/[^a-zA-Z0-9]/g, "_")}_Form_CYKL01.pdf`;
-        const pdfBlob = await renderHTMLToPDFBlob(html, filename);
+        const pdfBlob = await renderHTMLToPDFBlob(html);
 
         const link = document.createElement("a");
         link.href = URL.createObjectURL(pdfBlob);
@@ -1020,7 +1020,7 @@ export default function MonthSummaryPage() {
         const safeName = (userObj.name || "Engineer").replace(/[^a-zA-Z0-9]/g, "_");
         const safeMonth = (userObj.month || "Month").replace(/[^a-zA-Z0-9]/g, "_");
         const fileName = `${safeName}_${userObj.e_code || userObj.user_id}_${safeMonth}_${userObj.year}.pdf`;
-        const pdfBlob = await renderHTMLToPDFBlob(html, fileName);
+        const pdfBlob = await renderHTMLToPDFBlob(html);
         zip.file(fileName, pdfBlob);
       }
 
