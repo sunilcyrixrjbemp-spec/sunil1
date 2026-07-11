@@ -20,39 +20,6 @@ jobs:
         run: npm install -g wrangler
 
       - name: Deploy Worker
-        working-directory: ./backend
-        run: |
-          if [[ "${{ secrets.CF_API_TOKEN }}" == cfk_* ]]; then
-            echo "Using Cloudflare Global API Key authentication..."
-            export CLOUDFLARE_API_KEY="${{ secrets.CF_API_TOKEN }}"
-            export CLOUDFLARE_EMAIL="Sunil.cyrixrjbemp@gmail.com"
-          else
-            echo "Using Cloudflare Scoped API Token authentication..."
-            export CLOUDFLARE_API_TOKEN="${{ secrets.CF_API_TOKEN }}"
-          fi
-          npx wrangler deploy
-        env:
-          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CF_ACCOUNT_ID }}
-
-      - name: Set Wrangler Secrets
-        working-directory: ./backend
-        run: |
-          if [[ "${{ secrets.CF_API_TOKEN }}" == cfk_* ]]; then
-            export CLOUDFLARE_API_KEY="${{ secrets.CF_API_TOKEN }}"
-            export CLOUDFLARE_EMAIL="Sunil.cyrixrjbemp@gmail.com"
-          else
-            export CLOUDFLARE_API_TOKEN="${{ secrets.CF_API_TOKEN }}"
-          fi
-          echo "${{ secrets.CF_API_TOKEN }}" | npx wrangler secret put CLOUDFLARE_API_TOKEN || true
-          echo "${{ secrets.CF_ACCOUNT_ID }}" | npx wrangler secret put CLOUDFLARE_ACCOUNT_ID || true
-          echo "${{ secrets.CF_DATABASE_ID }}" | npx wrangler secret put CLOUDFLARE_DATABASE_ID || true
-          if [ -n "${{ secrets.CF_KV_NAMESPACE_ID }}" ]; then
-            echo "${{ secrets.CF_KV_NAMESPACE_ID }}" | npx wrangler secret put CLOUDFLARE_KV_NAMESPACE_ID || true
-          fi
-        env:
-          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CF_ACCOUNT_ID }}
-
-      - name: Deploy Secondary Worker
         working-directory: ./worker-backend
         run: |
           if [[ "${{ secrets.CF_API_TOKEN }}" == cfk_* ]]; then
@@ -67,7 +34,7 @@ jobs:
         env:
           CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CF_ACCOUNT_ID }}
 
-      - name: Set Secondary Worker Secrets
+      - name: Set Worker Secrets
         working-directory: ./worker-backend
         run: |
           if [[ "${{ secrets.CF_API_TOKEN }}" == cfk_* ]]; then
