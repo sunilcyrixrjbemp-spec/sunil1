@@ -422,8 +422,12 @@ function buildExcelPrintHTML(user: any, claims: any[], attachments: any[] = [], 
         
         function trigger() {
           setTimeout(function() {
-            window.print();
-          }, 300);
+            try {
+              window.print();
+            } catch (e) {
+              console.warn("Print failed:", e);
+            }
+          }, 350);
         }
         
         if (images.length === 0) {
@@ -447,10 +451,13 @@ function buildExcelPrintHTML(user: any, claims: any[], attachments: any[] = [], 
         }
       }
 
-      if (document.readyState === 'complete') {
+      if (document.readyState === 'complete' || document.readyState === 'interactive') {
         doPrint();
       } else {
+        document.addEventListener('DOMContentLoaded', doPrint);
         window.addEventListener('load', doPrint);
+        // Fallback safety timeout
+        setTimeout(doPrint, 1500);
       }
     })();
   </script>
@@ -593,12 +600,13 @@ export default function MonthSummaryPage() {
       setTimeout(() => {
         try {
           if (win && !win.closed) {
+            win.focus();
             win.print();
           }
         } catch (e) {
           console.warn("Direct popup print failed:", e);
         }
-      }, 1000);
+      }, 1500);
 
       toast.dismiss(tid);
       toast.success(`PDF ready — ${row.name} (${row.month} ${row.year})`);
@@ -766,7 +774,11 @@ export default function MonthSummaryPage() {
         
         function trigger() {
           setTimeout(function() {
-            window.print();
+            try {
+              window.print();
+            } catch (e) {
+              console.warn("Print failed:", e);
+            }
           }, 500);
         }
         
@@ -791,10 +803,13 @@ export default function MonthSummaryPage() {
         }
       }
 
-      if (document.readyState === 'complete') {
+      if (document.readyState === 'complete' || document.readyState === 'interactive') {
         doPrint();
       } else {
+        document.addEventListener('DOMContentLoaded', doPrint);
         window.addEventListener('load', doPrint);
+        // Fallback safety timeout
+        setTimeout(doPrint, 1500);
       }
     })();
   </script>
@@ -810,12 +825,13 @@ export default function MonthSummaryPage() {
     setTimeout(() => {
       try {
         if (win && !win.closed) {
+          win.focus();
           win.print();
         }
       } catch (e) {
         console.warn("Direct popup print failed:", e);
       }
-    }, 1200);
+    }, 1500);
 
     toast.success(`Print preview loaded for ${fetched.length} claims`);
   };
