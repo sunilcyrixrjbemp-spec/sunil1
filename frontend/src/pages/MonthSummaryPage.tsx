@@ -34,6 +34,7 @@ function numberToWords(num: number): string {
     "Seventeen", "Eighteen", "Nineteen"];
   const b = ["", "", "Twenty", "Thirty", "Forty", "Fifty", "Sixty", "Seventy", "Eighty", "Ninety"];
   const n = Math.floor(num);
+  if (n < 0) return "Negative " + numberToWords(Math.abs(n));
   if (n === 0) return "Zero";
   if (n < 20) return a[n];
   if (n < 100) return b[Math.floor(n / 10)] + (n % 10 ? " " + a[n % 10] : "");
@@ -43,9 +44,10 @@ function numberToWords(num: number): string {
   return numberToWords(Math.floor(n / 10000000)) + " Crore" + (n % 10000000 ? " " + numberToWords(n % 10000000) : "");
 }
 function amountWords(amount: number): string {
-  const rupees = Math.floor(amount);
-  const paise = Math.round((amount - rupees) * 100);
-  let w = "Rupees " + numberToWords(rupees);
+  const absAmount = Math.abs(amount);
+  const rupees = Math.floor(absAmount);
+  const paise = Math.round((absAmount - rupees) * 100);
+  let w = (amount < 0 ? "Negative " : "") + "Rupees " + numberToWords(rupees);
   if (paise > 0) w += " And " + numberToWords(paise) + " Paise";
   return w + " Only";
 }
@@ -100,20 +102,24 @@ function buildExcelPrintHTML(user: any, claims: any[], attachments: any[] = [], 
     if (l.activity_details) {
       try {
         const details = typeof l.activity_details === 'string' ? JSON.parse(l.activity_details) : l.activity_details;
-        acts = details.selected_activities || [];
-        actOtherDesc = details.activity_other_desc || "";
+        if (details && typeof details === 'object') {
+          acts = details.selected_activities || [];
+          actOtherDesc = details.activity_other_desc || "";
+        }
       } catch (e) {}
     }
     
-    if (acts.length === 0 && l.visit_purpose) {
-      let clean = l.visit_purpose;
+    const visitPurposeStr = String(l.visit_purpose || "");
+    if ((!Array.isArray(acts) || acts.length === 0) && visitPurposeStr) {
+      let clean = visitPurposeStr;
       if (clean.startsWith("Activities: ")) {
         clean = clean.replace("Activities: ", "");
       }
       acts = clean.split(",").map((s: string) => s.trim());
     }
 
-    acts.forEach((act: string) => {
+    const finalActs = Array.isArray(acts) ? acts : [];
+    finalActs.forEach((act: string) => {
       const actClean = act.trim();
       // Filter out any activity name that matches the monetary other_desc
       if (l.other_desc && actClean === l.other_desc.trim()) {
@@ -142,7 +148,7 @@ function buildExcelPrintHTML(user: any, claims: any[], attachments: any[] = [], 
     }
 
     if (parts.length === 0) {
-      const cleanPurpose = l.visit_purpose && !l.visit_purpose.startsWith("Activities:") ? l.visit_purpose : "Field visit";
+      const cleanPurpose = l.visit_purpose && !visitPurposeStr.startsWith("Activities:") ? visitPurposeStr : "Field visit";
       if (l.other_desc && cleanPurpose.trim() === l.other_desc.trim()) {
         return "Field visit";
       }
@@ -167,7 +173,7 @@ function buildExcelPrintHTML(user: any, claims: any[], attachments: any[] = [], 
 
   // ── Data rows — 18 columns ──
   const dataRows = allLegs.map((r, i) => {
-    const l = r.leg;
+    const l = r.leg || {};
     const taCol   = l.ta_amount || 0;
     const bikeCarAmt = (l.bike_amount || 0) + (l.car_amount || 0);
     const rowTotal = taCol + bikeCarAmt + (l.auto_amount || 0) + (l.da_amount || 0)
@@ -409,36 +415,44 @@ function buildExcelPrintHTML(user: any, claims: any[], attachments: any[] = [], 
 
   ${autoPrint ? `
   <script>
-    window.onload = function() {
-      const images = Array.from(document.getElementsByTagName('img'));
-      let loadedCount = 0;
-      
+    (function() {
       function doPrint() {
-        setTimeout(function() {
-          window.print();
-        }, 300);
+        const images = Array.from(document.getElementsByTagName('img'));
+        let loadedCount = 0;
+        
+        function trigger() {
+          setTimeout(function() {
+            window.print();
+          }, 300);
+        }
+        
+        if (images.length === 0) {
+          trigger();
+        } else {
+          images.forEach(function(img) {
+            if (img.complete) {
+              loadedCount++;
+              if (loadedCount === images.length) trigger();
+            } else {
+              img.onload = function() {
+                loadedCount++;
+                if (loadedCount === images.length) trigger();
+              };
+              img.onerror = function() {
+                loadedCount++;
+                if (loadedCount === images.length) trigger();
+              };
+            }
+          });
+        }
       }
-      
-      if (images.length === 0) {
+
+      if (document.readyState === 'complete') {
         doPrint();
       } else {
-        images.forEach(function(img) {
-          if (img.complete) {
-            loadedCount++;
-            if (loadedCount === images.length) doPrint();
-          } else {
-            img.onload = function() {
-              loadedCount++;
-              if (loadedCount === images.length) doPrint();
-            };
-            img.onerror = function() {
-              loadedCount++;
-              if (loadedCount === images.length) doPrint();
-            };
-          }
-        });
+        window.addEventListener('load', doPrint);
       }
-    };
+    })();
   </script>
   ` : ""}
 </div>
@@ -745,36 +759,44 @@ export default function MonthSummaryPage() {
 <body>
   ${combinedBody}
   <script>
-    window.onload = function() {
-      const images = Array.from(document.getElementsByTagName('img'));
-      let loadedCount = 0;
-      
+    (function() {
       function doPrint() {
-        setTimeout(function() {
-          window.print();
-        }, 500);
+        const images = Array.from(document.getElementsByTagName('img'));
+        let loadedCount = 0;
+        
+        function trigger() {
+          setTimeout(function() {
+            window.print();
+          }, 500);
+        }
+        
+        if (images.length === 0) {
+          trigger();
+        } else {
+          images.forEach(function(img) {
+            if (img.complete) {
+              loadedCount++;
+              if (loadedCount === images.length) trigger();
+            } else {
+              img.onload = function() {
+                loadedCount++;
+                if (loadedCount === images.length) trigger();
+              };
+              img.onerror = function() {
+                loadedCount++;
+                if (loadedCount === images.length) trigger();
+              };
+            }
+          });
+        }
       }
-      
-      if (images.length === 0) {
+
+      if (document.readyState === 'complete') {
         doPrint();
       } else {
-        images.forEach(function(img) {
-          if (img.complete) {
-            loadedCount++;
-            if (loadedCount === images.length) doPrint();
-          } else {
-            img.onload = function() {
-              loadedCount++;
-              if (loadedCount === images.length) doPrint();
-            };
-            img.onerror = function() {
-              loadedCount++;
-              if (loadedCount === images.length) doPrint();
-            };
-          }
-        });
+        window.addEventListener('load', doPrint);
       }
-    };
+    })();
   </script>
 </body>
 </html>`;

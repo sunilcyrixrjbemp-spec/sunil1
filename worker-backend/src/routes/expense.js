@@ -2116,7 +2116,7 @@ export async function handleGetMonthSummary(request, env, params, query, user) {
       COUNT(e.id) as approved_count
     FROM expenses e
     JOIN users u ON e.user_id = u.id
-    WHERE ${whereStr} AND e.status = 'approved'
+    WHERE ${whereStr} AND LOWER(e.status) = 'approved'
     GROUP BY u.user_id, u.name, e.month, e.year
     ORDER BY u.name ASC
   `).bind(...bindings).all();
@@ -2153,7 +2153,7 @@ export async function handleGetMonthSummary(request, env, params, query, user) {
         COUNT(*) as approved_count
       FROM expense_master m
       JOIN users u ON LOWER(m.user_id) = LOWER(u.user_id)
-      WHERE ${legacyWhereClauses.join(" AND ")} AND m.status = 'Approved'
+      WHERE ${legacyWhereClauses.join(" AND ")} AND LOWER(m.status) = 'approved'
       GROUP BY m.user_id, u.name, u.district, u.zone
       ORDER BY u.name ASC
     `).bind(...legacyBindings).all();
@@ -2346,7 +2346,7 @@ export async function handleGetEngineerMonthClaims(request, env, params, query, 
       WHERE LOWER(user_id) = LOWER(?)
         AND strftime('%m', expense_date) = ?
         AND strftime('%Y', expense_date) = ?
-        AND status = 'Approved'
+        AND LOWER(status) = 'approved'
       ORDER BY expense_date ASC
     `).bind(userCode,
       String(["january","february","march","april","may","june","july","august","september","october","november","december"].indexOf(month.toLowerCase()) + 1).padStart(2, "0"),
