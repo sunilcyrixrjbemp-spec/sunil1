@@ -196,3 +196,19 @@ We have completed the implementation of the core features and enhancements reque
 *   **Response Restructuring**: Wrapped the return JSON of `handleGetMonthSummary` in the expected `{ success: true, data: Object.values(summaryMap), districts }` format.
 *   **Manager Hierarchy Resolution**: Integrated team users direct/hierarchy lookups to restrict visibility for non-admin team leads/managers.
 *   **Dynamic Districts Fetch**: Added a lookup query `SELECT DISTINCT district FROM users WHERE district IS NOT NULL` to dynamically return all active districts for the frontend filter select box.
+
+## 📁 Direct PDF Downloads, Bulk ZIP & Smart Bill Filtering (July 12, 2026 - Update 8)
+
+### 1. 🔄 Objectives
+*   **Smart Attachment Filtering**: Only show/print bill attachments for approved claims/legs, and automatically exclude bills for any travel category that was zeroed out (approved amount set to 0) by the approver.
+*   **Direct Single PDF Download**: Provide a direct download button instead of relying on the browser's print dialog, generating the PDF directly in the client context.
+*   **Bulk PDF Download as ZIP**: Bundle multiple selected engineers' PDF sheets into a single structured ZIP archive for easy offline management.
+
+### 2. 🛠️ Implemented Fixes & Upgrades
+*   **Backend Filtering ([expense.js](file:///c:/Users/Cyrix%20HealthCare/Desktop/Sunil%20React.tsx/worker-backend/src/routes/expense.js))**:
+    *   Updated `handleGetEngineerMonthClaims` to cross-reference each attachment's `bill_type` and `itinerary_id` against its corresponding itinerary leg approved amounts.
+    *   Excludes attachments for `Hotel` if `hotel_amount` is 0, `Local_Purchase` if `local_purchase` is 0, `Other`/`Other_Expense` if `other_amount` is 0, and public/secondary transport modes if their approved amounts are 0.
+*   **Frontend Client-side Generation ([MonthSummaryPage.tsx](file:///c:/Users/Cyrix%20HealthCare/Desktop/Sunil%20React.tsx/frontend/src/pages/MonthSummaryPage.tsx))**:
+    *   Dynamically loads `html2pdf.js` and `jszip` from CDN on-demand to generate high-quality PDFs client-side without bloat.
+    *   Replaced `handlePDF` to download the engineer's Form CYKL01 PDF directly.
+    *   Replaced the bulk download handler with `handleBulkDownloadZIP`, which generates separate PDFs for each selected engineer and bundles them into a download-ready ZIP archive.
