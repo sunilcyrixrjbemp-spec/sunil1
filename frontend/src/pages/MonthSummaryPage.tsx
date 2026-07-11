@@ -13,8 +13,19 @@ import Loader from "../components/common/Loader";
 const getAbsoluteUrl = (path: string) => {
   if (!path) return "";
   if (path.startsWith("http://") || path.startsWith("https://")) return path;
-  const baseURL = api.defaults.baseURL || "";
-  const host = baseURL.replace(/\/api$/, "");
+  
+  const envBaseURL = import.meta.env.VITE_API_URL || "";
+  let host = "";
+  if (envBaseURL) {
+    host = envBaseURL.replace(/\/api$/, "");
+  } else {
+    const baseURL = api.defaults.baseURL || "";
+    if (baseURL.startsWith("http://") || baseURL.startsWith("https://")) {
+      host = baseURL.replace(/\/api$/, "");
+    } else {
+      host = window.location.origin;
+    }
+  }
   return `${host}/${path.replace(/^\//, "")}`;
 };
 
@@ -615,7 +626,7 @@ export default function MonthSummaryPage() {
         element.style.position = "absolute";
         element.style.left = "-9999px";
         element.style.top = "-9999px";
-        element.style.width = "900px";
+        element.style.width = "1120px";
         element.style.background = "white";
         element.innerHTML = html;
         document.body.appendChild(element);
@@ -627,7 +638,7 @@ export default function MonthSummaryPage() {
           filename:     `${(userObj.name || "Engineer").replace(/[^a-zA-Z0-9]/g, "_")}_Form_CYKL01.pdf`,
           image:        { type: 'jpeg', quality: 0.98 },
           html2canvas:  { scale: 2, useCORS: true, logging: false },
-          jsPDF:        { unit: 'mm', format: 'a4', orientation: 'portrait' }
+          jsPDF:        { unit: 'mm', format: 'a4', orientation: 'landscape' }
         };
 
         await (window as any).html2pdf().from(element).set(opt).save();
@@ -921,7 +932,7 @@ export default function MonthSummaryPage() {
         element.style.position = "absolute";
         element.style.left = "-9999px";
         element.style.top = "-9999px";
-        element.style.width = "900px";
+        element.style.width = "1120px";
         element.style.background = "white";
         element.innerHTML = html;
         document.body.appendChild(element);
@@ -932,7 +943,7 @@ export default function MonthSummaryPage() {
           margin:       [10, 10, 10, 10],
           image:        { type: 'jpeg', quality: 0.98 },
           html2canvas:  { scale: 2, useCORS: true, logging: false },
-          jsPDF:        { unit: 'mm', format: 'a4', orientation: 'portrait' }
+          jsPDF:        { unit: 'mm', format: 'a4', orientation: 'landscape' }
         };
 
         const pdfBlob = await (window as any).html2pdf().from(element).set(opt).toPdf().outputPdf('blob');
