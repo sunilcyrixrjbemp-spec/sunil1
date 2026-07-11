@@ -2074,6 +2074,9 @@ export async function handleGetMonthSummary(request, env, params, query, user) {
   const district = query.get("district");
   const engineer = query.get("engineer");
 
+  const userRoleClean = (user.role || "").trim().toLowerCase();
+  const isAdminOrReportViewer = ["admin", "mis", "vp", "accountant"].includes(userRoleClean);
+
   // Build filters for new expenses table
   const whereClauses = ["1=1"];
   const bindings = [];
@@ -2088,11 +2091,51 @@ export async function handleGetMonthSummary(request, env, params, query, user) {
   }
 
   // Row-level access control
-  const role = (user.role || "").trim().toLowerCase();
-  if (role === "engineer") {
+  if (userRoleClean === "engineer") {
     whereClauses.push("u.user_id = ?");
     bindings.push(user.user_id);
-  } else if (district) {
+  } else if (!isAdminOrReportViewer) {
+    // Non-admin managers see team
+    const nameClean = (user.name || "").trim();
+    const uidClean = (user.user_id || "").trim();
+
+    // Query direct reports
+    const directReportsRes = await env.DB.prepare(`
+      SELECT id FROM users
+      WHERE LOWER(TRIM(manager)) = ? OR LOWER(TRIM(manager)) = ?
+         OR LOWER(TRIM(coordinator)) = ? OR LOWER(TRIM(coordinator)) = ?
+         OR LOWER(TRIM(zonal_manager)) = ? OR LOWER(TRIM(zonal_manager)) = ?
+    `).bind(nameClean.toLowerCase(), uidClean.toLowerCase(), nameClean.toLowerCase(), uidClean.toLowerCase(), nameClean.toLowerCase(), uidClean.toLowerCase()).all();
+    const directReports = directReportsRes.results || [];
+
+    // Query hierarchy reports
+    const hierarchyApprovals = await env.DB.prepare(`
+      SELECT hierarchy_id FROM hierarchy_approvers WHERE approver_id = ?
+    `).bind(user.id).all();
+    
+    let hierarchyReports = [];
+    if (hierarchyApprovals.results && hierarchyApprovals.results.length > 0) {
+      const hIds = hierarchyApprovals.results.map(h => h.hierarchy_id);
+      const placeholders = hIds.map(() => "?").join(",");
+      const reqsRes = await env.DB.prepare(`
+        SELECT u.id FROM users u
+        JOIN hierarchy_requesters hr ON u.id = hr.user_id
+        WHERE hr.hierarchy_id IN (${placeholders})
+      `).bind(...hIds).all();
+      hierarchyReports = reqsRes.results || [];
+    }
+
+    const teamIds = Array.from(new Set([...directReports.map(u => u.id), ...hierarchyReports.map(u => u.id)]));
+    if (teamIds.length === 0) {
+      whereClauses.push("1=0");
+    } else {
+      const placeholders = teamIds.map(() => "?").join(",");
+      whereClauses.push(`u.id IN (${placeholders})`);
+      bindings.push(...teamIds);
+    }
+  }
+
+  if (district) {
     whereClauses.push("LOWER(u.district) = LOWER(?)");
     bindings.push(district);
   }
@@ -2137,9 +2180,54 @@ export async function handleGetMonthSummary(request, env, params, query, user) {
       legacyWhereClauses.push("strftime('%Y', expense_date) = ?");
       legacyBindings.push(String(year));
     }
-    if (role === "Engineer") {
-      legacyWhereClauses.push("LOWER(m.user_id) = LOWER(?)");
+
+    if (userRoleClean === "engineer") {
+      legacyWhereClauses.push("LOWER(u.user_id) = LOWER(?)");
       legacyBindings.push(user.user_id);
+    } else if (!isAdminOrReportViewer) {
+      // Non-admin managers see team
+      const nameClean = (user.name || "").trim();
+      const uidClean = (user.user_id || "").trim();
+
+      // Query direct reports
+      const directReportsRes = await env.DB.prepare(`
+        SELECT id FROM users
+        WHERE LOWER(TRIM(manager)) = ? OR LOWER(TRIM(manager)) = ?
+           OR LOWER(TRIM(coordinator)) = ? OR LOWER(TRIM(coordinator)) = ?
+           OR LOWER(TRIM(zonal_manager)) = ? OR LOWER(TRIM(zonal_manager)) = ?
+      `).bind(nameClean.toLowerCase(), uidClean.toLowerCase(), nameClean.toLowerCase(), uidClean.toLowerCase(), nameClean.toLowerCase(), uidClean.toLowerCase()).all();
+      const directReports = directReportsRes.results || [];
+
+      // Query hierarchy reports
+      const hierarchyApprovals = await env.DB.prepare(`
+        SELECT hierarchy_id FROM hierarchy_approvers WHERE approver_id = ?
+      `).bind(user.id).all();
+      
+      let hierarchyReports = [];
+      if (hierarchyApprovals.results && hierarchyApprovals.results.length > 0) {
+        const hIds = hierarchyApprovals.results.map(h => h.hierarchy_id);
+        const placeholders = hIds.map(() => "?").join(",");
+        const reqsRes = await env.DB.prepare(`
+          SELECT u.id FROM users u
+          JOIN hierarchy_requesters hr ON u.id = hr.user_id
+          WHERE hr.hierarchy_id IN (${placeholders})
+        `).bind(...hIds).all();
+        hierarchyReports = reqsRes.results || [];
+      }
+
+      const teamIds = Array.from(new Set([...directReports.map(u => u.id), ...hierarchyReports.map(u => u.id)]));
+      if (teamIds.length === 0) {
+        legacyWhereClauses.push("1=0");
+      } else {
+        const placeholders = teamIds.map(() => "?").join(",");
+        legacyWhereClauses.push(`u.id IN (${placeholders})`);
+        legacyBindings.push(...teamIds);
+      }
+    }
+
+    if (district) {
+      legacyWhereClauses.push("LOWER(u.district) = LOWER(?)");
+      legacyBindings.push(district);
     }
 
     const legacyRes = await env.DB.prepare(`
@@ -2160,6 +2248,7 @@ export async function handleGetMonthSummary(request, env, params, query, user) {
     legacyRows = legacyRes.results || [];
   } catch (e) {
     // Legacy table may not exist
+    console.warn("Legacy expenses fetch failed:", e.message);
   }
 
   const summaryMap = {};
@@ -2178,7 +2267,24 @@ export async function handleGetMonthSummary(request, env, params, query, user) {
     }
   }
 
-  return jsonResponse(Object.values(summaryMap));
+  // Fetch unique districts of active users to populate the dropdown filter dynamically
+  let districts = [];
+  try {
+    const distRes = await env.DB.prepare(`
+      SELECT DISTINCT district FROM users 
+      WHERE district IS NOT NULL AND TRIM(district) != ''
+      ORDER BY district ASC
+    `).all();
+    districts = (distRes.results || []).map(r => r.district.trim());
+  } catch (e) {
+    console.error("Failed to fetch districts list:", e.message);
+  }
+
+  return jsonResponse({
+    success: true,
+    data: Object.values(summaryMap),
+    districts
+  });
 }
 
 /**
