@@ -135,5 +135,10 @@ export const adminService = {
   bulkImportHierarchies: async (data: any[]): Promise<any> => {
     const response = await api.post("/admin/hierarchies/bulk", { rows: data });
     return response.data;
+  },
+
+  runMigrations: async (): Promise<any> => {
+    const response = await api.post("/admin/run-migrations");
+    return response.data;
   }
 };

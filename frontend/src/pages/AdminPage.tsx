@@ -131,6 +131,10 @@ export default function AdminPage() {
   const [chartZoneFilter, setChartZoneFilter] = useState<string>("all");
   const ITEMS_PER_PAGE = 25;
 
+  // System Maintenance
+  const [migrationLoading, setMigrationLoading] = useState(false);
+  const [migrationResult, setMigrationResult] = useState<{ success: boolean; message: string } | null>(null);
+
   // Modals visibility
   const [showSingleUserModal, setShowSingleUserModal] = useState(false);
   const [showEditUserModal, setShowEditUserModal] = useState(false);
@@ -728,6 +732,24 @@ export default function AdminPage() {
       });
     } finally {
       setBulkLoading(false);
+    }
+  };
+
+  // Handler: Run DB Migrations (Admin only)
+  const handleRunMigrations = async () => {
+    if (!window.confirm("⚠️ Run DB Migrations?\n\nYeh DB schema aur indexes update karega.\nPehli baar deploy karne ke baad hi run karo.\n\nContinue?")) return;
+    setMigrationLoading(true);
+    setMigrationResult(null);
+    try {
+      const result = await adminService.runMigrations();
+      setMigrationResult({ success: true, message: result.message || "Migrations completed successfully!" });
+      toast.success("✅ DB Migrations completed!");
+    } catch (err: any) {
+      const msg = err?.response?.data?.error || err?.message || "Migration failed";
+      setMigrationResult({ success: false, message: msg });
+      toast.error("❌ Migration failed: " + msg);
+    } finally {
+      setMigrationLoading(false);
     }
   };
 
@@ -1526,6 +1548,71 @@ export default function AdminPage() {
               </div>
             </div>
           </div>
+
+          {/* ── System Maintenance Card ── */}
+          <div className="bg-white border border-red-200 rounded shadow-sm overflow-hidden">
+            <div className="border-b border-red-200 px-4 py-3 bg-red-600 text-white flex items-center gap-2 rounded-t">
+              <svg xmlns="http://www.w3.org/2000/svg" className="w-4 h-4 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v2m0 4h.01M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z" />
+              </svg>
+              <h4 className="text-xs font-bold uppercase tracking-wider">System Maintenance — Danger Zone</h4>
+            </div>
+            <div className="p-5">
+              <div className="flex flex-col sm:flex-row sm:items-start gap-5">
+                {/* Description */}
+                <div className="flex-1">
+                  <p className="text-sm font-bold text-gray-800 mb-1">🗄️ Run Database Migrations &amp; Rebuild Indexes</p>
+                  <p className="text-xs text-gray-500 leading-relaxed">
+                    Nayi deployment ke baad ek baar run karo. Yeh DB schema update karega, missing tables banayega,
+                    aur <span className="font-semibold text-gray-700">22 performance indexes</span> create karega jo
+                    queries 60–90% faster banate hain.
+                  </p>
+                  <p className="text-[11px] text-red-500 font-semibold mt-2">⚠️ Sirf Admin run kare. Normal usage mein zaroorat nahi.</p>
+                </div>
+
+                {/* Button + Result */}
+                <div className="flex flex-col items-start sm:items-end gap-2 shrink-0">
+                  <button
+                    id="btn-run-migrations"
+                    onClick={handleRunMigrations}
+                    disabled={migrationLoading}
+                    className="flex items-center gap-2 px-4 py-2 rounded text-xs font-bold uppercase tracking-wider text-white transition-all duration-200"
+                    style={{
+                      background: migrationLoading ? "#9ca3af" : "linear-gradient(135deg, #dc2626, #b91c1c)",
+                      boxShadow: migrationLoading ? "none" : "0 2px 8px rgba(220,38,38,0.35)",
+                      cursor: migrationLoading ? "not-allowed" : "pointer"
+                    }}
+                  >
+                    {migrationLoading ? (
+                      <>
+                        <span className="animate-spin rounded-full h-3.5 w-3.5 border-2 border-white/40 border-t-white inline-block shrink-0" />
+                        Running...
+                      </>
+                    ) : (
+                      <>
+                        <svg xmlns="http://www.w3.org/2000/svg" className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                          <path strokeLinecap="round" strokeLinejoin="round" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                        </svg>
+                        Run Migrations
+                      </>
+                    )}
+                  </button>
+
+                  {/* Result Badge */}
+                  {migrationResult && (
+                    <div className={`flex items-center gap-1.5 px-3 py-1.5 rounded text-[11px] font-bold ${
+                      migrationResult.success
+                        ? "bg-green-50 border border-green-200 text-green-700"
+                        : "bg-red-50 border border-red-200 text-red-700"
+                    }`}>
+                      {migrationResult.success ? "✅" : "❌"} {migrationResult.message}
+                    </div>
+                  )}
+                </div>
+              </div>
+            </div>
+          </div>
+
         </div>
       ) : (
         /* ================= ROLE MAPPINGS TAB ================= */
