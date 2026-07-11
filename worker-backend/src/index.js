@@ -271,6 +271,41 @@ router.post("/api/expense", handleSubmitExpense, true);
 router.get("/api/expense/:id", handleGetExpenseDetails, true);
 router.delete("/api/expense/:id", handleDeleteExpense, true);
 
+router.get("/api/temp-update-churu", async (req, env) => {
+  try {
+    // 1. Update expenses description if it contains Churu
+    await env.DB.prepare(`
+      UPDATE expenses
+      SET description = CASE 
+        WHEN description LIKE '%churu%' THEN REPLACE(description, 'Churu', 'Punjab')
+        WHEN description LIKE '%CHURU%' THEN REPLACE(description, 'CHURU', 'Punjab')
+        ELSE description
+      END
+      WHERE UPPER(expense_code) = 'RJ-07/26-000246' OR expense_code = 'RJ-07/26-000246'
+    `).run();
+
+    // 2. Update itineraries from Churu to Punjab
+    const res = await env.DB.prepare(`
+      UPDATE expense_itineraries
+      SET 
+        from_district = CASE WHEN LOWER(from_district) = 'churu' THEN 'Punjab' ELSE from_district END,
+        to_district = CASE WHEN LOWER(to_district) = 'churu' THEN 'Punjab' ELSE to_district END,
+        from_location = CASE WHEN LOWER(from_location) = 'churu' THEN 'Punjab' ELSE from_location END,
+        to_location = CASE WHEN LOWER(to_location) = 'churu' THEN 'Punjab' ELSE to_location END,
+        worked_district = CASE WHEN LOWER(worked_district) = 'churu' THEN 'Punjab' ELSE worked_district END
+      WHERE UPPER(exp_id) = 'RJ-07/26-000246' OR exp_id = 'RJ-07/26-000246'
+    `).run();
+
+    return new Response(JSON.stringify({ success: true, meta: res.meta }), {
+      headers: { "Content-Type": "application/json" }
+    });
+  } catch (err) {
+    return new Response(JSON.stringify({ error: err.message }), {
+      status: 500,
+      headers: { "Content-Type": "application/json" }
+    });
+  }
+});
 
 // Dedicated migration endpoint — call once after deployment, not on every request
 router.post("/api/admin/run-migrations", async (req, env, params, query, user) => {
