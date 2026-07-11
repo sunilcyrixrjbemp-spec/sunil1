@@ -148,6 +148,59 @@ export async function runMigrations(db) {
     console.error("Failed to execute local_purchase self-healing query:", err.message);
   }
 
+  // Direct database correction for claim 246: Change Churu to Punjab
+  try {
+    const expRow = await db.prepare("SELECT id, expense_code, description FROM expenses WHERE id = 246").first();
+    const codes = [];
+    if (expRow) {
+      console.log(`Found expense 246 with code: ${expRow.expense_code}`);
+      codes.push(expRow.expense_code);
+      if (expRow.description && expRow.description.toLowerCase().includes("churu")) {
+        const newDesc = expRow.description.replace(/churu/gi, "Punjab");
+        await db.prepare("UPDATE expenses SET description = ? WHERE id = 246").bind(newDesc).run();
+      }
+    }
+    
+    // Add other potential codes for fallback matching
+    const expRows = await db.prepare("SELECT expense_code FROM expenses WHERE expense_code LIKE '%246%' OR id = 246").all();
+    if (expRows.results && expRows.results.length > 0) {
+      for (const r of expRows.results) {
+        if (r.expense_code && !codes.includes(r.expense_code)) {
+          codes.push(r.expense_code);
+        }
+      }
+    }
+    codes.push("246"); // Literal ID fallback
+
+    for (const code of codes) {
+      await db.prepare(`
+        UPDATE expense_itineraries
+        SET 
+          from_district = CASE WHEN LOWER(from_district) = 'churu' THEN 'Punjab' ELSE from_district END,
+          to_district = CASE WHEN LOWER(to_district) = 'churu' THEN 'Punjab' ELSE to_district END,
+          from_location = CASE WHEN LOWER(from_location) = 'churu' THEN 'Punjab' ELSE from_location END,
+          to_location = CASE WHEN LOWER(to_location) = 'churu' THEN 'Punjab' ELSE to_location END,
+          worked_district = CASE WHEN LOWER(worked_district) = 'churu' THEN 'Punjab' ELSE worked_district END
+        WHERE exp_id = ?
+      `).bind(code).run();
+    }
+
+    // Also update legacy table matches just in case
+    await db.prepare(`
+      UPDATE expense_itineraries
+      SET 
+        from_district = CASE WHEN LOWER(from_district) = 'churu' THEN 'Punjab' ELSE from_district END,
+        to_district = CASE WHEN LOWER(to_district) = 'churu' THEN 'Punjab' ELSE to_district END,
+        from_location = CASE WHEN LOWER(from_location) = 'churu' THEN 'Punjab' ELSE from_location END,
+        to_location = CASE WHEN LOWER(to_location) = 'churu' THEN 'Punjab' ELSE to_location END,
+        worked_district = CASE WHEN LOWER(worked_district) = 'churu' THEN 'Punjab' ELSE worked_district END
+      WHERE exp_id = '246' OR exp_id LIKE '%-246' OR exp_id LIKE '%_246'
+    `).run();
+    console.log("Successfully executed database correction for claim 246.");
+  } catch (err) {
+    console.error("Failed to execute database correction for claim 246:", err.message);
+  }
+
   // ─── Performance Indexes ────────────────────────────────────────────────────
   // These indexes dramatically reduce query time for the most common operations.
   const indexes = [
