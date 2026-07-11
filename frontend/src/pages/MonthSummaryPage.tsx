@@ -615,6 +615,8 @@ export default function MonthSummaryPage() {
         element.style.position = "absolute";
         element.style.left = "-9999px";
         element.style.top = "-9999px";
+        element.style.width = "900px";
+        element.style.background = "white";
         element.innerHTML = html;
         document.body.appendChild(element);
 
@@ -919,6 +921,8 @@ export default function MonthSummaryPage() {
         element.style.position = "absolute";
         element.style.left = "-9999px";
         element.style.top = "-9999px";
+        element.style.width = "900px";
+        element.style.background = "white";
         element.innerHTML = html;
         document.body.appendChild(element);
 
@@ -931,7 +935,7 @@ export default function MonthSummaryPage() {
           jsPDF:        { unit: 'mm', format: 'a4', orientation: 'portrait' }
         };
 
-        const pdfBlob = await (window as any).html2pdf().from(element).set(opt).output('blob');
+        const pdfBlob = await (window as any).html2pdf().from(element).set(opt).toPdf().outputPdf('blob');
         document.body.removeChild(element);
         const safeName = (userObj.name || "Engineer").replace(/[^a-zA-Z0-9]/g, "_");
         const safeMonth = (userObj.month || "Month").replace(/[^a-zA-Z0-9]/g, "_");
