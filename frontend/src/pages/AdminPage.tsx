@@ -1526,6 +1526,7 @@ export default function AdminPage() {
             </div>
           </div>
         </div>
+      </div>
       ) : (
         /* ================= ROLE MAPPINGS TAB ================= */
         <div className="space-y-6">
