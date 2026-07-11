@@ -2626,7 +2626,7 @@ export async function handleGetEngineerAdvance(request, env, params, query, user
 
   const record = await env.DB.prepare(`
     SELECT * FROM engineer_advances
-    WHERE LOWER(user_code) = LOWER(?) AND LOWER(month) = LOWER(?) AND year = ?
+    WHERE LOWER(user_id) = LOWER(?) AND LOWER(month) = LOWER(?) AND year = ?
     LIMIT 1
   `).bind(userCode, month, year).first().catch(() => null);
 
@@ -2657,19 +2657,19 @@ export async function handleSaveEngineerAdvance(request, env, params, query, use
   // Upsert the advance record
   const existing = await env.DB.prepare(`
     SELECT id FROM engineer_advances
-    WHERE LOWER(user_code) = LOWER(?) AND LOWER(month) = LOWER(?) AND year = ?
+    WHERE LOWER(user_id) = LOWER(?) AND LOWER(month) = LOWER(?) AND year = ?
   `).bind(user_code, month, year).first().catch(() => null);
 
   if (existing) {
     await runWrite(env, "UPDATE engineer_advances SET advance_amount = ?, updated_at = ? WHERE id = ?", [amount, timestamp, existing.id]);
   } else {
     await runWrite(env, `
-      INSERT INTO engineer_advances (user_code, month, year, advance_amount, created_at, updated_at)
+      INSERT INTO engineer_advances (user_id, month, year, advance_amount, created_at, updated_at)
       VALUES (?, ?, ?, ?, ?, ?)
     `, [user_code, month, year, amount, timestamp, timestamp]).catch(async () => {
       // Table may not have updated_at column, try simpler version
       await runWrite(env, `
-        INSERT INTO engineer_advances (user_code, month, year, advance_amount, created_at)
+        INSERT INTO engineer_advances (user_id, month, year, advance_amount, created_at)
         VALUES (?, ?, ?, ?, ?)
       `, [user_code, month, year, amount, timestamp]);
     });
@@ -2747,13 +2747,13 @@ export async function handleGetConsolidatedReport(request, env, params, query, u
 
   // 4. Fetch advances
   const advancesRes = await env.DB.prepare(`
-    SELECT user_code, advance_amount FROM engineer_advances
+    SELECT user_id, advance_amount FROM engineer_advances
     WHERE LOWER(month) = LOWER(?) AND year = ?
   `).bind(month, year).all().catch(() => ({ results: [] }));
   const advances = advancesRes.results || [];
   const advancesMap = {};
   for (const adv of advances) {
-    advancesMap[(adv.user_code || "").toLowerCase()] = parseFloat(adv.advance_amount || 0);
+    advancesMap[(adv.user_id || "").toLowerCase()] = parseFloat(adv.advance_amount || 0);
   }
 
   // 5. Fetch edit logs for comments using queryInChunks
