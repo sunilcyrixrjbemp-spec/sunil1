@@ -19,30 +19,37 @@ export default function ConsolidatedReportPage() {
   const [year, setYear] = useState<number>(currentDate.getFullYear());
   const [loading, setLoading] = useState(false);
   const [data, setData] = useState<any[]>([]);
-  const [selectedPolicyGrade, setSelectedPolicyGrade] = useState<string>("Grade A");
-  const [policyRules, setPolicyRules] = useState<any[]>([]);
+  const [selectedPolicyGrade, setSelectedPolicyGrade] = useState<string>("");
+  const [allPolicies, setAllPolicies] = useState<any[]>([]);
   const [loadingPolicies, setLoadingPolicies] = useState<boolean>(false);
   const [showPolicyPanel, setShowPolicyPanel] = useState<boolean>(false);
 
   const fetchPolicies = async () => {
     setLoadingPolicies(true);
     try {
-      const res = await expenseService.getPolicyRules(selectedPolicyGrade);
+      const res = await expenseService.getPolicyRules("");
       if (res && res.success) {
-        setPolicyRules(res.data || []);
+        const policies = res.data || [];
+        setAllPolicies(policies);
+        if (policies.length > 0 && !selectedPolicyGrade) {
+          setSelectedPolicyGrade(policies[0].grade || "");
+        }
       }
     } catch (err) {
-      console.error("Failed to load policy rules", err);
+      console.error("Failed to load policy rules from allowance master", err);
     } finally {
       setLoadingPolicies(false);
     }
   };
 
   useEffect(() => {
-    if (showPolicyPanel) {
+    if (showPolicyPanel && allPolicies.length === 0) {
       fetchPolicies();
     }
-  }, [selectedPolicyGrade, showPolicyPanel]);
+  }, [showPolicyPanel]);
+
+  const availableGrades = Array.from(new Set(allPolicies.map((p) => p.grade))).filter(Boolean).sort();
+  const selectedPolicy = allPolicies.find((p) => p.grade === selectedPolicyGrade);
 
   useEffect(() => {
     fetchReport();
@@ -340,7 +347,7 @@ export default function ConsolidatedReportPage() {
                   onChange={(e) => setSelectedPolicyGrade(e.target.value)}
                   className="w-full border border-slate-200 rounded-xl px-2.5 py-1.5 text-xs font-semibold text-slate-700 focus:outline-none focus:border-indigo-500 cursor-pointer"
                 >
-                  {["Grade A", "Grade B", "Grade C", "Grade D", "Grade E"].map((g) => (
+                  {availableGrades.map((g) => (
                     <option key={g} value={g}>{g}</option>
                   ))}
                 </select>
@@ -348,34 +355,97 @@ export default function ConsolidatedReportPage() {
               <div className="flex-1 flex items-center gap-2 text-indigo-600 bg-indigo-50/50 p-2.5 rounded-2xl border border-indigo-100/30">
                 <Info className="w-4 h-4 shrink-0 text-indigo-500" />
                 <p className="text-[10px] font-semibold leading-relaxed text-slate-650">
-                  Select a grade to see the active reimbursement limits and rates. Claims that exceed these thresholds are flagged for audit and may be automatically deducted.
+                  Showing active rules loaded dynamically from the Allowance Master database. Claimed amounts exceeding these limits are auto-flagged and subject to deduction.
                 </p>
               </div>
             </div>
 
             {loadingPolicies ? (
               <div className="flex items-center justify-center py-6 gap-2 text-slate-400 text-xs font-semibold">
-                <RefreshCw className="w-4 h-4 animate-spin text-indigo-600" /> Loading policies...
+                <RefreshCw className="w-4 h-4 animate-spin text-indigo-600" /> Loading allowances...
               </div>
-            ) : policyRules.length === 0 ? (
+            ) : !selectedPolicy ? (
               <div className="text-center py-6 text-slate-400 font-medium italic text-xs">
                 No policy rules configured for this grade.
               </div>
             ) : (
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
-                {policyRules.map((rule) => {
-                  const isKmRate = rule.expense_type.includes("Transport");
-                  const displayLimit = isKmRate 
-                    ? `₹${rule.limit_amount.toFixed(2)} / KM` 
-                    : `₹${rule.limit_amount.toLocaleString("en-IN", { minimumFractionDigits: 2 })} Max`;
-                  return (
-                    <div key={rule.id} className="p-3.5 bg-slate-50/40 hover:bg-slate-50 border border-slate-100/70 rounded-2xl transition-all duration-200">
-                      <span className="text-[9px] font-black uppercase tracking-wider text-indigo-650 block mb-0.5">{rule.expense_type}</span>
-                      <span className="text-sm font-extrabold text-slate-800 block mb-1 font-mono">{displayLimit}</span>
-                      <p className="text-[9.5px] text-slate-450 leading-normal font-medium">{rule.description || "No description provided."}</p>
-                    </div>
-                  );
-                })}
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 animate-fadeIn">
+                {/* 1. Daily Allowance In-District */}
+                <div className="p-3.5 bg-slate-50/40 hover:bg-slate-50 border border-slate-100/70 rounded-2xl transition-all duration-200">
+                  <span className="text-[9px] font-black uppercase tracking-wider text-indigo-650 block mb-0.5">DA (In-District)</span>
+                  <span className="text-sm font-extrabold text-slate-800 block mb-1 font-mono">₹{(selectedPolicy.daily_in_district || 0).toFixed(2)}</span>
+                  <p className="text-[9.5px] text-slate-450 leading-normal font-medium">Daily allowance when traveling inside headquarters district.</p>
+                </div>
+
+                {/* 2. Daily Allowance Out-District */}
+                <div className="p-3.5 bg-slate-50/40 hover:bg-slate-50 border border-slate-100/70 rounded-2xl transition-all duration-200">
+                  <span className="text-[9px] font-black uppercase tracking-wider text-indigo-650 block mb-0.5">DA (Out-District)</span>
+                  <span className="text-sm font-extrabold text-slate-800 block mb-1 font-mono">₹{(selectedPolicy.daily_out_district || 0).toFixed(2)}</span>
+                  <p className="text-[9.5px] text-slate-450 leading-normal font-medium">Daily allowance when traveling outside headquarters district.</p>
+                </div>
+
+                {/* 3. Daily Allowance Hotel */}
+                <div className="p-3.5 bg-slate-50/40 hover:bg-slate-50 border border-slate-100/70 rounded-2xl transition-all duration-200">
+                  <span className="text-[9px] font-black uppercase tracking-wider text-indigo-650 block mb-0.5">DA (Hotel Stay)</span>
+                  <span className="text-sm font-extrabold text-slate-800 block mb-1 font-mono">₹{(selectedPolicy.daily_hotel || 0).toFixed(2)}</span>
+                  <p className="text-[9.5px] text-slate-450 leading-normal font-medium">Daily allowance when staying at a hotel.</p>
+                </div>
+
+                {/* 4. Daily Allowance Out-State */}
+                <div className="p-3.5 bg-slate-50/40 hover:bg-slate-50 border border-slate-100/70 rounded-2xl transition-all duration-200">
+                  <span className="text-[9px] font-black uppercase tracking-wider text-indigo-650 block mb-0.5">DA (Out-of-State)</span>
+                  <span className="text-sm font-extrabold text-slate-800 block mb-1 font-mono">₹{(selectedPolicy.daily_out_state || 0).toFixed(2)}</span>
+                  <p className="text-[9.5px] text-slate-450 leading-normal font-medium">Daily allowance when traveling outside parent state.</p>
+                </div>
+
+                {/* 5. In-State Hotel Room Rent */}
+                <div className="p-3.5 bg-slate-50/40 hover:bg-slate-50 border border-slate-100/70 rounded-2xl transition-all duration-200">
+                  <span className="text-[9px] font-black uppercase tracking-wider text-indigo-650 block mb-0.5">Hotel Rent (In-State)</span>
+                  <span className="text-sm font-extrabold text-slate-800 block mb-1 font-mono">₹{(selectedPolicy.hotel_in_state_s || 0).toFixed(2)} / Night</span>
+                  <p className="text-[9.5px] text-slate-450 leading-normal font-medium">Maximum reimbursement per night for in-state hotel boarding/lodging.</p>
+                </div>
+
+                {/* 6. Out-of-State Hotel Room Rent */}
+                <div className="p-3.5 bg-slate-50/40 hover:bg-slate-50 border border-slate-100/70 rounded-2xl transition-all duration-200">
+                  <span className="text-[9px] font-black uppercase tracking-wider text-indigo-650 block mb-0.5">Hotel Rent (Out-State)</span>
+                  <span className="text-sm font-extrabold text-slate-800 block mb-1 font-mono">₹{(selectedPolicy.hotel_out_state_s || 0).toFixed(2)} / Night</span>
+                  <p className="text-[9.5px] text-slate-450 leading-normal font-medium">Maximum reimbursement per night for out-of-state hotel boarding/lodging.</p>
+                </div>
+
+                {/* 7. Bike Rate */}
+                <div className="p-3.5 bg-slate-50/40 hover:bg-slate-50 border border-slate-100/70 rounded-2xl transition-all duration-200">
+                  <span className="text-[9px] font-black uppercase tracking-wider text-indigo-650 block mb-0.5">Bike Travel Rate</span>
+                  <span className="text-sm font-extrabold text-slate-800 block mb-1 font-mono">₹{(selectedPolicy.rate_bike || 0).toFixed(2)} / KM</span>
+                  <p className="text-[9.5px] text-slate-450 leading-normal font-medium">Reimbursement rate per kilometer when using personal motorcycle.</p>
+                </div>
+
+                {/* 8. Car Rate */}
+                <div className="p-3.5 bg-slate-50/40 hover:bg-slate-50 border border-slate-100/70 rounded-2xl transition-all duration-200">
+                  <span className="text-[9px] font-black uppercase tracking-wider text-indigo-650 block mb-0.5">Car Travel Rate</span>
+                  <span className="text-sm font-extrabold text-slate-800 block mb-1 font-mono">₹{(selectedPolicy.rate_car || 0).toFixed(2)} / KM</span>
+                  <p className="text-[9.5px] text-slate-450 leading-normal font-medium">Reimbursement rate per kilometer when using personal car.</p>
+                </div>
+
+                {/* 9. Max KM per month */}
+                <div className="p-3.5 bg-slate-50/40 hover:bg-slate-50 border border-slate-100/70 rounded-2xl transition-all duration-200">
+                  <span className="text-[9px] font-black uppercase tracking-wider text-indigo-650 block mb-0.5">Monthly Travel Cap</span>
+                  <span className="text-sm font-extrabold text-slate-800 block mb-1 font-mono">{selectedPolicy.max_km_per_month || 0} KM</span>
+                  <p className="text-[9.5px] text-slate-450 leading-normal font-medium">Maximum reimbursable distance allowed per month.</p>
+                </div>
+
+                {/* 10. Max Auto per month */}
+                <div className="p-3.5 bg-slate-50/40 hover:bg-slate-50 border border-slate-100/70 rounded-2xl transition-all duration-200">
+                  <span className="text-[9px] font-black uppercase tracking-wider text-indigo-650 block mb-0.5">Monthly Auto Cap</span>
+                  <span className="text-sm font-extrabold text-slate-800 block mb-1 font-mono">₹{(selectedPolicy.max_auto_per_month || 0).toFixed(2)}</span>
+                  <p className="text-[9.5px] text-slate-450 leading-normal font-medium">Maximum reimbursable amount allowed for auto/cab fares per month.</p>
+                </div>
+
+                {/* 11. Vehicle Type */}
+                <div className="p-3.5 bg-slate-50/40 hover:bg-slate-50 border border-slate-100/70 rounded-2xl transition-all duration-200">
+                  <span className="text-[9px] font-black uppercase tracking-wider text-indigo-650 block mb-0.5">Approved Vehicle</span>
+                  <span className="text-sm font-extrabold text-slate-800 block mb-1 font-mono">{selectedPolicy.vehicle_type || "None"}</span>
+                  <p className="text-[9.5px] text-slate-450 leading-normal font-medium">The standard vehicle type authorized for this grade.</p>
+                </div>
               </div>
             )}
           </div>

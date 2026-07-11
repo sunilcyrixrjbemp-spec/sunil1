@@ -3208,11 +3208,11 @@ export async function handleGetPolicyRules(req, env, params, query) {
     let results;
     if (grade) {
       results = await env.DB.prepare(
-        "SELECT * FROM expense_policy_rules WHERE LOWER(grade) = ? ORDER BY id ASC"
+        "SELECT * FROM allowance_master WHERE LOWER(grade) = ?"
       ).bind(grade.toLowerCase()).all();
     } else {
       results = await env.DB.prepare(
-        "SELECT * FROM expense_policy_rules ORDER BY grade ASC, id ASC"
+        "SELECT * FROM allowance_master ORDER BY grade ASC"
       ).all();
     }
 
