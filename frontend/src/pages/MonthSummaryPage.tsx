@@ -226,7 +226,7 @@ function buildExcelPrintHTML(user: any, claims: any[], attachments: any[] = [], 
       return `
         <div class="attachment-page" style="width:1122px;height:793px;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:10px 20px;box-sizing:border-box;background:#fff;overflow:hidden;">
           <div style="width:100%;max-width:1080px;border:2px solid #1565C0;border-radius:6px;padding:12px 16px;background:#fff;box-sizing:border-box;display:flex;flex-direction:column;align-items:center;">
-            <div style="width:100%;font-size:11pt;font-weight:900;color:#1565C0;text-align:left;border-bottom:2px solid #1565C0;padding-bottom:6px;margin-bottom:12px;text-transform:uppercase;font-family:'Inter',sans-serif;letter-spacing:0.5px;">
+            <div style="width:100%;font-size:11pt;font-weight:900;color:#1565C0;text-align:left;border-bottom:2px solid #1565C0;padding-bottom:6px;margin-bottom:12px;text-transform:uppercase;font-family:Arial,Helvetica,sans-serif;letter-spacing:0.5px;">
               BILL ATTACHMENT &mdash; DATE: ${dateStr}
             </div>
             <img src="${absoluteUrl}" style="max-width:100%;max-height:640px;object-fit:contain;border:1px solid #ccc;" alt="Attachment ${dateStr}" />
@@ -243,9 +243,9 @@ function buildExcelPrintHTML(user: any, claims: any[], attachments: any[] = [], 
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Expense Form — ${user.name} — ${user.month} ${user.year}</title>
   <style>
-    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap');
-    *{-webkit-print-color-adjust:exact!important;print-color-adjust:exact!important;box-sizing:border-box;margin:0;padding:0;}
-    body{font-family:'Inter',sans-serif;color:#000;background:#fff;font-size:7.5pt;}
+    /* Use system fonts — Google Fonts @import fails in cross-origin iframes causing html2canvas to collapse spaces */
+    *{-webkit-print-color-adjust:exact!important;print-color-adjust:exact!important;box-sizing:border-box;margin:0;padding:0;word-spacing:normal!important;letter-spacing:normal!important;}
+    body{font-family:Arial,Helvetica,sans-serif;color:#000;background:#fff;font-size:7.5pt;}
     .wrap{width:100%;padding:4mm;background:#fff;}
     table{width:100%;border-collapse:collapse;table-layout:fixed;}
     th,td{border:1px solid #222!important;padding:3.5px 4px;vertical-align:middle;word-wrap:break-word;overflow-wrap:break-word;}
