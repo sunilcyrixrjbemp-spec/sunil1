@@ -184,3 +184,15 @@ We have completed the implementation of the core features and enhancements reque
 *   **Parent-Context Fallback Focus**:
     *   Updated the fallback print calls from the main React window context to execute `win.focus()` before invoking `win.print()`. This prevents browsers from ignoring cross-frame print requests.
     This resolves all blank popups and blocked print dialogues during both single and bulk PDF exports.
+
+## 📊 Month Summary Data Resolution Fixes (July 12, 2026 - Update 7)
+
+### 1. 🔄 Objectives
+*   **Resolve Empty Month Summary**: Fix the bug where `/api/expense/month-summary` API endpoint returned a raw array directly, while the frontend UI expected a structured object with a `{ success, data, districts }` schema. This mismatch caused `res.data` to evaluate to `undefined`, setting the local React state to an empty array and displaying `NO MATCHING SUMMARY RECORDS FOUND`.
+*   **Manager Team Security Filters**: Fix the backend routing filter so that managers/coordinators (non-admin, non-report-viewer roles) are strictly confined to viewing their direct and hierarchy team members' summaries, instead of viewing empty datasets or full unfiltered datasets.
+*   **Case-Sensitivity & Districts List**: Fix case-sensitivity in the legacy query filters and populate the districts dropdown filter dynamically from active database users instead of keeping it empty.
+
+### 2. 🛠️ Implemented Fixes in [expense.js](file:///c:/Users/Cyrix%20HealthCare/Desktop/Sunil%20React.tsx/worker-backend/src/routes/expense.js)
+*   **Response Restructuring**: Wrapped the return JSON of `handleGetMonthSummary` in the expected `{ success: true, data: Object.values(summaryMap), districts }` format.
+*   **Manager Hierarchy Resolution**: Integrated team users direct/hierarchy lookups to restrict visibility for non-admin team leads/managers.
+*   **Dynamic Districts Fetch**: Added a lookup query `SELECT DISTINCT district FROM users WHERE district IS NOT NULL` to dynamically return all active districts for the frontend filter select box.
