@@ -429,14 +429,14 @@ export default function ConsolidatedReportPage() {
                 {/* 9. Max KM per month */}
                 <div className="p-3.5 bg-slate-50/40 hover:bg-slate-50 border border-slate-100/70 rounded-2xl transition-all duration-200">
                   <span className="text-[9px] font-black uppercase tracking-wider text-indigo-650 block mb-0.5">Monthly Travel Cap</span>
-                  <span className="text-sm font-extrabold text-slate-800 block mb-1 font-mono">{selectedPolicy.max_km_per_month || 0} KM</span>
+                  <span className="text-sm font-extrabold text-slate-800 block mb-1 font-mono">{selectedPolicy.max_km_per_month || 2000} KM</span>
                   <p className="text-[9.5px] text-slate-450 leading-normal font-medium">Maximum reimbursable distance allowed per month.</p>
                 </div>
 
                 {/* 10. Max Auto per month */}
                 <div className="p-3.5 bg-slate-50/40 hover:bg-slate-50 border border-slate-100/70 rounded-2xl transition-all duration-200">
                   <span className="text-[9px] font-black uppercase tracking-wider text-indigo-650 block mb-0.5">Monthly Auto Cap</span>
-                  <span className="text-sm font-extrabold text-slate-800 block mb-1 font-mono">₹{(selectedPolicy.max_auto_per_month || 0).toFixed(2)}</span>
+                  <span className="text-sm font-extrabold text-slate-800 block mb-1 font-mono">₹{(selectedPolicy.max_auto_per_month || 1000).toFixed(2)}</span>
                   <p className="text-[9.5px] text-slate-450 leading-normal font-medium">Maximum reimbursable amount allowed for auto/cab fares per month.</p>
                 </div>
 
