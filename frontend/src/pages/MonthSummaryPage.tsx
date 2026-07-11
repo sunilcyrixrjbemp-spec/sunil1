@@ -222,13 +222,14 @@ function buildExcelPrintHTML(user: any, claims: any[], attachments: any[] = [], 
     attachmentsSection = attachments.map((att: any, index) => {
       const absoluteUrl = getAbsoluteUrl(att.file_url);
       const dateStr = att.date ? fmtDate(att.date) : `Receipt #${index + 1}`;
+      // Fixed height = A4 landscape at 96dpi (793px) so it always fills exactly one PDF page
       return `
-        <div class="attachment-page" style="page-break-before: always; width: 100%; height: 100vh; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 5mm; box-sizing: border-box; overflow: hidden;">
-          <div style="width: 100%; max-width: 950px; border: 1.5px solid #000; padding: 10px; background: #fff; text-align: center; border-radius: 4px; box-sizing: border-box;">
-            <div style="font-size: 10pt; font-weight: bold; color: #000; text-align: left; border-bottom: 1.5px solid #000; padding-bottom: 6px; margin-bottom: 15px; text-transform: uppercase; font-family:'Arial',sans-serif;">
+        <div class="attachment-page" style="width:1122px;height:793px;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:10px 20px;box-sizing:border-box;background:#fff;overflow:hidden;">
+          <div style="width:100%;max-width:1080px;border:2px solid #1565C0;border-radius:6px;padding:12px 16px;background:#fff;box-sizing:border-box;display:flex;flex-direction:column;align-items:center;">
+            <div style="width:100%;font-size:11pt;font-weight:900;color:#1565C0;text-align:left;border-bottom:2px solid #1565C0;padding-bottom:6px;margin-bottom:12px;text-transform:uppercase;font-family:'Inter',sans-serif;letter-spacing:0.5px;">
               BILL ATTACHMENT &mdash; DATE: ${dateStr}
             </div>
-            <img src="${absoluteUrl}" style="max-width: 100%; max-height: 180mm; object-fit: contain; border: 1px solid #ccc;" alt="Attachment ${dateStr}" />
+            <img src="${absoluteUrl}" style="max-width:100%;max-height:640px;object-fit:contain;border:1px solid #ccc;" alt="Attachment ${dateStr}" />
           </div>
         </div>
       `;
@@ -247,36 +248,39 @@ function buildExcelPrintHTML(user: any, claims: any[], attachments: any[] = [], 
     body{font-family:'Inter',sans-serif;color:#000;background:#fff;font-size:7.5pt;}
     .wrap{width:100%;padding:4mm;background:#fff;}
     table{width:100%;border-collapse:collapse;table-layout:fixed;}
-    th,td{border:1px solid #000!important;padding:3.5px 4px;vertical-align:middle;word-wrap:break-word;overflow-wrap:break-word;}
-    .main-hdr{background:#1e3a8a!important;color:#fff!important;text-align:center;font-size:13pt!important;
-      font-weight:800!important;letter-spacing:1px;padding:6px!important;border:1px solid #000!important;}
-    .month-hdr{background:#1e3a8a!important;color:#eff6ff!important;font-size:7.5pt!important;
-      font-weight:700!important;text-align:right;padding:4px 8px!important;border:1px solid #000!important;white-space:nowrap;}
-    .form-no{background:#1e3a8a!important;color:#fef08a!important;font-size:7.5pt!important;
-      font-weight:700!important;text-align:right;padding:4px 8px!important;border:1px solid #000!important;white-space:nowrap;}
-    .info-tbl{margin-bottom:0; border:1px solid #000!important; border-top: none!important;}
-    .info-lbl{font-weight:700; background:#fff!important; color:#000; border-right:1px solid #000!important; font-size:7pt; text-align:left; padding:4px 6px; text-transform:uppercase; white-space:nowrap;}
-    .info-val{background:#fff!important; color:#1e3a8a!important; border-right:1px solid #000!important; font-size:7pt; text-align:left; padding:4px 6px; font-weight:800;}
-    .col-h1{background:#1d4ed8!important;color:#fff!important;font-size:7pt!important;
-      font-weight:700!important;text-align:center!important;padding:4.5px 2px!important;
-      border:1px solid #000!important;line-height:1.2;vertical-align:middle;}
-    .col-h2{background:#3b82f6!important;color:#fff!important;font-size:6.5pt!important;
-      font-weight:700!important;text-align:center!important;padding:3.5px 2px!important;
-      border:1px solid #000!important;line-height:1.15;vertical-align:middle;}
-    .tot-lbl{border:1px solid #000!important;padding:4px 5px;font-size:7pt;font-weight:800;color:#000;background:#fef3c7!important;vertical-align:middle;}
-    .tot-num{border:1px solid #000!important;padding:4px 5px;font-size:7pt;font-weight:800;color:#000;background:#fef3c7!important;vertical-align:middle;text-align:right;}
-    .net-lbl{border:1px solid #000!important;padding:5px 6px;font-size:7.5pt;font-weight:800;color:#000;background:#e5e7eb!important;text-align:center;text-transform:uppercase;}
-    .net-val{border:1px solid #000!important;padding:5px 6px;font-size:8pt;font-weight:900;color:#000;background:#fff!important;text-align:center;}
-    .awords-box{border:1px solid #000!important;border-top:none!important;padding:5px 8px;font-size:7pt;font-weight:500;color:#000;background:#fff!important;}
-    .remarks-box{border:1px solid #000!important;border-top:none!important;padding:4px 8px;font-size:7pt;font-weight:700;color:#000;background:#fff!important;}
-    .sig-tbl{border:1px solid #000!important;border-top:none!important;}
-    .sig-lbl{border-right:1px solid #000!important;padding:4px 6px;font-size:7pt;font-weight:500;color:#000;background:#fff!important;height:32px;vertical-align:top;}
-    .sig-val{border-right:1px solid #000!important;padding:4px 6px;font-size:7pt;font-weight:500;color:#000;background:#fff!important;height:32px;vertical-align:bottom;}
+    th,td{border:1px solid #222!important;padding:3.5px 4px;vertical-align:middle;word-wrap:break-word;overflow-wrap:break-word;}
+    tbody tr{page-break-inside:avoid!important;break-inside:avoid!important;}
+    .main-hdr{background:#1565C0!important;color:#fff!important;text-align:center;font-size:13pt!important;
+      font-weight:900!important;letter-spacing:1px;padding:6px!important;border:1px solid #0d3f7a!important;}
+    .month-hdr{background:#1565C0!important;color:#fff!important;font-size:7.5pt!important;
+      font-weight:800!important;text-align:right;padding:4px 8px!important;border:1px solid #0d3f7a!important;white-space:nowrap;}
+    .form-no{background:#1565C0!important;color:#FFE082!important;font-size:7.5pt!important;
+      font-weight:800!important;text-align:right;padding:4px 8px!important;border:1px solid #0d3f7a!important;white-space:nowrap;}
+    .info-tbl{margin-bottom:0; border:1px solid #222!important; border-top: none!important;}
+    .info-lbl{font-weight:800; background:#F5F5F5!important; color:#000; border-right:1px solid #222!important; font-size:7pt; text-align:left; padding:4px 6px; text-transform:uppercase; white-space:nowrap;}
+    .info-val{background:#fff!important; color:#1565C0!important; border-right:1px solid #222!important; font-size:7pt; text-align:left; padding:4px 6px; font-weight:900;}
+    .col-h1{background:#1565C0!important;color:#fff!important;font-size:7pt!important;
+      font-weight:800!important;text-align:center!important;padding:4.5px 2px!important;
+      border:1px solid #0d3f7a!important;line-height:1.2;vertical-align:middle;}
+    .col-h2{background:#1976D2!important;color:#fff!important;font-size:6.5pt!important;
+      font-weight:800!important;text-align:center!important;padding:3.5px 2px!important;
+      border:1px solid #0d3f7a!important;line-height:1.15;vertical-align:middle;}
+    .tot-lbl{border:1px solid #222!important;padding:4px 5px;font-size:7pt;font-weight:900;color:#000;background:#FFF9C4!important;vertical-align:middle;}
+    .tot-num{border:1px solid #222!important;padding:4px 5px;font-size:7pt;font-weight:900;color:#000;background:#FFF9C4!important;vertical-align:middle;text-align:right;}
+    .net-lbl{border:1px solid #222!important;padding:5px 6px;font-size:7.5pt;font-weight:900;color:#000;background:#CFD8DC!important;text-align:center;text-transform:uppercase;}
+    .net-val{border:1px solid #222!important;padding:5px 6px;font-size:8pt;font-weight:900;color:#000;background:#fff!important;text-align:center;}
+    .awords-box{border:1px solid #222!important;border-top:none!important;padding:5px 8px;font-size:7pt;font-weight:600;color:#000;background:#fff!important;}
+    .remarks-box{border:1px solid #222!important;border-top:none!important;padding:4px 8px;font-size:7pt;font-weight:800;color:#000;background:#fff!important;}
+    .sig-tbl{border:1px solid #222!important;border-top:none!important;}
+    .sig-lbl{border-right:1px solid #222!important;padding:4px 6px;font-size:7pt;font-weight:700;color:#000;background:#fff!important;height:32px;vertical-align:top;}
+    .sig-val{border-right:1px solid #222!important;padding:4px 6px;font-size:7pt;font-weight:600;color:#000;background:#fff!important;height:32px;vertical-align:bottom;}
+    .attachment-page{width:1122px!important;height:793px!important;overflow:hidden!important;}
     @page{size:A4 landscape;margin:6mm 7mm;}
     @media print{
       body{margin:0;padding:0;}
       .wrap{page-break-after:always;page-break-inside:avoid;}
-      .attachment-page{page-break-before:always!important;break-before:page!important;height:100vh!important;page-break-inside:avoid!important;break-inside:avoid!important;overflow:hidden!important;}
+      tbody tr{page-break-inside:avoid!important;break-inside:avoid!important;}
+      .attachment-page{page-break-before:always!important;break-before:page!important;height:793px!important;page-break-inside:avoid!important;break-inside:avoid!important;overflow:hidden!important;}
     }
   </style>
 </head>
@@ -573,14 +577,19 @@ export default function MonthSummaryPage() {
 
   // Renders a full HTML document inside a hidden iframe, captures it with
   // html2canvas + jsPDF, and returns the PDF as a Blob.
+  // Uses smart row-aware slicing to prevent table rows from being cut across pages.
   const renderHTMLToPDFBlob = (html: string): Promise<Blob> => {
     return new Promise((resolve, reject) => {
+      const SCALE = 2;
+      const A4_W_CSS = 1122;  // A4 landscape at 96dpi
+
       const iframe = document.createElement("iframe");
       iframe.style.position = "fixed";
       iframe.style.top = "0";
       iframe.style.left = "0";
-      iframe.style.width = "1122px";   // A4 landscape at 96dpi ≈ 1123px
-      iframe.style.height = "794px";
+      iframe.style.width = `${A4_W_CSS}px`;
+      // Tall enough that all content is in-viewport — getBoundingClientRect gives absolute positions
+      iframe.style.height = "20000px";
       iframe.style.opacity = "0";
       iframe.style.pointerEvents = "none";
       iframe.style.border = "none";
@@ -594,12 +603,12 @@ export default function MonthSummaryPage() {
       iDoc.write(html);
       iDoc.close();
 
-      // Wait for images inside the iframe to load
+      // Wait for all images inside the iframe to fully load
       const waitIframeImages = () => new Promise<void>((res) => {
         const imgs = Array.from(iDoc.getElementsByTagName("img"));
-        if (imgs.length === 0) { setTimeout(res, 300); return; }
+        if (imgs.length === 0) { setTimeout(res, 400); return; }
         let done = 0;
-        const check = () => { done++; if (done >= imgs.length) setTimeout(res, 300); };
+        const check = () => { done++; if (done >= imgs.length) setTimeout(res, 400); };
         imgs.forEach((img) => {
           if ((img as HTMLImageElement).complete) check();
           else { img.onload = check; img.onerror = check; }
@@ -612,13 +621,28 @@ export default function MonthSummaryPage() {
           const h2c = (window as any).html2canvas;
           const jsPDF = (window as any).jspdf?.jsPDF || (window as any).jsPDF;
 
-          // Capture the full scrollable body
           const body = iDoc.body;
           const totalHeight = body.scrollHeight;
-          const totalWidth = body.scrollWidth || 1122;
+          const totalWidth = A4_W_CSS;
 
+          // ── Collect row bottom boundaries (in CSS px, iframe-absolute) ──
+          // Since iframe height = 20000px all rows are in viewport → getBoundingClientRect is correct
+          const allRows = Array.from(iDoc.querySelectorAll("tbody tr"));
+          const rowBottomsPx: number[] = allRows.map(tr => {
+            const r = (tr as HTMLElement).getBoundingClientRect();
+            return Math.ceil(r.bottom);
+          });
+
+          // ── Collect attachment page top boundaries ──
+          const attachEls = Array.from(iDoc.querySelectorAll(".attachment-page"));
+          const attachTopsPx: number[] = attachEls.map(el => {
+            const r = (el as HTMLElement).getBoundingClientRect();
+            return Math.floor(r.top);
+          });
+
+          // ── Capture full-page canvas ──
           const canvas = await h2c(body, {
-            scale: 2,
+            scale: SCALE,
             useCORS: true,
             allowTaint: false,
             logging: false,
@@ -630,58 +654,87 @@ export default function MonthSummaryPage() {
             windowHeight: totalHeight,
           });
 
-          document.body.removeChild(iframe);
+          if (document.body.contains(iframe)) document.body.removeChild(iframe);
 
-          // A4 landscape dimensions in mm
-          const pageW = 297;
-          const pageH = 210;
-          const margin = 5;
-          const contentW = pageW - margin * 2;
-          const contentH = pageH - margin * 2;
+          // ── PDF page dimensions ──
+          const margin = 5;        // mm
+          const contentWmm = 287;  // 297 - 5*2
+          const contentHmm = 200;  // 210 - 5*2
 
-          // Scale image width to fit page content width
-          const imgWidthMM = contentW;
-          const imgHeightMM = (canvas.height / canvas.width) * contentW;
+          // Pixels per mm on the canvas (at scale 2)
+          const pxPerMM = canvas.width / contentWmm;
+          // Page height in canvas pixels
+          const pageHpx = contentHmm * pxPerMM;
 
           const pdf = new jsPDF({ unit: "mm", format: "a4", orientation: "landscape" });
-          let yOffset = 0;
           let firstPage = true;
+          let currentPx = 0;  // current Y position in canvas pixels
 
-          while (yOffset < imgHeightMM) {
+          while (currentPx < canvas.height) {
+            const idealEndPx = currentPx + pageHpx;
+
+            // ── Snap to row boundary to avoid cutting rows ──
+            let sliceEndPx = Math.min(idealEndPx, canvas.height);
+
+            // Check if an attachment page starts within this page window (snap to it)
+            const nextAttach = attachTopsPx.find(y => {
+              const yCanvas = y * SCALE;
+              return yCanvas > currentPx && yCanvas <= idealEndPx + pageHpx * 0.1;
+            });
+            if (nextAttach !== undefined) {
+              // Break page just before the attachment starts
+              const attachCanvasPx = nextAttach * SCALE;
+              if (attachCanvasPx > currentPx) sliceEndPx = Math.min(attachCanvasPx, canvas.height);
+            } else {
+              // Find the last tbody row that COMPLETELY fits within this page
+              const fittingBottoms = rowBottomsPx
+                .map(y => y * SCALE)
+                .filter(y => y > currentPx && y <= idealEndPx);
+              if (fittingBottoms.length > 0) {
+                sliceEndPx = fittingBottoms[fittingBottoms.length - 1];
+              }
+              // If no row fits (single row taller than page), cut at ideal end
+            }
+
+            sliceEndPx = Math.min(sliceEndPx, canvas.height);
+            // Safety: never get stuck in an infinite loop
+            if (sliceEndPx <= currentPx) sliceEndPx = Math.min(currentPx + pageHpx, canvas.height);
+
+            const sliceH = Math.ceil(sliceEndPx - currentPx);
+
             if (!firstPage) pdf.addPage();
             firstPage = false;
 
-            // Source slice in px on the canvas
-            const srcY = (yOffset / imgHeightMM) * canvas.height;
-            const srcH = (contentH / imgHeightMM) * canvas.height;
-
             const sliceCanvas = document.createElement("canvas");
             sliceCanvas.width = canvas.width;
-            sliceCanvas.height = Math.min(srcH, canvas.height - srcY);
+            sliceCanvas.height = sliceH;
             const ctx = sliceCanvas.getContext("2d")!;
-            ctx.drawImage(canvas, 0, srcY, canvas.width, sliceCanvas.height, 0, 0, canvas.width, sliceCanvas.height);
-            const sliceData = sliceCanvas.toDataURL("image/jpeg", 0.95);
-            const sliceHeightMM = (sliceCanvas.height / canvas.width) * contentW;
+            ctx.fillStyle = "#ffffff";
+            ctx.fillRect(0, 0, sliceCanvas.width, sliceCanvas.height);
+            ctx.drawImage(canvas, 0, currentPx, canvas.width, sliceH, 0, 0, canvas.width, sliceH);
 
-            pdf.addImage(sliceData, "JPEG", margin, margin, imgWidthMM, sliceHeightMM);
-            yOffset += contentH;
+            const sliceData = sliceCanvas.toDataURL("image/jpeg", 0.96);
+            const sliceHmm = (sliceH / canvas.width) * contentWmm;
+
+            pdf.addImage(sliceData, "JPEG", margin, margin, contentWmm, sliceHmm);
+            currentPx = sliceEndPx;
           }
 
           resolve(pdf.output("blob"));
         } catch (e) {
-          document.body.removeChild(iframe);
+          if (document.body.contains(iframe)) document.body.removeChild(iframe);
           reject(e);
         }
       };
 
-      // Give the iframe time to fully render layout
+      // Trigger capture once iframe is fully rendered
       if (iframe.contentWindow) {
         iframe.contentWindow.onload = () => doCapture();
       }
-      // Fallback if onload already fired
+      // Fallback: if onload already fired before we could attach
       setTimeout(() => {
         if (iDoc.readyState === "complete") doCapture();
-      }, 800);
+      }, 1000);
     });
   };
 
