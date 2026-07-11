@@ -625,20 +625,32 @@ export default function MonthSummaryPage() {
           const totalHeight = body.scrollHeight;
           const totalWidth = A4_W_CSS;
 
-          // ── Collect row bottom boundaries (in CSS px, iframe-absolute) ──
-          // Since iframe height = 20000px all rows are in viewport → getBoundingClientRect is correct
+          // ── Minimum slice height (30 CSS px × scale) — skip thinner slices ──
+          const MIN_SLICE_PX = SCALE * 30;
+
+          // ── Collect tbody row bottom boundaries ──
           const allRows = Array.from(iDoc.querySelectorAll("tbody tr"));
           const rowBottomsPx: number[] = allRows.map(tr => {
-            const r = (tr as HTMLElement).getBoundingClientRect();
-            return Math.ceil(r.bottom);
+            return Math.ceil((tr as HTMLElement).getBoundingClientRect().bottom);
           });
 
-          // ── Collect attachment page top boundaries ──
+          // ── Also snap at the bottom of the main .wrap form div ──
+          // This prevents footer/totals/signatures spilling onto a new near-blank page
+          const wrapEl = iDoc.querySelector(".wrap");
+          if (wrapEl) {
+            rowBottomsPx.push(Math.ceil((wrapEl as HTMLElement).getBoundingClientRect().bottom));
+          }
+          rowBottomsPx.sort((a, b) => a - b);
+
+          // ── Collect attachment top AND bottom boundaries ──
           const attachEls = Array.from(iDoc.querySelectorAll(".attachment-page"));
-          const attachTopsPx: number[] = attachEls.map(el => {
-            const r = (el as HTMLElement).getBoundingClientRect();
-            return Math.floor(r.top);
-          });
+          const attachTopsPx: number[] = attachEls.map(el =>
+            Math.floor((el as HTMLElement).getBoundingClientRect().top)
+          );
+          // The effective end of content = bottom of last attachment (or end of wrap)
+          const lastAttachBottom = attachEls.length > 0
+            ? Math.ceil((attachEls[attachEls.length - 1] as HTMLElement).getBoundingClientRect().bottom)
+            : null;
 
           // ── Capture full-page canvas ──
           const canvas = await h2c(body, {
@@ -656,51 +668,57 @@ export default function MonthSummaryPage() {
 
           if (document.body.contains(iframe)) document.body.removeChild(iframe);
 
+          // The true end of meaningful content in canvas pixels
+          const contentEndPx = lastAttachBottom !== null
+            ? Math.min(lastAttachBottom * SCALE, canvas.height)
+            : (wrapEl ? Math.min(Math.ceil((wrapEl as HTMLElement).getBoundingClientRect().bottom) * SCALE, canvas.height) : canvas.height);
+
           // ── PDF page dimensions ──
           const margin = 5;        // mm
           const contentWmm = 287;  // 297 - 5*2
           const contentHmm = 200;  // 210 - 5*2
-
-          // Pixels per mm on the canvas (at scale 2)
           const pxPerMM = canvas.width / contentWmm;
-          // Page height in canvas pixels
           const pageHpx = contentHmm * pxPerMM;
 
           const pdf = new jsPDF({ unit: "mm", format: "a4", orientation: "landscape" });
           let firstPage = true;
-          let currentPx = 0;  // current Y position in canvas pixels
+          let currentPx = 0;
 
-          while (currentPx < canvas.height) {
+          // Only iterate up to the end of real content — ignore trailing whitespace
+          while (currentPx < contentEndPx - MIN_SLICE_PX) {
             const idealEndPx = currentPx + pageHpx;
 
-            // ── Snap to row boundary to avoid cutting rows ──
-            let sliceEndPx = Math.min(idealEndPx, canvas.height);
+            let sliceEndPx = Math.min(idealEndPx, contentEndPx);
 
-            // Check if an attachment page starts within this page window (snap to it)
+            // ── Priority 1: Snap to attachment start (hard page boundary) ──
             const nextAttach = attachTopsPx.find(y => {
               const yCanvas = y * SCALE;
-              return yCanvas > currentPx && yCanvas <= idealEndPx + pageHpx * 0.1;
+              return yCanvas > currentPx + MIN_SLICE_PX && yCanvas <= idealEndPx + pageHpx * 0.15;
             });
             if (nextAttach !== undefined) {
-              // Break page just before the attachment starts
               const attachCanvasPx = nextAttach * SCALE;
-              if (attachCanvasPx > currentPx) sliceEndPx = Math.min(attachCanvasPx, canvas.height);
+              sliceEndPx = Math.min(attachCanvasPx, contentEndPx);
             } else {
-              // Find the last tbody row that COMPLETELY fits within this page
+              // ── Priority 2: Snap to last row/.wrap bottom that fits this page ──
               const fittingBottoms = rowBottomsPx
                 .map(y => y * SCALE)
-                .filter(y => y > currentPx && y <= idealEndPx);
+                .filter(y => y > currentPx + MIN_SLICE_PX && y <= idealEndPx);
               if (fittingBottoms.length > 0) {
                 sliceEndPx = fittingBottoms[fittingBottoms.length - 1];
               }
-              // If no row fits (single row taller than page), cut at ideal end
             }
 
-            sliceEndPx = Math.min(sliceEndPx, canvas.height);
-            // Safety: never get stuck in an infinite loop
-            if (sliceEndPx <= currentPx) sliceEndPx = Math.min(currentPx + pageHpx, canvas.height);
+            sliceEndPx = Math.min(sliceEndPx, contentEndPx);
+            // Safety guard — never infinite-loop
+            if (sliceEndPx <= currentPx) sliceEndPx = Math.min(currentPx + pageHpx, contentEndPx);
 
             const sliceH = Math.ceil(sliceEndPx - currentPx);
+
+            // Skip near-empty slices (e.g. just a border line)
+            if (sliceH < MIN_SLICE_PX) {
+              currentPx = sliceEndPx;
+              continue;
+            }
 
             if (!firstPage) pdf.addPage();
             firstPage = false;
