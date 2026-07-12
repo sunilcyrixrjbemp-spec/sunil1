@@ -26,17 +26,6 @@ export async function runMigrations(db) {
       created_at TEXT
     )`,
 
-    // Notifications table (required for alerts)
-    `CREATE TABLE IF NOT EXISTS notifications (
-      id INTEGER PRIMARY KEY AUTOINCREMENT,
-      user_id TEXT NOT NULL,
-      title TEXT NOT NULL,
-      description TEXT NOT NULL,
-      type TEXT DEFAULT 'info',
-      read INTEGER DEFAULT 0,
-      link TEXT,
-      created_at TEXT DEFAULT CURRENT_TIMESTAMP
-    )`,
     // KPI Appraisals table (to store performance appraisal data)
     `CREATE TABLE IF NOT EXISTS kpi_appraisals (
       user_id TEXT NOT NULL,
@@ -199,8 +188,6 @@ export async function runMigrations(db) {
     // Approvals — pending lookups
     `CREATE INDEX IF NOT EXISTS idx_approvals_approver_status ON approvals(approver_id, status)`,
     `CREATE INDEX IF NOT EXISTS idx_approvals_expense_status ON approvals(expense_id, status)`,
-    // Notifications — unread count (shown on every page)
-    `CREATE INDEX IF NOT EXISTS idx_notifications_user_read ON notifications(user_id, read)`,
     // Hierarchy tables
     `CREATE INDEX IF NOT EXISTS idx_hier_approvers_approver ON hierarchy_approvers(approver_id)`,
     `CREATE INDEX IF NOT EXISTS idx_hier_requesters_user ON hierarchy_requesters(user_id)`,

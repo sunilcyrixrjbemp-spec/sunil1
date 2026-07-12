@@ -2,7 +2,9 @@ import { verifyPassword, signJwt, verifyJwt, getPasswordHash } from "../utils/se
 import { DESIGNATIONS, ZONE_DISTRICTS, ROLES, MONTH_NAMES } from "../utils/constants.js";
 import { getExpenseInitData } from "./expense.js";
 import { fetchPendingApprovals } from "./approval.js";
-import { runWrite, runBatchWrite } from "../utils/db.js";
+import { getDrizzleDb } from "../db/client.js";
+import { users, userRoles, passwordHistories, allowanceMaster, expenses, loginLogs, hierarchyApprovers, hierarchyRequesters } from "../db/schema.js";
+import { eq, and, or, sql, desc, inArray } from "drizzle-orm";
 
 /**
  * Helper to build JSON responses in routes
@@ -15,26 +17,29 @@ function jsonResponse(data, status = 200) {
 }
 
 /**
- * Helper to log login attempts to db
- * Uses runWrite() to ensure replication to Primary DB
+ * Audit log login attempts to database
  */
-async function logLogin(env, userId, ipAddress, userAgent, status) {
+async function logLogin(env, userCode, ipAddress, userAgent, status) {
+  const timestamp = new Date().toISOString();
   try {
-    const timestamp = new Date().toISOString();
-    await runWrite(env, `
-      INSERT INTO login_logs (user_id, ip_address, user_agent, status, created_at)
-      VALUES (?, ?, ?, ?, ?)
-    `, [userId, ipAddress, userAgent, status, timestamp]);
+    const db = getDrizzleDb(env);
+    await db.insert(loginLogs).values({
+      userId: userCode,
+      ipAddress,
+      userAgent,
+      status,
+      createdAt: timestamp
+    });
   } catch (e) {
-    console.error("Failed to log login:", e);
+    console.error("Login logging failed:", e);
   }
 }
 
 /**
- * Resolves manager, zonal_manager, and coordinator e_codes/user_ids to actual User Names.
- * OPTIMIZED: Uses a single query instead of 3 sequential queries.
+ * Resolve manager/coordinator/zonal_manager codes into full names
  */
-async function resolveUserHierarchyNames(env, user) {
+async function resolveUserHierarchyNames(env, user, request = null) {
+  const db = getDrizzleDb(env, request);
   const fields = ["manager", "zonal_manager", "coordinator"];
   const values = fields
     .map(f => (user[f] || "").trim().toLowerCase())
@@ -42,19 +47,22 @@ async function resolveUserHierarchyNames(env, user) {
 
   if (values.length === 0) return;
 
-  // Fetch all in one query
-  const placeholders = values.map(() => "?").join(",");
-  const allResolved = await env.DB.prepare(`
-    SELECT name, user_id, e_code FROM users 
-    WHERE LOWER(TRIM(user_id)) IN (${placeholders}) 
-       OR LOWER(TRIM(e_code)) IN (${placeholders}) 
-       OR LOWER(TRIM(name)) IN (${placeholders})
-  `).bind(...values, ...values, ...values).all();
+  const allResolved = await db.select({
+    name: users.name,
+    userId: users.userId,
+    eCode: users.eCode
+  })
+  .from(users)
+  .where(or(
+    inArray(sql`lower(trim(${users.userId}))`, values),
+    inArray(sql`lower(trim(${users.eCode}))`, values),
+    inArray(sql`lower(trim(${users.name}))`, values)
+  ));
 
   const resolvedMap = {};
-  for (const r of (allResolved.results || [])) {
-    if (r.user_id) resolvedMap[r.user_id.toLowerCase()] = r.name;
-    if (r.e_code) resolvedMap[r.e_code.toLowerCase()] = r.name;
+  for (const r of allResolved) {
+    if (r.userId) resolvedMap[r.userId.toLowerCase()] = r.name;
+    if (r.eCode) resolvedMap[r.eCode.toLowerCase()] = r.name;
     if (r.name) resolvedMap[r.name.toLowerCase()] = r.name;
   }
 
@@ -69,7 +77,8 @@ async function resolveUserHierarchyNames(env, user) {
 /**
  * Pre-fetches bootstrap dashboard parameters concurrently
  */
-export async function getBootstrapDataHelper(env, user) {
+export async function getBootstrapDataHelper(env, user, request = null) {
+  const db = getDrizzleDb(env, request);
   const allowedWindows = user.allowed_windows ? user.allowed_windows.split(",").map(w => w.trim().toLowerCase()) : [];
   
   const nameClean = (user.name || "").trim();
@@ -77,41 +86,48 @@ export async function getBootstrapDataHelper(env, user) {
 
   // Check direct reports + hierarchy approver in PARALLEL
   const [hasDirectReportsResult, isHierarchyApproverResult] = await Promise.all([
-    env.DB.prepare(`
-      SELECT id FROM users
-      WHERE LOWER(TRIM(manager)) = ? OR LOWER(TRIM(manager)) = ?
-         OR LOWER(TRIM(coordinator)) = ? OR LOWER(TRIM(coordinator)) = ?
-         OR LOWER(TRIM(zonal_manager)) = ? OR LOWER(TRIM(zonal_manager)) = ?
-      LIMIT 1
-    `).bind(nameClean.toLowerCase(), uidClean.toLowerCase(), nameClean.toLowerCase(), uidClean.toLowerCase(), nameClean.toLowerCase(), uidClean.toLowerCase()).first(),
-    env.DB.prepare(`
-      SELECT id FROM hierarchy_approvers WHERE approver_id = ? LIMIT 1
-    `).bind(user.id).first()
+    db.select({ id: users.id })
+      .from(users)
+      .where(or(
+        eq(sql`lower(trim(${users.manager}))`, nameClean.toLowerCase()),
+        eq(sql`lower(trim(${users.manager}))`, uidClean.toLowerCase()),
+        eq(sql`lower(trim(${users.coordinator}))`, nameClean.toLowerCase()),
+        eq(sql`lower(trim(${users.coordinator}))`, uidClean.toLowerCase()),
+        eq(sql`lower(trim(${users.zonalManager}))`, nameClean.toLowerCase()),
+        eq(sql`lower(trim(${users.zonalManager}))`, uidClean.toLowerCase())
+      ))
+      .limit(1),
+    db.select({ id: hierarchyApprovers.id })
+      .from(hierarchyApprovers)
+      .where(eq(hierarchyApprovers.approverId, user.id))
+      .limit(1)
   ]);
 
-  const hasDirectReports = !!hasDirectReportsResult;
-  const isHierarchyApprover = !!isHierarchyApproverResult;
+  const hasDirectReports = hasDirectReportsResult.length > 0;
+  const isHierarchyApprover = isHierarchyApproverResult.length > 0;
 
   const isTeamLead = user.role === "Admin" || allowedWindows.includes("approval") || hasDirectReports || isHierarchyApprover;
 
-  // Run all independent bootstrap queries in PARALLEL
   const now = new Date();
   const currentMonthName = MONTH_NAMES[now.getMonth()];
   const currentYear = now.getFullYear();
   const monthStr = now.toISOString().slice(0, 7); // YYYY-MM
 
-  // Limit my_expenses to last 3 months to avoid loading entire history
   const threeMonthsAgo = new Date(now.getFullYear(), now.getMonth() - 2, 1).toISOString();
 
   const [gradesRows, myExpensesResult, expenseInit] = await Promise.all([
-    env.DB.prepare("SELECT DISTINCT grade FROM allowance_master").all(),
-    env.DB.prepare(
-      "SELECT * FROM expenses WHERE user_id = ? AND created_at >= ? ORDER BY id DESC LIMIT 50"
-    ).bind(user.id, threeMonthsAgo).all(),
+    db.select({ grade: allowanceMaster.grade }).from(allowanceMaster),
+    db.select().from(expenses)
+      .where(and(
+        eq(expenses.userId, user.id),
+        sql`${expenses.createdAt} >= ${threeMonthsAgo}`
+      ))
+      .orderBy(desc(expenses.id))
+      .limit(50),
     getExpenseInitData(env, user, monthStr)
   ]);
 
-  const grades = (gradesRows.results || []).map(r => r.grade).filter(Boolean).sort();
+  const grades = Array.from(new Set(gradesRows.map(r => r.grade))).filter(Boolean).sort();
   const dropdowns = {
     designations: DESIGNATIONS,
     zones: ZONE_DISTRICTS,
@@ -119,43 +135,122 @@ export async function getBootstrapDataHelper(env, user) {
     grades: grades.length ? grades : ["A", "B", "C", "D"]
   };
 
-  const myExpenses = myExpensesResult.results || [];
+  const myExpenses = myExpensesResult.map(e => ({
+    ...e,
+    user_id: e.userId,
+    travel_mode: e.travelMode,
+    expense_code: e.expenseCode,
+    da_amount: e.daAmount,
+    hotel_amount: e.hotelAmount,
+    other_expense_amount: e.otherExpenseAmount,
+    calls_assigned: e.callsAssigned,
+    calls_completed: e.callsCompleted,
+    pms_count: e.pmsCount,
+    asset_tagging: e.assetTagging,
+    local_purchase_amount: e.localPurchaseAmount,
+    original_amount: e.originalAmount,
+    original_da_amount: e.originalDaAmount,
+    original_hotel_amount: e.originalHotelAmount,
+    original_other_expense_amount: e.originalOtherExpenseAmount,
+    original_local_purchase_amount: e.originalLocalPurchaseAmount,
+    calibration_count: e.calibrationCount,
+    mobilise_count: e.mobiliseCount,
+    created_at: e.createdAt,
+    updated_at: e.updatedAt
+  }));
 
-  // 4. Fetch team expenses and pending approvals
   let teamExpenses = [];
   let pendingApprovals = [];
   if (isTeamLead) {
     if (user.role === "Admin") {
-      // Admin: only load current month to avoid massive full-table scan
-      const teamRes = await env.DB.prepare(
-        "SELECT e.*, u.name as employee_name FROM expenses e JOIN users u ON e.user_id = u.id WHERE e.year = ? AND e.month = ? ORDER BY e.id DESC LIMIT 10000"
-      ).bind(currentYear, currentMonthName).all();
-      teamExpenses = teamRes.results || [];
+      const teamRes = await db.select({
+        id: expenses.id,
+        userId: expenses.userId,
+        month: expenses.month,
+        year: expenses.year,
+        amount: expenses.amount,
+        status: expenses.status,
+        travelMode: expenses.travelMode,
+        itinerary: expenses.itinerary,
+        description: expenses.description,
+        expenseCode: expenses.expenseCode,
+        daAmount: expenses.daAmount,
+        hotelAmount: expenses.hotelAmount,
+        otherExpenseAmount: expenses.otherExpenseAmount,
+        callsAssigned: expenses.callsAssigned,
+        callsCompleted: expenses.callsCompleted,
+        pmsCount: expenses.pmsCount,
+        assetTagging: expenses.assetTagging,
+        localPurchaseAmount: expenses.localPurchaseAmount,
+        originalAmount: expenses.originalAmount,
+        originalDaAmount: expenses.originalDaAmount,
+        originalHotelAmount: expenses.originalHotelAmount,
+        originalOtherExpenseAmount: expenses.originalOtherExpenseAmount,
+        originalLocalPurchaseAmount: expenses.originalLocalPurchaseAmount,
+        calibrationCount: expenses.calibrationCount,
+        mobiliseCount: expenses.mobiliseCount,
+        createdAt: expenses.createdAt,
+        updatedAt: expenses.updatedAt,
+        employee_name: users.name
+      })
+      .from(expenses)
+      .join(users, eq(expenses.userId, users.id))
+      .where(and(
+        eq(expenses.year, currentYear),
+        eq(expenses.month, currentMonthName)
+      ))
+      .orderBy(desc(expenses.id))
+      .limit(10000);
+      
+      teamExpenses = teamRes.map(e => ({
+        ...e,
+        user_id: e.userId,
+        travel_mode: e.travelMode,
+        expense_code: e.expenseCode,
+        da_amount: e.daAmount,
+        hotel_amount: e.hotelAmount,
+        other_expense_amount: e.otherExpenseAmount,
+        calls_assigned: e.callsAssigned,
+        calls_completed: e.callsCompleted,
+        pms_count: e.pmsCount,
+        asset_tagging: e.assetTagging,
+        local_purchase_amount: e.localPurchaseAmount,
+        original_amount: e.originalAmount,
+        original_da_amount: e.originalDaAmount,
+        original_hotel_amount: e.originalHotelAmount,
+        original_other_expense_amount: e.originalOtherExpenseAmount,
+        original_local_purchase_amount: e.originalLocalPurchaseAmount,
+        calibration_count: e.calibrationCount,
+        mobilise_count: e.mobiliseCount,
+        created_at: e.createdAt,
+        updated_at: e.updatedAt
+      }));
     } else {
-      // Find team user IDs exactly like handleGetTeamExpenses does
       const [directReportsRes, hierarchyApprovals] = await Promise.all([
-        env.DB.prepare(`
-          SELECT id FROM users
-          WHERE LOWER(TRIM(manager)) = ? OR LOWER(TRIM(manager)) = ?
-             OR LOWER(TRIM(coordinator)) = ? OR LOWER(TRIM(coordinator)) = ?
-             OR LOWER(TRIM(zonal_manager)) = ? OR LOWER(TRIM(zonal_manager)) = ?
-        `).bind(nameClean.toLowerCase(), uidClean.toLowerCase(), nameClean.toLowerCase(), uidClean.toLowerCase(), nameClean.toLowerCase(), uidClean.toLowerCase()).all(),
-        env.DB.prepare(`
-          SELECT hierarchy_id FROM hierarchy_approvers WHERE approver_id = ?
-        `).bind(user.id).all()
+        db.select({ id: users.id })
+          .from(users)
+          .where(or(
+            eq(sql`lower(trim(${users.manager}))`, nameClean.toLowerCase()),
+            eq(sql`lower(trim(${users.manager}))`, uidClean.toLowerCase()),
+            eq(sql`lower(trim(${users.coordinator}))`, nameClean.toLowerCase()),
+            eq(sql`lower(trim(${users.coordinator}))`, uidClean.toLowerCase()),
+            eq(sql`lower(trim(${users.zonalManager}))`, nameClean.toLowerCase()),
+            eq(sql`lower(trim(${users.zonalManager}))`, uidClean.toLowerCase())
+          )),
+        db.select({ hierarchyId: hierarchyApprovers.hierarchyId })
+          .from(hierarchyApprovers)
+          .where(eq(hierarchyApprovers.approverId, user.id))
       ]);
 
-      const directReportsIds = (directReportsRes.results || []).map(r => r.id);
+      const directReportsIds = directReportsRes.map(r => r.id);
       
       let hierarchyReportsIds = [];
-      if (hierarchyApprovals.results && hierarchyApprovals.results.length > 0) {
-        const hIds = hierarchyApprovals.results.map(h => h.hierarchy_id);
-        const placeholders = hIds.map(() => "?").join(",");
-        const reqsRes = await env.DB.prepare(`
-          SELECT hr.user_id FROM hierarchy_requesters hr
-          WHERE hr.hierarchy_id IN (${placeholders})
-        `).bind(...hIds).all();
-        hierarchyReportsIds = (reqsRes.results || []).map(r => r.user_id);
+      if (hierarchyApprovals.length > 0) {
+        const hIds = hierarchyApprovals.map(h => h.hierarchyId);
+        const reqsRes = await db.select({ userId: hierarchyRequesters.userId })
+          .from(hierarchyRequesters)
+          .where(inArray(hierarchyRequesters.hierarchyId, hIds));
+        hierarchyReportsIds = reqsRes.map(r => r.userId);
       }
 
       const teamUserIdsSet = new Set([...directReportsIds, ...hierarchyReportsIds]);
@@ -163,24 +258,74 @@ export async function getBootstrapDataHelper(env, user) {
       const teamUserIds = Array.from(teamUserIdsSet);
 
       if (teamUserIds.length > 0) {
-        const placeholders = teamUserIds.map(() => "?").join(",");
-        const teamRes = await env.DB.prepare(`
-          SELECT e.*, u.name as employee_name 
-          FROM expenses e
-          JOIN users u ON e.user_id = u.id
-          WHERE e.user_id IN (${placeholders})
-            AND e.year = ? AND e.month = ?
-          ORDER BY e.id DESC LIMIT 5000
-        `).bind(...teamUserIds, currentYear, currentMonthName).all();
-        teamExpenses = teamRes.results || [];
-      } else {
-        teamExpenses = [];
+        const teamRes = await db.select({
+          id: expenses.id,
+          userId: expenses.userId,
+          month: expenses.month,
+          year: expenses.year,
+          amount: expenses.amount,
+          status: expenses.status,
+          travelMode: expenses.travelMode,
+          itinerary: expenses.itinerary,
+          description: expenses.description,
+          expenseCode: expenses.expenseCode,
+          daAmount: expenses.daAmount,
+          hotelAmount: expenses.hotelAmount,
+          otherExpenseAmount: expenses.otherExpenseAmount,
+          callsAssigned: expenses.callsAssigned,
+          callsCompleted: expenses.callsCompleted,
+          pmsCount: expenses.pmsCount,
+          assetTagging: expenses.assetTagging,
+          localPurchaseAmount: expenses.localPurchaseAmount,
+          originalAmount: expenses.originalAmount,
+          originalDaAmount: expenses.originalDaAmount,
+          originalHotelAmount: expenses.originalHotelAmount,
+          originalOtherExpenseAmount: expenses.originalOtherExpenseAmount,
+          originalLocalPurchaseAmount: expenses.originalLocalPurchaseAmount,
+          calibrationCount: expenses.calibrationCount,
+          mobiliseCount: expenses.mobiliseCount,
+          createdAt: expenses.createdAt,
+          updatedAt: expenses.updatedAt,
+          employee_name: users.name
+        })
+        .from(expenses)
+        .join(users, eq(expenses.userId, users.id))
+        .where(and(
+          inArray(expenses.userId, teamUserIds),
+          eq(expenses.year, currentYear),
+          eq(expenses.month, currentMonthName)
+        ))
+        .orderBy(desc(expenses.id))
+        .limit(5000);
+        
+        teamExpenses = teamRes.map(e => ({
+          ...e,
+          user_id: e.userId,
+          travel_mode: e.travelMode,
+          expense_code: e.expenseCode,
+          da_amount: e.daAmount,
+          hotel_amount: e.hotelAmount,
+          other_expense_amount: e.otherExpenseAmount,
+          calls_assigned: e.callsAssigned,
+          calls_completed: e.callsCompleted,
+          pms_count: e.pmsCount,
+          asset_tagging: e.assetTagging,
+          local_purchase_amount: e.localPurchaseAmount,
+          original_amount: e.originalAmount,
+          original_da_amount: e.originalDaAmount,
+          original_hotel_amount: e.originalHotelAmount,
+          original_other_expense_amount: e.originalOtherExpenseAmount,
+          original_local_purchase_amount: e.originalLocalPurchaseAmount,
+          calibration_count: e.calibrationCount,
+          mobilise_count: e.mobiliseCount,
+          created_at: e.createdAt,
+          updated_at: e.updatedAt
+        }));
       }
     }
     pendingApprovals = await fetchPendingApprovals(env, user);
   }
 
-  // 5. Compile allowance stats
   let allowanceStats = null;
   if (expenseInit && expenseInit.allowance) {
     const allowance = expenseInit.allowance;
@@ -210,6 +355,7 @@ export async function getBootstrapDataHelper(env, user) {
  * POST /api/auth/login
  */
 export async function handleLogin(request, env, params, query) {
+  const db = getDrizzleDb(env, request);
   let body;
   try {
     body = await request.json();
@@ -226,34 +372,52 @@ export async function handleLogin(request, env, params, query) {
   }
 
   // 1. Fetch user from DB
-  const user = await env.DB.prepare("SELECT * FROM users WHERE user_id = ?").bind(user_id).first();
+  const [user] = await db.select().from(users).where(eq(users.userId, user_id)).limit(1);
   if (!user) {
     await logLogin(env, user_id, ipAddress, userAgent, "failed");
     return jsonResponse({ error: "Invalid User ID or Password", detail: "Invalid User ID or Password" }, 401);
   }
 
+  // Format properties for backward compatibility
+  const compatibleUser = {
+    ...user,
+    user_id: user.userId,
+    hashed_password: user.hashedPassword,
+    user_status: user.userStatus,
+    failed_attempt: user.failedAttempt,
+    active_session_id: user.activeSessionId,
+    date_of_birth: user.dateOfBirth,
+    date_of_joining: user.dateOfJoining,
+    mobile_number: user.mobileNumber,
+    mail_id: user.mailId
+  };
+
   // 2. Check user status
-  if (user.user_status === "disabled") {
+  if (compatibleUser.user_status === "disabled") {
     await logLogin(env, user_id, ipAddress, userAgent, "failed");
     return jsonResponse({ error: "Your account is disabled. Please contact the administrator.", detail: "Your account is disabled. Please contact the administrator." }, 403);
   }
 
-  if (user.user_status === "locked") {
+  if (compatibleUser.user_status === "locked") {
     await logLogin(env, user_id, ipAddress, userAgent, "locked");
     return jsonResponse({ error: "Your account is locked. Please use the Unlock Account option.", detail: "Your account is locked. Please use the Unlock Account option." }, 403);
   }
 
   // 3. Verify password
-  const passwordCorrect = await verifyPassword(password, user.hashed_password);
+  const passwordCorrect = await verifyPassword(password, compatibleUser.hashed_password);
   if (!passwordCorrect) {
-    const failedAttempts = (user.failed_attempt || 0) + 1;
+    const failedAttempts = (compatibleUser.failed_attempt || 0) + 1;
     
     if (failedAttempts >= 5) {
-      await runWrite(env, "UPDATE users SET failed_attempt = ?, user_status = 'locked' WHERE user_id = ?", [failedAttempts, user_id]);
+      await db.update(users)
+        .set({ failedAttempt: failedAttempts, userStatus: 'locked' })
+        .where(eq(users.userId, user_id));
       await logLogin(env, user_id, ipAddress, userAgent, "locked");
       return jsonResponse({ error: "Your account has been locked due to 5 failed login attempts.", detail: "Your account has been locked due to 5 failed login attempts." }, 403);
     } else {
-      await runWrite(env, "UPDATE users SET failed_attempt = ? WHERE user_id = ?", [failedAttempts, user_id]);
+      await db.update(users)
+        .set({ failedAttempt: failedAttempts })
+        .where(eq(users.userId, user_id));
       await logLogin(env, user_id, ipAddress, userAgent, "failed");
       const attemptsLeft = 5 - failedAttempts;
       return jsonResponse({ error: `Invalid User ID or Password. ${attemptsLeft} attempts remaining.`, detail: `Invalid User ID or Password. ${attemptsLeft} attempts remaining.` }, 401);
@@ -261,13 +425,15 @@ export async function handleLogin(request, env, params, query) {
   }
 
   // 4. Single session validation
-  if (user.active_session_id && !force) {
+  if (compatibleUser.active_session_id && !force) {
     return jsonResponse({ error: "ALREADY_LOGGED_IN" }, 409);
   }
 
   // 5. Success - generate new active session ID
   const sessionId = crypto.randomUUID();
-  await runWrite(env, "UPDATE users SET active_session_id = ?, failed_attempt = 0 WHERE user_id = ?", [sessionId, user_id]);
+  await db.update(users)
+    .set({ activeSessionId: sessionId, failedAttempt: 0 })
+    .where(eq(users.userId, user_id));
   
   await logLogin(env, user_id, ipAddress, userAgent, "success");
 
@@ -276,27 +442,46 @@ export async function handleLogin(request, env, params, query) {
   const accessExp = Math.floor(Date.now() / 1000) + 30 * 24 * 60 * 60; // 30 Days
   const refreshExp = Math.floor(Date.now() / 1000) + 365 * 24 * 60 * 60; // 365 Days
 
-  const accessToken = await signJwt({ sub: user.user_id, sid: sessionId, exp: accessExp, type: "access" }, secretKey);
-  const refreshToken = await signJwt({ sub: user.user_id, sid: sessionId, exp: refreshExp, type: "refresh" }, secretKey);
+  const accessToken = await signJwt({ sub: compatibleUser.user_id, sid: sessionId, exp: accessExp, type: "access" }, secretKey);
+  const refreshToken = await signJwt({ sub: compatibleUser.user_id, sid: sessionId, exp: refreshExp, type: "refresh" }, secretKey);
 
   // Fetch role
-  const roleRow = await env.DB.prepare("SELECT role FROM user_roles WHERE user_id = ?").bind(user_id).first();
-  user.role = roleRow?.role || "user";
+  const [roleRow] = await db.select({ role: userRoles.role })
+    .from(userRoles)
+    .where(eq(userRoles.userId, user_id))
+    .limit(1);
+  compatibleUser.role = roleRow?.role || "user";
 
   // Resolve manager/zonal_manager/coordinator names if they contain e_codes
-  await resolveUserHierarchyNames(env, user);
+  await resolveUserHierarchyNames(env, compatibleUser, request);
 
   // Prefetch bootstrap data for instant frontend load
-  const bootstrapData = await getBootstrapDataHelper(env, user);
+  const bootstrapData = await getBootstrapDataHelper(env, compatibleUser, request);
 
-  const profile = { ...user };
+  const profile = { ...compatibleUser };
   delete profile.hashed_password;
+
+  const formattedProfile = {
+    ...profile,
+    user_id: profile.userId,
+    e_code: profile.eCode,
+    user_status: profile.userStatus,
+    mobile_number: profile.mobileNumber,
+    mail_id: profile.mailId,
+    date_of_joining: profile.dateOfJoining,
+    date_of_birth: profile.dateOfBirth,
+    e_upkaran_id: profile.eUpkaranId,
+    allowed_windows: profile.allowedWindows,
+    profile_photo: profile.profilePhoto,
+    created_at: profile.createdAt,
+    updated_at: profile.updatedAt
+  };
 
   return jsonResponse({
     access_token: accessToken,
     refresh_token: refreshToken,
     token_type: "bearer",
-    user: profile,
+    user: formattedProfile,
     bootstrap_data: bootstrapData
   });
 }
@@ -305,6 +490,7 @@ export async function handleLogin(request, env, params, query) {
  * POST /api/auth/refresh
  */
 export async function handleRefresh(request, env, params, query) {
+  const db = getDrizzleDb(env, request);
   let body;
   try {
     body = await request.json();
@@ -322,19 +508,19 @@ export async function handleRefresh(request, env, params, query) {
     return jsonResponse({ error: "Invalid or expired refresh token" }, 401);
   }
 
-  const user = await env.DB.prepare("SELECT * FROM users WHERE user_id = ?").bind(payload.sub).first();
-  if (!user || user.active_session_id !== payload.sid) {
+  const [user] = await db.select().from(users).where(eq(users.userId, payload.sub)).limit(1);
+  if (!user || user.activeSessionId !== payload.sid) {
     return jsonResponse({ error: "Session expired or invalid" }, 401);
   }
 
   const sessionId = crypto.randomUUID();
-  await runWrite(env, "UPDATE users SET active_session_id = ? WHERE user_id = ?", [sessionId, user.user_id]);
+  await db.update(users).set({ activeSessionId: sessionId }).where(eq(users.userId, user.userId));
 
   const accessExp = Math.floor(Date.now() / 1000) + 30 * 24 * 60 * 60;
   const refreshExp = Math.floor(Date.now() / 1000) + 365 * 24 * 60 * 60;
 
-  const accessToken = await signJwt({ sub: user.user_id, sid: sessionId, exp: accessExp, type: "access" }, env.API_SECRET);
-  const newRefreshToken = await signJwt({ sub: user.user_id, sid: sessionId, exp: refreshExp, type: "refresh" }, env.API_SECRET);
+  const accessToken = await signJwt({ sub: user.userId, sid: sessionId, exp: accessExp, type: "access" }, env.API_SECRET);
+  const newRefreshToken = await signJwt({ sub: user.userId, sid: sessionId, exp: refreshExp, type: "refresh" }, env.API_SECRET);
 
   return jsonResponse({
     access_token: accessToken,
@@ -347,7 +533,7 @@ export async function handleRefresh(request, env, params, query) {
  * GET /api/auth/bootstrap
  */
 export async function handleBootstrap(request, env, params, query, user) {
-  const bootstrapData = await getBootstrapDataHelper(env, user);
+  const bootstrapData = await getBootstrapDataHelper(env, user, request);
   return jsonResponse(bootstrapData);
 }
 
@@ -355,10 +541,10 @@ export async function handleBootstrap(request, env, params, query, user) {
  * POST /api/auth/logout
  */
 export async function handleLogout(request, env, params, query, user) {
+  const db = getDrizzleDb(env, request);
   try {
-    // Clear active session ID for the user
     if (user && user.user_id) {
-      await runWrite(env, "UPDATE users SET active_session_id = NULL WHERE user_id = ?", [user.user_id]);
+      await db.update(users).set({ activeSessionId: null }).where(eq(users.userId, user.user_id));
     }
   } catch (e) {
     console.warn("Logout DB error:", e);
@@ -371,8 +557,9 @@ export async function handleLogout(request, env, params, query, user) {
  * Returns designations, zones, roles, grades for frontend dropdowns
  */
 export async function handleGetDropdowns(request, env, params, query) {
-  const gradesRows = await env.DB.prepare("SELECT DISTINCT grade FROM allowance_master").all();
-  const grades = (gradesRows.results || []).map(r => r.grade).filter(Boolean).sort();
+  const db = getDrizzleDb(env, request);
+  const gradesRows = await db.select({ grade: allowanceMaster.grade }).from(allowanceMaster);
+  const grades = Array.from(new Set(gradesRows.map(r => r.grade))).filter(Boolean).sort();
   return jsonResponse({
     designations: DESIGNATIONS,
     zones: ZONE_DISTRICTS,
@@ -390,7 +577,6 @@ async function sendEmail(to, subject, body, env) {
   const plainText = body.replace(/<[^>]*>/g, ""); // strip HTML tags for plain text fallback
   const purpose = subject.toLowerCase().includes("unlock") ? "account_unlock" : "password_reset";
   
-  // Extract OTP code from body (usually a 6-digit number)
   const otpMatch = body.match(/\b\d{6}\b/);
   const otp = otpMatch ? otpMatch[0] : "";
 
@@ -426,9 +612,10 @@ async function sendEmail(to, subject, body, env) {
 
 /**
  * POST /api/auth/forgot-password
- * Verifies user_id + DOB then sends OTP via email and notification (stores in KV)
+ * Verifies user_id + DOB then sends OTP via email
  */
 export async function handleForgotPassword(request, env, params, query) {
+  const db = getDrizzleDb(env, request);
   try {
     let body;
     try { body = await request.json(); } catch (e) { return jsonResponse({ error: "Invalid JSON" }, 400); }
@@ -438,14 +625,14 @@ export async function handleForgotPassword(request, env, params, query) {
       return jsonResponse({ error: "user_id and date_of_birth are required" }, 400);
     }
 
-    const user = await env.DB.prepare("SELECT * FROM users WHERE user_id = ?").bind(user_id).first();
+    const [user] = await db.select().from(users).where(eq(users.userId, user_id)).limit(1);
     if (!user) {
       return jsonResponse({ error: "No user found with that User ID" }, 404);
     }
 
     // Verify DOB
     const dobInput = String(date_of_birth).trim().replace(/\//g, "-");
-    const dobStored = user.date_of_birth ? String(user.date_of_birth).trim() : "";
+    const dobStored = user.dateOfBirth ? String(user.dateOfBirth).trim() : "";
     const dobMatch = dobInput === dobStored || dobInput.split("-").reverse().join("-") === dobStored;
     if (!dobMatch) {
       return jsonResponse({ error: "Date of birth does not match our records" }, 400);
@@ -453,9 +640,8 @@ export async function handleForgotPassword(request, env, params, query) {
 
     // Generate 6-digit OTP
     const otp = String(Math.floor(100000 + Math.random() * 900000));
-    const timestamp = new Date().toISOString();
 
-    // Store OTP in Cloudflare KV: otp:${user_id}:forgot_password
+    // Store OTP in Cloudflare KV
     const kvKey = `otp:${user_id}:forgot_password`;
     if (env.OTPS_KV) {
       await env.OTPS_KV.put(kvKey, otp, { expirationTtl: 600 });
@@ -463,14 +649,10 @@ export async function handleForgotPassword(request, env, params, query) {
       console.warn("env.OTPS_KV is not bound! Falling back to console logging.");
     }
 
-    // Also insert a notification record in D1 DB for compatibility, masking the sensitive OTP code
-    await runWrite(env, `
-      INSERT INTO notifications (user_id, title, description, type, read, link, created_at)
-      VALUES (?, ?, ?, 'info', 0, '/login', ?)
-    `, [user_id, "Password Reset OTP", "A verification OTP has been sent to your registered email.", timestamp]).catch(() => {});
+    // Note: We removed the notifications insert here to clean up the notification subsystem.
 
     // Send OTP via Google Apps Script email
-    const email = user.mail_id || "";
+    const email = user.mailId || "";
     if (email) {
       const emailTemplate = `
         <div style="font-family: 'Segoe UI', Tahoma, sans-serif; max-width: 550px; margin: auto; border: 1px solid #e2e8f0; border-radius: 12px; overflow: hidden; box-shadow: 0 4px 12px rgba(0,0,0,0.08);">
@@ -514,7 +696,7 @@ export async function handleForgotPassword(request, env, params, query) {
       message: "OTP sent successfully",
       otp_sent: true,
       masked_email: maskedEmail,
-      mobile_masked: user.mobile_number ? `XXXXXX${String(user.mobile_number).slice(-4)}` : null
+      mobile_masked: user.mobileNumber ? `XXXXXX${String(user.mobileNumber).slice(-4)}` : null
     });
   } catch (err) {
     return jsonResponse({ error: `Internal server error: ${err.message}` }, 500);
@@ -533,7 +715,6 @@ export async function handleVerifyOtp(request, env, params, query) {
     return jsonResponse({ error: "user_id, otp, and otp_type are required" }, 400);
   }
 
-  // Normalize otp_type for compatibility
   let normalizedType = otp_type;
   if (normalizedType === "reset_password") {
     normalizedType = "forgot_password";
@@ -553,10 +734,9 @@ export async function handleVerifyOtp(request, env, params, query) {
     return jsonResponse({ error: "Invalid or expired OTP. Please request a new one." }, 400);
   }
 
-  // Check strike limits
   let strikes = parseInt(await env.OTPS_KV.get(strikeKey) || "0", 10);
   if (strikes >= 5) {
-    await env.OTPS_KV.delete(kvKey); // invalidate the OTP completely
+    await env.OTPS_KV.delete(kvKey);
     await env.OTPS_KV.delete(strikeKey);
     return jsonResponse({ error: "OTP blocked due to too many failed attempts. Please request a new code." }, 400);
   }
@@ -572,7 +752,6 @@ export async function handleVerifyOtp(request, env, params, query) {
     return jsonResponse({ error: `Invalid OTP. ${remaining} attempts remaining.` }, 400);
   }
 
-  // Successful verification - clear strikes
   if (env.OTPS_KV) {
     await env.OTPS_KV.delete(strikeKey);
   }
@@ -584,6 +763,7 @@ export async function handleVerifyOtp(request, env, params, query) {
  * POST /api/auth/reset-password
  */
 export async function handleResetPassword(request, env, params, query) {
+  const db = getDrizzleDb(env, request);
   let body;
   try { body = await request.json(); } catch (e) { return jsonResponse({ error: "Invalid JSON" }, 400); }
 
@@ -614,7 +794,6 @@ export async function handleResetPassword(request, env, params, query) {
     return jsonResponse({ error: "Invalid or expired OTP" }, 400);
   }
 
-  // Check strike limits
   let strikes = parseInt(await env.OTPS_KV.get(strikeKey) || "0", 10);
   if (strikes >= 5) {
     await env.OTPS_KV.delete(kvKey);
@@ -633,26 +812,17 @@ export async function handleResetPassword(request, env, params, query) {
     return jsonResponse({ error: `Invalid OTP. ${remaining} attempts remaining.` }, 400);
   }
 
-  // Hash and update password
   const newHash = await getPasswordHash(new_password);
   const timestamp = new Date().toISOString();
 
-  const user = await env.DB.prepare("SELECT * FROM users WHERE user_id = ?").bind(user_id).first();
+  const [user] = await db.select().from(users).where(eq(users.userId, user_id)).limit(1);
   if (!user) return jsonResponse({ error: "User not found" }, 404);
 
-  const statements = [
-    {
-      sql: "UPDATE users SET hashed_password = ?, active_session_id = NULL, failed_attempt = 0, user_status = 'active' WHERE user_id = ?",
-      params: [newHash, user_id]
-    },
-    {
-      sql: "INSERT INTO password_histories (user_id, hashed_password, created_at) VALUES (?, ?, ?)",
-      params: [user.id, newHash, timestamp]
-    }
-  ];
-  await runBatchWrite(env, statements).catch(() => {});
+  await db.batch([
+    db.update(users).set({ hashedPassword: newHash, activeSessionId: null, failedAttempt: 0, userStatus: 'active' }).where(eq(users.userId, user_id)),
+    db.insert(passwordHistories).values({ userId: user.id, hashedPassword: newHash, createdAt: timestamp })
+  ]);
 
-  // Invalidate OTP in KV
   if (env.OTPS_KV) {
     await env.OTPS_KV.delete(kvKey);
     await env.OTPS_KV.delete(strikeKey);
@@ -666,6 +836,7 @@ export async function handleResetPassword(request, env, params, query) {
  * Verifies user_id + DOJ + DOB then sends OTP via email
  */
 export async function handleUnlockAccount(request, env, params, query) {
+  const db = getDrizzleDb(env, request);
   try {
     let body;
     try { body = await request.json(); } catch (e) { return jsonResponse({ error: "Invalid JSON" }, 400); }
@@ -675,45 +846,39 @@ export async function handleUnlockAccount(request, env, params, query) {
       return jsonResponse({ error: "user_id, date_of_joining, and date_of_birth are required" }, 400);
     }
 
-    const user = await env.DB.prepare("SELECT * FROM users WHERE user_id = ?").bind(user_id).first();
+    const [user] = await db.select().from(users).where(eq(users.userId, user_id)).limit(1);
     if (!user) return jsonResponse({ error: "No user found with that User ID" }, 404);
 
-    if (user.user_status !== "locked") {
+    if (user.userStatus !== "locked") {
       return jsonResponse({ error: "Account is not locked. Please contact admin if you are having issues." }, 400);
     }
 
     // Verify DOJ
     const dojInput = String(date_of_joining).trim().replace(/\//g, "-");
-    const dojStored = user.date_of_joining ? String(user.date_of_joining).trim() : "";
+    const dojStored = user.dateOfJoining ? String(user.dateOfJoining).trim() : "";
     const dojMatch = dojInput === dojStored || dojInput.split("-").reverse().join("-") === dojStored;
 
     // Verify DOB
     const dobInput = String(date_of_birth).trim().replace(/\//g, "-");
-    const dobStored = user.date_of_birth ? String(user.date_of_birth).trim() : "";
+    const dobStored = user.dateOfBirth ? String(user.dateOfBirth).trim() : "";
     const dobMatch = dobInput === dobStored || dobInput.split("-").reverse().join("-") === dobStored;
 
     if (!dojMatch || !dobMatch) {
       return jsonResponse({ error: "Date of joining or date of birth does not match our records" }, 400);
     }
 
-    // Generate OTP
     const otp = String(Math.floor(100000 + Math.random() * 900000));
     const timestamp = new Date().toISOString();
 
-    // Store OTP in KV
     const kvKey = `otp:${user_id}:unlock_account`;
     if (env.OTPS_KV) {
       await env.OTPS_KV.put(kvKey, otp, { expirationTtl: 600 });
     }
 
-    // Compatibility DB log, masking the sensitive OTP code
-    await runWrite(env, `
-      INSERT INTO notifications (user_id, title, description, type, read, link, created_at)
-      VALUES (?, ?, ?, 'info', 0, '/login', ?)
-    `, [user_id, "Account Unlock OTP", "A verification OTP has been sent to your registered email.", timestamp]).catch(() => {});
+    // Note: We removed the notifications insert here to clean up the notification subsystem.
 
     // Send email via Google Apps Script
-    const email = user.mail_id || "";
+    const email = user.mailId || "";
     if (email) {
       const emailTemplate = `
         <div style="font-family: 'Segoe UI', Tahoma, sans-serif; max-width: 550px; margin: auto; border: 1px solid #e2e8f0; border-radius: 12px; overflow: hidden; box-shadow: 0 4px 12px rgba(0,0,0,0.08);">
@@ -729,23 +894,15 @@ export async function handleUnlockAccount(request, env, params, query) {
                 </div>
                 <p style="font-size: 14px; color: #64748b;">If you did not request this, please contact support.</p>
                 <hr style="border: 0; border-top: 1px solid #f1f5f9; margin: 30px 0;">
-                <div style="text-align: center; font-size: 11px; color: #94a3b8;">&copy; 2026 Cyrix Healthcare Pvt. Ltd. | Account Security</div>
+                <div style="text-align: center; font-size: 11px; color: #94a3b8;">&copy; 2026 Cyrix Healthcare Pvt. Ltd. | Secure Access</div>
             </div>
         </div>`;
       
       try {
-        await sendEmail(email, "Action Required: Account Unlock Request", emailTemplate, env);
+        await sendEmail(email, "Security Verification - Unlock Request", emailTemplate, env);
       } catch (emailErr) {
         console.error("Failed to send unlock email:", emailErr);
-        let userMessage = emailErr.message;
-        try {
-          const cleanMsg = emailErr.message.replace("Email dispatch failed: ", "");
-          const parsed = JSON.parse(cleanMsg);
-          if (parsed.message) {
-            userMessage = parsed.message;
-          }
-        } catch (e) {}
-        return jsonResponse({ error: `Email delivery failed: ${userMessage}. Please verify Google Apps Script configuration.` }, 400);
+        return jsonResponse({ error: "Failed to deliver unlock verification code. Contact administrator." }, 400);
       }
     }
 
@@ -754,10 +911,9 @@ export async function handleUnlockAccount(request, env, params, query) {
 
     return jsonResponse({
       success: true,
-      message: "OTP sent. Please check your registered email.",
+      message: "Unlock verification code sent successfully.",
       otp_sent: true,
-      masked_email: maskedEmail,
-      mobile_masked: user.mobile_number ? `XXXXXX${String(user.mobile_number).slice(-4)}` : null
+      masked_email: maskedEmail
     });
   } catch (err) {
     return jsonResponse({ error: `Internal server error: ${err.message}` }, 500);
@@ -768,6 +924,7 @@ export async function handleUnlockAccount(request, env, params, query) {
  * POST /api/auth/unlock-verify-otp
  */
 export async function handleUnlockVerifyOtp(request, env, params, query) {
+  const db = getDrizzleDb(env, request);
   let body;
   try { body = await request.json(); } catch (e) { return jsonResponse({ error: "Invalid JSON" }, 400); }
 
@@ -776,9 +933,9 @@ export async function handleUnlockVerifyOtp(request, env, params, query) {
     return jsonResponse({ error: "user_id and otp are required" }, 400);
   }
 
-  // Verify OTP from KV
   const kvKey = `otp:${user_id}:unlock_account`;
   const strikeKey = `otp_strikes:${user_id}:unlock_account`;
+
   let storedOtp = null;
   if (env.OTPS_KV) {
     storedOtp = await env.OTPS_KV.get(kvKey);
@@ -787,15 +944,14 @@ export async function handleUnlockVerifyOtp(request, env, params, query) {
   }
 
   if (!storedOtp) {
-    return jsonResponse({ error: "Invalid or expired OTP. Please try again." }, 400);
+    return jsonResponse({ error: "Verification code expired. Please request a new one." }, 400);
   }
 
-  // Check strike limits
   let strikes = parseInt(await env.OTPS_KV.get(strikeKey) || "0", 10);
   if (strikes >= 5) {
     await env.OTPS_KV.delete(kvKey);
     await env.OTPS_KV.delete(strikeKey);
-    return jsonResponse({ error: "OTP blocked due to too many failed attempts. Please request a new code." }, 400);
+    return jsonResponse({ error: "Too many failed attempts. Code blocked. Please request a new one." }, 400);
   }
 
   if (storedOtp.trim() !== String(otp).trim()) {
@@ -809,19 +965,12 @@ export async function handleUnlockVerifyOtp(request, env, params, query) {
     return jsonResponse({ error: `Invalid OTP. ${remaining} attempts remaining.` }, 400);
   }
 
-  // Unlock account
-  const timestamp = new Date().toISOString();
-  const statements = [
-    {
-      sql: "UPDATE users SET user_status = 'active', failed_attempt = 0, active_session_id = NULL WHERE user_id = ?",
-      params: [user_id]
-    },
-    {
-      sql: "INSERT INTO notifications (user_id, title, description, type, read, link, created_at) VALUES (?, 'Account Unlocked', 'Your account has been successfully unlocked. You can now log in.', 'success', 0, '/login', ?)",
-      params: [user_id, timestamp]
-    }
-  ];
-  await runBatchWrite(env, statements).catch(() => {});
+  // Unlock account in D1
+  await db.update(users)
+    .set({ userStatus: 'active', failedAttempt: 0, activeSessionId: null })
+    .where(eq(users.userId, user_id));
+  
+  // Note: We removed the notifications insert here to clean up the notification subsystem.
   
   // Invalidate OTP in KV
   if (env.OTPS_KV) {

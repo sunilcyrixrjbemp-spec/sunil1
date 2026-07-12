@@ -11,7 +11,7 @@ const ALL_KNOWN_TABLES = [
   "users", "user_roles", "password_histories", "expenses", "expense_master",
   "expense_itineraries", "expense_asset_taggings", "approvals", "approval_hierarchies",
   "hierarchy_requesters", "hierarchy_approvers", "limit_approval_requests",
-  "notifications", "allowance_master", "facility_details", "login_logs", "otps",
+  "allowance_master", "facility_details", "login_logs", "otps",
   "kpi_appraisals", "rj_penalties", "assets_inventory", "asset_value_master"
 ];
 
@@ -80,6 +80,12 @@ function invalidateCacheOnWrite(sql) {
  * Execute a single write query (INSERT/UPDATE/DELETE) locally and replicate to primary DB.
  */
 export async function runWrite(env, sql, params = []) {
+  const sqlLower = sql.toLowerCase();
+  if (sqlLower.includes("notifications")) {
+    console.log("Ignored write to deleted notifications table:", sql.slice(0, 100));
+    return { success: true, meta: { last_row_id: 1, changes: 0 } };
+  }
+
   const originalDB = env._originalDB || env.DB;
   
   // Invalidate any relevant query cache entries before writing
@@ -113,15 +119,29 @@ export async function runWrite(env, sql, params = []) {
 export async function runBatchWrite(env, statements) {
   if (statements.length === 0) return [];
   
+  // Filter out any notification statements to avoid crashes
+  const activeStatements = statements.filter(s => {
+    const sqlLower = (s.sql || "").toLowerCase();
+    if (sqlLower.includes("notifications")) {
+      console.log("Ignored batch write to deleted notifications table:", s.sql.slice(0, 100));
+      return false;
+    }
+    return true;
+  });
+
+  if (activeStatements.length === 0) {
+    return statements.map(() => ({ success: true, meta: { last_row_id: 1, changes: 0 } }));
+  }
+
   const originalDB = env._originalDB || env.DB;
 
   // Invalidate any relevant query cache entries
-  for (const s of statements) {
+  for (const s of activeStatements) {
     invalidateCacheOnWrite(s.sql);
   }
 
   // 1. Prepare local batch promise
-  const batch = statements.map(s => {
+  const batch = activeStatements.map(s => {
     return originalDB.prepare(s.sql).bind(...(s.params || []));
   });
   const localBatchPromise = originalDB.batch(batch);
@@ -134,15 +154,23 @@ export async function runBatchWrite(env, statements) {
 
   const shouldReplicate = env.SKIP_PRIMARY_SYNC !== "true" && primaryAccount && primaryDb && primaryToken;
 
+  let localResults;
   if (shouldReplicate) {
-    const replicationPromise = replicateBatchToPrimary(primaryAccount, primaryDb, primaryToken, primaryEmail, statements);
-    
-    // Execute both in parallel (sath-sath) and wait for both to complete
-    const [localResults] = await Promise.all([localBatchPromise, replicationPromise]);
-    return localResults;
+    const replicationPromise = replicateBatchToPrimary(primaryAccount, primaryDb, primaryToken, primaryEmail, activeStatements);
+    [localResults] = await Promise.all([localBatchPromise, replicationPromise]);
   } else {
-    return await localBatchPromise;
+    localResults = await localBatchPromise;
   }
+
+  // Re-assemble results to match the original statements array length and indices
+  let activeIndex = 0;
+  return statements.map(s => {
+    const sqlLower = (s.sql || "").toLowerCase();
+    if (sqlLower.includes("notifications")) {
+      return { success: true, meta: { last_row_id: 1, changes: 0 } };
+    }
+    return localResults[activeIndex++];
+  });
 }
 
 /**

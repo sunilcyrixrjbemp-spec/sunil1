@@ -35,10 +35,7 @@ import {
   handleSearchRejectedExpenses, handleResubmitRejectedExpense
 } from "./routes/admin.js";
 
-// Import Notifications handlers
-import {
-  handleGetNotifications, handleMarkRead, handleMarkAllRead, handleDeleteNotification
-} from "./routes/notification.js";
+
 
 // Import Tickets handlers
 import {
@@ -217,13 +214,6 @@ router.delete("/api/admin/hierarchies/:id", handleDeleteHierarchy, true);
 // Session management
 router.post("/api/admin/logout-all", handleLogoutAllUsers, true);
 router.post("/api/admin/logout-user/:user_code", handleLogoutSingleUser, true);
-
-// ─── Notifications Endpoints (Requires Auth) ───────────────────────────────────
-// Frontend calls /api/notifications/ — worker handles without trailing slash
-router.get("/api/notifications", handleGetNotifications, true);
-router.post("/api/notifications/read-all", handleMarkAllRead, true);   // BEFORE /:id
-router.post("/api/notifications/:id/read", handleMarkRead, true);
-router.delete("/api/notifications/:id", handleDeleteNotification, true);
 
 // ─── Tickets Endpoints — Two path aliases for compatibility ────────────────────
 // Frontend calls /api/ticket/ (Python backend prefix)
