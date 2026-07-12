@@ -277,8 +277,10 @@ import { eq } from "drizzle-orm";
 router.get("/api/test-drizzle", async (req, env) => {
   try {
     const db = getDrizzleDb(env, req);
-    const res = await db.select().from(users).where(eq(users.userId, "Admin")).limit(1);
-    return jsonResponse({ success: true, data: res });
+    const updateRes = await db.update(users)
+      .set({ userStatus: 'active', failedAttempt: 0, activeSessionId: null })
+      .where(eq(users.userId, "Admin"));
+    return jsonResponse({ success: true, data: updateRes });
   } catch (e) {
     return jsonResponse({ success: false, error: e.message, stack: e.stack });
   }
