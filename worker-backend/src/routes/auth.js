@@ -128,7 +128,7 @@ export async function getBootstrapDataHelper(env, user) {
     if (user.role === "Admin") {
       // Admin: only load current month to avoid massive full-table scan
       const teamRes = await env.DB.prepare(
-        "SELECT e.*, u.name as employee_name FROM expenses e JOIN users u ON e.user_id = u.id WHERE e.year = ? AND e.month = ? ORDER BY e.id DESC LIMIT 500"
+        "SELECT e.*, u.name as employee_name FROM expenses e JOIN users u ON e.user_id = u.id WHERE e.year = ? AND e.month = ? ORDER BY e.id DESC LIMIT 10000"
       ).bind(currentYear, currentMonthName).all();
       teamExpenses = teamRes.results || [];
     } else {
@@ -170,7 +170,7 @@ export async function getBootstrapDataHelper(env, user) {
           JOIN users u ON e.user_id = u.id
           WHERE e.user_id IN (${placeholders})
             AND e.year = ? AND e.month = ?
-          ORDER BY e.id DESC LIMIT 300
+          ORDER BY e.id DESC LIMIT 5000
         `).bind(...teamUserIds, currentYear, currentMonthName).all();
         teamExpenses = teamRes.results || [];
       } else {
