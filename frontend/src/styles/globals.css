@@ -228,7 +228,8 @@ select.input-lte option {
 }
 
 .modal-lte-overlay {
-  @apply fixed inset-0 bg-black/50 flex items-center justify-center p-4 overflow-y-auto;
+  @apply fixed inset-0 bg-black/50 flex items-center justify-center p-4;
+  overflow-y: auto;
   z-index: 1000;
   animation: fadeIn 0.2s ease-out;
   overscroll-behavior: contain;
@@ -246,7 +247,8 @@ select.input-lte option {
 }
 
 .modal-lte-body {
-  @apply py-4 space-y-4 overflow-y-auto max-h-[75vh];
+  @apply py-4 space-y-4 max-h-[75vh];
+  overflow-y: auto;
   overscroll-behavior: contain;
   -webkit-overflow-scrolling: touch;
   touch-action: pan-y;
