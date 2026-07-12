@@ -84,6 +84,9 @@ export default function AdminPage() {
   const handleTabChange = (tab: "users" | "approvals" | "analytics" | "settings") => {
     setActiveTab(tab);
     localStorage.setItem("admin_active_tab", tab);
+    if (tab === "settings") {
+      fetchRejectedClaims("");
+    }
   };
   const [users, setUsers] = useState<any[]>(() => {
     try {
@@ -136,6 +139,12 @@ export default function AdminPage() {
     rejection_fallback_level: "creator"
   });
   const [savingSettings, setSavingSettings] = useState(false);
+
+  // Rejected claims state
+  const [rejectedSearch, setRejectedSearch] = useState("");
+  const [rejectedClaims, setRejectedClaims] = useState<any[]>([]);
+  const [loadingRejected, setLoadingRejected] = useState(false);
+  const [actioningClaimId, setActioningClaimId] = useState<number | null>(null);
 
   // Single User Create Form state
   const [eCode, setECode] = useState("");
@@ -309,6 +318,39 @@ export default function AdminPage() {
       setError(getErrorMessage(err, "Failed to save system settings."));
     } finally {
       setSavingSettings(false);
+    }
+  };
+
+  const fetchRejectedClaims = async (queryStr = "") => {
+    setLoadingRejected(true);
+    try {
+      const res = await adminService.searchRejectedExpenses(queryStr);
+      if (res && res.success) {
+        setRejectedClaims(res.data || []);
+      }
+    } catch (err) {
+      console.error("Failed to load rejected claims", err);
+    } finally {
+      setLoadingRejected(false);
+    }
+  };
+
+  const handleResubmitClaim = async (claimId: number) => {
+    if (!confirm("Are you sure you want to reset the status of this claim to Submitted? This will route it back to Level 1 approval.")) {
+      return;
+    }
+    setActioningClaimId(claimId);
+    try {
+      const res = await adminService.resubmitRejectedExpense(claimId);
+      if (res && res.success) {
+        alert(res.message || "Claim status reset to Submitted successfully.");
+        // Reload list
+        fetchRejectedClaims(rejectedSearch);
+      }
+    } catch (err: any) {
+      alert(err.response?.data?.error || err.message || "Failed to reset claim status.");
+    } finally {
+      setActioningClaimId(null);
     }
   };
 
@@ -1909,6 +1951,87 @@ export default function AdminPage() {
               </button>
             </div>
           </form>
+
+          {/* Override Rejected Claims Panel */}
+          <div className="bg-white border border-gray-200 rounded-lg shadow-sm p-6 space-y-6 max-w-3xl mt-6">
+            <div>
+              <h3 className="text-sm font-bold text-gray-800 uppercase tracking-wide border-b border-gray-100 pb-2 flex items-center gap-2">
+                <i className="fas fa-undo text-red-500"></i> Override / Re-submit Rejected Claims
+              </h3>
+              <p className="text-gray-500 text-xs mt-1">
+                Search and override rejected claims to reset their status to 'Submitted'. This will re-initialize the approval hierarchy sequence from Level 1.
+              </p>
+            </div>
+
+            <div className="flex gap-2">
+              <input
+                type="text"
+                value={rejectedSearch}
+                onChange={(e) => setRejectedSearch(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter") {
+                    fetchRejectedClaims(rejectedSearch);
+                  }
+                }}
+                className="flex-1 p-2 border border-gray-300 rounded text-xs focus:ring-1 focus:ring-blue-500 focus:outline-none"
+                placeholder="Search by Claim Code, Employee Code, or Name..."
+              />
+              <button
+                type="button"
+                onClick={() => fetchRejectedClaims(rejectedSearch)}
+                className="px-4 py-2 bg-slate-800 text-white rounded text-xs font-bold hover:bg-slate-700 cursor-pointer border-0 shadow-sm"
+              >
+                Search
+              </button>
+            </div>
+
+            {loadingRejected ? (
+              <div className="text-center py-6 text-xs text-slate-500 font-bold">
+                <i className="fas fa-spinner fa-spin mr-2"></i> Loading rejected claims...
+              </div>
+            ) : rejectedClaims.length === 0 ? (
+              <div className="text-center py-6 text-xs text-slate-400 border border-dashed border-slate-200 rounded">
+                No rejected claims found matching search criteria.
+              </div>
+            ) : (
+              <div className="border border-slate-200 rounded overflow-x-auto">
+                <table className="w-full text-left text-xs border-collapse">
+                  <thead>
+                    <tr className="bg-slate-50 border-b border-slate-200">
+                      <th className="p-2.5 font-bold text-slate-700">Claim Code</th>
+                      <th className="p-2.5 font-bold text-slate-700">Employee</th>
+                      <th className="p-2.5 font-bold text-slate-700">Expense Date</th>
+                      <th className="p-2.5 font-bold text-slate-700">Amount</th>
+                      <th className="p-2.5 font-bold text-slate-700 text-right">Action</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {rejectedClaims.map((claim) => (
+                      <tr key={claim.id} className="border-b border-slate-100 hover:bg-slate-50/50">
+                        <td className="p-2.5 font-mono font-bold text-slate-900">{claim.expense_code}</td>
+                        <td className="p-2.5">
+                          <div className="font-bold text-slate-800">{claim.employee_name}</div>
+                          <div className="text-[10px] text-slate-500">{claim.employee_code}</div>
+                        </td>
+                        <td className="p-2.5 text-slate-600">{claim.expense_date}</td>
+                        <td className="p-2.5 font-mono font-bold text-slate-900">₹{parseFloat(claim.amount).toLocaleString()}</td>
+                        <td className="p-2.5 text-right">
+                          <button
+                            type="button"
+                            disabled={actioningClaimId === claim.id}
+                            onClick={() => handleResubmitClaim(claim.id)}
+                            className="px-2.5 py-1.5 bg-blue-600 text-white rounded text-[10px] font-bold hover:bg-blue-700 cursor-pointer border-0 shadow-sm disabled:bg-slate-300"
+                          >
+                            {actioningClaimId === claim.id ? "Resetting..." : "Reset to Submitted"}
+                          </button>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
+          </div>
         </div>
       )}
       </div>

@@ -147,6 +147,17 @@ export const adminService = {
     return response.data;
   },
 
+  searchRejectedExpenses: async (search: string): Promise<any> => {
+    const qp = search ? `?search=${encodeURIComponent(search)}` : "";
+    const response = await api.get(`/admin/expenses/rejected${qp}`);
+    return response.data;
+  },
+
+  resubmitRejectedExpense: async (expenseId: number): Promise<any> => {
+    const response = await api.post(`/admin/expenses/${expenseId}/resubmit`);
+    return response.data;
+  },
+
   runMigrations: async (): Promise<any> => {
     const response = await api.post("/admin/run-migrations");
     return response.data;

@@ -944,3 +944,135 @@ export async function handleSaveSystemSettings(request, env, params, query, admi
     return jsonResponse({ error: "Failed to save settings", detail: err.message }, 500);
   }
 }
+
+/**
+ * GET /api/admin/expenses/rejected
+ */
+export async function handleSearchRejectedExpenses(request, env, params, query, adminUser) {
+  if (adminUser.role !== "Admin") {
+    return jsonResponse({ error: "Access denied" }, 403);
+  }
+
+  const search = (query.get("search") || "").trim().toLowerCase();
+
+  try {
+    let sql = `
+      SELECT e.id, e.expense_code, e.amount, e.status, e.itinerary as expense_date, e.description, 
+             u.name as employee_name, u.user_id as employee_code
+      FROM expenses e
+      JOIN users u ON e.user_id = u.id
+      WHERE e.status = 'rejected'
+    `;
+    const bindParams = [];
+
+    if (search) {
+      sql += ` AND (LOWER(e.expense_code) LIKE ? OR LOWER(u.name) LIKE ? OR LOWER(u.user_id) LIKE ?)`;
+      const term = `%${search}%`;
+      bindParams.push(term, term, term);
+    }
+
+    sql += ` ORDER BY e.itinerary DESC, e.id DESC`;
+
+    const results = await env.DB.prepare(sql).bind(...bindParams).all();
+    return jsonResponse({ success: true, data: results.results || [] });
+  } catch (err) {
+    return jsonResponse({ error: "Failed to retrieve rejected expenses", detail: err.message }, 500);
+  }
+}
+
+/**
+ * POST /api/admin/expenses/:expense_id/resubmit
+ */
+export async function handleResubmitRejectedExpense(request, env, params, query, adminUser) {
+  if (adminUser.role !== "Admin") {
+    return jsonResponse({ error: "Access denied" }, 403);
+  }
+
+  const expenseId = parseInt(params.expense_id, 10);
+  if (!expenseId) {
+    return jsonResponse({ error: "Invalid expense ID" }, 400);
+  }
+
+  const timestamp = new Date().toISOString();
+
+  // 1. Fetch the expense
+  const expense = await env.DB.prepare("SELECT * FROM expenses WHERE id = ?").bind(expenseId).first();
+  if (!expense) {
+    return jsonResponse({ error: "Expense claim not found" }, 404);
+  }
+
+  if (expense.status !== "rejected") {
+    return jsonResponse({ error: "Only rejected expense claims can be re-submitted" }, 400);
+  }
+
+  // 2. Query the user and hierarchy approval chain for this expense's creator
+  const approvalChain = await env.DB.prepare(`
+    SELECT a.* 
+    FROM hierarchy_approvers a
+    JOIN hierarchy_requesters hr ON a.hierarchy_id = hr.hierarchy_id
+    WHERE hr.user_id = ?
+    ORDER BY a.level_number ASC
+  `).bind(expense.user_id).all();
+
+  const approvals = approvalChain.results || [];
+  if (approvals.length === 0) {
+    return jsonResponse({ error: "This employee is not mapped to any approval hierarchy team. Cannot route for approval." }, 400);
+  }
+
+  const statements = [];
+
+  // 3. Reset the expense status to 'submitted'
+  statements.push({
+    sql: "UPDATE expenses SET status = 'submitted', updated_at = ? WHERE id = ?",
+    params: [timestamp, expenseId]
+  });
+
+  // 4. Re-create or reset approvals records
+  statements.push({
+    sql: "DELETE FROM approvals WHERE expense_id = ?",
+    params: [expenseId]
+  });
+
+  for (const step of approvals) {
+    statements.push({
+      sql: `INSERT INTO approvals (expense_id, approver_id, level_number, status, comments, created_at, updated_at)
+            VALUES (?, ?, ?, ?, '', ?, ?)`,
+      params: [
+        expenseId,
+        step.approver_id,
+        step.level_number,
+        step.level_number === 1 ? "pending" : "waiting",
+        timestamp,
+        timestamp
+      ]
+    });
+  }
+
+  try {
+    await runBatchWrite(env, statements);
+
+    // 5. Send notifications
+    const creatorUser = await env.DB.prepare("SELECT * FROM users WHERE id = ?").bind(expense.user_id).first();
+    const firstApproverUser = await env.DB.prepare("SELECT * FROM users WHERE id = ?").bind(approvals[0].approver_id).first();
+
+    if (creatorUser) {
+      await runWrite(env, "INSERT INTO notifications (user_id, title, description, type, read, link, created_at) VALUES (?, '🔄 Claim Reset to Submitted', ?, 'info', 0, '/home', ?)", [
+        creatorUser.user_id,
+        `Your rejected claim ${expense.expense_code} has been reset to Submitted by the administrator.`,
+        timestamp
+      ]);
+    }
+
+    if (firstApproverUser) {
+      await runWrite(env, "INSERT INTO notifications (user_id, title, description, type, read, link, created_at) VALUES (?, '📥 New Claim for Approval (Reset)', ?, 'warning', 0, '/approval-center', ?)", [
+        firstApproverUser.user_id,
+        `Claim ${expense.expense_code} (₹${expense.amount}) has been reset by the Admin and is pending your review.`,
+        timestamp
+      ]);
+    }
+
+    return jsonResponse({ success: true, message: "Expense claim status reset to Submitted successfully." });
+  } catch (err) {
+    return jsonResponse({ error: "Failed to resubmit expense claim", detail: err.message }, 500);
+  }
+}

@@ -31,7 +31,8 @@ import {
   handleUpdateUser, handleBulkCreateUsers, handleGetEligibleApprovers,
   handleDeleteHierarchy, handleLogoutAllUsers, handleLogoutSingleUser,
   handleExportHierarchies, handleBulkImportHierarchies,
-  handleGetSystemSettings, handleSaveSystemSettings
+  handleGetSystemSettings, handleSaveSystemSettings,
+  handleSearchRejectedExpenses, handleResubmitRejectedExpense
 } from "./routes/admin.js";
 
 // Import Notifications handlers
@@ -199,6 +200,8 @@ router.post("/api/approvals/:expense_id/return-to-draft", handleReturnToDraft, t
 // NOTE: Specific routes BEFORE wildcard :user_id routes to avoid conflicts
 router.get("/api/admin/settings", handleGetSystemSettings, true);
 router.post("/api/admin/settings", handleSaveSystemSettings, true);
+router.get("/api/admin/expenses/rejected", handleSearchRejectedExpenses, true);
+router.post("/api/admin/expenses/:expense_id/resubmit", handleResubmitRejectedExpense, true);
 router.get("/api/admin/users", handleListUsers, true);
 router.post("/api/admin/users/bulk", handleBulkCreateUsers, true);   // MUST be before /api/admin/users/:user_id
 router.post("/api/admin/users", handleSaveUser, true);
