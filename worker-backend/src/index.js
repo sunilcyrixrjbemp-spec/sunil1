@@ -340,7 +340,7 @@ export default {
                   };
                 }
                 
-                const val = Reflect.get(target, prop, receiver);
+                const val = target[prop];
                 if (typeof val === "function") {
                   return val.bind(target);
                 }
