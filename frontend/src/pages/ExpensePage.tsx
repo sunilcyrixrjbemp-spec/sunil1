@@ -546,7 +546,7 @@ export default function ExpensePage() {
   const [showDetailsModal, setShowDetailsModal] = useState(false);
   const [detailsLoading, setDetailsLoading] = useState(false);
   const [deletedAttachments, setDeletedAttachments] = useState<{leg: number; type: string}[]>([]);
-  const [assetValueMaster, setAssetValueMaster] = useState<{equipment_name: string; rmsc_tender_cost: number}[]>([]);
+  const [assetValueMaster, setAssetValueMaster] = useState<{equipment_name: string; rmsc_tender_cost: number; asset_value?: number}[]>([]);
 
   // Image Preview Lightbox
   const [lightboxImage, setLightboxImage] = useState<string | null>(null);
@@ -4981,7 +4981,7 @@ export default function ExpensePage() {
                                               <div className="flex flex-wrap gap-2">
                                                 {assetsList.map((a: any, aIdx: number) => {
                                                   const selectedEq = assetValueMaster.find(eq => eq.equipment_name === a.equipment_name);
-                                                  const costPerUnit = selectedEq ? (selectedEq.rmsc_tender_cost || 0) : 0;
+                                                  const costPerUnit = selectedEq ? (selectedEq.asset_value || selectedEq.rmsc_tender_cost || 0) : 0;
                                                   const qty = parseInt(a.quantity || "0") || 0;
                                                   const totalCost = qty * costPerUnit;
                                                   
@@ -5254,7 +5254,7 @@ export default function ExpensePage() {
                                       <div className="text-[9px] font-bold text-emerald-700 uppercase text-left">Asset Tagging Records</div>
                                       {assetsList.map((a: any, aIdx: number) => {
                                         const selectedEq = assetValueMaster.find(eq => eq.equipment_name === a.equipment_name);
-                                        const costPerUnit = selectedEq ? (selectedEq.rmsc_tender_cost || 0) : 0;
+                                        const costPerUnit = selectedEq ? (selectedEq.asset_value || selectedEq.rmsc_tender_cost || 0) : 0;
                                         const qty = parseInt(a.quantity || "0") || 0;
                                         const totalCost = qty * costPerUnit;
                                         

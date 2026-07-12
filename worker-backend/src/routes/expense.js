@@ -740,7 +740,7 @@ export async function handleGetAssetValueMaster(request, env, params, query, use
   try {
     // Try querying the dedicated asset_value_master table first
     const result = await env.DB.prepare(`
-      SELECT DISTINCT equipment_name, CAST(rmsc_tender_cost AS REAL) as asset_value 
+      SELECT DISTINCT equipment_name, CAST(rmsc_tender_cost AS REAL) as asset_value, CAST(rmsc_tender_cost AS REAL) as rmsc_tender_cost 
       FROM asset_value_master 
       ORDER BY equipment_name ASC
     `).all();
@@ -754,7 +754,7 @@ export async function handleGetAssetValueMaster(request, env, params, query, use
   // Fallback 1: Query assets_inventory using parsed_asset_value
   try {
     const result = await env.DB.prepare(`
-      SELECT DISTINCT equipment_name, CAST(parsed_asset_value AS REAL) as asset_value 
+      SELECT DISTINCT equipment_name, CAST(parsed_asset_value AS REAL) as asset_value, CAST(parsed_asset_value AS REAL) as rmsc_tender_cost 
       FROM assets_inventory 
       WHERE parsed_asset_value IS NOT NULL AND parsed_asset_value > 0
       ORDER BY equipment_name ASC
@@ -766,7 +766,9 @@ export async function handleGetAssetValueMaster(request, env, params, query, use
     // Fallback 2: Query assets_inventory using asset_value
     try {
       const result = await env.DB.prepare(`
-        SELECT DISTINCT equipment_name, CAST(REPLACE(REPLACE(asset_value, ',', ''), '₹', '') AS REAL) as asset_value 
+        SELECT DISTINCT equipment_name, 
+               CAST(REPLACE(REPLACE(asset_value, ',', ''), '₹', '') AS REAL) as asset_value,
+               CAST(REPLACE(REPLACE(asset_value, ',', ''), '₹', '') AS REAL) as rmsc_tender_cost 
         FROM assets_inventory 
         WHERE asset_value IS NOT NULL AND asset_value != '' AND asset_value != '0'
         ORDER BY equipment_name ASC

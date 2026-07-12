@@ -2032,7 +2032,7 @@ export default function ApprovalPage() {
                                         <tbody className="divide-y divide-gray-100">
                                           {assetsList.map((a: any, aIdx: number) => {
                                             const selectedEq = assetValueMaster.find(eq => eq.equipment_name === a.equipment_name);
-                                            const costPerUnit = selectedEq ? (selectedEq.rmsc_tender_cost || 0) : 0;
+                                            const costPerUnit = selectedEq ? (selectedEq.asset_value || selectedEq.rmsc_tender_cost || 0) : 0;
                                             const qty = parseInt(a.quantity || "0") || 0;
                                             const totalCost = qty * costPerUnit;
                                             return (
@@ -2052,7 +2052,7 @@ export default function ApprovalPage() {
                                     <div className="block lg:hidden space-y-2 p-2.5 bg-gray-50/20">
                                       {assetsList.map((a: any, aIdx: number) => {
                                         const selectedEq = assetValueMaster.find(eq => eq.equipment_name === a.equipment_name);
-                                        const costPerUnit = selectedEq ? (selectedEq.rmsc_tender_cost || 0) : 0;
+                                        const costPerUnit = selectedEq ? (selectedEq.asset_value || selectedEq.rmsc_tender_cost || 0) : 0;
                                         const qty = parseInt(a.quantity || "0") || 0;
                                         const totalCost = qty * costPerUnit;
                                         return (
