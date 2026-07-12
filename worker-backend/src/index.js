@@ -284,6 +284,19 @@ router.post("/api/admin/run-migrations", async (req, env, params, query, user) =
   }
 }, true);
 
+router.get("/api/admin/debug-database", async (req, env, params, query, user) => {
+  try {
+    const usersRes = await env.DB.prepare("SELECT * FROM users LIMIT 5").all();
+    const expensesRes = await env.DB.prepare("SELECT * FROM expenses LIMIT 5").all();
+    return jsonResponse({
+      users: usersRes.results,
+      expenses: expensesRes.results
+    });
+  } catch (e) {
+    return jsonResponse({ error: e.message }, 500);
+  }
+}, false);
+
 // --- Main Entry point ---
 export default {
   async fetch(request, env, ctx) {
