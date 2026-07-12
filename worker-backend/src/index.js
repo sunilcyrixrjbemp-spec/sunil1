@@ -22,7 +22,7 @@ import {
 } from "./routes/users.js";
 
 // Import Approval handlers
-import { handleGetApprovals, handleApprove, handleReject, handleReturnToDraft } from "./routes/approval.js";
+import { handleGetApprovals, handleApprove, handleReject, handleReturnToDraft, handleAutoApprovalExpiry } from "./routes/approval.js";
 
 // Import Admin handlers
 import {
@@ -30,7 +30,8 @@ import {
   handleListHierarchies, handleSaveHierarchy,
   handleUpdateUser, handleBulkCreateUsers, handleGetEligibleApprovers,
   handleDeleteHierarchy, handleLogoutAllUsers, handleLogoutSingleUser,
-  handleExportHierarchies, handleBulkImportHierarchies
+  handleExportHierarchies, handleBulkImportHierarchies,
+  handleGetSystemSettings, handleSaveSystemSettings
 } from "./routes/admin.js";
 
 // Import Notifications handlers
@@ -196,6 +197,8 @@ router.post("/api/approvals/:expense_id/return-to-draft", handleReturnToDraft, t
 
 // ─── Admin Endpoints (Requires Auth) ──────────────────────────────────────────
 // NOTE: Specific routes BEFORE wildcard :user_id routes to avoid conflicts
+router.get("/api/admin/settings", handleGetSystemSettings, true);
+router.post("/api/admin/settings", handleSaveSystemSettings, true);
 router.get("/api/admin/users", handleListUsers, true);
 router.post("/api/admin/users/bulk", handleBulkCreateUsers, true);   // MUST be before /api/admin/users/:user_id
 router.post("/api/admin/users", handleSaveUser, true);
@@ -411,4 +414,7 @@ export default {
       return jsonResponse({ error: "Internal server error", detail: error.message }, 500, origin);
     }
   },
+  async scheduled(event, env, ctx) {
+    ctx.waitUntil(handleAutoApprovalExpiry(env));
+  }
 };

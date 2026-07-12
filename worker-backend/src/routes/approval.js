@@ -611,22 +611,65 @@ export async function handleReject(request, env, params, query, user) {
     await processRemovedAttachments(env, removed_attachments);
   }
 
+  const fallbackSettings = await env.DB.prepare("SELECT value FROM system_settings WHERE key = 'rejection_fallback_level'").first();
+  const fallbackVal = fallbackSettings?.value || "creator";
+
+  let nextStatus = "rejected";
   const statements = [
     {
       sql: "UPDATE approvals SET status = 'rejected', comments = ?, updated_at = ? WHERE id = ?",
       params: [comments, timestamp, activeApproval.id]
-    },
-    {
-      sql: "UPDATE approvals SET status = 'cancelled', updated_at = ? WHERE expense_id = ? AND level_number > ? AND status = 'waiting'",
-      params: [timestamp, expenseId, activeApproval.level_number]
-    },
-    {
-      sql: "UPDATE expenses SET status = 'rejected', updated_at = ? WHERE id = ?",
-      params: [timestamp, expenseId]
     }
   ];
 
+  if (fallbackVal === "creator") {
+    statements.push({
+      sql: "UPDATE approvals SET status = 'cancelled', updated_at = ? WHERE expense_id = ? AND level_number > ? AND status = 'waiting'",
+      params: [timestamp, expenseId, activeApproval.level_number]
+    });
+    nextStatus = "rejected";
+  } else if (fallbackVal === "level_1") {
+    statements.push({
+      sql: "UPDATE approvals SET status = CASE WHEN level_number = 1 THEN 'pending' ELSE 'waiting' END, comments = CASE WHEN level_number = 1 THEN '' ELSE comments END, updated_at = ? WHERE expense_id = ?",
+      params: [timestamp, expenseId]
+    });
+    nextStatus = "submitted_l1";
+  } else if (fallbackVal === "previous_level") {
+    if (activeApproval.level_number > 1) {
+      const prevLvl = activeApproval.level_number - 1;
+      statements.push({
+        sql: "UPDATE approvals SET status = CASE WHEN level_number = ? THEN 'pending' WHEN level_number >= ? THEN 'waiting' ELSE status END, comments = CASE WHEN level_number = ? THEN '' ELSE comments END, updated_at = ? WHERE expense_id = ?",
+        params: [prevLvl, activeApproval.level_number, prevLvl, timestamp, expenseId]
+      });
+      nextStatus = `submitted_l${prevLvl}`;
+    } else {
+      statements.push({
+        sql: "UPDATE approvals SET status = 'cancelled', updated_at = ? WHERE expense_id = ? AND level_number > ? AND status = 'waiting'",
+        params: [timestamp, expenseId, activeApproval.level_number]
+      });
+      nextStatus = "rejected";
+    }
+  }
+
+  statements.push({
+    sql: "UPDATE expenses SET status = ?, updated_at = ? WHERE id = ?",
+    params: [nextStatus, timestamp, expenseId]
+  });
+
   await runBatchWrite(env, statements);
+
+  // Send re-approval notification if returned to a level
+  if (nextStatus !== "rejected") {
+    const newPendingApp = await env.DB.prepare("SELECT * FROM approvals WHERE expense_id = ? AND status = 'pending'").bind(expenseId).first();
+    if (newPendingApp) {
+      const nextApproverUser = await env.DB.prepare("SELECT * FROM users WHERE id = ?").bind(newPendingApp.approver_id).first();
+      if (nextApproverUser) {
+        await runWrite(env, "INSERT INTO notifications (user_id, title, description, type, read, link, created_at) VALUES (?, '📥 Claim Returned for Re-approval', ?, 'warning', 0, '/approval-center', ?)", [
+          nextApproverUser.user_id, `Claim ${expense.expense_code} has been returned to you for re-approval after rejection at a higher level.`, timestamp
+        ]);
+      }
+    }
+  }
 
   // Notification to submitter
   const submitter = await env.DB.prepare("SELECT * FROM users WHERE id = ?").bind(expense.user_id).first();
@@ -777,4 +820,183 @@ async function deleteAttachmentFromStorage(env, fileUrl) {
     console.error("Failed to delete attachment from storage:", e.message);
   }
 }
+
+/**
+ * Scheduled background job: Scan pending approvals and apply auto-expiry (approve/reject).
+ * This can be run via Cloudflare Scheduled event or triggered manually by Admin.
+ */
+export async function handleAutoApprovalExpiry(env) {
+  const timestamp = new Date().toISOString();
+  
+  // 1. Get auto-expiry settings
+  const settingsRows = await env.DB.prepare(
+    "SELECT key, value FROM system_settings WHERE key IN ('pending_auto_expiry_days', 'pending_auto_action')"
+  ).all();
+  
+  let expiryDays = null;
+  let autoAction = null;
+  
+  for (const row of (settingsRows.results || [])) {
+    if (row.key === "pending_auto_expiry_days") expiryDays = parseInt(row.value, 10);
+    if (row.key === "pending_auto_action") autoAction = row.value;
+  }
+  
+  if (expiryDays === null || expiryDays <= 0 || !autoAction) {
+    return { success: true, message: "Auto-expiry settings disabled or not configured." };
+  }
+  
+  // 2. Fetch all pending approvals
+  const pendingApprovals = await env.DB.prepare(
+    "SELECT a.*, e.expense_code, e.user_id as submitter_user_id FROM approvals a JOIN expenses e ON a.expense_id = e.id WHERE a.status = 'pending'"
+  ).all();
+  
+  const results = [];
+  
+  for (const app of (pendingApprovals.results || [])) {
+    const updatedAt = new Date(app.updated_at || app.created_at);
+    const diffTime = new Date().getTime() - updatedAt.getTime();
+    const diffDays = diffTime / (1000 * 60 * 60 * 24);
+    
+    if (diffDays >= expiryDays) {
+      // Expiry threshold reached, action this approval!
+      try {
+        if (autoAction === "approve") {
+          // AUTO-APPROVE
+          // Query next level
+          const allApprovals = await env.DB.prepare("SELECT * FROM approvals WHERE expense_id = ? ORDER BY level_number ASC").bind(app.expense_id).all();
+          let nextApproval = null;
+          for (const a of (allApprovals.results || [])) {
+            if (a.level_number > app.level_number && a.status === "waiting") {
+              nextApproval = a;
+              break;
+            }
+          }
+          
+          let finalStatus = "approved";
+          const statements = [
+            {
+              sql: "UPDATE approvals SET status = 'approved', comments = ?, updated_at = ? WHERE id = ?",
+              params: [`System Auto-Approved after ${expiryDays} days`, timestamp, app.id]
+            }
+          ];
+          
+          if (nextApproval) {
+            finalStatus = `submitted_l${nextApproval.level_number}`;
+            statements.push({
+              sql: "UPDATE approvals SET status = 'pending', created_at = ?, updated_at = ? WHERE id = ?",
+              params: [timestamp, timestamp, nextApproval.id]
+            });
+          }
+          
+          statements.push({
+            sql: "UPDATE expenses SET status = ?, updated_at = ? WHERE id = ?",
+            params: [finalStatus, timestamp, app.expense_id]
+          });
+          
+          await runBatchWrite(env, statements);
+          
+          // Notifications
+          const submitter = await env.DB.prepare("SELECT * FROM users WHERE id = ?").bind(app.submitter_user_id).first();
+          if (submitter) {
+            if (finalStatus === "approved") {
+              await runWrite(env, "INSERT INTO notifications (user_id, title, description, type, read, link, created_at) VALUES (?, '✅ Claim Auto-Approved', ?, 'success', 0, '/home', ?)", [
+                submitter.user_id, `Your claim ${app.expense_code} has been auto-approved by the system.`, timestamp
+              ]);
+            } else {
+              await runWrite(env, "INSERT INTO notifications (user_id, title, description, type, read, link, created_at) VALUES (?, '🔄 Claim Auto-Forwarded', ?, 'info', 0, '/home', ?)", [
+                submitter.user_id, `Your claim ${app.expense_code} has been auto-approved at Level ${app.level_number} and forwarded to the next level.`, timestamp
+              ]);
+            }
+          }
+          
+          if (nextApproval) {
+            const nextApproverUser = await env.DB.prepare("SELECT * FROM users WHERE id = ?").bind(nextApproval.approver_id).first();
+            if (nextApproverUser) {
+              await runWrite(env, "INSERT INTO notifications (user_id, title, description, type, read, link, created_at) VALUES (?, '📥 Pending Auto-Approval', ?, 'warning', 0, '/approval-center', ?)", [
+                nextApproverUser.user_id, `Claim ${app.expense_code} has been auto-forwarded to you for review.`, timestamp
+              ]);
+            }
+          }
+          results.push(`Auto-approved expense ${app.expense_id} at level ${app.level_number}`);
+          
+        } else if (autoAction === "reject") {
+          // AUTO-REJECT
+          const fallbackSettings = await env.DB.prepare("SELECT value FROM system_settings WHERE key = 'rejection_fallback_level'").first();
+          const fallbackVal = fallbackSettings?.value || "creator";
+          
+          const statements = [
+            {
+              sql: "UPDATE approvals SET status = 'rejected', comments = ?, updated_at = ? WHERE id = ?",
+              params: [`System Auto-Rejected after ${expiryDays} days`, timestamp, app.id]
+            }
+          ];
+          
+          let nextStatus = "rejected";
+          
+          if (fallbackVal === "creator") {
+            statements.push({
+              sql: "UPDATE approvals SET status = 'cancelled', updated_at = ? WHERE expense_id = ? AND level_number > ? AND status = 'waiting'",
+              params: [timestamp, app.expense_id, app.level_number]
+            });
+            nextStatus = "rejected";
+          } else if (fallbackVal === "level_1") {
+            statements.push({
+              sql: "UPDATE approvals SET status = CASE WHEN level_number = 1 THEN 'pending' ELSE 'waiting' END, comments = CASE WHEN level_number = 1 THEN '' ELSE comments END, updated_at = ? WHERE expense_id = ?",
+              params: [timestamp, app.expense_id]
+            });
+            nextStatus = "submitted_l1";
+          } else if (fallbackVal === "previous_level") {
+            if (app.level_number > 1) {
+              const prevLvl = app.level_number - 1;
+              statements.push({
+                sql: "UPDATE approvals SET status = CASE WHEN level_number = ? THEN 'pending' WHEN level_number >= ? THEN 'waiting' ELSE status END, comments = CASE WHEN level_number = ? THEN '' ELSE comments END, updated_at = ? WHERE expense_id = ?",
+                params: [prevLvl, app.level_number, prevLvl, timestamp, app.expense_id]
+              });
+              nextStatus = `submitted_l${prevLvl}`;
+            } else {
+              statements.push({
+                sql: "UPDATE approvals SET status = 'cancelled', updated_at = ? WHERE expense_id = ? AND level_number > ? AND status = 'waiting'",
+                params: [timestamp, app.expense_id, app.level_number]
+              });
+              nextStatus = "rejected";
+            }
+          }
+          
+          statements.push({
+            sql: "UPDATE expenses SET status = ?, updated_at = ? WHERE id = ?",
+            params: [nextStatus, timestamp, app.expense_id]
+          });
+          
+          await runBatchWrite(env, statements);
+          
+          // Send re-approval notification if returned to a level
+          if (nextStatus !== "rejected") {
+            const newPendingApp = await env.DB.prepare("SELECT * FROM approvals WHERE expense_id = ? AND status = 'pending'").bind(app.expense_id).first();
+            if (newPendingApp) {
+              const nextApproverUser = await env.DB.prepare("SELECT * FROM users WHERE id = ?").bind(newPendingApp.approver_id).first();
+              if (nextApproverUser) {
+                await runWrite(env, "INSERT INTO notifications (user_id, title, description, type, read, link, created_at) VALUES (?, '📥 Claim Returned for Re-approval', ?, 'warning', 0, '/approval-center', ?)", [
+                  nextApproverUser.user_id, `Claim ${app.expense_code} has been returned to you for re-approval after rejection at a higher level.`, timestamp
+                ]);
+              }
+            }
+          }
+          
+          // Notification to submitter
+          const submitter = await env.DB.prepare("SELECT * FROM users WHERE id = ?").bind(app.submitter_user_id).first();
+          if (submitter) {
+            await runWrite(env, "INSERT INTO notifications (user_id, title, description, type, read, link, created_at) VALUES (?, '❌ Claim Auto-Rejected', ?, 'error', 0, '/home', ?)", [
+              submitter.user_id, `Your claim ${app.expense_code} has been auto-rejected by the system.`, timestamp
+            ]);
+          }
+          results.push(`Auto-rejected expense ${app.expense_id} at level ${app.level_number} (fallback: ${fallbackVal})`);
+        }
+      } catch (ex) {
+        console.error(`Auto-expiry failed for approval ${app.id}:`, ex.message);
+      }
+    }
+  }
+  return { success: true, processed: results };
+}
+
 

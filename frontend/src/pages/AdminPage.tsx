@@ -77,11 +77,11 @@ const ALL_WINDOWS = [
 ];
 
 export default function AdminPage() {
-  const [activeTab, setActiveTab] = useState<"users" | "approvals" | "analytics">((() => {
-    return (localStorage.getItem("admin_active_tab") as "users" | "approvals" | "analytics") || "users";
+  const [activeTab, setActiveTab] = useState<"users" | "approvals" | "analytics" | "settings">((() => {
+    return (localStorage.getItem("admin_active_tab") as "users" | "approvals" | "analytics" | "settings") || "users";
   }));
 
-  const handleTabChange = (tab: "users" | "approvals" | "analytics") => {
+  const handleTabChange = (tab: "users" | "approvals" | "analytics" | "settings") => {
     setActiveTab(tab);
     localStorage.setItem("admin_active_tab", tab);
   };
@@ -126,6 +126,16 @@ export default function AdminPage() {
   const [hierarchyCsvText, setHierarchyCsvText] = useState("");
   const [bulkHierarchyLoading, setBulkHierarchyLoading] = useState(false);
   const [bulkHierarchyResult, setBulkHierarchyResult] = useState<any>(null);
+
+  // System Settings state
+  const [settings, setSettings] = useState<any>({
+    max_past_days_limit: "15",
+    monthly_cutoff_day: "3",
+    pending_auto_expiry_days: "5",
+    pending_auto_action: "reject",
+    rejection_fallback_level: "creator"
+  });
+  const [savingSettings, setSavingSettings] = useState(false);
 
   // Single User Create Form state
   const [eCode, setECode] = useState("");
@@ -247,13 +257,18 @@ export default function AdminPage() {
     }
     setError(null);
     try {
-      const [u, dd, hqs] = await Promise.all([
+      const [u, dd, hqs, settingsRes] = await Promise.all([
         adminService.getUsers(),
         authService.getDropdowns(),
-        adminService.getHierarchies()
+        adminService.getHierarchies(),
+        adminService.getSettings()
       ]);
       setUsers(u);
       localStorage.setItem("cache_admin_users", JSON.stringify(u));
+
+      if (settingsRes && settingsRes.success) {
+        setSettings(settingsRes.settings);
+      }
       
       setDropdowns(dd);
       localStorage.setItem("cache_dropdowns", JSON.stringify(dd));
@@ -280,6 +295,20 @@ export default function AdminPage() {
       }
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleSaveSettings = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setSavingSettings(true);
+    setError(null);
+    try {
+      await adminService.saveSettings(settings);
+      alert("System Settings saved successfully!");
+    } catch (err: any) {
+      setError(getErrorMessage(err, "Failed to save system settings."));
+    } finally {
+      setSavingSettings(false);
     }
   };
 
@@ -1048,7 +1077,7 @@ export default function AdminPage() {
         </div>
 
         {/* Tab Selection - Premium Segmented Control */}
-        <div className="flex bg-slate-100 border border-gray-250/50 rounded-xl p-1 shrink-0 shadow-inner gap-1">
+        <div className="flex bg-slate-100 border border-gray-250/50 rounded-xl p-1 shrink-0 shadow-inner gap-1 overflow-x-auto">
           <button
             type="button"
             onClick={() => handleTabChange("users")}
@@ -1084,6 +1113,18 @@ export default function AdminPage() {
             }`}
           >
             Dashboard Charts
+          </button>
+          <button
+            type="button"
+            onClick={() => handleTabChange("settings")}
+            style={{ minHeight: 'auto' }}
+            className={`px-4 py-1.5 text-xs font-black uppercase tracking-wider rounded-lg transition-all cursor-pointer border-0 whitespace-nowrap ${
+              activeTab === "settings"
+                ? "bg-[#a5d8e8] text-slate-900 font-extrabold shadow-sm"
+                : "bg-transparent text-gray-500 hover:text-gray-800 hover:bg-slate-200/50"
+            }`}
+          >
+            System Settings
           </button>
         </div>
       </div>
@@ -1615,7 +1656,7 @@ export default function AdminPage() {
           </div>
         </div>
       </div>
-      ) : (
+      ) : activeTab === "approvals" ? (
         /* ================= ROLE MAPPINGS TAB ================= */
         <div className="space-y-6">
           <div className="flex justify-between items-center bg-white border border-gray-200 rounded p-4 shadow-sm">
@@ -1743,6 +1784,131 @@ export default function AdminPage() {
               ))}
             </div>
           )}
+        </div>
+      ) : (
+        /* ================= SYSTEM SETTINGS TAB ================= */
+        <div className="space-y-6 animate-fadeIn">
+          <div className="bg-white border border-gray-200 rounded p-4 shadow-sm">
+            <h3 className="text-sm font-bold text-gray-800 uppercase tracking-wide">Global System Settings</h3>
+            <p className="text-gray-500 text-xs mt-1">Configure global expense submission policies, monthly cutoff dates, and auto-approval expiry rules.</p>
+          </div>
+
+          <form onSubmit={handleSaveSettings} className="bg-white border border-gray-205 rounded-lg shadow-sm p-6 space-y-6 max-w-3xl">
+            {/* Expense Date Submission Limits */}
+            <div className="space-y-4">
+              <h4 className="text-xs font-bold uppercase tracking-wider text-blue-600 border-b border-gray-100 pb-2">1. Expense Submission Policies</h4>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div>
+                  <label className="label-lte block text-xs font-bold text-gray-700 mb-1">
+                    Allowed Past Days Window
+                  </label>
+                  <input
+                    type="number"
+                    min="1"
+                    required
+                    value={settings.max_past_days_limit || ""}
+                    onChange={(e) => setSettings({ ...settings, max_past_days_limit: e.target.value })}
+                    className="w-full p-2 border border-gray-300 rounded text-xs focus:ring-1 focus:ring-blue-500 focus:outline-none"
+                    placeholder="e.g. 15"
+                  />
+                  <p className="text-[10px] text-gray-500 mt-1">
+                    Number of past days (from today) for which engineers can submit expense claims. Older claims will be blocked.
+                  </p>
+                </div>
+
+                <div>
+                  <label className="label-lte block text-xs font-bold text-gray-700 mb-1">
+                    Monthly Cutoff Day (of next month)
+                  </label>
+                  <input
+                    type="number"
+                    min="1"
+                    max="28"
+                    required
+                    value={settings.monthly_cutoff_day || ""}
+                    onChange={(e) => setSettings({ ...settings, monthly_cutoff_day: e.target.value })}
+                    className="w-full p-2 border border-gray-300 rounded text-xs focus:ring-1 focus:ring-blue-500 focus:outline-none"
+                    placeholder="e.g. 3"
+                  />
+                  <p className="text-[10px] text-gray-500 mt-1">
+                    After this calendar day of the current month, previous month's expense submissions will be blocked (e.g. set to 3 to block by 4th of month).
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            {/* Auto-Expiry Approval Rules */}
+            <div className="space-y-4 pt-4 border-t border-gray-100">
+              <h4 className="text-xs font-bold uppercase tracking-wider text-blue-600 border-b border-gray-100 pb-2">2. Auto-Approval / Expiry Rules</h4>
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                <div>
+                  <label className="label-lte block text-xs font-bold text-gray-700 mb-1">
+                    Pending Days Threshold
+                  </label>
+                  <input
+                    type="number"
+                    min="0"
+                    required
+                    value={settings.pending_auto_expiry_days || ""}
+                    onChange={(e) => setSettings({ ...settings, pending_auto_expiry_days: e.target.value })}
+                    className="w-full p-2 border border-gray-300 rounded text-xs focus:ring-1 focus:ring-blue-500 focus:outline-none"
+                    placeholder="e.g. 5"
+                  />
+                  <p className="text-[10px] text-gray-500 mt-1">
+                    Days a claim can remain pending at any level before system auto-actions it. Set to 0 to disable.
+                  </p>
+                </div>
+
+                <div>
+                  <label className="label-lte block text-xs font-bold text-gray-700 mb-1">
+                    Auto-Expiry Action
+                  </label>
+                  <select
+                    value={settings.pending_auto_action || "reject"}
+                    onChange={(e) => setSettings({ ...settings, pending_auto_action: e.target.value })}
+                    className="w-full p-2 border border-gray-300 rounded text-xs bg-white focus:ring-1 focus:ring-blue-500 focus:outline-none"
+                  >
+                    <option value="approve">Auto Approve</option>
+                    <option value="reject">Auto Reject</option>
+                  </select>
+                  <p className="text-[10px] text-gray-500 mt-1">
+                    Action to perform automatically (approve current level or reject the claim entirely).
+                  </p>
+                </div>
+
+                <div>
+                  <label className="label-lte block text-xs font-bold text-gray-700 mb-1">
+                    Rejection Fallback Routing Level
+                  </label>
+                  <select
+                    value={settings.rejection_fallback_level || "creator"}
+                    onChange={(e) => setSettings({ ...settings, rejection_fallback_level: e.target.value })}
+                    className="w-full p-2 border border-gray-300 rounded text-xs bg-white focus:ring-1 focus:ring-blue-500 focus:outline-none"
+                  >
+                    <option value="creator">Return to Draft (Creator)</option>
+                    <option value="level_1">Reset to Level 1 Approval</option>
+                    <option value="previous_level">Return to Previous Level</option>
+                  </select>
+                  <p className="text-[10px] text-gray-500 mt-1">
+                    Where a rejected claim (both manual rejections and auto-rejections) is sent for re-approval/edit.
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            {/* Submit Button */}
+            <div className="flex justify-end pt-4 border-t border-gray-100">
+              <button
+                type="submit"
+                disabled={savingSettings}
+                className={`px-6 py-2.5 text-xs font-bold uppercase tracking-wider rounded-lg border-0 shadow cursor-pointer text-white transition-all ${
+                  savingSettings ? "bg-slate-400" : "bg-blue-600 hover:bg-blue-700"
+                }`}
+              >
+                {savingSettings ? "Saving Settings..." : "Save System Settings"}
+              </button>
+            </div>
+          </form>
         </div>
       )}
       </div>

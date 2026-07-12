@@ -1583,6 +1583,52 @@ export async function handleSubmitExpense(request, env, params, query, user) {
 
   const timestamp = new Date().toISOString();
 
+  // ─── Policy Rules Checks (Allowed Past Days & Monthly Cutoff) ─────────────────
+  try {
+    const settingsRows = await env.DB.prepare(
+      "SELECT key, value FROM system_settings WHERE key IN ('max_past_days_limit', 'monthly_cutoff_day')"
+    ).all();
+    
+    let maxPastDays = null;
+    let monthlyCutoff = null;
+    for (const r of (settingsRows.results || [])) {
+      if (r.key === "max_past_days_limit") maxPastDays = parseInt(r.value, 10);
+      if (r.key === "monthly_cutoff_day") monthlyCutoff = parseInt(r.value, 10);
+    }
+
+    const today = new Date();
+    const expenseDateObj = new Date(date);
+    const d1 = Date.UTC(today.getFullYear(), today.getMonth(), today.getDate());
+    const d2 = Date.UTC(expenseDateObj.getFullYear(), expenseDateObj.getMonth(), expenseDateObj.getDate());
+    const diffDays = Math.floor((d1 - d2) / (1000 * 60 * 60 * 24));
+
+    if (d2 > d1) {
+      return jsonResponse({ error: "Submission policy violation: Expense date cannot be in the future." }, 400);
+    }
+
+    if (maxPastDays !== null && maxPastDays > 0) {
+      if (diffDays > maxPastDays) {
+        return jsonResponse({ error: `Submission policy violation: Expense date (${date}) is older than the allowed limit of ${maxPastDays} days.` }, 400);
+      }
+    }
+
+    if (monthlyCutoff !== null && monthlyCutoff > 0) {
+      const currentDay = today.getDate();
+      if (currentDay > monthlyCutoff) {
+        const currentYear = today.getFullYear();
+        const currentMonth = today.getMonth(); // 0-indexed
+        const expenseYear = expenseDateObj.getFullYear();
+        const expenseMonth = expenseDateObj.getMonth();
+        
+        if (expenseYear < currentYear || (expenseYear === currentYear && expenseMonth < currentMonth)) {
+          return jsonResponse({ error: `Submission policy violation: Cutoff day (${monthlyCutoff}rd/th) for previous month's expenses has passed. You cannot submit expenses for past months.` }, 400);
+        }
+      }
+    }
+  } catch (err) {
+    console.error("Failed to verify submission policies:", err.message);
+  }
+
   // Duplicate Date Check (prevent submitting twice for the same date unless rejected)
   let dupQuery = "SELECT id FROM expenses WHERE user_id = ? AND itinerary = ? AND status NOT IN ('rejected', 'returned_to_draft')";
   let dupParams = [user.id, date];

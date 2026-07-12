@@ -94,6 +94,11 @@ export async function runMigrations(db) {
     `CREATE TABLE IF NOT EXISTS legacy_hash_mapping (
       hash_id INTEGER PRIMARY KEY,
       exp_id TEXT UNIQUE NOT NULL
+    )`,
+    // system_settings table
+    `CREATE TABLE IF NOT EXISTS system_settings (
+      key TEXT PRIMARY KEY,
+      value TEXT NOT NULL
     )`
   ];
 
@@ -138,6 +143,26 @@ export async function runMigrations(db) {
     }
   } catch (err) {
     console.error("Failed to seed assets_inventory:", err.message);
+  }
+
+  // Seed system_settings if empty
+  try {
+    const settingsRes = await db.prepare("SELECT COUNT(*) as count FROM system_settings").first();
+    if (settingsRes && settingsRes.count === 0) {
+      const defaults = [
+        ["max_past_days_limit", "15"],
+        ["monthly_cutoff_day", "3"],
+        ["pending_auto_expiry_days", "5"],
+        ["pending_auto_action", "reject"],
+        ["rejection_fallback_level", "creator"]
+      ];
+      for (const [k, v] of defaults) {
+        await db.prepare("INSERT INTO system_settings (key, value) VALUES (?, ?)").bind(k, v).run();
+      }
+      console.log("Successfully seeded system_settings.");
+    }
+  } catch (err) {
+    console.error("Failed to seed system_settings:", err.message);
   }
 
   // Self-healing database repair: Set local_purchase to original_local_purchase if it is 0/null and original is > 0

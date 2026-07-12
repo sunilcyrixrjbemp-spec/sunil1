@@ -137,6 +137,16 @@ export const adminService = {
     return response.data;
   },
 
+  getSettings: async (): Promise<any> => {
+    const response = await api.get("/admin/settings");
+    return response.data;
+  },
+
+  saveSettings: async (settings: any): Promise<any> => {
+    const response = await api.post("/admin/settings", { settings });
+    return response.data;
+  },
+
   runMigrations: async (): Promise<any> => {
     const response = await api.post("/admin/run-migrations");
     return response.data;

@@ -888,3 +888,59 @@ export async function handleBulkImportHierarchies(request, env, params, query, a
 
   return jsonResponse({ status: "success", created_count: createdCount, failed_count: errors.length, errors });
 }
+
+/**
+ * GET /api/admin/settings
+ */
+export async function handleGetSystemSettings(request, env, params, query, adminUser) {
+  if (adminUser.role !== "Admin") {
+    return jsonResponse({ error: "Access denied" }, 403);
+  }
+
+  try {
+    const rowsRes = await env.DB.prepare("SELECT * FROM system_settings").all();
+    const rows = rowsRes.results || [];
+    const settings = {};
+    for (const r of rows) {
+      settings[r.key] = r.value;
+    }
+
+    return jsonResponse({ success: true, settings });
+  } catch (err) {
+    return jsonResponse({ error: "Failed to fetch settings", detail: err.message }, 500);
+  }
+}
+
+/**
+ * POST /api/admin/settings
+ */
+export async function handleSaveSystemSettings(request, env, params, query, adminUser) {
+  if (adminUser.role !== "Admin") {
+    return jsonResponse({ error: "Access denied" }, 403);
+  }
+
+  let body;
+  try {
+    body = await request.json();
+  } catch (e) {
+    return jsonResponse({ error: "Invalid JSON body" }, 400);
+  }
+
+  const settings = body.settings || {};
+  const statements = [];
+  for (const [key, value] of Object.entries(settings)) {
+    statements.push({
+      sql: "INSERT OR REPLACE INTO system_settings (key, value) VALUES (?, ?)",
+      params: [key, String(value)]
+    });
+  }
+
+  try {
+    if (statements.length > 0) {
+      await runBatchWrite(env, statements);
+    }
+    return jsonResponse({ success: true, message: "Settings saved successfully" });
+  } catch (err) {
+    return jsonResponse({ error: "Failed to save settings", detail: err.message }, 500);
+  }
+}
