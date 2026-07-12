@@ -20,7 +20,8 @@ import {
   Filter,
   Zap
 } from "lucide-react";
-import { PieChart, Pie, Cell, Tooltip, Legend, ResponsiveContainer, BarChart, Bar, XAxis, YAxis, CartesianGrid } from "recharts";
+import { ResponsivePie } from "@nivo/pie";
+import { ResponsiveBar } from "@nivo/bar";
 import toast from "react-hot-toast";
 import api from "../services/api";
 import Loader from "../components/common/Loader";
@@ -922,29 +923,31 @@ export default function AssetUploadPage() {
             </div>
             <div className="w-full h-64 p-4">
               {stats.charts.status_list.length > 0 ? (
-                <div className="relative flex justify-center items-center h-full">
-                  <ResponsiveContainer width="100%" height="100%">
-                    <PieChart>
-                      <Pie
-                        data={stats.charts.status_list}
-                        cx="50%"
-                        cy="50%"
-                        innerRadius={45}
-                        outerRadius={65}
-                        paddingAngle={3}
-                        dataKey="value"
-                        stroke="#ffffff"
-                        strokeWidth={2}
-                      >
-                        {stats.charts.status_list.map((_, index) => (
-                          <Cell key={`cell-${index}`} fill={GALLERY_COLORS[index % GALLERY_COLORS.length]} />
-                        ))}
-                      </Pie>
-                      <Tooltip content={<CustomTooltip />} />
-                      <Legend verticalAlign="bottom" height={36} iconType="circle" wrapperStyle={{ fontSize: 9, fontWeight: 'bold' }} />
-                    </PieChart>
-                  </ResponsiveContainer>
-                  <div className="absolute flex flex-col items-center justify-center pointer-events-none" style={{ top: '40%', left: '50%', transform: 'translate(-50%, -50%)' }}>
+                <div className="relative flex justify-center items-center h-full" style={{ height: "200px" }}>
+                  <ResponsivePie
+                    data={stats.charts.status_list.map((s, i) => ({ id: s.name, label: s.name, value: s.value, color: GALLERY_COLORS[i % GALLERY_COLORS.length] }))}
+                    margin={{ top: 10, right: 10, bottom: 10, left: 10 }}
+                    innerRadius={0.7}
+                    padAngle={3}
+                    colors={{ datum: 'data.color' }}
+                    borderWidth={2}
+                    borderColor="#ffffff"
+                    enableArcLinkLabels={false}
+                    enableArcLabels={false}
+                    tooltip={({ datum }) => (
+                      <div className="bg-slate-900/95 backdrop-blur-md text-white border border-slate-800 shadow-2xl rounded-xl p-3 text-xs min-w-[120px] font-sans pointer-events-none z-50">
+                        <p className="font-extrabold text-[10px] uppercase text-slate-400 tracking-wider mb-1.5">{datum.label}</p>
+                        <div className="flex items-center justify-between gap-4">
+                          <span className="flex items-center gap-1.5 text-slate-300">
+                            <span className="w-2 h-2 rounded-full" style={{ backgroundColor: datum.color }} />
+                            Units:
+                          </span>
+                          <span className="font-mono font-bold text-white">{datum.value}</span>
+                        </div>
+                      </div>
+                    )}
+                  />
+                  <div className="absolute flex flex-col items-center justify-center pointer-events-none" style={{ top: '50%', left: '50%', transform: 'translate(-50%, -50%)' }}>
                     <span className="text-[8px] text-gray-400 font-bold uppercase tracking-wider">Total</span>
                     <span className="text-xs font-black text-slate-800 font-mono">
                       {stats.charts.status_list.reduce((sum, item) => sum + item.value, 0)}
@@ -953,6 +956,16 @@ export default function AssetUploadPage() {
                 </div>
               ) : (
                 <div className="flex items-center justify-center h-full text-xs text-gray-400 font-bold">No Data Available</div>
+              )}
+              {stats.charts.status_list.length > 0 && (
+                <div className="flex flex-wrap justify-center gap-x-2.5 gap-y-1 mt-2">
+                  {stats.charts.status_list.map((item, i) => (
+                    <div key={i} className="flex items-center gap-1 text-[8px] font-bold text-slate-500">
+                      <span className="w-1.5 h-1.5 rounded-full shrink-0" style={{ backgroundColor: GALLERY_COLORS[i % GALLERY_COLORS.length] }} />
+                      <span>{item.name}</span>
+                    </div>
+                  ))}
+                </div>
               )}
             </div>
           </div>
@@ -967,19 +980,60 @@ export default function AssetUploadPage() {
             </div>
             <div className="w-full h-64 p-4">
               {stats.charts.top_types.length > 0 ? (
-                <ResponsiveContainer width="100%" height="100%">
-                  <BarChart data={stats.charts.top_types} layout="vertical" margin={{ left: 10, right: 10, top: 10, bottom: 10 }}>
-                    <CartesianGrid strokeDasharray="3 3" stroke="#f3f4f6" horizontal={false} vertical={true} />
-                    <XAxis type="number" stroke="#9ca3af" fontSize={9} />
-                    <YAxis dataKey="name" type="category" stroke="#9ca3af" fontSize={8} width={80} />
-                    <Tooltip content={<CustomTooltip />} />
-                    <Bar dataKey="value" radius={[0, 6, 6, 0]} maxBarSize={16}>
-                      {stats.charts.top_types.map((_, index) => (
-                        <Cell key={`cell-${index}`} fill={GALLERY_COLORS[index % GALLERY_COLORS.length]} />
-                      ))}
-                    </Bar>
-                  </BarChart>
-                </ResponsiveContainer>
+                <ResponsiveBar
+                  data={stats.charts.top_types}
+                  keys={["value"]}
+                  indexBy="name"
+                  layout="horizontal"
+                  margin={{ top: 15, right: 15, bottom: 35, left: 80 }}
+                  padding={0.35}
+                  colors={GALLERY_COLORS}
+                  colorBy="indexValue"
+                  borderRadius={6}
+                  borderWidth={0}
+                  enableLabel={false}
+                  axisTop={null}
+                  axisRight={null}
+                  axisBottom={{
+                    tickSize: 0,
+                    tickPadding: 8,
+                    tickRotation: 0
+                  }}
+                  axisLeft={{
+                    tickSize: 0,
+                    tickPadding: 8,
+                    tickRotation: 0
+                  }}
+                  theme={{
+                    grid: {
+                      line: {
+                        stroke: '#f1f5f9',
+                        strokeWidth: 1
+                      }
+                    },
+                    axis: {
+                      ticks: {
+                        text: {
+                          fontSize: 8,
+                          fontWeight: 'bold',
+                          fill: '#64748b'
+                        }
+                      }
+                    }
+                  }}
+                  tooltip={({ id, value, color, indexValue }) => (
+                    <div className="bg-slate-900/95 backdrop-blur-md text-white border border-slate-800 shadow-2xl rounded-xl p-3 text-xs min-w-[120px] font-sans pointer-events-none z-50">
+                      <p className="font-extrabold text-[10px] uppercase text-slate-400 tracking-wider mb-1.5">{indexValue}</p>
+                      <div className="flex items-center justify-between gap-4">
+                        <span className="flex items-center gap-1.5 text-slate-300">
+                          <span className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: color }} />
+                          Units:
+                        </span>
+                        <span className="font-mono font-bold text-white">{value}</span>
+                      </div>
+                    </div>
+                  )}
+                />
               ) : (
                 <div className="flex items-center justify-center h-full text-xs text-gray-400 font-bold">No Data Available</div>
               )}
@@ -996,26 +1050,43 @@ export default function AssetUploadPage() {
             </div>
             <div className="w-full h-64 p-4">
               {stats.charts.warranty_list.some(w => w.value > 0) ? (
-                <ResponsiveContainer width="100%" height="100%">
-                  <PieChart>
-                    <Pie
-                      data={stats.charts.warranty_list}
-                      cx="50%"
-                      cy="50%"
-                      outerRadius={70}
-                      dataKey="value"
-                      stroke="#ffffff"
-                      strokeWidth={2}
-                    >
-                      <Cell fill="#2b7d50" />
-                      <Cell fill="#d28b2a" />
-                    </Pie>
-                    <Tooltip content={<CustomTooltip />} />
-                    <Legend verticalAlign="bottom" height={36} iconType="circle" wrapperStyle={{ fontSize: 9, fontWeight: 'bold' }} />
-                  </PieChart>
-                </ResponsiveContainer>
+                <div className="relative flex justify-center items-center h-full" style={{ height: "200px" }}>
+                  <ResponsivePie
+                    data={stats.charts.warranty_list.map((w, i) => ({ id: w.name, label: w.name, value: w.value, color: i === 0 ? "#2b7d50" : "#d28b2a" }))}
+                    margin={{ top: 10, right: 10, bottom: 10, left: 10 }}
+                    innerRadius={0}
+                    padAngle={1.5}
+                    colors={{ datum: 'data.color' }}
+                    borderWidth={2}
+                    borderColor="#ffffff"
+                    enableArcLinkLabels={false}
+                    enableArcLabels={false}
+                    tooltip={({ datum }) => (
+                      <div className="bg-slate-900/95 backdrop-blur-md text-white border border-slate-800 shadow-2xl rounded-xl p-3 text-xs min-w-[120px] font-sans pointer-events-none z-50">
+                        <p className="font-extrabold text-[10px] uppercase text-slate-400 tracking-wider mb-1.5">{datum.label}</p>
+                        <div className="flex items-center justify-between gap-4">
+                          <span className="flex items-center gap-1.5 text-slate-300">
+                            <span className="w-2 h-2 rounded-full" style={{ backgroundColor: datum.color }} />
+                            Units:
+                          </span>
+                          <span className="font-mono font-bold text-white">{datum.value}</span>
+                        </div>
+                      </div>
+                    )}
+                  />
+                </div>
               ) : (
                 <div className="flex items-center justify-center h-full text-xs text-gray-400 font-bold">No Data Available</div>
+              )}
+              {stats.charts.warranty_list.some(w => w.value > 0) && (
+                <div className="flex flex-wrap justify-center gap-x-2.5 gap-y-1 mt-2">
+                  {stats.charts.warranty_list.map((item, i) => (
+                    <div key={i} className="flex items-center gap-1 text-[8px] font-bold text-slate-500">
+                      <span className="w-1.5 h-1.5 rounded-full shrink-0" style={{ backgroundColor: i === 0 ? "#2b7d50" : "#d28b2a" }} />
+                      <span>{item.name}</span>
+                    </div>
+                  ))}
+                </div>
               )}
             </div>
           </div>

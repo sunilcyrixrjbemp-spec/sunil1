@@ -1,5 +1,6 @@
 import { useEffect, useState, useMemo } from "react";
-import { BarChart, Bar, Cell, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, AreaChart, Area, PieChart, Pie } from "recharts";
+import { ResponsiveBar } from "@nivo/bar";
+import { ResponsivePie } from "@nivo/pie";
 import { expenseService } from "../services/expenseService";
 import { authService } from "../services/authService";
 import Loader from "../components/common/Loader";
@@ -1025,25 +1026,67 @@ export default function AnalysisPage() {
               </h3>
               <p className="text-[10px] text-gray-400 mt-0.5">Highest claim amounts by employee</p>
             </div>
-            <div className="p-4" style={{ height: 280 }}>
-              {userWiseData.length > 0 ? (
-                <ResponsiveContainer width="100%" height="100%">
-                  <BarChart data={userWiseData} layout="vertical" margin={{ left: 10, right: 20 }}>
-                    <CartesianGrid strokeDasharray="3 3" stroke="#f3f4f6" horizontal={false} vertical={true} />
-                    <XAxis type="number" tick={{ fontSize: 10 }} tickFormatter={(v) => `₹${(v / 1000).toFixed(0)}k`} />
-                    <YAxis type="category" dataKey="name" tick={{ fontSize: 10 }} width={90} />
-                    <Tooltip content={<CustomMoneyTooltip />} />
-                    <Bar dataKey="amount" radius={[0, 6, 6, 0]} maxBarSize={16}>
-                      {userWiseData.map((_, index) => (
-                        <Cell key={`cell-${index}`} fill={GALLERY_COLORS[index % GALLERY_COLORS.length]} />
-                      ))}
-                    </Bar>
-                  </BarChart>
-                </ResponsiveContainer>
-              ) : (
-                <div className="flex items-center justify-center h-full text-gray-400 text-xs">No user data</div>
-              )}
-            </div>
+              <div className="p-4" style={{ height: 280 }}>
+                {userWiseData.length > 0 ? (
+                  <ResponsiveBar
+                    data={userWiseData}
+                    keys={["amount"]}
+                    indexBy="name"
+                    layout="horizontal"
+                    margin={{ top: 15, right: 15, bottom: 35, left: 90 }}
+                    padding={0.35}
+                    colors={GALLERY_COLORS}
+                    colorBy="indexValue"
+                    borderRadius={6}
+                    borderWidth={0}
+                    enableLabel={false}
+                    axisTop={null}
+                    axisRight={null}
+                    axisBottom={{
+                      tickSize: 0,
+                      tickPadding: 8,
+                      tickRotation: 0,
+                      format: (v) => `₹${(v / 1000).toFixed(0)}k`
+                    }}
+                    axisLeft={{
+                      tickSize: 0,
+                      tickPadding: 8,
+                      tickRotation: 0
+                    }}
+                    theme={{
+                      grid: {
+                        line: {
+                          stroke: '#f1f5f9',
+                          strokeWidth: 1
+                        }
+                      },
+                      axis: {
+                        ticks: {
+                          text: {
+                            fontSize: 8,
+                            fontWeight: 'bold',
+                            fill: '#64748b'
+                          }
+                        }
+                      }
+                    }}
+                    tooltip={({ id, value, color, indexValue }) => (
+                      <div className="bg-slate-900/95 backdrop-blur-md text-white border border-slate-800 shadow-2xl rounded-xl p-3 text-xs min-w-[120px] font-sans pointer-events-none z-50">
+                        <p className="font-extrabold text-[10px] uppercase text-slate-400 tracking-wider mb-1.5">{indexValue}</p>
+                        <div className="flex items-center justify-between gap-4">
+                          <span className="flex items-center gap-1.5 text-slate-300">
+                            <span className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: color }} />
+                            Amount:
+                          </span>
+                          <span className="font-mono font-bold text-white">₹{value.toLocaleString()}</span>
+                        </div>
+                      </div>
+                    )}
+                  />
+                ) : (
+                  <div className="flex items-center justify-center h-full text-gray-400 text-xs">No user data</div>
+                )}
+              </div>
           </div>
 
           {/* Chart 2: Claim Status Distribution */}
@@ -1056,34 +1099,49 @@ export default function AnalysisPage() {
             </div>
             <div className="p-4" style={{ height: 280 }}>
               {statusWiseData.length > 0 ? (
-                <div className="relative flex justify-center items-center h-full">
-                  <ResponsiveContainer width="100%" height="100%">
-                    <PieChart margin={{ top: 15, right: 15, bottom: 15, left: 15 }}>
-                      <Pie
-                        data={statusWiseData}
-                        cx="50%"
-                        cy="50%"
-                        innerRadius={45}
-                        outerRadius={65}
-                        paddingAngle={3}
-                        dataKey="value"
-                        stroke="#ffffff"
-                        strokeWidth={2}
-                      >
-                        {statusWiseData.map((entry, i) => (
-                          <Cell key={i} fill={entry.name === "Approved" ? "#2e7d32" : entry.name === "Rejected" ? "#d32f2f" : "#f57c00"} />
-                        ))}
-                      </Pie>
-                      <Tooltip content={<CustomMoneyTooltip />} />
-                      <Legend verticalAlign="bottom" height={36} iconType="circle" wrapperStyle={{ fontSize: 9, fontWeight: 'bold' }} />
-                    </PieChart>
-                  </ResponsiveContainer>
-                  <div className="absolute flex flex-col items-center justify-center pointer-events-none" style={{ top: '40%', left: '50%', transform: 'translate(-50%, -50%)' }}>
-                    <span className="text-[8px] text-gray-400 font-bold uppercase tracking-wider">Total Claims</span>
-                    <span className="text-[10px] font-black text-slate-800 font-mono">
+                <div className="relative flex justify-center items-center h-full" style={{ height: "210px" }}>
+                  <ResponsivePie
+                    data={statusWiseData.map(d => ({
+                      id: d.name,
+                      label: d.name,
+                      value: d.value,
+                      color: d.name === "Approved" ? "#2e7d32" : d.name === "Rejected" ? "#d32f2f" : "#f57c00"
+                    }))}
+                    margin={{ top: 10, right: 10, bottom: 10, left: 10 }}
+                    innerRadius={0.7}
+                    padAngle={3}
+                    colors={{ datum: 'data.color' }}
+                    borderWidth={2}
+                    borderColor="#ffffff"
+                    enableArcLinkLabels={false}
+                    enableArcLabels={false}
+                    tooltip={({ datum }) => (
+                      <div className="bg-slate-900/95 backdrop-blur-md text-white border border-slate-800 shadow-2xl rounded-xl p-3 text-xs min-w-[120px] font-sans pointer-events-none z-50">
+                        <p className="font-extrabold text-[10px] uppercase text-slate-400 tracking-wider mb-1.5">{datum.label}</p>
+                        <div className="flex items-center justify-between gap-4">
+                          <span className="flex items-center gap-1.5 text-slate-300">
+                            <span className="w-2 h-2 rounded-full" style={{ backgroundColor: datum.color }} />
+                            Amount:
+                          </span>
+                          <span className="font-mono font-bold text-white">₹{datum.value?.toLocaleString()}</span>
+                        </div>
+                      </div>
+                    )}
+                  />
+                  <div className="absolute flex flex-col items-center justify-center pointer-events-none" style={{ top: '50%', left: '50%', transform: 'translate(-50%, -50%)' }}>
+                    <span className="text-[7px] text-gray-400 font-bold uppercase tracking-wider">Total Claims</span>
+                    <span className="text-[11px] font-black text-slate-800 font-mono mt-0.5">
                       ₹{statusWiseData.reduce((sum, item) => sum + item.value, 0).toLocaleString()}
                     </span>
                   </div>
+                </div>
+                <div className="flex flex-wrap justify-center gap-x-2.5 gap-y-1 mt-2">
+                  {statusWiseData.map((item, i) => (
+                    <div key={i} className="flex items-center gap-1 text-[8px] font-bold text-slate-500">
+                      <span className="w-1.5 h-1.5 rounded-full shrink-0" style={{ backgroundColor: item.name === "Approved" ? "#2e7d32" : item.name === "Rejected" ? "#d32f2f" : "#f57c00" }} />
+                      <span>{item.name}</span>
+                    </div>
+                  ))}
                 </div>
               ) : (
                 <div className="flex items-center justify-center h-full text-gray-400 text-xs">No status data</div>

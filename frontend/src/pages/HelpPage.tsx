@@ -4,7 +4,7 @@ import { ticketService, TicketCreatePayload } from "../services/ticketService";
 import { expenseService } from "../services/expenseService";
 import Loader from "../components/common/Loader";
 import api from "../services/api";
-import { BarChart, Bar, Cell, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from "recharts";
+import { ResponsiveBar } from "@nivo/bar";
 
 const GALLERY_COLORS = ["#2f5bb7", "#2b7d50", "#d28b2a", "#854aa5", "#d83b01", "#00a2ad", "#e81123"];
 
@@ -557,19 +557,60 @@ export default function HelpPage() {
         <div className="card border border-slate-100 p-4 bg-white shadow-sm rounded-3xl">
           <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest block border-b border-slate-100 pb-2 mb-3">Concerns by Category</span>
           <div style={{ height: 160 }}>
-            <ResponsiveContainer width="100%" height="100%">
-              <BarChart data={analytics.categoryChart} layout="vertical" margin={{ left: 5, right: 10, top: 5, bottom: 5 }}>
-                <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" horizontal={true} vertical={false} />
-                <XAxis type="number" tick={{ fontSize: 9, fontWeight: 'bold' }} allowDecimals={false} stroke="#94a3b8" />
-                <YAxis type="category" dataKey="label" tick={{ fontSize: 9, fontWeight: 'bold' }} width={80} stroke="#94a3b8" />
-                <Tooltip content={<CustomTooltip />} />
-                <Bar dataKey="amount" radius={[0, 6, 6, 0]} maxBarSize={16}>
-                  {analytics.categoryChart.map((_, index) => (
-                    <Cell key={`cell-${index}`} fill={GALLERY_COLORS[index % GALLERY_COLORS.length]} />
-                  ))}
-                </Bar>
-              </BarChart>
-            </ResponsiveContainer>
+            <ResponsiveBar
+              data={analytics.categoryChart}
+              keys={["amount"]}
+              indexBy="label"
+              layout="horizontal"
+              margin={{ top: 10, right: 10, bottom: 25, left: 80 }}
+              padding={0.35}
+              colors={GALLERY_COLORS}
+              colorBy="indexValue"
+              borderRadius={6}
+              borderWidth={0}
+              enableLabel={false}
+              axisTop={null}
+              axisRight={null}
+              axisBottom={{
+                tickSize: 0,
+                tickPadding: 6,
+                tickRotation: 0
+              }}
+              axisLeft={{
+                tickSize: 0,
+                tickPadding: 6,
+                tickRotation: 0
+              }}
+              theme={{
+                grid: {
+                  line: {
+                    stroke: '#f1f5f9',
+                    strokeWidth: 1
+                  }
+                },
+                axis: {
+                  ticks: {
+                    text: {
+                      fontSize: 8,
+                      fontWeight: 'bold',
+                      fill: '#64748b'
+                    }
+                  }
+                }
+              }}
+              tooltip={({ id, value, color, indexValue }) => (
+                <div className="bg-slate-900/95 backdrop-blur-md text-white border border-slate-800 shadow-2xl rounded-xl p-3 text-xs min-w-[120px] font-sans pointer-events-none z-50">
+                  <p className="font-extrabold text-[10px] uppercase text-slate-400 tracking-wider mb-1.5">{indexValue}</p>
+                  <div className="flex items-center justify-between gap-4">
+                    <span className="flex items-center gap-1.5 text-slate-300">
+                      <span className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: color }} />
+                      Concerns:
+                    </span>
+                    <span className="font-mono font-bold text-white">{value}</span>
+                  </div>
+                </div>
+              )}
+            />
           </div>
         </div>
 
@@ -577,19 +618,60 @@ export default function HelpPage() {
         <div className="card border border-slate-100 p-4 bg-white shadow-sm rounded-3xl">
           <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest block border-b border-slate-100 pb-2 mb-3">Concerns by Priority</span>
           <div style={{ height: 160 }}>
-            <ResponsiveContainer width="100%" height="100%">
-              <BarChart data={analytics.priorityChart} layout="vertical" margin={{ left: 5, right: 10, top: 5, bottom: 5 }}>
-                <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" horizontal={true} vertical={false} />
-                <XAxis type="number" tick={{ fontSize: 9, fontWeight: 'bold' }} allowDecimals={false} stroke="#94a3b8" />
-                <YAxis type="category" dataKey="label" tick={{ fontSize: 9, fontWeight: 'bold' }} width={70} stroke="#94a3b8" />
-                <Tooltip content={<CustomTooltip />} />
-                <Bar dataKey="amount" radius={[0, 6, 6, 0]} maxBarSize={16}>
-                  {analytics.priorityChart.map((_, index) => (
-                    <Cell key={`cell-${index}`} fill={GALLERY_COLORS[index % GALLERY_COLORS.length]} />
-                  ))}
-                </Bar>
-              </BarChart>
-            </ResponsiveContainer>
+            <ResponsiveBar
+              data={analytics.priorityChart}
+              keys={["amount"]}
+              indexBy="label"
+              layout="horizontal"
+              margin={{ top: 10, right: 10, bottom: 25, left: 70 }}
+              padding={0.35}
+              colors={GALLERY_COLORS}
+              colorBy="indexValue"
+              borderRadius={6}
+              borderWidth={0}
+              enableLabel={false}
+              axisTop={null}
+              axisRight={null}
+              axisBottom={{
+                tickSize: 0,
+                tickPadding: 6,
+                tickRotation: 0
+              }}
+              axisLeft={{
+                tickSize: 0,
+                tickPadding: 6,
+                tickRotation: 0
+              }}
+              theme={{
+                grid: {
+                  line: {
+                    stroke: '#f1f5f9',
+                    strokeWidth: 1
+                  }
+                },
+                axis: {
+                  ticks: {
+                    text: {
+                      fontSize: 8,
+                      fontWeight: 'bold',
+                      fill: '#64748b'
+                    }
+                  }
+                }
+              }}
+              tooltip={({ id, value, color, indexValue }) => (
+                <div className="bg-slate-900/95 backdrop-blur-md text-white border border-slate-800 shadow-2xl rounded-xl p-3 text-xs min-w-[120px] font-sans pointer-events-none z-50">
+                  <p className="font-extrabold text-[10px] uppercase text-slate-400 tracking-wider mb-1.5">{indexValue}</p>
+                  <div className="flex items-center justify-between gap-4">
+                    <span className="flex items-center gap-1.5 text-slate-300">
+                      <span className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: color }} />
+                      Concerns:
+                    </span>
+                    <span className="font-mono font-bold text-white">{value}</span>
+                  </div>
+                </div>
+              )}
+            />
           </div>
         </div>
 
@@ -597,19 +679,60 @@ export default function HelpPage() {
         <div className="card border border-slate-100 p-4 bg-white shadow-sm rounded-3xl">
           <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest block border-b border-slate-100 pb-2 mb-3">Concerns by Status</span>
           <div style={{ height: 160 }}>
-            <ResponsiveContainer width="100%" height="100%">
-              <BarChart data={analytics.statusChart} layout="vertical" margin={{ left: 5, right: 10, top: 5, bottom: 5 }}>
-                <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" horizontal={true} vertical={false} />
-                <XAxis type="number" tick={{ fontSize: 9, fontWeight: 'bold' }} allowDecimals={false} stroke="#94a3b8" />
-                <YAxis type="category" dataKey="label" tick={{ fontSize: 9, fontWeight: 'bold' }} width={85} stroke="#94a3b8" />
-                <Tooltip content={<CustomTooltip />} />
-                <Bar dataKey="amount" radius={[0, 6, 6, 0]} maxBarSize={16}>
-                  {analytics.statusChart.map((_, index) => (
-                    <Cell key={`cell-${index}`} fill={GALLERY_COLORS[index % GALLERY_COLORS.length]} />
-                  ))}
-                </Bar>
-              </BarChart>
-            </ResponsiveContainer>
+            <ResponsiveBar
+              data={analytics.statusChart}
+              keys={["amount"]}
+              indexBy="label"
+              layout="horizontal"
+              margin={{ top: 10, right: 10, bottom: 25, left: 85 }}
+              padding={0.35}
+              colors={GALLERY_COLORS}
+              colorBy="indexValue"
+              borderRadius={6}
+              borderWidth={0}
+              enableLabel={false}
+              axisTop={null}
+              axisRight={null}
+              axisBottom={{
+                tickSize: 0,
+                tickPadding: 6,
+                tickRotation: 0
+              }}
+              axisLeft={{
+                tickSize: 0,
+                tickPadding: 6,
+                tickRotation: 0
+              }}
+              theme={{
+                grid: {
+                  line: {
+                    stroke: '#f1f5f9',
+                    strokeWidth: 1
+                  }
+                },
+                axis: {
+                  ticks: {
+                    text: {
+                      fontSize: 8,
+                      fontWeight: 'bold',
+                      fill: '#64748b'
+                    }
+                  }
+                }
+              }}
+              tooltip={({ id, value, color, indexValue }) => (
+                <div className="bg-slate-900/95 backdrop-blur-md text-white border border-slate-800 shadow-2xl rounded-xl p-3 text-xs min-w-[120px] font-sans pointer-events-none z-50">
+                  <p className="font-extrabold text-[10px] uppercase text-slate-400 tracking-wider mb-1.5">{indexValue}</p>
+                  <div className="flex items-center justify-between gap-4">
+                    <span className="flex items-center gap-1.5 text-slate-300">
+                      <span className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: color }} />
+                      Concerns:
+                    </span>
+                    <span className="font-mono font-bold text-white">{value}</span>
+                  </div>
+                </div>
+              )}
+            />
           </div>
         </div>
 

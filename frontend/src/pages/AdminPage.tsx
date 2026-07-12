@@ -4,7 +4,8 @@ import { adminService, UserCreatePayload, UserEditPayload, ApprovalHierarchyResp
 import { authService } from "../services/authService";
 import { Search, UploadCloud, Pencil, Trash2, Plus, LogOut, Download } from "lucide-react";
 import Loader from "../components/common/Loader";
-import { PieChart, Pie, Cell, Tooltip, Legend, ResponsiveContainer, BarChart, Bar, XAxis, YAxis, CartesianGrid } from "recharts";
+import { ResponsivePie } from "@nivo/pie";
+import { ResponsiveBar } from "@nivo/bar";
 
 const LteSpinner = () => (
   <span className="animate-spin rounded-full h-3.5 w-3.5 border-2 border-slate-200 border-t-blue-600 inline-block mr-1.5 shrink-0"></span>
@@ -1414,35 +1415,44 @@ export default function AdminPage() {
                 </h4>
               </div>
               <div className="p-4" style={{ height: "290px" }}>
-                <div className="relative flex justify-center items-center h-full">
-                  <ResponsiveContainer width="100%" height="100%">
-                    <PieChart>
-                      <Pie
-                        data={getZoneData().slice(0, 5)}
-                        dataKey="value"
-                        nameKey="name"
-                        cx="50%"
-                        cy="50%"
-                        innerRadius={45}
-                        outerRadius={65}
-                        paddingAngle={3}
-                        stroke="#ffffff"
-                        strokeWidth={2}
-                      >
-                        {getZoneData().slice(0, 5).map((_, index) => (
-                          <Cell key={`cell-${index}`} fill={GALLERY_COLORS[index % GALLERY_COLORS.length]} />
-                        ))}
-                      </Pie>
-                      <Tooltip content={<CustomCountTooltip />} />
-                      <Legend verticalAlign="bottom" height={36} iconType="circle" wrapperStyle={{ fontSize: 9, fontWeight: 'bold' }} />
-                    </PieChart>
-                  </ResponsiveContainer>
-                  <div className="absolute flex flex-col items-center justify-center pointer-events-none" style={{ top: '40%', left: '50%', transform: 'translate(-50%, -50%)' }}>
+                <div className="relative flex justify-center items-center h-full" style={{ height: "230px" }}>
+                  <ResponsivePie
+                    data={getZoneData().slice(0, 5).map((z, i) => ({ id: z.name, label: z.name, value: z.value, color: GALLERY_COLORS[i % GALLERY_COLORS.length] }))}
+                    margin={{ top: 10, right: 10, bottom: 10, left: 10 }}
+                    innerRadius={0.7}
+                    padAngle={3}
+                    colors={{ datum: 'data.color' }}
+                    borderWidth={2}
+                    borderColor="#ffffff"
+                    enableArcLinkLabels={false}
+                    enableArcLabels={false}
+                    tooltip={({ datum }) => (
+                      <div className="bg-slate-900/95 backdrop-blur-md text-white border border-slate-800 shadow-2xl rounded-xl p-3 text-xs min-w-[120px] font-sans pointer-events-none z-50">
+                        <p className="font-extrabold text-[10px] uppercase text-slate-400 tracking-wider mb-1.5">{datum.label}</p>
+                        <div className="flex items-center justify-between gap-4">
+                          <span className="flex items-center gap-1.5 text-slate-300">
+                            <span className="w-2 h-2 rounded-full" style={{ backgroundColor: datum.color }} />
+                            Count:
+                          </span>
+                          <span className="font-mono font-bold text-white">{datum.value}</span>
+                        </div>
+                      </div>
+                    )}
+                  />
+                  <div className="absolute flex flex-col items-center justify-center pointer-events-none" style={{ top: '50%', left: '50%', transform: 'translate(-50%, -50%)' }}>
                     <span className="text-[8px] text-gray-400 font-bold uppercase tracking-wider">Total</span>
                     <span className="text-xs font-black text-slate-800 font-mono">
                       {getZoneData().reduce((sum, item) => sum + item.value, 0)}
                     </span>
                   </div>
+                </div>
+                <div className="flex flex-wrap justify-center gap-x-2.5 gap-y-1 mt-2">
+                  {getZoneData().slice(0, 5).map((item, i) => (
+                    <div key={i} className="flex items-center gap-1 text-[8px] font-bold text-slate-500">
+                      <span className="w-1.5 h-1.5 rounded-full shrink-0" style={{ backgroundColor: GALLERY_COLORS[i % GALLERY_COLORS.length] }} />
+                      <span>{item.name}</span>
+                    </div>
+                  ))}
                 </div>
               </div>
             </div>
@@ -1455,19 +1465,59 @@ export default function AdminPage() {
                 </h4>
               </div>
               <div className="p-4" style={{ height: "290px" }}>
-                <ResponsiveContainer width="100%" height="100%">
-                  <BarChart data={getDistrictData().slice(0, 6)}>
-                    <CartesianGrid strokeDasharray="3 3" stroke="#f3f4f6" horizontal={false} vertical={true} />
-                    <XAxis dataKey="name" tick={{ fontSize: 9, fontWeight: 'bold' }} />
-                    <YAxis tick={{ fontSize: 9 }} allowDecimals={false} />
-                    <Tooltip content={<CustomCountTooltip />} />
-                    <Bar dataKey="value" radius={[6, 6, 0, 0]} maxBarSize={40}>
-                      {getDistrictData().slice(0, 6).map((_, index) => (
-                        <Cell key={`cell-${index}`} fill={GALLERY_COLORS[index % GALLERY_COLORS.length]} />
-                      ))}
-                    </Bar>
-                  </BarChart>
-                </ResponsiveContainer>
+                <ResponsiveBar
+                  data={getDistrictData().slice(0, 6)}
+                  keys={["value"]}
+                  indexBy="name"
+                  margin={{ top: 15, right: 10, bottom: 35, left: 30 }}
+                  padding={0.35}
+                  colors={GALLERY_COLORS}
+                  colorBy="indexValue"
+                  borderRadius={6}
+                  borderWidth={0}
+                  enableLabel={false}
+                  axisTop={null}
+                  axisRight={null}
+                  axisBottom={{
+                    tickSize: 0,
+                    tickPadding: 8,
+                    tickRotation: 0
+                  }}
+                  axisLeft={{
+                    tickSize: 0,
+                    tickPadding: 8,
+                    tickRotation: 0
+                  }}
+                  theme={{
+                    grid: {
+                      line: {
+                        stroke: '#f1f5f9',
+                        strokeWidth: 1
+                      }
+                    },
+                    axis: {
+                      ticks: {
+                        text: {
+                          fontSize: 8,
+                          fontWeight: 'bold',
+                          fill: '#64748b'
+                        }
+                      }
+                    }
+                  }}
+                  tooltip={({ id, value, color, indexValue }) => (
+                    <div className="bg-slate-900/95 backdrop-blur-md text-white border border-slate-800 shadow-2xl rounded-xl p-3 text-xs min-w-[120px] font-sans pointer-events-none z-50">
+                      <p className="font-extrabold text-[10px] uppercase text-slate-400 tracking-wider mb-1.5">{indexValue}</p>
+                      <div className="flex items-center justify-between gap-4">
+                        <span className="flex items-center gap-1.5 text-slate-300">
+                          <span className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: color }} />
+                          Count:
+                        </span>
+                        <span className="font-mono font-bold text-white">{value}</span>
+                      </div>
+                    </div>
+                  )}
+                />
               </div>
             </div>
 
@@ -1479,19 +1529,60 @@ export default function AdminPage() {
                 </h4>
               </div>
               <div className="p-4" style={{ height: "290px" }}>
-                <ResponsiveContainer width="100%" height="100%">
-                  <BarChart data={getManagerData().slice(0, 6)} layout="vertical">
-                    <CartesianGrid strokeDasharray="3 3" stroke="#f3f4f6" horizontal={true} vertical={false} />
-                    <XAxis type="number" tick={{ fontSize: 9 }} allowDecimals={false} />
-                    <YAxis dataKey="name" type="category" tick={{ fontSize: 9, fontWeight: 'bold' }} width={85} />
-                    <Tooltip content={<CustomCountTooltip />} />
-                    <Bar dataKey="value" radius={[0, 6, 6, 0]} maxBarSize={22}>
-                      {getManagerData().slice(0, 6).map((_, index) => (
-                        <Cell key={`cell-${index}`} fill={GALLERY_COLORS[index % GALLERY_COLORS.length]} />
-                      ))}
-                    </Bar>
-                  </BarChart>
-                </ResponsiveContainer>
+                <ResponsiveBar
+                  data={getManagerData().slice(0, 6)}
+                  keys={["value"]}
+                  indexBy="name"
+                  layout="horizontal"
+                  margin={{ top: 15, right: 10, bottom: 35, left: 85 }}
+                  padding={0.35}
+                  colors={GALLERY_COLORS}
+                  colorBy="indexValue"
+                  borderRadius={6}
+                  borderWidth={0}
+                  enableLabel={false}
+                  axisTop={null}
+                  axisRight={null}
+                  axisBottom={{
+                    tickSize: 0,
+                    tickPadding: 8,
+                    tickRotation: 0
+                  }}
+                  axisLeft={{
+                    tickSize: 0,
+                    tickPadding: 8,
+                    tickRotation: 0
+                  }}
+                  theme={{
+                    grid: {
+                      line: {
+                        stroke: '#f1f5f9',
+                        strokeWidth: 1
+                      }
+                    },
+                    axis: {
+                      ticks: {
+                        text: {
+                          fontSize: 8,
+                          fontWeight: 'bold',
+                          fill: '#64748b'
+                        }
+                      }
+                    }
+                  }}
+                  tooltip={({ id, value, color, indexValue }) => (
+                    <div className="bg-slate-900/95 backdrop-blur-md text-white border border-slate-800 shadow-2xl rounded-xl p-3 text-xs min-w-[120px] font-sans pointer-events-none z-50">
+                      <p className="font-extrabold text-[10px] uppercase text-slate-400 tracking-wider mb-1.5">{indexValue}</p>
+                      <div className="flex items-center justify-between gap-4">
+                        <span className="flex items-center gap-1.5 text-slate-300">
+                          <span className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: color }} />
+                          Count:
+                        </span>
+                        <span className="font-mono font-bold text-white">{value}</span>
+                      </div>
+                    </div>
+                  )}
+                />
               </div>
             </div>
 
@@ -1503,27 +1594,40 @@ export default function AdminPage() {
                 </h4>
               </div>
               <div className="p-4" style={{ height: "290px" }}>
-                <ResponsiveContainer width="100%" height="100%">
-                  <PieChart>
-                    <Pie
-                      data={getDesignationData().slice(0, 5)}
-                      dataKey="value"
-                      nameKey="name"
-                      cx="50%"
-                      cy="50%"
-                      outerRadius={70}
-                      stroke="#ffffff"
-                      strokeWidth={2}
-                    >
-                      {getDesignationData().slice(0, 5).map((_, index) => (
-                        <Cell key={`cell-${index}`} fill={GALLERY_COLORS[index % GALLERY_COLORS.length]} />
-                      ))}
-                    </Pie>
-                    <Tooltip content={<CustomCountTooltip />} />
-                    <Legend verticalAlign="bottom" height={36} iconType="circle" wrapperStyle={{ fontSize: 9, fontWeight: 'bold' }} />
-                  </PieChart>
-                </ResponsiveContainer>
-            </div>
+                <div className="relative flex justify-center items-center h-full" style={{ height: "230px" }}>
+                  <ResponsivePie
+                    data={getDesignationData().slice(0, 5).map((d, i) => ({ id: d.name, label: d.name, value: d.value, color: GALLERY_COLORS[i % GALLERY_COLORS.length] }))}
+                    margin={{ top: 10, right: 10, bottom: 10, left: 10 }}
+                    innerRadius={0}
+                    padAngle={1.5}
+                    colors={{ datum: 'data.color' }}
+                    borderWidth={2}
+                    borderColor="#ffffff"
+                    enableArcLinkLabels={false}
+                    enableArcLabels={false}
+                    tooltip={({ datum }) => (
+                      <div className="bg-slate-900/95 backdrop-blur-md text-white border border-slate-800 shadow-2xl rounded-xl p-3 text-xs min-w-[120px] font-sans pointer-events-none z-50">
+                        <p className="font-extrabold text-[10px] uppercase text-slate-400 tracking-wider mb-1.5">{datum.label}</p>
+                        <div className="flex items-center justify-between gap-4">
+                          <span className="flex items-center gap-1.5 text-slate-300">
+                            <span className="w-2 h-2 rounded-full" style={{ backgroundColor: datum.color }} />
+                            Count:
+                          </span>
+                          <span className="font-mono font-bold text-white">{datum.value}</span>
+                        </div>
+                      </div>
+                    )}
+                  />
+                </div>
+                <div className="flex flex-wrap justify-center gap-x-2.5 gap-y-1 mt-2">
+                  {getDesignationData().slice(0, 5).map((item, i) => (
+                    <div key={i} className="flex items-center gap-1 text-[8px] font-bold text-slate-500">
+                      <span className="w-1.5 h-1.5 rounded-full shrink-0" style={{ backgroundColor: GALLERY_COLORS[i % GALLERY_COLORS.length] }} />
+                      <span>{item.name}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
           </div>
         </div>
       </div>

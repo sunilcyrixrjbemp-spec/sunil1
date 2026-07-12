@@ -1,8 +1,6 @@
 import { useState, useEffect, useCallback } from "react";
-import {
-  AreaChart, Area, BarChart, Bar, XAxis, YAxis, CartesianGrid,
-  Tooltip, Legend, ResponsiveContainer
-} from "recharts";
+import { ResponsiveLine } from "@nivo/line";
+import { ResponsiveBar } from "@nivo/bar";
 import toast from "react-hot-toast";
 
 const BASE = "https://fieldops-secondary-api.sunnybishnoi.workers.dev";
@@ -674,26 +672,74 @@ export default function DBMonitoringPage() {
             </div>
           </div>
           {loading ? <Skeleton h="h-48"/> : (
-            <ResponsiveContainer width="100%" height={220}>
-              <AreaChart data={timeline} margin={{ top: 5, right: 10, left: 0, bottom: 0 }}>
-                <defs>
-                  {[["blue","#2f5bb7"],["orange","#d28b2a"]].map(([id,c])=>(
-                    <linearGradient key={id} id={`g-${id}`} x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="5%" stopColor={c} stopOpacity={0.2}/>
-                      <stop offset="95%" stopColor={c} stopOpacity={0}/>
-                    </linearGradient>
-                  ))}
-                </defs>
-                <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" vertical={false}/>
-                <XAxis dataKey="date" tick={{ fill:"#64748b", fontSize:9 }} tickLine={false} axisLine={false}
-                  tickFormatter={d => d?.slice(5) || ""}/>
-                <YAxis tick={{ fill:"#64748b", fontSize:9 }} tickLine={false} axisLine={false}
-                  tickFormatter={v => v >= 1000 ? `${(v/1000).toFixed(0)}k` : v}/>
-                <Tooltip content={<CustomTooltip/>}/>
-                <Area type="monotone" dataKey="db_reads" name="DB Reads" stroke="#2f5bb7" fill="url(#g-blue)" strokeWidth={2}/>
-                <Area type="monotone" dataKey="db_writes" name="DB Writes" stroke="#d28b2a" fill="url(#g-orange)" strokeWidth={1.5}/>
-              </AreaChart>
-            </ResponsiveContainer>
+            <div style={{ height: 220 }}>
+              <ResponsiveLine
+                data={[
+                  {
+                    id: "DB Reads",
+                    color: "#2f5bb7",
+                    data: timeline.map(t => ({ x: t.date?.slice(5) || "", y: t.db_reads }))
+                  },
+                  {
+                    id: "DB Writes",
+                    color: "#d28b2a",
+                    data: timeline.map(t => ({ x: t.date?.slice(5) || "", y: t.db_writes }))
+                  }
+                ]}
+                margin={{ top: 15, right: 15, bottom: 35, left: 35 }}
+                xScale={{ type: 'point' }}
+                yScale={{ type: 'linear', min: 'auto', max: 'auto' }}
+                curve="monotoneX"
+                colors={d => d.color}
+                lineWidth={2}
+                enableArea={true}
+                areaOpacity={0.12}
+                enablePoints={false}
+                useMesh={true}
+                axisTop={null}
+                axisRight={null}
+                axisBottom={{
+                  tickSize: 0,
+                  tickPadding: 8,
+                  tickRotation: 0
+                }}
+                axisLeft={{
+                  tickSize: 0,
+                  tickPadding: 8,
+                  tickRotation: 0,
+                  format: v => v >= 1000 ? `${(v/1000).toFixed(0)}k` : v
+                }}
+                theme={{
+                  grid: {
+                    line: {
+                      stroke: '#f1f5f9',
+                      strokeWidth: 1
+                    }
+                  },
+                  axis: {
+                    ticks: {
+                      text: {
+                        fontSize: 8,
+                        fontWeight: 'bold',
+                        fill: '#64748b'
+                      }
+                    }
+                  }
+                }}
+                tooltip={({ point }) => (
+                  <div className="bg-slate-900/95 backdrop-blur-md text-white border border-slate-800 shadow-2xl rounded-xl p-3 text-xs min-w-[120px] font-sans pointer-events-none z-50">
+                    <p className="font-extrabold text-[10px] uppercase text-slate-400 tracking-wider mb-1.5">{point.data.x}</p>
+                    <div className="flex items-center justify-between gap-4">
+                      <span className="flex items-center gap-1.5 text-slate-300">
+                        <span className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: point.color }} />
+                        {point.serieId}:
+                      </span>
+                      <span className="font-mono font-bold text-white">{(point.data.y as number).toLocaleString()}</span>
+                    </div>
+                  </div>
+                )}
+              />
+            </div>
           )}
         </div>
 
@@ -704,19 +750,70 @@ export default function DBMonitoringPage() {
             {loading ? <Skeleton h="h-48"/> : pageBarData.length === 0 ? (
               <p className="text-slate-400 text-center py-10 text-xs">No records tracked</p>
             ) : (
-              <ResponsiveContainer width="100%" height={220}>
-                <BarChart data={pageBarData} margin={{ top: 5, right: 10, left: 0, bottom: 20 }}>
-                  <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" horizontal={true} vertical={false}/>
-                  <XAxis dataKey="name" tick={{ fill:"#64748b", fontSize:9 }} tickLine={false} axisLine={false}
-                    interval={0} angle={-15} textAnchor="end"/>
-                  <YAxis tick={{ fill:"#64748b", fontSize:9 }} tickLine={false} axisLine={false}
-                    tickFormatter={v => v >= 1000 ? `${(v/1000).toFixed(0)}k` : String(v)}/>
-                  <Tooltip content={<CustomTooltip/>}/>
-                  <Legend wrapperStyle={{ color:"#475569", fontSize:10, paddingTop:8 }}/>
-                  <Bar dataKey="DB Reads" fill="#2f5bb7" radius={[3,3,0,0]}/>
-                  <Bar dataKey="Writes"   fill="#d28b2a" radius={[3,3,0,0]}/>
-                </BarChart>
-              </ResponsiveContainer>
+              <div style={{ height: 220 }}>
+                <ResponsiveBar
+                  data={pageBarData}
+                  keys={["DB Reads", "Writes"]}
+                  indexBy="name"
+                  groupMode="grouped"
+                  margin={{ top: 15, right: 15, bottom: 45, left: 35 }}
+                  padding={0.3}
+                  colors={["#2f5bb7", "#d28b2a"]}
+                  borderRadius={3}
+                  borderWidth={0}
+                  enableLabel={false}
+                  axisTop={null}
+                  axisRight={null}
+                  axisBottom={{
+                    tickSize: 0,
+                    tickPadding: 8,
+                    tickRotation: -15
+                  }}
+                  axisLeft={{
+                    tickSize: 0,
+                    tickPadding: 8,
+                    tickRotation: 0,
+                    format: v => v >= 1000 ? `${(v/1000).toFixed(0)}k` : v
+                  }}
+                  theme={{
+                    grid: {
+                      line: {
+                        stroke: '#f1f5f9',
+                        strokeWidth: 1
+                      }
+                    },
+                    axis: {
+                      ticks: {
+                        text: {
+                          fontSize: 8,
+                          fontWeight: 'bold',
+                          fill: '#64748b'
+                        }
+                      }
+                    }
+                  }}
+                  tooltip={({ id, value, color, indexValue }) => (
+                    <div className="bg-slate-900/95 backdrop-blur-md text-white border border-slate-800 shadow-2xl rounded-xl p-3 text-xs min-w-[120px] font-sans pointer-events-none z-50">
+                      <p className="font-extrabold text-[10px] uppercase text-slate-400 tracking-wider mb-1.5">{indexValue}</p>
+                      <div className="flex items-center justify-between gap-4">
+                        <span className="flex items-center gap-1.5 text-slate-300">
+                          <span className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: color }} />
+                          {id}:
+                        </span>
+                        <span className="font-mono font-bold text-white">{(value as number).toLocaleString()}</span>
+                      </div>
+                    </div>
+                  )}
+                />
+              </div>
+              <div className="flex flex-wrap justify-center gap-x-3 gap-y-1 mt-2">
+                {[["#2f5bb7","DB Reads"],["#d28b2a","Writes"]].map(([c,n])=>(
+                  <div key={n} className="flex items-center gap-1 text-[8px] font-bold text-slate-500">
+                    <span className="w-1.5 h-1.5 rounded-full shrink-0" style={{background:c}}/>
+                    <span>{n}</span>
+                  </div>
+                ))}
+              </div>
             )}
           </div>
         )}

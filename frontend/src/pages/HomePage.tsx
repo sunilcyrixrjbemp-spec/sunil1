@@ -6,7 +6,7 @@ import { approvalService } from "../services/approvalService";
 import toast from "react-hot-toast";
 import Loader from "../components/common/Loader";
 import { checkIsHeic, convertHeicToJpegUrl } from "../utils/heic";
-import { PieChart, Pie, Cell, Tooltip, Legend, ResponsiveContainer } from "recharts";
+import { ResponsivePie } from "@nivo/pie";
 import ExpenseCalendar from "../components/common/ExpenseCalendar";
 import { 
   FileSpreadsheet, 
@@ -1054,32 +1054,44 @@ export default function HomePage() {
                   No claims to analyze
                 </div>
               ) : (
-                <div style={{ height: 180 }} className="relative flex justify-center items-center">
-                  <ResponsiveContainer width="100%" height="100%">
-                    <PieChart>
-                      <Pie
-                         data={getPersonalChartData().map(c => ({ name: c.label, value: c.amount }))}
-                        cx="50%" cy="50%"
-                        innerRadius={45}
-                        outerRadius={65}
-                        paddingAngle={3} dataKey="value"
-                        stroke="#ffffff"
-                        strokeWidth={2}
-                      >
-                        {getPersonalChartData().map((_, i) => (
-                          <Cell key={i} fill={GALLERY_COLORS[i % GALLERY_COLORS.length]} />
-                        ))}
-                      </Pie>
-                      <Tooltip content={<CustomTooltip />} />
-                      <Legend verticalAlign="bottom" height={36} iconType="circle" wrapperStyle={{ fontSize: 9, fontWeight: 'bold' }} />
-                    </PieChart>
-                  </ResponsiveContainer>
-                  <div className="absolute flex flex-col items-center justify-center pointer-events-none" style={{ top: '40%', left: '50%', transform: 'translate(-50%, -50%)' }}>
-                    <span className="text-[8px] text-slate-400 font-bold uppercase tracking-wider">Total Claimed</span>
-                    <span className="text-xs font-black text-slate-800 font-mono">
+                <div style={{ height: 140 }} className="relative flex justify-center items-center">
+                  <ResponsivePie
+                    data={getPersonalChartData().map((c, i) => ({ id: c.label, label: c.label, value: c.amount, color: GALLERY_COLORS[i % GALLERY_COLORS.length] }))}
+                    margin={{ top: 5, right: 5, bottom: 5, left: 5 }}
+                    innerRadius={0.72}
+                    padAngle={3}
+                    colors={{ datum: 'data.color' }}
+                    borderWidth={2}
+                    borderColor="#ffffff"
+                    enableArcLinkLabels={false}
+                    enableArcLabels={false}
+                    tooltip={({ datum }) => (
+                      <div className="bg-slate-900/95 backdrop-blur-md text-white border border-slate-800 shadow-2xl rounded-xl p-3 text-xs min-w-[120px] font-sans pointer-events-none z-50">
+                        <p className="font-extrabold text-[10px] uppercase text-slate-400 tracking-wider mb-1.5">{datum.label}</p>
+                        <div className="flex items-center justify-between gap-4">
+                          <span className="flex items-center gap-1.5 text-slate-300">
+                            <span className="w-2 h-2 rounded-full" style={{ backgroundColor: datum.color }} />
+                            Amount:
+                          </span>
+                          <span className="font-mono font-bold text-white">₹{datum.value?.toLocaleString()}</span>
+                        </div>
+                      </div>
+                    )}
+                  />
+                  <div className="absolute flex flex-col items-center justify-center pointer-events-none" style={{ top: '50%', left: '50%', transform: 'translate(-50%, -50%)' }}>
+                    <span className="text-[7px] text-slate-400 font-bold uppercase tracking-wider">Total Claimed</span>
+                    <span className="text-[11px] font-black text-slate-800 font-mono mt-0.5">
                       ₹{getPersonalChartData().reduce((sum, item) => sum + item.amount, 0).toLocaleString()}
                     </span>
                   </div>
+                </div>
+                <div className="flex flex-wrap justify-center gap-x-2.5 gap-y-1 mt-2">
+                  {getPersonalChartData().map((item, i) => (
+                    <div key={i} className="flex items-center gap-1 text-[8px] font-bold text-slate-500">
+                      <span className="w-1.5 h-1.5 rounded-full shrink-0" style={{ backgroundColor: GALLERY_COLORS[i % GALLERY_COLORS.length] }} />
+                      <span>{item.label}</span>
+                    </div>
+                  ))}
                 </div>
               )}
             </div>
@@ -1167,32 +1179,44 @@ export default function HomePage() {
                     const chartData = getTeamChartData();
                     if (chartData.length === 0) return null;
                     return (
-                      <div style={{ height: 180 }} className="relative flex justify-center items-center">
-                        <ResponsiveContainer width="100%" height="100%">
-                          <PieChart>
-                            <Pie
-                              data={chartData.map(c => ({ name: c.name, value: c.amount }))}
-                              cx="50%" cy="50%"
-                              innerRadius={45}
-                              outerRadius={65}
-                              paddingAngle={3} dataKey="value"
-                              stroke="#ffffff"
-                              strokeWidth={2}
-                            >
-                              {chartData.map((_, i) => (
-                                <Cell key={i} fill={GALLERY_COLORS[i % GALLERY_COLORS.length]} />
-                              ))}
-                            </Pie>
-                            <Tooltip content={<CustomTooltip />} />
-                            <Legend verticalAlign="bottom" height={36} iconType="circle" wrapperStyle={{ fontSize: 9, fontWeight: 'bold' }} />
-                          </PieChart>
-                        </ResponsiveContainer>
-                        <div className="absolute flex flex-col items-center justify-center pointer-events-none" style={{ top: '40%', left: '50%', transform: 'translate(-50%, -50%)' }}>
-                          <span className="text-[8px] text-gray-400 font-bold uppercase tracking-wider">Total Team</span>
-                          <span className="text-xs font-black text-slate-800 font-mono">
+                      <div style={{ height: 140 }} className="relative flex justify-center items-center">
+                        <ResponsivePie
+                          data={chartData.map((c, i) => ({ id: c.name, label: c.name, value: c.amount, color: GALLERY_COLORS[i % GALLERY_COLORS.length] }))}
+                          margin={{ top: 5, right: 5, bottom: 5, left: 5 }}
+                          innerRadius={0.72}
+                          padAngle={3}
+                          colors={{ datum: 'data.color' }}
+                          borderWidth={2}
+                          borderColor="#ffffff"
+                          enableArcLinkLabels={false}
+                          enableArcLabels={false}
+                          tooltip={({ datum }) => (
+                            <div className="bg-slate-900/95 backdrop-blur-md text-white border border-slate-800 shadow-2xl rounded-xl p-3 text-xs min-w-[120px] font-sans pointer-events-none z-50">
+                              <p className="font-extrabold text-[10px] uppercase text-slate-400 tracking-wider mb-1.5">{datum.label}</p>
+                              <div className="flex items-center justify-between gap-4">
+                                <span className="flex items-center gap-1.5 text-slate-300">
+                                  <span className="w-2 h-2 rounded-full" style={{ backgroundColor: datum.color }} />
+                                  Amount:
+                                </span>
+                                <span className="font-mono font-bold text-white">₹{datum.value?.toLocaleString()}</span>
+                              </div>
+                            </div>
+                          )}
+                        />
+                        <div className="absolute flex flex-col items-center justify-center pointer-events-none" style={{ top: '50%', left: '50%', transform: 'translate(-50%, -50%)' }}>
+                          <span className="text-[7px] text-gray-400 font-bold uppercase tracking-wider">Total Team</span>
+                          <span className="text-[11px] font-black text-slate-800 font-mono mt-0.5">
                             ₹{chartData.reduce((sum, item) => sum + item.amount, 0).toLocaleString()}
                           </span>
                         </div>
+                      </div>
+                      <div className="flex flex-wrap justify-center gap-x-2.5 gap-y-1 mt-2">
+                        {chartData.map((item, i) => (
+                          <div key={i} className="flex items-center gap-1 text-[8px] font-bold text-slate-500">
+                            <span className="w-1.5 h-1.5 rounded-full shrink-0" style={{ backgroundColor: GALLERY_COLORS[i % GALLERY_COLORS.length] }} />
+                            <span>{item.name}</span>
+                          </div>
+                        ))}
                       </div>
                     );
                   })()}

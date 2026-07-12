@@ -7,16 +7,7 @@ import {
   Save,
   Users
 } from "lucide-react";
-import { 
-  BarChart, 
-  Bar, 
-  XAxis, 
-  YAxis, 
-  CartesianGrid, 
-  Tooltip, 
-  ResponsiveContainer,
-  Cell
-} from "recharts";
+import { ResponsiveBar } from "@nivo/bar";
 import { authService } from "../services/authService";
 import { expenseService } from "../services/expenseService";
 import toast from "react-hot-toast";
@@ -941,37 +932,60 @@ export default function KPIDashboardPage() {
             </h3>
           </div>
           
-          <div className="h-64 w-full flex-1">
-            <ResponsiveContainer width="100%" height="100%">
-              <BarChart
-                data={chartData}
-                margin={{ top: 10, right: 10, left: -25, bottom: 5 }}
-              >
-                <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#555" />
-                <XAxis 
-                  dataKey="name" 
-                  tick={{ fill: "#ccc", fontSize: 7, fontWeight: 700 }}
-                  axisLine={{ stroke: "#666" }}
-                  tickLine={false}
-                />
-                <YAxis 
-                  domain={[0, 100]} 
-                  tick={{ fill: "#ccc", fontSize: 8, fontWeight: 700 }}
-                  axisLine={{ stroke: "#666" }}
-                  tickLine={false}
-                />
-                <Tooltip 
-                  contentStyle={{ backgroundColor: "#1e293b", borderRadius: "8px", border: "none", color: "#fff" }}
-                  itemStyle={{ color: "#fff", fontSize: "10px", fontWeight: "bold" }}
-                  labelStyle={{ color: "#94a3b8", fontSize: "9px", fontWeight: "extrabold", textTransform: "uppercase" }}
-                />
-                <Bar dataKey="Score" radius={[2, 2, 0, 0]} barSize={20}>
-                  {chartData.map((_entry, index) => (
-                    <Cell key={`cell-${index}`} fill={BAR_COLORS[index % BAR_COLORS.length]} />
-                  ))}
-                </Bar>
-              </BarChart>
-            </ResponsiveContainer>
+          <div style={{ height: 240 }} className="w-full flex-1">
+            <ResponsiveBar
+              data={chartData}
+              keys={["Score"]}
+              indexBy="name"
+              margin={{ top: 15, right: 15, bottom: 35, left: 30 }}
+              padding={0.35}
+              colors={BAR_COLORS}
+              colorBy="indexValue"
+              borderRadius={2}
+              borderWidth={0}
+              enableLabel={false}
+              axisTop={null}
+              axisRight={null}
+              axisBottom={{
+                tickSize: 0,
+                tickPadding: 8,
+                tickRotation: 0
+              }}
+              axisLeft={{
+                tickSize: 0,
+                tickPadding: 8,
+                tickRotation: 0
+              }}
+              theme={{
+                grid: {
+                  line: {
+                    stroke: '#555555',
+                    strokeWidth: 1
+                  }
+                },
+                axis: {
+                  ticks: {
+                    text: {
+                      fontSize: 8,
+                      fontWeight: 'bold',
+                      fill: '#cccccc'
+                    }
+                  }
+                }
+              }}
+              tooltip={({ id, value, color, indexValue }) => (
+                <div className="bg-slate-900/95 backdrop-blur-md text-white border border-slate-800 shadow-2xl rounded-xl p-3 text-xs min-w-[120px] font-sans pointer-events-none z-50">
+                  <p className="font-extrabold text-[10px] uppercase text-slate-400 tracking-wider mb-1.5">{indexValue}</p>
+                  <div className="flex items-center justify-between gap-4">
+                    <span className="flex items-center gap-1.5 text-slate-300">
+                      <span className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: color }} />
+                      Score:
+                    </span>
+                    <span className="font-mono font-bold text-white">{value}%</span>
+                  </div>
+                </div>
+              )}
+            />
           </div>
 
           <div className="flex items-center justify-center gap-2 text-[9px] font-black uppercase mt-3 pt-3 border-t border-[#555]">
