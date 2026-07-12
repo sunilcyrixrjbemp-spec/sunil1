@@ -85,6 +85,9 @@ export default function AnalysisPage() {
   const [selectedEngineer, setSelectedEngineer] = useState<string>(() => {
     return localStorage.getItem("analysis_selectedEngineer") || "all";
   });
+  const [selectedZone, setSelectedZone] = useState<string>(() => {
+    return localStorage.getItem("analysis_selectedZone") || "all";
+  });
   const [selectedStatus, setSelectedStatus] = useState<string>(() => {
     return localStorage.getItem("analysis_selectedStatus") || "all";
   });
@@ -118,6 +121,15 @@ export default function AnalysisPage() {
   useEffect(() => {
     localStorage.setItem("analysis_selectedStatus", selectedStatus);
   }, [selectedStatus]);
+
+  useEffect(() => {
+    localStorage.setItem("analysis_selectedZone", selectedZone);
+  }, [selectedZone]);
+
+  useEffect(() => {
+    setSelectedDistrict("all");
+    setSelectedEngineer("all");
+  }, [selectedZone]);
 
   useEffect(() => {
     localStorage.setItem("analysis_startDate", startDate);
@@ -187,23 +199,29 @@ export default function AnalysisPage() {
     const source = viewMode === "team" && isReviewer ? teamExpenses : myExpenses;
     const monthlyList = filterByMonth(source);
     
-    // 1. Filter engineers based on selectedDistrict
+    // 1. Filter engineers based on selectedDistrict and selectedZone
     const engineers = new Set<string>();
     monthlyList.forEach(e => {
       const dist = e.district || e.submitter_district || e.home_district || "Ganganagar";
       const name = e.submitter_name || "Self";
+      const zone = e.zone || "";
       if (selectedDistrict === "all" || dist.toLowerCase() === selectedDistrict.toLowerCase()) {
-        engineers.add(name);
+        if (selectedZone === "all" || zone.toLowerCase() === selectedZone.toLowerCase()) {
+          engineers.add(name);
+        }
       }
     });
 
-    // 2. Filter districts based on selectedEngineer
+    // 2. Filter districts based on selectedEngineer and selectedZone
     const districts = new Set<string>();
     monthlyList.forEach(e => {
       const dist = e.district || e.submitter_district || e.home_district || "Ganganagar";
       const name = e.submitter_name || "Self";
+      const zone = e.zone || "";
       if (selectedEngineer === "all" || name.toLowerCase() === selectedEngineer.toLowerCase()) {
-        districts.add(dist);
+        if (selectedZone === "all" || zone.toLowerCase() === selectedZone.toLowerCase()) {
+          districts.add(dist);
+        }
       }
     });
 
@@ -211,7 +229,19 @@ export default function AnalysisPage() {
       districts: Array.from(districts),
       engineers: Array.from(engineers)
     };
-  }, [viewMode, myExpenses, teamExpenses, selectedMonth, selectedYear, selectedDistrict, selectedEngineer]);
+  }, [viewMode, myExpenses, teamExpenses, selectedMonth, selectedYear, selectedDistrict, selectedEngineer, selectedZone]);
+
+  const uniqueZones = useMemo(() => {
+    const source = viewMode === "team" && isReviewer ? teamExpenses : myExpenses;
+    const monthlyList = filterByMonth(source);
+    return Array.from(
+      new Set(
+        monthlyList
+          .filter((e): e is any => !!e && !!e.zone)
+          .map(e => String(e.zone).trim())
+      )
+    ).sort();
+  }, [viewMode, teamExpenses, myExpenses, selectedMonth, selectedYear]);
 
   // Safety resets for dependent dropdowns
   useEffect(() => {
@@ -256,8 +286,14 @@ export default function AnalysisPage() {
       });
     }
 
-    // 3. Filter by district & engineer (team mode only)
+    // 3. Filter by zone, district & engineer (team mode only)
     if (viewMode === "team") {
+      if (selectedZone !== "all") {
+        list = list.filter(e => {
+          const zone = e.zone || "";
+          return zone.toLowerCase() === selectedZone.toLowerCase();
+        });
+      }
       if (selectedDistrict !== "all") {
         list = list.filter(e => {
           const dist = e.district || e.submitter_district || e.home_district || "Ganganagar";
@@ -273,7 +309,7 @@ export default function AnalysisPage() {
     }
 
     return list;
-  }, [viewMode, myExpenses, teamExpenses, selectedMonth, selectedYear, selectedDistrict, selectedEngineer, selectedStatus, startDate, endDate]);
+  }, [viewMode, myExpenses, teamExpenses, selectedMonth, selectedYear, selectedDistrict, selectedEngineer, selectedStatus, startDate, endDate, selectedZone]);
 
   // Date range limits based on selected month/year
   const monthStr = String(selectedMonth + 1).padStart(2, "0");
@@ -555,27 +591,41 @@ export default function AnalysisPage() {
           </div>
 
           {viewMode === "team" && isReviewer && (
-            <div className="flex gap-1.5 mt-1.5">
-              <select
-                value={selectedDistrict}
-                onChange={(e) => setSelectedDistrict(e.target.value)}
-                className="flex-1 border border-gray-300 rounded-lg px-1.5 py-1 text-[9px] font-bold bg-white text-gray-800 focus:outline-none focus:border-[#a5d8e8]"
-              >
-                <option value="all">All Districts</option>
-                {filterOptions.districts.map(d => (
-                  <option key={d} value={d}>{d}</option>
-                ))}
-              </select>
-              <select
-                value={selectedEngineer}
-                onChange={(e) => setSelectedEngineer(e.target.value)}
-                className="flex-1 border border-gray-300 rounded-lg px-1.5 py-1 text-[9px] font-bold bg-white text-gray-800 focus:outline-none focus:border-[#a5d8e8]"
-              >
-                <option value="all">All Engineers</option>
-                {filterOptions.engineers.map(name => (
-                  <option key={name} value={name}>{name}</option>
-                ))}
-              </select>
+            <div className="space-y-1.5 mt-1.5">
+              {user?.role === "Admin" && (
+                <select
+                  value={selectedZone}
+                  onChange={(e) => setSelectedZone(e.target.value)}
+                  className="w-full border border-gray-300 rounded-lg px-1.5 py-1 text-[9px] font-bold bg-white text-gray-800 focus:outline-none focus:border-[#a5d8e8]"
+                >
+                  <option value="all">All Zones</option>
+                  {uniqueZones.map(z => (
+                    <option key={z} value={z}>{z}</option>
+                  ))}
+                </select>
+              )}
+              <div className="flex gap-1.5">
+                <select
+                  value={selectedDistrict}
+                  onChange={(e) => setSelectedDistrict(e.target.value)}
+                  className="flex-1 border border-gray-300 rounded-lg px-1.5 py-1 text-[9px] font-bold bg-white text-gray-800 focus:outline-none focus:border-[#a5d8e8]"
+                >
+                  <option value="all">All Districts</option>
+                  {filterOptions.districts.map(d => (
+                    <option key={d} value={d}>{d}</option>
+                  ))}
+                </select>
+                <select
+                  value={selectedEngineer}
+                  onChange={(e) => setSelectedEngineer(e.target.value)}
+                  className="flex-1 border border-gray-300 rounded-lg px-1.5 py-1 text-[9px] font-bold bg-white text-gray-800 focus:outline-none focus:border-[#a5d8e8]"
+                >
+                  <option value="all">All Engineers</option>
+                  {filterOptions.engineers.map(name => (
+                    <option key={name} value={name}>{name}</option>
+                  ))}
+                </select>
+              </div>
             </div>
           )}
         </div>
@@ -798,6 +848,19 @@ export default function AnalysisPage() {
         {/* Team Specific Filters */}
         {viewMode === "team" && isReviewer && (
           <>
+            {user?.role === "Admin" && (
+              <select
+                value={selectedZone}
+                onChange={(e) => setSelectedZone(e.target.value)}
+                className="border border-gray-300 rounded px-2 py-1 text-[11px] bg-white text-gray-700 cursor-pointer focus:outline-none focus:border-blue-500"
+              >
+                <option value="all">All Zones</option>
+                {uniqueZones.map(z => (
+                  <option key={z} value={z}>{z}</option>
+                ))}
+              </select>
+            )}
+
             <select
               value={selectedDistrict}
               onChange={(e) => setSelectedDistrict(e.target.value)}

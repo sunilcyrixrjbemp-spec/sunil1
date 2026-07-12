@@ -193,7 +193,9 @@ export async function getBootstrapDataHelper(env, user, request = null) {
         updatedAt: expenses.updatedAt,
         submitter_name: users.name,
         submitter_code: users.userId,
-        submitter_designation: users.designation
+        submitter_designation: users.designation,
+        zone: users.zone,
+        district: users.district
       })
       .from(expenses)
       .join(users, eq(expenses.userId, users.id))
@@ -228,7 +230,9 @@ export async function getBootstrapDataHelper(env, user, request = null) {
         updated_at: e.updatedAt,
         submitter_name: e.submitter_name,
         submitter_code: e.submitter_code,
-        submitter_designation: e.submitter_designation || "Engineer"
+        submitter_designation: e.submitter_designation || "Engineer",
+        zone: e.zone || "Bikaner",
+        district: e.district || "Ganganar"
       }));
     } else {
       const [directReportsRes, hierarchyApprovals] = await Promise.all([
@@ -293,7 +297,9 @@ export async function getBootstrapDataHelper(env, user, request = null) {
           updatedAt: expenses.updatedAt,
           submitter_name: users.name,
           submitter_code: users.userId,
-          submitter_designation: users.designation
+          submitter_designation: users.designation,
+          zone: users.zone,
+          district: users.district
         })
         .from(expenses)
         .join(users, eq(expenses.userId, users.id))
@@ -329,7 +335,9 @@ export async function getBootstrapDataHelper(env, user, request = null) {
           updated_at: e.updatedAt,
           submitter_name: e.submitter_name,
           submitter_code: e.submitter_code,
-          submitter_designation: e.submitter_designation || "Engineer"
+          submitter_designation: e.submitter_designation || "Engineer",
+          zone: e.zone || "Bikaner",
+          district: e.district || "Ganganar"
         }));
       }
     }
