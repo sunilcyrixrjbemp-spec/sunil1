@@ -143,7 +143,19 @@ export default function ExpensePage() {
     return Math.min(Math.round((used / limit) * 100), 100);
   };
 
-  const currentUserId = (() => { try { const u = JSON.parse(localStorage.getItem("user") || "{}"); return u.user_id || "Admin"; } catch(e) { return "Admin"; } })().trim();
+  // Pre-calculate user context ONCE to avoid 17 redundant localStorage parses
+  const { parsedUser, currentUserId, isCalibrationUser } = React.useMemo(() => {
+    try {
+      const u = JSON.parse(localStorage.getItem("user") || "{}");
+      return {
+        parsedUser: u,
+        currentUserId: (u.user_id || "Admin").trim(),
+        isCalibrationUser: (u.designation || "").toLowerCase().includes("calibration")
+      };
+    } catch (e) {
+      return { parsedUser: {}, currentUserId: "Admin", isCalibrationUser: false };
+    }
+  }, []);
 
   // Date State
   const [date, setDate] = useState(() => new Date().toLocaleDateString('sv'));
@@ -151,12 +163,6 @@ export default function ExpensePage() {
 
   // Init default helpers
   const createDefaultLeg = (num: number): ItineraryLeg => {
-    const isCalib = (() => {
-      try {
-        const u = JSON.parse(localStorage.getItem("user") || "{}");
-        return (u.designation || "").toLowerCase().includes("calibration");
-      } catch (e) { return false; }
-    })();
     return {
       company_provided: false,
       leg: num,
@@ -185,7 +191,7 @@ export default function ExpensePage() {
       visit_purpose: "",
       show_sub_leg: false,
       activity_details: "",
-      selected_activities: isCalib ? ["Calibration"] : [],
+      selected_activities: isCalibrationUser ? ["Calibration"] : [],
       calls_barcode: "",
       calls_verified: false,
       calls_asset_details: null,
@@ -231,16 +237,11 @@ export default function ExpensePage() {
   };
 
   const [itineraries, setItineraries] = useState<ItineraryLeg[]>(() => {
-    const currentUserId = (() => { try { const u = JSON.parse(localStorage.getItem("user") || "{}"); return u.user_id || "Admin"; } catch(e) { return "Admin"; } })().trim();
     const monthStr = new Date().toISOString().slice(0, 7);
     const cached = localStorage.getItem(`cache_month_limits_${currentUserId}_${monthStr}`);
     let homeDistrict = "Jodhpur";
-    const userVal = localStorage.getItem("user");
-    if (userVal) {
-      try {
-        const u = JSON.parse(userVal);
-        homeDistrict = u.district || u.home_district || "Jodhpur";
-      } catch (e) {}
+    if (parsedUser && Object.keys(parsedUser).length > 0) {
+      homeDistrict = parsedUser.district || parsedUser.home_district || "Jodhpur";
     } else if (cached) {
       try {
         const parsed = JSON.parse(cached).user || {};
@@ -248,12 +249,6 @@ export default function ExpensePage() {
       } catch (e) {}
     }
     
-    const isCalib = (() => {
-      try {
-        const u = JSON.parse(localStorage.getItem("user") || "{}");
-        return (u.designation || "").toLowerCase().includes("calibration");
-      } catch (e) { return false; }
-    })();
     const leg: ItineraryLeg = {
       company_provided: false,
       leg: 1,
@@ -277,10 +272,10 @@ export default function ExpensePage() {
       ws_closed: "",
       ws_pms: "",
       ws_asset: "",
-      visit_purpose: "",
+      visit_purpose: "Field visit",
       show_sub_leg: false,
       activity_details: "",
-      selected_activities: isCalib ? ["Calibration"] : [],
+      selected_activities: isCalibrationUser ? ["Calibration"] : [],
       calls_barcode: "",
       calls_verified: false,
       calls_asset_details: null,
@@ -397,7 +392,6 @@ export default function ExpensePage() {
 
   // Init Data States
   const [user, setUser] = useState<any>(() => {
-    const currentUserId = (() => { try { const u = JSON.parse(localStorage.getItem("user") || "{}"); return u.user_id || "Admin"; } catch(e) { return "Admin"; } })().trim();
     const monthStr = new Date().toISOString().slice(0, 7);
     const cached = localStorage.getItem(`cache_month_limits_${currentUserId}_${monthStr}`);
     if (cached) {
@@ -408,21 +402,16 @@ export default function ExpensePage() {
         district: parsed.district || parsed.home_district
       };
     }
-    const userVal = localStorage.getItem("user");
-    if (userVal) {
-      try {
-        const u = JSON.parse(userVal);
-        return {
-          ...u,
-          name: u.name || u.full_name,
-          district: u.district || u.home_district
-        };
-      } catch (e) {}
+    if (parsedUser && Object.keys(parsedUser).length > 0) {
+      return {
+        ...parsedUser,
+        name: parsedUser.name || parsedUser.full_name,
+        district: parsedUser.district || parsedUser.home_district
+      };
     }
     return {};
   });
   const [allowance, setAllowance] = useState<any>(() => {
-    const currentUserId = (() => { try { const u = JSON.parse(localStorage.getItem("user") || "{}"); return u.user_id || "Admin"; } catch(e) { return "Admin"; } })().trim();
     const monthStr = new Date().toISOString().slice(0, 7);
     const cached = localStorage.getItem(`cache_month_limits_${currentUserId}_${monthStr}`);
     if (cached) {
@@ -434,7 +423,6 @@ export default function ExpensePage() {
     return {};
   });
   const [facilities, setFacilities] = useState<Record<string, string[]>>(() => {
-    const currentUserId = (() => { try { const u = JSON.parse(localStorage.getItem("user") || "{}"); return u.user_id || "Admin"; } catch(e) { return "Admin"; } })().trim();
     const monthStr = new Date().toISOString().slice(0, 7);
     const cached = localStorage.getItem(`cache_month_limits_${currentUserId}_${monthStr}`);
     if (cached) {
@@ -446,7 +434,6 @@ export default function ExpensePage() {
     return {};
   });
   const [submittedDates, setSubmittedDates] = useState<string[]>(() => {
-    const currentUserId = (() => { try { const u = JSON.parse(localStorage.getItem("user") || "{}"); return u.user_id || "Admin"; } catch(e) { return "Admin"; } })().trim();
     const monthStr = new Date().toISOString().slice(0, 7);
     const cached = localStorage.getItem(`cache_month_limits_${currentUserId}_${monthStr}`);
     if (cached) {
@@ -458,7 +445,6 @@ export default function ExpensePage() {
     return [];
   });
   const [nextExpId, setNextExpId] = useState(() => {
-    const currentUserId = (() => { try { const u = JSON.parse(localStorage.getItem("user") || "{}"); return u.user_id || "Admin"; } catch(e) { return "Admin"; } })().trim();
     const monthStr = new Date().toISOString().slice(0, 7);
     const cached = localStorage.getItem(`cache_month_limits_${currentUserId}_${monthStr}`);
     if (cached) {
@@ -474,7 +460,6 @@ export default function ExpensePage() {
 
   // Limits tracking
   const [approvedKm, setApprovedKm] = useState(() => {
-    const currentUserId = (() => { try { const u = JSON.parse(localStorage.getItem("user") || "{}"); return u.user_id || "Admin"; } catch(e) { return "Admin"; } })().trim();
     const monthStr = new Date().toISOString().slice(0, 7);
     const cached = localStorage.getItem(`cache_month_limits_${currentUserId}_${monthStr}`);
     if (cached) {
@@ -486,7 +471,6 @@ export default function ExpensePage() {
     return 0;
   });
   const [approvedAuto, setApprovedAuto] = useState(() => {
-    const currentUserId = (() => { try { const u = JSON.parse(localStorage.getItem("user") || "{}"); return u.user_id || "Admin"; } catch(e) { return "Admin"; } })().trim();
     const monthStr = new Date().toISOString().slice(0, 7);
     const cached = localStorage.getItem(`cache_month_limits_${currentUserId}_${monthStr}`);
     if (cached) {
@@ -498,7 +482,6 @@ export default function ExpensePage() {
     return 0;
   });
   const [existingKmReq, setExistingKmReq] = useState<any>(() => {
-    const currentUserId = (() => { try { const u = JSON.parse(localStorage.getItem("user") || "{}"); return u.user_id || "Admin"; } catch(e) { return "Admin"; } })().trim();
     const monthStr = new Date().toISOString().slice(0, 7);
     const cached = localStorage.getItem(`cache_month_limits_${currentUserId}_${monthStr}`);
     if (cached) {
@@ -510,7 +493,6 @@ export default function ExpensePage() {
     return null;
   });
   const [existingAutoReq, setExistingAutoReq] = useState<any>(() => {
-    const currentUserId = (() => { try { const u = JSON.parse(localStorage.getItem("user") || "{}"); return u.user_id || "Admin"; } catch(e) { return "Admin"; } })().trim();
     const monthStr = new Date().toISOString().slice(0, 7);
     const cached = localStorage.getItem(`cache_month_limits_${currentUserId}_${monthStr}`);
     if (cached) {
@@ -543,12 +525,10 @@ export default function ExpensePage() {
   const [initLoading, setInitLoading] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [claims, setClaims] = useState<any[]>(() => {
-    const currentUserId = (() => { try { const u = JSON.parse(localStorage.getItem("user") || "{}"); return u.user_id || "Admin"; } catch(e) { return "Admin"; } })().trim();
     const cached = localStorage.getItem(`cache_my_expenses_${currentUserId}`);
     return cached ? JSON.parse(cached) : [];
   });
   const [claimsLoading, setClaimsLoading] = useState(() => {
-    const currentUserId = (() => { try { const u = JSON.parse(localStorage.getItem("user") || "{}"); return u.user_id || "Admin"; } catch(e) { return "Admin"; } })().trim();
     return !localStorage.getItem(`cache_my_expenses_${currentUserId}`);
   });
   const [myClaimsPage, setMyClaimsPage] = useState(1);
@@ -1428,8 +1408,9 @@ export default function ExpensePage() {
         URL.revokeObjectURL(objectUrl);
         const canvas = document.createElement("canvas");
         let { width, height } = img;
-        // Scale down large images to max 1600px on longest side
-        const maxDim = 1600;
+        
+        // Since target size is 50KB, limit max dimensions to 1000px for optimal compression & performance
+        const maxDim = 1000;
         if (width > maxDim || height > maxDim) {
           if (width > height) {
             height = Math.round((height * maxDim) / width);
@@ -1445,35 +1426,26 @@ export default function ExpensePage() {
         if (!ctx) { resolve(file); return; }
         ctx.drawImage(img, 0, 0, width, height);
 
-        // Binary search for the right quality to hit ≤50KB
-        let lo = 0.1, hi = 0.95, quality = 0.7;
-        let bestBlob: Blob | null = null;
-        const tryQuality = (q: number, done: (blob: Blob) => void) => {
-          canvas.toBlob((blob) => {
-            if (blob) done(blob);
-            else resolve(file);
-          }, "image/jpeg", q);
-        };
-        // Iterative compression — 6 passes max
-        const iterate = (pass: number, lo: number, hi: number) => {
-          quality = (lo + hi) / 2;
-          tryQuality(quality, (blob) => {
-            bestBlob = blob;
-            if (pass >= 6 || Math.abs(blob.size - TARGET_SIZE) < 2048) {
-              // Done — wrap blob as File
-              const compressedFile = new File([bestBlob!], file.name.replace(/\.[^.]+$/, ".jpg"), {
+        // Try single-pass encoding first (most images under 1000px at 0.6 quality fit in 50KB)
+        canvas.toBlob((blob) => {
+          if (blob && blob.size <= TARGET_SIZE) {
+            const compressedFile = new File([blob], file.name.replace(/\.[^.]+$/, ".jpg"), {
+              type: "image/jpeg",
+              lastModified: Date.now()
+            });
+            resolve(compressedFile);
+          } else {
+            // Second pass at 0.4 quality if first pass exceeded 50KB
+            canvas.toBlob((secondBlob) => {
+              const finalBlob = secondBlob || blob || file;
+              const compressedFile = new File([finalBlob], file.name.replace(/\.[^.]+$/, ".jpg"), {
                 type: "image/jpeg",
                 lastModified: Date.now()
               });
               resolve(compressedFile);
-            } else if (blob.size > TARGET_SIZE) {
-              iterate(pass + 1, lo, quality);
-            } else {
-              iterate(pass + 1, quality, hi);
-            }
-          });
-        };
-        iterate(0, lo, hi);
+            }, "image/jpeg", 0.4);
+          }
+        }, "image/jpeg", 0.6);
       };
       img.onerror = () => { URL.revokeObjectURL(objectUrl); resolve(file); };
       img.src = objectUrl;
