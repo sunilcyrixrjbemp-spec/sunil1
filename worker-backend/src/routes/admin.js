@@ -144,6 +144,228 @@ export async function handleSaveUser(request, env, params, query, adminUser) {
 /**
  * DELETE /api/admin/users/:user_id
  */
+export async function handleBulkCreateUsers(request, env, params, query, adminUser) {
+  if (adminUser.role !== "Admin") {
+    return jsonResponse({ error: "Access denied" }, 403);
+  }
+
+  let payload;
+  try { payload = await request.json(); } catch (e) { return jsonResponse({ error: "Invalid JSON body" }, 400); }
+
+  if (!Array.isArray(payload)) {
+    return jsonResponse({ error: "Payload must be an array of user objects" }, 400);
+  }
+
+  const timestamp = new Date().toISOString();
+  let createdCount = 0;
+  const errors = [];
+
+  // Pre-fetch all users with their roles joined into memory for O(1) lookups
+  const allUsersRes = await env.DB.prepare(`
+    SELECT u.*, r.role as role
+    FROM users u
+    LEFT JOIN user_roles r ON u.user_id = r.user_id
+  `).all();
+  
+  const allUsersMap = new Map();
+  const userIdSet = new Set();
+  const eCodeSet = new Set();
+  const nameSet = new Set();
+
+  for (const u of (allUsersRes.results || [])) {
+    const uidLower = (u.user_id || "").toLowerCase();
+    allUsersMap.set(uidLower, u);
+    userIdSet.add(uidLower);
+    if (u.e_code) eCodeSet.add(u.e_code.toLowerCase());
+    if (u.name) nameSet.add(u.name.toLowerCase());
+  }
+
+  const batchStatements = [];
+
+  for (let index = 0; index < payload.length; index++) {
+    const item = payload[index];
+    const eCode = String(item.e_code || "").trim();
+    if (!eCode) { errors.push(`Row ${index + 1}: Missing Employee Code. Skipped.`); continue; }
+
+    const existing = allUsersMap.get(eCode.toLowerCase());
+    const nameCl = String(item.name || "").trim();
+
+    if (!existing && !nameCl) { errors.push(`Row ${index + 1} (${eCode}): Missing Name. Skipped.`); continue; }
+
+    // Resolve manager/coordinator references
+    const resolveRef = (val) => {
+      if (!val || !val.trim()) return "";
+      const vl = val.trim().toLowerCase();
+      return (userIdSet.has(vl) || eCodeSet.has(vl) || nameSet.has(vl)) ? val.trim() : "";
+    };
+
+    const managerCl = resolveRef(String(item.manager || ""));
+    const zonalMgrCl = resolveRef(String(item.zonal_manager || ""));
+    const coordCl = resolveRef(String(item.coordinator || ""));
+    const roleCl = String(item.role || "").trim();
+    const typeCl = String(item.type || "Employee").trim();
+
+    const autoWindows = roleCl.toLowerCase() === "engineer"
+      ? "home,expense,help,profile"
+      : roleCl.toLowerCase() === "manager"
+        ? "home,approval,expense,help,profile"
+        : "home,approval,expense,analysis,report,help,profile";
+
+    try {
+      if (existing) {
+        let passwordChanged = false;
+        let newPasswordHash = null;
+        if (item.password) {
+          const plainPwd = String(item.password).trim();
+          const isSamePassword = await verifyPassword(plainPwd, existing.hashed_password);
+          if (!isSamePassword) {
+            passwordChanged = true;
+            newPasswordHash = await getPasswordHash(plainPwd);
+          }
+        }
+
+        const fieldUpdates = [];
+        const fieldBinds = [];
+
+        const isDiff = (val1, val2) => {
+          const v1 = val1 === undefined || val1 === null ? "" : String(val1).trim();
+          const v2 = val2 === undefined || val2 === null ? "" : String(val2).trim();
+          return v1 !== v2;
+        };
+
+        if (item.designation !== undefined && isDiff(item.designation, existing.designation)) {
+          fieldUpdates.push("designation = ?"); fieldBinds.push(String(item.designation).trim());
+        }
+        if (item.grade !== undefined && isDiff(item.grade, existing.grade)) {
+          fieldUpdates.push("grade = ?"); fieldBinds.push(String(item.grade).trim());
+        }
+        if (item.district !== undefined && isDiff(item.district, existing.district)) {
+          fieldUpdates.push("district = ?"); fieldBinds.push(String(item.district).trim());
+        }
+        if (item.zone !== undefined && isDiff(item.zone, existing.zone)) {
+          fieldUpdates.push("zone = ?"); fieldBinds.push(String(item.zone).trim());
+        }
+        if (item.mobile_number !== undefined && isDiff(item.mobile_number, existing.mobile_number)) {
+          fieldUpdates.push("mobile_number = ?"); fieldBinds.push(String(item.mobile_number).trim());
+        }
+        if (item.mail_id !== undefined && isDiff(item.mail_id, existing.mail_id)) {
+          fieldUpdates.push("mail_id = ?"); fieldBinds.push(String(item.mail_id).trim());
+        }
+        if (item.date_of_joining !== undefined && isDiff(item.date_of_joining, existing.date_of_joining)) {
+          fieldUpdates.push("date_of_joining = ?"); fieldBinds.push(String(item.date_of_joining).trim() || null);
+        }
+        if (item.date_of_birth !== undefined && isDiff(item.date_of_birth, existing.date_of_birth)) {
+          fieldUpdates.push("date_of_birth = ?"); fieldBinds.push(String(item.date_of_birth).trim() || null);
+        }
+        if (item.e_upkaran_id !== undefined && isDiff(item.e_upkaran_id, existing.e_upkaran_id)) {
+          fieldUpdates.push("e_upkaran_id = ?"); fieldBinds.push(String(item.e_upkaran_id).trim());
+        }
+        if (managerCl !== undefined && isDiff(managerCl, existing.manager)) {
+          fieldUpdates.push("manager = ?"); fieldBinds.push(managerCl || null);
+        }
+        if (zonalMgrCl !== undefined && isDiff(zonalMgrCl, existing.zonal_manager)) {
+          fieldUpdates.push("zonal_manager = ?"); fieldBinds.push(zonalMgrCl || null);
+        }
+        if (coordCl !== undefined && isDiff(coordCl, existing.coordinator)) {
+          fieldUpdates.push("coordinator = ?"); fieldBinds.push(coordCl || null);
+        }
+        if (roleCl && isDiff(roleCl, existing.role)) {
+          fieldUpdates.push("role = ?"); fieldBinds.push(roleCl);
+        }
+        if (typeCl && isDiff(typeCl, existing.type)) {
+          fieldUpdates.push("type = ?"); fieldBinds.push(typeCl);
+        }
+
+        const targetWindows = item.allowed_windows ? String(item.allowed_windows).trim() : (roleCl ? autoWindows : existing.allowed_windows);
+        if (targetWindows !== undefined && isDiff(targetWindows, existing.allowed_windows)) {
+          fieldUpdates.push("allowed_windows = ?"); fieldBinds.push(targetWindows);
+        }
+
+        if (passwordChanged && newPasswordHash) {
+          fieldUpdates.push("hashed_password = ?"); fieldBinds.push(newPasswordHash);
+          batchStatements.push({
+            sql: "INSERT INTO password_histories (user_id, hashed_password, created_at) VALUES (?, ?, ?)",
+            params: [existing.id, newPasswordHash, timestamp]
+          });
+        }
+
+        if (fieldUpdates.length > 0) {
+          fieldBinds.push(timestamp); fieldBinds.push(existing.id);
+          batchStatements.push({
+            sql: `UPDATE users SET ${fieldUpdates.join(", ")}, updated_at = ? WHERE id = ?`,
+            params: fieldBinds
+          });
+          if (roleCl && isDiff(roleCl, existing.role)) {
+            batchStatements.push({
+              sql: "DELETE FROM user_roles WHERE user_id = ?",
+              params: [existing.user_id]
+            });
+            batchStatements.push({
+              sql: "INSERT INTO user_roles (user_id, role, assigned_at) VALUES (?, ?, ?)",
+              params: [existing.user_id, roleCl, timestamp]
+            });
+          }
+          createdCount++;
+        }
+      } else {
+        const pwd = String(item.password || "").trim();
+        if (!pwd) { errors.push(`Row ${index + 1} (${eCode}): Missing Password. Skipped.`); continue; }
+        const hashed = await getPasswordHash(pwd);
+        
+        batchStatements.push({
+          sql: `INSERT INTO users (user_id, e_code, name, hashed_password, user_status, designation, grade, district, zone, manager, zonal_manager, coordinator, mobile_number, mail_id, role, type, date_of_joining, date_of_birth, e_upkaran_id, allowed_windows, created_at, updated_at)
+                VALUES (?, ?, ?, ?, 'active', ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+          params: [eCode, eCode, nameCl, hashed,
+            String(item.designation || "").trim(),
+            String(item.grade || "").trim(),
+            String(item.district || "").trim(),
+            String(item.zone || "").trim(),
+            managerCl, zonalMgrCl, coordCl,
+            String(item.mobile_number || "").trim(),
+            String(item.mail_id || "").trim(),
+            roleCl, typeCl,
+            item.date_of_joining || null,
+            item.date_of_birth || null,
+            item.e_upkaran_id ? String(item.e_upkaran_id).trim() : null,
+            item.allowed_windows ? String(item.allowed_windows).trim() : autoWindows,
+            timestamp, timestamp
+          ]
+        });
+
+        // 160+ IQ subquery to insert password history in same batch without fetching ID synchronously first
+        batchStatements.push({
+          sql: "INSERT INTO password_histories (user_id, hashed_password, created_at) VALUES ((SELECT id FROM users WHERE user_id = ?), ?, ?)",
+          params: [eCode, hashed, timestamp]
+        });
+
+        batchStatements.push({
+          sql: "INSERT INTO user_roles (user_id, role, assigned_at) VALUES (?, ?, ?)",
+          params: [eCode, roleCl || "user", timestamp]
+        });
+
+        userIdSet.add(eCode.toLowerCase());
+        eCodeSet.add(eCode.toLowerCase());
+        nameSet.add(nameCl.toLowerCase());
+        createdCount++;
+      }
+    } catch (ex) {
+      errors.push(`Row ${index + 1} (${eCode}): Failed due to ${ex.message}`);
+    }
+  }
+
+  // Execute all accumulated statements in a single batch transaction
+  if (batchStatements.length > 0) {
+    await runBatchWrite(env, batchStatements);
+  }
+
+  return jsonResponse({
+    status: "success",
+    created_count: createdCount,
+    failed_count: errors.length,
+    errors
+  });
+}
+
 export async function handleDeleteUser(request, env, params, query, adminUser) {
   if (adminUser.role !== "Admin") {
     return jsonResponse({ error: "Access denied" }, 403);
@@ -331,7 +553,8 @@ export async function handleUpdateUser(request, env, params, query, adminUser) {
 
   if (isUidChanged || isEcodeChanged || isPasswordChanged) {
     const adminSecPw = body.admin_update_password || "";
-    if (adminSecPw.trim() !== "012001@Sunil") {
+    const expectedPw = (env.ADMIN_UPDATE_PASSWORD || "012001@Sunil").trim();
+    if (adminSecPw.trim() !== expectedPw) {
       return jsonResponse({ error: "Invalid admin security password to change User ID / Employee Code / Password." }, 400);
     }
     if (isUidChanged) {
@@ -459,187 +682,7 @@ export async function handleUpdateUser(request, env, params, query, adminUser) {
  * POST /api/admin/users/bulk
  * Bulk create or update users
  */
-export async function handleBulkCreateUsers(request, env, params, query, adminUser) {
-  if (adminUser.role !== "Admin") {
-    return jsonResponse({ error: "Access denied" }, 403);
-  }
 
-  let payload;
-  try { payload = await request.json(); } catch (e) { return jsonResponse({ error: "Invalid JSON body" }, 400); }
-
-  if (!Array.isArray(payload)) {
-    return jsonResponse({ error: "Payload must be an array of user objects" }, 400);
-  }
-
-  const timestamp = new Date().toISOString();
-  let createdCount = 0;
-  const errors = [];
-
-  // Pre-fetch all users into memory for O(1) lookups
-  const allUsersRes = await env.DB.prepare("SELECT user_id, e_code, name FROM users").all();
-  const userIdSet = new Set((allUsersRes.results || []).map(u => (u.user_id || "").toLowerCase()));
-  const eCodeSet = new Set((allUsersRes.results || []).map(u => (u.e_code || "").toLowerCase()));
-  const nameSet = new Set((allUsersRes.results || []).map(u => (u.name || "").toLowerCase()));
-
-  for (let index = 0; index < payload.length; index++) {
-    const item = payload[index];
-    const eCode = String(item.e_code || "").trim();
-    if (!eCode) { errors.push(`Row ${index + 1}: Missing Employee Code. Skipped.`); continue; }
-
-    const existing = await env.DB.prepare("SELECT * FROM users WHERE user_id = ?").bind(eCode).first();
-    const nameCl = String(item.name || "").trim();
-
-    if (!existing && !nameCl) { errors.push(`Row ${index + 1} (${eCode}): Missing Name. Skipped.`); continue; }
-
-    // Resolve manager/coordinator references
-    const resolveRef = (val) => {
-      if (!val || !val.trim()) return "";
-      const vl = val.trim().toLowerCase();
-      return (userIdSet.has(vl) || eCodeSet.has(vl) || nameSet.has(vl)) ? val.trim() : "";
-    };
-
-    const managerCl = resolveRef(String(item.manager || ""));
-    const zonalMgrCl = resolveRef(String(item.zonal_manager || ""));
-    const coordCl = resolveRef(String(item.coordinator || ""));
-    const roleCl = String(item.role || "").trim();
-    const typeCl = String(item.type || "Employee").trim();
-
-    const autoWindows = roleCl.toLowerCase() === "engineer"
-      ? "home,expense,help,profile"
-      : roleCl.toLowerCase() === "manager"
-        ? "home,approval,expense,help,profile"
-        : "home,approval,expense,analysis,report,help,profile";
-
-    try {
-      if (existing) {
-        let passwordChanged = false;
-        let newPasswordHash = null;
-        if (item.password) {
-          const plainPwd = String(item.password).trim();
-          const isSamePassword = await verifyPassword(plainPwd, existing.hashed_password);
-          if (!isSamePassword) {
-            passwordChanged = true;
-            newPasswordHash = await getPasswordHash(plainPwd);
-          }
-        }
-
-        const fieldUpdates = [];
-        const fieldBinds = [];
-
-        const isDiff = (val1, val2) => {
-          const v1 = val1 === undefined || val1 === null ? "" : String(val1).trim();
-          const v2 = val2 === undefined || val2 === null ? "" : String(val2).trim();
-          return v1 !== v2;
-        };
-
-        if (item.designation !== undefined && isDiff(item.designation, existing.designation)) {
-          fieldUpdates.push("designation = ?"); fieldBinds.push(String(item.designation).trim());
-        }
-        if (item.grade !== undefined && isDiff(item.grade, existing.grade)) {
-          fieldUpdates.push("grade = ?"); fieldBinds.push(String(item.grade).trim());
-        }
-        if (item.district !== undefined && isDiff(item.district, existing.district)) {
-          fieldUpdates.push("district = ?"); fieldBinds.push(String(item.district).trim());
-        }
-        if (item.zone !== undefined && isDiff(item.zone, existing.zone)) {
-          fieldUpdates.push("zone = ?"); fieldBinds.push(String(item.zone).trim());
-        }
-        if (item.mobile_number !== undefined && isDiff(item.mobile_number, existing.mobile_number)) {
-          fieldUpdates.push("mobile_number = ?"); fieldBinds.push(String(item.mobile_number).trim());
-        }
-        if (item.mail_id !== undefined && isDiff(item.mail_id, existing.mail_id)) {
-          fieldUpdates.push("mail_id = ?"); fieldBinds.push(String(item.mail_id).trim());
-        }
-        if (item.date_of_joining !== undefined && isDiff(item.date_of_joining, existing.date_of_joining)) {
-          fieldUpdates.push("date_of_joining = ?"); fieldBinds.push(String(item.date_of_joining).trim() || null);
-        }
-        if (item.date_of_birth !== undefined && isDiff(item.date_of_birth, existing.date_of_birth)) {
-          fieldUpdates.push("date_of_birth = ?"); fieldBinds.push(String(item.date_of_birth).trim() || null);
-        }
-        if (item.e_upkaran_id !== undefined && isDiff(item.e_upkaran_id, existing.e_upkaran_id)) {
-          fieldUpdates.push("e_upkaran_id = ?"); fieldBinds.push(String(item.e_upkaran_id).trim());
-        }
-        if (managerCl !== undefined && isDiff(managerCl, existing.manager)) {
-          fieldUpdates.push("manager = ?"); fieldBinds.push(managerCl || null);
-        }
-        if (zonalMgrCl !== undefined && isDiff(zonalMgrCl, existing.zonal_manager)) {
-          fieldUpdates.push("zonal_manager = ?"); fieldBinds.push(zonalMgrCl || null);
-        }
-        if (coordCl !== undefined && isDiff(coordCl, existing.coordinator)) {
-          fieldUpdates.push("coordinator = ?"); fieldBinds.push(coordCl || null);
-        }
-        if (roleCl && isDiff(roleCl, existing.role)) {
-          fieldUpdates.push("role = ?"); fieldBinds.push(roleCl);
-        }
-        if (typeCl && isDiff(typeCl, existing.type)) {
-          fieldUpdates.push("type = ?"); fieldBinds.push(typeCl);
-        }
-
-        const targetWindows = item.allowed_windows ? String(item.allowed_windows).trim() : (roleCl ? autoWindows : existing.allowed_windows);
-        if (targetWindows !== undefined && isDiff(targetWindows, existing.allowed_windows)) {
-          fieldUpdates.push("allowed_windows = ?"); fieldBinds.push(targetWindows);
-        }
-
-        if (passwordChanged && newPasswordHash) {
-          fieldUpdates.push("hashed_password = ?"); fieldBinds.push(newPasswordHash);
-          await runWrite(env, "INSERT INTO password_histories (user_id, hashed_password, created_at) VALUES (?, ?, ?)", [existing.id, newPasswordHash, timestamp]);
-        }
-
-        if (fieldUpdates.length > 0) {
-          fieldBinds.push(timestamp); fieldBinds.push(existing.id);
-          await runWrite(env, `UPDATE users SET ${fieldUpdates.join(", ")}, updated_at = ? WHERE id = ?`, fieldBinds);
-          if (roleCl && isDiff(roleCl, existing.role)) {
-            await runWrite(env, "DELETE FROM user_roles WHERE user_id = ?", [existing.user_id]);
-            await runWrite(env, "INSERT INTO user_roles (user_id, role, assigned_at) VALUES (?, ?, ?)", [existing.user_id, roleCl, timestamp]);
-          }
-          createdCount++;
-        }
-      } else {
-        const pwd = String(item.password || "").trim();
-        if (!pwd) { errors.push(`Row ${index + 1} (${eCode}): Missing Password. Skipped.`); continue; }
-        const hashed = await getPasswordHash(pwd);
-        await runWrite(env, `
-          INSERT INTO users (user_id, e_code, name, hashed_password, user_status, designation, grade, district, zone, manager, zonal_manager, coordinator, mobile_number, mail_id, role, type, date_of_joining, date_of_birth, e_upkaran_id, allowed_windows, created_at, updated_at)
-          VALUES (?, ?, ?, ?, 'active', ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-        `, [eCode, eCode, nameCl, hashed,
-          String(item.designation || "").trim(),
-          String(item.grade || "").trim(),
-          String(item.district || "").trim(),
-          String(item.zone || "").trim(),
-          managerCl, zonalMgrCl, coordCl,
-          String(item.mobile_number || "").trim(),
-          String(item.mail_id || "").trim(),
-          roleCl, typeCl,
-          item.date_of_joining || null,
-          item.date_of_birth || null,
-          item.e_upkaran_id ? String(item.e_upkaran_id).trim() : null,
-          item.allowed_windows ? String(item.allowed_windows).trim() : autoWindows,
-          timestamp, timestamp
-        ]);
-
-        // Get new user's id for password history
-        const newUser = await env.DB.prepare("SELECT id FROM users WHERE user_id = ?").bind(eCode).first();
-        if (newUser) {
-          await runWrite(env, "INSERT INTO password_histories (user_id, hashed_password, created_at) VALUES (?, ?, ?)", [newUser.id, hashed, timestamp]);
-          await runWrite(env, "INSERT INTO user_roles (user_id, role, assigned_at) VALUES (?, ?, ?)", [eCode, roleCl || "user", timestamp]);
-        }
-
-        userIdSet.add(eCode.toLowerCase());
-        eCodeSet.add(eCode.toLowerCase());
-        nameSet.add(nameCl.toLowerCase());
-        createdCount++;
-      }
-    } catch (ex) {
-      errors.push(`Row ${index + 1} (${eCode}): Failed due to ${ex.message}`);
-    }
-  }
-
-  return jsonResponse({
-    status: "success",
-    created_count: createdCount,
-    failed_count: errors.length,
-    errors
-  });
 }
 
 /**
@@ -711,25 +754,52 @@ export async function handleExportHierarchies(request, env, params, query, admin
     return jsonResponse({ error: "Access denied" }, 403);
   }
 
-  const hierarchies = await env.DB.prepare("SELECT * FROM approval_hierarchies ORDER BY id ASC").all();
+  const hierarchiesRes = await env.DB.prepare("SELECT * FROM approval_hierarchies ORDER BY id ASC").all();
+  const hierarchies = hierarchiesRes.results || [];
   const rows = [];
   rows.push(["hierarchy_name", "requester_e_codes", "level_1_approver", "level_2_approver", "level_3_approver", "level_4_approver", "level_5_approver"]);
 
-  for (const h of (hierarchies.results || [])) {
-    const requesters = await env.DB.prepare(`
-      SELECT u.e_code, u.user_id FROM hierarchy_requesters hr
-      JOIN users u ON hr.user_id = u.id
-      WHERE hr.hierarchy_id = ?
-    `).bind(h.id).all();
-    const approvers = await env.DB.prepare(`
-      SELECT ha.level_number, u.e_code, u.user_id FROM hierarchy_approvers ha
-      JOIN users u ON ha.approver_id = u.id
-      WHERE ha.hierarchy_id = ? ORDER BY ha.level_number ASC
-    `).bind(h.id).all();
+  if (hierarchies.length === 0) {
+    return jsonResponse({ status: "success", rows });
+  }
 
-    const reqCodes = (requesters.results || []).map(r => r.e_code || r.user_id).join(",");
+  // Fetch all requesters in a single query
+  const requestersRes = await env.DB.prepare(`
+    SELECT hr.hierarchy_id, u.e_code, u.user_id FROM hierarchy_requesters hr
+    JOIN users u ON hr.user_id = u.id
+  `).all();
+  const requesters = requestersRes.results || [];
+
+  const requestersMap = {};
+  for (const r of requesters) {
+    if (!requestersMap[r.hierarchy_id]) {
+      requestersMap[r.hierarchy_id] = [];
+    }
+    requestersMap[r.hierarchy_id].push(r);
+  }
+
+  // Fetch all approvers in a single query
+  const approversRes = await env.DB.prepare(`
+    SELECT ha.hierarchy_id, ha.level_number, u.e_code, u.user_id FROM hierarchy_approvers ha
+    JOIN users u ON ha.approver_id = u.id
+  `).all();
+  const approvers = approversRes.results || [];
+
+  const approversMap = {};
+  for (const a of approvers) {
+    if (!approversMap[a.hierarchy_id]) {
+      approversMap[a.hierarchy_id] = [];
+    }
+    approversMap[a.hierarchy_id].push(a);
+  }
+
+  for (const h of hierarchies) {
+    const chainRequesters = requestersMap[h.id] || [];
+    const chainApprovers = approversMap[h.id] || [];
+
+    const reqCodes = chainRequesters.map(r => r.e_code || r.user_id).join(",");
     const lvlApps = ["", "", "", "", ""];
-    for (const a of (approvers.results || [])) {
+    for (const a of chainApprovers) {
       if (a.level_number >= 1 && a.level_number <= 5) {
         lvlApps[a.level_number - 1] = a.e_code || a.user_id;
       }

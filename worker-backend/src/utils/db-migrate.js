@@ -89,6 +89,11 @@ export async function runMigrations(db) {
       facility_type TEXT,
       equipment_type TEXT,
       uploaded_at TEXT DEFAULT CURRENT_TIMESTAMP
+    )`,
+    // legacy_hash_mapping table (for caching legacy mockId mapping)
+    `CREATE TABLE IF NOT EXISTS legacy_hash_mapping (
+      hash_id INTEGER PRIMARY KEY,
+      exp_id TEXT UNIQUE NOT NULL
     )`
   ];
 
@@ -181,6 +186,8 @@ export async function runMigrations(db) {
     `CREATE INDEX IF NOT EXISTS idx_assets_hospital ON assets_inventory(LOWER(TRIM(hospital_name)))`,
     // Login logs (audit trail queries)
     `CREATE INDEX IF NOT EXISTS idx_login_logs_user ON login_logs(user_id)`,
+    // Legacy hash mapping index
+    `CREATE INDEX IF NOT EXISTS idx_legacy_hash_mapping_hash_id ON legacy_hash_mapping(hash_id)`,
   ];
 
   for (const idxSql of indexes) {

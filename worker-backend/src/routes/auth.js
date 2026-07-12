@@ -323,7 +323,7 @@ export async function handleRefresh(request, env, params, query) {
   }
 
   const user = await env.DB.prepare("SELECT * FROM users WHERE user_id = ?").bind(payload.sub).first();
-  if (!user) {
+  if (!user || user.active_session_id !== payload.sid) {
     return jsonResponse({ error: "Session expired or invalid" }, 401);
   }
 
@@ -463,11 +463,11 @@ export async function handleForgotPassword(request, env, params, query) {
       console.warn("env.OTPS_KV is not bound! Falling back to console logging.");
     }
 
-    // Also insert a notification record in D1 DB for compatibility
+    // Also insert a notification record in D1 DB for compatibility, masking the sensitive OTP code
     await runWrite(env, `
       INSERT INTO notifications (user_id, title, description, type, read, link, created_at)
       VALUES (?, ?, ?, 'info', 0, '/login', ?)
-    `, [user_id, "Password Reset OTP", `Your OTP for password reset is: ${otp}. Valid for 10 minutes.`, timestamp]).catch(() => {});
+    `, [user_id, "Password Reset OTP", "A verification OTP has been sent to your registered email.", timestamp]).catch(() => {});
 
     // Send OTP via Google Apps Script email
     const email = user.mail_id || "";
@@ -706,11 +706,11 @@ export async function handleUnlockAccount(request, env, params, query) {
       await env.OTPS_KV.put(kvKey, otp, { expirationTtl: 600 });
     }
 
-    // Compatibility DB log
+    // Compatibility DB log, masking the sensitive OTP code
     await runWrite(env, `
       INSERT INTO notifications (user_id, title, description, type, read, link, created_at)
       VALUES (?, ?, ?, 'info', 0, '/login', ?)
-    `, [user_id, "Account Unlock OTP", `Your OTP to unlock account: ${otp}. Valid for 10 minutes.`, timestamp]).catch(() => {});
+    `, [user_id, "Account Unlock OTP", "A verification OTP has been sent to your registered email.", timestamp]).catch(() => {});
 
     // Send email via Google Apps Script
     const email = user.mail_id || "";

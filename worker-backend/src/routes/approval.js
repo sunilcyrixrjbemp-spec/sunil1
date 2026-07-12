@@ -1,5 +1,6 @@
 import { runWrite, runBatchWrite } from "../utils/db.js";
 import { deleteFromGoogleDrive } from "./upload.js";
+import { resolveLegacyExpenseId } from "../utils/legacy-resolver.js";
 
 function jsonResponse(data, status = 200) {
   return new Response(JSON.stringify(data), {
@@ -313,20 +314,15 @@ export async function handleApprove(request, env, params, query, user) {
 
   // 1. Handle Legacy Expense (expenseId < 0 and <= -200000)
   if (expenseId <= -200000) {
-    // Legacy mapping (skip hashes calculation here to keep code efficient; we lookup matches in expense_master)
-    // For legacy support, we fetch all rows and find hash match
-    const allRows = await env.DB.prepare("SELECT exp_id, user_id, status, level_first_approver, level_second_approver, total_amount FROM expense_master").all();
-    let match = null;
-    
-    // We implement the Python hashing function get_legacy_expense_hash_id in JS:
-    // Hashing function: -((exp_id * 73 + 19) % 800000 + 200000)
-    for (const row of (allRows.results || [])) {
-      const hashId = -((row.exp_id * 73 + 19) % 800000 + 200000);
-      if (hashId === expenseId) {
-        match = row;
-        break;
-      }
+    const matchingExpId = await resolveLegacyExpenseId(env, expenseId);
+    if (!matchingExpId) {
+      return jsonResponse({ error: "Legacy expense claim not found" }, 404);
     }
+
+    const match = await env.DB.prepare(`
+      SELECT exp_id, user_id, status, level_first_approver, level_second_approver, total_amount 
+      FROM expense_master WHERE exp_id = ?
+    `).bind(matchingExpId).first();
 
     if (!match) {
       return jsonResponse({ error: "Legacy expense claim not found" }, 404);
@@ -517,15 +513,15 @@ export async function handleReject(request, env, params, query, user) {
 
   // 1. Handle Legacy Expense Rejection
   if (expenseId <= -200000) {
-    const allRows = await env.DB.prepare("SELECT exp_id, user_id, status, level_first_approver, level_second_approver FROM expense_master").all();
-    let match = null;
-    for (const row of (allRows.results || [])) {
-      const hashId = -((row.exp_id * 73 + 19) % 800000 + 200000);
-      if (hashId === expenseId) {
-        match = row;
-        break;
-      }
+    const matchingExpId = await resolveLegacyExpenseId(env, expenseId);
+    if (!matchingExpId) {
+      return jsonResponse({ error: "Legacy claim not found" }, 404);
     }
+
+    const match = await env.DB.prepare(`
+      SELECT exp_id, user_id, status, level_first_approver, level_second_approver 
+      FROM expense_master WHERE exp_id = ?
+    `).bind(matchingExpId).first();
 
     if (!match) return jsonResponse({ error: "Legacy claim not found" }, 404);
 

@@ -7,23 +7,31 @@
 // ─── Global Query Cache for Ultrafast Reads ──────────────────────────────────
 const MEMORY_CACHE = new Map();
 
+const ALL_KNOWN_TABLES = [
+  "users", "user_roles", "password_histories", "expenses", "expense_master",
+  "expense_itineraries", "expense_asset_taggings", "approvals", "approval_hierarchies",
+  "hierarchy_requesters", "hierarchy_approvers", "limit_approval_requests",
+  "notifications", "allowance_master", "facility_details", "login_logs", "otps",
+  "kpi_appraisals", "rj_penalties", "assets_inventory", "asset_value_master"
+];
+
+function extractTables(sql) {
+  const sqlLower = sql.toLowerCase();
+  const found = [];
+  for (const t of ALL_KNOWN_TABLES) {
+    const regex = new RegExp(`\\b${t}\\b`);
+    if (regex.test(sqlLower)) {
+      found.push(t);
+    }
+  }
+  return found;
+}
+
 function getCacheKey(sql, params) {
   return `${sql}:${JSON.stringify(params)}`;
 }
 
 function getCachedResult(sql, params) {
-  const sqlLower = sql.toLowerCase();
-  let ttl = 0;
-  
-  // Static tables are cached for 1 hour; user/auth info is cached for 15 seconds
-  if (sqlLower.includes("allowance_master") || sqlLower.includes("facility_details")) {
-    ttl = 3600000; // 1 hour
-  } else if (sqlLower.includes("users")) {
-    ttl = 15000; // 15 seconds
-  }
-
-  if (ttl === 0) return null;
-
   const key = getCacheKey(sql, params);
   const cached = MEMORY_CACHE.get(key);
   if (cached) {
@@ -38,32 +46,31 @@ function getCachedResult(sql, params) {
 
 function setCachedResult(sql, params, data) {
   const sqlLower = sql.toLowerCase();
-  let ttl = 0;
+  let ttl = 30000; // Default: 30 seconds cache for all read queries!
   
-  if (sqlLower.includes("allowance_master") || sqlLower.includes("facility_details")) {
-    ttl = 3600000; // 1 hour
-  } else if (sqlLower.includes("users")) {
-    ttl = 15000; // 15 seconds
+  if (sqlLower.includes("allowance_master") || sqlLower.includes("facility_details") || sqlLower.includes("asset_value_master")) {
+    ttl = 3600000; // 1 hour for static tables
+  } else if (sqlLower.includes("login_logs") || sqlLower.includes("notifications") || sqlLower.includes("otps")) {
+    ttl = 5000; // 5 seconds for volatile status tables
   }
 
-  if (ttl === 0) return;
-
   const key = getCacheKey(sql, params);
+  const tables = extractTables(sql);
+  
   MEMORY_CACHE.set(key, {
     data,
+    tables,
     expiresAt: Date.now() + ttl
   });
 }
 
 function invalidateCacheOnWrite(sql) {
-  const sqlLower = sql.toLowerCase();
-  for (const key of MEMORY_CACHE.keys()) {
-    const keyLower = key.toLowerCase();
-    if (sqlLower.includes("users") && keyLower.includes("users")) {
-      MEMORY_CACHE.delete(key);
-    } else if (sqlLower.includes("allowance_master") && keyLower.includes("allowance_master")) {
-      MEMORY_CACHE.delete(key);
-    } else if (sqlLower.includes("facility_details") && keyLower.includes("facility_details")) {
+  const writeTables = extractTables(sql);
+  if (writeTables.length === 0) return;
+
+  for (const [key, cached] of MEMORY_CACHE.entries()) {
+    const hasOverlap = (cached.tables || []).some(t => writeTables.includes(t));
+    if (hasOverlap) {
       MEMORY_CACHE.delete(key);
     }
   }

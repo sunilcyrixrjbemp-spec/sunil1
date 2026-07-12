@@ -1756,11 +1756,22 @@ export default function ExpensePage() {
       const mainAmt = parseFloat(leg.amount) || 0;
 
       if (leg.mode === "Train") {
+        // Train: bill always required (any amount ≥ ₹1)
         if (mainAmt >= 1 && !hasMainAttachment) {
           setValidationModal({
             show: true,
-            title: `Visit ${legNum}: Missing Train Ticket`,
-            message: "Please upload your train ticket receipt since the amount is ₹1 or more."
+            title: `Visit ${legNum}: Train Ticket Required`,
+            message: "Train ticket / receipt upload is mandatory. Please attach your train ticket before submitting."
+          });
+          return false;
+        }
+      } else if (leg.mode === "Auto" || leg.mode === "Bus") {
+        // Auto / Bus: bill required when fare ≥ ₹300
+        if (mainAmt >= 300 && !hasMainAttachment) {
+          setValidationModal({
+            show: true,
+            title: `Visit ${legNum}: ${leg.mode} Receipt Required`,
+            message: `${leg.mode} fare is ₹${mainAmt.toFixed(0)} (₹300 or more). Please upload the ${leg.mode} receipt / ticket before submitting.`
           });
           return false;
         }
@@ -1778,11 +1789,12 @@ export default function ExpensePage() {
           return false;
         }
       } else if (leg.mode !== "Bike" && leg.mode !== "Car") {
+        // All other paid modes (Flight, etc.): bill required when fare ≥ ₹300
         if (mainAmt >= 300 && !hasMainAttachment) {
           setValidationModal({
             show: true,
             title: `Visit ${legNum}: Missing Ticket Receipt`,
-            message: `Please upload a receipt screenshot for travel mode "${leg.mode}" since the fare is ₹300 or more.`
+            message: `Please upload a receipt / ticket for travel mode "${leg.mode}" since the fare is ₹300 or more.`
           });
           return false;
         }
@@ -1802,11 +1814,22 @@ export default function ExpensePage() {
         const hasSubAttachment = subBill || hasExistingFile(legNum, leg.sub_mode);
 
         if (leg.sub_mode === "Train") {
+          // Sub Train: bill always required
           if (subAmt >= 1 && !hasSubAttachment) {
             setValidationModal({
               show: true,
-              title: `Visit ${legNum}: Missing Sub-connection Train Ticket`,
-              message: "Please upload the sub-connection train ticket receipt since the amount is ₹1 or more."
+              title: `Visit ${legNum}: Sub-connection Train Ticket Required`,
+              message: "Train ticket upload is mandatory for sub-connection travel. Please attach the ticket before submitting."
+            });
+            return false;
+          }
+        } else if (leg.sub_mode === "Auto" || leg.sub_mode === "Bus") {
+          // Sub Auto / Bus: bill required when fare ≥ ₹300
+          if (subAmt >= 300 && !hasSubAttachment) {
+            setValidationModal({
+              show: true,
+              title: `Visit ${legNum}: Sub-connection ${leg.sub_mode} Receipt Required`,
+              message: `Sub-connection ${leg.sub_mode} fare is ₹${subAmt.toFixed(0)} (₹300 or more). Please upload the receipt before submitting.`
             });
             return false;
           }
@@ -1828,12 +1851,13 @@ export default function ExpensePage() {
             setValidationModal({
               show: true,
               title: `Visit ${legNum}: Missing Sub-connection Receipt`,
-              message: `Please upload a sub-connection receipt screenshot since the fare is ₹300 or more.`
+              message: `Please upload a sub-connection receipt since the fare is ₹300 or more.`
             });
             return false;
           }
         }
       }
+
 
       if (leg.travel_type === "Outdoor") {
         if (!leg.district_from) {

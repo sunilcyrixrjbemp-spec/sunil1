@@ -1,5 +1,6 @@
 import { runWrite, runBatchWrite, runRead } from "../utils/db.js";
 import { getLegacyExpenseHashId } from "./approval.js";
+import { resolveLegacyExpenseId } from "../utils/legacy-resolver.js";
 import { uploadFileWithFallback } from "./upload.js";
 import { MONTH_NAMES } from "../utils/constants.js";
 
@@ -1054,16 +1055,7 @@ export async function handleGetExpenseDetails(request, env, params, query, user)
     if (val <= -200000) {
       // Legacy expense_master claim!
       try {
-        const allRows = await env.DB.prepare("SELECT exp_id FROM expense_master").all();
-        let matchingExpId = null;
-        for (const row of (allRows.results || [])) {
-          const hashId = await getLegacyExpenseHashId(row.exp_id);
-          if (hashId === val) {
-            matchingExpId = row.exp_id;
-            break;
-          }
-        }
-
+        const matchingExpId = await resolveLegacyExpenseId(env, val);
         if (!matchingExpId) return jsonResponse({ error: "Legacy claim not found" }, 404);
 
         const masterRow = await env.DB.prepare(`
@@ -2330,15 +2322,50 @@ export async function handleGetEngineerMonthClaims(request, env, params, query, 
     `).bind(targetUser.id, month, year).all();
     expenses = expensesRes.results || [];
 
-    for (const exp of expenses) {
-      let legs = [];
-      try {
-        const legsRes = await env.DB.prepare("SELECT * FROM expense_itineraries WHERE exp_id = ? ORDER BY leg_number ASC").bind(exp.expense_code).all();
-        legs = legsRes.results || [];
-      } catch (e) {
-        console.warn("Legs fetch failed:", e.message);
-      }
+    const expCodes = expenses.map(e => e.expense_code).filter(Boolean);
+    
+    // Batch fetch all itineraries (legs) for all expenses in a single query
+    let allLegs = [];
+    if (expCodes.length > 0) {
+      const placeholders = expCodes.map(() => "?").join(",");
+      const legsRes = await env.DB.prepare(`
+        SELECT * FROM expense_itineraries 
+        WHERE exp_id IN (${placeholders}) 
+        ORDER BY exp_id ASC, leg_number ASC
+      `).bind(...expCodes).all();
+      allLegs = legsRes.results || [];
+    }
 
+    const legsMap = {};
+    for (const leg of allLegs) {
+      if (!legsMap[leg.exp_id]) {
+        legsMap[leg.exp_id] = [];
+      }
+      legsMap[leg.exp_id].push(leg);
+    }
+
+    // Batch fetch all asset taggings for all legs in a single query
+    const itiIds = allLegs.map(l => l.itinerary_id).filter(Boolean);
+    let allTaggings = [];
+    if (itiIds.length > 0) {
+      const placeholders = itiIds.map(() => "?").join(",");
+      const tagRes = await env.DB.prepare(`
+        SELECT * FROM expense_asset_taggings 
+        WHERE itinerary_id IN (${placeholders})
+      `).bind(...itiIds).all();
+      allTaggings = tagRes.results || [];
+    }
+
+    const taggingsMap = {};
+    for (const t of allTaggings) {
+      if (!taggingsMap[t.itinerary_id]) {
+        taggingsMap[t.itinerary_id] = [];
+      }
+      taggingsMap[t.itinerary_id].push(t);
+    }
+
+    for (const exp of expenses) {
+      const legs = legsMap[exp.expense_code] || [];
       const legData = [];
       for (const leg of legs) {
         let barcodes = [];
@@ -2358,20 +2385,16 @@ export async function handleGetEngineerMonthClaims(request, env, params, query, 
           } catch (err) {}
         }
 
-        // Calculate total asset tagging qty and value
+        // Calculate total asset tagging qty and value from batch-fetched taggings in-memory
         let totalTagQty = 0;
         let totalTagVal = 0;
-        try {
-          const tagRes = await env.DB.prepare("SELECT * FROM expense_asset_taggings WHERE itinerary_id = ?").bind(leg.itinerary_id).all();
-          for (const t of (tagRes.results || [])) {
-            const qty = t.quantity || 0;
-            totalTagQty += qty;
-            const eqName = (t.equipment_name || "").trim().toLowerCase();
-            const cost = assetCosts[eqName] || 0.0;
-            totalTagVal += qty * cost;
-          }
-        } catch (e) {
-          console.warn("Taggings fetch failed for leg:", leg.itinerary_id, e.message);
+        const taggings = taggingsMap[leg.itinerary_id] || [];
+        for (const t of taggings) {
+          const qty = t.quantity || 0;
+          totalTagQty += qty;
+          const eqName = (t.equipment_name || "").trim().toLowerCase();
+          const cost = assetCosts[eqName] || 0.0;
+          totalTagVal += qty * cost;
         }
 
         let tagInfo = "";
@@ -2460,15 +2483,30 @@ export async function handleGetEngineerMonthClaims(request, env, params, query, 
     ).all();
     legacyExpenses = legacyRes.results || [];
 
-    for (const exp of legacyExpenses) {
-      let legs = [];
-      try {
-        const legsRes = await env.DB.prepare("SELECT * FROM expense_itineraries WHERE exp_id = ? ORDER BY leg_number ASC").bind(exp.exp_id).all();
-        legs = legsRes.results || [];
-      } catch (e) {
-        console.warn("Legacy legs fetch failed:", e.message);
-      }
+    const legacyExpIds = legacyExpenses.map(e => e.exp_id).filter(Boolean);
+    
+    // Batch fetch all legacy itineraries (legs) in a single query
+    let legacyLegs = [];
+    if (legacyExpIds.length > 0) {
+      const placeholders = legacyExpIds.map(() => "?").join(",");
+      const legacyLegsRes = await env.DB.prepare(`
+        SELECT * FROM expense_itineraries 
+        WHERE exp_id IN (${placeholders}) 
+        ORDER BY exp_id ASC, leg_number ASC
+      `).bind(...legacyExpIds).all();
+      legacyLegs = legacyLegsRes.results || [];
+    }
 
+    const legacyLegsMap = {};
+    for (const leg of legacyLegs) {
+      if (!legacyLegsMap[leg.exp_id]) {
+        legacyLegsMap[leg.exp_id] = [];
+      }
+      legacyLegsMap[leg.exp_id].push(leg);
+    }
+
+    for (const exp of legacyExpenses) {
+      const legs = legacyLegsMap[exp.exp_id] || [];
       const legData = [];
       for (const leg of legs) {
         legData.push({

@@ -95,7 +95,10 @@ export async function deleteFromGoogleDrive(env, fileId) {
 }
 
 async function uploadToR2(env, file, key) {
-  const accountId = env.PRIMARY_CLOUDFLARE_ACCOUNT_ID || "befbd2e0ff580a1d0d0865f011002053";
+  const accountId = env.PRIMARY_CLOUDFLARE_ACCOUNT_ID;
+  if (!accountId) {
+    throw new Error("PRIMARY_CLOUDFLARE_ACCOUNT_ID configuration missing.");
+  }
   const bucketName = "fieldops-uploads";
   const url = `https://api.cloudflare.com/client/v4/accounts/${accountId}/r2/buckets/${bucketName}/objects/${key}`;
   
@@ -107,7 +110,10 @@ async function uploadToR2(env, file, key) {
 
   if (token && token.startsWith("cfk_")) {
     headers["X-Auth-Key"] = token;
-    headers["X-Auth-Email"] = email || "Sunil.cyrixrjbemp@gmail.com";
+    if (!email) {
+      throw new Error("PRIMARY_CLOUDFLARE_EMAIL configuration missing for X-Auth-Email header.");
+    }
+    headers["X-Auth-Email"] = email;
   } else if (token) {
     headers["Authorization"] = `Bearer ${token}`;
   }
@@ -130,22 +136,14 @@ async function uploadToR2(env, file, key) {
 
 export async function uploadFileWithFallback(env, file, subfolder, filename) {
   const safeName = makeSafeFilename(filename);
-  const key = `${subfolder}/${safeName}`;
 
-  // 1. Try Google Drive Upload First
+  // Upload strictly to Google Drive
   try {
     const fileId = await uploadToGoogleDrive(env, file, subfolder, safeName);
     return `/api/upload/file/gdrive/${fileId}`;
   } catch (driveErr) {
-    console.error("GDrive upload failed, trying R2 fallback...", driveErr);
-  }
-
-  // 2. Try R2 fallback
-  try {
-    return await uploadToR2(env, file, key);
-  } catch (r2Err) {
-    console.error("R2 upload failed:", r2Err);
-    throw new Error("Upload failed on both Google Drive and R2 fallback. Detail: " + r2Err.message);
+    console.error("Google Drive upload failed:", driveErr);
+    throw new Error("Upload failed on Google Drive. Detail: " + driveErr.message);
   }
 }
 
