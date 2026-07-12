@@ -26,6 +26,10 @@ export const users = sqliteTable("users", {
   createdAt: text("created_at"),
   updatedAt: text("updated_at"),
   profilePhoto: text("profile_photo"),
+  failedAttempt: integer("failed_attempt").default(0),
+  activeSessionId: text("active_session_id"),
+  fcmToken: text("fcm_token"),
+  profilePicUrl: text("profile_pic_url"),
 });
 
 // 2. User Roles Table
