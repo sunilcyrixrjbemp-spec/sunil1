@@ -191,7 +191,9 @@ export async function getBootstrapDataHelper(env, user, request = null) {
         mobiliseCount: expenses.mobiliseCount,
         createdAt: expenses.createdAt,
         updatedAt: expenses.updatedAt,
-        employee_name: users.name
+        submitter_name: users.name,
+        submitter_code: users.userId,
+        submitter_designation: users.designation
       })
       .from(expenses)
       .join(users, eq(expenses.userId, users.id))
@@ -223,7 +225,10 @@ export async function getBootstrapDataHelper(env, user, request = null) {
         calibration_count: e.calibrationCount,
         mobilise_count: e.mobiliseCount,
         created_at: e.createdAt,
-        updated_at: e.updatedAt
+        updated_at: e.updatedAt,
+        submitter_name: e.submitter_name,
+        submitter_code: e.submitter_code,
+        submitter_designation: e.submitter_designation || "Engineer"
       }));
     } else {
       const [directReportsRes, hierarchyApprovals] = await Promise.all([
@@ -286,7 +291,9 @@ export async function getBootstrapDataHelper(env, user, request = null) {
           mobiliseCount: expenses.mobiliseCount,
           createdAt: expenses.createdAt,
           updatedAt: expenses.updatedAt,
-          employee_name: users.name
+          submitter_name: users.name,
+          submitter_code: users.userId,
+          submitter_designation: users.designation
         })
         .from(expenses)
         .join(users, eq(expenses.userId, users.id))
@@ -319,7 +326,10 @@ export async function getBootstrapDataHelper(env, user, request = null) {
           calibration_count: e.calibrationCount,
           mobilise_count: e.mobiliseCount,
           created_at: e.createdAt,
-          updated_at: e.updatedAt
+          updated_at: e.updatedAt,
+          submitter_name: e.submitter_name,
+          submitter_code: e.submitter_code,
+          submitter_designation: e.submitter_designation || "Engineer"
         }));
       }
     }
