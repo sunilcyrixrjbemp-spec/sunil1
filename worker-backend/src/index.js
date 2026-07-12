@@ -264,13 +264,25 @@ router.get("/api/expense/engineer-advance", handleGetEngineerAdvance, true);
 router.post("/api/expense/engineer-advance", handleSaveEngineerAdvance, true);
 router.get("/api/expense/consolidated-report", handleGetConsolidatedReport, true);
 router.get("/api/expense/policy-rules", handleGetPolicyRules, true);
-// Root + wildcard AFTER all specific paths
 router.get("/api/expense", handleListExpenses, true);
 router.post("/api/expense", handleSubmitExpense, true);
 router.get("/api/expense/:id", handleGetExpenseDetails, true);
 router.delete("/api/expense/:id", handleDeleteExpense, true);
 
 
+import { getDrizzleDb } from "./db/client.js";
+import { users } from "./db/schema.js";
+import { eq } from "drizzle-orm";
+
+router.get("/api/test-drizzle", async (req, env) => {
+  try {
+    const db = getDrizzleDb(env, req);
+    const res = await db.select().from(users).where(eq(users.userId, "Admin")).limit(1);
+    return jsonResponse({ success: true, data: res });
+  } catch (e) {
+    return jsonResponse({ success: false, error: e.message, stack: e.stack });
+  }
+}, false);
 // Dedicated migration endpoint — call once after deployment, not on every request
 router.post("/api/admin/run-migrations", async (req, env, params, query, user) => {
   if (!user || user.role !== "Admin") {
