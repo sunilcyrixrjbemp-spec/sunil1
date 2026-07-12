@@ -678,12 +678,6 @@ export async function handleUpdateUser(request, env, params, query, adminUser) {
   return jsonResponse(result);
 }
 
-/**
- * POST /api/admin/users/bulk
- * Bulk create or update users
- */
-
-}
 
 /**
  * GET /api/admin/eligible-approvers
