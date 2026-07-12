@@ -549,16 +549,14 @@ export default function HomePage() {
     const grouped: Record<string, { name: string, amount: number }> = {};
     filteredTeamExpenses.forEach(e => {
       if (e.category === "Limit Request") return;
-      const code = e.submitter_code;
-      if (!grouped[code]) {
-        grouped[code] = { name: e.submitter_name, amount: 0 };
+      const zone = e.zone || "Bikaner";
+      if (!grouped[zone]) {
+        grouped[zone] = { name: zone, amount: 0 };
       }
-      grouped[code].amount += e.amount;
+      grouped[zone].amount += e.amount;
     });
-    return Object.entries(grouped)
-      .map(([code, val]) => ({ code, name: val.name, amount: val.amount }))
-      .sort((a, b) => b.amount - a.amount)
-      .slice(0, 5);
+    return Object.values(grouped)
+      .sort((a, b) => b.amount - a.amount);
   };
 
   // Stats calculations based on current active tab, filtered ONLY by month
@@ -1249,7 +1247,7 @@ export default function HomePage() {
                 </div>
               ) : (
                 <div className="space-y-2.5">
-                  <h4 className="text-[9px] font-extrabold uppercase text-gray-400 tracking-wider">Top Expenditures Comparison</h4>
+                  <h4 className="text-[9px] font-extrabold uppercase text-gray-400 tracking-wider">Zone-wise Expenditures Comparison</h4>
                   {(() => {
                     const chartData = getTeamChartData();
                     if (chartData.length === 0) return null;

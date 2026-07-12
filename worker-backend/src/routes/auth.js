@@ -1,6 +1,6 @@
 import { verifyPassword, signJwt, verifyJwt, getPasswordHash } from "../utils/security.js";
 import { DESIGNATIONS, ZONE_DISTRICTS, ROLES, MONTH_NAMES } from "../utils/constants.js";
-import { getExpenseInitData } from "./expense.js";
+import { getExpenseInitData, getActualZone } from "./expense.js";
 import { fetchPendingApprovals } from "./approval.js";
 import { getDrizzleDb } from "../db/client.js";
 import { users, userRoles, passwordHistories, allowanceMaster, expenses, loginLogs, hierarchyApprovers, hierarchyRequesters } from "../db/schema.js";
@@ -231,7 +231,7 @@ export async function getBootstrapDataHelper(env, user, request = null) {
         submitter_name: e.submitter_name,
         submitter_code: e.submitter_code,
         submitter_designation: e.submitter_designation || "Engineer",
-        zone: e.zone || "Bikaner",
+        zone: getActualZone(e.zone, e.district || "Ganganar"),
         district: e.district || "Ganganar"
       }));
     } else {
@@ -336,7 +336,7 @@ export async function getBootstrapDataHelper(env, user, request = null) {
           submitter_name: e.submitter_name,
           submitter_code: e.submitter_code,
           submitter_designation: e.submitter_designation || "Engineer",
-          zone: e.zone || "Bikaner",
+          zone: getActualZone(e.zone, e.district || "Ganganar"),
           district: e.district || "Ganganar"
         }));
       }

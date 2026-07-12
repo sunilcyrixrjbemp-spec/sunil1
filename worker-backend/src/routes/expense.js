@@ -11,6 +11,24 @@ function jsonResponse(data, status = 200) {
   });
 }
 
+export function getActualZone(zone, district) {
+  const zoneMapping = {
+    "Ajmer": ["ajmer", "beawer", "bhilwara", "nagaur", "tonk"],
+    "Bikaner": ["bikaner", "churu", "ganganar", "ganganagar", "hanumangarh"],
+    "Jaipur": ["jaipur"],
+    "Jodhpur": ["barmer", "balotra", "jaisalmer", "jalore", "jodhpur", "pali", "phalodi", "sirohi"],
+    "Udaipur": ["banswara", "chittorgarh", "dungarpur", "rajsamand", "pratapgarh", "udaipur"]
+  };
+  const zClean = (zone || "").trim().toLowerCase();
+  const dClean = (district || "").trim().toLowerCase();
+  for (const [zName, districts] of Object.entries(zoneMapping)) {
+    if (districts.includes(dClean) || districts.includes(zClean) || zName.toLowerCase() === zClean) {
+      return zName;
+    }
+  }
+  return "Bikaner"; // Default fallback
+}
+
 async function queryInChunks(db, queryTemplate, ids, chunkSize = 50) {
   let allResults = [];
   for (let i = 0; i < ids.length; i += chunkSize) {
@@ -551,7 +569,7 @@ export async function handleGetTeamExpenses(request, env, params, query, user) {
       const sCode = submitter?.user_id || submitter?.userId || submitter?.submitter_code || "N/A";
       const sDesignation = submitter?.designation || submitter?.submitter_designation || "Engineer";
       const sDistrict = submitter?.district || "Ganganar";
-      const sZone = submitter?.zone || "Bikaner";
+      const sZone = getActualZone(submitter?.zone, sDistrict);
 
       result.push({
         id: exp.id,
@@ -640,7 +658,7 @@ export async function handleGetTeamExpenses(request, env, params, query, user) {
         other_expense_amount: 0.0,
         local_purchase_amount: 0.0,
         district: submitter.district || "Ganganar",
-        zone: submitter.zone || "Bikaner"
+        zone: getActualZone(submitter.zone, submitter.district || "Ganganar")
       });
     }
   }
