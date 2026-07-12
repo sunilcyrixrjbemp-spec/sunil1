@@ -2817,19 +2817,21 @@ export async function handleGetConsolidatedReport(request, env, params, query, u
   const userRoleClean = (user.role || "").trim().toLowerCase();
   const isAdminOrReportViewer = ["admin", "mis", "vp", "accountant"].includes(userRoleClean);
 
-  let allowedUserIds = [];
+  const allowedUserCodesSet = new Set();
   let filteredUsers = [];
 
   if (isAdminOrReportViewer) {
+    for (const u of allUsers) {
+      if (u.user_id) allowedUserCodesSet.add(u.user_id);
+    }
     filteredUsers = allUsers;
-    allowedUserIds = allUsers.map(u => u.id);
   } else {
     const nameClean = (user.name || "").trim();
     const uidClean = (user.user_id || "").trim();
 
     // Query direct reports
     const directReportsRes = await env.DB.prepare(`
-      SELECT id FROM users
+      SELECT user_id FROM users
       WHERE LOWER(TRIM(manager)) = ? OR LOWER(TRIM(manager)) = ?
          OR LOWER(TRIM(coordinator)) = ? OR LOWER(TRIM(coordinator)) = ?
          OR LOWER(TRIM(zonal_manager)) = ? OR LOWER(TRIM(zonal_manager)) = ?
@@ -2838,14 +2840,16 @@ export async function handleGetConsolidatedReport(request, env, params, query, u
       nameClean.toLowerCase(), uidClean.toLowerCase(),
       nameClean.toLowerCase(), uidClean.toLowerCase()
     ).all().catch(() => ({ results: [] }));
-    const directReportsIds = (directReportsRes.results || []).map(r => r.id);
+    const directReports = directReportsRes.results || [];
+    for (const r of directReports) {
+      if (r.user_id) allowedUserCodesSet.add(r.user_id);
+    }
 
     // Query hierarchy reports
     const hierarchyApprovals = await env.DB.prepare(`
       SELECT hierarchy_id FROM hierarchy_approvers WHERE approver_id = ?
     `).bind(user.id).all().catch(() => ({ results: [] }));
     
-    let hierarchyReportsIds = [];
     if (hierarchyApprovals.results && hierarchyApprovals.results.length > 0) {
       const hIds = hierarchyApprovals.results.map(h => h.hierarchy_id);
       const placeholders = hIds.map(() => "?").join(",");
@@ -2853,13 +2857,18 @@ export async function handleGetConsolidatedReport(request, env, params, query, u
         SELECT user_id FROM hierarchy_requesters
         WHERE hierarchy_id IN (${placeholders})
       `).bind(...hIds).all().catch(() => ({ results: [] }));
-      hierarchyReportsIds = (reqsRes.results || []).map(r => r.user_id);
+      for (const r of (reqsRes.results || [])) {
+        if (r.user_id) allowedUserCodesSet.add(r.user_id);
+      }
     }
 
-    const allowedIdsSet = new Set([...directReportsIds, ...hierarchyReportsIds, user.id]);
-    allowedUserIds = Array.from(allowedIdsSet);
-    filteredUsers = allUsers.filter(u => allowedIdsSet.has(u.id));
+    // Also include self
+    if (user.user_id) allowedUserCodesSet.add(user.user_id);
+
+    filteredUsers = allUsers.filter(u => u.user_id && allowedUserCodesSet.has(u.user_id));
   }
+
+  const allowedUserCodes = Array.from(allowedUserCodesSet);
 
   // Build name resolution map for managers using allUsers (since we might need to resolve a manager's name who is not in filteredUsers)
   const nameLookupMap = {};
@@ -2878,12 +2887,12 @@ export async function handleGetConsolidatedReport(request, env, params, query, u
 
   // 2. Fetch approved expenses for allowed users
   let expenses = [];
-  if (allowedUserIds.length > 0) {
-    const placeholders = allowedUserIds.map(() => "?").join(",");
+  if (allowedUserCodes.length > 0) {
+    const placeholders = allowedUserCodes.map(() => "?").join(",");
     const expensesRes = await env.DB.prepare(`
       SELECT id, user_id, expense_code, amount, original_amount, status, itinerary, created_at FROM expenses
       WHERE UPPER(month) = UPPER(?) AND year = ? AND LOWER(status) = 'approved' AND user_id IN (${placeholders})
-    `).bind(month, year, ...allowedUserIds).all().catch(() => ({ results: [] }));
+    `).bind(month, year, ...allowedUserCodes).all().catch(() => ({ results: [] }));
     expenses = expensesRes.results || [];
   }
 
