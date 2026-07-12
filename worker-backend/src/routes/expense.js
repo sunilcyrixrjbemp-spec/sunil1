@@ -2780,11 +2780,59 @@ export async function handleGetConsolidatedReport(request, env, params, query, u
   const usersRes = await env.DB.prepare(`
     SELECT id, user_id, name, district, zone, grade, designation, date_of_joining, e_code, manager FROM users
   `).all().catch(() => ({ results: [] }));
-  const users = usersRes.results || [];
-  
-  // Build name resolution map for managers
+  const allUsers = usersRes.results || [];
+
+  // Determine allowed users based on role and hierarchy mapping
+  const userRoleClean = (user.role || "").trim().toLowerCase();
+  const isAdminOrReportViewer = ["admin", "mis", "vp", "accountant"].includes(userRoleClean);
+
+  let allowedUserIds = [];
+  let filteredUsers = [];
+
+  if (isAdminOrReportViewer) {
+    filteredUsers = allUsers;
+    allowedUserIds = allUsers.map(u => u.id);
+  } else {
+    const nameClean = (user.name || "").trim();
+    const uidClean = (user.user_id || "").trim();
+
+    // Query direct reports
+    const directReportsRes = await env.DB.prepare(`
+      SELECT id FROM users
+      WHERE LOWER(TRIM(manager)) = ? OR LOWER(TRIM(manager)) = ?
+         OR LOWER(TRIM(coordinator)) = ? OR LOWER(TRIM(coordinator)) = ?
+         OR LOWER(TRIM(zonal_manager)) = ? OR LOWER(TRIM(zonal_manager)) = ?
+    `).bind(
+      nameClean.toLowerCase(), uidClean.toLowerCase(),
+      nameClean.toLowerCase(), uidClean.toLowerCase(),
+      nameClean.toLowerCase(), uidClean.toLowerCase()
+    ).all().catch(() => ({ results: [] }));
+    const directReportsIds = (directReportsRes.results || []).map(r => r.id);
+
+    // Query hierarchy reports
+    const hierarchyApprovals = await env.DB.prepare(`
+      SELECT hierarchy_id FROM hierarchy_approvers WHERE approver_id = ?
+    `).bind(user.id).all().catch(() => ({ results: [] }));
+    
+    let hierarchyReportsIds = [];
+    if (hierarchyApprovals.results && hierarchyApprovals.results.length > 0) {
+      const hIds = hierarchyApprovals.results.map(h => h.hierarchy_id);
+      const placeholders = hIds.map(() => "?").join(",");
+      const reqsRes = await env.DB.prepare(`
+        SELECT user_id FROM hierarchy_requesters
+        WHERE hierarchy_id IN (${placeholders})
+      `).bind(...hIds).all().catch(() => ({ results: [] }));
+      hierarchyReportsIds = (reqsRes.results || []).map(r => r.user_id);
+    }
+
+    const allowedIdsSet = new Set([...directReportsIds, ...hierarchyReportsIds, user.id]);
+    allowedUserIds = Array.from(allowedIdsSet);
+    filteredUsers = allUsers.filter(u => allowedIdsSet.has(u.id));
+  }
+
+  // Build name resolution map for managers using allUsers (since we might need to resolve a manager's name who is not in filteredUsers)
   const nameLookupMap = {};
-  for (const u of users) {
+  for (const u of allUsers) {
     if (u.user_id) nameLookupMap[u.user_id.toLowerCase().trim()] = u.name;
     if (u.e_code) nameLookupMap[u.e_code.toLowerCase().trim()] = u.name;
     if (u.name) nameLookupMap[u.name.toLowerCase().trim()] = u.name;
@@ -2792,17 +2840,21 @@ export async function handleGetConsolidatedReport(request, env, params, query, u
 
   const userMap = {};
   const userByCode = {};
-  for (const u of users) {
+  for (const u of filteredUsers) {
     userMap[u.id] = u;
     userByCode[u.user_id] = u;
   }
 
-  // 2. Fetch all approved expenses (with itinerary and created_at for date/deduction tracking)
-  const expensesRes = await env.DB.prepare(`
-    SELECT id, user_id, expense_code, amount, original_amount, status, itinerary, created_at FROM expenses
-    WHERE UPPER(month) = UPPER(?) AND year = ? AND LOWER(status) = 'approved'
-  `).bind(month, year).all().catch(() => ({ results: [] }));
-  const expenses = expensesRes.results || [];
+  // 2. Fetch approved expenses for allowed users
+  let expenses = [];
+  if (allowedUserIds.length > 0) {
+    const placeholders = allowedUserIds.map(() => "?").join(",");
+    const expensesRes = await env.DB.prepare(`
+      SELECT id, user_id, expense_code, amount, original_amount, status, itinerary, created_at FROM expenses
+      WHERE UPPER(month) = UPPER(?) AND year = ? AND LOWER(status) = 'approved' AND user_id IN (${placeholders})
+    `).bind(month, year, ...allowedUserIds).all().catch(() => ({ results: [] }));
+    expenses = expensesRes.results || [];
+  }
 
   if (expenses.length === 0) {
     return jsonResponse({ success: true, data: [] });
