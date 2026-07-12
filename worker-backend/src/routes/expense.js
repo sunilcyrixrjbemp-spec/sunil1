@@ -372,70 +372,73 @@ export async function handleCreateLimitRequest(request, env, params, query, user
  * GET /api/expense/team
  */
 export async function handleGetTeamExpenses(request, env, params, query, user) {
-  const month = query.get("month");
-  console.log("DEBUG: handleGetTeamExpenses user =", JSON.stringify(user));
+  try {
+    const month = query.get("month");
+    console.log("DEBUG: handleGetTeamExpenses user =", JSON.stringify(user));
 
-  const allowedWindows = user.allowed_windows ? user.allowed_windows.split(",").map(w => w.trim().toLowerCase()) : [];
-  
-  // 1. Fetch team users
-  let teamUsers = [];
-  const userRoleClean = (user.role || "").trim().toLowerCase();
-  const isAdminOrReportViewer = ["admin", "mis", "vp", "accountant"].includes(userRoleClean);
-
-  if (isAdminOrReportViewer) {
-    const res = await env.DB.prepare("SELECT * FROM users").all();
-    teamUsers = res.results || [];
-    console.log("DEBUG: fetched all users, count =", teamUsers.length);
-  } else {
-    const nameClean = (user.name || "").trim();
-    const uidClean = (user.user_id || "").trim();
-
-    // Query direct reports
-    const directReportsRes = await env.DB.prepare(`
-      SELECT * FROM users
-      WHERE LOWER(TRIM(manager)) = ? OR LOWER(TRIM(manager)) = ?
-         OR LOWER(TRIM(coordinator)) = ? OR LOWER(TRIM(coordinator)) = ?
-         OR LOWER(TRIM(zonal_manager)) = ? OR LOWER(TRIM(zonal_manager)) = ?
-    `).bind(nameClean.toLowerCase(), uidClean.toLowerCase(), nameClean.toLowerCase(), uidClean.toLowerCase(), nameClean.toLowerCase(), uidClean.toLowerCase()).all();
-    const directReports = directReportsRes.results || [];
-
-    // Query hierarchy reports
-    const hierarchyApprovals = await env.DB.prepare(`
-      SELECT hierarchy_id FROM hierarchy_approvers WHERE approver_id = ?
-    `).bind(user.id).all();
+    const allowedWindows = user.allowed_windows ? user.allowed_windows.split(",").map(w => w.trim().toLowerCase()) : [];
     
-    let hierarchyReports = [];
-    if (hierarchyApprovals.results && hierarchyApprovals.results.length > 0) {
-      const hIds = hierarchyApprovals.results.map(h => h.hierarchy_id);
-      const placeholders = hIds.map(() => "?").join(",");
-      const reqsRes = await env.DB.prepare(`
-        SELECT u.* FROM users u
-        JOIN hierarchy_requesters hr ON u.id = hr.user_id
-        WHERE hr.hierarchy_id IN (${placeholders})
-      `).bind(...hIds).all();
-      hierarchyReports = reqsRes.results || [];
+    // 1. Fetch team users
+    let teamUsers = [];
+    const userRoleClean = (user.role || "").trim().toLowerCase();
+    const isAdminOrReportViewer = ["admin", "mis", "vp", "accountant"].includes(userRoleClean);
+
+    if (isAdminOrReportViewer) {
+      const res = await env.DB.prepare("SELECT * FROM users").all();
+      teamUsers = res.results || [];
+      console.log("DEBUG: fetched all users, count =", teamUsers.length);
+    } else {
+      const nameClean = (user.name || "").trim();
+      const uidClean = (user.user_id || "").trim();
+
+      // Query direct reports
+      const directReportsRes = await env.DB.prepare(`
+        SELECT * FROM users
+        WHERE LOWER(TRIM(manager)) = ? OR LOWER(TRIM(manager)) = ?
+           OR LOWER(TRIM(coordinator)) = ? OR LOWER(TRIM(coordinator)) = ?
+           OR LOWER(TRIM(zonal_manager)) = ? OR LOWER(TRIM(zonal_manager)) = ?
+      `).bind(nameClean.toLowerCase(), uidClean.toLowerCase(), nameClean.toLowerCase(), uidClean.toLowerCase(), nameClean.toLowerCase(), uidClean.toLowerCase()).all();
+      const directReports = directReportsRes.results || [];
+
+      // Query hierarchy reports
+      const hierarchyApprovals = await env.DB.prepare(`
+        SELECT hierarchy_id FROM hierarchy_approvers WHERE approver_id = ?
+      `).bind(user.id).all();
+      
+      let hierarchyReports = [];
+      if (hierarchyApprovals.results && hierarchyApprovals.results.length > 0) {
+        const hIds = hierarchyApprovals.results.map(h => h.hierarchy_id);
+        const placeholders = hIds.map(() => "?").join(",");
+        const reqsRes = await env.DB.prepare(`
+          SELECT u.* FROM users u
+          JOIN hierarchy_requesters hr ON u.id = hr.user_id
+          WHERE hr.hierarchy_id IN (${placeholders})
+        `).bind(...hIds).all();
+        hierarchyReports = reqsRes.results || [];
+      }
+
+      // Merge and de-duplicate team users
+      const reportsMap = {};
+      for (const u of [...directReports, ...hierarchyReports]) {
+        reportsMap[u.id] = u;
+      }
+      teamUsers = Object.values(reportsMap);
     }
 
-    // Merge and de-duplicate team users
-    const reportsMap = {};
-    for (const u of [...directReports, ...hierarchyReports]) {
-      reportsMap[u.id] = u;
+    if (teamUsers.length === 0) return jsonResponse([]);
+
+    const teamUserIds = isAdminOrReportViewer
+      ? teamUsers.map(u => u.id)
+      : teamUsers.map(u => u.id).filter(id => id !== user.id);
+    console.log("DEBUG: teamUserIds =", JSON.stringify(teamUserIds));
+    if (teamUserIds.length === 0) return jsonResponse([]);
+
+    const submittersById = {};
+    for (const u of teamUsers) {
+      if (u.id) submittersById[String(u.id)] = u;
+      if (u.user_id) submittersById[String(u.user_id)] = u;
+      if (u.userId) submittersById[String(u.userId)] = u;
     }
-    teamUsers = Object.values(reportsMap);
-  }
-
-  if (teamUsers.length === 0) return jsonResponse([]);
-
-  const teamUserIds = isAdminOrReportViewer
-    ? teamUsers.map(u => u.id)
-    : teamUsers.map(u => u.id).filter(id => id !== user.id);
-  console.log("DEBUG: teamUserIds =", JSON.stringify(teamUserIds));
-  if (teamUserIds.length === 0) return jsonResponse([]);
-
-  const submittersById = {};
-  for (const u of teamUsers) {
-    submittersById[u.id] = u;
-  }
 
   // 2. Fetch expenses of team members
   let querySql = "";
@@ -498,7 +501,7 @@ export async function handleGetTeamExpenses(request, env, params, query, user) {
     }
 
     for (const exp of expenses) {
-      const submitter = submittersById[exp.user_id] || null;
+      const submitter = submittersById[exp.user_id] || submittersById[String(exp.user_id)] || null;
       const legs = legsByCode[exp.expense_code] || [];
 
       const totKm = legs
@@ -544,12 +547,18 @@ export async function handleGetTeamExpenses(request, env, params, query, user) {
         ? legs.reduce((sum, l) => sum + (parseInt(l.mobilise_count) || 0), 0)
         : (parseInt(exp.mobilise_count) || 0);
 
+      const sName = submitter?.name || submitter?.submitter_name || "Unknown";
+      const sCode = submitter?.user_id || submitter?.userId || submitter?.submitter_code || "N/A";
+      const sDesignation = submitter?.designation || submitter?.submitter_designation || "Engineer";
+      const sDistrict = submitter?.district || "Ganganar";
+      const sZone = submitter?.zone || "Bikaner";
+
       result.push({
         id: exp.id,
         expense_code: exp.expense_code,
-        submitter_name: submitter?.name || "Unknown",
-        submitter_code: submitter?.user_id || "N/A",
-        submitter_designation: submitter?.designation || "Engineer",
+        submitter_name: sName,
+        submitter_code: sCode,
+        submitter_designation: sDesignation,
         month: exp.month,
         year: exp.year,
         amount: parseFloat(exp.amount || 0),
@@ -567,8 +576,8 @@ export async function handleGetTeamExpenses(request, env, params, query, user) {
         hotel_amount: parseFloat(exp.hotel_amount || 0.0),
         other_expense_amount: parseFloat(exp.other_expense_amount || 0.0),
         local_purchase_amount: parseFloat(exp.local_purchase_amount || 0.0),
-        district: submitter?.district || "Ganganar",
-        zone: submitter?.zone || "Bikaner",
+        district: sDistrict,
+        zone: sZone,
         calls_assigned: totCallsAssigned,
         calls_completed: totCallsCompleted,
         pms_count: totPmsCount,
@@ -636,10 +645,14 @@ export async function handleGetTeamExpenses(request, env, params, query, user) {
     }
   }
 
-  // Sort result by created_at desc
-  result.sort((a, b) => new Date(b.created_at || 0) - new Date(a.created_at || 0));
+    // Sort result by created_at desc
+    result.sort((a, b) => new Date(b.created_at || 0) - new Date(a.created_at || 0));
 
-  return jsonResponse(result);
+    return jsonResponse(result);
+  } catch (err) {
+    console.error("ERROR in handleGetTeamExpenses:", err.message, err.stack);
+    return jsonResponse({ error: "Internal Server Error", detail: err.message, stack: err.stack }, 500);
+  }
 }
 
 export async function handleVerifyBarcode(request, env, params, query, user) {
