@@ -803,7 +803,7 @@ svg, path, g, sector, .recharts-pie-sector, .recharts-sector, .recharts-pie, .re
   }
 
   .modal-lte-body, 
-  .flex-1.overflow-y-auto {
+  .modal-lte-overlay .flex-1.overflow-y-auto {
     padding: 0.875rem 1rem !important;
     background-color: #f8fafc !important; /* Comfortable Slate-50 base for popup body */
     overscroll-behavior: contain !important;
@@ -812,13 +812,13 @@ svg, path, g, sector, .recharts-pie-sector, .recharts-sector, .recharts-pie, .re
   }
 
   .modal-lte-body > * + *, 
-  .flex-1.overflow-y-auto > * + * {
+  .modal-lte-overlay .flex-1.overflow-y-auto > * + * {
     margin-top: 0.75rem !important;
   }
 
   /* Modals nested lists cards */
   .modal-lte-body .bg-white.border.rounded-lg,
-  .flex-1.overflow-y-auto .bg-white.border.rounded-lg {
+  .modal-lte-overlay .flex-1.overflow-y-auto .bg-white.border.rounded-lg {
     background-color: #ffffff !important;
     border-color: #e2e8f0 !important;
   }
