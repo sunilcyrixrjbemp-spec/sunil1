@@ -32,24 +32,7 @@ interface LogRow {
   log_date: string; created_at: string;
 }
 
-// ── Custom Tooltip (Light Theme) ───────────────────────────────────────
-const CustomTooltip = ({ active, payload, label }: any) => {
-  if (!active || !payload?.length) return null;
-  return (
-    <div className="bg-white border border-slate-200 rounded-xl p-3 shadow-xl text-xs font-sans">
-      <p className="text-slate-800 font-bold mb-2">{label}</p>
-      {payload.map((p: any) => (
-        <div key={p.name} className="flex items-center justify-between gap-6 mb-1">
-          <div className="flex items-center gap-2">
-            <span className="w-2.5 h-2.5 rounded-full" style={{ background: p.color }}/>
-            <span className="text-slate-500 font-medium">{p.name}:</span>
-          </div>
-          <span className="font-extrabold text-slate-800">{(p.value || 0).toLocaleString()}</span>
-        </div>
-      ))}
-    </div>
-  );
-};
+
 
 // ── Animated Count-Up ─────────────────────────────────────────────────
 function CountUp({ value }: { value: number }) {
@@ -728,7 +711,7 @@ export default function DBMonitoringPage() {
                 }}
                 tooltip={({ point }) => (
                   <div className="bg-slate-900/95 backdrop-blur-md text-white border border-slate-800 shadow-2xl rounded-xl p-3 text-xs min-w-[120px] font-sans pointer-events-none z-50">
-                    <p className="font-extrabold text-[10px] uppercase text-slate-400 tracking-wider mb-1.5">{point.data.x}</p>
+                    <p className="font-extrabold text-[10px] uppercase text-slate-400 tracking-wider mb-1.5">{String(point.data.x)}</p>
                     <div className="flex items-center justify-between gap-4">
                       <span className="flex items-center gap-1.5 text-slate-300">
                         <span className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: point.color }} />

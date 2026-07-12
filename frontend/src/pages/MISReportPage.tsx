@@ -82,45 +82,7 @@ interface DashboardData {
   };
 }
 
-const CustomMoneyTooltip = ({ active, payload }: any) => {
-  if (active && payload && payload.length) {
-    return (
-      <div className="bg-slate-900/95 backdrop-blur-md text-white border border-slate-800 shadow-2xl rounded-xl p-3 text-xs min-w-[120px] font-sans pointer-events-none">
-        <p className="font-extrabold text-[10px] uppercase text-slate-400 tracking-wider mb-1.5">{payload[0].name}</p>
-        <div className="flex items-center justify-between gap-4">
-          <span className="flex items-center gap-1.5 text-slate-300">
-            <span className="w-2 h-2 rounded-full" style={{ backgroundColor: payload[0].payload.fill || payload[0].color }} />
-            Penalty:
-          </span>
-          <span className="font-mono font-bold text-white">₹{payload[0].value?.toLocaleString()}</span>
-        </div>
-      </div>
-    );
-  }
-  return null;
-};
 
-const CustomCountTooltip = ({ active, payload }: any) => {
-  if (active && payload && payload.length) {
-    return (
-      <div className="bg-slate-900/95 backdrop-blur-md text-white border border-slate-800 shadow-2xl rounded-xl p-3 text-xs min-w-[120px] font-sans pointer-events-none">
-        <p className="font-extrabold text-[10px] uppercase text-slate-400 tracking-wider mb-1.5">{payload[0].payload.day || payload[0].name}</p>
-        <div className="space-y-1">
-          {payload.map((item: any, idx: number) => (
-            <div key={idx} className="flex items-center justify-between gap-4">
-              <span className="flex items-center gap-1.5 text-slate-300">
-                <span className="w-2 h-2 rounded-full" style={{ backgroundColor: item.color }} />
-                {item.name}:
-              </span>
-              <span className="font-mono font-bold text-white">{item.value}</span>
-            </div>
-          ))}
-        </div>
-      </div>
-    );
-  }
-  return null;
-};
 
 export default function MISReportPage() {
   const [data, setData] = useState<DashboardData | null>(null);
@@ -551,7 +513,6 @@ export default function MISReportPage() {
                       id: "Logged",
                       color: "#2f5bb7",
                       data: dailyLoggedData.map((d) => {
-                        const match = dailyClosedData.find(c => c.day === d.day);
                         return {
                           x: formatLabelDate(d.day),
                           y: d.count
@@ -611,13 +572,13 @@ export default function MISReportPage() {
                   }}
                   tooltip={({ point }) => (
                     <div className="bg-slate-900/95 backdrop-blur-md text-white border border-slate-800 shadow-2xl rounded-xl p-3 text-xs min-w-[120px] font-sans pointer-events-none z-50">
-                      <p className="font-extrabold text-[10px] uppercase text-slate-400 tracking-wider mb-1.5">{point.data.x}</p>
+                      <p className="font-extrabold text-[10px] uppercase text-slate-400 tracking-wider mb-1.5">{String(point.data.x)}</p>
                       <div className="flex items-center justify-between gap-4">
                         <span className="flex items-center gap-1.5 text-slate-300">
                           <span className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: point.color }} />
                           {point.serieId}:
                         </span>
-                        <span className="font-mono font-bold text-white">{point.data.y}</span>
+                        <span className="font-mono font-bold text-white">{String(point.data.y)}</span>
                       </div>
                     </div>
                   )}
@@ -685,13 +646,13 @@ export default function MISReportPage() {
                   }}
                   tooltip={({ point }) => (
                     <div className="bg-slate-900/95 backdrop-blur-md text-white border border-slate-800 shadow-2xl rounded-xl p-3 text-xs min-w-[120px] font-sans pointer-events-none z-50">
-                      <p className="font-extrabold text-[10px] uppercase text-slate-400 tracking-wider mb-1.5">{point.data.x}</p>
+                      <p className="font-extrabold text-[10px] uppercase text-slate-400 tracking-wider mb-1.5">{String(point.data.x)}</p>
                       <div className="flex items-center justify-between gap-4">
                         <span className="flex items-center gap-1.5 text-slate-300">
                           <span className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: point.color }} />
                           {point.serieId}:
                         </span>
-                        <span className="font-mono font-bold text-white">{point.data.y}</span>
+                        <span className="font-mono font-bold text-white">{String(point.data.y)}</span>
                       </div>
                     </div>
                   )}
@@ -772,7 +733,7 @@ export default function MISReportPage() {
               </div>
               <div className="p-4 h-64">
                 <ResponsiveBar
-                  data={breakdown?.di || []}
+                  data={(breakdown?.di || []) as any}
                   keys={["penalty"]}
                   indexBy="name"
                   margin={{ top: 15, right: 15, bottom: 35, left: 40 }}
@@ -812,7 +773,7 @@ export default function MISReportPage() {
                       }
                     }
                   }}
-                  tooltip={({ id, value, color, indexValue }) => (
+                  tooltip={({ value, color, indexValue }) => (
                     <div className="bg-slate-900/95 backdrop-blur-md text-white border border-slate-800 shadow-2xl rounded-xl p-3 text-xs min-w-[120px] font-sans pointer-events-none z-50">
                       <p className="font-extrabold text-[10px] uppercase text-slate-400 tracking-wider mb-1.5">{indexValue}</p>
                       <div className="flex items-center justify-between gap-4">
@@ -835,10 +796,10 @@ export default function MISReportPage() {
               </div>
               <div className="p-4 h-60">
                 <ResponsiveBar
-                  data={breakdown?.equipment.map((e) => ({
+                  data={(breakdown?.equipment.map((e) => ({
                     name: e.name.length > 20 ? e.name.slice(0, 18) + ".." : e.name,
                     penalty: e.penalty
-                  })) || []}
+                  })) || []) as any}
                   keys={["penalty"]}
                   indexBy="name"
                   layout="horizontal"
@@ -879,7 +840,7 @@ export default function MISReportPage() {
                       }
                     }
                   }}
-                  tooltip={({ id, value, color, indexValue }) => (
+                  tooltip={({ value, color, indexValue }) => (
                     <div className="bg-slate-900/95 backdrop-blur-md text-white border border-slate-800 shadow-2xl rounded-xl p-3 text-xs min-w-[120px] font-sans pointer-events-none z-50">
                       <p className="font-extrabold text-[10px] uppercase text-slate-400 tracking-wider mb-1.5">{indexValue}</p>
                       <div className="flex items-center justify-between gap-4">
@@ -1004,7 +965,7 @@ export default function MISReportPage() {
                   }}
                   tooltip={({ point }) => (
                     <div className="bg-slate-900/95 backdrop-blur-md text-white border border-slate-800 shadow-2xl rounded-xl p-3 text-xs min-w-[120px] font-sans pointer-events-none z-50">
-                      <p className="font-extrabold text-[10px] uppercase text-slate-400 tracking-wider mb-1.5">{point.data.x}</p>
+                      <p className="font-extrabold text-[10px] uppercase text-slate-400 tracking-wider mb-1.5">{String(point.data.x)}</p>
                       <div className="flex items-center justify-between gap-4">
                         <span className="flex items-center gap-1.5 text-slate-300">
                           <span className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: point.color }} />
@@ -1025,10 +986,10 @@ export default function MISReportPage() {
               </div>
               <div className="p-4 h-60">
                 <ResponsiveBar
-                  data={breakdown?.vendor.map((v) => ({
+                  data={(breakdown?.vendor.map((v) => ({
                     name: v.name.length > 20 ? v.name.slice(0, 18) + ".." : v.name,
                     penalty: v.penalty
-                  })) || []}
+                  })) || []) as any}
                   keys={["penalty"]}
                   indexBy="name"
                   layout="horizontal"
@@ -1069,7 +1030,7 @@ export default function MISReportPage() {
                       }
                     }
                   }}
-                  tooltip={({ id, value, color, indexValue }) => (
+                  tooltip={({ value, color, indexValue }) => (
                     <div className="bg-slate-900/95 backdrop-blur-md text-white border border-slate-800 shadow-2xl rounded-xl p-3 text-xs min-w-[120px] font-sans pointer-events-none z-50">
                       <p className="font-extrabold text-[10px] uppercase text-slate-400 tracking-wider mb-1.5">{indexValue}</p>
                       <div className="flex items-center justify-between gap-4">

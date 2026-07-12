@@ -11,23 +11,7 @@ const LteSpinner = () => (
   <span className="animate-spin rounded-full h-3.5 w-3.5 border-2 border-slate-200 border-t-blue-600 inline-block mr-1.5 shrink-0"></span>
 );
 
-const CustomCountTooltip = ({ active, payload }: any) => {
-  if (active && payload && payload.length) {
-    return (
-      <div className="bg-slate-900/95 backdrop-blur-md text-white border border-slate-800 shadow-2xl rounded-xl p-3 text-xs min-w-[120px] font-sans pointer-events-none">
-        <p className="font-extrabold text-[10px] uppercase text-slate-400 tracking-wider mb-1.5">{payload[0].name}</p>
-        <div className="flex items-center justify-between gap-4">
-          <span className="flex items-center gap-1.5 text-slate-300">
-            <span className="w-2 h-2 rounded-full" style={{ backgroundColor: payload[0].payload.fill || payload[0].color }} />
-            Employees:
-          </span>
-          <span className="font-mono font-bold text-white">{payload[0].value}</span>
-        </div>
-      </div>
-    );
-  }
-  return null;
-};
+
 
 const getErrorMessage = (err: any, fallback: string): string => {
   const detail = err.response?.data?.detail;
@@ -1505,7 +1489,7 @@ export default function AdminPage() {
                       }
                     }
                   }}
-                  tooltip={({ id, value, color, indexValue }) => (
+                  tooltip={({ value, color, indexValue }) => (
                     <div className="bg-slate-900/95 backdrop-blur-md text-white border border-slate-800 shadow-2xl rounded-xl p-3 text-xs min-w-[120px] font-sans pointer-events-none z-50">
                       <p className="font-extrabold text-[10px] uppercase text-slate-400 tracking-wider mb-1.5">{indexValue}</p>
                       <div className="flex items-center justify-between gap-4">
@@ -1570,7 +1554,7 @@ export default function AdminPage() {
                       }
                     }
                   }}
-                  tooltip={({ id, value, color, indexValue }) => (
+                  tooltip={({ value, color, indexValue }) => (
                     <div className="bg-slate-900/95 backdrop-blur-md text-white border border-slate-800 shadow-2xl rounded-xl p-3 text-xs min-w-[120px] font-sans pointer-events-none z-50">
                       <p className="font-extrabold text-[10px] uppercase text-slate-400 tracking-wider mb-1.5">{indexValue}</p>
                       <div className="flex items-center justify-between gap-4">

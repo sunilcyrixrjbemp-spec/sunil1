@@ -1,6 +1,7 @@
 import { useEffect, useState, useMemo } from "react";
 import { ResponsiveBar } from "@nivo/bar";
 import { ResponsivePie } from "@nivo/pie";
+import { ResponsiveLine } from "@nivo/line";
 import { expenseService } from "../services/expenseService";
 import { authService } from "../services/authService";
 import Loader from "../components/common/Loader";
@@ -12,42 +13,6 @@ const months = [
   "January", "February", "March", "April", "May", "June",
   "July", "August", "September", "October", "November", "December"
 ];
-
-const CustomMoneyTooltip = ({ active, payload }: any) => {
-  if (active && payload && payload.length) {
-    return (
-      <div className="bg-slate-900/95 backdrop-blur-md text-white border border-slate-800 shadow-2xl rounded-xl p-3 text-xs min-w-[120px] font-sans pointer-events-none">
-        <p className="font-extrabold text-[10px] uppercase text-slate-400 tracking-wider mb-1.5">{payload[0].name}</p>
-        <div className="flex items-center justify-between gap-4">
-          <span className="flex items-center gap-1.5 text-slate-300">
-            <span className="w-2 h-2 rounded-full" style={{ backgroundColor: payload[0].payload.fill || payload[0].color }} />
-            Amount:
-          </span>
-          <span className="font-mono font-bold text-white">₹{payload[0].value?.toLocaleString()}</span>
-        </div>
-      </div>
-    );
-  }
-  return null;
-};
-
-const CustomCountTooltip = ({ active, payload }: any) => {
-  if (active && payload && payload.length) {
-    return (
-      <div className="bg-slate-900/95 backdrop-blur-md text-white border border-slate-800 shadow-2xl rounded-xl p-3 text-xs min-w-[120px] font-sans pointer-events-none">
-        <p className="font-extrabold text-[10px] uppercase text-slate-400 tracking-wider mb-1.5">{payload[0].name}</p>
-        <div className="flex items-center justify-between gap-4">
-          <span className="flex items-center gap-1.5 text-slate-300">
-            <span className="w-2 h-2 rounded-full" style={{ backgroundColor: payload[0].payload.fill || payload[0].color }} />
-            Count:
-          </span>
-          <span className="font-mono font-bold text-white">{payload[0].value}</span>
-        </div>
-      </div>
-    );
-  }
-  return null;
-};
 
 export default function AnalysisPage() {
   const [isMobile, setIsMobile] = useState(window.innerWidth < 768);
@@ -1070,7 +1035,7 @@ export default function AnalysisPage() {
                         }
                       }
                     }}
-                    tooltip={({ id, value, color, indexValue }) => (
+                    tooltip={({ value, color, indexValue }) => (
                       <div className="bg-slate-900/95 backdrop-blur-md text-white border border-slate-800 shadow-2xl rounded-xl p-3 text-xs min-w-[120px] font-sans pointer-events-none z-50">
                         <p className="font-extrabold text-[10px] uppercase text-slate-400 tracking-wider mb-1.5">{indexValue}</p>
                         <div className="flex items-center justify-between gap-4">
@@ -1161,19 +1126,60 @@ export default function AnalysisPage() {
             </div>
             <div className="p-4" style={{ height: 280 }}>
               {districtWiseData.length > 0 ? (
-                <ResponsiveContainer width="100%" height="100%">
-                  <BarChart data={districtWiseData} margin={{ bottom: 5 }}>
-                    <CartesianGrid strokeDasharray="3 3" stroke="#f3f4f6" horizontal={true} vertical={false} />
-                    <XAxis dataKey="name" tick={{ fontSize: 10 }} />
-                    <YAxis tick={{ fontSize: 10 }} tickFormatter={(v) => `₹${(v / 1000).toFixed(0)}k`} />
-                    <Tooltip content={<CustomMoneyTooltip />} />
-                    <Bar dataKey="amount" radius={[6, 6, 0, 0]} maxBarSize={30}>
-                      {districtWiseData.map((_, index) => (
-                        <Cell key={`cell-${index}`} fill={GALLERY_COLORS[index % GALLERY_COLORS.length]} />
-                      ))}
-                    </Bar>
-                  </BarChart>
-                </ResponsiveContainer>
+                <ResponsiveBar
+                  data={districtWiseData}
+                  keys={["amount"]}
+                  indexBy="name"
+                  margin={{ top: 15, right: 15, bottom: 35, left: 45 }}
+                  padding={0.35}
+                  colors={GALLERY_COLORS}
+                  colorBy="indexValue"
+                  borderRadius={6}
+                  borderWidth={0}
+                  enableLabel={false}
+                  axisTop={null}
+                  axisRight={null}
+                  axisBottom={{
+                    tickSize: 0,
+                    tickPadding: 8,
+                    tickRotation: 0
+                  }}
+                  axisLeft={{
+                    tickSize: 0,
+                    tickPadding: 8,
+                    tickRotation: 0,
+                    format: (v) => `₹${(v / 1000).toFixed(0)}k`
+                  }}
+                  theme={{
+                    grid: {
+                      line: {
+                        stroke: '#f1f5f9',
+                        strokeWidth: 1
+                      }
+                    },
+                    axis: {
+                      ticks: {
+                        text: {
+                          fontSize: 8,
+                          fontWeight: 'bold',
+                          fill: '#64748b'
+                        }
+                      }
+                    }
+                  }}
+                  tooltip={({ value, color, indexValue }) => (
+                    <div className="bg-slate-900/95 backdrop-blur-md text-white border border-slate-800 shadow-2xl rounded-xl p-3 text-xs min-w-[120px] font-sans pointer-events-none z-50">
+                      <p className="font-extrabold text-[10px] uppercase text-slate-400 tracking-wider mb-1.5">{indexValue}</p>
+                      <div className="flex items-center justify-between gap-4">
+                        <span className="flex items-center gap-1.5 text-slate-300">
+                          <span className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: color }} />
+                          Amount:
+                        </span>
+                        <span className="font-mono font-bold text-white">₹{value.toLocaleString()}</span>
+                      </div>
+                    </div>
+                  )}
+                />
               ) : (
                 <div className="flex items-center justify-center h-full text-gray-400 text-xs">No district data</div>
               )}
@@ -1190,21 +1196,67 @@ export default function AnalysisPage() {
             </div>
             <div className="p-4" style={{ height: 280 }}>
               {last5DaysData.length > 0 ? (
-                <ResponsiveContainer width="100%" height="100%">
-                  <AreaChart data={last5DaysData}>
-                    <defs>
-                      <linearGradient id="colorAmount" x1="0" y1="0" x2="0" y2="1">
-                        <stop offset="5%" stopColor="#007bff" stopOpacity={0.3} />
-                        <stop offset="95%" stopColor="#007bff" stopOpacity={0.02} />
-                      </linearGradient>
-                    </defs>
-                    <CartesianGrid strokeDasharray="3 3" stroke="#f3f4f6" />
-                    <XAxis dataKey="date" tick={{ fontSize: 10 }} />
-                    <YAxis tick={{ fontSize: 10 }} tickFormatter={(v) => `₹${(v / 1000).toFixed(0)}k`} />
-                    <Tooltip content={<CustomMoneyTooltip />} />
-                    <Area type="monotone" dataKey="amount" stroke="#007bff" strokeWidth={2} fill="url(#colorAmount)" />
-                  </AreaChart>
-                </ResponsiveContainer>
+                <ResponsiveLine
+                  data={[
+                    {
+                      id: "Amount",
+                      color: "#007bff",
+                      data: last5DaysData.map(d => ({ x: d.date, y: d.amount }))
+                    }
+                  ]}
+                  margin={{ top: 15, right: 15, bottom: 35, left: 45 }}
+                  xScale={{ type: 'point' }}
+                  yScale={{ type: 'linear', min: 'auto', max: 'auto' }}
+                  curve="monotoneX"
+                  colors={d => d.color}
+                  lineWidth={2}
+                  enableArea={true}
+                  areaOpacity={0.12}
+                  enablePoints={false}
+                  useMesh={true}
+                  axisTop={null}
+                  axisRight={null}
+                  axisBottom={{
+                    tickSize: 0,
+                    tickPadding: 8,
+                    tickRotation: 0
+                  }}
+                  axisLeft={{
+                    tickSize: 0,
+                    tickPadding: 8,
+                    tickRotation: 0,
+                    format: (v) => `₹${(v / 1000).toFixed(0)}k`
+                  }}
+                  theme={{
+                    grid: {
+                      line: {
+                        stroke: '#f1f5f9',
+                        strokeWidth: 1
+                      }
+                    },
+                    axis: {
+                      ticks: {
+                        text: {
+                          fontSize: 8,
+                          fontWeight: 'bold',
+                          fill: '#64748b'
+                        }
+                      }
+                    }
+                  }}
+                  tooltip={({ point }) => (
+                    <div className="bg-slate-900/95 backdrop-blur-md text-white border border-slate-800 shadow-2xl rounded-xl p-3 text-xs min-w-[120px] font-sans pointer-events-none z-50">
+                      <p className="font-extrabold text-[10px] uppercase text-slate-400 tracking-wider mb-1.5">{String(point.data.x)}</p>
+                      <div className="flex items-center justify-between gap-4">
+                        <span className="flex items-center gap-1.5 text-slate-300">
+                          <span className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: point.color }} />
+                          Amount:
+                        </span>
+                        <span className="font-mono font-bold text-white">₹{(point.data.y as number).toLocaleString()}</span>
+                      </div>
+                    </div>
+                  )}
+                />
               ) : (
                 <div className="flex items-center justify-center h-full text-gray-400 text-xs">No date data</div>
               )}
@@ -1221,35 +1273,52 @@ export default function AnalysisPage() {
             </div>
             <div className="p-4" style={{ height: 280 }}>
               {zoneWiseData.length > 0 ? (
-                <div className="relative flex justify-center items-center h-full">
-                  <ResponsiveContainer width="100%" height="100%">
-                    <PieChart margin={{ top: 15, right: 15, bottom: 15, left: 15 }}>
-                      <Pie
-                        data={zoneWiseData}
-                        cx="50%"
-                        cy="50%"
-                        innerRadius={45}
-                        outerRadius={65}
-                        paddingAngle={3}
-                        dataKey="value"
-                        stroke="#ffffff"
-                        strokeWidth={2}
-                      >
-                        {zoneWiseData.map((_, i) => (
-                          <Cell key={i} fill={GALLERY_COLORS[i % GALLERY_COLORS.length]} />
-                        ))}
-                      </Pie>
-                      <Tooltip content={<CustomMoneyTooltip />} />
-                      <Legend verticalAlign="bottom" height={36} iconType="circle" wrapperStyle={{ fontSize: 9, fontWeight: 'bold' }} />
-                    </PieChart>
-                  </ResponsiveContainer>
-                  <div className="absolute flex flex-col items-center justify-center pointer-events-none" style={{ top: '40%', left: '50%', transform: 'translate(-50%, -50%)' }}>
-                    <span className="text-[8px] text-gray-400 font-bold uppercase tracking-wider">Total Zone</span>
-                    <span className="text-[10px] font-black text-slate-800 font-mono">
-                      ₹{zoneWiseData.reduce((sum, item) => sum + item.value, 0).toLocaleString()}
-                    </span>
+                <>
+                  <div className="relative flex justify-center items-center h-full" style={{ height: "210px" }}>
+                    <ResponsivePie
+                      data={zoneWiseData.map((z, i) => ({
+                        id: z.name,
+                        label: z.name,
+                        value: z.value,
+                        color: GALLERY_COLORS[i % GALLERY_COLORS.length]
+                      }))}
+                      margin={{ top: 10, right: 10, bottom: 10, left: 10 }}
+                      innerRadius={0.7}
+                      padAngle={3}
+                      colors={{ datum: 'data.color' }}
+                      borderWidth={2}
+                      borderColor="#ffffff"
+                      enableArcLinkLabels={false}
+                      enableArcLabels={false}
+                      tooltip={({ datum }) => (
+                        <div className="bg-slate-900/95 backdrop-blur-md text-white border border-slate-800 shadow-2xl rounded-xl p-3 text-xs min-w-[120px] font-sans pointer-events-none z-50">
+                          <p className="font-extrabold text-[10px] uppercase text-slate-400 tracking-wider mb-1.5">{datum.label}</p>
+                          <div className="flex items-center justify-between gap-4">
+                            <span className="flex items-center gap-1.5 text-slate-300">
+                              <span className="w-2 h-2 rounded-full" style={{ backgroundColor: datum.color }} />
+                              Amount:
+                            </span>
+                            <span className="font-mono font-bold text-white">₹{datum.value?.toLocaleString()}</span>
+                          </div>
+                        </div>
+                      )}
+                    />
+                    <div className="absolute flex flex-col items-center justify-center pointer-events-none" style={{ top: '50%', left: '50%', transform: 'translate(-50%, -50%)' }}>
+                      <span className="text-[7px] text-gray-400 font-bold uppercase tracking-wider">Total Zone</span>
+                      <span className="text-[11px] font-black text-slate-800 font-mono mt-0.5">
+                        ₹{zoneWiseData.reduce((sum, item) => sum + item.value, 0).toLocaleString()}
+                      </span>
+                    </div>
                   </div>
-                </div>
+                  <div className="flex flex-wrap justify-center gap-x-2.5 gap-y-1 mt-2">
+                    {zoneWiseData.map((item, i) => (
+                      <div key={i} className="flex items-center gap-1 text-[8px] font-bold text-slate-500">
+                        <span className="w-1.5 h-1.5 rounded-full shrink-0" style={{ backgroundColor: GALLERY_COLORS[i % GALLERY_COLORS.length] }} />
+                        <span>{item.name}</span>
+                      </div>
+                    ))}
+                  </div>
+                </>
               ) : (
                 <div className="flex items-center justify-center h-full text-gray-400 text-xs">No zone data</div>
               )}
@@ -1266,19 +1335,60 @@ export default function AnalysisPage() {
             </div>
             <div className="p-4" style={{ height: 280 }}>
               {categoryData.length > 0 ? (
-                <ResponsiveContainer width="100%" height="100%">
-                  <BarChart data={categoryData} margin={{ bottom: 5 }}>
-                    <CartesianGrid strokeDasharray="3 3" stroke="#f3f4f6" horizontal={true} vertical={false} />
-                    <XAxis dataKey="name" tick={{ fontSize: 10 }} />
-                    <YAxis tick={{ fontSize: 10 }} tickFormatter={(v) => `₹${(v / 1000).toFixed(0)}k`} />
-                    <Tooltip content={<CustomMoneyTooltip />} />
-                    <Bar dataKey="amount" radius={[6, 6, 0, 0]} maxBarSize={30}>
-                      {categoryData.map((_, index) => (
-                        <Cell key={`cell-${index}`} fill={GALLERY_COLORS[index % GALLERY_COLORS.length]} />
-                      ))}
-                    </Bar>
-                  </BarChart>
-                </ResponsiveContainer>
+                <ResponsiveBar
+                  data={categoryData}
+                  keys={["amount"]}
+                  indexBy="name"
+                  margin={{ top: 15, right: 15, bottom: 35, left: 45 }}
+                  padding={0.35}
+                  colors={GALLERY_COLORS}
+                  colorBy="indexValue"
+                  borderRadius={6}
+                  borderWidth={0}
+                  enableLabel={false}
+                  axisTop={null}
+                  axisRight={null}
+                  axisBottom={{
+                    tickSize: 0,
+                    tickPadding: 8,
+                    tickRotation: 0
+                  }}
+                  axisLeft={{
+                    tickSize: 0,
+                    tickPadding: 8,
+                    tickRotation: 0,
+                    format: (v) => `₹${(v / 1000).toFixed(0)}k`
+                  }}
+                  theme={{
+                    grid: {
+                      line: {
+                        stroke: '#f1f5f9',
+                        strokeWidth: 1
+                      }
+                    },
+                    axis: {
+                      ticks: {
+                        text: {
+                          fontSize: 8,
+                          fontWeight: 'bold',
+                          fill: '#64748b'
+                        }
+                      }
+                    }
+                  }}
+                  tooltip={({ value, color, indexValue }) => (
+                    <div className="bg-slate-900/95 backdrop-blur-md text-white border border-slate-800 shadow-2xl rounded-xl p-3 text-xs min-w-[120px] font-sans pointer-events-none z-50">
+                      <p className="font-extrabold text-[10px] uppercase text-slate-400 tracking-wider mb-1.5">{indexValue}</p>
+                      <div className="flex items-center justify-between gap-4">
+                        <span className="flex items-center gap-1.5 text-slate-300">
+                          <span className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: color }} />
+                          Amount:
+                        </span>
+                        <span className="font-mono font-bold text-white">₹{value.toLocaleString()}</span>
+                      </div>
+                    </div>
+                  )}
+                />
               ) : (
                 <div className="flex items-center justify-center h-full text-gray-400 text-xs">No category data</div>
               )}
@@ -1300,19 +1410,59 @@ export default function AnalysisPage() {
             </div>
             <div className="p-4" style={{ height: 320 }}>
               {activityChartData.some(d => d.count > 0) ? (
-                <ResponsiveContainer width="100%" height="100%">
-                  <BarChart data={activityChartData} margin={{ bottom: 15, top: 10 }}>
-                    <CartesianGrid strokeDasharray="3 3" stroke="#f3f4f6" horizontal={true} vertical={false} />
-                    <XAxis dataKey="name" tick={{ fontSize: 10, fontWeight: "bold" }} />
-                    <YAxis tick={{ fontSize: 10 }} allowDecimals={false} />
-                    <Tooltip content={<CustomCountTooltip />} />
-                    <Bar dataKey="count" radius={[6, 6, 0, 0]} maxBarSize={60}>
-                      {activityChartData.map((_, idx) => (
-                        <Cell key={idx} fill={GALLERY_COLORS[idx % GALLERY_COLORS.length]} />
-                      ))}
-                    </Bar>
-                  </BarChart>
-                </ResponsiveContainer>
+                <ResponsiveBar
+                  data={activityChartData}
+                  keys={["count"]}
+                  indexBy="name"
+                  margin={{ top: 15, right: 15, bottom: 35, left: 35 }}
+                  padding={0.35}
+                  colors={GALLERY_COLORS}
+                  colorBy="indexValue"
+                  borderRadius={6}
+                  borderWidth={0}
+                  enableLabel={false}
+                  axisTop={null}
+                  axisRight={null}
+                  axisBottom={{
+                    tickSize: 0,
+                    tickPadding: 8,
+                    tickRotation: 0
+                  }}
+                  axisLeft={{
+                    tickSize: 0,
+                    tickPadding: 8,
+                    tickRotation: 0
+                  }}
+                  theme={{
+                    grid: {
+                      line: {
+                        stroke: '#f1f5f9',
+                        strokeWidth: 1
+                      }
+                    },
+                    axis: {
+                      ticks: {
+                        text: {
+                          fontSize: 8,
+                          fontWeight: 'bold',
+                          fill: '#64748b'
+                        }
+                      }
+                    }
+                  }}
+                  tooltip={({ value, color, indexValue }) => (
+                    <div className="bg-slate-900/95 backdrop-blur-md text-white border border-slate-800 shadow-2xl rounded-xl p-3 text-xs min-w-[120px] font-sans pointer-events-none z-50">
+                      <p className="font-extrabold text-[10px] uppercase text-slate-400 tracking-wider mb-1.5">{indexValue}</p>
+                      <div className="flex items-center justify-between gap-4">
+                        <span className="flex items-center gap-1.5 text-slate-300">
+                          <span className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: color }} />
+                          Count:
+                        </span>
+                        <span className="font-mono font-bold text-white">{value}</span>
+                      </div>
+                    </div>
+                  )}
+                />
               ) : (
                 <div className="flex items-center justify-center h-full text-gray-400 text-xs font-bold">
                   No operational activities recorded in this selection

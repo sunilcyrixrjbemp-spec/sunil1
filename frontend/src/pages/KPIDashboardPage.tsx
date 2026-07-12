@@ -973,7 +973,7 @@ export default function KPIDashboardPage() {
                   }
                 }
               }}
-              tooltip={({ id, value, color, indexValue }) => (
+              tooltip={({ value, color, indexValue }) => (
                 <div className="bg-slate-900/95 backdrop-blur-md text-white border border-slate-800 shadow-2xl rounded-xl p-3 text-xs min-w-[120px] font-sans pointer-events-none z-50">
                   <p className="font-extrabold text-[10px] uppercase text-slate-400 tracking-wider mb-1.5">{indexValue}</p>
                   <div className="flex items-center justify-between gap-4">

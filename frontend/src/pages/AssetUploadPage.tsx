@@ -107,23 +107,7 @@ const parseCSVLine = (line: string, delimiter: string): string[] => {
   return result;
 };
 
-const CustomTooltip = ({ active, payload }: any) => {
-  if (active && payload && payload.length) {
-    return (
-      <div className="bg-slate-900/95 backdrop-blur-md text-white border border-slate-800 shadow-2xl rounded-xl p-3 text-xs min-w-[120px] font-sans pointer-events-none">
-        <p className="font-extrabold text-[10px] uppercase text-slate-400 tracking-wider mb-1.5">{payload[0].name}</p>
-        <div className="flex items-center justify-between gap-4">
-          <span className="flex items-center gap-1.5 text-slate-300">
-            <span className="w-2 h-2 rounded-full" style={{ backgroundColor: payload[0].payload.fill || payload[0].color }} />
-            Units:
-          </span>
-          <span className="font-mono font-bold text-white">{payload[0].value}</span>
-        </div>
-      </div>
-    );
-  }
-  return null;
-};
+
 
 export default function AssetUploadPage() {
 
@@ -981,7 +965,7 @@ export default function AssetUploadPage() {
             <div className="w-full h-64 p-4">
               {stats.charts.top_types.length > 0 ? (
                 <ResponsiveBar
-                  data={stats.charts.top_types}
+                  data={stats.charts.top_types as any}
                   keys={["value"]}
                   indexBy="name"
                   layout="horizontal"
@@ -1021,7 +1005,7 @@ export default function AssetUploadPage() {
                       }
                     }
                   }}
-                  tooltip={({ id, value, color, indexValue }) => (
+                  tooltip={({ value, color, indexValue }) => (
                     <div className="bg-slate-900/95 backdrop-blur-md text-white border border-slate-800 shadow-2xl rounded-xl p-3 text-xs min-w-[120px] font-sans pointer-events-none z-50">
                       <p className="font-extrabold text-[10px] uppercase text-slate-400 tracking-wider mb-1.5">{indexValue}</p>
                       <div className="flex items-center justify-between gap-4">
