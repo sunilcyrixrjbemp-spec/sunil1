@@ -1099,50 +1099,52 @@ export default function AnalysisPage() {
             </div>
             <div className="p-4" style={{ height: 280 }}>
               {statusWiseData.length > 0 ? (
-                <div className="relative flex justify-center items-center h-full" style={{ height: "210px" }}>
-                  <ResponsivePie
-                    data={statusWiseData.map(d => ({
-                      id: d.name,
-                      label: d.name,
-                      value: d.value,
-                      color: d.name === "Approved" ? "#2e7d32" : d.name === "Rejected" ? "#d32f2f" : "#f57c00"
-                    }))}
-                    margin={{ top: 10, right: 10, bottom: 10, left: 10 }}
-                    innerRadius={0.7}
-                    padAngle={3}
-                    colors={{ datum: 'data.color' }}
-                    borderWidth={2}
-                    borderColor="#ffffff"
-                    enableArcLinkLabels={false}
-                    enableArcLabels={false}
-                    tooltip={({ datum }) => (
-                      <div className="bg-slate-900/95 backdrop-blur-md text-white border border-slate-800 shadow-2xl rounded-xl p-3 text-xs min-w-[120px] font-sans pointer-events-none z-50">
-                        <p className="font-extrabold text-[10px] uppercase text-slate-400 tracking-wider mb-1.5">{datum.label}</p>
-                        <div className="flex items-center justify-between gap-4">
-                          <span className="flex items-center gap-1.5 text-slate-300">
-                            <span className="w-2 h-2 rounded-full" style={{ backgroundColor: datum.color }} />
-                            Amount:
-                          </span>
-                          <span className="font-mono font-bold text-white">₹{datum.value?.toLocaleString()}</span>
+                <>
+                  <div className="relative flex justify-center items-center h-full" style={{ height: "210px" }}>
+                    <ResponsivePie
+                      data={statusWiseData.map(d => ({
+                        id: d.name,
+                        label: d.name,
+                        value: d.value,
+                        color: d.name === "Approved" ? "#2e7d32" : d.name === "Rejected" ? "#d32f2f" : "#f57c00"
+                      }))}
+                      margin={{ top: 10, right: 10, bottom: 10, left: 10 }}
+                      innerRadius={0.7}
+                      padAngle={3}
+                      colors={{ datum: 'data.color' }}
+                      borderWidth={2}
+                      borderColor="#ffffff"
+                      enableArcLinkLabels={false}
+                      enableArcLabels={false}
+                      tooltip={({ datum }) => (
+                        <div className="bg-slate-900/95 backdrop-blur-md text-white border border-slate-800 shadow-2xl rounded-xl p-3 text-xs min-w-[120px] font-sans pointer-events-none z-50">
+                          <p className="font-extrabold text-[10px] uppercase text-slate-400 tracking-wider mb-1.5">{datum.label}</p>
+                          <div className="flex items-center justify-between gap-4">
+                            <span className="flex items-center gap-1.5 text-slate-300">
+                              <span className="w-2 h-2 rounded-full" style={{ backgroundColor: datum.color }} />
+                              Amount:
+                            </span>
+                            <span className="font-mono font-bold text-white">₹{datum.value?.toLocaleString()}</span>
+                          </div>
                         </div>
-                      </div>
-                    )}
-                  />
-                  <div className="absolute flex flex-col items-center justify-center pointer-events-none" style={{ top: '50%', left: '50%', transform: 'translate(-50%, -50%)' }}>
-                    <span className="text-[7px] text-gray-400 font-bold uppercase tracking-wider">Total Claims</span>
-                    <span className="text-[11px] font-black text-slate-800 font-mono mt-0.5">
-                      ₹{statusWiseData.reduce((sum, item) => sum + item.value, 0).toLocaleString()}
-                    </span>
-                  </div>
-                </div>
-                <div className="flex flex-wrap justify-center gap-x-2.5 gap-y-1 mt-2">
-                  {statusWiseData.map((item, i) => (
-                    <div key={i} className="flex items-center gap-1 text-[8px] font-bold text-slate-500">
-                      <span className="w-1.5 h-1.5 rounded-full shrink-0" style={{ backgroundColor: item.name === "Approved" ? "#2e7d32" : item.name === "Rejected" ? "#d32f2f" : "#f57c00" }} />
-                      <span>{item.name}</span>
+                      )}
+                    />
+                    <div className="absolute flex flex-col items-center justify-center pointer-events-none" style={{ top: '50%', left: '50%', transform: 'translate(-50%, -50%)' }}>
+                      <span className="text-[7px] text-gray-400 font-bold uppercase tracking-wider">Total Claims</span>
+                      <span className="text-[11px] font-black text-slate-800 font-mono mt-0.5">
+                        ₹{statusWiseData.reduce((sum, item) => sum + item.value, 0).toLocaleString()}
+                      </span>
                     </div>
-                  ))}
-                </div>
+                  </div>
+                  <div className="flex flex-wrap justify-center gap-x-2.5 gap-y-1 mt-2">
+                    {statusWiseData.map((item, i) => (
+                      <div key={i} className="flex items-center gap-1 text-[8px] font-bold text-slate-500">
+                        <span className="w-1.5 h-1.5 rounded-full shrink-0" style={{ backgroundColor: item.name === "Approved" ? "#2e7d32" : item.name === "Rejected" ? "#d32f2f" : "#f57c00" }} />
+                        <span>{item.name}</span>
+                      </div>
+                    ))}
+                  </div>
+                </>
               ) : (
                 <div className="flex items-center justify-center h-full text-gray-400 text-xs">No status data</div>
               )}
