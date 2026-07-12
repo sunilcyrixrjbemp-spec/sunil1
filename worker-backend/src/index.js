@@ -299,44 +299,54 @@ export default {
       env.DB = {
         prepare(sql) {
           const stmt = originalDB.prepare(sql);
-          // Pre-compute isSelect ONCE at prepare() time — avoids repeated trim/toLowerCase on every call
           const sqlTrimLower = sql.trim().toLowerCase();
           const isSelect = sqlTrimLower.startsWith("select") || sqlTrimLower.startsWith("with");
           
-          function wrapStmt(s, params) {
-            const originalAll = s.all;
-            const originalFirst = s.first;
-            const originalRun = s.run;
-            
-            s.all = async function() {
-              if (isSelect) {
-                return await runRead(env, sql, params, request);
+          function wrapStmt(nativeStmt, params) {
+            return new Proxy(nativeStmt, {
+              get(target, prop, receiver) {
+                if (prop === "all") {
+                  return async function() {
+                    if (isSelect) {
+                      return await runRead(env, sql, params, request);
+                    }
+                    return await target.all();
+                  };
+                }
+                
+                if (prop === "first") {
+                  return async function(column) {
+                    if (isSelect) {
+                      const res = await runRead(env, sql, params, request);
+                      const row = res.results && res.results[0];
+                      if (!row) return null;
+                      if (column) return row[column];
+                      return row;
+                    }
+                    return await target.first(column);
+                  };
+                }
+                
+                if (prop === "run") {
+                  return async function() {
+                    return await target.run();
+                  };
+                }
+                
+                if (prop === "bind") {
+                  return function(...newParams) {
+                    const newNativeStmt = target.bind(...newParams);
+                    return wrapStmt(newNativeStmt, newParams);
+                  };
+                }
+                
+                const val = Reflect.get(target, prop, receiver);
+                if (typeof val === "function") {
+                  return val.bind(target);
+                }
+                return val;
               }
-              return await originalAll.call(s);
-            };
-            
-            s.first = async function(column) {
-              if (isSelect) {
-                const res = await runRead(env, sql, params, request);
-                const row = res.results && res.results[0];
-                if (!row) return null;
-                if (column) return row[column];
-                return row;
-              }
-              return await originalFirst.call(s, column);
-            };
-            
-            s.run = async function() {
-              return await originalRun.call(s);
-            };
-            
-            const originalBind = s.bind;
-            s.bind = function(...newParams) {
-              const newStmt = originalBind.apply(s, newParams);
-              return wrapStmt(newStmt, newParams);
-            };
-            
-            return s;
+            });
           }
           
           return wrapStmt(stmt, []);
