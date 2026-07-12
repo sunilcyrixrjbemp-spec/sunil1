@@ -593,9 +593,8 @@ export default function HomePage() {
           <div className="relative flex items-center justify-between gap-4">
             <div>
               <h2 className="text-sm font-bold tracking-tight text-white leading-none">Hi, {user.name} 👋</h2>
-              <p className="text-indigo-200 text-[9px] font-medium mt-0.5">Claims summary &amp; operations hub.</p>
+              <p className="text-indigo-200 text-[9px] font-medium mt-0.5">Claims summary &amp; operations.</p>
             </div>
-            <span className="text-indigo-200 font-black text-[8px] uppercase tracking-widest bg-indigo-500/20 px-2 py-0.5 rounded">Hub</span>
           </div>
         </div>
 
