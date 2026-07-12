@@ -4,9 +4,23 @@ We have completed the implementation of the core features and enhancements reque
 
 ---
 
-## 🛠️ Summary of Accomplished Work
+## 🛠️ Summary of Accomplished Features
 
-### 1. 📬 Database-Backed Notification Persistence (`notifications` table)
+### 1. Dashboard Team Expenses Pagination
+*   **100-Item Chunking**: Paginated the Team Claims tab to divide entries into chunks of 100 per page to optimize load performance.
+*   **Prev/Next Navigation Controls**: Added intuitive pagination navigation buttons at the bottom of both desktop table and mobile card views.
+*   **Filter Reset Integration**: Auto-resets the page view to `Page 1` whenever any filter changes (e.g., month, employee, mode, or status status dropdown).
+
+### 2. Month-Filtered Metric Cards
+*   **Decoupled Metric Calculations**: Summary metrics cards at the top (Total Claimed, Approved, Pending, Rejected) are now computed using month-only filters.
+*   **Accurate Monthly Aggregations**: Selecting secondary sub-filters (like searching a specific employee, mode, or paginated page) will not alter the top-level cards, preserving the true monthly totals.
+
+### 3. Auto-Expiry Professional Rejection Message
+*   **Direct Rejection**: Auto-expiry logic directly rejects the claim to `'rejected'` status.
+*   **Professional Notification Message**: Comments and notifications are populated with the exact reasoning:
+    `"This claim was automatically rejected by the system because your manager did not approve it within the required duration of X days."`
+
+### 4. 📬 Database-Backed Notification Persistence (`notifications` table)
 *   **Problem**: Previously, notifications were generated "virtually" in the frontend and read/unread states were lost when the app was closed or webview cache was cleared. There was no notification table in the database.
 *   **Fix**:
     *   **SQL Table Schema**: Created a new SQLAlchemy `Notification` model and registered it in `backend/app/models/notification.py` to store notifications (columns: `id`, `user_id`, `title`, `description`, `type`, `read`, `link`, `created_at`).

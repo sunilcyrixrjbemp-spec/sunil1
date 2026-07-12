@@ -182,11 +182,16 @@ export default function HomePage() {
   // Filters state for team claims tab
   const [filterEmployee, setFilterEmployee] = useState<string>("all");
   const [filterMode, setFilterMode] = useState<string>("all");
+  const [teamPage, setTeamPage] = useState<number>(1);
 
   const [selectMonth, setSelectMonth] = useState<string>(() => {
     return new Date().toISOString().substring(0, 7); // Default current month YYYY-MM
   });
   const [homeStatusFilter, setHomeStatusFilter] = useState<"all" | "pending" | "approved" | "rejected">("all");
+
+  useEffect(() => {
+    setTeamPage(1);
+  }, [filterEmployee, filterMode, selectMonth, homeStatusFilter]);
 
   const refreshDashboardData = async () => {
     const currentUser = authService.getCurrentUser() || user;
@@ -485,6 +490,7 @@ export default function HomePage() {
   };
 
   const filteredTeamExpenses = getFilteredTeamExpenses();
+  const paginatedTeamExpenses = filteredTeamExpenses.slice((teamPage - 1) * 100, teamPage * 100);
   const totalFilteredKm = filteredTeamExpenses.filter(e => e.category !== "Limit Request").reduce((sum, e) => sum + (e.total_km || 0), 0);
   const totalFilteredAuto = filteredTeamExpenses.filter(e => e.category !== "Limit Request").reduce((sum, e) => sum + (e.total_auto || 0), 0);
   const totalFilteredAmount = filteredTeamExpenses.filter(e => e.category !== "Limit Request").reduce((sum, e) => sum + (e.amount || 0), 0);
@@ -539,13 +545,25 @@ export default function HomePage() {
       .slice(0, 5);
   };
 
-  // Stats calculations based on current active tab
-  const currentClaimsList = activeTab === "my-claims" ? filteredPersonalExpenses : filteredTeamExpenses;
+  // Stats calculations based on current active tab, filtered ONLY by month
+  const monthOnlyPersonalExpenses = safeMyExpenses.filter(exp => {
+    if (!exp) return false;
+    const rawDate = exp.itinerary || exp.date;
+    return rawDate && rawDate.startsWith(selectMonth);
+  });
 
-  const statsTotalClaims = currentClaimsList;
-  const statsApprovedClaims = currentClaimsList.filter(c => c.status?.toLowerCase() === "approved");
-  const statsRejectedClaims = currentClaimsList.filter(c => c.status?.toLowerCase() === "rejected");
-  const statsPendingClaims = currentClaimsList.filter(c => {
+  const monthOnlyTeamExpenses = safeTeamExpenses.filter(exp => {
+    if (!exp) return false;
+    const rawDate = exp.date || exp.itinerary;
+    return rawDate && rawDate.startsWith(selectMonth);
+  });
+
+  const monthOnlyClaimsList = activeTab === "my-claims" ? monthOnlyPersonalExpenses : monthOnlyTeamExpenses;
+
+  const statsTotalClaims = monthOnlyClaimsList;
+  const statsApprovedClaims = monthOnlyClaimsList.filter(c => c.status?.toLowerCase() === "approved");
+  const statsRejectedClaims = monthOnlyClaimsList.filter(c => c.status?.toLowerCase() === "rejected");
+  const statsPendingClaims = monthOnlyClaimsList.filter(c => {
     const s = c.status?.toLowerCase() || "";
     return s.startsWith("submitted") || s === "pending" || s === "draft" || s === "returned_to_draft";
   });
@@ -930,7 +948,7 @@ export default function HomePage() {
                         </tr>
                       </thead>
                       <tbody className="divide-y divide-gray-100 bg-white">
-                        {filteredTeamExpenses.map((exp) => (
+                        {paginatedTeamExpenses.map((exp) => (
                           <tr 
                             key={exp.id} 
                             onClick={() => handleOpenClaimDetails(exp.id)}
@@ -963,7 +981,7 @@ export default function HomePage() {
 
                     {/* Mobile Card List View */}
                     <div className="block md:hidden space-y-3 pb-24">
-                      {filteredTeamExpenses.map((exp) => (
+                      {paginatedTeamExpenses.map((exp) => (
                         <div
                           key={exp.id}
                           onClick={() => handleOpenClaimDetails(exp.id)}
@@ -1012,6 +1030,31 @@ export default function HomePage() {
                         </div>
                       ))}
                     </div>
+
+                    {/* Pagination Controls */}
+                    {filteredTeamExpenses.length > 100 && (
+                      <div className="flex justify-between items-center bg-white border border-slate-100 rounded-xl p-3 shadow-sm mt-4">
+                        <button
+                          type="button"
+                          disabled={teamPage === 1}
+                          onClick={() => setTeamPage(prev => Math.max(prev - 1, 1))}
+                          className="px-4 py-2 border border-gray-300 rounded text-xs font-bold bg-white text-slate-700 disabled:opacity-50 hover:bg-slate-50 cursor-pointer disabled:cursor-not-allowed border-0 shadow-sm"
+                        >
+                          Prev
+                        </button>
+                        <span className="text-xs font-bold text-slate-700">
+                          Page {teamPage} of {Math.ceil(filteredTeamExpenses.length / 100)} (Total {filteredTeamExpenses.length} claims)
+                        </span>
+                        <button
+                          type="button"
+                          disabled={teamPage >= Math.ceil(filteredTeamExpenses.length / 100)}
+                          onClick={() => setTeamPage(prev => Math.min(prev + 1, Math.ceil(filteredTeamExpenses.length / 100)))}
+                          className="px-4 py-2 border border-gray-300 rounded text-xs font-bold bg-white text-slate-700 disabled:opacity-50 hover:bg-slate-50 cursor-pointer disabled:cursor-not-allowed border-0 shadow-sm"
+                        >
+                          Next
+                        </button>
+                      </div>
+                    )}
                   </>
                 )
               )}
