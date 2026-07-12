@@ -4,7 +4,7 @@ import api from "../services/api";
 import { authService } from "../services/authService";
 import Loader from "../components/common/Loader";
 
-// Register Chart.js components
+// Recharts UI components
 import { BarChart, Bar, Cell, XAxis, YAxis, CartesianGrid, Tooltip as RechartsTooltip, Legend as RechartsLegend, ResponsiveContainer, AreaChart, Area, PieChart as RePieChart, Pie as RePie } from "recharts";
 
 const GALLERY_COLORS = ["#2f5bb7", "#2b7d50", "#d28b2a", "#854aa5", "#d83b01", "#00a2ad", "#e81123"];
