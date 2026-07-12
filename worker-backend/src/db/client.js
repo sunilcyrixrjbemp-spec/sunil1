@@ -48,6 +48,16 @@ export function getDrizzleDb(env, request = null) {
               return await runWrite(env, sql, params);
             }
           },
+          async raw() {
+            const res = await this.all();
+            if (!res) return [];
+            const results = res.results || [];
+            if (results.length === 0) return [];
+            return results.map(row => Object.values(row));
+          },
+          async values() {
+            return await this.raw();
+          },
           // Drizzle calls bind to substitute parameters
           bind(...newParams) {
             return createStatement(newParams);
