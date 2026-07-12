@@ -91,25 +91,29 @@ export async function runWrite(env, sql, params = []) {
   // Invalidate any relevant query cache entries before writing
   invalidateCacheOnWrite(sql);
 
-  // 1. Prepare local write promise
-  const localWritePromise = originalDB.prepare(sql).bind(...params).run();
+  try {
+    // 1. Prepare local write promise
+    const localWritePromise = originalDB.prepare(sql).bind(...params).run();
 
-  // 2. Prepare primary replication write promise (if credentials available)
-  const primaryAccount = env.PRIMARY_CLOUDFLARE_ACCOUNT_ID ? env.PRIMARY_CLOUDFLARE_ACCOUNT_ID.trim() : "";
-  const primaryDb = env.PRIMARY_CLOUDFLARE_DATABASE_ID ? env.PRIMARY_CLOUDFLARE_DATABASE_ID.trim() : "";
-  const primaryToken = env.PRIMARY_CLOUDFLARE_API_TOKEN ? env.PRIMARY_CLOUDFLARE_API_TOKEN.trim() : "";
-  const primaryEmail = env.PRIMARY_CLOUDFLARE_EMAIL ? env.PRIMARY_CLOUDFLARE_EMAIL.trim() : "";
+    // 2. Prepare primary replication write promise (if credentials available)
+    const primaryAccount = env.PRIMARY_CLOUDFLARE_ACCOUNT_ID ? env.PRIMARY_CLOUDFLARE_ACCOUNT_ID.trim() : "";
+    const primaryDb = env.PRIMARY_CLOUDFLARE_DATABASE_ID ? env.PRIMARY_CLOUDFLARE_DATABASE_ID.trim() : "";
+    const primaryToken = env.PRIMARY_CLOUDFLARE_API_TOKEN ? env.PRIMARY_CLOUDFLARE_API_TOKEN.trim() : "";
+    const primaryEmail = env.PRIMARY_CLOUDFLARE_EMAIL ? env.PRIMARY_CLOUDFLARE_EMAIL.trim() : "";
 
-  const shouldReplicate = env.SKIP_PRIMARY_SYNC !== "true" && primaryAccount && primaryDb && primaryToken;
+    const shouldReplicate = env.SKIP_PRIMARY_SYNC !== "true" && primaryAccount && primaryDb && primaryToken;
 
-  if (shouldReplicate) {
-    const replicationPromise = replicateToPrimary(primaryAccount, primaryDb, primaryToken, primaryEmail, sql, params);
-    
-    // Execute both in parallel (sath-sath) and wait for both to complete
-    const [localResult] = await Promise.all([localWritePromise, replicationPromise]);
-    return localResult;
-  } else {
-    return await localWritePromise;
+    if (shouldReplicate) {
+      const replicationPromise = replicateToPrimary(primaryAccount, primaryDb, primaryToken, primaryEmail, sql, params);
+      
+      // Execute both in parallel (sath-sath) and wait for both to complete
+      const [localResult] = await Promise.all([localWritePromise, replicationPromise]);
+      return localResult;
+    } else {
+      return await localWritePromise;
+    }
+  } catch (err) {
+    throw new Error(`${err.message} | SQL: ${sql} | Params: ${JSON.stringify(params)}`);
   }
 }
 
@@ -302,29 +306,33 @@ export async function runRead(env, sql, params = [], request = null) {
   const originalDB = env._originalDB || env.DB;
   let result;
 
-  if (usePrimary) {
-    try {
-      result = await fetchPrimaryD1(primaryAccount, primaryDb, primaryToken, primaryEmail, sql, params);
-    } catch (e) {
-      console.warn("Primary D1 read failed, falling back to local Secondary D1:", e);
-      result = await originalDB.prepare(sql).bind(...params).all();
-    }
-  } else {
-    try {
-      result = await originalDB.prepare(sql).bind(...params).all();
-    } catch (e) {
-      if (hasPrimary) {
-        console.warn("Local Secondary D1 read failed, falling back to Primary:", e);
-        try {
-          result = await fetchPrimaryD1(primaryAccount, primaryDb, primaryToken, primaryEmail, sql, params);
-        } catch (err) {
-          console.error("Both Secondary and Primary D1 reads failed:", err);
+  try {
+    if (usePrimary) {
+      try {
+        result = await fetchPrimaryD1(primaryAccount, primaryDb, primaryToken, primaryEmail, sql, params);
+      } catch (e) {
+        console.warn("Primary D1 read failed, falling back to local Secondary D1:", e);
+        result = await originalDB.prepare(sql).bind(...params).all();
+      }
+    } else {
+      try {
+        result = await originalDB.prepare(sql).bind(...params).all();
+      } catch (e) {
+        if (hasPrimary) {
+          console.warn("Local Secondary D1 read failed, falling back to Primary:", e);
+          try {
+            result = await fetchPrimaryD1(primaryAccount, primaryDb, primaryToken, primaryEmail, sql, params);
+          } catch (err) {
+            console.error("Both Secondary and Primary D1 reads failed:", err);
+            throw e;
+          }
+        } else {
           throw e;
         }
-      } else {
-        throw e;
       }
     }
+  } catch (err) {
+    throw new Error(`${err.message} | SQL: ${sql} | Params: ${JSON.stringify(params)}`);
   }
 
   // Save the result to cache before returning
