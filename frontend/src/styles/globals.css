@@ -231,6 +231,8 @@ select.input-lte option {
   @apply fixed inset-0 bg-black/50 flex items-center justify-center p-4 overflow-y-auto;
   z-index: 1000;
   animation: fadeIn 0.2s ease-out;
+  overscroll-behavior: contain;
+  -webkit-overflow-scrolling: touch;
 }
 
 .modal-lte-content {
@@ -244,6 +246,8 @@ select.input-lte option {
 
 .modal-lte-body {
   @apply py-4 space-y-4 overflow-y-auto max-h-[75vh];
+  overscroll-behavior: contain;
+  -webkit-overflow-scrolling: touch;
 }
 
 .modal-lte-footer {
@@ -731,6 +735,8 @@ svg, path, g, sector, .recharts-pie-sector, .recharts-sector, .recharts-pie, .re
     align-items: flex-end !important;
     background-color: rgba(0, 0, 0, 0.5) !important;
     z-index: 1000 !important;
+    overscroll-behavior: contain !important;
+    -webkit-overflow-scrolling: touch !important;
   }
 
   .modal-lte-content {
@@ -796,6 +802,8 @@ svg, path, g, sector, .recharts-pie-sector, .recharts-sector, .recharts-pie, .re
   .flex-1.overflow-y-auto {
     padding: 0.875rem 1rem !important;
     background-color: #f8fafc !important; /* Comfortable Slate-50 base for popup body */
+    overscroll-behavior: contain !important;
+    -webkit-overflow-scrolling: touch !important;
   }
 
   .modal-lte-body > * + *, 

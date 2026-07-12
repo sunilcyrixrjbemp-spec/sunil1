@@ -514,7 +514,18 @@ export default function ApprovalPage() {
 
       setShowDetailModal(false);
       const processedId = selectedApproval.expense_id;
-      setPendingApprovals(prev => prev.filter((a: any) => a.expense_id !== processedId));
+      setPendingApprovals(prev => {
+        const filtered = prev.filter((a: any) => a.expense_id !== processedId);
+        localStorage.setItem("cache_pending_approvals", JSON.stringify(filtered));
+        const currentUserStr = localStorage.getItem("user");
+        if (currentUserStr) {
+          try {
+            const currentUser = JSON.parse(currentUserStr);
+            localStorage.setItem(`cache_approvals_count_${currentUser.user_id}`, filtered.length.toString());
+          } catch(e) {}
+        }
+        return filtered;
+      });
       setSelectedApproval(null);
       setExpenseDetails(null);
       setEditedLegs([]);
@@ -545,7 +556,18 @@ export default function ApprovalPage() {
       await approvalService.returnToDraft(returnExpenseId, returnComments.trim(), removedAttachments);
       toast.success("Claim returned to engineer for corrections.");
       setShowReturnModal(false);
-      setPendingApprovals(prev => prev.filter((a: any) => a.expense_id !== returnExpenseId));
+      setPendingApprovals(prev => {
+        const filtered = prev.filter((a: any) => a.expense_id !== returnExpenseId);
+        localStorage.setItem("cache_pending_approvals", JSON.stringify(filtered));
+        const currentUserStr = localStorage.getItem("user");
+        if (currentUserStr) {
+          try {
+            const currentUser = JSON.parse(currentUserStr);
+            localStorage.setItem(`cache_approvals_count_${currentUser.user_id}`, filtered.length.toString());
+          } catch(e) {}
+        }
+        return filtered;
+      });
       setReturnExpenseId(null);
       setReturnComments("");
       if (selectedApproval && selectedApproval.expense_id === returnExpenseId) {
@@ -635,7 +657,18 @@ export default function ApprovalPage() {
 
     setShowBulkModal(false);
     const processedIds = [...selectedIds];
-    setPendingApprovals(prev => prev.filter((a: any) => !processedIds.includes(a.expense_id)));
+    setPendingApprovals(prev => {
+      const filtered = prev.filter((a: any) => !processedIds.includes(a.expense_id));
+      localStorage.setItem("cache_pending_approvals", JSON.stringify(filtered));
+      const currentUserStr = localStorage.getItem("user");
+      if (currentUserStr) {
+        try {
+          const currentUser = JSON.parse(currentUserStr);
+          localStorage.setItem(`cache_approvals_count_${currentUser.user_id}`, filtered.length.toString());
+        } catch(e) {}
+      }
+      return filtered;
+    });
     setBulkActionType(null);
     setBulkComments("");
     setSelectedIds([]);
