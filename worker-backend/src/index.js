@@ -270,21 +270,7 @@ router.get("/api/expense/:id", handleGetExpenseDetails, true);
 router.delete("/api/expense/:id", handleDeleteExpense, true);
 
 
-import { getDrizzleDb } from "./db/client.js";
-import { users } from "./db/schema.js";
-import { eq } from "drizzle-orm";
 
-router.get("/api/test-drizzle", async (req, env) => {
-  try {
-    const db = getDrizzleDb(env, req);
-    const updateRes = await db.update(users)
-      .set({ userStatus: 'active', failedAttempt: 0, activeSessionId: null })
-      .where(eq(users.userId, "Admin"));
-    return jsonResponse({ success: true, data: updateRes });
-  } catch (e) {
-    return jsonResponse({ success: false, error: e.message, stack: e.stack });
-  }
-}, false);
 // Dedicated migration endpoint — call once after deployment, not on every request
 router.post("/api/admin/run-migrations", async (req, env, params, query, user) => {
   if (!user || user.role !== "Admin") {
