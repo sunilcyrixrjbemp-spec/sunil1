@@ -198,7 +198,7 @@ export async function getBootstrapDataHelper(env, user, request = null) {
         district: users.district
       })
       .from(expenses)
-      .join(users, eq(expenses.userId, users.id))
+      .innerJoin(users, eq(expenses.userId, users.id))
       .where(and(
         eq(expenses.year, currentYear),
         eq(expenses.month, currentMonthName)
@@ -302,7 +302,7 @@ export async function getBootstrapDataHelper(env, user, request = null) {
           district: users.district
         })
         .from(expenses)
-        .join(users, eq(expenses.userId, users.id))
+        .innerJoin(users, eq(expenses.userId, users.id))
         .where(and(
           inArray(expenses.userId, teamUserIds),
           eq(expenses.year, currentYear),
