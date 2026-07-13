@@ -41,6 +41,8 @@ export default function ProfilePage() {
   // System Maintenance
   const [migrationLoading, setMigrationLoading] = useState(false);
   const [migrationResult, setMigrationResult] = useState<{ success: boolean; message: string } | null>(null);
+  const [policyLoading, setPolicyLoading] = useState(false);
+  const [policyResult, setPolicyResult] = useState<{ success: boolean; message: string } | null>(null);
 
 
   // Check screen size for mobile view
@@ -498,6 +500,24 @@ export default function ProfilePage() {
     }
   };
 
+  // Handler: Run Retroactive Base Location Policy adjustments (Admin only)
+  const handleRunPolicyAdjustment = async () => {
+    if (!window.confirm("⚠️ Run Base Location Policy Adjustment?\n\nThis will scan all current-month active claims for users with mapped base locations and retroactively apply commute TA deductions and DA restrictions.\n\nContinue?")) return;
+    setPolicyLoading(true);
+    setPolicyResult(null);
+    try {
+      const result = await adminService.runOneTimeAdjust();
+      setPolicyResult({ success: true, message: result.message || "Policy adjustments completed!" });
+      toast.success("✅ Base location policy adjustments applied!");
+    } catch (err: any) {
+      const msg = err?.response?.data?.error || err?.message || "Adjustment failed";
+      setPolicyResult({ success: false, message: msg });
+      toast.error("❌ Adjustment failed: " + msg);
+    } finally {
+      setPolicyLoading(false);
+    }
+  };
+
   const handlePasswordChange = async (e: React.FormEvent) => {
     e.preventDefault();
     setPassNotice(null);
@@ -871,6 +891,47 @@ export default function ProfilePage() {
                         : "bg-red-50 border border-red-200 text-red-700"
                     }`}>
                       {migrationResult.success ? "✅" : "❌"} {migrationResult.message}
+                    </div>
+                  )}
+
+                  <div className="pt-3 border-t border-slate-100/50 text-center">
+                    <h5 className="text-[10px] font-black text-rose-600 uppercase tracking-widest flex items-center justify-center gap-1.5">
+                      <i className="fas fa-route"></i> Travel Policy Adjustment
+                    </h5>
+                    <p className="text-[9px] text-slate-400 mt-0.5">
+                      Adjust commute TA & DA according to mapped base locations.
+                    </p>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={handleRunPolicyAdjustment}
+                    disabled={policyLoading}
+                    className="w-full h-8 rounded font-extrabold text-[10px] uppercase border-0 cursor-pointer flex items-center justify-center gap-2 transition-all duration-200 text-white"
+                    style={{
+                      background: policyLoading ? "#cbd5e1" : "linear-gradient(135deg, #e11d48, #be123c)",
+                      boxShadow: policyLoading ? "none" : "0 2px 6px rgba(225,29,72,0.25)",
+                      cursor: policyLoading ? "not-allowed" : "pointer"
+                    }}
+                  >
+                    {policyLoading ? (
+                      <>
+                        <LteSpinner />
+                        <span>Running...</span>
+                      </>
+                    ) : (
+                      <>
+                        <i className="fas fa-route text-[10px]"></i>
+                        <span>Run Policy Adjustments</span>
+                      </>
+                    )}
+                  </button>
+                  {policyResult && (
+                    <div className={`p-2 rounded text-[10px] font-bold text-center ${
+                      policyResult.success 
+                        ? "bg-green-50 border border-green-200 text-green-700" 
+                        : "bg-red-50 border border-red-200 text-red-700"
+                    }`}>
+                      {policyResult.success ? "✅" : "❌"} {policyResult.message}
                     </div>
                   )}
                 </div>
@@ -1424,6 +1485,47 @@ export default function ProfilePage() {
                             : "bg-red-50 border border-red-200 text-red-700"
                         }`}>
                           {migrationResult.success ? "✅" : "❌"} {migrationResult.message}
+                        </div>
+                      )}
+
+                      <div className="pt-3 border-t border-slate-100/50 text-center">
+                        <h5 className="text-[10px] font-black text-rose-600 uppercase tracking-widest flex items-center justify-center gap-1.5">
+                          <i className="fas fa-route"></i> Travel Policy Adjustment
+                        </h5>
+                        <p className="text-[9px] text-slate-400 mt-1">
+                          Adjust commute TA & DA according to mapped base locations.
+                        </p>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={handleRunPolicyAdjustment}
+                        disabled={policyLoading}
+                        className="w-full h-8.5 rounded font-extrabold text-[10px] uppercase border-0 cursor-pointer flex items-center justify-center gap-2 transition-all duration-200 text-white"
+                        style={{
+                          background: policyLoading ? "#cbd5e1" : "linear-gradient(135deg, #e11d48, #be123c)",
+                          boxShadow: policyLoading ? "none" : "0 2px 6px rgba(225,29,72,0.25)",
+                          cursor: policyLoading ? "not-allowed" : "pointer"
+                        }}
+                      >
+                        {policyLoading ? (
+                          <>
+                            <LteSpinner />
+                            <span>Running...</span>
+                          </>
+                        ) : (
+                          <>
+                            <i className="fas fa-route text-[10px]"></i>
+                            <span>Run Policy Adjustments</span>
+                          </>
+                        )}
+                      </button>
+                      {policyResult && (
+                        <div className={`p-2 rounded text-[10px] font-bold text-center ${
+                          policyResult.success 
+                            ? "bg-green-50 border border-green-200 text-green-700" 
+                            : "bg-red-50 border border-red-200 text-red-700"
+                        }`}>
+                          {policyResult.success ? "✅" : "❌"} {policyResult.message}
                         </div>
                       )}
                     </div>
