@@ -317,3 +317,12 @@ export const rjPenalties = sqliteTable("rj_penalties", {
   monthText: text("month_text"),
   totalPenalty: real("total_penalty"),
 });
+
+// 24. No TA DA Hospitals Table
+export const noTaDaHospitals = sqliteTable("no_ta_da_hospitals", {
+  id: integer("id").primaryKey({ autoIncrement: true }),
+  hospitalName: text("hospital_name").notNull(),
+  districtName: text("district_name").notNull(),
+  createdAt: text("created_at"),
+});
+

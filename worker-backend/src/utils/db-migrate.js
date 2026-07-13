@@ -88,6 +88,14 @@ export async function runMigrations(db) {
     `CREATE TABLE IF NOT EXISTS system_settings (
       key TEXT PRIMARY KEY,
       value TEXT NOT NULL
+    )`,
+    // no_ta_da_hospitals table
+    `CREATE TABLE IF NOT EXISTS no_ta_da_hospitals (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      hospital_name TEXT NOT NULL,
+      district_name TEXT NOT NULL,
+      created_at TEXT DEFAULT CURRENT_TIMESTAMP,
+      UNIQUE(hospital_name, district_name)
     )`
   ];
 
@@ -200,6 +208,9 @@ export async function runMigrations(db) {
     `CREATE INDEX IF NOT EXISTS idx_login_logs_user ON login_logs(user_id)`,
     // Legacy hash mapping index
     `CREATE INDEX IF NOT EXISTS idx_legacy_hash_mapping_hash_id ON legacy_hash_mapping(hash_id)`,
+    // No TA DA Hospitals indexes
+    `CREATE INDEX IF NOT EXISTS idx_no_ta_da_hospitals_name ON no_ta_da_hospitals(LOWER(TRIM(hospital_name)))`,
+    `CREATE INDEX IF NOT EXISTS idx_no_ta_da_hospitals_district ON no_ta_da_hospitals(LOWER(TRIM(district_name)))`,
   ];
 
   for (const idxSql of indexes) {

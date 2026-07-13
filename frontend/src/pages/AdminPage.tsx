@@ -2245,15 +2245,43 @@ export default function AdminPage() {
                   />
                 </div>
                 <div>
-                  <label className="label-lte">Device / Upkaran ID *</label>
-                  <input
-                    type="text"
-                    placeholder="e.g. UPK-9988-XY"
-                    value={eUpkaranId}
-                    onChange={(e) => setEUpkaranId(e.target.value)}
-                    className="input-lte"
-                    required
-                  />
+                  <label className="label-lte">Base Reporting Location(s) * (Select one or more)</label>
+                  {dropdowns?.facilities?.[district] && dropdowns.facilities[district].length > 0 ? (
+                    <div className="max-h-36 overflow-y-auto border border-gray-300 rounded p-2 bg-white space-y-1 shadow-inner">
+                      {dropdowns.facilities[district].map((fac: string) => {
+                        const selectedList = eUpkaranId ? eUpkaranId.split(",").map(x => x.trim()) : [];
+                        const isSelected = selectedList.includes(fac);
+                        return (
+                          <label key={fac} className="flex items-center gap-2 text-xs font-semibold text-gray-700 cursor-pointer select-none hover:bg-gray-50 p-1 rounded">
+                            <input
+                              type="checkbox"
+                              checked={isSelected}
+                              onChange={() => {
+                                let list = eUpkaranId ? eUpkaranId.split(",").map(x => x.trim()) : [];
+                                if (list.includes(fac)) {
+                                  list = list.filter(x => x !== fac);
+                                } else {
+                                  list = [...list, fac];
+                                }
+                                setEUpkaranId(list.join(", "));
+                              }}
+                              className="rounded border-gray-300 text-blue-600 focus:ring-blue-500 h-4 w-4 cursor-pointer"
+                            />
+                            {fac}
+                          </label>
+                        );
+                      })}
+                    </div>
+                  ) : (
+                    <input
+                      type="text"
+                      placeholder="e.g. PHC Location or Device ID"
+                      value={eUpkaranId}
+                      onChange={(e) => setEUpkaranId(e.target.value)}
+                      className="input-lte"
+                      required
+                    />
+                  )}
                 </div>
               </div>
 
@@ -2592,14 +2620,61 @@ export default function AdminPage() {
                   />
                 </div>
                 <div>
-                  <label className="label-lte">Device / Upkaran ID *</label>
-                  <input
-                    type="text"
-                    value={editEUpkaranId}
-                    onChange={(e) => setEditEUpkaranId(e.target.value)}
-                    className="input-lte"
-                    required
-                  />
+                  <label className="label-lte">Base Reporting Location(s) * (Select one or more)</label>
+                  {dropdowns?.facilities?.[editDistrict] && dropdowns.facilities[editDistrict].length > 0 ? (
+                    <div className="max-h-36 overflow-y-auto border border-gray-300 rounded p-2 bg-white space-y-1 shadow-inner">
+                      {dropdowns.facilities[editDistrict].map((fac: string) => {
+                        const selectedList = editEUpkaranId ? editEUpkaranId.split(",").map(x => x.trim()) : [];
+                        const isSelected = selectedList.includes(fac);
+                        return (
+                          <label key={fac} className="flex items-center gap-2 text-xs font-semibold text-gray-700 cursor-pointer select-none hover:bg-gray-50 p-1 rounded">
+                            <input
+                              type="checkbox"
+                              checked={isSelected}
+                              onChange={() => {
+                                let list = editEUpkaranId ? editEUpkaranId.split(",").map(x => x.trim()) : [];
+                                if (list.includes(fac)) {
+                                  list = list.filter(x => x !== fac);
+                                } else {
+                                  list = [...list, fac];
+                                }
+                                setEditEUpkaranId(list.join(", "));
+                              }}
+                              className="rounded border-gray-300 text-blue-600 focus:ring-blue-500 h-4 w-4 cursor-pointer"
+                            />
+                            {fac}
+                          </label>
+                        );
+                      })}
+                      {(() => {
+                        const selectedList = editEUpkaranId ? editEUpkaranId.split(",").map(x => x.trim()) : [];
+                        const customItems = selectedList.filter(item => item && !dropdowns.facilities[editDistrict].includes(item));
+                        return customItems.map((fac) => (
+                          <label key={fac} className="flex items-center gap-2 text-xs font-semibold text-gray-700 cursor-pointer select-none hover:bg-gray-50 p-1 rounded">
+                            <input
+                              type="checkbox"
+                              checked={true}
+                              onChange={() => {
+                                const list = selectedList.filter(x => x !== fac);
+                                setEditEUpkaranId(list.join(", "));
+                              }}
+                              className="rounded border-gray-300 text-blue-600 focus:ring-blue-500 h-4 w-4 cursor-pointer"
+                            />
+                            {fac} (Custom)
+                          </label>
+                        ));
+                      })()}
+                    </div>
+                  ) : (
+                    <input
+                      type="text"
+                      placeholder="e.g. PHC Location or Device ID"
+                      value={editEUpkaranId}
+                      onChange={(e) => setEditEUpkaranId(e.target.value)}
+                      className="input-lte"
+                      required
+                    />
+                  )}
                 </div>
               </div>
 
