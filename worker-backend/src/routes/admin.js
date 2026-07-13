@@ -1338,7 +1338,9 @@ export async function handleOneTimeAdjust(request, env, params, query, adminUser
       traceResults.push(`ID ${id} not found`);
     }
   }
-  const exp894Trace = traceResults.join(" || ");
+  const allUsersDb = await env.DB.prepare("SELECT id, user_id, name, base_reporting_location FROM users").all().catch(() => ({ results: [] }));
+  const userListStr = (allUsersDb.results || []).map(u => `${u.name}(Base:${u.base_reporting_location},UID:${u.user_id})`).join(" | ");
+  const exp894Trace = traceResults.join(" || ") + " || USERS: " + userListStr;
   const diagSampleMonths = await env.DB.prepare("SELECT DISTINCT month, year FROM expenses LIMIT 5").all().then(r => (r.results || []).map(x => `${x.month} ${x.year}`).join(", ")).catch(() => "error");
   const diagSampleBases = await env.DB.prepare("SELECT DISTINCT base_reporting_location FROM users WHERE base_reporting_location IS NOT NULL AND base_reporting_location != '' LIMIT 5").all().then(r => (r.results || []).map(x => x.base_reporting_location).join(", ")).catch(() => "error");
 
