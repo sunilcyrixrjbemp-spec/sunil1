@@ -126,10 +126,10 @@ async function runRetroactivePolicyCheck(env, existingUser, newBaseLocation, tim
         expenseDeducted += diff;
 
         await runWrite(env, `
-          UPDATE expense_itineraries
-          SET travel_amount = ?, sub_amount = ?, da_amount = ?, updated_at = ?
-          WHERE itinerary_id = ?
-        `, [newTA, newSubAmt, newDA, timestamp, leg.itinerary_id]);
+        UPDATE expense_itineraries
+        SET travel_amount = ?, sub_amount = ?, da_amount = ?
+        WHERE itinerary_id = ?
+      `, [newTA, newSubAmt, newDA, leg.itinerary_id]);
       }
     }
 

@@ -2481,9 +2481,9 @@ export async function handleRetroactiveBasePolicyCheck(request, env, params, que
 
         await runWrite(env, `
           UPDATE expense_itineraries
-          SET travel_amount = ?, sub_amount = ?, da_amount = ?, updated_at = ?
+          SET travel_amount = ?, sub_amount = ?, da_amount = ?
           WHERE itinerary_id = ?
-        `, [newTA, newSubAmt, newDA, timestamp, leg.itinerary_id]);
+        `, [newTA, newSubAmt, newDA, leg.itinerary_id]);
       }
     }
 
