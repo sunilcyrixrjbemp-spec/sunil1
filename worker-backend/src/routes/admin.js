@@ -1360,11 +1360,11 @@ export async function handleOneTimeAdjust(request, env, params, query, adminUser
         const exps = expensesRes.results || [];
         for (const exp of exps.slice(0, 1)) {
           const legsRes = await env.DB.prepare(`
-            SELECT from_location, to_location, travel_type FROM expense_itineraries WHERE exp_id = ? ORDER BY leg_number ASC
-          `).bind(exp.expense_code).all().catch(() => ({ results: [] }));
+            SELECT * FROM expense_itineraries LIMIT 1
+          `).all().catch(e => ({ results: [], error: e.message }));
           const rawLegs = legsRes.results || [];
-          const legLocs = rawLegs.map(l => `${l.from_location}->${l.to_location} (${l.travel_type || "no-type"})`).join(" | ");
-          traceLogs.push(`${user.name}(Base:${user.base_reporting_location}): code:${exp.expense_code} legs:[${legLocs}]`);
+          const keys = rawLegs.length > 0 ? Object.keys(rawLegs[0]).join(",") : "empty";
+          traceLogs.push(`${user.name}: itiCols:[${keys}] err:${legsRes.error || "none"}`);
         }
       }
     } catch (e) {
