@@ -9,9 +9,76 @@ import { ResponsiveBar } from "@nivo/bar";
 
 const LteSpinner = () => (
   <span className="animate-spin rounded-full h-3.5 w-3.5 border-2 border-slate-200 border-t-blue-600 inline-block mr-1.5 shrink-0"></span>
-);
+);const MultiSelectDropdown = ({ 
+  options, 
+  selectedValues, 
+  onChange, 
+  placeholder = "Select locations..." 
+}: { 
+  options: string[], 
+  selectedValues: string[], 
+  onChange: (vals: string[]) => void, 
+  placeholder?: string 
+}) => {
+  const [isOpen, setIsOpen] = useState(false);
+  const containerRef = useRef<HTMLDivElement>(null);
 
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (containerRef.current && !containerRef.current.contains(event.target as Node)) {
+        setIsOpen(false);
+      }
+    };
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
 
+  const handleToggle = (val: string) => {
+    if (selectedValues.includes(val)) {
+      onChange(selectedValues.filter(v => v !== val));
+    } else {
+      onChange([...selectedValues, val]);
+    }
+  };
+
+  return (
+    <div className="relative" ref={containerRef}>
+      <button
+        type="button"
+        onClick={() => setIsOpen(!isOpen)}
+        className="w-full flex items-center justify-between input-lte text-left cursor-pointer bg-white min-h-[38px] px-3 py-1.5 border border-gray-300 rounded shadow-sm focus:outline-none"
+      >
+        <span className="block truncate text-xs font-semibold text-gray-700">
+          {selectedValues.length > 0 ? selectedValues.join(", ") : placeholder}
+        </span>
+        <span className="ml-2 flex items-center pointer-events-none text-gray-500">
+          <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 9l-7 7-7-7" />
+          </svg>
+        </span>
+      </button>
+
+      {isOpen && (
+        <div className="absolute z-50 mt-1 w-full rounded-md bg-white shadow-lg border border-gray-200 max-h-60 overflow-y-auto py-1 text-xs">
+          {options.map((opt) => (
+            <label
+              key={opt}
+              className="flex items-center px-3 py-2 hover:bg-gray-100 cursor-pointer select-none text-gray-700 font-medium"
+            >
+              <input
+                type="checkbox"
+                checked={selectedValues.includes(opt)}
+                onChange={() => handleToggle(opt)}
+                className="rounded border-gray-300 text-blue-600 focus:ring-blue-500 h-4 w-4 mr-2"
+              />
+              <span>{opt}</span>
+            </label>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+};
 
 const getErrorMessage = (err: any, fallback: string): string => {
   const detail = err.response?.data?.detail;
@@ -2245,33 +2312,14 @@ export default function AdminPage() {
                   />
                 </div>
                 <div>
-                  <label className="label-lte">Base Reporting Location(s) * (Select one or more)</label>
+                  <label className="label-lte">Base Reporting Location(s) *</label>
                   {dropdowns?.facilities?.[district] && dropdowns.facilities[district].length > 0 ? (
-                    <div className="max-h-36 overflow-y-auto border border-gray-300 rounded p-2 bg-white space-y-1 shadow-inner">
-                      {dropdowns.facilities[district].map((fac: string) => {
-                        const selectedList = eUpkaranId ? eUpkaranId.split(",").map(x => x.trim()) : [];
-                        const isSelected = selectedList.includes(fac);
-                        return (
-                          <label key={fac} className="flex items-center gap-2 text-xs font-semibold text-gray-700 cursor-pointer select-none hover:bg-gray-50 p-1 rounded">
-                            <input
-                              type="checkbox"
-                              checked={isSelected}
-                              onChange={() => {
-                                let list = eUpkaranId ? eUpkaranId.split(",").map(x => x.trim()) : [];
-                                if (list.includes(fac)) {
-                                  list = list.filter(x => x !== fac);
-                                } else {
-                                  list = [...list, fac];
-                                }
-                                setEUpkaranId(list.join(", "));
-                              }}
-                              className="rounded border-gray-300 text-blue-600 focus:ring-blue-500 h-4 w-4 cursor-pointer"
-                            />
-                            {fac}
-                          </label>
-                        );
-                      })}
-                    </div>
+                    <MultiSelectDropdown
+                      options={dropdowns.facilities[district]}
+                      selectedValues={eUpkaranId ? eUpkaranId.split(",").map(x => x.trim()).filter(Boolean) : []}
+                      onChange={(vals) => setEUpkaranId(vals.join(", "))}
+                      placeholder="-- Select Base Reporting Location(s) --"
+                    />
                   ) : (
                     <input
                       type="text"
@@ -2620,51 +2668,18 @@ export default function AdminPage() {
                   />
                 </div>
                 <div>
-                  <label className="label-lte">Base Reporting Location(s) * (Select one or more)</label>
+                  <label className="label-lte">Base Reporting Location(s) *</label>
                   {dropdowns?.facilities?.[editDistrict] && dropdowns.facilities[editDistrict].length > 0 ? (
-                    <div className="max-h-36 overflow-y-auto border border-gray-300 rounded p-2 bg-white space-y-1 shadow-inner">
-                      {dropdowns.facilities[editDistrict].map((fac: string) => {
-                        const selectedList = editEUpkaranId ? editEUpkaranId.split(",").map(x => x.trim()) : [];
-                        const isSelected = selectedList.includes(fac);
-                        return (
-                          <label key={fac} className="flex items-center gap-2 text-xs font-semibold text-gray-700 cursor-pointer select-none hover:bg-gray-50 p-1 rounded">
-                            <input
-                              type="checkbox"
-                              checked={isSelected}
-                              onChange={() => {
-                                let list = editEUpkaranId ? editEUpkaranId.split(",").map(x => x.trim()) : [];
-                                if (list.includes(fac)) {
-                                  list = list.filter(x => x !== fac);
-                                } else {
-                                  list = [...list, fac];
-                                }
-                                setEditEUpkaranId(list.join(", "));
-                              }}
-                              className="rounded border-gray-300 text-blue-600 focus:ring-blue-500 h-4 w-4 cursor-pointer"
-                            />
-                            {fac}
-                          </label>
-                        );
-                      })}
-                      {(() => {
-                        const selectedList = editEUpkaranId ? editEUpkaranId.split(",").map(x => x.trim()) : [];
-                        const customItems = selectedList.filter(item => item && !dropdowns.facilities[editDistrict].includes(item));
-                        return customItems.map((fac) => (
-                          <label key={fac} className="flex items-center gap-2 text-xs font-semibold text-gray-700 cursor-pointer select-none hover:bg-gray-50 p-1 rounded">
-                            <input
-                              type="checkbox"
-                              checked={true}
-                              onChange={() => {
-                                const list = selectedList.filter(x => x !== fac);
-                                setEditEUpkaranId(list.join(", "));
-                              }}
-                              className="rounded border-gray-300 text-blue-600 focus:ring-blue-500 h-4 w-4 cursor-pointer"
-                            />
-                            {fac} (Custom)
-                          </label>
-                        ));
-                      })()}
-                    </div>
+                    <MultiSelectDropdown
+                      options={[
+                        ...dropdowns.facilities[editDistrict],
+                        ...(editEUpkaranId ? editEUpkaranId.split(",").map(x => x.trim()).filter(Boolean) : [])
+                          .filter(item => !dropdowns.facilities[editDistrict].includes(item))
+                      ]}
+                      selectedValues={editEUpkaranId ? editEUpkaranId.split(",").map(x => x.trim()).filter(Boolean) : []}
+                      onChange={(vals) => setEditEUpkaranId(vals.join(", "))}
+                      placeholder="-- Select Base Reporting Location(s) --"
+                    />
                   ) : (
                     <input
                       type="text"
