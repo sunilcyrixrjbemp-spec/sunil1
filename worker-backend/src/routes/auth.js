@@ -489,6 +489,7 @@ export async function handleLogin(request, env, params, query) {
     date_of_joining: profile.dateOfJoining,
     date_of_birth: profile.dateOfBirth,
     e_upkaran_id: profile.eUpkaranId,
+    base_reporting_location: profile.baseReportingLocation,
     allowed_windows: profile.allowedWindows,
     profile_photo: profile.profilePhoto,
     created_at: profile.createdAt,

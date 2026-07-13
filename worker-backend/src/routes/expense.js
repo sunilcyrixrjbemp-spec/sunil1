@@ -3284,12 +3284,18 @@ export async function handleGetConsolidatedReport(request, env, params, query, u
   // 2. Fetch approved expenses for allowed users
   let expenses = [];
   if (allowedUserCodes.length > 0) {
-    const placeholders = allowedUserCodes.map(() => "?").join(",");
-    const expensesRes = await env.DB.prepare(`
-      SELECT id, user_id, expense_code, amount, original_amount, status, itinerary, created_at FROM expenses
-      WHERE UPPER(month) = UPPER(?) AND year = ? AND LOWER(status) = 'approved' AND user_id IN (${placeholders})
-    `).bind(month, year, ...allowedUserCodes).all().catch(() => ({ results: [] }));
-    expenses = expensesRes.results || [];
+    const chunkSize = 50;
+    for (let i = 0; i < allowedUserCodes.length; i += chunkSize) {
+      const chunk = allowedUserCodes.slice(i, i + chunkSize);
+      const placeholders = chunk.map(() => "?").join(",");
+      const chunkRes = await env.DB.prepare(`
+        SELECT id, user_id, expense_code, amount, original_amount, status, itinerary, created_at FROM expenses
+        WHERE UPPER(month) = UPPER(?) AND year = ? AND LOWER(status) = 'approved' AND user_id IN (${placeholders})
+      `).bind(month, year, ...chunk).all().catch(() => ({ results: [] }));
+      if (chunkRes.results) {
+        expenses = expenses.concat(chunkRes.results);
+      }
+    }
   }
 
   if (expenses.length === 0) {

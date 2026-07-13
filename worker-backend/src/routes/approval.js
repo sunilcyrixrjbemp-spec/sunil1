@@ -9,6 +9,20 @@ function jsonResponse(data, status = 200) {
   });
 }
 
+async function queryInChunks(db, queryTemplate, ids, chunkSize = 50) {
+  let allResults = [];
+  for (let i = 0; i < ids.length; i += chunkSize) {
+    const chunk = ids.slice(i, i + chunkSize);
+    const placeholders = chunk.map(() => "?").join(",");
+    const sql = queryTemplate.replace("?", placeholders);
+    const res = await db.prepare(sql).bind(...chunk).all();
+    if (res.results) {
+      allResults = allResults.concat(res.results);
+    }
+  }
+  return allResults;
+}
+
 async function applyItineraryEditsAndLog(env, expense, itineraryEdits, currentUser, comments) {
   if (!itineraryEdits || itineraryEdits.length === 0) return;
 
@@ -174,19 +188,16 @@ export async function fetchPendingApprovals(env, user) {
 
   const approvalsList = approvals.results || [];
   
-  // Batch fetch itineraries count for all approval expense codes in a single query
+  // Batch fetch itineraries count for all approval expense codes in chunks of 50 to avoid SQL parameter limit
   const expenseCodes = approvalsList.map(a => a.expense_code).filter(Boolean);
   const itiCounts = {};
   if (expenseCodes.length > 0) {
-    const placeholders = expenseCodes.map(() => "?").join(",");
-    const countQuery = `
-      SELECT exp_id, COUNT(*) as cnt 
-      FROM expense_itineraries 
-      WHERE exp_id IN (${placeholders}) 
-      GROUP BY exp_id
-    `;
-    const countResults = await env.DB.prepare(countQuery).bind(...expenseCodes).all();
-    for (const row of (countResults.results || [])) {
+    const countResults = await queryInChunks(
+      env.DB,
+      "SELECT exp_id, COUNT(*) as cnt FROM expense_itineraries WHERE exp_id IN (?) GROUP BY exp_id",
+      expenseCodes
+    );
+    for (const row of countResults) {
       itiCounts[row.exp_id] = row.cnt;
     }
   }
@@ -229,29 +240,29 @@ export async function fetchPendingApprovals(env, user) {
     const legacyList = legacyRows.results || [];
 
     if (legacyList.length > 0) {
-      // BATCH fetch itinerary counts + first travel mode — eliminates N+1 queries
+      // BATCH fetch itinerary counts + first travel mode — chunked to avoid SQLite limit
       const legacyCodes = legacyList.map(r => r.exp_id);
-      const placeholders = legacyCodes.map(() => "?").join(",");
 
       const [countResults, firstLegs] = await Promise.all([
-        env.DB.prepare(`
-          SELECT exp_id, COUNT(*) as cnt 
-          FROM expense_itineraries 
-          WHERE exp_id IN (${placeholders}) 
-          GROUP BY exp_id
-        `).bind(...legacyCodes).all(),
-        env.DB.prepare(`
-          SELECT exp_id, travel_mode 
-          FROM expense_itineraries 
-          WHERE exp_id IN (${placeholders}) 
-          AND leg_number = (SELECT MIN(leg_number) FROM expense_itineraries ei2 WHERE ei2.exp_id = expense_itineraries.exp_id)
-        `).bind(...legacyCodes).all()
+        queryInChunks(
+          env.DB,
+          "SELECT exp_id, COUNT(*) as cnt FROM expense_itineraries WHERE exp_id IN (?) GROUP BY exp_id",
+          legacyCodes
+        ),
+        queryInChunks(
+          env.DB,
+          `SELECT exp_id, travel_mode 
+           FROM expense_itineraries 
+           WHERE exp_id IN (?) 
+           AND leg_number = (SELECT MIN(leg_number) FROM expense_itineraries ei2 WHERE ei2.exp_id = expense_itineraries.exp_id)`,
+          legacyCodes
+        )
       ]);
 
       const countMap = {};
-      for (const r of (countResults.results || [])) countMap[r.exp_id] = r.cnt;
+      for (const r of countResults) countMap[r.exp_id] = r.cnt;
       const modeMap = {};
-      for (const r of (firstLegs.results || [])) {
+      for (const r of firstLegs) {
         if (!modeMap[r.exp_id]) modeMap[r.exp_id] = r.travel_mode;
       }
 
