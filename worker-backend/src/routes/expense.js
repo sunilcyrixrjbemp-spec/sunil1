@@ -51,6 +51,31 @@ const DA_ALLOWED_BASES = ["pbm", "mathura das mathur", "mdm"];
 const RESIDENCE_SKIP_WORDS = [...MARKET_WORDS, ...STATION_WORDS];
 
 /**
+ * Checks if a typed location matches any mapped base location (supports exact, substring, and abbreviations)
+ */
+export function matchesBase(locText, baseLocations) {
+  const text = (locText || "").trim().toLowerCase();
+  if (!text) return false;
+  return baseLocations.some(base => {
+    const cleanBase = base.trim().toLowerCase();
+    if (text === cleanBase) return true;
+    if (text.includes(cleanBase) || cleanBase.includes(text)) return true;
+
+    // Check specific known abbreviations and names
+    if (cleanBase.includes("mathura das mathur") || cleanBase.includes("mdm")) {
+      if (text.includes("mdm") || text.includes("mathura das") || text.includes("mathur")) return true;
+    }
+    if (cleanBase.includes("pbm") || cleanBase.includes("bikaner")) {
+      if (text.includes("pbm") || text.includes("bikaner")) return true;
+    }
+    if (cleanBase.includes("jln") || cleanBase.includes("ajmer")) {
+      if (text.includes("jln") || text.includes("ajmer")) return true;
+    }
+    return false;
+  });
+}
+
+/**
  * Determines whether a day's itinerary qualifies as base-location-only travel.
  * Returns { isBaseLocOnly, isDaAllowed, baseLocations }
  */
@@ -60,10 +85,16 @@ export function computeBaseLocPolicy(baseReportingLocation, itineraries) {
 
   if (baseLocations.length === 0) return { isBaseLocOnly: false, isDaAllowed: true, baseLocations: [] };
 
+  // EXCLUSION: If any leg in the day has travel_type === "Outdoor", policy is completely disabled
+  const hasOutdoorLeg = itineraries.some(leg => (leg.travel_type || "").trim().toLowerCase() === "outdoor");
+  if (hasOutdoorLeg) {
+    return { isBaseLocOnly: false, isDaAllowed: true, baseLocations };
+  }
+
   // Must have visited at least one base location (dropdown or manual match)
   const hasVisitedBase = itineraries.some(leg =>
-    baseLocations.includes((leg.from || "").trim().toLowerCase()) ||
-    baseLocations.includes((leg.to || "").trim().toLowerCase())
+    matchesBase(leg.from, baseLocations) ||
+    matchesBase(leg.to, baseLocations)
   );
 
   if (!hasVisitedBase) return { isBaseLocOnly: false, isDaAllowed: true, baseLocations };
@@ -72,8 +103,8 @@ export function computeBaseLocPolicy(baseReportingLocation, itineraries) {
   const visitedNonBase = itineraries.some(leg => {
     const f = (leg.from || "").trim().toLowerCase();
     const t = (leg.to || "").trim().toLowerCase();
-    if (!leg.from_custom && !baseLocations.includes(f)) return true;
-    if (!leg.to_custom && !baseLocations.includes(t)) return true;
+    if (!leg.from_custom && !matchesBase(f, baseLocations)) return true;
+    if (!leg.to_custom && !matchesBase(t, baseLocations)) return true;
     return false;
   });
 
@@ -96,7 +127,8 @@ export function computeBaseLocPolicy(baseReportingLocation, itineraries) {
 
   let isDaAllowed = false;
   if (hasStation) {
-    isDaAllowed = itineraries.some(leg => (leg.travel_type || "").trim() === "Outdoor");
+    // Already verified hasOutdoorLeg is false (otherwise we would have returned early)
+    isDaAllowed = false;
   } else if (isDaBase && !hasMarket) {
     isDaAllowed = true;
   }
@@ -112,8 +144,11 @@ export function checkIsCommuteLeg(leg, baseLocations) {
   const t = (leg.to || "").trim().toLowerCase();
   const fromIsResidence = !!leg.from_custom && !RESIDENCE_SKIP_WORDS.some(w => f.includes(w));
   const toIsResidence = !!leg.to_custom && !RESIDENCE_SKIP_WORDS.some(w => t.includes(w));
-  const fromIsBase = baseLocations.includes(f);
-  const toIsBase = baseLocations.includes(t);
+  const fromIsBase = matchesBase(f, baseLocations);
+  const toIsBase = matchesBase(t, baseLocations);
+
+  if (fromIsResidence && fromIsBase) return false;
+  if (toIsResidence && toIsBase) return false;
   if (fromIsResidence && toIsBase) return true;
   if (fromIsBase && toIsResidence) return true;
   return false;
@@ -1858,14 +1893,50 @@ export async function handleSubmitExpense(request, env, params, query, user) {
     itineraries
   );
 
-  for (const iti of itineraries) {
+  const legLogs = [];
+
+  for (let idx = 0; idx < itineraries.length; idx++) {
+    const iti = itineraries[idx];
+    const legNum = parseInt(iti.leg || (idx + 1), 10);
     const isCommute = isBaseLocOnly && checkIsCommuteLeg(iti, baseLocations);
-    const travelAmt = isCommute ? 0.0 : parseFloat(iti.amount || "0.0");
-    const subAmt = isCommute ? 0.0 : parseFloat(iti.sub_amount || "0.0");
-    const daAmt = isDaAllowed ? parseFloat(iti.da || "0.0") : 0.0;
+    const originalTravelAmt = parseFloat(iti.amount || "0.0");
+    const originalSubAmt = parseFloat(iti.sub_amount || "0.0");
+    const originalDaAmt = parseFloat(iti.da || "0.0");
+
+    const travelAmt = isCommute ? 0.0 : originalTravelAmt;
+    const subAmt = isCommute ? 0.0 : originalSubAmt;
+    const daAmt = isDaAllowed ? originalDaAmt : 0.0;
     const hotelAmt = parseFloat(iti.hotel || "0.0");
     const otherAmt = parseFloat(iti.oth_amount || "0.0");
     const lpAmt = parseFloat(iti.local_purchase || "0.0");
+
+    if (originalTravelAmt > travelAmt) {
+      legLogs.push({
+        leg_number: legNum,
+        field_name: "travel_amount",
+        old_value: originalTravelAmt,
+        new_value: travelAmt,
+        comment: "[Policy] Base Location commute TA not eligible"
+      });
+    }
+    if (originalSubAmt > subAmt) {
+      legLogs.push({
+        leg_number: legNum,
+        field_name: "sub_amount",
+        old_value: originalSubAmt,
+        new_value: subAmt,
+        comment: "[Policy] Base Location commute local conveyance not eligible"
+      });
+    }
+    if (originalDaAmt > daAmt) {
+      legLogs.push({
+        leg_number: legNum,
+        field_name: "da_amount",
+        old_value: originalDaAmt,
+        new_value: daAmt,
+        comment: "[Policy] DA not applicable at base location"
+      });
+    }
 
     totalDa += daAmt;
     totalHotel += hotelAmt;
@@ -2243,8 +2314,18 @@ export async function handleSubmitExpense(request, env, params, query, user) {
           [newExpId, policyComment]
         );
       }
+      
+      // Save leg-level edit history logs
+      for (const log of legLogs) {
+        await runWrite(env,
+          `INSERT INTO expense_edit_logs 
+           (expense_id, leg_number, field_name, old_value, new_value, comment, editor_name, editor_role, editor_id)
+           VALUES (?, ?, ?, ?, ?, ?, 'SYSTEM', 'Policy', 0)`,
+          [newExpId, log.leg_number, log.field_name, String(log.old_value), String(log.new_value), log.comment]
+        );
+      }
     } catch (e) {
-      console.error("Failed to write base location policy comment:", e.message);
+      console.error("Failed to write base location policy comments:", e.message);
     }
   }
 
@@ -2337,6 +2418,7 @@ export async function handleRetroactiveBasePolicyCheck(request, env, params, que
 
     let expenseDeducted = 0;
     let policyApplied = false;
+    const retroLegLogs = [];
 
     for (const leg of legs) {
       const isCommute = checkIsCommuteLeg(leg, baseLocations);
@@ -2347,6 +2429,34 @@ export async function handleRetroactiveBasePolicyCheck(request, env, params, que
       const newTA = isCommute ? 0.0 : currentTA;
       const newSubAmt = isCommute ? 0.0 : currentSubAmt;
       const newDA = isDaAllowed ? currentDA : 0.0;
+
+      if (currentTA > newTA) {
+        retroLegLogs.push({
+          leg_number: leg.leg_number,
+          field_name: "travel_amount",
+          old_value: currentTA,
+          new_value: newTA,
+          comment: "[Retroactive] Base Location commute TA not eligible"
+        });
+      }
+      if (currentSubAmt > newSubAmt) {
+        retroLegLogs.push({
+          leg_number: leg.leg_number,
+          field_name: "sub_amount",
+          old_value: currentSubAmt,
+          new_value: newSubAmt,
+          comment: "[Retroactive] Base Location commute local conveyance not eligible"
+        });
+      }
+      if (currentDA > newDA) {
+        retroLegLogs.push({
+          leg_number: leg.leg_number,
+          field_name: "da_amount",
+          old_value: currentDA,
+          new_value: newDA,
+          comment: "[Retroactive] DA not applicable at base location"
+        });
+      }
 
       const diff = (currentTA - newTA) + (currentSubAmt - newSubAmt) + (currentDA - newDA);
       if (diff > 0) {
@@ -2376,12 +2486,22 @@ export async function handleRetroactiveBasePolicyCheck(request, env, params, que
         ), updated_at = ? WHERE id = ?
       `, [newTotal, exp.expense_code, timestamp, exp.id]);
 
-      // Write policy comment to expense_edit_logs
+      // Write policy comments to expense_edit_logs
       const policyComment = buildPolicyComment(baseLocations, legs, isDaAllowed, exp.itinerary || timestamp.split("T")[0]);
       if (policyComment) {
         await runWrite(env,
           "INSERT INTO expense_edit_logs (expense_id, comment, editor_name, editor_role, editor_id) VALUES (?, ?, 'SYSTEM', 'Policy', 0)",
           [exp.id, `[Retroactive] ${policyComment}`]
+        );
+      }
+      
+      // Save leg-level edit history logs
+      for (const log of retroLegLogs) {
+        await runWrite(env,
+          `INSERT INTO expense_edit_logs 
+           (expense_id, leg_number, field_name, old_value, new_value, comment, editor_name, editor_role, editor_id)
+           VALUES (?, ?, ?, ?, ?, ?, 'SYSTEM', 'Policy', 0)`,
+          [exp.id, log.leg_number, log.field_name, String(log.old_value), String(log.new_value), log.comment]
         );
       }
 

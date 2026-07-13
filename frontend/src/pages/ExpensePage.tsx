@@ -540,6 +540,11 @@ export default function ExpensePage() {
   const [reqAdditional, setReqAdditional] = useState("0");
   const [sendingRequest, setSendingRequest] = useState(false);
   const [hasShownExceededModal, setHasShownExceededModal] = useState(false);
+  const [acknowledgedBaseLocWarning, setAcknowledgedBaseLocWarning] = useState(false);
+
+  useEffect(() => {
+    setAcknowledgedBaseLocWarning(false);
+  }, [itineraries, date]);
 
   // Read-only popup modal state (Dashboard Preview Modal)
   const [selectedClaim, setSelectedClaim] = useState<any>(null);
@@ -1509,6 +1514,126 @@ export default function ExpensePage() {
 
 
 
+  const matchesBase = (locText: string, baseLocations: string[]) => {
+    const text = (locText || "").trim().toLowerCase();
+    if (!text) return false;
+    return baseLocations.some(base => {
+      const cleanBase = base.trim().toLowerCase();
+      if (text === cleanBase) return true;
+      if (text.includes(cleanBase) || cleanBase.includes(text)) return true;
+
+      // Check specific known abbreviations and names
+      if (cleanBase.includes("mathura das mathur") || cleanBase.includes("mdm")) {
+        if (text.includes("mdm") || text.includes("mathura das") || text.includes("mathur")) return true;
+      }
+      if (cleanBase.includes("pbm") || cleanBase.includes("bikaner")) {
+        if (text.includes("pbm") || text.includes("bikaner")) return true;
+      }
+      if (cleanBase.includes("jln") || cleanBase.includes("ajmer")) {
+        if (text.includes("jln") || text.includes("ajmer")) return true;
+      }
+      return false;
+    });
+  };
+
+  const isBaseLocationOnlyTravel = () => {
+    if (!user || !user.base_reporting_location) return false;
+    const baseLocations = user.base_reporting_location
+      ? user.base_reporting_location.split(",").map((x: string) => x.trim().toLowerCase()).filter(Boolean)
+      : [];
+    if (baseLocations.length === 0) return false;
+
+    // EXCLUSION: If any leg in the day has travel_type === "Outdoor", policy is completely disabled
+    const hasOutdoorLeg = itineraries.some(leg => (leg.travel_type || "").trim().toLowerCase() === "outdoor");
+    if (hasOutdoorLeg) return false;
+
+    // Must have visited at least one base location (dropdown or manual typing)
+    const hasVisitedBaseLocation = itineraries.some(leg => 
+      matchesBase(leg.from || "", baseLocations) ||
+      matchesBase(leg.to || "", baseLocations)
+    );
+
+    if (!hasVisitedBaseLocation) return false;
+
+    // Must NOT have visited any other official dropdown facility
+    const visitedNonBaseOfficialFacility = itineraries.some(leg => {
+      const fromLoc = (leg.from || "").trim().toLowerCase();
+      const toLoc = (leg.to || "").trim().toLowerCase();
+      const fromCustom = !!leg.from_custom;
+      const toCustom = !!leg.to_custom;
+
+      if (!fromCustom && !matchesBase(fromLoc, baseLocations)) return true;
+      if (!toCustom && !matchesBase(toLoc, baseLocations)) return true;
+      return false;
+    });
+
+    return !visitedNonBaseOfficialFacility;
+  };
+
+  const isCommuteLeg = (leg: ItineraryLeg) => {
+    if (!user || !user.base_reporting_location) return false;
+    const baseLocations = user.base_reporting_location
+      ? user.base_reporting_location.split(",").map((x: string) => x.trim().toLowerCase()).filter(Boolean)
+      : [];
+    if (baseLocations.length === 0) return false;
+
+    const fromLoc = (leg.from || "").trim().toLowerCase();
+    const toLoc = (leg.to || "").trim().toLowerCase();
+    const fromCustom = !!leg.from_custom;
+    const toCustom = !!leg.to_custom;
+
+    const fromIsBase = matchesBase(fromLoc, baseLocations);
+    const toIsBase = matchesBase(toLoc, baseLocations);
+
+    const fromIsResidence = fromCustom && !fromLoc.includes("market") && !fromLoc.includes("station") && !fromLoc.includes("railway") && !fromLoc.includes("bus stand") && !fromLoc.includes("bus stop");
+    const toIsResidence = toCustom && !toLoc.includes("market") && !toLoc.includes("station") && !toLoc.includes("railway") && !toLoc.includes("bus stand") && !toLoc.includes("bus stop");
+
+    if (fromIsResidence && fromIsBase) return false;
+    if (toIsResidence && toIsBase) return false;
+    if (fromIsResidence && toIsBase) return true;
+    if (fromIsBase && toIsResidence) return true;
+
+    return false;
+  };
+
+  const isDailyAllowanceAllowed = () => {
+    if (!isBaseLocationOnlyTravel()) return true;
+    if (!user || !user.base_reporting_location) return true;
+
+    const baseLocations = user.base_reporting_location
+      ? user.base_reporting_location.split(",").map((x: string) => x.trim().toLowerCase()).filter(Boolean)
+      : [];
+
+    const hasStation = itineraries.some(leg => {
+      const fromLoc = (leg.from || "").trim().toLowerCase();
+      const toLoc = (leg.to || "").trim().toLowerCase();
+      const stationWords = ["station", "railway", "bus stand", "bus stop", "bus depot"];
+      return stationWords.some(w => fromLoc.includes(w) || toLoc.includes(w));
+    });
+
+    const hasMarket = itineraries.some(leg => {
+      const fromLoc = (leg.from || "").trim().toLowerCase();
+      const toLoc = (leg.to || "").trim().toLowerCase();
+      return fromLoc.includes("market") || toLoc.includes("market");
+    });
+
+    const isDaAllowedBaseLocation = baseLocations.some(loc => 
+      loc.includes("pbm") || loc.includes("mathura das mathur") || loc.includes("mdm")
+    );
+
+    if (hasStation) {
+      // Station rule: Only allowed if travel type is Outdoor. But Outdoor travel disables the policy
+      // entirely in isBaseLocationOnlyTravel(), so this wouldn't be reached if Outdoor is true.
+      return false;
+    }
+
+    if (isDaAllowedBaseLocation && !hasMarket) {
+      return true;
+    }
+
+    return false;
+  };
+
   const calculateTotals = () => {
     let totalKmVal = 0;
     let totalAmtVal = 0;
@@ -1520,11 +1645,15 @@ export default function ExpensePage() {
     let totalBikeCarKmVal = 0;
     let totalBikeCarAmtVal = 0;
 
+    const isBaseLocOnly = isBaseLocationOnlyTravel();
+    const isDaAllowed = isDailyAllowanceAllowed();
+
     itineraries.forEach((leg, index) => {
       const legNum = index + 1;
       const legKm = parseFloat(leg.km) || 0;
-      const legAmt = parseFloat(leg.amount) || 0;
-      const subAmt = parseFloat(leg.sub_amount) || 0;
+      const isCommute = isBaseLocOnly && isCommuteLeg(leg);
+      const legAmt = isCommute ? 0 : (parseFloat(leg.amount) || 0);
+      const subAmt = isCommute ? 0 : (parseFloat(leg.sub_amount) || 0);
       const otherAmt = parseFloat(leg.oth_amount) || 0;
 
       if (leg.mode === "Bike" || leg.mode === "Car") {
@@ -1543,7 +1672,7 @@ export default function ExpensePage() {
       totalOtherVal += otherAmt;
 
       if (legNum === 1) {
-        const daAmt = parseFloat(leg.da) || 0;
+        const daAmt = isDaAllowed ? (parseFloat(leg.da) || 0) : 0;
         const hotelAmt = parseFloat(leg.hotel) || 0;
         const lpAmt = parseFloat(leg.local_purchase) || 0;
         totalAmtVal += daAmt + hotelAmt + lpAmt;
@@ -2025,6 +2154,32 @@ export default function ExpensePage() {
     setItineraries(processedItineraries);
 
     if (!validateClaim(processedItineraries)) return;
+
+    // Check base reporting location restriction
+    if (isBaseLocationOnlyTravel() && !acknowledgedBaseLocWarning) {
+      const hasCommuteTA = itineraries.some(isCommuteLeg);
+      const isDAAllowed = isDailyAllowanceAllowed();
+
+      let msg = "";
+      if (hasCommuteTA && !isDAAllowed) {
+        msg = "You are not eligible for travel allowance (TA) for your home-to-work commute and daily allowance (DA) at your base reporting location.";
+      } else if (!isDAAllowed) {
+        msg = "You are not eligible for daily allowance (DA) at your base reporting location.";
+      } else if (hasCommuteTA) {
+        msg = "You are not eligible for travel allowance (TA) for your home-to-work commute.";
+      }
+
+      if (msg) {
+        setValidationModal({
+          show: true,
+          title: "⚠️ TA/DA Policy Alert",
+          message: msg
+        });
+        setAcknowledgedBaseLocWarning(true);
+        return;
+      }
+    }
+
     setShowConfirmModal(true);
   };
 
@@ -2048,6 +2203,9 @@ export default function ExpensePage() {
         return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())} ${pad(d.getHours())}:${pad(d.getMinutes())}:${pad(d.getSeconds())}`;
       };
       formData.append("client_timestamp", getLocalTimestamp());
+
+      const isBaseLocOnly = isBaseLocationOnlyTravel();
+      const isDAAllowed = isDailyAllowanceAllowed();
 
       const itinerariesData = itineraries.map((leg, index) => {
         const legNum = index + 1;
@@ -2095,10 +2253,10 @@ export default function ExpensePage() {
           to: leg.to,
           mode: leg.mode,
           km: leg.km,
-          amount: leg.amount,
+          amount: (isBaseLocOnly && isCommuteLeg(leg)) ? "0" : leg.amount,
           sub_mode: leg.sub_mode,
-          sub_amount: leg.sub_amount,
-          da: legNum === 1 ? leg.da : "0",
+          sub_amount: (isBaseLocOnly && isCommuteLeg(leg)) ? "0" : leg.sub_amount,
+          da: legNum === 1 ? (isDAAllowed ? leg.da : "0") : "0",
           hotel: legNum === 1 ? leg.hotel : "0",
           local_purchase: legNum === 1 ? leg.local_purchase : "0",
           company_provided: legNum === 1 ? !!leg.company_provided : false,

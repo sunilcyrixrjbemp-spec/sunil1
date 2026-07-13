@@ -60,6 +60,7 @@ async function runRetroactivePolicyCheck(env, existingUser, newBaseLocation, tim
 
     let expenseDeducted = 0;
     let policyApplied = false;
+    const retroLegLogs = [];
 
     for (const leg of legs) {
       const isCommute = checkIsCommuteLeg(leg, baseLocations);
@@ -70,6 +71,34 @@ async function runRetroactivePolicyCheck(env, existingUser, newBaseLocation, tim
       const newTA = isCommute ? 0.0 : currentTA;
       const newSubAmt = isCommute ? 0.0 : currentSubAmt;
       const newDA = isDaAllowed ? currentDA : 0.0;
+
+      if (currentTA > newTA) {
+        retroLegLogs.push({
+          leg_number: leg.leg_number,
+          field_name: "travel_amount",
+          old_value: currentTA,
+          new_value: newTA,
+          comment: "[Retroactive] Base Location commute TA not eligible"
+        });
+      }
+      if (currentSubAmt > newSubAmt) {
+        retroLegLogs.push({
+          leg_number: leg.leg_number,
+          field_name: "sub_amount",
+          old_value: currentSubAmt,
+          new_value: newSubAmt,
+          comment: "[Retroactive] Base Location commute local conveyance not eligible"
+        });
+      }
+      if (currentDA > newDA) {
+        retroLegLogs.push({
+          leg_number: leg.leg_number,
+          field_name: "da_amount",
+          old_value: currentDA,
+          new_value: newDA,
+          comment: "[Retroactive] DA not applicable at base location"
+        });
+      }
 
       const diff = (currentTA - newTA) + (currentSubAmt - newSubAmt) + (currentDA - newDA);
       if (diff > 0) {
@@ -103,6 +132,16 @@ async function runRetroactivePolicyCheck(env, existingUser, newBaseLocation, tim
         await runWrite(env,
           "INSERT INTO expense_edit_logs (expense_id, comment, editor_name, editor_role, editor_id) VALUES (?, ?, 'SYSTEM', 'Policy', 0)",
           [exp.id, `[Retroactive] ${policyComment}`]
+        );
+      }
+
+      // Save leg-level edit history logs
+      for (const log of retroLegLogs) {
+        await runWrite(env,
+          `INSERT INTO expense_edit_logs 
+           (expense_id, leg_number, field_name, old_value, new_value, comment, editor_name, editor_role, editor_id)
+           VALUES (?, ?, ?, ?, ?, ?, 'SYSTEM', 'Policy', 0)`,
+          [exp.id, log.leg_number, log.field_name, String(log.old_value), String(log.new_value), log.comment]
         );
       }
 
