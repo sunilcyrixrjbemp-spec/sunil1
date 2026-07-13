@@ -43,6 +43,100 @@ async function queryInChunks(db, queryTemplate, ids, chunkSize = 50) {
   return allResults;
 }
 
+// ─── Base Location Policy Shared Utilities ──────────────────────────────────
+// Keywords used across all policy checks
+const MARKET_WORDS = ["market", "bazaar", "bazar", "mandi", "haat"];
+const STATION_WORDS = ["station", "railway", "bus stand", "bus stop", "bus depot", "bus adda", "rly"];
+const DA_ALLOWED_BASES = ["pbm", "mathura das mathur", "mdm"];
+const RESIDENCE_SKIP_WORDS = [...MARKET_WORDS, ...STATION_WORDS];
+
+/**
+ * Determines whether a day's itinerary qualifies as base-location-only travel.
+ * Returns { isBaseLocOnly, isDaAllowed, baseLocations }
+ */
+export function computeBaseLocPolicy(baseReportingLocation, itineraries) {
+  const baseLocations = (baseReportingLocation || "")
+    .split(",").map(x => x.trim().toLowerCase()).filter(Boolean);
+
+  if (baseLocations.length === 0) return { isBaseLocOnly: false, isDaAllowed: true, baseLocations: [] };
+
+  // Must have visited at least one base location (dropdown or manual match)
+  const hasVisitedBase = itineraries.some(leg =>
+    baseLocations.includes((leg.from || "").trim().toLowerCase()) ||
+    baseLocations.includes((leg.to || "").trim().toLowerCase())
+  );
+
+  if (!hasVisitedBase) return { isBaseLocOnly: false, isDaAllowed: true, baseLocations };
+
+  // Must NOT have visited any non-base official facility (dropdown selected)
+  const visitedNonBase = itineraries.some(leg => {
+    const f = (leg.from || "").trim().toLowerCase();
+    const t = (leg.to || "").trim().toLowerCase();
+    if (!leg.from_custom && !baseLocations.includes(f)) return true;
+    if (!leg.to_custom && !baseLocations.includes(t)) return true;
+    return false;
+  });
+
+  if (visitedNonBase) return { isBaseLocOnly: false, isDaAllowed: true, baseLocations };
+
+  // Determine DA eligibility
+  const hasStation = itineraries.some(leg => {
+    const f = (leg.from || "").trim().toLowerCase();
+    const t = (leg.to || "").trim().toLowerCase();
+    return STATION_WORDS.some(w => f.includes(w) || t.includes(w));
+  });
+
+  const hasMarket = itineraries.some(leg => {
+    const f = (leg.from || "").trim().toLowerCase();
+    const t = (leg.to || "").trim().toLowerCase();
+    return MARKET_WORDS.some(w => f.includes(w) || t.includes(w));
+  });
+
+  const isDaBase = baseLocations.some(loc => DA_ALLOWED_BASES.some(b => loc.includes(b)));
+
+  let isDaAllowed = false;
+  if (hasStation) {
+    isDaAllowed = itineraries.some(leg => (leg.travel_type || "").trim() === "Outdoor");
+  } else if (isDaBase && !hasMarket) {
+    isDaAllowed = true;
+  }
+
+  return { isBaseLocOnly: true, isDaAllowed, baseLocations };
+}
+
+/**
+ * Returns true if a leg is a commute leg (residence ↔ base location).
+ */
+export function checkIsCommuteLeg(leg, baseLocations) {
+  const f = (leg.from || "").trim().toLowerCase();
+  const t = (leg.to || "").trim().toLowerCase();
+  const fromIsResidence = !!leg.from_custom && !RESIDENCE_SKIP_WORDS.some(w => f.includes(w));
+  const toIsResidence = !!leg.to_custom && !RESIDENCE_SKIP_WORDS.some(w => t.includes(w));
+  const fromIsBase = baseLocations.includes(f);
+  const toIsBase = baseLocations.includes(t);
+  if (fromIsResidence && toIsBase) return true;
+  if (fromIsBase && toIsResidence) return true;
+  return false;
+}
+
+/**
+ * Builds a human-readable system policy comment for deduction_reason.
+ */
+export function buildPolicyComment(baseLocations, itineraries, isDaAllowed, date) {
+  const baseLabel = baseLocations.map(b => b.split(" ").map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(" ")).join(", ");
+  const commutedLegs = itineraries.filter(leg => checkIsCommuteLeg(leg, baseLocations));
+  const taDeducted = commutedLegs.reduce((s, leg) => s + parseFloat(leg.amount || "0") + parseFloat(leg.sub_amount || "0"), 0);
+  const daDeducted = !isDaAllowed ? itineraries.reduce((s, leg) => s + parseFloat(leg.da || "0"), 0) : 0;
+
+  const parts = [];
+  if (taDeducted > 0) parts.push(`Commute TA ₹${taDeducted.toFixed(0)} not eligible`);
+  if (daDeducted > 0) parts.push(`DA ₹${daDeducted.toFixed(0)} not applicable at base location`);
+  if (parts.length === 0) return "";
+
+  return `[Policy] Base: ${baseLabel} — ${parts.join("; ")}. Applied: ${date}.`;
+}
+
+
 export async function serializeExpenses(env, expenses, submittersMap) {
   if (!expenses || expenses.length === 0) return [];
 
@@ -1758,10 +1852,17 @@ export async function handleSubmitExpense(request, env, params, query, user) {
   let newAuto = 0.0;
   let calculatedTotal = 0.0;
 
+  // ── Base Location Policy ────────────────────────────────────────────────────
+  const { isBaseLocOnly, isDaAllowed, baseLocations } = computeBaseLocPolicy(
+    user.base_reporting_location || "",
+    itineraries
+  );
+
   for (const iti of itineraries) {
-    const travelAmt = parseFloat(iti.amount || "0.0");
-    const subAmt = parseFloat(iti.sub_amount || "0.0");
-    const daAmt = parseFloat(iti.da || "0.0");
+    const isCommute = isBaseLocOnly && checkIsCommuteLeg(iti, baseLocations);
+    const travelAmt = isCommute ? 0.0 : parseFloat(iti.amount || "0.0");
+    const subAmt = isCommute ? 0.0 : parseFloat(iti.sub_amount || "0.0");
+    const daAmt = isDaAllowed ? parseFloat(iti.da || "0.0") : 0.0;
     const hotelAmt = parseFloat(iti.hotel || "0.0");
     const otherAmt = parseFloat(iti.oth_amount || "0.0");
     const lpAmt = parseFloat(iti.local_purchase || "0.0");
@@ -2005,15 +2106,20 @@ export async function handleSubmitExpense(request, env, params, query, user) {
       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 0.0, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     `, [
       itiId, expenseCode, legNum, fromDist, toDist, iti.from || "", iti.to || "",
-      iti.mode || "Bike", parseFloat(iti.km || "0.0"), parseFloat(iti.amount || "0.0"),
-      iti.sub_mode || null, parseFloat(iti.sub_amount || "0.0"), parseFloat(iti.da || "0.0"),
+      iti.mode || "Bike", parseFloat(iti.km || "0.0"),
+      (isBaseLocOnly && checkIsCommuteLeg(iti, baseLocations)) ? 0.0 : parseFloat(iti.amount || "0.0"),
+      iti.sub_mode || null,
+      (isBaseLocOnly && checkIsCommuteLeg(iti, baseLocations)) ? 0.0 : parseFloat(iti.sub_amount || "0.0"),
+      isDaAllowed ? parseFloat(iti.da || "0.0") : 0.0,
       parseFloat(iti.hotel || "0.0"), parseFloat(iti.local_purchase || "0.0"), iti.oth_desc || null, parseFloat(iti.oth_amount || "0.0"),
       parseInt(iti.ws_assigned || "0", 10), parseInt(iti.ws_closed || "0", 10),
       parseInt(iti.ws_pms || "0", 10), parseInt(iti.ws_asset || "0", 10),
       iti.visit_purpose || "Field visit", 
       typeof iti.activity_details === "string" ? iti.activity_details : JSON.stringify(iti.activity_details || {}),
-      parseFloat(iti.km || "0.0"), parseFloat(iti.amount || "0.0"), parseFloat(iti.sub_amount || "0.0"),
-      parseFloat(iti.da || "0.0"), parseFloat(iti.hotel || "0.0"), parseFloat(iti.oth_amount || "0.0"),
+      parseFloat(iti.km || "0.0"),
+      (isBaseLocOnly && checkIsCommuteLeg(iti, baseLocations)) ? 0.0 : parseFloat(iti.amount || "0.0"),
+      (isBaseLocOnly && checkIsCommuteLeg(iti, baseLocations)) ? 0.0 : parseFloat(iti.sub_amount || "0.0"),
+      isDaAllowed ? parseFloat(iti.da || "0.0") : 0.0, parseFloat(iti.hotel || "0.0"), parseFloat(iti.oth_amount || "0.0"),
       parseFloat(iti.local_purchase || "0.0"), parseInt(iti.calibration_count || "0", 10),
       parseInt(iti.mobilise_asset_count || "0", 10)
     ]);
@@ -2127,11 +2233,181 @@ export async function handleSubmitExpense(request, env, params, query, user) {
     }
   }
 
+  // ── Write policy comment if base location restrictions were applied ────────
+  if (isBaseLocOnly && newExpId) {
+    try {
+      const policyComment = buildPolicyComment(baseLocations, itineraries, isDaAllowed, date);
+      if (policyComment) {
+        await runWrite(env,
+          "INSERT INTO expense_edit_logs (expense_id, comment, editor_name, editor_role, editor_id) VALUES (?, ?, 'SYSTEM', 'Policy', 0)",
+          [newExpId, policyComment]
+        );
+      }
+    } catch (e) {
+      console.error("Failed to write base location policy comment:", e.message);
+    }
+  }
+
   return jsonResponse({
     status: "success",
     message: "Expense claim submitted successfully.",
     expense_id: newExpId,
     expense_code: expenseCode
+  });
+}
+
+/**
+ * POST /api/expense/retroactive-policy-check
+ * Called by admin panel when base_reporting_location is assigned/changed for a user.
+ * Re-evaluates all current-month non-rejected expenses for that user and corrects
+ * travel_amount and da_amount according to the base location policy.
+ */
+export async function handleRetroactiveBasePolicyCheck(request, env, params, query, adminUser) {
+  const body = await request.json().catch(() => ({}));
+  const targetUserId = body.user_id;
+  const baseReportingLocation = body.base_reporting_location || "";
+
+  if (!targetUserId) {
+    return jsonResponse({ error: "user_id is required" }, 400);
+  }
+
+  const timestamp = new Date().toISOString();
+  const today = new Date();
+  const currentMonth = ["January","February","March","April","May","June",
+    "July","August","September","October","November","December"][today.getMonth()];
+  const currentYear = today.getFullYear();
+
+  // Fetch target user record
+  const targetUser = await env.DB.prepare("SELECT * FROM users WHERE user_id = ? OR id = ?")
+    .bind(targetUserId, parseInt(targetUserId, 10) || 0).first().catch(() => null);
+  if (!targetUser) {
+    return jsonResponse({ error: "User not found" }, 404);
+  }
+
+  // Fetch all active (non-rejected, non-draft) expenses for this user in current month
+  const activeExpenses = await env.DB.prepare(`
+    SELECT id, expense_code, itinerary, amount, original_amount
+    FROM expenses
+    WHERE user_id = ? AND LOWER(month) = LOWER(?) AND year = ?
+      AND LOWER(status) NOT IN ('rejected', 'returned_to_draft')
+  `).bind(targetUser.id, currentMonth, currentYear).all().catch(() => ({ results: [] }));
+
+  const expenses = activeExpenses.results || [];
+  if (expenses.length === 0) {
+    return jsonResponse({
+      success: true,
+      message: `No active expenses found for ${targetUser.name} in ${currentMonth} ${currentYear}.`,
+      affected_expenses: 0,
+      total_deducted: 0
+    });
+  }
+
+  let affectedCount = 0;
+  let totalDeducted = 0;
+
+  for (const exp of expenses) {
+    // Fetch itinerary legs for this expense
+    const legsRes = await env.DB.prepare(`
+      SELECT itinerary_id, leg_number, from_location, to_location, travel_mode, sub_mode,
+        distance_km, travel_amount, sub_amount, da_amount, hotel_amount, local_purchase,
+        other_amount, original_travel_amount, original_sub_amount, original_da_amount,
+        travel_type, from_location AS "from", to_location AS "to"
+      FROM expense_itineraries WHERE exp_id = ? ORDER BY leg_number ASC
+    `).bind(exp.expense_code).all().catch(() => ({ results: [] }));
+
+    const legs = (legsRes.results || []).map(leg => ({
+      ...leg,
+      from: leg.from_location || "",
+      to: leg.to_location || "",
+      // All saved legs are from dropdown — no custom flag in DB, treat as official
+      from_custom: false,
+      to_custom: false,
+      amount: leg.travel_amount,
+      sub_amount: leg.sub_amount,
+      da: leg.da_amount,
+      travel_type: leg.travel_type || ""
+    }));
+
+    const { isBaseLocOnly, isDaAllowed, baseLocations } = computeBaseLocPolicy(
+      baseReportingLocation,
+      legs
+    );
+
+    if (!isBaseLocOnly) continue; // No restriction applies to this expense
+
+    let expenseDeducted = 0;
+    let policyApplied = false;
+
+    for (const leg of legs) {
+      const isCommute = checkIsCommuteLeg(leg, baseLocations);
+      const currentTA = parseFloat(leg.travel_amount || "0");
+      const currentSubAmt = parseFloat(leg.sub_amount || "0");
+      const currentDA = parseFloat(leg.da_amount || "0");
+
+      const newTA = isCommute ? 0.0 : currentTA;
+      const newSubAmt = isCommute ? 0.0 : currentSubAmt;
+      const newDA = isDaAllowed ? currentDA : 0.0;
+
+      const diff = (currentTA - newTA) + (currentSubAmt - newSubAmt) + (currentDA - newDA);
+      if (diff > 0) {
+        policyApplied = true;
+        expenseDeducted += diff;
+
+        await runWrite(env, `
+          UPDATE expense_itineraries
+          SET travel_amount = ?, sub_amount = ?, da_amount = ?, updated_at = ?
+          WHERE itinerary_id = ?
+        `, [newTA, newSubAmt, newDA, timestamp, leg.itinerary_id]);
+      }
+    }
+
+    if (policyApplied) {
+      // Recalculate total for this expense
+      const newTotals = await env.DB.prepare(`
+        SELECT SUM(travel_amount + sub_amount + da_amount + hotel_amount + other_amount + local_purchase) as new_total
+        FROM expense_itineraries WHERE exp_id = ?
+      `).bind(exp.expense_code).first().catch(() => ({ new_total: 0 }));
+
+      const newTotal = parseFloat(newTotals?.new_total || 0);
+
+      await runWrite(env, `
+        UPDATE expenses SET amount = ?, da_amount = (
+          SELECT SUM(da_amount) FROM expense_itineraries WHERE exp_id = ?
+        ), updated_at = ? WHERE id = ?
+      `, [newTotal, exp.expense_code, timestamp, exp.id]);
+
+      // Write policy comment to expense_edit_logs
+      const policyComment = buildPolicyComment(baseLocations, legs, isDaAllowed, exp.itinerary || timestamp.split("T")[0]);
+      if (policyComment) {
+        await runWrite(env,
+          "INSERT INTO expense_edit_logs (expense_id, comment, editor_name, editor_role, editor_id) VALUES (?, ?, 'SYSTEM', 'Policy', 0)",
+          [exp.id, `[Retroactive] ${policyComment}`]
+        );
+      }
+
+      // Notify user
+      await runWrite(env,
+        "INSERT INTO notifications (user_id, title, description, type, read, link, created_at) VALUES (?, ?, ?, 'warning', 0, '/expense', ?)",
+        [
+          targetUser.user_id,
+          "⚠️ Expense Adjusted — Base Location Policy",
+          `Your expense for ${exp.itinerary || "this period"} has been adjusted as per base location TA/DA policy. TA deducted for home-to-work commute.`,
+          timestamp
+        ]
+      );
+
+      affectedCount++;
+      totalDeducted += expenseDeducted;
+    }
+  }
+
+  return jsonResponse({
+    success: true,
+    message: affectedCount > 0
+      ? `Base location policy applied. ${affectedCount} expense(s) adjusted for ${targetUser.name}. Total deducted: ₹${totalDeducted.toFixed(2)}.`
+      : `No adjustments needed. Existing expenses for ${targetUser.name} already comply with the base location policy.`,
+    affected_expenses: affectedCount,
+    total_deducted: Math.round(totalDeducted * 100) / 100
   });
 }
 

@@ -59,7 +59,7 @@ import {
   handleGetEngineerAdvance, handleSaveEngineerAdvance, handleGetExpenseDetails, handleDeleteExpense,
   handleGetMonthSummary, handleGetEngineerMonthClaims, handleGetConsolidatedReport,
   handleServeExpenseAttachment, handleGetTeamUsers, handleGetKpiAppraisal, handleSaveKpiAppraisal,
-  handleGetPolicyRules
+  handleGetPolicyRules, handleRetroactiveBasePolicyCheck
 } from "./routes/expense.js";
 
 // CORS Headers Configuration
@@ -264,6 +264,7 @@ router.get("/api/expense/engineer-advance", handleGetEngineerAdvance, true);
 router.post("/api/expense/engineer-advance", handleSaveEngineerAdvance, true);
 router.get("/api/expense/consolidated-report", handleGetConsolidatedReport, true);
 router.get("/api/expense/policy-rules", handleGetPolicyRules, true);
+router.post("/api/expense/retroactive-policy-check", handleRetroactiveBasePolicyCheck, true);
 router.get("/api/expense", handleListExpenses, true);
 router.post("/api/expense", handleSubmitExpense, true);
 router.get("/api/expense/:id", handleGetExpenseDetails, true);

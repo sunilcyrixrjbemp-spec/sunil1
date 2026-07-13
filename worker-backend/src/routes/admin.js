@@ -1,5 +1,6 @@
 import { runWrite, runBatchWrite } from "../utils/db.js";
 import { getPasswordHash, verifyPassword } from "../utils/security.js";
+import { computeBaseLocPolicy, checkIsCommuteLeg, buildPolicyComment } from "./expense.js";
 
 function jsonResponse(data, status = 200) {
   return new Response(JSON.stringify(data), {
@@ -7,6 +8,126 @@ function jsonResponse(data, status = 200) {
     headers: { "Content-Type": "application/json" }
   });
 }
+
+/**
+ * Internal helper: Re-evaluate existing expenses for a user when their base location changes.
+ * Corrects travel_amount and da_amount on all current-month active expenses,
+ * updates the expense total, writes a policy comment, and notifies the user.
+ */
+async function runRetroactivePolicyCheck(env, existingUser, newBaseLocation, timestamp) {
+  const today = new Date();
+  const MONTH_NAMES = ["January","February","March","April","May","June",
+    "July","August","September","October","November","December"];
+  const currentMonth = MONTH_NAMES[today.getMonth()];
+  const currentYear = today.getFullYear();
+
+  // Fetch active expenses for this user (current month, not rejected/draft)
+  const expensesRes = await env.DB.prepare(`
+    SELECT id, expense_code, itinerary, amount, original_amount
+    FROM expenses
+    WHERE user_id = ? AND LOWER(month) = LOWER(?) AND year = ?
+      AND LOWER(status) NOT IN ('rejected', 'returned_to_draft')
+  `).bind(existingUser.id, currentMonth, currentYear).all().catch(() => ({ results: [] }));
+
+  const expenses = expensesRes.results || [];
+  if (expenses.length === 0) return { affected_expenses: 0, total_deducted: 0 };
+
+  let affectedCount = 0;
+  let totalDeducted = 0;
+
+  for (const exp of expenses) {
+    const legsRes = await env.DB.prepare(`
+      SELECT itinerary_id, leg_number, from_location, to_location, travel_mode, sub_mode,
+        distance_km, travel_amount, sub_amount, da_amount, hotel_amount, local_purchase,
+        other_amount, travel_type
+      FROM expense_itineraries WHERE exp_id = ? ORDER BY leg_number ASC
+    `).bind(exp.expense_code).all().catch(() => ({ results: [] }));
+
+    const legs = (legsRes.results || []).map(leg => ({
+      ...leg,
+      from: leg.from_location || "",
+      to: leg.to_location || "",
+      from_custom: false,
+      to_custom: false,
+      amount: leg.travel_amount,
+      sub_amount: leg.sub_amount,
+      da: leg.da_amount,
+      travel_type: leg.travel_type || ""
+    }));
+
+    const { isBaseLocOnly, isDaAllowed, baseLocations } = computeBaseLocPolicy(newBaseLocation, legs);
+    if (!isBaseLocOnly) continue;
+
+    let expenseDeducted = 0;
+    let policyApplied = false;
+
+    for (const leg of legs) {
+      const isCommute = checkIsCommuteLeg(leg, baseLocations);
+      const currentTA = parseFloat(leg.travel_amount || "0");
+      const currentSubAmt = parseFloat(leg.sub_amount || "0");
+      const currentDA = parseFloat(leg.da_amount || "0");
+
+      const newTA = isCommute ? 0.0 : currentTA;
+      const newSubAmt = isCommute ? 0.0 : currentSubAmt;
+      const newDA = isDaAllowed ? currentDA : 0.0;
+
+      const diff = (currentTA - newTA) + (currentSubAmt - newSubAmt) + (currentDA - newDA);
+      if (diff > 0) {
+        policyApplied = true;
+        expenseDeducted += diff;
+
+        await runWrite(env, `
+          UPDATE expense_itineraries
+          SET travel_amount = ?, sub_amount = ?, da_amount = ?, updated_at = ?
+          WHERE itinerary_id = ?
+        `, [newTA, newSubAmt, newDA, timestamp, leg.itinerary_id]);
+      }
+    }
+
+    if (policyApplied) {
+      const newTotals = await env.DB.prepare(`
+        SELECT SUM(travel_amount + sub_amount + da_amount + hotel_amount + other_amount + local_purchase) AS new_total
+        FROM expense_itineraries WHERE exp_id = ?
+      `).bind(exp.expense_code).first().catch(() => ({ new_total: 0 }));
+
+      const newTotal = parseFloat(newTotals?.new_total || 0);
+
+      await runWrite(env, `
+        UPDATE expenses SET amount = ?, da_amount = (
+          SELECT SUM(da_amount) FROM expense_itineraries WHERE exp_id = ?
+        ), updated_at = ? WHERE id = ?
+      `, [newTotal, exp.expense_code, timestamp, exp.id]);
+
+      const policyComment = buildPolicyComment(baseLocations, legs, isDaAllowed, exp.itinerary || timestamp.split("T")[0]);
+      if (policyComment) {
+        await runWrite(env,
+          "INSERT INTO expense_edit_logs (expense_id, comment, editor_name, editor_role, editor_id) VALUES (?, ?, 'SYSTEM', 'Policy', 0)",
+          [exp.id, `[Retroactive] ${policyComment}`]
+        );
+      }
+
+      // Notify the user
+      await runWrite(env,
+        "INSERT INTO notifications (user_id, title, description, type, read, link, created_at) VALUES (?, ?, ?, 'warning', 0, '/expense', ?)",
+        [
+          existingUser.user_id,
+          "⚠️ Expense Adjusted — Base Location Policy",
+          `Your expense for ${exp.itinerary || "this period"} has been adjusted per base location TA/DA policy. Commute TA has been deducted.`,
+          timestamp
+        ]
+      );
+
+      affectedCount++;
+      totalDeducted += expenseDeducted;
+    }
+  }
+
+  return {
+    affected_expenses: affectedCount,
+    total_deducted: Math.round(totalDeducted * 100) / 100
+  };
+}
+
 
 /**
  * GET /api/admin/users
@@ -105,7 +226,21 @@ export async function handleSaveUser(request, env, params, query, adminUser) {
       }
     }
 
-    return jsonResponse({ status: "success", message: "User updated successfully" });
+    // ── Retroactive base location policy check ─────────────────────────────────
+    let retroSummary = null;
+    if (body.base_reporting_location !== undefined && body.base_reporting_location !== (existing.base_reporting_location || "")) {
+      try {
+        retroSummary = await runRetroactivePolicyCheck(env, existing, body.base_reporting_location, timestamp);
+      } catch (e) {
+        console.error("Retroactive policy check failed:", e.message);
+      }
+    }
+
+    return jsonResponse({
+      status: "success",
+      message: "User updated successfully",
+      ...(retroSummary ? { policy_adjustment: retroSummary } : {})
+    });
   } else {
     // CREATE new user
     const cleanUserId = (user_id || body.e_code || "").trim();
@@ -671,12 +806,34 @@ export async function handleUpdateUser(request, env, params, query, adminUser) {
     await runBatchWrite(env, batchStatements);
   }
 
+  // ── Retroactive base location policy check (if location changed) ────────────
+  let retroSummary = null;
+  const oldBaseLocation = user.base_reporting_location || "";
+  const newBaseLocation = body.base_reporting_location;
+  if (newBaseLocation !== undefined && newBaseLocation !== oldBaseLocation) {
+    try {
+      retroSummary = await runRetroactivePolicyCheck(env, user, newBaseLocation, timestamp);
+    } catch (e) {
+      console.error("Retroactive policy check failed in handleUpdateUser:", e.message);
+    }
+  }
+
   // Return updated user
   const updatedUser = await env.DB.prepare("SELECT * FROM users WHERE id = ?").bind(user.id).first();
   const roleRow = await env.DB.prepare("SELECT role FROM user_roles WHERE user_id = ?").bind(updatedUser.user_id).first();
   const result = { ...updatedUser, role: roleRow?.role || "user" };
   delete result.hashed_password;
-  return jsonResponse(result);
+
+  return jsonResponse({
+    ...result,
+    ...(retroSummary && retroSummary.affected_expenses > 0 ? {
+      policy_adjustment: {
+        message: `Base location policy applied. ${retroSummary.affected_expenses} expense(s) adjusted. Total deducted: ₹${retroSummary.total_deducted}.`,
+        affected_expenses: retroSummary.affected_expenses,
+        total_deducted: retroSummary.total_deducted
+      }
+    } : {})
+  });
 }
 
 
