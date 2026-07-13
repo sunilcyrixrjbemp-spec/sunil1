@@ -1321,14 +1321,24 @@ export async function handleOneTimeAdjust(request, env, params, query, adminUser
   const diagMappedUsers = await env.DB.prepare("SELECT COUNT(*) as count FROM users WHERE base_reporting_location IS NOT NULL AND base_reporting_location != ''").first().then(r => r?.count).catch(() => 0);
   const diagJulyClaims = await env.DB.prepare("SELECT COUNT(*) as count FROM expenses WHERE LOWER(month) = 'july' AND year = 2026").first().then(r => r?.count).catch(() => 0);
 
-  // Trace expense 894 diagnostic
-  const exp894 = await env.DB.prepare("SELECT * FROM expenses WHERE id = 894 OR expense_code LIKE '%894'").first().catch(() => null);
-  let exp894Trace = "Not found";
-  if (exp894) {
-    const legs894 = await env.DB.prepare("SELECT * FROM expense_itineraries WHERE exp_id = ?").bind(exp894.expense_code).all().catch(() => ({ results: [] }));
-    const legDetails = (legs894.results || []).map(l => `${l.leg_number}: ${l.from_location}->${l.to_location} (TA=${l.travel_amount}, DA=${l.da_amount})`).join(" | ");
-    exp894Trace = `Code:${exp894.expense_code} User:${exp894.user_id} Month:${exp894.month} Legs:[${legDetails}]`;
+  // Trace specific target expenses to analyze why they got TA
+  const idsToTrace = [9, 39, 40, 41, 894];
+  const traceResults = [];
+  for (const id of idsToTrace) {
+    const exp = await env.DB.prepare("SELECT * FROM expenses WHERE id = ? OR expense_code LIKE ?")
+      .bind(id, `%-${String(id).padStart(6, '0')}`).first().catch(() => null);
+    if (exp) {
+      const userRec = await env.DB.prepare("SELECT name, base_reporting_location FROM users WHERE id = ? OR user_id = ?")
+        .bind(exp.user_id, exp.user_id).first().catch(() => null);
+      const userStr = userRec ? `${userRec.name} (Base:${userRec.base_reporting_location})` : `User:${exp.user_id}`;
+      const legs = await env.DB.prepare("SELECT * FROM expense_itineraries WHERE exp_id = ?").bind(exp.expense_code).all().catch(() => ({ results: [] }));
+      const legDetails = (legs.results || []).map(l => `${l.leg_number}:${l.from_location}->${l.to_location}(TA=${l.travel_amount},Sub=${l.sub_amount},DA=${l.da_amount},fDist=${l.from_district},tDist=${l.to_district})`).join(" | ");
+      traceResults.push(`ID ${id} (${exp.expense_code}, ${userStr}): Month:${exp.month}, Amount:${exp.amount}, Legs:[${legDetails}]`);
+    } else {
+      traceResults.push(`ID ${id} not found`);
+    }
   }
+  const exp894Trace = traceResults.join(" || ");
   const diagSampleMonths = await env.DB.prepare("SELECT DISTINCT month, year FROM expenses LIMIT 5").all().then(r => (r.results || []).map(x => `${x.month} ${x.year}`).join(", ")).catch(() => "error");
   const diagSampleBases = await env.DB.prepare("SELECT DISTINCT base_reporting_location FROM users WHERE base_reporting_location IS NOT NULL AND base_reporting_location != '' LIMIT 5").all().then(r => (r.results || []).map(x => x.base_reporting_location).join(", ")).catch(() => "error");
 
