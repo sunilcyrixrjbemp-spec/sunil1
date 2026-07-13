@@ -2396,13 +2396,18 @@ export async function handleRetroactiveBasePolicyCheck(request, env, params, que
       SELECT itinerary_id, leg_number, from_location, to_location, travel_mode, sub_mode,
         distance_km, travel_amount, sub_amount, da_amount, hotel_amount, local_purchase,
         other_amount, original_travel_amount, original_sub_amount, original_da_amount,
-        travel_type, from_location AS "from", to_location AS "to"
+        from_district, to_district, from_location AS "from", to_location AS "to"
       FROM expense_itineraries WHERE exp_id = ? ORDER BY leg_number ASC
     `).bind(exp.expense_code).all().catch(() => ({ results: [] }));
 
     const legs = (legsRes.results || []).map(leg => {
       const fromLoc = (leg.from_location || "").trim().toLowerCase();
       const toLoc = (leg.to_location || "").trim().toLowerCase();
+      const fromDist = (leg.from_district || "").trim().toLowerCase();
+      const toDist = (leg.to_district || "").trim().toLowerCase();
+      
+      const isOutdoor = fromDist && toDist && fromDist !== toDist;
+      const travelType = isOutdoor ? "Outdoor" : "In-District";
       
       const fromCustom = fromLoc && !officialHospitals.has(fromLoc);
       const toCustom = toLoc && !officialHospitals.has(toLoc);
@@ -2416,7 +2421,7 @@ export async function handleRetroactiveBasePolicyCheck(request, env, params, que
         amount: leg.travel_amount,
         sub_amount: leg.sub_amount,
         da: leg.da_amount,
-        travel_type: leg.travel_type || ""
+        travel_type: travelType
       };
     });
 

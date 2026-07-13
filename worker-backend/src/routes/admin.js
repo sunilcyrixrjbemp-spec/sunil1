@@ -45,13 +45,18 @@ async function runRetroactivePolicyCheck(env, existingUser, newBaseLocation, tim
     const legsRes = await env.DB.prepare(`
       SELECT itinerary_id, leg_number, from_location, to_location, travel_mode, sub_mode,
         distance_km, travel_amount, sub_amount, da_amount, hotel_amount, local_purchase,
-        other_amount, travel_type
+        other_amount, from_district, to_district
       FROM expense_itineraries WHERE exp_id = ? ORDER BY leg_number ASC
     `).bind(exp.expense_code).all().catch(() => ({ results: [] }));
 
     const legs = (legsRes.results || []).map(leg => {
       const fromLoc = (leg.from_location || "").trim().toLowerCase();
       const toLoc = (leg.to_location || "").trim().toLowerCase();
+      const fromDist = (leg.from_district || "").trim().toLowerCase();
+      const toDist = (leg.to_district || "").trim().toLowerCase();
+      
+      const isOutdoor = fromDist && toDist && fromDist !== toDist;
+      const travelType = isOutdoor ? "Outdoor" : "In-District";
       
       // A location is custom if it is not found in the official dropdown hospitals list
       const fromCustom = fromLoc && !officialHospitals.has(fromLoc);
@@ -66,7 +71,7 @@ async function runRetroactivePolicyCheck(env, existingUser, newBaseLocation, tim
         amount: leg.travel_amount,
         sub_amount: leg.sub_amount,
         da: leg.da_amount,
-        travel_type: leg.travel_type || ""
+        travel_type: travelType
       };
     });
 
@@ -1360,11 +1365,42 @@ export async function handleOneTimeAdjust(request, env, params, query, adminUser
         const exps = expensesRes.results || [];
         for (const exp of exps.slice(0, 1)) {
           const legsRes = await env.DB.prepare(`
-            SELECT * FROM expense_itineraries LIMIT 1
-          `).all().catch(e => ({ results: [], error: e.message }));
+            SELECT itinerary_id, leg_number, from_location, to_location, travel_mode, sub_mode,
+              distance_km, travel_amount, sub_amount, da_amount, hotel_amount, local_purchase,
+              other_amount, from_district, to_district
+            FROM expense_itineraries WHERE exp_id = ? ORDER BY leg_number ASC
+          `).bind(exp.expense_code).all().catch(() => ({ results: [] }));
+          
           const rawLegs = legsRes.results || [];
-          const keys = rawLegs.length > 0 ? Object.keys(rawLegs[0]).join(",") : "empty";
-          traceLogs.push(`${user.name}: itiCols:[${keys}] err:${legsRes.error || "none"}`);
+          const legs = rawLegs.map(leg => {
+            const fromLoc = (leg.from_location || "").trim().toLowerCase();
+            const toLoc = (leg.to_location || "").trim().toLowerCase();
+            const fromDist = (leg.from_district || "").trim().toLowerCase();
+            const toDist = (leg.to_district || "").trim().toLowerCase();
+            const isOutdoor = fromDist && toDist && fromDist !== toDist;
+            const travelType = isOutdoor ? "Outdoor" : "In-District";
+            const fromCustom = fromLoc && !officialHospitals.has(fromLoc);
+            const toCustom = toLoc && !officialHospitals.has(toLoc);
+            return {
+              ...leg,
+              from: leg.from_location || "",
+              to: leg.to_location || "",
+              from_custom: fromCustom,
+              to_custom: toCustom,
+              amount: leg.travel_amount,
+              sub_amount: leg.sub_amount,
+              da: leg.da_amount,
+              travel_type: travelType
+            };
+          });
+
+          const { isBaseLocOnly, isDaAllowed } = computeBaseLocPolicy(
+            user.base_reporting_location,
+            legs
+          );
+
+          const legLocs = legs.map(l => `${l.from_location}->${l.to_location} (${l.travel_type})`).join(" | ");
+          traceLogs.push(`${user.name}(Base:${user.base_reporting_location}): code:${exp.expense_code} legs:[${legLocs}] isBaseOnly:${isBaseLocOnly} isDa:${isDaAllowed}`);
         }
       }
     } catch (e) {
