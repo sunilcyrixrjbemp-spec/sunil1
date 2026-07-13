@@ -1333,7 +1333,7 @@ export async function handleOneTimeAdjust(request, env, params, query, adminUser
   const adjustedUsers = [];
   let totalExpensesAdjusted = 0;
   let totalDeductionsAmount = 0;
-
+  const traceLogs = [];
   for (const user of users) {
     try {
       const summary = await runRetroactivePolicyCheck(env, user, user.base_reporting_location, timestamp);
@@ -1348,12 +1348,52 @@ export async function handleOneTimeAdjust(request, env, params, query, adminUser
         totalExpensesAdjusted += summary.affected_expenses;
         totalDeductionsAmount += summary.total_deducted;
       }
+
+      // Collect trace for debugging a few users
+      if (traceLogs.length < 3) {
+        const expensesRes = await env.DB.prepare(`
+          SELECT id, expense_code, itinerary, amount, original_amount, da_amount
+          FROM expenses
+          WHERE user_id = ? AND LOWER(month) = 'july' AND year = 2026
+            AND LOWER(status) NOT IN ('rejected', 'returned_to_draft')
+        `).bind(user.id).all().catch(() => ({ results: [] }));
+        const exps = expensesRes.results || [];
+        for (const exp of exps.slice(0, 1)) {
+          const legsRes = await env.DB.prepare(`
+            SELECT from_location, to_location, travel_amount, sub_amount, da_amount, travel_type
+            FROM expense_itineraries WHERE exp_id = ? ORDER BY leg_number ASC
+          `).bind(exp.expense_code).all().catch(() => ({ results: [] }));
+          
+          const legs = (legsRes.results || []).map(leg => {
+            const fromLoc = (leg.from_location || "").trim().toLowerCase();
+            const toLoc = (leg.to_location || "").trim().toLowerCase();
+            const fromCustom = fromLoc && !officialHospitals.has(fromLoc);
+            const toCustom = toLoc && !officialHospitals.has(toLoc);
+            return {
+              from: leg.from_location || "",
+              to: leg.to_location || "",
+              from_custom: fromCustom,
+              to_custom: toCustom,
+              amount: leg.travel_amount,
+              sub_amount: leg.sub_amount,
+              da: leg.da_amount,
+              travel_type: leg.travel_type || ""
+            };
+          });
+
+          const { isBaseLocOnly, isDaAllowed } = computeBaseLocPolicy(user.base_reporting_location, legs);
+          const baseLocations = (user.base_reporting_location || "").split(",").map(x => x.trim().toLowerCase()).filter(Boolean);
+          const commuteStatuses = legs.map(l => `${l.from}->${l.to} (cust:${l.from_custom}/${l.to_custom}) commute:${checkIsCommuteLeg(l, baseLocations)}`).join(", ");
+          traceLogs.push(`${user.name}(Base:${user.base_reporting_location}): isBaseOnly:${isBaseLocOnly} isDaAllowed:${isDaAllowed} legs:[${commuteStatuses}]`);
+        }
+      }
     } catch (e) {
       console.error(`One-time adjust failed for user ${user.user_id}:`, e.message);
     }
   }
 
-  const diagMsg = `Users: [${diagSampleUsers}]. Expense IDs: [${sampleExpenseUserIds}]. July Claims: ${diagJulyClaims}.`;
+  const diagTrace = traceLogs.join(" | ");
+  const diagMsg = `Trace: [${diagTrace}]. July Claims: ${diagJulyClaims}.`;
 
   return jsonResponse({
     success: true,
@@ -1364,7 +1404,7 @@ export async function handleOneTimeAdjust(request, env, params, query, adminUser
       total_expenses_adjusted: totalExpensesAdjusted,
       total_deducted: totalDeductionsAmount,
       details: adjustedUsers,
-      diagnostics: { diagTotalUsers, diagMappedUsers, diagJulyClaims, diagSampleMonths, diagSampleBases, diagSampleUsers, sampleExpenseUserIds }
+      diagnostics: { diagTotalUsers, diagMappedUsers, diagJulyClaims, diagSampleMonths, diagSampleBases, diagSampleUsers, sampleExpenseUserIds, diagTrace }
     }
   });
 }
