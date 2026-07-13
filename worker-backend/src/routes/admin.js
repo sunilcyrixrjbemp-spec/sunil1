@@ -1308,6 +1308,10 @@ export async function handleOneTimeAdjust(request, env, params, query, adminUser
   const diagSampleMonths = await env.DB.prepare("SELECT DISTINCT month, year FROM expenses LIMIT 5").all().then(r => (r.results || []).map(x => `${x.month} ${x.year}`).join(", ")).catch(() => "error");
   const diagSampleBases = await env.DB.prepare("SELECT DISTINCT base_reporting_location FROM users WHERE base_reporting_location IS NOT NULL AND base_reporting_location != '' LIMIT 5").all().then(r => (r.results || []).map(x => x.base_reporting_location).join(", ")).catch(() => "error");
 
+  // Detailed inspect of user_id formats
+  const diagSampleExpenses = await env.DB.prepare("SELECT user_id, COUNT(*) as count FROM expenses WHERE LOWER(month) = 'july' AND year = 2026 GROUP BY user_id LIMIT 5").all().catch(() => ({ results: [] }));
+  const sampleExpenseUserIds = (diagSampleExpenses.results || []).map(x => `${typeof x.user_id}:${x.user_id} (${x.count} claims)`).join(", ");
+
   // Fetch all active users with mapped base locations
   const usersRes = await env.DB.prepare(`
     SELECT id, user_id, name, base_reporting_location FROM users
@@ -1315,6 +1319,8 @@ export async function handleOneTimeAdjust(request, env, params, query, adminUser
   `).all().catch(() => ({ results: [] }));
 
   const users = usersRes.results || [];
+  const diagSampleUsers = users.slice(0, 5).map(x => `id=${typeof x.id}:${x.id}, user_id=${typeof x.user_id}:${x.user_id}`).join(", ");
+
   if (users.length === 0) {
     return jsonResponse({ 
       success: true, 
@@ -1347,7 +1353,7 @@ export async function handleOneTimeAdjust(request, env, params, query, adminUser
     }
   }
 
-  const diagMsg = `Checked ${users.length} users. July 2026 claims in DB: ${diagJulyClaims}. Sample months: [${diagSampleMonths}]. Sample bases: [${diagSampleBases}].`;
+  const diagMsg = `Users: [${diagSampleUsers}]. Expense IDs: [${sampleExpenseUserIds}]. July Claims: ${diagJulyClaims}.`;
 
   return jsonResponse({
     success: true,
@@ -1358,7 +1364,7 @@ export async function handleOneTimeAdjust(request, env, params, query, adminUser
       total_expenses_adjusted: totalExpensesAdjusted,
       total_deducted: totalDeductionsAmount,
       details: adjustedUsers,
-      diagnostics: { diagTotalUsers, diagMappedUsers, diagJulyClaims, diagSampleMonths, diagSampleBases }
+      diagnostics: { diagTotalUsers, diagMappedUsers, diagJulyClaims, diagSampleMonths, diagSampleBases, diagSampleUsers, sampleExpenseUserIds }
     }
   });
 }
