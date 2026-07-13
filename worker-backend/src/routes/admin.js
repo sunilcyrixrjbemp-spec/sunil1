@@ -40,6 +40,7 @@ async function runRetroactivePolicyCheck(env, existingUser, newBaseLocation, tim
 
   let affectedCount = 0;
   let totalDeducted = 0;
+  const batchStatements = [];
 
   for (const exp of expenses) {
     const legsRes = await env.DB.prepare(`
@@ -125,60 +126,69 @@ async function runRetroactivePolicyCheck(env, existingUser, newBaseLocation, tim
         policyApplied = true;
         expenseDeducted += diff;
 
-        await runWrite(env, `
-        UPDATE expense_itineraries
-        SET travel_amount = ?, sub_amount = ?, da_amount = ?
-        WHERE itinerary_id = ?
-      `, [newTA, newSubAmt, newDA, leg.itinerary_id]);
+        batchStatements.push({
+          sql: `
+            UPDATE expense_itineraries
+            SET travel_amount = ?, sub_amount = ?, da_amount = ?
+            WHERE itinerary_id = ?
+          `,
+          params: [newTA, newSubAmt, newDA, leg.itinerary_id]
+        });
       }
     }
 
     if (policyApplied) {
-      const newTotals = await env.DB.prepare(`
-        SELECT SUM(travel_amount + sub_amount + da_amount + hotel_amount + other_amount + local_purchase) AS new_total
-        FROM expense_itineraries WHERE exp_id = ?
-      `).bind(exp.expense_code).first().catch(() => ({ new_total: 0 }));
+      const newTotal = parseFloat(exp.amount || 0) - expenseDeducted;
+      const newDaTotal = legs.reduce((sum, l) => {
+        const isCommute = checkIsCommuteLeg(l, baseLocations);
+        const currentDA = parseFloat(l.da_amount || "0");
+        const newDA = isDaAllowed ? currentDA : 0.0;
+        return sum + newDA;
+      }, 0);
 
-      const newTotal = parseFloat(newTotals?.new_total || 0);
-
-      await runWrite(env, `
-        UPDATE expenses SET amount = ?, da_amount = (
-          SELECT SUM(da_amount) FROM expense_itineraries WHERE exp_id = ?
-        ), updated_at = ? WHERE id = ?
-      `, [newTotal, exp.expense_code, timestamp, exp.id]);
+      batchStatements.push({
+        sql: `
+          UPDATE expenses SET amount = ?, da_amount = ?, updated_at = ? WHERE id = ?
+        `,
+        params: [newTotal, newDaTotal, timestamp, exp.id]
+      });
 
       const policyComment = buildPolicyComment(baseLocations, legs, isDaAllowed, exp.itinerary || timestamp.split("T")[0]);
       if (policyComment) {
-        await runWrite(env,
-          "INSERT INTO expense_edit_logs (expense_id, comment, editor_name, editor_role, editor_id) VALUES (?, ?, 'SYSTEM', 'Policy', 0)",
-          [exp.id, `[Retroactive] ${policyComment}`]
-        );
+        batchStatements.push({
+          sql: "INSERT INTO expense_edit_logs (expense_id, comment, editor_name, editor_role, editor_id) VALUES (?, ?, 'SYSTEM', 'Policy', 0)",
+          params: [exp.id, `[Retroactive] ${policyComment}`]
+        });
       }
 
       // Save leg-level edit history logs
       for (const log of retroLegLogs) {
-        await runWrite(env,
-          `INSERT INTO expense_edit_logs 
-           (expense_id, leg_number, field_name, old_value, new_value, comment, editor_name, editor_role, editor_id)
-           VALUES (?, ?, ?, ?, ?, ?, 'SYSTEM', 'Policy', 0)`,
-          [exp.id, log.leg_number, log.field_name, String(log.old_value), String(log.new_value), log.comment]
-        );
+        batchStatements.push({
+          sql: `INSERT INTO expense_edit_logs 
+                 (expense_id, leg_number, field_name, old_value, new_value, comment, editor_name, editor_role, editor_id)
+                 VALUES (?, ?, ?, ?, ?, ?, 'SYSTEM', 'Policy', 0)`,
+          params: [exp.id, log.leg_number, log.field_name, String(log.old_value), String(log.new_value), log.comment]
+        });
       }
 
       // Notify the user
-      await runWrite(env,
-        "INSERT INTO notifications (user_id, title, description, type, read, link, created_at) VALUES (?, ?, ?, 'warning', 0, '/expense', ?)",
-        [
+      batchStatements.push({
+        sql: "INSERT INTO notifications (user_id, title, description, type, read, link, created_at) VALUES (?, ?, ?, 'warning', 0, '/expense', ?)",
+        params: [
           existingUser.user_id,
           "⚠️ Expense Adjusted — Base Location Policy",
           `Your expense for ${exp.itinerary || "this period"} has been adjusted per base location TA/DA policy. Commute TA has been deducted.`,
           timestamp
         ]
-      );
+      });
 
       affectedCount++;
       totalDeducted += expenseDeducted;
     }
+  }
+
+  if (batchStatements.length > 0) {
+    await runBatchWrite(env, batchStatements);
   }
 
   return {
@@ -1310,6 +1320,15 @@ export async function handleOneTimeAdjust(request, env, params, query, adminUser
   const diagTotalUsers = await env.DB.prepare("SELECT COUNT(*) as count FROM users").first().then(r => r?.count).catch(() => 0);
   const diagMappedUsers = await env.DB.prepare("SELECT COUNT(*) as count FROM users WHERE base_reporting_location IS NOT NULL AND base_reporting_location != ''").first().then(r => r?.count).catch(() => 0);
   const diagJulyClaims = await env.DB.prepare("SELECT COUNT(*) as count FROM expenses WHERE LOWER(month) = 'july' AND year = 2026").first().then(r => r?.count).catch(() => 0);
+
+  // Trace expense 894 diagnostic
+  const exp894 = await env.DB.prepare("SELECT * FROM expenses WHERE id = 894 OR expense_code LIKE '%894'").first().catch(() => null);
+  let exp894Trace = "Not found";
+  if (exp894) {
+    const legs894 = await env.DB.prepare("SELECT * FROM expense_itineraries WHERE exp_id = ?").bind(exp894.expense_code).all().catch(() => ({ results: [] }));
+    const legDetails = (legs894.results || []).map(l => `${l.leg_number}: ${l.from_location}->${l.to_location} (TA=${l.travel_amount}, DA=${l.da_amount})`).join(" | ");
+    exp894Trace = `Code:${exp894.expense_code} User:${exp894.user_id} Month:${exp894.month} Legs:[${legDetails}]`;
+  }
   const diagSampleMonths = await env.DB.prepare("SELECT DISTINCT month, year FROM expenses LIMIT 5").all().then(r => (r.results || []).map(x => `${x.month} ${x.year}`).join(", ")).catch(() => "error");
   const diagSampleBases = await env.DB.prepare("SELECT DISTINCT base_reporting_location FROM users WHERE base_reporting_location IS NOT NULL AND base_reporting_location != '' LIMIT 5").all().then(r => (r.results || []).map(x => x.base_reporting_location).join(", ")).catch(() => "error");
 
@@ -1414,7 +1433,7 @@ export async function handleOneTimeAdjust(request, env, params, query, adminUser
   }
 
   const diagTrace = traceLogs.join(" | ");
-  const diagMsg = `Trace: [${diagTrace}]. July Claims: ${diagJulyClaims}.`;
+  const diagMsg = `Trace: [${diagTrace}]. July Claims: ${diagJulyClaims}. Exp894: [${exp894Trace}].`;
 
   return jsonResponse({
     success: true,
