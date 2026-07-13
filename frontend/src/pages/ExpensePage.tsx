@@ -1617,7 +1617,7 @@ export default function ExpensePage() {
       return fromLoc.includes("market") || toLoc.includes("market");
     });
 
-    const isDaAllowedBaseLocation = baseLocations.some(loc => 
+    const isDaAllowedBaseLocation = baseLocations.some((loc: string) => 
       loc.includes("pbm") || loc.includes("mathura das mathur") || loc.includes("mdm")
     );
 
