@@ -559,25 +559,29 @@ export default function HomePage() {
       .sort((a, b) => b.amount - a.amount);
   };
 
-  // Stats calculations based on current active tab, filtered ONLY by month
-  const monthOnlyPersonalExpenses = safeMyExpenses.filter(exp => {
+  // Stats calculations based on current active tab, respecting zone, employee, and mode filters, but NOT the status tab filter
+  const statsBasePersonalExpenses = safeMyExpenses.filter(exp => {
     if (!exp) return false;
     const rawDate = exp.itinerary || exp.date;
     return rawDate && rawDate.startsWith(selectMonth);
   });
 
-  const monthOnlyTeamExpenses = safeTeamExpenses.filter(exp => {
+  const statsBaseTeamExpenses = safeTeamExpenses.filter(exp => {
     if (!exp) return false;
     const rawDate = exp.date || exp.itinerary;
-    return rawDate && rawDate.startsWith(selectMonth);
+    if (rawDate && !rawDate.startsWith(selectMonth)) return false;
+    if (filterZone !== "all" && String(exp.zone || "").trim().toLowerCase() !== filterZone.trim().toLowerCase()) return false;
+    if (filterEmployee !== "all" && String(exp.submitter_code || "").trim().toLowerCase() !== filterEmployee.trim().toLowerCase()) return false;
+    if (filterMode !== "all" && String(exp.category || "").trim().toLowerCase() !== filterMode.trim().toLowerCase()) return false;
+    return true;
   });
 
-  const monthOnlyClaimsList = activeTab === "my-claims" ? monthOnlyPersonalExpenses : monthOnlyTeamExpenses;
+  const statsClaimsList = activeTab === "my-claims" ? statsBasePersonalExpenses : statsBaseTeamExpenses;
 
-  const statsTotalClaims = monthOnlyClaimsList;
-  const statsApprovedClaims = monthOnlyClaimsList.filter(c => c.status?.toLowerCase() === "approved");
-  const statsRejectedClaims = monthOnlyClaimsList.filter(c => c.status?.toLowerCase() === "rejected");
-  const statsPendingClaims = monthOnlyClaimsList.filter(c => {
+  const statsTotalClaims = statsClaimsList;
+  const statsApprovedClaims = statsClaimsList.filter(c => c.status?.toLowerCase() === "approved");
+  const statsRejectedClaims = statsClaimsList.filter(c => c.status?.toLowerCase() === "rejected");
+  const statsPendingClaims = statsClaimsList.filter(c => {
     const s = c.status?.toLowerCase() || "";
     return s.startsWith("submitted") || s === "pending" || s === "draft" || s === "returned_to_draft";
   });
