@@ -163,5 +163,10 @@ export const adminService = {
   runMigrations: async (): Promise<any> => {
     const response = await api.post("/admin/run-migrations");
     return response.data;
+  },
+
+  runOneTimeAdjust: async (): Promise<any> => {
+    const response = await api.post("/admin/one-time-adjust");
+    return response.data;
   }
 };
