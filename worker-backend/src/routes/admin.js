@@ -1359,32 +1359,13 @@ export async function handleOneTimeAdjust(request, env, params, query, adminUser
         `).bind(user.id).all().catch(() => ({ results: [] }));
         const exps = expensesRes.results || [];
         for (const exp of exps.slice(0, 1)) {
+          const expKeys = Object.keys(exp).join(",");
           const legsRes = await env.DB.prepare(`
-            SELECT from_location, to_location, travel_amount, sub_amount, da_amount, travel_type
-            FROM expense_itineraries WHERE exp_id = ? ORDER BY leg_number ASC
-          `).bind(exp.expense_code).all().catch(() => ({ results: [] }));
+            SELECT * FROM expense_itineraries WHERE exp_id = ?
+          `).bind(exp.expense_code || exp.expenseCode || "").all().catch(e => ({ results: [], error: e.message }));
           
-          const legs = (legsRes.results || []).map(leg => {
-            const fromLoc = (leg.from_location || "").trim().toLowerCase();
-            const toLoc = (leg.to_location || "").trim().toLowerCase();
-            const fromCustom = fromLoc && !officialHospitals.has(fromLoc);
-            const toCustom = toLoc && !officialHospitals.has(toLoc);
-            return {
-              from: leg.from_location || "",
-              to: leg.to_location || "",
-              from_custom: fromCustom,
-              to_custom: toCustom,
-              amount: leg.travel_amount,
-              sub_amount: leg.sub_amount,
-              da: leg.da_amount,
-              travel_type: leg.travel_type || ""
-            };
-          });
-
-          const { isBaseLocOnly, isDaAllowed } = computeBaseLocPolicy(user.base_reporting_location, legs);
-          const baseLocations = (user.base_reporting_location || "").split(",").map(x => x.trim().toLowerCase()).filter(Boolean);
-          const commuteStatuses = legs.map(l => `${l.from}->${l.to} (cust:${l.from_custom}/${l.to_custom}) commute:${checkIsCommuteLeg(l, baseLocations)}`).join(", ");
-          traceLogs.push(`${user.name}(Base:${user.base_reporting_location}): isBaseOnly:${isBaseLocOnly} isDaAllowed:${isDaAllowed} legs:[${commuteStatuses}]`);
+          const rawLegs = legsRes.results || [];
+          traceLogs.push(`${user.name}(Base:${user.base_reporting_location}): expKeys:[${expKeys}] expId:${exp.id} codeProp:${exp.expense_code} camelProp:${exp.expenseCode} legsFound:${rawLegs.length} queryErr:${legsRes.error || "none"}`);
         }
       }
     } catch (e) {
