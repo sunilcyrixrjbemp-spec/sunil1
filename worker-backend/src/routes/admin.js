@@ -1359,13 +1359,12 @@ export async function handleOneTimeAdjust(request, env, params, query, adminUser
         `).bind(user.id).all().catch(() => ({ results: [] }));
         const exps = expensesRes.results || [];
         for (const exp of exps.slice(0, 1)) {
-          const expKeys = Object.keys(exp).join(",");
           const legsRes = await env.DB.prepare(`
-            SELECT * FROM expense_itineraries WHERE exp_id = ?
-          `).bind(exp.expense_code || exp.expenseCode || "").all().catch(e => ({ results: [], error: e.message }));
-          
+            SELECT from_location, to_location, travel_type FROM expense_itineraries WHERE exp_id = ? ORDER BY leg_number ASC
+          `).bind(exp.expense_code).all().catch(() => ({ results: [] }));
           const rawLegs = legsRes.results || [];
-          traceLogs.push(`${user.name}(Base:${user.base_reporting_location}): expKeys:[${expKeys}] expId:${exp.id} codeProp:${exp.expense_code} camelProp:${exp.expenseCode} legsFound:${rawLegs.length} queryErr:${legsRes.error || "none"}`);
+          const legLocs = rawLegs.map(l => `${l.from_location}->${l.to_location} (${l.travel_type || "no-type"})`).join(" | ");
+          traceLogs.push(`${user.name}(Base:${user.base_reporting_location}): code:${exp.expense_code} legs:[${legLocs}]`);
         }
       }
     } catch (e) {
