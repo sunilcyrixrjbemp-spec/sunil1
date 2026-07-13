@@ -22,6 +22,7 @@ export const users = sqliteTable("users", {
   dateOfJoining: text("date_of_joining"),
   dateOfBirth: text("date_of_birth"),
   eUpkaranId: text("e_upkaran_id"),
+  baseReportingLocation: text("base_reporting_location"),
   allowedWindows: text("allowed_windows").default("home,expense,help,profile"),
   createdAt: text("created_at"),
   updatedAt: text("updated_at"),

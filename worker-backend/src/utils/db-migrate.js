@@ -96,7 +96,9 @@ export async function runMigrations(db) {
       district_name TEXT NOT NULL,
       created_at TEXT DEFAULT CURRENT_TIMESTAMP,
       UNIQUE(hospital_name, district_name)
-    )`
+    )`,
+    // Add base_reporting_location column to users if not present
+    `ALTER TABLE users ADD COLUMN base_reporting_location TEXT`
   ];
 
   for (const sql of migrations) {

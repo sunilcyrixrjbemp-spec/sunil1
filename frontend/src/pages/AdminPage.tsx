@@ -240,6 +240,7 @@ export default function AdminPage() {
   const [dateOfJoining, setDateOfJoining] = useState("");
   const [dateOfBirth, setDateOfBirth] = useState("");
   const [eUpkaranId, setEUpkaranId] = useState("");
+  const [baseReportingLocation, setBaseReportingLocation] = useState("");
   const [allowedWindows, setAllowedWindows] = useState<string[]>([
     "home", "approval", "expense", "analysis", "report", "help", "profile"
   ]);
@@ -264,6 +265,7 @@ export default function AdminPage() {
   const [editDateOfJoining, setEditDateOfJoining] = useState("");
   const [editDateOfBirth, setEditDateOfBirth] = useState("");
   const [editEUpkaranId, setEditEUpkaranId] = useState("");
+  const [editBaseReportingLocation, setEditBaseReportingLocation] = useState("");
   const [editAllowedWindows, setEditAllowedWindows] = useState<string[]>([]);
   const [editUserId, setEditUserId] = useState("");
   const [editECode, setEditECode] = useState("");
@@ -461,7 +463,7 @@ export default function AdminPage() {
     if (
       !eCode.trim() || !userName.trim() || !password.trim() || !role || !designation ||
       !grade || !zone || !district || !mobileNumber.trim() || !mailId.trim() || !userType ||
-      !dateOfJoining || !dateOfBirth || !eUpkaranId.trim()
+      !dateOfJoining || !dateOfBirth || !eUpkaranId.trim() || !baseReportingLocation.trim()
     ) {
       setSingleUserError("All input details corresponding to user profile columns are compulsory.");
       return;
@@ -486,6 +488,7 @@ export default function AdminPage() {
       date_of_joining: dateOfJoining,
       date_of_birth: dateOfBirth,
       e_upkaran_id: eUpkaranId.trim(),
+      base_reporting_location: baseReportingLocation.trim(),
       allowed_windows: allowedWindows.join(",")
     };
 
@@ -504,6 +507,7 @@ export default function AdminPage() {
       setMobileNumber("");
       setMailId("");
       setEUpkaranId("");
+      setBaseReportingLocation("");
       setDateOfJoining("");
       setDateOfBirth("");
       setAllowedWindows(["home", "approval", "expense", "analysis", "report", "help", "profile"]);
@@ -554,6 +558,7 @@ export default function AdminPage() {
     setEditDateOfJoining(normalizeDateToYYYYMMDD(u.date_of_joining));
     setEditDateOfBirth(normalizeDateToYYYYMMDD(u.date_of_birth));
     setEditEUpkaranId(u.e_upkaran_id || "");
+    setEditBaseReportingLocation(u.base_reporting_location || "");
     setEditAllowedWindows(
       u.allowed_windows ? u.allowed_windows.split(",") : []
     );
@@ -592,7 +597,7 @@ export default function AdminPage() {
       !editName.trim() || !editRole || !editDesignation || !editGrade || 
       !editZone || !editDistrict || !editMobileNumber.trim() || !editMailId.trim() || 
       !editUserType || !editDateOfJoining || !editDateOfBirth || !editEUpkaranId.trim() ||
-      !editUserId.trim() || !editECode.trim()
+      !editBaseReportingLocation.trim() || !editUserId.trim() || !editECode.trim()
     ) {
       setEditUserError("All input details corresponding to user profile columns are compulsory.");
       return;
@@ -627,6 +632,7 @@ export default function AdminPage() {
       date_of_joining: editDateOfJoining,
       date_of_birth: editDateOfBirth,
       e_upkaran_id: editEUpkaranId.trim(),
+      base_reporting_location: editBaseReportingLocation.trim(),
       allowed_windows: editAllowedWindows.join(","),
       new_user_id: isUserIdModified ? editUserId.trim() : undefined,
       new_e_code: isECodeModified ? editECode.trim() : undefined,
@@ -2312,25 +2318,38 @@ export default function AdminPage() {
                   />
                 </div>
                 <div>
-                  <label className="label-lte">Base Reporting Location(s) *</label>
-                  {dropdowns?.facilities?.[district] && dropdowns.facilities[district].length > 0 ? (
-                    <MultiSelectDropdown
-                      options={dropdowns.facilities[district]}
-                      selectedValues={eUpkaranId ? eUpkaranId.split(",").map(x => x.trim()).filter(Boolean) : []}
-                      onChange={(vals) => setEUpkaranId(vals.join(", "))}
-                      placeholder="-- Select Base Reporting Location(s) --"
-                    />
-                  ) : (
-                    <input
-                      type="text"
-                      placeholder="e.g. PHC Location or Device ID"
-                      value={eUpkaranId}
-                      onChange={(e) => setEUpkaranId(e.target.value)}
-                      className="input-lte"
-                      required
-                    />
-                  )}
+                  <label className="label-lte">Device / Upkaran ID *</label>
+                  <input
+                    type="text"
+                    placeholder="e.g. UPK-9988-XY"
+                    value={eUpkaranId}
+                    onChange={(e) => setEUpkaranId(e.target.value)}
+                    className="input-lte"
+                    required
+                  />
                 </div>
+              </div>
+
+              {/* Base Reporting Location Section */}
+              <div className="space-y-1">
+                <label className="label-lte">Base Reporting Location(s) *</label>
+                {dropdowns?.facilities?.[district] && dropdowns.facilities[district].length > 0 ? (
+                  <MultiSelectDropdown
+                    options={dropdowns.facilities[district]}
+                    selectedValues={baseReportingLocation ? baseReportingLocation.split(",").map(x => x.trim()).filter(Boolean) : []}
+                    onChange={(vals) => setBaseReportingLocation(vals.join(", "))}
+                    placeholder="-- Select Base Reporting Location(s) --"
+                  />
+                ) : (
+                  <input
+                    type="text"
+                    placeholder="e.g. PHC Location or custom hospital"
+                    value={baseReportingLocation}
+                    onChange={(e) => setBaseReportingLocation(e.target.value)}
+                    className="input-lte"
+                    required
+                  />
+                )}
               </div>
 
               {/* Grid 6 - Dates */}
@@ -2668,29 +2687,41 @@ export default function AdminPage() {
                   />
                 </div>
                 <div>
-                  <label className="label-lte">Base Reporting Location(s) *</label>
-                  {dropdowns?.facilities?.[editDistrict] && dropdowns.facilities[editDistrict].length > 0 ? (
-                    <MultiSelectDropdown
-                      options={[
-                        ...dropdowns.facilities[editDistrict],
-                        ...(editEUpkaranId ? editEUpkaranId.split(",").map(x => x.trim()).filter(Boolean) : [])
-                          .filter(item => !dropdowns.facilities[editDistrict].includes(item))
-                      ]}
-                      selectedValues={editEUpkaranId ? editEUpkaranId.split(",").map(x => x.trim()).filter(Boolean) : []}
-                      onChange={(vals) => setEditEUpkaranId(vals.join(", "))}
-                      placeholder="-- Select Base Reporting Location(s) --"
-                    />
-                  ) : (
-                    <input
-                      type="text"
-                      placeholder="e.g. PHC Location or Device ID"
-                      value={editEUpkaranId}
-                      onChange={(e) => setEditEUpkaranId(e.target.value)}
-                      className="input-lte"
-                      required
-                    />
-                  )}
+                  <label className="label-lte">Device / Upkaran ID *</label>
+                  <input
+                    type="text"
+                    value={editEUpkaranId}
+                    onChange={(e) => setEditEUpkaranId(e.target.value)}
+                    className="input-lte"
+                    required
+                  />
                 </div>
+              </div>
+
+              {/* Base Reporting Location Section */}
+              <div className="space-y-1">
+                <label className="label-lte">Base Reporting Location(s) *</label>
+                {dropdowns?.facilities?.[editDistrict] && dropdowns.facilities[editDistrict].length > 0 ? (
+                  <MultiSelectDropdown
+                    options={[
+                      ...dropdowns.facilities[editDistrict],
+                      ...(editBaseReportingLocation ? editBaseReportingLocation.split(",").map(x => x.trim()).filter(Boolean) : [])
+                        .filter(item => !dropdowns.facilities[editDistrict].includes(item))
+                    ]}
+                    selectedValues={editBaseReportingLocation ? editBaseReportingLocation.split(",").map(x => x.trim()).filter(Boolean) : []}
+                    onChange={(vals) => setEditBaseReportingLocation(vals.join(", "))}
+                    placeholder="-- Select Base Reporting Location(s) --"
+                  />
+                ) : (
+                  <input
+                    type="text"
+                    placeholder="e.g. PHC Location or custom hospital"
+                    value={editBaseReportingLocation}
+                    onChange={(e) => setEditBaseReportingLocation(e.target.value)}
+                    className="input-lte"
+                    required
+                  />
+                )}
               </div>
 
               {/* Grid 6 - Dates */}

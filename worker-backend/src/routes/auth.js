@@ -3,7 +3,7 @@ import { DESIGNATIONS, ZONE_DISTRICTS, ROLES, MONTH_NAMES } from "../utils/const
 import { getExpenseInitData, getActualZone } from "./expense.js";
 import { fetchPendingApprovals } from "./approval.js";
 import { getDrizzleDb } from "../db/client.js";
-import { users, userRoles, passwordHistories, allowanceMaster, expenses, loginLogs, hierarchyApprovers, hierarchyRequesters, facilityDetails } from "../db/schema.js";
+import { users, userRoles, passwordHistories, allowanceMaster, expenses, loginLogs, hierarchyApprovers, hierarchyRequesters, facilityDetails, noTaDaHospitals } from "../db/schema.js";
 import { eq, and, or, sql, desc, inArray } from "drizzle-orm";
 
 /**
@@ -576,18 +576,18 @@ export async function handleLogout(request, env, params, query, user) {
  */
 export async function handleGetDropdowns(request, env, params, query) {
   const db = getDrizzleDb(env, request);
-  const [gradesRows, facilitiesRows] = await Promise.all([
+  const [gradesRows, hospitalsRows] = await Promise.all([
     db.select({ grade: allowanceMaster.grade }).from(allowanceMaster),
-    db.select({ districtName: facilityDetails.districtName, facilityName: facilityDetails.facilityName }).from(facilityDetails)
+    db.select({ districtName: noTaDaHospitals.districtName, hospitalName: noTaDaHospitals.hospitalName }).from(noTaDaHospitals)
   ]);
   const grades = Array.from(new Set(gradesRows.map(r => r.grade))).filter(Boolean).sort();
 
   const facilities = {};
-  for (const f of facilitiesRows) {
-    if (!facilities[f.districtName]) {
-      facilities[f.districtName] = [];
+  for (const h of hospitalsRows) {
+    if (!facilities[h.districtName]) {
+      facilities[h.districtName] = [];
     }
-    facilities[f.districtName].push(f.facilityName);
+    facilities[h.districtName].push(h.hospitalName);
   }
 
   return jsonResponse({

@@ -18,6 +18,7 @@ export interface UserCreatePayload {
   date_of_joining: string; // YYYY-MM-DD format
   date_of_birth: string;   // YYYY-MM-DD format
   e_upkaran_id: string;
+  base_reporting_location?: string;
   allowed_windows?: string;
 }
 
@@ -38,6 +39,7 @@ export interface UserEditPayload {
   date_of_joining?: string;
   date_of_birth?: string;
   e_upkaran_id?: string;
+  base_reporting_location?: string;
   allowed_windows?: string;
   new_user_id?: string;
   new_e_code?: string;

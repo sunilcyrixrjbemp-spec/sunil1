@@ -74,6 +74,7 @@ export async function handleSaveUser(request, env, params, query, adminUser) {
     if (body.date_of_joining !== undefined) { updates.push("date_of_joining = ?"); bindings.push(body.date_of_joining || null); }
     if (body.date_of_birth !== undefined) { updates.push("date_of_birth = ?"); bindings.push(body.date_of_birth || null); }
     if (body.e_upkaran_id !== undefined) { updates.push("e_upkaran_id = ?"); bindings.push(body.e_upkaran_id); }
+    if (body.base_reporting_location !== undefined) { updates.push("base_reporting_location = ?"); bindings.push(body.base_reporting_location); }
     if (body.allowed_windows !== undefined) { updates.push("allowed_windows = ?"); bindings.push(body.allowed_windows); }
 
     if (password) {
@@ -123,14 +124,14 @@ export async function handleSaveUser(request, env, params, query, adminUser) {
         user_id, e_code, name, hashed_password, user_status, designation, 
         zone, district, manager, zonal_manager, coordinator, mobile_number, 
         mail_id, grade, type, date_of_joining, date_of_birth, e_upkaran_id, 
-        allowed_windows, created_at, updated_at
+        base_reporting_location, allowed_windows, created_at, updated_at
       )
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     `, [
       cleanUserId, cleanUserId, name.trim(), hashed, user_status || "active", designation || "", 
       zone || "", district || "", manager || null, zonal_manager || null, coordinator || null, mobile_number || null, 
       mail_id || null, body.grade || "", body.type || "", body.date_of_joining || null, body.date_of_birth || null, body.e_upkaran_id || "", 
-      body.allowed_windows || "home,expense,help,profile", timestamp, timestamp
+      body.base_reporting_location || "", body.allowed_windows || "home,expense,help,profile", timestamp, timestamp
     ]);
 
     await runWrite(env, "INSERT INTO user_roles (user_id, role, assigned_at) VALUES (?, ?, ?)", [
