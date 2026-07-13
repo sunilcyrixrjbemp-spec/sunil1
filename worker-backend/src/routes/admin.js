@@ -32,6 +32,12 @@ async function runRetroactivePolicyCheck(env, existingUser, newBaseLocation, tim
   const expenses = expensesRes.results || [];
   if (expenses.length === 0) return { affected_expenses: 0, total_deducted: 0 };
 
+  // Fetch official hospitals list to resolve dropdown vs custom locations retroactively
+  const hospitalsRes = await env.DB.prepare("SELECT DISTINCT hospital_name FROM assets_inventory WHERE hospital_name IS NOT NULL").all().catch(() => ({ results: [] }));
+  const officialHospitals = new Set((hospitalsRes.results || []).map(h => h.hospital_name.trim().toLowerCase()));
+
+  const baseLocations = (newBaseLocation || "").split(",").map(x => x.trim().toLowerCase()).filter(Boolean);
+
   let affectedCount = 0;
   let totalDeducted = 0;
 
@@ -43,19 +49,28 @@ async function runRetroactivePolicyCheck(env, existingUser, newBaseLocation, tim
       FROM expense_itineraries WHERE exp_id = ? ORDER BY leg_number ASC
     `).bind(exp.expense_code).all().catch(() => ({ results: [] }));
 
-    const legs = (legsRes.results || []).map(leg => ({
-      ...leg,
-      from: leg.from_location || "",
-      to: leg.to_location || "",
-      from_custom: false,
-      to_custom: false,
-      amount: leg.travel_amount,
-      sub_amount: leg.sub_amount,
-      da: leg.da_amount,
-      travel_type: leg.travel_type || ""
-    }));
+    const legs = (legsRes.results || []).map(leg => {
+      const fromLoc = (leg.from_location || "").trim().toLowerCase();
+      const toLoc = (leg.to_location || "").trim().toLowerCase();
+      
+      // A location is custom if it is not found in the official dropdown hospitals list
+      const fromCustom = fromLoc && !officialHospitals.has(fromLoc);
+      const toCustom = toLoc && !officialHospitals.has(toLoc);
 
-    const { isBaseLocOnly, isDaAllowed, baseLocations } = computeBaseLocPolicy(newBaseLocation, legs);
+      return {
+        ...leg,
+        from: leg.from_location || "",
+        to: leg.to_location || "",
+        from_custom: fromCustom,
+        to_custom: toCustom,
+        amount: leg.travel_amount,
+        sub_amount: leg.sub_amount,
+        da: leg.da_amount,
+        travel_type: leg.travel_type || ""
+      };
+    });
+
+    const { isBaseLocOnly, isDaAllowed } = computeBaseLocPolicy(newBaseLocation, legs);
     if (!isBaseLocOnly) continue;
 
     let expenseDeducted = 0;

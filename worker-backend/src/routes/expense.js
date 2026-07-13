@@ -2386,6 +2386,10 @@ export async function handleRetroactiveBasePolicyCheck(request, env, params, que
   let affectedCount = 0;
   let totalDeducted = 0;
 
+  // Fetch official hospitals to resolve dropdown vs custom locations
+  const hospitalsRes = await env.DB.prepare("SELECT DISTINCT hospital_name FROM assets_inventory WHERE hospital_name IS NOT NULL").all().catch(() => ({ results: [] }));
+  const officialHospitals = new Set((hospitalsRes.results || []).map(h => h.hospital_name.trim().toLowerCase()));
+
   for (const exp of expenses) {
     // Fetch itinerary legs for this expense
     const legsRes = await env.DB.prepare(`
@@ -2396,20 +2400,27 @@ export async function handleRetroactiveBasePolicyCheck(request, env, params, que
       FROM expense_itineraries WHERE exp_id = ? ORDER BY leg_number ASC
     `).bind(exp.expense_code).all().catch(() => ({ results: [] }));
 
-    const legs = (legsRes.results || []).map(leg => ({
-      ...leg,
-      from: leg.from_location || "",
-      to: leg.to_location || "",
-      // All saved legs are from dropdown — no custom flag in DB, treat as official
-      from_custom: false,
-      to_custom: false,
-      amount: leg.travel_amount,
-      sub_amount: leg.sub_amount,
-      da: leg.da_amount,
-      travel_type: leg.travel_type || ""
-    }));
+    const legs = (legsRes.results || []).map(leg => {
+      const fromLoc = (leg.from_location || "").trim().toLowerCase();
+      const toLoc = (leg.to_location || "").trim().toLowerCase();
+      
+      const fromCustom = fromLoc && !officialHospitals.has(fromLoc);
+      const toCustom = toLoc && !officialHospitals.has(toLoc);
 
-    const { isBaseLocOnly, isDaAllowed, baseLocations } = computeBaseLocPolicy(
+      return {
+        ...leg,
+        from: leg.from_location || "",
+        to: leg.to_location || "",
+        from_custom: fromCustom,
+        to_custom: toCustom,
+        amount: leg.travel_amount,
+        sub_amount: leg.sub_amount,
+        da: leg.da_amount,
+        travel_type: leg.travel_type || ""
+      };
+    });
+
+    const { isBaseLocOnly, isDaAllowed } = computeBaseLocPolicy(
       baseReportingLocation,
       legs
     );
