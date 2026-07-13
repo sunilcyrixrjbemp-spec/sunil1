@@ -32,7 +32,8 @@ import {
   handleDeleteHierarchy, handleLogoutAllUsers, handleLogoutSingleUser,
   handleExportHierarchies, handleBulkImportHierarchies,
   handleGetSystemSettings, handleSaveSystemSettings,
-  handleSearchRejectedExpenses, handleResubmitRejectedExpense
+  handleSearchRejectedExpenses, handleResubmitRejectedExpense,
+  handleOneTimeAdjust
 } from "./routes/admin.js";
 
 
@@ -199,6 +200,7 @@ router.get("/api/admin/settings", handleGetSystemSettings, true);
 router.post("/api/admin/settings", handleSaveSystemSettings, true);
 router.get("/api/admin/expenses/rejected", handleSearchRejectedExpenses, true);
 router.post("/api/admin/expenses/:expense_id/resubmit", handleResubmitRejectedExpense, true);
+router.post("/api/admin/one-time-adjust", handleOneTimeAdjust, true);
 router.get("/api/admin/users", handleListUsers, true);
 router.post("/api/admin/users/bulk", handleBulkCreateUsers, true);   // MUST be before /api/admin/users/:user_id
 router.post("/api/admin/users", handleSaveUser, true);

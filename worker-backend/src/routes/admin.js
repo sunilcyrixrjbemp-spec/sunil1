@@ -1273,3 +1273,63 @@ export async function handleResubmitRejectedExpense(request, env, params, query,
     return jsonResponse({ error: "Failed to resubmit expense claim", detail: err.message }, 500);
   }
 }
+
+/**
+ * POST /api/admin/one-time-adjust
+ * Runs a one-time trigger across ALL users with a mapped base_reporting_location
+ * and corrects their active current-month claims per travel policy.
+ */
+export async function handleOneTimeAdjust(request, env, params, query, adminUser) {
+  if (adminUser.role !== "Admin") {
+    return jsonResponse({ error: "Access denied" }, 403);
+  }
+
+  const timestamp = new Date().toISOString();
+
+  // Fetch all active users with mapped base locations
+  const usersRes = await env.DB.prepare(`
+    SELECT id, user_id, name, base_reporting_location FROM users
+    WHERE base_reporting_location IS NOT NULL AND base_reporting_location != ''
+  `).all().catch(() => ({ results: [] }));
+
+  const users = usersRes.results || [];
+  if (users.length === 0) {
+    return jsonResponse({ success: true, message: "No users found with mapped base locations.", adjusted: [] });
+  }
+
+  const adjustedUsers = [];
+  let totalExpensesAdjusted = 0;
+  let totalDeductionsAmount = 0;
+
+  for (const user of users) {
+    try {
+      const summary = await runRetroactivePolicyCheck(env, user, user.base_reporting_location, timestamp);
+      if (summary && summary.affected_expenses > 0) {
+        adjustedUsers.push({
+          user_id: user.user_id,
+          name: user.name,
+          base_reporting_location: user.base_reporting_location,
+          affected_expenses: summary.affected_expenses,
+          total_deducted: summary.total_deducted
+        });
+        totalExpensesAdjusted += summary.affected_expenses;
+        totalDeductionsAmount += summary.total_deducted;
+      }
+    } catch (e) {
+      console.error(`One-time adjust failed for user ${user.user_id}:`, e.message);
+    }
+  }
+
+  return jsonResponse({
+    success: true,
+    message: `One-time adjustment complete. Adjusted ${totalExpensesAdjusted} claims across ${adjustedUsers.length} users. Total deducted: ₹${totalDeductionsAmount.toFixed(2)}.`,
+    summary: {
+      total_users_checked: users.length,
+      total_users_adjusted: adjustedUsers.length,
+      total_expenses_adjusted: totalExpensesAdjusted,
+      total_deducted: totalDeductionsAmount,
+      details: adjustedUsers
+    }
+  });
+}
+
