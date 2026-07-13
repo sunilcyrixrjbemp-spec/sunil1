@@ -1301,6 +1301,13 @@ export async function handleOneTimeAdjust(request, env, params, query, adminUser
 
   const timestamp = new Date().toISOString();
 
+  // Run database diagnostics to identify why zero claims are matching
+  const diagTotalUsers = await env.DB.prepare("SELECT COUNT(*) as count FROM users").first().then(r => r?.count).catch(() => 0);
+  const diagMappedUsers = await env.DB.prepare("SELECT COUNT(*) as count FROM users WHERE base_reporting_location IS NOT NULL AND base_reporting_location != ''").first().then(r => r?.count).catch(() => 0);
+  const diagJulyClaims = await env.DB.prepare("SELECT COUNT(*) as count FROM expenses WHERE LOWER(month) = 'july' AND year = 2026").first().then(r => r?.count).catch(() => 0);
+  const diagSampleMonths = await env.DB.prepare("SELECT DISTINCT month, year FROM expenses LIMIT 5").all().then(r => (r.results || []).map(x => `${x.month} ${x.year}`).join(", ")).catch(() => "error");
+  const diagSampleBases = await env.DB.prepare("SELECT DISTINCT base_reporting_location FROM users WHERE base_reporting_location IS NOT NULL AND base_reporting_location != '' LIMIT 5").all().then(r => (r.results || []).map(x => x.base_reporting_location).join(", ")).catch(() => "error");
+
   // Fetch all active users with mapped base locations
   const usersRes = await env.DB.prepare(`
     SELECT id, user_id, name, base_reporting_location FROM users
@@ -1309,7 +1316,12 @@ export async function handleOneTimeAdjust(request, env, params, query, adminUser
 
   const users = usersRes.results || [];
   if (users.length === 0) {
-    return jsonResponse({ success: true, message: "No users found with mapped base locations.", adjusted: [] });
+    return jsonResponse({ 
+      success: true, 
+      message: `No users found with mapped base locations. (Total users in DB: ${diagTotalUsers}, Mapped: ${diagMappedUsers}).`, 
+      adjusted: [],
+      diagnostics: { diagTotalUsers, diagMappedUsers, diagJulyClaims, diagSampleMonths, diagSampleBases }
+    });
   }
 
   const adjustedUsers = [];
@@ -1335,15 +1347,18 @@ export async function handleOneTimeAdjust(request, env, params, query, adminUser
     }
   }
 
+  const diagMsg = `Checked ${users.length} users. July 2026 claims in DB: ${diagJulyClaims}. Sample months: [${diagSampleMonths}]. Sample bases: [${diagSampleBases}].`;
+
   return jsonResponse({
     success: true,
-    message: `One-time adjustment complete. Adjusted ${totalExpensesAdjusted} claims across ${adjustedUsers.length} users. Total deducted: ₹${totalDeductionsAmount.toFixed(2)}.`,
+    message: `One-time adjustment complete. Adjusted ${totalExpensesAdjusted} claims across ${adjustedUsers.length} users. Total deducted: ₹${totalDeductionsAmount.toFixed(2)}. Details: ${diagMsg}`,
     summary: {
       total_users_checked: users.length,
       total_users_adjusted: adjustedUsers.length,
       total_expenses_adjusted: totalExpensesAdjusted,
       total_deducted: totalDeductionsAmount,
-      details: adjustedUsers
+      details: adjustedUsers,
+      diagnostics: { diagTotalUsers, diagMappedUsers, diagJulyClaims, diagSampleMonths, diagSampleBases }
     }
   });
 }
