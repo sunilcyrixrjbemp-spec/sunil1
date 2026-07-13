@@ -621,7 +621,7 @@ export async function handleUpdateUser(request, env, params, query, adminUser) {
     zone: "zone", manager: "manager", zonal_manager: "zonal_manager", coordinator: "coordinator",
     mobile_number: "mobile_number", mail_id: "mail_id", type: "type",
     date_of_joining: "date_of_joining", date_of_birth: "date_of_birth",
-    e_upkaran_id: "e_upkaran_id", allowed_windows: "allowed_windows"
+    e_upkaran_id: "e_upkaran_id", base_reporting_location: "base_reporting_location", allowed_windows: "allowed_windows"
   };
 
   for (const [reqField, dbField] of Object.entries(fieldMap)) {
