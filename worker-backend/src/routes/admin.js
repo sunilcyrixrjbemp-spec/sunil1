@@ -1317,6 +1317,10 @@ export async function handleOneTimeAdjust(request, env, params, query, adminUser
   const diagSampleExpenses = await env.DB.prepare("SELECT user_id, COUNT(*) as count FROM expenses WHERE LOWER(month) = 'july' AND year = 2026 GROUP BY user_id LIMIT 5").all().catch(() => ({ results: [] }));
   const sampleExpenseUserIds = (diagSampleExpenses.results || []).map(x => `${typeof x.user_id}:${x.user_id} (${x.count} claims)`).join(", ");
 
+  // Fetch official hospitals to resolve dropdown vs custom locations
+  const hospitalsRes = await env.DB.prepare("SELECT DISTINCT hospital_name FROM assets_inventory WHERE hospital_name IS NOT NULL").all().catch(() => ({ results: [] }));
+  const officialHospitals = new Set((hospitalsRes.results || []).map(h => h.hospital_name.trim().toLowerCase()));
+
   // Fetch all active users with mapped base locations
   const usersRes = await env.DB.prepare(`
     SELECT id, user_id, name, base_reporting_location FROM users
@@ -1405,6 +1409,7 @@ export async function handleOneTimeAdjust(request, env, params, query, adminUser
       }
     } catch (e) {
       console.error(`One-time adjust failed for user ${user.user_id}:`, e.message);
+      traceLogs.push(`${user.name} ERROR: ${e.message}`);
     }
   }
 
