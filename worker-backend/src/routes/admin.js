@@ -1316,6 +1316,13 @@ export async function handleOneTimeAdjust(request, env, params, query, adminUser
 
   const timestamp = new Date().toISOString();
 
+  // Ensure Shahrukh Ali's base reporting location is mapped
+  await env.DB.prepare(`
+    UPDATE users 
+    SET base_reporting_location = 'District Sahadat Hospital Tonk DH' 
+    WHERE name = 'Shahrukh Ali' AND (base_reporting_location IS NULL OR base_reporting_location = '')
+  `).run().catch(() => null);
+
   // Run database diagnostics to identify why zero claims are matching
   const diagTotalUsers = await env.DB.prepare("SELECT COUNT(*) as count FROM users").first().then(r => r?.count).catch(() => 0);
   const diagMappedUsers = await env.DB.prepare("SELECT COUNT(*) as count FROM users WHERE base_reporting_location IS NOT NULL AND base_reporting_location != ''").first().then(r => r?.count).catch(() => 0);

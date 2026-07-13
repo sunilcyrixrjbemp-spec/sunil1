@@ -64,12 +64,15 @@ export function matchesBase(locText, baseLocations) {
     // Check specific known abbreviations and names
     if (cleanBase.includes("mathura das mathur") || cleanBase.includes("mdm")) {
       if (text.includes("mdm") || text.includes("mathura das") || text.includes("mathur")) return true;
+      if (text === "jodhpur" || text === "jodhpur base" || text === "mdm hospital") return true;
     }
     if (cleanBase.includes("pbm") || cleanBase.includes("bikaner")) {
-      if (text.includes("pbm") || text.includes("bikaner")) return true;
+      if (text.includes("pbm")) return true;
+      if (text === "bikaner" || text === "bikaner base" || text === "pbm hospital") return true;
     }
     if (cleanBase.includes("jln") || cleanBase.includes("ajmer")) {
-      if (text.includes("jln") || text.includes("ajmer")) return true;
+      if (text.includes("jln")) return true;
+      if (text === "ajmer" || text === "ajmer base" || text === "jln hospital") return true;
     }
     return false;
   });
