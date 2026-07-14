@@ -63,7 +63,8 @@ export default function AnalysisPage() {
     const currentUser = authService.getCurrentUser();
     const role = currentUser?.role || "Engineer";
     const allowed = (currentUser?.allowed_windows || "").split(",").map((w: string) => w.trim().toLowerCase());
-    if (role === "Admin" || role === "MIS" || role === "VP" || role === "Accountant" || allowed.includes("approval")) {
+    const roleLower = role.trim().toLowerCase();
+    if (["admin", "project head", "mis", "travel desk", "travel tesk", "vp", "accountant", "hr"].includes(roleLower) || allowed.includes("approval")) {
       return "team";
     }
     return "my";
@@ -141,7 +142,7 @@ export default function AnalysisPage() {
 
   const user = authService.getCurrentUser();
   const allowedWindows = (user?.allowed_windows || "").split(",").map((w: string) => w.trim().toLowerCase());
-  const isReviewer = allowedWindows.includes("approval") || ["admin", "mis", "vp", "accountant"].includes((user?.role || "").trim().toLowerCase());
+  const isReviewer = allowedWindows.includes("approval") || ["admin", "project head", "mis", "travel desk", "travel tesk", "vp", "accountant", "hr"].includes((user?.role || "").trim().toLowerCase());
 
   useEffect(() => {
     const currentUser = authService.getCurrentUser();

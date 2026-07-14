@@ -543,8 +543,7 @@ export async function handleGetTeamExpenses(request, env, params, query, user) {
     
     // 1. Fetch team users
     let teamUsers = [];
-    const userRoleClean = (user.role || "").trim().toLowerCase();
-    const isAdminOrReportViewer = ["admin", "mis", "vp", "accountant"].includes(userRoleClean);
+    const isAdminOrReportViewer = ["admin", "mis", "vp", "accountant", "hr", "project head", "travel desk", "travel tesk"].includes(userRoleClean);
 
     if (isAdminOrReportViewer) {
       const res = await env.DB.prepare("SELECT * FROM users").all();
@@ -2565,7 +2564,7 @@ export async function handleGetMonthSummary(request, env, params, query, user) {
   const engineer = query.get("engineer");
 
   const userRoleClean = (user.role || "").trim().toLowerCase();
-  const isAdminOrReportViewer = ["admin", "mis", "vp", "accountant"].includes(userRoleClean);
+  const isAdminOrReportViewer = ["admin", "mis", "vp", "accountant", "hr", "project head", "travel desk", "travel tesk"].includes(userRoleClean);
 
   // Build filters for new expenses table
   const whereClauses = ["1=1"];
@@ -3234,7 +3233,7 @@ export async function handleGetConsolidatedReport(request, env, params, query, u
 
   // Determine allowed users based on role and hierarchy mapping
   const userRoleClean = (user.role || "").trim().toLowerCase();
-  const isAdminOrReportViewer = ["admin", "mis", "vp", "accountant"].includes(userRoleClean);
+  const isAdminOrReportViewer = ["admin", "mis", "vp", "accountant", "hr", "project head", "travel desk", "travel tesk"].includes(userRoleClean);
 
   const allowedUserCodesSet = new Set();
   let filteredUsers = [];
@@ -3736,7 +3735,7 @@ export async function handleServeExpenseAttachment(request, env, params, query, 
 export async function handleGetTeamUsers(request, env, params, query, user) {
   let teamUsers = [];
   const userRoleClean = (user.role || "").trim().toLowerCase();
-  const isAdminOrReportViewer = ["admin", "mis", "vp", "accountant"].includes(userRoleClean);
+  const isAdminOrReportViewer = ["admin", "mis", "vp", "accountant", "hr", "project head", "travel desk", "travel tesk"].includes(userRoleClean);
 
   if (isAdminOrReportViewer) {
     const res = await env.DB.prepare("SELECT id, user_id, name, role, zone, district, designation, manager FROM users ORDER BY name ASC").all();
@@ -3901,7 +3900,7 @@ export async function handleSaveKpiAppraisal(request, env, params, query, user) 
 // Helper: check hierarchy
 async function isManagerOfUser(managerUser, targetUserId, env) {
   const managerRoleClean = (managerUser.role || "").trim().toLowerCase();
-  if (["admin", "mis", "vp", "accountant"].includes(managerRoleClean)) {
+  if (["admin", "mis", "vp", "accountant", "hr", "project head", "travel desk", "travel tesk"].includes(managerRoleClean)) {
     return true;
   }
   

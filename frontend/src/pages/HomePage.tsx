@@ -110,7 +110,16 @@ export default function HomePage() {
 
   // Tabs state - persisted on refresh
   const [activeTab, setActiveTab] = useState<"my-claims" | "team-claims">((() => {
-    return (localStorage.getItem("dashboard_active_tab") as "my-claims" | "team-claims") || "my-claims";
+    const saved = localStorage.getItem("dashboard_active_tab");
+    if (saved === "my-claims" || saved === "team-claims") return saved;
+    const currentUser = JSON.parse(localStorage.getItem("user") || "null");
+    if (currentUser) {
+      const roleLower = (currentUser.role || "").trim().toLowerCase();
+      if (["admin", "project head", "mis", "travel desk", "travel tesk", "vp", "accountant", "hr"].includes(roleLower)) {
+        return "team-claims";
+      }
+    }
+    return "my-claims";
   }));
 
   const handleTabChange = (tab: "my-claims" | "team-claims") => {
@@ -203,10 +212,9 @@ export default function HomePage() {
     if (!currentUser) return;
 
     const uId = currentUser.user_id;
-    const allowedWindows = currentUser.allowed_windows
-      ? currentUser.allowed_windows.split(",").map((w: string) => w.trim().toLowerCase())
-      : ["home", "profile", "help"];
-    const isReviewer = allowedWindows.includes("approval");
+    const userRoleLower = (currentUser.role || "").trim().toLowerCase();
+    const isSpecialViewRole = ["admin", "project head", "mis", "travel desk", "travel tesk", "vp", "accountant", "hr"].includes(userRoleLower);
+    const isReviewer = allowedWindows.includes("approval") || isSpecialViewRole;
 
     if (isReviewer) {
       approvalService.getPendingApprovals()
@@ -339,13 +347,9 @@ export default function HomePage() {
 
   if (!user) return null;
 
-  const allowedWindows = user.allowed_windows
-    ? user.allowed_windows.split(",").map((w: string) => w.trim().toLowerCase())
-    : ["home", "profile", "help"];
-
-
-
-  const isReviewerRole = allowedWindows.includes("approval");
+  const userRoleLower = (user?.role || "").trim().toLowerCase();
+  const isSpecialViewRole = ["admin", "project head", "mis", "travel desk", "travel tesk", "vp", "accountant", "hr"].includes(userRoleLower);
+  const isReviewerRole = allowedWindows.includes("approval") || isSpecialViewRole;
 
   const getStatusBadgeClass = (status: string) => {
     const s = (status || "").toLowerCase();

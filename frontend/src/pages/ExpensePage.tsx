@@ -1540,8 +1540,6 @@ export default function ExpensePage() {
     });
   };
 
-  // Words that indicate a leg endpoint is NOT a plain home/residence
-  const RESIDENCE_SKIP_WORDS = ["market", "bazaar", "bazar", "mandi", "haat", "station", "railway", "bus stand", "bus stop", "bus depot", "bus adda", "rly"];
 
   /**
    * True only when this leg is a direct commute between residence and base hospital.

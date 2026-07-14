@@ -106,7 +106,9 @@ export async function getBootstrapDataHelper(env, user, request = null) {
   const hasDirectReports = hasDirectReportsResult.length > 0;
   const isHierarchyApprover = isHierarchyApproverResult.length > 0;
 
-  const isTeamLead = user.role === "Admin" || allowedWindows.includes("approval") || hasDirectReports || isHierarchyApprover;
+  const userRoleLower = (user.role || "").trim().toLowerCase();
+  const isSpecialViewRole = ["admin", "project head", "mis", "travel desk", "travel tesk", "vp", "accountant", "hr"].includes(userRoleLower);
+  const isTeamLead = user.role === "Admin" || allowedWindows.includes("approval") || hasDirectReports || isHierarchyApprover || isSpecialViewRole;
 
   const now = new Date();
   const currentMonthName = MONTH_NAMES[now.getMonth()];
@@ -162,7 +164,8 @@ export async function getBootstrapDataHelper(env, user, request = null) {
   let teamExpenses = [];
   let pendingApprovals = [];
   if (isTeamLead) {
-    if (user.role === "Admin") {
+    const isFullReportViewer = ["admin", "project head", "mis", "travel desk", "travel tesk", "vp", "accountant", "hr"].includes(userRoleLower);
+    if (isFullReportViewer) {
       const teamRes = await db.select({
         id: expenses.id,
         userId: expenses.userId,

@@ -51,9 +51,9 @@ const MENU_ITEMS: MenuItem[] = [
   { id: "upload_data", name: "Upload Data", path: "/upload-data", icon: UploadCloud, roles: ["Admin", "Coordinator", "MIS"] },
   { id: "asset_upload", name: "Asset Inventory", path: "/asset-upload", icon: Package, roles: ["Admin", "Coordinator", "MIS", "Engineer"] },
   { id: "penalty_report", name: "Penalty Report", path: "/penalty-report", icon: ShieldAlert, roles: ["Admin", "Manager", "Division Manager", "Accountant", "MIS", "VP"] },
-  { id: "analysis", name: "Analysis", path: "/analysis", icon: BarChart3, roles: ["Admin", "Manager", "Division Manager", "MIS", "VP"] },
-  { id: "report", name: "Month Report", path: "/month-report", icon: Calendar, roles: ["Admin", "Manager", "Division Manager", "Accountant", "HR", "MIS", "VP"] },
-  { id: "consolidated_report", name: "Consolidated Report", path: "/consolidated-report", icon: FileSpreadsheet, roles: ["Admin", "Manager", "Division Manager", "Coordinator", "Accountant", "HR", "MIS", "VP"] },
+  { id: "analysis", name: "Analysis", path: "/analysis", icon: BarChart3, roles: ["Admin", "Manager", "Division Manager", "MIS", "VP", "Project Head", "Travel Desk", "Accountant", "HR"] },
+  { id: "report", name: "Month Report", path: "/month-report", icon: Calendar, roles: ["Admin", "Manager", "Division Manager", "Accountant", "HR", "MIS", "VP", "Project Head", "Travel Desk"] },
+  { id: "consolidated_report", name: "Consolidated Report", path: "/consolidated-report", icon: FileSpreadsheet, roles: ["Admin", "Manager", "Division Manager", "Coordinator", "Accountant", "HR", "MIS", "VP", "Project Head", "Travel Desk"] },
   { id: "help", name: "Help Center", path: "/help-center", icon: HelpCircle, roles: ["Admin", "Engineer", "Manager", "Division Manager", "Coordinator", "Accountant", "HR", "Project Head", "Travel Desk", "MIS", "VP"] },
   { id: "profile", name: "Profile", path: "/profile", icon: User, roles: ["Admin", "Engineer", "Manager", "Division Manager", "Coordinator", "Accountant", "HR", "Project Head", "Travel Desk", "MIS", "VP"] },
 ];
@@ -294,6 +294,8 @@ export default function DashboardLayout() {
   if (!user) return null;
 
   const userRole = user.role || "Engineer";
+  const userRoleClean = userRole.trim().toLowerCase();
+  const isAlwaysAllowedAll = ["admin", "project head", "mis", "travel desk", "travel tesk", "vp", "accountant", "hr"].includes(userRoleClean);
 
   const isAdmin = ["Admin", "admin", "Super Admin", "super_admin"].includes(userRole);
 
@@ -314,6 +316,16 @@ export default function DashboardLayout() {
     }
   } catch (_) {
     allowedWindows = ["home", "profile", "help", "expense"];
+  }
+
+  // Force-enable specified windows for special roles
+  if (isAlwaysAllowedAll) {
+    const forced = ["home", "analysis", "report", "consolidated_report", "profile", "help"];
+    forced.forEach(w => {
+      if (!allowedWindows.includes(w)) {
+        allowedWindows.push(w);
+      }
+    });
   }
 
   // Check if user has permission for menu items based on allowed_windows
