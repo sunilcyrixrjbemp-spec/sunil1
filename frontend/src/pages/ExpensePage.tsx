@@ -2285,10 +2285,16 @@ export default function ExpensePage() {
           ? { policyMessage: baseLocDeductions.policyMessage, items: baseLocDeductions.items }
           : null;
 
+        // Use the correct message based on whether it was auto-approved (₹0) or sent for approval
+        const isAutoApproved = totalAmt <= 0;
+        const successMessage = isAutoApproved
+          ? "Your claim has been auto-approved since the total reimbursable amount is ₹0 after base location policy deductions. No manager approval is required."
+          : "Your reimbursement claim has been successfully recorded and forwarded to your reporting manager for approval.";
+
         setSubmitStatus({
           type: "success",
-          title: "Claim Submitted",
-          message: res.message || "Your expense claim has been submitted to your manager for review.",
+          title: isAutoApproved ? "Auto Approved!" : "Claim Submitted!",
+          message: successMessage,
           claimCode: res.expense_code,
           deductions: deductionSnapshot
         });
@@ -4784,14 +4790,20 @@ export default function ExpensePage() {
       {/* ================= SUBMISSION STATUS MODAL (SUCCESS/ERROR) ================= */}
       {submitStatus && (
         <div className="modal-lte-overlay">
-          <div className={`modal-lte-content max-w-sm p-0 overflow-hidden rounded-2xl shadow-2xl border-0 ${
-            submitStatus.type === "success" ? "ring-1 ring-emerald-200" : "ring-1 ring-rose-200"
+        <div className={`modal-lte-content max-w-sm p-0 overflow-hidden rounded-2xl shadow-2xl border-0 ${
+            submitStatus.type === "success"
+              ? submitStatus.title === "Auto Approved!"
+                ? "ring-1 ring-indigo-200"
+                : "ring-1 ring-emerald-200"
+              : "ring-1 ring-rose-200"
           }`}>
 
             {/* Gradient Header Strip */}
             <div className={`px-6 pt-6 pb-5 text-center ${
               submitStatus.type === "success"
-                ? "bg-gradient-to-br from-emerald-500 to-teal-600"
+                ? submitStatus.title === "Auto Approved!"
+                  ? "bg-gradient-to-br from-indigo-500 to-violet-600"
+                  : "bg-gradient-to-br from-emerald-500 to-teal-600"
                 : "bg-gradient-to-br from-rose-500 to-red-600"
             }`}>
               <div className="mx-auto w-14 h-14 rounded-full bg-white/20 backdrop-blur flex items-center justify-center mb-3 ring-4 ring-white/30">
@@ -4815,10 +4827,7 @@ export default function ExpensePage() {
 
               {/* Main Message */}
               <p className="text-xs text-gray-600 font-semibold leading-relaxed text-center">
-                {submitStatus.type === "success"
-                  ? "Your reimbursement claim has been successfully recorded and forwarded to your reporting manager for approval."
-                  : submitStatus.message
-                }
+                {submitStatus.message}
               </p>
 
               {/* Deduction Breakdown Card */}
@@ -4893,7 +4902,9 @@ export default function ExpensePage() {
                 }}
                 className={`w-full py-3 px-4 rounded-xl text-xs font-black uppercase tracking-widest transition-all border-0 cursor-pointer shadow-lg ${
                   submitStatus.type === "success"
-                    ? "bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-600 hover:to-teal-700 text-white shadow-emerald-500/30"
+                    ? submitStatus.title === "Auto Approved!"
+                      ? "bg-gradient-to-r from-indigo-500 to-violet-600 hover:from-indigo-600 hover:to-violet-700 text-white shadow-indigo-500/30"
+                      : "bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-600 hover:to-teal-700 text-white shadow-emerald-500/30"
                     : "bg-gradient-to-r from-rose-500 to-red-600 hover:from-rose-600 hover:to-red-700 text-white shadow-rose-500/30"
                 }`}
               >
