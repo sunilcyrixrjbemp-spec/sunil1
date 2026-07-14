@@ -2192,6 +2192,34 @@ export default function ExpensePage() {
       const isBaseLocOnly = isBaseLocationOnlyTravel();
       const isDAAllowed = isDailyAllowanceAllowed();
 
+      // Compute deductions directly from current itineraries to avoid stale state/closure issue
+      const deductionItems: { leg: number; from: string; to: string; taDeducted: number; daDeducted: number }[] = [];
+      let policyMsg = "";
+
+      if (isBaseLocOnly) {
+        if (!isDAAllowed) {
+          policyMsg = "Base location par kaam karne par TA aur DA dono eligible nahi hain (base location policy).";
+        } else {
+          policyMsg = "Base location par kaam karne par TA eligible nahi hai (base location policy).";
+        }
+
+        itineraries.forEach((leg, idx) => {
+          const legNum = idx + 1;
+          const origTA = parseFloat(leg.amount || "0");
+          const origSub = parseFloat(leg.sub_amount || "0");
+          const origDA = legNum === 1 ? parseFloat(leg.da || "0") : 0;
+          const taDeducted = origTA + origSub;
+          const daDeducted = isDAAllowed ? 0 : origDA;
+          if (taDeducted > 0 || daDeducted > 0) {
+            deductionItems.push({ leg: legNum, from: leg.from || "", to: leg.to || "", taDeducted, daDeducted });
+          }
+        });
+      }
+
+      const deductionSnapshot = deductionItems.length > 0
+        ? { policyMessage: policyMsg, items: deductionItems }
+        : null;
+
       const itinerariesData = itineraries.map((leg, index) => {
         const legNum = index + 1;
         const acts = leg.selected_activities || [];
@@ -2280,10 +2308,6 @@ export default function ExpensePage() {
 
       const res = await expenseService.submitItineraryExpense(formData);
       if (res.success || res.status === "success") {
-        // Snapshot deductions BEFORE resetForm() clears baseLocDeductions state
-        const deductionSnapshot = baseLocDeductions && baseLocDeductions.hasDeductions
-          ? { policyMessage: baseLocDeductions.policyMessage, items: baseLocDeductions.items }
-          : null;
 
         // Use backend's auto_approved flag — most reliable source of truth
         const isAutoApproved = !!res.auto_approved;
