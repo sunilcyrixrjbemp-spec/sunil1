@@ -2285,10 +2285,10 @@ export default function ExpensePage() {
           ? { policyMessage: baseLocDeductions.policyMessage, items: baseLocDeductions.items }
           : null;
 
-        // Use the correct message based on whether it was auto-approved (₹0) or sent for approval
-        const isAutoApproved = totalAmt <= 0;
+        // Use backend's auto_approved flag — most reliable source of truth
+        const isAutoApproved = !!res.auto_approved;
         const successMessage = isAutoApproved
-          ? "Your claim has been auto-approved since the total reimbursable amount is ₹0 after base location policy deductions. No manager approval is required."
+          ? (res.message || "Your claim has been auto-approved since the total reimbursable amount is ₹0 after base location policy deductions. No manager approval is required.")
           : "Your reimbursement claim has been successfully recorded and forwarded to your reporting manager for approval.";
 
         setSubmitStatus({

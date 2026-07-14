@@ -2283,9 +2283,12 @@ export async function handleSubmitExpense(request, env, params, query, user) {
 
   return jsonResponse({
     status: "success",
-    message: "Expense claim submitted successfully.",
+    message: amount <= 0
+      ? "Your claim has been auto-approved since the total reimbursable amount is ₹0 after policy deductions. No manager approval is required."
+      : "Expense claim submitted successfully.",
     expense_id: newExpId,
-    expense_code: expenseCode
+    expense_code: expenseCode,
+    auto_approved: amount <= 0
   });
 }
 
