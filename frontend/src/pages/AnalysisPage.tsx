@@ -15,6 +15,7 @@ const months = [
 ];
 
 export default function AnalysisPage() {
+  const cleanZone = (z: string) => (z || "").trim().replace(/\s*[Zz]one\s*$/i, "").toLowerCase();
   const [isMobile, setIsMobile] = useState(window.innerWidth < 768);
   useEffect(() => {
     const handleResize = () => setIsMobile(window.innerWidth < 768);
@@ -207,7 +208,7 @@ export default function AnalysisPage() {
       const name = e.submitter_name || "Self";
       const zone = e.zone || "";
       if (selectedDistrict === "all" || dist.toLowerCase() === selectedDistrict.toLowerCase()) {
-        if (selectedZone === "all" || zone.toLowerCase() === selectedZone.toLowerCase()) {
+        if (selectedZone === "all" || cleanZone(zone) === cleanZone(selectedZone)) {
           engineers.add(name);
         }
       }
@@ -220,7 +221,7 @@ export default function AnalysisPage() {
       const name = e.submitter_name || "Self";
       const zone = e.zone || "";
       if (selectedEngineer === "all" || name.toLowerCase() === selectedEngineer.toLowerCase()) {
-        if (selectedZone === "all" || zone.toLowerCase() === selectedZone.toLowerCase()) {
+        if (selectedZone === "all" || cleanZone(zone) === cleanZone(selectedZone)) {
           districts.add(dist);
         }
       }
@@ -282,7 +283,7 @@ export default function AnalysisPage() {
       if (selectedZone !== "all") {
         list = list.filter(e => {
           const zone = e.zone || "";
-          return zone.toLowerCase() === selectedZone.toLowerCase();
+          return cleanZone(zone) === cleanZone(selectedZone);
         });
       }
       if (selectedDistrict !== "all") {

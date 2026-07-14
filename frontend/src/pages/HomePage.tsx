@@ -62,6 +62,7 @@ const GALLERY_COLORS = ["#2f5bb7", "#2b7d50", "#d28b2a", "#854aa5", "#d83b01", "
 export default function HomePage() {
 
   const navigate = useNavigate();
+  const cleanZone = (z: string) => (z || "").trim().replace(/\s*[Zz]one\s*$/i, "").toLowerCase();
   const [user, setUser] = useState<any>(() => {
     return JSON.parse(localStorage.getItem("user") || "null");
   });
@@ -440,12 +441,11 @@ export default function HomePage() {
   const safeMyExpenses = Array.isArray(myExpenses) ? myExpenses : [];
   const safeTeamExpenses = Array.isArray(teamExpenses) ? teamExpenses : [];
 
-  // Unique employee list for dropdown filter
   const uniqueEmployees = Array.from(
     new Map(
       safeTeamExpenses
         .filter((e): e is any => !!e && !!e.submitter_code && !!e.submitter_name)
-        .filter((e) => filterZone === "all" || String(e.zone || "").trim().toLowerCase() === filterZone.trim().toLowerCase())
+        .filter((e) => filterZone === "all" || cleanZone(e.zone) === cleanZone(filterZone))
         .map(e => [e.submitter_code, e.submitter_name])
     ).entries()
   ).map(([code, name]) => ({ code: String(code), name: String(name) }));
@@ -492,7 +492,7 @@ export default function HomePage() {
     return safeTeamExpenses.filter(exp => {
       const rawDate = exp.date || exp.itinerary;
       if (rawDate && !rawDate.startsWith(selectMonth)) return false;
-      if (filterZone !== "all" && String(exp.zone || "").trim().toLowerCase() !== filterZone.trim().toLowerCase()) return false;
+      if (filterZone !== "all" && cleanZone(exp.zone) !== cleanZone(filterZone)) return false;
       if (filterEmployee !== "all" && String(exp.submitter_code || "").trim().toLowerCase() !== filterEmployee.trim().toLowerCase()) return false;
       if (filterMode !== "all" && String(exp.category || "").trim().toLowerCase() !== filterMode.trim().toLowerCase()) return false;
       if (homeStatusFilter !== "all") {
@@ -574,7 +574,7 @@ export default function HomePage() {
     if (!exp) return false;
     const rawDate = exp.date || exp.itinerary;
     if (rawDate && !rawDate.startsWith(selectMonth)) return false;
-    if (filterZone !== "all" && String(exp.zone || "").trim().toLowerCase() !== filterZone.trim().toLowerCase()) return false;
+    if (filterZone !== "all" && cleanZone(exp.zone) !== cleanZone(filterZone)) return false;
     if (filterEmployee !== "all" && String(exp.submitter_code || "").trim().toLowerCase() !== filterEmployee.trim().toLowerCase()) return false;
     if (filterMode !== "all" && String(exp.category || "").trim().toLowerCase() !== filterMode.trim().toLowerCase()) return false;
     return true;

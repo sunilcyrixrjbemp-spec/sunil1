@@ -19,8 +19,8 @@ export function getActualZone(zone, district) {
     "Jodhpur": ["barmer", "balotra", "jaisalmer", "jalore", "jodhpur", "pali", "phalodi", "sirohi"],
     "Udaipur": ["banswara", "chittorgarh", "dungarpur", "rajsamand", "pratapgarh", "udaipur"]
   };
-  const zClean = (zone || "").trim().toLowerCase();
-  const dClean = (district || "").trim().toLowerCase();
+  const zClean = (zone || "").trim().replace(/\s*zone\s*$/i, "").toLowerCase();
+  const dClean = (district || "").trim().replace(/\s*zone\s*$/i, "").toLowerCase();
   for (const [zName, districts] of Object.entries(zoneMapping)) {
     if (districts.includes(dClean) || districts.includes(zClean) || zName.toLowerCase() === zClean) {
       return zName;
