@@ -139,14 +139,26 @@ export async function getLegacyExpenseHashId(expId) {
 
 export async function fetchPendingApprovals(env, user) {
   const result = [];
+  const userRoleClean = (user.role || "").trim().toLowerCase();
+  const isAdmin = userRoleClean === "admin";
 
   // 1. Fetch pending limit requests (joining users table to avoid N+1 query loop)
-  const pendingLimits = await env.DB.prepare(`
-    SELECT pl.*, u.name AS submitter_name
-    FROM limit_approval_requests pl
-    LEFT JOIN users u ON u.user_id = pl.user_id
-    WHERE pl.manager_id = ? AND pl.status = 'Pending'
-  `).bind(user.user_id).all();
+  let pendingLimits;
+  if (isAdmin) {
+    pendingLimits = await env.DB.prepare(`
+      SELECT pl.*, u.name AS submitter_name
+      FROM limit_approval_requests pl
+      LEFT JOIN users u ON u.user_id = pl.user_id
+      WHERE pl.status = 'Pending'
+    `).all();
+  } else {
+    pendingLimits = await env.DB.prepare(`
+      SELECT pl.*, u.name AS submitter_name
+      FROM limit_approval_requests pl
+      LEFT JOIN users u ON u.user_id = pl.user_id
+      WHERE pl.manager_id = ? AND pl.status = 'Pending'
+    `).bind(user.user_id).all();
+  }
 
   for (const pl of (pendingLimits.results || [])) {
     result.push({
@@ -170,21 +182,34 @@ export async function fetchPendingApprovals(env, user) {
   }
 
   // 2. Fetch normal approvals (joining users table to avoid N+1 query loop)
-  const approvals = await env.DB.prepare(`
-    SELECT a.*, e.expense_code, e.amount, e.description, e.travel_mode, e.itinerary, e.user_id as submitter_user_id,
-           u.name AS submitter_name, u.user_id AS submitter_code
-    FROM approvals a
-    JOIN expenses e ON a.expense_id = e.id
-    LEFT JOIN users u ON e.user_id = u.id
-    WHERE a.approver_id = ? AND a.status = 'pending'
-      AND EXISTS (
-        SELECT 1 
-        FROM hierarchy_requesters hr 
-        JOIN hierarchy_approvers ha ON hr.hierarchy_id = ha.hierarchy_id 
-        WHERE hr.user_id = e.user_id AND ha.approver_id = a.approver_id
-      )
-    ORDER BY a.level_number ASC, a.created_at DESC
-  `).bind(user.id).all();
+  let approvals;
+  if (isAdmin) {
+    approvals = await env.DB.prepare(`
+      SELECT a.*, e.expense_code, e.amount, e.description, e.travel_mode, e.itinerary, e.user_id as submitter_user_id,
+             u.name AS submitter_name, u.user_id AS submitter_code
+      FROM approvals a
+      JOIN expenses e ON a.expense_id = e.id
+      LEFT JOIN users u ON e.user_id = u.id
+      WHERE a.status = 'pending'
+      ORDER BY a.level_number ASC, a.created_at DESC
+    `).all();
+  } else {
+    approvals = await env.DB.prepare(`
+      SELECT a.*, e.expense_code, e.amount, e.description, e.travel_mode, e.itinerary, e.user_id as submitter_user_id,
+             u.name AS submitter_name, u.user_id AS submitter_code
+      FROM approvals a
+      JOIN expenses e ON a.expense_id = e.id
+      LEFT JOIN users u ON e.user_id = u.id
+      WHERE a.approver_id = ? AND a.status = 'pending'
+        AND EXISTS (
+          SELECT 1 
+          FROM hierarchy_requesters hr 
+          JOIN hierarchy_approvers ha ON hr.hierarchy_id = ha.hierarchy_id 
+          WHERE hr.user_id = e.user_id AND ha.approver_id = a.approver_id
+        )
+      ORDER BY a.level_number ASC, a.created_at DESC
+    `).bind(user.id).all();
+  }
 
   const approvalsList = approvals.results || [];
   
@@ -227,15 +252,25 @@ export async function fetchPendingApprovals(env, user) {
 
   // 3. Fetch legacy pending claims
   try {
-    const legacyRows = await env.DB.prepare(`
-      SELECT m.exp_id, m.user_id, m.expense_date, m.total_amount, m.status, m.visit_purpose, u.name as full_name, u.e_code
-      FROM expense_master m
-      JOIN users u ON LOWER(m.user_id) = LOWER(u.user_id)
-      WHERE 
-        ((m.status = 'Pending L1' OR m.status = 'Pending') AND LOWER(m.level_first_approver) = LOWER(?))
-        OR
-        (m.status = 'Pending L2' AND LOWER(m.level_second_approver) = LOWER(?))
-    `).bind(user.user_id, user.user_id).all();
+    let legacyRows;
+    if (isAdmin) {
+      legacyRows = await env.DB.prepare(`
+        SELECT m.exp_id, m.user_id, m.expense_date, m.total_amount, m.status, m.visit_purpose, u.name as full_name, u.e_code
+        FROM expense_master m
+        JOIN users u ON LOWER(m.user_id) = LOWER(u.user_id)
+        WHERE m.status = 'Pending L1' OR m.status = 'Pending' OR m.status = 'Pending L2'
+      `).all();
+    } else {
+      legacyRows = await env.DB.prepare(`
+        SELECT m.exp_id, m.user_id, m.expense_date, m.total_amount, m.status, m.visit_purpose, u.name as full_name, u.e_code
+        FROM expense_master m
+        JOIN users u ON LOWER(m.user_id) = LOWER(u.user_id)
+        WHERE 
+          ((m.status = 'Pending L1' OR m.status = 'Pending') AND LOWER(m.level_first_approver) = LOWER(?))
+          OR
+          (m.status = 'Pending L2' AND LOWER(m.level_second_approver) = LOWER(?))
+      `).bind(user.user_id, user.user_id).all();
+    }
 
     const legacyList = legacyRows.results || [];
 
@@ -420,12 +455,20 @@ export async function handleApprove(request, env, params, query, user) {
   }
 
   // 3. Handle Standard Expense (expenseId > 0)
-  const activeApproval = await env.DB.prepare(`
-    SELECT * FROM approvals WHERE expense_id = ? AND approver_id = ? AND status = 'pending'
-  `).bind(expenseId, user.id).first();
+  let activeApproval;
+  if (user.role === "Admin") {
+    activeApproval = await env.DB.prepare(`
+      SELECT * FROM approvals WHERE expense_id = ? AND status = 'pending'
+      LIMIT 1
+    `).bind(expenseId).first();
+  } else {
+    activeApproval = await env.DB.prepare(`
+      SELECT * FROM approvals WHERE expense_id = ? AND approver_id = ? AND status = 'pending'
+    `).bind(expenseId, user.id).first();
+  }
 
   if (!activeApproval) {
-    return jsonResponse({ error: "No pending approval task found for you on this claim" }, 400);
+    return jsonResponse({ error: "No pending approval task found on this claim" }, 400);
   }
 
   const expense = await env.DB.prepare("SELECT * FROM expenses WHERE id = ?").bind(expenseId).first();
@@ -599,12 +642,20 @@ export async function handleReject(request, env, params, query, user) {
   }
 
   // 3. Handle Standard Expense Rejection
-  const activeApproval = await env.DB.prepare(`
-    SELECT * FROM approvals WHERE expense_id = ? AND approver_id = ? AND status = 'pending'
-  `).bind(expenseId, user.id).first();
+  let activeApproval;
+  if (user.role === "Admin") {
+    activeApproval = await env.DB.prepare(`
+      SELECT * FROM approvals WHERE expense_id = ? AND status = 'pending'
+      LIMIT 1
+    `).bind(expenseId).first();
+  } else {
+    activeApproval = await env.DB.prepare(`
+      SELECT * FROM approvals WHERE expense_id = ? AND approver_id = ? AND status = 'pending'
+    `).bind(expenseId, user.id).first();
+  }
 
   if (!activeApproval) {
-    return jsonResponse({ error: "No pending approval task found for you on this claim" }, 400);
+    return jsonResponse({ error: "No pending approval task found on this claim" }, 400);
   }
 
   const expense = await env.DB.prepare("SELECT * FROM expenses WHERE id = ?").bind(expenseId).first();
@@ -720,12 +771,20 @@ export async function handleReturnToDraft(request, env, params, query, user) {
   const timestamp = client_timestamp || new Date().toISOString();
 
   // Verify coordinator has a pending approval on this expense
-  const activeApproval = await env.DB.prepare(`
-    SELECT * FROM approvals WHERE expense_id = ? AND approver_id = ? AND status = 'pending'
-  `).bind(expenseId, user.id).first();
+  let activeApproval;
+  if (user.role === "Admin") {
+    activeApproval = await env.DB.prepare(`
+      SELECT * FROM approvals WHERE expense_id = ? AND status = 'pending'
+      LIMIT 1
+    `).bind(expenseId).first();
+  } else {
+    activeApproval = await env.DB.prepare(`
+      SELECT * FROM approvals WHERE expense_id = ? AND approver_id = ? AND status = 'pending'
+    `).bind(expenseId, user.id).first();
+  }
 
   if (!activeApproval) {
-    return jsonResponse({ error: "No pending approval task found for you on this claim" }, 400);
+    return jsonResponse({ error: "No pending approval task found on this claim" }, 400);
   }
 
   const expense = await env.DB.prepare("SELECT * FROM expenses WHERE id = ?").bind(expenseId).first();

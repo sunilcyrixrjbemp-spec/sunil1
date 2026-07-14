@@ -1900,10 +1900,9 @@ export async function handleSubmitExpense(request, env, params, query, user) {
 
   for (let idx = 0; idx < itineraries.length; idx++) {
     const iti = itineraries[idx];
-    // If isBaseLocOnly: ALL TA = 0 regardless of what frontend sent
-    // (frontend should have done it, but backend corrects if it missed)
-    const travelAmt = isBaseLocOnly ? 0.0 : parseFloat(iti.amount || "0.0");
-    const subAmt    = isBaseLocOnly ? 0.0 : parseFloat(iti.sub_amount || "0.0");
+    const isCommute = isBaseLocOnly && checkIsCommuteLeg(iti, baseLocations);
+    const travelAmt = isCommute ? 0.0 : parseFloat(iti.amount || "0.0");
+    const subAmt    = isCommute ? 0.0 : parseFloat(iti.sub_amount || "0.0");
     const daAmt     = isDaAllowed ? parseFloat(iti.da || "0.0") : 0.0;
     const hotelAmt = parseFloat(iti.hotel || "0.0");
     const otherAmt = parseFloat(iti.oth_amount || "0.0");
@@ -2138,6 +2137,7 @@ export async function handleSubmitExpense(request, env, params, query, user) {
     const itiId = `${expenseCode}-${legNum}`;
     const fromDist = iti.district_from || user.district || "Jodhpur";
     const toDist = iti.district || "Jodhpur";
+    const isCommute = isBaseLocOnly && checkIsCommuteLeg(iti, baseLocations);
     
     await runWrite(env, `
       INSERT INTO expense_itineraries (
@@ -2149,12 +2149,11 @@ export async function handleSubmitExpense(request, env, params, query, user) {
       )
       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 0.0, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     `, [
-      // Safety-net: apply base-loc policy on save (ALL TAs 0 when isBaseLocOnly)
       itiId, expenseCode, legNum, fromDist, toDist, iti.from || "", iti.to || "",
       iti.mode || "Bike", parseFloat(iti.km || "0.0"),
-      isBaseLocOnly ? 0.0 : parseFloat(iti.amount || "0.0"),
+      isCommute ? 0.0 : parseFloat(iti.amount || "0.0"),
       iti.sub_mode || null,
-      isBaseLocOnly ? 0.0 : parseFloat(iti.sub_amount || "0.0"),
+      isCommute ? 0.0 : parseFloat(iti.sub_amount || "0.0"),
       isDaAllowed ? parseFloat(iti.da || "0.0") : 0.0,
       parseFloat(iti.hotel || "0.0"), parseFloat(iti.local_purchase || "0.0"), iti.oth_desc || null, parseFloat(iti.oth_amount || "0.0"),
       parseInt(iti.ws_assigned || "0", 10), parseInt(iti.ws_closed || "0", 10),
@@ -2162,8 +2161,8 @@ export async function handleSubmitExpense(request, env, params, query, user) {
       iti.visit_purpose || "Field visit",
       typeof iti.activity_details === "string" ? iti.activity_details : JSON.stringify(iti.activity_details || {}),
       parseFloat(iti.km || "0.0"),
-      isBaseLocOnly ? 0.0 : parseFloat(iti.amount || "0.0"),
-      isBaseLocOnly ? 0.0 : parseFloat(iti.sub_amount || "0.0"),
+      isCommute ? 0.0 : parseFloat(iti.amount || "0.0"),
+      isCommute ? 0.0 : parseFloat(iti.sub_amount || "0.0"),
       isDaAllowed ? parseFloat(iti.da || "0.0") : 0.0, parseFloat(iti.hotel || "0.0"), parseFloat(iti.oth_amount || "0.0"),
       parseFloat(iti.local_purchase || "0.0"), parseInt(iti.calibration_count || "0", 10),
       parseInt(iti.mobilise_asset_count || "0", 10)
@@ -2287,11 +2286,12 @@ export async function handleSubmitExpense(request, env, params, query, user) {
     for (let idx = 0; idx < itineraries.length; idx++) {
       const iti = itineraries[idx];
       const legNum = idx + 1;
+      const isCommute = checkIsCommuteLeg(iti, baseLocations);
       const origTA = parseFloat(iti.original_travel_amount || iti.amount || "0.0");
       const origSub = parseFloat(iti.original_sub_amount || iti.sub_amount || "0.0");
       const origDA = legNum === 1 ? parseFloat(iti.original_da_amount || iti.da || "0.0") : 0.0;
 
-      const taDeducted = origTA + origSub;
+      const taDeducted = isCommute ? (origTA + origSub) : 0.0;
       const daDeducted = isDaAllowed ? 0.0 : origDA;
 
       if (taDeducted > 0.0 || daDeducted > 0.0) {
@@ -3227,7 +3227,7 @@ export async function handleGetConsolidatedReport(request, env, params, query, u
 
   if (isAdminOrReportViewer) {
     for (const u of allUsers) {
-      if (u.user_id) allowedUserCodesSet.add(u.user_id);
+      if (u.id) allowedUserCodesSet.add(u.id);
     }
     filteredUsers = allUsers;
   } else {
@@ -3236,7 +3236,7 @@ export async function handleGetConsolidatedReport(request, env, params, query, u
 
     // Query direct reports
     const directReportsRes = await env.DB.prepare(`
-      SELECT user_id FROM users
+      SELECT id, user_id FROM users
       WHERE LOWER(TRIM(manager)) = ? OR LOWER(TRIM(manager)) = ?
          OR LOWER(TRIM(coordinator)) = ? OR LOWER(TRIM(coordinator)) = ?
          OR LOWER(TRIM(zonal_manager)) = ? OR LOWER(TRIM(zonal_manager)) = ?
@@ -3247,7 +3247,7 @@ export async function handleGetConsolidatedReport(request, env, params, query, u
     ).all().catch(() => ({ results: [] }));
     const directReports = directReportsRes.results || [];
     for (const r of directReports) {
-      if (r.user_id) allowedUserCodesSet.add(r.user_id);
+      if (r.id) allowedUserCodesSet.add(r.id);
     }
 
     // Query hierarchy reports
@@ -3259,18 +3259,18 @@ export async function handleGetConsolidatedReport(request, env, params, query, u
       const hIds = hierarchyApprovals.results.map(h => h.hierarchy_id);
       const placeholders = hIds.map(() => "?").join(",");
       const reqsRes = await env.DB.prepare(`
-        SELECT user_id FROM hierarchy_requesters
+        SELECT id, user_id FROM hierarchy_requesters
         WHERE hierarchy_id IN (${placeholders})
       `).bind(...hIds).all().catch(() => ({ results: [] }));
       for (const r of (reqsRes.results || [])) {
-        if (r.user_id) allowedUserCodesSet.add(r.user_id);
+        if (r.id) allowedUserCodesSet.add(r.id);
       }
     }
 
     // Also include self
-    if (user.user_id) allowedUserCodesSet.add(user.user_id);
+    if (user.id) allowedUserCodesSet.add(user.id);
 
-    filteredUsers = allUsers.filter(u => u.user_id && allowedUserCodesSet.has(u.user_id));
+    filteredUsers = allUsers.filter(u => u.id && allowedUserCodesSet.has(u.id));
   }
 
   const allowedUserCodes = Array.from(allowedUserCodesSet);

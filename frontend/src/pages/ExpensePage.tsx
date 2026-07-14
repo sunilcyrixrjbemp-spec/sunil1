@@ -1540,6 +1540,27 @@ export default function ExpensePage() {
     });
   };
 
+  // Words that indicate a leg endpoint is NOT a plain home/residence
+  const RESIDENCE_SKIP_WORDS = ["market", "bazaar", "bazar", "mandi", "haat", "station", "railway", "bus stand", "bus stop", "bus depot", "bus adda", "rly"];
+
+  /**
+   * True only when this leg is a direct commute between residence and base hospital.
+   * Mirrors backend checkIsCommuteLeg().
+   */
+  const isCommuteLeg = (leg: ItineraryLeg, baseLocations: string[]): boolean => {
+    const f = (leg.from || "").trim().toLowerCase();
+    const t = (leg.to || "").trim().toLowerCase();
+    // A residence endpoint: user-typed (custom), and NOT a market / station keyword
+    const fromIsResidence = !!leg.from_custom && !RESIDENCE_SKIP_WORDS.some(w => f.includes(w));
+    const toIsResidence   = !!leg.to_custom   && !RESIDENCE_SKIP_WORDS.some(w => t.includes(w));
+    const fromIsBase = matchesBase(f, baseLocations);
+    const toIsBase   = matchesBase(t, baseLocations);
+    // Edge-case: residence AND base at same time — not a commute
+    if (fromIsResidence && fromIsBase) return false;
+    if (toIsResidence   && toIsBase)   return false;
+    return (fromIsResidence && toIsBase) || (fromIsBase && toIsResidence);
+  };
+
   const isBaseLocationOnlyTravel = (legs: ItineraryLeg[] = itineraries) => {
     if (!user || !user.base_reporting_location) return false;
     const baseLocations = user.base_reporting_location
@@ -1625,13 +1646,16 @@ export default function ExpensePage() {
 
     const isBaseLocOnly = isBaseLocationOnlyTravel();
     const isDaAllowed = isDailyAllowanceAllowed();
+    const baseLocs = (user?.base_reporting_location || "")
+      .split(",").map((x: string) => x.trim().toLowerCase()).filter(Boolean);
 
     itineraries.forEach((leg, index) => {
       const legNum = index + 1;
       const legKm = parseFloat(leg.km) || 0;
-      // When working at base location, ALL travel amounts are 0 (not just commute legs)
-      const legAmt = isBaseLocOnly ? 0 : (parseFloat(leg.amount) || 0);
-      const subAmt = isBaseLocOnly ? 0 : (parseFloat(leg.sub_amount) || 0);
+      // Only zero TA for actual Home ↔ Base Hospital commute legs, not all legs
+      const isCommute = isBaseLocOnly && isCommuteLeg(leg, baseLocs);
+      const legAmt = isCommute ? 0 : (parseFloat(leg.amount) || 0);
+      const subAmt = isCommute ? 0 : (parseFloat(leg.sub_amount) || 0);
       const otherAmt = parseFloat(leg.oth_amount) || 0;
 
       if (leg.mode === "Bike" || leg.mode === "Car") {
@@ -2146,13 +2170,18 @@ export default function ExpensePage() {
         policyMsg = "Under base location policy, Travel Allowance (TA) is not eligible.";
       }
 
+      const baseLocs = user.base_reporting_location
+        ? user.base_reporting_location.split(",").map((x: string) => x.trim().toLowerCase()).filter(Boolean)
+        : [];
+
       processedItineraries.forEach((leg, idx) => {
         const legNum = idx + 1;
         const origTA = parseFloat(leg.amount || "0");
         const origSub = parseFloat(leg.sub_amount || "0");
         const origDA = legNum === 1 ? parseFloat(leg.da || "0") : 0;
-        // ALL TAs are 0 when isBaseLocOnly (not just commute legs)
-        const taDeducted = origTA + origSub;
+        // Only deduct TA for actual commute legs (Home ↔ Base Hospital)
+        const isCommute = isCommuteLeg(leg, baseLocs);
+        const taDeducted = isCommute ? origTA + origSub : 0;
         const daDeducted = isDAAllowed ? 0 : origDA;
         if (taDeducted > 0 || daDeducted > 0) {
           deductionItems.push({ leg: legNum, from: leg.from, to: leg.to, taDeducted, daDeducted });
@@ -2206,12 +2235,18 @@ export default function ExpensePage() {
           policyMsg = "Under base location policy, Travel Allowance (TA) is not eligible.";
         }
 
+        const baseLocs2 = user.base_reporting_location
+          ? user.base_reporting_location.split(",").map((x: string) => x.trim().toLowerCase()).filter(Boolean)
+          : [];
+
         itineraries.forEach((leg, idx) => {
           const legNum = idx + 1;
           const origTA = parseFloat(leg.amount || "0");
           const origSub = parseFloat(leg.sub_amount || "0");
           const origDA = legNum === 1 ? parseFloat(leg.da || "0") : 0;
-          const taDeducted = origTA + origSub;
+          // Only deduct TA for commute legs (Home ↔ Base Hospital)
+          const isCommute = isCommuteLeg(leg, baseLocs2);
+          const taDeducted = isCommute ? origTA + origSub : 0;
           const daDeducted = isDAAllowed ? 0 : origDA;
           if (taDeducted > 0 || daDeducted > 0) {
             deductionItems.push({ leg: legNum, from: leg.from || "", to: leg.to || "", taDeducted, daDeducted });
@@ -2222,6 +2257,11 @@ export default function ExpensePage() {
       const deductionSnapshot = deductionItems.length > 0
         ? { policyMessage: policyMsg, items: deductionItems }
         : null;
+
+      // Base locations list — reused in payload builder below
+      const baseLocs3 = user.base_reporting_location
+        ? user.base_reporting_location.split(",").map((x: string) => x.trim().toLowerCase()).filter(Boolean)
+        : [];
 
       const itinerariesData = itineraries.map((leg, index) => {
         const legNum = index + 1;
@@ -2271,10 +2311,10 @@ export default function ExpensePage() {
           to_custom: !!leg.to_custom,
           mode: leg.mode,
           km: leg.km,
-          // When base-location-only, ALL legs get TA=0 (not just commute legs)
-          amount: isBaseLocOnly ? "0" : leg.amount,
+          // Only zero TA for actual commute legs (Home ↔ Base Hospital); other legs like market trips keep their TA
+          amount: (isBaseLocOnly && isCommuteLeg(leg, baseLocs3)) ? "0" : leg.amount,
           sub_mode: leg.sub_mode,
-          sub_amount: isBaseLocOnly ? "0" : leg.sub_amount,
+          sub_amount: (isBaseLocOnly && isCommuteLeg(leg, baseLocs3)) ? "0" : leg.sub_amount,
           da: legNum === 1 ? (isDAAllowed ? leg.da : "0") : "0",
           hotel: legNum === 1 ? leg.hotel : "0",
           local_purchase: legNum === 1 ? leg.local_purchase : "0",
