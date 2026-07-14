@@ -2138,9 +2138,9 @@ export default function ExpensePage() {
       let policyMsg = "";
 
       if (!isDAAllowed) {
-        policyMsg = "Base location par kaam karne par TA aur DA dono eligible nahi hain (base location policy).";
+        policyMsg = "Under base location policy, both Travel Allowance (TA) and Daily Allowance (DA) are not eligible.";
       } else {
-        policyMsg = "Base location par kaam karne par TA eligible nahi hai (base location policy).";
+        policyMsg = "Under base location policy, Travel Allowance (TA) is not eligible.";
       }
 
       processedItineraries.forEach((leg, idx) => {
@@ -2198,9 +2198,9 @@ export default function ExpensePage() {
 
       if (isBaseLocOnly) {
         if (!isDAAllowed) {
-          policyMsg = "Base location par kaam karne par TA aur DA dono eligible nahi hain (base location policy).";
+          policyMsg = "Under base location policy, both Travel Allowance (TA) and Daily Allowance (DA) are not eligible.";
         } else {
-          policyMsg = "Base location par kaam karne par TA eligible nahi hai (base location policy).";
+          policyMsg = "Under base location policy, Travel Allowance (TA) is not eligible.";
         }
 
         itineraries.forEach((leg, idx) => {
