@@ -1537,7 +1537,7 @@ export default function ExpensePage() {
     });
   };
 
-  const isBaseLocationOnlyTravel = () => {
+  const isBaseLocationOnlyTravel = (legs: ItineraryLeg[] = itineraries) => {
     if (!user || !user.base_reporting_location) return false;
     const baseLocations = user.base_reporting_location
       ? user.base_reporting_location.split(",").map((x: string) => x.trim().toLowerCase()).filter(Boolean)
@@ -1545,11 +1545,11 @@ export default function ExpensePage() {
     if (baseLocations.length === 0) return false;
 
     // EXCLUSION: If any leg in the day has travel_type === "Outdoor", policy is completely disabled
-    const hasOutdoorLeg = itineraries.some(leg => (leg.travel_type || "").trim().toLowerCase() === "outdoor");
+    const hasOutdoorLeg = legs.some(leg => (leg.travel_type || "").trim().toLowerCase() === "outdoor");
     if (hasOutdoorLeg) return false;
 
     // Must have visited at least one base location (dropdown or manual typing)
-    const hasVisitedBaseLocation = itineraries.some(leg => 
+    const hasVisitedBaseLocation = legs.some(leg => 
       matchesBase(leg.from || "", baseLocations) ||
       matchesBase(leg.to || "", baseLocations)
     );
@@ -1557,7 +1557,7 @@ export default function ExpensePage() {
     if (!hasVisitedBaseLocation) return false;
 
     // Must NOT have visited any other official dropdown facility
-    const visitedNonBaseOfficialFacility = itineraries.some(leg => {
+    const visitedNonBaseOfficialFacility = legs.some(leg => {
       const fromLoc = (leg.from || "").trim().toLowerCase();
       const toLoc = (leg.to || "").trim().toLowerCase();
       const fromCustom = !!leg.from_custom;
@@ -1571,22 +1571,22 @@ export default function ExpensePage() {
     return !visitedNonBaseOfficialFacility;
   };
 
-  const isDailyAllowanceAllowed = () => {
-    if (!isBaseLocationOnlyTravel()) return true;
+  const isDailyAllowanceAllowed = (legs: ItineraryLeg[] = itineraries) => {
+    if (!isBaseLocationOnlyTravel(legs)) return true;
     if (!user || !user.base_reporting_location) return true;
 
     const baseLocations = user.base_reporting_location
       ? user.base_reporting_location.split(",").map((x: string) => x.trim().toLowerCase()).filter(Boolean)
       : [];
 
-    const hasStation = itineraries.some(leg => {
+    const hasStation = legs.some(leg => {
       const fromLoc = (leg.from || "").trim().toLowerCase();
       const toLoc = (leg.to || "").trim().toLowerCase();
       const stationWords = ["station", "railway", "bus stand", "bus stop", "bus depot"];
       return stationWords.some(w => fromLoc.includes(w) || toLoc.includes(w));
     });
 
-    const hasMarket = itineraries.some(leg => {
+    const hasMarket = legs.some(leg => {
       const fromLoc = (leg.from || "").trim().toLowerCase();
       const toLoc = (leg.to || "").trim().toLowerCase();
       return fromLoc.includes("market") || toLoc.includes("market");
@@ -2131,8 +2131,8 @@ export default function ExpensePage() {
     if (!validateClaim(processedItineraries)) return;
 
     // ── Compute base-location deduction breakdown for confirm modal ──
-    const isBaseLocOnly = isBaseLocationOnlyTravel();
-    const isDAAllowed = isDailyAllowanceAllowed();
+    const isBaseLocOnly = isBaseLocationOnlyTravel(processedItineraries);
+    const isDAAllowed = isDailyAllowanceAllowed(processedItineraries);
     if (isBaseLocOnly) {
       const deductionItems: { leg: number; from: string; to: string; taDeducted: number; daDeducted: number }[] = [];
       let policyMsg = "";
@@ -4813,7 +4813,7 @@ export default function ExpensePage() {
                 }
               </div>
               <h3 className="text-base font-black uppercase tracking-widest text-white">
-                {submitStatus.type === "success" ? "Claim Submitted!" : "Submission Failed"}
+                {submitStatus.type === "success" ? submitStatus.title : "Submission Failed"}
               </h3>
               {submitStatus.type === "success" && submitStatus.claimCode && (
                 <p className="mt-1.5 inline-block bg-white/20 text-white font-mono text-[11px] font-bold px-3 py-0.5 rounded-full tracking-widest uppercase">
