@@ -142,13 +142,26 @@ export function computeBaseLocPolicy(baseReportingLocation, itineraries) {
 /**
  * Returns true if a leg is a commute leg (residence ↔ base location).
  */
-export function checkIsCommuteLeg(leg, baseLocations) {
+export function checkIsCommuteLeg(leg, baseLocations, index, totalLegs) {
   const f = (leg.from || "").trim().toLowerCase();
   const t = (leg.to || "").trim().toLowerCase();
-  const fromIsResidence = !!leg.from_custom && !RESIDENCE_SKIP_WORDS.some(w => f.includes(w));
-  const toIsResidence = !!leg.to_custom && !RESIDENCE_SKIP_WORDS.some(w => t.includes(w));
+
+  const RESIDENCE_WORDS = ["home", "residence", "room", "quarter", "house", "flat", "pg", "stay", "village", "vill", "rent", "address", "dera", "deri", "local"];
+  const WORK_WORDS = ["market", "bazaar", "bazar", "mandi", "haat", "station", "railway", "bus stand", "bus stop", "bus depot", "bus adda", "rly", "tower", "office", "repair", "collection", "hospital", "chc", "phc", "dh", "sdh", "clinic", "lab", "store", "shop", "vendor", "customer", "site", "service", "work"];
+
+  const fromHasResidenceWord = RESIDENCE_WORDS.some(w => f.includes(w));
+  const toHasResidenceWord   = RESIDENCE_WORDS.some(w => t.includes(w));
+  const fromHasWorkWord      = WORK_WORDS.some(w => f.includes(w));
+  const toHasWorkWord        = WORK_WORDS.some(w => t.includes(w));
+
+  const isFirstLeg = index === 0;
+  const isLastLeg  = (totalLegs !== undefined && index !== undefined) ? (index === totalLegs - 1) : false;
+
+  const fromIsResidence = !!leg.from_custom && (fromHasResidenceWord || (isFirstLeg && !fromHasWorkWord));
+  const toIsResidence   = !!leg.to_custom   && (toHasResidenceWord || (isLastLeg && !toHasWorkWord));
+
   const fromIsBase = matchesBase(f, baseLocations);
-  const toIsBase = matchesBase(t, baseLocations);
+  const toIsBase   = matchesBase(t, baseLocations);
 
   if (fromIsResidence && fromIsBase) return false;
   if (toIsResidence && toIsBase) return false;
@@ -162,7 +175,7 @@ export function checkIsCommuteLeg(leg, baseLocations) {
  */
 export function buildPolicyComment(baseLocations, itineraries, isDaAllowed, date) {
   const baseLabel = baseLocations.map(b => b.split(" ").map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(" ")).join(", ");
-  const commutedLegs = itineraries.filter(leg => checkIsCommuteLeg(leg, baseLocations));
+  const commutedLegs = itineraries.filter((leg, idx) => checkIsCommuteLeg(leg, baseLocations, idx, itineraries.length));
   const taDeducted = commutedLegs.reduce((s, leg) => s + parseFloat(leg.amount || "0") + parseFloat(leg.sub_amount || "0"), 0);
   const daDeducted = !isDaAllowed ? itineraries.reduce((s, leg) => s + parseFloat(leg.da || "0"), 0) : 0;
 
@@ -1900,7 +1913,7 @@ export async function handleSubmitExpense(request, env, params, query, user) {
 
   for (let idx = 0; idx < itineraries.length; idx++) {
     const iti = itineraries[idx];
-    const isCommute = isBaseLocOnly && checkIsCommuteLeg(iti, baseLocations);
+    const isCommute = isBaseLocOnly && checkIsCommuteLeg(iti, baseLocations, idx, itineraries.length);
     const travelAmt = isCommute ? 0.0 : parseFloat(iti.amount || "0.0");
     const subAmt    = isCommute ? 0.0 : parseFloat(iti.sub_amount || "0.0");
     const daAmt     = isDaAllowed ? parseFloat(iti.da || "0.0") : 0.0;
@@ -2137,7 +2150,7 @@ export async function handleSubmitExpense(request, env, params, query, user) {
     const itiId = `${expenseCode}-${legNum}`;
     const fromDist = iti.district_from || user.district || "Jodhpur";
     const toDist = iti.district || "Jodhpur";
-    const isCommute = isBaseLocOnly && checkIsCommuteLeg(iti, baseLocations);
+    const isCommute = isBaseLocOnly && checkIsCommuteLeg(iti, baseLocations, idx, itineraries.length);
     
     await runWrite(env, `
       INSERT INTO expense_itineraries (
@@ -2286,7 +2299,7 @@ export async function handleSubmitExpense(request, env, params, query, user) {
     for (let idx = 0; idx < itineraries.length; idx++) {
       const iti = itineraries[idx];
       const legNum = idx + 1;
-      const isCommute = checkIsCommuteLeg(iti, baseLocations);
+      const isCommute = checkIsCommuteLeg(iti, baseLocations, idx, itineraries.length);
       const origTA = parseFloat(iti.original_travel_amount || iti.amount || "0.0");
       const origSub = parseFloat(iti.original_sub_amount || iti.sub_amount || "0.0");
       const origDA = legNum === 1 ? parseFloat(iti.original_da_amount || iti.da || "0.0") : 0.0;
@@ -2429,8 +2442,9 @@ export async function handleRetroactiveBasePolicyCheck(request, env, params, que
     let policyApplied = false;
     const retroLegLogs = [];
 
-    for (const leg of legs) {
-      const isCommute = checkIsCommuteLeg(leg, baseLocations);
+    for (let idx = 0; idx < legs.length; idx++) {
+      const leg = legs[idx];
+      const isCommute = checkIsCommuteLeg(leg, baseLocations, idx, legs.length);
       const currentTA = parseFloat(leg.travel_amount || "0");
       const currentSubAmt = parseFloat(leg.sub_amount || "0");
       const currentDA = parseFloat(leg.da_amount || "0");

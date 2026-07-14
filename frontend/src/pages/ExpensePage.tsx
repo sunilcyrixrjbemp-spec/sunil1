@@ -1547,14 +1547,27 @@ export default function ExpensePage() {
    * True only when this leg is a direct commute between residence and base hospital.
    * Mirrors backend checkIsCommuteLeg().
    */
-  const isCommuteLeg = (leg: ItineraryLeg, baseLocations: string[]): boolean => {
+  const isCommuteLeg = (leg: ItineraryLeg, baseLocations: string[], index?: number, totalLegs?: number): boolean => {
     const f = (leg.from || "").trim().toLowerCase();
     const t = (leg.to || "").trim().toLowerCase();
-    // A residence endpoint: user-typed (custom), and NOT a market / station keyword
-    const fromIsResidence = !!leg.from_custom && !RESIDENCE_SKIP_WORDS.some(w => f.includes(w));
-    const toIsResidence   = !!leg.to_custom   && !RESIDENCE_SKIP_WORDS.some(w => t.includes(w));
+
+    const RESIDENCE_WORDS = ["home", "residence", "room", "quarter", "house", "flat", "pg", "stay", "village", "vill", "rent", "address", "dera", "deri", "local"];
+    const WORK_WORDS = ["market", "bazaar", "bazar", "mandi", "haat", "station", "railway", "bus stand", "bus stop", "bus depot", "bus adda", "rly", "tower", "office", "repair", "collection", "hospital", "chc", "phc", "dh", "sdh", "clinic", "lab", "store", "shop", "vendor", "customer", "site", "service", "work"];
+
+    const fromHasResidenceWord = RESIDENCE_WORDS.some(w => f.includes(w));
+    const toHasResidenceWord   = RESIDENCE_WORDS.some(w => t.includes(w));
+    const fromHasWorkWord      = WORK_WORDS.some(w => f.includes(w));
+    const toHasWorkWord        = WORK_WORDS.some(w => t.includes(w));
+
+    const isFirstLeg = index === 0;
+    const isLastLeg  = (totalLegs !== undefined && index !== undefined) ? (index === totalLegs - 1) : false;
+
+    const fromIsResidence = !!leg.from_custom && (fromHasResidenceWord || (isFirstLeg && !fromHasWorkWord));
+    const toIsResidence   = !!leg.to_custom   && (toHasResidenceWord || (isLastLeg && !toHasWorkWord));
+
     const fromIsBase = matchesBase(f, baseLocations);
     const toIsBase   = matchesBase(t, baseLocations);
+
     // Edge-case: residence AND base at same time — not a commute
     if (fromIsResidence && fromIsBase) return false;
     if (toIsResidence   && toIsBase)   return false;
@@ -1653,7 +1666,7 @@ export default function ExpensePage() {
       const legNum = index + 1;
       const legKm = parseFloat(leg.km) || 0;
       // Only zero TA for actual Home ↔ Base Hospital commute legs, not all legs
-      const isCommute = isBaseLocOnly && isCommuteLeg(leg, baseLocs);
+      const isCommute = isBaseLocOnly && isCommuteLeg(leg, baseLocs, index, itineraries.length);
       const legAmt = isCommute ? 0 : (parseFloat(leg.amount) || 0);
       const subAmt = isCommute ? 0 : (parseFloat(leg.sub_amount) || 0);
       const otherAmt = parseFloat(leg.oth_amount) || 0;
@@ -2180,7 +2193,7 @@ export default function ExpensePage() {
         const origSub = parseFloat(leg.sub_amount || "0");
         const origDA = legNum === 1 ? parseFloat(leg.da || "0") : 0;
         // Only deduct TA for actual commute legs (Home ↔ Base Hospital)
-        const isCommute = isCommuteLeg(leg, baseLocs);
+        const isCommute = isCommuteLeg(leg, baseLocs, idx, processedItineraries.length);
         const taDeducted = isCommute ? origTA + origSub : 0;
         const daDeducted = isDAAllowed ? 0 : origDA;
         if (taDeducted > 0 || daDeducted > 0) {
@@ -2245,7 +2258,7 @@ export default function ExpensePage() {
           const origSub = parseFloat(leg.sub_amount || "0");
           const origDA = legNum === 1 ? parseFloat(leg.da || "0") : 0;
           // Only deduct TA for commute legs (Home ↔ Base Hospital)
-          const isCommute = isCommuteLeg(leg, baseLocs2);
+          const isCommute = isCommuteLeg(leg, baseLocs2, idx, itineraries.length);
           const taDeducted = isCommute ? origTA + origSub : 0;
           const daDeducted = isDAAllowed ? 0 : origDA;
           if (taDeducted > 0 || daDeducted > 0) {
@@ -2312,9 +2325,9 @@ export default function ExpensePage() {
           mode: leg.mode,
           km: leg.km,
           // Only zero TA for actual commute legs (Home ↔ Base Hospital); other legs like market trips keep their TA
-          amount: (isBaseLocOnly && isCommuteLeg(leg, baseLocs3)) ? "0" : leg.amount,
+          amount: (isBaseLocOnly && isCommuteLeg(leg, baseLocs3, index, itineraries.length)) ? "0" : leg.amount,
           sub_mode: leg.sub_mode,
-          sub_amount: (isBaseLocOnly && isCommuteLeg(leg, baseLocs3)) ? "0" : leg.sub_amount,
+          sub_amount: (isBaseLocOnly && isCommuteLeg(leg, baseLocs3, index, itineraries.length)) ? "0" : leg.sub_amount,
           da: legNum === 1 ? (isDAAllowed ? leg.da : "0") : "0",
           hotel: legNum === 1 ? leg.hotel : "0",
           local_purchase: legNum === 1 ? leg.local_purchase : "0",
