@@ -1,4 +1,4 @@
-import { runWrite, runBatchWrite, runRead } from "../utils/db.js";
+﻿import { runWrite, runBatchWrite, runRead } from "../utils/db.js";
 import { getLegacyExpenseHashId } from "./approval.js";
 import { resolveLegacyExpenseId } from "../utils/legacy-resolver.js";
 import { uploadFileWithFallback } from "./upload.js";
@@ -12,26 +12,27 @@ function jsonResponse(data, status = 200) {
 }
 
 export function getActualZone(zone, district) {
+  const knownZones = ["Ajmer", "Bikaner", "Jaipur", "Jodhpur", "Udaipur"];
   const zoneMapping = {
-    "Ajmer": ["ajmer", "beawer", "bhilwara", "nagaur", "tonk"],
+    "Ajmer":   ["ajmer", "beawer", "bhilwara", "nagaur", "tonk"],
     "Bikaner": ["bikaner", "churu", "ganganar", "ganganagar", "hanumangarh"],
-    "Jaipur": ["jaipur"],
+    "Jaipur":  ["jaipur"],
     "Jodhpur": ["barmer", "balotra", "jaisalmer", "jalore", "jodhpur", "pali", "phalodi", "sirohi"],
     "Udaipur": ["banswara", "chittorgarh", "dungarpur", "rajsamand", "pratapgarh", "udaipur"]
   };
-  const zClean = (zone || "").trim().replace(/\s*zone\s*$/i, "").toLowerCase();
+  // PRIORITY 1: Use user zone field from DB directly (strip trailing "Zone" word if any)
+  const zoneRaw = (zone || "").trim();
+  const zoneStripped = zoneRaw.replace(/\s*zone\s*$/i, "").trim();
+  for (const zName of knownZones) {
+    if (zName.toLowerCase() === zoneStripped.toLowerCase()) return zName;
+  }
+  // PRIORITY 2: Infer from district field
   const dClean = (district || "").trim().replace(/\s*zone\s*$/i, "").toLowerCase();
   for (const [zName, districts] of Object.entries(zoneMapping)) {
-    if (districts.includes(dClean) || districts.includes(zClean) || zName.toLowerCase() === zClean) {
-      return zName;
-    }
+    if (districts.includes(dClean)) return zName;
   }
-  // If zone field is already set to a known zone name, use it directly
-  const knownZones = ["Ajmer", "Bikaner", "Jaipur", "Jodhpur", "Udaipur"];
-  const zoneCapitalized = (zone || "").trim();
-  if (knownZones.includes(zoneCapitalized)) return zoneCapitalized;
-  // Last resort: return the raw zone value or empty string (not a Bikaner default)
-  return zoneCapitalized || "";
+  // PRIORITY 3: Return raw zone value (never default to Bikaner)
+  return zoneStripped || "";
 }
 
 async function queryInChunks(db, queryTemplate, ids, chunkSize = 50) {
@@ -548,6 +549,8 @@ export async function handleGetTeamExpenses(request, env, params, query, user) {
     
     // 1. Fetch team users
     let teamUsers = [];
+    // FIX: define userRoleClean locally (was missing, causing isAdminOrReportViewer to always be false)
+    const userRoleClean = (user.role || "").trim().toLowerCase();
     const isAdminOrReportViewer = ["admin", "mis", "vp", "accountant", "hr", "project head", "travel desk", "travel tesk"].includes(userRoleClean);
 
     if (isAdminOrReportViewer) {
