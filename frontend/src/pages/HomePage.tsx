@@ -451,13 +451,7 @@ export default function HomePage() {
   ).map(([code, name]) => ({ code: String(code), name: String(name) }));
 
   // Unique zones list for dropdown filter
-  const uniqueZones = Array.from(
-    new Set(
-      safeTeamExpenses
-        .filter((e): e is any => !!e && !!e.zone)
-        .map(e => String(e.zone).trim())
-    )
-  ).sort();
+  const uniqueZones = ["Ajmer", "Bikaner", "Jaipur", "Jodhpur", "Udaipur"];
 
   // Unique categories/modes for dropdown filter
   const uniqueModes = Array.from(
@@ -801,7 +795,7 @@ export default function HomePage() {
                 /* Team / Engineer Claims Tab Filters */
                 <div className="dashboard-filters-box bg-slate-50/50 border border-slate-100 rounded-lg p-2 flex flex-col gap-1.5 text-[10px] font-bold text-slate-700">
                   {/* Row 1: Month, Zone (Admin only), and Engineer dropdowns with labels on top */}
-                  <div className={`grid ${user?.role === "Admin" ? "grid-cols-3" : "grid-cols-2"} gap-2 w-full`}>
+                  <div className={`grid ${isReviewerRole ? "grid-cols-3" : "grid-cols-2"} gap-2 w-full`}>
                     <div className="flex flex-col gap-0.5">
                       <span className="text-[7.5px] font-black uppercase text-slate-400">Month</span>
                       <input 
@@ -812,7 +806,7 @@ export default function HomePage() {
                       />
                     </div>
 
-                    {user?.role === "Admin" && (
+                    {isReviewerRole && (
                       <div className="flex flex-col gap-0.5">
                         <span className="text-[7.5px] font-black uppercase text-slate-400">Zone</span>
                         <select 
@@ -1182,7 +1176,7 @@ export default function HomePage() {
               <div className="space-y-3 p-4 bg-slate-50/50 rounded-2xl border border-slate-100 text-[10px] font-bold text-slate-700">
                 <span className="uppercase tracking-widest text-[8px] font-black text-slate-400 block">Filter Controls</span>
                 <div className="space-y-2">
-                  {user?.role === "Admin" && (
+                  {isReviewerRole && (
                     <div className="space-y-0.5">
                       <label className="block text-[8px] uppercase tracking-wider text-slate-400">Zone</label>
                       <select 

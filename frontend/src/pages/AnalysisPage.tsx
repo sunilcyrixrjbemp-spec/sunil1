@@ -232,17 +232,7 @@ export default function AnalysisPage() {
     };
   }, [viewMode, myExpenses, teamExpenses, selectedMonth, selectedYear, selectedDistrict, selectedEngineer, selectedZone]);
 
-  const uniqueZones = useMemo(() => {
-    const source = viewMode === "team" && isReviewer ? teamExpenses : myExpenses;
-    const monthlyList = filterByMonth(source);
-    return Array.from(
-      new Set(
-        monthlyList
-          .filter((e): e is any => !!e && !!e.zone)
-          .map(e => String(e.zone).trim())
-      )
-    ).sort();
-  }, [viewMode, teamExpenses, myExpenses, selectedMonth, selectedYear]);
+  const uniqueZones = ["Ajmer", "Bikaner", "Jaipur", "Jodhpur", "Udaipur"];
 
   // Safety resets for dependent dropdowns
   useEffect(() => {
@@ -593,7 +583,7 @@ export default function AnalysisPage() {
 
           {viewMode === "team" && isReviewer && (
             <div className="space-y-1.5 mt-1.5">
-              {user?.role === "Admin" && (
+              {isReviewer && (
                 <select
                   value={selectedZone}
                   onChange={(e) => setSelectedZone(e.target.value)}
@@ -849,7 +839,7 @@ export default function AnalysisPage() {
         {/* Team Specific Filters */}
         {viewMode === "team" && isReviewer && (
           <>
-            {user?.role === "Admin" && (
+            {isReviewer && (
               <select
                 value={selectedZone}
                 onChange={(e) => setSelectedZone(e.target.value)}

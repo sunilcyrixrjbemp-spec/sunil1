@@ -99,8 +99,8 @@ export default function MISReportPage() {
   const userRole = currentUser?.role?.trim() || "";
   const userZone = currentUser?.zone || "";
 
-  // The 5 zones
-  const zones = ["All", "Ajmer", "Bikaner", "Jodhpur", "Udaipur"];
+  // The 6 zones
+  const zones = ["All", "Ajmer", "Bikaner", "Jaipur", "Jodhpur", "Udaipur"];
   const allowedZones = userRole === "Zonal Manager" 
     ? [userZone.replace(" Zone", "").trim()] 
     : zones;
