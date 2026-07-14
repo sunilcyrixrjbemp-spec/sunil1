@@ -534,7 +534,7 @@ export default function ExpensePage() {
   const [myClaimsPage, setMyClaimsPage] = useState(1);
   
   const [showConfirmModal, setShowConfirmModal] = useState(false);
-  const [submitStatus, setSubmitStatus] = useState<{ type: "success" | "error"; title: string; message: string; claimCode?: string } | null>(null);
+  const [submitStatus, setSubmitStatus] = useState<{ type: "success" | "error"; title: string; message: string; claimCode?: string; deductions?: { policyMessage: string; items: { leg: number; from: string; to: string; taDeducted: number; daDeducted: number }[] } | null } | null>(null);
   const [showApprovalModal, setShowApprovalModal] = useState(false);
   const [exceededType, setExceededType] = useState<"KM" | "AUTO">("KM");
   const [reqAdditional, setReqAdditional] = useState("0");
@@ -2280,11 +2280,17 @@ export default function ExpensePage() {
 
       const res = await expenseService.submitItineraryExpense(formData);
       if (res.success || res.status === "success") {
+        // Snapshot deductions BEFORE resetForm() clears baseLocDeductions state
+        const deductionSnapshot = baseLocDeductions && baseLocDeductions.hasDeductions
+          ? { policyMessage: baseLocDeductions.policyMessage, items: baseLocDeductions.items }
+          : null;
+
         setSubmitStatus({
           type: "success",
           title: "Claim Submitted",
           message: res.message || "Your expense claim has been submitted to your manager for review.",
-          claimCode: res.expense_code
+          claimCode: res.expense_code,
+          deductions: deductionSnapshot
         });
         setShowConfirmModal(false);
         
@@ -4795,13 +4801,43 @@ export default function ExpensePage() {
               {submitStatus.title}
             </h3>
             
-            <div className="mt-3 text-xs text-gray-500 font-semibold leading-relaxed">
+            <div className="mt-3 text-xs text-gray-500 font-semibold leading-relaxed text-left">
               {submitStatus.type === "success" && submitStatus.claimCode && (
-                <p className="mb-2 bg-slate-50 border border-slate-100 py-1 px-2.5 rounded font-mono font-bold text-slate-700 inline-block uppercase text-[10px]">
-                  Claim Code: {submitStatus.claimCode}
+                <p className="mb-2 text-center">
+                  <span className="bg-slate-50 border border-slate-100 py-1 px-2.5 rounded font-mono font-bold text-slate-700 inline-block uppercase text-[10px]">
+                    Claim Code: {submitStatus.claimCode}
+                  </span>
                 </p>
               )}
-              <p>{submitStatus.message}</p>
+              <p className="text-center">{submitStatus.message}</p>
+
+              {/* ── Deduction details shown after successful submit ── */}
+              {submitStatus.type === "success" && submitStatus.deductions && submitStatus.deductions.items.length > 0 && (
+                <div className="mt-3 p-3 bg-amber-50 border border-amber-200 rounded-lg space-y-2">
+                  <p className="font-bold text-amber-800 flex items-center gap-1.5 text-[11px]">
+                    <AlertTriangle className="w-3.5 h-3.5 shrink-0" />
+                    TA/DA Deducted (Base Location Policy)
+                  </p>
+                  <div className="space-y-1">
+                    {submitStatus.deductions.items.map(item => (
+                      <div key={item.leg} className="bg-white border border-amber-100 rounded px-2.5 py-1.5 text-[11px]">
+                        <p className="font-semibold text-gray-700">Visit {item.leg}: {item.from} → {item.to}</p>
+                        {item.taDeducted > 0 && (
+                          <p className="text-rose-600">TA deducted: <span className="font-bold">-₹{item.taDeducted.toFixed(0)}</span></p>
+                        )}
+                        {item.daDeducted > 0 && (
+                          <p className="text-rose-600">DA deducted: <span className="font-bold">-₹{item.daDeducted.toFixed(0)}</span></p>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                  {submitStatus.deductions.policyMessage && (
+                    <p className="text-amber-700 text-[10px] leading-relaxed italic">
+                      {submitStatus.deductions.policyMessage}
+                    </p>
+                  )}
+                </div>
+              )}
             </div>
             
             <div className="mt-6">
