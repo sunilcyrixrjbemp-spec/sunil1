@@ -548,7 +548,7 @@ export default function ConsolidatedReportPage() {
                   <th className="py-1.5 px-1.5 border border-slate-200 text-right font-bold text-green-700 bg-green-50/10">Net Payable</th>
                   <th className="py-1.5 px-1.5 border border-slate-200 text-left font-bold">GST Bills</th>
                   <th className="py-1.5 px-1.5 border border-slate-200 text-center font-bold">Status</th>
-                  <th className="py-1.5 px-1.5 border border-slate-200 text-left font-bold max-w-[200px] truncate">Reason for deduction</th>
+                  <th className="py-1.5 px-1.5 border border-slate-200 text-left font-bold min-w-[150px]">Reason for deduction</th>
                   <th className="py-1.5 px-1.5 border border-slate-200 text-center font-bold">Month</th>
                   <th className="py-1.5 px-1.5 border border-slate-200 text-center font-bold">Hold Reson</th>
                   <th className="py-1.5 px-1.5 border border-slate-200 text-left font-bold">Remarks</th>
@@ -587,10 +587,10 @@ export default function ConsolidatedReportPage() {
                       <td className="py-1.5 px-1.5 text-right border border-slate-200 font-mono font-bold text-green-700 bg-green-50/10">{fmt(r.net_payable)}</td>
                       <td className="py-1.5 px-1.5 border border-slate-200"></td>
                       <td className="py-1.5 px-1.5 text-center font-bold text-green-600 border border-slate-200">Approved</td>
-                      <td className="py-1.5 px-1.5 border border-slate-200 max-w-[200px] truncate" title={r.deduction_reason}>{r.deduction_reason || ""}</td>
+                      <td className="py-1.5 px-1.5 border border-slate-200 min-w-[150px] whitespace-normal break-words font-medium text-slate-700" title={r.deduction_reason}>{r.deduction_reason || ""}</td>
                       <td className="py-1.5 px-1.5 text-center border border-slate-200 font-mono">{r.month || ""}</td>
                       <td className="py-1.5 px-1.5 text-center border border-slate-200 font-semibold text-slate-500">{r.hold_reason || "No"}</td>
-                      <td className="py-1.5 px-1.5 border border-slate-200">{r.remarks || ""}</td>
+                      <td className="py-1.5 px-1.5 border border-slate-200 whitespace-normal break-words min-w-[150px]">{r.remarks || ""}</td>
                       <td className="py-1.5 px-1.5 border border-slate-200 truncate max-w-[120px]" title={r.manager}>{r.manager || ""}</td>
                       <td className="py-1.5 px-1.5 text-center border border-slate-200">{r.state || "Rajasthan"}</td>
                       <td className="py-1.5 px-1.5 border border-slate-200 text-right font-mono font-semibold">{fmt(r.claimed_amount)}</td>

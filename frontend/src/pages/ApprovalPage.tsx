@@ -2271,7 +2271,7 @@ export default function ApprovalPage() {
                                   <td className="py-2 px-3 font-semibold text-gray-800">{cleanField}</td>
                                   <td className="py-2 px-3 font-mono text-gray-500">{log.field_name === "distance_km" ? `${log.old_value} KM` : `₹${parseFloat(log.old_value || "0").toLocaleString()}`}</td>
                                   <td className="py-2 px-3 font-mono font-bold text-blue-600">{log.field_name === "distance_km" ? `${log.new_value} KM` : `₹${parseFloat(log.new_value || "0").toLocaleString()}`}</td>
-                                  <td className="py-2 px-3 italic text-gray-600 max-w-[150px] truncate" title={log.comment}>{log.comment || "—"}</td>
+                                  <td className="py-2 px-3 italic text-gray-600 whitespace-normal break-words min-w-[150px] max-w-[250px]" title={log.comment}>{log.comment || "—"}</td>
                                   <td className="py-2 px-3 font-semibold text-slate-800">
                                     {log.editor_name} <span className="text-[8px] text-amber-600 font-bold block">{log.editor_role}</span>
                                   </td>
