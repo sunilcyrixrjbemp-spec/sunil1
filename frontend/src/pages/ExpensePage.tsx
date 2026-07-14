@@ -541,6 +541,12 @@ export default function ExpensePage() {
   const [sendingRequest, setSendingRequest] = useState(false);
   const [hasShownExceededModal, setHasShownExceededModal] = useState(false);
   const [acknowledgedBaseLocWarning, setAcknowledgedBaseLocWarning] = useState(false);
+  // Stores per-leg deduction breakdown to show in the confirm modal
+  const [baseLocDeductions, setBaseLocDeductions] = useState<{
+    hasDeductions: boolean;
+    policyMessage: string;
+    items: { leg: number; from: string; to: string; taDeducted: number; daDeducted: number }[];
+  } | null>(null);
 
   useEffect(() => {
     setAcknowledgedBaseLocWarning(false);
@@ -2155,29 +2161,45 @@ export default function ExpensePage() {
 
     if (!validateClaim(processedItineraries)) return;
 
-    // Check base reporting location restriction
-    if (isBaseLocationOnlyTravel() && !acknowledgedBaseLocWarning) {
-      const hasCommuteTA = itineraries.some(isCommuteLeg);
-      const isDAAllowed = isDailyAllowanceAllowed();
+    // ── Compute base-location deduction breakdown for confirm modal ──
+    const isBaseLocOnly = isBaseLocationOnlyTravel();
+    const isDAAllowed = isDailyAllowanceAllowed();
+    if (isBaseLocOnly) {
+      const deductionItems: { leg: number; from: string; to: string; taDeducted: number; daDeducted: number }[] = [];
+      let policyMsg = "";
+      const hasCommuteTA = processedItineraries.some(isCommuteLeg);
 
-      let msg = "";
       if (hasCommuteTA && !isDAAllowed) {
-        msg = "You are not eligible for travel allowance (TA) for your home-to-work commute and daily allowance (DA) at your base reporting location.";
+        policyMsg = "Base location par commute TA eligible nahi hai aur DA bhi deduct hoga (base location policy).";
       } else if (!isDAAllowed) {
-        msg = "You are not eligible for daily allowance (DA) at your base reporting location.";
+        policyMsg = "Base location par DA eligible nahi hai (base location policy).";
       } else if (hasCommuteTA) {
-        msg = "You are not eligible for travel allowance (TA) for your home-to-work commute.";
+        policyMsg = "Ghar se base location ka commute TA eligible nahi hai (base location policy).";
       }
 
-      if (msg) {
-        setValidationModal({
-          show: true,
-          title: "⚠️ TA/DA Policy Alert",
-          message: msg
-        });
-        setAcknowledgedBaseLocWarning(true);
-        return;
-      }
+      processedItineraries.forEach((leg, idx) => {
+        const legNum = idx + 1;
+        const origTA = parseFloat(leg.amount || "0");
+        const origSub = parseFloat(leg.sub_amount || "0");
+        const origDA = parseFloat(leg.da || "0");
+        const isCommute = isCommuteLeg(leg);
+        const effectiveTA = isCommute ? 0 : origTA;
+        const effectiveSub = isCommute ? 0 : origSub;
+        const effectiveDA = isDAAllowed ? origDA : 0;
+        const taDeducted = (origTA - effectiveTA) + (origSub - effectiveSub);
+        const daDeducted = origDA - effectiveDA;
+        if (taDeducted > 0 || daDeducted > 0) {
+          deductionItems.push({ leg: legNum, from: leg.from, to: leg.to, taDeducted, daDeducted });
+        }
+      });
+
+      setBaseLocDeductions({
+        hasDeductions: deductionItems.length > 0 || !isDAAllowed,
+        policyMessage: policyMsg,
+        items: deductionItems
+      });
+    } else {
+      setBaseLocDeductions(null);
     }
 
     setShowConfirmModal(true);
@@ -4725,10 +4747,43 @@ export default function ExpensePage() {
                 <p className="border-t border-gray-200 pt-1.5 mt-1.5">Total Claim Amount: <span className="font-black text-blue-700">₹{totalAmt.toLocaleString()}</span></p>
               </div>
 
+              {/* ── Base Location Deduction Breakdown ── */}
+              {baseLocDeductions && baseLocDeductions.hasDeductions && (
+                <div className="p-3 bg-amber-50 border border-amber-300 rounded space-y-2">
+                  <p className="font-bold text-amber-800 flex items-center gap-1.5">
+                    <AlertTriangle className="w-3.5 h-3.5 shrink-0" />
+                    TA/DA Deduction — Base Location Policy
+                  </p>
+                  {baseLocDeductions.items.length > 0 && (
+                    <div className="space-y-1">
+                      {baseLocDeductions.items.map(item => (
+                        <div key={item.leg} className="bg-white border border-amber-200 rounded px-2.5 py-1.5 text-[11px]">
+                          <p className="font-semibold text-gray-700">Visit {item.leg}: {item.from} → {item.to}</p>
+                          {item.taDeducted > 0 && (
+                            <p className="text-rose-600">TA deducted: <span className="font-bold">-₹{item.taDeducted.toFixed(0)}</span></p>
+                          )}
+                          {item.daDeducted > 0 && (
+                            <p className="text-rose-600">DA deducted: <span className="font-bold">-₹{item.daDeducted.toFixed(0)}</span></p>
+                          )}
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                  {baseLocDeductions.policyMessage && (
+                    <p className="text-amber-700 text-[11px] leading-relaxed font-medium italic">
+                      {baseLocDeductions.policyMessage}
+                    </p>
+                  )}
+                </div>
+              )}
+
               <div className="p-3 bg-blue-50 border border-blue-200 text-blue-800 rounded flex items-start gap-1.5">
                 <Info className="w-4 h-4 text-blue-600 shrink-0 mt-0.5" />
                 <p className="leading-relaxed font-medium">
-                  By clicking Confirm, you verify that this travel log and all attached invoice screenshots are genuine. The claim will be forwarded to your mapped manager.
+                  {totalAmt <= 0
+                    ? "This claim has ₹0 amount (all TA/DA waived by policy). It will be auto-approved without requiring manager review."
+                    : "By clicking Confirm, you verify that this travel log and all attached invoice screenshots are genuine. The claim will be forwarded to your mapped manager."
+                  }
                 </p>
               </div>
 

@@ -1744,7 +1744,9 @@ export async function handleSubmitExpense(request, env, params, query, user) {
     description = formData.get("description") || "";
   }
 
-  const timestamp = new Date().toISOString();
+  const rawClientTs = formData.get("client_timestamp") || null;
+  // Prefer the client-provided timestamp so all dates come from frontend
+  const timestamp = rawClientTs ? new Date(rawClientTs).toISOString() : new Date().toISOString();
 
   // ─── Policy Rules Checks (Allowed Past Days & Monthly Cutoff) ─────────────────
   try {
@@ -1874,7 +1876,7 @@ export async function handleSubmitExpense(request, env, params, query, user) {
   await runWrite(env, "DELETE FROM expense_attachments WHERE exp_id = ?", [expenseCode]);
   await runWrite(env, "DELETE FROM expense_itineraries WHERE exp_id = ?", [expenseCode]);
 
-  // Calculate totals and activity metrics
+  // ── Calculate totals from frontend-sent values (no backend deduction — frontend already applied base-loc policy) ──
   let totalDa = 0.0;
   let totalHotel = 0.0;
   let totalOther = 0.0;
@@ -1890,56 +1892,15 @@ export async function handleSubmitExpense(request, env, params, query, user) {
   let newAuto = 0.0;
   let calculatedTotal = 0.0;
 
-  // ── Base Location Policy ────────────────────────────────────────────────────
-  const { isBaseLocOnly, isDaAllowed, baseLocations } = computeBaseLocPolicy(
-    user.base_reporting_location || "",
-    itineraries
-  );
-
-  const legLogs = [];
-
   for (let idx = 0; idx < itineraries.length; idx++) {
     const iti = itineraries[idx];
-    const legNum = parseInt(iti.leg || (idx + 1), 10);
-    const isCommute = isBaseLocOnly && checkIsCommuteLeg(iti, baseLocations);
-    const originalTravelAmt = parseFloat(iti.amount || "0.0");
-    const originalSubAmt = parseFloat(iti.sub_amount || "0.0");
-    const originalDaAmt = parseFloat(iti.da || "0.0");
-
-    const travelAmt = isCommute ? 0.0 : originalTravelAmt;
-    const subAmt = isCommute ? 0.0 : originalSubAmt;
-    const daAmt = isDaAllowed ? originalDaAmt : 0.0;
+    // Trust the amounts the frontend sent — base location policy was already applied there
+    const travelAmt = parseFloat(iti.amount || "0.0");
+    const subAmt = parseFloat(iti.sub_amount || "0.0");
+    const daAmt = parseFloat(iti.da || "0.0");
     const hotelAmt = parseFloat(iti.hotel || "0.0");
     const otherAmt = parseFloat(iti.oth_amount || "0.0");
     const lpAmt = parseFloat(iti.local_purchase || "0.0");
-
-    if (originalTravelAmt > travelAmt) {
-      legLogs.push({
-        leg_number: legNum,
-        field_name: "travel_amount",
-        old_value: originalTravelAmt,
-        new_value: travelAmt,
-        comment: "[Policy] Base Location commute TA not eligible"
-      });
-    }
-    if (originalSubAmt > subAmt) {
-      legLogs.push({
-        leg_number: legNum,
-        field_name: "sub_amount",
-        old_value: originalSubAmt,
-        new_value: subAmt,
-        comment: "[Policy] Base Location commute local conveyance not eligible"
-      });
-    }
-    if (originalDaAmt > daAmt) {
-      legLogs.push({
-        leg_number: legNum,
-        field_name: "da_amount",
-        old_value: originalDaAmt,
-        new_value: daAmt,
-        comment: "[Policy] DA not applicable at base location"
-      });
-    }
 
     totalDa += daAmt;
     totalHotel += hotelAmt;
@@ -2008,9 +1969,7 @@ export async function handleSubmitExpense(request, env, params, query, user) {
     totalMobilise += itiMobilise;
   }
 
-  if (calculatedTotal <= 0) {
-    return jsonResponse({ error: "Total claim amount must be greater than zero." }, 400);
-  }
+  // ₹0 expenses are allowed (e.g. base-location-only travel where all TA/DA was waived on frontend)
   amount = calculatedTotal;
 
   // Backend Limit Validation
@@ -2081,7 +2040,11 @@ export async function handleSubmitExpense(request, env, params, query, user) {
   let status = "approved";
   let approvalsToInsert = [];
 
-  if (approvalChain.results && approvalChain.results.length > 0) {
+  // ₹0 amount expenses (e.g. base-location-only commute) are auto-approved — no approval chain needed
+  if (amount <= 0) {
+    status = "approved";
+    approvalsToInsert = [];
+  } else if (approvalChain.results && approvalChain.results.length > 0) {
     status = "submitted";
     for (const step of approvalChain.results) {
       approvalsToInsert.push({
@@ -2179,21 +2142,22 @@ export async function handleSubmitExpense(request, env, params, query, user) {
       )
       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 0.0, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     `, [
+      // Save the frontend-sent values directly (base-loc policy already applied by frontend)
       itiId, expenseCode, legNum, fromDist, toDist, iti.from || "", iti.to || "",
       iti.mode || "Bike", parseFloat(iti.km || "0.0"),
-      (isBaseLocOnly && checkIsCommuteLeg(iti, baseLocations)) ? 0.0 : parseFloat(iti.amount || "0.0"),
+      parseFloat(iti.amount || "0.0"),
       iti.sub_mode || null,
-      (isBaseLocOnly && checkIsCommuteLeg(iti, baseLocations)) ? 0.0 : parseFloat(iti.sub_amount || "0.0"),
-      isDaAllowed ? parseFloat(iti.da || "0.0") : 0.0,
+      parseFloat(iti.sub_amount || "0.0"),
+      parseFloat(iti.da || "0.0"),
       parseFloat(iti.hotel || "0.0"), parseFloat(iti.local_purchase || "0.0"), iti.oth_desc || null, parseFloat(iti.oth_amount || "0.0"),
       parseInt(iti.ws_assigned || "0", 10), parseInt(iti.ws_closed || "0", 10),
       parseInt(iti.ws_pms || "0", 10), parseInt(iti.ws_asset || "0", 10),
-      iti.visit_purpose || "Field visit", 
+      iti.visit_purpose || "Field visit",
       typeof iti.activity_details === "string" ? iti.activity_details : JSON.stringify(iti.activity_details || {}),
       parseFloat(iti.km || "0.0"),
-      (isBaseLocOnly && checkIsCommuteLeg(iti, baseLocations)) ? 0.0 : parseFloat(iti.amount || "0.0"),
-      (isBaseLocOnly && checkIsCommuteLeg(iti, baseLocations)) ? 0.0 : parseFloat(iti.sub_amount || "0.0"),
-      isDaAllowed ? parseFloat(iti.da || "0.0") : 0.0, parseFloat(iti.hotel || "0.0"), parseFloat(iti.oth_amount || "0.0"),
+      parseFloat(iti.amount || "0.0"),
+      parseFloat(iti.sub_amount || "0.0"),
+      parseFloat(iti.da || "0.0"), parseFloat(iti.hotel || "0.0"), parseFloat(iti.oth_amount || "0.0"),
       parseFloat(iti.local_purchase || "0.0"), parseInt(iti.calibration_count || "0", 10),
       parseInt(iti.mobilise_asset_count || "0", 10)
     ]);
@@ -2307,30 +2271,8 @@ export async function handleSubmitExpense(request, env, params, query, user) {
     }
   }
 
-  // ── Write policy comment if base location restrictions were applied ────────
-  if (isBaseLocOnly && newExpId) {
-    try {
-      const policyComment = buildPolicyComment(baseLocations, itineraries, isDaAllowed, date);
-      if (policyComment) {
-        await runWrite(env,
-          "INSERT INTO expense_edit_logs (expense_id, comment, editor_name, editor_role, editor_id) VALUES (?, ?, 'SYSTEM', 'Policy', 0)",
-          [newExpId, policyComment]
-        );
-      }
-      
-      // Save leg-level edit history logs
-      for (const log of legLogs) {
-        await runWrite(env,
-          `INSERT INTO expense_edit_logs 
-           (expense_id, leg_number, field_name, old_value, new_value, comment, editor_name, editor_role, editor_id)
-           VALUES (?, ?, ?, ?, ?, ?, 'SYSTEM', 'Policy', 0)`,
-          [newExpId, log.leg_number, log.field_name, String(log.old_value), String(log.new_value), log.comment]
-        );
-      }
-    } catch (e) {
-      console.error("Failed to write base location policy comments:", e.message);
-    }
-  }
+  // Note: base location policy deductions are applied by the frontend before submission.
+  // The backend saves exactly what the frontend sends — no server-side policy override needed here.
 
   return jsonResponse({
     status: "success",
