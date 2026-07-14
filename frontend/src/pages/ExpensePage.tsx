@@ -540,17 +540,12 @@ export default function ExpensePage() {
   const [reqAdditional, setReqAdditional] = useState("0");
   const [sendingRequest, setSendingRequest] = useState(false);
   const [hasShownExceededModal, setHasShownExceededModal] = useState(false);
-  const [acknowledgedBaseLocWarning, setAcknowledgedBaseLocWarning] = useState(false);
   // Stores per-leg deduction breakdown to show in the confirm modal
   const [baseLocDeductions, setBaseLocDeductions] = useState<{
     hasDeductions: boolean;
     policyMessage: string;
     items: { leg: number; from: string; to: string; taDeducted: number; daDeducted: number }[];
   } | null>(null);
-
-  useEffect(() => {
-    setAcknowledgedBaseLocWarning(false);
-  }, [itineraries, date]);
 
   // Read-only popup modal state (Dashboard Preview Modal)
   const [selectedClaim, setSelectedClaim] = useState<any>(null);
