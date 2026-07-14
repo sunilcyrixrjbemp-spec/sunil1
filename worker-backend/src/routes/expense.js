@@ -26,7 +26,12 @@ export function getActualZone(zone, district) {
       return zName;
     }
   }
-  return "Bikaner"; // Default fallback
+  // If zone field is already set to a known zone name, use it directly
+  const knownZones = ["Ajmer", "Bikaner", "Jaipur", "Jodhpur", "Udaipur"];
+  const zoneCapitalized = (zone || "").trim();
+  if (knownZones.includes(zoneCapitalized)) return zoneCapitalized;
+  // Last resort: return the raw zone value or empty string (not a Bikaner default)
+  return zoneCapitalized || "";
 }
 
 async function queryInChunks(db, queryTemplate, ids, chunkSize = 50) {
@@ -284,7 +289,7 @@ export async function serializeExpenses(env, expenses, submittersMap) {
       car_amount: carAmount,
       auto_amount: totAuto,
       district: submitter?.district || "Ganganar",
-      zone: submitter?.zone || "Bikaner",
+      zone: getActualZone(submitter?.zone, submitter?.district) || submitter?.zone || "",
       legs: legs.map(l => ({
         leg: l.leg_number,
         from_district: l.from_district,

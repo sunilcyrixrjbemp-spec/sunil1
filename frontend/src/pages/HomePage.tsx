@@ -549,11 +549,24 @@ export default function HomePage() {
     return isCarAllowed ? items : items.filter(item => item.label !== "Car Travel");
   };
 
+  const PRIVILEGED_ROLES_HOME = ["admin", "project head", "mis", "travel desk", "travel tesk", "vp", "accountant", "hr"];
+  const isPrivilegedRoleHome = PRIVILEGED_ROLES_HOME.includes((user?.role || "").trim().toLowerCase());
+
+  // All team expenses for the selected month (no zone/employee/mode filter) — for zone chart
+  const allMonthTeamExpenses = safeTeamExpenses.filter(exp => {
+    const rawDate = exp.date || exp.itinerary;
+    return rawDate && rawDate.startsWith(selectMonth);
+  });
+
   const getTeamChartData = () => {
     const grouped: Record<string, { name: string, amount: number }> = {};
-    filteredTeamExpenses.forEach(e => {
+    allMonthTeamExpenses.forEach(e => {
       if (e.category === "Limit Request") return;
-      const zone = e.zone || "Bikaner";
+      // Use actual zone from expense DB field — show ALL zones
+      let zone = (e.zone || "").trim();
+      if (!zone || zone.toLowerCase() === "all") {
+        zone = isPrivilegedRoleHome ? "Unknown" : (user?.zone || "Unknown");
+      }
       if (!grouped[zone]) {
         grouped[zone] = { name: zone, amount: 0 };
       }
