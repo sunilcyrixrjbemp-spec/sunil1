@@ -1571,32 +1571,6 @@ export default function ExpensePage() {
     return !visitedNonBaseOfficialFacility;
   };
 
-  const isCommuteLeg = (leg: ItineraryLeg) => {
-    if (!user || !user.base_reporting_location) return false;
-    const baseLocations = user.base_reporting_location
-      ? user.base_reporting_location.split(",").map((x: string) => x.trim().toLowerCase()).filter(Boolean)
-      : [];
-    if (baseLocations.length === 0) return false;
-
-    const fromLoc = (leg.from || "").trim().toLowerCase();
-    const toLoc = (leg.to || "").trim().toLowerCase();
-    const fromCustom = !!leg.from_custom;
-    const toCustom = !!leg.to_custom;
-
-    const fromIsBase = matchesBase(fromLoc, baseLocations);
-    const toIsBase = matchesBase(toLoc, baseLocations);
-
-    const fromIsResidence = fromCustom && !fromLoc.includes("market") && !fromLoc.includes("station") && !fromLoc.includes("railway") && !fromLoc.includes("bus stand") && !fromLoc.includes("bus stop");
-    const toIsResidence = toCustom && !toLoc.includes("market") && !toLoc.includes("station") && !toLoc.includes("railway") && !toLoc.includes("bus stand") && !toLoc.includes("bus stop");
-
-    if (fromIsResidence && fromIsBase) return false;
-    if (toIsResidence && toIsBase) return false;
-    if (fromIsResidence && toIsBase) return true;
-    if (fromIsBase && toIsResidence) return true;
-
-    return false;
-  };
-
   const isDailyAllowanceAllowed = () => {
     if (!isBaseLocationOnlyTravel()) return true;
     if (!user || !user.base_reporting_location) return true;
