@@ -62,7 +62,7 @@ export function matchesBase(locText, baseLocations) {
     if (text.includes(cleanBase) || cleanBase.includes(text)) return true;
 
     // Check specific known abbreviations and names
-    if (cleanBase.includes("mathura das mathur") || cleanBase.includes("mdm")) {
+    if (cleanBase.includes("mathura das mathur") || cleanBase.includes("mdm") || cleanBase.includes("jodhpur")) {
       if (text.includes("mdm") || text.includes("mathura das") || text.includes("mathur")) return true;
       if (text === "jodhpur" || text === "jodhpur base" || text === "mdm hospital") return true;
     }
@@ -2281,14 +2281,52 @@ export async function handleSubmitExpense(request, env, params, query, user) {
   // Note: base location policy deductions are applied by the frontend before submission.
   // The backend saves exactly what the frontend sends — no server-side policy override needed here.
 
+  let policyApplied = false;
+  const deductionItems = [];
+  if (isBaseLocOnly) {
+    for (let idx = 0; idx < itineraries.length; idx++) {
+      const iti = itineraries[idx];
+      const legNum = idx + 1;
+      const origTA = parseFloat(iti.original_travel_amount || iti.amount || "0.0");
+      const origSub = parseFloat(iti.original_sub_amount || iti.sub_amount || "0.0");
+      const origDA = legNum === 1 ? parseFloat(iti.original_da_amount || iti.da || "0.0") : 0.0;
+
+      const taDeducted = origTA + origSub;
+      const daDeducted = isDaAllowed ? 0.0 : origDA;
+
+      if (taDeducted > 0.0 || daDeducted > 0.0) {
+        policyApplied = true;
+        deductionItems.push({
+          leg: legNum,
+          from: iti.from || "",
+          to: iti.to || "",
+          taDeducted,
+          daDeducted
+        });
+      }
+    }
+  }
+
+  const successMsg = amount <= 0
+    ? (policyApplied
+        ? "Your claim has been auto-approved since the total reimbursable amount is ₹0 after policy deductions. No manager approval is required."
+        : "Your claim has been auto-approved since the total reimbursable amount is ₹0. No manager approval is required.")
+    : "Expense claim submitted successfully.";
+
   return jsonResponse({
     status: "success",
-    message: amount <= 0
-      ? "Your claim has been auto-approved since the total reimbursable amount is ₹0 after policy deductions. No manager approval is required."
-      : "Expense claim submitted successfully.",
+    message: successMsg,
     expense_id: newExpId,
     expense_code: expenseCode,
-    auto_approved: amount <= 0
+    auto_approved: amount <= 0,
+    deductions: policyApplied ? {
+      policyMessage: isBaseLocOnly
+        ? (!isDaAllowed
+            ? "Under base location policy, both Travel Allowance (TA) and Daily Allowance (DA) are not eligible."
+            : "Under base location policy, Travel Allowance (TA) is not eligible.")
+        : "",
+      items: deductionItems
+    } : null
   });
 }
 

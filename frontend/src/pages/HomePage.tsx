@@ -1364,6 +1364,18 @@ export default function HomePage() {
                     </div>
                   </div>
 
+                  {claimDetails.original_amount > claimDetails.amount && (
+                    <div className="bg-amber-50 border border-amber-200 rounded-lg p-3 flex items-start gap-2.5 text-xs text-amber-855 shadow-xs">
+                      <AlertTriangle className="w-4 h-4 text-amber-600 shrink-0 mt-0.5" />
+                      <div>
+                        <p className="font-extrabold uppercase tracking-wider text-[10px] text-amber-700">Policy Deductions Applied</p>
+                        <p className="mt-1 leading-relaxed">
+                          A total deduction of <span className="font-bold text-rose-600">₹{(claimDetails.original_amount - claimDetails.amount).toFixed(0)}</span> was applied to this claim in accordance with the base location policy.
+                        </p>
+                      </div>
+                    </div>
+                  )}
+
                   {/* Purpose & Total */}
                   <div className="flex items-center justify-between p-3 bg-blue-50 border border-blue-200 rounded text-xs">
                     <div>
@@ -1415,6 +1427,7 @@ export default function HomePage() {
                               <th className="py-2 px-3">Route</th>
                               <th className="py-2 px-3">Mode</th>
                               <th className="py-2 px-3 text-right">KM</th>
+                              <th className="py-2 px-3 text-right">TA / Fare</th>
                               <th className="py-2 px-3 text-right">DA</th>
                               <th className="py-2 px-3 text-right">Hotel</th>
                               <th className="py-2 px-3 text-right">Local Purchase</th>
@@ -1431,7 +1444,16 @@ export default function HomePage() {
                               const hotelCost = leg.hotel || 0;
                               const lpCost = leg.local_purchase || 0;
                               const otherCost = leg.oth_amount || 0;
+                              
+                              const origTA = parseFloat(leg.original_amount ?? leg.amount ?? 0);
+                              const origSub = parseFloat(leg.original_sub_amount ?? leg.sub_amount ?? 0);
+                              const origDA = parseFloat(leg.original_da ?? leg.da ?? 0);
+
+                              const taDeducted = (origTA - travelCost) + (origSub - subCost);
+                              const daDeducted = origDA - daCost;
+
                               const legTotal = travelCost + subCost + daCost + hotelCost + lpCost + otherCost;
+                              const origTotal = origTA + origSub + origDA + hotelCost + lpCost + otherCost;
 
                               let actDetails: any = null;
                               try {
@@ -1465,7 +1487,26 @@ export default function HomePage() {
                                       {leg.sub_mode && <span className="text-[9px] font-bold uppercase bg-purple-50 text-purple-700 px-1.5 py-0.5 rounded border border-purple-100 ml-1">+{leg.sub_mode}</span>}
                                     </td>
                                     <td className="py-2.5 px-3 text-right font-mono font-semibold text-gray-600">{leg.km || 0} KM</td>
-                                    <td className="py-2.5 px-3 text-right font-mono font-semibold">₹{daCost.toLocaleString()}</td>
+                                    <td className="py-2.5 px-3 text-right font-mono font-semibold text-gray-650">
+                                      <div className="flex flex-col items-end">
+                                        <span>₹{(travelCost + subCost).toLocaleString()}</span>
+                                        {taDeducted > 0 && (
+                                          <span className="text-[8px] font-bold text-rose-500 line-through" title="Claimed before policy deduction">
+                                            ₹{(origTA + origSub).toLocaleString()}
+                                          </span>
+                                        )}
+                                      </div>
+                                    </td>
+                                    <td className="py-2.5 px-3 text-right font-mono font-semibold">
+                                      <div className="flex flex-col items-end">
+                                        <span className="text-gray-650">₹{daCost.toLocaleString()}</span>
+                                        {daDeducted > 0 && (
+                                          <span className="text-[8px] font-bold text-rose-500 line-through" title="Claimed before policy deduction">
+                                            ₹{origDA.toLocaleString()}
+                                          </span>
+                                        )}
+                                      </div>
+                                    </td>
                                     <td className="py-2.5 px-3 text-right font-mono font-semibold">₹{hotelCost.toLocaleString()}</td>
                                     <td className="py-2.5 px-3 text-right font-mono font-semibold">₹{lpCost.toLocaleString()}</td>
                                     <td className="py-2.5 px-3">
@@ -1475,12 +1516,21 @@ export default function HomePage() {
                                     <td className="py-2.5 px-3 text-[10px] text-gray-500">
                                       <span>W:{leg.ws_assigned||0}</span> <span className="text-green-600">D:{leg.ws_closed||0}</span> <span>P:{leg.ws_pms||0}</span> <span>A:{leg.ws_asset||0}</span>
                                     </td>
-                                    <td className="py-2.5 px-3 text-right font-bold font-mono text-gray-900">₹{legTotal.toLocaleString()}</td>
+                                    <td className="py-2.5 px-3 text-right font-bold font-mono text-gray-900">
+                                      <div className="flex flex-col items-end">
+                                        <span>₹{legTotal.toLocaleString()}</span>
+                                        {origTotal > legTotal && (
+                                          <span className="text-[8px] font-bold text-rose-500 line-through" title="Claimed before policy deduction">
+                                            ₹{origTotal.toLocaleString()}
+                                          </span>
+                                        )}
+                                      </div>
+                                    </td>
                                   </tr>
 
                                   {hasActivities && (
                                     <tr className="bg-slate-50/50">
-                                      <td colSpan={10} className="py-2.5 px-4 border-t border-gray-150">
+                                      <td colSpan={11} className="py-2.5 px-4 border-t border-gray-150">
                                         <div className="flex flex-col gap-2.5 text-left">
                                           <div className="flex flex-wrap gap-2">
                                             <span className="text-[9px] font-bold text-gray-500 uppercase mr-2 mt-0.5">Activities:</span>
@@ -1615,7 +1665,16 @@ export default function HomePage() {
                           const hotelCost = leg.hotel || 0;
                           const lpCost = leg.local_purchase || 0;
                           const otherCost = leg.oth_amount || 0;
+
+                          const origTA = parseFloat(leg.original_amount ?? leg.amount ?? 0);
+                          const origSub = parseFloat(leg.original_sub_amount ?? leg.sub_amount ?? 0);
+                          const origDA = parseFloat(leg.original_da ?? leg.da ?? 0);
+
+                          const taDeducted = (origTA - travelCost) + (origSub - subCost);
+                          const daDeducted = origDA - daCost;
+
                           const legTotal = travelCost + subCost + daCost + hotelCost + lpCost + otherCost;
+                          const origTotal = origTA + origSub + origDA + hotelCost + lpCost + otherCost;
 
                           let actDetails: any = null;
                           try {
@@ -1641,7 +1700,12 @@ export default function HomePage() {
                               {/* Card Header */}
                               <div className="flex justify-between items-center border-b border-gray-100 pb-2">
                                 <span className="font-extrabold text-blue-600 font-mono text-xs">Visit #{leg.leg}</span>
-                                <span className="font-extrabold text-gray-900 text-sm">₹{legTotal.toLocaleString()}</span>
+                                <div className="flex flex-col items-end">
+                                  <span className="font-extrabold text-gray-900 text-sm">₹{legTotal.toLocaleString()}</span>
+                                  {origTotal > legTotal && (
+                                    <span className="text-[8px] font-bold text-rose-500 line-through">₹{origTotal.toLocaleString()}</span>
+                                  )}
+                                </div>
                               </div>
 
                               {/* Route & Mode */}
@@ -1674,10 +1738,20 @@ export default function HomePage() {
                               </div>
 
                               {/* Breakdown of costs */}
-                              <div className="grid grid-cols-3 gap-2 bg-gray-50/50 p-2.5 rounded-lg border border-gray-150 text-[10px] font-bold">
+                              <div className="grid grid-cols-2 gap-2.5 bg-gray-50/50 p-2.5 rounded-lg border border-gray-150 text-[10px] font-bold">
+                                <div>
+                                  <span className="text-gray-400 text-[8px] uppercase block">TA / Fare</span>
+                                  <span className="text-gray-700 font-mono">₹{(travelCost + subCost).toLocaleString()}</span>
+                                  {taDeducted > 0 && (
+                                    <span className="text-[8px] font-bold text-rose-500 line-through block">₹{(origTA + origSub).toLocaleString()}</span>
+                                  )}
+                                </div>
                                 <div>
                                   <span className="text-gray-400 text-[8px] uppercase block">DA</span>
                                   <span className="text-gray-700 font-mono">₹{daCost.toLocaleString()}</span>
+                                  {daDeducted > 0 && (
+                                    <span className="text-[8px] font-bold text-rose-500 line-through block">₹{origDA.toLocaleString()}</span>
+                                  )}
                                 </div>
                                 <div>
                                   <span className="text-gray-400 text-[8px] uppercase block">Hotel</span>
@@ -1688,7 +1762,7 @@ export default function HomePage() {
                                   <span className="text-gray-700 font-mono">₹{lpCost.toLocaleString()}</span>
                                 </div>
                                 {otherCost > 0 && (
-                                  <div className="col-span-3 border-t border-gray-100 pt-1.5 mt-0.5">
+                                  <div className="col-span-2 border-t border-gray-100 pt-1.5 mt-0.5">
                                     <span className="text-gray-400 text-[8px] uppercase block">Other/Misc (₹{otherCost.toLocaleString()})</span>
                                     <span className="text-gray-655 block text-[9px] font-normal italic">{leg.oth_desc || "No description"}</span>
                                   </div>
