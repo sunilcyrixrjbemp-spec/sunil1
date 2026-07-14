@@ -1652,9 +1652,9 @@ export default function ExpensePage() {
     itineraries.forEach((leg, index) => {
       const legNum = index + 1;
       const legKm = parseFloat(leg.km) || 0;
-      const isCommute = isBaseLocOnly && isCommuteLeg(leg);
-      const legAmt = isCommute ? 0 : (parseFloat(leg.amount) || 0);
-      const subAmt = isCommute ? 0 : (parseFloat(leg.sub_amount) || 0);
+      // When working at base location, ALL travel amounts are 0 (not just commute legs)
+      const legAmt = isBaseLocOnly ? 0 : (parseFloat(leg.amount) || 0);
+      const subAmt = isBaseLocOnly ? 0 : (parseFloat(leg.sub_amount) || 0);
       const otherAmt = parseFloat(leg.oth_amount) || 0;
 
       if (leg.mode === "Bike" || leg.mode === "Car") {
@@ -2162,34 +2162,28 @@ export default function ExpensePage() {
     if (isBaseLocOnly) {
       const deductionItems: { leg: number; from: string; to: string; taDeducted: number; daDeducted: number }[] = [];
       let policyMsg = "";
-      const hasCommuteTA = processedItineraries.some(isCommuteLeg);
 
-      if (hasCommuteTA && !isDAAllowed) {
-        policyMsg = "Base location par commute TA eligible nahi hai aur DA bhi deduct hoga (base location policy).";
-      } else if (!isDAAllowed) {
-        policyMsg = "Base location par DA eligible nahi hai (base location policy).";
-      } else if (hasCommuteTA) {
-        policyMsg = "Ghar se base location ka commute TA eligible nahi hai (base location policy).";
+      if (!isDAAllowed) {
+        policyMsg = "Base location par kaam karne par TA aur DA dono eligible nahi hain (base location policy).";
+      } else {
+        policyMsg = "Base location par kaam karne par TA eligible nahi hai (base location policy).";
       }
 
       processedItineraries.forEach((leg, idx) => {
         const legNum = idx + 1;
         const origTA = parseFloat(leg.amount || "0");
         const origSub = parseFloat(leg.sub_amount || "0");
-        const origDA = parseFloat(leg.da || "0");
-        const isCommute = isCommuteLeg(leg);
-        const effectiveTA = isCommute ? 0 : origTA;
-        const effectiveSub = isCommute ? 0 : origSub;
-        const effectiveDA = isDAAllowed ? origDA : 0;
-        const taDeducted = (origTA - effectiveTA) + (origSub - effectiveSub);
-        const daDeducted = origDA - effectiveDA;
+        const origDA = legNum === 1 ? parseFloat(leg.da || "0") : 0;
+        // ALL TAs are 0 when isBaseLocOnly (not just commute legs)
+        const taDeducted = origTA + origSub;
+        const daDeducted = isDAAllowed ? 0 : origDA;
         if (taDeducted > 0 || daDeducted > 0) {
           deductionItems.push({ leg: legNum, from: leg.from, to: leg.to, taDeducted, daDeducted });
         }
       });
 
       setBaseLocDeductions({
-        hasDeductions: deductionItems.length > 0 || !isDAAllowed,
+        hasDeductions: deductionItems.length > 0,
         policyMessage: policyMsg,
         items: deductionItems
       });
@@ -2272,9 +2266,10 @@ export default function ExpensePage() {
           to_custom: !!leg.to_custom,
           mode: leg.mode,
           km: leg.km,
-          amount: (isBaseLocOnly && isCommuteLeg(leg)) ? "0" : leg.amount,
+          // When base-location-only, ALL legs get TA=0 (not just commute legs)
+          amount: isBaseLocOnly ? "0" : leg.amount,
           sub_mode: leg.sub_mode,
-          sub_amount: (isBaseLocOnly && isCommuteLeg(leg)) ? "0" : leg.sub_amount,
+          sub_amount: isBaseLocOnly ? "0" : leg.sub_amount,
           da: legNum === 1 ? (isDAAllowed ? leg.da : "0") : "0",
           hotel: legNum === 1 ? leg.hotel : "0",
           local_purchase: legNum === 1 ? leg.local_purchase : "0",

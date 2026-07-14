@@ -1876,7 +1876,13 @@ export async function handleSubmitExpense(request, env, params, query, user) {
   await runWrite(env, "DELETE FROM expense_attachments WHERE exp_id = ?", [expenseCode]);
   await runWrite(env, "DELETE FROM expense_itineraries WHERE exp_id = ?", [expenseCode]);
 
-  // ── Calculate totals from frontend-sent values (no backend deduction — frontend already applied base-loc policy) ──
+  // ── Backend safety net: re-run base-loc policy to catch any frontend miss ──
+  // Frontend should have zeroed these, but backend verifies and corrects if not.
+  const { isBaseLocOnly, isDaAllowed, baseLocations } = computeBaseLocPolicy(
+    user.base_reporting_location || "",
+    itineraries
+  );
+
   let totalDa = 0.0;
   let totalHotel = 0.0;
   let totalOther = 0.0;
@@ -1894,10 +1900,11 @@ export async function handleSubmitExpense(request, env, params, query, user) {
 
   for (let idx = 0; idx < itineraries.length; idx++) {
     const iti = itineraries[idx];
-    // Trust the amounts the frontend sent — base location policy was already applied there
-    const travelAmt = parseFloat(iti.amount || "0.0");
-    const subAmt = parseFloat(iti.sub_amount || "0.0");
-    const daAmt = parseFloat(iti.da || "0.0");
+    // If isBaseLocOnly: ALL TA = 0 regardless of what frontend sent
+    // (frontend should have done it, but backend corrects if it missed)
+    const travelAmt = isBaseLocOnly ? 0.0 : parseFloat(iti.amount || "0.0");
+    const subAmt    = isBaseLocOnly ? 0.0 : parseFloat(iti.sub_amount || "0.0");
+    const daAmt     = isDaAllowed ? parseFloat(iti.da || "0.0") : 0.0;
     const hotelAmt = parseFloat(iti.hotel || "0.0");
     const otherAmt = parseFloat(iti.oth_amount || "0.0");
     const lpAmt = parseFloat(iti.local_purchase || "0.0");
@@ -2142,22 +2149,22 @@ export async function handleSubmitExpense(request, env, params, query, user) {
       )
       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 0.0, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     `, [
-      // Save the frontend-sent values directly (base-loc policy already applied by frontend)
+      // Safety-net: apply base-loc policy on save (ALL TAs 0 when isBaseLocOnly)
       itiId, expenseCode, legNum, fromDist, toDist, iti.from || "", iti.to || "",
       iti.mode || "Bike", parseFloat(iti.km || "0.0"),
-      parseFloat(iti.amount || "0.0"),
+      isBaseLocOnly ? 0.0 : parseFloat(iti.amount || "0.0"),
       iti.sub_mode || null,
-      parseFloat(iti.sub_amount || "0.0"),
-      parseFloat(iti.da || "0.0"),
+      isBaseLocOnly ? 0.0 : parseFloat(iti.sub_amount || "0.0"),
+      isDaAllowed ? parseFloat(iti.da || "0.0") : 0.0,
       parseFloat(iti.hotel || "0.0"), parseFloat(iti.local_purchase || "0.0"), iti.oth_desc || null, parseFloat(iti.oth_amount || "0.0"),
       parseInt(iti.ws_assigned || "0", 10), parseInt(iti.ws_closed || "0", 10),
       parseInt(iti.ws_pms || "0", 10), parseInt(iti.ws_asset || "0", 10),
       iti.visit_purpose || "Field visit",
       typeof iti.activity_details === "string" ? iti.activity_details : JSON.stringify(iti.activity_details || {}),
       parseFloat(iti.km || "0.0"),
-      parseFloat(iti.amount || "0.0"),
-      parseFloat(iti.sub_amount || "0.0"),
-      parseFloat(iti.da || "0.0"), parseFloat(iti.hotel || "0.0"), parseFloat(iti.oth_amount || "0.0"),
+      isBaseLocOnly ? 0.0 : parseFloat(iti.amount || "0.0"),
+      isBaseLocOnly ? 0.0 : parseFloat(iti.sub_amount || "0.0"),
+      isDaAllowed ? parseFloat(iti.da || "0.0") : 0.0, parseFloat(iti.hotel || "0.0"), parseFloat(iti.oth_amount || "0.0"),
       parseFloat(iti.local_purchase || "0.0"), parseInt(iti.calibration_count || "0", 10),
       parseInt(iti.mobilise_asset_count || "0", 10)
     ]);
