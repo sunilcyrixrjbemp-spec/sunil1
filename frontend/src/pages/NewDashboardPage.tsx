@@ -12,9 +12,7 @@ import {
   ChevronLeft,
   ChevronRight,
   Award,
-  AlertCircle,
-  HelpCircle,
-  Building
+  AlertCircle
 } from "lucide-react";
 import { ResponsiveBar } from "@nivo/bar";
 import { ResponsivePie } from "@nivo/pie";
@@ -25,11 +23,12 @@ import toast from "react-hot-toast";
 
 const API_KEY = import.meta.env.VITE_GOOGLE_SHEETS_API_KEY || "AIzaSyDTkQ1wNpug7rDLmHgDGt_0Xr2XTPnWsIA";
 const SPREADSHEET_ID = import.meta.env.VITE_GOOGLE_SPREADSHEET_ID || "1ASmvpLSl-X3Vm8S3LxB2Iyhg6HMhOpV-R4ywVS2o8Bs";
-const CACHE_KEY = "cyrix_dashboard_sheets_cache_v2"; // Increment cache key version
+const CACHE_KEY = "cyrix_dashboard_sheets_cache_v3"; // Cache version 3
 
 export default function NewDashboardPage() {
   const [loading, setLoading] = useState(true);
   const [backgroundSyncing, setBackgroundSyncing] = useState(false);
+  const [syncProgress, setSyncProgress] = useState<number | null>(null);
   const [error, setError] = useState("");
 
   // Raw Data from Google Sheets
@@ -64,7 +63,7 @@ export default function NewDashboardPage() {
   const userZone = currentUser?.zone || null;
   const userCoordinator = currentUser?.coordinator || null;
 
-  // COMPRESSION LOGIC: Minify JSON data before storing in LocalStorage to prevent Quota Exceeded error
+  // COMPRESSION LOGIC: Minify JSON data before storing in LocalStorage
   const serializeData = (data: any) => {
     const compactDi = (data.diNameList || []).map((row: any) => [
       row["Zone Name"] || "",
@@ -74,7 +73,9 @@ export default function NewDashboardPage() {
       row["Hospital Name"] || ""
     ]);
 
-    const compactPenalty = (data.penaltyFile || []).map((row: any) => [
+    // Cache ONLY the most recent 15,000 rows to guarantee fitting in LocalStorage (approx 400KB)
+    // Full million rows will load in the background in memory
+    const compactPenalty = (data.penaltyFile || []).slice(0, 15000).map((row: any) => [
       row["Complaint ID"] || "",
       row["District Name"] || "",
       row["Hospital Name"] || "",
@@ -130,7 +131,7 @@ export default function NewDashboardPage() {
     };
   };
 
-  // Restore compressed data from cache instantly
+  // Restore from cache instantly
   const restoreFromCache = () => {
     try {
       const cached = localStorage.getItem(CACHE_KEY);
@@ -150,6 +151,55 @@ export default function NewDashboardPage() {
     return false;
   };
 
+  // Progressive batch chunk fetcher to handle 1,000,000+ rows without timeouts/crashes
+  const fetchPenaltyFileInChunks = async (onProgress: (loaded: number) => void) => {
+    let rowStart = 2; // Start after headers
+    const chunkSize = 50000;
+    let hasMore = true;
+    const compiledRows: any[] = [];
+    
+    // Fetch headers first from row 1
+    const headerUrl = `https://sheets.googleapis.com/v4/spreadsheets/${SPREADSHEET_ID}/values/Penalty%20File!A1:G1?key=${API_KEY}`;
+    const hRes = await fetch(headerUrl);
+    if (!hRes.ok) throw new Error("Failed to fetch headers");
+    const hData = await hRes.json();
+    const headers = (hData.values || [[]])[0].map((h: string) => h.trim());
+    
+    while (hasMore) {
+      const range = `Penalty File!A${rowStart}:G${rowStart + chunkSize - 1}`;
+      const url = `https://sheets.googleapis.com/v4/spreadsheets/${SPREADSHEET_ID}/values/${encodeURIComponent(range)}?key=${API_KEY}`;
+      const res = await fetch(url);
+      if (!res.ok) throw new Error(`Google Sheets API error on range ${range}`);
+      const data = await res.json();
+      const rows = data.values || [];
+      
+      if (rows.length === 0) {
+        hasMore = false;
+        break;
+      }
+      
+      // Parse chunk rows to objects
+      const formatted = rows.map((row: any) => {
+        const obj: any = {};
+        headers.forEach((h: string, idx: number) => {
+          obj[h] = row[idx] !== undefined ? row[idx].trim() : "";
+        });
+        return obj;
+      });
+      
+      compiledRows.push(...formatted);
+      onProgress(compiledRows.length);
+      
+      if (rows.length < chunkSize) {
+        hasMore = false;
+      } else {
+        rowStart += chunkSize;
+      }
+    }
+    
+    return compiledRows;
+  };
+
   // Fetch all necessary sheets on load
   const loadAllDashboardData = async (isBackground = false) => {
     try {
@@ -159,12 +209,13 @@ export default function NewDashboardPage() {
         setLoading(true);
       }
       setError("");
+      setSyncProgress(0);
 
+      // Fetch reference lists (Zone, Critical Equipment, Assets) without hardcoded row limits
       const sheetsToFetch = [
-        { name: "diNameList", range: "DI Name List!A1:E2000" },
-        { name: "penaltyFile", range: "Penalty File!A1:Z5000" },
-        { name: "assetValues", range: "Asset Value!A1:B1000" },
-        { name: "criticalEquipment", range: "Critical Equipment!A1:B500" }
+        { name: "diNameList", range: "DI Name List!A1:E" },
+        { name: "assetValues", range: "Asset Value!A1:B" },
+        { name: "criticalEquipment", range: "Critical Equipment!A1:B" }
       ];
 
       const freshData: any = {};
@@ -191,6 +242,12 @@ export default function NewDashboardPage() {
           }
         })
       );
+
+      // Fetch the massive 1,000,000 row penalty file progressively
+      const fullPenaltyFile = await fetchPenaltyFileInChunks((loadedCount) => {
+        setSyncProgress(loadedCount);
+      });
+      freshData["penaltyFile"] = fullPenaltyFile;
 
       // Fetch submitted expenses to cross-verify barcodes
       let freshExpenses = [];
@@ -225,6 +282,7 @@ export default function NewDashboardPage() {
     } finally {
       setLoading(false);
       setBackgroundSyncing(false);
+      setSyncProgress(null);
     }
   };
 
@@ -396,7 +454,6 @@ export default function NewDashboardPage() {
     if (isNaN(raiseTime) || isNaN(closeTime)) return 1000;
     const days = Math.max(0, (closeTime - raiseTime) / (1000 * 60 * 60 * 24));
     
-    // Check if equipment is critical
     const isCritical = criticalEquipment.some(
       (c) => c["Name"]?.toLowerCase() === row["Equipment Name"]?.toLowerCase()
     );
@@ -456,7 +513,7 @@ export default function NewDashboardPage() {
     };
   }, [filteredComplaints, penaltyTab, diNameList, criticalEquipment]);
 
-  // 3. Open Complaints SLA Aging Breakdown (NEW POSSIBILITIES AND DETAILED ANALYSIS)
+  // 3. Open Complaints SLA Aging Breakdown
   const openComplaintsSummary = useMemo(() => {
     const list = filteredComplaints.filter(
       (row) => !row["Complaint Close date"] || row["Complaint Close date"] === "" || row["Complaint Close date"].toLowerCase() === "open"
@@ -500,7 +557,7 @@ export default function NewDashboardPage() {
 
   const totalOpenPages = Math.ceil(openComplaintsSummary.list.length / rowsPerPage);
 
-  // 4. DI Performance Leaderboard (NEW DETAILED ANALYSIS)
+  // 4. DI Performance Leaderboard
   const diLeaderboard = useMemo(() => {
     const performance: { [di: string]: { name: string; totalLogged: number; closed: number; totalPenalty: number; totalDays: number } } = {};
 
@@ -541,7 +598,7 @@ export default function NewDashboardPage() {
           avgResolutionTime
         };
       })
-      .sort((a, b) => a.totalPenalty - b.totalPenalty || b.resolutionRate - a.resolutionRate); // Lower penalty first
+      .sort((a, b) => a.totalPenalty - b.totalPenalty || b.resolutionRate - a.resolutionRate);
   }, [filteredComplaints, diNameList, criticalEquipment]);
 
   const paginatedDILeaderboard = useMemo(() => {
@@ -551,7 +608,7 @@ export default function NewDashboardPage() {
 
   const totalDIPages = Math.ceil(diLeaderboard.length / rowsPerPage);
 
-  // 5. Monthly Run Rate & Financial Penalty Projection (NEW POSSIBILITIES)
+  // 5. Monthly Run Rate & Financial Penalty Projection
   const monthlyProjections = useMemo(() => {
     const today = new Date();
     const totalDaysInMonth = new Date(today.getFullYear(), today.getMonth() + 1, 0).getDate();
@@ -711,9 +768,16 @@ export default function NewDashboardPage() {
 
   if (loading) {
     return (
-      <div className="flex flex-col items-center justify-center min-h-[80vh] gap-3 bg-slate-50">
+      <div className="flex flex-col items-center justify-center min-h-[80vh] gap-4 bg-slate-50">
         <div className="w-12 h-12 rounded-full border-4 border-slate-200 border-t-indigo-600 animate-spin"></div>
-        <p className="text-sm font-semibold text-slate-600 animate-pulse">Launching Enterprise Dashboard Live Intel...</p>
+        <div className="text-center space-y-1">
+          <p className="text-sm font-bold text-slate-700">Downloading live enterprise datasets...</p>
+          {syncProgress !== null && syncProgress > 0 && (
+            <p className="text-xs font-semibold text-indigo-600 animate-pulse bg-indigo-50 px-3 py-1 rounded-full inline-block">
+              Parsed {syncProgress.toLocaleString()} operational records so far
+            </p>
+          )}
+        </div>
       </div>
     );
   }
@@ -734,10 +798,12 @@ export default function NewDashboardPage() {
             <h1 className="text-2xl font-black text-slate-900 tracking-tight flex items-center gap-2">
               New Dashboard 
               {backgroundSyncing && (
-                <span className="text-[10px] font-bold text-indigo-600 bg-indigo-50 px-2 py-0.5 rounded-full animate-pulse">Syncing...</span>
+                <span className="text-[10px] font-bold text-indigo-600 bg-indigo-50 px-2 py-0.5 rounded-full animate-pulse">
+                  Syncing {syncProgress !== null ? `${syncProgress.toLocaleString()} rows` : "Live"}...
+                </span>
               )}
             </h1>
-            <p className="text-xs font-semibold text-slate-500 uppercase tracking-wider">Multi-Millionaire Audit & Performance Dashboard</p>
+            <p className="text-xs font-semibold text-slate-500 uppercase tracking-wider">Multi-Millionaire Audit & Performance Dashboard ({penaltyFile.length.toLocaleString()} rows)</p>
           </div>
         </div>
 
@@ -848,7 +914,7 @@ export default function NewDashboardPage() {
         </div>
       </div>
 
-      {/* 3. Projections & Financial Intel Banner (NEW POSSIBILITIES) */}
+      {/* 3. Projections & Financial Intel Banner */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-6">
         
         <div className="bg-gradient-to-r from-rose-500 to-red-600 p-5 rounded-2xl text-white shadow-sm flex flex-col justify-between relative overflow-hidden">
@@ -906,7 +972,7 @@ export default function NewDashboardPage() {
         <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm flex items-center justify-between">
           <div className="space-y-1">
             <p className="text-[10px] font-black text-slate-400 uppercase tracking-wider">Logged Calls</p>
-            <h3 className="text-3xl font-black text-slate-900">{ftfrData.logged}</h3>
+            <h3 className="text-3xl font-black text-slate-900">{ftfrData.logged.toLocaleString()}</h3>
             <p className="text-[10px] text-slate-500 font-semibold">Total logged calls</p>
           </div>
           <div className="p-3 bg-blue-50 text-blue-600 rounded-xl">
@@ -917,7 +983,7 @@ export default function NewDashboardPage() {
         <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm flex items-center justify-between">
           <div className="space-y-1">
             <p className="text-[10px] font-black text-slate-400 uppercase tracking-wider">Closed Calls</p>
-            <h3 className="text-3xl font-black text-green-600">{ftfrData.closed}</h3>
+            <h3 className="text-3xl font-black text-green-600">{ftfrData.closed.toLocaleString()}</h3>
             <p className="text-[10px] text-slate-500 font-semibold">({((ftfrData.closed / (ftfrData.logged || 1)) * 100).toFixed(0)}% Resolution Rate)</p>
           </div>
           <div className="p-3 bg-green-50 text-green-600 rounded-xl">
@@ -928,7 +994,7 @@ export default function NewDashboardPage() {
         <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm flex items-center justify-between">
           <div className="space-y-1">
             <p className="text-[10px] font-black text-slate-400 uppercase tracking-wider">Closed &lt; 24 Hrs</p>
-            <h3 className="text-3xl font-black text-indigo-600">{ftfrData.closedWithin24h}</h3>
+            <h3 className="text-3xl font-black text-indigo-600">{ftfrData.closedWithin24h.toLocaleString()}</h3>
             <p className="text-[10px] text-slate-500 font-semibold">Resolved in under 24 hours</p>
           </div>
           <div className="p-3 bg-indigo-50 text-indigo-600 rounded-xl">
@@ -1030,7 +1096,7 @@ export default function NewDashboardPage() {
           </div>
         </div>
 
-        {/* SLA Aging Pie Chart (NEW POSSIBILITIES) */}
+        {/* SLA Aging Pie Chart */}
         <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm">
           <div className="flex justify-between items-center mb-6 pb-2 border-b border-slate-100">
             <div className="flex items-center gap-1.5">
@@ -1181,7 +1247,7 @@ export default function NewDashboardPage() {
         </div>
       </div>
 
-      {/* 7. DI Performance Leaderboard Table (NEW POSSIBILITIES) */}
+      {/* 7. DI Performance Leaderboard Table */}
       <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm mb-6">
         <div className="flex justify-between items-center mb-4 pb-2 border-b border-slate-100">
           <div className="flex items-center gap-1.5">
@@ -1209,8 +1275,8 @@ export default function NewDashboardPage() {
               {paginatedDILeaderboard.map((item, idx) => (
                 <tr key={idx} className="hover:bg-slate-50/50">
                   <td className="px-4 py-3 text-left font-bold text-slate-800">{item.name}</td>
-                  <td className="px-4 py-3 text-center">{item.totalLogged}</td>
-                  <td className="px-4 py-3 text-center text-green-600">{item.closed}</td>
+                  <td className="px-4 py-3 text-center">{item.totalLogged.toLocaleString()}</td>
+                  <td className="px-4 py-3 text-center text-green-600">{item.closed.toLocaleString()}</td>
                   <td className="px-4 py-3 text-center font-mono">{item.avgResolutionTime} days</td>
                   <td className="px-4 py-3 text-center">
                     <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${
@@ -1260,7 +1326,7 @@ export default function NewDashboardPage() {
             <h2 className="text-xs font-bold text-slate-700 uppercase tracking-wider">Repeat Complaints & Preventative Downtime Auditor</h2>
           </div>
           <span className="text-xs font-black text-amber-600 bg-amber-50 px-2.5 py-1 rounded-lg">
-            {repeatCalls.length} Repeat Assets Found
+            {repeatCalls.length.toLocaleString()} Repeat Assets Found
           </span>
         </div>
 
@@ -1324,8 +1390,8 @@ export default function NewDashboardPage() {
             <h2 className="text-xs font-bold text-slate-700 uppercase tracking-wider">Engineer Expense Barcode Verification Panel</h2>
           </div>
           <div className="flex gap-4 text-xs font-bold">
-            <span className="text-emerald-600 bg-emerald-50 px-2.5 py-1 rounded-lg">Verified: {barcodeVerification.verifiedCount}</span>
-            <span className="text-red-600 bg-red-50 px-2.5 py-1 rounded-lg">Mismatches: {barcodeVerification.mismatchCount}</span>
+            <span className="text-emerald-600 bg-emerald-50 px-2.5 py-1 rounded-lg">Verified: {barcodeVerification.verifiedCount.toLocaleString()}</span>
+            <span className="text-red-600 bg-red-50 px-2.5 py-1 rounded-lg">Mismatches: {barcodeVerification.mismatchCount.toLocaleString()}</span>
           </div>
         </div>
 
@@ -1401,7 +1467,7 @@ export default function NewDashboardPage() {
         <div className="flex justify-between items-center mb-4 pb-2 border-b border-slate-100">
           <div className="flex items-center gap-1.5">
             <Clock className="w-4 h-4 text-indigo-600" />
-            <h2 className="text-xs font-bold text-slate-700 uppercase tracking-wider">Active Open Complaints Drilldown ({openComplaintsSummary.totalOpen})</h2>
+            <h2 className="text-xs font-bold text-slate-700 uppercase tracking-wider">Active Open Complaints Drilldown ({openComplaintsSummary.totalOpen.toLocaleString()})</h2>
           </div>
         </div>
 
