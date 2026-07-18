@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from "react";
+﻿import { useState, useEffect, useMemo } from "react";
 import {
   RefreshCw,
   AlertTriangle,
@@ -46,7 +46,7 @@ const SPREADSHEET_ID =
   "1ASmvpLSl-X3Vm8S3LxB2Iyhg6HMhOpV-R4ywVS2o8Bs";
 const CACHE_KEY = "cyrix_dashboard_sheets_cache_v9";
 
-// ─── Helpers ────────────────────────────────────────────────────────────────
+// â”€â”€â”€ Helpers â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 const isComplaintClosed = (row: any): boolean => {
   const status = (row.status || "").trim().toLowerCase();
@@ -98,7 +98,7 @@ const parseFlexibleDate = (dateStr: string | null | undefined): number => {
 const formatRupees = (val: number) =>
   new Intl.NumberFormat("en-IN", { style: "currency", currency: "INR", maximumFractionDigits: 0 }).format(val);
 
-// ─── Nivo shared theme ───────────────────────────────────────────────────────
+// â”€â”€â”€ Nivo shared theme â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 const nivoTheme = {
   background: "transparent",
   text: { fontSize: 11, fill: "#64748b", fontFamily: "inherit" },
@@ -121,7 +121,7 @@ const nivoTheme = {
   },
 };
 
-// ─── KPI Card Component ──────────────────────────────────────────────────────
+// â”€â”€â”€ KPI Card Component â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 const KpiCard = ({
   label,
   value,
@@ -168,7 +168,7 @@ const KpiCard = ({
   );
 };
 
-// ─── Main Component ──────────────────────────────────────────────────────────
+// â”€â”€â”€ Main Component â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 export default function NewDashboardPage() {
   const [loading, setLoading] = useState(true);
   const [backgroundSyncing, setBackgroundSyncing] = useState(false);
@@ -324,7 +324,7 @@ export default function NewDashboardPage() {
       setExpenseList(freshExpenses);
       saveToCache({ diNameList: parsedDIs, penaltyFile: parsedPenalties, assetValues: parsedAssets, criticalEquipment: parsedCritical, expenseList: freshExpenses });
 
-      if (isBackground) toast.success("Dashboard updated live! ⚡", { id: "bg-sync" });
+      if (isBackground) toast.success("Dashboard updated live! âš¡", { id: "bg-sync" });
     } catch (err: any) {
       console.error(err);
       setError("Failed to fetch Google Sheet data: " + err.message);
@@ -453,7 +453,7 @@ export default function NewDashboardPage() {
     return { currentMonthPenalty: curMonthPenalty, dailyRunRate, projectedPenalty: curMonthPenalty + (dailyRunRate * (totalDaysInMonth - currentDay)) };
   }, [filteredPenaltyFile, criticalEquipment]);
 
-  // ─── Monthly Trend Line Data ─────────────────────────────────────────────
+  // â”€â”€â”€ Monthly Trend Line Data â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   const monthlyTrendData = useMemo(() => {
     const monthMap: Record<string, { penalty: number; open: number; closed: number }> = {};
     filteredPenaltyFile.forEach((row) => {
@@ -502,7 +502,7 @@ export default function NewDashboardPage() {
     const list = Object.values(counts).sort((a, b) => b.amount - a.amount);
     const CHART_COLORS = ["#6366f1","#8b5cf6","#ec4899","#f43f5e","#f59e0b","#10b981","#3b82f6"];
     const chartData = list.slice(0, 7).map((item, i) => ({
-      name: item.name.length > 14 ? item.name.substring(0, 14) + "…" : item.name,
+      name: item.name.length > 14 ? item.name.substring(0, 14) + "â€¦" : item.name,
       fullName: item.name,
       Penalty: item.amount,
       Open: item.openTickets,
@@ -630,7 +630,7 @@ export default function NewDashboardPage() {
       row.hospital.toLowerCase().includes(fraudSearch.toLowerCase())
     ), [barcodeMismatches, fraudSearch]);
 
-  // ─── Equipment type breakdown for Pie ──────────────────────────────────────
+  // â”€â”€â”€ Equipment type breakdown for Pie â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   const equipTypePieData = useMemo(() => {
     const m: Record<string, number> = {};
     filteredPenaltyFile.forEach((row) => { const t = row.equipmentType || "Other"; m[t] = (m[t] || 0) + 1; });
@@ -638,7 +638,7 @@ export default function NewDashboardPage() {
     return Object.entries(m).sort((a, b) => b[1] - a[1]).slice(0, 8).map(([id, value], i) => ({ id, label: id, value, color: COLORS[i % COLORS.length] }));
   }, [filteredPenaltyFile]);
 
-  // ─── Smart Insights ──────────────────────────────────────────────────────────
+  // â”€â”€â”€ Smart Insights â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   const smartInsights = useMemo(() => {
     if (filteredPenaltyFile.length === 0) return [];
 
@@ -693,7 +693,7 @@ export default function NewDashboardPage() {
     return insights;
   }, [filteredPenaltyFile, diNameList, criticalEquipment]);
 
-  // ─── Hospital Risk Scorecard ──────────────────────────────────────────────
+  // â”€â”€â”€ Hospital Risk Scorecard â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   const hospitalRiskData = useMemo(() => {
     const map: Record<string, { hospital: string; district: string; open: number; penalty: number; repeats: number }> = {};
     const repeatBarcodes: Record<string, number> = {};
@@ -713,7 +713,7 @@ export default function NewDashboardPage() {
       .sort((a, b) => b.riskScore - a.riskScore);
   }, [filteredPenaltyFile, criticalEquipment]);
 
-  // ─── Equipment Health Report ──────────────────────────────────────────────
+  // â”€â”€â”€ Equipment Health Report â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   const equipmentHealthData = useMemo(() => {
     const map: Record<string, { name: string; total: number; open: number; downtime: number; penalty: number }> = {};
     filteredPenaltyFile.forEach((row) => {
@@ -734,7 +734,7 @@ export default function NewDashboardPage() {
       .sort((a, b) => b.penalty - a.penalty);
   }, [filteredPenaltyFile, criticalEquipment]);
 
-  // ─── Downtime by District Bar Data ────────────────────────────────────────
+  // â”€â”€â”€ Downtime by District Bar Data â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   const downtimeByDistrict = useMemo(() => {
     const map: Record<string, number> = {};
     filteredPenaltyFile.forEach((row) => {
@@ -746,14 +746,14 @@ export default function NewDashboardPage() {
       .sort((a, b) => b[1] - a[1])
       .slice(0, 10)
       .map(([name, downtime], i) => ({
-        name: name.length > 14 ? name.substring(0, 14) + "…" : name,
+        name: name.length > 14 ? name.substring(0, 14) + "â€¦" : name,
         fullName: name,
         Downtime: Math.round(downtime),
         color: COLORS[i % COLORS.length],
       }));
   }, [filteredPenaltyFile]);
 
-  // ─── Month-over-Month Penalty Change ─────────────────────────────────────
+  // â”€â”€â”€ Month-over-Month Penalty Change â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   const momData = useMemo(() => {
     const mNames = ["jan","feb","mar","apr","may","jun","jul","aug","sep","oct","nov","dec"];
     const parseMonthTs = (m: string) => { const p = m.split("-"); const mi = mNames.indexOf((p[0]||"jan").toLowerCase()); const y = parseInt("20"+(p[1]||"25")); return new Date(y, mi, 1).getTime(); };
@@ -767,7 +767,7 @@ export default function NewDashboardPage() {
     });
   }, [filteredPenaltyFile, criticalEquipment]);
 
-  // ─── Coordinator Efficiency ──────────────────────────────────────────────
+  // â”€â”€â”€ Coordinator Efficiency â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   const coordinatorData = useMemo(() => {
     const map: Record<string, { name: string; total: number; closed: number; totalDays: number; penalty: number }> = {};
     filteredPenaltyFile.forEach((row) => {
@@ -789,13 +789,13 @@ export default function NewDashboardPage() {
         resolutionRate: c.total > 0 ? Math.round((c.closed / c.total) * 100) : 0,
         avgFixDays: c.closed > 0 ? parseFloat((c.totalDays / c.closed).toFixed(1)) : 0,
         color: COLORS[i % COLORS.length],
-        shortName: c.name.length > 14 ? c.name.substring(0, 14) + "…" : c.name,
+        shortName: c.name.length > 14 ? c.name.substring(0, 14) + "â€¦" : c.name,
       }))
       .sort((a, b) => b.resolutionRate - a.resolutionRate)
       .slice(0, 10);
   }, [filteredPenaltyFile, diNameList, criticalEquipment]);
 
-  // ─── Loader ────────────────────────────────────────────────────────────────
+  // â”€â”€â”€ Loader â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   if (loading) {
     return (
       <div className="flex flex-col items-center justify-center min-h-[70vh] gap-3">
@@ -805,7 +805,7 @@ export default function NewDashboardPage() {
     );
   }
 
-  // ─── Tabs config ───────────────────────────────────────────────────────────
+  // â”€â”€â”€ Tabs config â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   const tabs = [
     { id: "overview", label: "Overview", icon: BarChart3 },
     { id: "leaderboard", label: "DI Leaderboard", icon: Award },
@@ -820,7 +820,7 @@ export default function NewDashboardPage() {
   return (
     <div className="p-4 md:p-6 bg-slate-50 min-h-screen font-sans antialiased text-slate-800">
 
-      {/* ── Header Banner ── */}
+      {/* â”€â”€ Header Banner â”€â”€ */}
       <div className="relative overflow-hidden bg-gradient-to-r from-indigo-900 via-violet-900 to-indigo-900 rounded-2xl p-6 mb-6 shadow-xl">
         {backgroundSyncing && <div className="absolute top-0 left-0 w-full h-1 bg-indigo-400 animate-pulse" />}
         {/* Decorative orbs */}
@@ -837,12 +837,12 @@ export default function NewDashboardPage() {
                 Cyrix Operations Command Center
                 {backgroundSyncing && (
                   <span className="text-[10px] font-bold text-indigo-200 bg-white/10 px-2.5 py-1 rounded-full animate-pulse border border-white/20">
-                    ⚡ Refreshing...
+                    âš¡ Refreshing...
                   </span>
                 )}
               </h1>
               <p className="text-indigo-200 text-xs font-semibold mt-0.5">
-                Live data from Google Sheets API • <span className="text-white font-black">{penaltyFile.length.toLocaleString()}</span> total records
+                Live data from Google Sheets API â€¢ <span className="text-white font-black">{penaltyFile.length.toLocaleString()}</span> total records
               </p>
             </div>
           </div>
@@ -871,12 +871,12 @@ export default function NewDashboardPage() {
         </div>
       )}
 
-      {/* ── Smart Insights Banner ── */}
+      {/* â”€â”€ Smart Insights Banner â”€â”€ */}
       {smartInsights.length > 0 && (
         <div className="mb-6">
           <div className="flex items-center gap-2 mb-2.5">
             <div className="p-1.5 bg-violet-100 rounded-lg"><Lightbulb className="w-3.5 h-3.5 text-violet-600" /></div>
-            <h2 className="text-xs font-black text-slate-600 uppercase tracking-widest">🧠 Auto-Detected Insights from Sheet Data</h2>
+            <h2 className="text-xs font-black text-slate-600 uppercase tracking-widest">ðŸ§  Auto-Detected Insights from Sheet Data</h2>
           </div>
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3">
             {smartInsights.map((ins, i) => {
@@ -903,7 +903,7 @@ export default function NewDashboardPage() {
         </div>
       )}
 
-      {/* ── KPI Cards ── */}
+      {/* â”€â”€ KPI Cards â”€â”€ */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
         <KpiCard label="Outstanding Penalty" value={formatRupees(summary.totalPenalty)} subtext="Incl. dynamic estimations" icon={IndianRupee} color="red" />
         <KpiCard label="Total Logged" value={summary.totalLogged.toLocaleString()} subtext="Sheet complaint records" icon={FileText} color="slate" />
@@ -911,7 +911,7 @@ export default function NewDashboardPage() {
         <KpiCard label="FTFR Rate" value={`${summary.ftfrRate}%`} subtext="Fixed within 24 hours" icon={Zap} color="indigo" />
       </div>
 
-      {/* ── Projection Mini-Widgets ── */}
+      {/* â”€â”€ Projection Mini-Widgets â”€â”€ */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
         <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-5 flex items-center gap-4">
           <div className="p-3 bg-amber-100 rounded-xl text-amber-600 shrink-0"><Target className="w-5 h-5" /></div>
@@ -936,7 +936,7 @@ export default function NewDashboardPage() {
         </div>
       </div>
 
-      {/* ── Global Filters ── */}
+      {/* â”€â”€ Global Filters â”€â”€ */}
       <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm mb-6">
         <div className="flex items-center justify-between mb-4 pb-3 border-b border-slate-100">
           <div className="flex items-center gap-2">
@@ -992,7 +992,7 @@ export default function NewDashboardPage() {
         </div>
       </div>
 
-      {/* ── Tab Navigation ── */}
+      {/* â”€â”€ Tab Navigation â”€â”€ */}
       <div className="flex bg-white border border-slate-200 rounded-2xl p-1.5 mb-6 shadow-sm gap-1 overflow-x-auto">
         {tabs.map(({ id, label, icon: Icon }) => (
           <button
@@ -1010,7 +1010,7 @@ export default function NewDashboardPage() {
         ))}
       </div>
 
-      {/* ── Tab Content ── */}
+      {/* â”€â”€ Tab Content â”€â”€ */}
       <div>
 
         {/* TAB 1: OVERVIEW */}
@@ -1055,13 +1055,13 @@ export default function NewDashboardPage() {
                       axisTop={null}
                       axisRight={null}
                       axisBottom={{ tickSize: 0, tickPadding: 8, tickRotation: -15, legendOffset: 40 }}
-                      axisLeft={{ tickSize: 0, tickPadding: 8, tickRotation: 0, legend: "₹ Penalty", legendPosition: "middle", legendOffset: -60, format: (v) => `₹${Number(v) >= 100000 ? (Number(v)/100000).toFixed(0)+"L" : Number(v) >= 1000 ? (Number(v)/1000).toFixed(0)+"K" : v}` }}
+                      axisLeft={{ tickSize: 0, tickPadding: 8, tickRotation: 0, legend: "â‚¹ Penalty", legendPosition: "middle", legendOffset: -60, format: (v) => `â‚¹${Number(v) >= 100000 ? (Number(v)/100000).toFixed(0)+"L" : Number(v) >= 1000 ? (Number(v)/1000).toFixed(0)+"K" : v}` }}
                       labelSkipWidth={30}
                       labelSkipHeight={20}
                       labelTextColor="#fff"
                       label={(d) => {
                         const v = Number(d.value);
-                        return v >= 100000 ? `₹${(v/100000).toFixed(0)}L` : v >= 1000 ? `₹${(v/1000).toFixed(0)}K` : `₹${v}`;
+                        return v >= 100000 ? `â‚¹${(v/100000).toFixed(0)}L` : v >= 1000 ? `â‚¹${(v/1000).toFixed(0)}K` : `â‚¹${v}`;
                       }}
                       tooltip={({ data, value }) => (
                         <div style={{ background: "#0f172a", color: "#f8fafc", padding: "10px 14px", borderRadius: 10, fontSize: 12, border: "1px solid rgba(255,255,255,0.1)" }}>
@@ -1132,7 +1132,7 @@ export default function NewDashboardPage() {
             <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-5">
               <div className="mb-4">
                 <h3 className="text-xs font-black text-slate-700 uppercase tracking-wider">Monthly Penalty & Open Ticket Trend</h3>
-                <p className="text-[10px] text-slate-400 mt-0.5">Last 8 months — Penalty in ₹000s / Tickets count</p>
+                <p className="text-[10px] text-slate-400 mt-0.5">Last 8 months â€” Penalty in â‚¹000s / Tickets count</p>
               </div>
               {monthlyTrendData[0]?.data?.length > 1 ? (
                 <div className="h-64">
@@ -1145,7 +1145,7 @@ export default function NewDashboardPage() {
                     axisTop={null}
                     axisRight={null}
                     axisBottom={{ tickSize: 0, tickPadding: 10, tickRotation: -15, legendOffset: 40 }}
-                    axisLeft={{ tickSize: 0, tickPadding: 8, legend: "₹K / Count", legendPosition: "middle", legendOffset: -45, format: (v) => `${v}` }}
+                    axisLeft={{ tickSize: 0, tickPadding: 8, legend: "â‚¹K / Count", legendPosition: "middle", legendOffset: -45, format: (v) => `${v}` }}
                     colors={({ color }) => color}
                     lineWidth={2.5}
                     pointSize={8}
@@ -1252,7 +1252,7 @@ export default function NewDashboardPage() {
                 <div className="h-64">
                   <ResponsiveBar
                     data={diLeaderboard.slice(0, 10).map((r) => ({
-                      name: r.name.length > 14 ? r.name.substring(0, 14) + "…" : r.name,
+                      name: r.name.length > 14 ? r.name.substring(0, 14) + "â€¦" : r.name,
                       "Resolution %": r.resolutionRate,
                       color: r.resolutionRate >= 80 ? "#10b981" : r.resolutionRate >= 50 ? "#f59e0b" : "#ef4444",
                     }))}
@@ -1285,7 +1285,7 @@ export default function NewDashboardPage() {
               <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-4">
                 <div>
                   <h3 className="text-xs font-black text-slate-700 uppercase tracking-wider">DI Performance Leaderboard</h3>
-                  <p className="text-[10px] text-slate-400 font-semibold mt-0.5">Sorted: Lowest penalty first (Best → Worst)</p>
+                  <p className="text-[10px] text-slate-400 font-semibold mt-0.5">Sorted: Lowest penalty first (Best â†’ Worst)</p>
                 </div>
                 <div className="relative w-full sm:w-64">
                   <Search className="w-4 h-4 text-slate-400 absolute left-3 top-3" />
@@ -1481,7 +1481,7 @@ export default function NewDashboardPage() {
                     axisBottom={{ tickSize: 0, tickPadding: 8, tickRotation: -15 }}
                     axisLeft={{ tickSize: 0, tickPadding: 8, legend: "Failure Count", legendPosition: "middle", legendOffset: -38 }}
                     labelTextColor="#fff"
-                    label={(d) => `${d.value}×`}
+                    label={(d) => `${d.value}Ã—`}
                     labelSkipWidth={16}
                     labelSkipHeight={16}
                   />
@@ -1493,7 +1493,7 @@ export default function NewDashboardPage() {
             <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden p-5">
               <div className="mb-4">
                 <h3 className="text-xs font-black text-slate-700 uppercase tracking-wider">Recurring Equipment Failures</h3>
-                <p className="text-[10px] text-slate-400 font-semibold mt-0.5">Assets with more than 1 logged complaint — Possible faulty batch or maintenance need</p>
+                <p className="text-[10px] text-slate-400 font-semibold mt-0.5">Assets with more than 1 logged complaint â€” Possible faulty batch or maintenance need</p>
               </div>
 
               {repeatCalls.length > 0 ? (
@@ -1519,11 +1519,11 @@ export default function NewDashboardPage() {
                           <td className="py-3 px-4 font-extrabold text-slate-900">{row.name}</td>
                           <td className="py-3 px-4 text-slate-600">{row.hospital}</td>
                           <td className="py-3 px-4 text-center">
-                            <span className="bg-slate-100 text-slate-700 px-2.5 py-1 rounded-lg font-black">{row.count}×</span>
+                            <span className="bg-slate-100 text-slate-700 px-2.5 py-1 rounded-lg font-black">{row.count}Ã—</span>
                           </td>
                           <td className="py-3 px-4 text-center">
                             <span className={`px-2 py-0.5 rounded-full text-[9px] font-black ${row.count >= 4 ? "bg-red-100 text-red-700 border border-red-200" : "bg-amber-50 text-amber-700 border border-amber-200"}`}>
-                              {row.count >= 4 ? "🔴 Critical Risk" : "🟡 Moderate Risk"}
+                              {row.count >= 4 ? "ðŸ”´ Critical Risk" : "ðŸŸ¡ Moderate Risk"}
                             </span>
                           </td>
                         </tr>
@@ -1533,7 +1533,7 @@ export default function NewDashboardPage() {
                 </div>
               ) : (
                 <div className="flex items-center justify-center py-16 text-slate-400 text-xs font-semibold">
-                  ✅ No recurring failures found — Excellent asset reliability!
+                  âœ… No recurring failures found â€” Excellent asset reliability!
                 </div>
               )}
             </div>
@@ -1600,7 +1600,7 @@ export default function NewDashboardPage() {
               </div>
             ) : (
               <div className="flex items-center justify-center py-16 text-slate-400 text-xs font-semibold">
-                ✅ No fraudulent/mismatched barcodes detected — Complete integrity observed.
+                âœ… No fraudulent/mismatched barcodes detected â€” Complete integrity observed.
               </div>
             )}
 
@@ -1616,11 +1616,267 @@ export default function NewDashboardPage() {
               </div>
             )}
           </div>
+
+        {/* TAB 6: DEEP ANALYTICS */}
+        {activeTab === "analytics" && (
+          <div className="space-y-6">
+
+            {/* Hospital Risk Scorecard */}
+            <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-5">
+              <div className="flex items-center gap-2 mb-4">
+                <div className="p-1.5 bg-red-100 rounded-lg"><Hospital className="w-4 h-4 text-red-600" /></div>
+                <div>
+                  <h3 className="text-xs font-black text-slate-700 uppercase tracking-wider">Hospital Risk Scorecard</h3>
+                  <p className="text-[10px] text-slate-400 mt-0.5">Risk Score = OpenÃ—5 + PenaltyÃ·1000 + Repeat FailuresÃ—10 â€” Higher is worse</p>
+                </div>
+              </div>
+              <div className="overflow-x-auto">
+                <table className="w-full border-collapse text-left text-xs">
+                  <thead>
+                    <tr className="border-b border-slate-100 bg-slate-50">
+                      <th className="py-3 px-3 font-black text-slate-500 uppercase tracking-wider">#</th>
+                      <th className="py-3 px-3 font-black text-slate-500 uppercase tracking-wider">Hospital</th>
+                      <th className="py-3 px-3 font-black text-slate-500 uppercase tracking-wider">District</th>
+                      <th className="py-3 px-3 font-black text-slate-500 uppercase tracking-wider text-center">Open Tickets</th>
+                      <th className="py-3 px-3 font-black text-slate-500 uppercase tracking-wider text-center">Repeat Failures</th>
+                      <th className="py-3 px-3 font-black text-slate-500 uppercase tracking-wider text-right">Penalty</th>
+                      <th className="py-3 px-3 font-black text-slate-500 uppercase tracking-wider text-center">Risk Score</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-slate-50 text-slate-700">
+                    {hospitalRiskData.slice(0, 15).map((h, i) => (
+                      <tr key={h.hospital} className="hover:bg-slate-50 transition">
+                        <td className="py-2.5 px-3 text-slate-400 font-bold">#{i+1}</td>
+                        <td className="py-2.5 px-3 font-extrabold text-slate-900 max-w-[180px] truncate">{h.hospital}</td>
+                        <td className="py-2.5 px-3 text-slate-500">{h.district}</td>
+                        <td className="py-2.5 px-3 text-center">
+                          <span className={`px-2 py-0.5 rounded-full text-[10px] font-black ${h.open > 3 ? "bg-red-50 text-red-700" : h.open > 0 ? "bg-amber-50 text-amber-700" : "bg-green-50 text-green-700"}`}>{h.open}</span>
+                        </td>
+                        <td className="py-2.5 px-3 text-center font-semibold text-slate-700">{h.repeats}</td>
+                        <td className="py-2.5 px-3 text-right font-black text-slate-900">{formatRupees(h.penalty)}</td>
+                        <td className="py-2.5 px-3 text-center">
+                          <span className={`px-2.5 py-1 rounded-lg text-[10px] font-black ${
+                            h.riskScore > 100 ? "bg-red-100 text-red-800" :
+                            h.riskScore > 40  ? "bg-amber-100 text-amber-800" :
+                            "bg-emerald-100 text-emerald-800"
+                          }`}>{h.riskScore.toLocaleString()}</span>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+
+            {/* Equipment Health + MoM */}
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+
+              {/* Equipment Health Report */}
+              <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-5">
+                <div className="flex items-center gap-2 mb-4">
+                  <div className="p-1.5 bg-indigo-100 rounded-lg"><Wrench className="w-4 h-4 text-indigo-600" /></div>
+                  <div>
+                    <h3 className="text-xs font-black text-slate-700 uppercase tracking-wider">Equipment Health Report</h3>
+                    <p className="text-[10px] text-slate-400 mt-0.5">By equipment type â€” failure rate &amp; downtime</p>
+                  </div>
+                </div>
+                <div className="overflow-x-auto">
+                  <table className="w-full border-collapse text-left text-xs">
+                    <thead>
+                      <tr className="border-b border-slate-100 bg-slate-50">
+                        <th className="py-2.5 px-3 font-black text-slate-500 uppercase tracking-wider">Equipment Type</th>
+                        <th className="py-2.5 px-3 font-black text-slate-500 uppercase tracking-wider text-center">Total</th>
+                        <th className="py-2.5 px-3 font-black text-slate-500 uppercase tracking-wider text-center">Fail %</th>
+                        <th className="py-2.5 px-3 font-black text-slate-500 uppercase tracking-wider text-center">Avg DT</th>
+                        <th className="py-2.5 px-3 font-black text-slate-500 uppercase tracking-wider text-center">Health</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-slate-50 text-slate-700">
+                      {equipmentHealthData.slice(0, 10).map((eq) => (
+                        <tr key={eq.name} className="hover:bg-slate-50 transition">
+                          <td className="py-2.5 px-3 font-extrabold text-slate-900 truncate max-w-[160px]">{eq.name}</td>
+                          <td className="py-2.5 px-3 text-center font-semibold">{eq.total}</td>
+                          <td className="py-2.5 px-3 text-center">
+                            <span className={`text-[10px] font-black ${
+                              eq.failureRate >= 50 ? "text-red-600" : eq.failureRate >= 25 ? "text-amber-600" : "text-emerald-600"
+                            }`}>{eq.failureRate}%</span>
+                          </td>
+                          <td className="py-2.5 px-3 text-center text-slate-500 font-semibold">{eq.avgDowntime}d</td>
+                          <td className="py-2.5 px-3 text-center">
+                            <span className={`px-2 py-0.5 rounded-full text-[9px] font-black ${
+                              eq.health === "Critical" ? "bg-red-100 text-red-700 border border-red-200" :
+                              eq.health === "Warning"  ? "bg-amber-50 text-amber-700 border border-amber-200" :
+                              "bg-emerald-50 text-emerald-700 border border-emerald-200"
+                            }`}>{eq.health === "Critical" ? "ðŸ”´ Critical" : eq.health === "Warning" ? "ðŸŸ¡ Warning" : "ðŸŸ¢ Healthy"}</span>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+
+              {/* Month-over-Month */}
+              <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-5">
+                <div className="flex items-center gap-2 mb-4">
+                  <div className="p-1.5 bg-violet-100 rounded-lg"><Timer className="w-4 h-4 text-violet-600" /></div>
+                  <div>
+                    <h3 className="text-xs font-black text-slate-700 uppercase tracking-wider">Month-over-Month Penalty</h3>
+                    <p className="text-[10px] text-slate-400 mt-0.5">Last 6 months with % change</p>
+                  </div>
+                </div>
+                <div className="space-y-3">
+                  {momData.map((m, i) => {
+                    const isLast = i === momData.length - 1;
+                    const up = m.change !== null && m.change > 0;
+                    const down = m.change !== null && m.change < 0;
+                    const maxP = Math.max(...momData.map((x) => x.penalty));
+                    const barPct = maxP > 0 ? Math.round((m.penalty / maxP) * 100) : 0;
+                    return (
+                      <div key={m.month} className={`rounded-xl p-3 ${isLast ? "bg-indigo-50 border border-indigo-200" : "bg-slate-50"}`}>
+                        <div className="flex items-center justify-between mb-1.5">
+                          <span className={`text-[10px] font-black uppercase ${isLast ? "text-indigo-700" : "text-slate-600"}`}>{m.month}</span>
+                          <div className="flex items-center gap-1.5">
+                            <span className="text-xs font-black text-slate-900">{formatRupees(m.penalty)}</span>
+                            {m.change !== null && (
+                              <span className={`flex items-center gap-0.5 text-[10px] font-black px-1.5 py-0.5 rounded-full ${
+                                up ? "bg-red-100 text-red-700" : down ? "bg-green-100 text-green-700" : "bg-slate-100 text-slate-500"
+                              }`}>
+                                {up ? <ArrowUp className="w-3 h-3" /> : down ? <ArrowDown className="w-3 h-3" /> : <Minus className="w-3 h-3" />}
+                                {Math.abs(m.change)}%
+                              </span>
+                            )}
+                          </div>
+                        </div>
+                        <div className="w-full bg-slate-200 rounded-full h-1.5">
+                          <div className={`h-1.5 rounded-full transition-all duration-500 ${isLast ? "bg-indigo-500" : "bg-slate-400"}`} style={{ width: `${barPct}%` }} />
+                        </div>
+                      </div>
+                    );
+                  })}
+                  {momData.length === 0 && <div className="text-center text-slate-400 text-xs py-8">No monthly data available</div>}
+                </div>
+              </div>
+            </div>
+
+            {/* Downtime by District + Coordinator Efficiency */}
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+
+              {/* Downtime by District */}
+              <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-5">
+                <div className="flex items-center gap-2 mb-4">
+                  <div className="p-1.5 bg-amber-100 rounded-lg"><Clock className="w-4 h-4 text-amber-600" /></div>
+                  <div>
+                    <h3 className="text-xs font-black text-slate-700 uppercase tracking-wider">Downtime by District</h3>
+                    <p className="text-[10px] text-slate-400 mt-0.5">Total equipment downtime hours from Penalty File</p>
+                  </div>
+                </div>
+                {downtimeByDistrict.length > 0 ? (
+                  <div className="h-72">
+                    <ResponsiveBar
+                      data={downtimeByDistrict}
+                      keys={["Downtime"]}
+                      indexBy="name"
+                      margin={{ top: 10, right: 20, bottom: 55, left: 60 }}
+                      padding={0.3}
+                      colors={({ data }) => (data as any).color || "#f59e0b"}
+                      borderRadius={5}
+                      theme={nivoTheme}
+                      axisTop={null}
+                      axisRight={null}
+                      axisBottom={{ tickSize: 0, tickPadding: 8, tickRotation: -15 }}
+                      axisLeft={{ tickSize: 0, tickPadding: 8, legend: "Downtime (hrs)", legendPosition: "middle", legendOffset: -50 }}
+                      labelTextColor="#fff"
+                      labelSkipWidth={30}
+                      labelSkipHeight={20}
+                      tooltip={({ data, value }) => (
+                        <div style={{ background: "#0f172a", color: "#f8fafc", padding: "10px 14px", borderRadius: 10, fontSize: 12, border: "1px solid rgba(255,255,255,0.1)" }}>
+                          <strong>{(data as any).fullName || data.name}</strong><br />
+                          Downtime: <strong>{Number(value).toLocaleString()} hrs</strong>
+                        </div>
+                      )}
+                    />
+                  </div>
+                ) : (
+                  <div className="flex items-center justify-center h-72 text-slate-400 text-xs">No downtime data available</div>
+                )}
+              </div>
+
+              {/* Coordinator Efficiency */}
+              <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-5">
+                <div className="flex items-center gap-2 mb-4">
+                  <div className="p-1.5 bg-emerald-100 rounded-lg"><Award className="w-4 h-4 text-emerald-600" /></div>
+                  <div>
+                    <h3 className="text-xs font-black text-slate-700 uppercase tracking-wider">Coordinator Efficiency</h3>
+                    <p className="text-[10px] text-slate-400 mt-0.5">Resolution rate % per coordinator</p>
+                  </div>
+                </div>
+                {coordinatorData.length > 0 ? (
+                  <div className="h-56">
+                    <ResponsiveBar
+                      data={coordinatorData.map((c) => ({ name: c.shortName, fullName: c.name, "Resolution %": c.resolutionRate, color: c.color }))}
+                      keys={["Resolution %"]}
+                      indexBy="name"
+                      margin={{ top: 10, right: 20, bottom: 55, left: 55 }}
+                      padding={0.3}
+                      valueScale={{ type: "linear", min: 0, max: 100 }}
+                      colors={({ data }) => (data as any).color || "#10b981"}
+                      borderRadius={5}
+                      theme={nivoTheme}
+                      axisTop={null}
+                      axisRight={null}
+                      axisBottom={{ tickSize: 0, tickPadding: 8, tickRotation: -15 }}
+                      axisLeft={{ tickSize: 0, tickPadding: 8, legend: "Resolution %", legendPosition: "middle", legendOffset: -45, format: (v) => `${v}%` }}
+                      label={(d) => `${d.value}%`}
+                      labelTextColor="#fff"
+                      labelSkipWidth={24}
+                      labelSkipHeight={18}
+                      tooltip={({ data, value }) => (
+                        <div style={{ background: "#0f172a", color: "#f8fafc", padding: "10px 14px", borderRadius: 10, fontSize: 12, border: "1px solid rgba(255,255,255,0.1)" }}>
+                          <strong>{(data as any).fullName || data.name}</strong><br />
+                          Resolution: <strong>{value}%</strong>
+                        </div>
+                      )}
+                    />
+                  </div>
+                ) : (
+                  <div className="flex items-center justify-center h-56 text-slate-400 text-xs">No coordinator data</div>
+                )}
+                <div className="mt-4 overflow-x-auto">
+                  <table className="w-full border-collapse text-left text-xs">
+                    <thead>
+                      <tr className="border-b border-slate-100">
+                        <th className="py-2 px-2 font-black text-slate-400 uppercase">Coordinator</th>
+                        <th className="py-2 px-2 font-black text-slate-400 uppercase text-center">Total</th>
+                        <th className="py-2 px-2 font-black text-slate-400 uppercase text-center">Res%</th>
+                        <th className="py-2 px-2 font-black text-slate-400 uppercase text-center">Avg Fix</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-slate-50">
+                      {coordinatorData.map((c) => (
+                        <tr key={c.name} className="hover:bg-slate-50">
+                          <td className="py-2 px-2 font-extrabold text-slate-800 truncate max-w-[130px]">{c.name}</td>
+                          <td className="py-2 px-2 text-center text-slate-600">{c.total}</td>
+                          <td className="py-2 px-2 text-center">
+                            <span className={`text-[10px] font-black ${
+                              c.resolutionRate >= 80 ? "text-emerald-600" : c.resolutionRate >= 50 ? "text-amber-600" : "text-red-600"
+                            }`}>{c.resolutionRate}%</span>
+                          </td>
+                          <td className="py-2 px-2 text-center text-slate-500">{c.avgFixDays}d</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            </div>
+
+          </div>
         )}
 
       </div>
 
-      {/* ── Repeat Failures History Modal ── */}
+      {/* â”€â”€ Repeat Failures History Modal â”€â”€ */}
       {selectedRepeatBarcode && (
         <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center z-50 p-4">
           <div className="bg-white rounded-3xl border border-slate-200 shadow-2xl max-w-2xl w-full max-h-[85vh] flex flex-col overflow-hidden">
@@ -1629,7 +1885,7 @@ export default function NewDashboardPage() {
                 <h3 className="text-sm font-black text-slate-900 tracking-tight">Barcode Failure History</h3>
                 <p className="text-[10px] text-indigo-600 font-mono font-bold mt-0.5">Tag ID: {selectedRepeatBarcode}</p>
               </div>
-              <button onClick={() => setSelectedRepeatBarcode(null)} className="text-xs font-black text-slate-400 hover:text-slate-700 border border-slate-200 hover:border-slate-300 bg-white px-3 py-1.5 rounded-xl cursor-pointer transition">Close ✕</button>
+              <button onClick={() => setSelectedRepeatBarcode(null)} className="text-xs font-black text-slate-400 hover:text-slate-700 border border-slate-200 hover:border-slate-300 bg-white px-3 py-1.5 rounded-xl cursor-pointer transition">Close âœ•</button>
             </div>
 
             <div className="p-5 overflow-y-auto flex-1 space-y-4">
@@ -1676,271 +1932,6 @@ export default function NewDashboardPage() {
           </div>
         </div>
       )}
-
-        {/* TAB 6: DEEP ANALYTICS */}
-        {activeTab === "analytics" && (
-          <div className="space-y-6">
-
-            {/* Row 1: Hospital Risk Scorecard */}
-            <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-5">
-              <div className="flex items-center gap-2 mb-4">
-                <div className="p-1.5 bg-red-100 rounded-lg"><Hospital className="w-4 h-4 text-red-600" /></div>
-                <div>
-                  <h3 className="text-xs font-black text-slate-700 uppercase tracking-wider">Hospital Risk Scorecard</h3>
-                  <p className="text-[10px] text-slate-400 mt-0.5">Risk Score = Open×5 + Penalty÷1000 + Repeat Failures×10 — Higher is worse</p>
-                </div>
-              </div>
-              <div className="overflow-x-auto">
-                <table className="w-full border-collapse text-left text-xs">
-                  <thead>
-                    <tr className="border-b border-slate-100 bg-slate-50">
-                      <th className="py-3 px-3 font-black text-slate-500 uppercase tracking-wider">#</th>
-                      <th className="py-3 px-3 font-black text-slate-500 uppercase tracking-wider">Hospital</th>
-                      <th className="py-3 px-3 font-black text-slate-500 uppercase tracking-wider">District</th>
-                      <th className="py-3 px-3 font-black text-slate-500 uppercase tracking-wider text-center">Open Tickets</th>
-                      <th className="py-3 px-3 font-black text-slate-500 uppercase tracking-wider text-center">Repeat Failures</th>
-                      <th className="py-3 px-3 font-black text-slate-500 uppercase tracking-wider text-right">Penalty</th>
-                      <th className="py-3 px-3 font-black text-slate-500 uppercase tracking-wider text-center">Risk Score</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-slate-50 text-slate-700">
-                    {hospitalRiskData.slice(0, 15).map((h, i) => (
-                      <tr key={h.hospital} className="hover:bg-slate-50 transition">
-                        <td className="py-2.5 px-3 text-slate-400 font-bold">#{i+1}</td>
-                        <td className="py-2.5 px-3 font-extrabold text-slate-900 max-w-[180px] truncate">{h.hospital}</td>
-                        <td className="py-2.5 px-3 text-slate-500">{h.district}</td>
-                        <td className="py-2.5 px-3 text-center">
-                          <span className={`px-2 py-0.5 rounded-full text-[10px] font-black ${h.open > 3 ? "bg-red-50 text-red-700" : h.open > 0 ? "bg-amber-50 text-amber-700" : "bg-green-50 text-green-700"}`}>{h.open}</span>
-                        </td>
-                        <td className="py-2.5 px-3 text-center font-semibold text-slate-700">{h.repeats}</td>
-                        <td className="py-2.5 px-3 text-right font-black text-slate-900">{formatRupees(h.penalty)}</td>
-                        <td className="py-2.5 px-3 text-center">
-                          <span className={`px-2.5 py-1 rounded-lg text-[10px] font-black ${
-                            h.riskScore > 100 ? "bg-red-100 text-red-800" :
-                            h.riskScore > 40 ? "bg-amber-100 text-amber-800" :
-                            "bg-emerald-100 text-emerald-800"
-                          }`}>{h.riskScore.toLocaleString()}</span>
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            </div>
-
-            {/* Row 2: Equipment Health + MoM */}
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-
-              {/* Equipment Health Report */}
-              <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-5">
-                <div className="flex items-center gap-2 mb-4">
-                  <div className="p-1.5 bg-indigo-100 rounded-lg"><Wrench className="w-4 h-4 text-indigo-600" /></div>
-                  <div>
-                    <h3 className="text-xs font-black text-slate-700 uppercase tracking-wider">Equipment Health Report</h3>
-                    <p className="text-[10px] text-slate-400 mt-0.5">By equipment type — failure rate & downtime</p>
-                  </div>
-                </div>
-                <div className="overflow-x-auto">
-                  <table className="w-full border-collapse text-left text-xs">
-                    <thead>
-                      <tr className="border-b border-slate-100 bg-slate-50">
-                        <th className="py-2.5 px-3 font-black text-slate-500 uppercase tracking-wider">Equipment Type</th>
-                        <th className="py-2.5 px-3 font-black text-slate-500 uppercase tracking-wider text-center">Total</th>
-                        <th className="py-2.5 px-3 font-black text-slate-500 uppercase tracking-wider text-center">Fail %</th>
-                        <th className="py-2.5 px-3 font-black text-slate-500 uppercase tracking-wider text-center">Avg DT</th>
-                        <th className="py-2.5 px-3 font-black text-slate-500 uppercase tracking-wider text-center">Health</th>
-                      </tr>
-                    </thead>
-                    <tbody className="divide-y divide-slate-50 text-slate-700">
-                      {equipmentHealthData.slice(0, 10).map((eq) => (
-                        <tr key={eq.name} className="hover:bg-slate-50 transition">
-                          <td className="py-2.5 px-3 font-extrabold text-slate-900 truncate max-w-[160px]">{eq.name}</td>
-                          <td className="py-2.5 px-3 text-center font-semibold">{eq.total}</td>
-                          <td className="py-2.5 px-3 text-center">
-                            <span className={`text-[10px] font-black ${
-                              eq.failureRate >= 50 ? "text-red-600" : eq.failureRate >= 25 ? "text-amber-600" : "text-emerald-600"
-                            }`}>{eq.failureRate}%</span>
-                          </td>
-                          <td className="py-2.5 px-3 text-center text-slate-500 font-semibold">{eq.avgDowntime}d</td>
-                          <td className="py-2.5 px-3 text-center">
-                            <span className={`px-2 py-0.5 rounded-full text-[9px] font-black ${
-                              eq.health === "Critical" ? "bg-red-100 text-red-700 border border-red-200" :
-                              eq.health === "Warning" ? "bg-amber-50 text-amber-700 border border-amber-200" :
-                              "bg-emerald-50 text-emerald-700 border border-emerald-200"
-                            }`}>{eq.health === "Critical" ? "🔴 Critical" : eq.health === "Warning" ? "🟡 Warning" : "🟢 Healthy"}</span>
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-              </div>
-
-              {/* Month-over-Month Penalty Change */}
-              <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-5">
-                <div className="flex items-center gap-2 mb-4">
-                  <div className="p-1.5 bg-violet-100 rounded-lg"><Timer className="w-4 h-4 text-violet-600" /></div>
-                  <div>
-                    <h3 className="text-xs font-black text-slate-700 uppercase tracking-wider">Month-over-Month Penalty</h3>
-                    <p className="text-[10px] text-slate-400 mt-0.5">Last 6 months penalty with % change</p>
-                  </div>
-                </div>
-                <div className="space-y-3">
-                  {momData.map((m, i) => {
-                    const isLast = i === momData.length - 1;
-                    const up = m.change !== null && m.change > 0;
-                    const down = m.change !== null && m.change < 0;
-                    const maxPenalty = Math.max(...momData.map((x) => x.penalty));
-                    const barPct = maxPenalty > 0 ? Math.round((m.penalty / maxPenalty) * 100) : 0;
-                    return (
-                      <div key={m.month} className={`rounded-xl p-3 ${isLast ? "bg-indigo-50 border border-indigo-200" : "bg-slate-50"}`}>
-                        <div className="flex items-center justify-between mb-1.5">
-                          <span className={`text-[10px] font-black uppercase ${isLast ? "text-indigo-700" : "text-slate-600"}`}>{m.month}</span>
-                          <div className="flex items-center gap-1.5">
-                            <span className="text-xs font-black text-slate-900">{formatRupees(m.penalty)}</span>
-                            {m.change !== null && (
-                              <span className={`flex items-center gap-0.5 text-[10px] font-black px-1.5 py-0.5 rounded-full ${
-                                up ? "bg-red-100 text-red-700" : down ? "bg-green-100 text-green-700" : "bg-slate-100 text-slate-500"
-                              }`}>
-                                {up ? <ArrowUp className="w-3 h-3" /> : down ? <ArrowDown className="w-3 h-3" /> : <Minus className="w-3 h-3" />}
-                                {Math.abs(m.change)}%
-                              </span>
-                            )}
-                          </div>
-                        </div>
-                        <div className="w-full bg-slate-200 rounded-full h-1.5">
-                          <div
-                            className={`h-1.5 rounded-full transition-all duration-500 ${isLast ? "bg-indigo-500" : "bg-slate-400"}`}
-                            style={{ width: `${barPct}%` }}
-                          />
-                        </div>
-                      </div>
-                    );
-                  })}
-                  {momData.length === 0 && <div className="text-center text-slate-400 text-xs py-8">No monthly data available</div>}
-                </div>
-              </div>
-            </div>
-
-            {/* Row 3: Downtime by District Bar + Coordinator Efficiency */}
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-
-              {/* Downtime by District */}
-              <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-5">
-                <div className="flex items-center gap-2 mb-4">
-                  <div className="p-1.5 bg-amber-100 rounded-lg"><Clock className="w-4 h-4 text-amber-600" /></div>
-                  <div>
-                    <h3 className="text-xs font-black text-slate-700 uppercase tracking-wider">Total Equipment Downtime by District</h3>
-                    <p className="text-[10px] text-slate-400 mt-0.5">Sum of all downtime hours from Penalty File</p>
-                  </div>
-                </div>
-                {downtimeByDistrict.length > 0 ? (
-                  <div className="h-72">
-                    <ResponsiveBar
-                      data={downtimeByDistrict}
-                      keys={["Downtime"]}
-                      indexBy="name"
-                      margin={{ top: 10, right: 20, bottom: 55, left: 60 }}
-                      padding={0.3}
-                      layout="vertical"
-                      colors={({ data }) => (data as any).color || "#f59e0b"}
-                      borderRadius={5}
-                      theme={nivoTheme}
-                      axisTop={null}
-                      axisRight={null}
-                      axisBottom={{ tickSize: 0, tickPadding: 8, tickRotation: -15 }}
-                      axisLeft={{ tickSize: 0, tickPadding: 8, legend: "Downtime (hrs)", legendPosition: "middle", legendOffset: -50 }}
-                      labelTextColor="#fff"
-                      labelSkipWidth={30}
-                      labelSkipHeight={20}
-                      tooltip={({ data, value }) => (
-                        <div style={{ background: "#0f172a", color: "#f8fafc", padding: "10px 14px", borderRadius: 10, fontSize: 12, border: "1px solid rgba(255,255,255,0.1)" }}>
-                          <strong>{(data as any).fullName || data.name}</strong><br />
-                          Downtime: <strong>{Number(value).toLocaleString()} hrs</strong>
-                        </div>
-                      )}
-                    />
-                  </div>
-                ) : (
-                  <div className="flex items-center justify-center h-72 text-slate-400 text-xs">No downtime data in sheet</div>
-                )}
-              </div>
-
-              {/* Coordinator Efficiency */}
-              <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-5">
-                <div className="flex items-center gap-2 mb-4">
-                  <div className="p-1.5 bg-emerald-100 rounded-lg"><Award className="w-4 h-4 text-emerald-600" /></div>
-                  <div>
-                    <h3 className="text-xs font-black text-slate-700 uppercase tracking-wider">Coordinator Efficiency</h3>
-                    <p className="text-[10px] text-slate-400 mt-0.5">Resolution rate % per coordinator</p>
-                  </div>
-                </div>
-                {coordinatorData.length > 0 ? (
-                  <div className="h-72">
-                    <ResponsiveBar
-                      data={coordinatorData.map((c) => ({ name: c.shortName, fullName: c.name, "Resolution %": c.resolutionRate, color: c.color }))}
-                      keys={["Resolution %"]}
-                      indexBy="name"
-                      margin={{ top: 10, right: 20, bottom: 55, left: 55 }}
-                      padding={0.3}
-                      valueScale={{ type: "linear", min: 0, max: 100 }}
-                      colors={({ data }) => (data as any).color || "#10b981"}
-                      borderRadius={5}
-                      theme={nivoTheme}
-                      axisTop={null}
-                      axisRight={null}
-                      axisBottom={{ tickSize: 0, tickPadding: 8, tickRotation: -15 }}
-                      axisLeft={{ tickSize: 0, tickPadding: 8, legend: "Resolution %", legendPosition: "middle", legendOffset: -45, format: (v) => `${v}%` }}
-                      label={(d) => `${d.value}%`}
-                      labelTextColor="#fff"
-                      labelSkipWidth={24}
-                      labelSkipHeight={18}
-                      tooltip={({ data, value }) => (
-                        <div style={{ background: "#0f172a", color: "#f8fafc", padding: "10px 14px", borderRadius: 10, fontSize: 12, border: "1px solid rgba(255,255,255,0.1)" }}>
-                          <strong>{(data as any).fullName || data.name}</strong><br />
-                          Resolution: <strong>{value}%</strong>
-                        </div>
-                      )}
-                    />
-                  </div>
-                ) : (
-                  <div className="flex items-center justify-center h-72 text-slate-400 text-xs">No coordinator data available</div>
-                )}
-
-                {/* Coordinator table */}
-                <div className="mt-4 overflow-x-auto">
-                  <table className="w-full border-collapse text-left text-xs">
-                    <thead>
-                      <tr className="border-b border-slate-100">
-                        <th className="py-2 px-2 font-black text-slate-400 uppercase">Coordinator</th>
-                        <th className="py-2 px-2 font-black text-slate-400 uppercase text-center">Total</th>
-                        <th className="py-2 px-2 font-black text-slate-400 uppercase text-center">Res %</th>
-                        <th className="py-2 px-2 font-black text-slate-400 uppercase text-center">Avg Fix</th>
-                      </tr>
-                    </thead>
-                    <tbody className="divide-y divide-slate-50">
-                      {coordinatorData.map((c) => (
-                        <tr key={c.name} className="hover:bg-slate-50">
-                          <td className="py-2 px-2 font-extrabold text-slate-800 truncate max-w-[130px]">{c.name}</td>
-                          <td className="py-2 px-2 text-center text-slate-600">{c.total}</td>
-                          <td className="py-2 px-2 text-center">
-                            <span className={`text-[10px] font-black ${
-                              c.resolutionRate >= 80 ? "text-emerald-600" : c.resolutionRate >= 50 ? "text-amber-600" : "text-red-600"
-                            }`}>{c.resolutionRate}%</span>
-                          </td>
-                          <td className="py-2 px-2 text-center text-slate-500">{c.avgFixDays}d</td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-              </div>
-            </div>
-
-          </div>
-        )}
-
-      </div>
 
     </div>
   );
