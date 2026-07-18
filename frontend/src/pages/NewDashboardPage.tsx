@@ -122,6 +122,7 @@ export default function NewDashboardPage() {
   const [currentOpenPage, setCurrentOpenPage] = useState(1);
   const [currentRepeatPage, setCurrentRepeatPage] = useState(1);
   const [currentDIPage, setCurrentDIPage] = useState(1);
+  const [selectedRepeatBarcode, setSelectedRepeatBarcode] = useState<string | null>(null);
   const rowsPerPage = 10;
 
   // User Info & RBAC Lock status
@@ -744,6 +745,29 @@ export default function NewDashboardPage() {
       .filter((g) => g.count > 1)
       .sort((a, b) => b.count - a.count);
   }, [filteredComplaints]);
+
+  // 6a. Memos for selected repeat barcode details modal popup
+  const barcodeComplaints = useMemo(() => {
+    if (!selectedRepeatBarcode) return [];
+    return penaltyFile.filter(row => row["Bar Code"] === selectedRepeatBarcode);
+  }, [selectedRepeatBarcode, penaltyFile]);
+
+  const repeatBarcodeStats = useMemo(() => {
+    if (barcodeComplaints.length === 0) return { totalPenalty: 0, downtime: 0, hospital: "N/A", equipment: "N/A" };
+    let totalPenalty = 0;
+    let downtime = 0;
+    barcodeComplaints.forEach((row) => {
+      totalPenalty += calculateTicketPenalty(row);
+      const dt = parseFloat(row["Total Downtime"]) || 0;
+      downtime += dt;
+    });
+    return {
+      totalPenalty,
+      downtime,
+      hospital: barcodeComplaints[0]["Hospital Name"] || "Unknown",
+      equipment: barcodeComplaints[0]["Equipment Name"] || "Unknown"
+    };
+  }, [barcodeComplaints]);
 
   const paginatedRepeatCalls = useMemo(() => {
     const start = (currentRepeatPage - 1) * rowsPerPage;
@@ -1430,7 +1454,12 @@ export default function NewDashboardPage() {
             </thead>
             <tbody className="divide-y divide-slate-100 text-slate-600 font-semibold">
               {paginatedRepeatCalls.map((item, idx) => (
-                <tr key={idx} className="hover:bg-slate-50/50">
+                <tr 
+                  key={idx} 
+                  onClick={() => setSelectedRepeatBarcode(item.barcode)}
+                  className="hover:bg-indigo-50/50 cursor-pointer transition-colors"
+                  title="Click to view detailed audit history of this asset"
+                >
                   <td className="px-4 py-2 text-left font-mono font-bold text-indigo-600">{item.barcode}</td>
                   <td className="px-4 py-2 text-left truncate max-w-[250px]">{item.name}</td>
                   <td className="px-4 py-2 text-left truncate max-w-[250px]">{item.hospital}</td>
@@ -1614,6 +1643,116 @@ export default function NewDashboardPage() {
           </div>
         )}
       </div>
+
+      {/* Repeat Call Details Modal Popup */}
+      {selectedRepeatBarcode && (
+        <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+          <div className="bg-white rounded-3xl border border-slate-200 shadow-2xl w-full max-w-4xl max-h-[85vh] flex flex-col overflow-hidden animate-in fade-in zoom-in-95 duration-200">
+            
+            {/* Modal Header */}
+            <div className="p-6 bg-slate-50 border-b border-slate-200 flex justify-between items-start">
+              <div>
+                <span className="inline-block text-[10px] font-black text-indigo-600 bg-indigo-50 px-2.5 py-1 rounded-full uppercase tracking-wider mb-2">
+                  Asset Repeat Audit
+                </span>
+                <h3 className="text-xl font-black text-slate-900 tracking-tight flex items-center gap-2">
+                  Barcode: <span className="font-mono text-indigo-600">{selectedRepeatBarcode}</span>
+                </h3>
+                <p className="text-xs text-slate-500 font-semibold mt-1">
+                  {repeatBarcodeStats.equipment} • {repeatBarcodeStats.hospital}
+                </p>
+              </div>
+              <button 
+                onClick={() => setSelectedRepeatBarcode(null)}
+                className="p-2 hover:bg-slate-200/60 rounded-xl text-slate-400 hover:text-slate-600 transition border-0 cursor-pointer text-sm font-bold"
+              >
+                ✕ Close
+              </button>
+            </div>
+
+            {/* Modal Body: Statistics Cards */}
+            <div className="p-6 overflow-y-auto space-y-6 flex-1">
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                <div className="bg-slate-50 border border-slate-200 p-4 rounded-2xl">
+                  <span className="text-[10px] font-black text-slate-400 uppercase tracking-wider block">Failure Frequency</span>
+                  <span className="text-2xl font-black text-slate-800">{barcodeComplaints.length} Times</span>
+                  <span className="text-[10px] text-slate-500 font-semibold block mt-1">Total logged incidents</span>
+                </div>
+                
+                <div className="bg-slate-50 border border-slate-200 p-4 rounded-2xl">
+                  <span className="text-[10px] font-black text-slate-400 uppercase tracking-wider block">Accumulated Downtime</span>
+                  <span className="text-2xl font-black text-slate-800">{repeatBarcodeStats.downtime} Days</span>
+                  <span className="text-[10px] text-slate-500 font-semibold block mt-1">Cumulative operational loss</span>
+                </div>
+
+                <div className="bg-slate-50 border border-slate-200 p-4 rounded-2xl">
+                  <span className="text-[10px] font-black text-slate-400 uppercase tracking-wider block">Estimated Penalty</span>
+                  <span className="text-2xl font-black text-red-600">₹{repeatBarcodeStats.totalPenalty.toLocaleString()}</span>
+                  <span className="text-[10px] text-slate-500 font-semibold block mt-1">Due to delayed resolutions</span>
+                </div>
+              </div>
+
+              {/* Modal Body: Complaints Table */}
+              <div className="border border-slate-200 rounded-2xl overflow-hidden">
+                <div className="bg-slate-50 px-4 py-3 border-b border-slate-200">
+                  <span className="text-xs font-bold text-slate-700 uppercase tracking-wider">Incident History Log</span>
+                </div>
+                <div className="overflow-x-auto max-h-[30vh]">
+                  <table className="w-full border-collapse text-xs">
+                    <thead className="bg-slate-50 text-slate-500 uppercase tracking-wider font-bold sticky top-0">
+                      <tr>
+                        <th className="px-4 py-3 text-left">Complaint ID</th>
+                        <th className="px-4 py-3 text-left">District</th>
+                        <th className="px-4 py-3 text-center">Raise Date</th>
+                        <th className="px-4 py-3 text-center">Close Date</th>
+                        <th className="px-4 py-3 text-center">Downtime</th>
+                        <th className="px-4 py-3 text-center">Status</th>
+                        <th className="px-4 py-3 text-right">Penalty</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-slate-200 text-slate-600 font-semibold">
+                      {barcodeComplaints.map((c, index) => {
+                        const penalty = calculateTicketPenalty(c);
+                        const isClosed = isComplaintClosed(c);
+                        return (
+                          <tr key={index} className="hover:bg-slate-50/50">
+                            <td className="px-4 py-3 text-left font-mono font-bold text-indigo-600">{c["Complaint ID"]}</td>
+                            <td className="px-4 py-3 text-left">{c["District Name"]}</td>
+                            <td className="px-4 py-3 text-center text-slate-500">{c["Complaint Raise Date"]}</td>
+                            <td className="px-4 py-3 text-center text-slate-500">
+                              {isClosed ? c["Complaint Close date"] : "-- (Open)"}
+                            </td>
+                            <td className="px-4 py-3 text-center font-mono">{c["Total Downtime"] || "0"} days</td>
+                            <td className="px-4 py-3 text-center">
+                              <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${
+                                isClosed ? "bg-green-100 text-green-800" : "bg-amber-100 text-amber-800"
+                              }`}>
+                                {isClosed ? "Closed" : "Open"}
+                              </span>
+                            </td>
+                            <td className="px-4 py-3 text-right font-black text-slate-900">₹{penalty.toLocaleString()}</td>
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            </div>
+
+            {/* Modal Footer */}
+            <div className="p-4 bg-slate-50 border-t border-slate-200 flex justify-end">
+              <button
+                onClick={() => setSelectedRepeatBarcode(null)}
+                className="px-6 py-2 bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold rounded-xl shadow-md hover:shadow-lg transition cursor-pointer border-0"
+              >
+                Done / Close Audit
+              </button>
+            </div>
+
+          </div>
+        </div>
+      )}
 
     </div>
   );
