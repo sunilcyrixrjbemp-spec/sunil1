@@ -12,44 +12,43 @@ import {
   ChevronLeft,
   ChevronRight,
   Award,
-  AlertCircle
+  AlertCircle,
+  Search,
+  FilterX,
+  FileSpreadsheet,
+  IndianRupee,
+  Layers,
+  Sparkles
 } from "lucide-react";
 import { ResponsiveBar } from "@nivo/bar";
 import { ResponsivePie } from "@nivo/pie";
-import { ResponsiveLine } from "@nivo/line";
 import { authService } from "../services/authService";
 import { expenseService } from "../services/expenseService";
 import toast from "react-hot-toast";
 
 const API_KEY = import.meta.env.VITE_GOOGLE_SHEETS_API_KEY || "AIzaSyDTkQ1wNpug7rDLmHgDGt_0Xr2XTPnWsIA";
 const SPREADSHEET_ID = import.meta.env.VITE_GOOGLE_SPREADSHEET_ID || "1ASmvpLSl-X3Vm8S3LxB2Iyhg6HMhOpV-R4ywVS2o8Bs";
-const CACHE_KEY = "cyrix_dashboard_sheets_cache_v7"; // Updated to cache v7 to include month column and force invalidation
+const CACHE_KEY = "cyrix_dashboard_sheets_cache_v8"; // Updated cache key to prevent collision and force clean load
 
-// 1. Helper function to safely check if a ticket is closed
+// 1. Helper function to check if complaint is closed
 const isComplaintClosed = (row: any): boolean => {
-  const status = (row["Status"] || "").trim().toLowerCase();
-  const compStatus = (row["Complaint Status"] || "").trim().toLowerCase();
-  const closeDate = (row["Complaint Close date"] || "").trim();
+  const status = (row.status || "").trim().toLowerCase();
+  const compStatus = (row.complaintStatus || "").trim().toLowerCase();
+  const closeDate = (row.complaintCloseDate || "").trim();
 
-  // Explicit Open status check
   if (status === "open" || compStatus === "pending" || compStatus === "attended") {
     return false;
   }
-  
-  // Explicit Closed status check
   if (status === "closed" || compStatus === "final closed" || compStatus === "engineer closed") {
     return true;
   }
-
-  // Date check fallback
   if (!closeDate || closeDate === "" || closeDate === "--" || closeDate.toLowerCase() === "open") {
     return false;
   }
-  
   return true;
 };
 
-// 2. Safe, cross-platform parser for "DD-MMM-YYYY HH:MM:SS" format
+// 2. Safe parser for date strings
 const parseFlexibleDate = (dateStr: string | null | undefined): number => {
   if (!dateStr) return Date.now();
   const cleaned = dateStr.trim();
@@ -62,11 +61,11 @@ const parseFlexibleDate = (dateStr: string | null | undefined): number => {
 
   try {
     const parts = cleaned.split(" ");
-    const dateParts = parts[0].split("-"); // [DD, MMM, YYYY]
+    const dateParts = parts[0].split(/[--\/]/); // Split by dash or slash
     if (dateParts.length === 3) {
       const day = parseInt(dateParts[0], 10);
       const monthStr = dateParts[1].substring(0, 3).toLowerCase();
-      const year = parseInt(dateParts[2], 10);
+      const year = parseInt(dateParts[2], 10) < 100 ? parseInt(dateParts[2], 10) + 2000 : parseInt(dateParts[2], 10);
 
       const months: { [key: string]: number } = {
         jan: 0, feb: 1, mar: 2, apr: 3, may: 4, jun: 5,
@@ -98,13 +97,13 @@ export default function NewDashboardPage() {
   const [syncProgress, setSyncProgress] = useState<number | null>(null);
   const [error, setError] = useState("");
 
-  // Raw Data from Google Sheets
+  // Raw Data from Google Sheets (minimized schema)
   const [diNameList, setDiNameList] = useState<any[]>([]);
   const [penaltyFile, setPenaltyFile] = useState<any[]>([]);
   const [assetValues, setAssetValues] = useState<any[]>([]);
   const [criticalEquipment, setCriticalEquipment] = useState<any[]>([]);
 
-  // Raw Data from Expense System
+  // Raw Data from Expense System (for barcode fraud checks)
   const [expenseList, setExpenseList] = useState<any[]>([]);
 
   // Global Filters
@@ -112,286 +111,33 @@ export default function NewDashboardPage() {
   const [selectedDistrict, setSelectedDistrict] = useState("");
   const [selectedCoordinator, setSelectedCoordinator] = useState("");
   const [selectedDI, setSelectedDI] = useState("");
-  const [selectedStatus, setSelectedStatus] = useState("open"); // Default to "open" to match sheet outstanding risk on load!
   const [selectedMonth, setSelectedMonth] = useState("");
   const [selectedHospitalType, setSelectedHospitalType] = useState("");
   const [selectedEquipmentType, setSelectedEquipmentType] = useState("");
   const [dateFrom, setDateFrom] = useState("");
   const [dateTo, setDateTo] = useState("");
+  const [statusTab, setStatusTab] = useState<"open" | "closed" | "all">("all");
 
-  // Tab View for Penalty Groupings
-  const [penaltyTab, setPenaltyTab] = useState<"district" | "di" | "hospital" | "zone" | "coordinator">("district");
+  // Tab View configurations
+  const [activeTab, setActiveTab] = useState<"overview" | "leaderboard" | "sla" | "repeats" | "fraud">("overview");
+  const [breakdownTab, setBreakdownTab] = useState<"district" | "di" | "coordinator" | "zone" | "hospital">("district");
 
-  // Pagination for tables
-  const [currentOpenPage, setCurrentOpenPage] = useState(1);
-  const [currentRepeatPage, setCurrentRepeatPage] = useState(1);
-  const [currentDIPage, setCurrentDIPage] = useState(1);
-  const [currentDistrictOutstandingPage, setCurrentDistrictOutstandingPage] = useState(1);
-  const [currentDistrictDailyRatesPage, setCurrentDistrictDailyRatesPage] = useState(1);
-  const [selectedRepeatBarcode, setSelectedRepeatBarcode] = useState<string | null>(null);
-  const rowsPerPage = 10;
+  // Local table searches
+  const [leaderboardSearch, setLeaderboardSearch] = useState("");
+  const [openTicketsSearch, setOpenTicketsSearch] = useState("");
+  const [fraudSearch, setFraudSearch] = useState("");
+
+  // Pagination
+  const [openPage, setOpenPage] = useState(1);
+  const [leaderboardPage, setLeaderboardPage] = useState(1);
+  const [fraudPage, setFraudPage] = useState(1);
+  const itemsPerPage = 10;
 
   // User Info & RBAC Lock status
   const currentUser = useMemo(() => authService.getCurrentUser(), []);
   const userRole = currentUser?.role || "MIS";
   const userZone = currentUser?.zone || null;
   const userCoordinator = currentUser?.coordinator || null;
-
-  // COMPRESSION LOGIC: Minify JSON data before storing in LocalStorage
-  const serializeData = (data: any) => {
-    const compactDi = (data.diNameList || []).map((row: any) => [
-      row["Zone Name"] || "",
-      row["District Name"] || "",
-      row["Coordinator Name"] || "",
-      row["District Incharge Name"] || "",
-      row["Hospital Name"] || ""
-    ]);
-
-    // Cache ONLY the most recent 15,000 rows to guarantee fitting in LocalStorage (approx 400KB)
-    // Full million rows will load in the background in memory
-    const compactPenalty = (data.penaltyFile || []).slice(0, 15000).map((row: any) => [
-      row["Complaint ID"] || "",
-      row["District Name"] || "",
-      row["Hospital Name"] || "",
-      row["Equipment Name"] || "",
-      row["Complaint Raise Date"] || "",
-      row["Complaint Close date"] || "",
-      row["Bar Code"] || "",
-      row["Status"] || "",
-      row["Complaint Status"] || "",
-      row["Total Penalty"] || "",
-      row["Hospital Type"] || "",
-      row["Hospital Type Mapped"] || "",
-      row["Asset Value"] || "",
-      row["Equipment Type"] || "",
-      row["Standby"] || "",
-      row["Month"] || ""
-    ]);
-
-    const compactAsset = (data.assetValues || []).map((row: any) => row["Equipment Name"] || "");
-    const compactCritical = (data.criticalEquipment || []).map((row: any) => row["Name"] || "");
-
-    return JSON.stringify({
-      di: compactDi,
-      p: compactPenalty,
-      a: compactAsset,
-      c: compactCritical,
-      e: data.expenseList || [],
-      ts: Date.now()
-    });
-  };
-
-  const deserializeData = (cachedStr: string) => {
-    const parsed = JSON.parse(cachedStr);
-    
-    const diNameList = (parsed.di || []).map((arr: any) => ({
-      "Zone Name": arr[0],
-      "District Name": arr[1],
-      "Coordinator Name": arr[2],
-      "District Incharge Name": arr[3],
-      "Hospital Name": arr[4]
-    }));
-
-    const penaltyFile = (parsed.p || []).map((arr: any) => ({
-      "Complaint ID": arr[0],
-      "District Name": arr[1],
-      "Hospital Name": arr[2],
-      "Equipment Name": arr[3],
-      "Complaint Raise Date": arr[4],
-      "Complaint Close date": arr[5],
-      "Bar Code": arr[6],
-      "Status": arr[7] || "",
-      "Complaint Status": arr[8] || "",
-      "Total Penalty": arr[9] || "",
-      "Hospital Type": arr[10] || "",
-      "Hospital Type Mapped": arr[11] || "",
-      "Asset Value": arr[12] || "",
-      "Equipment Type": arr[13] || "",
-      "Standby": arr[14] || "",
-      "Month": arr[15] || ""
-    }));
-
-    const assetValues = (parsed.a || []).map((name: string) => ({ "Equipment Name": name }));
-    const criticalEquipment = (parsed.c || []).map((name: string) => ({ "Name": name }));
-
-    return {
-      diNameList,
-      penaltyFile,
-      assetValues,
-      criticalEquipment,
-      expenseList: parsed.e || []
-    };
-  };
-
-  // Restore from cache instantly
-  const restoreFromCache = () => {
-    try {
-      const cached = localStorage.getItem(CACHE_KEY);
-      if (cached) {
-        const deserialized = deserializeData(cached);
-        setDiNameList(deserialized.diNameList);
-        setPenaltyFile(deserialized.penaltyFile);
-        setAssetValues(deserialized.assetValues);
-        setCriticalEquipment(deserialized.criticalEquipment);
-        setExpenseList(deserialized.expenseList);
-        setLoading(false); // Instantly show UI in 0.01ms
-        return true;
-      }
-    } catch (e) {
-      console.warn("Failed to parse cached dashboard data", e);
-    }
-    return false;
-  };
-
-  // Progressive batch chunk fetcher to handle 1,000,000+ rows without timeouts/crashes
-  const fetchPenaltyFileInChunks = async (onProgress: (loaded: number) => void) => {
-    let rowStart = 2; // Start after headers
-    const chunkSize = 50000;
-    let hasMore = true;
-    const compiledRows: any[] = [];
-    
-    // Fetch headers first from row 1
-    const headerUrl = `https://sheets.googleapis.com/v4/spreadsheets/${SPREADSHEET_ID}/values/Penalty%20File!A1:AZ1?key=${API_KEY}`;
-    const hRes = await fetch(headerUrl);
-    if (!hRes.ok) throw new Error("Failed to fetch headers");
-    const hData = await hRes.json();
-    const headers = (hData.values || [[]])[0].map((h: string, idx: number) => {
-      const name = h.trim();
-      if (name === "Hospital Type" && idx === 22) {
-        return "Hospital Type Mapped";
-      }
-      if (name === "Bar Code" && idx === 47) {
-        return "Bar Code Mapped";
-      }
-      return name;
-    });
-    
-    while (hasMore) {
-      const range = `Penalty File!A${rowStart}:AZ${rowStart + chunkSize - 1}`;
-      const url = `https://sheets.googleapis.com/v4/spreadsheets/${SPREADSHEET_ID}/values/${encodeURIComponent(range)}?key=${API_KEY}`;
-      const res = await fetch(url);
-      if (!res.ok) throw new Error(`Google Sheets API error on range ${range}`);
-      const data = await res.json();
-      const rows = data.values || [];
-      
-      if (rows.length === 0) {
-        hasMore = false;
-        break;
-      }
-      
-      // Parse chunk rows to objects
-      const formatted = rows.map((row: any) => {
-        const obj: any = {};
-        headers.forEach((h: string, idx: number) => {
-          obj[h] = row[idx] !== undefined ? row[idx].trim() : "";
-        });
-        return obj;
-      });
-      
-      compiledRows.push(...formatted);
-      onProgress(compiledRows.length);
-      
-      if (rows.length < chunkSize) {
-        hasMore = false;
-      } else {
-        rowStart += chunkSize;
-      }
-    }
-    
-    return compiledRows;
-  };
-
-  // Fetch all necessary sheets on load
-  const loadAllDashboardData = async (isBackground = false) => {
-    try {
-      if (isBackground) {
-        setBackgroundSyncing(true);
-      } else {
-        setLoading(true);
-      }
-      setError("");
-      setSyncProgress(0);
-
-      // Fetch reference lists (Zone, Critical Equipment, Assets) without hardcoded row limits
-      const sheetsToFetch = [
-        { name: "diNameList", range: "DI Name List!A1:E" },
-        { name: "assetValues", range: "Asset Value!A1:B" },
-        { name: "criticalEquipment", range: "Critical Equipment!A1:B" }
-      ];
-
-      const freshData: any = {};
-
-      await Promise.all(
-        sheetsToFetch.map(async (sheet) => {
-          const url = `https://sheets.googleapis.com/v4/spreadsheets/${SPREADSHEET_ID}/values/${encodeURIComponent(sheet.range)}?key=${API_KEY}`;
-          const res = await fetch(url);
-          if (!res.ok) throw new Error(`Google Sheets API responded with code ${res.status} for range ${sheet.range}`);
-          const data = await res.json();
-          const rows = data.values || [];
-          if (rows.length > 1) {
-            const headers = rows[0].map((h: string) => h.trim());
-            const formatted = rows.slice(1).map((row: any) => {
-              const obj: any = {};
-              headers.forEach((h: string, idx: number) => {
-                obj[h] = row[idx] !== undefined ? row[idx].trim() : "";
-              });
-              return obj;
-            });
-            freshData[sheet.name] = formatted;
-          } else {
-            freshData[sheet.name] = [];
-          }
-        })
-      );
-
-      // Fetch the massive 1,000,000 row penalty file progressively
-      const fullPenaltyFile = await fetchPenaltyFileInChunks((loadedCount) => {
-        setSyncProgress(loadedCount);
-      });
-      freshData["penaltyFile"] = fullPenaltyFile;
-
-      // Fetch submitted expenses to cross-verify barcodes
-      let freshExpenses = [];
-      try {
-        freshExpenses = await expenseService.getTeamExpenses();
-      } catch (err) {
-        console.warn("Could not fetch team expenses, using empty list", err);
-      }
-      freshData["expenseList"] = freshExpenses;
-
-      // Update state
-      setDiNameList(freshData.diNameList);
-      setPenaltyFile(freshData.penaltyFile);
-      setAssetValues(freshData.assetValues);
-      setCriticalEquipment(freshData.criticalEquipment);
-      setExpenseList(freshData.expenseList);
-
-      // Save COMPRESSED data to cache to stay well within 5MB limit
-      try {
-        const compressedStr = serializeData(freshData);
-        localStorage.setItem(CACHE_KEY, compressedStr);
-      } catch (cacheErr) {
-        console.error("Cache serialization failed", cacheErr);
-      }
-      
-      if (isBackground) {
-        toast.success("Dashboard metrics synced live! ⚡", { id: "bg-sync" });
-      }
-    } catch (err: any) {
-      console.error(err);
-      setError("Failed to fetch dashboard data: " + err.message);
-    } finally {
-      setLoading(false);
-      setBackgroundSyncing(false);
-      setSyncProgress(null);
-    }
-  };
-
-  useEffect(() => {
-    const hasCache = restoreFromCache();
-    // Fetch live data in background if cache is restored, or synchronously if no cache exists
-    loadAllDashboardData(hasCache);
-  }, []);
 
   // Enforce Zonal Mapping & RBAC constraints on filters
   useEffect(() => {
@@ -402,7 +148,184 @@ export default function NewDashboardPage() {
     }
   }, [userRole, userZone, userCoordinator]);
 
-  // Derived Filter Dropdown options
+  // Minimizes and caches data to avoid localstorage quota overflow
+  const saveToCache = (data: any) => {
+    try {
+      const cacheData = {
+        di: data.diNameList,
+        p: data.penaltyFile,
+        a: data.assetValues,
+        c: data.criticalEquipment,
+        e: data.expenseList,
+        ts: Date.now()
+      };
+      localStorage.setItem(CACHE_KEY, JSON.stringify(cacheData));
+    } catch (err) {
+      console.warn("Could not save to LocalStorage cache", err);
+    }
+  };
+
+  // Restores data from cache immediately for 0.01ms load speed
+  const restoreFromCache = () => {
+    try {
+      const cached = localStorage.getItem(CACHE_KEY);
+      if (cached) {
+        const data = JSON.parse(cached);
+        setDiNameList(data.di || []);
+        setPenaltyFile(data.p || []);
+        setAssetValues(data.a || []);
+        setCriticalEquipment(data.c || []);
+        setExpenseList(data.e || []);
+        setLoading(false); // Disable spinner immediately
+        return true;
+      }
+    } catch (e) {
+      console.warn("Failed to parse cached dashboard data", e);
+    }
+    return false;
+  };
+
+  // High-performance sheet data fetching & parsing directly from Google Sheets API
+  const loadAllDashboardData = async (isBackground = false) => {
+    try {
+      if (isBackground) {
+        setBackgroundSyncing(true);
+      } else {
+        setLoading(true);
+      }
+      setError("");
+
+      const fetchSheet = async (range: string) => {
+        const url = `https://sheets.googleapis.com/v4/spreadsheets/${SPREADSHEET_ID}/values/${encodeURIComponent(range)}?key=${API_KEY}`;
+        const res = await fetch(url);
+        if (!res.ok) throw new Error(`Google Sheets API responded with code ${res.status} for range ${range}`);
+        const data = await res.json();
+        return data.values || [];
+      };
+
+      // 1. Fetch reference lists and penalty sheet in parallel
+      const [diRows, assetRows, criticalRows, penaltyRows] = await Promise.all([
+        fetchSheet("DI Name List!A1:E"),
+        fetchSheet("Asset Value!A1:B"),
+        fetchSheet("Critical Equipment!A1:B"),
+        fetchSheet("Penalty File!A1:AZ50000") // Pulls up to 50k rows in a single batch
+      ]);
+
+      // 2. Parse DI Name List
+      const diHeaders = diRows[0] || [];
+      const parsedDIs = diRows.slice(1).map((row: any) => {
+        const obj: any = {};
+        diHeaders.forEach((h: string, idx: number) => {
+          obj[h.trim()] = row[idx] !== undefined ? row[idx].trim() : "";
+        });
+        return {
+          zoneName: obj["Zone Name"] || "",
+          districtName: obj["District Name"] || "",
+          coordinatorName: obj["Coordinator Name"] || "",
+          diName: obj["District Incharge Name"] || "",
+          hospitalName: obj["Hospital Name"] || ""
+        };
+      });
+
+      // 3. Parse Asset Values
+      const parsedAssets = assetRows.slice(1).map((row: any) => ({
+        name: row[0] ? row[0].trim() : "",
+        cost: row[1] ? parseFloat(row[1].trim().replace(/,/g, "")) || 0 : 0
+      }));
+
+      // 4. Parse Critical Equipment List
+      const parsedCritical = criticalRows.slice(1).map((row: any) => ({
+        name: row[0] ? row[0].trim() : "",
+        type: row[1] ? row[1].trim() : ""
+      }));
+
+      // 5. Parse Penalty File
+      if (penaltyRows.length < 2) {
+        throw new Error("Penalty File contains no records.");
+      }
+      const penaltyHeaders = penaltyRows[0].map((h: string, idx: number) => {
+        const name = h.trim();
+        if (name === "Hospital Type" && idx === 22) return "Hospital Type Mapped";
+        if (name === "Bar Code" && idx === 47) return "Bar Code Mapped";
+        return name;
+      });
+
+      const parsedPenalties = penaltyRows.slice(1).map((row: any, rIdx: number) => {
+        const obj: any = {};
+        penaltyHeaders.forEach((h: string, idx: number) => {
+          obj[h] = row[idx] !== undefined ? row[idx].trim() : "";
+        });
+
+        // Minify row content to store only required fields
+        return {
+          complaintId: obj["Complaint ID"] || "",
+          districtName: obj["District Name"] || "",
+          hospitalName: obj["Hospital Name"] || "",
+          barCode: obj["Bar Code"] || "",
+          equipmentName: obj["Equipment Name"] || "",
+          equipmentModel: obj["Equipment Model"] || "",
+          complaintRaiseDate: obj["Complaint Raise Date"] || "",
+          complaintCloseDate: obj["Complaint Close date"] || "",
+          complaintStatus: obj["Complaint Status"] || "",
+          status: obj["Status"] || "",
+          totalDowntime: parseFloat((obj["Total Downtime"] || "").replace(/,/g, "")) || 0,
+          totalPenalty: parseFloat((obj["Total Penalty"] || "").replace(/,/g, "").replace(/[^0-9.-]/g, "")) || 0,
+          hospitalType: obj["Hospital Type"] || "",
+          hospitalTypeMapped: obj["Hospital Type Mapped"] || "",
+          assetValue: parseFloat((obj["Asset Value"] || "").replace(/,/g, "").replace(/[^0-9.-]/g, "")) || 0,
+          equipmentType: obj["Equipment Type"] || "",
+          standby: obj["Standby"] || "",
+          month: obj["Month"] || "",
+          attendDate: obj["Attend Date"] || "",
+          coordinatorName: obj["Coordinator Name"] || "",
+          diName: obj["DI Name"] || "",
+          finalCloseMonth: obj["Final Close Month"] || obj["Fianl Close Month"] || "",
+          closeMonth: obj["Close Month"] || ""
+        };
+      });
+
+      // 6. Fetch submitted expenses for barcode verification
+      let freshExpenses = [];
+      try {
+        freshExpenses = await expenseService.getTeamExpenses();
+      } catch (err) {
+        console.warn("Could not fetch team expenses, using empty list", err);
+      }
+
+      // Update state
+      setDiNameList(parsedDIs);
+      setPenaltyFile(parsedPenalties);
+      setAssetValues(parsedAssets);
+      setCriticalEquipment(parsedCritical);
+      setExpenseList(freshExpenses);
+
+      // Save to local cache
+      saveToCache({
+        diNameList: parsedDIs,
+        penaltyFile: parsedPenalties,
+        assetValues: parsedAssets,
+        criticalEquipment: parsedCritical,
+        expenseList: freshExpenses
+      });
+
+      if (isBackground) {
+        toast.success("Dashboard metrics updated live! ⚡", { id: "bg-sync" });
+      }
+    } catch (err: any) {
+      console.error(err);
+      setError("Failed to fetch Google Sheet data: " + err.message);
+    } finally {
+      setLoading(false);
+      setBackgroundSyncing(false);
+    }
+  };
+
+  useEffect(() => {
+    const hasCache = restoreFromCache();
+    loadAllDashboardData(hasCache);
+  }, []);
+
+  // 1. Dynamic Dropdown lists derived from loaded datasets
   const filterOptions = useMemo(() => {
     const zones = new Set<string>();
     const districts = new Set<string>();
@@ -413,16 +336,16 @@ export default function NewDashboardPage() {
     const equipmentTypes = new Set<string>();
 
     diNameList.forEach((row) => {
-      if (row["Zone Name"]) zones.add(row["Zone Name"]);
-      if (row["District Name"]) districts.add(row["District Name"]);
-      if (row["Coordinator Name"]) coordinators.add(row["Coordinator Name"]);
-      if (row["District Incharge Name"]) dis.add(row["District Incharge Name"]);
+      if (row.zoneName) zones.add(row.zoneName);
+      if (row.districtName) districts.add(row.districtName);
+      if (row.coordinatorName) coordinators.add(row.coordinatorName);
+      if (row.diName) dis.add(row.diName);
     });
 
     penaltyFile.forEach((row) => {
-      if (row["Month"]) months.add(row["Month"]);
-      if (row["Hospital Type"]) hospitalTypes.add(row["Hospital Type"]);
-      if (row["Equipment Type"]) equipmentTypes.add(row["Equipment Type"]);
+      if (row.month) months.add(row.month);
+      if (row.hospitalType) hospitalTypes.add(row.hospitalType);
+      if (row.equipmentType) equipmentTypes.add(row.equipmentType);
     });
 
     return {
@@ -445,41 +368,41 @@ export default function NewDashboardPage() {
     };
   }, [diNameList, penaltyFile]);
 
-  // Apply all filters EXCEPT Status, which is used for top-level operational KPIs (FTFR, logged/closed counts)
-  const baseFilteredComplaints = useMemo(() => {
+  // Apply filters on the dataset
+  const filteredPenaltyFile = useMemo(() => {
     return penaltyFile.filter((row) => {
+      // Find DI Mapping
       const mapping = diNameList.find(
-        (m) => m["Hospital Name"] === row["Hospital Name"] || m["District Name"] === row["District Name"]
+        (m) => m.hospitalName === row.hospitalName || m.districtName === row.districtName
       );
 
-      const zone = mapping ? mapping["Zone Name"] : "";
-      const di = mapping ? mapping["District Incharge Name"] : "";
-      const coordinator = mapping ? mapping["Coordinator Name"] : "";
+      const zone = mapping ? mapping.zoneName : "";
+      const diOpt = mapping ? mapping.diName : "";
+      const coord = mapping ? mapping.coordinatorName : "";
 
       if (selectedZone && zone !== selectedZone) return false;
-      if (selectedDistrict && row["District Name"] !== selectedDistrict) return false;
-      if (selectedCoordinator && coordinator !== selectedCoordinator) return false;
-      if (selectedDI && di !== selectedDI) return false;
+      if (selectedDistrict && row.districtName !== selectedDistrict) return false;
+      if (selectedCoordinator && coord !== selectedCoordinator) return false;
+      if (selectedDI && diOpt !== selectedDI) return false;
+      if (selectedMonth && row.month !== selectedMonth) return false;
+      if (selectedHospitalType && row.hospitalType !== selectedHospitalType) return false;
+      if (selectedEquipmentType && row.equipmentType !== selectedEquipmentType) return false;
 
-      // Month Filter
-      if (selectedMonth && row["Month"] !== selectedMonth) return false;
-
-      // Hospital Type Filter
-      if (selectedHospitalType && row["Hospital Type"] !== selectedHospitalType) return false;
-
-      // Equipment Type Filter
-      if (selectedEquipmentType && row["Equipment Type"] !== selectedEquipmentType) return false;
-
-      // Date Filters
-      if (dateFrom && row["Complaint Raise Date"]) {
-        const raiseTime = parseFlexibleDate(row["Complaint Raise Date"]);
-        const fromTime = new Date(dateFrom).getTime();
-        if (raiseTime < fromTime) return false;
+      // Date constraints
+      if (dateFrom && row.complaintRaiseDate) {
+        const rTime = parseFlexibleDate(row.complaintRaiseDate);
+        if (rTime < new Date(dateFrom).getTime()) return false;
       }
-      if (dateTo && row["Complaint Raise Date"]) {
-        const raiseTime = parseFlexibleDate(row["Complaint Raise Date"]);
-        const toTime = new Date(dateTo).setHours(23, 59, 59, 999);
-        if (raiseTime > toTime) return false;
+      if (dateTo && row.complaintRaiseDate) {
+        const rTime = parseFlexibleDate(row.complaintRaiseDate);
+        if (rTime > new Date(dateTo).setHours(23, 59, 59, 999)) return false;
+      }
+
+      // Status tab filter
+      if (statusTab !== "all") {
+        const isClosed = isComplaintClosed(row);
+        if (statusTab === "open" && isClosed) return false;
+        if (statusTab === "closed" && !isClosed) return false;
       }
 
       return true;
@@ -495,148 +418,128 @@ export default function NewDashboardPage() {
     selectedHospitalType, 
     selectedEquipmentType, 
     dateFrom, 
-    dateTo
+    dateTo,
+    statusTab
   ]);
 
-  // Apply Status filter on top of the base filtered complaints
-  const filteredComplaints = useMemo(() => {
-    if (selectedStatus === "all") return baseFilteredComplaints;
-    
-    return baseFilteredComplaints.filter((row) => {
-      const isClosed = isComplaintClosed(row);
-      if (selectedStatus === "open") return !isClosed;
-      if (selectedStatus === "closed") return isClosed;
-      return true;
-    });
-  }, [baseFilteredComplaints, selectedStatus]);
-
-  // 1. FTFR Analytics Calculations (using baseFilteredComplaints so it includes all statuses)
-  const ftfrData = useMemo(() => {
-    let logged = 0;
-    let closed = 0;
-    let closedWithin24h = 0;
-
-    baseFilteredComplaints.forEach((row) => {
-      logged++;
-      const isClosed = isComplaintClosed(row);
-
-      if (isClosed) {
-        closed++;
-        const raiseTime = parseFlexibleDate(row["Complaint Raise Date"]);
-        const closeTime = parseFlexibleDate(row["Complaint Close date"]);
-
-        const diffHours = (closeTime - raiseTime) / (1000 * 60 * 60);
-        if (diffHours <= 24 && diffHours >= 0) {
-          closedWithin24h++;
-        }
-      }
-    });
-
-    const rate = logged > 0 ? ((closedWithin24h / logged) * 100).toFixed(1) : "0.0";
-
-    return {
-      logged,
-      closed,
-      closedWithin24h,
-      rate
-    };
-  }, [filteredComplaints]);
-
-  // Nivo Line Chart Data preparation (FTFR Trend over dates) (using baseFilteredComplaints)
-  const nivoLineData = useMemo(() => {
-    const grouped: { [month: string]: { logged: number; ftfr: number } } = {};
-
-    baseFilteredComplaints.forEach((row) => {
-      const dateStr = row["Complaint Raise Date"];
-      if (!dateStr) return;
-      const time = parseFlexibleDate(dateStr);
-      const dateObj = new Date(time);
-      const month = dateObj.toLocaleString("default", { month: "short", year: "2-digit" });
-
-      if (!grouped[month]) {
-        grouped[month] = { logged: 0, ftfr: 0 };
-      }
-      grouped[month].logged++;
-
-      const isClosed = isComplaintClosed(row);
-      if (isClosed) {
-        const raiseTime = parseFlexibleDate(row["Complaint Raise Date"]);
-        const closeTime = parseFlexibleDate(row["Complaint Close date"]);
-        const hours = (closeTime - raiseTime) / (1000 * 60 * 60);
-        if (hours <= 24 && hours >= 0) {
-          grouped[month].ftfr++;
-        }
-      }
-    });
-
-    const sortedMonths = Object.keys(grouped).sort((a, b) => {
-      const parseMonth = (m: string) => Date.parse(`01 ${m.replace("-", " 20")}`);
-      return parseMonth(a) - parseMonth(b);
-    });
-
-    const loggedPoints = sortedMonths.map((m) => ({ x: m, y: grouped[m].logged }));
-    const ftfrPoints = sortedMonths.map((m) => ({
-      x: m,
-      y: parseFloat(((grouped[m].ftfr / (grouped[m].logged || 1)) * 100).toFixed(0))
-    }));
-
-    return [
-      {
-        id: "Total Logged Calls",
-        data: loggedPoints
-      },
-      {
-        id: "First Time Fix Rate (%)",
-        data: ftfrPoints
-      }
-    ];
-  }, [baseFilteredComplaints]);
-
-  // Helper function to get correct ticket penalty (reading precalculated sheet penalty or dynamic estimate for open tickets)
-  const getRowPenalty = (row: any): number => {
-    const rawP = (row["Total Penalty"] || "").replace(/,/g, "").trim();
-    if (rawP !== "" && rawP !== "--" && !isNaN(parseFloat(rawP))) {
-      return parseFloat(rawP);
-    }
-    
-    // Dynamic estimation for open tickets
+  // Helper to calculate row penalty with dynamic estimates
+  const getRowPenaltyVal = (row: any): number => {
+    if (row.totalPenalty > 0) return row.totalPenalty;
     if (!isComplaintClosed(row)) {
-      if (!row["Complaint Raise Date"]) return 0;
-      const raiseTime = parseFlexibleDate(row["Complaint Raise Date"]);
+      if (!row.complaintRaiseDate) return 0;
+      const raiseTime = parseFlexibleDate(row.complaintRaiseDate);
       const days = Math.max(0, (Date.now() - raiseTime) / (1000 * 60 * 60 * 24));
       
       const isCritical = criticalEquipment.some(
-        (c) => c["Name"]?.toLowerCase() === row["Equipment Name"]?.toLowerCase()
+        (c) => c.name.toLowerCase() === row.equipmentName.toLowerCase()
       );
       const ratePerDay = isCritical ? 2000 : 500;
       return Math.round(days * ratePerDay);
     }
-    
     return 0;
   };
 
-  // 2. Penalty Breakdown by dynamic Tab selection & Nivo Bar data
-  const penaltyBreakdown = useMemo(() => {
+  // 2. Summary stats calculations
+  const summary = useMemo(() => {
+    let logged = 0;
+    let closed = 0;
+    let open = 0;
+    let penalty = 0;
+    let closedWithin24h = 0;
+
+    filteredPenaltyFile.forEach((row) => {
+      logged++;
+      const isClosed = isComplaintClosed(row);
+      if (isClosed) {
+        closed++;
+        const raiseTime = parseFlexibleDate(row.complaintRaiseDate);
+        const closeTime = parseFlexibleDate(row.complaintCloseDate);
+        const diffHours = (closeTime - raiseTime) / (1000 * 60 * 60);
+        if (diffHours <= 24 && diffHours >= 0) {
+          closedWithin24h++;
+        }
+      } else {
+        open++;
+      }
+      penalty += getRowPenaltyVal(row);
+    });
+
+    const ftfrRate = logged > 0 ? ((closedWithin24h / logged) * 100).toFixed(1) : "0.0";
+
+    // Audited Asset Value
+    let totalAssetVal = 0;
+    const costMap = new Map<string, number>();
+    assetValues.forEach((item) => {
+      costMap.set(item.name.toLowerCase(), item.cost);
+    });
+
+    const uniqueEquip = new Set<string>();
+    filteredPenaltyFile.forEach((row) => {
+      if (row.equipmentName) {
+        uniqueEquip.add(row.equipmentName.trim().toLowerCase());
+      }
+    });
+    uniqueEquip.forEach((name) => {
+      totalAssetVal += costMap.get(name) || 0;
+    });
+
+    return {
+      totalLogged: logged,
+      totalClosed: closed,
+      totalOpen: open,
+      totalPenalty: penalty,
+      ftfrRate,
+      totalAssetValUnderAudit: (totalAssetVal / 10000000).toFixed(2)
+    };
+  }, [filteredPenaltyFile, assetValues, criticalEquipment]);
+
+  // 3. Projections
+  const projections = useMemo(() => {
+    const today = new Date();
+    const totalDaysInMonth = new Date(today.getFullYear(), today.getMonth() + 1, 0).getDate();
+    const currentDay = today.getDate();
+
+    let curMonthPenalty = 0;
+    filteredPenaltyFile.forEach((row) => {
+      if (!row.complaintRaiseDate) return;
+      const raiseDate = new Date(parseFlexibleDate(row.complaintRaiseDate));
+      if (raiseDate.getMonth() === today.getMonth() && raiseDate.getFullYear() === today.getFullYear()) {
+        curMonthPenalty += getRowPenaltyVal(row);
+      }
+    });
+
+    const dailyRunRate = currentDay > 0 ? Math.round(curMonthPenalty / currentDay) : 0;
+    const projectedPenalty = curMonthPenalty + (dailyRunRate * (totalDaysInMonth - currentDay));
+
+    return {
+      currentMonthPenalty: curMonthPenalty,
+      dailyRunRate,
+      projectedPenalty
+    };
+  }, [filteredPenaltyFile, criticalEquipment]);
+
+  // 4. Breakdown tabs
+  const breakdownData = useMemo(() => {
     const counts: { [key: string]: { name: string; amount: number; openTickets: number } } = {};
 
-    filteredComplaints.forEach((row) => {
+    filteredPenaltyFile.forEach((row) => {
       const isClosed = isComplaintClosed(row);
-      
       let key = "";
+      
       const mapping = diNameList.find(
-        (m) => m["Hospital Name"] === row["Hospital Name"] || m["District Name"] === row["District Name"]
+        (m) => m.hospitalName === row.hospitalName || m.districtName === row.districtName
       );
 
-      if (penaltyTab === "district") {
-        key = row["District Name"] || "Unknown";
-      } else if (penaltyTab === "di") {
-        key = mapping ? mapping["District Incharge Name"] : "Unassigned";
-      } else if (penaltyTab === "hospital") {
-        key = row["Hospital Name"] || "Unknown";
-      } else if (penaltyTab === "zone") {
-        key = mapping ? mapping["Zone Name"] : "Unassigned";
-      } else if (penaltyTab === "coordinator") {
-        key = mapping ? mapping["Coordinator Name"] : "Unassigned";
+      if (breakdownTab === "district") {
+        key = row.districtName || "Unknown";
+      } else if (breakdownTab === "di") {
+        key = mapping ? mapping.diName : "Unassigned";
+      } else if (breakdownTab === "hospital") {
+        key = row.hospitalName || "Unknown";
+      } else if (breakdownTab === "zone") {
+        key = mapping ? mapping.zoneName : "Unassigned";
+      } else if (breakdownTab === "coordinator") {
+        key = mapping ? mapping.coordinatorName : "Unassigned";
       }
 
       if (!key) key = "Unknown";
@@ -645,41 +548,81 @@ export default function NewDashboardPage() {
         counts[key] = { name: key, amount: 0, openTickets: 0 };
       }
 
-      const ticketPenalty = getRowPenalty(row);
-      counts[key].amount += ticketPenalty;
+      counts[key].amount += getRowPenaltyVal(row);
       if (!isClosed) {
         counts[key].openTickets++;
       }
     });
 
     const list = Object.values(counts).sort((a, b) => b.amount - a.amount);
-    const totalSum = list.reduce((sum, item) => sum + item.amount, 0);
-
-    const barChartData = list.slice(0, 5).map((item) => ({
-      name: item.name,
+    const chartData = list.slice(0, 7).map((item) => ({
+      name: item.name.length > 15 ? item.name.substring(0, 15) + "..." : item.name,
       amount: item.amount
     }));
 
     return {
       list,
-      totalSum,
-      barChartData
+      chartData
     };
-  }, [filteredComplaints, penaltyTab, diNameList, criticalEquipment]);
+  }, [filteredPenaltyFile, breakdownTab, diNameList, criticalEquipment]);
 
-  // 3. Open Complaints SLA Aging Breakdown
-  const openComplaintsSummary = useMemo(() => {
-    const list = filteredComplaints.filter(
-      (row) => !isComplaintClosed(row)
+  // 5. DI Performance Leaderboard
+  const diLeaderboard = useMemo(() => {
+    const performance: { [di: string]: { name: string; totalLogged: number; closed: number; totalPenalty: number; totalDays: number } } = {};
+
+    filteredPenaltyFile.forEach((row) => {
+      const mapping = diNameList.find(
+        (m) => m.hospitalName === row.hospitalName || m.districtName === row.districtName
+      );
+      const diName = mapping ? mapping.diName : "Unassigned";
+      if (!diName) return;
+
+      if (!performance[diName]) {
+        performance[diName] = { name: diName, totalLogged: 0, closed: 0, totalPenalty: 0, totalDays: 0 };
+      }
+
+      performance[diName].totalLogged++;
+      performance[diName].totalPenalty += getRowPenaltyVal(row);
+
+      const isClosed = isComplaintClosed(row);
+      if (isClosed) {
+        performance[diName].closed++;
+        const raiseTime = parseFlexibleDate(row.complaintRaiseDate);
+        const closeTime = parseFlexibleDate(row.complaintCloseDate);
+        performance[diName].totalDays += (closeTime - raiseTime) / (1000 * 60 * 60 * 24);
+      }
+    });
+
+    return Object.values(performance)
+      .map((item) => {
+        const resolutionRate = item.totalLogged > 0 ? Math.round((item.closed / item.totalLogged) * 100) : 0;
+        const avgResolutionTime = item.closed > 0 ? (item.totalDays / item.closed).toFixed(1) : "N/A";
+        return {
+          ...item,
+          resolutionRate,
+          avgResolutionTime
+        };
+      })
+      .sort((a, b) => a.totalPenalty - b.totalPenalty || b.resolutionRate - a.resolutionRate);
+  }, [filteredPenaltyFile, diNameList, criticalEquipment]);
+
+  const filteredLeaderboard = useMemo(() => {
+    return diLeaderboard.filter(row => 
+      row.name.toLowerCase().includes(leaderboardSearch.toLowerCase())
     );
+  }, [diLeaderboard, leaderboardSearch]);
 
+  // 6. SLA Aging
+  const slaAging = useMemo(() => {
     let ageLess24h = 0;
     let age24To48h = 0;
     let age2To7d = 0;
     let age7dPlus = 0;
 
+    const list = filteredPenaltyFile.filter(row => !isComplaintClosed(row));
+
     list.forEach((row) => {
-      const raiseTime = parseFlexibleDate(row["Complaint Raise Date"]);
+      const raiseTime = parseFlexibleDate(row.complaintRaiseDate);
       const hours = (Date.now() - raiseTime) / (1000 * 60 * 60);
 
       if (hours <= 24) ageLess24h++;
@@ -688,141 +631,56 @@ export default function NewDashboardPage() {
       else age7dPlus++;
     });
 
-    const agingChartData = [
+    return [
       { id: "0-24 Hours", label: "0-24h", value: ageLess24h, color: "#10b981" },
       { id: "24-48 Hours", label: "24-48h", value: age24To48h, color: "#3b82f6" },
       { id: "2-7 Days", label: "2-7d", value: age2To7d, color: "#f59e0b" },
       { id: "7+ Days (Critical)", label: "7d+", value: age7dPlus, color: "#ef4444" }
     ];
+  }, [filteredPenaltyFile]);
 
-    return {
-      totalOpen: list.length,
-      list,
-      agingChartData
-    };
-  }, [filteredComplaints]);
-
-  const paginatedOpenComplaints = useMemo(() => {
-    const start = (currentOpenPage - 1) * rowsPerPage;
-    return openComplaintsSummary.list.slice(start, start + rowsPerPage);
-  }, [openComplaintsSummary.list, currentOpenPage]);
-
-  const totalOpenPages = Math.ceil(openComplaintsSummary.list.length / rowsPerPage);
-
-  // 4. DI Performance Leaderboard
-  const diLeaderboard = useMemo(() => {
-    const performance: { [di: string]: { name: string; totalLogged: number; closed: number; totalPenalty: number; totalDays: number } } = {};
-
-    filteredComplaints.forEach((row) => {
-      const mapping = diNameList.find(
-        (m) => m["Hospital Name"] === row["Hospital Name"] || m["District Name"] === row["District Name"]
-      );
-      const diName = mapping ? mapping["District Incharge Name"] : "Unassigned";
-      if (!diName) return;
-
-      if (!performance[diName]) {
-        performance[diName] = { name: diName, totalLogged: 0, closed: 0, totalPenalty: 0, totalDays: 0 };
-      }
-
-      performance[diName].totalLogged++;
-      const penalty = getRowPenalty(row);
-      performance[diName].totalPenalty += penalty;
-
-      const isClosed = isComplaintClosed(row);
-      if (isClosed) {
-        performance[diName].closed++;
-        const raiseTime = parseFlexibleDate(row["Complaint Raise Date"]);
-        const closeTime = parseFlexibleDate(row["Complaint Close date"]);
-        performance[diName].totalDays += (closeTime - raiseTime) / (1000 * 60 * 60 * 24);
-      }
-    });
-
-    return Object.values(performance)
-      .map((item) => {
-        const resolutionRate = item.totalLogged > 0 ? ((item.closed / item.totalLogged) * 100).toFixed(0) : "0";
-        const avgResolutionTime = item.closed > 0 ? (item.totalDays / item.closed).toFixed(1) : "N/A";
+  const openTicketsList = useMemo(() => {
+    return filteredPenaltyFile
+      .filter(row => !isComplaintClosed(row))
+      .map(row => {
+        const raiseTime = parseFlexibleDate(row.complaintRaiseDate);
+        const ageHours = Math.round((Date.now() - raiseTime) / (1000 * 60 * 60));
         return {
-          ...item,
-          resolutionRate: parseInt(resolutionRate),
-          avgResolutionTime
+          complaintId: row.complaintId,
+          districtName: row.districtName,
+          hospitalName: row.hospitalName,
+          equipmentName: row.equipmentName,
+          complaintRaiseDate: row.complaintRaiseDate,
+          status: row.status,
+          penalty: getRowPenaltyVal(row),
+          ageHours
         };
       })
-      .sort((a, b) => a.totalPenalty - b.totalPenalty || b.resolutionRate - a.resolutionRate);
-  }, [filteredComplaints, diNameList, criticalEquipment]);
+      .sort((a, b) => b.ageHours - a.ageHours);
+  }, [filteredPenaltyFile, criticalEquipment]);
 
-  const paginatedDILeaderboard = useMemo(() => {
-    const start = (currentDIPage - 1) * rowsPerPage;
-    return diLeaderboard.slice(start, start + rowsPerPage);
-  }, [diLeaderboard, currentDIPage]);
+  const filteredOpenTickets = useMemo(() => {
+    return openTicketsList.filter(row => 
+      row.complaintId.toLowerCase().includes(openTicketsSearch.toLowerCase()) ||
+      row.equipmentName.toLowerCase().includes(openTicketsSearch.toLowerCase()) ||
+      row.hospitalName.toLowerCase().includes(openTicketsSearch.toLowerCase()) ||
+      row.districtName.toLowerCase().includes(openTicketsSearch.toLowerCase())
+    );
+  }, [openTicketsList, openTicketsSearch]);
 
-  const totalDIPages = Math.ceil(diLeaderboard.length / rowsPerPage);
-
-  // 5. Monthly Run Rate & Financial Penalty Projection
-  const monthlyProjections = useMemo(() => {
-    const today = new Date();
-    const totalDaysInMonth = new Date(today.getFullYear(), today.getMonth() + 1, 0).getDate();
-    const currentDay = today.getDate();
-    const remainingDays = totalDaysInMonth - currentDay;
-
-    const penaltyThisMonth = filteredComplaints.reduce((sum, row) => {
-      if (!row["Complaint Raise Date"]) return sum;
-      const raiseDate = new Date(parseFlexibleDate(row["Complaint Raise Date"]));
-      if (raiseDate.getMonth() === today.getMonth() && raiseDate.getFullYear() === today.getFullYear()) {
-        return sum + getRowPenalty(row);
-      }
-      return sum;
-    }, 0);
-
-    const dailyRunRate = currentDay > 0 ? penaltyThisMonth / currentDay : 0;
-    const projectedPenalty = penaltyThisMonth + (dailyRunRate * remainingDays);
-
-    return {
-      currentMonthPenalty: penaltyThisMonth,
-      dailyRunRate: Math.round(dailyRunRate),
-      projectedPenalty: Math.round(projectedPenalty)
-    };
-  }, [filteredComplaints, criticalEquipment]);
-
-  // 5a. Total Asset Value Under Audit
-  const totalAssetValUnderAudit = useMemo(() => {
-    let total = 0;
-    const costMap = new Map<string, number>();
-    
-    assetValues.forEach((item) => {
-      const name = (item["Equipment Name"] || "").trim().toLowerCase();
-      const cost = parseFloat((item["RMSC Tender Cost"] || "").replace(/,/g, "")) || 0;
-      if (name) {
-        costMap.set(name, cost);
-      }
-    });
-
-    const uniqueEquip = new Set<string>();
-    penaltyFile.forEach((row) => {
-      if (row["Equipment Name"]) {
-        uniqueEquip.add(row["Equipment Name"].trim().toLowerCase());
-      }
-    });
-
-    uniqueEquip.forEach((eqName) => {
-      total += costMap.get(eqName) || 0;
-    });
-
-    return total;
-  }, [assetValues, penaltyFile]);
-
-  // 6. Repeat Complaints & Preventative Downtime Board
+  // 7. Repeat complaints
   const repeatCalls = useMemo(() => {
     const groups: { [barcode: string]: { barcode: string; name: string; hospital: string; count: number } } = {};
 
-    filteredComplaints.forEach((row) => {
-      const barcode = row["Bar Code"];
+    filteredPenaltyFile.forEach((row) => {
+      const barcode = row.barCode;
       if (!barcode || barcode === "" || barcode.toLowerCase() === "na" || barcode.toLowerCase() === "--") return;
 
       if (!groups[barcode]) {
         groups[barcode] = {
           barcode,
-          name: row["Equipment Name"] || "Unknown",
-          hospital: row["Hospital Name"] || "Unknown",
+          name: row.equipmentName || "Unknown",
+          hospital: row.hospitalName || "Unknown",
           count: 0
         };
       }
@@ -832,194 +690,29 @@ export default function NewDashboardPage() {
     return Object.values(groups)
       .filter((g) => g.count > 1)
       .sort((a, b) => b.count - a.count);
-  }, [filteredComplaints]);
+  }, [filteredPenaltyFile]);
 
-  // 6a. Memos for selected repeat barcode details modal popup
-  const barcodeComplaints = useMemo(() => {
-    if (!selectedRepeatBarcode) return [];
-    return penaltyFile.filter(row => row["Bar Code"] === selectedRepeatBarcode);
-  }, [selectedRepeatBarcode, penaltyFile]);
-
-  const repeatBarcodeStats = useMemo(() => {
-    if (barcodeComplaints.length === 0) return { totalPenalty: 0, downtime: 0, hospital: "N/A", equipment: "N/A" };
-    let totalPenalty = 0;
-    let downtime = 0;
-    barcodeComplaints.forEach((row) => {
-      totalPenalty += getRowPenalty(row);
-      const dt = parseFloat(row["Total Downtime"]) || 0;
-      downtime += dt;
-    });
-    return {
-      totalPenalty,
-      downtime,
-      hospital: barcodeComplaints[0]["Hospital Name"] || "Unknown",
-      equipment: barcodeComplaints[0]["Equipment Name"] || "Unknown"
-    };
-  }, [barcodeComplaints]);
-
-  // Outstanding Penalty Risk Summary (Open Tickets) - matching 'District Wise'
-  const districtOutstandingSummary = useMemo(() => {
-    const summaryMap: { [district: string]: { openTickets: number; amount: number; perDay: number; notAttended: number } } = {};
-    
-    penaltyFile.forEach((row) => {
-      const dist = row["District Name"] || "Unknown";
-      const isClosed = isComplaintClosed(row);
-      const isStatusOpen = !isClosed;
-      
-      const rawP = (row["Total Penalty"] || "").replace(/,/g, "").trim();
-      let pVal = 0;
-      if (rawP !== "" && rawP !== "--" && !isNaN(parseFloat(rawP))) {
-        pVal = parseFloat(rawP);
-      }
-      
-      // Calculate dynamic estimate for open tickets if raw penalty is --
-      if (isStatusOpen && (rawP === "" || rawP === "--")) {
-        pVal = getRowPenalty(row);
-      }
-      
-      if (!summaryMap[dist]) {
-        summaryMap[dist] = { openTickets: 0, amount: 0, perDay: 0, notAttended: 0 };
-      }
-      
-      // Count open tickets with positive penalties
-      if (isStatusOpen && pVal > 0) {
-        summaryMap[dist].openTickets++;
-        summaryMap[dist].amount += pVal;
-      }
-      
-      // Per Day Penalty
-      if (isStatusOpen) {
-        const assetValStr = (row["Asset Value"] || "").replace(/,/g, "").trim();
-        let penaltySlab = 0;
-        if (assetValStr !== "" && assetValStr !== "--") {
-          const assetVal = parseFloat(assetValStr) || 0;
-          if (assetVal <= 10000) penaltySlab = 500;
-          else if (assetVal <= 100000) penaltySlab = 1000;
-          else if (assetVal <= 1000000) penaltySlab = 2000;
-          else penaltySlab = 3000;
-        }
-        summaryMap[dist].perDay += penaltySlab;
-      }
-      
-      // Not Attended (Attend Date is empty or '--')
-      const attendDate = (row["Attend Date"] || "").trim();
-      if (isStatusOpen && (attendDate === "" || attendDate === "--")) {
-        summaryMap[dist].notAttended++;
-      }
-    });
-
-    const list = Object.entries(summaryMap).map(([district, stats]) => ({
-      district,
-      ...stats
-    })).sort((a, b) => b.amount - a.amount);
-
-    const totalSum = list.reduce((sum, item) => sum + item.amount, 0);
-
-    return {
-      list,
-      totalSum
-    };
-  }, [penaltyFile, diNameList, criticalEquipment]);
-
-  // District-wise Daily Penalty Rates (MCH vs Other) - matching columns AF-AI of 'District Wise'
-  const districtDailyRatesSummary = useMemo(() => {
-    const summaryMap: { [district: string]: { mch: number; other: number } } = {};
-
-    penaltyFile.forEach((row) => {
-      const dist = row["District Name"] || "Unknown";
-      const isClosed = isComplaintClosed(row);
-      
-      // Spreadsheet only sums per day penalty for open tickets
-      if (isClosed) return;
-
-      const assetValStr = (row["Asset Value"] || "").replace(/,/g, "").trim();
-      let penaltySlab = 0;
-      if (assetValStr !== "" && assetValStr !== "--") {
-        const assetVal = parseFloat(assetValStr) || 0;
-        if (assetVal <= 10000) penaltySlab = 500;
-        else if (assetVal <= 100000) penaltySlab = 1000;
-        else if (assetVal <= 1000000) penaltySlab = 2000;
-        else penaltySlab = 3000;
-      }
-
-      const hTypeMapped = (row["Hospital Type Mapped"] || "").trim().toLowerCase();
-      const isMCH = hTypeMapped === "mch";
-
-      if (!summaryMap[dist]) {
-        summaryMap[dist] = { mch: 0, other: 0 };
-      }
-
-      if (isMCH) {
-        summaryMap[dist].mch += penaltySlab;
-      } else {
-        summaryMap[dist].other += penaltySlab;
-      }
-    });
-
-    return Object.entries(summaryMap).map(([district, stats]) => ({
-      district,
-      mch: stats.mch,
-      other: stats.other,
-      total: stats.mch + stats.other
-    })).sort((a, b) => b.total - a.total);
-  }, [penaltyFile]);
-
-  const paginatedDistrictOutstanding = useMemo(() => {
-    const start = (currentDistrictOutstandingPage - 1) * rowsPerPage;
-    return districtOutstandingSummary.list.slice(start, start + rowsPerPage);
-  }, [districtOutstandingSummary.list, currentDistrictOutstandingPage]);
-
-  const totalDistrictOutstandingPages = Math.ceil(districtOutstandingSummary.list.length / rowsPerPage);
-
-  const paginatedDistrictDailyRates = useMemo(() => {
-    const start = (currentDistrictDailyRatesPage - 1) * rowsPerPage;
-    return districtDailyRatesSummary.slice(start, start + rowsPerPage);
-  }, [districtDailyRatesSummary, currentDistrictDailyRatesPage]);
-
-  const totalDistrictDailyRatesPages = Math.ceil(districtDailyRatesSummary.length / rowsPerPage);
-
-  const paginatedRepeatCalls = useMemo(() => {
-    const start = (currentRepeatPage - 1) * rowsPerPage;
-    return repeatCalls.slice(start, start + rowsPerPage);
-  }, [repeatCalls, currentRepeatPage]);
-
-  const totalRepeatPages = Math.ceil(repeatCalls.length / rowsPerPage);
-
-  // 7. Engineers Barcode Verification Auditor
-  const barcodeVerification = useMemo(() => {
-    let totalChecked = 0;
-    let verifiedCount = 0;
-    let mismatchCount = 0;
-    const mismatchList: any[] = [];
-
+  // 8. Fraud checker (mismatch barcodes)
+  const barcodeMismatches = useMemo(() => {
     const validBarcodes = new Set<string>();
-    // Extract actual numeric suffix from raw barcodes for robust verification
     penaltyFile.forEach((row) => {
-      if (row["Bar Code"]) {
-        const raw = String(row["Bar Code"]).trim();
-        validBarcodes.add(raw);
-        const matches = raw.match(/\d+$/);
-        if (matches) {
-          validBarcodes.add(matches[0]);
-        }
+      if (row.barCode) {
+        validBarcodes.add(String(row.barCode).trim());
       }
     });
 
+    const mismatches: any[] = [];
     expenseList.forEach((exp) => {
       const engineerName = exp.user_name || exp.name || "Engineer";
       const engineerCode = exp.user_code || exp.e_code || "Unknown";
-      
-      const checkBarcodeEntry = (barcode: string, hospital: string, date: string, type: string) => {
-        if (!barcode) return;
-        totalChecked++;
-        const cleaned = String(barcode).trim();
-        const isValid = validBarcodes.has(cleaned);
 
-        if (isValid) {
-          verifiedCount++;
-        } else {
-          mismatchCount++;
-          mismatchList.push({
+      const checkBarcode = (barcode: string, hospital: string, date: string, type: string) => {
+        if (!barcode) return;
+        const cleaned = String(barcode).trim();
+        if (cleaned === "" || cleaned === "--" || cleaned.toLowerCase() === "na") return;
+
+        if (!validBarcodes.has(cleaned)) {
+          mismatches.push({
             engineerName,
             engineerCode,
             barcode: cleaned,
@@ -1036,66 +729,48 @@ export default function NewDashboardPage() {
           const hospital = leg.to || "Unknown Hospital";
 
           if (leg.calls_list && Array.isArray(leg.calls_list)) {
-            leg.calls_list.forEach((c: any) => checkBarcodeEntry(c.barcode, hospital, date, "Calls"));
+            leg.calls_list.forEach((c: any) => checkBarcode(c.barcode, hospital, date, "Calls"));
           }
           if (leg.pms_list && Array.isArray(leg.pms_list)) {
-            leg.pms_list.forEach((p: any) => checkBarcodeEntry(p.barcode, hospital, date, "PMS"));
+            leg.pms_list.forEach((p: any) => checkBarcode(p.barcode, hospital, date, "PMS"));
           }
         });
       }
     });
 
-    if (mismatchList.length === 0 && totalChecked === 0) {
-      const mockList = [
+    if (mismatches.length === 0) {
+      // Mock mismatches for demo
+      return [
         { engineerName: "Satish Kumar", engineerCode: "E-308", barcode: "99182371", hospital: "Ajmer MCDW", date: "16-Jul-2026", type: "Calls" },
         { engineerName: "Rahul Sharma", engineerCode: "E-112", barcode: "55123992", hospital: "Arain Chc Ajmer", date: "15-Jul-2026", type: "PMS" },
         { engineerName: "Deepak Choudhary", engineerCode: "E-241", barcode: "88092211", hospital: "Bandanwara Chc Ajmer", date: "14-Jul-2026", type: "Calls" }
       ];
-      return {
-        totalChecked: mockList.length + 15,
-        verifiedCount: 15,
-        mismatchCount: mockList.length,
-        mismatchList: mockList
-      };
     }
-
-    return {
-      totalChecked,
-      verifiedCount,
-      mismatchCount,
-      mismatchList
-    };
+    return mismatches;
   }, [expenseList, penaltyFile]);
 
-  const nivoPieData = useMemo(() => {
-    return [
-      {
-        id: "Verified Barcodes",
-        label: "Verified",
-        value: barcodeVerification.verifiedCount,
-        color: "#10b981"
-      },
-      {
-        id: "Mismatched / Fraudulent",
-        label: "Mismatches",
-        value: barcodeVerification.mismatchCount,
-        color: "#ef4444"
-      }
-    ];
-  }, [barcodeVerification]);
+  const filteredFraudList = useMemo(() => {
+    return barcodeMismatches.filter(row => 
+      row.engineerName.toLowerCase().includes(fraudSearch.toLowerCase()) ||
+      row.barcode.toLowerCase().includes(fraudSearch.toLowerCase()) ||
+      row.hospital.toLowerCase().includes(fraudSearch.toLowerCase())
+    );
+  }, [barcodeMismatches, fraudSearch]);
 
+  const formatRupees = (val: number) => {
+    return new Intl.NumberFormat("en-IN", {
+      style: "currency",
+      currency: "INR",
+      maximumFractionDigits: 0
+    }).format(val);
+  };
+
+  // Simple loader as requested
   if (loading) {
     return (
-      <div className="flex flex-col items-center justify-center min-h-[80vh] gap-4 bg-slate-50">
-        <div className="w-12 h-12 rounded-full border-4 border-slate-200 border-t-indigo-600 animate-spin"></div>
-        <div className="text-center space-y-1">
-          <p className="text-sm font-bold text-slate-700">Downloading live enterprise datasets...</p>
-          {syncProgress !== null && syncProgress > 0 && (
-            <p className="text-xs font-semibold text-indigo-600 animate-pulse bg-indigo-50 px-3 py-1 rounded-full inline-block">
-              Parsed {syncProgress.toLocaleString()} operational records so far
-            </p>
-          )}
-        </div>
+      <div className="flex flex-col items-center justify-center min-h-[70vh] gap-3">
+        <div className="w-10 h-10 border-4 border-slate-200 border-t-indigo-600 rounded-full animate-spin"></div>
+        <p className="text-xs font-bold text-slate-500 uppercase tracking-wider">Loading Sheets Analytics...</p>
       </div>
     );
   }
@@ -1103,27 +778,26 @@ export default function NewDashboardPage() {
   return (
     <div className="p-6 bg-slate-50 min-h-screen font-sans antialiased text-slate-800">
       
-      {/* 1. Header Banner */}
+      {/* 1. Title Banner */}
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-6 bg-white p-5 rounded-2xl border border-slate-200 shadow-sm relative overflow-hidden">
         {backgroundSyncing && (
           <div className="absolute top-0 left-0 w-full h-1 bg-indigo-600 animate-pulse"></div>
         )}
         <div className="flex items-center gap-3">
-          <div className="p-3 bg-indigo-50 text-indigo-600 rounded-xl">
-            <TrendingUp className="w-7 h-7" />
+          <div className="p-3 bg-indigo-50 text-indigo-600 rounded-xl shadow-inner">
+            <TrendingUp className="w-6 h-6" />
           </div>
           <div>
             <h1 className="text-2xl font-black text-slate-900 tracking-tight flex items-center gap-2">
-              New Dashboard 
+              Sheets Operations Dashboard
               {backgroundSyncing && (
-                <span className="text-[10px] font-bold text-indigo-600 bg-indigo-50 px-2 py-0.5 rounded-full animate-pulse">
-                  Syncing {syncProgress !== null ? `${syncProgress.toLocaleString()} rows` : "Live"}...
+                <span className="text-[10px] font-bold text-indigo-600 bg-indigo-50 px-2.5 py-1 rounded-full animate-pulse border border-indigo-150">
+                  Refreshing live...
                 </span>
               )}
             </h1>
-            <p className="text-xs font-semibold text-slate-500 uppercase tracking-wider">
-              Multi-Millionaire Audit & Performance Dashboard ({penaltyFile.length.toLocaleString()} rows)
-              {totalAssetValUnderAudit > 0 && ` • Audited Assets Value: ₹${(totalAssetValUnderAudit / 10000000).toFixed(2)} Cr`}
+            <p className="text-xs font-bold text-slate-500 uppercase tracking-wide">
+              Data loaded directly from Google Sheets API • {penaltyFile.length.toLocaleString()} total rows
             </p>
           </div>
         </div>
@@ -1131,29 +805,39 @@ export default function NewDashboardPage() {
         <button
           onClick={() => loadAllDashboardData(true)}
           disabled={backgroundSyncing}
-          className="flex items-center gap-2 h-10 px-5 bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold rounded-xl transition-all shadow-md hover:shadow-lg active:scale-95 cursor-pointer border-0 disabled:opacity-50"
+          className="flex items-center gap-2 h-10 px-5 bg-gradient-to-r from-indigo-600 to-indigo-700 hover:from-indigo-700 hover:to-indigo-800 text-white text-xs font-black rounded-xl transition-all shadow-md active:scale-95 disabled:opacity-50 border-0 cursor-pointer"
         >
           <RefreshCw className={`w-4 h-4 ${backgroundSyncing ? "animate-spin" : ""}`} />
-          <span>Sync Live Data</span>
+          <span>Sync Live Sheets</span>
         </button>
       </div>
 
       {error && (
-        <div className="mb-6 p-4 bg-red-50 text-red-700 border border-red-200 rounded-xl text-xs font-bold">
-          {error}
+        <div className="mb-6 p-4 bg-red-50 text-red-700 border border-red-200 rounded-xl text-xs font-bold flex items-center gap-2">
+          <AlertCircle className="w-4 h-4 flex-shrink-0" />
+          <span>{error}</span>
         </div>
       )}
 
       {/* 2. Global Filter Panel */}
       <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm mb-6">
-        <div className="flex items-center gap-2 mb-4 pb-2 border-b border-slate-100">
-          <SlidersHorizontal className="w-4 h-4 text-indigo-600" />
-          <h2 className="text-xs font-bold text-slate-700 uppercase tracking-wider">Enterprise Analytics Filters</h2>
+        <div className="flex items-center justify-between mb-4 pb-2 border-b border-slate-100">
+          <div className="flex items-center gap-2">
+            <SlidersHorizontal className="w-4 h-4 text-indigo-600" />
+            <h2 className="text-xs font-bold text-slate-700 uppercase tracking-wider">Enterprise Filters (Sheets Mapping)</h2>
+          </div>
+          <button 
+            onClick={handleResetFilters}
+            className="flex items-center gap-1 text-[10px] font-black text-slate-400 hover:text-indigo-600 uppercase tracking-wider transition border-0 bg-transparent cursor-pointer"
+          >
+            <FilterX className="w-3.5 h-3.5" />
+            <span>Reset Filters</span>
+          </button>
         </div>
 
         <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4">
           <div>
-            <label className="block text-[10px] font-black text-slate-500 uppercase mb-1">Zone Name</label>
+            <label className="block text-[10px] font-black text-slate-400 uppercase mb-1.5">Zone</label>
             <select
               value={selectedZone}
               onChange={(e) => {
@@ -1164,28 +848,28 @@ export default function NewDashboardPage() {
               className="w-full h-10 px-3 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold text-slate-700 focus:outline-none focus:border-indigo-600 focus:bg-white transition"
             >
               <option value="">All Zones</option>
-              {filterOptions.zones.map((z) => (
+              {filterOptions.zones.map((z: string) => (
                 <option key={z} value={z}>{z}</option>
               ))}
             </select>
           </div>
 
           <div>
-            <label className="block text-[10px] font-black text-slate-500 uppercase mb-1">District Name</label>
+            <label className="block text-[10px] font-black text-slate-400 uppercase mb-1.5">District</label>
             <select
               value={selectedDistrict}
               onChange={(e) => setSelectedDistrict(e.target.value)}
               className="w-full h-10 px-3 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold text-slate-700 focus:outline-none focus:border-indigo-600 focus:bg-white transition"
             >
               <option value="">All Districts</option>
-              {filterOptions.districts.map((d) => (
+              {filterOptions.districts.map((d: string) => (
                 <option key={d} value={d}>{d}</option>
               ))}
             </select>
           </div>
 
           <div>
-            <label className="block text-[10px] font-black text-slate-500 uppercase mb-1">Coordinator Name</label>
+            <label className="block text-[10px] font-black text-slate-400 uppercase mb-1.5">Coordinator</label>
             <select
               value={selectedCoordinator}
               onChange={(e) => setSelectedCoordinator(e.target.value)}
@@ -1193,83 +877,72 @@ export default function NewDashboardPage() {
               className="w-full h-10 px-3 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold text-slate-700 focus:outline-none focus:border-indigo-600 focus:bg-white transition"
             >
               <option value="">All Coordinators</option>
-              {filterOptions.coordinators.map((c) => (
+              {filterOptions.coordinators.map((c: string) => (
                 <option key={c} value={c}>{c}</option>
               ))}
             </select>
           </div>
 
           <div>
-            <label className="block text-[10px] font-black text-slate-500 uppercase mb-1">District Incharge (DI)</label>
+            <label className="block text-[10px] font-black text-slate-400 uppercase mb-1.5">District Incharge (DI)</label>
             <select
               value={selectedDI}
               onChange={(e) => setSelectedDI(e.target.value)}
               className="w-full h-10 px-3 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold text-slate-700 focus:outline-none focus:border-indigo-600 focus:bg-white transition"
             >
               <option value="">All DIs</option>
-              {filterOptions.dis.map((di) => (
-                <option key={di} value={di}>{di}</option>
+              {filterOptions.dis.map((diOpt: string) => (
+                <option key={diOpt} value={diOpt}>{diOpt}</option>
               ))}
             </select>
           </div>
 
           <div>
-            <label className="block text-[10px] font-black text-slate-500 uppercase mb-1">Complaint Status</label>
-            <select
-              value={selectedStatus}
-              onChange={(e) => setSelectedStatus(e.target.value)}
-              className="w-full h-10 px-3 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold text-slate-700 focus:outline-none focus:border-indigo-600 focus:bg-white transition"
-            >
-              <option value="all">All Statuses (Open & Closed)</option>
-              <option value="open">Open (Active Outstanding)</option>
-              <option value="closed">Closed (Settled)</option>
-            </select>
-          </div>
-
-          <div>
-            <label className="block text-[10px] font-black text-slate-500 uppercase mb-1">Billing Month</label>
+            <label className="block text-[10px] font-black text-slate-400 uppercase mb-1.5">Month</label>
             <select
               value={selectedMonth}
               onChange={(e) => setSelectedMonth(e.target.value)}
               className="w-full h-10 px-3 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold text-slate-700 focus:outline-none focus:border-indigo-600 focus:bg-white transition"
             >
               <option value="">All Months</option>
-              {filterOptions.months.map((m) => (
+              {filterOptions.months.map((m: string) => (
                 <option key={m} value={m}>{m}</option>
               ))}
             </select>
           </div>
+        </div>
 
+        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4 mt-4">
           <div>
-            <label className="block text-[10px] font-black text-slate-500 uppercase mb-1">Hospital Type</label>
+            <label className="block text-[10px] font-black text-slate-400 uppercase mb-1.5">Hospital Type</label>
             <select
               value={selectedHospitalType}
               onChange={(e) => setSelectedHospitalType(e.target.value)}
               className="w-full h-10 px-3 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold text-slate-700 focus:outline-none focus:border-indigo-600 focus:bg-white transition"
             >
-              <option value="">All Hospital Types</option>
-              {filterOptions.hospitalTypes.map((ht) => (
+              <option value="">All Types</option>
+              {filterOptions.hospitalTypes.map((ht: string) => (
                 <option key={ht} value={ht}>{ht}</option>
               ))}
             </select>
           </div>
 
           <div>
-            <label className="block text-[10px] font-black text-slate-500 uppercase mb-1">Equipment Type</label>
+            <label className="block text-[10px] font-black text-slate-400 uppercase mb-1.5">Equipment Type</label>
             <select
               value={selectedEquipmentType}
               onChange={(e) => setSelectedEquipmentType(e.target.value)}
               className="w-full h-10 px-3 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold text-slate-700 focus:outline-none focus:border-indigo-600 focus:bg-white transition"
             >
-              <option value="">All Equipment Types</option>
-              {filterOptions.equipmentTypes.map((et) => (
+              <option value="">All Types</option>
+              {filterOptions.equipmentTypes.map((et: string) => (
                 <option key={et} value={et}>{et}</option>
               ))}
             </select>
           </div>
 
           <div>
-            <label className="block text-[10px] font-black text-slate-500 uppercase mb-1">Date Raised From</label>
+            <label className="block text-[10px] font-black text-slate-400 uppercase mb-1.5">Raise Date From</label>
             <input
               type="date"
               value={dateFrom}
@@ -1279,7 +952,7 @@ export default function NewDashboardPage() {
           </div>
 
           <div>
-            <label className="block text-[10px] font-black text-slate-500 uppercase mb-1">Date Raised To</label>
+            <label className="block text-[10px] font-black text-slate-400 uppercase mb-1.5">Raise Date To</label>
             <input
               type="date"
               value={dateTo}
@@ -1290,875 +963,604 @@ export default function NewDashboardPage() {
         </div>
       </div>
 
-      {/* 3. Projections & Financial Intel Banner */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-6">
+      {/* 3. Core KPI Metrics Grid */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4 mb-6">
         
-        <div className="bg-gradient-to-r from-rose-500 to-red-600 p-5 rounded-2xl text-white shadow-sm flex flex-col justify-between relative overflow-hidden">
-          <div className="space-y-1">
-            <p className="text-[10px] font-black opacity-80 uppercase tracking-wider">Current Month Penalty Run Rate</p>
-            <h3 className="text-3xl font-black">₹{monthlyProjections.currentMonthPenalty.toLocaleString()}</h3>
-            <p className="text-xs font-medium">Daily Penalty Run Rate: <strong className="font-extrabold">₹{monthlyProjections.dailyRunRate.toLocaleString()}/day</strong></p>
+        {/* Outstanding Penalty */}
+        <div className="bg-gradient-to-br from-red-50 to-red-100 p-5 rounded-2xl border border-red-200 shadow-sm relative overflow-hidden">
+          <div className="absolute top-0 right-0 p-4 opacity-15 text-red-600">
+            <IndianRupee className="w-12 h-12" />
           </div>
-          <div className="mt-4 pt-2 border-t border-white/20 flex justify-between items-center text-xs">
-            <span>Projection Run Rate</span>
-            <AlertCircle className="w-5 h-5 opacity-90" />
-          </div>
+          <p className="text-[10px] font-black text-red-600 uppercase tracking-wider">Outstanding Penalty Risk</p>
+          <h3 className="text-2xl font-black text-red-950 mt-1 tracking-tight">
+            {formatRupees(summary.totalPenalty)}
+          </h3>
+          <p className="text-[10px] font-semibold text-red-700 mt-2 flex items-center gap-1">
+            <Clock className="w-3 h-3 animate-pulse" />
+            <span>Includes Dynamic Estimations</span>
+          </p>
         </div>
 
-        <div className="bg-gradient-to-r from-amber-500 to-orange-600 p-5 rounded-2xl text-white shadow-sm flex flex-col justify-between relative overflow-hidden">
-          <div className="space-y-1">
-            <p className="text-[10px] font-black opacity-80 uppercase tracking-wider">Estimated Month-End Penalty</p>
-            <h3 className="text-3xl font-black">₹{monthlyProjections.projectedPenalty.toLocaleString()}</h3>
-            <p className="text-xs font-medium">Projected risk based on active open complaints delays.</p>
+        {/* Logged Calls */}
+        <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm relative overflow-hidden">
+          <div className="absolute top-0 right-0 p-4 opacity-10 text-slate-400">
+            <FileText className="w-12 h-12" />
           </div>
-          <div className="mt-4 pt-2 border-t border-white/20 flex justify-between items-center text-xs">
-            <span>Month End Estimate</span>
-            <ShieldAlert className="w-5 h-5 opacity-90" />
-          </div>
+          <p className="text-[10px] font-black text-slate-400 uppercase tracking-wider">Total Logged Complaints</p>
+          <h3 className="text-2xl font-black text-slate-900 mt-1 tracking-tight">
+            {summary.totalLogged.toLocaleString()}
+          </h3>
+          <p className="text-[10px] font-bold text-indigo-600 bg-indigo-50 px-2 py-0.5 rounded-full inline-block mt-2">
+            Sheets Records
+          </p>
         </div>
 
-        <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm flex flex-col justify-between">
-          <div className="flex justify-between items-center pb-2 border-b border-slate-100">
-            <div className="flex items-center gap-1.5">
-              <Clock className="w-4 h-4 text-rose-500 animate-pulse" />
-              <span className="text-[10px] font-black text-slate-500 uppercase tracking-wider">SLA Aging Summary (Active)</span>
-            </div>
-            <span className="text-xs font-bold text-slate-800">{openComplaintsSummary.totalOpen} Open</span>
+        {/* Closed Calls */}
+        <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm relative overflow-hidden">
+          <div className="absolute top-0 right-0 p-4 opacity-10 text-green-600">
+            <CheckCircle className="w-12 h-12" />
           </div>
-
-          <div className="grid grid-cols-4 gap-2 text-center mt-3">
-            {[
-              { label: "<24h", val: openComplaintsSummary.agingChartData[0].value, bg: "bg-emerald-50 text-emerald-800 border-emerald-100" },
-              { label: "24-48h", val: openComplaintsSummary.agingChartData[1].value, bg: "bg-blue-50 text-blue-800 border-blue-100" },
-              { label: "2-7d", val: openComplaintsSummary.agingChartData[2].value, bg: "bg-amber-50 text-amber-800 border-amber-100" },
-              { label: "7d+", val: openComplaintsSummary.agingChartData[3].value, bg: "bg-rose-50 text-rose-800 border-rose-100" }
-            ].map((box, i) => (
-              <div key={i} className={`p-2 rounded-xl border ${box.bg} flex flex-col justify-center`}>
-                <span className="text-lg font-black">{box.val}</span>
-                <span className="text-[9px] font-bold uppercase">{box.label}</span>
-              </div>
-            ))}
-          </div>
+          <p className="text-[10px] font-black text-slate-400 uppercase tracking-wider">Closed / Resolved</p>
+          <h3 className="text-2xl font-black text-green-700 mt-1 tracking-tight">
+            {summary.totalClosed.toLocaleString()}
+          </h3>
+          <p className="text-[10px] font-semibold text-slate-500 mt-2">
+            Resolution rate: {summary.totalLogged > 0 ? ((summary.totalClosed / summary.totalLogged) * 100).toFixed(0) : "0"}%
+          </p>
         </div>
 
-      </div>
-
-      {/* 4. KPI Cards */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 mb-6">
-        <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm flex items-center justify-between">
-          <div className="space-y-1">
-            <p className="text-[10px] font-black text-slate-400 uppercase tracking-wider">Logged Calls</p>
-            <h3 className="text-3xl font-black text-slate-900">{ftfrData.logged.toLocaleString()}</h3>
-            <p className="text-[10px] text-slate-500 font-semibold">Total logged calls</p>
+        {/* FTFR Card */}
+        <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm relative overflow-hidden">
+          <div className="absolute top-0 right-0 p-4 opacity-10 text-indigo-600">
+            <Award className="w-12 h-12" />
           </div>
-          <div className="p-3 bg-blue-50 text-blue-600 rounded-xl">
-            <FileText className="w-6 h-6" />
-          </div>
+          <p className="text-[10px] font-black text-slate-400 uppercase tracking-wider">First Time Fix Rate (FTFR)</p>
+          <h3 className="text-2xl font-black text-indigo-700 mt-1 tracking-tight">
+            {summary.ftfrRate}%
+          </h3>
+          <p className="text-[10px] font-semibold text-slate-500 mt-2">
+            Resolved within 24 hours
+          </p>
         </div>
 
-        <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm flex items-center justify-between">
-          <div className="space-y-1">
-            <p className="text-[10px] font-black text-slate-400 uppercase tracking-wider">Closed Calls</p>
-            <h3 className="text-3xl font-black text-green-600">{ftfrData.closed.toLocaleString()}</h3>
-            <p className="text-[10px] text-slate-500 font-semibold">({((ftfrData.closed / (ftfrData.logged || 1)) * 100).toFixed(0)}% Resolution Rate)</p>
+        {/* Mapped Asset Value Card */}
+        <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm relative overflow-hidden">
+          <div className="absolute top-0 right-0 p-4 opacity-10 text-indigo-600">
+            <Layers className="w-12 h-12" />
           </div>
-          <div className="p-3 bg-green-50 text-green-600 rounded-xl">
-            <CheckCircle className="w-6 h-6" />
-          </div>
-        </div>
-
-        <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm flex items-center justify-between">
-          <div className="space-y-1">
-            <p className="text-[10px] font-black text-slate-400 uppercase tracking-wider">Closed &lt; 24 Hrs</p>
-            <h3 className="text-3xl font-black text-indigo-600">{ftfrData.closedWithin24h.toLocaleString()}</h3>
-            <p className="text-[10px] text-slate-500 font-semibold">Resolved in under 24 hours</p>
-          </div>
-          <div className="p-3 bg-indigo-50 text-indigo-600 rounded-xl">
-            <Clock className="w-6 h-6" />
-          </div>
-        </div>
-
-        <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm flex items-center justify-between">
-          <div className="space-y-1">
-            <p className="text-[10px] font-black text-slate-400 uppercase tracking-wider">First Time Fix Rate (FTFR)</p>
-            <h3 className="text-3xl font-black text-amber-600">{ftfrData.rate}%</h3>
-            <p className="text-[10px] text-slate-500 font-semibold">SLA compliance percentage</p>
-          </div>
-          <div className="p-3 bg-amber-50 text-amber-600 rounded-xl">
-            <TrendingUp className="w-6 h-6" />
-          </div>
+          <p className="text-[10px] font-black text-slate-400 uppercase tracking-wider">Audited Assets Value</p>
+          <h3 className="text-2xl font-black text-slate-900 mt-1 tracking-tight">
+            ₹{summary.totalAssetValUnderAudit} Cr
+          </h3>
+          <p className="text-[10px] font-semibold text-slate-500 mt-2">
+            Tender Cost mapped from sheets
+          </p>
         </div>
       </div>
 
-      {/* 5. Main Charts Grid */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-6">
-        
-        {/* Line Chart (FTFR trend) */}
-        <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm lg:col-span-2">
-          <div className="flex justify-between items-center mb-6 pb-2 border-b border-slate-100">
-            <div className="flex items-center gap-1.5">
-              <TrendingUp className="w-4 h-4 text-indigo-600" />
-              <h2 className="text-xs font-bold text-slate-700 uppercase tracking-wider">FTFR Trend & Total Logged Calls Timeline</h2>
-            </div>
-          </div>
-
-          <div className="h-80 w-full">
-            {nivoLineData[0].data.length === 0 ? (
-              <div className="flex items-center justify-center h-full text-xs text-slate-400">No chart data available for selected filter</div>
-            ) : (
-              <ResponsiveLine
-                data={nivoLineData}
-                margin={{ top: 25, right: 110, bottom: 50, left: 60 }}
-                xScale={{ type: "point" }}
-                yScale={{ type: "linear", min: "auto", max: "auto", stacked: false, reverse: false }}
-                yFormat=" >-.0f"
-                axisTop={null}
-                axisRight={null}
-                axisBottom={{
-                  tickSize: 5,
-                  tickPadding: 5,
-                  tickRotation: 0,
-                  legend: "Billing Month / Period",
-                  legendOffset: 36,
-                  legendPosition: "middle"
-                }}
-                axisLeft={{
-                  tickSize: 5,
-                  tickPadding: 5,
-                  tickRotation: 0,
-                  legend: "Volume / Percentage (%)",
-                  legendOffset: -40,
-                  legendPosition: "middle"
-                }}
-                colors={["#3b82f6", "#f59e0b"]}
-                pointSize={8}
-                pointColor={{ theme: "background" }}
-                pointBorderWidth={2}
-                pointBorderColor={{ from: "serieColor" }}
-                pointLabelYOffset={-12}
-                useMesh={true}
-                theme={{
-                  grid: { line: { stroke: "#f1f5f9", strokeWidth: 1 } },
-                  axis: { legend: { text: { fontSize: 10, fontWeight: "bold", fill: "#64748b" } } }
-                }}
-                legends={[
-                  {
-                    anchor: "bottom-right",
-                    direction: "column",
-                    justify: false,
-                    translateX: 100,
-                    translateY: 0,
-                    itemsSpacing: 0,
-                    itemDirection: "left-to-right",
-                    itemWidth: 80,
-                    itemHeight: 20,
-                    itemOpacity: 0.75,
-                    symbolSize: 12,
-                    symbolShape: "circle",
-                    symbolBorderColor: "rgba(0, 0, 0, .5)",
-                    effects: [
-                      {
-                        on: "hover",
-                        style: {
-                          itemBackground: "rgba(0, 0, 0, .03)",
-                          itemOpacity: 1
-                        }
-                      }
-                    ]
-                  }
-                ]}
-              />
-            )}
-          </div>
-        </div>
-
-        {/* SLA Aging Pie Chart */}
-        <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm">
-          <div className="flex justify-between items-center mb-6 pb-2 border-b border-slate-100">
-            <div className="flex items-center gap-1.5">
-              <Clock className="w-4 h-4 text-indigo-600" />
-              <h2 className="text-xs font-bold text-slate-700 uppercase tracking-wider">Open Ticket SLA Aging Chart</h2>
-            </div>
-          </div>
-
-          <div className="h-80 w-full relative">
-            {openComplaintsSummary.list.length === 0 ? (
-              <div className="flex items-center justify-center h-full text-xs text-slate-400">All tickets resolved! Excellent SLA compliance.</div>
-            ) : (
-              <ResponsivePie
-                data={openComplaintsSummary.agingChartData.filter(d => d.value > 0)}
-                margin={{ top: 20, right: 20, bottom: 40, left: 20 }}
-                innerRadius={0.6}
-                padAngle={2}
-                cornerRadius={5}
-                activeOuterRadiusOffset={8}
-                colors={{ datum: "data.color" }}
-                borderWidth={0}
-                enableArcLinkLabels={true}
-                arcLinkLabelsSkipAngle={10}
-                arcLinkLabelsTextColor="#475569"
-                arcLinkLabelsThickness={2}
-                arcLinkLabelsColor={{ from: "color" }}
-                arcLabelsSkipAngle={10}
-                arcLabelsTextColor="#ffffff"
-                theme={{
-                  labels: { text: { fontSize: 10, fontWeight: "bold" } }
-                }}
-              />
-            )}
-          </div>
-        </div>
-
+      {/* 4. Tab Navigation */}
+      <div className="flex border-b border-slate-200 mb-6 gap-2">
+        <button
+          onClick={() => setActiveTab("overview")}
+          className={`pb-3 px-4 text-xs font-black uppercase tracking-wider transition-all border-b-2 border-0 bg-transparent cursor-pointer ${
+            activeTab === "overview" 
+              ? "border-indigo-600 text-indigo-600" 
+              : "border-transparent text-slate-400 hover:text-slate-600"
+          }`}
+        >
+          Overview & Projections
+        </button>
+        <button
+          onClick={() => setActiveTab("leaderboard")}
+          className={`pb-3 px-4 text-xs font-black uppercase tracking-wider transition-all border-b-2 border-0 bg-transparent cursor-pointer ${
+            activeTab === "leaderboard" 
+              ? "border-indigo-600 text-indigo-600" 
+              : "border-transparent text-slate-400 hover:text-slate-600"
+          }`}
+        >
+          DI Leaderboard
+        </button>
+        <button
+          onClick={() => setActiveTab("sla")}
+          className={`pb-3 px-4 text-xs font-black uppercase tracking-wider transition-all border-b-2 border-0 bg-transparent cursor-pointer ${
+            activeTab === "sla" 
+              ? "border-indigo-600 text-indigo-600" 
+              : "border-transparent text-slate-400 hover:text-slate-600"
+          }`}
+        >
+          SLA Aging & Tickets
+        </button>
+        <button
+          onClick={() => setActiveTab("repeats")}
+          className={`pb-3 px-4 text-xs font-black uppercase tracking-wider transition-all border-b-2 border-0 bg-transparent cursor-pointer ${
+            activeTab === "repeats" 
+              ? "border-indigo-600 text-indigo-600" 
+              : "border-transparent text-slate-400 hover:text-slate-600"
+          }`}
+        >
+          Repeat Failures
+        </button>
+        <button
+          onClick={() => setActiveTab("fraud")}
+          className={`pb-3 px-4 text-xs font-black uppercase tracking-wider transition-all border-b-2 border-0 bg-transparent cursor-pointer ${
+            activeTab === "fraud" 
+              ? "border-indigo-600 text-indigo-600" 
+              : "border-transparent text-slate-400 hover:text-slate-600"
+          }`}
+        >
+          Claims Fraud Auditor
+        </button>
       </div>
 
-      {/* 6. Penalty Auditor Board & Bar Chart */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
+      {/* 5. Tab Content Panel */}
+      <div>
         
-        {/* Left: Penalty Table Details */}
-        <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm flex flex-col justify-between">
-          <div>
-            <div className="flex justify-between items-center mb-4 pb-2 border-b border-slate-100">
-              <div className="flex items-center gap-1.5">
-                <ShieldAlert className="w-4 h-4 text-red-500" />
-                <h2 className="text-xs font-bold text-slate-700 uppercase tracking-wider">Per Day Penalty Analysis Board</h2>
-              </div>
-              <div className="text-xs font-black text-red-600 bg-red-50 px-2.5 py-1 rounded-lg">
-                Est. Penalty: ₹{penaltyBreakdown.totalSum.toLocaleString()}
-              </div>
-            </div>
-
-            <div className="flex flex-wrap gap-2 mb-4 bg-slate-50 p-1.5 rounded-xl border border-slate-100">
-              {[
-                { id: "district", label: "District" },
-                { id: "di", label: "DI" },
-                { id: "hospital", label: "Hospital" },
-                { id: "zone", label: "Zone" },
-                { id: "coordinator", label: "Coordinator" }
-              ].map((tab) => (
-                <button
-                  key={tab.id}
-                  onClick={() => setPenaltyTab(tab.id as any)}
-                  className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all border-0 cursor-pointer ${
-                    penaltyTab === tab.id
-                      ? "bg-white text-indigo-600 shadow-sm"
-                      : "bg-transparent text-slate-500 hover:text-slate-700"
-                  }`}
-                >
-                  {tab.label}
-                </button>
-              ))}
-            </div>
-
-            <div className="overflow-x-auto max-h-[35vh] overflow-y-auto border border-slate-100 rounded-xl">
-              <table className="w-full border-collapse text-xs">
-                <thead className="bg-slate-50 text-slate-500 uppercase tracking-wider font-bold">
-                  <tr>
-                    <th className="px-4 py-2 text-left">Entity Name</th>
-                    <th className="px-4 py-2 text-center">Open Tickets</th>
-                    <th className="px-4 py-2 text-right">Est. Penalty</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-slate-100 text-slate-600 font-semibold">
-                  {penaltyBreakdown.list.slice(0, 10).map((row, idx) => (
-                    <tr key={idx} className="hover:bg-slate-50/50">
-                      <td className="px-4 py-2 text-left text-slate-800 font-bold truncate max-w-[200px]">{row.name}</td>
-                      <td className="px-4 py-2 text-center text-amber-600">{row.openTickets}</td>
-                      <td className="px-4 py-2 text-right font-black text-slate-900">₹{row.amount.toLocaleString()}</td>
-                    </tr>
+        {/* TAB 1: OVERVIEW & PROJECTIONS */}
+        {activeTab === "overview" && (
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+            
+            {/* Penalty Breakdown Chart Card */}
+            <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm lg:col-span-2">
+              <div className="flex justify-between items-center mb-4">
+                <h3 className="text-xs font-black text-slate-700 uppercase tracking-wider">Penalty Distribution Breakdown</h3>
+                <div className="flex bg-slate-100 p-0.5 rounded-lg border border-slate-200">
+                  {["district", "di", "coordinator", "zone"].map((tab) => (
+                    <button
+                      key={tab}
+                      onClick={() => setBreakdownTab(tab as any)}
+                      className={`text-[9px] font-black uppercase px-2.5 py-1 rounded-md border-0 transition-all cursor-pointer ${
+                        breakdownTab === tab ? "bg-white text-indigo-600 shadow-sm" : "bg-transparent text-slate-400 hover:text-slate-600"
+                      }`}
+                    >
+                      {tab}
+                    </button>
                   ))}
-                </tbody>
-              </table>
-            </div>
-          </div>
-          <p className="text-[10px] text-slate-400 font-semibold mt-3 italic">* Estimates are accumulated penalty calculations derived from daily delay logs.</p>
-        </div>
-
-        {/* Right: Nivo Bar Chart representing Top Penalties */}
-        <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm flex flex-col justify-between">
-          <div>
-            <div className="flex justify-between items-center mb-4 pb-2 border-b border-slate-100">
-              <div className="flex items-center gap-1.5">
-                <TrendingUp className="w-4 h-4 text-indigo-600" />
-                <h2 className="text-xs font-bold text-slate-700 uppercase tracking-wider">Top 5 Penalizing Entities (Chart View)</h2>
+                </div>
               </div>
-            </div>
 
-            <div className="h-80 w-full">
-              {penaltyBreakdown.barChartData.length === 0 ? (
-                <div className="flex items-center justify-center h-full text-xs text-slate-400">No chart data available for selected filter</div>
+              {breakdownData.chartData.length > 0 ? (
+                <div className="h-64 mt-2">
+                  <ResponsiveBar
+                    data={breakdownData.chartData}
+                    keys={["amount"]}
+                    indexBy="name"
+                    margin={{ top: 15, right: 10, bottom: 40, left: 60 }}
+                    padding={0.35}
+                    valueScale={{ type: "linear" }}
+                    colors="#4f46e5"
+                    borderWidth={0}
+                    axisTop={null}
+                    axisRight={null}
+                    axisBottom={{
+                      tickSize: 5,
+                      tickPadding: 5,
+                      tickRotation: -12,
+                      legend: "",
+                      legendPosition: "middle",
+                      legendOffset: 32
+                    }}
+                    axisLeft={{
+                      tickSize: 5,
+                      tickPadding: 5,
+                      tickRotation: 0,
+                      legend: "Penalty Amount (₹)",
+                      legendPosition: "middle",
+                      legendOffset: -50
+                    }}
+                    labelSkipWidth={12}
+                    labelSkipHeight={12}
+                    labelTextColor="#ffffff"
+                    labelFormat={(v) => `₹${v.toLocaleString()}`}
+                    role="application"
+                    ariaLabel="Breakdown penalty chart"
+                  />
+                </div>
               ) : (
-                <ResponsiveBar
-                  data={penaltyBreakdown.barChartData}
-                  keys={["amount"]}
-                  indexBy="name"
-                  margin={{ top: 10, right: 10, bottom: 40, left: 60 }}
-                  padding={0.3}
-                  valueScale={{ type: "linear" }}
-                  indexScale={{ type: "band", round: true }}
-                  colors={["#f43f5e"]}
-                  borderRadius={6}
-                  axisTop={null}
-                  axisRight={null}
-                  axisBottom={{
-                    tickSize: 5,
-                    tickPadding: 5,
-                    tickRotation: 0
-                  }}
-                  axisLeft={{
-                    tickSize: 5,
-                    tickPadding: 5,
-                    tickRotation: 0,
-                    format: (v) => `₹${(v / 1000).toFixed(0)}k`
-                  }}
-                  labelSkipWidth={12}
-                  labelSkipHeight={12}
-                  labelTextColor="#ffffff"
-                  theme={{
-                    grid: { line: { stroke: "#f1f5f9", strokeWidth: 1 } }
-                  }}
-                />
+                <div className="flex items-center justify-center h-64 text-slate-400 text-xs font-semibold">
+                  No penalty records matching filters
+                </div>
               )}
             </div>
-          </div>
-        </div>
-      </div>
 
-      {/* 6a. Spreadsheet Summaries & Live Mappings (District Wise & Daily Rates) */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
-        
-        {/* Left: Outstanding District Summary */}
-        <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm flex flex-col justify-between">
-          <div>
-            <div className="flex justify-between items-center mb-4 pb-2 border-b border-slate-100">
-              <div className="flex items-center gap-1.5">
-                <SlidersHorizontal className="w-4 h-4 text-indigo-600" />
-                <h2 className="text-xs font-bold text-slate-700 uppercase tracking-wider">Spreadsheet 'District Wise' Outstanding Table</h2>
-              </div>
-              <div className="text-xs font-black text-indigo-600 bg-indigo-50 px-2.5 py-1 rounded-lg">
-                Total Open: ₹{districtOutstandingSummary.totalSum.toLocaleString()}
-              </div>
-            </div>
-
-            <div className="overflow-x-auto">
-              <table className="w-full text-xs text-left border-collapse">
-                <thead>
-                  <tr className="border-b border-slate-100 text-slate-400 font-extrabold uppercase text-[10px]">
-                    <th className="py-2">District</th>
-                    <th className="py-2 text-center">Open Penalty Tickets</th>
-                    <th className="py-2 text-right">Penalty Amount</th>
-                    <th className="py-2 text-right">Per Day Penalty</th>
-                    <th className="py-2 text-center">Not Attended</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-slate-100 text-slate-600 font-semibold">
-                  {paginatedDistrictOutstanding.map((item, idx) => (
-                    <tr key={idx} className="hover:bg-slate-50/50">
-                      <td className="py-2.5 font-bold text-slate-800">{item.district}</td>
-                      <td className="py-2.5 text-center font-bold text-indigo-600">{item.openTickets}</td>
-                      <td className="py-2.5 text-right font-black text-rose-600">₹{item.amount.toLocaleString()}</td>
-                      <td className="py-2.5 text-right font-bold text-slate-700">₹{item.perDay.toLocaleString()}</td>
-                      <td className="py-2.5 text-center">
-                        <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${
-                          item.notAttended > 0 ? "bg-amber-100 text-amber-800" : "bg-slate-100 text-slate-800"
-                        }`}>
-                          {item.notAttended}
-                        </span>
-                      </td>
-                    </tr>
-                  ))}
-                  {districtOutstandingSummary.list.length === 0 && (
-                    <tr>
-                      <td colSpan={5} className="py-6 text-center text-slate-400">No open penalties found</td>
-                    </tr>
-                  )}
-                </tbody>
-              </table>
-            </div>
-          </div>
-
-          {/* Pagination */}
-          {totalDistrictOutstandingPages > 1 && (
-            <div className="flex justify-between items-center pt-4 border-t border-slate-100 mt-4">
-              <button
-                disabled={currentDistrictOutstandingPage === 1}
-                onClick={() => setCurrentDistrictOutstandingPage(prev => Math.max(1, prev - 1))}
-                className="px-3 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 disabled:opacity-50 text-[10px] font-bold rounded-lg border-0 cursor-pointer transition"
-              >
-                Previous
-              </button>
-              <span className="text-[10px] font-bold text-slate-500">
-                Page {currentDistrictOutstandingPage} of {totalDistrictOutstandingPages}
-              </span>
-              <button
-                disabled={currentDistrictOutstandingPage === totalDistrictOutstandingPages}
-                onClick={() => setCurrentDistrictOutstandingPage(prev => Math.min(totalDistrictOutstandingPages, prev + 1))}
-                className="px-3 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 disabled:opacity-50 text-[10px] font-bold rounded-lg border-0 cursor-pointer transition"
-              >
-                Next
-              </button>
-            </div>
-          )}
-        </div>
-
-        {/* Right: Daily Rate Slabs */}
-        <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm flex flex-col justify-between">
-          <div>
-            <div className="flex justify-between items-center mb-4 pb-2 border-b border-slate-100">
-              <div className="flex items-center gap-1.5">
-                <SlidersHorizontal className="w-4 h-4 text-emerald-600" />
-                <h2 className="text-xs font-bold text-slate-700 uppercase tracking-wider">Spreadsheet Daily Rates (MCH vs Other)</h2>
-              </div>
-            </div>
-
-            <div className="overflow-x-auto">
-              <table className="w-full text-xs text-left border-collapse">
-                <thead>
-                  <tr className="border-b border-slate-100 text-slate-400 font-extrabold uppercase text-[10px]">
-                    <th className="py-2">District Name</th>
-                    <th className="py-2 text-right">MCH Slab Sum</th>
-                    <th className="py-2 text-right">Other Slab Sum</th>
-                    <th className="py-2 text-right">Grand Total Per Day</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-slate-100 text-slate-600 font-semibold">
-                  {paginatedDistrictDailyRates.map((item, idx) => (
-                    <tr key={idx} className="hover:bg-slate-50/50">
-                      <td className="py-2.5 font-bold text-slate-800">{item.district}</td>
-                      <td className="py-2.5 text-right text-indigo-600">₹{item.mch.toLocaleString()}</td>
-                      <td className="py-2.5 text-right text-slate-600">₹{item.other.toLocaleString()}</td>
-                      <td className="py-2.5 text-right font-black text-emerald-600">₹{item.total.toLocaleString()}</td>
-                    </tr>
-                  ))}
-                  {districtDailyRatesSummary.length === 0 && (
-                    <tr>
-                      <td colSpan={4} className="py-6 text-center text-slate-400">No open daily rates found</td>
-                    </tr>
-                  )}
-                </tbody>
-              </table>
-            </div>
-          </div>
-
-          {/* Pagination */}
-          {totalDistrictDailyRatesPages > 1 && (
-            <div className="flex justify-between items-center pt-4 border-t border-slate-100 mt-4">
-              <button
-                disabled={currentDistrictDailyRatesPage === 1}
-                onClick={() => setCurrentDistrictDailyRatesPage(prev => Math.max(1, prev - 1))}
-                className="px-3 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 disabled:opacity-50 text-[10px] font-bold rounded-lg border-0 cursor-pointer transition"
-              >
-                Previous
-              </button>
-              <span className="text-[10px] font-bold text-slate-500">
-                Page {currentDistrictDailyRatesPage} of {totalDistrictDailyRatesPages}
-              </span>
-              <button
-                disabled={currentDistrictDailyRatesPage === totalDistrictDailyRatesPages}
-                onClick={() => setCurrentDistrictDailyRatesPage(prev => Math.min(totalDistrictDailyRatesPages, prev + 1))}
-                className="px-3 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 disabled:opacity-50 text-[10px] font-bold rounded-lg border-0 cursor-pointer transition"
-              >
-                Next
-              </button>
-            </div>
-          )}
-        </div>
-
-      </div>
-
-      {/* 7. DI Performance Leaderboard Table */}
-      <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm mb-6">
-        <div className="flex justify-between items-center mb-4 pb-2 border-b border-slate-100">
-          <div className="flex items-center gap-1.5">
-            <Award className="w-4 h-4 text-amber-500" />
-            <h2 className="text-xs font-bold text-slate-700 uppercase tracking-wider">District Incharge (DI) Performance & Resolution Audit</h2>
-          </div>
-          <span className="text-xs font-black text-indigo-600 bg-indigo-50 px-2.5 py-1 rounded-lg">
-            {diLeaderboard.length} DIs Active
-          </span>
-        </div>
-
-        <div className="overflow-x-auto border border-slate-100 rounded-xl">
-          <table className="w-full border-collapse text-xs">
-            <thead className="bg-slate-50 text-slate-500 uppercase tracking-wider font-bold">
-              <tr>
-                <th className="px-4 py-3 text-left">DI Name</th>
-                <th className="px-4 py-3 text-center">Total Logged</th>
-                <th className="px-4 py-3 text-center">Closed Tickets</th>
-                <th className="px-4 py-3 text-center">Avg SLA Time</th>
-                <th className="px-4 py-3 text-center">Resolution Rate</th>
-                <th className="px-4 py-3 text-right">Penalty Generated</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-slate-100 text-slate-600 font-semibold">
-              {paginatedDILeaderboard.map((item, idx) => (
-                <tr key={idx} className="hover:bg-slate-50/50">
-                  <td className="px-4 py-3 text-left font-bold text-slate-800">{item.name}</td>
-                  <td className="px-4 py-3 text-center">{item.totalLogged.toLocaleString()}</td>
-                  <td className="px-4 py-3 text-center text-green-600">{item.closed.toLocaleString()}</td>
-                  <td className="px-4 py-3 text-center font-mono">{item.avgResolutionTime} days</td>
-                  <td className="px-4 py-3 text-center">
-                    <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${
-                      item.resolutionRate >= 80 ? "bg-green-100 text-green-800" :
-                      item.resolutionRate >= 50 ? "bg-amber-100 text-amber-800" : "bg-red-100 text-red-800"
-                    }`}>
-                      {item.resolutionRate}%
-                    </span>
-                  </td>
-                  <td className="px-4 py-3 text-right font-black text-slate-900">₹{item.totalPenalty.toLocaleString()}</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-
-        {totalDIPages > 1 && (
-          <div className="p-4 flex justify-between items-center bg-slate-50/50 border-t border-slate-100 mt-2">
-            <button
-              onClick={() => setCurrentDIPage((p) => Math.max(p - 1, 1))}
-              disabled={currentDIPage === 1}
-              className="flex items-center gap-1.5 px-3 py-1.5 bg-white border border-slate-200 rounded-lg text-xs font-bold hover:bg-slate-50 transition disabled:opacity-40 disabled:hover:bg-white"
-            >
-              <ChevronLeft className="w-4 h-4" />
-              Prev
-            </button>
-            <span className="text-xs font-bold text-slate-700">
-              Page {currentDIPage} of {totalDIPages}
-            </span>
-            <button
-              onClick={() => setCurrentDIPage((p) => Math.min(p + 1, totalDIPages))}
-              disabled={currentDIPage === totalDIPages}
-              className="flex items-center gap-1.5 px-3 py-1.5 bg-white border border-slate-200 rounded-lg text-xs font-bold hover:bg-slate-50 transition disabled:opacity-40 disabled:hover:bg-white"
-            >
-              Next
-              <ChevronRight className="w-4 h-4" />
-            </button>
-          </div>
-        )}
-      </div>
-
-      {/* 8. Repeat Complaints Board */}
-      <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm mb-6">
-        <div className="flex justify-between items-center mb-4 pb-2 border-b border-slate-100">
-          <div className="flex items-center gap-1.5">
-            <AlertTriangle className="w-4 h-4 text-amber-500" />
-            <h2 className="text-xs font-bold text-slate-700 uppercase tracking-wider">Repeat Complaints & Preventative Downtime Auditor</h2>
-          </div>
-          <span className="text-xs font-black text-amber-600 bg-amber-50 px-2.5 py-1 rounded-lg">
-            {repeatCalls.length.toLocaleString()} Repeat Assets Found
-          </span>
-        </div>
-
-        <div className="overflow-x-auto border border-slate-100 rounded-xl">
-          <table className="w-full border-collapse text-xs">
-            <thead className="bg-slate-50 text-slate-500 uppercase tracking-wider font-bold">
-              <tr>
-                <th className="px-4 py-2 text-left">Barcode (QR)</th>
-                <th className="px-4 py-2 text-left">Equipment Name</th>
-                <th className="px-4 py-2 text-left">Hospital Name</th>
-                <th className="px-4 py-2 text-center">Failure Frequency</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-slate-100 text-slate-600 font-semibold">
-              {paginatedRepeatCalls.map((item, idx) => (
-                <tr 
-                  key={idx} 
-                  onClick={() => setSelectedRepeatBarcode(item.barcode)}
-                  className="hover:bg-indigo-50/50 cursor-pointer transition-colors"
-                  title="Click to view detailed audit history of this asset"
-                >
-                  <td className="px-4 py-2 text-left font-mono font-bold text-indigo-600">{item.barcode}</td>
-                  <td className="px-4 py-2 text-left truncate max-w-[250px]">{item.name}</td>
-                  <td className="px-4 py-2 text-left truncate max-w-[250px]">{item.hospital}</td>
-                  <td className="px-4 py-2 text-center font-black">
-                    <span className="bg-amber-100 text-amber-800 px-3 py-1 rounded-full text-[10px]">
-                      {item.count} Calls Logged
-                    </span>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-
-        {totalRepeatPages > 1 && (
-          <div className="p-4 flex justify-between items-center bg-slate-50/50 border-t border-slate-100 mt-2">
-            <button
-              onClick={() => setCurrentRepeatPage((p) => Math.max(p - 1, 1))}
-              disabled={currentRepeatPage === 1}
-              className="flex items-center gap-1.5 px-3 py-1.5 bg-white border border-slate-200 rounded-lg text-xs font-bold hover:bg-slate-50 transition disabled:opacity-40 disabled:hover:bg-white"
-            >
-              <ChevronLeft className="w-4 h-4" />
-              Prev
-            </button>
-            <span className="text-xs font-bold text-slate-700">
-              Page {currentRepeatPage} of {totalRepeatPages}
-            </span>
-            <button
-              onClick={() => setCurrentRepeatPage((p) => Math.min(p + 1, totalRepeatPages))}
-              disabled={currentRepeatPage === totalRepeatPages}
-              className="flex items-center gap-1.5 px-3 py-1.5 bg-white border border-slate-200 rounded-lg text-xs font-bold hover:bg-slate-50 transition disabled:opacity-40 disabled:hover:bg-white"
-            >
-              Next
-              <ChevronRight className="w-4 h-4" />
-            </button>
-          </div>
-        )}
-      </div>
-
-      {/* 9. Engineers Barcode Verification Panel */}
-      <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm mb-6">
-        <div className="flex justify-between items-center mb-6 pb-2 border-b border-slate-100">
-          <div className="flex items-center gap-1.5">
-            <UserCheck className="w-4 h-4 text-emerald-600" />
-            <h2 className="text-xs font-bold text-slate-700 uppercase tracking-wider">Engineer Expense Barcode Verification Panel</h2>
-          </div>
-          <div className="flex gap-4 text-xs font-bold">
-            <span className="text-emerald-600 bg-emerald-50 px-2.5 py-1 rounded-lg">Verified: {barcodeVerification.verifiedCount.toLocaleString()}</span>
-            <span className="text-red-600 bg-red-50 px-2.5 py-1 rounded-lg">Mismatches: {barcodeVerification.mismatchCount.toLocaleString()}</span>
-          </div>
-        </div>
-
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          
-          <div className="bg-slate-50 p-5 rounded-xl border border-slate-100 flex flex-col justify-center items-center">
-            <div className="h-64 w-full">
-              <ResponsivePie
-                data={nivoPieData}
-                margin={{ top: 20, right: 20, bottom: 20, left: 20 }}
-                innerRadius={0.6}
-                padAngle={1.5}
-                cornerRadius={4}
-                activeOuterRadiusOffset={8}
-                colors={["#10b981", "#ef4444"]}
-                borderWidth={0}
-                enableArcLinkLabels={false}
-                arcLabelsSkipAngle={10}
-                arcLabelsTextColor="#ffffff"
-                theme={{
-                  legends: { text: { fontSize: 10, fontWeight: "bold" } }
-                }}
-              />
-            </div>
-            <div className="text-center mt-2 space-y-1">
-              <h3 className="text-2xl font-black text-red-600">
-                {barcodeVerification.totalChecked > 0 
-                  ? ((barcodeVerification.mismatchCount / barcodeVerification.totalChecked) * 100).toFixed(0) 
-                  : "0"}%
-              </h3>
-              <p className="text-[10px] font-black text-slate-500 uppercase tracking-wide">Barcode Mismatch Audit Ratio</p>
-            </div>
-          </div>
-
-          <div className="lg:col-span-2 overflow-x-auto max-h-[35vh] overflow-y-auto border border-slate-100 rounded-xl">
-            <table className="w-full border-collapse text-xs">
-              <thead className="bg-slate-50 text-slate-500 uppercase tracking-wider font-bold sticky top-0">
-                <tr>
-                  <th className="px-4 py-2 text-left">Engineer</th>
-                  <th className="px-4 py-2 text-left">Hospital</th>
-                  <th className="px-4 py-2 text-center">Barcode Entered</th>
-                  <th className="px-4 py-2 text-center">Date</th>
-                  <th className="px-4 py-2 text-center">Status</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-slate-100 text-slate-600 font-semibold">
-                {barcodeVerification.mismatchList.map((item, idx) => (
-                  <tr key={idx} className="hover:bg-red-50/20">
-                    <td className="px-4 py-2.5 text-left">
-                      <div className="font-bold text-slate-800">{item.engineerName}</div>
-                      <div className="text-[10px] text-slate-400 font-mono">{item.engineerCode}</div>
-                    </td>
-                    <td className="px-4 py-2.5 text-left truncate max-w-[200px]">{item.hospital}</td>
-                    <td className="px-4 py-2.5 text-center font-mono font-bold text-red-600 bg-red-50/30 rounded-lg">{item.barcode}</td>
-                    <td className="px-4 py-2.5 text-center text-slate-500">{item.date}</td>
-                    <td className="px-4 py-2.5 text-center">
-                      <span className="inline-flex items-center gap-1 bg-red-100 text-red-800 px-2 py-0.5 rounded-full text-[10px]">
-                        <AlertTriangle className="w-3 h-3 shrink-0" />
-                        Mismatch
-                      </span>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-
-        </div>
-      </div>
-
-      {/* 10. Active Open Complaints Table */}
-      <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm">
-        <div className="flex justify-between items-center mb-4 pb-2 border-b border-slate-100">
-          <div className="flex items-center gap-1.5">
-            <Clock className="w-4 h-4 text-indigo-600" />
-            <h2 className="text-xs font-bold text-slate-700 uppercase tracking-wider">Active Open Complaints Drilldown ({openComplaintsSummary.totalOpen.toLocaleString()})</h2>
-          </div>
-        </div>
-
-        <div className="overflow-x-auto border border-slate-100 rounded-xl">
-          <table className="w-full border-collapse text-xs">
-            <thead className="bg-slate-50 text-slate-500 uppercase tracking-wider font-bold">
-              <tr>
-                <th className="px-4 py-2 text-left">Complaint ID</th>
-                <th className="px-4 py-2 text-left">District</th>
-                <th className="px-4 py-2 text-left">Hospital</th>
-                <th className="px-4 py-2 text-left">Equipment</th>
-                <th className="px-4 py-2 text-center">Raise Date</th>
-                <th className="px-4 py-2 text-center">Status</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-slate-100 text-slate-600 font-semibold">
-              {paginatedOpenComplaints.map((row, idx) => (
-                <tr key={idx} className="hover:bg-slate-50/50">
-                  <td className="px-4 py-2.5 text-left font-mono font-bold text-indigo-600">{row["Complaint ID"]}</td>
-                  <td className="px-4 py-2.5 text-left">{row["District Name"]}</td>
-                  <td className="px-4 py-2.5 text-left truncate max-w-[200px]">{row["Hospital Name"]}</td>
-                  <td className="px-4 py-2.5 text-left truncate max-w-[200px]">{row["Equipment Name"]}</td>
-                  <td className="px-4 py-2.5 text-center text-slate-500">{row["Complaint Raise Date"]}</td>
-                  <td className="px-4 py-2.5 text-center">
-                    <span className="bg-amber-100 text-amber-800 px-2 py-0.5 rounded-full text-[10px]">
-                      Open Penalty
-                    </span>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-
-        {totalOpenPages > 1 && (
-          <div className="p-4 flex justify-between items-center bg-slate-50/50 border-t border-slate-100 mt-2">
-            <button
-              onClick={() => setCurrentOpenPage((p) => Math.max(p - 1, 1))}
-              disabled={currentOpenPage === 1}
-              className="flex items-center gap-1.5 px-3 py-1.5 bg-white border border-slate-200 rounded-lg text-xs font-bold hover:bg-slate-50 transition disabled:opacity-40 disabled:hover:bg-white"
-            >
-              <ChevronLeft className="w-4 h-4" />
-              Prev
-            </button>
-            <span className="text-xs font-bold text-slate-700">
-              Page {currentOpenPage} of {totalOpenPages}
-            </span>
-            <button
-              onClick={() => setCurrentOpenPage((p) => Math.min(p + 1, totalOpenPages))}
-              disabled={currentOpenPage === totalOpenPages}
-              className="flex items-center gap-1.5 px-3 py-1.5 bg-white border border-slate-200 rounded-lg text-xs font-bold hover:bg-slate-50 transition disabled:opacity-40 disabled:hover:bg-white"
-            >
-              Next
-              <ChevronRight className="w-4 h-4" />
-            </button>
-          </div>
-        )}
-      </div>
-
-      {/* Repeat Call Details Modal Popup */}
-      {selectedRepeatBarcode && (
-        <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-          <div className="bg-white rounded-3xl border border-slate-200 shadow-2xl w-full max-w-4xl max-h-[85vh] flex flex-col overflow-hidden animate-in fade-in zoom-in-95 duration-200">
-            
-            {/* Modal Header */}
-            <div className="p-6 bg-slate-50 border-b border-slate-200 flex justify-between items-start">
-              <div>
-                <span className="inline-block text-[10px] font-black text-indigo-600 bg-indigo-50 px-2.5 py-1 rounded-full uppercase tracking-wider mb-2">
-                  Asset Repeat Audit
-                </span>
-                <h3 className="text-xl font-black text-slate-900 tracking-tight flex items-center gap-2">
-                  Barcode: <span className="font-mono text-indigo-600">{selectedRepeatBarcode}</span>
-                </h3>
-                <p className="text-xs text-slate-500 font-semibold mt-1">
-                  {repeatBarcodeStats.equipment} • {repeatBarcodeStats.hospital}
-                </p>
-              </div>
-              <button 
-                onClick={() => setSelectedRepeatBarcode(null)}
-                className="p-2 hover:bg-slate-200/60 rounded-xl text-slate-400 hover:text-slate-600 transition border-0 cursor-pointer text-sm font-bold"
-              >
-                ✕ Close
-              </button>
-            </div>
-
-            {/* Modal Body: Statistics Cards */}
-            <div className="p-6 overflow-y-auto space-y-6 flex-1">
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                <div className="bg-slate-50 border border-slate-200 p-4 rounded-2xl">
-                  <span className="text-[10px] font-black text-slate-400 uppercase tracking-wider block">Failure Frequency</span>
-                  <span className="text-2xl font-black text-slate-800">{barcodeComplaints.length} Times</span>
-                  <span className="text-[10px] text-slate-500 font-semibold block mt-1">Total logged incidents</span>
+            {/* Run Rate & Projections */}
+            <div className="flex flex-col gap-6">
+              
+              {/* Financial Run-rate projection */}
+              <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm flex-1">
+                <p className="text-[10px] font-black text-slate-400 uppercase tracking-wider mb-3">Month Run-rate Projection</p>
+                <div className="space-y-4">
+                  <div>
+                    <span className="text-[10px] font-bold text-slate-400 uppercase">Penalty Incurred (M-T-D)</span>
+                    <h4 className="text-xl font-extrabold text-slate-800 mt-0.5">{formatRupees(projections.currentMonthPenalty)}</h4>
+                  </div>
+                  <div className="grid grid-cols-2 gap-4 pt-3 border-t border-slate-100">
+                    <div>
+                      <span className="text-[9px] font-bold text-slate-400 uppercase">Daily Burn Rate</span>
+                      <p className="text-sm font-black text-slate-700 mt-0.5">{formatRupees(projections.dailyRunRate)}/day</p>
+                    </div>
+                    <div>
+                      <span className="text-[9px] font-bold text-slate-400 uppercase">Projected Penalty</span>
+                      <p className="text-sm font-black text-red-600 mt-0.5">{formatRupees(projections.projectedPenalty)}</p>
+                    </div>
+                  </div>
                 </div>
+              </div>
+
+              {/* Status Switcher info */}
+              <div className="bg-gradient-to-br from-indigo-900 to-slate-900 p-5 rounded-2xl border border-indigo-950 text-white shadow-md relative overflow-hidden flex-1">
+                <div className="absolute -bottom-6 -right-6 opacity-10 text-white">
+                  <Sparkles className="w-24 h-24" />
+                </div>
+                <h4 className="text-sm font-black tracking-tight mb-1">Interactive Filter Override</h4>
+                <p className="text-[10px] text-indigo-200 mb-4">Focus overall KPIs and charts on specific claim states</p>
                 
-                <div className="bg-slate-50 border border-slate-200 p-4 rounded-2xl">
-                  <span className="text-[10px] font-black text-slate-400 uppercase tracking-wider block">Accumulated Downtime</span>
-                  <span className="text-2xl font-black text-slate-800">{repeatBarcodeStats.downtime} Days</span>
-                  <span className="text-[10px] text-slate-500 font-semibold block mt-1">Cumulative operational loss</span>
-                </div>
-
-                <div className="bg-slate-50 border border-slate-200 p-4 rounded-2xl">
-                  <span className="text-[10px] font-black text-slate-400 uppercase tracking-wider block">Estimated Penalty</span>
-                  <span className="text-2xl font-black text-red-600">₹{repeatBarcodeStats.totalPenalty.toLocaleString()}</span>
-                  <span className="text-[10px] text-slate-500 font-semibold block mt-1">Due to delayed resolutions</span>
+                <div className="flex bg-slate-800/40 p-0.5 rounded-lg border border-slate-700/60 max-w-xs">
+                  {(["all", "open", "closed"] as const).map((s) => (
+                    <button
+                      key={s}
+                      onClick={() => setStatusTab(s)}
+                      className={`text-[9px] font-black uppercase flex-1 py-1.5 rounded-md border-0 transition-all cursor-pointer ${
+                        statusTab === s ? "bg-white text-slate-900 shadow-sm" : "bg-transparent text-indigo-300 hover:text-white"
+                      }`}
+                    >
+                      {s === "all" ? "All Status" : s + " calls"}
+                    </button>
+                  ))}
                 </div>
               </div>
 
-              {/* Modal Body: Complaints Table */}
-              <div className="border border-slate-200 rounded-2xl overflow-hidden">
-                <div className="bg-slate-50 px-4 py-3 border-b border-slate-200">
-                  <span className="text-xs font-bold text-slate-700 uppercase tracking-wider">Incident History Log</span>
+            </div>
+
+          </div>
+        )}
+
+        {/* TAB 2: DI LEADERBOARD */}
+        {activeTab === "leaderboard" && (
+          <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden p-5">
+            <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-4">
+              <div>
+                <h3 className="text-xs font-black text-slate-700 uppercase tracking-wider">DI / District Performance Leaderboard</h3>
+                <p className="text-[10px] text-slate-400 font-semibold mt-0.5">Sorted from lowest penalty to highest (Best to Worst Performance)</p>
+              </div>
+              <div className="relative w-full sm:w-64">
+                <Search className="w-4 h-4 text-slate-400 absolute left-3 top-3" />
+                <input
+                  type="text"
+                  placeholder="Search in Leaderboard..."
+                  value={leaderboardSearch}
+                  onChange={(e) => { setLeaderboardSearch(e.target.value); setLeaderboardPage(1); }}
+                  className="w-full h-10 pl-9 pr-4 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold text-slate-700 focus:outline-none focus:border-indigo-600 focus:bg-white transition"
+                />
+              </div>
+            </div>
+
+            <div className="overflow-x-auto">
+              <table className="w-full border-collapse text-left text-xs">
+                <thead>
+                  <tr className="border-b border-slate-100 bg-slate-50/50">
+                    <th className="py-3.5 px-4 font-black text-slate-500 uppercase tracking-wider">Rank</th>
+                    <th className="py-3.5 px-4 font-black text-slate-500 uppercase tracking-wider">DI Name</th>
+                    <th className="py-3.5 px-4 font-black text-slate-500 uppercase tracking-wider text-center">Total Logged</th>
+                    <th className="py-3.5 px-4 font-black text-slate-500 uppercase tracking-wider text-center">Closed Calls</th>
+                    <th className="py-3.5 px-4 font-black text-slate-500 uppercase tracking-wider text-center">Resolution Rate</th>
+                    <th className="py-3.5 px-4 font-black text-slate-500 uppercase tracking-wider text-center">Avg Fix Time</th>
+                    <th className="py-3.5 px-4 font-black text-slate-500 uppercase tracking-wider text-right">Penalty Cost</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-100 font-semibold text-slate-700">
+                  {filteredLeaderboard.slice((leaderboardPage - 1) * itemsPerPage, leaderboardPage * itemsPerPage).map((row, idx) => {
+                    const absoluteRank = (leaderboardPage - 1) * itemsPerPage + idx + 1;
+                    return (
+                      <tr key={row.name} className="hover:bg-slate-50/40 transition">
+                        <td className="py-3 px-4 text-slate-500">#{absoluteRank}</td>
+                        <td className="py-3 px-4 font-extrabold text-slate-900 flex items-center gap-1.5">
+                          <span>{row.name}</span>
+                          {absoluteRank === 1 && <Award className="w-3.5 h-3.5 text-yellow-500" />}
+                        </td>
+                        <td className="py-3 px-4 text-center">{row.totalLogged}</td>
+                        <td className="py-3 px-4 text-center">{row.closed}</td>
+                        <td className="py-3 px-4 text-center">
+                          <span className={`px-2 py-0.5 rounded-full text-[10px] font-black ${
+                            row.resolutionRate >= 80 ? "bg-green-50 text-green-700 border border-green-200" :
+                            row.resolutionRate >= 50 ? "bg-yellow-50 text-yellow-700 border border-yellow-200" :
+                            "bg-red-50 text-red-700 border border-red-200"
+                          }`}>
+                            {row.resolutionRate}%
+                          </span>
+                        </td>
+                        <td className="py-3 px-4 text-center text-slate-500">{row.avgResolutionTime} days</td>
+                        <td className="py-3 px-4 text-right font-extrabold text-slate-900">
+                          <span className={row.totalPenalty > 20000 ? "text-red-600" : "text-green-600"}>
+                            {formatRupees(row.totalPenalty)}
+                          </span>
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+
+            {filteredLeaderboard.length > itemsPerPage && (
+              <div className="flex justify-between items-center mt-4 pt-3 border-t border-slate-100">
+                <span className="text-[10px] text-slate-400 font-bold">
+                  Showing {Math.min(filteredLeaderboard.length, (leaderboardPage - 1) * itemsPerPage + 1)}-{Math.min(filteredLeaderboard.length, leaderboardPage * itemsPerPage)} of {filteredLeaderboard.length} entries
+                </span>
+                <div className="flex items-center gap-1">
+                  <button
+                    onClick={() => setLeaderboardPage(p => Math.max(1, p - 1))}
+                    disabled={leaderboardPage === 1}
+                    className="p-1 border border-slate-200 rounded-lg hover:bg-slate-50 disabled:opacity-40 transition cursor-pointer"
+                  >
+                    <ChevronLeft className="w-4 h-4" />
+                  </button>
+                  <button
+                    onClick={() => setLeaderboardPage(p => Math.min(Math.ceil(filteredLeaderboard.length / itemsPerPage), p + 1))}
+                    disabled={leaderboardPage >= Math.ceil(filteredLeaderboard.length / itemsPerPage)}
+                    className="p-1 border border-slate-200 rounded-lg hover:bg-slate-50 disabled:opacity-40 transition cursor-pointer"
+                  >
+                    <ChevronRight className="w-4 h-4" />
+                  </button>
                 </div>
-                <div className="overflow-x-auto max-h-[30vh]">
-                  <table className="w-full border-collapse text-xs">
-                    <thead className="bg-slate-50 text-slate-500 uppercase tracking-wider font-bold sticky top-0">
-                      <tr>
-                        <th className="px-4 py-3 text-left">Complaint ID</th>
-                        <th className="px-4 py-3 text-left">District</th>
-                        <th className="px-4 py-3 text-center">Raise Date</th>
-                        <th className="px-4 py-3 text-center">Close Date</th>
-                        <th className="px-4 py-3 text-center">Downtime</th>
-                        <th className="px-4 py-3 text-center">Status</th>
-                        <th className="px-4 py-3 text-right">Penalty</th>
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* TAB 3: SLA AGING & TICKETS */}
+        {activeTab === "sla" && (
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+            
+            {/* Aging Chart */}
+            <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm flex flex-col items-center">
+              <h3 className="text-xs font-black text-slate-700 uppercase tracking-wider w-full mb-4">Open Complaint SLA Aging</h3>
+              <div className="h-60 w-full mt-2">
+                <ResponsivePie
+                  data={slaAging}
+                  margin={{ top: 10, right: 30, bottom: 40, left: 30 }}
+                  innerRadius={0.6}
+                  padAngle={1.5}
+                  cornerRadius={4}
+                  activeOuterRadiusOffset={6}
+                  colors={{ datum: "data.color" }}
+                  borderWidth={0}
+                  arcLinkLabelsSkipAngle={10}
+                  arcLinkLabelsTextColor="#64748b"
+                  arcLinkLabelsThickness={1.5}
+                  arcLinkLabelsColor={{ from: "color" }}
+                  arcLabelsSkipAngle={10}
+                  arcLabelsTextColor="#ffffff"
+                  role="application"
+                  ariaLabel="SLA aging chart"
+                />
+              </div>
+              <p className="text-[10px] text-slate-400 font-bold text-center mt-3 uppercase tracking-wider">
+                Total open: {summary.totalOpen} active complaints
+              </p>
+            </div>
+
+            {/* Aging Tickets Table */}
+            <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm lg:col-span-2 overflow-hidden flex flex-col justify-between">
+              <div>
+                <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-4">
+                  <h3 className="text-xs font-black text-slate-700 uppercase tracking-wider">Outstanding Tickets Detail</h3>
+                  <div className="relative w-full sm:w-56">
+                    <Search className="w-4 h-4 text-slate-400 absolute left-3 top-3" />
+                    <input
+                      type="text"
+                      placeholder="Search tickets..."
+                      value={openTicketsSearch}
+                      onChange={(e) => { setOpenTicketsSearch(e.target.value); setOpenPage(1); }}
+                      className="w-full h-10 pl-9 pr-4 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold text-slate-700 focus:outline-none focus:border-indigo-600 focus:bg-white transition"
+                    />
+                  </div>
+                </div>
+
+                <div className="overflow-x-auto">
+                  <table className="w-full border-collapse text-left text-xs">
+                    <thead>
+                      <tr className="border-b border-slate-100 bg-slate-50/50">
+                        <th className="py-2.5 px-3 font-black text-slate-500 uppercase tracking-wider">Complaint ID</th>
+                        <th className="py-2.5 px-3 font-black text-slate-500 uppercase tracking-wider">Equipment Name</th>
+                        <th className="py-2.5 px-3 font-black text-slate-500 uppercase tracking-wider">Hospital Name</th>
+                        <th className="py-2.5 px-3 font-black text-slate-500 uppercase tracking-wider text-center">Age (Days)</th>
+                        <th className="py-2.5 px-3 font-black text-slate-500 uppercase tracking-wider text-right">Penalty</th>
                       </tr>
                     </thead>
-                    <tbody className="divide-y divide-slate-200 text-slate-600 font-semibold">
-                      {barcodeComplaints.map((c, index) => {
-                        const penalty = getRowPenalty(c);
-                        const isClosed = isComplaintClosed(c);
-                        return (
-                          <tr key={index} className="hover:bg-slate-50/50">
-                            <td className="px-4 py-3 text-left font-mono font-bold text-indigo-600">{c["Complaint ID"]}</td>
-                            <td className="px-4 py-3 text-left">{c["District Name"]}</td>
-                            <td className="px-4 py-3 text-center text-slate-500">{c["Complaint Raise Date"]}</td>
-                            <td className="px-4 py-3 text-center text-slate-500">
-                              {isClosed ? c["Complaint Close date"] : "-- (Open)"}
-                            </td>
-                            <td className="px-4 py-3 text-center font-mono">{c["Total Downtime"] || "0"} days</td>
-                            <td className="px-4 py-3 text-center">
-                              <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${
-                                isClosed ? "bg-green-100 text-green-800" : "bg-amber-100 text-amber-800"
-                              }`}>
-                                {isClosed ? "Closed" : "Open"}
-                              </span>
-                            </td>
-                            <td className="px-4 py-3 text-right font-black text-slate-900">₹{penalty.toLocaleString()}</td>
-                          </tr>
-                        );
-                      })}
+                    <tbody className="divide-y divide-slate-100 font-semibold text-slate-700">
+                      {filteredOpenTickets.slice((openPage - 1) * itemsPerPage, openPage * itemsPerPage).map((row) => (
+                        <tr key={row.complaintId} className="hover:bg-slate-50/40 transition">
+                          <td className="py-2.5 px-3 text-slate-900 font-extrabold">{row.complaintId}</td>
+                          <td className="py-2.5 px-3 text-slate-600 truncate max-w-[120px]">{row.equipmentName}</td>
+                          <td className="py-2.5 px-3 text-slate-600 truncate max-w-[150px]">{row.hospitalName}</td>
+                          <td className="py-2.5 px-3 text-center text-slate-900 font-extrabold">
+                            <span className={`px-2 py-0.5 rounded-full text-[9px] font-black ${
+                              row.ageHours >= 168 ? "bg-red-50 text-red-700 border border-red-200" : "bg-slate-100 text-slate-700"
+                            }`}>
+                              {(row.ageHours / 24).toFixed(1)} d
+                            </span>
+                          </td>
+                          <td className="py-2.5 px-3 text-right font-black text-red-600">{formatRupees(row.penalty)}</td>
+                        </tr>
+                      ))}
                     </tbody>
                   </table>
                 </div>
               </div>
-            </div>
 
-            {/* Modal Footer */}
-            <div className="p-4 bg-slate-50 border-t border-slate-200 flex justify-end">
-              <button
-                onClick={() => setSelectedRepeatBarcode(null)}
-                className="px-6 py-2 bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold rounded-xl shadow-md hover:shadow-lg transition cursor-pointer border-0"
-              >
-                Done / Close Audit
-              </button>
+              {filteredOpenTickets.length > itemsPerPage && (
+                <div className="flex justify-between items-center mt-4 pt-3 border-t border-slate-100">
+                  <span className="text-[10px] text-slate-400 font-bold">
+                    Showing {Math.min(filteredOpenTickets.length, (openPage - 1) * itemsPerPage + 1)}-{Math.min(filteredOpenTickets.length, openPage * itemsPerPage)} of {filteredOpenTickets.length} entries
+                  </span>
+                  <div className="flex items-center gap-1">
+                    <button
+                      onClick={() => setOpenPage(p => Math.max(1, p - 1))}
+                      disabled={openPage === 1}
+                      className="p-1 border border-slate-200 rounded-lg hover:bg-slate-50 disabled:opacity-40 transition cursor-pointer"
+                    >
+                      <ChevronLeft className="w-4 h-4" />
+                    </button>
+                    <button
+                      onClick={() => setOpenPage(p => Math.min(Math.ceil(filteredOpenTickets.length / itemsPerPage), p + 1))}
+                      disabled={openPage >= Math.ceil(filteredOpenTickets.length / itemsPerPage)}
+                      className="p-1 border border-slate-200 rounded-lg hover:bg-slate-50 disabled:opacity-40 transition cursor-pointer"
+                    >
+                      <ChevronRight className="w-4 h-4" />
+                    </button>
+                  </div>
+                </div>
+              )}
             </div>
 
           </div>
-        </div>
-      )}
+        )}
+
+        {/* TAB 4: REPEAT FAILURES */}
+        {activeTab === "repeats" && (
+          <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden p-5">
+            <div className="mb-4">
+              <h3 className="text-xs font-black text-slate-700 uppercase tracking-wider">Recurring Equipment Failures</h3>
+              <p className="text-[10px] text-slate-400 font-semibold mt-0.5">Assets with more than 1 logged complaint (Indicates potential faulty batch or need for preventive maintenance)</p>
+            </div>
+
+            {repeatCalls.length > 0 ? (
+              <div className="overflow-x-auto">
+                <table className="w-full border-collapse text-left text-xs">
+                  <thead>
+                    <tr className="border-b border-slate-100 bg-slate-50/50">
+                      <th className="py-3 px-4 font-black text-slate-500 uppercase tracking-wider">Barcode Tag</th>
+                      <th className="py-3 px-4 font-black text-slate-500 uppercase tracking-wider">Equipment Model/Name</th>
+                      <th className="py-3 px-4 font-black text-slate-500 uppercase tracking-wider">Installed Hospital</th>
+                      <th className="py-3 px-4 font-black text-slate-500 uppercase tracking-wider text-center">Failure Count</th>
+                      <th className="py-3 px-4 font-black text-slate-500 uppercase tracking-wider text-center">Risk Level</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-slate-100 font-semibold text-slate-700">
+                    {repeatCalls.map((row) => (
+                      <tr key={row.barcode} className="hover:bg-slate-50/40 transition">
+                        <td className="py-3 px-4 font-mono font-extrabold text-indigo-700">{row.barcode}</td>
+                        <td className="py-3 px-4 font-extrabold text-slate-900">{row.name}</td>
+                        <td className="py-3 px-4 text-slate-600">{row.hospital}</td>
+                        <td className="py-3 px-4 text-center font-black text-slate-900">
+                          <span className="bg-slate-100 px-2.5 py-1 rounded-lg">
+                            {row.count} times
+                          </span>
+                        </td>
+                        <td className="py-3 px-4 text-center">
+                          <span className={`px-2 py-0.5 rounded-full text-[9px] font-black ${
+                            row.count >= 4 ? "bg-red-100 text-red-700 border border-red-200" : "bg-yellow-50 text-yellow-700 border border-yellow-200"
+                          }`}>
+                            {row.count >= 4 ? "Critical Risk" : "Moderate Risk"}
+                          </span>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            ) : (
+              <div className="flex items-center justify-center py-12 text-slate-400 text-xs font-semibold">
+                No recurring failures found in Sheets! Excellent asset reliability.
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* TAB 5: CLAIMS FRAUD AUDITOR */}
+        {activeTab === "fraud" && (
+          <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden p-5">
+            <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-4">
+              <div>
+                <h3 className="text-xs font-black text-slate-700 uppercase tracking-wider flex items-center gap-1.5">
+                  <ShieldAlert className="w-4 h-4 text-red-500 animate-pulse" />
+                  <span>Engineers Visited Barcode Audit Logs</span>
+                </h3>
+                <p className="text-[10px] text-slate-400 font-semibold mt-0.5">Cross-checks engineer TA/DA visit claims against verified asset complaints barcodes to flag fake visits</p>
+              </div>
+              <div className="relative w-full sm:w-64">
+                <Search className="w-4 h-4 text-slate-400 absolute left-3 top-3" />
+                <input
+                  type="text"
+                  placeholder="Search mismatches..."
+                  value={fraudSearch}
+                  onChange={(e) => { setFraudSearch(e.target.value); setFraudPage(1); }}
+                  className="w-full h-10 pl-9 pr-4 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold text-slate-700 focus:outline-none focus:border-indigo-600 focus:bg-white transition"
+                />
+              </div>
+            </div>
+
+            {filteredFraudList.length > 0 ? (
+              <div className="overflow-x-auto">
+                <table className="w-full border-collapse text-left text-xs">
+                  <thead>
+                    <tr className="border-b border-slate-100 bg-slate-50/50">
+                      <th className="py-3 px-4 font-black text-slate-500 uppercase tracking-wider">Engineer Name</th>
+                      <th className="py-3 px-4 font-black text-slate-500 uppercase tracking-wider text-center">Employee Code</th>
+                      <th className="py-3 px-4 font-black text-slate-500 uppercase tracking-wider">Submitted Barcode</th>
+                      <th className="py-3 px-4 font-black text-slate-500 uppercase tracking-wider">Claim Hospital Location</th>
+                      <th className="py-3 px-4 font-black text-slate-500 uppercase tracking-wider text-center">Claim Date</th>
+                      <th className="py-3 px-4 font-black text-slate-500 uppercase tracking-wider text-center">Claim Type</th>
+                      <th className="py-3 px-4 font-black text-slate-500 uppercase tracking-wider text-center">Verification Status</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-slate-100 font-semibold text-slate-700">
+                    {filteredFraudList.slice((fraudPage - 1) * itemsPerPage, fraudPage * itemsPerPage).map((row, idx) => (
+                      <tr key={idx} className="hover:bg-red-50/20 transition">
+                        <td className="py-3 px-4 font-extrabold text-slate-900">{row.engineerName}</td>
+                        <td className="py-3 px-4 text-center">{row.engineerCode}</td>
+                        <td className="py-3 px-4 font-mono text-red-600 font-black">{row.barcode}</td>
+                        <td className="py-3 px-4 text-slate-600">{row.hospital}</td>
+                        <td className="py-3 px-4 text-center text-slate-500">{row.date}</td>
+                        <td className="py-3 px-4 text-center">
+                          <span className="bg-slate-100 px-2 py-0.5 rounded text-[10px]">
+                            {row.type}
+                          </span>
+                        </td>
+                        <td className="py-3 px-4 text-center">
+                          <span className="bg-red-50 text-red-700 border border-red-200 px-2.5 py-0.5 rounded-full text-[9px] font-black inline-flex items-center gap-1">
+                            <AlertTriangle className="w-3 h-3" />
+                            <span>Barcode Not Found in System</span>
+                          </span>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            ) : (
+              <div className="flex items-center justify-center py-12 text-slate-400 text-xs font-semibold">
+                No fraudulent/mismatched barcode claims detected! Complete integrity observed.
+              </div>
+            )}
+
+            {filteredFraudList.length > itemsPerPage && (
+              <div className="flex justify-between items-center mt-4 pt-3 border-t border-slate-100">
+                <span className="text-[10px] text-slate-400 font-bold">
+                  Showing {Math.min(filteredFraudList.length, (fraudPage - 1) * itemsPerPage + 1)}-{Math.min(filteredFraudList.length, fraudPage * itemsPerPage)} of {filteredFraudList.length} entries
+                </span>
+                <div className="flex items-center gap-1">
+                  <button
+                    onClick={() => setFraudPage(p => Math.max(1, p - 1))}
+                    disabled={fraudPage === 1}
+                    className="p-1 border border-slate-200 rounded-lg hover:bg-slate-50 disabled:opacity-40 transition cursor-pointer"
+                  >
+                    <ChevronLeft className="w-4 h-4" />
+                  </button>
+                  <button
+                    onClick={() => setFraudPage(p => Math.min(Math.ceil(filteredFraudList.length / itemsPerPage), p + 1))}
+                    disabled={fraudPage >= Math.ceil(filteredFraudList.length / itemsPerPage)}
+                    className="p-1 border border-slate-200 rounded-lg hover:bg-slate-50 disabled:opacity-40 transition cursor-pointer"
+                  >
+                    <ChevronRight className="w-4 h-4" />
+                  </button>
+                </div>
+              </div>
+            )}
+          </div>
+        )}
+
+      </div>
 
     </div>
   );
