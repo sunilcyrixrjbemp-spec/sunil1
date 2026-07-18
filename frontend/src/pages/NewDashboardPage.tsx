@@ -18,7 +18,7 @@ import {
   Sparkles,
   Activity,
   BarChart3,
-  Users,
+
   Zap,
   Target,
   TrendingDown,
@@ -962,7 +962,7 @@ export default function NewDashboardPage() {
                     enableSlices="x"
                     sliceTooltip={({ slice }) => (
                       <div style={{ background: "#0f172a", color: "#f8fafc", padding: "10px 14px", borderRadius: 10, fontSize: 12, border: "1px solid rgba(255,255,255,0.1)" }}>
-                        <strong style={{ display: "block", marginBottom: 4 }}>{slice.points[0]?.data?.x}</strong>
+                        <strong style={{ display: "block", marginBottom: 4 }}>{String(slice.points[0]?.data?.x ?? "")}</strong>
                         {slice.points.map((p) => (
                           <div key={p.id} style={{ display: "flex", alignItems: "center", gap: 6 }}>
                             <div style={{ width: 8, height: 8, borderRadius: "50%", background: p.color }} />
