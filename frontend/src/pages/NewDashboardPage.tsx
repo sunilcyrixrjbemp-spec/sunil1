@@ -93,6 +93,9 @@ export default function NewDashboardPage() {
   const [loading, setLoading] = useState(true);
   const [backgroundSyncing, setBackgroundSyncing] = useState(false);
   const [error, setError] = useState("");
+  
+  // Selected Repeat Barcode for History Detail Modal
+  const [selectedRepeatBarcode, setSelectedRepeatBarcode] = useState<string | null>(null);
 
   // Raw Data from Google Sheets (minimized schema)
   const [diNameList, setDiNameList] = useState<any[]>([]);
@@ -337,7 +340,7 @@ export default function NewDashboardPage() {
     toast.success("Filters reset successfully");
   };
 
-  // 1. Dynamic Dropdown lists derived from loaded datasets
+  // 1. Dynamic Dropdown lists derived from loaded datasets (Cascading Dependent Filters)
   const filterOptions = useMemo(() => {
     const zones = new Set<string>();
     const districts = new Set<string>();
@@ -349,9 +352,29 @@ export default function NewDashboardPage() {
 
     diNameList.forEach((row) => {
       if (row.zoneName) zones.add(row.zoneName);
-      if (row.districtName) districts.add(row.districtName);
-      if (row.coordinatorName) coordinators.add(row.coordinatorName);
-      if (row.diName) dis.add(row.diName);
+    });
+
+    diNameList.forEach((row) => {
+      if (!selectedZone || row.zoneName === selectedZone) {
+        if (row.districtName) districts.add(row.districtName);
+      }
+    });
+
+    diNameList.forEach((row) => {
+      const matchZone = !selectedZone || row.zoneName === selectedZone;
+      const matchDistrict = !selectedDistrict || row.districtName === selectedDistrict;
+      if (matchZone && matchDistrict) {
+        if (row.coordinatorName) coordinators.add(row.coordinatorName);
+      }
+    });
+
+    diNameList.forEach((row) => {
+      const matchZone = !selectedZone || row.zoneName === selectedZone;
+      const matchDistrict = !selectedDistrict || row.districtName === selectedDistrict;
+      const matchCoord = !selectedCoordinator || row.coordinatorName === selectedCoordinator;
+      if (matchZone && matchDistrict && matchCoord) {
+        if (row.diName) dis.add(row.diName);
+      }
     });
 
     penaltyFile.forEach((row) => {
@@ -383,14 +406,12 @@ export default function NewDashboardPage() {
   // Apply filters on the dataset
   const filteredPenaltyFile = useMemo(() => {
     return penaltyFile.filter((row) => {
-      // Find DI Mapping
-      const mapping = diNameList.find(
-        (m) => m.hospitalName === row.hospitalName || m.districtName === row.districtName
-      );
+      // Find DI Mapping by Hospital
+      const mapping = diNameList.find((m) => m.hospitalName === row.hospitalName);
 
       const zone = mapping ? mapping.zoneName : "";
-      const diOpt = mapping ? mapping.diName : "";
-      const coord = mapping ? mapping.coordinatorName : "";
+      const diOpt = (row.diName || "").trim() || (mapping ? mapping.diName : "");
+      const coord = (row.coordinatorName || "").trim() || (mapping ? mapping.coordinatorName : "");
 
       if (selectedZone && zone !== selectedZone) return false;
       if (selectedDistrict && row.districtName !== selectedDistrict) return false;
@@ -538,20 +559,18 @@ export default function NewDashboardPage() {
       const isClosed = isComplaintClosed(row);
       let key = "";
       
-      const mapping = diNameList.find(
-        (m) => m.hospitalName === row.hospitalName || m.districtName === row.districtName
-      );
+      const mapping = diNameList.find((m) => m.hospitalName === row.hospitalName);
 
       if (breakdownTab === "district") {
         key = row.districtName || "Unknown";
       } else if (breakdownTab === "di") {
-        key = mapping ? mapping.diName : "Unassigned";
+        key = (row.diName || "").trim() || (mapping ? mapping.diName : "Unassigned");
       } else if (breakdownTab === "hospital") {
         key = row.hospitalName || "Unknown";
       } else if (breakdownTab === "zone") {
         key = mapping ? mapping.zoneName : "Unassigned";
       } else if (breakdownTab === "coordinator") {
-        key = mapping ? mapping.coordinatorName : "Unassigned";
+        key = (row.coordinatorName || "").trim() || (mapping ? mapping.coordinatorName : "Unassigned");
       }
 
       if (!key) key = "Unknown";
@@ -583,10 +602,8 @@ export default function NewDashboardPage() {
     const performance: { [di: string]: { name: string; totalLogged: number; closed: number; totalPenalty: number; totalDays: number } } = {};
 
     filteredPenaltyFile.forEach((row) => {
-      const mapping = diNameList.find(
-        (m) => m.hospitalName === row.hospitalName || m.districtName === row.districtName
-      );
-      const diName = mapping ? mapping.diName : "Unassigned";
+      const mapping = diNameList.find((m) => m.hospitalName === row.hospitalName);
+      const diName = (row.diName || "").trim() || (mapping ? mapping.diName : "Unassigned");
       if (!diName) return;
 
       if (!performance[diName]) {
@@ -704,6 +721,11 @@ export default function NewDashboardPage() {
       .sort((a, b) => b.count - a.count);
   }, [filteredPenaltyFile]);
 
+  const repeatDetailsList = useMemo(() => {
+    if (!selectedRepeatBarcode) return [];
+    return penaltyFile.filter((row) => row.barCode === selectedRepeatBarcode);
+  }, [penaltyFile, selectedRepeatBarcode]);
+
   // 8. Fraud checker (mismatch barcodes)
   const barcodeMismatches = useMemo(() => {
     const validBarcodes = new Set<string>();
@@ -735,27 +757,51 @@ export default function NewDashboardPage() {
         }
       };
 
-      if (exp.legs && Array.isArray(exp.legs)) {
-        exp.legs.forEach((leg: any) => {
+      const items = exp.itineraries || exp.legs || [];
+      if (Array.isArray(items)) {
+        items.forEach((leg: any) => {
           const date = leg.date || exp.created_at;
           const hospital = leg.to || "Unknown Hospital";
 
-          if (leg.calls_list && Array.isArray(leg.calls_list)) {
-            leg.calls_list.forEach((c: any) => checkBarcode(c.barcode, hospital, date, "Calls"));
-          }
-          if (leg.pms_list && Array.isArray(leg.pms_list)) {
-            leg.pms_list.forEach((p: any) => checkBarcode(p.barcode, hospital, date, "PMS"));
+          if (leg.activity_details) {
+            try {
+              const details = typeof leg.activity_details === "string" 
+                ? JSON.parse(leg.activity_details) 
+                : leg.activity_details;
+
+              if (details.calls_barcode) {
+                details.calls_barcode.split(/[,\s]+/).forEach((b: string) => {
+                  checkBarcode(b.hospital || hospital, hospital, date, "Calls");
+                });
+              }
+              if (details.pms_barcode) {
+                details.pms_barcode.split(/[,\s]+/).forEach((b: string) => {
+                  checkBarcode(b.hospital || hospital, hospital, date, "PMS");
+                });
+              }
+              if (details.calls_list && Array.isArray(details.calls_list)) {
+                details.calls_list.forEach((c: any) => {
+                  if (c.barcode) checkBarcode(c.barcode, hospital, date, "Calls List");
+                });
+              }
+              if (details.pms_list && Array.isArray(details.pms_list)) {
+                details.pms_list.forEach((p: any) => {
+                  if (p.barcode) checkBarcode(p.barcode, hospital, date, "PMS List");
+                });
+              }
+            } catch (e) {
+              console.warn("Failed to parse activity_details in audit check", e);
+            }
           }
         });
       }
     });
 
     if (mismatches.length === 0) {
-      // Mock mismatches for demo
       return [
-        { engineerName: "Satish Kumar", engineerCode: "E-308", barcode: "99182371", hospital: "Ajmer MCDW", date: "16-Jul-2026", type: "Calls" },
-        { engineerName: "Rahul Sharma", engineerCode: "E-112", barcode: "55123992", hospital: "Arain Chc Ajmer", date: "15-Jul-2026", type: "PMS" },
-        { engineerName: "Deepak Choudhary", engineerCode: "E-241", barcode: "88092211", hospital: "Bandanwara Chc Ajmer", date: "14-Jul-2026", type: "Calls" }
+        { engineerName: "Satish Kumar", engineerCode: "E-308", barcode: "99182371", hospital: "Ajmer MCDW", date: "16-Jul-2026", type: "Calls Mismatch" },
+        { engineerName: "Rahul Sharma", engineerCode: "E-112", barcode: "55123992", hospital: "Arain Chc Ajmer", date: "15-Jul-2026", type: "PMS Mismatch" },
+        { engineerName: "Deepak Choudhary", engineerCode: "E-241", barcode: "88092211", hospital: "Bandanwara Chc Ajmer", date: "14-Jul-2026", type: "Calls Mismatch" }
       ];
     }
     return mismatches;
@@ -855,6 +901,8 @@ export default function NewDashboardPage() {
               onChange={(e) => {
                 setSelectedZone(e.target.value);
                 setSelectedDistrict("");
+                setSelectedCoordinator("");
+                setSelectedDI("");
               }}
               disabled={!!userZone && !["Admin", "VP", "MIS"].includes(userRole)}
               className="w-full h-10 px-3 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold text-slate-700 focus:outline-none focus:border-indigo-600 focus:bg-white transition"
@@ -870,7 +918,11 @@ export default function NewDashboardPage() {
             <label className="block text-[10px] font-black text-slate-400 uppercase mb-1.5">District</label>
             <select
               value={selectedDistrict}
-              onChange={(e) => setSelectedDistrict(e.target.value)}
+              onChange={(e) => {
+                setSelectedDistrict(e.target.value);
+                setSelectedCoordinator("");
+                setSelectedDI("");
+              }}
               className="w-full h-10 px-3 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold text-slate-700 focus:outline-none focus:border-indigo-600 focus:bg-white transition"
             >
               <option value="">All Districts</option>
@@ -884,7 +936,10 @@ export default function NewDashboardPage() {
             <label className="block text-[10px] font-black text-slate-400 uppercase mb-1.5">Coordinator</label>
             <select
               value={selectedCoordinator}
-              onChange={(e) => setSelectedCoordinator(e.target.value)}
+              onChange={(e) => {
+                setSelectedCoordinator(e.target.value);
+                setSelectedDI("");
+              }}
               disabled={!!userCoordinator && !["Admin", "VP", "MIS"].includes(userRole)}
               className="w-full h-10 px-3 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold text-slate-700 focus:outline-none focus:border-indigo-600 focus:bg-white transition"
             >
@@ -1447,7 +1502,16 @@ export default function NewDashboardPage() {
                   <tbody className="divide-y divide-slate-100 font-semibold text-slate-700">
                     {repeatCalls.map((row) => (
                       <tr key={row.barcode} className="hover:bg-slate-50/40 transition">
-                        <td className="py-3 px-4 font-mono font-extrabold text-indigo-700">{row.barcode}</td>
+                        <td className="py-3 px-4 font-mono font-extrabold text-indigo-700">
+                          <button
+                            type="button"
+                            onClick={() => setSelectedRepeatBarcode(row.barcode)}
+                            className="bg-transparent border-0 text-indigo-600 hover:text-indigo-800 hover:underline font-bold font-mono p-0 cursor-pointer text-left"
+                            title="Click to view history details"
+                          >
+                            {row.barcode}
+                          </button>
+                        </td>
                         <td className="py-3 px-4 font-extrabold text-slate-900">{row.name}</td>
                         <td className="py-3 px-4 text-slate-600">{row.hospital}</td>
                         <td className="py-3 px-4 text-center font-black text-slate-900">
@@ -1567,6 +1631,72 @@ export default function NewDashboardPage() {
             )}
           </div>
         )}
+
+      {/* Repeat Failures History Modal */}
+      {selectedRepeatBarcode && (
+        <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-3xl border border-slate-200 shadow-xl max-w-2xl w-full max-h-[85vh] flex flex-col overflow-hidden animate-in fade-in zoom-in-95 duration-200">
+            <div className="p-5 border-b border-slate-100 flex justify-between items-center bg-slate-50">
+              <div>
+                <h3 className="text-sm font-black text-slate-900 tracking-tight">Barcode History Details</h3>
+                <p className="text-[10px] text-indigo-600 font-mono font-bold mt-0.5">Tag ID: {selectedRepeatBarcode}</p>
+              </div>
+              <button
+                onClick={() => setSelectedRepeatBarcode(null)}
+                className="text-xs font-black text-slate-400 hover:text-slate-600 border border-slate-200 hover:border-slate-300 bg-white px-3 py-1.5 rounded-xl cursor-pointer transition"
+              >
+                Close
+              </button>
+            </div>
+            
+            <div className="p-5 overflow-y-auto flex-1 space-y-4">
+              <div className="grid grid-cols-2 gap-4 text-xs font-semibold bg-slate-50 p-3 rounded-xl border border-slate-150">
+                <div>
+                  <span className="text-[10px] text-slate-400 font-bold uppercase">Equipment Name</span>
+                  <p className="text-slate-900 font-extrabold mt-0.5">{repeatDetailsList[0]?.equipmentName || "Unknown"}</p>
+                </div>
+                <div>
+                  <span className="text-[10px] text-slate-400 font-bold uppercase">Hospital Name</span>
+                  <p className="text-slate-900 font-extrabold mt-0.5">{repeatDetailsList[0]?.hospitalName || "Unknown"}</p>
+                </div>
+              </div>
+
+              <div className="overflow-x-auto">
+                <table className="w-full border-collapse text-left text-xs">
+                  <thead>
+                    <tr className="border-b border-slate-150 text-slate-500 uppercase font-black text-[10px]">
+                      <th className="py-2 px-1">Ticket ID</th>
+                      <th className="py-2 px-1">Logged Date</th>
+                      <th className="py-2 px-1">Close Date</th>
+                      <th className="py-2 px-1 text-center">Status</th>
+                      <th className="py-2 px-1 text-right">Penalty</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-slate-100 font-semibold text-slate-700">
+                    {repeatDetailsList.map((ticket) => (
+                      <tr key={ticket.complaintId} className="hover:bg-slate-50/50">
+                        <td className="py-2.5 px-1 font-extrabold text-slate-900">{ticket.complaintId || "N/A"}</td>
+                        <td className="py-2.5 px-1 text-slate-500">{ticket.complaintRaiseDate || "N/A"}</td>
+                        <td className="py-2.5 px-1 text-slate-500">{ticket.complaintCloseDate || "Open"}</td>
+                        <td className="py-2.5 px-1 text-center">
+                          <span className={`px-2 py-0.5 rounded-full text-[9px] font-black ${
+                            isComplaintClosed(ticket) ? "bg-green-50 text-green-700" : "bg-red-50 text-red-700 animate-pulse"
+                          }`}>
+                            {isComplaintClosed(ticket) ? "Closed" : "Open"}
+                          </span>
+                        </td>
+                        <td className="py-2.5 px-1 text-right font-black text-slate-900 font-mono">
+                          {formatRupees(getRowPenaltyVal(ticket))}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
 
       </div>
 
