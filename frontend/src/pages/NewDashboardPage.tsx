@@ -771,12 +771,12 @@ export default function NewDashboardPage() {
 
               if (details.calls_barcode) {
                 details.calls_barcode.split(/[,\s]+/).forEach((b: string) => {
-                  checkBarcode(b.hospital || hospital, hospital, date, "Calls");
+                  checkBarcode(b, hospital, date, "Calls");
                 });
               }
               if (details.pms_barcode) {
                 details.pms_barcode.split(/[,\s]+/).forEach((b: string) => {
-                  checkBarcode(b.hospital || hospital, hospital, date, "PMS");
+                  checkBarcode(b, hospital, date, "PMS");
                 });
               }
               if (details.calls_list && Array.isArray(details.calls_list)) {
