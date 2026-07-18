@@ -159,14 +159,14 @@ export default function NewDashboardPage() {
     const compiledRows: any[] = [];
     
     // Fetch headers first from row 1
-    const headerUrl = `https://sheets.googleapis.com/v4/spreadsheets/${SPREADSHEET_ID}/values/Penalty%20File!A1:G1?key=${API_KEY}`;
+    const headerUrl = `https://sheets.googleapis.com/v4/spreadsheets/${SPREADSHEET_ID}/values/Penalty%20File!A1:Z1?key=${API_KEY}`;
     const hRes = await fetch(headerUrl);
     if (!hRes.ok) throw new Error("Failed to fetch headers");
     const hData = await hRes.json();
     const headers = (hData.values || [[]])[0].map((h: string) => h.trim());
     
     while (hasMore) {
-      const range = `Penalty File!A${rowStart}:G${rowStart + chunkSize - 1}`;
+      const range = `Penalty File!A${rowStart}:Z${rowStart + chunkSize - 1}`;
       const url = `https://sheets.googleapis.com/v4/spreadsheets/${SPREADSHEET_ID}/values/${encodeURIComponent(range)}?key=${API_KEY}`;
       const res = await fetch(url);
       if (!res.ok) throw new Error(`Google Sheets API error on range ${range}`);
