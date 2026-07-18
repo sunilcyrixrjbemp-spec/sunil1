@@ -694,6 +694,33 @@ export default function NewDashboardPage() {
     };
   }, [filteredComplaints, criticalEquipment]);
 
+  // 5a. Total Asset Value Under Audit
+  const totalAssetValUnderAudit = useMemo(() => {
+    let total = 0;
+    const costMap = new Map<string, number>();
+    
+    assetValues.forEach((item) => {
+      const name = (item["Equipment Name"] || "").trim().toLowerCase();
+      const cost = parseFloat((item["RMSC Tender Cost"] || "").replace(/,/g, "")) || 0;
+      if (name) {
+        costMap.set(name, cost);
+      }
+    });
+
+    const uniqueEquip = new Set<string>();
+    penaltyFile.forEach((row) => {
+      if (row["Equipment Name"]) {
+        uniqueEquip.add(row["Equipment Name"].trim().toLowerCase());
+      }
+    });
+
+    uniqueEquip.forEach((eqName) => {
+      total += costMap.get(eqName) || 0;
+    });
+
+    return total;
+  }, [assetValues, penaltyFile]);
+
   // 6. Repeat Complaints & Preventative Downtime Board
   const repeatCalls = useMemo(() => {
     const groups: { [barcode: string]: { barcode: string; name: string; hospital: string; count: number } } = {};
@@ -861,7 +888,10 @@ export default function NewDashboardPage() {
                 </span>
               )}
             </h1>
-            <p className="text-xs font-semibold text-slate-500 uppercase tracking-wider">Multi-Millionaire Audit & Performance Dashboard ({penaltyFile.length.toLocaleString()} rows)</p>
+            <p className="text-xs font-semibold text-slate-500 uppercase tracking-wider">
+              Multi-Millionaire Audit & Performance Dashboard ({penaltyFile.length.toLocaleString()} rows)
+              {totalAssetValUnderAudit > 0 && ` • Audited Assets Value: ₹${(totalAssetValUnderAudit / 10000000).toFixed(2)} Cr`}
+            </p>
           </div>
         </div>
 
