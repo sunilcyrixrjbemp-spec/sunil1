@@ -135,6 +135,7 @@ const ALL_WINDOWS = [
   { id: "report", name: "Month Report" },
   { id: "mis_report", name: "MIS Report" },
   { id: "kpi", name: "KPI Dashboard" },
+  { id: "new_dashboard", name: "New Dashboard" },
   { id: "upload_data", name: "Upload Data" },
   { id: "asset_upload", name: "Asset Inventory" },
   { id: "penalty_report", name: "Penalty Report" },
