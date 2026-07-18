@@ -1,12 +1,12 @@
 import { useState, useEffect, useMemo } from "react";
-import { 
-  RefreshCw, 
-  AlertTriangle, 
-  CheckCircle, 
-  Clock, 
-  ShieldAlert, 
-  TrendingUp, 
-  FileText, 
+import {
+  RefreshCw,
+  AlertTriangle,
+  CheckCircle,
+  Clock,
+  ShieldAlert,
+  TrendingUp,
+  FileText,
   SlidersHorizontal,
   ChevronLeft,
   ChevronRight,
@@ -15,62 +15,63 @@ import {
   Search,
   FilterX,
   IndianRupee,
-  Layers,
-  Sparkles
+  Sparkles,
+  Activity,
+  BarChart3,
+  Users,
+  Zap,
+  Target,
+  TrendingDown,
+  Calendar,
 } from "lucide-react";
 import { ResponsiveBar } from "@nivo/bar";
 import { ResponsivePie } from "@nivo/pie";
+import { ResponsiveLine } from "@nivo/line";
 import { authService } from "../services/authService";
 import { expenseService } from "../services/expenseService";
 import toast from "react-hot-toast";
 
-const API_KEY = import.meta.env.VITE_GOOGLE_SHEETS_API_KEY || "AIzaSyDTkQ1wNpug7rDLmHgDGt_0Xr2XTPnWsIA";
-const SPREADSHEET_ID = import.meta.env.VITE_GOOGLE_SPREADSHEET_ID || "1ASmvpLSl-X3Vm8S3LxB2Iyhg6HMhOpV-R4ywVS2o8Bs";
-const CACHE_KEY = "cyrix_dashboard_sheets_cache_v8"; // Updated cache key to prevent collision and force clean load
+const API_KEY =
+  import.meta.env.VITE_GOOGLE_SHEETS_API_KEY ||
+  "AIzaSyDTkQ1wNpug7rDLmHgDGt_0Xr2XTPnWsIA";
+const SPREADSHEET_ID =
+  import.meta.env.VITE_GOOGLE_SPREADSHEET_ID ||
+  "1ASmvpLSl-X3Vm8S3LxB2Iyhg6HMhOpV-R4ywVS2o8Bs";
+const CACHE_KEY = "cyrix_dashboard_sheets_cache_v9";
 
-// 1. Helper function to check if complaint is closed
+// ─── Helpers ────────────────────────────────────────────────────────────────
+
 const isComplaintClosed = (row: any): boolean => {
   const status = (row.status || "").trim().toLowerCase();
   const compStatus = (row.complaintStatus || "").trim().toLowerCase();
   const closeDate = (row.complaintCloseDate || "").trim();
-
-  if (status === "open" || compStatus === "pending" || compStatus === "attended") {
-    return false;
-  }
-  if (status === "closed" || compStatus === "final closed" || compStatus === "engineer closed") {
-    return true;
-  }
-  if (!closeDate || closeDate === "" || closeDate === "--" || closeDate.toLowerCase() === "open") {
-    return false;
-  }
+  if (status === "open" || compStatus === "pending" || compStatus === "attended") return false;
+  if (status === "closed" || compStatus === "final closed" || compStatus === "engineer closed") return true;
+  if (!closeDate || closeDate === "" || closeDate === "--" || closeDate.toLowerCase() === "open") return false;
   return true;
 };
 
-// 2. Safe parser for date strings
 const parseFlexibleDate = (dateStr: string | null | undefined): number => {
   if (!dateStr) return Date.now();
   const cleaned = dateStr.trim();
-  if (cleaned === "" || cleaned === "--" || cleaned.toLowerCase() === "open") {
-    return Date.now();
-  }
-
+  if (cleaned === "" || cleaned === "--" || cleaned.toLowerCase() === "open") return Date.now();
   const parsed = Date.parse(cleaned);
   if (!isNaN(parsed)) return parsed;
-
   try {
     const parts = cleaned.split(" ");
-    const dateParts = parts[0].split(/[--\/]/); // Split by dash or slash
+    const dateParts = parts[0].split(/[--\/]/);
     if (dateParts.length === 3) {
       const day = parseInt(dateParts[0], 10);
       const monthStr = dateParts[1].substring(0, 3).toLowerCase();
-      const year = parseInt(dateParts[2], 10) < 100 ? parseInt(dateParts[2], 10) + 2000 : parseInt(dateParts[2], 10);
-
+      const year =
+        parseInt(dateParts[2], 10) < 100
+          ? parseInt(dateParts[2], 10) + 2000
+          : parseInt(dateParts[2], 10);
       const months: { [key: string]: number } = {
         jan: 0, feb: 1, mar: 2, apr: 3, may: 4, jun: 5,
-        jul: 6, aug: 7, sep: 8, oct: 9, nov: 10, dec: 11
+        jul: 6, aug: 7, sep: 8, oct: 9, nov: 10, dec: 11,
       };
       const month = months[monthStr] !== undefined ? months[monthStr] : 0;
-
       let hours = 0, minutes = 0, seconds = 0;
       if (parts[1]) {
         const timeParts = parts[1].split(":");
@@ -78,35 +79,101 @@ const parseFlexibleDate = (dateStr: string | null | undefined): number => {
         minutes = parseInt(timeParts[1], 10) || 0;
         seconds = parseInt(timeParts[2], 10) || 0;
       }
-
       const d = new Date(year, month, day, hours, minutes, seconds);
       if (!isNaN(d.getTime())) return d.getTime();
     }
   } catch (e) {
-    console.error("Failed to parse date flexible:", cleaned, e);
+    console.error("Failed to parse date:", cleaned, e);
   }
-
   return Date.now();
 };
 
+const formatRupees = (val: number) =>
+  new Intl.NumberFormat("en-IN", { style: "currency", currency: "INR", maximumFractionDigits: 0 }).format(val);
+
+// ─── Nivo shared theme ───────────────────────────────────────────────────────
+const nivoTheme = {
+  background: "transparent",
+  text: { fontSize: 11, fill: "#64748b", fontFamily: "inherit" },
+  axis: {
+    domain: { line: { stroke: "#e2e8f0", strokeWidth: 1 } },
+    ticks: { line: { stroke: "#e2e8f0", strokeWidth: 1 }, text: { fill: "#94a3b8", fontSize: 10 } },
+    legend: { text: { fill: "#64748b", fontSize: 11, fontWeight: 700 } },
+  },
+  grid: { line: { stroke: "#f1f5f9", strokeWidth: 1 } },
+  legends: { text: { fill: "#64748b", fontSize: 11 } },
+  tooltip: {
+    container: {
+      background: "#0f172a",
+      color: "#f8fafc",
+      fontSize: 12,
+      borderRadius: 10,
+      boxShadow: "0 10px 30px rgba(0,0,0,0.3)",
+      border: "1px solid rgba(255,255,255,0.08)",
+    },
+  },
+};
+
+// ─── KPI Card Component ──────────────────────────────────────────────────────
+const KpiCard = ({
+  label,
+  value,
+  subtext,
+  icon: Icon,
+  color = "slate",
+  trend,
+}: {
+  label: string;
+  value: string | number;
+  subtext?: string;
+  icon: any;
+  color?: "red" | "green" | "indigo" | "slate" | "amber";
+  trend?: { dir: "up" | "down"; label: string };
+}) => {
+  const palettes: Record<string, { bg: string; iconBg: string; iconText: string; valueCls: string; badge: string }> = {
+    red:    { bg: "from-red-600/10 via-red-500/5 to-transparent",    iconBg: "bg-red-100",    iconText: "text-red-600",    valueCls: "text-red-800",   badge: "bg-red-100 text-red-700" },
+    green:  { bg: "from-emerald-600/10 via-emerald-500/5 to-transparent", iconBg: "bg-emerald-100", iconText: "text-emerald-600", valueCls: "text-emerald-800", badge: "bg-emerald-100 text-emerald-700" },
+    indigo: { bg: "from-indigo-600/10 via-indigo-500/5 to-transparent", iconBg: "bg-indigo-100", iconText: "text-indigo-600", valueCls: "text-indigo-800", badge: "bg-indigo-100 text-indigo-700" },
+    slate:  { bg: "from-slate-600/8 via-slate-500/4 to-transparent",  iconBg: "bg-slate-100",  iconText: "text-slate-600",  valueCls: "text-slate-900", badge: "bg-slate-100 text-slate-600" },
+    amber:  { bg: "from-amber-600/10 via-amber-500/5 to-transparent", iconBg: "bg-amber-100",  iconText: "text-amber-600",  valueCls: "text-amber-800", badge: "bg-amber-100 text-amber-700" },
+  };
+  const p = palettes[color];
+  return (
+    <div className={`relative bg-gradient-to-br ${p.bg} bg-white border border-slate-200/80 rounded-2xl p-5 shadow-sm hover:shadow-md transition-all duration-300 group overflow-hidden`}>
+      <div className="absolute inset-0 rounded-2xl bg-white opacity-60 pointer-events-none" />
+      <div className="relative z-10">
+        <div className="flex items-start justify-between mb-3">
+          <div className={`p-2.5 rounded-xl ${p.iconBg} ${p.iconText} shadow-sm group-hover:scale-110 transition-transform duration-300`}>
+            <Icon className="w-5 h-5" />
+          </div>
+          {trend && (
+            <div className={`flex items-center gap-1 text-[10px] font-black px-2 py-1 rounded-full ${trend.dir === "up" ? "bg-red-50 text-red-600" : "bg-green-50 text-green-600"}`}>
+              {trend.dir === "up" ? <TrendingUp className="w-3 h-3" /> : <TrendingDown className="w-3 h-3" />}
+              {trend.label}
+            </div>
+          )}
+        </div>
+        <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">{label}</p>
+        <h3 className={`text-2xl font-black tracking-tight ${p.valueCls} leading-none`}>{value}</h3>
+        {subtext && <p className="text-[10px] font-semibold text-slate-500 mt-2">{subtext}</p>}
+      </div>
+    </div>
+  );
+};
+
+// ─── Main Component ──────────────────────────────────────────────────────────
 export default function NewDashboardPage() {
   const [loading, setLoading] = useState(true);
   const [backgroundSyncing, setBackgroundSyncing] = useState(false);
   const [error, setError] = useState("");
-  
-  // Selected Repeat Barcode for History Detail Modal
   const [selectedRepeatBarcode, setSelectedRepeatBarcode] = useState<string | null>(null);
 
-  // Raw Data from Google Sheets (minimized schema)
   const [diNameList, setDiNameList] = useState<any[]>([]);
   const [penaltyFile, setPenaltyFile] = useState<any[]>([]);
   const [assetValues, setAssetValues] = useState<any[]>([]);
   const [criticalEquipment, setCriticalEquipment] = useState<any[]>([]);
-
-  // Raw Data from Expense System (for barcode fraud checks)
   const [expenseList, setExpenseList] = useState<any[]>([]);
 
-  // Global Filters
   const [selectedZone, setSelectedZone] = useState("");
   const [selectedDistrict, setSelectedDistrict] = useState("");
   const [selectedCoordinator, setSelectedCoordinator] = useState("");
@@ -118,28 +185,23 @@ export default function NewDashboardPage() {
   const [dateTo, setDateTo] = useState("");
   const [statusTab, setStatusTab] = useState<"open" | "closed" | "all">("all");
 
-  // Tab View configurations
   const [activeTab, setActiveTab] = useState<"overview" | "leaderboard" | "sla" | "repeats" | "fraud">("overview");
   const [breakdownTab, setBreakdownTab] = useState<"district" | "di" | "coordinator" | "zone" | "hospital">("district");
 
-  // Local table searches
   const [leaderboardSearch, setLeaderboardSearch] = useState("");
   const [openTicketsSearch, setOpenTicketsSearch] = useState("");
   const [fraudSearch, setFraudSearch] = useState("");
 
-  // Pagination
   const [openPage, setOpenPage] = useState(1);
   const [leaderboardPage, setLeaderboardPage] = useState(1);
   const [fraudPage, setFraudPage] = useState(1);
   const itemsPerPage = 10;
 
-  // User Info & RBAC Lock status
   const currentUser = useMemo(() => authService.getCurrentUser(), []);
   const userRole = currentUser?.role || "MIS";
   const userZone = currentUser?.zone || null;
   const userCoordinator = currentUser?.coordinator || null;
 
-  // Enforce Zonal Mapping & RBAC constraints on filters
   useEffect(() => {
     const isPowerUser = ["Admin", "VP", "MIS"].includes(userRole);
     if (!isPowerUser) {
@@ -148,24 +210,14 @@ export default function NewDashboardPage() {
     }
   }, [userRole, userZone, userCoordinator]);
 
-  // Minimizes and caches data to avoid localstorage quota overflow
   const saveToCache = (data: any) => {
     try {
-      const cacheData = {
-        di: data.diNameList,
-        p: data.penaltyFile,
-        a: data.assetValues,
-        c: data.criticalEquipment,
-        e: data.expenseList,
-        ts: Date.now()
-      };
-      localStorage.setItem(CACHE_KEY, JSON.stringify(cacheData));
+      localStorage.setItem(CACHE_KEY, JSON.stringify({ di: data.diNameList, p: data.penaltyFile, a: data.assetValues, c: data.criticalEquipment, e: data.expenseList, ts: Date.now() }));
     } catch (err) {
       console.warn("Could not save to LocalStorage cache", err);
     }
   };
 
-  // Restores data from cache immediately for 0.01ms load speed
   const restoreFromCache = () => {
     try {
       const cached = localStorage.getItem(CACHE_KEY);
@@ -176,7 +228,7 @@ export default function NewDashboardPage() {
         setAssetValues(data.a || []);
         setCriticalEquipment(data.c || []);
         setExpenseList(data.e || []);
-        setLoading(false); // Disable spinner immediately
+        setLoading(false);
         return true;
       }
     } catch (e) {
@@ -185,14 +237,10 @@ export default function NewDashboardPage() {
     return false;
   };
 
-  // High-performance sheet data fetching & parsing directly from Google Sheets API
   const loadAllDashboardData = async (isBackground = false) => {
     try {
-      if (isBackground) {
-        setBackgroundSyncing(true);
-      } else {
-        setLoading(true);
-      }
+      if (isBackground) setBackgroundSyncing(true);
+      else setLoading(true);
       setError("");
 
       const fetchSheet = async (range: string) => {
@@ -203,46 +251,25 @@ export default function NewDashboardPage() {
         return data.values || [];
       };
 
-      // 1. Fetch reference lists and penalty sheet in parallel
       const [diRows, assetRows, criticalRows, penaltyRows] = await Promise.all([
         fetchSheet("DI Name List!A1:E"),
         fetchSheet("Asset Value!A1:B"),
         fetchSheet("Critical Equipment!A1:B"),
-        fetchSheet("Penalty File!A1:AZ50000") // Pulls up to 50k rows in a single batch
+        fetchSheet("Penalty File!A1:AZ50000"),
       ]);
 
-      // 2. Parse DI Name List
       const diHeaders = diRows[0] || [];
       const parsedDIs = diRows.slice(1).map((row: any) => {
         const obj: any = {};
-        diHeaders.forEach((h: string, idx: number) => {
-          obj[h.trim()] = row[idx] !== undefined ? row[idx].trim() : "";
-        });
-        return {
-          zoneName: obj["Zone Name"] || "",
-          districtName: obj["District Name"] || "",
-          coordinatorName: obj["Coordinator Name"] || "",
-          diName: obj["District Incharge Name"] || "",
-          hospitalName: obj["Hospital Name"] || ""
-        };
+        diHeaders.forEach((h: string, idx: number) => { obj[h.trim()] = row[idx] !== undefined ? row[idx].trim() : ""; });
+        return { zoneName: obj["Zone Name"] || "", districtName: obj["District Name"] || "", coordinatorName: obj["Coordinator Name"] || "", diName: obj["District Incharge Name"] || "", hospitalName: obj["Hospital Name"] || "" };
       });
 
-      // 3. Parse Asset Values
-      const parsedAssets = assetRows.slice(1).map((row: any) => ({
-        name: row[0] ? row[0].trim() : "",
-        cost: row[1] ? parseFloat(row[1].trim().replace(/,/g, "")) || 0 : 0
-      }));
+      const parsedAssets = assetRows.slice(1).map((row: any) => ({ name: row[0] ? row[0].trim() : "", cost: row[1] ? parseFloat(row[1].trim().replace(/,/g, "")) || 0 : 0 }));
+      const parsedCritical = criticalRows.slice(1).map((row: any) => ({ name: row[0] ? row[0].trim() : "", type: row[1] ? row[1].trim() : "" }));
 
-      // 4. Parse Critical Equipment List
-      const parsedCritical = criticalRows.slice(1).map((row: any) => ({
-        name: row[0] ? row[0].trim() : "",
-        type: row[1] ? row[1].trim() : ""
-      }));
+      if (penaltyRows.length < 2) throw new Error("Penalty File contains no records.");
 
-      // 5. Parse Penalty File
-      if (penaltyRows.length < 2) {
-        throw new Error("Penalty File contains no records.");
-      }
       const penaltyHeaders = penaltyRows[0].map((h: string, idx: number) => {
         const name = h.trim();
         if (name === "Hospital Type" && idx === 22) return "Hospital Type Mapped";
@@ -252,11 +279,7 @@ export default function NewDashboardPage() {
 
       const parsedPenalties = penaltyRows.slice(1).map((row: any) => {
         const obj: any = {};
-        penaltyHeaders.forEach((h: string, idx: number) => {
-          obj[h] = row[idx] !== undefined ? row[idx].trim() : "";
-        });
-
-        // Minify row content to store only required fields
+        penaltyHeaders.forEach((h: string, idx: number) => { obj[h] = row[idx] !== undefined ? row[idx].trim() : ""; });
         return {
           complaintId: obj["Complaint ID"] || "",
           districtName: obj["District Name"] || "",
@@ -280,37 +303,21 @@ export default function NewDashboardPage() {
           coordinatorName: obj["Coordinator Name"] || "",
           diName: obj["DI Name"] || "",
           finalCloseMonth: obj["Final Close Month"] || obj["Fianl Close Month"] || "",
-          closeMonth: obj["Close Month"] || ""
+          closeMonth: obj["Close Month"] || "",
         };
       });
 
-      // 6. Fetch submitted expenses for barcode verification
-      let freshExpenses = [];
-      try {
-        freshExpenses = await expenseService.getTeamExpenses();
-      } catch (err) {
-        console.warn("Could not fetch team expenses, using empty list", err);
-      }
+      let freshExpenses: any[] = [];
+      try { freshExpenses = await expenseService.getTeamExpenses(); } catch (err) { console.warn("Could not fetch team expenses", err); }
 
-      // Update state
       setDiNameList(parsedDIs);
       setPenaltyFile(parsedPenalties);
       setAssetValues(parsedAssets);
       setCriticalEquipment(parsedCritical);
       setExpenseList(freshExpenses);
+      saveToCache({ diNameList: parsedDIs, penaltyFile: parsedPenalties, assetValues: parsedAssets, criticalEquipment: parsedCritical, expenseList: freshExpenses });
 
-      // Save to local cache
-      saveToCache({
-        diNameList: parsedDIs,
-        penaltyFile: parsedPenalties,
-        assetValues: parsedAssets,
-        criticalEquipment: parsedCritical,
-        expenseList: freshExpenses
-      });
-
-      if (isBackground) {
-        toast.success("Dashboard metrics updated live! ⚡", { id: "bg-sync" });
-      }
+      if (isBackground) toast.success("Dashboard updated live! ⚡", { id: "bg-sync" });
     } catch (err: any) {
       console.error(err);
       setError("Failed to fetch Google Sheet data: " + err.message);
@@ -337,10 +344,9 @@ export default function NewDashboardPage() {
     setDateFrom("");
     setDateTo("");
     setStatusTab("all");
-    toast.success("Filters reset successfully");
+    toast.success("Filters reset");
   };
 
-  // 1. Dynamic Dropdown lists derived from loaded datasets (Cascading Dependent Filters)
   const filterOptions = useMemo(() => {
     const zones = new Set<string>();
     const districts = new Set<string>();
@@ -350,38 +356,20 @@ export default function NewDashboardPage() {
     const hospitalTypes = new Set<string>();
     const equipmentTypes = new Set<string>();
 
-    diNameList.forEach((row) => {
-      if (row.zoneName) zones.add(row.zoneName);
-    });
-
-    diNameList.forEach((row) => {
-      if (!selectedZone || row.zoneName === selectedZone) {
-        if (row.districtName) districts.add(row.districtName);
-      }
-    });
-
+    diNameList.forEach((row) => { if (row.zoneName) zones.add(row.zoneName); });
+    diNameList.forEach((row) => { if (!selectedZone || row.zoneName === selectedZone) { if (row.districtName) districts.add(row.districtName); } });
     diNameList.forEach((row) => {
       const matchZone = !selectedZone || row.zoneName === selectedZone;
       const matchDistrict = !selectedDistrict || row.districtName === selectedDistrict;
-      if (matchZone && matchDistrict) {
-        if (row.coordinatorName) coordinators.add(row.coordinatorName);
-      }
+      if (matchZone && matchDistrict && row.coordinatorName) coordinators.add(row.coordinatorName);
     });
-
     diNameList.forEach((row) => {
       const matchZone = !selectedZone || row.zoneName === selectedZone;
       const matchDistrict = !selectedDistrict || row.districtName === selectedDistrict;
       const matchCoord = !selectedCoordinator || row.coordinatorName === selectedCoordinator;
-      if (matchZone && matchDistrict && matchCoord) {
-        if (row.diName) dis.add(row.diName);
-      }
+      if (matchZone && matchDistrict && matchCoord && row.diName) dis.add(row.diName);
     });
-
-    penaltyFile.forEach((row) => {
-      if (row.month) months.add(row.month);
-      if (row.hospitalType) hospitalTypes.add(row.hospitalType);
-      if (row.equipmentType) equipmentTypes.add(row.equipmentType);
-    });
+    penaltyFile.forEach((row) => { if (row.month) months.add(row.month); if (row.hospitalType) hospitalTypes.add(row.hospitalType); if (row.equipmentType) equipmentTypes.add(row.equipmentType); });
 
     return {
       zones: Array.from(zones).sort(),
@@ -389,30 +377,20 @@ export default function NewDashboardPage() {
       coordinators: Array.from(coordinators).sort(),
       dis: Array.from(dis).sort(),
       months: Array.from(months).sort((a, b) => {
-        const parseMonth = (m: string) => {
-          const parts = m.split("-");
-          const mNames = ["jan", "feb", "mar", "apr", "may", "jun", "jul", "aug", "sep", "oct", "nov", "dec"];
-          const monthIdx = mNames.indexOf(parts[0].toLowerCase());
-          const year = parseInt("20" + parts[1]);
-          return new Date(year, monthIdx, 1).getTime();
-        };
+        const parseMonth = (m: string) => { const parts = m.split("-"); const mNames = ["jan","feb","mar","apr","may","jun","jul","aug","sep","oct","nov","dec"]; const monthIdx = mNames.indexOf(parts[0].toLowerCase()); const year = parseInt("20" + parts[1]); return new Date(year, monthIdx, 1).getTime(); };
         return parseMonth(a) - parseMonth(b);
       }),
       hospitalTypes: Array.from(hospitalTypes).filter(Boolean).sort(),
-      equipmentTypes: Array.from(equipmentTypes).filter(Boolean).sort()
+      equipmentTypes: Array.from(equipmentTypes).filter(Boolean).sort(),
     };
-  }, [diNameList, penaltyFile]);
+  }, [diNameList, penaltyFile, selectedZone, selectedDistrict, selectedCoordinator]);
 
-  // Apply filters on the dataset
   const filteredPenaltyFile = useMemo(() => {
     return penaltyFile.filter((row) => {
-      // Find DI Mapping by Hospital
       const mapping = diNameList.find((m) => m.hospitalName === row.hospitalName);
-
       const zone = mapping ? mapping.zoneName : "";
       const diOpt = (row.diName || "").trim() || (mapping ? mapping.diName : "");
       const coord = (row.coordinatorName || "").trim() || (mapping ? mapping.coordinatorName : "");
-
       if (selectedZone && zone !== selectedZone) return false;
       if (selectedDistrict && row.districtName !== selectedDistrict) return false;
       if (selectedCoordinator && coord !== selectedCoordinator) return false;
@@ -420,305 +398,177 @@ export default function NewDashboardPage() {
       if (selectedMonth && row.month !== selectedMonth) return false;
       if (selectedHospitalType && row.hospitalType !== selectedHospitalType) return false;
       if (selectedEquipmentType && row.equipmentType !== selectedEquipmentType) return false;
-
-      // Date constraints
-      if (dateFrom && row.complaintRaiseDate) {
-        const rTime = parseFlexibleDate(row.complaintRaiseDate);
-        if (rTime < new Date(dateFrom).getTime()) return false;
-      }
-      if (dateTo && row.complaintRaiseDate) {
-        const rTime = parseFlexibleDate(row.complaintRaiseDate);
-        if (rTime > new Date(dateTo).setHours(23, 59, 59, 999)) return false;
-      }
-
-      // Status tab filter
-      if (statusTab !== "all") {
-        const isClosed = isComplaintClosed(row);
-        if (statusTab === "open" && isClosed) return false;
-        if (statusTab === "closed" && !isClosed) return false;
-      }
-
+      if (dateFrom && row.complaintRaiseDate) { if (parseFlexibleDate(row.complaintRaiseDate) < new Date(dateFrom).getTime()) return false; }
+      if (dateTo && row.complaintRaiseDate) { if (parseFlexibleDate(row.complaintRaiseDate) > new Date(dateTo).setHours(23, 59, 59, 999)) return false; }
+      if (statusTab !== "all") { const isClosed = isComplaintClosed(row); if (statusTab === "open" && isClosed) return false; if (statusTab === "closed" && !isClosed) return false; }
       return true;
     });
-  }, [
-    penaltyFile, 
-    diNameList, 
-    selectedZone, 
-    selectedDistrict, 
-    selectedCoordinator, 
-    selectedDI, 
-    selectedMonth, 
-    selectedHospitalType, 
-    selectedEquipmentType, 
-    dateFrom, 
-    dateTo,
-    statusTab
-  ]);
+  }, [penaltyFile, diNameList, selectedZone, selectedDistrict, selectedCoordinator, selectedDI, selectedMonth, selectedHospitalType, selectedEquipmentType, dateFrom, dateTo, statusTab]);
 
-  // Helper to calculate row penalty with dynamic estimates
   const getRowPenaltyVal = (row: any): number => {
     if (row.totalPenalty > 0) return row.totalPenalty;
     if (!isComplaintClosed(row)) {
       if (!row.complaintRaiseDate) return 0;
       const raiseTime = parseFlexibleDate(row.complaintRaiseDate);
       const days = Math.max(0, (Date.now() - raiseTime) / (1000 * 60 * 60 * 24));
-      
-      const isCritical = criticalEquipment.some(
-        (c) => c.name.toLowerCase() === row.equipmentName.toLowerCase()
-      );
-      const ratePerDay = isCritical ? 2000 : 500;
-      return Math.round(days * ratePerDay);
+      const isCritical = criticalEquipment.some((c) => c.name.toLowerCase() === row.equipmentName.toLowerCase());
+      return Math.round(days * (isCritical ? 2000 : 500));
     }
     return 0;
   };
 
-  // 2. Summary stats calculations
   const summary = useMemo(() => {
-    let logged = 0;
-    let closed = 0;
-    let open = 0;
-    let penalty = 0;
-    let closedWithin24h = 0;
-
+    let logged = 0, closed = 0, open = 0, penalty = 0, closedWithin24h = 0;
     filteredPenaltyFile.forEach((row) => {
       logged++;
       const isClosed = isComplaintClosed(row);
       if (isClosed) {
         closed++;
-        const raiseTime = parseFlexibleDate(row.complaintRaiseDate);
-        const closeTime = parseFlexibleDate(row.complaintCloseDate);
-        const diffHours = (closeTime - raiseTime) / (1000 * 60 * 60);
-        if (diffHours <= 24 && diffHours >= 0) {
-          closedWithin24h++;
-        }
-      } else {
-        open++;
-      }
+        const diffHours = (parseFlexibleDate(row.complaintCloseDate) - parseFlexibleDate(row.complaintRaiseDate)) / (1000 * 60 * 60);
+        if (diffHours <= 24 && diffHours >= 0) closedWithin24h++;
+      } else { open++; }
       penalty += getRowPenaltyVal(row);
     });
-
-    const ftfrRate = logged > 0 ? ((closedWithin24h / logged) * 100).toFixed(1) : "0.0";
-
-    // Audited Asset Value
-    let totalAssetVal = 0;
-    const costMap = new Map<string, number>();
-    assetValues.forEach((item) => {
-      costMap.set(item.name.toLowerCase(), item.cost);
-    });
-
-    const uniqueEquip = new Set<string>();
-    filteredPenaltyFile.forEach((row) => {
-      if (row.equipmentName) {
-        uniqueEquip.add(row.equipmentName.trim().toLowerCase());
-      }
-    });
-    uniqueEquip.forEach((name) => {
-      totalAssetVal += costMap.get(name) || 0;
-    });
-
-    return {
-      totalLogged: logged,
-      totalClosed: closed,
-      totalOpen: open,
-      totalPenalty: penalty,
-      ftfrRate,
-      totalAssetValUnderAudit: (totalAssetVal / 10000000).toFixed(2)
-    };
+    return { totalLogged: logged, totalClosed: closed, totalOpen: open, totalPenalty: penalty, ftfrRate: logged > 0 ? ((closedWithin24h / logged) * 100).toFixed(1) : "0.0", closedWithin24h };
   }, [filteredPenaltyFile, assetValues, criticalEquipment]);
 
-  // 3. Projections
   const projections = useMemo(() => {
     const today = new Date();
     const totalDaysInMonth = new Date(today.getFullYear(), today.getMonth() + 1, 0).getDate();
     const currentDay = today.getDate();
-
     let curMonthPenalty = 0;
     filteredPenaltyFile.forEach((row) => {
       if (!row.complaintRaiseDate) return;
       const raiseDate = new Date(parseFlexibleDate(row.complaintRaiseDate));
-      if (raiseDate.getMonth() === today.getMonth() && raiseDate.getFullYear() === today.getFullYear()) {
-        curMonthPenalty += getRowPenaltyVal(row);
-      }
+      if (raiseDate.getMonth() === today.getMonth() && raiseDate.getFullYear() === today.getFullYear()) curMonthPenalty += getRowPenaltyVal(row);
     });
-
     const dailyRunRate = currentDay > 0 ? Math.round(curMonthPenalty / currentDay) : 0;
-    const projectedPenalty = curMonthPenalty + (dailyRunRate * (totalDaysInMonth - currentDay));
-
-    return {
-      currentMonthPenalty: curMonthPenalty,
-      dailyRunRate,
-      projectedPenalty
-    };
+    return { currentMonthPenalty: curMonthPenalty, dailyRunRate, projectedPenalty: curMonthPenalty + (dailyRunRate * (totalDaysInMonth - currentDay)) };
   }, [filteredPenaltyFile, criticalEquipment]);
 
-  // 4. Breakdown tabs
+  // ─── Monthly Trend Line Data ─────────────────────────────────────────────
+  const monthlyTrendData = useMemo(() => {
+    const monthMap: Record<string, { penalty: number; open: number; closed: number }> = {};
+    filteredPenaltyFile.forEach((row) => {
+      const key = row.month || "Unknown";
+      if (!monthMap[key]) monthMap[key] = { penalty: 0, open: 0, closed: 0 };
+      monthMap[key].penalty += getRowPenaltyVal(row);
+      if (isComplaintClosed(row)) monthMap[key].closed++;
+      else monthMap[key].open++;
+    });
+    const sortedKeys = Object.keys(monthMap).sort((a, b) => {
+      const mNames = ["jan","feb","mar","apr","may","jun","jul","aug","sep","oct","nov","dec"];
+      const parse = (m: string) => { const parts = m.split("-"); const mi = mNames.indexOf((parts[0] || "jan").toLowerCase()); const y = parseInt("20" + (parts[1] || "25")); return new Date(y, mi, 1).getTime(); };
+      return parse(a) - parse(b);
+    });
+    const last8 = sortedKeys.slice(-8);
+    return [
+      {
+        id: "Penalty",
+        color: "#ef4444",
+        data: last8.map((k) => ({ x: k.toUpperCase(), y: Math.round(monthMap[k].penalty / 1000) })),
+      },
+      {
+        id: "Open Tickets",
+        color: "#f59e0b",
+        data: last8.map((k) => ({ x: k.toUpperCase(), y: monthMap[k].open })),
+      },
+    ];
+  }, [filteredPenaltyFile, criticalEquipment]);
+
   const breakdownData = useMemo(() => {
     const counts: { [key: string]: { name: string; amount: number; openTickets: number } } = {};
-
     filteredPenaltyFile.forEach((row) => {
       const isClosed = isComplaintClosed(row);
-      let key = "";
-      
       const mapping = diNameList.find((m) => m.hospitalName === row.hospitalName);
-
-      if (breakdownTab === "district") {
-        key = row.districtName || "Unknown";
-      } else if (breakdownTab === "di") {
-        key = (row.diName || "").trim() || (mapping ? mapping.diName : "Unassigned");
-      } else if (breakdownTab === "hospital") {
-        key = row.hospitalName || "Unknown";
-      } else if (breakdownTab === "zone") {
-        key = mapping ? mapping.zoneName : "Unassigned";
-      } else if (breakdownTab === "coordinator") {
-        key = (row.coordinatorName || "").trim() || (mapping ? mapping.coordinatorName : "Unassigned");
-      }
-
+      let key = "";
+      if (breakdownTab === "district") key = row.districtName || "Unknown";
+      else if (breakdownTab === "di") key = (row.diName || "").trim() || (mapping ? mapping.diName : "Unassigned");
+      else if (breakdownTab === "hospital") key = row.hospitalName || "Unknown";
+      else if (breakdownTab === "zone") key = mapping ? mapping.zoneName : "Unassigned";
+      else if (breakdownTab === "coordinator") key = (row.coordinatorName || "").trim() || (mapping ? mapping.coordinatorName : "Unassigned");
       if (!key) key = "Unknown";
-
-      if (!counts[key]) {
-        counts[key] = { name: key, amount: 0, openTickets: 0 };
-      }
-
+      if (!counts[key]) counts[key] = { name: key, amount: 0, openTickets: 0 };
       counts[key].amount += getRowPenaltyVal(row);
-      if (!isClosed) {
-        counts[key].openTickets++;
-      }
+      if (!isClosed) counts[key].openTickets++;
     });
-
     const list = Object.values(counts).sort((a, b) => b.amount - a.amount);
-    const chartData = list.slice(0, 7).map((item) => ({
-      name: item.name.length > 15 ? item.name.substring(0, 15) + "..." : item.name,
-      amount: item.amount
+    const CHART_COLORS = ["#6366f1","#8b5cf6","#ec4899","#f43f5e","#f59e0b","#10b981","#3b82f6"];
+    const chartData = list.slice(0, 7).map((item, i) => ({
+      name: item.name.length > 14 ? item.name.substring(0, 14) + "…" : item.name,
+      fullName: item.name,
+      Penalty: item.amount,
+      Open: item.openTickets,
+      color: CHART_COLORS[i % CHART_COLORS.length],
     }));
-
-    return {
-      list,
-      chartData
-    };
+    return { list, chartData };
   }, [filteredPenaltyFile, breakdownTab, diNameList, criticalEquipment]);
 
-  // 5. DI Performance Leaderboard
   const diLeaderboard = useMemo(() => {
     const performance: { [di: string]: { name: string; totalLogged: number; closed: number; totalPenalty: number; totalDays: number } } = {};
-
     filteredPenaltyFile.forEach((row) => {
       const mapping = diNameList.find((m) => m.hospitalName === row.hospitalName);
       const diName = (row.diName || "").trim() || (mapping ? mapping.diName : "Unassigned");
       if (!diName) return;
-
-      if (!performance[diName]) {
-        performance[diName] = { name: diName, totalLogged: 0, closed: 0, totalPenalty: 0, totalDays: 0 };
-      }
-
+      if (!performance[diName]) performance[diName] = { name: diName, totalLogged: 0, closed: 0, totalPenalty: 0, totalDays: 0 };
       performance[diName].totalLogged++;
       performance[diName].totalPenalty += getRowPenaltyVal(row);
-
       const isClosed = isComplaintClosed(row);
       if (isClosed) {
         performance[diName].closed++;
-        const raiseTime = parseFlexibleDate(row.complaintRaiseDate);
-        const closeTime = parseFlexibleDate(row.complaintCloseDate);
-        performance[diName].totalDays += (closeTime - raiseTime) / (1000 * 60 * 60 * 24);
+        performance[diName].totalDays += (parseFlexibleDate(row.complaintCloseDate) - parseFlexibleDate(row.complaintRaiseDate)) / (1000 * 60 * 60 * 24);
       }
     });
-
-    return Object.values(performance)
-      .map((item) => {
-        const resolutionRate = item.totalLogged > 0 ? Math.round((item.closed / item.totalLogged) * 100) : 0;
-        const avgResolutionTime = item.closed > 0 ? (item.totalDays / item.closed).toFixed(1) : "N/A";
-        return {
-          ...item,
-          resolutionRate,
-          avgResolutionTime
-        };
-      })
-      .sort((a, b) => a.totalPenalty - b.totalPenalty || b.resolutionRate - a.resolutionRate);
+    return Object.values(performance).map((item) => ({
+      ...item,
+      resolutionRate: item.totalLogged > 0 ? Math.round((item.closed / item.totalLogged) * 100) : 0,
+      avgResolutionTime: item.closed > 0 ? (item.totalDays / item.closed).toFixed(1) : "N/A",
+    })).sort((a, b) => a.totalPenalty - b.totalPenalty || b.resolutionRate - a.resolutionRate);
   }, [filteredPenaltyFile, diNameList, criticalEquipment]);
 
-  const filteredLeaderboard = useMemo(() => {
-    return diLeaderboard.filter(row => 
-      row.name.toLowerCase().includes(leaderboardSearch.toLowerCase())
-    );
-  }, [diLeaderboard, leaderboardSearch]);
+  const filteredLeaderboard = useMemo(() => diLeaderboard.filter((row) => row.name.toLowerCase().includes(leaderboardSearch.toLowerCase())), [diLeaderboard, leaderboardSearch]);
 
-  // 6. SLA Aging
   const slaAging = useMemo(() => {
-    let ageLess24h = 0;
-    let age24To48h = 0;
-    let age2To7d = 0;
-    let age7dPlus = 0;
-
-    const list = filteredPenaltyFile.filter(row => !isComplaintClosed(row));
-
-    list.forEach((row) => {
-      const raiseTime = parseFlexibleDate(row.complaintRaiseDate);
-      const hours = (Date.now() - raiseTime) / (1000 * 60 * 60);
-
+    let ageLess24h = 0, age24To48h = 0, age2To7d = 0, age7dPlus = 0;
+    filteredPenaltyFile.filter((row) => !isComplaintClosed(row)).forEach((row) => {
+      const hours = (Date.now() - parseFlexibleDate(row.complaintRaiseDate)) / (1000 * 60 * 60);
       if (hours <= 24) ageLess24h++;
       else if (hours <= 48) age24To48h++;
       else if (hours <= 168) age2To7d++;
       else age7dPlus++;
     });
-
     return [
       { id: "0-24 Hours", label: "0-24h", value: ageLess24h, color: "#10b981" },
       { id: "24-48 Hours", label: "24-48h", value: age24To48h, color: "#3b82f6" },
       { id: "2-7 Days", label: "2-7d", value: age2To7d, color: "#f59e0b" },
-      { id: "7+ Days (Critical)", label: "7d+", value: age7dPlus, color: "#ef4444" }
+      { id: "7+ Days (Critical)", label: "7d+", value: age7dPlus, color: "#ef4444" },
     ];
   }, [filteredPenaltyFile]);
 
-  const openTicketsList = useMemo(() => {
-    return filteredPenaltyFile
-      .filter(row => !isComplaintClosed(row))
-      .map(row => {
-        const raiseTime = parseFlexibleDate(row.complaintRaiseDate);
-        const ageHours = Math.round((Date.now() - raiseTime) / (1000 * 60 * 60));
-        return {
-          complaintId: row.complaintId,
-          districtName: row.districtName,
-          hospitalName: row.hospitalName,
-          equipmentName: row.equipmentName,
-          complaintRaiseDate: row.complaintRaiseDate,
-          status: row.status,
-          penalty: getRowPenaltyVal(row),
-          ageHours
-        };
-      })
-      .sort((a, b) => b.ageHours - a.ageHours);
-  }, [filteredPenaltyFile, criticalEquipment]);
+  const openTicketsList = useMemo(() =>
+    filteredPenaltyFile.filter((row) => !isComplaintClosed(row)).map((row) => {
+      const ageHours = Math.round((Date.now() - parseFlexibleDate(row.complaintRaiseDate)) / (1000 * 60 * 60));
+      return { ...row, penalty: getRowPenaltyVal(row), ageHours };
+    }).sort((a, b) => b.ageHours - a.ageHours),
+  [filteredPenaltyFile, criticalEquipment]);
 
-  const filteredOpenTickets = useMemo(() => {
-    return openTicketsList.filter(row => 
+  const filteredOpenTickets = useMemo(() =>
+    openTicketsList.filter((row) =>
       row.complaintId.toLowerCase().includes(openTicketsSearch.toLowerCase()) ||
       row.equipmentName.toLowerCase().includes(openTicketsSearch.toLowerCase()) ||
       row.hospitalName.toLowerCase().includes(openTicketsSearch.toLowerCase()) ||
       row.districtName.toLowerCase().includes(openTicketsSearch.toLowerCase())
-    );
-  }, [openTicketsList, openTicketsSearch]);
+    ), [openTicketsList, openTicketsSearch]);
 
-  // 7. Repeat complaints
   const repeatCalls = useMemo(() => {
     const groups: { [barcode: string]: { barcode: string; name: string; hospital: string; count: number } } = {};
-
     filteredPenaltyFile.forEach((row) => {
       const barcode = row.barCode;
       if (!barcode || barcode === "" || barcode.toLowerCase() === "na" || barcode.toLowerCase() === "--") return;
-
-      if (!groups[barcode]) {
-        groups[barcode] = {
-          barcode,
-          name: row.equipmentName || "Unknown",
-          hospital: row.hospitalName || "Unknown",
-          count: 0
-        };
-      }
+      if (!groups[barcode]) groups[barcode] = { barcode, name: row.equipmentName || "Unknown", hospital: row.hospitalName || "Unknown", count: 0 };
       groups[barcode].count++;
     });
-
-    return Object.values(groups)
-      .filter((g) => g.count > 1)
-      .sort((a, b) => b.count - a.count);
+    return Object.values(groups).filter((g) => g.count > 1).sort((a, b) => b.count - a.count);
   }, [filteredPenaltyFile]);
 
   const repeatDetailsList = useMemo(() => {
@@ -726,721 +576,663 @@ export default function NewDashboardPage() {
     return penaltyFile.filter((row) => row.barCode === selectedRepeatBarcode);
   }, [penaltyFile, selectedRepeatBarcode]);
 
-  // 8. Fraud checker (mismatch barcodes)
   const barcodeMismatches = useMemo(() => {
     const validBarcodes = new Set<string>();
-    penaltyFile.forEach((row) => {
-      if (row.barCode) {
-        validBarcodes.add(String(row.barCode).trim());
-      }
-    });
-
+    penaltyFile.forEach((row) => { if (row.barCode) validBarcodes.add(String(row.barCode).trim()); });
     const mismatches: any[] = [];
     expenseList.forEach((exp) => {
       const engineerName = exp.user_name || exp.name || "Engineer";
       const engineerCode = exp.user_code || exp.e_code || "Unknown";
-
       const checkBarcode = (barcode: string, hospital: string, date: string, type: string) => {
         if (!barcode) return;
         const cleaned = String(barcode).trim();
-        if (cleaned === "" || cleaned === "--" || cleaned.toLowerCase() === "na") return;
-
-        if (!validBarcodes.has(cleaned)) {
-          mismatches.push({
-            engineerName,
-            engineerCode,
-            barcode: cleaned,
-            hospital,
-            date: date ? new Date(date).toLocaleDateString() : "N/A",
-            type
-          });
-        }
+        if (!cleaned || cleaned === "--" || cleaned.toLowerCase() === "na") return;
+        if (!validBarcodes.has(cleaned)) mismatches.push({ engineerName, engineerCode, barcode: cleaned, hospital, date: date ? new Date(date).toLocaleDateString() : "N/A", type });
       };
-
       const items = exp.itineraries || exp.legs || [];
       if (Array.isArray(items)) {
         items.forEach((leg: any) => {
           const date = leg.date || exp.created_at;
           const hospital = leg.to || "Unknown Hospital";
-
           if (leg.activity_details) {
             try {
-              const details = typeof leg.activity_details === "string" 
-                ? JSON.parse(leg.activity_details) 
-                : leg.activity_details;
-
-              if (details.calls_barcode) {
-                details.calls_barcode.split(/[,\s]+/).forEach((b: string) => {
-                  checkBarcode(b, hospital, date, "Calls");
-                });
-              }
-              if (details.pms_barcode) {
-                details.pms_barcode.split(/[,\s]+/).forEach((b: string) => {
-                  checkBarcode(b, hospital, date, "PMS");
-                });
-              }
-              if (details.calls_list && Array.isArray(details.calls_list)) {
-                details.calls_list.forEach((c: any) => {
-                  if (c.barcode) checkBarcode(c.barcode, hospital, date, "Calls List");
-                });
-              }
-              if (details.pms_list && Array.isArray(details.pms_list)) {
-                details.pms_list.forEach((p: any) => {
-                  if (p.barcode) checkBarcode(p.barcode, hospital, date, "PMS List");
-                });
-              }
-            } catch (e) {
-              console.warn("Failed to parse activity_details in audit check", e);
-            }
+              const details = typeof leg.activity_details === "string" ? JSON.parse(leg.activity_details) : leg.activity_details;
+              if (details.calls_barcode) details.calls_barcode.split(/[,\s]+/).forEach((b: string) => checkBarcode(b, hospital, date, "Calls"));
+              if (details.pms_barcode) details.pms_barcode.split(/[,\s]+/).forEach((b: string) => checkBarcode(b, hospital, date, "PMS"));
+              if (details.calls_list && Array.isArray(details.calls_list)) details.calls_list.forEach((c: any) => { if (c.barcode) checkBarcode(c.barcode, hospital, date, "Calls List"); });
+              if (details.pms_list && Array.isArray(details.pms_list)) details.pms_list.forEach((p: any) => { if (p.barcode) checkBarcode(p.barcode, hospital, date, "PMS List"); });
+            } catch (e) { console.warn("Failed to parse activity_details", e); }
           }
         });
       }
     });
-
     if (mismatches.length === 0) {
       return [
         { engineerName: "Satish Kumar", engineerCode: "E-308", barcode: "99182371", hospital: "Ajmer MCDW", date: "16-Jul-2026", type: "Calls Mismatch" },
         { engineerName: "Rahul Sharma", engineerCode: "E-112", barcode: "55123992", hospital: "Arain Chc Ajmer", date: "15-Jul-2026", type: "PMS Mismatch" },
-        { engineerName: "Deepak Choudhary", engineerCode: "E-241", barcode: "88092211", hospital: "Bandanwara Chc Ajmer", date: "14-Jul-2026", type: "Calls Mismatch" }
+        { engineerName: "Deepak Choudhary", engineerCode: "E-241", barcode: "88092211", hospital: "Bandanwara Chc Ajmer", date: "14-Jul-2026", type: "Calls Mismatch" },
       ];
     }
     return mismatches;
   }, [expenseList, penaltyFile]);
 
-  const filteredFraudList = useMemo(() => {
-    return barcodeMismatches.filter(row => 
+  const filteredFraudList = useMemo(() =>
+    barcodeMismatches.filter((row) =>
       row.engineerName.toLowerCase().includes(fraudSearch.toLowerCase()) ||
       row.barcode.toLowerCase().includes(fraudSearch.toLowerCase()) ||
       row.hospital.toLowerCase().includes(fraudSearch.toLowerCase())
-    );
-  }, [barcodeMismatches, fraudSearch]);
+    ), [barcodeMismatches, fraudSearch]);
 
-  const formatRupees = (val: number) => {
-    return new Intl.NumberFormat("en-IN", {
-      style: "currency",
-      currency: "INR",
-      maximumFractionDigits: 0
-    }).format(val);
-  };
+  // ─── Equipment type breakdown for Pie ──────────────────────────────────────
+  const equipTypePieData = useMemo(() => {
+    const m: Record<string, number> = {};
+    filteredPenaltyFile.forEach((row) => { const t = row.equipmentType || "Other"; m[t] = (m[t] || 0) + 1; });
+    const COLORS = ["#6366f1","#8b5cf6","#ec4899","#f43f5e","#f59e0b","#10b981","#3b82f6","#06b6d4"];
+    return Object.entries(m).sort((a, b) => b[1] - a[1]).slice(0, 8).map(([id, value], i) => ({ id, label: id, value, color: COLORS[i % COLORS.length] }));
+  }, [filteredPenaltyFile]);
 
-  // Simple loader as requested
+  // ─── Loader ────────────────────────────────────────────────────────────────
   if (loading) {
     return (
       <div className="flex flex-col items-center justify-center min-h-[70vh] gap-3">
-        <div className="w-10 h-10 border-4 border-slate-200 border-t-indigo-600 rounded-full animate-spin"></div>
+        <div className="w-10 h-10 border-4 border-slate-200 border-t-indigo-600 rounded-full animate-spin" />
         <p className="text-xs font-bold text-slate-500 uppercase tracking-wider">Loading Sheets Analytics...</p>
       </div>
     );
   }
 
+  // ─── Tabs config ───────────────────────────────────────────────────────────
+  const tabs = [
+    { id: "overview", label: "Overview", icon: BarChart3 },
+    { id: "leaderboard", label: "DI Leaderboard", icon: Award },
+    { id: "sla", label: "SLA & Tickets", icon: Clock },
+    { id: "repeats", label: "Repeat Failures", icon: Activity },
+    { id: "fraud", label: "Claims Audit", icon: ShieldAlert },
+  ];
+
+  const selectCls = "w-full h-10 px-3 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold text-slate-700 focus:outline-none focus:border-indigo-500 focus:bg-white focus:ring-2 focus:ring-indigo-100 transition-all";
+
   return (
-    <div className="p-6 bg-slate-50 min-h-screen font-sans antialiased text-slate-800">
-      
-      {/* 1. Title Banner */}
-      <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-6 bg-white p-5 rounded-2xl border border-slate-200 shadow-sm relative overflow-hidden">
-        {backgroundSyncing && (
-          <div className="absolute top-0 left-0 w-full h-1 bg-indigo-600 animate-pulse"></div>
-        )}
-        <div className="flex items-center gap-3">
-          <div className="p-3 bg-indigo-50 text-indigo-600 rounded-xl shadow-inner">
-            <TrendingUp className="w-6 h-6" />
+    <div className="p-4 md:p-6 bg-slate-50 min-h-screen font-sans antialiased text-slate-800">
+
+      {/* ── Header Banner ── */}
+      <div className="relative overflow-hidden bg-gradient-to-r from-indigo-900 via-violet-900 to-indigo-900 rounded-2xl p-6 mb-6 shadow-xl">
+        {backgroundSyncing && <div className="absolute top-0 left-0 w-full h-1 bg-indigo-400 animate-pulse" />}
+        {/* Decorative orbs */}
+        <div className="absolute -top-10 -right-10 w-48 h-48 bg-violet-500/20 rounded-full blur-3xl pointer-events-none" />
+        <div className="absolute -bottom-10 -left-10 w-48 h-48 bg-indigo-500/20 rounded-full blur-3xl pointer-events-none" />
+
+        <div className="relative flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+          <div className="flex items-center gap-4">
+            <div className="p-3 bg-white/10 backdrop-blur rounded-2xl border border-white/20 shadow-lg">
+              <TrendingUp className="w-7 h-7 text-white" />
+            </div>
+            <div>
+              <h1 className="text-2xl font-black text-white tracking-tight flex items-center gap-2">
+                Cyrix Operations Command Center
+                {backgroundSyncing && (
+                  <span className="text-[10px] font-bold text-indigo-200 bg-white/10 px-2.5 py-1 rounded-full animate-pulse border border-white/20">
+                    ⚡ Refreshing...
+                  </span>
+                )}
+              </h1>
+              <p className="text-indigo-200 text-xs font-semibold mt-0.5">
+                Live data from Google Sheets API • <span className="text-white font-black">{penaltyFile.length.toLocaleString()}</span> total records
+              </p>
+            </div>
           </div>
-          <div>
-            <h1 className="text-2xl font-black text-slate-900 tracking-tight flex items-center gap-2">
-              Sheets Operations Dashboard
-              {backgroundSyncing && (
-                <span className="text-[10px] font-bold text-indigo-600 bg-indigo-50 px-2.5 py-1 rounded-full animate-pulse border border-indigo-150">
-                  Refreshing live...
-                </span>
-              )}
-            </h1>
-            <p className="text-xs font-bold text-slate-500 uppercase tracking-wide">
-              Data loaded directly from Google Sheets API • {penaltyFile.length.toLocaleString()} total rows
-            </p>
+
+          <div className="flex items-center gap-2">
+            <div className="hidden md:flex items-center gap-3 text-xs font-bold text-indigo-200 bg-white/5 border border-white/10 px-4 py-2.5 rounded-xl">
+              <Calendar className="w-4 h-4" />
+              {new Date().toLocaleDateString("en-IN", { day: "2-digit", month: "short", year: "numeric" })}
+            </div>
+            <button
+              onClick={() => loadAllDashboardData(true)}
+              disabled={backgroundSyncing}
+              className="flex items-center gap-2 h-10 px-5 bg-white/10 hover:bg-white/20 text-white text-xs font-black rounded-xl transition-all border border-white/20 active:scale-95 disabled:opacity-50 cursor-pointer backdrop-blur"
+            >
+              <RefreshCw className={`w-4 h-4 ${backgroundSyncing ? "animate-spin" : ""}`} />
+              Sync Live
+            </button>
           </div>
         </div>
-
-        <button
-          onClick={() => loadAllDashboardData(true)}
-          disabled={backgroundSyncing}
-          className="flex items-center gap-2 h-10 px-5 bg-gradient-to-r from-indigo-600 to-indigo-700 hover:from-indigo-700 hover:to-indigo-800 text-white text-xs font-black rounded-xl transition-all shadow-md active:scale-95 disabled:opacity-50 border-0 cursor-pointer"
-        >
-          <RefreshCw className={`w-4 h-4 ${backgroundSyncing ? "animate-spin" : ""}`} />
-          <span>Sync Live Sheets</span>
-        </button>
       </div>
 
       {error && (
-        <div className="mb-6 p-4 bg-red-50 text-red-700 border border-red-200 rounded-xl text-xs font-bold flex items-center gap-2">
+        <div className="mb-5 p-4 bg-red-50 text-red-700 border border-red-200 rounded-xl text-xs font-bold flex items-center gap-2 shadow-sm">
           <AlertCircle className="w-4 h-4 flex-shrink-0" />
-          <span>{error}</span>
+          {error}
         </div>
       )}
 
-      {/* 2. Global Filter Panel */}
-      <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm mb-6">
-        <div className="flex items-center justify-between mb-4 pb-2 border-b border-slate-100">
-          <div className="flex items-center gap-2">
-            <SlidersHorizontal className="w-4 h-4 text-indigo-600" />
-            <h2 className="text-xs font-bold text-slate-700 uppercase tracking-wider">Enterprise Filters (Sheets Mapping)</h2>
+      {/* ── KPI Cards ── */}
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+        <KpiCard label="Outstanding Penalty" value={formatRupees(summary.totalPenalty)} subtext="Incl. dynamic estimations" icon={IndianRupee} color="red" />
+        <KpiCard label="Total Logged" value={summary.totalLogged.toLocaleString()} subtext="Sheet complaint records" icon={FileText} color="slate" />
+        <KpiCard label="Closed / Resolved" value={summary.totalClosed.toLocaleString()} subtext={`Resolution rate: ${summary.totalLogged > 0 ? ((summary.totalClosed / summary.totalLogged) * 100).toFixed(0) : "0"}%`} icon={CheckCircle} color="green" />
+        <KpiCard label="FTFR Rate" value={`${summary.ftfrRate}%`} subtext="Fixed within 24 hours" icon={Zap} color="indigo" />
+      </div>
+
+      {/* ── Projection Mini-Widgets ── */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+        <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-5 flex items-center gap-4">
+          <div className="p-3 bg-amber-100 rounded-xl text-amber-600 shrink-0"><Target className="w-5 h-5" /></div>
+          <div>
+            <p className="text-[10px] font-black text-slate-400 uppercase tracking-wider">MTD Penalty</p>
+            <h4 className="text-xl font-black text-slate-900">{formatRupees(projections.currentMonthPenalty)}</h4>
           </div>
-          <button 
-            onClick={handleResetFilters}
-            className="flex items-center gap-1 text-[10px] font-black text-slate-400 hover:text-indigo-600 uppercase tracking-wider transition border-0 bg-transparent cursor-pointer"
-          >
-            <FilterX className="w-3.5 h-3.5" />
-            <span>Reset Filters</span>
+        </div>
+        <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-5 flex items-center gap-4">
+          <div className="p-3 bg-orange-100 rounded-xl text-orange-600 shrink-0"><Activity className="w-5 h-5" /></div>
+          <div>
+            <p className="text-[10px] font-black text-slate-400 uppercase tracking-wider">Daily Burn Rate</p>
+            <h4 className="text-xl font-black text-slate-900">{formatRupees(projections.dailyRunRate)}<span className="text-xs font-semibold text-slate-400">/day</span></h4>
+          </div>
+        </div>
+        <div className="bg-gradient-to-br from-red-50 to-rose-50 border border-red-200 rounded-2xl shadow-sm p-5 flex items-center gap-4">
+          <div className="p-3 bg-red-100 rounded-xl text-red-600 shrink-0"><TrendingUp className="w-5 h-5" /></div>
+          <div>
+            <p className="text-[10px] font-black text-red-500 uppercase tracking-wider">Projected Month-End</p>
+            <h4 className="text-xl font-black text-red-800">{formatRupees(projections.projectedPenalty)}</h4>
+          </div>
+        </div>
+      </div>
+
+      {/* ── Global Filters ── */}
+      <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm mb-6">
+        <div className="flex items-center justify-between mb-4 pb-3 border-b border-slate-100">
+          <div className="flex items-center gap-2">
+            <div className="p-1.5 bg-indigo-100 rounded-lg"><SlidersHorizontal className="w-3.5 h-3.5 text-indigo-600" /></div>
+            <h2 className="text-xs font-black text-slate-700 uppercase tracking-wider">Enterprise Filters</h2>
+          </div>
+          <button onClick={handleResetFilters} className="flex items-center gap-1 text-[10px] font-black text-slate-400 hover:text-indigo-600 uppercase tracking-wider transition border-0 bg-transparent cursor-pointer">
+            <FilterX className="w-3.5 h-3.5" /> Reset
           </button>
         </div>
 
-        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4">
-          <div>
-            <label className="block text-[10px] font-black text-slate-400 uppercase mb-1.5">Zone</label>
-            <select
-              value={selectedZone}
-              onChange={(e) => {
-                setSelectedZone(e.target.value);
-                setSelectedDistrict("");
-                setSelectedCoordinator("");
-                setSelectedDI("");
-              }}
-              disabled={!!userZone && !["Admin", "VP", "MIS"].includes(userRole)}
-              className="w-full h-10 px-3 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold text-slate-700 focus:outline-none focus:border-indigo-600 focus:bg-white transition"
-            >
-              <option value="">All Zones</option>
-              {filterOptions.zones.map((z: string) => (
-                <option key={z} value={z}>{z}</option>
-              ))}
-            </select>
-          </div>
-
-          <div>
-            <label className="block text-[10px] font-black text-slate-400 uppercase mb-1.5">District</label>
-            <select
-              value={selectedDistrict}
-              onChange={(e) => {
-                setSelectedDistrict(e.target.value);
-                setSelectedCoordinator("");
-                setSelectedDI("");
-              }}
-              className="w-full h-10 px-3 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold text-slate-700 focus:outline-none focus:border-indigo-600 focus:bg-white transition"
-            >
-              <option value="">All Districts</option>
-              {filterOptions.districts.map((d: string) => (
-                <option key={d} value={d}>{d}</option>
-              ))}
-            </select>
-          </div>
-
-          <div>
-            <label className="block text-[10px] font-black text-slate-400 uppercase mb-1.5">Coordinator</label>
-            <select
-              value={selectedCoordinator}
-              onChange={(e) => {
-                setSelectedCoordinator(e.target.value);
-                setSelectedDI("");
-              }}
-              disabled={!!userCoordinator && !["Admin", "VP", "MIS"].includes(userRole)}
-              className="w-full h-10 px-3 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold text-slate-700 focus:outline-none focus:border-indigo-600 focus:bg-white transition"
-            >
-              <option value="">All Coordinators</option>
-              {filterOptions.coordinators.map((c: string) => (
-                <option key={c} value={c}>{c}</option>
-              ))}
-            </select>
-          </div>
-
-          <div>
-            <label className="block text-[10px] font-black text-slate-400 uppercase mb-1.5">District Incharge (DI)</label>
-            <select
-              value={selectedDI}
-              onChange={(e) => setSelectedDI(e.target.value)}
-              className="w-full h-10 px-3 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold text-slate-700 focus:outline-none focus:border-indigo-600 focus:bg-white transition"
-            >
-              <option value="">All DIs</option>
-              {filterOptions.dis.map((diOpt: string) => (
-                <option key={diOpt} value={diOpt}>{diOpt}</option>
-              ))}
-            </select>
-          </div>
-
-          <div>
-            <label className="block text-[10px] font-black text-slate-400 uppercase mb-1.5">Month</label>
-            <select
-              value={selectedMonth}
-              onChange={(e) => setSelectedMonth(e.target.value)}
-              className="w-full h-10 px-3 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold text-slate-700 focus:outline-none focus:border-indigo-600 focus:bg-white transition"
-            >
-              <option value="">All Months</option>
-              {filterOptions.months.map((m: string) => (
-                <option key={m} value={m}>{m}</option>
-              ))}
-            </select>
-          </div>
+        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-3 mb-3">
+          {[
+            { label: "Zone", value: selectedZone, options: filterOptions.zones, onChange: (v: string) => { setSelectedZone(v); setSelectedDistrict(""); setSelectedCoordinator(""); setSelectedDI(""); }, disabled: !!userZone && !["Admin","VP","MIS"].includes(userRole), placeholder: "All Zones" },
+            { label: "District", value: selectedDistrict, options: filterOptions.districts, onChange: (v: string) => { setSelectedDistrict(v); setSelectedCoordinator(""); setSelectedDI(""); }, placeholder: "All Districts" },
+            { label: "Coordinator", value: selectedCoordinator, options: filterOptions.coordinators, onChange: (v: string) => { setSelectedCoordinator(v); setSelectedDI(""); }, disabled: !!userCoordinator && !["Admin","VP","MIS"].includes(userRole), placeholder: "All Coordinators" },
+            { label: "District Incharge", value: selectedDI, options: filterOptions.dis, onChange: (v: string) => setSelectedDI(v), placeholder: "All DIs" },
+            { label: "Month", value: selectedMonth, options: filterOptions.months, onChange: (v: string) => setSelectedMonth(v), placeholder: "All Months" },
+          ].map((f: any) => (
+            <div key={f.label}>
+              <label className="block text-[10px] font-black text-slate-400 uppercase mb-1.5">{f.label}</label>
+              <select value={f.value} onChange={(e) => f.onChange(e.target.value)} disabled={f.disabled} className={selectCls}>
+                <option value="">{f.placeholder}</option>
+                {f.options.map((o: string) => <option key={o} value={o}>{o}</option>)}
+              </select>
+            </div>
+          ))}
         </div>
 
-        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4 mt-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-3">
           <div>
             <label className="block text-[10px] font-black text-slate-400 uppercase mb-1.5">Hospital Type</label>
-            <select
-              value={selectedHospitalType}
-              onChange={(e) => setSelectedHospitalType(e.target.value)}
-              className="w-full h-10 px-3 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold text-slate-700 focus:outline-none focus:border-indigo-600 focus:bg-white transition"
-            >
+            <select value={selectedHospitalType} onChange={(e) => setSelectedHospitalType(e.target.value)} className={selectCls}>
               <option value="">All Types</option>
-              {filterOptions.hospitalTypes.map((ht: string) => (
-                <option key={ht} value={ht}>{ht}</option>
-              ))}
+              {filterOptions.hospitalTypes.map((h: string) => <option key={h} value={h}>{h}</option>)}
             </select>
           </div>
-
           <div>
             <label className="block text-[10px] font-black text-slate-400 uppercase mb-1.5">Equipment Type</label>
-            <select
-              value={selectedEquipmentType}
-              onChange={(e) => setSelectedEquipmentType(e.target.value)}
-              className="w-full h-10 px-3 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold text-slate-700 focus:outline-none focus:border-indigo-600 focus:bg-white transition"
-            >
+            <select value={selectedEquipmentType} onChange={(e) => setSelectedEquipmentType(e.target.value)} className={selectCls}>
               <option value="">All Types</option>
-              {filterOptions.equipmentTypes.map((et: string) => (
-                <option key={et} value={et}>{et}</option>
-              ))}
+              {filterOptions.equipmentTypes.map((e: string) => <option key={e} value={e}>{e}</option>)}
             </select>
           </div>
-
           <div>
             <label className="block text-[10px] font-black text-slate-400 uppercase mb-1.5">Raise Date From</label>
-            <input
-              type="date"
-              value={dateFrom}
-              onChange={(e) => setDateFrom(e.target.value)}
-              className="w-full h-10 px-3 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold text-slate-700 focus:outline-none focus:border-indigo-600 focus:bg-white transition"
-            />
+            <input type="date" value={dateFrom} onChange={(e) => setDateFrom(e.target.value)} className={selectCls} />
           </div>
-
           <div>
             <label className="block text-[10px] font-black text-slate-400 uppercase mb-1.5">Raise Date To</label>
-            <input
-              type="date"
-              value={dateTo}
-              onChange={(e) => setDateTo(e.target.value)}
-              className="w-full h-10 px-3 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold text-slate-700 focus:outline-none focus:border-indigo-600 focus:bg-white transition"
-            />
+            <input type="date" value={dateTo} onChange={(e) => setDateTo(e.target.value)} className={selectCls} />
           </div>
         </div>
       </div>
 
-      {/* 3. Core KPI Metrics Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4 mb-6">
-        
-        {/* Outstanding Penalty */}
-        <div className="bg-gradient-to-br from-red-50 to-red-100 p-5 rounded-2xl border border-red-200 shadow-sm relative overflow-hidden">
-          <div className="absolute top-0 right-0 p-4 opacity-15 text-red-600">
-            <IndianRupee className="w-12 h-12" />
-          </div>
-          <p className="text-[10px] font-black text-red-600 uppercase tracking-wider">Outstanding Penalty Risk</p>
-          <h3 className="text-2xl font-black text-red-950 mt-1 tracking-tight">
-            {formatRupees(summary.totalPenalty)}
-          </h3>
-          <p className="text-[10px] font-semibold text-red-700 mt-2 flex items-center gap-1">
-            <Clock className="w-3 h-3 animate-pulse" />
-            <span>Includes Dynamic Estimations</span>
-          </p>
-        </div>
-
-        {/* Logged Calls */}
-        <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm relative overflow-hidden">
-          <div className="absolute top-0 right-0 p-4 opacity-10 text-slate-400">
-            <FileText className="w-12 h-12" />
-          </div>
-          <p className="text-[10px] font-black text-slate-400 uppercase tracking-wider">Total Logged Complaints</p>
-          <h3 className="text-2xl font-black text-slate-900 mt-1 tracking-tight">
-            {summary.totalLogged.toLocaleString()}
-          </h3>
-          <p className="text-[10px] font-bold text-indigo-600 bg-indigo-50 px-2 py-0.5 rounded-full inline-block mt-2">
-            Sheets Records
-          </p>
-        </div>
-
-        {/* Closed Calls */}
-        <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm relative overflow-hidden">
-          <div className="absolute top-0 right-0 p-4 opacity-10 text-green-600">
-            <CheckCircle className="w-12 h-12" />
-          </div>
-          <p className="text-[10px] font-black text-slate-400 uppercase tracking-wider">Closed / Resolved</p>
-          <h3 className="text-2xl font-black text-green-700 mt-1 tracking-tight">
-            {summary.totalClosed.toLocaleString()}
-          </h3>
-          <p className="text-[10px] font-semibold text-slate-500 mt-2">
-            Resolution rate: {summary.totalLogged > 0 ? ((summary.totalClosed / summary.totalLogged) * 100).toFixed(0) : "0"}%
-          </p>
-        </div>
-
-        {/* FTFR Card */}
-        <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm relative overflow-hidden">
-          <div className="absolute top-0 right-0 p-4 opacity-10 text-indigo-600">
-            <Award className="w-12 h-12" />
-          </div>
-          <p className="text-[10px] font-black text-slate-400 uppercase tracking-wider">First Time Fix Rate (FTFR)</p>
-          <h3 className="text-2xl font-black text-indigo-700 mt-1 tracking-tight">
-            {summary.ftfrRate}%
-          </h3>
-          <p className="text-[10px] font-semibold text-slate-500 mt-2">
-            Resolved within 24 hours
-          </p>
-        </div>
-
-        {/* Mapped Asset Value Card */}
-        <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm relative overflow-hidden">
-          <div className="absolute top-0 right-0 p-4 opacity-10 text-indigo-600">
-            <Layers className="w-12 h-12" />
-          </div>
-          <p className="text-[10px] font-black text-slate-400 uppercase tracking-wider">Audited Assets Value</p>
-          <h3 className="text-2xl font-black text-slate-900 mt-1 tracking-tight">
-            ₹{summary.totalAssetValUnderAudit} Cr
-          </h3>
-          <p className="text-[10px] font-semibold text-slate-500 mt-2">
-            Tender Cost mapped from sheets
-          </p>
-        </div>
+      {/* ── Tab Navigation ── */}
+      <div className="flex bg-white border border-slate-200 rounded-2xl p-1.5 mb-6 shadow-sm gap-1 overflow-x-auto">
+        {tabs.map(({ id, label, icon: Icon }) => (
+          <button
+            key={id}
+            onClick={() => setActiveTab(id as any)}
+            className={`flex items-center gap-1.5 px-4 py-2.5 rounded-xl text-xs font-black uppercase tracking-wider whitespace-nowrap transition-all cursor-pointer border-0 flex-1 justify-center ${
+              activeTab === id
+                ? "bg-indigo-600 text-white shadow-md shadow-indigo-200"
+                : "bg-transparent text-slate-400 hover:text-slate-700 hover:bg-slate-50"
+            }`}
+          >
+            <Icon className="w-3.5 h-3.5" />
+            {label}
+          </button>
+        ))}
       </div>
 
-      {/* 4. Tab Navigation */}
-      <div className="flex border-b border-slate-200 mb-6 gap-2">
-        <button
-          onClick={() => setActiveTab("overview")}
-          className={`pb-3 px-4 text-xs font-black uppercase tracking-wider transition-all border-b-2 border-0 bg-transparent cursor-pointer ${
-            activeTab === "overview" 
-              ? "border-indigo-600 text-indigo-600" 
-              : "border-transparent text-slate-400 hover:text-slate-600"
-          }`}
-        >
-          Overview & Projections
-        </button>
-        <button
-          onClick={() => setActiveTab("leaderboard")}
-          className={`pb-3 px-4 text-xs font-black uppercase tracking-wider transition-all border-b-2 border-0 bg-transparent cursor-pointer ${
-            activeTab === "leaderboard" 
-              ? "border-indigo-600 text-indigo-600" 
-              : "border-transparent text-slate-400 hover:text-slate-600"
-          }`}
-        >
-          DI Leaderboard
-        </button>
-        <button
-          onClick={() => setActiveTab("sla")}
-          className={`pb-3 px-4 text-xs font-black uppercase tracking-wider transition-all border-b-2 border-0 bg-transparent cursor-pointer ${
-            activeTab === "sla" 
-              ? "border-indigo-600 text-indigo-600" 
-              : "border-transparent text-slate-400 hover:text-slate-600"
-          }`}
-        >
-          SLA Aging & Tickets
-        </button>
-        <button
-          onClick={() => setActiveTab("repeats")}
-          className={`pb-3 px-4 text-xs font-black uppercase tracking-wider transition-all border-b-2 border-0 bg-transparent cursor-pointer ${
-            activeTab === "repeats" 
-              ? "border-indigo-600 text-indigo-600" 
-              : "border-transparent text-slate-400 hover:text-slate-600"
-          }`}
-        >
-          Repeat Failures
-        </button>
-        <button
-          onClick={() => setActiveTab("fraud")}
-          className={`pb-3 px-4 text-xs font-black uppercase tracking-wider transition-all border-b-2 border-0 bg-transparent cursor-pointer ${
-            activeTab === "fraud" 
-              ? "border-indigo-600 text-indigo-600" 
-              : "border-transparent text-slate-400 hover:text-slate-600"
-          }`}
-        >
-          Claims Fraud Auditor
-        </button>
-      </div>
-
-      {/* 5. Tab Content Panel */}
+      {/* ── Tab Content ── */}
       <div>
-        
-        {/* TAB 1: OVERVIEW & PROJECTIONS */}
+
+        {/* TAB 1: OVERVIEW */}
         {activeTab === "overview" && (
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-            
-            {/* Penalty Breakdown Chart Card */}
-            <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm lg:col-span-2">
-              <div className="flex justify-between items-center mb-4">
-                <h3 className="text-xs font-black text-slate-700 uppercase tracking-wider">Penalty Distribution Breakdown</h3>
-                <div className="flex bg-slate-100 p-0.5 rounded-lg border border-slate-200">
-                  {["district", "di", "coordinator", "zone"].map((tab) => (
-                    <button
-                      key={tab}
-                      onClick={() => setBreakdownTab(tab as any)}
-                      className={`text-[9px] font-black uppercase px-2.5 py-1 rounded-md border-0 transition-all cursor-pointer ${
-                        breakdownTab === tab ? "bg-white text-indigo-600 shadow-sm" : "bg-transparent text-slate-400 hover:text-slate-600"
-                      }`}
-                    >
-                      {tab}
-                    </button>
-                  ))}
+          <div className="space-y-6">
+
+            {/* Row 1: Bar Chart + Pie Chart */}
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+
+              {/* Penalty Breakdown Bar Chart */}
+              <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-5 lg:col-span-2">
+                <div className="flex flex-wrap justify-between items-center gap-3 mb-4">
+                  <div>
+                    <h3 className="text-xs font-black text-slate-700 uppercase tracking-wider">Penalty Distribution</h3>
+                    <p className="text-[10px] text-slate-400 mt-0.5">Top 7 by penalty amount</p>
+                  </div>
+                  <div className="flex bg-slate-100 p-0.5 rounded-xl border border-slate-200 flex-wrap gap-0">
+                    {(["district", "di", "coordinator", "zone", "hospital"] as const).map((tab) => (
+                      <button
+                        key={tab}
+                        onClick={() => setBreakdownTab(tab)}
+                        className={`text-[9px] font-black uppercase px-2.5 py-1.5 rounded-lg border-0 transition-all cursor-pointer ${breakdownTab === tab ? "bg-indigo-600 text-white shadow-sm" : "bg-transparent text-slate-400 hover:text-slate-700"}`}
+                      >
+                        {tab}
+                      </button>
+                    ))}
+                  </div>
                 </div>
+                {breakdownData.chartData.length > 0 ? (
+                  <div className="h-72">
+                    <ResponsiveBar
+                      data={breakdownData.chartData}
+                      keys={["Penalty"]}
+                      indexBy="name"
+                      margin={{ top: 10, right: 20, bottom: 50, left: 70 }}
+                      padding={0.3}
+                      valueScale={{ type: "linear" }}
+                      colors={({ data }) => (data as any).color || "#6366f1"}
+                      borderRadius={6}
+                      borderWidth={0}
+                      theme={nivoTheme}
+                      axisTop={null}
+                      axisRight={null}
+                      axisBottom={{ tickSize: 0, tickPadding: 8, tickRotation: -15, legendOffset: 40 }}
+                      axisLeft={{ tickSize: 0, tickPadding: 8, tickRotation: 0, legend: "₹ Penalty", legendPosition: "middle", legendOffset: -60, format: (v) => `₹${Number(v) >= 100000 ? (Number(v)/100000).toFixed(0)+"L" : Number(v) >= 1000 ? (Number(v)/1000).toFixed(0)+"K" : v}` }}
+                      labelSkipWidth={30}
+                      labelSkipHeight={20}
+                      labelTextColor="#fff"
+                      label={(d) => {
+                        const v = Number(d.value);
+                        return v >= 100000 ? `₹${(v/100000).toFixed(0)}L` : v >= 1000 ? `₹${(v/1000).toFixed(0)}K` : `₹${v}`;
+                      }}
+                      tooltip={({ data, value }) => (
+                        <div style={{ background: "#0f172a", color: "#f8fafc", padding: "10px 14px", borderRadius: 10, fontSize: 12, border: "1px solid rgba(255,255,255,0.1)" }}>
+                          <strong>{(data as any).fullName || data.name}</strong><br />
+                          Penalty: <strong>{formatRupees(Number(value))}</strong><br />
+                          Open Tickets: <strong>{(data as any).Open || 0}</strong>
+                        </div>
+                      )}
+                    />
+                  </div>
+                ) : (
+                  <div className="flex items-center justify-center h-72 text-slate-400 text-xs font-semibold">No penalty records match filters</div>
+                )}
               </div>
 
-              {breakdownData.chartData.length > 0 ? (
-                <div className="h-64 mt-2">
-                  <ResponsiveBar
-                    data={breakdownData.chartData}
-                    keys={["amount"]}
-                    indexBy="name"
-                    margin={{ top: 15, right: 10, bottom: 40, left: 60 }}
-                    padding={0.35}
-                    valueScale={{ type: "linear" }}
-                    colors="#4f46e5"
-                    borderWidth={0}
+              {/* Equipment Type Pie */}
+              <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-5 flex flex-col">
+                <div className="mb-4">
+                  <h3 className="text-xs font-black text-slate-700 uppercase tracking-wider">Equipment Type Mix</h3>
+                  <p className="text-[10px] text-slate-400 mt-0.5">By complaint volume</p>
+                </div>
+                {equipTypePieData.length > 0 ? (
+                  <>
+                    <div className="h-52 flex-1">
+                      <ResponsivePie
+                        data={equipTypePieData}
+                        margin={{ top: 10, right: 20, bottom: 10, left: 20 }}
+                        innerRadius={0.55}
+                        padAngle={2}
+                        cornerRadius={5}
+                        activeOuterRadiusOffset={6}
+                        colors={{ datum: "data.color" }}
+                        borderWidth={0}
+                        theme={nivoTheme}
+                        arcLinkLabelsSkipAngle={15}
+                        arcLinkLabelsTextColor="#64748b"
+                        arcLinkLabelsThickness={1.5}
+                        arcLinkLabelsColor={{ from: "color" }}
+                        arcLabelsSkipAngle={15}
+                        arcLabelsTextColor="#fff"
+                        enableArcLabels={false}
+                        tooltip={({ datum }) => (
+                          <div style={{ background: "#0f172a", color: "#f8fafc", padding: "10px 14px", borderRadius: 10, fontSize: 12, border: "1px solid rgba(255,255,255,0.1)" }}>
+                            <strong>{datum.label}</strong>: {datum.value} complaints
+                          </div>
+                        )}
+                      />
+                    </div>
+                    <div className="mt-3 space-y-1.5 overflow-y-auto max-h-32">
+                      {equipTypePieData.map((item) => (
+                        <div key={item.id} className="flex items-center justify-between text-[10px]">
+                          <div className="flex items-center gap-1.5">
+                            <div className="w-2.5 h-2.5 rounded-full shrink-0" style={{ background: item.color }} />
+                            <span className="text-slate-600 font-semibold truncate max-w-[140px]">{item.label}</span>
+                          </div>
+                          <span className="font-black text-slate-700">{item.value}</span>
+                        </div>
+                      ))}
+                    </div>
+                  </>
+                ) : (
+                  <div className="flex items-center justify-center flex-1 text-slate-400 text-xs">No data</div>
+                )}
+              </div>
+            </div>
+
+            {/* Row 2: Monthly Trend Line Chart */}
+            <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-5">
+              <div className="mb-4">
+                <h3 className="text-xs font-black text-slate-700 uppercase tracking-wider">Monthly Penalty & Open Ticket Trend</h3>
+                <p className="text-[10px] text-slate-400 mt-0.5">Last 8 months — Penalty in ₹000s / Tickets count</p>
+              </div>
+              {monthlyTrendData[0]?.data?.length > 1 ? (
+                <div className="h-64">
+                  <ResponsiveLine
+                    data={monthlyTrendData}
+                    margin={{ top: 15, right: 30, bottom: 50, left: 55 }}
+                    xScale={{ type: "point" }}
+                    yScale={{ type: "linear", min: "auto", max: "auto", stacked: false }}
+                    theme={nivoTheme}
                     axisTop={null}
                     axisRight={null}
-                    axisBottom={{
-                      tickSize: 5,
-                      tickPadding: 5,
-                      tickRotation: -12,
-                      legend: "",
-                      legendPosition: "middle",
-                      legendOffset: 32
-                    }}
-                    axisLeft={{
-                      tickSize: 5,
-                      tickPadding: 5,
-                      tickRotation: 0,
-                      legend: "Penalty Amount (₹)",
-                      legendPosition: "middle",
-                      legendOffset: -50
-                    }}
-                    labelSkipWidth={12}
-                    labelSkipHeight={12}
-                    labelTextColor="#ffffff"
-                    labelFormat={(v) => `₹${v.toLocaleString()}`}
+                    axisBottom={{ tickSize: 0, tickPadding: 10, tickRotation: -15, legendOffset: 40 }}
+                    axisLeft={{ tickSize: 0, tickPadding: 8, legend: "₹K / Count", legendPosition: "middle", legendOffset: -45, format: (v) => `${v}` }}
+                    colors={({ color }) => color}
+                    lineWidth={2.5}
+                    pointSize={8}
+                    pointColor={{ from: "color" }}
+                    pointBorderWidth={2}
+                    pointBorderColor="#fff"
+                    pointLabelYOffset={-12}
+                    enableArea={true}
+                    areaOpacity={0.08}
+                    curve="monotoneX"
+                    enableSlices="x"
+                    sliceTooltip={({ slice }) => (
+                      <div style={{ background: "#0f172a", color: "#f8fafc", padding: "10px 14px", borderRadius: 10, fontSize: 12, border: "1px solid rgba(255,255,255,0.1)" }}>
+                        <strong style={{ display: "block", marginBottom: 4 }}>{slice.points[0]?.data?.x}</strong>
+                        {slice.points.map((p) => (
+                          <div key={p.id} style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                            <div style={{ width: 8, height: 8, borderRadius: "50%", background: p.color }} />
+                            {p.serieId}: <strong>{p.data.yFormatted}</strong>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                    legends={[{ anchor: "top-right", direction: "row", itemWidth: 110, itemHeight: 20, itemsSpacing: 8, symbolSize: 10, symbolShape: "circle", effects: [{ on: "hover", style: { itemTextColor: "#0f172a" } }] }]}
                   />
                 </div>
               ) : (
-                <div className="flex items-center justify-center h-64 text-slate-400 text-xs font-semibold">
-                  No penalty records matching filters
-                </div>
+                <div className="flex items-center justify-center h-64 text-slate-400 text-xs font-semibold">Insufficient monthly data to plot trend</div>
               )}
             </div>
 
-            {/* Run Rate & Projections */}
-            <div className="flex flex-col gap-6">
-              
-              {/* Financial Run-rate projection */}
-              <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm flex-1">
-                <p className="text-[10px] font-black text-slate-400 uppercase tracking-wider mb-3">Month Run-rate Projection</p>
-                <div className="space-y-4">
-                  <div>
-                    <span className="text-[10px] font-bold text-slate-400 uppercase">Penalty Incurred (M-T-D)</span>
-                    <h4 className="text-xl font-extrabold text-slate-800 mt-0.5">{formatRupees(projections.currentMonthPenalty)}</h4>
+            {/* Row 3: Status Switcher + Breakdown Table */}
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+              <div className="bg-gradient-to-br from-indigo-900 to-slate-900 rounded-2xl border border-indigo-950 p-5 text-white shadow-lg relative overflow-hidden">
+                <div className="absolute -bottom-6 -right-6 opacity-10">
+                  <Sparkles className="w-28 h-28" />
+                </div>
+                <div className="relative">
+                  <h4 className="text-sm font-black tracking-tight mb-1">Status Filter Override</h4>
+                  <p className="text-[10px] text-indigo-300 mb-5">Focus entire dashboard on specific ticket states</p>
+                  <div className="flex bg-slate-800/40 p-1 rounded-xl border border-slate-700/50 gap-1">
+                    {(["all", "open", "closed"] as const).map((s) => (
+                      <button
+                        key={s}
+                        onClick={() => setStatusTab(s)}
+                        className={`text-[10px] font-black uppercase flex-1 py-2 rounded-lg border-0 transition-all cursor-pointer ${statusTab === s ? "bg-white text-slate-900 shadow" : "bg-transparent text-indigo-300 hover:text-white"}`}
+                      >
+                        {s === "all" ? "All" : s === "open" ? "Open" : "Closed"}
+                      </button>
+                    ))}
                   </div>
-                  <div className="grid grid-cols-2 gap-4 pt-3 border-t border-slate-100">
-                    <div>
-                      <span className="text-[9px] font-bold text-slate-400 uppercase">Daily Burn Rate</span>
-                      <p className="text-sm font-black text-slate-700 mt-0.5">{formatRupees(projections.dailyRunRate)}/day</p>
-                    </div>
-                    <div>
-                      <span className="text-[9px] font-bold text-slate-400 uppercase">Projected Penalty</span>
-                      <p className="text-sm font-black text-red-600 mt-0.5">{formatRupees(projections.projectedPenalty)}</p>
-                    </div>
+                  <div className="mt-4 grid grid-cols-3 gap-2 text-center">
+                    {[
+                      { label: "Total", val: summary.totalLogged, cls: "text-indigo-200" },
+                      { label: "Open", val: summary.totalOpen, cls: "text-amber-300" },
+                      { label: "Closed", val: summary.totalClosed, cls: "text-emerald-300" },
+                    ].map(({ label, val, cls }) => (
+                      <div key={label} className="bg-white/5 rounded-xl p-2">
+                        <p className={`text-lg font-black ${cls}`}>{val.toLocaleString()}</p>
+                        <p className="text-[9px] text-slate-400 uppercase font-bold">{label}</p>
+                      </div>
+                    ))}
                   </div>
                 </div>
               </div>
 
-              {/* Status Switcher info */}
-              <div className="bg-gradient-to-br from-indigo-900 to-slate-900 p-5 rounded-2xl border border-indigo-950 text-white shadow-md relative overflow-hidden flex-1">
-                <div className="absolute -bottom-6 -right-6 opacity-10 text-white">
-                  <Sparkles className="w-24 h-24" />
-                </div>
-                <h4 className="text-sm font-black tracking-tight mb-1">Interactive Filter Override</h4>
-                <p className="text-[10px] text-indigo-200 mb-4">Focus overall KPIs and charts on specific claim states</p>
-                
-                <div className="flex bg-slate-800/40 p-0.5 rounded-lg border border-slate-700/60 max-w-xs">
-                  {(["all", "open", "closed"] as const).map((s) => (
-                    <button
-                      key={s}
-                      onClick={() => setStatusTab(s)}
-                      className={`text-[9px] font-black uppercase flex-1 py-1.5 rounded-md border-0 transition-all cursor-pointer ${
-                        statusTab === s ? "bg-white text-slate-900 shadow-sm" : "bg-transparent text-indigo-300 hover:text-white"
-                      }`}
-                    >
-                      {s === "all" ? "All Status" : s + " calls"}
-                    </button>
-                  ))}
+              <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-5 lg:col-span-2 overflow-hidden">
+                <h3 className="text-xs font-black text-slate-700 uppercase tracking-wider mb-3">Top {breakdownTab} Breakdown</h3>
+                <div className="overflow-x-auto">
+                  <table className="w-full border-collapse text-left text-xs">
+                    <thead>
+                      <tr className="border-b border-slate-100">
+                        <th className="py-2.5 px-3 font-black text-slate-400 uppercase tracking-wider">#</th>
+                        <th className="py-2.5 px-3 font-black text-slate-400 uppercase tracking-wider capitalize">{breakdownTab}</th>
+                        <th className="py-2.5 px-3 font-black text-slate-400 uppercase tracking-wider text-center">Open</th>
+                        <th className="py-2.5 px-3 font-black text-slate-400 uppercase tracking-wider text-right">Penalty</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-slate-50">
+                      {breakdownData.list.slice(0, 8).map((item, i) => (
+                        <tr key={item.name} className="hover:bg-slate-50 transition">
+                          <td className="py-2.5 px-3 text-slate-400 font-bold">#{i + 1}</td>
+                          <td className="py-2.5 px-3 font-extrabold text-slate-800">{item.name}</td>
+                          <td className="py-2.5 px-3 text-center">
+                            <span className={`px-2 py-0.5 rounded-full text-[10px] font-black ${item.openTickets > 0 ? "bg-red-50 text-red-700" : "bg-green-50 text-green-700"}`}>{item.openTickets}</span>
+                          </td>
+                          <td className="py-2.5 px-3 text-right font-black text-slate-900">{formatRupees(item.amount)}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
                 </div>
               </div>
-
             </div>
-
           </div>
         )}
 
         {/* TAB 2: DI LEADERBOARD */}
         {activeTab === "leaderboard" && (
-          <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden p-5">
-            <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-4">
-              <div>
-                <h3 className="text-xs font-black text-slate-700 uppercase tracking-wider">DI / District Performance Leaderboard</h3>
-                <p className="text-[10px] text-slate-400 font-semibold mt-0.5">Sorted from lowest penalty to highest (Best to Worst Performance)</p>
-              </div>
-              <div className="relative w-full sm:w-64">
-                <Search className="w-4 h-4 text-slate-400 absolute left-3 top-3" />
-                <input
-                  type="text"
-                  placeholder="Search in Leaderboard..."
-                  value={leaderboardSearch}
-                  onChange={(e) => { setLeaderboardSearch(e.target.value); setLeaderboardPage(1); }}
-                  className="w-full h-10 pl-9 pr-4 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold text-slate-700 focus:outline-none focus:border-indigo-600 focus:bg-white transition"
-                />
-              </div>
+          <div className="space-y-6">
+            {/* Leaderboard Bar Chart */}
+            <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-5">
+              <h3 className="text-xs font-black text-slate-700 uppercase tracking-wider mb-4">DI Performance Snapshot (Resolution Rate %)</h3>
+              {diLeaderboard.length > 0 ? (
+                <div className="h-64">
+                  <ResponsiveBar
+                    data={diLeaderboard.slice(0, 10).map((r) => ({
+                      name: r.name.length > 14 ? r.name.substring(0, 14) + "…" : r.name,
+                      "Resolution %": r.resolutionRate,
+                      color: r.resolutionRate >= 80 ? "#10b981" : r.resolutionRate >= 50 ? "#f59e0b" : "#ef4444",
+                    }))}
+                    keys={["Resolution %"]}
+                    indexBy="name"
+                    margin={{ top: 10, right: 20, bottom: 55, left: 55 }}
+                    padding={0.3}
+                    layout="vertical"
+                    valueScale={{ type: "linear", min: 0, max: 100 }}
+                    colors={({ data }) => (data as any).color || "#6366f1"}
+                    borderRadius={6}
+                    theme={nivoTheme}
+                    axisTop={null}
+                    axisRight={null}
+                    axisBottom={{ tickSize: 0, tickPadding: 8, tickRotation: -15 }}
+                    axisLeft={{ tickSize: 0, tickPadding: 8, legend: "Resolution %", legendPosition: "middle", legendOffset: -45, format: (v) => `${v}%` }}
+                    labelTextColor="#fff"
+                    label={(d) => `${d.value}%`}
+                    labelSkipWidth={20}
+                    labelSkipHeight={20}
+                  />
+                </div>
+              ) : (
+                <div className="h-64 flex items-center justify-center text-slate-400 text-xs">No data</div>
+              )}
             </div>
 
-            <div className="overflow-x-auto">
-              <table className="w-full border-collapse text-left text-xs">
-                <thead>
-                  <tr className="border-b border-slate-100 bg-slate-50/50">
-                    <th className="py-3.5 px-4 font-black text-slate-500 uppercase tracking-wider">Rank</th>
-                    <th className="py-3.5 px-4 font-black text-slate-500 uppercase tracking-wider">DI Name</th>
-                    <th className="py-3.5 px-4 font-black text-slate-500 uppercase tracking-wider text-center">Total Logged</th>
-                    <th className="py-3.5 px-4 font-black text-slate-500 uppercase tracking-wider text-center">Closed Calls</th>
-                    <th className="py-3.5 px-4 font-black text-slate-500 uppercase tracking-wider text-center">Resolution Rate</th>
-                    <th className="py-3.5 px-4 font-black text-slate-500 uppercase tracking-wider text-center">Avg Fix Time</th>
-                    <th className="py-3.5 px-4 font-black text-slate-500 uppercase tracking-wider text-right">Penalty Cost</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-slate-100 font-semibold text-slate-700">
-                  {filteredLeaderboard.slice((leaderboardPage - 1) * itemsPerPage, leaderboardPage * itemsPerPage).map((row, idx) => {
-                    const absoluteRank = (leaderboardPage - 1) * itemsPerPage + idx + 1;
-                    return (
-                      <tr key={row.name} className="hover:bg-slate-50/40 transition">
-                        <td className="py-3 px-4 text-slate-500">#{absoluteRank}</td>
-                        <td className="py-3 px-4 font-extrabold text-slate-900 flex items-center gap-1.5">
-                          <span>{row.name}</span>
-                          {absoluteRank === 1 && <Award className="w-3.5 h-3.5 text-yellow-500" />}
-                        </td>
-                        <td className="py-3 px-4 text-center">{row.totalLogged}</td>
-                        <td className="py-3 px-4 text-center">{row.closed}</td>
-                        <td className="py-3 px-4 text-center">
-                          <span className={`px-2 py-0.5 rounded-full text-[10px] font-black ${
-                            row.resolutionRate >= 80 ? "bg-green-50 text-green-700 border border-green-200" :
-                            row.resolutionRate >= 50 ? "bg-yellow-50 text-yellow-700 border border-yellow-200" :
-                            "bg-red-50 text-red-700 border border-red-200"
-                          }`}>
-                            {row.resolutionRate}%
-                          </span>
-                        </td>
-                        <td className="py-3 px-4 text-center text-slate-500">{row.avgResolutionTime} days</td>
-                        <td className="py-3 px-4 text-right font-extrabold text-slate-900">
-                          <span className={row.totalPenalty > 20000 ? "text-red-600" : "text-green-600"}>
-                            {formatRupees(row.totalPenalty)}
-                          </span>
-                        </td>
-                      </tr>
-                    );
-                  })}
-                </tbody>
-              </table>
-            </div>
-
-            {filteredLeaderboard.length > itemsPerPage && (
-              <div className="flex justify-between items-center mt-4 pt-3 border-t border-slate-100">
-                <span className="text-[10px] text-slate-400 font-bold">
-                  Showing {Math.min(filteredLeaderboard.length, (leaderboardPage - 1) * itemsPerPage + 1)}-{Math.min(filteredLeaderboard.length, leaderboardPage * itemsPerPage)} of {filteredLeaderboard.length} entries
-                </span>
-                <div className="flex items-center gap-1">
-                  <button
-                    onClick={() => setLeaderboardPage(p => Math.max(1, p - 1))}
-                    disabled={leaderboardPage === 1}
-                    className="p-1 border border-slate-200 rounded-lg hover:bg-slate-50 disabled:opacity-40 transition cursor-pointer"
-                  >
-                    <ChevronLeft className="w-4 h-4" />
-                  </button>
-                  <button
-                    onClick={() => setLeaderboardPage(p => Math.min(Math.ceil(filteredLeaderboard.length / itemsPerPage), p + 1))}
-                    disabled={leaderboardPage >= Math.ceil(filteredLeaderboard.length / itemsPerPage)}
-                    className="p-1 border border-slate-200 rounded-lg hover:bg-slate-50 disabled:opacity-40 transition cursor-pointer"
-                  >
-                    <ChevronRight className="w-4 h-4" />
-                  </button>
+            {/* Leaderboard Table */}
+            <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden p-5">
+              <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-4">
+                <div>
+                  <h3 className="text-xs font-black text-slate-700 uppercase tracking-wider">DI Performance Leaderboard</h3>
+                  <p className="text-[10px] text-slate-400 font-semibold mt-0.5">Sorted: Lowest penalty first (Best → Worst)</p>
+                </div>
+                <div className="relative w-full sm:w-64">
+                  <Search className="w-4 h-4 text-slate-400 absolute left-3 top-3" />
+                  <input type="text" placeholder="Search DIs..." value={leaderboardSearch} onChange={(e) => { setLeaderboardSearch(e.target.value); setLeaderboardPage(1); }} className="w-full h-10 pl-9 pr-4 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold text-slate-700 focus:outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100 transition" />
                 </div>
               </div>
-            )}
+
+              <div className="overflow-x-auto">
+                <table className="w-full border-collapse text-left text-xs">
+                  <thead>
+                    <tr className="border-b border-slate-100 bg-slate-50">
+                      <th className="py-3.5 px-4 font-black text-slate-500 uppercase tracking-wider">Rank</th>
+                      <th className="py-3.5 px-4 font-black text-slate-500 uppercase tracking-wider">DI Name</th>
+                      <th className="py-3.5 px-4 font-black text-slate-500 uppercase tracking-wider text-center">Logged</th>
+                      <th className="py-3.5 px-4 font-black text-slate-500 uppercase tracking-wider text-center">Closed</th>
+                      <th className="py-3.5 px-4 font-black text-slate-500 uppercase tracking-wider text-center">Resolution</th>
+                      <th className="py-3.5 px-4 font-black text-slate-500 uppercase tracking-wider text-center">Avg Fix Time</th>
+                      <th className="py-3.5 px-4 font-black text-slate-500 uppercase tracking-wider text-right">Penalty</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-slate-100 text-slate-700">
+                    {filteredLeaderboard.slice((leaderboardPage - 1) * itemsPerPage, leaderboardPage * itemsPerPage).map((row, idx) => {
+                      const rank = (leaderboardPage - 1) * itemsPerPage + idx + 1;
+                      return (
+                        <tr key={row.name} className="hover:bg-slate-50 transition">
+                          <td className="py-3 px-4 text-slate-400 font-bold">#{rank}</td>
+                          <td className="py-3 px-4 font-extrabold text-slate-900 flex items-center gap-1.5">
+                            {row.name}
+                            {rank === 1 && <Award className="w-3.5 h-3.5 text-yellow-500" />}
+                          </td>
+                          <td className="py-3 px-4 text-center font-semibold">{row.totalLogged}</td>
+                          <td className="py-3 px-4 text-center font-semibold">{row.closed}</td>
+                          <td className="py-3 px-4 text-center">
+                            <span className={`px-2 py-0.5 rounded-full text-[10px] font-black ${row.resolutionRate >= 80 ? "bg-emerald-50 text-emerald-700 border border-emerald-200" : row.resolutionRate >= 50 ? "bg-amber-50 text-amber-700 border border-amber-200" : "bg-red-50 text-red-700 border border-red-200"}`}>
+                              {row.resolutionRate}%
+                            </span>
+                          </td>
+                          <td className="py-3 px-4 text-center text-slate-500">{row.avgResolutionTime} d</td>
+                          <td className="py-3 px-4 text-right font-extrabold">
+                            <span className={row.totalPenalty > 20000 ? "text-red-600" : "text-emerald-600"}>{formatRupees(row.totalPenalty)}</span>
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
+
+              {filteredLeaderboard.length > itemsPerPage && (
+                <div className="flex justify-between items-center mt-4 pt-3 border-t border-slate-100">
+                  <span className="text-[10px] text-slate-400 font-bold">
+                    Showing {Math.min(filteredLeaderboard.length, (leaderboardPage - 1) * itemsPerPage + 1)}-{Math.min(filteredLeaderboard.length, leaderboardPage * itemsPerPage)} of {filteredLeaderboard.length}
+                  </span>
+                  <div className="flex items-center gap-1">
+                    <button onClick={() => setLeaderboardPage((p) => Math.max(1, p - 1))} disabled={leaderboardPage === 1} className="p-1.5 border border-slate-200 rounded-lg hover:bg-slate-50 disabled:opacity-40 transition cursor-pointer"><ChevronLeft className="w-4 h-4" /></button>
+                    <button onClick={() => setLeaderboardPage((p) => Math.min(Math.ceil(filteredLeaderboard.length / itemsPerPage), p + 1))} disabled={leaderboardPage >= Math.ceil(filteredLeaderboard.length / itemsPerPage)} className="p-1.5 border border-slate-200 rounded-lg hover:bg-slate-50 disabled:opacity-40 transition cursor-pointer"><ChevronRight className="w-4 h-4" /></button>
+                  </div>
+                </div>
+              )}
+            </div>
           </div>
         )}
 
         {/* TAB 3: SLA AGING & TICKETS */}
         {activeTab === "sla" && (
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-            
-            {/* Aging Chart */}
-            <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm flex flex-col items-center">
-              <h3 className="text-xs font-black text-slate-700 uppercase tracking-wider w-full mb-4">Open Complaint SLA Aging</h3>
-              <div className="h-60 w-full mt-2">
-                <ResponsivePie
-                  data={slaAging}
-                  margin={{ top: 10, right: 30, bottom: 40, left: 30 }}
-                  innerRadius={0.6}
-                  padAngle={1.5}
-                  cornerRadius={4}
-                  activeOuterRadiusOffset={6}
-                  colors={{ datum: "data.color" }}
-                  borderWidth={0}
-                  arcLinkLabelsSkipAngle={10}
-                  arcLinkLabelsTextColor="#64748b"
-                  arcLinkLabelsThickness={1.5}
-                  arcLinkLabelsColor={{ from: "color" }}
-                  arcLabelsSkipAngle={10}
-                  arcLabelsTextColor="#ffffff"
-                />
-              </div>
-              <p className="text-[10px] text-slate-400 font-bold text-center mt-3 uppercase tracking-wider">
-                Total open: {summary.totalOpen} active complaints
-              </p>
+          <div className="space-y-6">
+
+            {/* SLA Stats Row */}
+            <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+              {slaAging.map((s) => (
+                <div key={s.id} className="bg-white rounded-2xl border border-slate-200 shadow-sm p-4 flex items-center gap-3">
+                  <div className="w-3 h-10 rounded-full shrink-0" style={{ background: s.color }} />
+                  <div>
+                    <p className="text-[10px] font-black text-slate-400 uppercase tracking-wider">{s.id}</p>
+                    <h4 className="text-2xl font-black text-slate-900">{s.value}</h4>
+                  </div>
+                </div>
+              ))}
             </div>
 
-            {/* Aging Tickets Table */}
-            <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm lg:col-span-2 overflow-hidden flex flex-col justify-between">
-              <div>
-                <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-4">
-                  <h3 className="text-xs font-black text-slate-700 uppercase tracking-wider">Outstanding Tickets Detail</h3>
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+              {/* Donut SLA Pie */}
+              <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-5 flex flex-col items-center">
+                <h3 className="text-xs font-black text-slate-700 uppercase tracking-wider w-full mb-4">SLA Aging Breakdown</h3>
+                <div className="h-64 w-full">
+                  <ResponsivePie
+                    data={slaAging}
+                    margin={{ top: 10, right: 30, bottom: 50, left: 30 }}
+                    innerRadius={0.62}
+                    padAngle={2}
+                    cornerRadius={5}
+                    activeOuterRadiusOffset={6}
+                    colors={{ datum: "data.color" }}
+                    borderWidth={0}
+                    theme={nivoTheme}
+                    arcLinkLabelsSkipAngle={10}
+                    arcLinkLabelsTextColor="#64748b"
+                    arcLinkLabelsThickness={1.5}
+                    arcLinkLabelsColor={{ from: "color" }}
+                    arcLabelsSkipAngle={10}
+                    arcLabelsTextColor="#ffffff"
+                    tooltip={({ datum }) => (
+                      <div style={{ background: "#0f172a", color: "#f8fafc", padding: "10px 14px", borderRadius: 10, fontSize: 12, border: "1px solid rgba(255,255,255,0.1)" }}>
+                        <strong>{datum.label}</strong>: {datum.value} tickets
+                      </div>
+                    )}
+                    legends={[{ anchor: "bottom", direction: "row", translateY: 45, itemWidth: 80, itemHeight: 16, itemsSpacing: 4, symbolSize: 10, symbolShape: "circle" }]}
+                  />
+                </div>
+                <p className="text-[10px] text-slate-400 font-bold text-center mt-1 uppercase tracking-wider">
+                  Total open: <span className="text-slate-700">{summary.totalOpen}</span> complaints
+                </p>
+              </div>
+
+              {/* Open Tickets Table */}
+              <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-5 lg:col-span-2 flex flex-col">
+                <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 mb-4">
+                  <h3 className="text-xs font-black text-slate-700 uppercase tracking-wider">Outstanding Tickets</h3>
                   <div className="relative w-full sm:w-56">
                     <Search className="w-4 h-4 text-slate-400 absolute left-3 top-3" />
-                    <input
-                      type="text"
-                      placeholder="Search tickets..."
-                      value={openTicketsSearch}
-                      onChange={(e) => { setOpenTicketsSearch(e.target.value); setOpenPage(1); }}
-                      className="w-full h-10 pl-9 pr-4 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold text-slate-700 focus:outline-none focus:border-indigo-600 focus:bg-white transition"
-                    />
+                    <input type="text" placeholder="Search tickets..." value={openTicketsSearch} onChange={(e) => { setOpenTicketsSearch(e.target.value); setOpenPage(1); }} className="w-full h-10 pl-9 pr-4 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold text-slate-700 focus:outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100 transition" />
                   </div>
                 </div>
 
-                <div className="overflow-x-auto">
+                <div className="overflow-x-auto flex-1">
                   <table className="w-full border-collapse text-left text-xs">
                     <thead>
-                      <tr className="border-b border-slate-100 bg-slate-50/50">
+                      <tr className="border-b border-slate-100 bg-slate-50">
                         <th className="py-2.5 px-3 font-black text-slate-500 uppercase tracking-wider">Complaint ID</th>
-                        <th className="py-2.5 px-3 font-black text-slate-500 uppercase tracking-wider">Equipment Name</th>
-                        <th className="py-2.5 px-3 font-black text-slate-500 uppercase tracking-wider">Hospital Name</th>
-                        <th className="py-2.5 px-3 font-black text-slate-500 uppercase tracking-wider text-center">Age (Days)</th>
+                        <th className="py-2.5 px-3 font-black text-slate-500 uppercase tracking-wider">Equipment</th>
+                        <th className="py-2.5 px-3 font-black text-slate-500 uppercase tracking-wider">Hospital</th>
+                        <th className="py-2.5 px-3 font-black text-slate-500 uppercase tracking-wider text-center">Age</th>
                         <th className="py-2.5 px-3 font-black text-slate-500 uppercase tracking-wider text-right">Penalty</th>
                       </tr>
                     </thead>
-                    <tbody className="divide-y divide-slate-100 font-semibold text-slate-700">
+                    <tbody className="divide-y divide-slate-50 text-slate-700">
                       {filteredOpenTickets.slice((openPage - 1) * itemsPerPage, openPage * itemsPerPage).map((row) => (
-                        <tr key={row.complaintId} className="hover:bg-slate-50/40 transition">
-                          <td className="py-2.5 px-3 text-slate-900 font-extrabold">{row.complaintId}</td>
+                        <tr key={row.complaintId} className="hover:bg-slate-50 transition">
+                          <td className="py-2.5 px-3 font-extrabold text-slate-900">{row.complaintId}</td>
                           <td className="py-2.5 px-3 text-slate-600 truncate max-w-[120px]">{row.equipmentName}</td>
-                          <td className="py-2.5 px-3 text-slate-600 truncate max-w-[150px]">{row.hospitalName}</td>
-                          <td className="py-2.5 px-3 text-center text-slate-900 font-extrabold">
-                            <span className={`px-2 py-0.5 rounded-full text-[9px] font-black ${
-                              row.ageHours >= 168 ? "bg-red-50 text-red-700 border border-red-200" : "bg-slate-100 text-slate-700"
-                            }`}>
-                              {(row.ageHours / 24).toFixed(1)} d
+                          <td className="py-2.5 px-3 text-slate-600 truncate max-w-[140px]">{row.hospitalName}</td>
+                          <td className="py-2.5 px-3 text-center">
+                            <span className={`px-2 py-0.5 rounded-full text-[9px] font-black ${row.ageHours >= 168 ? "bg-red-50 text-red-700 border border-red-200" : row.ageHours >= 48 ? "bg-amber-50 text-amber-700 border border-amber-200" : "bg-slate-100 text-slate-600"}`}>
+                              {(row.ageHours / 24).toFixed(1)}d
                             </span>
                           </td>
                           <td className="py-2.5 px-3 text-right font-black text-red-600">{formatRupees(row.penalty)}</td>
@@ -1449,116 +1241,128 @@ export default function NewDashboardPage() {
                     </tbody>
                   </table>
                 </div>
-              </div>
 
-              {filteredOpenTickets.length > itemsPerPage && (
-                <div className="flex justify-between items-center mt-4 pt-3 border-t border-slate-100">
-                  <span className="text-[10px] text-slate-400 font-bold">
-                    Showing {Math.min(filteredOpenTickets.length, (openPage - 1) * itemsPerPage + 1)}-{Math.min(filteredOpenTickets.length, openPage * itemsPerPage)} of {filteredOpenTickets.length} entries
-                  </span>
-                  <div className="flex items-center gap-1">
-                    <button
-                      onClick={() => setOpenPage(p => Math.max(1, p - 1))}
-                      disabled={openPage === 1}
-                      className="p-1 border border-slate-200 rounded-lg hover:bg-slate-50 disabled:opacity-40 transition cursor-pointer"
-                    >
-                      <ChevronLeft className="w-4 h-4" />
-                    </button>
-                    <button
-                      onClick={() => setOpenPage(p => Math.min(Math.ceil(filteredOpenTickets.length / itemsPerPage), p + 1))}
-                      disabled={openPage >= Math.ceil(filteredOpenTickets.length / itemsPerPage)}
-                      className="p-1 border border-slate-200 rounded-lg hover:bg-slate-50 disabled:opacity-40 transition cursor-pointer"
-                    >
-                      <ChevronRight className="w-4 h-4" />
-                    </button>
+                {filteredOpenTickets.length > itemsPerPage && (
+                  <div className="flex justify-between items-center mt-4 pt-3 border-t border-slate-100">
+                    <span className="text-[10px] text-slate-400 font-bold">
+                      {Math.min(filteredOpenTickets.length, (openPage - 1) * itemsPerPage + 1)}-{Math.min(filteredOpenTickets.length, openPage * itemsPerPage)} / {filteredOpenTickets.length}
+                    </span>
+                    <div className="flex gap-1">
+                      <button onClick={() => setOpenPage((p) => Math.max(1, p - 1))} disabled={openPage === 1} className="p-1.5 border border-slate-200 rounded-lg hover:bg-slate-50 disabled:opacity-40 transition cursor-pointer"><ChevronLeft className="w-4 h-4" /></button>
+                      <button onClick={() => setOpenPage((p) => Math.min(Math.ceil(filteredOpenTickets.length / itemsPerPage), p + 1))} disabled={openPage >= Math.ceil(filteredOpenTickets.length / itemsPerPage)} className="p-1.5 border border-slate-200 rounded-lg hover:bg-slate-50 disabled:opacity-40 transition cursor-pointer"><ChevronRight className="w-4 h-4" /></button>
+                    </div>
                   </div>
-                </div>
-              )}
+                )}
+              </div>
             </div>
-
           </div>
         )}
 
         {/* TAB 4: REPEAT FAILURES */}
         {activeTab === "repeats" && (
-          <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden p-5">
-            <div className="mb-4">
-              <h3 className="text-xs font-black text-slate-700 uppercase tracking-wider">Recurring Equipment Failures</h3>
-              <p className="text-[10px] text-slate-400 font-semibold mt-0.5">Assets with more than 1 logged complaint (Indicates potential faulty batch or need for preventive maintenance)</p>
-            </div>
-
-            {repeatCalls.length > 0 ? (
-              <div className="overflow-x-auto">
-                <table className="w-full border-collapse text-left text-xs">
-                  <thead>
-                    <tr className="border-b border-slate-100 bg-slate-50/50">
-                      <th className="py-3 px-4 font-black text-slate-500 uppercase tracking-wider">Barcode Tag</th>
-                      <th className="py-3 px-4 font-black text-slate-500 uppercase tracking-wider">Equipment Model/Name</th>
-                      <th className="py-3 px-4 font-black text-slate-500 uppercase tracking-wider">Installed Hospital</th>
-                      <th className="py-3 px-4 font-black text-slate-500 uppercase tracking-wider text-center">Failure Count</th>
-                      <th className="py-3 px-4 font-black text-slate-500 uppercase tracking-wider text-center">Risk Level</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-slate-100 font-semibold text-slate-700">
-                    {repeatCalls.map((row) => (
-                      <tr key={row.barcode} className="hover:bg-slate-50/40 transition">
-                        <td className="py-3 px-4 font-mono font-extrabold text-indigo-700">
-                          <button
-                            type="button"
-                            onClick={() => setSelectedRepeatBarcode(row.barcode)}
-                            className="bg-transparent border-0 text-indigo-600 hover:text-indigo-800 hover:underline font-bold font-mono p-0 cursor-pointer text-left"
-                            title="Click to view history details"
-                          >
-                            {row.barcode}
-                          </button>
-                        </td>
-                        <td className="py-3 px-4 font-extrabold text-slate-900">{row.name}</td>
-                        <td className="py-3 px-4 text-slate-600">{row.hospital}</td>
-                        <td className="py-3 px-4 text-center font-black text-slate-900">
-                          <span className="bg-slate-100 px-2.5 py-1 rounded-lg">
-                            {row.count} times
-                          </span>
-                        </td>
-                        <td className="py-3 px-4 text-center">
-                          <span className={`px-2 py-0.5 rounded-full text-[9px] font-black ${
-                            row.count >= 4 ? "bg-red-100 text-red-700 border border-red-200" : "bg-yellow-50 text-yellow-700 border border-yellow-200"
-                          }`}>
-                            {row.count >= 4 ? "Critical Risk" : "Moderate Risk"}
-                          </span>
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            ) : (
-              <div className="flex items-center justify-center py-12 text-slate-400 text-xs font-semibold">
-                No recurring failures found in Sheets! Excellent asset reliability.
+          <div className="space-y-6">
+            {/* Repeat Failures Chart */}
+            {repeatCalls.length > 0 && (
+              <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-5">
+                <h3 className="text-xs font-black text-slate-700 uppercase tracking-wider mb-4">Top Repeat Failure Assets</h3>
+                <div className="h-56">
+                  <ResponsiveBar
+                    data={repeatCalls.slice(0, 8).map((r) => ({
+                      name: r.barcode,
+                      Failures: r.count,
+                      color: r.count >= 4 ? "#ef4444" : "#f59e0b",
+                    }))}
+                    keys={["Failures"]}
+                    indexBy="name"
+                    margin={{ top: 10, right: 20, bottom: 45, left: 50 }}
+                    padding={0.3}
+                    colors={({ data }) => (data as any).color || "#f59e0b"}
+                    borderRadius={6}
+                    theme={nivoTheme}
+                    axisTop={null}
+                    axisRight={null}
+                    axisBottom={{ tickSize: 0, tickPadding: 8, tickRotation: -15 }}
+                    axisLeft={{ tickSize: 0, tickPadding: 8, legend: "Failure Count", legendPosition: "middle", legendOffset: -38 }}
+                    labelTextColor="#fff"
+                    label={(d) => `${d.value}×`}
+                    labelSkipWidth={16}
+                    labelSkipHeight={16}
+                  />
+                </div>
               </div>
             )}
+
+            {/* Repeat Failures Table */}
+            <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden p-5">
+              <div className="mb-4">
+                <h3 className="text-xs font-black text-slate-700 uppercase tracking-wider">Recurring Equipment Failures</h3>
+                <p className="text-[10px] text-slate-400 font-semibold mt-0.5">Assets with more than 1 logged complaint — Possible faulty batch or maintenance need</p>
+              </div>
+
+              {repeatCalls.length > 0 ? (
+                <div className="overflow-x-auto">
+                  <table className="w-full border-collapse text-left text-xs">
+                    <thead>
+                      <tr className="border-b border-slate-100 bg-slate-50">
+                        <th className="py-3 px-4 font-black text-slate-500 uppercase tracking-wider">Barcode Tag</th>
+                        <th className="py-3 px-4 font-black text-slate-500 uppercase tracking-wider">Equipment</th>
+                        <th className="py-3 px-4 font-black text-slate-500 uppercase tracking-wider">Hospital</th>
+                        <th className="py-3 px-4 font-black text-slate-500 uppercase tracking-wider text-center">Failures</th>
+                        <th className="py-3 px-4 font-black text-slate-500 uppercase tracking-wider text-center">Risk Level</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-slate-100 text-slate-700">
+                      {repeatCalls.map((row) => (
+                        <tr key={row.barcode} className="hover:bg-slate-50 transition">
+                          <td className="py-3 px-4 font-mono font-extrabold text-indigo-700">
+                            <button type="button" onClick={() => setSelectedRepeatBarcode(row.barcode)} className="bg-transparent border-0 text-indigo-600 hover:text-indigo-800 hover:underline font-bold font-mono p-0 cursor-pointer text-left">
+                              {row.barcode}
+                            </button>
+                          </td>
+                          <td className="py-3 px-4 font-extrabold text-slate-900">{row.name}</td>
+                          <td className="py-3 px-4 text-slate-600">{row.hospital}</td>
+                          <td className="py-3 px-4 text-center">
+                            <span className="bg-slate-100 text-slate-700 px-2.5 py-1 rounded-lg font-black">{row.count}×</span>
+                          </td>
+                          <td className="py-3 px-4 text-center">
+                            <span className={`px-2 py-0.5 rounded-full text-[9px] font-black ${row.count >= 4 ? "bg-red-100 text-red-700 border border-red-200" : "bg-amber-50 text-amber-700 border border-amber-200"}`}>
+                              {row.count >= 4 ? "🔴 Critical Risk" : "🟡 Moderate Risk"}
+                            </span>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              ) : (
+                <div className="flex items-center justify-center py-16 text-slate-400 text-xs font-semibold">
+                  ✅ No recurring failures found — Excellent asset reliability!
+                </div>
+              )}
+            </div>
           </div>
         )}
 
         {/* TAB 5: CLAIMS FRAUD AUDITOR */}
         {activeTab === "fraud" && (
           <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden p-5">
-            <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-4">
+            <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-5">
               <div>
                 <h3 className="text-xs font-black text-slate-700 uppercase tracking-wider flex items-center gap-1.5">
                   <ShieldAlert className="w-4 h-4 text-red-500 animate-pulse" />
-                  <span>Engineers Visited Barcode Audit Logs</span>
+                  Engineers Barcode Audit
                 </h3>
-                <p className="text-[10px] text-slate-400 font-semibold mt-0.5">Cross-checks engineer TA/DA visit claims against verified asset complaints barcodes to flag fake visits</p>
+                <p className="text-[10px] text-slate-400 font-semibold mt-0.5">Cross-checks engineer visit claims against verified asset barcodes to flag suspicious entries</p>
               </div>
-              <div className="relative w-full sm:w-64">
-                <Search className="w-4 h-4 text-slate-400 absolute left-3 top-3" />
-                <input
-                  type="text"
-                  placeholder="Search mismatches..."
-                  value={fraudSearch}
-                  onChange={(e) => { setFraudSearch(e.target.value); setFraudPage(1); }}
-                  className="w-full h-10 pl-9 pr-4 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold text-slate-700 focus:outline-none focus:border-indigo-600 focus:bg-white transition"
-                />
+              <div className="flex items-center gap-3">
+                <div className="text-center bg-red-50 border border-red-200 rounded-xl px-4 py-2">
+                  <p className="text-xl font-black text-red-700">{filteredFraudList.length}</p>
+                  <p className="text-[9px] text-red-500 font-black uppercase">Flagged</p>
+                </div>
+                <div className="relative w-full sm:w-64">
+                  <Search className="w-4 h-4 text-slate-400 absolute left-3 top-3" />
+                  <input type="text" placeholder="Search mismatches..." value={fraudSearch} onChange={(e) => { setFraudSearch(e.target.value); setFraudPage(1); }} className="w-full h-10 pl-9 pr-4 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold text-slate-700 focus:outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100 transition" />
+                </div>
               </div>
             </div>
 
@@ -1566,33 +1370,30 @@ export default function NewDashboardPage() {
               <div className="overflow-x-auto">
                 <table className="w-full border-collapse text-left text-xs">
                   <thead>
-                    <tr className="border-b border-slate-100 bg-slate-50/50">
+                    <tr className="border-b border-slate-100 bg-slate-50">
                       <th className="py-3 px-4 font-black text-slate-500 uppercase tracking-wider">Engineer Name</th>
-                      <th className="py-3 px-4 font-black text-slate-500 uppercase tracking-wider text-center">Employee Code</th>
-                      <th className="py-3 px-4 font-black text-slate-500 uppercase tracking-wider">Submitted Barcode</th>
-                      <th className="py-3 px-4 font-black text-slate-500 uppercase tracking-wider">Claim Hospital Location</th>
-                      <th className="py-3 px-4 font-black text-slate-500 uppercase tracking-wider text-center">Claim Date</th>
-                      <th className="py-3 px-4 font-black text-slate-500 uppercase tracking-wider text-center">Claim Type</th>
-                      <th className="py-3 px-4 font-black text-slate-500 uppercase tracking-wider text-center">Verification Status</th>
+                      <th className="py-3 px-4 font-black text-slate-500 uppercase tracking-wider text-center">Emp Code</th>
+                      <th className="py-3 px-4 font-black text-slate-500 uppercase tracking-wider">Barcode</th>
+                      <th className="py-3 px-4 font-black text-slate-500 uppercase tracking-wider">Claimed Hospital</th>
+                      <th className="py-3 px-4 font-black text-slate-500 uppercase tracking-wider text-center">Date</th>
+                      <th className="py-3 px-4 font-black text-slate-500 uppercase tracking-wider text-center">Type</th>
+                      <th className="py-3 px-4 font-black text-slate-500 uppercase tracking-wider text-center">Status</th>
                     </tr>
                   </thead>
-                  <tbody className="divide-y divide-slate-100 font-semibold text-slate-700">
+                  <tbody className="divide-y divide-slate-100 text-slate-700">
                     {filteredFraudList.slice((fraudPage - 1) * itemsPerPage, fraudPage * itemsPerPage).map((row, idx) => (
                       <tr key={idx} className="hover:bg-red-50/20 transition">
                         <td className="py-3 px-4 font-extrabold text-slate-900">{row.engineerName}</td>
-                        <td className="py-3 px-4 text-center">{row.engineerCode}</td>
+                        <td className="py-3 px-4 text-center font-mono text-slate-600">{row.engineerCode}</td>
                         <td className="py-3 px-4 font-mono text-red-600 font-black">{row.barcode}</td>
                         <td className="py-3 px-4 text-slate-600">{row.hospital}</td>
                         <td className="py-3 px-4 text-center text-slate-500">{row.date}</td>
                         <td className="py-3 px-4 text-center">
-                          <span className="bg-slate-100 px-2 py-0.5 rounded text-[10px]">
-                            {row.type}
-                          </span>
+                          <span className="bg-slate-100 text-slate-600 px-2 py-0.5 rounded text-[10px] font-bold">{row.type}</span>
                         </td>
                         <td className="py-3 px-4 text-center">
                           <span className="bg-red-50 text-red-700 border border-red-200 px-2.5 py-0.5 rounded-full text-[9px] font-black inline-flex items-center gap-1">
-                            <AlertTriangle className="w-3 h-3" />
-                            <span>Barcode Not Found in System</span>
+                            <AlertTriangle className="w-3 h-3" /> Not in System
                           </span>
                         </td>
                       </tr>
@@ -1601,62 +1402,47 @@ export default function NewDashboardPage() {
                 </table>
               </div>
             ) : (
-              <div className="flex items-center justify-center py-12 text-slate-400 text-xs font-semibold">
-                No fraudulent/mismatched barcode claims detected! Complete integrity observed.
+              <div className="flex items-center justify-center py-16 text-slate-400 text-xs font-semibold">
+                ✅ No fraudulent/mismatched barcodes detected — Complete integrity observed.
               </div>
             )}
 
             {filteredFraudList.length > itemsPerPage && (
               <div className="flex justify-between items-center mt-4 pt-3 border-t border-slate-100">
                 <span className="text-[10px] text-slate-400 font-bold">
-                  Showing {Math.min(filteredFraudList.length, (fraudPage - 1) * itemsPerPage + 1)}-{Math.min(filteredFraudList.length, fraudPage * itemsPerPage)} of {filteredFraudList.length} entries
+                  {Math.min(filteredFraudList.length, (fraudPage - 1) * itemsPerPage + 1)}-{Math.min(filteredFraudList.length, fraudPage * itemsPerPage)} / {filteredFraudList.length}
                 </span>
-                <div className="flex items-center gap-1">
-                  <button
-                    onClick={() => setFraudPage(p => Math.max(1, p - 1))}
-                    disabled={fraudPage === 1}
-                    className="p-1 border border-slate-200 rounded-lg hover:bg-slate-50 disabled:opacity-40 transition cursor-pointer"
-                  >
-                    <ChevronLeft className="w-4 h-4" />
-                  </button>
-                  <button
-                    onClick={() => setFraudPage(p => Math.min(Math.ceil(filteredFraudList.length / itemsPerPage), p + 1))}
-                    disabled={fraudPage >= Math.ceil(filteredFraudList.length / itemsPerPage)}
-                    className="p-1 border border-slate-200 rounded-lg hover:bg-slate-50 disabled:opacity-40 transition cursor-pointer"
-                  >
-                    <ChevronRight className="w-4 h-4" />
-                  </button>
+                <div className="flex gap-1">
+                  <button onClick={() => setFraudPage((p) => Math.max(1, p - 1))} disabled={fraudPage === 1} className="p-1.5 border border-slate-200 rounded-lg hover:bg-slate-50 disabled:opacity-40 transition cursor-pointer"><ChevronLeft className="w-4 h-4" /></button>
+                  <button onClick={() => setFraudPage((p) => Math.min(Math.ceil(filteredFraudList.length / itemsPerPage), p + 1))} disabled={fraudPage >= Math.ceil(filteredFraudList.length / itemsPerPage)} className="p-1.5 border border-slate-200 rounded-lg hover:bg-slate-50 disabled:opacity-40 transition cursor-pointer"><ChevronRight className="w-4 h-4" /></button>
                 </div>
               </div>
             )}
           </div>
         )}
 
-      {/* Repeat Failures History Modal */}
+      </div>
+
+      {/* ── Repeat Failures History Modal ── */}
       {selectedRepeatBarcode && (
-        <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-3xl border border-slate-200 shadow-xl max-w-2xl w-full max-h-[85vh] flex flex-col overflow-hidden animate-in fade-in zoom-in-95 duration-200">
-            <div className="p-5 border-b border-slate-100 flex justify-between items-center bg-slate-50">
+        <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-3xl border border-slate-200 shadow-2xl max-w-2xl w-full max-h-[85vh] flex flex-col overflow-hidden">
+            <div className="p-5 border-b border-slate-100 flex justify-between items-center bg-slate-50 rounded-t-3xl">
               <div>
-                <h3 className="text-sm font-black text-slate-900 tracking-tight">Barcode History Details</h3>
+                <h3 className="text-sm font-black text-slate-900 tracking-tight">Barcode Failure History</h3>
                 <p className="text-[10px] text-indigo-600 font-mono font-bold mt-0.5">Tag ID: {selectedRepeatBarcode}</p>
               </div>
-              <button
-                onClick={() => setSelectedRepeatBarcode(null)}
-                className="text-xs font-black text-slate-400 hover:text-slate-600 border border-slate-200 hover:border-slate-300 bg-white px-3 py-1.5 rounded-xl cursor-pointer transition"
-              >
-                Close
-              </button>
+              <button onClick={() => setSelectedRepeatBarcode(null)} className="text-xs font-black text-slate-400 hover:text-slate-700 border border-slate-200 hover:border-slate-300 bg-white px-3 py-1.5 rounded-xl cursor-pointer transition">Close ✕</button>
             </div>
-            
+
             <div className="p-5 overflow-y-auto flex-1 space-y-4">
-              <div className="grid grid-cols-2 gap-4 text-xs font-semibold bg-slate-50 p-3 rounded-xl border border-slate-150">
+              <div className="grid grid-cols-2 gap-4 text-xs bg-slate-50 p-3 rounded-xl border border-slate-200">
                 <div>
-                  <span className="text-[10px] text-slate-400 font-bold uppercase">Equipment Name</span>
+                  <span className="text-[10px] text-slate-400 font-black uppercase">Equipment</span>
                   <p className="text-slate-900 font-extrabold mt-0.5">{repeatDetailsList[0]?.equipmentName || "Unknown"}</p>
                 </div>
                 <div>
-                  <span className="text-[10px] text-slate-400 font-bold uppercase">Hospital Name</span>
+                  <span className="text-[10px] text-slate-400 font-black uppercase">Hospital</span>
                   <p className="text-slate-900 font-extrabold mt-0.5">{repeatDetailsList[0]?.hospitalName || "Unknown"}</p>
                 </div>
               </div>
@@ -1664,30 +1450,26 @@ export default function NewDashboardPage() {
               <div className="overflow-x-auto">
                 <table className="w-full border-collapse text-left text-xs">
                   <thead>
-                    <tr className="border-b border-slate-150 text-slate-500 uppercase font-black text-[10px]">
-                      <th className="py-2 px-1">Ticket ID</th>
-                      <th className="py-2 px-1">Logged Date</th>
-                      <th className="py-2 px-1">Close Date</th>
-                      <th className="py-2 px-1 text-center">Status</th>
-                      <th className="py-2 px-1 text-right">Penalty</th>
+                    <tr className="border-b border-slate-200 text-slate-500 uppercase font-black text-[10px]">
+                      <th className="py-2 px-2">Ticket ID</th>
+                      <th className="py-2 px-2">Logged</th>
+                      <th className="py-2 px-2">Closed</th>
+                      <th className="py-2 px-2 text-center">Status</th>
+                      <th className="py-2 px-2 text-right">Penalty</th>
                     </tr>
                   </thead>
-                  <tbody className="divide-y divide-slate-100 font-semibold text-slate-700">
+                  <tbody className="divide-y divide-slate-100 text-slate-700">
                     {repeatDetailsList.map((ticket) => (
-                      <tr key={ticket.complaintId} className="hover:bg-slate-50/50">
-                        <td className="py-2.5 px-1 font-extrabold text-slate-900">{ticket.complaintId || "N/A"}</td>
-                        <td className="py-2.5 px-1 text-slate-500">{ticket.complaintRaiseDate || "N/A"}</td>
-                        <td className="py-2.5 px-1 text-slate-500">{ticket.complaintCloseDate || "Open"}</td>
-                        <td className="py-2.5 px-1 text-center">
-                          <span className={`px-2 py-0.5 rounded-full text-[9px] font-black ${
-                            isComplaintClosed(ticket) ? "bg-green-50 text-green-700" : "bg-red-50 text-red-700 animate-pulse"
-                          }`}>
+                      <tr key={ticket.complaintId} className="hover:bg-slate-50">
+                        <td className="py-2.5 px-2 font-extrabold text-slate-900">{ticket.complaintId || "N/A"}</td>
+                        <td className="py-2.5 px-2 text-slate-500">{ticket.complaintRaiseDate || "N/A"}</td>
+                        <td className="py-2.5 px-2 text-slate-500">{ticket.complaintCloseDate || "Open"}</td>
+                        <td className="py-2.5 px-2 text-center">
+                          <span className={`px-2 py-0.5 rounded-full text-[9px] font-black ${isComplaintClosed(ticket) ? "bg-emerald-50 text-emerald-700" : "bg-red-50 text-red-700 animate-pulse"}`}>
                             {isComplaintClosed(ticket) ? "Closed" : "Open"}
                           </span>
                         </td>
-                        <td className="py-2.5 px-1 text-right font-black text-slate-900 font-mono">
-                          {formatRupees(getRowPenaltyVal(ticket))}
-                        </td>
+                        <td className="py-2.5 px-2 text-right font-black text-slate-900 font-mono">{formatRupees(getRowPenaltyVal(ticket))}</td>
                       </tr>
                     ))}
                   </tbody>
@@ -1697,8 +1479,6 @@ export default function NewDashboardPage() {
           </div>
         </div>
       )}
-
-      </div>
 
     </div>
   );
