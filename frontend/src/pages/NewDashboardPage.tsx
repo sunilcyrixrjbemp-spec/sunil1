@@ -23,7 +23,6 @@ import {
   TrendingDown,
   Calendar,
   Lightbulb,
-  Hospital,
   Wrench,
   Timer,
   ArrowUp,
@@ -192,7 +191,7 @@ export default function NewDashboardPage() {
   const [dateTo, setDateTo] = useState("");
   const [statusTab, setStatusTab] = useState<"open" | "closed" | "all">("all");
 
-  const [activeTab, setActiveTab] = useState<"overview" | "leaderboard" | "sla" | "repeats" | "fraud">("overview");
+  const [activeTab, setActiveTab] = useState<"overview" | "leaderboard" | "sla" | "repeats" | "fraud" | "analytics">("overview");
   const [breakdownTab, setBreakdownTab] = useState<"district" | "di" | "coordinator" | "zone" | "hospital">("district");
 
   const [leaderboardSearch, setLeaderboardSearch] = useState("");
@@ -1625,7 +1624,7 @@ export default function NewDashboardPage() {
             {/* Hospital Risk Scorecard */}
             <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-5">
               <div className="flex items-center gap-2 mb-4">
-                <div className="p-1.5 bg-red-100 rounded-lg"><Hospital className="w-4 h-4 text-red-600" /></div>
+                <div className="p-1.5 bg-red-100 rounded-lg"><Activity className="w-4 h-4 text-red-600" /></div>
                 <div>
                   <h3 className="text-xs font-black text-slate-700 uppercase tracking-wider">Hospital Risk Scorecard</h3>
                   <p className="text-[10px] text-slate-400 mt-0.5">Risk Score = OpenÃ—5 + PenaltyÃ·1000 + Repeat FailuresÃ—10 â€” Higher is worse</p>
