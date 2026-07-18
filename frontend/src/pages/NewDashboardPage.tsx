@@ -5,7 +5,6 @@ import {
   CheckCircle, 
   Clock, 
   ShieldAlert, 
-  UserCheck, 
   TrendingUp, 
   FileText, 
   SlidersHorizontal,
@@ -15,7 +14,6 @@ import {
   AlertCircle,
   Search,
   FilterX,
-  FileSpreadsheet,
   IndianRupee,
   Layers,
   Sparkles
@@ -94,7 +92,6 @@ const parseFlexibleDate = (dateStr: string | null | undefined): number => {
 export default function NewDashboardPage() {
   const [loading, setLoading] = useState(true);
   const [backgroundSyncing, setBackgroundSyncing] = useState(false);
-  const [syncProgress, setSyncProgress] = useState<number | null>(null);
   const [error, setError] = useState("");
 
   // Raw Data from Google Sheets (minimized schema)
@@ -250,7 +247,7 @@ export default function NewDashboardPage() {
         return name;
       });
 
-      const parsedPenalties = penaltyRows.slice(1).map((row: any, rIdx: number) => {
+      const parsedPenalties = penaltyRows.slice(1).map((row: any) => {
         const obj: any = {};
         penaltyHeaders.forEach((h: string, idx: number) => {
           obj[h] = row[idx] !== undefined ? row[idx].trim() : "";
@@ -324,6 +321,21 @@ export default function NewDashboardPage() {
     const hasCache = restoreFromCache();
     loadAllDashboardData(hasCache);
   }, []);
+
+  const handleResetFilters = () => {
+    const isPowerUser = ["Admin", "VP", "MIS"].includes(userRole);
+    setSelectedZone(isPowerUser ? "" : (userZone || ""));
+    setSelectedDistrict("");
+    setSelectedCoordinator(isPowerUser ? "" : (userCoordinator || ""));
+    setSelectedDI("");
+    setSelectedMonth("");
+    setSelectedHospitalType("");
+    setSelectedEquipmentType("");
+    setDateFrom("");
+    setDateTo("");
+    setStatusTab("all");
+    toast.success("Filters reset successfully");
+  };
 
   // 1. Dynamic Dropdown lists derived from loaded datasets
   const filterOptions = useMemo(() => {
@@ -1151,8 +1163,6 @@ export default function NewDashboardPage() {
                     labelSkipHeight={12}
                     labelTextColor="#ffffff"
                     labelFormat={(v) => `₹${v.toLocaleString()}`}
-                    role="application"
-                    ariaLabel="Breakdown penalty chart"
                   />
                 </div>
               ) : (
@@ -1330,8 +1340,6 @@ export default function NewDashboardPage() {
                   arcLinkLabelsColor={{ from: "color" }}
                   arcLabelsSkipAngle={10}
                   arcLabelsTextColor="#ffffff"
-                  role="application"
-                  ariaLabel="SLA aging chart"
                 />
               </div>
               <p className="text-[10px] text-slate-400 font-bold text-center mt-3 uppercase tracking-wider">
