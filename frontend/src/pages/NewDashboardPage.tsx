@@ -23,7 +23,7 @@ import toast from "react-hot-toast";
 
 const API_KEY = import.meta.env.VITE_GOOGLE_SHEETS_API_KEY || "AIzaSyDTkQ1wNpug7rDLmHgDGt_0Xr2XTPnWsIA";
 const SPREADSHEET_ID = import.meta.env.VITE_GOOGLE_SPREADSHEET_ID || "1ASmvpLSl-X3Vm8S3LxB2Iyhg6HMhOpV-R4ywVS2o8Bs";
-const CACHE_KEY = "cyrix_dashboard_sheets_cache_v4"; // Updated to cache v4 to force invalidate old incorrect data
+const CACHE_KEY = "cyrix_dashboard_sheets_cache_v5"; // Updated to cache v5 to include raw penalty column and force invalidation
 
 // 1. Helper function to safely check if a ticket is closed
 const isComplaintClosed = (row: any): boolean => {
@@ -152,7 +152,8 @@ export default function NewDashboardPage() {
       row["Complaint Close date"] || "",
       row["Bar Code"] || "",
       row["Status"] || "",
-      row["Complaint Status"] || ""
+      row["Complaint Status"] || "",
+      row["Total Penalty(Attend+Delay)"] || ""
     ]);
 
     const compactAsset = (data.assetValues || []).map((row: any) => row["Equipment Name"] || "");
@@ -188,7 +189,8 @@ export default function NewDashboardPage() {
       "Complaint Close date": arr[5],
       "Bar Code": arr[6],
       "Status": arr[7] || "",
-      "Complaint Status": arr[8] || ""
+      "Complaint Status": arr[8] || "",
+      "Total Penalty(Attend+Delay)": arr[9] || ""
     }));
 
     const assetValues = (parsed.a || []).map((name: string) => ({ "Equipment Name": name }));
@@ -509,22 +511,27 @@ export default function NewDashboardPage() {
     ];
   }, [filteredComplaints]);
 
-  // Helper function to calculate ticket penalty
-  const calculateTicketPenalty = (row: any) => {
-    if (!row["Complaint Raise Date"]) return 1000;
-    const raiseTime = parseFlexibleDate(row["Complaint Raise Date"]);
-    const isClosed = isComplaintClosed(row);
-    const closeTime = isClosed
-      ? parseFlexibleDate(row["Complaint Close date"]) 
-      : Date.now();
-
-    const days = Math.max(0, (closeTime - raiseTime) / (1000 * 60 * 60 * 24));
+  // Helper function to get correct ticket penalty (reading precalculated sheet penalty or dynamic estimate for open tickets)
+  const getRowPenalty = (row: any): number => {
+    const rawP = (row["Total Penalty(Attend+Delay)"] || "").replace(/,/g, "").trim();
+    if (rawP !== "" && rawP !== "--" && !isNaN(parseFloat(rawP))) {
+      return parseFloat(rawP);
+    }
     
-    const isCritical = criticalEquipment.some(
-      (c) => c["Name"]?.toLowerCase() === row["Equipment Name"]?.toLowerCase()
-    );
-    const ratePerDay = isCritical ? 2000 : 500;
-    return Math.round(days * ratePerDay);
+    // Dynamic estimation for open tickets
+    if (!isComplaintClosed(row)) {
+      if (!row["Complaint Raise Date"]) return 0;
+      const raiseTime = parseFlexibleDate(row["Complaint Raise Date"]);
+      const days = Math.max(0, (Date.now() - raiseTime) / (1000 * 60 * 60 * 24));
+      
+      const isCritical = criticalEquipment.some(
+        (c) => c["Name"]?.toLowerCase() === row["Equipment Name"]?.toLowerCase()
+      );
+      const ratePerDay = isCritical ? 2000 : 500;
+      return Math.round(days * ratePerDay);
+    }
+    
+    return 0;
   };
 
   // 2. Penalty Breakdown by dynamic Tab selection & Nivo Bar data
@@ -557,7 +564,7 @@ export default function NewDashboardPage() {
         counts[key] = { name: key, amount: 0, openTickets: 0 };
       }
 
-      const ticketPenalty = calculateTicketPenalty(row);
+      const ticketPenalty = getRowPenalty(row);
       counts[key].amount += ticketPenalty;
       if (!isClosed) {
         counts[key].openTickets++;
@@ -637,7 +644,7 @@ export default function NewDashboardPage() {
       }
 
       performance[diName].totalLogged++;
-      const penalty = calculateTicketPenalty(row);
+      const penalty = getRowPenalty(row);
       performance[diName].totalPenalty += penalty;
 
       const isClosed = isComplaintClosed(row);
@@ -680,7 +687,7 @@ export default function NewDashboardPage() {
       if (!row["Complaint Raise Date"]) return sum;
       const raiseDate = new Date(parseFlexibleDate(row["Complaint Raise Date"]));
       if (raiseDate.getMonth() === today.getMonth() && raiseDate.getFullYear() === today.getFullYear()) {
-        return sum + calculateTicketPenalty(row);
+        return sum + getRowPenalty(row);
       }
       return sum;
     }, 0);
@@ -757,7 +764,7 @@ export default function NewDashboardPage() {
     let totalPenalty = 0;
     let downtime = 0;
     barcodeComplaints.forEach((row) => {
-      totalPenalty += calculateTicketPenalty(row);
+      totalPenalty += getRowPenalty(row);
       const dt = parseFloat(row["Total Downtime"]) || 0;
       downtime += dt;
     });
@@ -1712,7 +1719,7 @@ export default function NewDashboardPage() {
                     </thead>
                     <tbody className="divide-y divide-slate-200 text-slate-600 font-semibold">
                       {barcodeComplaints.map((c, index) => {
-                        const penalty = calculateTicketPenalty(c);
+                        const penalty = getRowPenalty(c);
                         const isClosed = isComplaintClosed(c);
                         return (
                           <tr key={index} className="hover:bg-slate-50/50">
