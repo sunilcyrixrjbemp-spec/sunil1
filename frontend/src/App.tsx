@@ -7,6 +7,7 @@ import { Fingerprint, Lock, ScanFace } from "lucide-react";
 import ProtectedRoute from "./components/auth/ProtectedRoute";
 import DashboardLayout from "./components/dashboard/DashboardLayout";
 import ErrorBoundary from "./components/common/ErrorBoundary";
+import NewDashboardPage from "./pages/NewDashboardPage";
 
 // Lazy-loaded page components for fast initial loading
 const LoginPage = lazy(() => import("./pages/LoginPage"));
@@ -313,6 +314,7 @@ function App() {
                 <Route path="/asset-upload" element={<AssetUploadPage />} />
                 <Route path="/penalty-report" element={<PenaltyReportPage />} />
                 <Route path="/analysis" element={<AnalysisPage />} />
+                <Route path="/new-dashboard" element={<NewDashboardPage />} />
                 <Route path="/month-report" element={<MonthSummaryPage />} />
                 <Route path="/consolidated-report" element={<ConsolidatedReportPage />} />
                 <Route path="/notifications" element={<NotificationsPage />} />

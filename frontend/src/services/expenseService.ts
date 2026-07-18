@@ -62,6 +62,11 @@ export const expenseService = {
     return response.data;
   },
 
+  reverseExpense: async (expenseId: number, reason?: string): Promise<any> => {
+    const response = await api.post(`/expense/${expenseId}/reverse`, { reason: reason || "" });
+    return response.data;
+  },
+
   verifyBarcode: async (barcode: string, hospital?: string): Promise<any> => {
     const url = hospital 
       ? `/expense/verify-barcode?barcode=${barcode}&hospital=${encodeURIComponent(hospital)}` 

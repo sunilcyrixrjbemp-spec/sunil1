@@ -29,7 +29,8 @@ import {
   Info,
   Activity,
   Server,
-  Database
+  Database,
+  TrendingUp
 } from "lucide-react";
 
 interface MenuItem {
@@ -42,6 +43,7 @@ interface MenuItem {
 
 const MENU_ITEMS: MenuItem[] = [
   { id: "home", name: "Home", path: "/home", icon: Home, roles: ["Admin", "Engineer", "Manager", "Division Manager", "Coordinator", "Accountant", "HR", "Project Head", "Travel Desk", "MIS", "VP"] },
+  { id: "new_dashboard", name: "New Dashboard", path: "/new-dashboard", icon: TrendingUp, roles: ["Admin", "Manager", "Division Manager", "Coordinator", "MIS", "VP"] },
   { id: "admin", name: "Admin Panel", path: "/admin", icon: Settings, roles: ["Admin"] },
   { id: "db_monitor", name: "DB Monitor", path: "/db-monitor", icon: Activity, roles: ["Admin"] },
   { id: "approval", name: "Approval Center", path: "/approval-center", icon: CheckSquare, roles: ["Admin", "Manager", "Division Manager", "Coordinator", "Accountant", "HR", "Project Head", "VP"] },

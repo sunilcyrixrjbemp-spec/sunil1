@@ -1,4 +1,4 @@
-﻿import { runWrite, runBatchWrite, runRead } from "../utils/db.js";
+import { runWrite, runBatchWrite, runRead } from "../utils/db.js";
 import { getLegacyExpenseHashId } from "./approval.js";
 import { resolveLegacyExpenseId } from "../utils/legacy-resolver.js";
 import { uploadFileWithFallback } from "./upload.js";
@@ -1705,6 +1705,71 @@ export async function handleDeleteExpense(request, env, params, query, user) {
   await runBatchWrite(env, statements);
 
   return jsonResponse({ status: "success", message: "Expense claim deleted successfully." });
+}
+
+/**
+ * POST /api/expense/:id/reverse
+ * Reverse an expense entry (Admin only) — does NOT delete data.
+ * Marks status as "reversed", stores reversal metadata.
+ */
+export async function handleReverseExpense(request, env, params, query, user) {
+  // Only Admin can reverse entries
+  if (!user || (user.role || "").trim().toLowerCase() !== "admin") {
+    return jsonResponse({ error: "Access denied. Only Admin can reverse expense entries." }, 403);
+  }
+
+  const expenseId = parseInt(params.id, 10);
+  if (isNaN(expenseId)) {
+    return jsonResponse({ error: "Invalid expense ID" }, 400);
+  }
+
+  // Find the expense
+  const expense = await env.DB.prepare("SELECT * FROM expenses WHERE id = ?").bind(expenseId).first();
+  if (!expense) {
+    return jsonResponse({ error: "Expense claim not found" }, 404);
+  }
+
+  // Don't reverse an already reversed entry
+  if ((expense.status || "").toLowerCase() === "reversed") {
+    return jsonResponse({ error: "This expense entry is already reversed." }, 400);
+  }
+
+  // Parse request body for reversal reason
+  let reversal_reason = "";
+  try {
+    const body = await request.json();
+    reversal_reason = (body.reason || "").trim();
+  } catch (e) {
+    reversal_reason = "";
+  }
+
+  const timestamp = new Date().toISOString();
+
+  // Update status to "reversed" and store reversal metadata in description suffix
+  // We store: original status (for audit), reversal reason, reversed_by, reversed_at
+  const reversalNote = `[REVERSED by ${user.name || user.user_id} on ${timestamp}${reversal_reason ? ": " + reversal_reason : ""}]`;
+  const updatedDescription = expense.description
+    ? `${expense.description} ${reversalNote}`
+    : reversalNote;
+
+  await env.DB.prepare(`
+    UPDATE expenses
+    SET status = 'reversed',
+        description = ?,
+        updated_at = ?
+    WHERE id = ?
+  `).bind(updatedDescription, timestamp, expenseId).run();
+
+  return jsonResponse({
+    status: "success",
+    message: `Expense ID ${expenseId} (${expense.expense_code}) has been reversed successfully. Original data is preserved.`,
+    expense_id: expenseId,
+    expense_code: expense.expense_code,
+    previous_status: expense.status,
+    reversed_by: user.name || user.user_id,
+    reversed_at: timestamp,
+    reason: reversal_reason || null
+  });
 }
 
 
