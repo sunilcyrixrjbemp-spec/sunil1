@@ -1,7 +1,5 @@
 import { useState, useEffect, useMemo } from "react";
 import { 
-  FileSpreadsheet, 
-  Search, 
   RefreshCw, 
   AlertTriangle, 
   CheckCircle, 
@@ -11,7 +9,6 @@ import {
   TrendingUp, 
   FileText, 
   SlidersHorizontal,
-  Info,
   ChevronLeft,
   ChevronRight
 } from "lucide-react";
@@ -34,11 +31,8 @@ export default function NewDashboardPage() {
   // Raw Data from Google Sheets
   const [diNameList, setDiNameList] = useState<any[]>([]);
   const [penaltyFile, setPenaltyFile] = useState<any[]>([]);
-  const [districtWiseSummary, setDistrictWiseSummary] = useState<any[]>([]);
-  const [coordinatorPenaltySummary, setCoordinatorPenaltySummary] = useState<any[]>([]);
   const [assetValues, setAssetValues] = useState<any[]>([]);
   const [criticalEquipment, setCriticalEquipment] = useState<any[]>([]);
-  const [mainHospitals, setMainHospitals] = useState<any[]>([]);
 
   // Raw Data from Expense System
   const [expenseList, setExpenseList] = useState<any[]>([]);
@@ -48,7 +42,6 @@ export default function NewDashboardPage() {
   const [selectedDistrict, setSelectedDistrict] = useState("");
   const [selectedCoordinator, setSelectedCoordinator] = useState("");
   const [selectedDI, setSelectedDI] = useState("");
-  const [selectedHospital, setSelectedHospital] = useState("");
   const [dateFrom, setDateFrom] = useState("");
   const [dateTo, setDateTo] = useState("");
 
@@ -74,11 +67,8 @@ export default function NewDashboardPage() {
         const parsed = JSON.parse(cached);
         setDiNameList(parsed.diNameList || []);
         setPenaltyFile(parsed.penaltyFile || []);
-        setDistrictWiseSummary(parsed.districtWiseSummary || []);
-        setCoordinatorPenaltySummary(parsed.coordinatorPenaltySummary || []);
         setAssetValues(parsed.assetValues || []);
         setCriticalEquipment(parsed.criticalEquipment || []);
-        setMainHospitals(parsed.mainHospitals || []);
         setExpenseList(parsed.expenseList || []);
         setLoading(false); // Instantly show UI
         return true;
@@ -102,11 +92,8 @@ export default function NewDashboardPage() {
       const sheetsToFetch = [
         { name: "diNameList", range: "DI Name List!A1:E2000" },
         { name: "penaltyFile", range: "Penalty File!A1:Z5000" },
-        { name: "districtWiseSummary", range: "District Wise!A1:F50" },
-        { name: "coordinatorPenaltySummary", range: "Coordinator Wise Penalty!A1:G100" },
         { name: "assetValues", range: "Asset Value!A1:B1000" },
-        { name: "criticalEquipment", range: "Critical Equipment!A1:B500" },
-        { name: "mainHospitals", range: "Main Hospital!A1:G200" }
+        { name: "criticalEquipment", range: "Critical Equipment!A1:B500" }
       ];
 
       const freshData: any = {};
@@ -146,11 +133,8 @@ export default function NewDashboardPage() {
       // Update state
       setDiNameList(freshData.diNameList);
       setPenaltyFile(freshData.penaltyFile);
-      setDistrictWiseSummary(freshData.districtWiseSummary);
-      setCoordinatorPenaltySummary(freshData.coordinatorPenaltySummary);
       setAssetValues(freshData.assetValues);
       setCriticalEquipment(freshData.criticalEquipment);
-      setMainHospitals(freshData.mainHospitals);
       setExpenseList(freshData.expenseList);
 
       // Save to localStorage cache for subsequent 0.01ms loading
@@ -223,7 +207,6 @@ export default function NewDashboardPage() {
       if (selectedDistrict && row["District Name"] !== selectedDistrict) return false;
       if (selectedCoordinator && coordinator !== selectedCoordinator) return false;
       if (selectedDI && di !== selectedDI) return false;
-      if (selectedHospital && row["Hospital Name"] !== selectedHospital) return false;
 
       // Date Filters
       if (dateFrom && row["Complaint Raise Date"]) {
@@ -239,7 +222,7 @@ export default function NewDashboardPage() {
 
       return true;
     });
-  }, [penaltyFile, diNameList, selectedZone, selectedDistrict, selectedCoordinator, selectedDI, selectedHospital, dateFrom, dateTo]);
+  }, [penaltyFile, diNameList, selectedZone, selectedDistrict, selectedCoordinator, selectedDI, dateFrom, dateTo]);
 
   // 1. FTFR Analytics (First Time Fix Rate) Calculations
   const ftfrData = useMemo(() => {
@@ -594,6 +577,12 @@ export default function NewDashboardPage() {
           <span>Sync Live Data</span>
         </button>
       </div>
+
+      {error && (
+        <div className="mb-6 p-4 bg-red-50 text-red-700 border border-red-200 rounded-xl text-xs font-bold">
+          {error}
+        </div>
+      )}
 
       {/* 2. Global Filter Panel */}
       <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm mb-6">
