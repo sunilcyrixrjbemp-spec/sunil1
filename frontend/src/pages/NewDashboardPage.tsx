@@ -875,7 +875,7 @@ export default function NewDashboardPage() {
         <div className="mb-6">
           <div className="flex items-center gap-2 mb-2.5">
             <div className="p-1.5 bg-violet-100 rounded-lg"><Lightbulb className="w-3.5 h-3.5 text-violet-600" /></div>
-            <h2 className="text-xs font-black text-slate-600 uppercase tracking-widest">ðŸ§  Auto-Detected Insights from Sheet Data</h2>
+            <h2 className="text-xs font-black text-slate-600 uppercase tracking-widest">Auto-Detected Insights from Sheet Data</h2>
           </div>
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3">
             {smartInsights.map((ins, i) => {
@@ -1054,13 +1054,13 @@ export default function NewDashboardPage() {
                       axisTop={null}
                       axisRight={null}
                       axisBottom={{ tickSize: 0, tickPadding: 8, tickRotation: -15, legendOffset: 40 }}
-                      axisLeft={{ tickSize: 0, tickPadding: 8, tickRotation: 0, legend: "â‚¹ Penalty", legendPosition: "middle", legendOffset: -60, format: (v) => `â‚¹${Number(v) >= 100000 ? (Number(v)/100000).toFixed(0)+"L" : Number(v) >= 1000 ? (Number(v)/1000).toFixed(0)+"K" : v}` }}
+                      axisLeft={{ tickSize: 0, tickPadding: 8, tickRotation: 0, legend: "\u20B9 Penalty", legendPosition: "middle", legendOffset: -60, format: (v) => `\u20B9${Number(v) >= 100000 ? (Number(v)/100000).toFixed(0)+"L" : Number(v) >= 1000 ? (Number(v)/1000).toFixed(0)+"K" : v}` }}
                       labelSkipWidth={30}
                       labelSkipHeight={20}
                       labelTextColor="#fff"
                       label={(d) => {
                         const v = Number(d.value);
-                        return v >= 100000 ? `â‚¹${(v/100000).toFixed(0)}L` : v >= 1000 ? `â‚¹${(v/1000).toFixed(0)}K` : `â‚¹${v}`;
+                         return v >= 100000 ? `\u20B9${(v/100000).toFixed(0)}L` : v >= 1000 ? `\u20B9${(v/1000).toFixed(0)}K` : `\u20B9${v}`;
                       }}
                       tooltip={({ data, value }) => (
                         <div style={{ background: "#0f172a", color: "#f8fafc", padding: "10px 14px", borderRadius: 10, fontSize: 12, border: "1px solid rgba(255,255,255,0.1)" }}>
@@ -1131,7 +1131,7 @@ export default function NewDashboardPage() {
             <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-5">
               <div className="mb-4">
                 <h3 className="text-xs font-black text-slate-700 uppercase tracking-wider">Monthly Penalty & Open Ticket Trend</h3>
-                <p className="text-[10px] text-slate-400 mt-0.5">Last 8 months â€” Penalty in â‚¹000s / Tickets count</p>
+                 <p className="text-[10px] text-slate-400 mt-0.5">Last 8 months - Penalty in \u20B9000s / Tickets count</p>
               </div>
               {monthlyTrendData[0]?.data?.length > 1 ? (
                 <div className="h-64">
@@ -1144,7 +1144,7 @@ export default function NewDashboardPage() {
                     axisTop={null}
                     axisRight={null}
                     axisBottom={{ tickSize: 0, tickPadding: 10, tickRotation: -15, legendOffset: 40 }}
-                    axisLeft={{ tickSize: 0, tickPadding: 8, legend: "â‚¹K / Count", legendPosition: "middle", legendOffset: -45, format: (v) => `${v}` }}
+                     axisLeft={{ tickSize: 0, tickPadding: 8, legend: "\u20B9K / Count", legendPosition: "middle", legendOffset: -45, format: (v) => `${v}` }}
                     colors={({ color }) => color}
                     lineWidth={2.5}
                     pointSize={8}
@@ -1251,7 +1251,7 @@ export default function NewDashboardPage() {
                 <div className="h-64">
                   <ResponsiveBar
                     data={diLeaderboard.slice(0, 10).map((r) => ({
-                      name: r.name.length > 14 ? r.name.substring(0, 14) + "â€¦" : r.name,
+                       name: r.name.length > 14 ? r.name.substring(0, 14) + "..." : r.name,
                       "Resolution %": r.resolutionRate,
                       color: r.resolutionRate >= 80 ? "#10b981" : r.resolutionRate >= 50 ? "#f59e0b" : "#ef4444",
                     }))}
@@ -1284,7 +1284,7 @@ export default function NewDashboardPage() {
               <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-4">
                 <div>
                   <h3 className="text-xs font-black text-slate-700 uppercase tracking-wider">DI Performance Leaderboard</h3>
-                  <p className="text-[10px] text-slate-400 font-semibold mt-0.5">Sorted: Lowest penalty first (Best â†’ Worst)</p>
+                   <p className="text-[10px] text-slate-400 font-semibold mt-0.5">Sorted: Lowest penalty first (Best -> Worst)</p>
                 </div>
                 <div className="relative w-full sm:w-64">
                   <Search className="w-4 h-4 text-slate-400 absolute left-3 top-3" />
@@ -1480,7 +1480,7 @@ export default function NewDashboardPage() {
                     axisBottom={{ tickSize: 0, tickPadding: 8, tickRotation: -15 }}
                     axisLeft={{ tickSize: 0, tickPadding: 8, legend: "Failure Count", legendPosition: "middle", legendOffset: -38 }}
                     labelTextColor="#fff"
-                    label={(d) => `${d.value}Ã—`}
+                    label={(d) => `${d.value}x`}
                     labelSkipWidth={16}
                     labelSkipHeight={16}
                   />
@@ -1492,7 +1492,7 @@ export default function NewDashboardPage() {
             <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden p-5">
               <div className="mb-4">
                 <h3 className="text-xs font-black text-slate-700 uppercase tracking-wider">Recurring Equipment Failures</h3>
-                <p className="text-[10px] text-slate-400 font-semibold mt-0.5">Assets with more than 1 logged complaint â€” Possible faulty batch or maintenance need</p>
+                <p className="text-[10px] text-slate-400 font-semibold mt-0.5">Assets with more than 1 logged complaint - Possible faulty batch or maintenance need</p>
               </div>
 
               {repeatCalls.length > 0 ? (
@@ -1518,11 +1518,11 @@ export default function NewDashboardPage() {
                           <td className="py-3 px-4 font-extrabold text-slate-900">{row.name}</td>
                           <td className="py-3 px-4 text-slate-600">{row.hospital}</td>
                           <td className="py-3 px-4 text-center">
-                            <span className="bg-slate-100 text-slate-700 px-2.5 py-1 rounded-lg font-black">{row.count}Ã—</span>
+                            <span className="bg-slate-100 text-slate-700 px-2.5 py-1 rounded-lg font-black">{row.count}x</span>
                           </td>
                           <td className="py-3 px-4 text-center">
                             <span className={`px-2 py-0.5 rounded-full text-[9px] font-black ${row.count >= 4 ? "bg-red-100 text-red-700 border border-red-200" : "bg-amber-50 text-amber-700 border border-amber-200"}`}>
-                              {row.count >= 4 ? "ðŸ”´ Critical Risk" : "ðŸŸ¡ Moderate Risk"}
+                              {row.count >= 4 ? "\uD83D\uDD34 Critical Risk" : "\uD83D\uDFE1 Moderate Risk"}
                             </span>
                           </td>
                         </tr>
@@ -1532,7 +1532,7 @@ export default function NewDashboardPage() {
                 </div>
               ) : (
                 <div className="flex items-center justify-center py-16 text-slate-400 text-xs font-semibold">
-                  âœ… No recurring failures found â€” Excellent asset reliability!
+                  No recurring failures found - Excellent asset reliability!
                 </div>
               )}
             </div>
@@ -1599,7 +1599,7 @@ export default function NewDashboardPage() {
               </div>
             ) : (
               <div className="flex items-center justify-center py-16 text-slate-400 text-xs font-semibold">
-                âœ… No fraudulent/mismatched barcodes detected â€” Complete integrity observed.
+                No fraudulent/mismatched barcodes detected - Complete integrity observed.
               </div>
             )}
 
@@ -1627,7 +1627,7 @@ export default function NewDashboardPage() {
                 <div className="p-1.5 bg-red-100 rounded-lg"><Activity className="w-4 h-4 text-red-600" /></div>
                 <div>
                   <h3 className="text-xs font-black text-slate-700 uppercase tracking-wider">Hospital Risk Scorecard</h3>
-                  <p className="text-[10px] text-slate-400 mt-0.5">Risk Score = OpenÃ—5 + PenaltyÃ·1000 + Repeat FailuresÃ—10 â€” Higher is worse</p>
+                  <p className="text-[10px] text-slate-400 mt-0.5">Risk Score = (Open * 5) + (Penalty / 1000) + (Repeats * 10) - Higher is worse</p>
                 </div>
               </div>
               <div className="overflow-x-auto">
@@ -1677,7 +1677,7 @@ export default function NewDashboardPage() {
                   <div className="p-1.5 bg-indigo-100 rounded-lg"><Wrench className="w-4 h-4 text-indigo-600" /></div>
                   <div>
                     <h3 className="text-xs font-black text-slate-700 uppercase tracking-wider">Equipment Health Report</h3>
-                    <p className="text-[10px] text-slate-400 mt-0.5">By equipment type â€” failure rate &amp; downtime</p>
+                    <p className="text-[10px] text-slate-400 mt-0.5">By equipment type - failure rate & downtime</p>
                   </div>
                 </div>
                 <div className="overflow-x-auto">
@@ -1707,7 +1707,7 @@ export default function NewDashboardPage() {
                               eq.health === "Critical" ? "bg-red-100 text-red-700 border border-red-200" :
                               eq.health === "Warning"  ? "bg-amber-50 text-amber-700 border border-amber-200" :
                               "bg-emerald-50 text-emerald-700 border border-emerald-200"
-                            }`}>{eq.health === "Critical" ? "ðŸ”´ Critical" : eq.health === "Warning" ? "ðŸŸ¡ Warning" : "ðŸŸ¢ Healthy"}</span>
+                            }`}>{eq.health === "Critical" ? "\uD83D\uDD34 Critical" : eq.health === "Warning" ? "\uD83D\uDFE1 Warning" : "\uD83D\uDFE2 Healthy"}</span>
                           </td>
                         </tr>
                       ))}
@@ -1885,7 +1885,7 @@ export default function NewDashboardPage() {
                 <h3 className="text-sm font-black text-slate-900 tracking-tight">Barcode Failure History</h3>
                 <p className="text-[10px] text-indigo-600 font-mono font-bold mt-0.5">Tag ID: {selectedRepeatBarcode}</p>
               </div>
-              <button onClick={() => setSelectedRepeatBarcode(null)} className="text-xs font-black text-slate-400 hover:text-slate-700 border border-slate-200 hover:border-slate-300 bg-white px-3 py-1.5 rounded-xl cursor-pointer transition">Close âœ•</button>
+              <button onClick={() => setSelectedRepeatBarcode(null)} className="text-xs font-black text-slate-400 hover:text-slate-700 border border-slate-200 hover:border-slate-300 bg-white px-3 py-1.5 rounded-xl cursor-pointer transition">Close X</button>
             </div>
 
             <div className="p-5 overflow-y-auto flex-1 space-y-4">
