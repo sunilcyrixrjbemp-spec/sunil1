@@ -1,4 +1,4 @@
-﻿import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect, useMemo } from "react";
 import {
   RefreshCw,
   AlertTriangle,
@@ -1616,6 +1616,7 @@ export default function NewDashboardPage() {
               </div>
             )}
           </div>
+        )}
 
         {/* TAB 6: DEEP ANALYTICS */}
         {activeTab === "analytics" && (
