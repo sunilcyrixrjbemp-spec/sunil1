@@ -23,7 +23,74 @@ import toast from "react-hot-toast";
 
 const API_KEY = import.meta.env.VITE_GOOGLE_SHEETS_API_KEY || "AIzaSyDTkQ1wNpug7rDLmHgDGt_0Xr2XTPnWsIA";
 const SPREADSHEET_ID = import.meta.env.VITE_GOOGLE_SPREADSHEET_ID || "1ASmvpLSl-X3Vm8S3LxB2Iyhg6HMhOpV-R4ywVS2o8Bs";
-const CACHE_KEY = "cyrix_dashboard_sheets_cache_v3"; // Cache version 3
+const CACHE_KEY = "cyrix_dashboard_sheets_cache_v4"; // Updated to cache v4 to force invalidate old incorrect data
+
+// 1. Helper function to safely check if a ticket is closed
+const isComplaintClosed = (row: any): boolean => {
+  const status = (row["Status"] || "").trim().toLowerCase();
+  const compStatus = (row["Complaint Status"] || "").trim().toLowerCase();
+  const closeDate = (row["Complaint Close date"] || "").trim();
+
+  // Explicit Open status check
+  if (status === "open" || compStatus === "pending" || compStatus === "attended") {
+    return false;
+  }
+  
+  // Explicit Closed status check
+  if (status === "closed" || compStatus === "final closed" || compStatus === "engineer closed") {
+    return true;
+  }
+
+  // Date check fallback
+  if (!closeDate || closeDate === "" || closeDate === "--" || closeDate.toLowerCase() === "open") {
+    return false;
+  }
+  
+  return true;
+};
+
+// 2. Safe, cross-platform parser for "DD-MMM-YYYY HH:MM:SS" format
+const parseFlexibleDate = (dateStr: string | null | undefined): number => {
+  if (!dateStr) return Date.now();
+  const cleaned = dateStr.trim();
+  if (cleaned === "" || cleaned === "--" || cleaned.toLowerCase() === "open") {
+    return Date.now();
+  }
+
+  const parsed = Date.parse(cleaned);
+  if (!isNaN(parsed)) return parsed;
+
+  try {
+    const parts = cleaned.split(" ");
+    const dateParts = parts[0].split("-"); // [DD, MMM, YYYY]
+    if (dateParts.length === 3) {
+      const day = parseInt(dateParts[0], 10);
+      const monthStr = dateParts[1].substring(0, 3).toLowerCase();
+      const year = parseInt(dateParts[2], 10);
+
+      const months: { [key: string]: number } = {
+        jan: 0, feb: 1, mar: 2, apr: 3, may: 4, jun: 5,
+        jul: 6, aug: 7, sep: 8, oct: 9, nov: 10, dec: 11
+      };
+      const month = months[monthStr] !== undefined ? months[monthStr] : 0;
+
+      let hours = 0, minutes = 0, seconds = 0;
+      if (parts[1]) {
+        const timeParts = parts[1].split(":");
+        hours = parseInt(timeParts[0], 10) || 0;
+        minutes = parseInt(timeParts[1], 10) || 0;
+        seconds = parseInt(timeParts[2], 10) || 0;
+      }
+
+      const d = new Date(year, month, day, hours, minutes, seconds);
+      if (!isNaN(d.getTime())) return d.getTime();
+    }
+  } catch (e) {
+    console.error("Failed to parse date flexible:", cleaned, e);
+  }
+
+  return Date.now();
+};
 
 export default function NewDashboardPage() {
   const [loading, setLoading] = useState(true);
@@ -82,10 +149,12 @@ export default function NewDashboardPage() {
       row["Equipment Name"] || "",
       row["Complaint Raise Date"] || "",
       row["Complaint Close date"] || "",
-      row["Bar Code"] || ""
+      row["Bar Code"] || "",
+      row["Status"] || "",
+      row["Complaint Status"] || ""
     ]);
 
-    const compactAsset = (data.assetValues || []).map((row: any) => row["Bar Code"] || "");
+    const compactAsset = (data.assetValues || []).map((row: any) => row["Equipment Name"] || "");
     const compactCritical = (data.criticalEquipment || []).map((row: any) => row["Name"] || "");
 
     return JSON.stringify({
@@ -116,10 +185,12 @@ export default function NewDashboardPage() {
       "Equipment Name": arr[3],
       "Complaint Raise Date": arr[4],
       "Complaint Close date": arr[5],
-      "Bar Code": arr[6]
+      "Bar Code": arr[6],
+      "Status": arr[7] || "",
+      "Complaint Status": arr[8] || ""
     }));
 
-    const assetValues = (parsed.a || []).map((bc: string) => ({ "Bar Code": bc }));
+    const assetValues = (parsed.a || []).map((name: string) => ({ "Equipment Name": name }));
     const criticalEquipment = (parsed.c || []).map((name: string) => ({ "Name": name }));
 
     return {
@@ -341,14 +412,14 @@ export default function NewDashboardPage() {
 
       // Date Filters
       if (dateFrom && row["Complaint Raise Date"]) {
-        const raiseDate = new Date(row["Complaint Raise Date"]);
-        const fromDate = new Date(dateFrom);
-        if (raiseDate < fromDate) return false;
+        const raiseTime = parseFlexibleDate(row["Complaint Raise Date"]);
+        const fromTime = new Date(dateFrom).getTime();
+        if (raiseTime < fromTime) return false;
       }
       if (dateTo && row["Complaint Raise Date"]) {
-        const raiseDate = new Date(row["Complaint Raise Date"]);
-        const toDate = new Date(dateTo);
-        if (raiseDate > toDate) return false;
+        const raiseTime = parseFlexibleDate(row["Complaint Raise Date"]);
+        const toTime = new Date(dateTo).setHours(23, 59, 59, 999);
+        if (raiseTime > toTime) return false;
       }
 
       return true;
@@ -363,20 +434,16 @@ export default function NewDashboardPage() {
 
     filteredComplaints.forEach((row) => {
       logged++;
-      const raiseStr = row["Complaint Raise Date"];
-      const closeStr = row["Complaint Close date"];
+      const isClosed = isComplaintClosed(row);
 
-      if (closeStr && closeStr !== "" && closeStr.toLowerCase() !== "open") {
+      if (isClosed) {
         closed++;
-        const raiseDate = Date.parse(raiseStr);
-        const closeDate = Date.parse(closeStr);
+        const raiseTime = parseFlexibleDate(row["Complaint Raise Date"]);
+        const closeTime = parseFlexibleDate(row["Complaint Close date"]);
 
-        if (!isNaN(raiseDate) && !isNaN(closeDate)) {
-          const diffMs = closeDate - raiseDate;
-          const diffHours = diffMs / (1000 * 60 * 60);
-          if (diffHours <= 24 && diffHours >= 0) {
-            closedWithin24h++;
-          }
+        const diffHours = (closeTime - raiseTime) / (1000 * 60 * 60);
+        if (diffHours <= 24 && diffHours >= 0) {
+          closedWithin24h++;
         }
       }
     });
@@ -398,8 +465,8 @@ export default function NewDashboardPage() {
     filteredComplaints.forEach((row) => {
       const dateStr = row["Complaint Raise Date"];
       if (!dateStr) return;
-      const dateObj = new Date(dateStr);
-      if (isNaN(dateObj.getTime())) return;
+      const time = parseFlexibleDate(dateStr);
+      const dateObj = new Date(time);
       const month = dateObj.toLocaleString("default", { month: "short", year: "2-digit" });
 
       if (!grouped[month]) {
@@ -407,15 +474,13 @@ export default function NewDashboardPage() {
       }
       grouped[month].logged++;
 
-      const closeStr = row["Complaint Close date"];
-      if (closeStr && closeStr !== "" && closeStr.toLowerCase() !== "open") {
-        const raiseDate = Date.parse(dateStr);
-        const closeDate = Date.parse(closeStr);
-        if (!isNaN(raiseDate) && !isNaN(closeDate)) {
-          const hours = (closeDate - raiseDate) / (1000 * 60 * 60);
-          if (hours <= 24 && hours >= 0) {
-            grouped[month].ftfr++;
-          }
+      const isClosed = isComplaintClosed(row);
+      if (isClosed) {
+        const raiseTime = parseFlexibleDate(row["Complaint Raise Date"]);
+        const closeTime = parseFlexibleDate(row["Complaint Close date"]);
+        const hours = (closeTime - raiseTime) / (1000 * 60 * 60);
+        if (hours <= 24 && hours >= 0) {
+          grouped[month].ftfr++;
         }
       }
     });
@@ -446,12 +511,12 @@ export default function NewDashboardPage() {
   // Helper function to calculate ticket penalty
   const calculateTicketPenalty = (row: any) => {
     if (!row["Complaint Raise Date"]) return 1000;
-    const raiseTime = Date.parse(row["Complaint Raise Date"]);
-    const closeTime = row["Complaint Close date"] && row["Complaint Close date"].toLowerCase() !== "open" 
-      ? Date.parse(row["Complaint Close date"]) 
+    const raiseTime = parseFlexibleDate(row["Complaint Raise Date"]);
+    const isClosed = isComplaintClosed(row);
+    const closeTime = isClosed
+      ? parseFlexibleDate(row["Complaint Close date"]) 
       : Date.now();
 
-    if (isNaN(raiseTime) || isNaN(closeTime)) return 1000;
     const days = Math.max(0, (closeTime - raiseTime) / (1000 * 60 * 60 * 24));
     
     const isCritical = criticalEquipment.some(
@@ -466,7 +531,7 @@ export default function NewDashboardPage() {
     const counts: { [key: string]: { name: string; amount: number; openTickets: number } } = {};
 
     filteredComplaints.forEach((row) => {
-      const isClosed = row["Complaint Close date"] && row["Complaint Close date"] !== "" && row["Complaint Close date"].toLowerCase() !== "open";
+      const isClosed = isComplaintClosed(row);
       
       let key = "";
       const mapping = diNameList.find(
@@ -516,7 +581,7 @@ export default function NewDashboardPage() {
   // 3. Open Complaints SLA Aging Breakdown
   const openComplaintsSummary = useMemo(() => {
     const list = filteredComplaints.filter(
-      (row) => !row["Complaint Close date"] || row["Complaint Close date"] === "" || row["Complaint Close date"].toLowerCase() === "open"
+      (row) => !isComplaintClosed(row)
     );
 
     let ageLess24h = 0;
@@ -525,9 +590,7 @@ export default function NewDashboardPage() {
     let age7dPlus = 0;
 
     list.forEach((row) => {
-      if (!row["Complaint Raise Date"]) return;
-      const raiseTime = Date.parse(row["Complaint Raise Date"]);
-      if (isNaN(raiseTime)) return;
+      const raiseTime = parseFlexibleDate(row["Complaint Raise Date"]);
       const hours = (Date.now() - raiseTime) / (1000 * 60 * 60);
 
       if (hours <= 24) ageLess24h++;
@@ -576,15 +639,12 @@ export default function NewDashboardPage() {
       const penalty = calculateTicketPenalty(row);
       performance[diName].totalPenalty += penalty;
 
-      const raiseStr = row["Complaint Raise Date"];
-      const closeStr = row["Complaint Close date"];
-      if (closeStr && closeStr !== "" && closeStr.toLowerCase() !== "open") {
+      const isClosed = isComplaintClosed(row);
+      if (isClosed) {
         performance[diName].closed++;
-        const raiseTime = Date.parse(raiseStr);
-        const closeTime = Date.parse(closeStr);
-        if (!isNaN(raiseTime) && !isNaN(closeTime)) {
-          performance[diName].totalDays += (closeTime - raiseTime) / (1000 * 60 * 60 * 24);
-        }
+        const raiseTime = parseFlexibleDate(row["Complaint Raise Date"]);
+        const closeTime = parseFlexibleDate(row["Complaint Close date"]);
+        performance[diName].totalDays += (closeTime - raiseTime) / (1000 * 60 * 60 * 24);
       }
     });
 
@@ -617,7 +677,7 @@ export default function NewDashboardPage() {
 
     const penaltyThisMonth = filteredComplaints.reduce((sum, row) => {
       if (!row["Complaint Raise Date"]) return sum;
-      const raiseDate = new Date(row["Complaint Raise Date"]);
+      const raiseDate = new Date(parseFlexibleDate(row["Complaint Raise Date"]));
       if (raiseDate.getMonth() === today.getMonth() && raiseDate.getFullYear() === today.getFullYear()) {
         return sum + calculateTicketPenalty(row);
       }
@@ -640,7 +700,7 @@ export default function NewDashboardPage() {
 
     filteredComplaints.forEach((row) => {
       const barcode = row["Bar Code"];
-      if (!barcode || barcode === "" || barcode.toLowerCase() === "na") return;
+      if (!barcode || barcode === "" || barcode.toLowerCase() === "na" || barcode.toLowerCase() === "--") return;
 
       if (!groups[barcode]) {
         groups[barcode] = {
@@ -673,16 +733,14 @@ export default function NewDashboardPage() {
     const mismatchList: any[] = [];
 
     const validBarcodes = new Set<string>();
-    assetValues.forEach((row) => {
-      if (row["Bar Code"]) validBarcodes.add(String(row["Bar Code"]).trim());
-    });
+    // Extract actual numeric suffix from raw barcodes for robust verification
     penaltyFile.forEach((row) => {
       if (row["Bar Code"]) {
-        const matches = row["Bar Code"].match(/\d+$/);
+        const raw = String(row["Bar Code"]).trim();
+        validBarcodes.add(raw);
+        const matches = raw.match(/\d+$/);
         if (matches) {
           validBarcodes.add(matches[0]);
-        } else {
-          validBarcodes.add(String(row["Bar Code"]).trim());
         }
       }
     });
@@ -747,7 +805,7 @@ export default function NewDashboardPage() {
       mismatchCount,
       mismatchList
     };
-  }, [expenseList, assetValues, penaltyFile]);
+  }, [expenseList, penaltyFile]);
 
   const nivoPieData = useMemo(() => {
     return [
@@ -943,7 +1001,7 @@ export default function NewDashboardPage() {
 
         <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm flex flex-col justify-between">
           <div className="flex justify-between items-center pb-2 border-b border-slate-100">
-            <div className="flex items-center gap-1">
+            <div className="flex items-center gap-1.5">
               <Clock className="w-4 h-4 text-rose-500 animate-pulse" />
               <span className="text-[10px] font-black text-slate-500 uppercase tracking-wider">SLA Aging Summary (Active)</span>
             </div>
