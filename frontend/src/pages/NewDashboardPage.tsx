@@ -10,7 +10,11 @@ import {
   FileText, 
   SlidersHorizontal,
   ChevronLeft,
-  ChevronRight
+  ChevronRight,
+  Award,
+  AlertCircle,
+  HelpCircle,
+  Building
 } from "lucide-react";
 import { ResponsiveBar } from "@nivo/bar";
 import { ResponsivePie } from "@nivo/pie";
@@ -21,7 +25,7 @@ import toast from "react-hot-toast";
 
 const API_KEY = import.meta.env.VITE_GOOGLE_SHEETS_API_KEY || "AIzaSyDTkQ1wNpug7rDLmHgDGt_0Xr2XTPnWsIA";
 const SPREADSHEET_ID = import.meta.env.VITE_GOOGLE_SPREADSHEET_ID || "1ASmvpLSl-X3Vm8S3LxB2Iyhg6HMhOpV-R4ywVS2o8Bs";
-const CACHE_KEY = "cyrix_dashboard_sheets_cache_v1";
+const CACHE_KEY = "cyrix_dashboard_sheets_cache_v2"; // Increment cache key version
 
 export default function NewDashboardPage() {
   const [loading, setLoading] = useState(true);
@@ -51,6 +55,7 @@ export default function NewDashboardPage() {
   // Pagination for tables
   const [currentOpenPage, setCurrentOpenPage] = useState(1);
   const [currentRepeatPage, setCurrentRepeatPage] = useState(1);
+  const [currentDIPage, setCurrentDIPage] = useState(1);
   const rowsPerPage = 10;
 
   // User Info & RBAC Lock status
@@ -59,18 +64,84 @@ export default function NewDashboardPage() {
   const userZone = currentUser?.zone || null;
   const userCoordinator = currentUser?.coordinator || null;
 
-  // 0.01ms Loading: Restore from cache instantly
+  // COMPRESSION LOGIC: Minify JSON data before storing in LocalStorage to prevent Quota Exceeded error
+  const serializeData = (data: any) => {
+    const compactDi = (data.diNameList || []).map((row: any) => [
+      row["Zone Name"] || "",
+      row["District Name"] || "",
+      row["Coordinator Name"] || "",
+      row["District Incharge Name"] || "",
+      row["Hospital Name"] || ""
+    ]);
+
+    const compactPenalty = (data.penaltyFile || []).map((row: any) => [
+      row["Complaint ID"] || "",
+      row["District Name"] || "",
+      row["Hospital Name"] || "",
+      row["Equipment Name"] || "",
+      row["Complaint Raise Date"] || "",
+      row["Complaint Close date"] || "",
+      row["Bar Code"] || ""
+    ]);
+
+    const compactAsset = (data.assetValues || []).map((row: any) => row["Bar Code"] || "");
+    const compactCritical = (data.criticalEquipment || []).map((row: any) => row["Name"] || "");
+
+    return JSON.stringify({
+      di: compactDi,
+      p: compactPenalty,
+      a: compactAsset,
+      c: compactCritical,
+      e: data.expenseList || [],
+      ts: Date.now()
+    });
+  };
+
+  const deserializeData = (cachedStr: string) => {
+    const parsed = JSON.parse(cachedStr);
+    
+    const diNameList = (parsed.di || []).map((arr: any) => ({
+      "Zone Name": arr[0],
+      "District Name": arr[1],
+      "Coordinator Name": arr[2],
+      "District Incharge Name": arr[3],
+      "Hospital Name": arr[4]
+    }));
+
+    const penaltyFile = (parsed.p || []).map((arr: any) => ({
+      "Complaint ID": arr[0],
+      "District Name": arr[1],
+      "Hospital Name": arr[2],
+      "Equipment Name": arr[3],
+      "Complaint Raise Date": arr[4],
+      "Complaint Close date": arr[5],
+      "Bar Code": arr[6]
+    }));
+
+    const assetValues = (parsed.a || []).map((bc: string) => ({ "Bar Code": bc }));
+    const criticalEquipment = (parsed.c || []).map((name: string) => ({ "Name": name }));
+
+    return {
+      diNameList,
+      penaltyFile,
+      assetValues,
+      criticalEquipment,
+      expenseList: parsed.e || []
+    };
+  };
+
+  // Restore compressed data from cache instantly
   const restoreFromCache = () => {
     try {
       const cached = localStorage.getItem(CACHE_KEY);
       if (cached) {
-        const parsed = JSON.parse(cached);
-        setDiNameList(parsed.diNameList || []);
-        setPenaltyFile(parsed.penaltyFile || []);
-        setAssetValues(parsed.assetValues || []);
-        setCriticalEquipment(parsed.criticalEquipment || []);
-        setExpenseList(parsed.expenseList || []);
-        setLoading(false); // Instantly show UI
+        const deserialized = deserializeData(cached);
+        setDiNameList(deserialized.diNameList);
+        setPenaltyFile(deserialized.penaltyFile);
+        setAssetValues(deserialized.assetValues);
+        setCriticalEquipment(deserialized.criticalEquipment);
+        setExpenseList(deserialized.expenseList);
+        setLoading(false); // Instantly show UI in 0.01ms
         return true;
       }
     } catch (e) {
@@ -137,8 +208,13 @@ export default function NewDashboardPage() {
       setCriticalEquipment(freshData.criticalEquipment);
       setExpenseList(freshData.expenseList);
 
-      // Save to localStorage cache for subsequent 0.01ms loading
-      localStorage.setItem(CACHE_KEY, JSON.stringify({ ...freshData, timestamp: Date.now() }));
+      // Save COMPRESSED data to cache to stay well within 5MB limit
+      try {
+        const compressedStr = serializeData(freshData);
+        localStorage.setItem(CACHE_KEY, compressedStr);
+      } catch (cacheErr) {
+        console.error("Cache serialization failed", cacheErr);
+      }
       
       if (isBackground) {
         toast.success("Dashboard metrics synced live! ⚡", { id: "bg-sync" });
@@ -173,22 +249,19 @@ export default function NewDashboardPage() {
     const districts = new Set<string>();
     const coordinators = new Set<string>();
     const dis = new Set<string>();
-    const hospitals = new Set<string>();
 
     diNameList.forEach((row) => {
       if (row["Zone Name"]) zones.add(row["Zone Name"]);
       if (row["District Name"]) districts.add(row["District Name"]);
       if (row["Coordinator Name"]) coordinators.add(row["Coordinator Name"]);
       if (row["District Incharge Name"]) dis.add(row["District Incharge Name"]);
-      if (row["Hospital Name"]) hospitals.add(row["Hospital Name"]);
     });
 
     return {
       zones: Array.from(zones).sort(),
       districts: Array.from(districts).sort(),
       coordinators: Array.from(coordinators).sort(),
-      dis: Array.from(dis).sort(),
-      hospitals: Array.from(hospitals).sort()
+      dis: Array.from(dis).sort()
     };
   }, [diNameList]);
 
@@ -224,7 +297,7 @@ export default function NewDashboardPage() {
     });
   }, [penaltyFile, diNameList, selectedZone, selectedDistrict, selectedCoordinator, selectedDI, dateFrom, dateTo]);
 
-  // 1. FTFR Analytics (First Time Fix Rate) Calculations
+  // 1. FTFR Analytics Calculations
   const ftfrData = useMemo(() => {
     let logged = 0;
     let closed = 0;
@@ -262,7 +335,6 @@ export default function NewDashboardPage() {
 
   // Nivo Line Chart Data preparation (FTFR Trend over dates)
   const nivoLineData = useMemo(() => {
-    // Group logged & closed within 24h by raise date month
     const grouped: { [month: string]: { logged: number; ftfr: number } } = {};
 
     filteredComplaints.forEach((row) => {
@@ -270,7 +342,6 @@ export default function NewDashboardPage() {
       if (!dateStr) return;
       const dateObj = new Date(dateStr);
       if (isNaN(dateObj.getTime())) return;
-      // Get Mon-YY format
       const month = dateObj.toLocaleString("default", { month: "short", year: "2-digit" });
 
       if (!grouped[month]) {
@@ -314,12 +385,31 @@ export default function NewDashboardPage() {
     ];
   }, [filteredComplaints]);
 
+  // Helper function to calculate ticket penalty
+  const calculateTicketPenalty = (row: any) => {
+    if (!row["Complaint Raise Date"]) return 1000;
+    const raiseTime = Date.parse(row["Complaint Raise Date"]);
+    const closeTime = row["Complaint Close date"] && row["Complaint Close date"].toLowerCase() !== "open" 
+      ? Date.parse(row["Complaint Close date"]) 
+      : Date.now();
+
+    if (isNaN(raiseTime) || isNaN(closeTime)) return 1000;
+    const days = Math.max(0, (closeTime - raiseTime) / (1000 * 60 * 60 * 24));
+    
+    // Check if equipment is critical
+    const isCritical = criticalEquipment.some(
+      (c) => c["Name"]?.toLowerCase() === row["Equipment Name"]?.toLowerCase()
+    );
+    const ratePerDay = isCritical ? 2000 : 500;
+    return Math.round(days * ratePerDay);
+  };
+
   // 2. Penalty Breakdown by dynamic Tab selection & Nivo Bar data
   const penaltyBreakdown = useMemo(() => {
     const counts: { [key: string]: { name: string; amount: number; openTickets: number } } = {};
 
     filteredComplaints.forEach((row) => {
-      const isClosed = row["Complaint Close date"] && row["Complaint Close date"] !== "";
+      const isClosed = row["Complaint Close date"] && row["Complaint Close date"] !== "" && row["Complaint Close date"].toLowerCase() !== "open";
       
       let key = "";
       const mapping = diNameList.find(
@@ -344,21 +434,7 @@ export default function NewDashboardPage() {
         counts[key] = { name: key, amount: 0, openTickets: 0 };
       }
 
-      // Estimate penalty
-      let ticketPenalty = 1000;
-      if (row["Complaint Raise Date"]) {
-        const raiseTime = Date.parse(row["Complaint Raise Date"]);
-        const closeTime = row["Complaint Close date"] ? Date.parse(row["Complaint Close date"]) : Date.now();
-        if (!isNaN(raiseTime) && !isNaN(closeTime)) {
-          const days = Math.max(0, (closeTime - raiseTime) / (1000 * 60 * 60 * 24));
-          const isCritical = criticalEquipment.some(
-            (c) => c["Name"]?.toLowerCase() === row["Equipment Name"]?.toLowerCase()
-          );
-          const ratePerDay = isCritical ? 2000 : 500;
-          ticketPenalty = Math.round(days * ratePerDay);
-        }
-      }
-
+      const ticketPenalty = calculateTicketPenalty(row);
       counts[key].amount += ticketPenalty;
       if (!isClosed) {
         counts[key].openTickets++;
@@ -368,7 +444,6 @@ export default function NewDashboardPage() {
     const list = Object.values(counts).sort((a, b) => b.amount - a.amount);
     const totalSum = list.reduce((sum, item) => sum + item.amount, 0);
 
-    // Prepare top 5 for bar chart representation
     const barChartData = list.slice(0, 5).map((item) => ({
       name: item.name,
       amount: item.amount
@@ -381,7 +456,128 @@ export default function NewDashboardPage() {
     };
   }, [filteredComplaints, penaltyTab, diNameList, criticalEquipment]);
 
-  // 3. Repeat Calls Auditor
+  // 3. Open Complaints SLA Aging Breakdown (NEW POSSIBILITIES AND DETAILED ANALYSIS)
+  const openComplaintsSummary = useMemo(() => {
+    const list = filteredComplaints.filter(
+      (row) => !row["Complaint Close date"] || row["Complaint Close date"] === "" || row["Complaint Close date"].toLowerCase() === "open"
+    );
+
+    let ageLess24h = 0;
+    let age24To48h = 0;
+    let age2To7d = 0;
+    let age7dPlus = 0;
+
+    list.forEach((row) => {
+      if (!row["Complaint Raise Date"]) return;
+      const raiseTime = Date.parse(row["Complaint Raise Date"]);
+      if (isNaN(raiseTime)) return;
+      const hours = (Date.now() - raiseTime) / (1000 * 60 * 60);
+
+      if (hours <= 24) ageLess24h++;
+      else if (hours <= 48) age24To48h++;
+      else if (hours <= 168) age2To7d++;
+      else age7dPlus++;
+    });
+
+    const agingChartData = [
+      { id: "0-24 Hours", label: "0-24h", value: ageLess24h, color: "#10b981" },
+      { id: "24-48 Hours", label: "24-48h", value: age24To48h, color: "#3b82f6" },
+      { id: "2-7 Days", label: "2-7d", value: age2To7d, color: "#f59e0b" },
+      { id: "7+ Days (Critical)", label: "7d+", value: age7dPlus, color: "#ef4444" }
+    ];
+
+    return {
+      totalOpen: list.length,
+      list,
+      agingChartData
+    };
+  }, [filteredComplaints]);
+
+  const paginatedOpenComplaints = useMemo(() => {
+    const start = (currentOpenPage - 1) * rowsPerPage;
+    return openComplaintsSummary.list.slice(start, start + rowsPerPage);
+  }, [openComplaintsSummary.list, currentOpenPage]);
+
+  const totalOpenPages = Math.ceil(openComplaintsSummary.list.length / rowsPerPage);
+
+  // 4. DI Performance Leaderboard (NEW DETAILED ANALYSIS)
+  const diLeaderboard = useMemo(() => {
+    const performance: { [di: string]: { name: string; totalLogged: number; closed: number; totalPenalty: number; totalDays: number } } = {};
+
+    filteredComplaints.forEach((row) => {
+      const mapping = diNameList.find(
+        (m) => m["Hospital Name"] === row["Hospital Name"] || m["District Name"] === row["District Name"]
+      );
+      const diName = mapping ? mapping["District Incharge Name"] : "Unassigned";
+      if (!diName) return;
+
+      if (!performance[diName]) {
+        performance[diName] = { name: diName, totalLogged: 0, closed: 0, totalPenalty: 0, totalDays: 0 };
+      }
+
+      performance[diName].totalLogged++;
+      const penalty = calculateTicketPenalty(row);
+      performance[diName].totalPenalty += penalty;
+
+      const raiseStr = row["Complaint Raise Date"];
+      const closeStr = row["Complaint Close date"];
+      if (closeStr && closeStr !== "" && closeStr.toLowerCase() !== "open") {
+        performance[diName].closed++;
+        const raiseTime = Date.parse(raiseStr);
+        const closeTime = Date.parse(closeStr);
+        if (!isNaN(raiseTime) && !isNaN(closeTime)) {
+          performance[diName].totalDays += (closeTime - raiseTime) / (1000 * 60 * 60 * 24);
+        }
+      }
+    });
+
+    return Object.values(performance)
+      .map((item) => {
+        const resolutionRate = item.totalLogged > 0 ? ((item.closed / item.totalLogged) * 100).toFixed(0) : "0";
+        const avgResolutionTime = item.closed > 0 ? (item.totalDays / item.closed).toFixed(1) : "N/A";
+        return {
+          ...item,
+          resolutionRate: parseInt(resolutionRate),
+          avgResolutionTime
+        };
+      })
+      .sort((a, b) => a.totalPenalty - b.totalPenalty || b.resolutionRate - a.resolutionRate); // Lower penalty first
+  }, [filteredComplaints, diNameList, criticalEquipment]);
+
+  const paginatedDILeaderboard = useMemo(() => {
+    const start = (currentDIPage - 1) * rowsPerPage;
+    return diLeaderboard.slice(start, start + rowsPerPage);
+  }, [diLeaderboard, currentDIPage]);
+
+  const totalDIPages = Math.ceil(diLeaderboard.length / rowsPerPage);
+
+  // 5. Monthly Run Rate & Financial Penalty Projection (NEW POSSIBILITIES)
+  const monthlyProjections = useMemo(() => {
+    const today = new Date();
+    const totalDaysInMonth = new Date(today.getFullYear(), today.getMonth() + 1, 0).getDate();
+    const currentDay = today.getDate();
+    const remainingDays = totalDaysInMonth - currentDay;
+
+    const penaltyThisMonth = filteredComplaints.reduce((sum, row) => {
+      if (!row["Complaint Raise Date"]) return sum;
+      const raiseDate = new Date(row["Complaint Raise Date"]);
+      if (raiseDate.getMonth() === today.getMonth() && raiseDate.getFullYear() === today.getFullYear()) {
+        return sum + calculateTicketPenalty(row);
+      }
+      return sum;
+    }, 0);
+
+    const dailyRunRate = currentDay > 0 ? penaltyThisMonth / currentDay : 0;
+    const projectedPenalty = penaltyThisMonth + (dailyRunRate * remainingDays);
+
+    return {
+      currentMonthPenalty: penaltyThisMonth,
+      dailyRunRate: Math.round(dailyRunRate),
+      projectedPenalty: Math.round(projectedPenalty)
+    };
+  }, [filteredComplaints, criticalEquipment]);
+
+  // 6. Repeat Complaints & Preventative Downtime Board
   const repeatCalls = useMemo(() => {
     const groups: { [barcode: string]: { barcode: string; name: string; hospital: string; count: number } } = {};
 
@@ -405,7 +601,6 @@ export default function NewDashboardPage() {
       .sort((a, b) => b.count - a.count);
   }, [filteredComplaints]);
 
-  // Paginated lists
   const paginatedRepeatCalls = useMemo(() => {
     const start = (currentRepeatPage - 1) * rowsPerPage;
     return repeatCalls.slice(start, start + rowsPerPage);
@@ -413,33 +608,13 @@ export default function NewDashboardPage() {
 
   const totalRepeatPages = Math.ceil(repeatCalls.length / rowsPerPage);
 
-  // 4. Open Complaints Detailed Table
-  const openComplaintsSummary = useMemo(() => {
-    const list = filteredComplaints.filter(
-      (row) => !row["Complaint Close date"] || row["Complaint Close date"] === ""
-    );
-
-    return {
-      totalOpen: list.length,
-      list
-    };
-  }, [filteredComplaints]);
-
-  const paginatedOpenComplaints = useMemo(() => {
-    const start = (currentOpenPage - 1) * rowsPerPage;
-    return openComplaintsSummary.list.slice(start, start + rowsPerPage);
-  }, [openComplaintsSummary.list, currentOpenPage]);
-
-  const totalOpenPages = Math.ceil(openComplaintsSummary.list.length / rowsPerPage);
-
-  // 5. Engineers Barcode Verification Auditor
+  // 7. Engineers Barcode Verification Auditor
   const barcodeVerification = useMemo(() => {
     let totalChecked = 0;
     let verifiedCount = 0;
     let mismatchCount = 0;
     const mismatchList: any[] = [];
 
-    // Extract valid barcodes from sheets
     const validBarcodes = new Set<string>();
     assetValues.forEach((row) => {
       if (row["Bar Code"]) validBarcodes.add(String(row["Bar Code"]).trim());
@@ -495,7 +670,6 @@ export default function NewDashboardPage() {
       }
     });
 
-    // Mock entries if no actual mismatches found to showcase the millionaire audit board
     if (mismatchList.length === 0 && totalChecked === 0) {
       const mockList = [
         { engineerName: "Satish Kumar", engineerCode: "E-308", barcode: "99182371", hospital: "Ajmer MCDW", date: "16-Jul-2026", type: "Calls" },
@@ -518,7 +692,6 @@ export default function NewDashboardPage() {
     };
   }, [expenseList, assetValues, penaltyFile]);
 
-  // Nivo Pie Chart Data for Barcode Audit
   const nivoPieData = useMemo(() => {
     return [
       {
@@ -675,7 +848,60 @@ export default function NewDashboardPage() {
         </div>
       </div>
 
-      {/* 3. KPI Cards */}
+      {/* 3. Projections & Financial Intel Banner (NEW POSSIBILITIES) */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-6">
+        
+        <div className="bg-gradient-to-r from-rose-500 to-red-600 p-5 rounded-2xl text-white shadow-sm flex flex-col justify-between relative overflow-hidden">
+          <div className="space-y-1">
+            <p className="text-[10px] font-black opacity-80 uppercase tracking-wider">Current Month Penalty Run Rate</p>
+            <h3 className="text-3xl font-black">₹{monthlyProjections.currentMonthPenalty.toLocaleString()}</h3>
+            <p className="text-xs font-medium">Daily Penalty Run Rate: <strong className="font-extrabold">₹{monthlyProjections.dailyRunRate.toLocaleString()}/day</strong></p>
+          </div>
+          <div className="mt-4 pt-2 border-t border-white/20 flex justify-between items-center text-xs">
+            <span>Projection Run Rate</span>
+            <AlertCircle className="w-5 h-5 opacity-90" />
+          </div>
+        </div>
+
+        <div className="bg-gradient-to-r from-amber-500 to-orange-600 p-5 rounded-2xl text-white shadow-sm flex flex-col justify-between relative overflow-hidden">
+          <div className="space-y-1">
+            <p className="text-[10px] font-black opacity-80 uppercase tracking-wider">Estimated Month-End Penalty</p>
+            <h3 className="text-3xl font-black">₹{monthlyProjections.projectedPenalty.toLocaleString()}</h3>
+            <p className="text-xs font-medium">Projected risk based on active open complaints delays.</p>
+          </div>
+          <div className="mt-4 pt-2 border-t border-white/20 flex justify-between items-center text-xs">
+            <span>Month End Estimate</span>
+            <ShieldAlert className="w-5 h-5 opacity-90" />
+          </div>
+        </div>
+
+        <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm flex flex-col justify-between">
+          <div className="flex justify-between items-center pb-2 border-b border-slate-100">
+            <div className="flex items-center gap-1">
+              <Clock className="w-4 h-4 text-rose-500 animate-pulse" />
+              <span className="text-[10px] font-black text-slate-500 uppercase tracking-wider">SLA Aging Summary (Active)</span>
+            </div>
+            <span className="text-xs font-bold text-slate-800">{openComplaintsSummary.totalOpen} Open</span>
+          </div>
+
+          <div className="grid grid-cols-4 gap-2 text-center mt-3">
+            {[
+              { label: "<24h", val: openComplaintsSummary.agingChartData[0].value, bg: "bg-emerald-50 text-emerald-800 border-emerald-100" },
+              { label: "24-48h", val: openComplaintsSummary.agingChartData[1].value, bg: "bg-blue-50 text-blue-800 border-blue-100" },
+              { label: "2-7d", val: openComplaintsSummary.agingChartData[2].value, bg: "bg-amber-50 text-amber-800 border-amber-100" },
+              { label: "7d+", val: openComplaintsSummary.agingChartData[3].value, bg: "bg-rose-50 text-rose-800 border-rose-100" }
+            ].map((box, i) => (
+              <div key={i} className={`p-2 rounded-xl border ${box.bg} flex flex-col justify-center`}>
+                <span className="text-lg font-black">{box.val}</span>
+                <span className="text-[9px] font-bold uppercase">{box.label}</span>
+              </div>
+            ))}
+          </div>
+        </div>
+
+      </div>
+
+      {/* 4. KPI Cards */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 mb-6">
         <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm flex items-center justify-between">
           <div className="space-y-1">
@@ -722,86 +948,128 @@ export default function NewDashboardPage() {
         </div>
       </div>
 
-      {/* 4. Line Chart: FTFR trend (React Nivo Library) */}
-      <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm mb-6">
-        <div className="flex justify-between items-center mb-6 pb-2 border-b border-slate-100">
-          <div className="flex items-center gap-1.5">
-            <TrendingUp className="w-4 h-4 text-indigo-600" />
-            <h2 className="text-xs font-bold text-slate-700 uppercase tracking-wider">FTFR Trend & Total Logged Calls Timeline</h2>
+      {/* 5. Main Charts Grid */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-6">
+        
+        {/* Line Chart (FTFR trend) */}
+        <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm lg:col-span-2">
+          <div className="flex justify-between items-center mb-6 pb-2 border-b border-slate-100">
+            <div className="flex items-center gap-1.5">
+              <TrendingUp className="w-4 h-4 text-indigo-600" />
+              <h2 className="text-xs font-bold text-slate-700 uppercase tracking-wider">FTFR Trend & Total Logged Calls Timeline</h2>
+            </div>
+          </div>
+
+          <div className="h-80 w-full">
+            {nivoLineData[0].data.length === 0 ? (
+              <div className="flex items-center justify-center h-full text-xs text-slate-400">No chart data available for selected filter</div>
+            ) : (
+              <ResponsiveLine
+                data={nivoLineData}
+                margin={{ top: 25, right: 110, bottom: 50, left: 60 }}
+                xScale={{ type: "point" }}
+                yScale={{ type: "linear", min: "auto", max: "auto", stacked: false, reverse: false }}
+                yFormat=" >-.0f"
+                axisTop={null}
+                axisRight={null}
+                axisBottom={{
+                  tickSize: 5,
+                  tickPadding: 5,
+                  tickRotation: 0,
+                  legend: "Billing Month / Period",
+                  legendOffset: 36,
+                  legendPosition: "middle"
+                }}
+                axisLeft={{
+                  tickSize: 5,
+                  tickPadding: 5,
+                  tickRotation: 0,
+                  legend: "Volume / Percentage (%)",
+                  legendOffset: -40,
+                  legendPosition: "middle"
+                }}
+                colors={["#3b82f6", "#f59e0b"]}
+                pointSize={8}
+                pointColor={{ theme: "background" }}
+                pointBorderWidth={2}
+                pointBorderColor={{ from: "serieColor" }}
+                pointLabelYOffset={-12}
+                useMesh={true}
+                theme={{
+                  grid: { line: { stroke: "#f1f5f9", strokeWidth: 1 } },
+                  axis: { legend: { text: { fontSize: 10, fontWeight: "bold", fill: "#64748b" } } }
+                }}
+                legends={[
+                  {
+                    anchor: "bottom-right",
+                    direction: "column",
+                    justify: false,
+                    translateX: 100,
+                    translateY: 0,
+                    itemsSpacing: 0,
+                    itemDirection: "left-to-right",
+                    itemWidth: 80,
+                    itemHeight: 20,
+                    itemOpacity: 0.75,
+                    symbolSize: 12,
+                    symbolShape: "circle",
+                    symbolBorderColor: "rgba(0, 0, 0, .5)",
+                    effects: [
+                      {
+                        on: "hover",
+                        style: {
+                          itemBackground: "rgba(0, 0, 0, .03)",
+                          itemOpacity: 1
+                        }
+                      }
+                    ]
+                  }
+                ]}
+              />
+            )}
           </div>
         </div>
 
-        <div className="h-80 w-full">
-          {nivoLineData[0].data.length === 0 ? (
-            <div className="flex items-center justify-center h-full text-xs text-slate-400">No chart data available for selected filter</div>
-          ) : (
-            <ResponsiveLine
-              data={nivoLineData}
-              margin={{ top: 25, right: 110, bottom: 50, left: 60 }}
-              xScale={{ type: "point" }}
-              yScale={{ type: "linear", min: "auto", max: "auto", stacked: false, reverse: false }}
-              yFormat=" >-.0f"
-              axisTop={null}
-              axisRight={null}
-              axisBottom={{
-                tickSize: 5,
-                tickPadding: 5,
-                tickRotation: 0,
-                legend: "Billing Month / Period",
-                legendOffset: 36,
-                legendPosition: "middle"
-              }}
-              axisLeft={{
-                tickSize: 5,
-                tickPadding: 5,
-                tickRotation: 0,
-                legend: "Volume / Percentage (%)",
-                legendOffset: -40,
-                legendPosition: "middle"
-              }}
-              colors={["#3b82f6", "#f59e0b"]}
-              pointSize={8}
-              pointColor={{ theme: "background" }}
-              pointBorderWidth={2}
-              pointBorderColor={{ from: "serieColor" }}
-              pointLabelYOffset={-12}
-              useMesh={true}
-              theme={{
-                grid: { line: { stroke: "#f1f5f9", strokeWidth: 1 } },
-                axis: { legend: { text: { fontSize: 10, fontWeight: "bold", fill: "#64748b" } } }
-              }}
-              legends={[
-                {
-                  anchor: "bottom-right",
-                  direction: "column",
-                  justify: false,
-                  translateX: 100,
-                  translateY: 0,
-                  itemsSpacing: 0,
-                  itemDirection: "left-to-right",
-                  itemWidth: 80,
-                  itemHeight: 20,
-                  itemOpacity: 0.75,
-                  symbolSize: 12,
-                  symbolShape: "circle",
-                  symbolBorderColor: "rgba(0, 0, 0, .5)",
-                  effects: [
-                    {
-                      on: "hover",
-                      style: {
-                        itemBackground: "rgba(0, 0, 0, .03)",
-                        itemOpacity: 1
-                      }
-                    }
-                  ]
-                }
-              ]}
-            />
-          )}
+        {/* SLA Aging Pie Chart (NEW POSSIBILITIES) */}
+        <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm">
+          <div className="flex justify-between items-center mb-6 pb-2 border-b border-slate-100">
+            <div className="flex items-center gap-1.5">
+              <Clock className="w-4 h-4 text-indigo-600" />
+              <h2 className="text-xs font-bold text-slate-700 uppercase tracking-wider">Open Ticket SLA Aging Chart</h2>
+            </div>
+          </div>
+
+          <div className="h-80 w-full relative">
+            {openComplaintsSummary.list.length === 0 ? (
+              <div className="flex items-center justify-center h-full text-xs text-slate-400">All tickets resolved! Excellent SLA compliance.</div>
+            ) : (
+              <ResponsivePie
+                data={openComplaintsSummary.agingChartData.filter(d => d.value > 0)}
+                margin={{ top: 20, right: 20, bottom: 40, left: 20 }}
+                innerRadius={0.6}
+                padAngle={2}
+                cornerRadius={5}
+                activeOuterRadiusOffset={8}
+                colors={{ datum: "data.color" }}
+                borderWidth={0}
+                enableArcLinkLabels={true}
+                arcLinkLabelsSkipAngle={10}
+                arcLinkLabelsTextColor="#475569"
+                arcLinkLabelsThickness={2}
+                arcLinkLabelsColor={{ from: "color" }}
+                arcLabelsSkipAngle={10}
+                arcLabelsTextColor="#ffffff"
+                theme={{
+                  labels: { text: { fontSize: 10, fontWeight: "bold" } }
+                }}
+              />
+            )}
+          </div>
         </div>
+
       </div>
 
-      {/* 5. Penalty Auditor Board & Bar Chart (React Nivo Library) */}
+      {/* 6. Penalty Auditor Board & Bar Chart */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
         
         {/* Left: Penalty Table Details */}
@@ -913,7 +1181,78 @@ export default function NewDashboardPage() {
         </div>
       </div>
 
-      {/* 6. Repeat Complaints & Preventative Downtime Board */}
+      {/* 7. DI Performance Leaderboard Table (NEW POSSIBILITIES) */}
+      <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm mb-6">
+        <div className="flex justify-between items-center mb-4 pb-2 border-b border-slate-100">
+          <div className="flex items-center gap-1.5">
+            <Award className="w-4 h-4 text-amber-500" />
+            <h2 className="text-xs font-bold text-slate-700 uppercase tracking-wider">District Incharge (DI) Performance & Resolution Audit</h2>
+          </div>
+          <span className="text-xs font-black text-indigo-600 bg-indigo-50 px-2.5 py-1 rounded-lg">
+            {diLeaderboard.length} DIs Active
+          </span>
+        </div>
+
+        <div className="overflow-x-auto border border-slate-100 rounded-xl">
+          <table className="w-full border-collapse text-xs">
+            <thead className="bg-slate-50 text-slate-500 uppercase tracking-wider font-bold">
+              <tr>
+                <th className="px-4 py-3 text-left">DI Name</th>
+                <th className="px-4 py-3 text-center">Total Logged</th>
+                <th className="px-4 py-3 text-center">Closed Tickets</th>
+                <th className="px-4 py-3 text-center">Avg SLA Time</th>
+                <th className="px-4 py-3 text-center">Resolution Rate</th>
+                <th className="px-4 py-3 text-right">Penalty Generated</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-slate-100 text-slate-600 font-semibold">
+              {paginatedDILeaderboard.map((item, idx) => (
+                <tr key={idx} className="hover:bg-slate-50/50">
+                  <td className="px-4 py-3 text-left font-bold text-slate-800">{item.name}</td>
+                  <td className="px-4 py-3 text-center">{item.totalLogged}</td>
+                  <td className="px-4 py-3 text-center text-green-600">{item.closed}</td>
+                  <td className="px-4 py-3 text-center font-mono">{item.avgResolutionTime} days</td>
+                  <td className="px-4 py-3 text-center">
+                    <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${
+                      item.resolutionRate >= 80 ? "bg-green-100 text-green-800" :
+                      item.resolutionRate >= 50 ? "bg-amber-100 text-amber-800" : "bg-red-100 text-red-800"
+                    }`}>
+                      {item.resolutionRate}%
+                    </span>
+                  </td>
+                  <td className="px-4 py-3 text-right font-black text-slate-900">₹{item.totalPenalty.toLocaleString()}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+
+        {totalDIPages > 1 && (
+          <div className="p-4 flex justify-between items-center bg-slate-50/50 border-t border-slate-100 mt-2">
+            <button
+              onClick={() => setCurrentDIPage((p) => Math.max(p - 1, 1))}
+              disabled={currentDIPage === 1}
+              className="flex items-center gap-1.5 px-3 py-1.5 bg-white border border-slate-200 rounded-lg text-xs font-bold hover:bg-slate-50 transition disabled:opacity-40 disabled:hover:bg-white"
+            >
+              <ChevronLeft className="w-4 h-4" />
+              Prev
+            </button>
+            <span className="text-xs font-bold text-slate-700">
+              Page {currentDIPage} of {totalDIPages}
+            </span>
+            <button
+              onClick={() => setCurrentDIPage((p) => Math.min(p + 1, totalDIPages))}
+              disabled={currentDIPage === totalDIPages}
+              className="flex items-center gap-1.5 px-3 py-1.5 bg-white border border-slate-200 rounded-lg text-xs font-bold hover:bg-slate-50 transition disabled:opacity-40 disabled:hover:bg-white"
+            >
+              Next
+              <ChevronRight className="w-4 h-4" />
+            </button>
+          </div>
+        )}
+      </div>
+
+      {/* 8. Repeat Complaints Board */}
       <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm mb-6">
         <div className="flex justify-between items-center mb-4 pb-2 border-b border-slate-100">
           <div className="flex items-center gap-1.5">
@@ -977,7 +1316,7 @@ export default function NewDashboardPage() {
         )}
       </div>
 
-      {/* 7. Engineers Barcode Verification & Audit Board */}
+      {/* 9. Engineers Barcode Verification Panel */}
       <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm mb-6">
         <div className="flex justify-between items-center mb-6 pb-2 border-b border-slate-100">
           <div className="flex items-center gap-1.5">
@@ -992,7 +1331,6 @@ export default function NewDashboardPage() {
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
           
-          {/* Nivo Pie Chart representing verified vs mismatched barcodes */}
           <div className="bg-slate-50 p-5 rounded-xl border border-slate-100 flex flex-col justify-center items-center">
             <div className="h-64 w-full">
               <ResponsivePie
@@ -1022,7 +1360,6 @@ export default function NewDashboardPage() {
             </div>
           </div>
 
-          {/* Audit List of Mismatches */}
           <div className="lg:col-span-2 overflow-x-auto max-h-[35vh] overflow-y-auto border border-slate-100 rounded-xl">
             <table className="w-full border-collapse text-xs">
               <thead className="bg-slate-50 text-slate-500 uppercase tracking-wider font-bold sticky top-0">
@@ -1059,7 +1396,7 @@ export default function NewDashboardPage() {
         </div>
       </div>
 
-      {/* 7. Open Complaints Detailed Table */}
+      {/* 10. Active Open Complaints Table */}
       <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm">
         <div className="flex justify-between items-center mb-4 pb-2 border-b border-slate-100">
           <div className="flex items-center gap-1.5">
