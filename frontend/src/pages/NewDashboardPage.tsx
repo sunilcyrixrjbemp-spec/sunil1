@@ -23,7 +23,7 @@ import toast from "react-hot-toast";
 
 const API_KEY = import.meta.env.VITE_GOOGLE_SHEETS_API_KEY || "AIzaSyDTkQ1wNpug7rDLmHgDGt_0Xr2XTPnWsIA";
 const SPREADSHEET_ID = import.meta.env.VITE_GOOGLE_SPREADSHEET_ID || "1ASmvpLSl-X3Vm8S3LxB2Iyhg6HMhOpV-R4ywVS2o8Bs";
-const CACHE_KEY = "cyrix_dashboard_sheets_cache_v5"; // Updated to cache v5 to include raw penalty column and force invalidation
+const CACHE_KEY = "cyrix_dashboard_sheets_cache_v6"; // Updated to cache v6 to include column AJ Total Penalty and force invalidation
 
 // 1. Helper function to safely check if a ticket is closed
 const isComplaintClosed = (row: any): boolean => {
@@ -153,7 +153,7 @@ export default function NewDashboardPage() {
       row["Bar Code"] || "",
       row["Status"] || "",
       row["Complaint Status"] || "",
-      row["Total Penalty(Attend+Delay)"] || ""
+      row["Total Penalty"] || ""
     ]);
 
     const compactAsset = (data.assetValues || []).map((row: any) => row["Equipment Name"] || "");
@@ -190,7 +190,7 @@ export default function NewDashboardPage() {
       "Bar Code": arr[6],
       "Status": arr[7] || "",
       "Complaint Status": arr[8] || "",
-      "Total Penalty(Attend+Delay)": arr[9] || ""
+      "Total Penalty": arr[9] || ""
     }));
 
     const assetValues = (parsed.a || []).map((name: string) => ({ "Equipment Name": name }));
@@ -233,14 +233,14 @@ export default function NewDashboardPage() {
     const compiledRows: any[] = [];
     
     // Fetch headers first from row 1
-    const headerUrl = `https://sheets.googleapis.com/v4/spreadsheets/${SPREADSHEET_ID}/values/Penalty%20File!A1:Z1?key=${API_KEY}`;
+    const headerUrl = `https://sheets.googleapis.com/v4/spreadsheets/${SPREADSHEET_ID}/values/Penalty%20File!A1:AZ1?key=${API_KEY}`;
     const hRes = await fetch(headerUrl);
     if (!hRes.ok) throw new Error("Failed to fetch headers");
     const hData = await hRes.json();
     const headers = (hData.values || [[]])[0].map((h: string) => h.trim());
     
     while (hasMore) {
-      const range = `Penalty File!A${rowStart}:Z${rowStart + chunkSize - 1}`;
+      const range = `Penalty File!A${rowStart}:AZ${rowStart + chunkSize - 1}`;
       const url = `https://sheets.googleapis.com/v4/spreadsheets/${SPREADSHEET_ID}/values/${encodeURIComponent(range)}?key=${API_KEY}`;
       const res = await fetch(url);
       if (!res.ok) throw new Error(`Google Sheets API error on range ${range}`);
@@ -513,7 +513,7 @@ export default function NewDashboardPage() {
 
   // Helper function to get correct ticket penalty (reading precalculated sheet penalty or dynamic estimate for open tickets)
   const getRowPenalty = (row: any): number => {
-    const rawP = (row["Total Penalty(Attend+Delay)"] || "").replace(/,/g, "").trim();
+    const rawP = (row["Total Penalty"] || "").replace(/,/g, "").trim();
     if (rawP !== "" && rawP !== "--" && !isNaN(parseFloat(rawP))) {
       return parseFloat(rawP);
     }
