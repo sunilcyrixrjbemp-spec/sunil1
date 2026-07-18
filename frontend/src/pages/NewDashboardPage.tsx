@@ -23,7 +23,7 @@ import toast from "react-hot-toast";
 
 const API_KEY = import.meta.env.VITE_GOOGLE_SHEETS_API_KEY || "AIzaSyDTkQ1wNpug7rDLmHgDGt_0Xr2XTPnWsIA";
 const SPREADSHEET_ID = import.meta.env.VITE_GOOGLE_SPREADSHEET_ID || "1ASmvpLSl-X3Vm8S3LxB2Iyhg6HMhOpV-R4ywVS2o8Bs";
-const CACHE_KEY = "cyrix_dashboard_sheets_cache_v6"; // Updated to cache v6 to include column AJ Total Penalty and force invalidation
+const CACHE_KEY = "cyrix_dashboard_sheets_cache_v7"; // Updated to cache v7 to include month column and force invalidation
 
 // 1. Helper function to safely check if a ticket is closed
 const isComplaintClosed = (row: any): boolean => {
@@ -112,6 +112,10 @@ export default function NewDashboardPage() {
   const [selectedDistrict, setSelectedDistrict] = useState("");
   const [selectedCoordinator, setSelectedCoordinator] = useState("");
   const [selectedDI, setSelectedDI] = useState("");
+  const [selectedStatus, setSelectedStatus] = useState("open"); // Default to "open" to match sheet outstanding risk on load!
+  const [selectedMonth, setSelectedMonth] = useState("");
+  const [selectedHospitalType, setSelectedHospitalType] = useState("");
+  const [selectedEquipmentType, setSelectedEquipmentType] = useState("");
   const [dateFrom, setDateFrom] = useState("");
   const [dateTo, setDateTo] = useState("");
 
@@ -122,6 +126,8 @@ export default function NewDashboardPage() {
   const [currentOpenPage, setCurrentOpenPage] = useState(1);
   const [currentRepeatPage, setCurrentRepeatPage] = useState(1);
   const [currentDIPage, setCurrentDIPage] = useState(1);
+  const [currentDistrictOutstandingPage, setCurrentDistrictOutstandingPage] = useState(1);
+  const [currentDistrictDailyRatesPage, setCurrentDistrictDailyRatesPage] = useState(1);
   const [selectedRepeatBarcode, setSelectedRepeatBarcode] = useState<string | null>(null);
   const rowsPerPage = 10;
 
@@ -153,7 +159,13 @@ export default function NewDashboardPage() {
       row["Bar Code"] || "",
       row["Status"] || "",
       row["Complaint Status"] || "",
-      row["Total Penalty"] || ""
+      row["Total Penalty"] || "",
+      row["Hospital Type"] || "",
+      row["Hospital Type Mapped"] || "",
+      row["Asset Value"] || "",
+      row["Equipment Type"] || "",
+      row["Standby"] || "",
+      row["Month"] || ""
     ]);
 
     const compactAsset = (data.assetValues || []).map((row: any) => row["Equipment Name"] || "");
@@ -190,7 +202,13 @@ export default function NewDashboardPage() {
       "Bar Code": arr[6],
       "Status": arr[7] || "",
       "Complaint Status": arr[8] || "",
-      "Total Penalty": arr[9] || ""
+      "Total Penalty": arr[9] || "",
+      "Hospital Type": arr[10] || "",
+      "Hospital Type Mapped": arr[11] || "",
+      "Asset Value": arr[12] || "",
+      "Equipment Type": arr[13] || "",
+      "Standby": arr[14] || "",
+      "Month": arr[15] || ""
     }));
 
     const assetValues = (parsed.a || []).map((name: string) => ({ "Equipment Name": name }));
@@ -237,7 +255,16 @@ export default function NewDashboardPage() {
     const hRes = await fetch(headerUrl);
     if (!hRes.ok) throw new Error("Failed to fetch headers");
     const hData = await hRes.json();
-    const headers = (hData.values || [[]])[0].map((h: string) => h.trim());
+    const headers = (hData.values || [[]])[0].map((h: string, idx: number) => {
+      const name = h.trim();
+      if (name === "Hospital Type" && idx === 22) {
+        return "Hospital Type Mapped";
+      }
+      if (name === "Bar Code" && idx === 47) {
+        return "Bar Code Mapped";
+      }
+      return name;
+    });
     
     while (hasMore) {
       const range = `Penalty File!A${rowStart}:AZ${rowStart + chunkSize - 1}`;
@@ -381,6 +408,9 @@ export default function NewDashboardPage() {
     const districts = new Set<string>();
     const coordinators = new Set<string>();
     const dis = new Set<string>();
+    const months = new Set<string>();
+    const hospitalTypes = new Set<string>();
+    const equipmentTypes = new Set<string>();
 
     diNameList.forEach((row) => {
       if (row["Zone Name"]) zones.add(row["Zone Name"]);
@@ -389,16 +419,34 @@ export default function NewDashboardPage() {
       if (row["District Incharge Name"]) dis.add(row["District Incharge Name"]);
     });
 
+    penaltyFile.forEach((row) => {
+      if (row["Month"]) months.add(row["Month"]);
+      if (row["Hospital Type"]) hospitalTypes.add(row["Hospital Type"]);
+      if (row["Equipment Type"]) equipmentTypes.add(row["Equipment Type"]);
+    });
+
     return {
       zones: Array.from(zones).sort(),
       districts: Array.from(districts).sort(),
       coordinators: Array.from(coordinators).sort(),
-      dis: Array.from(dis).sort()
+      dis: Array.from(dis).sort(),
+      months: Array.from(months).sort((a, b) => {
+        const parseMonth = (m: string) => {
+          const parts = m.split("-");
+          const mNames = ["jan", "feb", "mar", "apr", "may", "jun", "jul", "aug", "sep", "oct", "nov", "dec"];
+          const monthIdx = mNames.indexOf(parts[0].toLowerCase());
+          const year = parseInt("20" + parts[1]);
+          return new Date(year, monthIdx, 1).getTime();
+        };
+        return parseMonth(a) - parseMonth(b);
+      }),
+      hospitalTypes: Array.from(hospitalTypes).filter(Boolean).sort(),
+      equipmentTypes: Array.from(equipmentTypes).filter(Boolean).sort()
     };
-  }, [diNameList]);
+  }, [diNameList, penaltyFile]);
 
-  // Apply filters on the raw penalty file complaints
-  const filteredComplaints = useMemo(() => {
+  // Apply all filters EXCEPT Status, which is used for top-level operational KPIs (FTFR, logged/closed counts)
+  const baseFilteredComplaints = useMemo(() => {
     return penaltyFile.filter((row) => {
       const mapping = diNameList.find(
         (m) => m["Hospital Name"] === row["Hospital Name"] || m["District Name"] === row["District Name"]
@@ -412,6 +460,15 @@ export default function NewDashboardPage() {
       if (selectedDistrict && row["District Name"] !== selectedDistrict) return false;
       if (selectedCoordinator && coordinator !== selectedCoordinator) return false;
       if (selectedDI && di !== selectedDI) return false;
+
+      // Month Filter
+      if (selectedMonth && row["Month"] !== selectedMonth) return false;
+
+      // Hospital Type Filter
+      if (selectedHospitalType && row["Hospital Type"] !== selectedHospitalType) return false;
+
+      // Equipment Type Filter
+      if (selectedEquipmentType && row["Equipment Type"] !== selectedEquipmentType) return false;
 
       // Date Filters
       if (dateFrom && row["Complaint Raise Date"]) {
@@ -427,15 +484,39 @@ export default function NewDashboardPage() {
 
       return true;
     });
-  }, [penaltyFile, diNameList, selectedZone, selectedDistrict, selectedCoordinator, selectedDI, dateFrom, dateTo]);
+  }, [
+    penaltyFile, 
+    diNameList, 
+    selectedZone, 
+    selectedDistrict, 
+    selectedCoordinator, 
+    selectedDI, 
+    selectedMonth, 
+    selectedHospitalType, 
+    selectedEquipmentType, 
+    dateFrom, 
+    dateTo
+  ]);
 
-  // 1. FTFR Analytics Calculations
+  // Apply Status filter on top of the base filtered complaints
+  const filteredComplaints = useMemo(() => {
+    if (selectedStatus === "all") return baseFilteredComplaints;
+    
+    return baseFilteredComplaints.filter((row) => {
+      const isClosed = isComplaintClosed(row);
+      if (selectedStatus === "open") return !isClosed;
+      if (selectedStatus === "closed") return isClosed;
+      return true;
+    });
+  }, [baseFilteredComplaints, selectedStatus]);
+
+  // 1. FTFR Analytics Calculations (using baseFilteredComplaints so it includes all statuses)
   const ftfrData = useMemo(() => {
     let logged = 0;
     let closed = 0;
     let closedWithin24h = 0;
 
-    filteredComplaints.forEach((row) => {
+    baseFilteredComplaints.forEach((row) => {
       logged++;
       const isClosed = isComplaintClosed(row);
 
@@ -461,11 +542,11 @@ export default function NewDashboardPage() {
     };
   }, [filteredComplaints]);
 
-  // Nivo Line Chart Data preparation (FTFR Trend over dates)
+  // Nivo Line Chart Data preparation (FTFR Trend over dates) (using baseFilteredComplaints)
   const nivoLineData = useMemo(() => {
     const grouped: { [month: string]: { logged: number; ftfr: number } } = {};
 
-    filteredComplaints.forEach((row) => {
+    baseFilteredComplaints.forEach((row) => {
       const dateStr = row["Complaint Raise Date"];
       if (!dateStr) return;
       const time = parseFlexibleDate(dateStr);
@@ -509,7 +590,7 @@ export default function NewDashboardPage() {
         data: ftfrPoints
       }
     ];
-  }, [filteredComplaints]);
+  }, [baseFilteredComplaints]);
 
   // Helper function to get correct ticket penalty (reading precalculated sheet penalty or dynamic estimate for open tickets)
   const getRowPenalty = (row: any): number => {
@@ -776,6 +857,127 @@ export default function NewDashboardPage() {
     };
   }, [barcodeComplaints]);
 
+  // Outstanding Penalty Risk Summary (Open Tickets) - matching 'District Wise'
+  const districtOutstandingSummary = useMemo(() => {
+    const summaryMap: { [district: string]: { openTickets: number; amount: number; perDay: number; notAttended: number } } = {};
+    
+    penaltyFile.forEach((row) => {
+      const dist = row["District Name"] || "Unknown";
+      const isClosed = isComplaintClosed(row);
+      const isStatusOpen = !isClosed;
+      
+      const rawP = (row["Total Penalty"] || "").replace(/,/g, "").trim();
+      let pVal = 0;
+      if (rawP !== "" && rawP !== "--" && !isNaN(parseFloat(rawP))) {
+        pVal = parseFloat(rawP);
+      }
+      
+      // Calculate dynamic estimate for open tickets if raw penalty is --
+      if (isStatusOpen && (rawP === "" || rawP === "--")) {
+        pVal = getRowPenalty(row);
+      }
+      
+      if (!summaryMap[dist]) {
+        summaryMap[dist] = { openTickets: 0, amount: 0, perDay: 0, notAttended: 0 };
+      }
+      
+      // Count open tickets with positive penalties
+      if (isStatusOpen && pVal > 0) {
+        summaryMap[dist].openTickets++;
+        summaryMap[dist].amount += pVal;
+      }
+      
+      // Per Day Penalty
+      if (isStatusOpen) {
+        const assetValStr = (row["Asset Value"] || "").replace(/,/g, "").trim();
+        let penaltySlab = 0;
+        if (assetValStr !== "" && assetValStr !== "--") {
+          const assetVal = parseFloat(assetValStr) || 0;
+          if (assetVal <= 10000) penaltySlab = 500;
+          else if (assetVal <= 100000) penaltySlab = 1000;
+          else if (assetVal <= 1000000) penaltySlab = 2000;
+          else penaltySlab = 3000;
+        }
+        summaryMap[dist].perDay += penaltySlab;
+      }
+      
+      // Not Attended (Attend Date is empty or '--')
+      const attendDate = (row["Attend Date"] || "").trim();
+      if (isStatusOpen && (attendDate === "" || attendDate === "--")) {
+        summaryMap[dist].notAttended++;
+      }
+    });
+
+    const list = Object.entries(summaryMap).map(([district, stats]) => ({
+      district,
+      ...stats
+    })).sort((a, b) => b.amount - a.amount);
+
+    const totalSum = list.reduce((sum, item) => sum + item.amount, 0);
+
+    return {
+      list,
+      totalSum
+    };
+  }, [penaltyFile, diNameList, criticalEquipment]);
+
+  // District-wise Daily Penalty Rates (MCH vs Other) - matching columns AF-AI of 'District Wise'
+  const districtDailyRatesSummary = useMemo(() => {
+    const summaryMap: { [district: string]: { mch: number; other: number } } = {};
+
+    penaltyFile.forEach((row) => {
+      const dist = row["District Name"] || "Unknown";
+      const isClosed = isComplaintClosed(row);
+      
+      // Spreadsheet only sums per day penalty for open tickets
+      if (isClosed) return;
+
+      const assetValStr = (row["Asset Value"] || "").replace(/,/g, "").trim();
+      let penaltySlab = 0;
+      if (assetValStr !== "" && assetValStr !== "--") {
+        const assetVal = parseFloat(assetValStr) || 0;
+        if (assetVal <= 10000) penaltySlab = 500;
+        else if (assetVal <= 100000) penaltySlab = 1000;
+        else if (assetVal <= 1000000) penaltySlab = 2000;
+        else penaltySlab = 3000;
+      }
+
+      const hTypeMapped = (row["Hospital Type Mapped"] || "").trim().toLowerCase();
+      const isMCH = hTypeMapped === "mch";
+
+      if (!summaryMap[dist]) {
+        summaryMap[dist] = { mch: 0, other: 0 };
+      }
+
+      if (isMCH) {
+        summaryMap[dist].mch += penaltySlab;
+      } else {
+        summaryMap[dist].other += penaltySlab;
+      }
+    });
+
+    return Object.entries(summaryMap).map(([district, stats]) => ({
+      district,
+      mch: stats.mch,
+      other: stats.other,
+      total: stats.mch + stats.other
+    })).sort((a, b) => b.total - a.total);
+  }, [penaltyFile]);
+
+  const paginatedDistrictOutstanding = useMemo(() => {
+    const start = (currentDistrictOutstandingPage - 1) * rowsPerPage;
+    return districtOutstandingSummary.list.slice(start, start + rowsPerPage);
+  }, [districtOutstandingSummary.list, currentDistrictOutstandingPage]);
+
+  const totalDistrictOutstandingPages = Math.ceil(districtOutstandingSummary.list.length / rowsPerPage);
+
+  const paginatedDistrictDailyRates = useMemo(() => {
+    const start = (currentDistrictDailyRatesPage - 1) * rowsPerPage;
+    return districtDailyRatesSummary.slice(start, start + rowsPerPage);
+  }, [districtDailyRatesSummary, currentDistrictDailyRatesPage]);
+
+  const totalDistrictDailyRatesPages = Math.ceil(districtDailyRatesSummary.length / rowsPerPage);
+
   const paginatedRepeatCalls = useMemo(() => {
     const start = (currentRepeatPage - 1) * rowsPerPage;
     return repeatCalls.slice(start, start + rowsPerPage);
@@ -949,7 +1151,7 @@ export default function NewDashboardPage() {
           <h2 className="text-xs font-bold text-slate-700 uppercase tracking-wider">Enterprise Analytics Filters</h2>
         </div>
 
-        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4">
           <div>
             <label className="block text-[10px] font-black text-slate-500 uppercase mb-1">Zone Name</label>
             <select
@@ -1007,6 +1209,61 @@ export default function NewDashboardPage() {
               <option value="">All DIs</option>
               {filterOptions.dis.map((di) => (
                 <option key={di} value={di}>{di}</option>
+              ))}
+            </select>
+          </div>
+
+          <div>
+            <label className="block text-[10px] font-black text-slate-500 uppercase mb-1">Complaint Status</label>
+            <select
+              value={selectedStatus}
+              onChange={(e) => setSelectedStatus(e.target.value)}
+              className="w-full h-10 px-3 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold text-slate-700 focus:outline-none focus:border-indigo-600 focus:bg-white transition"
+            >
+              <option value="all">All Statuses (Open & Closed)</option>
+              <option value="open">Open (Active Outstanding)</option>
+              <option value="closed">Closed (Settled)</option>
+            </select>
+          </div>
+
+          <div>
+            <label className="block text-[10px] font-black text-slate-500 uppercase mb-1">Billing Month</label>
+            <select
+              value={selectedMonth}
+              onChange={(e) => setSelectedMonth(e.target.value)}
+              className="w-full h-10 px-3 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold text-slate-700 focus:outline-none focus:border-indigo-600 focus:bg-white transition"
+            >
+              <option value="">All Months</option>
+              {filterOptions.months.map((m) => (
+                <option key={m} value={m}>{m}</option>
+              ))}
+            </select>
+          </div>
+
+          <div>
+            <label className="block text-[10px] font-black text-slate-500 uppercase mb-1">Hospital Type</label>
+            <select
+              value={selectedHospitalType}
+              onChange={(e) => setSelectedHospitalType(e.target.value)}
+              className="w-full h-10 px-3 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold text-slate-700 focus:outline-none focus:border-indigo-600 focus:bg-white transition"
+            >
+              <option value="">All Hospital Types</option>
+              {filterOptions.hospitalTypes.map((ht) => (
+                <option key={ht} value={ht}>{ht}</option>
+              ))}
+            </select>
+          </div>
+
+          <div>
+            <label className="block text-[10px] font-black text-slate-500 uppercase mb-1">Equipment Type</label>
+            <select
+              value={selectedEquipmentType}
+              onChange={(e) => setSelectedEquipmentType(e.target.value)}
+              className="w-full h-10 px-3 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold text-slate-700 focus:outline-none focus:border-indigo-600 focus:bg-white transition"
+            >
+              <option value="">All Equipment Types</option>
+              {filterOptions.equipmentTypes.map((et) => (
+                <option key={et} value={et}>{et}</option>
               ))}
             </select>
           </div>
@@ -1364,6 +1621,148 @@ export default function NewDashboardPage() {
             </div>
           </div>
         </div>
+      </div>
+
+      {/* 6a. Spreadsheet Summaries & Live Mappings (District Wise & Daily Rates) */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
+        
+        {/* Left: Outstanding District Summary */}
+        <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm flex flex-col justify-between">
+          <div>
+            <div className="flex justify-between items-center mb-4 pb-2 border-b border-slate-100">
+              <div className="flex items-center gap-1.5">
+                <SlidersHorizontal className="w-4 h-4 text-indigo-600" />
+                <h2 className="text-xs font-bold text-slate-700 uppercase tracking-wider">Spreadsheet 'District Wise' Outstanding Table</h2>
+              </div>
+              <div className="text-xs font-black text-indigo-600 bg-indigo-50 px-2.5 py-1 rounded-lg">
+                Total Open: ₹{districtOutstandingSummary.totalSum.toLocaleString()}
+              </div>
+            </div>
+
+            <div className="overflow-x-auto">
+              <table className="w-full text-xs text-left border-collapse">
+                <thead>
+                  <tr className="border-b border-slate-100 text-slate-400 font-extrabold uppercase text-[10px]">
+                    <th className="py-2">District</th>
+                    <th className="py-2 text-center">Open Penalty Tickets</th>
+                    <th className="py-2 text-right">Penalty Amount</th>
+                    <th className="py-2 text-right">Per Day Penalty</th>
+                    <th className="py-2 text-center">Not Attended</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-100 text-slate-600 font-semibold">
+                  {paginatedDistrictOutstanding.map((item, idx) => (
+                    <tr key={idx} className="hover:bg-slate-50/50">
+                      <td className="py-2.5 font-bold text-slate-800">{item.district}</td>
+                      <td className="py-2.5 text-center font-bold text-indigo-600">{item.openTickets}</td>
+                      <td className="py-2.5 text-right font-black text-rose-600">₹{item.amount.toLocaleString()}</td>
+                      <td className="py-2.5 text-right font-bold text-slate-700">₹{item.perDay.toLocaleString()}</td>
+                      <td className="py-2.5 text-center">
+                        <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${
+                          item.notAttended > 0 ? "bg-amber-100 text-amber-800" : "bg-slate-100 text-slate-800"
+                        }`}>
+                          {item.notAttended}
+                        </span>
+                      </td>
+                    </tr>
+                  ))}
+                  {districtOutstandingSummary.list.length === 0 && (
+                    <tr>
+                      <td colSpan={5} className="py-6 text-center text-slate-400">No open penalties found</td>
+                    </tr>
+                  )}
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+          {/* Pagination */}
+          {totalDistrictOutstandingPages > 1 && (
+            <div className="flex justify-between items-center pt-4 border-t border-slate-100 mt-4">
+              <button
+                disabled={currentDistrictOutstandingPage === 1}
+                onClick={() => setCurrentDistrictOutstandingPage(prev => Math.max(1, prev - 1))}
+                className="px-3 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 disabled:opacity-50 text-[10px] font-bold rounded-lg border-0 cursor-pointer transition"
+              >
+                Previous
+              </button>
+              <span className="text-[10px] font-bold text-slate-500">
+                Page {currentDistrictOutstandingPage} of {totalDistrictOutstandingPages}
+              </span>
+              <button
+                disabled={currentDistrictOutstandingPage === totalDistrictOutstandingPages}
+                onClick={() => setCurrentDistrictOutstandingPage(prev => Math.min(totalDistrictOutstandingPages, prev + 1))}
+                className="px-3 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 disabled:opacity-50 text-[10px] font-bold rounded-lg border-0 cursor-pointer transition"
+              >
+                Next
+              </button>
+            </div>
+          )}
+        </div>
+
+        {/* Right: Daily Rate Slabs */}
+        <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm flex flex-col justify-between">
+          <div>
+            <div className="flex justify-between items-center mb-4 pb-2 border-b border-slate-100">
+              <div className="flex items-center gap-1.5">
+                <SlidersHorizontal className="w-4 h-4 text-emerald-600" />
+                <h2 className="text-xs font-bold text-slate-700 uppercase tracking-wider">Spreadsheet Daily Rates (MCH vs Other)</h2>
+              </div>
+            </div>
+
+            <div className="overflow-x-auto">
+              <table className="w-full text-xs text-left border-collapse">
+                <thead>
+                  <tr className="border-b border-slate-100 text-slate-400 font-extrabold uppercase text-[10px]">
+                    <th className="py-2">District Name</th>
+                    <th className="py-2 text-right">MCH Slab Sum</th>
+                    <th className="py-2 text-right">Other Slab Sum</th>
+                    <th className="py-2 text-right">Grand Total Per Day</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-100 text-slate-600 font-semibold">
+                  {paginatedDistrictDailyRates.map((item, idx) => (
+                    <tr key={idx} className="hover:bg-slate-50/50">
+                      <td className="py-2.5 font-bold text-slate-800">{item.district}</td>
+                      <td className="py-2.5 text-right text-indigo-600">₹{item.mch.toLocaleString()}</td>
+                      <td className="py-2.5 text-right text-slate-600">₹{item.other.toLocaleString()}</td>
+                      <td className="py-2.5 text-right font-black text-emerald-600">₹{item.total.toLocaleString()}</td>
+                    </tr>
+                  ))}
+                  {districtDailyRatesSummary.length === 0 && (
+                    <tr>
+                      <td colSpan={4} className="py-6 text-center text-slate-400">No open daily rates found</td>
+                    </tr>
+                  )}
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+          {/* Pagination */}
+          {totalDistrictDailyRatesPages > 1 && (
+            <div className="flex justify-between items-center pt-4 border-t border-slate-100 mt-4">
+              <button
+                disabled={currentDistrictDailyRatesPage === 1}
+                onClick={() => setCurrentDistrictDailyRatesPage(prev => Math.max(1, prev - 1))}
+                className="px-3 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 disabled:opacity-50 text-[10px] font-bold rounded-lg border-0 cursor-pointer transition"
+              >
+                Previous
+              </button>
+              <span className="text-[10px] font-bold text-slate-500">
+                Page {currentDistrictDailyRatesPage} of {totalDistrictDailyRatesPages}
+              </span>
+              <button
+                disabled={currentDistrictDailyRatesPage === totalDistrictDailyRatesPages}
+                onClick={() => setCurrentDistrictDailyRatesPage(prev => Math.min(totalDistrictDailyRatesPages, prev + 1))}
+                className="px-3 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 disabled:opacity-50 text-[10px] font-bold rounded-lg border-0 cursor-pointer transition"
+              >
+                Next
+              </button>
+            </div>
+          )}
+        </div>
+
       </div>
 
       {/* 7. DI Performance Leaderboard Table */}
