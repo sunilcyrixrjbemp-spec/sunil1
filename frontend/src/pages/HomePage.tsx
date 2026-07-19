@@ -512,14 +512,50 @@ export default function HomePage() {
     : [];
 
   const allPossibleZones = ["Ajmer", "Bikaner", "Jaipur", "Jodhpur", "Udaipur"];
-  let uniqueZones = allPossibleZones;
+  const dataZones = Array.from(
+    new Set(
+      safeTeamExpenses
+        .map(e => {
+          const raw = (e.zone || "").trim();
+          return raw ? raw.replace(/\s*[Zz]one\s*$/i, "") : "Unassigned Zone";
+        })
+        .filter(Boolean)
+    )
+  );
+  const allAvailableZones = Array.from(new Set([...allPossibleZones, ...dataZones]));
+  let uniqueZones = allAvailableZones;
 
   if (!isGlobalAdminRole && userZonesList.length > 0) {
-    uniqueZones = allPossibleZones.filter(z => userZonesList.includes(cleanZone(z)));
+    uniqueZones = allAvailableZones.filter(z => userZonesList.includes(cleanZone(z)));
     if (uniqueZones.length === 0) {
       uniqueZones = userZonesList;
     }
   }
+
+  // Zone Mapping Audit Check: verify total claims count equals sum across all zones
+  useEffect(() => {
+    if (!safeTeamExpenses || safeTeamExpenses.length === 0) return;
+    const totalClaims = safeTeamExpenses.length;
+    const zoneCounts: Record<string, number> = {};
+    let unassignedCount = 0;
+
+    safeTeamExpenses.forEach(exp => {
+      let z = (exp.zone || "").trim();
+      if (!z || z.toLowerCase() === "unknown") z = "Unassigned Zone";
+      else z = z.replace(/\s*[Zz]one\s*$/i, "");
+      
+      zoneCounts[z] = (zoneCounts[z] || 0) + 1;
+      if (z === "Unassigned Zone") unassignedCount++;
+    });
+
+    const sumCounts = Object.values(zoneCounts).reduce((a, b) => a + b, 0);
+    if (sumCounts !== totalClaims || unassignedCount > 0) {
+      console.warn(
+        `[Zone Mapping Audit Check] Total claims: ${totalClaims}, Sum across zones: ${sumCounts}. Unassigned claims: ${unassignedCount}`,
+        zoneCounts
+      );
+    }
+  }, [safeTeamExpenses]);
 
   // Unique categories/modes for dropdown filter
   const uniqueModes = Array.from(
@@ -628,17 +664,20 @@ export default function HomePage() {
 
   const getTeamChartData = () => {
     const grouped: Record<string, { name: string, amount: number }> = {};
-    allMonthTeamExpenses.forEach(e => {
+    const baseList = (filterZone !== "all" || filterEmployee !== "all" || filterMode !== "all" || homeStatusFilter !== "all")
+      ? filteredTeamExpenses
+      : allMonthTeamExpenses;
+
+    baseList.forEach(e => {
       if (e.category === "Limit Request") return;
-      // Use actual zone from expense DB field — show ALL zones
       let zone = (e.zone || "").trim();
-      if (!zone || zone.toLowerCase() === "all") {
-        zone = isPrivilegedRoleHome ? "Unknown" : (user?.zone || "Unknown");
-      }
+      if (!zone || zone.toLowerCase() === "unknown") zone = "Unassigned Zone";
+      else zone = zone.replace(/\s*[Zz]one\s*$/i, "");
+      
       if (!grouped[zone]) {
         grouped[zone] = { name: zone, amount: 0 };
       }
-      grouped[zone].amount += e.amount;
+      grouped[zone].amount += (e.amount || 0);
     });
     return Object.values(grouped)
       .sort((a, b) => b.amount - a.amount);
@@ -1337,7 +1376,7 @@ export default function HomePage() {
           </Col>
 
           {/* Right Sidebar: Dynamic Charts & Filters */}
-          <Col xs={24} lg={8} className="space-y-4">
+          <Col xs={24} lg={8} className="space-y-4 lg:sticky lg:top-16 lg:max-h-[calc(100vh-4.5rem)] lg:overflow-y-auto no-scrollbar">
             
             <div className="hidden lg:block">
   {/* Claims Breakdown Chart Card */}

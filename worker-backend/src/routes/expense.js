@@ -720,8 +720,8 @@ export async function handleGetTeamExpenses(request, env, params, query, user) {
       const sName = submitter?.name || submitter?.submitter_name || "Unknown";
       const sCode = submitter?.user_id || submitter?.userId || submitter?.submitter_code || "N/A";
       const sDesignation = submitter?.designation || submitter?.submitter_designation || "Engineer";
-      const sDistrict = submitter?.district || "Ganganar";
-      const sZone = getActualZone(submitter?.zone, sDistrict);
+      const sDistrict = submitter?.district || exp.district || "Ganganar";
+      const sZone = getActualZone(submitter?.zone, sDistrict) || getActualZone(exp.zone, sDistrict) || "Unassigned Zone";
 
       result.push({
         id: exp.id,
