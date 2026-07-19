@@ -386,7 +386,6 @@ export default function ProfilePage() {
   const [oldPassword, setOldPassword] = useState("");
   const [newPassword, setNewPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
-  const [showPass, setShowPass] = useState(false);
   const [passLoading, setPassLoading] = useState(false);
   const [passNotice, setPassNotice] = useState<{ type: "success" | "error"; text: string } | null>(null);
 
