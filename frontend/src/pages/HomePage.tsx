@@ -2169,7 +2169,7 @@ export default function HomePage() {
               </div>
             )}
 
-                        {/* Attachments Section */}
+                        {/* Attachments Section with Category Purpose Labels */}
             {claimDetails.category !== "Limit Request" && (
               <div className="space-y-1.5">
                 <Text type="secondary" className="text-[9px] uppercase font-bold tracking-wider block">Receipt Invoices &amp; Attachments</Text>
@@ -2178,15 +2178,43 @@ export default function HomePage() {
                 ) : (
                   <div className="flex flex-wrap gap-2">
                     {getAttachmentsArray(claimDetails.attachments).map((url: string, index: number) => {
-                      const filename = url.substring(url.lastIndexOf("/") + 1) || `Receipt-${index + 1}`;
+                      const urlLower = (url || "").toLowerCase();
+                      let label = `Receipt Invoice #${index + 1}`;
+                      
+                      if (claimDetails.itineraries && Array.isArray(claimDetails.itineraries)) {
+                        for (const leg of claimDetails.itineraries) {
+                          const legFileStr = (leg.file_path || leg.receipt || leg.attachments || "").toString().toLowerCase();
+                          if (legFileStr && legFileStr.includes(urlLower.substring(urlLower.lastIndexOf("/") + 1))) {
+                            label = `Leg #${leg.leg} (${leg.from_district === leg.to_district ? leg.to_district : `${leg.from_district} → ${leg.to_district}`}) Receipt`;
+                            break;
+                          }
+                        }
+                        if (label.startsWith("Receipt Invoice") && claimDetails.itineraries[index]) {
+                          const leg = claimDetails.itineraries[index];
+                          label = `Leg #${leg.leg} (${leg.from_district === leg.to_district ? leg.to_district : `${leg.from_district} → ${leg.to_district}`}) Receipt`;
+                        }
+                      }
+
+                      if (label.startsWith("Receipt Invoice")) {
+                        if (urlLower.includes("hotel") || urlLower.includes("stay") || urlLower.includes("lodge")) {
+                          label = `Hotel / Stay Invoice #${index + 1}`;
+                        } else if (urlLower.includes("da") || urlLower.includes("food") || urlLower.includes("meal")) {
+                          label = `Food / DA Receipt #${index + 1}`;
+                        } else if (urlLower.includes("auto") || urlLower.includes("taxi")) {
+                          label = `Auto / Taxi Receipt #${index + 1}`;
+                        } else if (urlLower.includes("fuel") || urlLower.includes("petrol") || urlLower.includes("diesel")) {
+                          label = `Fuel / Travel Bill #${index + 1}`;
+                        }
+                      }
+
                       return (
                         <Tag 
                           key={index} 
                           color="blue" 
-                          className="cursor-pointer font-medium hover:border-indigo-400 px-2 py-0.5 flex items-center gap-1.5"
+                          className="cursor-pointer font-medium hover:border-indigo-400 px-2.5 py-1 flex items-center gap-1.5 shadow-2xs rounded-md"
                           onClick={() => setLightboxImage(url.startsWith("http") ? url : `${API_BASE}${url}`)}
                         >
-                          <Download size={10} className="inline mr-1" /> {filename}
+                          <Download size={12} className="inline mr-1 text-indigo-600" /> {label}
                         </Tag>
                       );
                     })}
@@ -2207,24 +2235,41 @@ export default function HomePage() {
                 <div className="p-3 bg-white space-y-3">
                   {claimDetails.approvals.map((app: any, idx: number) => {
                     const statusVal = (app.status || "").toLowerCase();
+                    const claimStatusVal = (claimDetails.status || "").toLowerCase();
+
+                    // Check if any prior approval level rejected the claim
+                    const isPriorRejected = claimDetails.approvals.some(
+                      (prevApp: any, prevIdx: number) => prevIdx < idx && (prevApp.status || "").toLowerCase() === "rejected"
+                    );
+
                     const isApproved = statusVal === "approved";
                     const isRejected = statusVal === "rejected";
+                    const isReturned = statusVal === "returned" || statusVal === "returned_to_draft" || statusVal === "return";
+                    const isCancelled = statusVal === "cancelled" || isPriorRejected || (claimStatusVal === "rejected" && !isApproved && !isRejected);
 
                     let containerBgClass = "bg-amber-50/70 border-amber-300 border-l-4 text-amber-950";
-                    let statusBadge = <Tag color="warning" className="font-bold text-[9px] uppercase tracking-wider">Pending/Returned</Tag>;
+                    let statusBadge = <Tag color="warning" className="font-bold text-[9px] uppercase tracking-wider">PENDING</Tag>;
                     let remarkBgClass = "bg-amber-100/60 border-amber-300 text-amber-950";
 
                     if (isApproved) {
                       containerBgClass = "bg-emerald-50/70 border-emerald-400 border-l-4 text-emerald-950";
-                      statusBadge = <Tag color="success" className="font-bold text-[9px] uppercase tracking-wider">Approved</Tag>;
+                      statusBadge = <Tag color="success" className="font-bold text-[9px] uppercase tracking-wider">APPROVED</Tag>;
                       remarkBgClass = "bg-emerald-100/60 border-emerald-300 text-emerald-950";
                     } else if (isRejected) {
                       containerBgClass = "bg-rose-50/70 border-rose-400 border-l-4 text-rose-950";
-                      statusBadge = <Tag color="error" className="font-bold text-[9px] uppercase tracking-wider">Rejected</Tag>;
+                      statusBadge = <Tag color="error" className="font-bold text-[9px] uppercase tracking-wider">REJECTED</Tag>;
                       remarkBgClass = "bg-rose-100/60 border-rose-300 text-rose-950";
+                    } else if (isReturned) {
+                      containerBgClass = "bg-purple-50/70 border-purple-400 border-l-4 text-purple-950";
+                      statusBadge = <Tag color="volcano" className="font-bold text-[9px] uppercase tracking-wider">RETURNED TO DRAFT</Tag>;
+                      remarkBgClass = "bg-purple-100/60 border-purple-300 text-purple-950";
+                    } else if (isCancelled) {
+                      containerBgClass = "bg-slate-100/80 border-slate-400 border-l-4 text-slate-700 opacity-80";
+                      statusBadge = <Tag color="default" className="font-bold text-[9px] uppercase tracking-wider">CANCELLED</Tag>;
+                      remarkBgClass = "bg-slate-200/70 border-slate-300 text-slate-800";
                     } else if (statusVal === "waiting") {
                       containerBgClass = "bg-slate-50 border-slate-300 border-l-4 text-slate-900";
-                      statusBadge = <Tag color="default" className="font-bold text-[9px] uppercase tracking-wider">Waiting</Tag>;
+                      statusBadge = <Tag color="default" className="font-bold text-[9px] uppercase tracking-wider">WAITING</Tag>;
                       remarkBgClass = "bg-slate-100 border-slate-200 text-slate-900";
                     }
 
@@ -2262,82 +2307,119 @@ export default function HomePage() {
               </div>
             )}
 
-            {/* Policy Deductions & Audit Remarks Center */}
-            {((claimDetails.original_amount && claimDetails.original_amount > claimDetails.amount) ||
-              claimDetails.deduction_remark ||
-              claimDetails.rejection_reason ||
-              (claimDetails.itineraries && claimDetails.itineraries.some((leg: any) => {
-                const travelCost = leg.amount || 0;
-                const subCost = leg.sub_amount || 0;
-                const daCost = leg.da || 0;
-                const origTA = parseFloat(leg.original_amount ?? leg.amount ?? 0);
-                const origSub = parseFloat(leg.original_sub_amount ?? leg.sub_amount ?? 0);
-                const origDA = parseFloat(leg.original_da ?? leg.da ?? 0);
-                return ((origTA - travelCost) + (origSub - subCost)) > 0 || (origDA - daCost) > 0;
-              }))
-            ) && (
-              <div className="border border-rose-300 rounded-lg overflow-hidden bg-rose-50/40 shadow-2xs">
-                <div className="px-3.5 py-2.5 bg-rose-100/80 border-b border-rose-300 flex items-center justify-between">
-                  <h4 className="text-[10.5px] font-bold uppercase text-rose-800 tracking-wider flex items-center gap-1.5">
-                    <AlertTriangle size={14} className="text-rose-600" />
-                    Policy Deductions &amp; Audit Remarks
-                  </h4>
-                  {claimDetails.original_amount && claimDetails.original_amount > claimDetails.amount && (
-                    <span className="text-xs font-mono font-bold text-rose-700 bg-white px-2 py-0.5 rounded border border-rose-300 shadow-2xs">
-                      Total Deducted: ₹{(claimDetails.original_amount - claimDetails.amount).toLocaleString()}
-                    </span>
-                  )}
-                </div>
-                
-                <div className="p-3 space-y-3 bg-white">
-                  {/* Overall Deduction / Rejection Remarks if present */}
-                  {(claimDetails.deduction_remark || claimDetails.rejection_reason) && (
-                    <div className="p-2.5 bg-rose-50 border border-rose-200 rounded-md text-xs text-rose-950">
-                      <span className="font-bold uppercase text-[9px] text-rose-700 block mb-0.5">Audit Remark / Deduction Reason:</span>
-                      <p className="font-semibold italic">"{claimDetails.deduction_remark || claimDetails.rejection_reason}"</p>
-                    </div>
-                  )}
+            {/* Complete Policy Deductions & Audit Remarks Center */}
+            {(() => {
+              const origAmt = parseFloat(claimDetails.original_amount || claimDetails.total_original_amount || 0);
+              const appAmt = parseFloat(claimDetails.amount || claimDetails.approved_amount || 0);
+              const overallDeduction = (origAmt > appAmt) ? (origAmt - appAmt) : 0;
 
-                  {/* Leg-by-leg deductions list */}
-                  {claimDetails.itineraries && claimDetails.itineraries.map((leg: any, idx: number) => {
-                    const travelCost = leg.amount || 0;
-                    const subCost = leg.sub_amount || 0;
-                    const daCost = leg.da || 0;
-                    const origTA = parseFloat(leg.original_amount ?? leg.amount ?? 0);
-                    const origSub = parseFloat(leg.original_sub_amount ?? leg.sub_amount ?? 0);
-                    const origDA = parseFloat(leg.original_da ?? leg.da ?? 0);
+              // Check leg deductions
+              let totalLegDeductions = 0;
+              const legDeductionsList: any[] = [];
+              if (claimDetails.itineraries && Array.isArray(claimDetails.itineraries)) {
+                claimDetails.itineraries.forEach((leg: any) => {
+                  const travelCost = parseFloat(leg.amount || 0);
+                  const subCost = parseFloat(leg.sub_amount || 0);
+                  const daCost = parseFloat(leg.da || 0);
+                  const origTA = parseFloat(leg.original_amount ?? leg.amount ?? 0);
+                  const origSub = parseFloat(leg.original_sub_amount ?? leg.sub_amount ?? 0);
+                  const origDA = parseFloat(leg.original_da ?? leg.da ?? 0);
 
-                    const taDeducted = (origTA - travelCost) + (origSub - subCost);
-                    const daDeducted = origDA - daCost;
+                  const taDeduction = (origTA - travelCost) + (origSub - subCost);
+                  const daDeduction = (origDA - daCost);
+                  const legTotalDeduction = Math.max(0, taDeduction) + Math.max(0, daDeduction);
 
-                    if (taDeducted <= 0 && daDeducted <= 0) return null;
+                  if (legTotalDeduction > 0 || leg.deduction_reason || leg.remark) {
+                    totalLegDeductions += legTotalDeduction;
+                    legDeductionsList.push({
+                      leg: leg.leg,
+                      from: leg.from_district,
+                      to: leg.to_district,
+                      taDeducted: Math.max(0, taDeduction),
+                      origTA: origTA + origSub,
+                      allowedTA: travelCost + subCost,
+                      daDeducted: Math.max(0, daDeduction),
+                      origDA: origDA,
+                      allowedDA: daCost,
+                      totalLegDeducted: legTotalDeduction,
+                      reason: leg.deduction_reason || leg.remark || leg.comment
+                    });
+                  }
+                });
+              }
 
-                    return (
-                      <div key={idx} className="flex flex-col gap-1.5 border-l-4 border-rose-500 pl-3 py-2 bg-rose-50/30 p-2.5 text-xs rounded-md border border-rose-200">
-                        <div className="flex justify-between items-center font-bold text-gray-900">
-                          <span>Visit Leg #{leg.leg} ({leg.from_district === leg.to_district ? leg.to_district : `${leg.from_district} → ${leg.to_district}`})</span>
-                          <span className="text-rose-700 font-mono font-bold bg-white px-2 py-0.5 rounded border border-rose-300 shadow-2xs">
-                            Deducted: ₹{(taDeducted + daDeducted).toLocaleString()}
-                          </span>
-                        </div>
-                        <div className="space-y-1.5 mt-1 text-[11px] text-gray-700">
-                          {taDeducted > 0 && (
-                            <p className="bg-white p-2 rounded border border-gray-200">
-                              <strong className="text-rose-700 font-bold">Travel Fare:</strong> Deducted ₹{taDeducted.toLocaleString()} (Claimed: ₹{(origTA + origSub).toLocaleString()} | Allowed: ₹{(travelCost + subCost).toLocaleString()}). <span className="italic text-gray-600 block mt-0.5">Reasoning: Claimed travel fare exceeded location policy limits.</span>
-                            </p>
-                          )}
-                          {daDeducted > 0 && (
-                            <p className="bg-white p-2 rounded border border-gray-200">
-                              <strong className="text-rose-700 font-bold">Daily Allowance (DA):</strong> Deducted ₹{daDeducted.toLocaleString()} (Claimed: ₹{origDA.toLocaleString()} | Allowed: ₹{daCost.toLocaleString()}). <span className="italic text-gray-600 block mt-0.5">Reasoning: DA claimed value exceeded daily policy grade ceilings.</span>
-                            </p>
-                          )}
-                        </div>
+              const finalDeductionAmount = Math.max(overallDeduction, totalLegDeductions);
+              const hasDeductionsOrRemarks = finalDeductionAmount > 0 || claimDetails.deduction_remark || claimDetails.rejection_reason;
+
+              if (!hasDeductionsOrRemarks) return null;
+
+              return (
+                <div className="border border-rose-300 rounded-lg overflow-hidden bg-rose-50/40 shadow-2xs">
+                  <div className="px-3.5 py-2.5 bg-rose-100/80 border-b border-rose-300 flex items-center justify-between">
+                    <h4 className="text-[10.5px] font-bold uppercase text-rose-800 tracking-wider flex items-center gap-1.5">
+                      <AlertTriangle size={14} className="text-rose-600" />
+                      Policy Deductions &amp; Audit Remarks Center
+                    </h4>
+                    {finalDeductionAmount > 0 && (
+                      <span className="text-xs font-mono font-bold text-rose-700 bg-white px-2.5 py-0.5 rounded border border-rose-300 shadow-2xs">
+                        Total Deducted: ₹{finalDeductionAmount.toLocaleString()}
+                      </span>
+                    )}
+                  </div>
+
+                  <div className="p-3 space-y-3 bg-white">
+                    {/* Claim Audit Remark / Reason */}
+                    {(claimDetails.deduction_remark || claimDetails.rejection_reason) && (
+                      <div className="p-2.5 bg-rose-50 border border-rose-200 rounded-md text-xs text-rose-950">
+                        <span className="font-bold uppercase text-[9px] text-rose-700 block mb-0.5">Audit Deduction / Rejection Reason Remark:</span>
+                        <p className="font-semibold italic leading-relaxed">
+                          "{claimDetails.deduction_remark || claimDetails.rejection_reason}"
+                        </p>
                       </div>
-                    );
-                  })}
+                    )}
+
+                    {/* Leg-by-Leg Deductions Detail */}
+                    {legDeductionsList.length > 0 && (
+                      <div className="space-y-2">
+                        <span className="text-[9px] font-bold uppercase tracking-wider text-gray-500 block">Leg-Wise Deduction Details:</span>
+                        {legDeductionsList.map((item: any, idx: number) => (
+                          <div key={idx} className="flex flex-col gap-1.5 border-l-4 border-rose-500 pl-3 py-2 bg-rose-50/20 p-2.5 text-xs rounded-md border border-rose-200">
+                            <div className="flex justify-between items-center font-bold text-gray-900">
+                              <span>Visit Leg #{item.leg} ({item.from === item.to ? item.to : `${item.from} → ${item.to}`})</span>
+                              {item.totalLegDeducted > 0 && (
+                                <span className="text-rose-700 font-mono font-bold bg-white px-2 py-0.5 rounded border border-rose-300 shadow-2xs">
+                                  Deducted: ₹{item.totalLegDeducted.toLocaleString()}
+                                </span>
+                              )}
+                            </div>
+
+                            <div className="space-y-1.5 mt-1 text-[11px] text-gray-700">
+                              {item.taDeducted > 0 && (
+                                <p className="bg-white p-2 rounded border border-gray-200">
+                                  <strong className="text-rose-700 font-bold">Travel Fare:</strong> Deducted ₹{item.taDeducted.toLocaleString()} (Claimed: ₹{item.origTA.toLocaleString()} | Allowed: ₹{item.allowedTA.toLocaleString()}).
+                                  <span className="italic text-gray-600 block mt-0.5">Reason: {item.reason || "Claimed travel fare exceeded grade policy limits."}</span>
+                                </p>
+                              )}
+                              {item.daDeducted > 0 && (
+                                <p className="bg-white p-2 rounded border border-gray-200">
+                                  <strong className="text-rose-700 font-bold">Daily Allowance (DA):</strong> Deducted ₹{item.daDeducted.toLocaleString()} (Claimed: ₹{item.origDA.toLocaleString()} | Allowed: ₹{item.allowedDA.toLocaleString()}).
+                                  <span className="italic text-gray-600 block mt-0.5">Reason: {item.reason || "DA claimed value exceeded daily policy ceiling limits."}</span>
+                                </p>
+                              )}
+                              {item.taDeducted === 0 && item.daDeducted === 0 && item.reason && (
+                                <p className="bg-white p-2 rounded border border-gray-200 italic text-gray-700">
+                                  <strong>Audit Note:</strong> "{item.reason}"
+                                </p>
+                              )}
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
                 </div>
-              </div>
-            )}
+              );
+            })()}
 
             {/* Audit Log / History list */}
             {claimDetails.logs && claimDetails.logs.length > 0 && (
