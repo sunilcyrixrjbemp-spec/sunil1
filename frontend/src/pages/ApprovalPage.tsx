@@ -12,8 +12,22 @@ import {
   Input, 
   Typography, 
   Avatar, 
-  Checkbox
+  Checkbox,
+  Descriptions,
+  Tooltip
 } from "antd";
+import {
+  FileTextOutlined,
+  UserOutlined,
+  EnvironmentOutlined,
+  InfoCircleOutlined,
+  CloseOutlined,
+  CheckOutlined,
+  CloseCircleOutlined,
+  RedoOutlined,
+  PaperClipOutlined,
+  HistoryOutlined
+} from "@ant-design/icons";
 import { approvalService } from "../services/approvalService";
 import { expenseService } from "../services/expenseService";
 import Loader from "../components/common/Loader";
@@ -24,11 +38,8 @@ import {
   Eye, 
   Search,
   FileText, 
-  MapPin, 
-  Info, 
   AlertTriangle,
   ExternalLink,
-  ChevronRight,
   Loader2,
   RotateCcw
 } from "lucide-react";
@@ -1159,70 +1170,68 @@ export default function ApprovalPage() {
         onCancel={() => { setShowDetailModal(false); setSelectedApproval(null); }}
         width={950}
         style={{ maxWidth: "96vw", top: 16 }}
-        styles={{
-          body: {
-            maxHeight: "72vh",
-            overflowY: "auto",
-            overflowX: "hidden",
-            padding: "16px",
-            WebkitOverflowScrolling: "touch",
-            overscrollBehavior: "contain",
-            touchAction: "pan-y"
-          }
+        className="approval-review-modal"
+        bodyStyle={{
+          maxHeight: "72vh",
+          overflowY: "auto",
+          overflowX: "hidden",
+          padding: "16px",
+          background: "#ffffff",
+          WebkitOverflowScrolling: "touch",
+          overscrollBehaviorY: "contain",
+          touchAction: "pan-y"
         }}
         title={
-          <div className="flex items-center gap-2">
-            <FileText size={18} className="text-indigo-600" />
-            <span className="font-bold text-sm uppercase">
-              Reviewing Claim: {selectedApproval?.expense_code} ({selectedApproval?.employeeName || expenseDetails?.submitter_name})
+          <Space>
+            <FileTextOutlined style={{ color: "#4f46e5", fontSize: 16 }} />
+            <span style={{ fontWeight: 800, fontSize: 13, textTransform: "uppercase", letterSpacing: "0.02em" }}>
+              Reviewing Claim: {selectedApproval?.expense_code}
             </span>
-          </div>
+          </Space>
         }
         footer={
-          <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-2 w-full">
+          <div style={{ display: "flex", flexWrap: "wrap", gap: 8, justifyContent: "space-between", alignItems: "center", width: "100%" }}>
             <Button
               onClick={() => { setShowDetailModal(false); setSelectedApproval(null); }}
               disabled={actionLoading}
-              icon={<X size={14} />}
-              className="font-bold text-xs"
+              icon={<CloseOutlined />}
+              style={{ fontWeight: 700, fontSize: 12 }}
             >
               Close Window
             </Button>
-            <div className="flex flex-wrap items-center justify-end gap-2">
+            <Space wrap>
               <Button
                 danger
                 type="primary"
                 onClick={() => handleProcessAction("reject")}
                 disabled={actionLoading || loadingDetails}
                 loading={actionLoading && _actionType === "reject"}
-                icon={<X size={14} />}
-                className="font-bold text-xs"
+                icon={<CloseCircleOutlined />}
+                style={{ fontWeight: 700, fontSize: 12 }}
               >
                 Reject Claim
               </Button>
               {isCoordinator && selectedApproval && selectedApproval.category !== "Limit Request" && (
                 <Button
-                  style={{ backgroundColor: "#ea580c", borderColor: "#ea580c", color: "#fff" }}
                   onClick={() => handleOpenReturnModal(selectedApproval.expense_id)}
                   disabled={actionLoading || loadingDetails}
-                  icon={<RotateCcw size={14} />}
-                  className="font-bold text-xs"
+                  icon={<RedoOutlined />}
+                  style={{ backgroundColor: "#fa8c16", borderColor: "#fa8c16", color: "#fff", fontWeight: 700, fontSize: 12 }}
                 >
                   Return to Draft
                 </Button>
               )}
               <Button
                 type="primary"
-                style={{ backgroundColor: "#10b981", borderColor: "#10b981" }}
                 onClick={() => handleProcessAction("approve")}
                 disabled={actionLoading || loadingDetails}
                 loading={actionLoading && _actionType === "approve"}
-                icon={<Check size={14} />}
-                className="font-bold text-xs"
+                icon={<CheckOutlined />}
+                style={{ backgroundColor: "#10b981", borderColor: "#10b981", fontWeight: 700, fontSize: 12 }}
               >
                 Approve Claim
               </Button>
-            </div>
+            </Space>
           </div>
         }
       >
@@ -1230,25 +1239,80 @@ export default function ApprovalPage() {
           <Loader message="Retrieving itineraries & receipts..." />
         ) : expenseDetails ? (
           <div className="space-y-4">
+
+            {/* ── SUBMITTER DETAILS SECTION ── */}
+            <Card
+              size="small"
+              style={{ borderColor: "#e5e7eb", borderRadius: 8, background: "#fafafa" }}
+              bodyStyle={{ padding: "12px 14px" }}
+            >
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 10 }}>
+                <Space>
+                  <UserOutlined style={{ color: "#4f46e5" }} />
+                  <Typography.Text strong style={{ fontSize: 11, textTransform: "uppercase", letterSpacing: "0.05em", color: "#374151" }}>
+                    Submitter Details & Information
+                  </Typography.Text>
+                </Space>
+                <Tag color="processing" style={{ fontWeight: 700, fontSize: 10, fontFamily: "monospace" }}>
+                  {selectedApproval?.expense_code}
+                </Tag>
+              </div>
+              <Descriptions
+                column={1}
+                size="small"
+                labelStyle={{ color: "#9ca3af", fontSize: 10, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.04em", width: 140 }}
+                contentStyle={{ fontWeight: 700, fontSize: 12, color: "#111827" }}
+              >
+                <Descriptions.Item label={<Space size={4}><UserOutlined />Employee Name</Space>}>
+                  {expenseDetails?.submitter_name || selectedApproval?.employeeName || "—"}
+                </Descriptions.Item>
+                <Descriptions.Item label="Employee ID">
+                  <Typography.Text code style={{ fontSize: 12, color: "#2563eb" }}>
+                    {expenseDetails?.submitter_code || selectedApproval?.eCode || "—"}
+                  </Typography.Text>
+                </Descriptions.Item>
+                <Descriptions.Item label="Claim Month / Date">
+                  {selectedApproval?.date || expenseDetails?.date || "—"}
+                </Descriptions.Item>
+                {(expenseDetails?.purpose || selectedApproval?.purpose) && (
+                  <Descriptions.Item label="Purpose / Description">
+                    {expenseDetails?.purpose || selectedApproval?.purpose}
+                  </Descriptions.Item>
+                )}
+              </Descriptions>
+            </Card>
+
+            {/* ── AUTO-APPROVED BANNER ── */}
             {(expenseDetails.is_auto_approved || expenseDetails.auto_approved || expenseDetails.status === "auto_approved" || selectedApproval?.is_auto_approved) && (
               <Alert
-                message={<span className="font-bold text-xs uppercase tracking-wider">⚡ Claim Auto-Approved by Policy</span>}
+                message={<span style={{ fontWeight: 700, fontSize: 11, textTransform: "uppercase", letterSpacing: "0.05em" }}>⚡ Claim Auto-Approved by Policy</span>}
                 description="This claim satisfies automatic approval parameters (e.g. 0 reimbursable total or corporate auto-pass rules)."
                 type="success"
                 showIcon
+                style={{ borderRadius: 8 }}
               />
             )}
 
                   {/* EDITABLE ITINERARY LEGS */}
                   {selectedApproval.category !== "Limit Request" && (
                     <div className="space-y-3">
-                    <div className="flex items-center justify-between">
-                       <h4 className="text-xs font-extrabold uppercase text-gray-700 tracking-wider">Facility Visits & Claimed Amounts</h4>
-                      <div className="flex items-center gap-2">
-                        <Info className="w-3.5 h-3.5 text-blue-500" />
-                        <span className="text-[10px] text-gray-500 font-semibold">Adjust TA, Hotel and Local Purchase amounts below if needed.</span>
-                      </div>
-                    </div>
+                    {/* Facility Visits Card Header with antd Card + Tooltip */}
+                    <Card
+                      size="small"
+                      style={{ borderColor: "#e5e7eb", borderRadius: 8 }}
+                      bodyStyle={{ padding: 0 }}
+                      title={
+                        <Space>
+                          <EnvironmentOutlined style={{ color: "#ef4444" }} />
+                          <Typography.Text strong style={{ fontSize: 11, textTransform: "uppercase", letterSpacing: "0.04em" }}>
+                            Facility Visits & Claimed Amounts
+                          </Typography.Text>
+                          <Tooltip title="Adjust TA, Hotel and Local Purchase amounts below if needed.">
+                            <InfoCircleOutlined style={{ color: "#6366f1", cursor: "help", fontSize: 13 }} />
+                          </Tooltip>
+                        </Space>
+                      }
+                    >
 
                     <div className="space-y-4">
                       {editedLegs.map((leg, index) => {
@@ -1287,20 +1351,21 @@ export default function ApprovalPage() {
                         
                         return (
                           <div key={index} className="border border-gray-250 bg-white rounded shadow-sm overflow-hidden text-xs">
-                            {/* Route Segment with clear From/To Facility and District labels */}
-                            <div className="bg-slate-100 border-b border-gray-200 p-3 space-y-2.5">
-                              <div className="flex justify-between items-center text-[10px] font-black text-slate-700 uppercase tracking-wide">
-                                <span className="flex items-center gap-1">
-                                  <MapPin className="w-3.5 h-3.5 text-red-500" />
+                    {/* Facility Visit Item header row */}
+                            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "10px 12px", background: "#f8fafc", borderBottom: "1px solid #e5e7eb" }}>
+                              <Space size={4}>
+                                <EnvironmentOutlined style={{ color: "#ef4444", fontSize: 13 }} />
+                                <Typography.Text strong style={{ fontSize: 10, textTransform: "uppercase", letterSpacing: "0.06em", color: "#374151" }}>
                                   Facility Visit {leg.leg}
-                                </span>
-                                <div className="flex gap-2">
-                                  <span className="font-bold text-blue-700 bg-blue-50 px-2 py-0.5 rounded border border-blue-200 uppercase text-[9px]">{leg.mode} ({leg.km} KM)</span>
-                                  {leg.sub_mode && (
-                                    <span className="font-bold text-purple-700 bg-purple-50 px-2 py-0.5 rounded border border-purple-200 uppercase text-[9px]">Local: {leg.sub_mode}</span>
-                                  )}
-                                </div>
-                              </div>
+                                </Typography.Text>
+                              </Space>
+                              <Space size={4}>
+                                <Tag color="blue" style={{ fontWeight: 700, fontSize: 10, textTransform: "uppercase", margin: 0 }}>{leg.mode} ({leg.km} KM)</Tag>
+                                {leg.sub_mode && (
+                                  <Tag color="purple" style={{ fontWeight: 700, fontSize: 10, textTransform: "uppercase", margin: 0 }}>Local: {leg.sub_mode}</Tag>
+                                )}
+                              </Space>
+                            </div>
                               <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
                                 <div className="bg-white p-2.5 border border-gray-200 rounded-lg flex flex-col justify-between">
                                   <div>
@@ -1327,8 +1392,6 @@ export default function ApprovalPage() {
 
                             {/* Leg inputs and details */}
                             <div className="p-4 grid grid-cols-1 lg:grid-cols-12 gap-5">
-                              
-                              {/* Left parameters */}
                               <div className="lg:col-span-4 grid grid-cols-2 gap-3 bg-gray-50 p-3 border border-gray-200 rounded">
                                 <div>
                                   <span className="text-[9px] text-gray-400 font-bold uppercase tracking-wider block">Visit Purpose</span>
@@ -1967,14 +2030,26 @@ export default function ApprovalPage() {
                           </div>
                         );
                       })}
-                    </div>
+                    </div>{/* end space-y-4 leg list */}
+                    </Card>{/* end Facility Visits Card */}
                   </div>
                   )}
 
                   {/* ATTACHMENTS VIEW LIST WITH LIGHTBOX */}
                   {getAttachmentsArray(expenseDetails.attachments).length > 0 && (
-                    <div className="space-y-2 border-t border-gray-100 pt-4">
-                      <h4 className="text-xs font-extrabold uppercase text-gray-700 tracking-wider">Uploaded Receipt Attachments</h4>
+                    <Card
+                      size="small"
+                      style={{ borderColor: "#e5e7eb", borderRadius: 8 }}
+                      bodyStyle={{ padding: "12px 14px" }}
+                      title={
+                        <Space>
+                          <PaperClipOutlined style={{ color: "#6366f1" }} />
+                          <Typography.Text strong style={{ fontSize: 11, textTransform: "uppercase", letterSpacing: "0.04em" }}>
+                            Uploaded Receipt Attachments
+                          </Typography.Text>
+                        </Space>
+                      }
+                    >
                       <div className="flex flex-wrap gap-3">
                         {getAttachmentsArray(expenseDetails.attachments).map((url: string, attIdx: number) => {
                           const filename = url.split("/").pop() || "Receipt";
@@ -2032,55 +2107,55 @@ export default function ApprovalPage() {
                           );
                         })}
                       </div>
-                    </div>
+                    </Card>
                   )}
 
-                  {/* Dynamic Summary bar */}
-                  <div className="p-4 rounded border border-blue-200 bg-blue-50/30 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 text-xs">
-                    <div className="space-y-1 text-left">
-                      <h4 className="font-extrabold text-blue-800 uppercase tracking-wide">
-                        {selectedApproval.category === "Limit Request" ? "Limit Extension Request" : "Expense Total Summary"}
-                      </h4>
-                      <p className="text-gray-600 font-semibold">
-                        {selectedApproval.category === "Limit Request" 
-                          ? "This displays the requested limit extension value." 
-                          : "This reflects the sum of Travel, Local Conveyance, DA, Hotel and Local Purchases."}
-                      </p>
-                    </div>
-                    <div className="flex items-center gap-6 self-end sm:self-center">
-                      <div className="text-right">
-                        <span className="text-[10px] text-gray-400 font-bold block">REQUESTED VALUE</span>
-                        <span className="text-sm font-bold text-blue-700 font-mono">
-                          {selectedApproval.category === "Limit Request" 
-                            ? `${expenseDetails?.amount} ${selectedApproval.expense_code.includes("KM") ? "KM" : "₹"}`
-                            : `₹${(Number(expenseDetails?.amount) || 0).toLocaleString()}`}
-                        </span>
+                  {/* Dynamic Summary bar — antd Card */}
+                  <Card
+                    size="small"
+                    style={{ background: "#eff6ff", borderColor: "#bfdbfe", borderRadius: 8 }}
+                    bodyStyle={{ padding: "12px 14px" }}
+                  >
+                    <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+                      <div>
+                        <Typography.Text strong style={{ fontSize: 11, textTransform: "uppercase", letterSpacing: "0.05em", color: "#1e40af" }}>
+                          {selectedApproval.category === "Limit Request" ? "Limit Extension Request" : "Expense Total Summary"}
+                        </Typography.Text>
+                        <Typography.Text type="secondary" style={{ fontSize: 10, display: "block", marginTop: 2 }}>
+                          {selectedApproval.category === "Limit Request"
+                            ? "This displays the requested limit extension value."
+                            : "This reflects the sum of Travel, Local Conveyance, DA, Hotel and Local Purchases."}
+                        </Typography.Text>
                       </div>
-                      {selectedApproval.category === "Limit Request" ? (
-                        <>
-                          <ChevronRight className="w-5 h-5 text-gray-300 hidden sm:block animate-pulse" />
-                          <div className="text-right">
-                            <span className="text-[10px] text-amber-700 font-extrabold block">ADJUSTED LIMIT APPROVED</span>
-                            <span className="text-base font-black font-mono text-amber-600">
+                      <div style={{ display: "flex", flexWrap: "wrap", gap: 16, alignItems: "center" }}>
+                        <div>
+                          <Typography.Text type="secondary" style={{ fontSize: 9, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.04em", display: "block" }}>Requested Value</Typography.Text>
+                          <Typography.Text strong style={{ fontSize: 16, color: "#1d4ed8", fontFamily: "monospace" }}>
+                            {selectedApproval.category === "Limit Request"
+                              ? `${expenseDetails?.amount} ${selectedApproval.expense_code.includes("KM") ? "KM" : "₹"}`
+                              : `₹${(Number(expenseDetails?.amount) || 0).toLocaleString()}`}
+                          </Typography.Text>
+                        </div>
+                        {selectedApproval.category === "Limit Request" ? (
+                          <div>
+                            <Typography.Text style={{ fontSize: 9, fontWeight: 800, textTransform: "uppercase", color: "#92400e", display: "block" }}>Adjusted Limit Approved</Typography.Text>
+                            <Typography.Text strong style={{ fontSize: 16, color: "#d97706", fontFamily: "monospace" }}>
                               {selectedApproval.expense_code.includes("KM")
                                 ? `${editedLegs[0]?.km || expenseDetails?.amount} KM`
                                 : `₹${(editedLegs[0]?.travel_amount || expenseDetails?.amount || 0).toLocaleString()}`}
-                            </span>
+                            </Typography.Text>
                           </div>
-                        </>
-                      ) : (
-                        <>
-                          <ChevronRight className="w-5 h-5 text-gray-300 hidden sm:block animate-pulse" />
-                          <div className="text-right">
-                            <span className="text-[10px] text-blue-700 font-extrabold block">ADJUSTED APPROVAL TOTAL</span>
-                            <span className={`text-base font-black font-mono ${isEdited() ? "text-amber-600" : "text-blue-700"}`}>
+                        ) : (
+                          <div>
+                            <Typography.Text style={{ fontSize: 9, fontWeight: 800, textTransform: "uppercase", color: "#1e40af", display: "block" }}>Adjusted Approval Total</Typography.Text>
+                            <Typography.Text strong style={{ fontSize: 16, fontFamily: "monospace", color: isEdited() ? "#d97706" : "#1d4ed8" }}>
                               ₹{(Number(calculateAdjustedTotal()) || 0).toLocaleString()}
-                            </span>
+                            </Typography.Text>
                           </div>
-                        </>
-                      )}
+                        )}
+                      </div>
                     </div>
-                  </div>
+                  </Card>
 
                   {isEdited() && (
                     <div className="p-3 bg-amber-50 border border-amber-250 rounded text-amber-800 text-xs font-semibold flex items-center gap-2">
@@ -2089,27 +2164,40 @@ export default function ApprovalPage() {
                     </div>
                   )}
 
-                  {/* COMMENTS FIELD */}
+                  {/* Comments field — antd Input.TextArea */}
                   <div className="space-y-1.5 pt-2 text-left">
-                    <label className="label-lte flex justify-between">
-                      <span>Approver Review Comments / Remarks</span>
-                      <span className="text-[10px] text-gray-400 font-semibold">(Mandatory for rejections, optional for approvals)</span>
-                    </label>
-                    <textarea
+                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 4 }}>
+                      <Typography.Text strong style={{ fontSize: 10, textTransform: "uppercase", letterSpacing: "0.04em", color: "#374151" }}>
+                        Approver Review Comments / Remarks
+                      </Typography.Text>
+                      <Typography.Text type="secondary" style={{ fontSize: 10 }}>
+                        (Mandatory for rejections, optional for approvals)
+                      </Typography.Text>
+                    </div>
+                    <Input.TextArea
                       rows={3}
                       placeholder="Add reviewer notes or reasons for rejection here..."
                       value={comments}
                       onChange={(e) => setComments(e.target.value)}
-                      className="input-lte resize-none"
+                      style={{ fontSize: 12, borderRadius: 6 }}
                     />
                   </div>
 
-                  {/* Adjustment & Edit Log History inside Approval Review Details modal */}
+                  {/* Adjustment & Edit Log History — antd Card wrapper */}
                   {expenseDetails.edit_history && expenseDetails.edit_history.length > 0 && (
-                    <div className="border border-amber-200 rounded overflow-hidden mt-4 text-left">
-                      <div className="px-3 py-2 bg-amber-50/50 border-b border-amber-200">
-                        <h4 className="text-[10px] font-bold uppercase text-amber-800 tracking-wider">Adjustment & Edit Log History</h4>
-                      </div>
+                    <Card
+                      size="small"
+                      style={{ borderColor: "#fde68a", background: "#fffbeb", borderRadius: 8 }}
+                      bodyStyle={{ padding: 0 }}
+                      title={
+                        <Space>
+                          <HistoryOutlined style={{ color: "#92400e" }} />
+                          <Typography.Text strong style={{ fontSize: 11, textTransform: "uppercase", letterSpacing: "0.04em", color: "#92400e" }}>
+                            Adjustment & Edit Log History
+                          </Typography.Text>
+                        </Space>
+                      }
+                    >
                       <div className="overflow-x-auto">
                         <table className="w-full text-left border-collapse text-[10px]">
                           <thead>
@@ -2150,7 +2238,7 @@ export default function ApprovalPage() {
                           </tbody>
                         </table>
                       </div>
-                    </div>
+                    </Card>
                   )}
                 </div>
               ) : (
