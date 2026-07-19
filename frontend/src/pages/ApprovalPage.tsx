@@ -128,6 +128,7 @@ export default function ApprovalPage() {
   const currentUser = JSON.parse(localStorage.getItem("user") || "{}");
   const userRoleLower = (currentUser.role || "").trim().toLowerCase();
   const isBulkAuthorized = ["coordinator", "project head"].includes(userRoleLower);
+  const isCoordinator = ["coordinator", "admin", "project head"].includes(userRoleLower);
 
   // Edit single itineraries state
   const [editedLegs, setEditedLegs] = useState<any[]>([]);
@@ -758,7 +759,7 @@ export default function ApprovalPage() {
             )}
             {!isBulkAuthorized && (
               <Tag color="warning" className="font-bold border-0 bg-amber-50 text-amber-800 px-3 py-1 text-xs">
-                Role: {currentUser.role || user?.role || "Staff"} (Individual Approvals Only)
+                Role: {currentUser.role || "Staff"} (Individual Approvals Only)
               </Tag>
             )}
           </div>
