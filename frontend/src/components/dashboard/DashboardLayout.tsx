@@ -56,19 +56,110 @@ const MENU_ITEMS: MenuItem[] = [
   { id: "profile", name: "Profile", path: "/profile", icon: User, roles: ["Admin", "Engineer", "Manager", "Division Manager", "Coordinator", "Accountant", "HR", "Project Head", "Travel Desk", "MIS", "VP"] },
 ];
 
-const MenuGridIcon = () => (
-  <svg className="w-5 h-5 transition-all duration-300 hover:rotate-90 text-inherit" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-    <rect x="3" y="3" width="4" height="4" rx="1" fill="currentColor" />
-    <rect x="10" y="3" width="4" height="4" rx="1" fill="currentColor" />
-    <rect x="17" y="3" width="4" height="4" rx="1" fill="currentColor" />
-    <rect x="3" y="10" width="4" height="4" rx="1" fill="currentColor" />
-    <rect x="10" y="10" width="4" height="4" rx="1" fill="currentColor" />
-    <rect x="17" y="10" width="4" height="4" rx="1" fill="currentColor" />
-    <rect x="3" y="17" width="4" height="4" rx="1" fill="currentColor" />
-    <rect x="10" y="17" width="4" height="4" rx="1" fill="currentColor" />
-    <rect x="17" y="17" width="4" height="4" rx="1" fill="currentColor" />
+const HomeSvgIcon = ({ active }: { active?: boolean }) => (
+  <svg className={`w-5 h-5 transition-transform duration-200 ${active ? "scale-110" : ""}`} viewBox="0 0 24 24" fill="none">
+    <path d="M3 10.5L12 3l9 7.5V20a1 1 0 01-1 1h-5v-6h-6v6H4a1 1 0 01-1-1v-9.5z" 
+      fill={active ? "url(#homeGradFill)" : "#94a3b8"} 
+      stroke={active ? "#4f46e5" : "#64748b"} 
+      strokeWidth="1.8" 
+      strokeLinejoin="round" 
+    />
+    <defs>
+      <linearGradient id="homeGradFill" x1="0%" y1="0%" x2="100%" y2="100%">
+        <stop offset="0%" stopColor="#6366f1" />
+        <stop offset="100%" stopColor="#4338ca" />
+      </linearGradient>
+    </defs>
   </svg>
 );
+
+const ClaimSvgIcon = ({ active }: { active?: boolean }) => (
+  <svg className={`w-5 h-5 transition-transform duration-200 ${active ? "scale-110" : ""}`} viewBox="0 0 24 24" fill="none">
+    <rect x="3" y="3" width="18" height="18" rx="4" 
+      fill={active ? "url(#claimGradFill)" : "#94a3b8"} 
+      stroke={active ? "#059669" : "#64748b"} 
+      strokeWidth="1.8" 
+    />
+    <path d="M12 8v8M8 12h8" stroke="#ffffff" strokeWidth="2.5" strokeLinecap="round" />
+    <defs>
+      <linearGradient id="claimGradFill" x1="0%" y1="0%" x2="100%" y2="100%">
+        <stop offset="0%" stopColor="#10b981" />
+        <stop offset="100%" stopColor="#059669" />
+      </linearGradient>
+    </defs>
+  </svg>
+);
+
+const ApprovalSvgIcon = ({ active }: { active?: boolean }) => (
+  <svg className={`w-5 h-5 transition-transform duration-200 ${active ? "scale-110" : ""}`} viewBox="0 0 24 24" fill="none">
+    <rect x="3" y="3" width="18" height="18" rx="4" 
+      fill={active ? "url(#appGradFill)" : "#94a3b8"} 
+      stroke={active ? "#7c3aed" : "#64748b"} 
+      strokeWidth="1.8" 
+    />
+    <path d="M8.5 12.5l2.5 2.5 5-5" stroke="#ffffff" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" />
+    <defs>
+      <linearGradient id="appGradFill" x1="0%" y1="0%" x2="100%" y2="100%">
+        <stop offset="0%" stopColor="#8b5cf6" />
+        <stop offset="100%" stopColor="#6d28d9" />
+      </linearGradient>
+    </defs>
+  </svg>
+);
+
+const ProfileSvgIcon = ({ active }: { active?: boolean }) => (
+  <svg className={`w-5 h-5 transition-transform duration-200 ${active ? "scale-110" : ""}`} viewBox="0 0 24 24" fill="none">
+    <circle cx="12" cy="8" r="4" 
+      fill={active ? "url(#profGradFill)" : "#94a3b8"} 
+      stroke={active ? "#d97706" : "#64748b"} 
+      strokeWidth="1.8" 
+    />
+    <path d="M20 21a8 8 0 10-16 0" 
+      stroke={active ? "#f59e0b" : "#64748b"} 
+      strokeWidth="2.2" 
+      strokeLinecap="round" 
+    />
+    <defs>
+      <linearGradient id="profGradFill" x1="0%" y1="0%" x2="100%" y2="100%">
+        <stop offset="0%" stopColor="#fbbf24" />
+        <stop offset="100%" stopColor="#d97706" />
+      </linearGradient>
+    </defs>
+  </svg>
+);
+
+const MoreSvgIcon = ({ active }: { active?: boolean }) => (
+  <svg className={`w-5 h-5 transition-transform duration-200 ${active ? "scale-110" : ""}`} viewBox="0 0 24 24" fill="none">
+    <rect x="3" y="3" width="5" height="5" rx="1.5" fill={active ? "#06b6d4" : "#64748b"} />
+    <rect x="10.5" y="3" width="5" height="5" rx="1.5" fill={active ? "#3b82f6" : "#64748b"} />
+    <rect x="18" y="3" width="3" height="5" rx="1" fill={active ? "#8b5cf6" : "#94a3b8"} />
+    <rect x="3" y="10.5" width="5" height="5" rx="1.5" fill={active ? "#10b981" : "#64748b"} />
+    <rect x="10.5" y="10.5" width="5" height="5" rx="1.5" fill={active ? "#f59e0b" : "#64748b"} />
+    <rect x="18" y="10.5" width="3" height="5" rx="1" fill={active ? "#f43f5e" : "#94a3b8"} />
+    <rect x="3" y="18" width="5" height="3" rx="1" fill={active ? "#ec4899" : "#94a3b8"} />
+    <rect x="10.5" y="18" width="5" height="3" rx="1" fill={active ? "#6366f1" : "#94a3b8"} />
+    <rect x="18" y="18" width="3" height="3" rx="1" fill={active ? "#14b8a6" : "#94a3b8"} />
+  </svg>
+);
+
+const ITEM_GRADIENTS: Record<string, string> = {
+  home: "bg-gradient-to-br from-indigo-500 to-blue-600 text-white shadow-indigo-200",
+  new_dashboard: "bg-gradient-to-br from-blue-500 to-cyan-600 text-white shadow-blue-200",
+  admin: "bg-gradient-to-br from-slate-700 to-slate-900 text-white shadow-slate-200",
+  db_monitor: "bg-gradient-to-br from-amber-500 to-orange-600 text-white shadow-amber-200",
+  approval: "bg-gradient-to-br from-purple-500 to-violet-600 text-white shadow-purple-200",
+  expense: "bg-gradient-to-br from-emerald-500 to-teal-600 text-white shadow-emerald-200",
+  mis_report: "bg-gradient-to-br from-teal-500 to-emerald-600 text-white shadow-teal-200",
+  kpi: "bg-gradient-to-br from-pink-500 to-rose-600 text-white shadow-pink-200",
+  upload_data: "bg-gradient-to-br from-sky-500 to-blue-600 text-white shadow-sky-200",
+  asset_upload: "bg-gradient-to-br from-amber-400 to-yellow-600 text-white shadow-yellow-200",
+  penalty_report: "bg-gradient-to-br from-rose-500 to-red-600 text-white shadow-rose-200",
+  analysis: "bg-gradient-to-br from-indigo-500 to-purple-600 text-white shadow-indigo-200",
+  report: "bg-gradient-to-br from-violet-500 to-indigo-600 text-white shadow-violet-200",
+  consolidated_report: "bg-gradient-to-br from-emerald-500 to-cyan-600 text-white shadow-emerald-200",
+  help: "bg-gradient-to-br from-green-500 to-teal-600 text-white shadow-green-200",
+  profile: "bg-gradient-to-br from-orange-400 to-amber-500 text-white shadow-orange-200"
+};
 
 export default function DashboardLayout() {
   const navigate = useNavigate();
@@ -465,11 +556,11 @@ export default function DashboardLayout() {
           onMouseEnter={() => preloadRoute("/home")}
           className={`flex flex-col items-center justify-center py-1 px-3 rounded-xl transition-all relative no-underline ${
             currentActiveItem?.id === "home" 
-              ? "bg-indigo-50 border border-indigo-100 text-indigo-600 scale-105 shadow-2xs" 
+              ? "bg-indigo-50/80 border border-indigo-100/90 text-indigo-600 scale-105 shadow-2xs" 
               : "text-slate-500 hover:text-slate-800"
           }`}
         >
-          <Home className={`w-5 h-5 transition-all ${currentActiveItem?.id === "home" ? "text-indigo-600 stroke-[2.5]" : "stroke-[1.75]"}`} />
+          <HomeSvgIcon active={currentActiveItem?.id === "home"} />
           <span className={`text-[9px] font-bold uppercase tracking-tight mt-0.5 ${currentActiveItem?.id === "home" ? "text-indigo-600 font-black" : "text-slate-500"}`}>
             Home
           </span>
@@ -485,16 +576,16 @@ export default function DashboardLayout() {
             onMouseEnter={() => preloadRoute("/submit-expense")}
             className={`flex flex-col items-center justify-center py-1 px-3 rounded-xl transition-all relative no-underline ${
               currentActiveItem?.id === "expense" 
-                ? "bg-indigo-50 border border-indigo-100 text-indigo-600 scale-105 shadow-2xs" 
+                ? "bg-emerald-50/80 border border-emerald-100/90 text-emerald-600 scale-105 shadow-2xs" 
                 : "text-slate-500 hover:text-slate-800"
             }`}
           >
-            <Plus className={`w-5 h-5 transition-all ${currentActiveItem?.id === "expense" ? "text-indigo-600 stroke-[2.5]" : "stroke-[1.75]"}`} />
-            <span className={`text-[9px] font-bold uppercase tracking-tight mt-0.5 ${currentActiveItem?.id === "expense" ? "text-indigo-600 font-black" : "text-slate-500"}`}>
+            <ClaimSvgIcon active={currentActiveItem?.id === "expense"} />
+            <span className={`text-[9px] font-bold uppercase tracking-tight mt-0.5 ${currentActiveItem?.id === "expense" ? "text-emerald-600 font-black" : "text-slate-500"}`}>
               Claim
             </span>
             {currentActiveItem?.id === "expense" && (
-              <span className="absolute -bottom-1 left-1/2 -translate-x-1/2 w-1.5 h-1.5 rounded-full bg-indigo-600 shadow-xs"></span>
+              <span className="absolute -bottom-1 left-1/2 -translate-x-1/2 w-1.5 h-1.5 rounded-full bg-emerald-600 shadow-xs"></span>
             )}
           </Link>
         )}
@@ -506,16 +597,16 @@ export default function DashboardLayout() {
             onMouseEnter={() => preloadRoute("/approval-center")}
             className={`flex flex-col items-center justify-center py-1 px-3 rounded-xl transition-all relative no-underline ${
               currentActiveItem?.id === "approval" 
-                ? "bg-indigo-50 border border-indigo-100 text-indigo-600 scale-105 shadow-2xs" 
+                ? "bg-purple-50/80 border border-purple-100/90 text-purple-600 scale-105 shadow-2xs" 
                 : "text-slate-500 hover:text-slate-800"
             }`}
           >
-            <CheckSquare className={`w-5 h-5 transition-all ${currentActiveItem?.id === "approval" ? "text-indigo-600 stroke-[2.5]" : "stroke-[1.75]"}`} />
-            <span className={`text-[9px] font-bold uppercase tracking-tight mt-0.5 ${currentActiveItem?.id === "approval" ? "text-indigo-600 font-black" : "text-slate-500"}`}>
+            <ApprovalSvgIcon active={currentActiveItem?.id === "approval"} />
+            <span className={`text-[9px] font-bold uppercase tracking-tight mt-0.5 ${currentActiveItem?.id === "approval" ? "text-purple-600 font-black" : "text-slate-500"}`}>
               Approval
             </span>
             {currentActiveItem?.id === "approval" && (
-              <span className="absolute -bottom-1 left-1/2 -translate-x-1/2 w-1.5 h-1.5 rounded-full bg-indigo-600 shadow-xs"></span>
+              <span className="absolute -bottom-1 left-1/2 -translate-x-1/2 w-1.5 h-1.5 rounded-full bg-purple-600 shadow-xs"></span>
             )}
           </Link>
         )}
@@ -526,16 +617,16 @@ export default function DashboardLayout() {
           onMouseEnter={() => preloadRoute("/profile")}
           className={`flex flex-col items-center justify-center py-1 px-3 rounded-xl transition-all relative no-underline ${
             currentActiveItem?.id === "profile" 
-              ? "bg-indigo-50 border border-indigo-100 text-indigo-600 scale-105 shadow-2xs" 
+              ? "bg-amber-50/80 border border-amber-100/90 text-amber-600 scale-105 shadow-2xs" 
               : "text-slate-500 hover:text-slate-800"
           }`}
         >
-          <User className={`w-5 h-5 transition-all ${currentActiveItem?.id === "profile" ? "text-indigo-600 stroke-[2.5]" : "stroke-[1.75]"}`} />
-          <span className={`text-[9px] font-bold uppercase tracking-tight mt-0.5 ${currentActiveItem?.id === "profile" ? "text-indigo-600 font-black" : "text-slate-500"}`}>
+          <ProfileSvgIcon active={currentActiveItem?.id === "profile"} />
+          <span className={`text-[9px] font-bold uppercase tracking-tight mt-0.5 ${currentActiveItem?.id === "profile" ? "text-amber-600 font-black" : "text-slate-500"}`}>
             Profile
           </span>
           {currentActiveItem?.id === "profile" && (
-            <span className="absolute -bottom-1 left-1/2 -translate-x-1/2 w-1.5 h-1.5 rounded-full bg-indigo-600 shadow-xs"></span>
+            <span className="absolute -bottom-1 left-1/2 -translate-x-1/2 w-1.5 h-1.5 rounded-full bg-amber-600 shadow-xs"></span>
           )}
         </Link>
 
@@ -544,16 +635,16 @@ export default function DashboardLayout() {
           onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
           className={`flex flex-col items-center justify-center py-1 px-3 rounded-xl transition-all border-0 bg-transparent cursor-pointer relative ${
             isMobileMenuOpen 
-              ? "bg-indigo-50 border border-indigo-100 text-indigo-600 scale-105 shadow-2xs" 
+              ? "bg-cyan-50/80 border border-cyan-100/90 text-cyan-600 scale-105 shadow-2xs" 
               : "text-slate-500 hover:text-slate-800"
           }`}
         >
-          <MenuGridIcon />
-          <span className={`text-[9px] font-bold uppercase tracking-tight mt-0.5 ${isMobileMenuOpen ? "text-indigo-600 font-black" : "text-slate-500"}`}>
+          <MoreSvgIcon active={isMobileMenuOpen} />
+          <span className={`text-[9px] font-bold uppercase tracking-tight mt-0.5 ${isMobileMenuOpen ? "text-cyan-600 font-black" : "text-slate-500"}`}>
             More
           </span>
           {isMobileMenuOpen && (
-            <span className="absolute -bottom-1 left-1/2 -translate-x-1/2 w-1.5 h-1.5 rounded-full bg-indigo-600 shadow-xs"></span>
+            <span className="absolute -bottom-1 left-1/2 -translate-x-1/2 w-1.5 h-1.5 rounded-full bg-cyan-600 shadow-xs"></span>
           )}
         </button>
       </nav>
@@ -564,7 +655,7 @@ export default function DashboardLayout() {
           {/* Header */}
           <div className="h-14 px-4 bg-slate-900 border-b border-slate-800 flex items-center justify-between shrink-0 shadow-md">
             <span className="text-xs font-black uppercase tracking-wider text-white flex items-center gap-2">
-              <MenuGridIcon /> Navigation Menu
+              <MoreSvgIcon active={true} /> Navigation Menu
             </span>
             <button 
               onClick={() => setIsMobileMenuOpen(false)}
@@ -608,6 +699,7 @@ export default function DashboardLayout() {
               {allowedMenuItems.map((item) => {
                 const Icon = item.icon;
                 const isActive = currentActiveItem?.id === item.id;
+                const gradientClass = ITEM_GRADIENTS[item.id] || "bg-gradient-to-br from-indigo-500 to-blue-600 text-white shadow-indigo-200";
                 return (
                   <Link
                     key={item.id}
@@ -616,19 +708,15 @@ export default function DashboardLayout() {
                     onClick={() => setIsMobileMenuOpen(false)}
                     className={`flex flex-col items-center justify-center p-3 rounded-xl border transition-all no-underline ${
                       isActive 
-                        ? "bg-indigo-600 border-indigo-600 text-white font-extrabold shadow-md scale-[1.02]" 
+                        ? "bg-white border-indigo-500 text-indigo-900 font-extrabold shadow-md scale-[1.03] ring-2 ring-indigo-500/30" 
                         : "bg-white border-gray-200/80 hover:border-indigo-300 text-gray-800 shadow-2xs hover:shadow-xs"
                     }`}
                   >
-                    <div className={`p-2.5 rounded-xl mb-1.5 ${
-                      isActive 
-                        ? "bg-white/20 text-white" 
-                        : "bg-indigo-50/70 text-indigo-600 border border-indigo-100/60"
-                    }`}>
-                      <Icon className="w-5 h-5" />
+                    <div className={`p-2.5 rounded-xl mb-1.5 shadow-sm transition-transform ${gradientClass}`}>
+                      <Icon className="w-5 h-5 text-white stroke-[2.2]" />
                     </div>
                     <span className={`text-[10px] font-bold text-center leading-tight tracking-tight uppercase ${
-                      isActive ? "text-white font-black" : "text-gray-700"
+                      isActive ? "text-indigo-600 font-black" : "text-gray-700"
                     }`}>
                       {item.name}
                     </span>
