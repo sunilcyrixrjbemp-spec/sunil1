@@ -870,7 +870,7 @@ export default function AssetUploadPage() {
 
           {/* Pagination */}
           {totalPages > 1 && (
-            <div className="p-3 border-t border-gray-200 bg-gray-50 flex items-center justify-between">
+            <div className="p-3 border-t border-gray-200 bg-gray-50 flex items-center justify-between mb-16 sm:mb-0">
               <button onClick={() => setCurrentPage(p => Math.max(1, p - 1))} disabled={currentPage <= 1}
                 className="px-3 py-1.5 text-xs font-bold border border-gray-200 rounded bg-white hover:bg-gray-50 cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed flex items-center gap-1 transition-colors">
                 <ChevronLeft className="w-3 h-3" /> Prev

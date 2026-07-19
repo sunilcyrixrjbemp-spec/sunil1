@@ -949,7 +949,7 @@ export default function HomePage() {
                                 <Card
                                   key={exp.id}
                                   onClick={() => handleOpenClaimDetails(exp.id)}
-                                  className="border border-slate-200 bg-[#f8fafc] hover:bg-[#f1f5f9] cursor-pointer transition-colors shadow-xs"
+                                  className="border border-slate-300 bg-[#f1f5f9] hover:bg-slate-200 cursor-pointer transition-colors shadow-sm"
                                   size="small"
                                 >
                                   <div className="flex justify-between items-center pb-2 border-b border-gray-150">
@@ -1190,7 +1190,7 @@ export default function HomePage() {
                                 <Card
                                   key={exp.id}
                                   onClick={() => handleOpenClaimDetails(exp.id)}
-                                  className="border border-gray-200 cursor-pointer active:bg-gray-50 transition-colors shadow-xs"
+                                  className="border border-slate-300 bg-[#f1f5f9] hover:bg-slate-200 cursor-pointer transition-colors shadow-sm"
                                   size="small"
                                 >
                                   <div className="flex justify-between items-center pb-2 border-b border-gray-150">

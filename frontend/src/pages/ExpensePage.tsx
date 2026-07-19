@@ -4749,7 +4749,7 @@ export default function ExpensePage() {
             if (totalItems <= 10) return null;
 
             return (
-              <div className="px-5 py-3.5 border-t border-gray-200 bg-slate-50 flex items-center justify-between text-xs text-gray-500">
+              <div className="px-5 py-3.5 border-t border-gray-200 bg-slate-50 flex items-center justify-between text-xs text-gray-500 mb-16 md:mb-0">
                 <span>Showing {((myClaimsPage - 1) * 10) + 1} to {Math.min(myClaimsPage * 10, totalItems)} of {totalItems} entries</span>
                 <div className="flex gap-2">
                   <button
