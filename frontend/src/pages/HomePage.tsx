@@ -1012,7 +1012,7 @@ export default function HomePage() {
                             </div>
 
                             {/* Mobile Card List View */}
-                            <div className="block md:hidden space-y-3 pb-20">
+                            <div className="block md:hidden space-y-3 pb-2">
                               {filteredPersonalExpenses.map((exp) => (
                                 <Card
                                   key={exp.id}
@@ -1253,7 +1253,7 @@ export default function HomePage() {
                             </div>
 
                             {/* Mobile Card List View */}
-                            <div className="block md:hidden space-y-3 pb-20">
+                            <div className="block md:hidden space-y-3 pb-2">
                               {paginatedTeamExpenses.map((exp) => (
                                 <Card
                                   key={exp.id}
@@ -1304,7 +1304,7 @@ export default function HomePage() {
 
                             {/* Pagination Controls */}
                             {filteredTeamExpenses.length > 100 && (
-                              <div className="flex justify-between items-center bg-gray-50 border border-gray-200 rounded-lg p-2.5 mt-4 mb-36 lg:mb-0 shadow-2xs">
+                              <div className="flex justify-between items-center bg-gray-50 border border-gray-200 rounded-lg p-2.5 mt-4 mb-2 lg:mb-0 shadow-2xs">
                                 <Button
                                   disabled={teamPage === 1}
                                   onClick={() => setTeamPage(prev => Math.max(prev - 1, 1))}
@@ -1326,9 +1326,6 @@ export default function HomePage() {
                                 </Button>
                               </div>
                             )}
-
-                            {/* Extra bottom spacer on mobile to keep pagination clear of bottom nav */}
-                            <div className="h-20 w-full block lg:hidden" />
                           </>
                         )}
                       </div>
@@ -1630,6 +1627,53 @@ export default function HomePage() {
                 )}
               </div>
             </div>
+
+            {/* Deduction Amount Badge & Approver Remark Section */}
+            {(() => {
+              let rawDeduction = claimDetails.deduction_amount;
+              if (rawDeduction === undefined || rawDeduction === null) {
+                if (claimDetails.original_amount && claimDetails.amount && parseFloat(claimDetails.original_amount) > parseFloat(claimDetails.amount)) {
+                  rawDeduction = parseFloat(claimDetails.original_amount) - parseFloat(claimDetails.amount);
+                } else {
+                  rawDeduction = 0;
+                }
+              }
+              const deductionAmt = typeof rawDeduction === "number" ? rawDeduction : parseFloat(rawDeduction || 0);
+              const hasDeduction = deductionAmt > 0;
+
+              let remarkText = (claimDetails.approver_remark || claimDetails.remark || claimDetails.deduction_remark || "").trim();
+              if (!remarkText && claimDetails.approvals && Array.isArray(claimDetails.approvals)) {
+                const appWithComment = claimDetails.approvals.find((a: any) => (a.comments || a.remark || "").trim());
+                if (appWithComment) {
+                  remarkText = (appWithComment.comments || appWithComment.remark || "").trim();
+                }
+              }
+
+              if (!hasDeduction && !remarkText) return null;
+
+              return (
+                <div className="p-3 bg-amber-50/90 border border-amber-300 rounded-lg space-y-2 text-xs text-amber-950 shadow-2xs">
+                  {hasDeduction && (
+                    <div className="flex items-center gap-2">
+                      <span className="inline-flex items-center px-2.5 py-1 rounded font-black text-xs bg-rose-600 text-white shadow-2xs uppercase tracking-wider">
+                        Deduction: ₹{deductionAmt.toLocaleString()}
+                      </span>
+                    </div>
+                  )}
+
+                  {remarkText && (
+                    <div className="space-y-1 pt-0.5">
+                      <span className="text-[9px] font-extrabold uppercase tracking-wider text-amber-900 block opacity-85">
+                        Remark:
+                      </span>
+                      <p className="font-semibold text-xs text-slate-800 leading-relaxed bg-white p-2.5 rounded border border-amber-200 shadow-2xs">
+                        "{remarkText}"
+                      </p>
+                    </div>
+                  )}
+                </div>
+              );
+            })()}
 
 {/* Legs Table */}
             {claimDetails.category !== "Limit Request" && claimDetails.itineraries && claimDetails.itineraries.length > 0 && (

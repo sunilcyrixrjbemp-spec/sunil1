@@ -1661,6 +1661,16 @@ export async function handleGetExpenseDetails(request, env, params, query, user)
       original_oth_amount: parseFloat(i.original_other_amount || i.other_amount || 0.0),
       original_local_purchase: parseFloat(i.original_local_purchase || i.local_purchase || 0.0)
     })),
+    deduction_amount: expense.deduction_amount !== undefined && expense.deduction_amount !== null
+      ? parseFloat(expense.deduction_amount)
+      : (expense.deduction_amt !== undefined && expense.deduction_amt !== null
+          ? parseFloat(expense.deduction_amt)
+          : (expense.original_amount && expense.amount && parseFloat(expense.original_amount) > parseFloat(expense.amount)
+              ? parseFloat((parseFloat(expense.original_amount) - parseFloat(expense.amount)).toFixed(2))
+              : 0)),
+    remark: expense.remark || expense.approver_remark || expense.deduction_remark || expense.comments || (approvalsList.find(a => a.comments || a.remark)?.comments) || "",
+    approver_remark: expense.approver_remark || expense.remark || expense.deduction_remark || expense.comments || (approvalsList.find(a => a.comments || a.remark)?.comments) || "",
+    deduction_remark: expense.deduction_remark || expense.approver_remark || expense.remark || expense.comments || "",
     created_at: expense.created_at,
     updated_at: expense.updated_at,
     approvals: approvalsList,

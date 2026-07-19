@@ -563,7 +563,7 @@ export default function ProfilePage() {
 
   if (isMobile) {
     return (
-      <div className="space-y-4 pb-20 text-gray-800 text-xs animate-fadeIn" style={{ fontFamily: "'Plus Jakarta Sans', sans-serif" }}>
+      <div className="space-y-4 pb-2 text-gray-800 text-xs animate-fadeIn" style={{ fontFamily: "'Plus Jakarta Sans', sans-serif" }}>
         
         {/* Profile Card Header Banner */}
         <div className="bg-gradient-to-br from-slate-900 via-slate-800 to-indigo-950 text-white border border-slate-700/50 rounded-2xl shadow-xl overflow-hidden text-center relative p-6 animate-scaleIn">

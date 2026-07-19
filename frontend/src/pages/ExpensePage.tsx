@@ -2624,7 +2624,7 @@ export default function ExpensePage() {
 
   return (
     <>
-      <div className="space-y-6 animate-fadeIn text-[#212529] pb-24 text-xs font-sans">
+      <div className="space-y-6 animate-fadeIn text-[#212529] pb-2 text-xs font-sans">
       
       {/* Header Info */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between border-b border-slate-100 pb-3 gap-2">
@@ -4749,7 +4749,7 @@ export default function ExpensePage() {
             if (totalItems <= 10) return null;
 
             return (
-              <div className="px-5 py-3.5 border-t border-gray-200 bg-slate-50 flex items-center justify-between text-xs text-gray-500 mb-36 md:mb-0">
+              <div className="px-5 py-3.5 border-t border-gray-200 bg-slate-50 flex items-center justify-between text-xs text-gray-500 mb-2 md:mb-0">
                 <span>Showing {((myClaimsPage - 1) * 10) + 1} to {Math.min(myClaimsPage * 10, totalItems)} of {totalItems} entries</span>
                 <div className="flex gap-2">
                   <button
@@ -5183,6 +5183,53 @@ export default function ExpensePage() {
                       )}
                     </div>
                   </div>
+
+                  {/* Deduction Amount Badge & Approver Remark Section */}
+                  {(() => {
+                    let rawDeduction = selectedClaim.deduction_amount;
+                    if (rawDeduction === undefined || rawDeduction === null) {
+                      if (selectedClaim.original_amount && selectedClaim.amount && parseFloat(selectedClaim.original_amount) > parseFloat(selectedClaim.amount)) {
+                        rawDeduction = parseFloat(selectedClaim.original_amount) - parseFloat(selectedClaim.amount);
+                      } else {
+                        rawDeduction = 0;
+                      }
+                    }
+                    const deductionAmt = typeof rawDeduction === "number" ? rawDeduction : parseFloat(rawDeduction || 0);
+                    const hasDeduction = deductionAmt > 0;
+
+                    let remarkText = (selectedClaim.approver_remark || selectedClaim.remark || selectedClaim.deduction_remark || "").trim();
+                    if (!remarkText && selectedClaim.approvals && Array.isArray(selectedClaim.approvals)) {
+                      const appWithComment = selectedClaim.approvals.find((a: any) => (a.comments || a.remark || "").trim());
+                      if (appWithComment) {
+                        remarkText = (appWithComment.comments || appWithComment.remark || "").trim();
+                      }
+                    }
+
+                    if (!hasDeduction && !remarkText) return null;
+
+                    return (
+                      <div className="p-3 bg-amber-50/90 border border-amber-300 rounded-lg space-y-2 text-xs text-amber-950 shadow-2xs">
+                        {hasDeduction && (
+                          <div className="flex items-center gap-2">
+                            <span className="inline-flex items-center px-2.5 py-1 rounded font-black text-xs bg-rose-600 text-white shadow-2xs uppercase tracking-wider">
+                              Deduction: ₹{deductionAmt.toLocaleString()}
+                            </span>
+                          </div>
+                        )}
+
+                        {remarkText && (
+                          <div className="space-y-1 pt-0.5">
+                            <span className="text-[9px] font-extrabold uppercase tracking-wider text-amber-900 block opacity-85">
+                              Remark:
+                            </span>
+                            <p className="font-semibold text-xs text-slate-800 leading-relaxed bg-white p-2.5 rounded border border-amber-200 shadow-2xs">
+                              "{remarkText}"
+                            </p>
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })()}
 
                   {/* Legs Table */}
                   {selectedClaim.category !== "Limit Request" && selectedClaim.itineraries && selectedClaim.itineraries.length > 0 && (

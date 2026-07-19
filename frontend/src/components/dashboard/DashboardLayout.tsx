@@ -490,7 +490,7 @@ export default function DashboardLayout() {
       </aside>
 
       {/* MAIN CONTAINER WORKSPACE */}
-      <div className="flex-1 flex flex-col min-h-screen min-w-0">
+      <div className="flex-1 flex flex-col min-w-0 min-h-0">
         
         {/* TOP NAVBAR - ADMINLTE WHITE NAVBAR */}
         <header className="h-14 bg-slate-900 border-b border-slate-800 flex items-center justify-between px-4 sticky top-0 z-40 shrink-0 shadow-md">
@@ -620,7 +620,7 @@ export default function DashboardLayout() {
         )}
 
         {/* MAIN AREA WORKSPACE */}
-        <main className="flex-1 p-2 sm:p-4 pb-20 lg:pb-4 overflow-y-auto min-w-0 overflow-x-hidden w-full">
+        <main className="flex-1 p-2 sm:p-4 pb-16 lg:pb-4 overflow-y-auto min-w-0 overflow-x-hidden w-full">
           {hasAccess ? (
             <Outlet />
           ) : (
