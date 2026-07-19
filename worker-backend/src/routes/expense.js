@@ -109,11 +109,18 @@ export function computeBaseLocPolicy(baseReportingLocation, itineraries) {
   if (!hasVisitedBase) return { isBaseLocOnly: false, isDaAllowed: true, baseLocations };
 
   // Must NOT have visited any non-base official facility (dropdown selected)
+  // IMPORTANT: Custom-typed entries that are residence locations (home/room/hotel) must be
+  // exempted — they are NOT official dropdown facility selections.
+  const RESIDENCE_WORDS_CHK = ["home", "residence", "room", "quarter", "house", "flat", "pg", "stay", "village", "vill", "rent", "address", "dera", "deri", "hotel"];
   const visitedNonBase = itineraries.some(leg => {
     const f = (leg.from || "").trim().toLowerCase();
     const t = (leg.to || "").trim().toLowerCase();
-    if (!leg.from_custom && !matchesBase(f, baseLocations)) return true;
-    if (!leg.to_custom && !matchesBase(t, baseLocations)) return true;
+    // If the leg is a manual (custom) entry AND contains a residence word → it is a home/room
+    // location, NOT an official facility → do not flag it as "non-base official facility"
+    const fromIsResidenceText = RESIDENCE_WORDS_CHK.some(w => f.includes(w));
+    const toIsResidenceText   = RESIDENCE_WORDS_CHK.some(w => t.includes(w));
+    if (!leg.from_custom && !matchesBase(f, baseLocations) && !fromIsResidenceText) return true;
+    if (!leg.to_custom   && !matchesBase(t, baseLocations) && !toIsResidenceText)   return true;
     return false;
   });
 
@@ -152,7 +159,7 @@ export function checkIsCommuteLeg(leg, baseLocations, index, totalLegs) {
   const f = (leg.from || "").trim().toLowerCase();
   const t = (leg.to || "").trim().toLowerCase();
 
-  const RESIDENCE_WORDS = ["home", "residence", "room", "quarter", "house", "flat", "pg", "stay", "village", "vill", "rent", "address", "dera", "deri", "local"];
+  const RESIDENCE_WORDS = ["home", "residence", "room", "quarter", "house", "flat", "pg", "stay", "village", "vill", "rent", "address", "dera", "deri", "local", "hotel"];
   const WORK_WORDS = ["market", "bazaar", "bazar", "mandi", "haat", "station", "railway", "bus stand", "bus stop", "bus depot", "bus adda", "rly", "tower", "office", "repair", "collection", "hospital", "chc", "phc", "dh", "sdh", "clinic", "lab", "store", "shop", "vendor", "customer", "site", "service", "work"];
 
   const fromHasResidenceWord = RESIDENCE_WORDS.some(w => f.includes(w));
@@ -163,16 +170,24 @@ export function checkIsCommuteLeg(leg, baseLocations, index, totalLegs) {
   const isFirstLeg = index === 0;
   const isLastLeg  = (totalLegs !== undefined && index !== undefined) ? (index === totalLegs - 1) : false;
 
-  const fromIsResidence = !!leg.from_custom && (fromHasResidenceWord || (isFirstLeg && !fromHasWorkWord));
-  const toIsResidence   = !!leg.to_custom   && (toHasResidenceWord || (isLastLeg && !toHasWorkWord));
+  // FIX: Residence detection uses content (residence words) as PRIMARY signal.
+  // from_custom flag is a BOOSTER — helps in ambiguous cases but is NOT required.
+  // This ensures Leg 1 "My Home, Jodhpur" (from_custom may be false) is still detected as residence.
+  const fromIsResidence = fromHasResidenceWord
+    || (!!leg.from_custom && (fromHasResidenceWord || (isFirstLeg && !fromHasWorkWord)))
+    || (isFirstLeg && !fromHasWorkWord && !matchesBase(f, baseLocations) && f.length > 0);
+  const toIsResidence   = toHasResidenceWord
+    || (!!leg.to_custom   && (toHasResidenceWord   || (isLastLeg  && !toHasWorkWord)))
+    || (isLastLeg  && !toHasWorkWord   && !matchesBase(t, baseLocations) && t.length > 0);
 
   const fromIsBase = matchesBase(f, baseLocations);
   const toIsBase   = matchesBase(t, baseLocations);
 
+  // Edge-case: a location cannot be both residence AND base at the same time
   if (fromIsResidence && fromIsBase) return false;
-  if (toIsResidence && toIsBase) return false;
-  if (fromIsResidence && toIsBase) return true;
-  if (fromIsBase && toIsResidence) return true;
+  if (toIsResidence   && toIsBase)   return false;
+  if (fromIsResidence && toIsBase)   return true;  // Home → Base
+  if (fromIsBase      && toIsResidence) return true;  // Base → Home
   return false;
 }
 

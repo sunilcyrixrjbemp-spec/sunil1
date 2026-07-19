@@ -1587,13 +1587,22 @@ export default function ExpensePage() {
   /**
    * True only when this leg is a direct commute between residence and base hospital.
    * Mirrors backend checkIsCommuteLeg().
+   *
+   * FIX: Residence is detected via content (residence words) as PRIMARY signal.
+   * from_custom is a BOOSTER — helps in ambiguous cases but is NOT required.
+   * This ensures Leg 1 "My Home, Jodhpur" (from_custom may be undefined/false)
+   * is correctly identified as a residence for commute detection.
    */
   const isCommuteLeg = (leg: ItineraryLeg, baseLocations: string[], index?: number, totalLegs?: number): boolean => {
     const f = (leg.from || "").trim().toLowerCase();
     const t = (leg.to || "").trim().toLowerCase();
 
-    const RESIDENCE_WORDS = ["home", "residence", "room", "quarter", "house", "flat", "pg", "stay", "village", "vill", "rent", "address", "dera", "deri", "local"];
-    const WORK_WORDS = ["market", "bazaar", "bazar", "mandi", "haat", "station", "railway", "bus stand", "bus stop", "bus depot", "bus adda", "rly", "tower", "office", "repair", "collection", "hospital", "chc", "phc", "dh", "sdh", "clinic", "lab", "store", "shop", "vendor", "customer", "site", "service", "work"];
+    const RESIDENCE_WORDS = ["home", "residence", "room", "quarter", "house", "flat", "pg", "stay",
+      "village", "vill", "rent", "address", "dera", "deri", "local", "hotel"];
+    const WORK_WORDS = ["market", "bazaar", "bazar", "mandi", "haat", "station", "railway",
+      "bus stand", "bus stop", "bus depot", "bus adda", "rly", "tower", "office", "repair",
+      "collection", "hospital", "chc", "phc", "dh", "sdh", "clinic", "lab", "store", "shop",
+      "vendor", "customer", "site", "service", "work"];
 
     const fromHasResidenceWord = RESIDENCE_WORDS.some(w => f.includes(w));
     const toHasResidenceWord   = RESIDENCE_WORDS.some(w => t.includes(w));
@@ -1603,16 +1612,25 @@ export default function ExpensePage() {
     const isFirstLeg = index === 0;
     const isLastLeg  = (totalLegs !== undefined && index !== undefined) ? (index === totalLegs - 1) : false;
 
-    const fromIsResidence = !!leg.from_custom && (fromHasResidenceWord || (isFirstLeg && !fromHasWorkWord));
-    const toIsResidence   = !!leg.to_custom   && (toHasResidenceWord || (isLastLeg && !toHasWorkWord));
+    // Residence detection: content-first (from_custom is a booster, not a requirement)
+    const fromIsResidence =
+      fromHasResidenceWord
+      || (!!leg.from_custom && (fromHasResidenceWord || (isFirstLeg && !fromHasWorkWord)))
+      || (isFirstLeg && !fromHasWorkWord && !matchesBase(f, baseLocations) && f.length > 0);
+    const toIsResidence =
+      toHasResidenceWord
+      || (!!leg.to_custom   && (toHasResidenceWord   || (isLastLeg  && !toHasWorkWord)))
+      || (isLastLeg  && !toHasWorkWord   && !matchesBase(t, baseLocations) && t.length > 0);
 
     const fromIsBase = matchesBase(f, baseLocations);
     const toIsBase   = matchesBase(t, baseLocations);
 
-    // Edge-case: residence AND base at same time — not a commute
+    // Edge-case: a location cannot be both residence AND base at the same time
     if (fromIsResidence && fromIsBase) return false;
     if (toIsResidence   && toIsBase)   return false;
-    return (fromIsResidence && toIsBase) || (fromIsBase && toIsResidence);
+    if (fromIsResidence && toIsBase)   return true;  // Home → Base
+    if (fromIsBase      && toIsResidence) return true;  // Base → Home
+    return false;
   };
 
   const isBaseLocationOnlyTravel = (legs: ItineraryLeg[] = itineraries) => {
@@ -1622,32 +1640,40 @@ export default function ExpensePage() {
       : [];
     if (baseLocations.length === 0) return false;
 
-    // EXCLUSION: If any leg in the day has travel_type === "Outdoor", policy is completely disabled
+    // EXCLUSION: If any leg has travel_type === "Outdoor", policy is completely disabled
     const hasOutdoorLeg = legs.some(leg => (leg.travel_type || "").trim().toLowerCase() === "outdoor");
     if (hasOutdoorLeg) return false;
 
     // Must have visited at least one base location (dropdown or manual typing)
-    const hasVisitedBaseLocation = legs.some(leg => 
+    const hasVisitedBaseLocation = legs.some(leg =>
       matchesBase(leg.from || "", baseLocations) ||
       matchesBase(leg.to || "", baseLocations)
     );
-
     if (!hasVisitedBaseLocation) return false;
 
-    // Must NOT have visited any other official dropdown facility
+    // Must NOT have visited any non-base OFFICIAL DROPDOWN facility.
+    // FIX: Manual text entries containing residence words (home/room/hotel) must be
+    // exempted — they are NOT official dropdown facility selections.
+    // Previously "My Home" in Leg 1 (from_custom=false) was incorrectly treated as
+    // a non-base official facility, making isBaseLocOnly return false.
+    const RESIDENCE_WORDS_CHK = ["home", "residence", "room", "quarter", "house", "flat", "pg",
+      "stay", "village", "vill", "rent", "address", "dera", "deri", "hotel"];
+
     const visitedNonBaseOfficialFacility = legs.some(leg => {
       const fromLoc = (leg.from || "").trim().toLowerCase();
-      const toLoc = (leg.to || "").trim().toLowerCase();
+      const toLoc   = (leg.to   || "").trim().toLowerCase();
       const fromCustom = !!leg.from_custom;
-      const toCustom = !!leg.to_custom;
-
-      if (!fromCustom && !matchesBase(fromLoc, baseLocations)) return true;
-      if (!toCustom && !matchesBase(toLoc, baseLocations)) return true;
+      const toCustom   = !!leg.to_custom;
+      const fromIsResidenceText = RESIDENCE_WORDS_CHK.some(w => fromLoc.includes(w));
+      const toIsResidenceText   = RESIDENCE_WORDS_CHK.some(w => toLoc.includes(w));
+      if (!fromCustom && !matchesBase(fromLoc, baseLocations) && !fromIsResidenceText) return true;
+      if (!toCustom   && !matchesBase(toLoc,   baseLocations) && !toIsResidenceText)   return true;
       return false;
     });
 
     return !visitedNonBaseOfficialFacility;
   };
+
 
   const isDailyAllowanceAllowed = (legs: ItineraryLeg[] = itineraries) => {
     if (!isBaseLocationOnlyTravel(legs)) return true;
