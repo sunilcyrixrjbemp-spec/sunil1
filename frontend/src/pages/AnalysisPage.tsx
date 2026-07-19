@@ -5,6 +5,33 @@ import { ResponsiveLine } from "@nivo/line";
 import { expenseService } from "../services/expenseService";
 import { authService } from "../services/authService";
 import Loader from "../components/common/Loader";
+import {
+  Card,
+  Row,
+  Col,
+  Statistic,
+  Select,
+  Button,
+  Radio,
+  Typography,
+  Space,
+  Input,
+  Progress
+} from "antd";
+import {
+  FilterOutlined,
+  UserOutlined,
+  TeamOutlined,
+  CloseOutlined,
+  FileExcelOutlined,
+  DashboardOutlined,
+  FundOutlined,
+  GlobalOutlined,
+  CheckOutlined,
+  InfoCircleOutlined
+} from "@ant-design/icons";
+
+const { Title, Text } = Typography;
 
 
 const GALLERY_COLORS = ["#2f5bb7", "#2b7d50", "#d28b2a", "#854aa5", "#d83b01", "#00a2ad", "#e81123"];
@@ -16,12 +43,6 @@ const months = [
 
 export default function AnalysisPage() {
   const cleanZone = (z: string) => (z || "").trim().replace(/\s*[Zz]one\s*$/i, "").toLowerCase();
-  const [isMobile, setIsMobile] = useState(window.innerWidth < 768);
-  useEffect(() => {
-    const handleResize = () => setIsMobile(window.innerWidth < 768);
-    window.addEventListener("resize", handleResize);
-    return () => window.removeEventListener("resize", handleResize);
-  }, []);
 
   const [myExpenses, setMyExpenses] = useState<any[]>(() => {
     const currentUser = authService.getCurrentUser();
@@ -536,1021 +557,771 @@ export default function AnalysisPage() {
 
   if (loading) {
     return (
-      <div className="py-20">
+      <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: '60vh' }}>
         <Loader message="Loading analysis dashboard..." />
       </div>
     );
   }
 
-  if (isMobile) {
-    return (
-      <div className="space-y-4 text-gray-800 p-3 pb-36" style={{ fontFamily: "'Plus Jakarta Sans', sans-serif" }}>
-        {/* Page Header */}
-        <div className="flex justify-between items-center pb-1">
-          <div>
-            <h2 className="text-sm font-extrabold text-gray-900 uppercase tracking-wide">Expense Analytics</h2>
-            <p className="text-gray-500 text-[9px]">Mobile Dashboard & Insights</p>
-          </div>
-          
+  return (
+    <div className="space-y-4 p-4 lg:p-6 pb-36 md:pb-6" style={{ fontFamily: "'Plus Jakarta Sans', sans-serif" }}>
+      
+      {/* Page Header */}
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 pb-2 border-b border-gray-100">
+        <div>
+          <Title level={4} style={{ margin: 0, fontSize: "18px", color: "#1F2937" }} className="uppercase font-bold tracking-wider flex items-center gap-2">
+            <DashboardOutlined className="text-indigo-600" /> Expense Analysis
+          </Title>
+          <Text type="secondary" className="text-xs">Real-time expense data visualization & insights</Text>
+        </div>
+
+        {/* Actions Toolbar */}
+        <div className="flex flex-wrap items-center gap-2">
           {isReviewer && (
-            <div className="flex items-center gap-1.5">
-              <button
-                type="button"
-                onClick={downloadCSV}
-                className="px-2 py-1 text-[9px] font-black uppercase rounded border border-green-300 bg-green-50 text-green-700 cursor-pointer shadow-xs flex items-center justify-center gap-1"
-                title="Download CSV Report"
-              >
-                <i className="fas fa-file-excel"></i> CSV
-              </button>
-              <button
-                type="button"
-                onClick={() => setViewMode(viewMode === "my" ? "team" : "my")}
-                className="px-2 py-1 text-[9px] font-black uppercase rounded border border-[#a5d8e8] bg-[#a5d8e8]/10 text-slate-700 cursor-pointer shadow-xs"
-              >
-                {viewMode === "my" ? "Team" : "Self"}
-              </button>
-            </div>
+            <Radio.Group
+              value={viewMode}
+              onChange={(e) => setViewMode(e.target.value as "my" | "team")}
+              optionType="button"
+              buttonStyle="solid"
+              size="middle"
+            >
+              <Radio.Button value="my">
+                <Space><UserOutlined />My Data</Space>
+              </Radio.Button>
+              <Radio.Button value="team">
+                <Space><TeamOutlined />Team Data</Space>
+              </Radio.Button>
+            </Radio.Group>
           )}
+          <Button
+            type="primary"
+            icon={<FileExcelOutlined />}
+            style={{ backgroundColor: "#10b981", borderColor: "#10b981" }}
+            onClick={downloadCSV}
+            disabled={activeExpenses.length === 0}
+            className="font-bold text-xs"
+          >
+            Export CSV
+          </Button>
         </div>
+      </div>
 
-        {/* Filters — all in one compact row */}
-        <div className="bg-white border border-gray-200 rounded-xl p-2.5 shadow-xs">
-          <div className="grid grid-cols-3 gap-1.5 w-full">
-            <select
-              value={selectedMonth}
-              onChange={(e) => setSelectedMonth(Number(e.target.value))}
-              className="w-full border border-gray-300 rounded-lg px-1.5 py-1 text-[9px] font-black bg-white text-gray-800 focus:outline-none focus:border-[#a5d8e8]"
-            >
-              {months.map((m, i) => (
-                <option key={m} value={i}>{m.slice(0, 3)}</option>
-              ))}
-            </select>
-            <select
-              value={selectedYear}
-              onChange={(e) => setSelectedYear(Number(e.target.value))}
-              className="w-full border border-gray-300 rounded-lg px-1.5 py-1 text-[9px] font-black bg-white text-gray-800 focus:outline-none focus:border-[#a5d8e8]"
-            >
-              {availableYears.map(y => (
-                <option key={y} value={y}>{y}</option>
-              ))}
-            </select>
-            <select
-              value={selectedStatus}
-              onChange={(e) => setSelectedStatus(e.target.value)}
-              className="w-full border border-gray-300 rounded-lg px-1.5 py-1 text-[9px] font-black bg-white text-gray-800 focus:outline-none focus:border-[#a5d8e8]"
-            >
-              <option value="all">All Status</option>
-              <option value="approved">Approved</option>
-              <option value="pending">Pending</option>
-              <option value="rejected">Rejected</option>
-            </select>
-          </div>
+      {/* Filters Panel Card */}
+      <Card size="small" className="border border-gray-200 shadow-xs">
+        <Row gutter={[12, 12]} align="middle">
+          {/* Header */}
+          <Col xs={24} className="flex items-center gap-1.5 text-gray-400 font-bold mb-1 lg:mb-0">
+            <FilterOutlined style={{ fontSize: 13 }} />
+            <span className="text-[10px] uppercase tracking-wider">Filters</span>
+          </Col>
 
+          {/* Dynamic selectors */}
           {viewMode === "team" && isReviewer && (
-            <div className="space-y-1.5 mt-1.5">
-              {isReviewer && (
-                <select
+            <>
+              {/* Zone Filter */}
+              <Col xs={12} sm={8} md={6} lg={4}>
+                <span className="text-[9px] font-bold text-gray-400 uppercase block mb-1">Zone</span>
+                <Select
                   value={selectedZone}
-                  onChange={(e) => setSelectedZone(e.target.value)}
-                  className="w-full border border-gray-300 rounded-lg px-1.5 py-1 text-[9px] font-bold bg-white text-gray-800 focus:outline-none focus:border-[#a5d8e8]"
-                >
-                  <option value="all">All Zones</option>
-                  {uniqueZones.map(z => (
-                    <option key={z} value={z}>{z}</option>
-                  ))}
-                </select>
-              )}
-              <div className="flex gap-1.5">
-                <select
+                  onChange={setSelectedZone}
+                  style={{ width: "100%" }}
+                  options={[
+                    { label: "All Zones", value: "all" },
+                    ...uniqueZones.map(z => ({ label: z, value: z }))
+                  ]}
+                />
+              </Col>
+
+              {/* District Filter */}
+              <Col xs={12} sm={8} md={6} lg={4}>
+                <span className="text-[9px] font-bold text-gray-400 uppercase block mb-1">District</span>
+                <Select
                   value={selectedDistrict}
-                  onChange={(e) => setSelectedDistrict(e.target.value)}
-                  className="flex-1 border border-gray-300 rounded-lg px-1.5 py-1 text-[9px] font-bold bg-white text-gray-800 focus:outline-none focus:border-[#a5d8e8]"
-                >
-                  <option value="all">All Districts</option>
-                  {filterOptions.districts.map(d => (
-                    <option key={d} value={d}>{d}</option>
-                  ))}
-                </select>
-                <select
+                  onChange={setSelectedDistrict}
+                  style={{ width: "100%" }}
+                  options={[
+                    { label: "All Districts", value: "all" },
+                    ...filterOptions.districts.map(d => ({ label: d, value: d }))
+                  ]}
+                />
+              </Col>
+
+              {/* Engineer Filter */}
+              <Col xs={24} sm={8} md={6} lg={4}>
+                <span className="text-[9px] font-bold text-gray-400 uppercase block mb-1">Engineer</span>
+                <Select
                   value={selectedEngineer}
-                  onChange={(e) => setSelectedEngineer(e.target.value)}
-                  className="flex-1 border border-gray-300 rounded-lg px-1.5 py-1 text-[9px] font-bold bg-white text-gray-800 focus:outline-none focus:border-[#a5d8e8]"
-                >
-                  <option value="all">All Engineers</option>
-                  {filterOptions.engineers.map(name => (
-                    <option key={name} value={name}>{name}</option>
-                  ))}
-                </select>
-              </div>
-            </div>
+                  onChange={setSelectedEngineer}
+                  style={{ width: "100%" }}
+                  options={[
+                    { label: "All Engineers", value: "all" },
+                    ...filterOptions.engineers.map(name => ({ label: name, value: name }))
+                  ]}
+                />
+              </Col>
+            </>
           )}
-        </div>
 
-        {/* Stats Grid */}
-        {count === 0 ? (
-          <div className="bg-white border border-gray-200 rounded-xl p-8 text-center text-gray-400">
-            <span className="text-xs font-bold block mb-1">No claims in this selection</span>
-            <span className="text-[10px]">Please update the month/year filter.</span>
-          </div>
-        ) : (
-          <>
-            <div className="grid grid-cols-3 gap-2">
-              <div className="bg-white border border-gray-200 rounded-xl p-2 flex flex-col items-center text-center shadow-xs">
-                <div className="w-7 h-7 rounded-full bg-emerald-50 text-emerald-600 flex items-center justify-center font-black text-xs mb-1">₹</div>
-                <span className="text-[7px] uppercase tracking-wider text-gray-400 block">Total Spend</span>
-                <span className="text-[10px] font-black font-mono leading-none block mt-0.5">₹{totalAmount.toLocaleString()}</span>
-              </div>
-              <div className="bg-white border border-gray-200 rounded-xl p-2 flex flex-col items-center text-center shadow-xs">
-                <div className="w-7 h-7 rounded-full bg-blue-50 text-blue-600 flex items-center justify-center font-black text-xs mb-1">#</div>
-                <span className="text-[7px] uppercase tracking-wider text-gray-400 block">Claims</span>
-                <span className="text-[10px] font-black font-mono leading-none block mt-0.5">{count}</span>
-              </div>
-              <div className="bg-white border border-gray-200 rounded-xl p-2 flex flex-col items-center text-center shadow-xs">
-                <div className="w-7 h-7 rounded-full bg-amber-50 text-amber-600 flex items-center justify-center font-black text-xs mb-1">Avg</div>
-                <span className="text-[7px] uppercase tracking-wider text-gray-400 block">Avg Claim</span>
-                <span className="text-[10px] font-black font-mono leading-none block mt-0.5">₹{avgValue.toLocaleString()}</span>
-              </div>
-              <div className="bg-white border border-gray-200 rounded-xl p-2 flex flex-col items-center text-center shadow-xs">
-                <div className="w-7 h-7 rounded-full bg-indigo-50 text-indigo-600 flex items-center justify-center font-black text-xs mb-1">☎</div>
-                <span className="text-[7px] uppercase tracking-wider text-gray-400 block">Calls Done</span>
-                <span className="text-[10px] font-black font-mono leading-none block mt-0.5">{activityStats.callsCompleted}/{activityStats.callsAssigned}</span>
-              </div>
-              <div className="bg-white border border-gray-200 rounded-xl p-2 flex flex-col items-center text-center shadow-xs">
-                <div className="w-7 h-7 rounded-full bg-teal-50 text-teal-600 flex items-center justify-center font-black text-xs mb-1">PMS</div>
-                <span className="text-[7px] uppercase tracking-wider text-gray-400 block">PMS Done</span>
-                <span className="text-[10px] font-black font-mono leading-none block mt-0.5">{activityStats.pmsCount}</span>
-              </div>
-              <div className="bg-white border border-gray-200 rounded-xl p-2 flex flex-col items-center text-center shadow-xs">
-                <div className="w-7 h-7 rounded-full bg-purple-50 text-purple-600 flex items-center justify-center font-black text-xs mb-1">Tag</div>
-                <span className="text-[7px] uppercase tracking-wider text-gray-400 block">Tag+Calib</span>
-                <span className="text-[10px] font-black font-mono leading-none block mt-0.5">{activityStats.assetTaggingCount + activityStats.calibrationCount}</span>
-              </div>
+          {/* Month Filter */}
+          <Col xs={12} sm={8} md={6} lg={3}>
+            <span className="text-[9px] font-bold text-gray-400 uppercase block mb-1">Month</span>
+            <Select
+              value={selectedMonth}
+              onChange={setSelectedMonth}
+              disabled={!!startDate || !!endDate}
+              style={{ width: "100%" }}
+              options={months.map((m, i) => ({ label: m, value: i }))}
+            />
+          </Col>
+
+          {/* Year Filter */}
+          <Col xs={12} sm={8} md={6} lg={3}>
+            <span className="text-[9px] font-bold text-gray-400 uppercase block mb-1">Year</span>
+            <Select
+              value={selectedYear}
+              onChange={setSelectedYear}
+              disabled={!!startDate || !!endDate}
+              style={{ width: "100%" }}
+              options={availableYears.map(y => ({ label: String(y), value: y }))}
+            />
+          </Col>
+
+          {/* Status Filter */}
+          <Col xs={12} sm={8} md={6} lg={3}>
+            <span className="text-[9px] font-bold text-gray-400 uppercase block mb-1">Status</span>
+            <Select
+              value={selectedStatus}
+              onChange={setSelectedStatus}
+              style={{ width: "100%" }}
+              options={[
+                { label: "All Statuses", value: "all" },
+                { label: "Approved", value: "approved" },
+                { label: "Pending", value: "pending" },
+                { label: "Rejected", value: "rejected" }
+              ]}
+            />
+          </Col>
+
+          {/* Date Range Filters */}
+          <Col xs={24} md={12} lg={6}>
+            <span className="text-[9px] font-bold text-gray-400 uppercase block mb-1">Custom Date Range</span>
+            <div className="flex items-center gap-2">
+              <Input
+                type="date"
+                value={startDate}
+                min={minDateStr}
+                max={maxDateStr}
+                onChange={(e) => setStartDate(e.target.value)}
+                style={{ width: "100%" }}
+              />
+              <span className="text-gray-400 text-xs">to</span>
+              <Input
+                type="date"
+                value={endDate}
+                min={minDateStr}
+                max={maxDateStr}
+                onChange={(e) => setEndDate(e.target.value)}
+                style={{ width: "100%" }}
+              />
+              {(startDate || endDate) && (
+                <Button
+                  type="text"
+                  danger
+                  icon={<CloseOutlined />}
+                  onClick={() => { setStartDate(""); setEndDate(""); }}
+                />
+              )}
             </div>
+          </Col>
+        </Row>
+      </Card>
 
-            {/* Breakdown Lists */}
+      {/* Key Stats Grid */}
+      <Row gutter={[12, 12]}>
+        {/* Card 1: Total Claims */}
+        <Col xs={12} sm={8} md={6} lg={4} xl={3.4}>
+          <Card size="small" bordered={false} className="shadow-xs border border-gray-150 rounded-xl">
+            <Statistic
+              title={<span className="text-[9px] font-bold uppercase tracking-wider text-gray-400">Total Claims</span>}
+              value={count}
+              valueStyle={{ fontSize: "16px", fontWeight: 800, color: "#1F2937", fontFamily: "monospace" }}
+              prefix={<FileExcelOutlined className="text-blue-500 mr-1.5" />}
+            />
+          </Card>
+        </Col>
+
+        {/* Card 2: Total Amount */}
+        <Col xs={12} sm={8} md={6} lg={4} xl={3.4}>
+          <Card size="small" bordered={false} className="shadow-xs border border-gray-150 rounded-xl">
+            <Statistic
+              title={<span className="text-[9px] font-bold uppercase tracking-wider text-gray-400">Total Spend</span>}
+              value={totalAmount}
+              valueStyle={{ fontSize: "16px", fontWeight: 800, color: "#1F2937", fontFamily: "monospace" }}
+              prefix={<span className="text-emerald-500 font-bold mr-1">₹</span>}
+              formatter={(val) => Number(val).toLocaleString()}
+            />
+          </Card>
+        </Col>
+
+        {/* Card 3: Average Claim */}
+        <Col xs={12} sm={8} md={6} lg={4} xl={3.4}>
+          <Card size="small" bordered={false} className="shadow-xs border border-gray-150 rounded-xl">
+            <Statistic
+              title={<span className="text-[9px] font-bold uppercase tracking-wider text-gray-400">Avg Claim</span>}
+              value={avgValue}
+              valueStyle={{ fontSize: "16px", fontWeight: 800, color: "#1F2937", fontFamily: "monospace" }}
+              prefix={<span className="text-amber-500 font-bold mr-1">₹</span>}
+              formatter={(val) => Number(val).toLocaleString()}
+            />
+          </Card>
+        </Col>
+
+        {/* Card 4: Calls Completed / Assigned */}
+        <Col xs={12} sm={8} md={6} lg={4} xl={3.4}>
+          <Card size="small" bordered={false} className="shadow-xs border border-gray-150 rounded-xl">
+            <Statistic
+              title={<span className="text-[9px] font-bold uppercase tracking-wider text-gray-400">Calls Done</span>}
+              value={`${activityStats.callsCompleted} / ${activityStats.callsAssigned}`}
+              valueStyle={{ fontSize: "16px", fontWeight: 800, color: "#1F2937", fontFamily: "monospace" }}
+              prefix={<FundOutlined className="text-indigo-500 mr-1.5" />}
+            />
+          </Card>
+        </Col>
+
+        {/* Card 5: PMS Completed */}
+        <Col xs={12} sm={8} md={6} lg={4} xl={3.4}>
+          <Card size="small" bordered={false} className="shadow-xs border border-gray-150 rounded-xl">
+            <Statistic
+              title={<span className="text-[9px] font-bold uppercase tracking-wider text-gray-400">PMS Done</span>}
+              value={activityStats.pmsCount}
+              valueStyle={{ fontSize: "16px", fontWeight: 800, color: "#1F2937", fontFamily: "monospace" }}
+              prefix={<CheckOutlined className="text-teal-500 mr-1.5" />}
+            />
+          </Card>
+        </Col>
+
+        {/* Card 6: Tag & Calib Done */}
+        <Col xs={12} sm={8} md={6} lg={4} xl={3.4}>
+          <Card size="small" bordered={false} className="shadow-xs border border-gray-150 rounded-xl">
+            <Statistic
+              title={<span className="text-[9px] font-bold uppercase tracking-wider text-gray-400">Tag & Calib</span>}
+              value={activityStats.assetTaggingCount + activityStats.calibrationCount}
+              valueStyle={{ fontSize: "16px", fontWeight: 800, color: "#1F2937", fontFamily: "monospace" }}
+              prefix={<GlobalOutlined className="text-cyan-500 mr-1.5" />}
+            />
+          </Card>
+        </Col>
+
+        {/* Card 7: Scope / View Mode */}
+        <Col xs={12} sm={8} md={6} lg={4} xl={3.4}>
+          <Card size="small" bordered={false} className="shadow-xs border border-gray-150 rounded-xl">
+            <Statistic
+              title={<span className="text-[9px] font-bold uppercase tracking-wider text-gray-400">Scope</span>}
+              value={viewMode === "team" ? "Team Data" : "My Data"}
+              valueStyle={{ fontSize: "14px", fontWeight: 800, color: "#1F2937" }}
+              prefix={viewMode === "team" ? <TeamOutlined className="text-purple-500 mr-1" /> : <UserOutlined className="text-purple-500 mr-1" />}
+            />
+          </Card>
+        </Col>
+      </Row>
+
+      {/* No Data State */}
+      {count === 0 && (
+        <Card className="text-center p-8 border border-gray-200 rounded-xl shadow-xs">
+          <InfoCircleOutlined style={{ fontSize: 32, color: "#bfbfbf", marginBottom: 12 }} />
+          <p style={{ margin: 0, fontWeight: "bold", fontSize: 13, color: "#595959" }}>No expense data found for {months[selectedMonth]} {selectedYear}</p>
+          <p style={{ margin: "4px 0 0 0", fontSize: 11, color: "#8c8c8c" }}>Try selecting a different month or year from the filters panel above</p>
+        </Card>
+      )}
+
+      {/* Content Section when count > 0 */}
+      {count > 0 && (
+        <Row gutter={[16, 16]}>
+          {/* Mobile Breakdown Progress Lists (Visible only on mobile/tablet) */}
+          <Col xs={24} md={0}>
             <div className="space-y-3">
               {/* Category Wise spend */}
-              <div className="bg-white border border-gray-200 rounded p-3">
-                <h3 className="text-[10px] font-extrabold uppercase tracking-wider text-gray-700 mb-2 border-b border-gray-100 pb-1">Spend by Travel Mode</h3>
-                <div className="space-y-2">
+              <Card 
+                size="small"
+                title={<span className="text-[10px] font-extrabold uppercase tracking-wider text-gray-700">Spend by Travel Mode</span>}
+                className="border border-gray-200 rounded-xl shadow-xs"
+              >
+                <div className="space-y-3">
                   {categoryData.slice(0, 5).map((cat, i) => {
                     const pct = totalAmount > 0 ? Math.round((cat.amount / totalAmount) * 100) : 0;
                     return (
                       <div key={i} className="space-y-1">
                         <div className="flex justify-between items-center text-[10px] font-bold">
                           <span className="text-gray-700">{cat.name}</span>
-                          <span className="font-mono text-gray-900">₹{cat.amount.toLocaleString()} ({pct}%)</span>
+                          <span className="font-mono text-gray-950">₹{cat.amount.toLocaleString()} ({pct}%)</span>
                         </div>
-                        <div className="w-full bg-gray-150 rounded-full h-1.5 overflow-hidden">
-                          <div className="bg-blue-600 h-full rounded-full" style={{ width: `${pct}%` }}></div>
-                        </div>
+                        <Progress percent={pct} strokeColor="#4f46e5" size="small" showInfo={false} />
                       </div>
                     );
                   })}
                 </div>
-              </div>
+              </Card>
 
               {/* Top Districts */}
-              <div className="bg-white border border-gray-200 rounded p-3">
-                <h3 className="text-[10px] font-extrabold uppercase tracking-wider text-gray-700 mb-2 border-b border-gray-100 pb-1">Top Districts</h3>
-                <div className="space-y-2">
+              <Card 
+                size="small"
+                title={<span className="text-[10px] font-extrabold uppercase tracking-wider text-gray-700">Top Districts</span>}
+                className="border border-gray-200 rounded-xl shadow-xs"
+              >
+                <div className="space-y-3">
                   {districtWiseData.map((d, i) => {
                     const pct = totalAmount > 0 ? Math.round((d.amount / totalAmount) * 100) : 0;
                     return (
                       <div key={i} className="space-y-1">
                         <div className="flex justify-between items-center text-[10px] font-bold">
                           <span className="text-gray-700">{d.name}</span>
-                          <span className="font-mono text-gray-900">₹{d.amount.toLocaleString()} ({pct}%)</span>
+                          <span className="font-mono text-gray-955">₹{d.amount.toLocaleString()} ({pct}%)</span>
                         </div>
-                        <div className="w-full bg-gray-150 rounded-full h-1.5 overflow-hidden">
-                          <div className="bg-emerald-600 h-full rounded-full" style={{ width: `${pct}%` }}></div>
-                        </div>
+                        <Progress percent={pct} strokeColor="#10b981" size="small" showInfo={false} />
                       </div>
                     );
                   })}
                 </div>
-              </div>
+              </Card>
 
               {/* Top Spenders (only in Team mode) */}
               {viewMode === "team" && userWiseData.length > 0 && (
-                <div className="bg-white border border-gray-200 rounded p-3">
-                  <h3 className="text-[10px] font-extrabold uppercase tracking-wider text-gray-700 mb-2 border-b border-gray-100 pb-1">Top Spenders</h3>
-                  <div className="space-y-2">
+                <Card 
+                  size="small"
+                  title={<span className="text-[10px] font-extrabold uppercase tracking-wider text-gray-700">Top Spenders</span>}
+                  className="border border-gray-200 rounded-xl shadow-xs"
+                >
+                  <div className="space-y-3">
                     {userWiseData.map((usr, i) => {
                       const pct = totalAmount > 0 ? Math.round((usr.amount / totalAmount) * 100) : 0;
                       return (
                         <div key={i} className="space-y-1">
                           <div className="flex justify-between items-center text-[10px] font-bold">
                             <span className="text-gray-700 truncate max-w-[120px]">{usr.name}</span>
-                            <span className="font-mono text-gray-900">₹{usr.amount.toLocaleString()} ({pct}%)</span>
+                            <span className="font-mono text-gray-955">₹{usr.amount.toLocaleString()} ({pct}%)</span>
                           </div>
-                          <div className="w-full bg-gray-150 rounded-full h-1.5 overflow-hidden">
-                            <div className="bg-purple-600 h-full rounded-full" style={{ width: `${pct}%` }}></div>
-                          </div>
+                          <Progress percent={pct} strokeColor="#8b5cf6" size="small" showInfo={false} />
                         </div>
                       );
                     })}
                   </div>
-                </div>
+                </Card>
               )}
             </div>
-          </>
-        )}
-      </div>
-    );
-  }
+          </Col>
 
-  return (
-    <div className="space-y-5 text-gray-800 p-4 lg:p-6 pb-40 lg:pb-8" style={{ fontFamily: "'Plus Jakarta Sans', sans-serif" }}>
-      <style>{`
-        .custom-desktop-filters {
-          display: flex !important;
-          flex-direction: row !important;
-          flex-wrap: wrap !important;
-          align-items: center !important;
-          gap: 8px !important;
-          width: 100% !important;
-          background-color: #ffffff !important;
-          box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.05), 0 1px 2px -1px rgba(0, 0, 0, 0.05) !important;
-        }
-        .custom-desktop-filters select {
-          width: auto !important;
-          min-width: 110px !important;
-          max-width: 180px !important;
-          min-height: 28px !important;
-          height: 28px !important;
-          padding: 2px 8px !important;
-          font-size: 11px !important;
-          border-radius: 6px !important;
-          border: 1px solid #cbd5e1 !important;
-          display: inline-block !important;
-          background-color: #ffffff !important;
-          color: #1e293b !important;
-        }
-        .custom-desktop-filters .date-picker-wrapper {
-          display: inline-flex !important;
-          flex-direction: row !important;
-          align-items: center !important;
-          gap: 6px !important;
-          border: 1px solid #cbd5e1 !important;
-          border-radius: 6px !important;
-          padding: 2px 8px !important;
-          min-height: 28px !important;
-          height: 28px !important;
-          background-color: #ffffff !important;
-          box-sizing: border-box !important;
-        }
-        .custom-desktop-filters .custom-date-input {
-          width: 90px !important;
-          min-height: 20px !important;
-          height: 20px !important;
-          padding: 0 !important;
-          display: inline-block !important;
-          border: 0 !important;
-          outline: none !important;
-          font-size: 11px !important;
-          font-weight: 600 !important;
-          color: #1e293b !important;
-          background-color: transparent !important;
-        }
-      `}</style>
-      
-      {/* Page Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 pb-1">
-        <div>
-          <h2 className="text-base font-bold text-gray-900 uppercase tracking-wide">Expense Analysis</h2>
-          <p className="text-gray-500 text-[10px]">Real-time expense data visualization & insights</p>
-        </div>
+          {/* Desktop/Tablet Nivo Charts (Visible only on md and larger) */}
+          <Col xs={0} md={24}>
+            <Row gutter={[16, 16]}>
+              {/* Chart 1: Top Spenders (User-wise) */}
+              {viewMode === "team" && (
+                <Col xs={24} lg={12}>
+                  <Card 
+                    size="small"
+                    title={<span className="text-xs font-bold text-gray-700 uppercase tracking-wider">Top Spenders — User Wise Breakdown</span>}
+                    extra={<span className="text-[10px] text-gray-400">Highest claim amounts by employee</span>}
+                    className="shadow-sm border border-gray-200 rounded-xl"
+                  >
+                    <div style={{ height: 280 }}>
+                      {userWiseData.length > 0 ? (
+                        <ResponsiveBar
+                          data={userWiseData}
+                          keys={["amount"]}
+                          indexBy="name"
+                          layout="horizontal"
+                          margin={{ top: 15, right: 15, bottom: 35, left: 90 }}
+                          padding={0.35}
+                          colors={GALLERY_COLORS}
+                          colorBy="indexValue"
+                          borderRadius={6}
+                          borderWidth={0}
+                          enableLabel={false}
+                          axisTop={null}
+                          axisRight={null}
+                          axisBottom={{
+                            tickSize: 0,
+                            tickPadding: 8,
+                            tickRotation: 0,
+                            format: (v) => `₹${(v / 1000).toFixed(0)}k`
+                          }}
+                          axisLeft={{
+                            tickSize: 0,
+                            tickPadding: 8,
+                            tickRotation: 0
+                          }}
+                          theme={{
+                            grid: { line: { stroke: '#f1f5f9', strokeWidth: 1 } },
+                            axis: { ticks: { text: { fontSize: 8, fontWeight: 'bold', fill: '#64748b' } } }
+                          }}
+                          tooltip={({ value, color, indexValue }) => (
+                            <div className="bg-slate-900/95 backdrop-blur-md text-white border border-slate-800 shadow-2xl rounded-xl p-3 text-xs min-w-[120px] font-sans pointer-events-none z-50">
+                              <p className="font-extrabold text-[10px] uppercase text-slate-400 tracking-wider mb-1.5">{indexValue}</p>
+                              <div className="flex items-center justify-between gap-4">
+                                <span className="flex items-center gap-1.5 text-slate-300">
+                                  <span className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: color }} />
+                                  Amount:
+                                </span>
+                                <span className="font-mono font-bold text-white">₹{value.toLocaleString()}</span>
+                              </div>
+                            </div>
+                          )}
+                        />
+                      ) : (
+                        <div className="flex items-center justify-center h-full text-gray-400 text-xs">No user data</div>
+                      )}
+                    </div>
+                  </Card>
+                </Col>
+              )}
 
-        {/* View Mode & Download Actions */}
-        {isReviewer && (
-          <div className="flex items-center gap-2 self-start sm:self-auto">
-            <button
-              onClick={downloadCSV}
-              className="flex items-center gap-1.5 px-3 py-1.5 border border-green-600 rounded bg-green-50 hover:bg-green-100 text-green-700 text-[11px] font-semibold transition-colors cursor-pointer shadow-sm border-0"
-              title="Download filtered analysis data as CSV"
-            >
-              <i className="fas fa-file-excel text-sm"></i> Export CSV
-            </button>
-            <div className="flex border border-gray-300 rounded overflow-hidden text-[11px] bg-white shadow-sm">
-              <button
-                onClick={() => setViewMode("my")}
-                className={`px-3 py-1.5 flex items-center gap-1 font-semibold transition-colors border-0 cursor-pointer ${
-                  viewMode === "my" ? "bg-blue-600 text-white" : "bg-white text-gray-600 hover:bg-gray-50"
-                }`}
-              >
-                <i className="fas fa-user text-xs"></i> My Data
-              </button>
-              <button
-                onClick={() => setViewMode("team")}
-                className={`px-3 py-1.5 flex items-center gap-1 font-semibold transition-colors border-0 cursor-pointer ${
-                  viewMode === "team" ? "bg-blue-600 text-white" : "bg-white text-gray-600 hover:bg-gray-50"
-                }`}
-              >
-                <i className="fas fa-users text-xs"></i> Team Data
-              </button>
-            </div>
-          </div>
-        )}
-      </div>
-
-      {/* Dedicated Compact Filter Panel Bar */}
-      <div className="card-lte p-2 custom-desktop-filters">
-        <div className="flex items-center gap-1 text-gray-400 font-semibold mr-1 shrink-0">
-          <i className="fas fa-filter text-[10px] uppercase tracking-wider"></i>
-          <span className="text-[10px] uppercase tracking-wider">Filters:</span>
-        </div>
-        
-        {/* Team Specific Filters */}
-        {viewMode === "team" && isReviewer && (
-          <>
-            {isReviewer && (
-              <select
-                value={selectedZone}
-                onChange={(e) => setSelectedZone(e.target.value)}
-                className="border border-gray-300 rounded px-2 py-1 text-[11px] bg-white text-gray-700 cursor-pointer focus:outline-none focus:border-blue-500"
-              >
-                <option value="all">All Zones</option>
-                {uniqueZones.map(z => (
-                  <option key={z} value={z}>{z}</option>
-                ))}
-              </select>
-            )}
-
-            <select
-              value={selectedDistrict}
-              onChange={(e) => setSelectedDistrict(e.target.value)}
-              className="border border-gray-300 rounded px-2 py-1 text-[11px] bg-white text-gray-700 cursor-pointer focus:outline-none focus:border-blue-500"
-            >
-              <option value="all">All Districts</option>
-              {filterOptions.districts.map(d => (
-                <option key={d} value={d}>{d}</option>
-              ))}
-            </select>
-
-            <select
-              value={selectedEngineer}
-              onChange={(e) => setSelectedEngineer(e.target.value)}
-              className="border border-gray-300 rounded px-2 py-1 text-[11px] bg-white text-gray-700 cursor-pointer focus:outline-none focus:border-blue-500"
-            >
-              <option value="all">All Engineers</option>
-              {filterOptions.engineers.map(name => (
-                <option key={name} value={name}>{name}</option>
-              ))}
-            </select>
-          </>
-        )}
-
-        <select
-          value={selectedMonth}
-          onChange={(e) => setSelectedMonth(Number(e.target.value))}
-          disabled={!!startDate || !!endDate}
-          className={`border border-gray-300 rounded px-2 py-1 text-[11px] bg-white text-gray-700 cursor-pointer focus:outline-none focus:border-blue-500 ${
-            (!!startDate || !!endDate) ? "opacity-50 cursor-not-allowed bg-gray-50" : ""
-          }`}
-        >
-          {months.map((m, i) => (
-            <option key={m} value={i}>{m}</option>
-          ))}
-        </select>
-        <select
-          value={selectedYear}
-          onChange={(e) => setSelectedYear(Number(e.target.value))}
-          disabled={!!startDate || !!endDate}
-          className={`border border-gray-300 rounded px-2 py-1 text-[11px] bg-white text-gray-700 cursor-pointer focus:outline-none focus:border-blue-500 ${
-            (!!startDate || !!endDate) ? "opacity-50 cursor-not-allowed bg-gray-50" : ""
-          }`}
-        >
-          {availableYears.map(y => (
-            <option key={y} value={y}>{y}</option>
-          ))}
-        </select>
-
-        {/* Status Filter */}
-        <select
-          value={selectedStatus}
-          onChange={(e) => setSelectedStatus(e.target.value)}
-          className="border border-gray-300 rounded px-2 py-1 text-[11px] bg-white text-gray-700 cursor-pointer focus:outline-none focus:border-blue-500"
-        >
-          <option value="all">All Statuses</option>
-          <option value="approved">Approved</option>
-          <option value="pending">Pending</option>
-          <option value="rejected">Rejected</option>
-        </select>
-
-        {/* Date Range Picker */}
-        <div className="date-picker-wrapper">
-          <span className="text-[9px] text-gray-400 font-bold uppercase">From:</span>
-          <input
-            type="date"
-            value={startDate}
-            min={minDateStr}
-            max={maxDateStr}
-            onChange={(e) => setStartDate(e.target.value)}
-            className="custom-date-input"
-          />
-          <span className="text-[9px] text-gray-400 font-bold uppercase">To:</span>
-          <input
-            type="date"
-            value={endDate}
-            min={minDateStr}
-            max={maxDateStr}
-            onChange={(e) => setEndDate(e.target.value)}
-            className="custom-date-input"
-          />
-          {(startDate || endDate) && (
-            <button
-              onClick={() => { setStartDate(""); setEndDate(""); }}
-              className="p-0.5 text-gray-400 hover:text-red-500 rounded bg-transparent border-0 cursor-pointer flex items-center justify-center"
-              title="Clear Dates"
-            >
-              <i className="fas fa-times"></i>
-            </button>
-          )}
-        </div>
-      </div>
-
-      {/* Summary Stats */}
-      <div className="flex overflow-x-auto pb-1.5 lg:grid lg:grid-cols-7 gap-3 w-full scrollbar-none">
-        {/* Card 1: Total Claims */}
-        <div className="info-box-lte animate-fadeIn">
-          <div className="info-box-icon bg-[#007bff]">
-            <i className="fas fa-file-excel text-white text-sm"></i>
-          </div>
-          <div className="info-box-content">
-            <span className="text-[9px] font-bold uppercase tracking-wider text-gray-400 block">Total Claims</span>
-            <span className="text-base font-extrabold text-gray-800 font-mono block mt-0.5">{count}</span>
-          </div>
-        </div>
-
-        {/* Card 2: Total Amount */}
-        <div className="info-box-lte animate-fadeIn">
-          <div className="info-box-icon bg-[#28a745]">
-            <i className="fas fa-rupee-sign text-white text-sm"></i>
-          </div>
-          <div className="info-box-content">
-            <span className="text-[9px] font-bold uppercase tracking-wider text-gray-400 block">Total Amount</span>
-            <span className="text-base font-extrabold text-gray-800 font-mono block mt-0.5">₹{totalAmount.toLocaleString()}</span>
-          </div>
-        </div>
-
-        {/* Card 3: Average Claim */}
-        <div className="info-box-lte animate-fadeIn">
-          <div className="info-box-icon bg-[#ffc107]">
-            <i className="fas fa-chart-line text-white text-sm"></i>
-          </div>
-          <div className="info-box-content">
-            <span className="text-[9px] font-bold uppercase tracking-wider text-gray-400 block">Average Claim</span>
-            <span className="text-base font-extrabold text-gray-800 font-mono block mt-0.5">₹{avgValue.toLocaleString()}</span>
-          </div>
-        </div>
-
-        {/* Card 4: Calls Done / Assigned */}
-        <div className="info-box-lte animate-fadeIn">
-          <div className="info-box-icon bg-[#605ca8]">
-            <i className="fas fa-phone text-white text-sm"></i>
-          </div>
-          <div className="info-box-content">
-            <span className="text-[9px] font-bold uppercase tracking-wider text-gray-400 block">Calls Done / Assigned</span>
-            <span className="text-base font-extrabold text-gray-800 font-mono block mt-0.5">{activityStats.callsCompleted} / {activityStats.callsAssigned}</span>
-          </div>
-        </div>
-
-        {/* Card 5: PMS Completed */}
-        <div className="info-box-lte animate-fadeIn">
-          <div className="info-box-icon bg-[#20c997]">
-            <i className="fas fa-shield-alt text-white text-sm"></i>
-          </div>
-          <div className="info-box-content">
-            <span className="text-[9px] font-bold uppercase tracking-wider text-gray-400 block">PMS Completed</span>
-            <span className="text-base font-extrabold text-gray-800 font-mono block mt-0.5">{activityStats.pmsCount}</span>
-          </div>
-        </div>
-
-        {/* Card 6: Tag & Calib Done */}
-        <div className="info-box-lte animate-fadeIn">
-          <div className="info-box-icon bg-[#17a2b8]">
-            <i className="fas fa-chart-line text-white text-sm"></i>
-          </div>
-          <div className="info-box-content">
-            <span className="text-[9px] font-bold uppercase tracking-wider text-gray-400 block">Tag & Calib Done</span>
-            <span className="text-base font-extrabold text-gray-800 font-mono block mt-0.5">{activityStats.assetTaggingCount + activityStats.calibrationCount}</span>
-          </div>
-        </div>
-
-        {/* Card 7: Scope */}
-        <div className="info-box-lte animate-fadeIn">
-          <div className="info-box-icon bg-[#6f42c1]">
-            {viewMode === "team" ? <i className="fas fa-users text-white text-sm"></i> : <i className="fas fa-user text-white text-sm"></i>}
-          </div>
-          <div className="info-box-content">
-            <span className="text-[9px] font-bold uppercase tracking-wider text-gray-400 block">Scope</span>
-            <span className="text-xs font-bold text-gray-800 block truncate mt-0.5" title={viewMode === "team" ? "Team" : "My Data"}>{viewMode === "team" ? "Team" : "My Data"}</span>
-          </div>
-        </div>
-      </div>
-
-      {/* No Data State */}
-      {count === 0 && (
-        <div className="card-lte p-10 text-center bg-white shadow-sm">
-          <i className="fas fa-chart-bar fa-2x text-gray-300 mx-auto mb-3 block"></i>
-          <p className="text-sm font-bold text-gray-500">No expense data found for {months[selectedMonth]} {selectedYear}</p>
-          <p className="text-xs text-gray-400 mt-1">Try selecting a different month or year from the filter above</p>
-        </div>
-      )}
-
-      {count > 0 && (
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
-
-          {/* Chart 1: Top Spenders (User-wise) */}
-          <div className="bg-white border border-gray-200 rounded shadow-sm">
-            <div className="px-4 py-3 border-b border-gray-200 bg-gray-50">
-              <h3 className="text-xs font-bold text-gray-700 uppercase tracking-wider">
-                Top Spenders — User Wise Breakdown
-              </h3>
-              <p className="text-[10px] text-gray-400 mt-0.5">Highest claim amounts by employee</p>
-            </div>
-              <div className="p-4" style={{ height: 280 }}>
-                {userWiseData.length > 0 ? (
-                  <ResponsiveBar
-                    data={userWiseData}
-                    keys={["amount"]}
-                    indexBy="name"
-                    layout="horizontal"
-                    margin={{ top: 15, right: 15, bottom: 35, left: 90 }}
-                    padding={0.35}
-                    colors={GALLERY_COLORS}
-                    colorBy="indexValue"
-                    borderRadius={6}
-                    borderWidth={0}
-                    enableLabel={false}
-                    axisTop={null}
-                    axisRight={null}
-                    axisBottom={{
-                      tickSize: 0,
-                      tickPadding: 8,
-                      tickRotation: 0,
-                      format: (v) => `₹${(v / 1000).toFixed(0)}k`
-                    }}
-                    axisLeft={{
-                      tickSize: 0,
-                      tickPadding: 8,
-                      tickRotation: 0
-                    }}
-                    theme={{
-                      grid: {
-                        line: {
-                          stroke: '#f1f5f9',
-                          strokeWidth: 1
-                        }
-                      },
-                      axis: {
-                        ticks: {
-                          text: {
-                            fontSize: 8,
-                            fontWeight: 'bold',
-                            fill: '#64748b'
-                          }
-                        }
-                      }
-                    }}
-                    tooltip={({ value, color, indexValue }) => (
-                      <div className="bg-slate-900/95 backdrop-blur-md text-white border border-slate-800 shadow-2xl rounded-xl p-3 text-xs min-w-[120px] font-sans pointer-events-none z-50">
-                        <p className="font-extrabold text-[10px] uppercase text-slate-400 tracking-wider mb-1.5">{indexValue}</p>
-                        <div className="flex items-center justify-between gap-4">
-                          <span className="flex items-center gap-1.5 text-slate-300">
-                            <span className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: color }} />
-                            Amount:
-                          </span>
-                          <span className="font-mono font-bold text-white">₹{value.toLocaleString()}</span>
+              {/* Chart 2: Claim Status Distribution */}
+              <Col xs={24} lg={viewMode === "team" ? 12 : 24}>
+                <Card 
+                  size="small"
+                  title={<span className="text-xs font-bold text-gray-700 uppercase tracking-wider">Claim Status Distribution</span>}
+                  extra={<span className="text-[10px] text-gray-400">Approved vs Pending vs Rejected amounts</span>}
+                  className="shadow-sm border border-gray-200 rounded-xl"
+                >
+                  <div style={{ height: 280 }}>
+                    {statusWiseData.length > 0 ? (
+                      <>
+                        <div className="relative flex justify-center items-center h-[210px]">
+                          <ResponsivePie
+                            data={statusWiseData.map(d => ({
+                              id: d.name,
+                              label: d.name,
+                              value: d.value,
+                              color: d.name === "Approved" ? "#2e7d32" : d.name === "Rejected" ? "#d32f2f" : "#f57c00"
+                            }))}
+                            margin={{ top: 10, right: 10, bottom: 10, left: 10 }}
+                            innerRadius={0.7}
+                            padAngle={3}
+                            colors={{ datum: 'data.color' }}
+                            borderWidth={2}
+                            borderColor="#ffffff"
+                            enableArcLinkLabels={false}
+                            enableArcLabels={false}
+                            tooltip={({ datum }) => (
+                              <div className="bg-slate-900/95 backdrop-blur-md text-white border border-slate-800 shadow-2xl rounded-xl p-3 text-xs min-w-[120px] font-sans pointer-events-none z-50">
+                                <p className="font-extrabold text-[10px] uppercase text-slate-400 tracking-wider mb-1.5">{datum.label}</p>
+                                <div className="flex items-center justify-between gap-4">
+                                  <span className="flex items-center gap-1.5 text-slate-300">
+                                    <span className="w-2 h-2 rounded-full" style={{ backgroundColor: datum.color }} />
+                                    Amount:
+                                  </span>
+                                  <span className="font-mono font-bold text-white">₹{datum.value?.toLocaleString()}</span>
+                                </div>
+                              </div>
+                            )}
+                          />
+                          <div className="absolute flex flex-col items-center justify-center pointer-events-none" style={{ top: '50%', left: '50%', transform: 'translate(-50%, -50%)' }}>
+                            <span className="text-[7px] text-gray-400 font-bold uppercase tracking-wider">Total Claims</span>
+                            <span className="text-[11px] font-black text-slate-800 font-mono mt-0.5">
+                              ₹{statusWiseData.reduce((sum, item) => sum + item.value, 0).toLocaleString()}
+                            </span>
+                          </div>
                         </div>
+                        <div className="flex flex-wrap justify-center gap-x-2.5 gap-y-1 mt-2">
+                          {statusWiseData.map((item, i) => (
+                            <div key={i} className="flex items-center gap-1 text-[8px] font-bold text-slate-500">
+                              <span className="w-1.5 h-1.5 rounded-full shrink-0" style={{ backgroundColor: item.name === "Approved" ? "#2e7d32" : item.name === "Rejected" ? "#d32f2f" : "#f57c00" }} />
+                              <span>{item.name}</span>
+                            </div>
+                          ))}
+                        </div>
+                      </>
+                    ) : (
+                      <div className="flex items-center justify-center h-full text-gray-400 text-xs">No status data</div>
+                    )}
+                  </div>
+                </Card>
+              </Col>
+
+              {/* Chart 3: District-wise Expenditure */}
+              <Col xs={24} lg={12}>
+                <Card 
+                  size="small"
+                  title={<span className="text-xs font-bold text-gray-700 uppercase tracking-wider">District Wise Expenditure</span>}
+                  extra={<span className="text-[10px] text-gray-400">Expense distribution across districts</span>}
+                  className="shadow-sm border border-gray-200 rounded-xl"
+                >
+                  <div style={{ height: 280 }}>
+                    {districtWiseData.length > 0 ? (
+                      <ResponsiveBar
+                        data={districtWiseData}
+                        keys={["amount"]}
+                        indexBy="name"
+                        margin={{ top: 15, right: 15, bottom: 35, left: 45 }}
+                        padding={0.35}
+                        colors={GALLERY_COLORS}
+                        colorBy="indexValue"
+                        borderRadius={6}
+                        borderWidth={0}
+                        enableLabel={false}
+                        axisTop={null}
+                        axisRight={null}
+                        axisBottom={{ tickSize: 0, tickPadding: 8, tickRotation: 0 }}
+                        axisLeft={{
+                          tickSize: 0,
+                          tickPadding: 8,
+                          tickRotation: 0,
+                          format: (v) => `₹${(v / 1000).toFixed(0)}k`
+                        }}
+                        theme={{
+                          grid: { line: { stroke: '#f1f5f9', strokeWidth: 1 } },
+                          axis: { ticks: { text: { fontSize: 8, fontWeight: 'bold', fill: '#64748b' } } }
+                        }}
+                        tooltip={({ value, color, indexValue }) => (
+                          <div className="bg-slate-900/95 backdrop-blur-md text-white border border-slate-800 shadow-2xl rounded-xl p-3 text-xs min-w-[120px] font-sans pointer-events-none z-50">
+                            <p className="font-extrabold text-[10px] uppercase text-slate-400 tracking-wider mb-1.5">{indexValue}</p>
+                            <div className="flex items-center justify-between gap-4">
+                              <span className="flex items-center gap-1.5 text-slate-300">
+                                <span className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: color }} />
+                                Amount:
+                              </span>
+                              <span className="font-mono font-bold text-white">₹{value.toLocaleString()}</span>
+                            </div>
+                          </div>
+                        )}
+                      />
+                    ) : (
+                      <div className="flex items-center justify-center h-full text-gray-400 text-xs">No district data</div>
+                    )}
+                  </div>
+                </Card>
+              </Col>
+
+              {/* Chart 4: Date-wise Expense Trend */}
+              <Col xs={24} lg={12}>
+                <Card 
+                  size="small"
+                  title={<span className="text-xs font-bold text-gray-700 uppercase tracking-wider">Date Wise Expense Trend</span>}
+                  extra={<span className="text-[10px] text-gray-400">Daily spending pattern for last active dates</span>}
+                  className="shadow-sm border border-gray-200 rounded-xl"
+                >
+                  <div style={{ height: 280 }}>
+                    {last5DaysData.length > 0 ? (
+                      <ResponsiveLine
+                        data={[
+                          {
+                            id: "Amount",
+                            color: "#007bff",
+                            data: last5DaysData.map(d => ({ x: d.date, y: d.amount }))
+                          }
+                        ]}
+                        margin={{ top: 15, right: 15, bottom: 35, left: 45 }}
+                        xScale={{ type: 'point' }}
+                        yScale={{ type: 'linear', min: 'auto', max: 'auto' }}
+                        curve="monotoneX"
+                        colors={d => d.color}
+                        lineWidth={2}
+                        enableArea={true}
+                        areaOpacity={0.12}
+                        enablePoints={false}
+                        useMesh={true}
+                        axisTop={null}
+                        axisRight={null}
+                        axisBottom={{ tickSize: 0, tickPadding: 8, tickRotation: 0 }}
+                        axisLeft={{
+                          tickSize: 0,
+                          tickPadding: 8,
+                          tickRotation: 0,
+                          format: (v) => `₹${(v / 1000).toFixed(0)}k`
+                        }}
+                        theme={{
+                          grid: { line: { stroke: '#f1f5f9', strokeWidth: 1 } },
+                          axis: { ticks: { text: { fontSize: 8, fontWeight: 'bold', fill: '#64748b' } } }
+                        }}
+                        tooltip={({ point }) => (
+                          <div className="bg-slate-900/95 backdrop-blur-md text-white border border-slate-800 shadow-2xl rounded-xl p-3 text-xs min-w-[120px] font-sans pointer-events-none z-50">
+                            <p className="font-extrabold text-[10px] uppercase text-slate-400 tracking-wider mb-1.5">{String(point.data.x)}</p>
+                            <div className="flex items-center justify-between gap-4">
+                              <span className="flex items-center gap-1.5 text-slate-300">
+                                <span className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: point.color }} />
+                                Amount:
+                              </span>
+                              <span className="font-mono font-bold text-white">₹{(point.data.y as number).toLocaleString()}</span>
+                            </div>
+                          </div>
+                        )}
+                      />
+                    ) : (
+                      <div className="flex items-center justify-center h-full text-gray-400 text-xs">No date data</div>
+                    )}
+                  </div>
+                </Card>
+              </Col>
+
+              {/* Chart 5: Zone-wise Distribution */}
+              <Col xs={24} lg={12}>
+                <Card 
+                  size="small"
+                  title={<span className="text-xs font-bold text-gray-700 uppercase tracking-wider">Zone Wise Distribution</span>}
+                  extra={<span className="text-[10px] text-gray-400">Expenses grouped by operational zone</span>}
+                  className="shadow-sm border border-gray-200 rounded-xl"
+                >
+                  <div style={{ height: 280 }}>
+                    {zoneWiseData.length > 0 ? (
+                      <>
+                        <div className="relative flex justify-center items-center h-[210px]">
+                          <ResponsivePie
+                            data={zoneWiseData.map((z, i) => ({
+                              id: z.name,
+                              label: z.name,
+                              value: z.value,
+                              color: GALLERY_COLORS[i % GALLERY_COLORS.length]
+                            }))}
+                            margin={{ top: 10, right: 10, bottom: 10, left: 10 }}
+                            innerRadius={0.7}
+                            padAngle={3}
+                            colors={{ datum: 'data.color' }}
+                            borderWidth={2}
+                            borderColor="#ffffff"
+                            enableArcLinkLabels={false}
+                            enableArcLabels={false}
+                            tooltip={({ datum }) => (
+                              <div className="bg-slate-900/95 backdrop-blur-md text-white border border-slate-800 shadow-2xl rounded-xl p-3 text-xs min-w-[120px] font-sans pointer-events-none z-50">
+                                <p className="font-extrabold text-[10px] uppercase text-slate-400 tracking-wider mb-1.5">{datum.label}</p>
+                                <div className="flex items-center justify-between gap-4">
+                                  <span className="flex items-center gap-1.5 text-slate-300">
+                                    <span className="w-2 h-2 rounded-full" style={{ backgroundColor: datum.color }} />
+                                    Amount:
+                                  </span>
+                                  <span className="font-mono font-bold text-white">₹{datum.value?.toLocaleString()}</span>
+                                </div>
+                              </div>
+                            )}
+                          />
+                          <div className="absolute flex flex-col items-center justify-center pointer-events-none" style={{ top: '50%', left: '50%', transform: 'translate(-50%, -50%)' }}>
+                            <span className="text-[7px] text-gray-400 font-bold uppercase tracking-wider">Total Zone</span>
+                            <span className="text-[11px] font-black text-slate-800 font-mono mt-0.5">
+                              ₹{zoneWiseData.reduce((sum, item) => sum + item.value, 0).toLocaleString()}
+                            </span>
+                          </div>
+                        </div>
+                        <div className="flex flex-wrap justify-center gap-x-2.5 gap-y-1 mt-2">
+                          {zoneWiseData.map((item, i) => (
+                            <div key={i} className="flex items-center gap-1 text-[8px] font-bold text-slate-500">
+                              <span className="w-1.5 h-1.5 rounded-full shrink-0" style={{ backgroundColor: GALLERY_COLORS[i % GALLERY_COLORS.length] }} />
+                              <span>{item.name}</span>
+                            </div>
+                          ))}
+                        </div>
+                      </>
+                    ) : (
+                      <div className="flex items-center justify-center h-full text-gray-400 text-xs">No zone data</div>
+                    )}
+                  </div>
+                </Card>
+              </Col>
+
+              {/* Chart 6: Travel Mode / Category Breakdown */}
+              <Col xs={24} lg={12}>
+                <Card 
+                  size="small"
+                  title={<span className="text-xs font-bold text-gray-700 uppercase tracking-wider">Travel Mode / Category Breakdown</span>}
+                  extra={<span className="text-[10px] text-gray-400 font-bold">Expenditure by travel mode</span>}
+                  className="shadow-sm border border-gray-200 rounded-xl"
+                >
+                  <div style={{ height: 280 }}>
+                    {categoryData.length > 0 ? (
+                      <ResponsiveBar
+                        data={categoryData}
+                        keys={["amount"]}
+                        indexBy="name"
+                        margin={{ top: 15, right: 15, bottom: 35, left: 45 }}
+                        padding={0.35}
+                        colors={GALLERY_COLORS}
+                        colorBy="indexValue"
+                        borderRadius={6}
+                        borderWidth={0}
+                        enableLabel={false}
+                        axisTop={null}
+                        axisRight={null}
+                        axisBottom={{ tickSize: 0, tickPadding: 8, tickRotation: 0 }}
+                        axisLeft={{
+                          tickSize: 0,
+                          tickPadding: 8,
+                          tickRotation: 0,
+                          format: (v) => `₹${(v / 1000).toFixed(0)}k`
+                        }}
+                        theme={{
+                          grid: { line: { stroke: '#f1f5f9', strokeWidth: 1 } },
+                          axis: { ticks: { text: { fontSize: 8, fontWeight: 'bold', fill: '#64748b' } } }
+                        }}
+                        tooltip={({ value, color, indexValue }) => (
+                          <div className="bg-slate-900/95 backdrop-blur-md text-white border border-slate-800 shadow-2xl rounded-xl p-3 text-xs min-w-[120px] font-sans pointer-events-none z-50">
+                            <p className="font-extrabold text-[10px] uppercase text-slate-400 tracking-wider mb-1.5">{indexValue}</p>
+                            <div className="flex items-center justify-between gap-4">
+                              <span className="flex items-center gap-1.5 text-slate-300">
+                                <span className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: color }} />
+                                Amount:
+                              </span>
+                              <span className="font-mono font-bold text-white">₹{value.toLocaleString()}</span>
+                            </div>
+                          </div>
+                        )}
+                      />
+                    ) : (
+                      <div className="flex items-center justify-center h-full text-gray-400 text-xs">No category data</div>
+                    )}
+                  </div>
+                </Card>
+              </Col>
+
+              {/* Chart 7: Operations Activity Metrics */}
+              <Col xs={24}>
+                <Card 
+                  size="small"
+                  title={<span className="text-xs font-bold text-gray-700 uppercase tracking-wider">Operations Activity Metrics</span>}
+                  extra={<span className="text-[10px] text-gray-400 font-bold text-indigo-700 bg-indigo-50 border border-indigo-200 px-2 py-0.5 rounded uppercase">Operational KPIs</span>}
+                  className="shadow-sm border border-gray-200 rounded-xl"
+                >
+                  <div style={{ height: 300 }}>
+                    {activityChartData.some(d => d.count > 0) ? (
+                      <ResponsiveBar
+                        data={activityChartData}
+                        keys={["count"]}
+                        indexBy="name"
+                        margin={{ top: 15, right: 15, bottom: 35, left: 35 }}
+                        padding={0.35}
+                        colors={GALLERY_COLORS}
+                        colorBy="indexValue"
+                        borderRadius={6}
+                        borderWidth={0}
+                        enableLabel={false}
+                        axisTop={null}
+                        axisRight={null}
+                        axisBottom={{ tickSize: 0, tickPadding: 8, tickRotation: 0 }}
+                        axisLeft={{ tickSize: 0, tickPadding: 8, tickRotation: 0 }}
+                        theme={{
+                          grid: { line: { stroke: '#f1f5f9', strokeWidth: 1 } },
+                          axis: { ticks: { text: { fontSize: 8, fontWeight: 'bold', fill: '#64748b' } } }
+                        }}
+                        tooltip={({ value, color, indexValue }) => (
+                          <div className="bg-slate-900/95 backdrop-blur-md text-white border border-slate-800 shadow-2xl rounded-xl p-3 text-xs min-w-[120px] font-sans pointer-events-none z-50">
+                            <p className="font-extrabold text-[10px] uppercase text-slate-400 tracking-wider mb-1.5">{indexValue}</p>
+                            <div className="flex items-center justify-between gap-4">
+                              <span className="flex items-center gap-1.5 text-slate-300">
+                                <span className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: color }} />
+                                Count:
+                              </span>
+                              <span className="font-mono font-bold text-white">{value}</span>
+                            </div>
+                          </div>
+                        )}
+                      />
+                    ) : (
+                      <div className="flex items-center justify-center h-full text-gray-400 text-xs font-bold">
+                        No operational activities recorded in this selection
                       </div>
                     )}
-                  />
-                ) : (
-                  <div className="flex items-center justify-center h-full text-gray-400 text-xs">No user data</div>
-                )}
-              </div>
-          </div>
-
-          {/* Chart 2: Claim Status Distribution */}
-          <div className="bg-white border border-gray-200 rounded shadow-sm">
-            <div className="px-4 py-3 border-b border-gray-200 bg-gray-50">
-              <h3 className="text-xs font-bold text-gray-700 uppercase tracking-wider">
-                Claim Status Distribution
-              </h3>
-              <p className="text-[10px] text-gray-400 mt-0.5">Approved vs Pending vs Rejected amounts</p>
-            </div>
-            <div className="p-4" style={{ height: 280 }}>
-              {statusWiseData.length > 0 ? (
-                <>
-                  <div className="relative flex justify-center items-center h-full" style={{ height: "210px" }}>
-                    <ResponsivePie
-                      data={statusWiseData.map(d => ({
-                        id: d.name,
-                        label: d.name,
-                        value: d.value,
-                        color: d.name === "Approved" ? "#2e7d32" : d.name === "Rejected" ? "#d32f2f" : "#f57c00"
-                      }))}
-                      margin={{ top: 10, right: 10, bottom: 10, left: 10 }}
-                      innerRadius={0.7}
-                      padAngle={3}
-                      colors={{ datum: 'data.color' }}
-                      borderWidth={2}
-                      borderColor="#ffffff"
-                      enableArcLinkLabels={false}
-                      enableArcLabels={false}
-                      tooltip={({ datum }) => (
-                        <div className="bg-slate-900/95 backdrop-blur-md text-white border border-slate-800 shadow-2xl rounded-xl p-3 text-xs min-w-[120px] font-sans pointer-events-none z-50">
-                          <p className="font-extrabold text-[10px] uppercase text-slate-400 tracking-wider mb-1.5">{datum.label}</p>
-                          <div className="flex items-center justify-between gap-4">
-                            <span className="flex items-center gap-1.5 text-slate-300">
-                              <span className="w-2 h-2 rounded-full" style={{ backgroundColor: datum.color }} />
-                              Amount:
-                            </span>
-                            <span className="font-mono font-bold text-white">₹{datum.value?.toLocaleString()}</span>
-                          </div>
-                        </div>
-                      )}
-                    />
-                    <div className="absolute flex flex-col items-center justify-center pointer-events-none" style={{ top: '50%', left: '50%', transform: 'translate(-50%, -50%)' }}>
-                      <span className="text-[7px] text-gray-400 font-bold uppercase tracking-wider">Total Claims</span>
-                      <span className="text-[11px] font-black text-slate-800 font-mono mt-0.5">
-                        ₹{statusWiseData.reduce((sum, item) => sum + item.value, 0).toLocaleString()}
-                      </span>
-                    </div>
                   </div>
-                  <div className="flex flex-wrap justify-center gap-x-2.5 gap-y-1 mt-2">
-                    {statusWiseData.map((item, i) => (
-                      <div key={i} className="flex items-center gap-1 text-[8px] font-bold text-slate-500">
-                        <span className="w-1.5 h-1.5 rounded-full shrink-0" style={{ backgroundColor: item.name === "Approved" ? "#2e7d32" : item.name === "Rejected" ? "#d32f2f" : "#f57c00" }} />
-                        <span>{item.name}</span>
-                      </div>
-                    ))}
-                  </div>
-                </>
-              ) : (
-                <div className="flex items-center justify-center h-full text-gray-400 text-xs">No status data</div>
-              )}
-            </div>
-          </div>
-
-          {/* Chart 3: District-wise Expenditure */}
-          <div className="bg-white border border-gray-200 rounded shadow-sm">
-            <div className="px-4 py-3 border-b border-gray-200 bg-gray-50">
-              <h3 className="text-xs font-bold text-gray-700 uppercase tracking-wider">
-                District Wise Expenditure
-              </h3>
-              <p className="text-[10px] text-gray-400 mt-0.5">Expense distribution across districts</p>
-            </div>
-            <div className="p-4" style={{ height: 280 }}>
-              {districtWiseData.length > 0 ? (
-                <ResponsiveBar
-                  data={districtWiseData}
-                  keys={["amount"]}
-                  indexBy="name"
-                  margin={{ top: 15, right: 15, bottom: 35, left: 45 }}
-                  padding={0.35}
-                  colors={GALLERY_COLORS}
-                  colorBy="indexValue"
-                  borderRadius={6}
-                  borderWidth={0}
-                  enableLabel={false}
-                  axisTop={null}
-                  axisRight={null}
-                  axisBottom={{
-                    tickSize: 0,
-                    tickPadding: 8,
-                    tickRotation: 0
-                  }}
-                  axisLeft={{
-                    tickSize: 0,
-                    tickPadding: 8,
-                    tickRotation: 0,
-                    format: (v) => `₹${(v / 1000).toFixed(0)}k`
-                  }}
-                  theme={{
-                    grid: {
-                      line: {
-                        stroke: '#f1f5f9',
-                        strokeWidth: 1
-                      }
-                    },
-                    axis: {
-                      ticks: {
-                        text: {
-                          fontSize: 8,
-                          fontWeight: 'bold',
-                          fill: '#64748b'
-                        }
-                      }
-                    }
-                  }}
-                  tooltip={({ value, color, indexValue }) => (
-                    <div className="bg-slate-900/95 backdrop-blur-md text-white border border-slate-800 shadow-2xl rounded-xl p-3 text-xs min-w-[120px] font-sans pointer-events-none z-50">
-                      <p className="font-extrabold text-[10px] uppercase text-slate-400 tracking-wider mb-1.5">{indexValue}</p>
-                      <div className="flex items-center justify-between gap-4">
-                        <span className="flex items-center gap-1.5 text-slate-300">
-                          <span className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: color }} />
-                          Amount:
-                        </span>
-                        <span className="font-mono font-bold text-white">₹{value.toLocaleString()}</span>
-                      </div>
-                    </div>
-                  )}
-                />
-              ) : (
-                <div className="flex items-center justify-center h-full text-gray-400 text-xs">No district data</div>
-              )}
-            </div>
-          </div>
-
-          {/* Chart 4: Date-wise Expense Trend */}
-          <div className="bg-white border border-gray-200 rounded shadow-sm">
-            <div className="px-4 py-3 border-b border-gray-200 bg-gray-50">
-              <h3 className="text-xs font-bold text-gray-700 uppercase tracking-wider">
-                Date Wise Expense Trend
-              </h3>
-              <p className="text-[10px] text-gray-400 mt-0.5">Daily spending pattern for last active dates</p>
-            </div>
-            <div className="p-4" style={{ height: 280 }}>
-              {last5DaysData.length > 0 ? (
-                <ResponsiveLine
-                  data={[
-                    {
-                      id: "Amount",
-                      color: "#007bff",
-                      data: last5DaysData.map(d => ({ x: d.date, y: d.amount }))
-                    }
-                  ]}
-                  margin={{ top: 15, right: 15, bottom: 35, left: 45 }}
-                  xScale={{ type: 'point' }}
-                  yScale={{ type: 'linear', min: 'auto', max: 'auto' }}
-                  curve="monotoneX"
-                  colors={d => d.color}
-                  lineWidth={2}
-                  enableArea={true}
-                  areaOpacity={0.12}
-                  enablePoints={false}
-                  useMesh={true}
-                  axisTop={null}
-                  axisRight={null}
-                  axisBottom={{
-                    tickSize: 0,
-                    tickPadding: 8,
-                    tickRotation: 0
-                  }}
-                  axisLeft={{
-                    tickSize: 0,
-                    tickPadding: 8,
-                    tickRotation: 0,
-                    format: (v) => `₹${(v / 1000).toFixed(0)}k`
-                  }}
-                  theme={{
-                    grid: {
-                      line: {
-                        stroke: '#f1f5f9',
-                        strokeWidth: 1
-                      }
-                    },
-                    axis: {
-                      ticks: {
-                        text: {
-                          fontSize: 8,
-                          fontWeight: 'bold',
-                          fill: '#64748b'
-                        }
-                      }
-                    }
-                  }}
-                  tooltip={({ point }) => (
-                    <div className="bg-slate-900/95 backdrop-blur-md text-white border border-slate-800 shadow-2xl rounded-xl p-3 text-xs min-w-[120px] font-sans pointer-events-none z-50">
-                      <p className="font-extrabold text-[10px] uppercase text-slate-400 tracking-wider mb-1.5">{String(point.data.x)}</p>
-                      <div className="flex items-center justify-between gap-4">
-                        <span className="flex items-center gap-1.5 text-slate-300">
-                          <span className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: point.color }} />
-                          Amount:
-                        </span>
-                        <span className="font-mono font-bold text-white">₹{(point.data.y as number).toLocaleString()}</span>
-                      </div>
-                    </div>
-                  )}
-                />
-              ) : (
-                <div className="flex items-center justify-center h-full text-gray-400 text-xs">No date data</div>
-              )}
-            </div>
-          </div>
-
-          {/* Chart 5: Zone-wise Distribution */}
-          <div className="bg-white border border-gray-200 rounded shadow-sm">
-            <div className="px-4 py-3 border-b border-gray-200 bg-gray-50">
-              <h3 className="text-xs font-bold text-gray-700 uppercase tracking-wider">
-                Zone Wise Distribution
-              </h3>
-              <p className="text-[10px] text-gray-400 mt-0.5">Expenses grouped by operational zone</p>
-            </div>
-            <div className="p-4" style={{ height: 280 }}>
-              {zoneWiseData.length > 0 ? (
-                <>
-                  <div className="relative flex justify-center items-center h-full" style={{ height: "210px" }}>
-                    <ResponsivePie
-                      data={zoneWiseData.map((z, i) => ({
-                        id: z.name,
-                        label: z.name,
-                        value: z.value,
-                        color: GALLERY_COLORS[i % GALLERY_COLORS.length]
-                      }))}
-                      margin={{ top: 10, right: 10, bottom: 10, left: 10 }}
-                      innerRadius={0.7}
-                      padAngle={3}
-                      colors={{ datum: 'data.color' }}
-                      borderWidth={2}
-                      borderColor="#ffffff"
-                      enableArcLinkLabels={false}
-                      enableArcLabels={false}
-                      tooltip={({ datum }) => (
-                        <div className="bg-slate-900/95 backdrop-blur-md text-white border border-slate-800 shadow-2xl rounded-xl p-3 text-xs min-w-[120px] font-sans pointer-events-none z-50">
-                          <p className="font-extrabold text-[10px] uppercase text-slate-400 tracking-wider mb-1.5">{datum.label}</p>
-                          <div className="flex items-center justify-between gap-4">
-                            <span className="flex items-center gap-1.5 text-slate-300">
-                              <span className="w-2 h-2 rounded-full" style={{ backgroundColor: datum.color }} />
-                              Amount:
-                            </span>
-                            <span className="font-mono font-bold text-white">₹{datum.value?.toLocaleString()}</span>
-                          </div>
-                        </div>
-                      )}
-                    />
-                    <div className="absolute flex flex-col items-center justify-center pointer-events-none" style={{ top: '50%', left: '50%', transform: 'translate(-50%, -50%)' }}>
-                      <span className="text-[7px] text-gray-400 font-bold uppercase tracking-wider">Total Zone</span>
-                      <span className="text-[11px] font-black text-slate-800 font-mono mt-0.5">
-                        ₹{zoneWiseData.reduce((sum, item) => sum + item.value, 0).toLocaleString()}
-                      </span>
-                    </div>
-                  </div>
-                  <div className="flex flex-wrap justify-center gap-x-2.5 gap-y-1 mt-2">
-                    {zoneWiseData.map((item, i) => (
-                      <div key={i} className="flex items-center gap-1 text-[8px] font-bold text-slate-500">
-                        <span className="w-1.5 h-1.5 rounded-full shrink-0" style={{ backgroundColor: GALLERY_COLORS[i % GALLERY_COLORS.length] }} />
-                        <span>{item.name}</span>
-                      </div>
-                    ))}
-                  </div>
-                </>
-              ) : (
-                <div className="flex items-center justify-center h-full text-gray-400 text-xs">No zone data</div>
-              )}
-            </div>
-          </div>
-
-          {/* Chart 6: Travel Mode / Category Breakdown */}
-          <div className="bg-white border border-gray-200 rounded shadow-sm">
-            <div className="px-4 py-3 border-b border-gray-200 bg-gray-50">
-              <h3 className="text-xs font-bold text-gray-700 uppercase tracking-wider">
-                Travel Mode / Category Breakdown
-              </h3>
-              <p className="text-[10px] text-gray-400 mt-0.5">Expenditure by travel mode (Bike, Car, Auto, etc.)</p>
-            </div>
-            <div className="p-4" style={{ height: 280 }}>
-              {categoryData.length > 0 ? (
-                <ResponsiveBar
-                  data={categoryData}
-                  keys={["amount"]}
-                  indexBy="name"
-                  margin={{ top: 15, right: 15, bottom: 35, left: 45 }}
-                  padding={0.35}
-                  colors={GALLERY_COLORS}
-                  colorBy="indexValue"
-                  borderRadius={6}
-                  borderWidth={0}
-                  enableLabel={false}
-                  axisTop={null}
-                  axisRight={null}
-                  axisBottom={{
-                    tickSize: 0,
-                    tickPadding: 8,
-                    tickRotation: 0
-                  }}
-                  axisLeft={{
-                    tickSize: 0,
-                    tickPadding: 8,
-                    tickRotation: 0,
-                    format: (v) => `₹${(v / 1000).toFixed(0)}k`
-                  }}
-                  theme={{
-                    grid: {
-                      line: {
-                        stroke: '#f1f5f9',
-                        strokeWidth: 1
-                      }
-                    },
-                    axis: {
-                      ticks: {
-                        text: {
-                          fontSize: 8,
-                          fontWeight: 'bold',
-                          fill: '#64748b'
-                        }
-                      }
-                    }
-                  }}
-                  tooltip={({ value, color, indexValue }) => (
-                    <div className="bg-slate-900/95 backdrop-blur-md text-white border border-slate-800 shadow-2xl rounded-xl p-3 text-xs min-w-[120px] font-sans pointer-events-none z-50">
-                      <p className="font-extrabold text-[10px] uppercase text-slate-400 tracking-wider mb-1.5">{indexValue}</p>
-                      <div className="flex items-center justify-between gap-4">
-                        <span className="flex items-center gap-1.5 text-slate-300">
-                          <span className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: color }} />
-                          Amount:
-                        </span>
-                        <span className="font-mono font-bold text-white">₹{value.toLocaleString()}</span>
-                      </div>
-                    </div>
-                  )}
-                />
-              ) : (
-                <div className="flex items-center justify-center h-full text-gray-400 text-xs">No category data</div>
-              )}
-            </div>
-          </div>
-
-          {/* Chart 7: Operations Activity Metrics */}
-          <div className="bg-white border border-gray-200 rounded shadow-sm lg:col-span-2">
-            <div className="px-4 py-3 border-b border-gray-200 bg-gray-50 flex items-center justify-between">
-              <div>
-                <h3 className="text-xs font-bold text-gray-700 uppercase tracking-wider">
-                  Operations Activity Metrics
-                </h3>
-                <p className="text-[10px] text-gray-400 mt-0.5">Calls, PMS, calibrations, and asset tagging totals</p>
-              </div>
-              <span className="bg-blue-50 text-blue-700 border border-blue-200 text-[10px] font-bold px-2 py-0.5 rounded">
-                Operational KPIs
-              </span>
-            </div>
-            <div className="p-4" style={{ height: 320 }}>
-              {activityChartData.some(d => d.count > 0) ? (
-                <ResponsiveBar
-                  data={activityChartData}
-                  keys={["count"]}
-                  indexBy="name"
-                  margin={{ top: 15, right: 15, bottom: 35, left: 35 }}
-                  padding={0.35}
-                  colors={GALLERY_COLORS}
-                  colorBy="indexValue"
-                  borderRadius={6}
-                  borderWidth={0}
-                  enableLabel={false}
-                  axisTop={null}
-                  axisRight={null}
-                  axisBottom={{
-                    tickSize: 0,
-                    tickPadding: 8,
-                    tickRotation: 0
-                  }}
-                  axisLeft={{
-                    tickSize: 0,
-                    tickPadding: 8,
-                    tickRotation: 0
-                  }}
-                  theme={{
-                    grid: {
-                      line: {
-                        stroke: '#f1f5f9',
-                        strokeWidth: 1
-                      }
-                    },
-                    axis: {
-                      ticks: {
-                        text: {
-                          fontSize: 8,
-                          fontWeight: 'bold',
-                          fill: '#64748b'
-                        }
-                      }
-                    }
-                  }}
-                  tooltip={({ value, color, indexValue }) => (
-                    <div className="bg-slate-900/95 backdrop-blur-md text-white border border-slate-800 shadow-2xl rounded-xl p-3 text-xs min-w-[120px] font-sans pointer-events-none z-50">
-                      <p className="font-extrabold text-[10px] uppercase text-slate-400 tracking-wider mb-1.5">{indexValue}</p>
-                      <div className="flex items-center justify-between gap-4">
-                        <span className="flex items-center gap-1.5 text-slate-300">
-                          <span className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: color }} />
-                          Count:
-                        </span>
-                        <span className="font-mono font-bold text-white">{value}</span>
-                      </div>
-                    </div>
-                  )}
-                />
-              ) : (
-                <div className="flex items-center justify-center h-full text-gray-400 text-xs font-bold">
-                  No operational activities recorded in this selection
-                </div>
-              )}
-            </div>
-          </div>
-
-        </div>
+                </Card>
+              </Col>
+            </Row>
+          </Col>
+        </Row>
       )}
     </div>
   );
