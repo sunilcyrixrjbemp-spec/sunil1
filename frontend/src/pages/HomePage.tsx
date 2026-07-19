@@ -39,6 +39,14 @@ const getSegmentedClass = (status: string) => {
       return "status-segmented-all";
   }
 };
+
+const uniqueMonths = Array.from({ length: 12 }, (_, i) => {
+  const d = new Date();
+  d.setMonth(d.getMonth() - i);
+  const yyyyMm = d.toISOString().substring(0, 7);
+  const label = d.toLocaleDateString("en-US", { month: "short", year: "numeric" });
+  return { value: yyyyMm, label };
+});
 import { 
   FileSpreadsheet, 
   BarChart3, 
@@ -1010,12 +1018,20 @@ export default function HomePage() {
                             <Col xs={12} sm={6}>
                               <div className="flex flex-col gap-0.5">
                                 <span className="text-[8px] uppercase font-bold text-gray-400">Month</span>
-                                <input 
-                                  type="month"
-                                  value={selectMonth}
-                                  onChange={(e) => setSelectMonth(e.target.value)}
-                                  className="bg-white border border-gray-200 rounded px-2.5 py-0.5 text-xs font-semibold text-gray-800 cursor-pointer w-full focus:outline-none"
-                                />
+                                <Select 
+                                  size="small"
+                                  value={selectMonth} 
+                                  onChange={(val) => setSelectMonth(val)}
+                                  className="w-full text-xs font-semibold"
+                                  popupMatchSelectWidth={false}
+                                  dropdownStyle={{ fontSize: "12px" }}
+                                >
+                                  {uniqueMonths.map(m => (
+                                    <Select.Option key={m.value} value={m.value}>
+                                      Month: {m.label}
+                                    </Select.Option>
+                                  ))}
+                                </Select>
                               </div>
                             </Col>
 
@@ -1031,9 +1047,9 @@ export default function HomePage() {
                                     popupMatchSelectWidth={false}
                                     dropdownStyle={{ fontSize: "12px" }}
                                   >
-                                    <Select.Option value="all">All Zones</Select.Option>
+                                    <Select.Option value="all">Zone: All</Select.Option>
                                     {uniqueZones.map(z => (
-                                      <Select.Option key={z} value={z}>{z}</Select.Option>
+                                      <Select.Option key={z} value={z}>Zone: {z}</Select.Option>
                                     ))}
                                   </Select>
                                 </div>
@@ -1051,9 +1067,9 @@ export default function HomePage() {
                                   popupMatchSelectWidth={false}
                                   dropdownStyle={{ fontSize: "12px" }}
                                 >
-                                  <Select.Option value="all">All Members</Select.Option>
+                                  <Select.Option value="all">Engineer: All</Select.Option>
                                   {uniqueEmployees.map(emp => (
-                                    <Select.Option key={emp.code} value={emp.code}>{emp.name}</Select.Option>
+                                    <Select.Option key={emp.code} value={emp.code}>Engineer: {emp.name}</Select.Option>
                                   ))}
                                 </Select>
                               </div>
@@ -1070,9 +1086,9 @@ export default function HomePage() {
                                   popupMatchSelectWidth={false}
                                   dropdownStyle={{ fontSize: "12px" }}
                                 >
-                                  <Select.Option value="all">All Modes</Select.Option>
+                                  <Select.Option value="all">Mode: All</Select.Option>
                                   {uniqueModes.map(m => (
-                                    <Select.Option key={m} value={m.toLowerCase()}>{m}</Select.Option>
+                                    <Select.Option key={m} value={m.toLowerCase()}>Mode: {m}</Select.Option>
                                   ))}
                                 </Select>
                               </div>
@@ -1663,7 +1679,7 @@ export default function HomePage() {
                                 {leg.oth_desc && <span className="text-[9px] text-gray-400 block truncate max-w-[100px]" title={leg.oth_desc}>{leg.oth_desc}</span>}
                               </td>
                               <td className="py-2.5 px-3 text-[10px] text-gray-500">
-                                <span>W:{leg.ws_assigned||0}</span> <span className="text-green-600">D:{leg.ws_closed||0}</span> <span>P:{leg.ws_pms||0}</span> <span>A:{leg.ws_asset||0}</span>
+                                <span>Call Attended: {leg.ws_assigned||0}</span> <span className="text-green-600">Call Closed: {leg.ws_closed||0}</span> <span>P:{leg.ws_pms||0}</span> <span>A:{leg.ws_asset||0}</span>
                               </td>
                               <td className="py-2.5 px-3 text-right font-bold font-mono text-gray-900">
                                 <div className="flex flex-col items-end">
@@ -1920,8 +1936,8 @@ export default function HomePage() {
 
                         {/* Work Summary */}
                         <div className="text-[10px] text-gray-500 bg-gray-50/50 px-2.5 py-1.5 rounded border border-gray-100 flex justify-between font-bold">
-                          <span>Work: {leg.ws_assigned||0}</span>
-                          <span className="text-green-600">Done: {leg.ws_closed||0}</span>
+                          <span>Call Attended: {leg.ws_assigned||0}</span>
+                          <span className="text-green-600">Call Closed: {leg.ws_closed||0}</span>
                           <span>PMS: {leg.ws_pms||0}</span>
                           <span>Asset: {leg.ws_asset||0}</span>
                         </div>
