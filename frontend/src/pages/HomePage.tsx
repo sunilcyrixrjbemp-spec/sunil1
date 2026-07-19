@@ -243,6 +243,7 @@ export default function HomePage() {
   // Filters state for team claims tab
   const [filterEmployee, setFilterEmployee] = useState<string>("all");
   const [filterMode, setFilterMode] = useState<string>("all");
+  const [filterZone, setFilterZone] = useState<string>("all");
   const [teamPage, setTeamPage] = useState<number>(1);
   const [personalPage, setPersonalPage] = useState<number>(1);
 

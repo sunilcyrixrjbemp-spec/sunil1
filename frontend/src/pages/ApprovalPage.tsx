@@ -8,7 +8,6 @@ import {
   Select, 
   Modal, 
   Alert, 
-  Badge, 
   Space, 
   Input, 
   Typography, 
@@ -110,7 +109,6 @@ export default function ApprovalPage() {
   const [loading, setLoading] = useState(() => {
     return !localStorage.getItem("cache_pending_approvals");
   });
-  const [approvalsPage, setApprovalsPage] = useState(1);
   
   const [selectedApproval, setSelectedApproval] = useState<any>(null);
   const [expenseDetails, setExpenseDetails] = useState<any>(null);
@@ -129,8 +127,7 @@ export default function ApprovalPage() {
 
   const currentUser = JSON.parse(localStorage.getItem("user") || "{}");
   const userRoleLower = (currentUser.role || "").trim().toLowerCase();
-  const isManagerRole = userRoleLower === "manager";
-  const isCoordinator = userRoleLower === "coordinator" || userRoleLower === "admin";
+  const isBulkAuthorized = ["coordinator", "project head"].includes(userRoleLower);
 
   // Edit single itineraries state
   const [editedLegs, setEditedLegs] = useState<any[]>([]);
@@ -633,16 +630,6 @@ export default function ApprovalPage() {
   };
 
   // Checkbox functions
-  const toggleSelectClaim = (expenseId: number) => {
-    setSelectedIds(prev => {
-      if (prev.includes(expenseId)) {
-        return prev.filter(id => id !== expenseId);
-      } else {
-        return [...prev, expenseId];
-      }
-    });
-  };
-
   const toggleSelectAll = () => {
     if (selectedIds.length === claimRequests.length) {
       setSelectedIds([]);
@@ -652,8 +639,8 @@ export default function ApprovalPage() {
   };
 
   const handleOpenBulkAction = (type: "approve" | "reject") => {
-    if (isManagerRole) {
-      toast.error("Manager role is restricted to individual claim approvals only.");
+    if (!isBulkAuthorized) {
+      toast.error("Bulk approval is restricted to Coordinator and Project Head roles only.");
       return;
     }
     if (selectedIds.length === 0) {
@@ -666,8 +653,8 @@ export default function ApprovalPage() {
   };
 
   const handleBulkSubmit = async () => {
-    if (isManagerRole) {
-      toast.error("Manager role is restricted to individual claim approvals only.");
+    if (!isBulkAuthorized) {
+      toast.error("Bulk approval is restricted to Coordinator and Project Head roles only.");
       setShowBulkModal(false);
       return;
     }
@@ -769,9 +756,9 @@ export default function ApprovalPage() {
                 Limit Extensions: <strong>{limitRequests.length}</strong>
               </Tag>
             )}
-            {isManagerRole && (
+            {!isBulkAuthorized && (
               <Tag color="warning" className="font-bold border-0 bg-amber-50 text-amber-800 px-3 py-1 text-xs">
-                Role: Manager (Individual Approvals Only)
+                Role: {currentUser.role || user?.role || "Staff"} (Individual Approvals Only)
               </Tag>
             )}
           </div>
@@ -808,8 +795,8 @@ export default function ApprovalPage() {
             </div>
           </div>
 
-          {/* Bulk Toolbar — Only for authorized non-manager roles */}
-          {!isManagerRole && claimRequests.length > 0 && (
+          {/* Bulk Toolbar — Only for authorized Coordinator & Project Head roles */}
+          {isBulkAuthorized && claimRequests.length > 0 && (
             <div className="flex items-center gap-2">
               <Checkbox
                 checked={selectedIds.length > 0 && selectedIds.length === claimRequests.length}
@@ -976,7 +963,7 @@ export default function ApprovalPage() {
             rowKey="expense_id"
             size="small"
             pagination={{ pageSize: 25, size: "small" }}
-            rowSelection={!isManagerRole ? {
+            rowSelection={isBulkAuthorized ? {
               selectedRowKeys: selectedIds,
               onChange: (keys) => setSelectedIds(keys as number[]),
             } : undefined}

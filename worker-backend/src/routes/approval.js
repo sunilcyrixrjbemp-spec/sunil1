@@ -972,11 +972,11 @@ export async function handleAutoApprovalExpiry(env) {
 
 export async function handleBulkApprove(request, env, params, query, user) {
   const userRoleClean = (user.role || "").trim().toLowerCase();
+  const allowedBulkRoles = ["coordinator", "project head"];
   
-  // Requirement 3: Server-side validation for Manager Role restriction
-  if (userRoleClean === "manager") {
+  if (!allowedBulkRoles.includes(userRoleClean)) {
     return jsonResponse({
-      error: "Forbidden: Bulk approval is restricted for Manager role. Please review and approve claims individually."
+      error: "Forbidden: Bulk approval is restricted to Coordinator and Project Head roles only. Please review and approve claims individually."
     }, 403);
   }
 

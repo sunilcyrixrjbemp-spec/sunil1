@@ -40,5 +40,15 @@ export const approvalService = {
       removed_attachments: removedAttachments
     });
     return response.data;
+  },
+
+  bulkApproveExpenses: async (expenseIds: number[], actionType: "approve" | "reject", comments: string): Promise<any> => {
+    const response = await api.post("/approval/bulk-approve", {
+      expense_ids: expenseIds,
+      action_type: actionType,
+      comments: comments,
+      client_timestamp: getLocalTimestamp()
+    });
+    return response.data;
   }
 };
