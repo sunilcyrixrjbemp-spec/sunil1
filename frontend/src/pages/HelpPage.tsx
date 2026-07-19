@@ -850,11 +850,125 @@ export default function HelpPage() {
 
       </div>
 
+      {/* Global CSS overrides for Ant Design Select and Segmented to ensure full text visibility on mobile */}
+      <style>{`
+        .ant-select-selector input,
+        .ant-select-selection-search input,
+        .ant-select-selection-search-input {
+          min-height: unset !important;
+          height: 100% !important;
+          padding: 0 !important;
+          margin: 0 !important;
+          border-radius: 0 !important;
+          background-color: transparent !important;
+          border: none !important;
+          box-shadow: none !important;
+        }
+        .ant-select-selector {
+          min-height: 40px !important;
+          padding: 4px 11px !important;
+          border-radius: 10px !important;
+          border: 1px solid #cbd5e1 !important;
+          background-color: #ffffff !important;
+          display: flex !important;
+          align-items: center !important;
+        }
+        .ant-select-selection-item {
+          line-height: 28px !important;
+          font-size: 12px !important;
+          font-weight: 600 !important;
+          color: #0f172a !important;
+        }
+        .help-tab-segmented .ant-segmented-item-selected {
+          background-color: #4f46e5 !important;
+        }
+        .help-tab-segmented .ant-segmented-item-selected * {
+          color: #ffffff !important;
+          font-weight: 800 !important;
+        }
+      `}</style>
+
+      {/* Prominent Tab Switcher Bar - Always Visible at Top */}
+      <Card className="rounded-2xl border-slate-200/80 shadow-2xs" bodyStyle={{ padding: "12px" }}>
+        <Segmented
+          value={activeTab}
+          onChange={(val) => { handleTabChange(val as any); setSelectedTicket(null); }}
+          options={[
+            { label: `My Raised Tickets (${myRaisedTickets.length})`, value: "my-tickets" },
+            { label: "File Support Ticket", value: "raise" },
+            ...(hasAccessToAssignedTab ? [{ label: `Assigned Concerns (${assignedTickets.length})`, value: "assigned-tickets" }] : [])
+          ]}
+          block
+          className="help-tab-segmented bg-slate-100/90 p-1 font-extrabold text-xs"
+        />
+      </Card>
+
+      {/* Home-style Filter Toolbar */}
+      {activeTab !== "raise" && (
+        <div className="bg-white border border-slate-200/80 rounded-2xl p-3.5 shadow-2xs flex flex-wrap items-center justify-between gap-3">
+          <div className="flex flex-wrap items-center gap-3 w-full sm:w-auto">
+            <div className="flex items-center gap-1.5 text-xs font-extrabold text-slate-700 uppercase tracking-wider shrink-0">
+              <FilterOutlined className="text-indigo-600 text-sm" />
+              <span>Filter Concerns:</span>
+            </div>
+
+            {/* Follow-up Filter */}
+            <Select
+              value={filterFollowup}
+              onChange={(val) => setFilterFollowup(val)}
+              className="w-full sm:w-36"
+            >
+              <Option value="all">All Concerns</Option>
+              <Option value="flagged">⭐ Flagged Only</Option>
+              <Option value="normal">Unflagged Only</Option>
+            </Select>
+
+            {/* Status Filter */}
+            <Select
+              value={filterStatus}
+              onChange={(val) => setFilterStatus(val)}
+              className="w-full sm:w-36"
+            >
+              <Option value="all">All Statuses</Option>
+              <Option value="Open">Open</Option>
+              <Option value="Re-opened">Re-opened</Option>
+              <Option value="Updated">Updated</Option>
+              <Option value="Closed">Closed</Option>
+              <Option value="Final Closed">Final Closed</Option>
+            </Select>
+
+            {/* Category Filter */}
+            <Select
+              value={filterCategory}
+              onChange={(val) => setFilterCategory(val)}
+              className="w-full sm:w-36"
+            >
+              <Option value="all">All Categories</Option>
+              <Option value="Expense">Expense</Option>
+              <Option value="TA/DA">TA / DA</Option>
+              <Option value="Profile">Profile</Option>
+              <Option value="Other">Other</Option>
+            </Select>
+          </div>
+
+          <Button 
+            onClick={() => {
+              setFilterFollowup("all");
+              setFilterStatus("all");
+              setFilterCategory("all");
+            }}
+            className="text-xs font-bold text-slate-600 rounded-xl hover:text-indigo-600 border-slate-200"
+          >
+            Reset Filters
+          </Button>
+        </div>
+      )}
+
       {/* Main Workspace Layout */}
       <Row gutter={[20, 20]}>
         
         {/* Left Column: File Ticket Form */}
-        <Col xs={24} lg={8} className={activeTab === "raise" ? "block" : "hidden xl:block"}>
+        <Col xs={24} lg={8} className={activeTab === "raise" ? "block" : "hidden lg:block"}>
           <Card 
             title={
               <Text className="text-xs font-black text-slate-800 uppercase tracking-wider flex items-center gap-2">
@@ -969,7 +1083,7 @@ export default function HelpPage() {
                   placeholder="Explain your concern with clear details..."
                   value={description}
                   onChange={(e) => setDescription(e.target.value)}
-                  className="rounded-xl border-slate-200"
+                  className="rounded-xl border-slate-200 font-medium"
                   required
                 />
               </div>
@@ -990,66 +1104,15 @@ export default function HelpPage() {
         </Col>
 
         {/* Right Column: Listing & Thread */}
-        <Col xs={24} lg={16} className={activeTab === "raise" ? "hidden xl:block" : "block"}>
+        <Col xs={24} lg={16} className={activeTab === "raise" ? "hidden lg:block" : "block"}>
           
           <Card className="rounded-2xl border-slate-200/80 shadow-sm overflow-hidden" bodyStyle={{ padding: 0 }}>
             
-            {/* Header Tabs & Filters Toolbar */}
-            <div className="p-4 bg-slate-50 border-b border-slate-200/80 flex flex-col md:flex-row md:items-center justify-between gap-4">
-              
-              {/* Segmented Tab Switcher */}
-              <Segmented
-                value={activeTab}
-                onChange={(val) => { handleTabChange(val as any); setSelectedTicket(null); }}
-                options={[
-                  { label: `My Tickets (${myRaisedTickets.length})`, value: "my-tickets" },
-                  { label: "File Ticket", value: "raise" },
-                  ...(hasAccessToAssignedTab ? [{ label: `Assigned (${assignedTickets.length})`, value: "assigned-tickets" }] : [])
-                ]}
-                className="bg-slate-200/70 p-1 font-bold text-xs"
-              />
-
-              {/* Sub-Filters */}
-              <Space flex-wrap>
-                <Select
-                  value={filterFollowup}
-                  onChange={(val) => setFilterFollowup(val)}
-                  size="small"
-                  className="w-32"
-                >
-                  <Option value="all">All Concerns</Option>
-                  <Option value="flagged">Flagged Only</Option>
-                  <Option value="normal">Unflagged Only</Option>
-                </Select>
-
-                <Select
-                  value={filterStatus}
-                  onChange={(val) => setFilterStatus(val)}
-                  size="small"
-                  className="w-32"
-                >
-                  <Option value="all">All Statuses</Option>
-                  <Option value="Open">Open</Option>
-                  <Option value="Re-opened">Re-opened</Option>
-                  <Option value="Updated">Updated</Option>
-                  <Option value="Closed">Closed</Option>
-                  <Option value="Final Closed">Final Closed</Option>
-                </Select>
-
-                <Select
-                  value={filterCategory}
-                  onChange={(val) => setFilterCategory(val)}
-                  size="small"
-                  className="w-32"
-                >
-                  <Option value="all">All Categories</Option>
-                  <Option value="Expense">Expense</Option>
-                  <Option value="TA/DA">TA / DA</Option>
-                  <Option value="Profile">Profile</Option>
-                  <Option value="Other">Other</Option>
-                </Select>
-              </Space>
-
+            {/* List Header Title */}
+            <div className="px-4 py-3 bg-slate-50 border-b border-slate-200/80 flex items-center justify-between">
+              <Text className="font-extrabold text-xs uppercase tracking-wider text-slate-700">
+                {activeTab === "assigned-tickets" ? "Assigned Concerns" : "My Support Tickets"} ({filteredList.length})
+              </Text>
             </div>
 
             {/* Ticket Cards List */}
