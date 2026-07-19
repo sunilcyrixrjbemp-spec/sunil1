@@ -1160,6 +1160,7 @@ export default function ApprovalPage() {
         width={950}
         style={{ maxWidth: "96vw", top: 16 }}
         className="approval-review-modal"
+        destroyOnClose
         bodyStyle={{
           maxHeight: "72vh",
           overflowY: "auto",
@@ -1179,48 +1180,51 @@ export default function ApprovalPage() {
           </Space>
         }
         footer={
-          <div style={{ display: "flex", flexWrap: "wrap", gap: 8, justifyContent: "space-between", alignItems: "center", width: "100%" }}>
+          <div style={{ display: "flex", gap: 6, alignItems: "center", width: "100%", flexWrap: "nowrap", overflowX: "auto" }}>
             <Button
               onClick={() => { setShowDetailModal(false); setSelectedApproval(null); }}
               disabled={actionLoading}
               icon={<CloseOutlined />}
-              style={{ fontWeight: 700, fontSize: 12 }}
+              size="small"
+              style={{ fontWeight: 700, fontSize: 11, whiteSpace: "nowrap", flexShrink: 0 }}
             >
-              Close Window
+              Close
             </Button>
-            <Space wrap>
+            <div style={{ flex: 1 }} />
+            <Button
+              danger
+              type="primary"
+              onClick={() => handleProcessAction("reject")}
+              disabled={actionLoading || loadingDetails}
+              loading={actionLoading && _actionType === "reject"}
+              icon={<CloseCircleOutlined />}
+              size="small"
+              style={{ fontWeight: 700, fontSize: 11, whiteSpace: "nowrap", flexShrink: 0 }}
+            >
+              Reject
+            </Button>
+            {isCoordinator && selectedApproval && selectedApproval.category !== "Limit Request" && (
               <Button
-                danger
-                type="primary"
-                onClick={() => handleProcessAction("reject")}
+                onClick={() => handleOpenReturnModal(selectedApproval.expense_id)}
                 disabled={actionLoading || loadingDetails}
-                loading={actionLoading && _actionType === "reject"}
-                icon={<CloseCircleOutlined />}
-                style={{ fontWeight: 700, fontSize: 12 }}
+                icon={<RedoOutlined />}
+                size="small"
+                style={{ backgroundColor: "#fa8c16", borderColor: "#fa8c16", color: "#fff", fontWeight: 700, fontSize: 11, whiteSpace: "nowrap", flexShrink: 0 }}
               >
-                Reject Claim
+                Return
               </Button>
-              {isCoordinator && selectedApproval && selectedApproval.category !== "Limit Request" && (
-                <Button
-                  onClick={() => handleOpenReturnModal(selectedApproval.expense_id)}
-                  disabled={actionLoading || loadingDetails}
-                  icon={<RedoOutlined />}
-                  style={{ backgroundColor: "#fa8c16", borderColor: "#fa8c16", color: "#fff", fontWeight: 700, fontSize: 12 }}
-                >
-                  Return to Draft
-                </Button>
-              )}
-              <Button
-                type="primary"
-                onClick={() => handleProcessAction("approve")}
-                disabled={actionLoading || loadingDetails}
-                loading={actionLoading && _actionType === "approve"}
-                icon={<CheckOutlined />}
-                style={{ backgroundColor: "#10b981", borderColor: "#10b981", fontWeight: 700, fontSize: 12 }}
-              >
-                Approve Claim
-              </Button>
-            </Space>
+            )}
+            <Button
+              type="primary"
+              onClick={() => handleProcessAction("approve")}
+              disabled={actionLoading || loadingDetails}
+              loading={actionLoading && _actionType === "approve"}
+              icon={<CheckOutlined />}
+              size="small"
+              style={{ backgroundColor: "#10b981", borderColor: "#10b981", fontWeight: 700, fontSize: 11, whiteSpace: "nowrap", flexShrink: 0 }}
+            >
+              Approve
+            </Button>
           </div>
         }
       >
@@ -1283,7 +1287,7 @@ export default function ApprovalPage() {
             )}
 
                   {/* EDITABLE ITINERARY LEGS */}
-                  {selectedApproval.category !== "Limit Request" && (
+                  {selectedApproval?.category !== "Limit Request" && (
                     <div className="space-y-3">
                     {/* Facility Visits Card Header with antd Card + Tooltip */}
                     <Card
@@ -2109,10 +2113,10 @@ export default function ApprovalPage() {
                     <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
                       <div>
                         <Typography.Text strong style={{ fontSize: 11, textTransform: "uppercase", letterSpacing: "0.05em", color: "#1e40af" }}>
-                          {selectedApproval.category === "Limit Request" ? "Limit Extension Request" : "Expense Total Summary"}
+                          {selectedApproval?.category === "Limit Request" ? "Limit Extension Request" : "Expense Total Summary"}
                         </Typography.Text>
                         <Typography.Text type="secondary" style={{ fontSize: 10, display: "block", marginTop: 2 }}>
-                          {selectedApproval.category === "Limit Request"
+                          {selectedApproval?.category === "Limit Request"
                             ? "This displays the requested limit extension value."
                             : "This reflects the sum of Travel, Local Conveyance, DA, Hotel and Local Purchases."}
                         </Typography.Text>
@@ -2121,16 +2125,16 @@ export default function ApprovalPage() {
                         <div>
                           <Typography.Text type="secondary" style={{ fontSize: 9, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.04em", display: "block" }}>Requested Value</Typography.Text>
                           <Typography.Text strong style={{ fontSize: 16, color: "#1d4ed8", fontFamily: "monospace" }}>
-                            {selectedApproval.category === "Limit Request"
-                              ? `${expenseDetails?.amount} ${selectedApproval.expense_code.includes("KM") ? "KM" : "₹"}`
+                            {selectedApproval?.category === "Limit Request"
+                              ? `${expenseDetails?.amount} ${selectedApproval?.expense_code?.includes("KM") ? "KM" : "₹"}`
                               : `₹${(Number(expenseDetails?.amount) || 0).toLocaleString()}`}
                           </Typography.Text>
                         </div>
-                        {selectedApproval.category === "Limit Request" ? (
+                        {selectedApproval?.category === "Limit Request" ? (
                           <div>
                             <Typography.Text style={{ fontSize: 9, fontWeight: 800, textTransform: "uppercase", color: "#92400e", display: "block" }}>Adjusted Limit Approved</Typography.Text>
                             <Typography.Text strong style={{ fontSize: 16, color: "#d97706", fontFamily: "monospace" }}>
-                              {selectedApproval.expense_code.includes("KM")
+                              {selectedApproval?.expense_code?.includes("KM")
                                 ? `${editedLegs[0]?.km || expenseDetails?.amount} KM`
                                 : `₹${(editedLegs[0]?.travel_amount || expenseDetails?.amount || 0).toLocaleString()}`}
                             </Typography.Text>

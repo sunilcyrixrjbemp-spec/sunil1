@@ -1605,6 +1605,7 @@ export default function HomePage() {
         open={showDetailsModal}
         onCancel={() => { setShowDetailsModal(false); setClaimDetails(null); }}
         width={1000}
+        destroyOnClose
         footer={[
           <div className="flex justify-between items-center w-full" key="claim-details-footer">
             <div className="flex gap-2">
@@ -2658,7 +2659,10 @@ export default function HomePage() {
           maxHeight: "70vh", 
           overflowY: "auto", 
           padding: "12px",
-          background: "#ffffff"
+          background: "#ffffff",
+          WebkitOverflowScrolling: "touch",
+          overscrollBehaviorY: "contain",
+          touchAction: "pan-y"
         }}
       >
         {statsModalClaims.length === 0 ? (
