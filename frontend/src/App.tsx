@@ -8,6 +8,8 @@ import ProtectedRoute from "./components/auth/ProtectedRoute";
 import DashboardLayout from "./components/dashboard/DashboardLayout";
 import ErrorBoundary from "./components/common/ErrorBoundary";
 import NewDashboardPage from "./pages/NewDashboardPage";
+import { ConfigProvider } from "antd";
+import { antdTheme } from "./styles/themeConfig";
 
 // Lazy-loaded page components for fast initial loading
 const LoginPage = lazy(() => import("./pages/LoginPage"));
@@ -28,6 +30,7 @@ const ProfilePage = lazy(() => import("./pages/ProfilePage"));
 const AdminPage = lazy(() => import("./pages/AdminPage"));
 const DBMonitoringPage = lazy(() => import("./pages/DBMonitoringPage"));
 const NotFoundPage = lazy(() => import("./pages/NotFoundPage"));
+const DesignSystemPage = lazy(() => import("./pages/DesignSystemPage"));
 
 function PageLoader() {
   return (
@@ -281,7 +284,8 @@ function App() {
 
   return (
     <ErrorBoundary>
-      <Router>
+      <ConfigProvider theme={antdTheme}>
+        <Router>
         <div className="min-h-screen bg-[#f4f6f9] text-[#212529] font-sans antialiased relative">
         {isOffline && (
           <div 
@@ -322,6 +326,7 @@ function App() {
                 <Route path="/profile" element={<ProfilePage />} />
                 <Route path="/admin" element={<AdminPage />} />
                 <Route path="/db-monitor" element={<DBMonitoringPage />} />
+                <Route path="/design-system" element={<DesignSystemPage />} />
                 <Route path="/not-found" element={<NotFoundPage />} />
               </Route>
             </Route>
@@ -363,6 +368,7 @@ function App() {
         />
         </div>
       </Router>
+      </ConfigProvider>
     </ErrorBoundary>
   );
 }

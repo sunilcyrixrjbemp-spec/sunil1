@@ -1284,7 +1284,7 @@ export default function NewDashboardPage() {
               <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-4">
                 <div>
                   <h3 className="text-xs font-black text-slate-700 uppercase tracking-wider">DI Performance Leaderboard</h3>
-                   <p className="text-[10px] text-slate-400 font-semibold mt-0.5">Sorted: Lowest penalty first (Best -> Worst)</p>
+                   <p className="text-[10px] text-slate-400 font-semibold mt-0.5">Sorted: Lowest penalty first (Best &rarr; Worst)</p>
                 </div>
                 <div className="relative w-full sm:w-64">
                   <Search className="w-4 h-4 text-slate-400 absolute left-3 top-3" />
