@@ -1140,13 +1140,17 @@ export default function HomePage() {
                                   </div>
                                   
                                   <Row gutter={[4, 4]} className="text-[11px] pt-2">
-                                    <Col span={12}>
+                                    <Col span={8}>
                                       <span className="text-gray-400 font-bold uppercase text-[9px] block">Date</span>
                                       <span className="text-gray-700 font-semibold">{exp.itinerary || exp.date}</span>
                                     </Col>
-                                    <Col span={12}>
+                                    <Col span={8}>
                                       <span className="text-gray-400 font-bold uppercase text-[9px] block">Travel Mode</span>
                                       <Tag color="blue" style={{ margin: 0, fontSize: "9px" }} className="uppercase font-bold">{exp.travel_mode || exp.category}</Tag>
+                                    </Col>
+                                    <Col span={8}>
+                                      <span className="text-gray-400 font-bold uppercase text-[9px] block">Calls Logs</span>
+                                      <span className="text-emerald-700 font-bold">{exp.calls_assigned > 0 ? `${exp.calls_completed || 0}/${exp.calls_assigned}` : "—"}</span>
                                     </Col>
                                     <Col span={12} className="mt-1.5">
                                       <span className="text-gray-400 font-bold uppercase text-[9px] block">Distance / Auto</span>
@@ -1414,8 +1418,13 @@ export default function HomePage() {
                                       <span className="text-gray-700 font-semibold">{exp.expense_code} ({exp.date || exp.itinerary})</span>
                                     </Col>
                                     <Col span={12}>
-                                      <span className="text-gray-400 font-bold uppercase text-[9px] block">Mode</span>
-                                      <Tag color="blue" style={{ margin: 0, fontSize: "9px" }} className="uppercase font-bold">{exp.category || exp.travel_mode}</Tag>
+                                      <span className="text-gray-400 font-bold uppercase text-[9px] block">Mode / Calls</span>
+                                      <div className="flex items-center gap-1.5">
+                                        <Tag color="blue" style={{ margin: 0, fontSize: "9px" }} className="uppercase font-bold">{exp.category || exp.travel_mode}</Tag>
+                                        {exp.calls_assigned > 0 && (
+                                          <span className="text-emerald-700 font-bold text-[10px]">📞 {exp.calls_completed || 0}/{exp.calls_assigned}</span>
+                                        )}
+                                      </div>
                                     </Col>
                                     <Col span={12} className="mt-1.5">
                                       <span className="text-gray-400 font-bold uppercase text-[9px] block">Distance / Auto</span>
@@ -1425,7 +1434,7 @@ export default function HomePage() {
                                     </Col>
                                     <Col span={12} className="mt-1.5">
                                       <span className="text-gray-400 font-bold uppercase text-[9px] block">Amount</span>
-                                      <span className="text-indigo-650 font-black">₹{exp.amount.toLocaleString()}</span>
+                                      <span className="text-indigo-655 font-black">₹{exp.amount.toLocaleString()}</span>
                                     </Col>
                                   </Row>
                                   

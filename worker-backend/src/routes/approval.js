@@ -174,6 +174,7 @@ export async function fetchPendingApprovals(env, user) {
   // 2. Fetch normal approvals (joining users table to avoid N+1 query loop)
   const approvals = await env.DB.prepare(`
     SELECT a.*, e.expense_code, e.amount, e.description, e.travel_mode, e.itinerary, e.user_id as submitter_user_id,
+           e.calls_assigned, e.calls_completed,
            u.name AS submitter_name, u.user_id AS submitter_code
     FROM approvals a
     JOIN expenses e ON a.expense_id = e.id
@@ -223,14 +224,16 @@ export async function fetchPendingApprovals(env, user) {
       category: app.travel_mode || "Travel",
       amount: parseFloat(app.amount || 0),
       date: app.itinerary,
-      itinerariesCount: itiCount
+      itinerariesCount: itiCount,
+      calls_assigned: app.calls_assigned || 0,
+      calls_completed: app.calls_completed || 0
     });
   }
 
   // 3. Fetch legacy pending claims
   try {
     const legacyRows = await env.DB.prepare(`
-      SELECT m.exp_id, m.user_id, m.expense_date, m.total_amount, m.status, m.visit_purpose, u.name as full_name, u.e_code
+      SELECT m.exp_id, m.user_id, m.expense_date, m.total_amount, m.status, m.visit_purpose, m.calls_assigned, m.calls_completed, u.name as full_name, u.e_code
       FROM expense_master m
       JOIN users u ON LOWER(m.user_id) = LOWER(u.user_id)
       WHERE 
@@ -256,7 +259,7 @@ export async function fetchPendingApprovals(env, user) {
           `SELECT exp_id, travel_mode 
            FROM expense_itineraries 
            WHERE exp_id IN (?) 
-           AND leg_number = (SELECT MIN(leg_number) FROM expense_itineraries ei2 WHERE ei2.exp_id = expense_itineraries.exp_id)`,
+           AND leg = 1`,
           legacyCodes
         )
       ]);
@@ -290,7 +293,9 @@ export async function fetchPendingApprovals(env, user) {
           category: category,
           amount: parseFloat(row.total_amount || 0),
           date: row.expense_date,
-          itinerariesCount: itiCount
+          itinerariesCount: itiCount,
+          calls_assigned: row.calls_assigned || 0,
+          calls_completed: row.calls_completed || 0
         });
       }
     }

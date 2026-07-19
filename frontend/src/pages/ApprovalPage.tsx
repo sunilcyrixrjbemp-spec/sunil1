@@ -1487,6 +1487,12 @@ export default function ApprovalPage() {
                           <div style={{ fontSize: 9, color: "#9ca3af", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.04em" }}>Category</div>
                           <Tag color="blue" style={{ margin: 0, fontSize: 10, fontWeight: 700 }}>{req.category}</Tag>
                         </div>
+                        {req.calls_assigned > 0 && (
+                          <div>
+                            <div style={{ fontSize: 9, color: "#9ca3af", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.04em" }}>Calls</div>
+                            <div style={{ fontSize: 11, fontWeight: 700, color: "#059669" }}>{req.calls_completed || 0}/{req.calls_assigned}</div>
+                          </div>
+                        )}
                         <div>
                           <div style={{ fontSize: 9, color: "#9ca3af", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.04em" }}>Amount</div>
                           <div style={{ fontSize: 12, fontWeight: 800, color: "#111827", fontFamily: "monospace" }}>₹{(Number(req.amount) || 0).toLocaleString()}</div>

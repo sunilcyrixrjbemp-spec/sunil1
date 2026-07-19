@@ -10,12 +10,12 @@ import {
   Row,
   Col,
   Statistic,
-  Select,
   Button,
   Radio,
   Typography,
   Space,
-  Progress
+  Progress,
+  Segmented
 } from "antd";
 import {
   FilterOutlined,
@@ -32,6 +32,18 @@ import {
 
 const { Title, Text } = Typography;
 
+const getSegmentedClass = (status: string) => {
+  switch (status) {
+    case "approved":
+      return "status-segmented-approved";
+    case "rejected":
+      return "status-segmented-rejected";
+    case "pending":
+      return "status-segmented-pending";
+    default:
+      return "status-segmented-all";
+  }
+};
 
 const GALLERY_COLORS = ["#2f5bb7", "#2b7d50", "#d28b2a", "#854aa5", "#d83b01", "#00a2ad", "#e81123"];
 
@@ -599,26 +611,50 @@ export default function AnalysisPage() {
         
         /* Date Inputs style fixes */
         .analysis-date-input {
-          height: 38px !important;
-          min-height: 38px !important;
-          border: 1.5px solid #cbd5e1 !important;
-          border-radius: 12px !important;
-          padding: 0 12px !important;
-          font-size: 12px !important;
+          height: 34px !important;
+          min-height: 34px !important;
+          border: 1px solid #d1d5db !important;
+          border-radius: 6px !important;
+          padding: 0 8px !important;
+          font-size: 11px !important;
           font-weight: 600 !important;
           background-color: #ffffff !important;
           background-image: none !important;
-          color: #0f172a !important;
+          color: #1f2937 !important;
           width: 100% !important;
           box-sizing: border-box !important;
-          -webkit-appearance: none !important;
-          appearance: none !important;
           font-family: inherit !important;
         }
         .analysis-date-input:focus {
-          border-color: #4f46e5 !important;
+          border-color: #6366f1 !important;
           outline: none !important;
-          box-shadow: 0 0 0 2px rgba(79, 70, 229, 0.1) !important;
+          box-shadow: 0 0 0 2px rgba(99, 102, 241, 0.1) !important;
+        }
+
+        /* Status Segmented control custom styling */
+        .status-segmented-all .ant-segmented-item-selected {
+          background-color: #4f46e5 !important;
+        }
+        .status-segmented-all .ant-segmented-item-selected * {
+          color: white !important;
+        }
+        .status-segmented-pending .ant-segmented-item-selected {
+          background-color: #f97316 !important;
+        }
+        .status-segmented-pending .ant-segmented-item-selected * {
+          color: white !important;
+        }
+        .status-segmented-approved .ant-segmented-item-selected {
+          background-color: #10b981 !important;
+        }
+        .status-segmented-approved .ant-segmented-item-selected * {
+          color: white !important;
+        }
+        .status-segmented-rejected .ant-segmented-item-selected {
+          background-color: #ef4444 !important;
+        }
+        .status-segmented-rejected .ant-segmented-item-selected * {
+          color: white !important;
         }
       `}</style>
       
@@ -677,43 +713,49 @@ export default function AnalysisPage() {
               {/* Zone Filter */}
               <Col xs={12} sm={8} md={6} lg={4}>
                 <span className="text-[9px] font-bold text-gray-400 uppercase block mb-1">Zone</span>
-                <Select
+                <select
                   value={selectedZone}
-                  onChange={setSelectedZone}
-                  style={{ width: "100%" }}
-                  options={[
-                    { label: "All Zones", value: "all" },
-                    ...uniqueZones.map(z => ({ label: z, value: z }))
-                  ]}
-                />
+                  onChange={(e) => setSelectedZone(e.target.value)}
+                  className="w-full bg-white border border-gray-300 rounded px-2 py-1 text-xs font-semibold text-gray-800 shadow-2xs focus:outline-none focus:border-indigo-500 cursor-pointer"
+                  style={{ minHeight: "34px", height: "34px", borderRadius: "6px", fontSize: "11px", lineHeight: "1.2" }}
+                >
+                  <option value="all">Zone: All</option>
+                  {uniqueZones.map(z => (
+                    <option key={z} value={z}>{z}</option>
+                  ))}
+                </select>
               </Col>
 
               {/* District Filter */}
               <Col xs={12} sm={8} md={6} lg={4}>
                 <span className="text-[9px] font-bold text-gray-400 uppercase block mb-1">District</span>
-                <Select
+                <select
                   value={selectedDistrict}
-                  onChange={setSelectedDistrict}
-                  style={{ width: "100%" }}
-                  options={[
-                    { label: "All Districts", value: "all" },
-                    ...filterOptions.districts.map(d => ({ label: d, value: d }))
-                  ]}
-                />
+                  onChange={(e) => setSelectedDistrict(e.target.value)}
+                  className="w-full bg-white border border-gray-300 rounded px-2 py-1 text-xs font-semibold text-gray-800 shadow-2xs focus:outline-none focus:border-indigo-500 cursor-pointer"
+                  style={{ minHeight: "34px", height: "34px", borderRadius: "6px", fontSize: "11px", lineHeight: "1.2" }}
+                >
+                  <option value="all">District: All</option>
+                  {filterOptions.districts.map(d => (
+                    <option key={d} value={d}>{d}</option>
+                  ))}
+                </select>
               </Col>
 
               {/* Engineer Filter */}
               <Col xs={24} sm={8} md={6} lg={4}>
                 <span className="text-[9px] font-bold text-gray-400 uppercase block mb-1">Engineer</span>
-                <Select
+                <select
                   value={selectedEngineer}
-                  onChange={setSelectedEngineer}
-                  style={{ width: "100%" }}
-                  options={[
-                    { label: "All Engineers", value: "all" },
-                    ...filterOptions.engineers.map(name => ({ label: name, value: name }))
-                  ]}
-                />
+                  onChange={(e) => setSelectedEngineer(e.target.value)}
+                  className="w-full bg-white border border-gray-300 rounded px-2 py-1 text-xs font-semibold text-gray-800 shadow-2xs focus:outline-none focus:border-indigo-500 cursor-pointer"
+                  style={{ minHeight: "34px", height: "34px", borderRadius: "6px", fontSize: "11px", lineHeight: "1.2" }}
+                >
+                  <option value="all">Engineer: All</option>
+                  {filterOptions.engineers.map(name => (
+                    <option key={name} value={name}>{name}</option>
+                  ))}
+                </select>
               </Col>
             </>
           )}
@@ -721,40 +763,49 @@ export default function AnalysisPage() {
           {/* Month Filter */}
           <Col xs={12} sm={8} md={6} lg={3}>
             <span className="text-[9px] font-bold text-gray-400 uppercase block mb-1">Month</span>
-            <Select
+            <select
               value={selectedMonth}
-              onChange={setSelectedMonth}
+              onChange={(e) => setSelectedMonth(Number(e.target.value))}
               disabled={!!startDate || !!endDate}
-              style={{ width: "100%" }}
-              options={months.map((m, i) => ({ label: m, value: i }))}
-            />
+              className="w-full bg-white border border-gray-300 rounded px-2 py-1 text-xs font-semibold text-gray-800 shadow-2xs focus:outline-none focus:border-indigo-500 cursor-pointer disabled:opacity-50"
+              style={{ minHeight: "34px", height: "34px", borderRadius: "6px", fontSize: "11px", lineHeight: "1.2" }}
+            >
+              {months.map((m, i) => (
+                <option key={i} value={i}>{m}</option>
+              ))}
+            </select>
           </Col>
 
           {/* Year Filter */}
           <Col xs={12} sm={8} md={6} lg={3}>
             <span className="text-[9px] font-bold text-gray-400 uppercase block mb-1">Year</span>
-            <Select
+            <select
               value={selectedYear}
-              onChange={setSelectedYear}
+              onChange={(e) => setSelectedYear(Number(e.target.value))}
               disabled={!!startDate || !!endDate}
-              style={{ width: "100%" }}
-              options={availableYears.map(y => ({ label: String(y), value: y }))}
-            />
+              className="w-full bg-white border border-gray-300 rounded px-2 py-1 text-xs font-semibold text-gray-800 shadow-2xs focus:outline-none focus:border-indigo-500 cursor-pointer disabled:opacity-50"
+              style={{ minHeight: "34px", height: "34px", borderRadius: "6px", fontSize: "11px", lineHeight: "1.2" }}
+            >
+              {availableYears.map(y => (
+                <option key={y} value={y}>{y}</option>
+              ))}
+            </select>
           </Col>
 
           {/* Status Filter */}
-          <Col xs={12} sm={8} md={6} lg={3}>
+          <Col xs={24} md={12} lg={6}>
             <span className="text-[9px] font-bold text-gray-400 uppercase block mb-1">Status</span>
-            <Select
+            <Segmented
+              block
               value={selectedStatus}
-              onChange={setSelectedStatus}
-              style={{ width: "100%" }}
+              onChange={(val) => setSelectedStatus(val as any)}
               options={[
-                { label: "All Statuses", value: "all" },
-                { label: "Approved", value: "approved" },
-                { label: "Pending", value: "pending" },
-                { label: "Rejected", value: "rejected" }
+                { label: <span className="text-[9px] xs:text-[10px] tracking-tight">All</span>, value: 'all' },
+                { label: <span className="text-[9px] xs:text-[10px] tracking-tight">Pending</span>, value: 'pending' },
+                { label: <span className="text-[9px] xs:text-[10px] tracking-tight">Approved</span>, value: 'approved' },
+                { label: <span className="text-[9px] xs:text-[10px] tracking-tight">Rejected</span>, value: 'rejected' }
               ]}
+              className={`font-bold text-[10px] uppercase tracking-wider ${getSegmentedClass(selectedStatus)}`}
             />
           </Col>
 
