@@ -769,28 +769,29 @@ export default function ApprovalPage() {
       {/* Contextual Ant Design Filters & Bulk Actions Toolbar */}
       <Card size="small" className="border border-gray-200 shadow-xs mb-4">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-          <div className="flex flex-wrap items-center gap-3">
-            <div className="flex items-center gap-2">
-              <Text type="secondary" className="text-[10px] uppercase font-bold tracking-wider">Month:</Text>
+          <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2.5 w-full sm:w-auto">
+            <div className="flex items-center gap-2 w-full sm:w-auto">
+              <Text type="secondary" className="text-[10px] uppercase font-bold tracking-wider shrink-0">Month:</Text>
               <Select
-                size="small"
+                size="middle"
                 value={filterMonth}
                 onChange={(val) => setFilterMonth(val)}
-                className="w-32 text-xs font-semibold"
+                className="w-full sm:w-36 text-xs font-semibold"
                 options={[
                   { label: "All Months", value: "" },
                   ...["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"].map(m => ({ label: m, value: m }))
                 ]}
               />
             </div>
-            <div className="flex items-center gap-2">
-              <Text type="secondary" className="text-[10px] uppercase font-bold tracking-wider">Search:</Text>
+            <div className="flex items-center gap-2 w-full sm:w-auto">
+              <Text type="secondary" className="text-[10px] uppercase font-bold tracking-wider shrink-0">Search:</Text>
               <Input
-                size="small"
+                size="middle"
                 value={filterEngineer}
                 onChange={(e) => setFilterEngineer(e.target.value)}
                 placeholder="Name or Code..."
-                className="w-44 text-xs font-semibold"
+                prefix={<Search size={14} className="text-gray-400" />}
+                className="w-full sm:w-48 text-xs font-semibold"
                 allowClear
               />
             </div>
@@ -798,7 +799,7 @@ export default function ApprovalPage() {
 
           {/* Bulk Toolbar — Only for authorized Coordinator & Project Head roles */}
           {isBulkAuthorized && claimRequests.length > 0 && (
-            <div className="flex items-center gap-2">
+            <div className="flex flex-wrap items-center justify-between sm:justify-end gap-2 pt-2 sm:pt-0 border-t sm:border-t-0 border-gray-150">
               <Checkbox
                 checked={selectedIds.length > 0 && selectedIds.length === claimRequests.length}
                 onChange={toggleSelectAll}
@@ -806,28 +807,30 @@ export default function ApprovalPage() {
               >
                 Select All ({selectedIds.length})
               </Checkbox>
-              <Button
-                type="primary"
-                size="small"
-                style={{ backgroundColor: "#10b981", borderColor: "#10b981" }}
-                disabled={selectedIds.length === 0}
-                onClick={() => handleOpenBulkAction("approve")}
-                icon={<ThumbsUp size={12} />}
-                className="font-bold text-xs"
-              >
-                Bulk Approve ({selectedIds.length})
-              </Button>
-              <Button
-                type="primary"
-                danger
-                size="small"
-                disabled={selectedIds.length === 0}
-                onClick={() => handleOpenBulkAction("reject")}
-                icon={<ThumbsDown size={12} />}
-                className="font-bold text-xs"
-              >
-                Bulk Reject ({selectedIds.length})
-              </Button>
+              <div className="flex items-center gap-2">
+                <Button
+                  type="primary"
+                  size="middle"
+                  style={{ backgroundColor: "#10b981", borderColor: "#10b981" }}
+                  disabled={selectedIds.length === 0}
+                  onClick={() => handleOpenBulkAction("approve")}
+                  icon={<ThumbsUp size={14} />}
+                  className="font-bold text-xs"
+                >
+                  Bulk Approve ({selectedIds.length})
+                </Button>
+                <Button
+                  type="primary"
+                  danger
+                  size="middle"
+                  disabled={selectedIds.length === 0}
+                  onClick={() => handleOpenBulkAction("reject")}
+                  icon={<ThumbsDown size={14} />}
+                  className="font-bold text-xs"
+                >
+                  Bulk Reject ({selectedIds.length})
+                </Button>
+              </div>
             </div>
           )}
         </div>
@@ -958,249 +961,279 @@ export default function ApprovalPage() {
       }>
         {loading ? (
           <Loader message="Loading pending reviews..." />
+        ) : claimRequests.length === 0 ? (
+          <div className="py-12 text-center text-gray-400 text-xs font-bold">
+            No pending claims awaiting review.
+          </div>
         ) : (
-          <Table
-            dataSource={claimRequests}
-            rowKey="expense_id"
-            size="small"
-            pagination={{ pageSize: 25, size: "small" }}
-            rowSelection={isBulkAuthorized ? {
-              selectedRowKeys: selectedIds,
-              onChange: (keys) => setSelectedIds(keys as number[]),
-            } : undefined}
-            onRow={(record) => ({
-              onClick: () => handleOpenDetails(record),
-              className: "cursor-pointer hover:bg-indigo-50/15"
-            })}
-            columns={[
-              {
-                title: "Employee Details",
-                dataIndex: "employeeName",
-                key: "employeeName",
-                render: (name, req) => (
-                  <div className="flex items-center gap-2">
-                    <Avatar size="small" className="bg-indigo-600 font-bold text-xs">
-                      {name ? name.charAt(0).toUpperCase() : "U"}
-                    </Avatar>
-                    <div>
-                      <Text className="font-bold text-gray-800 block text-xs leading-tight">{name}</Text>
-                      <Text className="text-[9px] text-indigo-600 font-mono font-bold block">{req.eCode}</Text>
-                    </div>
-                  </div>
-                ),
-              },
-              {
-                title: "Claim ID",
-                dataIndex: "expense_code",
-                key: "expense_code",
-                render: (code) => <Text className="font-mono font-bold text-indigo-600 text-xs">{code}</Text>,
-              },
-              {
-                title: "Category",
-                dataIndex: "category",
-                key: "category",
-                render: (cat) => <Tag color="blue" className="font-bold text-[10px]">{cat}</Tag>,
-              },
-              {
-                title: "Date / Month",
-                dataIndex: "date",
-                key: "date",
-                align: "center" as const,
-                render: (d) => <Text className="text-gray-600 font-semibold text-xs">{d}</Text>,
-              },
-              {
-                title: "Purpose",
-                dataIndex: "purpose",
-                key: "purpose",
-                ellipsis: true,
-                render: (p) => <Text className="text-gray-700 font-semibold text-xs">{p || "—"}</Text>,
-              },
-              {
-                title: "Total Amount",
-                dataIndex: "amount",
-                key: "amount",
-                align: "right" as const,
-                render: (amt) => <Text className="font-mono font-bold text-gray-900 text-xs">₹{(Number(amt) || 0).toLocaleString()}</Text>,
-              },
-              {
-                title: "Status",
-                dataIndex: "status",
-                key: "status",
-                align: "center" as const,
-                render: (_, req) => {
-                  if (req.is_auto_approved || req.auto_approved || req.status === "auto_approved") {
-                    return <Tag color="success" className="font-bold border-0 bg-emerald-100 text-emerald-800 text-[9px]">⚡ Auto Approved</Tag>;
+          <>
+            {/* Desktop Table View */}
+            <div className="hidden md:block">
+              <Table
+                dataSource={claimRequests}
+                rowKey="expense_id"
+                size="small"
+                pagination={{ pageSize: 25, size: "small" }}
+                scroll={{ x: 800 }}
+                rowSelection={isBulkAuthorized ? {
+                  selectedRowKeys: selectedIds,
+                  onChange: (keys) => setSelectedIds(keys as number[]),
+                } : undefined}
+                onRow={(record) => ({
+                  onClick: () => handleOpenDetails(record),
+                  className: "cursor-pointer hover:bg-indigo-50/15"
+                })}
+                columns={[
+                  {
+                    title: "Employee Details",
+                    dataIndex: "employeeName",
+                    key: "employeeName",
+                    render: (name, req) => (
+                      <div className="flex items-center gap-2">
+                        <Avatar size="small" className="bg-indigo-600 font-bold text-xs">
+                          {name ? name.charAt(0).toUpperCase() : "U"}
+                        </Avatar>
+                        <div>
+                          <Text className="font-bold text-gray-800 block text-xs leading-tight">{name}</Text>
+                          <Text className="text-[9px] text-indigo-600 font-mono font-bold block">{req.eCode}</Text>
+                        </div>
+                      </div>
+                    ),
+                  },
+                  {
+                    title: "Claim ID",
+                    dataIndex: "expense_code",
+                    key: "expense_code",
+                    render: (code) => <Text className="font-mono font-bold text-indigo-600 text-xs">{code}</Text>,
+                  },
+                  {
+                    title: "Category",
+                    dataIndex: "category",
+                    key: "category",
+                    render: (cat) => <Tag color="blue" className="font-bold text-[10px]">{cat}</Tag>,
+                  },
+                  {
+                    title: "Date / Month",
+                    dataIndex: "date",
+                    key: "date",
+                    align: "center" as const,
+                    render: (d) => <Text className="text-gray-600 font-semibold text-xs">{d}</Text>,
+                  },
+                  {
+                    title: "Purpose",
+                    dataIndex: "purpose",
+                    key: "purpose",
+                    ellipsis: true,
+                    render: (p) => <Text className="text-gray-700 font-semibold text-xs">{p || "—"}</Text>,
+                  },
+                  {
+                    title: "Total Amount",
+                    dataIndex: "amount",
+                    key: "amount",
+                    align: "right" as const,
+                    render: (amt) => <Text className="font-mono font-bold text-gray-900 text-xs">₹{(Number(amt) || 0).toLocaleString()}</Text>,
+                  },
+                  {
+                    title: "Status",
+                    dataIndex: "status",
+                    key: "status",
+                    align: "center" as const,
+                    render: (_, req) => {
+                      if (req.is_auto_approved || req.auto_approved || req.status === "auto_approved") {
+                        return <Tag color="success" className="font-bold border-0 bg-emerald-100 text-emerald-800 text-[9px]">⚡ Auto Approved</Tag>;
+                      }
+                      return <Tag color="warning" className="font-bold border-0 bg-amber-50 text-amber-700 text-[9px]">Pending</Tag>;
+                    }
+                  },
+                  {
+                    title: "Actions",
+                    key: "actions",
+                    align: "center" as const,
+                    render: (_, req) => (
+                      <Space size="small" onClick={(e) => e.stopPropagation()}>
+                        <Button
+                          type="default"
+                          size="small"
+                          icon={<Eye size={12} />}
+                          onClick={() => handleOpenDetails(req)}
+                          className="text-[10px] font-bold"
+                        >
+                          Review
+                        </Button>
+                      </Space>
+                    ),
                   }
-                  return <Tag color="warning" className="font-bold border-0 bg-amber-50 text-amber-700 text-[9px]">Pending</Tag>;
-                }
-              },
-              {
-                title: "Actions",
-                key: "actions",
-                align: "center" as const,
-                render: (_, req) => (
-                  <Space size="small" onClick={(e) => e.stopPropagation()}>
-                    <Button
-                      type="default"
-                      size="small"
-                      icon={<Eye size={12} />}
-                      onClick={() => handleOpenDetails(req)}
-                      className="text-[10px] font-bold"
-                    >
-                      Review
-                    </Button>
-                  </Space>
-                ),
-              }
-            ]}
-          />
+                ]}
+              />
+            </div>
+
+            {/* Mobile Responsive Card List View */}
+            <div className="block md:hidden space-y-3 pb-6 touch-pan-y overscroll-y-contain">
+              {claimRequests.map((req) => {
+                const isChecked = selectedIds.includes(req.expense_id);
+                return (
+                  <Card
+                    key={req.expense_id || req.id}
+                    size="small"
+                    onClick={() => handleOpenDetails(req)}
+                    className={`border cursor-pointer shadow-xs transition-all ${
+                      isChecked ? "border-indigo-400 bg-indigo-50/20" : "border-gray-200 bg-white"
+                    }`}
+                  >
+                    <div className="flex items-center justify-between pb-2 border-b border-gray-150">
+                      <div className="flex items-center gap-2">
+                        {isBulkAuthorized && (
+                          <div onClick={(e) => e.stopPropagation()}>
+                            <Checkbox
+                              checked={isChecked}
+                              onChange={() => {
+                                setSelectedIds(prev =>
+                                  prev.includes(req.expense_id)
+                                    ? prev.filter(id => id !== req.expense_id)
+                                    : [...prev, req.expense_id]
+                                );
+                              }}
+                            />
+                          </div>
+                        )}
+                        <Avatar size="small" className="bg-indigo-600 font-bold text-xs">
+                          {req.employeeName ? req.employeeName.charAt(0).toUpperCase() : "U"}
+                        </Avatar>
+                        <div>
+                          <Text className="font-bold text-gray-800 text-xs block leading-tight">{req.employeeName}</Text>
+                          <Text className="text-[9px] text-indigo-600 font-mono font-bold block">{req.eCode}</Text>
+                        </div>
+                      </div>
+                      {req.is_auto_approved || req.auto_approved || req.status === "auto_approved" ? (
+                        <Tag color="success" className="font-bold border-0 bg-emerald-100 text-emerald-800 text-[9px] m-0">⚡ Auto Approved</Tag>
+                      ) : (
+                        <Tag color="warning" className="font-bold border-0 bg-amber-50 text-amber-700 text-[9px] m-0">Pending</Tag>
+                      )}
+                    </div>
+
+                    <Row gutter={[4, 4]} className="text-[11px] pt-2">
+                      <Col span={12}>
+                        <span className="text-gray-400 font-bold uppercase text-[9px] block">Claim ID / Date</span>
+                        <Text className="font-mono font-bold text-indigo-600 text-xs block">{req.expense_code}</Text>
+                        <Text className="text-gray-600 font-medium text-[9px] block">{req.date}</Text>
+                      </Col>
+                      <Col span={12}>
+                        <span className="text-gray-400 font-bold uppercase text-[9px] block">Category</span>
+                        <Tag color="blue" className="font-bold text-[9px] uppercase">{req.category}</Tag>
+                      </Col>
+                      <Col span={12} className="mt-1">
+                        <span className="text-gray-400 font-bold uppercase text-[9px] block">Total Amount</span>
+                        <Text className="font-mono font-bold text-gray-900 text-xs">₹{(Number(req.amount) || 0).toLocaleString()}</Text>
+                      </Col>
+                      <Col span={12} className="mt-1 flex items-end justify-end">
+                        <Button
+                          type="default"
+                          size="small"
+                          icon={<Eye size={12} />}
+                          onClick={(e) => { e.stopPropagation(); handleOpenDetails(req); }}
+                          className="text-[10px] font-bold"
+                        >
+                          Review
+                        </Button>
+                      </Col>
+                    </Row>
+
+                    {req.purpose && (
+                      <div className="border-t border-gray-100 mt-2 pt-1.5 text-[10px]">
+                        <span className="text-gray-400 font-bold uppercase text-[8px] block">Purpose</span>
+                        <Text className="text-gray-700 font-semibold text-[10px] truncate block">{req.purpose}</Text>
+                      </div>
+                    )}
+                  </Card>
+                );
+              })}
+            </div>
+          </>
         )}
       </Card>
       </div>
 
       {/* ================= DETAIL SINGLE REVIEW AND EDIT MODAL ================= */}
-      {showDetailModal && selectedApproval && (
-        <div className="modal-lte-overlay">
-          <div className="modal-lte-content max-w-5xl max-h-[90vh] flex flex-col">
-            
-            {/* Modal Header */}
-            <div className="px-5 py-4 border-b border-gray-200 bg-gray-50 flex items-center justify-between shrink-0">
-              <div className="flex items-center gap-2">
-                <FileText className="w-5 h-5 text-blue-600" />
-                <h3 className="text-sm font-extrabold uppercase tracking-wider text-gray-800">
-                  Reviewing Claim: {selectedApproval.expense_code}
-                </h3>
-              </div>
-              <button 
-                onClick={() => { setShowDetailModal(false); setSelectedApproval(null); }}
-                className="w-7 h-7 rounded-full border border-red-200 bg-red-50 text-red-500 hover:bg-red-100 hover:text-red-700 transition-all cursor-pointer flex items-center justify-center font-bold text-xs"
+      <Modal
+        open={showDetailModal && !!selectedApproval}
+        onCancel={() => { setShowDetailModal(false); setSelectedApproval(null); }}
+        width={950}
+        style={{ maxWidth: "95vw", top: 20 }}
+        title={
+          <div className="flex items-center gap-2">
+            <FileText size={18} className="text-indigo-600" />
+            <span className="font-bold text-sm uppercase">
+              Reviewing Claim: {selectedApproval?.expense_code} ({selectedApproval?.employeeName || expenseDetails?.submitter_name})
+            </span>
+          </div>
+        }
+        footer={[
+          <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 w-full" key="modal-footer">
+            <Button
+              onClick={() => { setShowDetailModal(false); setSelectedApproval(null); }}
+              disabled={actionLoading}
+              icon={<X size={14} />}
+              className="font-bold text-xs"
+            >
+              Close Window
+            </Button>
+            <div className="flex flex-wrap items-center justify-end gap-2">
+              <Button
+                danger
+                type="primary"
+                onClick={() => handleProcessAction("reject")}
+                disabled={actionLoading || loadingDetails}
+                loading={actionLoading && _actionType === "reject"}
+                icon={<X size={14} />}
+                className="font-bold text-xs"
               >
-                ✕
-              </button>
+                Reject Claim
+              </Button>
+              {isCoordinator && selectedApproval && selectedApproval.category !== "Limit Request" && (
+                <Button
+                  style={{ backgroundColor: "#ea580c", borderColor: "#ea580c", color: "#fff" }}
+                  onClick={() => handleOpenReturnModal(selectedApproval.expense_id)}
+                  disabled={actionLoading || loadingDetails}
+                  icon={<RotateCcw size={14} />}
+                  className="font-bold text-xs"
+                >
+                  Return to Draft
+                </Button>
+              )}
+              <Button
+                type="primary"
+                style={{ backgroundColor: "#10b981", borderColor: "#10b981" }}
+                onClick={() => handleProcessAction("approve")}
+                disabled={actionLoading || loadingDetails}
+                loading={actionLoading && _actionType === "approve"}
+                icon={<Check size={14} />}
+                className="font-bold text-xs"
+              >
+                Approve Claim
+              </Button>
             </div>
-
-            {/* Modal Content */}
-            <div className="flex-1 overflow-y-auto p-5 space-y-6">
-              {loadingDetails ? (
-                <Loader message="Retrieving itineraries & receipts..." />
-              ) : expenseDetails ? (
-                <>
-                  {/* Submitter details box */}
-                  <div className="bg-white border-t-4 border-t-blue-600 border border-gray-200 rounded-xl p-4 shadow-sm space-y-3.5 text-xs text-left">
-                    <div className="flex justify-between items-center border-b border-gray-150 pb-2">
-                      <h4 className="font-black text-gray-800 text-[10px] uppercase tracking-widest">Submitter Details & Information</h4>
-                      <span className="font-mono text-[9px] font-bold uppercase bg-blue-50 text-blue-750 px-2 py-0.5 rounded border border-blue-200">{selectedApproval.expense_code}</span>
-                    </div>
-                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3.5">
-                      <div className="p-2.5 bg-gray-50/70 border border-gray-200 rounded">
-                        <span className="text-gray-400 font-bold uppercase tracking-wider block text-[8px]">Employee Name</span>
-                        <div className="flex items-center gap-1.5 mt-1">
-                          <User className="w-3.5 h-3.5 text-gray-500" />
-                          <span className="font-extrabold text-gray-800">{expenseDetails.submitter_name || "—"}</span>
-                        </div>
-                      </div>
-                      <div className="p-2.5 bg-gray-50/70 border border-gray-200 rounded">
-                        <span className="text-gray-400 font-bold uppercase tracking-wider block text-[8px]">Employee ID</span>
-                        <p className="font-mono font-bold text-blue-700 mt-1.5 text-xs">{expenseDetails.submitter_code || "—"}</p>
-                      </div>
-                      <div className="p-2.5 bg-gray-50/70 border border-gray-200 rounded">
-                        <span className="text-gray-400 font-bold uppercase tracking-wider block text-[8px]">Claim Month / Date</span>
-                        <p className="font-extrabold text-gray-800 mt-1.5">{expenseDetails.month} {expenseDetails.year} ({expenseDetails.date})</p>
-                      </div>
-                      <div className="p-2.5 bg-gray-50/70 border border-gray-200 rounded">
-                        <span className="text-gray-400 font-bold uppercase tracking-wider block text-[8px]">Purpose / Description</span>
-                        <p className="font-bold text-gray-705 mt-1.5 truncate" title={expenseDetails.purpose}>{expenseDetails.purpose || "—"}</p>
-                      </div>
-                    </div>
-                  </div>
-
-                  {aiReport && (
-                    <div className={`border rounded-xl p-4 shadow-sm text-xs text-left space-y-2.5 ${
-                      expenseDetails.is_anomaly 
-                        ? "bg-red-50/50 border-red-200 border-t-4 border-t-red-600" 
-                        : "bg-green-50/40 border-green-200 border-t-4 border-t-green-600"
-                    }`}>
-                      <div className="flex justify-between items-center border-b pb-2">
-                        <h4 className={`font-black text-[10px] uppercase tracking-widest flex items-center gap-1.5 ${
-                          expenseDetails.is_anomaly ? "text-red-800" : "text-green-800"
-                        }`}>
-                          <span>🤖 AI Security Audit Report</span>
-                          {expenseDetails.is_anomaly && (
-                            <span className="bg-red-600 text-white font-bold text-[8px] px-1.5 py-0.5 rounded animate-pulse">SUSPICION FLAGGED</span>
-                          )}
-                        </h4>
-                        <span className={`font-mono text-[9px] font-black uppercase px-2 py-0.5 rounded border ${
-                          expenseDetails.is_anomaly 
-                            ? "bg-red-105 text-red-750 border-red-200" 
-                            : "bg-green-105 text-green-750 border-green-200"
-                        }`}>
-                          Risk Score: {aiReport.confidence_score}%
-                        </span>
-                      </div>
-                      
-                      <p className="text-gray-700 font-bold leading-relaxed">{aiReport.summary}</p>
-                      
-                      {aiReport.flags && aiReport.flags.length > 0 && (
-                        <div className="space-y-1.5 pt-1.5">
-                          <span className="text-[9px] text-gray-400 font-black uppercase block tracking-wider">Flagged Observations:</span>
-                          <ul className="list-disc list-inside space-y-1 text-gray-600 font-medium">
-                            {aiReport.flags.map((flag: string, fIdx: number) => (
-                              <li key={fIdx} className="text-red-750">{flag}</li>
-                            ))}
-                          </ul>
-                        </div>
-                      )}
-                    </div>
-                  )}
-
-                  {selectedApproval.category === "Limit Request" && (
-                    <div className="p-4 bg-amber-50 border border-amber-200 rounded-lg text-left space-y-3">
-                      <h4 className="text-xs font-extrabold uppercase text-amber-800 tracking-wider">Approved Limit Adjustment</h4>
-                      <div className="flex items-center gap-4">
-                        <div className="flex-1">
-                          <label className="text-[10px] text-gray-500 font-extrabold uppercase block mb-1">
-                            Approved {selectedApproval.expense_code.includes("KM") ? "KM Limit" : "AUTO Amount"}
-                          </label>
-                          <div className="relative rounded-md shadow-sm max-w-xs">
-                            {selectedApproval.expense_code.includes("AUTO") && (
-                              <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                                <span className="text-gray-500 sm:text-xs">₹</span>
-                              </div>
-                            )}
-                            <input
-                              type="number"
-                              className={`input-lte w-full font-mono font-bold text-sm text-gray-800 ${selectedApproval.expense_code.includes("AUTO") ? "pl-7" : ""}`}
-                              value={selectedApproval.expense_code.includes("KM") ? (editedLegs[0]?.km ?? expenseDetails?.amount ?? 0) : (editedLegs[0]?.travel_amount ?? expenseDetails?.amount ?? 0)}
-                              onChange={(e) => {
-                                const val = parseFloat(e.target.value);
-                                const parsedVal = isNaN(val) ? 0 : val;
-                                setEditedLegs(prev => {
-                                  const updated = [...prev];
-                                  if (updated[0]) {
-                                    if (selectedApproval.expense_code.includes("KM")) {
-                                      updated[0].km = parsedVal;
-                                    } else {
-                                      updated[0].travel_amount = parsedVal;
-                                      updated[0].amount = parsedVal;
-                                    }
-                                  }
-                                  return updated;
-                                });
-                              }}
-                            />
-                            {selectedApproval.expense_code.includes("KM") && (
-                              <div className="absolute inset-y-0 right-0 pr-3 flex items-center pointer-events-none">
-                                <span className="text-gray-500 sm:text-xs">KM</span>
-                              </div>
-                            )}
-                          </div>
-                          <span className="text-[9px] text-gray-400 font-medium mt-1 block">
-                            Requested value was {expenseDetails?.amount} {selectedApproval.expense_code.includes("KM") ? "KM" : "₹"}. You can reduce or adjust it before approving.
-                          </span>
-                        </div>
-                      </div>
-                    </div>
-                  )}
+          </div>
+        ]}
+        bodyStyle={{
+          maxHeight: "75vh",
+          overflowY: "auto",
+          padding: "16px",
+          WebkitOverflowScrolling: "touch",
+          overscrollBehaviorY: "contain"
+        }}
+      >
+        {loadingDetails ? (
+          <Loader message="Retrieving itineraries & receipts..." />
+        ) : expenseDetails ? (
+          <div className="space-y-4">
+            {(expenseDetails.is_auto_approved || expenseDetails.auto_approved || expenseDetails.status === "auto_approved" || selectedApproval?.is_auto_approved) && (
+              <Alert
+                message={<span className="font-bold text-xs uppercase tracking-wider">⚡ Claim Auto-Approved by Policy</span>}
+                description="This claim satisfies automatic approval parameters (e.g. 0 reimbursable total or corporate auto-pass rules)."
+                type="success"
+                showIcon
+              />
+            )}
 
                   {/* EDITABLE ITINERARY LEGS */}
                   {selectedApproval.category !== "Limit Request" && (
@@ -2161,101 +2194,81 @@ export default function ApprovalPage() {
                     <span>Return to Draft</span>
                   </button>
                 )}
-                <button
-                  type="button"
-                  onClick={() => handleProcessAction("approve")}
-                  disabled={actionLoading || loadingDetails}
-                  className="w-full sm:w-auto px-5 py-2.5 bg-emerald-600 hover:bg-emerald-700 active:bg-emerald-800 text-white font-bold rounded-lg text-xs uppercase tracking-wider transition-all cursor-pointer border-0 shadow-sm flex items-center justify-center gap-1.5 min-w-[130px]"
-                >
-                  {actionLoading && _actionType === "approve" ? (
-                    <span className="w-3.5 h-3.5 rounded-full border-2 border-white/35 border-t-white animate-spin shrink-0"/>
-                  ) : (
-                    <Check className="w-3.5 h-3.5" />
-                  )}
-                  <span>{actionLoading && _actionType === "approve" ? "Approving..." : "Approve Claim"}</span>
-                </button>
-              </div>
-            </div>
-
           </div>
-        </div>
-      )}
+        ) : (
+          <div className="py-20 text-center text-gray-400">
+            <AlertTriangle className="w-10 h-10 text-red-500 mx-auto mb-3" />
+            <p className="font-bold">Error: Could not retrieve claim data.</p>
+          </div>
+        )}
+      </Modal>
 
       {/* ================= BATCH ACTION CONFIRMATION MODAL ================= */}
-      {showBulkModal && bulkActionType && (
-        <div className="modal-lte-overlay">
-          <div className="modal-lte-content max-w-md">
-            <h3 className="text-sm font-extrabold uppercase tracking-wider border-b border-gray-250 pb-3 text-gray-800 text-left">
-              Confirm Bulk {bulkActionType === "approve" ? "Reimbursement Approval" : "Claims Rejection"}
-            </h3>
+      <Modal
+        open={showBulkModal && !!bulkActionType}
+        onCancel={() => {
+          setShowBulkModal(false);
+          setBulkActionType(null);
+          setBulkComments("");
+        }}
+        width={500}
+        title={
+          <span className="font-bold text-sm uppercase">
+            Confirm Bulk {bulkActionType === "approve" ? "Reimbursement Approval" : "Claims Rejection"}
+          </span>
+        }
+        footer={[
+          <Button
+            key="cancel"
+            onClick={() => {
+              setShowBulkModal(false);
+              setBulkActionType(null);
+              setBulkComments("");
+            }}
+            disabled={bulkActionLoading}
+          >
+            Cancel
+          </Button>,
+          <Button
+            key="submit"
+            type="primary"
+            danger={bulkActionType === "reject"}
+            style={bulkActionType === "approve" ? { backgroundColor: "#10b981", borderColor: "#10b981" } : undefined}
+            onClick={handleBulkSubmit}
+            loading={bulkActionLoading}
+            className="font-bold text-xs"
+          >
+            Confirm Bulk {bulkActionType === "approve" ? "Approval" : "Rejection"}
+          </Button>
+        ]}
+      >
+        <div className="space-y-4 pt-2 text-left">
+          <div className="text-xs text-gray-700 bg-gray-50 p-3 border border-gray-200 rounded space-y-1.5">
+            <p>Selected claims count: <span className="font-bold text-gray-900">{selectedIds.length} Claims</span></p>
+            {bulkActionType === "approve" && (
+              <p>Accumulated Total Value: <span className="font-bold text-blue-700">₹{(Number(getSelectedTotalAmount()) || 0).toLocaleString()}</span></p>
+            )}
+            <p className="text-[10px] text-gray-400 font-semibold italic mt-1 leading-normal">
+              Note: Bulk actions will process all selected claims sequentially as-is without any visit amount modifications.
+            </p>
+          </div>
 
-            <div className="space-y-4 mt-4 text-left">
-              <div className="text-xs text-gray-700 bg-gray-50 p-3 border border-gray-200 rounded space-y-1.5">
-                <p>Selected claims count: <span className="font-bold text-gray-900">{selectedIds.length} Claims</span></p>
-                {bulkActionType === "approve" && (
-                  <p>Accumulated Total Value: <span className="font-bold text-blue-700">₹{(Number(getSelectedTotalAmount()) || 0).toLocaleString()}</span></p>
-                )}
-                <p className="text-[10px] text-gray-400 font-semibold italic mt-1 leading-normal">
-                  Note: Bulk actions will process all selected claims sequentially as-is without any visit amount modifications.
-                </p>
-              </div>
-
-              {/* Comments */}
-              <div className="space-y-1.5">
-                <label className="label-lte flex justify-between">
-                  <span>Review Comments / Remarks</span>
-                  <span className="text-[9px] text-gray-400">
-                    {bulkActionType === "reject" ? "* (Mandatory)" : "(Optional)"}
-                  </span>
-                </label>
-                <textarea
-                  rows={3}
-                  placeholder={bulkActionType === "reject" ? "State rejection reasons (mandatory)..." : "Add approval notes..."}
-                  value={bulkComments}
-                  onChange={(e) => setBulkComments(e.target.value)}
-                  className="input-lte resize-none"
-                  required={bulkActionType === "reject"}
-                />
-              </div>
-
-              {/* Action buttons */}
-              <div className="flex justify-end gap-3 pt-3 border-t border-gray-250 mt-6">
-                <button
-                  type="button"
-                  onClick={() => {
-                    setShowBulkModal(false);
-                    setBulkActionType(null);
-                    setBulkComments("");
-                  }}
-                  className="btn-lte-secondary"
-                  disabled={bulkActionLoading}
-                >
-                  Cancel
-                </button>
-                <button
-                  type="button"
-                  onClick={handleBulkSubmit}
-                  disabled={bulkActionLoading}
-                  className={`px-5 py-2 rounded text-white font-bold text-xs tracking-wider uppercase transition-all shadow flex items-center gap-1.5 cursor-pointer border-0 ${
-                    bulkActionType === "approve" 
-                      ? "bg-[#28a745] hover:bg-[#218838]" 
-                      : "bg-[#dc3545] hover:bg-[#c82333]"
-                  } disabled:opacity-50`}
-                >
-                  {bulkActionLoading ? (
-                    <>
-                      <Loader2 className="w-3.5 h-3.5 animate-spin" />
-                      <span>Processing...</span>
-                    </>
-                  ) : (
-                    <span>Confirm Bulk {bulkActionType === "approve" ? "Approval" : "Rejection"}</span>
-                  )}
-                </button>
-              </div>
-            </div>
+          <div className="space-y-1.5">
+            <label className="text-xs font-bold text-gray-700 flex justify-between">
+              <span>Review Comments / Remarks</span>
+              <span className="text-[10px] text-gray-400">
+                {bulkActionType === "reject" ? "* (Mandatory)" : "(Optional)"}
+              </span>
+            </label>
+            <Input.TextArea
+              rows={3}
+              placeholder={bulkActionType === "reject" ? "State rejection reasons (mandatory)..." : "Add approval notes..."}
+              value={bulkComments}
+              onChange={(e) => setBulkComments(e.target.value)}
+            />
           </div>
         </div>
-      )}
+      </Modal>
 
       {/* ================= RECEIPT IMAGE LIGHTBOX POPUP ================= */}
       {lightboxImage && (
@@ -2289,55 +2302,48 @@ export default function ApprovalPage() {
       )}
 
       {/* Return to Draft Modal */}
-      {showReturnModal && (
-        <div 
-          className="fixed inset-0 flex items-center justify-center bg-black/40 p-4 animate-fadeIn" 
-          style={{ zIndex: 99999 }}
-          onClick={() => setShowReturnModal(false)}
-        >
-          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md p-6 space-y-4" onClick={(e) => e.stopPropagation()}>
-            <h3 className="text-sm font-extrabold text-orange-850 uppercase tracking-wider flex items-center gap-2">
-              <RotateCcw className="w-5 h-5 text-orange-600" />
-              Return Claim to Draft
-            </h3>
-            <p className="text-xs text-slate-600">
-              This will return the expense claim back to the engineer for corrections. They can edit and resubmit it, or delete it and create a new one.
-            </p>
-            <div>
-              <label className="block text-[10px] font-bold text-slate-500 uppercase mb-1">Reason / Comments *</label>
-              <textarea
-                value={returnComments}
-                onChange={(e) => setReturnComments(e.target.value)}
-                placeholder="Please explain why this claim needs corrections..."
-                rows={3}
-                className="w-full border border-slate-200 rounded-xl px-3 py-2 text-xs text-slate-800 focus:outline-none focus:border-orange-400 resize-none"
-              />
-            </div>
-            <div className="flex gap-3">
-              <button
-                type="button"
-                onClick={() => setShowReturnModal(false)}
-                className="flex-1 py-2.5 rounded-xl font-bold text-xs uppercase tracking-wider bg-slate-100 border border-slate-200 text-slate-600 hover:bg-slate-200 transition-all cursor-pointer border-none"
-              >
-                Cancel
-              </button>
-              <button
-                type="button"
-                onClick={handleReturnToDraft}
-                disabled={returnLoading || !returnComments.trim()}
-                className="flex-1 py-2.5 rounded-xl font-bold text-xs uppercase tracking-wider bg-orange-600 text-white hover:bg-orange-700 transition-all disabled:opacity-50 flex items-center justify-center gap-2 cursor-pointer border-none"
-              >
-                {returnLoading ? (
-                  <span className="w-4 h-4 rounded-full border-2 border-white/35 border-t-white animate-spin" />
-                ) : (
-                  <RotateCcw className="w-4 h-4" />
-                )}
-                Confirm Return
-              </button>
-            </div>
+      <Modal
+        open={showReturnModal}
+        onCancel={() => setShowReturnModal(false)}
+        width={450}
+        title={
+          <span className="font-bold text-sm uppercase text-orange-850 flex items-center gap-2">
+            <RotateCcw size={16} className="text-orange-600" />
+            Return Claim to Draft
+          </span>
+        }
+        footer={[
+          <Button key="cancel" onClick={() => setShowReturnModal(false)}>
+            Cancel
+          </Button>,
+          <Button
+            key="submit"
+            type="primary"
+            style={{ backgroundColor: "#ea580c", borderColor: "#ea580c" }}
+            disabled={returnLoading || !returnComments.trim()}
+            loading={returnLoading}
+            onClick={handleReturnToDraft}
+            className="font-bold text-xs"
+          >
+            Confirm Return
+          </Button>
+        ]}
+      >
+        <div className="space-y-3 pt-2">
+          <Text className="text-xs text-slate-600 block">
+            This will return the expense claim back to the engineer for corrections. They can edit and resubmit it, or delete it and create a new one.
+          </Text>
+          <div>
+            <label className="block text-[10px] font-bold text-slate-500 uppercase mb-1">Reason / Comments *</label>
+            <Input.TextArea
+              value={returnComments}
+              onChange={(e) => setReturnComments(e.target.value)}
+              placeholder="Please explain why this claim needs corrections..."
+              rows={3}
+            />
           </div>
         </div>
-      )}
+      </Modal>
 
     </>
   );

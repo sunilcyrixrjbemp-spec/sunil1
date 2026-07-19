@@ -1632,10 +1632,12 @@ export default function HomePage() {
           </div>
         ]}
         bodyStyle={{ 
-          maxHeight: "70vh", 
+          maxHeight: "75vh", 
           overflowY: "auto", 
-          padding: "12px",
-          background: "#ffffff"
+          padding: "16px",
+          background: "#ffffff",
+          WebkitOverflowScrolling: "touch",
+          overscrollBehaviorY: "contain"
         }}
       >
         {!claimDetails ? (
