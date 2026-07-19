@@ -321,7 +321,7 @@ export const tokenPersistence = {
    * 4. Median.co Native Storage (most persistent — WebView)
    * 5. Capacitor Preferences (most persistent — Native App)
    */
-  save: (accessToken: string, refreshToken: string, user: any) => {
+  save: async (accessToken: string, refreshToken: string, user: any) => {
     _cachedToken = accessToken;
 
     try {
@@ -332,26 +332,44 @@ export const tokenPersistence = {
       console.warn("localStorage write failed:", e);
     }
 
-    setCookieVal("fallback_access_token", accessToken, COOKIE_EXPIRY_DAYS);
-    setCookieVal("fallback_refresh_token", refreshToken, COOKIE_EXPIRY_DAYS);
-    setCookieVal("fallback_user", JSON.stringify(user), COOKIE_EXPIRY_DAYS);
-
-    setIDBValue("access_token", accessToken);
-    setIDBValue("refresh_token", refreshToken);
-    setIDBValue("user", user);
-
-    medianSetItem("access_token", accessToken);
-    medianSetItem("refresh_token", refreshToken);
-    medianSetItem("user", JSON.stringify(user));
+    try {
+      setCookieVal("fallback_access_token", accessToken, COOKIE_EXPIRY_DAYS);
+      setCookieVal("fallback_refresh_token", refreshToken, COOKIE_EXPIRY_DAYS);
+      setCookieVal("fallback_user", JSON.stringify(user), COOKIE_EXPIRY_DAYS);
+    } catch (e) {
+      console.warn("Cookie write failed:", e);
+    }
 
     try {
-      Preferences.set({ key: "access_token", value: accessToken });
-      Preferences.set({ key: "refresh_token", value: refreshToken });
-      Preferences.set({ key: "user", value: JSON.stringify(user) });
-    } catch (_) {}
+      await setIDBValue("access_token", accessToken);
+      await setIDBValue("refresh_token", refreshToken);
+      await setIDBValue("user", user);
+    } catch (e) {
+      console.warn("IndexedDB write failed:", e);
+    }
+
+    try {
+      medianSetItem("access_token", accessToken);
+      medianSetItem("refresh_token", refreshToken);
+      medianSetItem("user", JSON.stringify(user));
+    } catch (e) {
+      console.warn("Median write failed:", e);
+    }
+
+    try {
+      await Preferences.set({ key: "access_token", value: accessToken });
+      await Preferences.set({ key: "refresh_token", value: refreshToken });
+      await Preferences.set({ key: "user", value: JSON.stringify(user) });
+    } catch (e) {
+      console.warn("Preferences write failed:", e);
+    }
 
     // Save physical file backup in phone storage Documents/CyrixField/session.json
-    saveToBackupFile(accessToken, refreshToken, user);
+    try {
+      await saveToBackupFile(accessToken, refreshToken, user);
+    } catch (e) {
+      console.warn("Backup file write failed:", e);
+    }
   },
 
   clear: () => {

@@ -1259,7 +1259,8 @@ export async function getUserMonthlyStatsHelper(env, userDbId, month, year, excl
 export async function handleGetExpenseDetails(request, env, params, query, user) {
   const expenseId = params.id;
 
-  if (expenseId.startsWith("-")) {
+  try {
+    if (expenseId.startsWith("-")) {
     const val = parseInt(expenseId, 10);
     if (val <= -200000) {
       // Legacy expense_master claim!
@@ -1703,6 +1704,9 @@ export async function handleGetExpenseDetails(request, env, params, query, user)
     rate_bike: rateBike,
     rate_car: rateCar
   });
+  } catch (err) {
+    return jsonResponse({ error: "Failed to load details: " + err.message, stack: err.stack }, 500);
+  }
 }
 
 /**

@@ -14,7 +14,7 @@ export const authService = {
   login: async (credentials: LoginCredentials): Promise<AuthResponse> => {
     const response = await api.post("/auth/login", credentials);
     const { access_token, refresh_token, user, bootstrap_data } = response.data;
-    tokenPersistence.save(access_token, refresh_token, user);
+    await tokenPersistence.save(access_token, refresh_token, user);
     
     // Save bootstrap data to cache immediately if present!
     if (bootstrap_data) {
@@ -137,7 +137,7 @@ export const authService = {
       || document.cookie.split("; ").find(r => r.startsWith("fallback_refresh_token="))?.split("=")[1]?.replace(/%[0-9A-F]{2}/gi, c => decodeURIComponent(c))
       || "";
     if (accessToken) {
-      tokenPersistence.save(accessToken, refreshToken, response.data);
+      await tokenPersistence.save(accessToken, refreshToken, response.data);
     }
     return response.data;
   },
@@ -151,7 +151,7 @@ export const authService = {
       || document.cookie.split("; ").find(r => r.startsWith("fallback_refresh_token="))?.split("=")[1]?.replace(/%[0-9A-F]{2}/gi, c => decodeURIComponent(c))
       || "";
     if (accessToken) {
-      tokenPersistence.save(accessToken, refreshToken, response.data);
+      await tokenPersistence.save(accessToken, refreshToken, response.data);
     }
     return response.data;
   },
@@ -171,7 +171,7 @@ export const authService = {
       || document.cookie.split("; ").find(r => r.startsWith("fallback_refresh_token="))?.split("=")[1]?.replace(/%[0-9A-F]{2}/gi, c => decodeURIComponent(c))
       || "";
     if (accessToken) {
-      tokenPersistence.save(accessToken, refreshToken, response.data);
+      await tokenPersistence.save(accessToken, refreshToken, response.data);
     }
     return response.data;
   },
@@ -190,7 +190,7 @@ export const authService = {
       || document.cookie.split("; ").find(r => r.startsWith("fallback_refresh_token="))?.split("=")[1]?.replace(/%[0-9A-F]{2}/gi, c => decodeURIComponent(c))
       || "";
     if (accessToken) {
-      tokenPersistence.save(accessToken, refreshToken, response.data);
+      await tokenPersistence.save(accessToken, refreshToken, response.data);
     }
     return response.data;
   },

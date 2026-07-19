@@ -776,8 +776,8 @@ export default function DashboardLayout() {
             </div>
           </Link>
 
-          {/* Menu Items Grid - centered vertically */}
-          <div className="flex-1 overflow-y-auto flex items-center justify-center p-6">
+          {/* Menu Items Grid - scrollable from top */}
+          <div className="flex-1 overflow-y-auto flex flex-col items-center justify-start py-8 px-6">
             <div className="w-full max-w-sm grid grid-cols-3 gap-3 text-center">
               {allowedMenuItems.map((item) => {
                 const Icon = item.icon;

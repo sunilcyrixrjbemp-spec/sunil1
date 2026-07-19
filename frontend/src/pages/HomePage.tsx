@@ -72,7 +72,8 @@ import {
   Loader2,
   ShieldCheck,
   AlertTriangle,
-  Download
+  Download,
+  ChevronUp
 } from "lucide-react";
 
 import api from "../services/api";
@@ -196,6 +197,53 @@ export default function HomePage() {
   const [lightboxImage, setLightboxImage] = useState<string | null>(null);
   const [displayImageUrl, setDisplayImageUrl] = useState<string | null>(null);
   const [isConvertingHeic, setIsConvertingHeic] = useState(false);
+
+  const [showModalScrollTop, setShowModalScrollTop] = useState(false);
+
+  useEffect(() => {
+    if (!showDetailsModal) {
+      setShowModalScrollTop(false);
+      return;
+    }
+
+    const handleScroll = (e: Event) => {
+      const target = e.target as HTMLElement;
+      if (target.scrollTop > 150) {
+        setShowModalScrollTop(true);
+      } else {
+        setShowModalScrollTop(false);
+      }
+    };
+
+    const timer = setTimeout(() => {
+      const body = document.querySelector(".my-claims-modal-wrap .ant-modal-body");
+      if (body) {
+        body.addEventListener("scroll", handleScroll, { passive: true });
+      }
+    }, 300);
+
+    return () => {
+      clearTimeout(timer);
+      const body = document.querySelector(".my-claims-modal-wrap .ant-modal-body");
+      if (body) {
+        body.removeEventListener("scroll", handleScroll);
+      }
+    };
+  }, [showDetailsModal]);
+
+  const [showPageScrollTop, setShowPageScrollTop] = useState(false);
+
+  useEffect(() => {
+    const handlePageScroll = () => {
+      if (window.scrollY > 300) {
+        setShowPageScrollTop(true);
+      } else {
+        setShowPageScrollTop(false);
+      }
+    };
+    window.addEventListener("scroll", handlePageScroll, { passive: true });
+    return () => window.removeEventListener("scroll", handlePageScroll);
+  }, []);
 
   useEffect(() => {
     let active = true;
@@ -2637,6 +2685,35 @@ export default function HomePage() {
                 </div>
               </div>
             )}
+            {showModalScrollTop && (
+              <button
+                type="button"
+                onClick={() => {
+                  const body = document.querySelector(".my-claims-modal-wrap .ant-modal-body");
+                  if (body) body.scrollTo({ top: 0, behavior: "smooth" });
+                }}
+                style={{
+                  position: "fixed",
+                  right: "24px",
+                  bottom: "76px",
+                  width: "36px",
+                  height: "36px",
+                  borderRadius: "50%",
+                  backgroundColor: "#4f46e5",
+                  color: "#ffffff",
+                  border: "none",
+                  boxShadow: "0 4px 12px rgba(79, 70, 229, 0.4)",
+                  display: "flex",
+                  alignItems: "center",
+                  justify-content: "center",
+                  cursor: "pointer",
+                  zIndex: 9999
+                }}
+                className="hover:scale-110 active:scale-95 transition-all"
+              >
+                <ChevronUp className="w-5 h-5 text-white" />
+              </button>
+            )}
           </div>
         )}
       </Modal>
@@ -2793,6 +2870,33 @@ export default function HomePage() {
           />
         )}
       </Modal>
+
+      {showPageScrollTop && (
+        <button
+          type="button"
+          onClick={() => window.scrollTo({ top: 0, behavior: "smooth" })}
+          style={{
+            position: "fixed",
+            right: "24px",
+            bottom: "80px",
+            width: "40px",
+            height: "40px",
+            borderRadius: "50%",
+            backgroundColor: "#4f46e5",
+            color: "#ffffff",
+            border: "none",
+            boxShadow: "0 4px 12px rgba(79, 70, 229, 0.4)",
+            display: "flex",
+            alignItems: "center",
+            justify-content: "center",
+            cursor: "pointer",
+            zIndex: 999
+          }}
+          className="hover:scale-110 active:scale-95 transition-all"
+        >
+          <ChevronUp className="w-6 h-6 text-white" />
+        </button>
+      )}
     </>
   );
 }

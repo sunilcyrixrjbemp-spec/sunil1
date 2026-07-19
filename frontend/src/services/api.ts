@@ -126,7 +126,7 @@ api.interceptors.response.use(
           
           const currentUserStr = localStorage.getItem("user");
           const currentUser = currentUserStr ? JSON.parse(currentUserStr) : null;
-          tokenPersistence.save(access_token, new_refresh_token || refreshToken, currentUser);
+          await tokenPersistence.save(access_token, new_refresh_token || refreshToken, currentUser);
           
           processQueue(null, access_token);
           
