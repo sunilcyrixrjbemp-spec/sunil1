@@ -9,7 +9,6 @@ import {
   Trash2, Pencil, Plus, Calendar, 
   AlertTriangle, Check, Loader2,
   TrendingUp,
-  Bookmark,
   Info,
   MapPin,
   User,
@@ -25,10 +24,33 @@ import {
   ChevronUp
 } from "lucide-react";
 import api from "../services/api";
-import { DatePicker, ConfigProvider } from "antd";
+import { 
+  DatePicker, ConfigProvider, Modal, Button, Tag, Space 
+} from "antd";
+import { 
+  EditOutlined, DeleteOutlined, FileTextOutlined 
+} from "@ant-design/icons";
 import dayjs, { Dayjs } from "dayjs";
 
 const API_BASE = (api.defaults.baseURL || "").replace(/\/api$/, "");
+
+const renderAntdStatusTag = (status: string) => {
+  const s = (status || "").toLowerCase().trim();
+  switch (s) {
+    case "approved":
+      return <Tag color="success" className="font-bold text-xs px-2.5 py-0.5 rounded-full uppercase tracking-wide">Approved</Tag>;
+    case "rejected":
+      return <Tag color="error" className="font-bold text-xs px-2.5 py-0.5 rounded-full uppercase tracking-wide">Rejected</Tag>;
+    case "submitted":
+    case "pending":
+      return <Tag color="processing" className="font-bold text-xs px-2.5 py-0.5 rounded-full uppercase tracking-wide">Pending</Tag>;
+    case "returned_to_draft":
+    case "returned":
+      return <Tag color="warning" className="font-bold text-xs px-2.5 py-0.5 rounded-full uppercase tracking-wide">Returned to Draft</Tag>;
+    default:
+      return <Tag className="font-bold text-xs px-2.5 py-0.5 rounded-full uppercase tracking-wide">{status || "Draft"}</Tag>;
+  }
+};
 
 const getAttachmentsArray = (attachments: any): string[] => {
   if (!attachments) return [];
@@ -5286,26 +5308,58 @@ export default function ExpensePage() {
       )}
 
       {/* ================= DETAILS MODAL ================= */}
-      {showDetailsModal && (
-        <div className="modal-lte-overlay">
-          <div className="modal-lte-content max-w-5xl max-h-[90vh] flex flex-col">
-            
-            {/* Modal Header */}
-            <div className="px-4 py-3 bg-gradient-to-r from-slate-50 to-gray-100 border-b border-gray-200 flex items-center justify-between shrink-0">
-              <h3 className="text-sm font-extrabold uppercase tracking-wider text-gray-800 flex items-center gap-2">
-                <Bookmark className="w-4 h-4 text-blue-600" />
-                Claim Details {selectedClaim ? `— ${selectedClaim.expense_code}` : ""}
-              </h3>
-              <button 
-                onClick={() => { setShowDetailsModal(false); setSelectedClaim(null); }}
-                className="w-7 h-7 rounded-full border border-red-200 bg-red-50 text-red-500 hover:bg-red-100 hover:text-red-700 transition-all cursor-pointer flex items-center justify-center font-bold text-xs"
-              >
-                ✕
-              </button>
-            </div>
-
-            {/* Modal Content */}
-            <div className="flex-1 overflow-y-auto p-4 space-y-4 bg-slate-50/70">
+      <Modal
+        open={showDetailsModal}
+        onCancel={() => { setShowDetailsModal(false); setSelectedClaim(null); }}
+        footer={
+          <div className="flex items-center justify-between pt-2 border-t border-slate-200">
+            <Space className="gap-2">
+              {selectedClaim && selectedClaim.category !== "Limit Request" && ["draft", "submitted", "returned_to_draft"].includes(selectedClaim.status?.toLowerCase()) && (
+                <>
+                  <Button
+                    type="primary"
+                    icon={<EditOutlined />}
+                    onClick={() => handleEditFromModal(selectedClaim.id)}
+                    className="bg-amber-500 hover:bg-amber-600 font-bold text-xs border-0"
+                  >
+                    Edit Claim
+                  </Button>
+                  <Button
+                    danger
+                    icon={<DeleteOutlined />}
+                    onClick={() => {
+                      handleDeleteClaim(selectedClaim.id);
+                      setShowDetailsModal(false);
+                      setSelectedClaim(null);
+                    }}
+                    className="font-bold text-xs"
+                  >
+                    Delete Claim
+                  </Button>
+                </>
+              )}
+            </Space>
+            <Button
+              onClick={() => { setShowDetailsModal(false); setSelectedClaim(null); }}
+              className="font-bold text-xs"
+            >
+              Close
+            </Button>
+          </div>
+        }
+        width={1000}
+        centered
+        className="rounded-2xl"
+        title={
+          <div className="flex items-center gap-2 pb-2 border-b border-slate-100">
+            <FileTextOutlined className="text-blue-600 text-lg" />
+            <span className="font-extrabold uppercase tracking-wide text-xs text-slate-800 m-0">
+              Claim Details {selectedClaim ? `— ${selectedClaim.expense_code}` : ""}
+            </span>
+          </div>
+        }
+      >
+        <div className="space-y-4 py-2 max-h-[75vh] overflow-y-auto pr-1">
               {detailsLoading || !selectedClaim ? (
                 <div className="flex justify-center p-12 text-gray-400 font-bold">Loading...</div>
               ) : (
@@ -5326,11 +5380,11 @@ export default function ExpensePage() {
                       <span className="text-[9px] text-gray-400 font-bold uppercase block">Submitted At</span>
                       <span className="font-bold text-gray-800 block mt-0.5">{formatDateTime(selectedClaim.created_at)}</span>
                     </div>
-                    <div className="p-3 bg-gray-50 border border-gray-200 rounded">
-                      <span className="text-[9px] text-gray-400 font-bold uppercase block">Status</span>
-                      <span className={`inline-flex items-center px-2 py-0.5 rounded border text-[9px] font-bold uppercase tracking-wider mt-1 ${getStatusBadgeClass(selectedClaim.status)}`}>
-                        {getStatusLabel(selectedClaim.status)}
-                      </span>
+                    <div className="p-3 bg-slate-50 border border-slate-200 rounded-xl">
+                      <span className="text-[9px] text-slate-400 font-bold uppercase block">Status</span>
+                      <div className="mt-1">
+                        {renderAntdStatusTag(selectedClaim.status)}
+                      </div>
                     </div>
                   </div>
 
@@ -6157,45 +6211,7 @@ export default function ExpensePage() {
                 </>
               )}
             </div>
-
-            {/* Modal Footer */}
-            <div className="px-4 py-3 border-t border-gray-200 bg-gray-50 flex items-center justify-between shrink-0">
-              <div className="flex gap-2">
-                {selectedClaim && selectedClaim.category !== "Limit Request" && ["draft", "submitted", "returned_to_draft"].includes(selectedClaim.status?.toLowerCase()) && (
-                  <>
-                    <button
-                      type="button"
-                      onClick={() => handleEditFromModal(selectedClaim.id)}
-                      className="px-3 py-1.5 bg-amber-500 hover:bg-amber-600 text-white rounded text-xs font-bold transition-all cursor-pointer border-0 flex items-center gap-1"
-                    >
-                      ✏️ Edit
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => {
-                        handleDeleteClaim(selectedClaim.id);
-                        setShowDetailsModal(false);
-                        setSelectedClaim(null);
-                      }}
-                      className="px-3 py-1.5 bg-rose-600 hover:bg-rose-700 text-white rounded text-xs font-bold transition-all cursor-pointer border-0 flex items-center gap-1"
-                    >
-                      🗑️ Delete
-                    </button>
-                  </>
-                )}
-              </div>
-              <button
-                type="button"
-                onClick={() => { setShowDetailsModal(false); setSelectedClaim(null); }}
-                className="px-4 py-1.5 bg-gray-200 hover:bg-gray-300 text-gray-700 rounded text-xs font-bold transition-all cursor-pointer border-0"
-              >
-                Close
-              </button>
-            </div>
-
-          </div>
-        </div>
-      )}
+      </Modal>
 
       {/* ================= RECEIPT IMAGE LIGHTBOX POPUP ================= */}
       {lightboxImage && (
