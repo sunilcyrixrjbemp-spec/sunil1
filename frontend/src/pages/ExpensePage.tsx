@@ -3056,10 +3056,6 @@ export default function ExpensePage() {
                     }}
                   />
                 </ConfigProvider>
-                <p className="text-[10px] text-gray-400 font-medium mt-1.5 flex items-center gap-1">
-                  <span style={{ display: "inline-block", width: 6, height: 6, borderRadius: "50%", background: "#22c55e", flexShrink: 0 }} />
-                  Green dot = available &nbsp;|&nbsp; Greyed = already submitted
-                </p>
               </div>
             </div>
 
