@@ -243,8 +243,8 @@ export default function HomePage() {
   // Filters state for team claims tab
   const [filterEmployee, setFilterEmployee] = useState<string>("all");
   const [filterMode, setFilterMode] = useState<string>("all");
-  const [filterZone, setFilterZone] = useState<string>("all");
   const [teamPage, setTeamPage] = useState<number>(1);
+  const [personalPage, setPersonalPage] = useState<number>(1);
 
   const [selectMonth, setSelectMonth] = useState<string>(() => {
     return new Date().toISOString().substring(0, 7); // Default current month YYYY-MM
@@ -253,6 +253,7 @@ export default function HomePage() {
 
   useEffect(() => {
     setTeamPage(1);
+    setPersonalPage(1);
   }, [filterEmployee, filterMode, selectMonth, homeStatusFilter, filterZone]);
 
   useEffect(() => {
@@ -435,39 +436,62 @@ export default function HomePage() {
     return (status || "").toUpperCase();
   };
 
+  const normalizeClaimObject = (raw: any) => {
+    if (!raw) return null;
+    return {
+      ...raw,
+      submitter_name: raw.submitter_name || user?.name || "",
+      submitter_code: raw.submitter_code || user?.user_id || "",
+      category: raw.category || raw.travel_mode || "Travel",
+      date: raw.date || raw.itinerary || "",
+      purpose: raw.purpose || raw.description || "",
+      itineraries: (raw.itineraries && raw.itineraries.length > 0)
+        ? raw.itineraries
+        : (raw.legs || [])
+    };
+  };
+
   const handleOpenClaimDetails = async (claimId: number | string) => {
     setSelectedClaimId(claimId);
     setShowDetailsModal(true);
 
-    // Pre-populate basic details from list instantly to bypass server lag
     const listExpenses = [
       ...(Array.isArray(myExpenses) ? myExpenses : []),
       ...(Array.isArray(teamExpenses) ? teamExpenses : [])
     ];
-    const basicClaim = listExpenses.find(e => e && e.id === claimId);
+    const basicClaim = listExpenses.find(e => e && (String(e.id) === String(claimId) || String(e.expense_code) === String(claimId) || String(e.expense_id) === String(claimId)));
     if (basicClaim) {
-      setClaimDetails(basicClaim);
+      setClaimDetails(normalizeClaimObject(basicClaim));
+    } else {
+      setClaimDetails(null);
     }
 
     const cacheKey = `cache_claim_detail_${claimId}`;
     const cached = localStorage.getItem(cacheKey);
     if (cached) {
-      setClaimDetails(JSON.parse(cached));
-      setLoadingDetails(false);
+      try {
+        setClaimDetails(normalizeClaimObject(JSON.parse(cached)));
+        setLoadingDetails(false);
+      } catch (e) {}
       expenseService.getExpenseDetails(claimId)
         .then(data => {
-          setClaimDetails(data);
-          localStorage.setItem(cacheKey, JSON.stringify(data));
+          if (data) {
+            const norm = normalizeClaimObject(data);
+            setClaimDetails(norm);
+            localStorage.setItem(cacheKey, JSON.stringify(norm));
+          }
         })
         .catch(() => {});
     } else {
       setLoadingDetails(true);
       try {
         const data = await expenseService.getExpenseDetails(claimId);
-        setClaimDetails(data);
-        localStorage.setItem(cacheKey, JSON.stringify(data));
+        if (data) {
+          const norm = normalizeClaimObject(data);
+          setClaimDetails(norm);
+          localStorage.setItem(cacheKey, JSON.stringify(norm));
+        }
       } catch (err) {
-        // If we already pre-populated from list, don't close the modal on network failure
         if (!basicClaim) {
           toast.error("Failed to load expense details.");
           setShowDetailsModal(false);
@@ -593,6 +617,7 @@ export default function HomePage() {
   };
 
   const filteredPersonalExpenses = getFilteredPersonalExpenses();
+  const paginatedPersonalExpenses = filteredPersonalExpenses.slice((personalPage - 1) * 50, personalPage * 50);
 
   const getFilteredTeamExpenses = () => {
     return safeTeamExpenses.filter(exp => {
@@ -1050,8 +1075,8 @@ export default function HomePage() {
                             </div>
 
                             {/* Mobile Card List View */}
-                            <div className="block md:hidden space-y-3 pb-2">
-                              {filteredPersonalExpenses.map((exp) => (
+                            <div className="block md:hidden space-y-3 pb-6 touch-pan-y overscroll-y-contain">
+                              {paginatedPersonalExpenses.map((exp) => (
                                 <Card
                                   key={exp.id}
                                   onClick={() => handleOpenClaimDetails(exp.id)}
@@ -1095,6 +1120,31 @@ export default function HomePage() {
                                 </Card>
                               ))}
                             </div>
+
+                            {/* Pagination Controls */}
+                            {filteredPersonalExpenses.length > 50 && (
+                              <div className="flex justify-between items-center bg-gray-50 border border-gray-200 rounded-lg p-2.5 mt-4 mb-4 shadow-2xs">
+                                <Button
+                                  disabled={personalPage === 1}
+                                  onClick={() => setPersonalPage(prev => Math.max(prev - 1, 1))}
+                                  size="small"
+                                  className="font-bold text-xs"
+                                >
+                                  Prev
+                                </Button>
+                                <span className="text-xs font-bold text-slate-655">
+                                  Page {personalPage} of {Math.ceil(filteredPersonalExpenses.length / 50)} (Total {filteredPersonalExpenses.length} claims)
+                                </span>
+                                <Button
+                                  disabled={personalPage >= Math.ceil(filteredPersonalExpenses.length / 50)}
+                                  onClick={() => setPersonalPage(prev => Math.min(prev + 1, Math.ceil(filteredPersonalExpenses.length / 50)))}
+                                  size="small"
+                                  className="font-bold text-xs"
+                                >
+                                  Next
+                                </Button>
+                              </div>
+                            )}
                           </>
                         )}
                       </div>
