@@ -93,6 +93,14 @@ const formatDateTime = (dateVal: any) => {
   }
 };
 
+const safeSetLocalStorage = (key: string, value: string) => {
+  try {
+    localStorage.setItem(key, value);
+  } catch (e) {
+    console.warn(`localStorage.setItem failed for key "${key}":`, e);
+  }
+};
+
 export default function ApprovalPage() {
   const [pendingApprovals, setPendingApprovals] = useState<any[]>(() => {
     const cached = localStorage.getItem("cache_pending_approvals");
@@ -375,14 +383,14 @@ export default function ApprovalPage() {
 
     try {
       const data = await approvalService.getPendingApprovals();
-      localStorage.setItem(cacheKey, JSON.stringify(data));
+      safeSetLocalStorage(cacheKey, JSON.stringify(data));
       setPendingApprovals(data);
       
       // Also update dashboard badge cache
       const currentUserStr = localStorage.getItem("user");
       if (currentUserStr) {
         const currentUser = JSON.parse(currentUserStr);
-        localStorage.setItem(`cache_approvals_count_${currentUser.user_id}`, data.length.toString());
+        safeSetLocalStorage(`cache_approvals_count_${currentUser.user_id}`, data.length.toString());
       }
     } catch (err: any) {
       console.error("Failed to load approvals", err);
@@ -444,7 +452,7 @@ export default function ApprovalPage() {
         .then(data => {
           setExpenseDetails(data);
           initLegs(data);
-          localStorage.setItem(cacheKey, JSON.stringify(data));
+          safeSetLocalStorage(cacheKey, JSON.stringify(data));
         })
         .catch(() => {});
     } else {
@@ -453,7 +461,7 @@ export default function ApprovalPage() {
         const details = await expenseService.getExpenseDetails(app.expense_id);
         setExpenseDetails(details);
         initLegs(details);
-        localStorage.setItem(cacheKey, JSON.stringify(details));
+        safeSetLocalStorage(cacheKey, JSON.stringify(details));
       } catch (err: any) {
         console.error("Error loading expense details:", err);
         const errMsg = err?.response?.data?.error || err?.message || String(err);
@@ -625,12 +633,12 @@ export default function ApprovalPage() {
       const processedId = selectedApproval.expense_id;
       setPendingApprovals(prev => {
         const filtered = prev.filter((a: any) => a.expense_id !== processedId);
-        localStorage.setItem("cache_pending_approvals", JSON.stringify(filtered));
+        safeSetLocalStorage("cache_pending_approvals", JSON.stringify(filtered));
         const currentUserStr = localStorage.getItem("user");
         if (currentUserStr) {
           try {
             const currentUser = JSON.parse(currentUserStr);
-            localStorage.setItem(`cache_approvals_count_${currentUser.user_id}`, filtered.length.toString());
+            safeSetLocalStorage(`cache_approvals_count_${currentUser.user_id}`, filtered.length.toString());
           } catch(e) {}
         }
         return filtered;
@@ -667,12 +675,12 @@ export default function ApprovalPage() {
       setShowReturnModal(false);
       setPendingApprovals(prev => {
         const filtered = prev.filter((a: any) => a.expense_id !== returnExpenseId);
-        localStorage.setItem("cache_pending_approvals", JSON.stringify(filtered));
+        safeSetLocalStorage("cache_pending_approvals", JSON.stringify(filtered));
         const currentUserStr = localStorage.getItem("user");
         if (currentUserStr) {
           try {
             const currentUser = JSON.parse(currentUserStr);
-            localStorage.setItem(`cache_approvals_count_${currentUser.user_id}`, filtered.length.toString());
+            safeSetLocalStorage(`cache_approvals_count_${currentUser.user_id}`, filtered.length.toString());
           } catch(e) {}
         }
         return filtered;
