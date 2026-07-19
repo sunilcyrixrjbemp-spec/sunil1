@@ -23,9 +23,6 @@ import {
   ShieldAlert,
   Package,
   Plus,
-  AlertTriangle,
-  Check,
-  Info,
   Activity,
   Server,
   Database,
@@ -110,18 +107,6 @@ export default function DashboardLayout() {
   }, []);
 
   useEffect(() => {
-    setIsNotifOpen(false);
-  }, [location.pathname]);
-
-  useEffect(() => {
-    if (typeof window !== "undefined" && "Notification" in window) {
-      if (Notification.permission === "default") {
-        Notification.requestPermission();
-      }
-    }
-  }, []);
-
-  useEffect(() => {
     const currentUser = authService.getCurrentUser();
     if (!currentUser) {
       navigate("/login");
@@ -189,22 +174,6 @@ export default function DashboardLayout() {
     preloadImage();
   }, [user?.profile_pic_url, user?.user_id, user?.id]);
 
-  const formatDateTime = (dateVal: any) => {
-    if (!dateVal) return "—";
-    try {
-      const d = new Date(dateVal);
-      if (isNaN(d.getTime())) return "Just now";
-      const day = String(d.getDate()).padStart(2, "0");
-      const months = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
-      const month = months[d.getMonth()];
-      const hours = String(d.getHours()).padStart(2, "0");
-      const minutes = String(d.getMinutes()).padStart(2, "0");
-      return `${day}-${month}-${d.getFullYear()} ${hours}:${minutes}:${String(d.getSeconds()).padStart(2, "0")}`;
-    } catch (_) {
-      return "—";
-    }
-  };
-
   if (!user) return null;
 
   const userRole = user.role || "Engineer";
@@ -270,7 +239,6 @@ export default function DashboardLayout() {
   const hasAccess = 
     !currentActiveItem || 
     allowedWindows.includes(currentActiveItem.id.toLowerCase());
-  const safeNotifications = Array.isArray(notifications) ? notifications : [];
 
   return (
     <div className="min-h-screen bg-[#f4f6f9] text-[#212529] flex flex-col lg:flex-row antialiased">
