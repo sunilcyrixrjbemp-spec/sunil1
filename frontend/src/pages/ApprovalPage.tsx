@@ -1419,7 +1419,7 @@ export default function ApprovalPage() {
             </div>
 
             {/* Mobile Responsive Card List View — antd Card based, one card per claim */}
-            <div className="block md:hidden space-y-3 pb-6">
+            <div className={`block md:hidden space-y-3 ${selectedIds.length > 0 ? 'pb-24' : 'pb-6'}`}>
               {claimRequests.map((req) => {
                 const isChecked = selectedIds.includes(req.expense_id);
                 const isAutoApproved = req.is_auto_approved || req.auto_approved || req.status === "auto_approved";
@@ -2805,6 +2805,40 @@ export default function ApprovalPage() {
         >
           <ChevronUp className="w-6 h-6 text-white" />
         </button>
+      )}
+      {/* Sticky Mobile Bulk Action Bar */}
+      {isBulkAuthorized && selectedIds.length > 0 && (
+        <div 
+          className="md:hidden fixed bottom-14 left-0 right-0 bg-white border-t border-gray-200 shadow-[0_-4px_12px_rgba(0,0,0,0.08)] px-4 py-3 z-[998] flex items-center justify-between animate-fadeIn"
+          style={{ animationDuration: '0.2s' }}
+        >
+          <div className="flex flex-col">
+            <span className="text-[10px] text-gray-400 font-extrabold uppercase tracking-wider">Bulk Actions</span>
+            <span className="text-xs font-bold text-indigo-700">{selectedIds.length} Selected</span>
+          </div>
+          <div className="flex items-center gap-2">
+            <Button
+              type="primary"
+              size="middle"
+              style={{ backgroundColor: "#10b981", borderColor: "#10b981" }}
+              onClick={() => handleOpenBulkAction("approve")}
+              icon={<Check size={14} />}
+              className="font-bold text-xs"
+            >
+              Approve ({selectedIds.length})
+            </Button>
+            <Button
+              type="primary"
+              danger
+              size="middle"
+              onClick={() => handleOpenBulkAction("reject")}
+              icon={<X size={14} />}
+              className="font-bold text-xs"
+            >
+              Reject ({selectedIds.length})
+            </Button>
+          </div>
+        </div>
       )}
     </>
   );
