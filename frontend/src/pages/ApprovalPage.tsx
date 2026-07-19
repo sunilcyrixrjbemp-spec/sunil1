@@ -570,9 +570,27 @@ export default function ApprovalPage() {
         if (type === "approve") {
           await approvalService.approveExpense(selectedApproval.expense_id, comments.trim() || "Approved limit extension", undefined, approvedVal);
           toast.success("Limit request approved successfully!");
+          setSuccessModal({
+            visible: true,
+            isAuto: false,
+            claimCode: selectedApproval.expense_code,
+            empName: selectedApproval.employeeName,
+            amount: approvedVal || selectedApproval.amount || 0,
+            actionType: "approve",
+            isLimit: true
+          });
         } else {
           await approvalService.rejectExpense(selectedApproval.expense_id, comments.trim() || "Limit extension rejected");
           toast.error("Limit request rejected.");
+          setSuccessModal({
+            visible: true,
+            isAuto: false,
+            claimCode: selectedApproval.expense_code,
+            empName: selectedApproval.employeeName,
+            amount: selectedApproval.amount || 0,
+            actionType: "reject",
+            isLimit: true
+          });
         }
       } else {
         if (type === "approve") {
@@ -589,6 +607,14 @@ export default function ApprovalPage() {
         } else {
           await approvalService.rejectExpense(selectedApproval.expense_id, comments.trim(), itineraryEdits, removedAttachments);
           toast.error(`Claim ${selectedApproval.expense_code} rejected.`);
+          setSuccessModal({
+            visible: true,
+            isAuto: false,
+            claimCode: selectedApproval.expense_code,
+            empName: selectedApproval.employeeName,
+            amount: selectedApproval.amount || 0,
+            actionType: "reject"
+          });
         }
       }
 
@@ -802,6 +828,10 @@ export default function ApprovalPage() {
           0%, 100% { box-shadow: 0 0 0 0 rgba(99,102,241,0.5); }
           50%       { box-shadow: 0 0 0 14px rgba(99,102,241,0); }
         }
+        @keyframes ap-reject-ring-pulse {
+          0%, 100% { box-shadow: 0 0 0 0 rgba(225,29,72,0.5); }
+          50%       { box-shadow: 0 0 0 14px rgba(225,29,72,0); }
+        }
         .ap-success-modal-content {
           animation: ap-modal-in 0.55s cubic-bezier(0.34,1.56,0.64,1) both;
         }
@@ -811,7 +841,10 @@ export default function ApprovalPage() {
         .ap-auto-ring {
           animation: ap-ring-pulse 0.5s ease-out 0.1s both, ap-auto-ring-pulse 1.4s ease-in-out 0.6s infinite;
         }
-        .ap-check-svg path {
+        .ap-reject-ring {
+          animation: ap-ring-pulse 0.5s ease-out 0.1s both, ap-reject-ring-pulse 1.4s ease-in-out 0.6s infinite;
+        }
+        .ap-check-svg path, .ap-cross-svg path {
           stroke-dasharray: 100;
           animation: ap-check-draw 0.45s ease-out 0.35s both;
         }
@@ -837,24 +870,38 @@ export default function ApprovalPage() {
           <div className="ap-success-modal-content" style={{ borderRadius: 16, overflow: "hidden", background: "#fff", textAlign: "center" }}>
             {/* Gradient header */}
             <div style={{
-              background: successModal.isAuto
-                ? "linear-gradient(135deg, #4f46e5 0%, #7c3aed 100%)"
-                : "linear-gradient(135deg, #059669 0%, #10b981 100%)",
+              background: successModal.actionType === "reject"
+                ? "linear-gradient(135deg, #be123c 0%, #fb7185 100%)"
+                : successModal.isAuto
+                  ? "linear-gradient(135deg, #4f46e5 0%, #7c3aed 100%)"
+                  : "linear-gradient(135deg, #059669 0%, #10b981 100%)",
               padding: "32px 24px 24px",
               position: "relative",
               overflow: "hidden"
             }}>
               {/* Confetti particles */}
-              {[
-                { color: "#fde68a", left: "12%", delay: "0.4s" },
-                { color: "#a5f3fc", left: "28%", delay: "0.5s" },
-                { color: "#fca5a5", left: "44%", delay: "0.3s" },
-                { color: "#bbf7d0", left: "60%", delay: "0.6s" },
-                { color: "#ddd6fe", left: "76%", delay: "0.45s" },
-                { color: "#fde68a", left: "88%", delay: "0.35s" },
-                { color: "#a5f3fc", left: "20%", delay: "0.7s" },
-                { color: "#fca5a5", left: "70%", delay: "0.55s" },
-              ].map((p, i) => (
+              {(successModal.actionType === "reject"
+                ? [
+                    { color: "#fda4af", left: "12%", delay: "0.4s" },
+                    { color: "#fecdd3", left: "28%", delay: "0.5s" },
+                    { color: "#e2e8f0", left: "44%", delay: "0.3s" },
+                    { color: "#cbd5e1", left: "60%", delay: "0.6s" },
+                    { color: "#fecdd3", left: "76%", delay: "0.45s" },
+                    { color: "#fda4af", left: "88%", delay: "0.35s" },
+                    { color: "#e2e8f0", left: "20%", delay: "0.7s" },
+                    { color: "#fecdd3", left: "70%", delay: "0.55s" },
+                  ]
+                : [
+                    { color: "#fde68a", left: "12%", delay: "0.4s" },
+                    { color: "#a5f3fc", left: "28%", delay: "0.5s" },
+                    { color: "#fca5a5", left: "44%", delay: "0.3s" },
+                    { color: "#bbf7d0", left: "60%", delay: "0.6s" },
+                    { color: "#ddd6fe", left: "76%", delay: "0.45s" },
+                    { color: "#fde68a", left: "88%", delay: "0.35s" },
+                    { color: "#a5f3fc", left: "20%", delay: "0.7s" },
+                    { color: "#fca5a5", left: "70%", delay: "0.55s" },
+                  ]
+              ).map((p, i) => (
                 <div key={i} className="ap-particle" style={{
                   background: p.color,
                   left: p.left,
@@ -867,7 +914,13 @@ export default function ApprovalPage() {
               {/* Animated icon ring */}
               <div style={{ display: "flex", justifyContent: "center", marginBottom: 12 }}>
                 <div
-                  className={successModal.isAuto ? "ap-auto-ring" : "ap-check-ring"}
+                  className={
+                    successModal.actionType === "reject"
+                      ? "ap-reject-ring"
+                      : successModal.isAuto
+                        ? "ap-auto-ring"
+                        : "ap-check-ring"
+                  }
                   style={{
                     width: 80, height: 80,
                     borderRadius: "50%",
@@ -877,7 +930,18 @@ export default function ApprovalPage() {
                     backdropFilter: "blur(4px)"
                   }}
                 >
-                  {successModal.isAuto ? (
+                  {successModal.actionType === "reject" ? (
+                    <svg className="ap-cross-svg" width="44" height="44" viewBox="0 0 52 52" fill="none">
+                      <path
+                        d="M16 16 L36 36 M36 16 L16 36"
+                        stroke="white"
+                        strokeWidth="5"
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        fill="none"
+                      />
+                    </svg>
+                  ) : successModal.isAuto ? (
                     <span style={{ fontSize: 38, lineHeight: 1 }}>⚡</span>
                   ) : successModal.isBulk ? (
                     <span style={{ fontSize: 38, lineHeight: 1 }}>
@@ -901,14 +965,20 @@ export default function ApprovalPage() {
               {/* Title */}
               <div style={{ color: "#fff", fontWeight: 800, fontSize: 17, letterSpacing: "0.01em", lineHeight: 1.3 }}>
                 {successModal.isBulk
-                  ? `Bulk ${successModal.actionType === "approve" ? "Approval" : "Rejection"} Done!`
-                  : successModal.isAuto
-                    ? "Auto-Approved! ⚡"
-                    : "Claim Approved! 🎉"}
+                  ? `Bulk Claims ${successModal.actionType === "approve" ? "Approved" : "Rejected"}!`
+                  : successModal.actionType === "reject"
+                    ? (successModal.isLimit ? "Limit Request Rejected!" : "Claim Rejected! ❌")
+                    : successModal.isAuto
+                      ? "Auto-Approved! ⚡"
+                      : (successModal.isLimit ? "Limit Request Approved!" : "Claim Approved! 🎉")}
               </div>
               {!successModal.isBulk && (
                 <div style={{ color: "rgba(255,255,255,0.82)", fontSize: 12, marginTop: 4, fontWeight: 500 }}>
-                  {successModal.isAuto ? "System policy auto-approval applied" : "Reimbursement has been sanctioned"}
+                  {successModal.actionType === "reject"
+                    ? "Expense claim has been rejected"
+                    : successModal.isAuto
+                      ? "System policy auto-approval applied"
+                      : "Reimbursement has been sanctioned"}
                 </div>
               )}
             </div>
@@ -916,17 +986,48 @@ export default function ApprovalPage() {
             {/* Body details */}
             <div style={{ padding: "20px 24px" }}>
               {successModal.isBulk ? (
-                <div style={{ background: "#f0fdf4", border: "1px solid #bbf7d0", borderRadius: 10, padding: "14px 16px", marginBottom: 16 }}>
-                  <div style={{ fontSize: 13, fontWeight: 700, color: "#065f46" }}>
-                    Successfully processed <span style={{ fontSize: 22, fontWeight: 900, color: "#059669" }}>{successModal.bulkCount}</span> claim{(successModal.bulkCount || 0) > 1 ? "s" : ""}
+                <div style={{
+                  background: successModal.actionType === "reject" ? "#fff5f5" : "#f0fdf4",
+                  border: `1px solid ${successModal.actionType === "reject" ? "#fecdd3" : "#bbf7d0"}`,
+                  borderRadius: 10,
+                  padding: "14px 16px",
+                  marginBottom: 16
+                }}>
+                  <div style={{ fontSize: 13, fontWeight: 700, color: successModal.actionType === "reject" ? "#9f1239" : "#065f46" }}>
+                    Successfully processed <span style={{ fontSize: 22, fontWeight: 900, color: successModal.actionType === "reject" ? "#e11d48" : "#059669" }}>{successModal.bulkCount}</span> claim{(successModal.bulkCount || 0) > 1 ? "s" : ""}
                   </div>
                 </div>
               ) : (
-                <div style={{ background: successModal.isAuto ? "#eef2ff" : "#f0fdf4", border: `1px solid ${successModal.isAuto ? "#c7d2fe" : "#bbf7d0"}`, borderRadius: 10, padding: "12px 14px", marginBottom: 16, textAlign: "left" }}>
+                <div style={{
+                  background: successModal.actionType === "reject"
+                    ? "#fff5f5"
+                    : successModal.isAuto
+                      ? "#eef2ff"
+                      : "#f0fdf4",
+                  border: `1px solid ${
+                    successModal.actionType === "reject"
+                      ? "#fecdd3"
+                      : successModal.isAuto
+                        ? "#c7d2fe"
+                        : "#bbf7d0"
+                  }`,
+                  borderRadius: 10,
+                  padding: "12px 14px",
+                  marginBottom: 16,
+                  textAlign: "left"
+                }}>
                   <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
                     <div style={{ display: "flex", justifyContent: "space-between", fontSize: 12 }}>
                       <span style={{ color: "#6b7280", fontWeight: 600 }}>Claim ID</span>
-                      <span style={{ fontFamily: "monospace", fontWeight: 800, color: successModal.isAuto ? "#4f46e5" : "#059669" }}>
+                      <span style={{
+                        fontFamily: "monospace",
+                        fontWeight: 800,
+                        color: successModal.actionType === "reject"
+                          ? "#be123c"
+                          : successModal.isAuto
+                            ? "#4f46e5"
+                            : "#059669"
+                      }}>
                         {successModal.claimCode}
                       </span>
                     </div>
@@ -937,7 +1038,12 @@ export default function ApprovalPage() {
                     {!successModal.isAuto && (successModal.amount || 0) > 0 && (
                       <div style={{ display: "flex", justifyContent: "space-between", fontSize: 12 }}>
                         <span style={{ color: "#6b7280", fontWeight: 600 }}>Amount</span>
-                        <span style={{ fontFamily: "monospace", fontWeight: 900, color: "#059669", fontSize: 14 }}>
+                        <span style={{
+                          fontFamily: "monospace",
+                          fontWeight: 900,
+                          color: successModal.actionType === "reject" ? "#be123c" : "#059669",
+                          fontSize: 14
+                        }}>
                           ₹{(successModal.amount || 0).toLocaleString()}
                         </span>
                       </div>
@@ -957,17 +1063,21 @@ export default function ApprovalPage() {
                 size="large"
                 onClick={() => setSuccessModal(null)}
                 style={{
-                  background: successModal.isAuto
-                    ? "linear-gradient(135deg, #4f46e5, #7c3aed)"
-                    : "linear-gradient(135deg, #059669, #10b981)",
+                  background: successModal.actionType === "reject"
+                    ? "linear-gradient(135deg, #e11d48, #fb7185)"
+                    : successModal.isAuto
+                      ? "linear-gradient(135deg, #4f46e5, #7c3aed)"
+                      : "linear-gradient(135deg, #059669, #10b981)",
                   border: "none",
                   borderRadius: 10,
                   fontWeight: 800,
                   fontSize: 14,
                   height: 46,
-                  boxShadow: successModal.isAuto
-                    ? "0 4px 14px rgba(79,70,229,0.35)"
-                    : "0 4px 14px rgba(16,185,129,0.35)"
+                  boxShadow: successModal.actionType === "reject"
+                    ? "0 4px 14px rgba(225,29,72,0.35)"
+                    : successModal.isAuto
+                      ? "0 4px 14px rgba(79,70,229,0.35)"
+                      : "0 4px 14px rgba(16,185,129,0.35)"
                 }}
               >
                 {successModal.isBulk ? "Close" : "Done ✓"}
