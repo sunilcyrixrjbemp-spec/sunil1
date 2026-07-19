@@ -13,7 +13,6 @@ import {
   Button, 
   Table, 
   Modal, 
-  Select, 
   Tabs, 
   Row, 
   Col, 
@@ -502,8 +501,25 @@ export default function HomePage() {
     ).entries()
   ).map(([code, name]) => ({ code: String(code), name: String(name) }));
 
-  // Unique zones list for dropdown filter
-  const uniqueZones = ["Ajmer", "Bikaner", "Jaipur", "Jodhpur", "Udaipur"];
+  // Role-based zone restrictions for filter dropdown
+  const currentUserObj = JSON.parse(localStorage.getItem("user") || "null") || user;
+  const effectiveUserRoleLower = (currentUserObj?.role || "").trim().toLowerCase();
+  const isGlobalAdminRole = ["admin", "project head", "mis", "travel desk", "travel tesk", "vp", "accountant", "hr"].includes(effectiveUserRoleLower);
+  
+  const userZoneRaw = currentUserObj?.zone || "";
+  const userZonesList = userZoneRaw
+    ? userZoneRaw.split(",").map((z: string) => cleanZone(z)).filter(Boolean)
+    : [];
+
+  const allPossibleZones = ["Ajmer", "Bikaner", "Jaipur", "Jodhpur", "Udaipur"];
+  let uniqueZones = allPossibleZones;
+
+  if (!isGlobalAdminRole && userZonesList.length > 0) {
+    uniqueZones = allPossibleZones.filter(z => userZonesList.includes(cleanZone(z)));
+    if (uniqueZones.length === 0) {
+      uniqueZones = userZonesList;
+    }
+  }
 
   // Unique categories/modes for dropdown filter
   const uniqueModes = Array.from(
@@ -1052,84 +1068,76 @@ export default function HomePage() {
                     children: (
                       <div className="space-y-3 pt-2">
                         {/* Filters Row */}
-                        <div className="bg-gray-50 border border-gray-255 rounded-lg p-2.5 space-y-2 text-xs font-bold text-slate-705">
+                        <div className="bg-gray-50 border border-gray-200 rounded-lg p-2.5 space-y-2 text-xs font-bold text-slate-700">
                           <Row gutter={[8, 8]} align="middle">
-                            <Col xs={24} sm={6}>
-                              <div className="flex flex-col gap-0.5">
-                                <span className="text-[8px] uppercase font-bold text-gray-400">Month</span>
-                                <Select 
-                                  size="small"
+                            <Col xs={12} sm={6}>
+                              <div className="flex flex-col gap-1">
+                                <span className="text-[9px] uppercase font-bold text-gray-500 tracking-wider">Month</span>
+                                <select 
                                   value={selectMonth} 
-                                  onChange={(val) => setSelectMonth(val)}
-                                  className="w-full text-xs font-semibold"
-                                  popupMatchSelectWidth={false}
-                                  dropdownStyle={{ fontSize: "12px" }}
+                                  onChange={(e) => setSelectMonth(e.target.value)}
+                                  className="w-full bg-white border border-gray-300 rounded px-2 py-1 text-xs font-semibold text-gray-800 shadow-2xs focus:outline-none focus:border-indigo-500 cursor-pointer"
+                                  style={{ minHeight: "34px", height: "34px", borderRadius: "6px", fontSize: "11px", lineHeight: "1.2" }}
                                 >
                                   {uniqueMonths.map(m => (
-                                    <Select.Option key={m.value} value={m.value}>
+                                    <option key={m.value} value={m.value}>
                                       Month: {m.label}
-                                    </Select.Option>
+                                    </option>
                                   ))}
-                                </Select>
+                                </select>
                               </div>
                             </Col>
 
                             {isReviewerRole && (
-                              <Col xs={24} sm={6}>
-                                <div className="flex flex-col gap-0.5">
-                                  <span className="text-[8px] uppercase font-bold text-gray-400">Zone</span>
-                                  <Select 
-                                    size="small"
+                              <Col xs={12} sm={6}>
+                                <div className="flex flex-col gap-1">
+                                  <span className="text-[9px] uppercase font-bold text-gray-500 tracking-wider">Zone</span>
+                                  <select 
                                     value={filterZone} 
-                                    onChange={(val) => setFilterZone(val)}
-                                    className="w-full text-xs font-semibold"
-                                    popupMatchSelectWidth={false}
-                                    dropdownStyle={{ fontSize: "12px" }}
+                                    onChange={(e) => setFilterZone(e.target.value)}
+                                    className="w-full bg-white border border-gray-300 rounded px-2 py-1 text-xs font-semibold text-gray-800 shadow-2xs focus:outline-none focus:border-indigo-500 cursor-pointer"
+                                    style={{ minHeight: "34px", height: "34px", borderRadius: "6px", fontSize: "11px", lineHeight: "1.2" }}
                                   >
-                                    <Select.Option value="all">Zone: All</Select.Option>
+                                    {isGlobalAdminRole && <option value="all">Zone: All</option>}
                                     {uniqueZones.map(z => (
-                                      <Select.Option key={z} value={z}>Zone: {z}</Select.Option>
+                                      <option key={z} value={z}>Zone: {z}</option>
                                     ))}
-                                  </Select>
+                                  </select>
                                 </div>
                               </Col>
                             )}
 
-                            <Col xs={24} sm={6}>
-                              <div className="flex flex-col gap-0.5">
-                                <span className="text-[8px] uppercase font-bold text-gray-400">Engineer</span>
-                                <Select 
-                                  size="small"
+                            <Col xs={12} sm={6}>
+                              <div className="flex flex-col gap-1">
+                                <span className="text-[9px] uppercase font-bold text-gray-500 tracking-wider">Engineer</span>
+                                <select 
                                   value={filterEmployee} 
-                                  onChange={(val) => setFilterEmployee(val)}
-                                  className="w-full text-xs font-semibold"
-                                  popupMatchSelectWidth={false}
-                                  dropdownStyle={{ fontSize: "12px" }}
+                                  onChange={(e) => setFilterEmployee(e.target.value)}
+                                  className="w-full bg-white border border-gray-300 rounded px-2 py-1 text-xs font-semibold text-gray-800 shadow-2xs focus:outline-none focus:border-indigo-500 cursor-pointer"
+                                  style={{ minHeight: "34px", height: "34px", borderRadius: "6px", fontSize: "11px", lineHeight: "1.2" }}
                                 >
-                                  <Select.Option value="all">Engineer: All</Select.Option>
+                                  <option value="all">Engineer: All</option>
                                   {uniqueEmployees.map(emp => (
-                                    <Select.Option key={emp.code} value={emp.code}>Engineer: {emp.name}</Select.Option>
+                                    <option key={emp.code} value={emp.code}>Engineer: {emp.name}</option>
                                   ))}
-                                </Select>
+                                </select>
                               </div>
                             </Col>
 
-                            <Col xs={24} sm={6}>
-                              <div className="flex flex-col gap-0.5">
-                                <span className="text-[8px] uppercase font-bold text-gray-400">Travel Mode</span>
-                                <Select 
-                                  size="small"
+                            <Col xs={12} sm={6}>
+                              <div className="flex flex-col gap-1">
+                                <span className="text-[9px] uppercase font-bold text-gray-500 tracking-wider">Travel Mode</span>
+                                <select 
                                   value={filterMode} 
-                                  onChange={(val) => setFilterMode(val)}
-                                  className="w-full text-xs font-semibold"
-                                  popupMatchSelectWidth={false}
-                                  dropdownStyle={{ fontSize: "12px" }}
+                                  onChange={(e) => setFilterMode(e.target.value)}
+                                  className="w-full bg-white border border-gray-300 rounded px-2 py-1 text-xs font-semibold text-gray-800 shadow-2xs focus:outline-none focus:border-indigo-500 cursor-pointer"
+                                  style={{ minHeight: "34px", height: "34px", borderRadius: "6px", fontSize: "11px", lineHeight: "1.2" }}
                                 >
-                                  <Select.Option value="all">Mode: All</Select.Option>
+                                  <option value="all">Mode: All</option>
                                   {uniqueModes.map(m => (
-                                    <Select.Option key={m} value={m.toLowerCase()}>Mode: {m}</Select.Option>
+                                    <option key={m} value={m.toLowerCase()}>Mode: {m}</option>
                                   ))}
-                                </Select>
+                                </select>
                               </div>
                             </Col>
                           </Row>
@@ -1296,7 +1304,7 @@ export default function HomePage() {
 
                             {/* Pagination Controls */}
                             {filteredTeamExpenses.length > 100 && (
-                              <div className="flex justify-between items-center bg-gray-50 border border-gray-200 rounded-lg p-2.5 mt-4 mb-32 lg:mb-0">
+                              <div className="flex justify-between items-center bg-gray-50 border border-gray-200 rounded-lg p-2.5 mt-4 mb-36 lg:mb-0 shadow-2xs">
                                 <Button
                                   disabled={teamPage === 1}
                                   onClick={() => setTeamPage(prev => Math.max(prev - 1, 1))}
@@ -1318,6 +1326,9 @@ export default function HomePage() {
                                 </Button>
                               </div>
                             )}
+
+                            {/* Extra bottom spacer on mobile to keep pagination clear of bottom nav */}
+                            <div className="h-20 w-full block lg:hidden" />
                           </>
                         )}
                       </div>
@@ -2184,11 +2195,14 @@ export default function HomePage() {
               </div>
             )}
 
-            {/* Approval History Section */}
+            {/* Approval History Section with Decision-Based Color Coding */}
             {claimDetails.approvals && claimDetails.approvals.length > 0 && (
-              <div className="border border-gray-200 rounded overflow-hidden">
-                <div className="px-3 py-2 bg-slate-50 border-b border-gray-200">
-                  <h4 className="text-[10px] font-bold uppercase text-gray-655 tracking-wider">Approval History &amp; Decision Remarks</h4>
+              <div className="border border-gray-200 rounded-lg overflow-hidden shadow-2xs">
+                <div className="px-3.5 py-2.5 bg-slate-50 border-b border-gray-200">
+                  <h4 className="text-[10.5px] font-bold uppercase text-gray-700 tracking-wider flex items-center gap-1.5">
+                    <ShieldCheck size={14} className="text-indigo-600" />
+                    Approval History &amp; Decision Remarks
+                  </h4>
                 </div>
                 <div className="p-3 bg-white space-y-3">
                   {claimDetails.approvals.map((app: any, idx: number) => {
@@ -2196,44 +2210,49 @@ export default function HomePage() {
                     const isApproved = statusVal === "approved";
                     const isRejected = statusVal === "rejected";
 
-                    
-                    let statusBadge = (
-                      <Tag color="orange" className="font-bold text-[8px] uppercase tracking-wider">Pending/Returned</Tag>
-                    );
+                    let containerBgClass = "bg-amber-50/70 border-amber-300 border-l-4 text-amber-950";
+                    let statusBadge = <Tag color="warning" className="font-bold text-[9px] uppercase tracking-wider">Pending/Returned</Tag>;
+                    let remarkBgClass = "bg-amber-100/60 border-amber-300 text-amber-950";
+
                     if (isApproved) {
-                      statusBadge = (
-                        <Tag color="success" className="font-bold text-[8px] uppercase tracking-wider">Approved</Tag>
-                      );
+                      containerBgClass = "bg-emerald-50/70 border-emerald-400 border-l-4 text-emerald-950";
+                      statusBadge = <Tag color="success" className="font-bold text-[9px] uppercase tracking-wider">Approved</Tag>;
+                      remarkBgClass = "bg-emerald-100/60 border-emerald-300 text-emerald-950";
                     } else if (isRejected) {
-                      statusBadge = (
-                        <Tag color="error" className="font-bold text-[8px] uppercase tracking-wider">Rejected</Tag>
-                      );
+                      containerBgClass = "bg-rose-50/70 border-rose-400 border-l-4 text-rose-950";
+                      statusBadge = <Tag color="error" className="font-bold text-[9px] uppercase tracking-wider">Rejected</Tag>;
+                      remarkBgClass = "bg-rose-100/60 border-rose-300 text-rose-950";
                     } else if (statusVal === "waiting") {
-                      statusBadge = (
-                        <Tag color="default" className="font-bold text-[8px] uppercase tracking-wider">Waiting</Tag>
-                      );
+                      containerBgClass = "bg-slate-50 border-slate-300 border-l-4 text-slate-900";
+                      statusBadge = <Tag color="default" className="font-bold text-[9px] uppercase tracking-wider">Waiting</Tag>;
+                      remarkBgClass = "bg-slate-100 border-slate-200 text-slate-900";
                     }
 
+                    const commentText = app.comments || app.remark || app.rejection_reason;
+
                     return (
-                      <div key={idx} className="flex gap-3 text-xs border-l-2 border-indigo-500 pl-3 py-1 bg-slate-50/50 p-2.5 rounded shadow-2xs">
+                      <div key={idx} className={`flex gap-3 text-xs pl-3 py-2 p-3 rounded-md shadow-2xs ${containerBgClass}`}>
                         <div className="flex-1 space-y-1">
                           <div className="flex items-center justify-between">
                             <div>
-                              <span className="font-bold text-gray-800">{app.approver_name}</span>
-                              <span className="text-[9px] text-gray-455 font-bold uppercase ml-1.5">({app.approver_role || `L${app.level_number} Approver`})</span>
+                              <span className="font-bold text-gray-900 text-xs">{app.approver_name}</span>
+                              <span className="text-[9.5px] text-gray-600 font-bold uppercase ml-1.5">({app.approver_role || `L${app.level_number} Approver`})</span>
                             </div>
-                            <span className="text-[9px] text-gray-400 font-mono">
+                            <span className="text-[10px] text-gray-500 font-mono font-medium">
                               {app.updated_at ? formatDateTime(app.updated_at) : "—"}
                             </span>
                           </div>
-                          <div className="flex items-center gap-2 mt-0.5">
-                            <span className="text-gray-400 font-bold text-[8px] uppercase">Decision:</span>
+                          <div className="flex items-center gap-2 mt-1">
+                            <span className="text-gray-500 font-bold text-[9px] uppercase tracking-wider">Decision:</span>
                             {statusBadge}
                           </div>
-                          {app.comments && (
-                            <p className="text-gray-655 italic bg-white p-2 rounded border border-gray-150 mt-1.5 text-[11px] leading-relaxed">
-                              "{app.comments}"
-                            </p>
+                          {commentText && (
+                            <div className={`mt-2 p-2.5 rounded-md border ${remarkBgClass}`}>
+                              <span className="text-[9px] font-bold uppercase tracking-wider block opacity-80 mb-0.5">Decision Remark / Comment:</span>
+                              <p className="font-semibold text-xs leading-relaxed">
+                                "{commentText}"
+                              </p>
+                            </div>
                           )}
                         </div>
                       </div>
@@ -2243,22 +2262,44 @@ export default function HomePage() {
               </div>
             )}
 
-            {/* Deductions Section */}
-            {claimDetails.category !== "Limit Request" && claimDetails.itineraries && claimDetails.itineraries.some((leg: any) => {
-              const travelCost = leg.amount || 0;
-              const subCost = leg.sub_amount || 0;
-              const daCost = leg.da || 0;
-              const origTA = parseFloat(leg.original_amount ?? leg.amount ?? 0);
-              const origSub = parseFloat(leg.original_sub_amount ?? leg.sub_amount ?? 0);
-              const origDA = parseFloat(leg.original_da ?? leg.da ?? 0);
-              return ((origTA - travelCost) + (origSub - subCost)) > 0 || (origDA - daCost) > 0;
-            }) && (
-              <div className="border border-gray-200 overflow-hidden">
-                <div className="px-3 py-2 bg-slate-50 border-b border-gray-200">
-                  <h4 className="text-[10px] font-bold uppercase text-red-655 tracking-wider">Deductions Detail</h4>
+            {/* Policy Deductions & Audit Remarks Center */}
+            {((claimDetails.original_amount && claimDetails.original_amount > claimDetails.amount) ||
+              claimDetails.deduction_remark ||
+              claimDetails.rejection_reason ||
+              (claimDetails.itineraries && claimDetails.itineraries.some((leg: any) => {
+                const travelCost = leg.amount || 0;
+                const subCost = leg.sub_amount || 0;
+                const daCost = leg.da || 0;
+                const origTA = parseFloat(leg.original_amount ?? leg.amount ?? 0);
+                const origSub = parseFloat(leg.original_sub_amount ?? leg.sub_amount ?? 0);
+                const origDA = parseFloat(leg.original_da ?? leg.da ?? 0);
+                return ((origTA - travelCost) + (origSub - subCost)) > 0 || (origDA - daCost) > 0;
+              }))
+            ) && (
+              <div className="border border-rose-300 rounded-lg overflow-hidden bg-rose-50/40 shadow-2xs">
+                <div className="px-3.5 py-2.5 bg-rose-100/80 border-b border-rose-300 flex items-center justify-between">
+                  <h4 className="text-[10.5px] font-bold uppercase text-rose-800 tracking-wider flex items-center gap-1.5">
+                    <AlertTriangle size={14} className="text-rose-600" />
+                    Policy Deductions &amp; Audit Remarks
+                  </h4>
+                  {claimDetails.original_amount && claimDetails.original_amount > claimDetails.amount && (
+                    <span className="text-xs font-mono font-bold text-rose-700 bg-white px-2 py-0.5 rounded border border-rose-300 shadow-2xs">
+                      Total Deducted: ₹{(claimDetails.original_amount - claimDetails.amount).toLocaleString()}
+                    </span>
+                  )}
                 </div>
-                <div className="p-3 bg-white space-y-3">
-                  {claimDetails.itineraries.map((leg: any, idx: number) => {
+                
+                <div className="p-3 space-y-3 bg-white">
+                  {/* Overall Deduction / Rejection Remarks if present */}
+                  {(claimDetails.deduction_remark || claimDetails.rejection_reason) && (
+                    <div className="p-2.5 bg-rose-50 border border-rose-200 rounded-md text-xs text-rose-950">
+                      <span className="font-bold uppercase text-[9px] text-rose-700 block mb-0.5">Audit Remark / Deduction Reason:</span>
+                      <p className="font-semibold italic">"{claimDetails.deduction_remark || claimDetails.rejection_reason}"</p>
+                    </div>
+                  )}
+
+                  {/* Leg-by-leg deductions list */}
+                  {claimDetails.itineraries && claimDetails.itineraries.map((leg: any, idx: number) => {
                     const travelCost = leg.amount || 0;
                     const subCost = leg.sub_amount || 0;
                     const daCost = leg.da || 0;
@@ -2272,20 +2313,22 @@ export default function HomePage() {
                     if (taDeducted <= 0 && daDeducted <= 0) return null;
 
                     return (
-                      <div key={idx} className="flex flex-col gap-1 border-l-2 border-red-500 pl-3 py-2 bg-red-50/10 p-2.5 text-xs">
-                        <div className="flex justify-between items-center font-bold text-gray-800">
+                      <div key={idx} className="flex flex-col gap-1.5 border-l-4 border-rose-500 pl-3 py-2 bg-rose-50/30 p-2.5 text-xs rounded-md border border-rose-200">
+                        <div className="flex justify-between items-center font-bold text-gray-900">
                           <span>Visit Leg #{leg.leg} ({leg.from_district === leg.to_district ? leg.to_district : `${leg.from_district} → ${leg.to_district}`})</span>
-                          <span className="text-red-650 font-mono">Deducted: ₹{(taDeducted + daDeducted).toLocaleString()}</span>
+                          <span className="text-rose-700 font-mono font-bold bg-white px-2 py-0.5 rounded border border-rose-300 shadow-2xs">
+                            Deducted: ₹{(taDeducted + daDeducted).toLocaleString()}
+                          </span>
                         </div>
-                        <div className="space-y-1 mt-1 text-[11px] text-gray-600">
+                        <div className="space-y-1.5 mt-1 text-[11px] text-gray-700">
                           {taDeducted > 0 && (
-                            <p>
-                              <strong className="text-red-750 font-bold">Travel Fare:</strong> Deducted ₹{taDeducted.toLocaleString()} (Claimed: ₹{(origTA + origSub).toLocaleString()} | Allowed: ₹{(travelCost + subCost).toLocaleString()}). <span className="italic">Reasoning: Claimed travel fare exceeded location-based allowed cap limits.</span>
+                            <p className="bg-white p-2 rounded border border-gray-200">
+                              <strong className="text-rose-700 font-bold">Travel Fare:</strong> Deducted ₹{taDeducted.toLocaleString()} (Claimed: ₹{(origTA + origSub).toLocaleString()} | Allowed: ₹{(travelCost + subCost).toLocaleString()}). <span className="italic text-gray-600 block mt-0.5">Reasoning: Claimed travel fare exceeded location policy limits.</span>
                             </p>
                           )}
                           {daDeducted > 0 && (
-                            <p>
-                              <strong className="text-red-750 font-bold">Daily Allowance (DA):</strong> Deducted ₹{daDeducted.toLocaleString()} (Claimed: ₹{origDA.toLocaleString()} | Allowed: ₹{daCost.toLocaleString()}). <span className="italic">Reasoning: DA claimed value exceeded daily policy grade standard ceilings.</span>
+                            <p className="bg-white p-2 rounded border border-gray-200">
+                              <strong className="text-rose-700 font-bold">Daily Allowance (DA):</strong> Deducted ₹{daDeducted.toLocaleString()} (Claimed: ₹{origDA.toLocaleString()} | Allowed: ₹{daCost.toLocaleString()}). <span className="italic text-gray-600 block mt-0.5">Reasoning: DA claimed value exceeded daily policy grade ceilings.</span>
                             </p>
                           )}
                         </div>
