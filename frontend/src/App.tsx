@@ -88,7 +88,7 @@ function App() {
 
   // Non-blocking ping to wake up free-tier backend server instantly on app startup
   useEffect(() => {
-    fetch("https://fieldops-secondary-api.sunnybishnoi.workers.dev/api/health").catch(() => {});
+    fetch("https://fieldops-secondary-api.sunilbishnoi.workers.dev/api/health").catch(() => {});
   }, []);
 
   // Prevent background body scrolling when any modal is open

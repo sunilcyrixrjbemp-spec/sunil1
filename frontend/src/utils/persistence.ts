@@ -118,12 +118,16 @@ const openDB = (): Promise<IDBDatabase> => {
 const getIDBValue = async (key: string): Promise<any> => {
   try {
     const db = await openDB();
-    return new Promise((resolve) => {
-      const transaction = db.transaction("session", "readonly");
-      const store = transaction.objectStore("session");
-      const request = store.get(key);
-      request.onsuccess = () => resolve(request.result);
-      request.onerror = () => resolve(null);
+    return await new Promise((resolve) => {
+      try {
+        const transaction = db.transaction("session", "readonly");
+        const store = transaction.objectStore("session");
+        const request = store.get(key);
+        request.onsuccess = () => resolve(request.result);
+        request.onerror = () => resolve(null);
+      } catch (err) {
+        resolve(null);
+      }
     });
   } catch (e) {
     return null;
@@ -133,25 +137,35 @@ const getIDBValue = async (key: string): Promise<any> => {
 const setIDBValue = async (key: string, value: any): Promise<void> => {
   try {
     const db = await openDB();
-    return new Promise((resolve, reject) => {
-      const transaction = db.transaction("session", "readwrite");
-      const store = transaction.objectStore("session");
-      const request = store.put(value, key);
-      request.onsuccess = () => resolve();
-      request.onerror = () => reject(request.error);
+    await new Promise<void>((resolve, reject) => {
+      try {
+        const transaction = db.transaction("session", "readwrite");
+        const store = transaction.objectStore("session");
+        const request = store.put(value, key);
+        request.onsuccess = () => resolve();
+        request.onerror = () => reject(request.error);
+      } catch (err) {
+        reject(err);
+      }
     });
-  } catch (e) {}
+  } catch (e) {
+    console.warn("setIDBValue failed:", e);
+  }
 };
 
 const deleteIDBValue = async (key: string): Promise<void> => {
   try {
     const db = await openDB();
-    return new Promise((resolve) => {
-      const transaction = db.transaction("session", "readwrite");
-      const store = transaction.objectStore("session");
-      const request = store.delete(key);
-      request.onsuccess = () => resolve();
-      request.onerror = () => resolve();
+    await new Promise<void>((resolve) => {
+      try {
+        const transaction = db.transaction("session", "readwrite");
+        const store = transaction.objectStore("session");
+        const request = store.delete(key);
+        request.onsuccess = () => resolve();
+        request.onerror = () => resolve();
+      } catch (err) {
+        resolve();
+      }
     });
   } catch (e) {}
 };

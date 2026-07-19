@@ -139,7 +139,7 @@ export const biometricAuth = {
 };
 
 const rawApiUrl = import.meta.env.VITE_API_URL as string || "";
-const API_BASE = (rawApiUrl && !rawApiUrl.includes("onrender.com")) ? rawApiUrl : 'https://fieldops-secondary-api.sunnybishnoi.workers.dev';
+const API_BASE = (rawApiUrl && !rawApiUrl.includes("onrender.com")) ? rawApiUrl : 'https://fieldops-secondary-api.sunilbishnoi.workers.dev';
 
 const saveFCMToken = async (token: string): Promise<void> => {
   try {

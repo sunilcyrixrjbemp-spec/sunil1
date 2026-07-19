@@ -20,6 +20,7 @@ PRIMARY_CLOUDFLARE_DATABASE_ID = "34e085d8-c078-4f2f-b240-9bf8f4cf9301"
 [[kv_namespaces]]
 binding = "OTPS_KV"
 id = "7a00b8d26638473384d2d99f92417fee"
+preview_id = "7a00b8d26638473384d2d99f92417fee"
 
 [triggers]
 crons = ["0 0 * * *"]
