@@ -673,6 +673,11 @@ export default function HomePage() {
         .status-segmented-rejected .ant-segmented-item-selected * {
           color: white !important;
         }
+        .rounded-none-modal,
+        .rounded-none-modal .ant-modal-content,
+        .rounded-none-modal * {
+          border-radius: 0px !important;
+        }
       `}</style>
       <div className="space-y-3 sm:space-y-4 animate-fadeIn text-[#212529] p-0 sm:p-2 md:p-4 w-full max-w-none">
         
@@ -1438,6 +1443,7 @@ export default function HomePage() {
 
       {/* ================= CLAIM DETAILS POPUP MODAL ================= */}
       <Modal
+        className="rounded-none-modal"
         title={
           <Title level={5} style={{ margin: 0 }} className="flex items-center gap-2 text-gray-805">
             <Layers className="w-4 h-4 text-indigo-650" />
@@ -2168,6 +2174,59 @@ export default function HomePage() {
                         </div>
                       );
                     })}
+                </div>
+              </div>
+            )}
+
+            {/* Deductions Section */}
+            {claimDetails.category !== "Limit Request" && claimDetails.itineraries && claimDetails.itineraries.some((leg: any) => {
+              const travelCost = leg.amount || 0;
+              const subCost = leg.sub_amount || 0;
+              const daCost = leg.da || 0;
+              const origTA = parseFloat(leg.original_amount ?? leg.amount ?? 0);
+              const origSub = parseFloat(leg.original_sub_amount ?? leg.sub_amount ?? 0);
+              const origDA = parseFloat(leg.original_da ?? leg.da ?? 0);
+              return ((origTA - travelCost) + (origSub - subCost)) > 0 || (origDA - daCost) > 0;
+            }) && (
+              <div className="border border-gray-200 overflow-hidden">
+                <div className="px-3 py-2 bg-slate-50 border-b border-gray-200">
+                  <h4 className="text-[10px] font-bold uppercase text-red-655 tracking-wider">Deductions Detail</h4>
+                </div>
+                <div className="p-3 bg-white space-y-3">
+                  {claimDetails.itineraries.map((leg: any, idx: number) => {
+                    const travelCost = leg.amount || 0;
+                    const subCost = leg.sub_amount || 0;
+                    const daCost = leg.da || 0;
+                    const origTA = parseFloat(leg.original_amount ?? leg.amount ?? 0);
+                    const origSub = parseFloat(leg.original_sub_amount ?? leg.sub_amount ?? 0);
+                    const origDA = parseFloat(leg.original_da ?? leg.da ?? 0);
+
+                    const taDeducted = (origTA - travelCost) + (origSub - subCost);
+                    const daDeducted = origDA - daCost;
+
+                    if (taDeducted <= 0 && daDeducted <= 0) return null;
+
+                    return (
+                      <div key={idx} className="flex flex-col gap-1 border-l-2 border-red-500 pl-3 py-2 bg-red-50/10 p-2.5 text-xs">
+                        <div className="flex justify-between items-center font-bold text-gray-800">
+                          <span>Visit Leg #{leg.leg} ({leg.from_district === leg.to_district ? leg.to_district : `${leg.from_district} → ${leg.to_district}`})</span>
+                          <span className="text-red-650 font-mono">Deducted: ₹{(taDeducted + daDeducted).toLocaleString()}</span>
+                        </div>
+                        <div className="space-y-1 mt-1 text-[11px] text-gray-600">
+                          {taDeducted > 0 && (
+                            <p>
+                              <strong className="text-red-750 font-bold">Travel Fare:</strong> Deducted ₹{taDeducted.toLocaleString()} (Claimed: ₹{(origTA + origSub).toLocaleString()} | Allowed: ₹{(travelCost + subCost).toLocaleString()}). <span className="italic">Reasoning: Claimed travel fare exceeded location-based allowed cap limits.</span>
+                            </p>
+                          )}
+                          {daDeducted > 0 && (
+                            <p>
+                              <strong className="text-red-750 font-bold">Daily Allowance (DA):</strong> Deducted ₹{daDeducted.toLocaleString()} (Claimed: ₹{origDA.toLocaleString()} | Allowed: ₹{daCost.toLocaleString()}). <span className="italic">Reasoning: DA claimed value exceeded daily policy grade standard ceilings.</span>
+                            </p>
+                          )}
+                        </div>
+                      </div>
+                    );
+                  })}
                 </div>
               </div>
             )}
