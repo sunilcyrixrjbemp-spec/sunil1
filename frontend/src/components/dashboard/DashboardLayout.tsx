@@ -114,6 +114,7 @@ export default function DashboardLayout() {
     return [];
   });
   const [isNotifOpen, setIsNotifOpen] = useState(false);
+  const unreadNotifCount = notifications.filter(n => !n.is_read && !(n as any).read).length;
 
   useEffect(() => {
     const handleResize = () => {
