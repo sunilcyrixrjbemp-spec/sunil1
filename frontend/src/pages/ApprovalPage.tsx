@@ -642,7 +642,13 @@ export default function ApprovalPage() {
       }
     });
   };
-}, 0);
+
+  const toggleSelectAll = () => {
+    if (selectedIds.length === claimRequests.length) {
+      setSelectedIds([]);
+    } else {
+      setSelectedIds(claimRequests.map(item => item.expense_id));
+    }
   };
 
   const handleOpenBulkAction = (type: "approve" | "reject") => {
@@ -712,19 +718,9 @@ export default function ApprovalPage() {
 
     setBulkActionLoading(false);
     setShowBulkModal(false);
-      if (currentUserStr) {
-        try {
-          const currentUser = JSON.parse(currentUserStr);
-          localStorage.setItem(`cache_approvals_count_${currentUser.user_id}`, filtered.length.toString());
-        } catch(e) {}
-      }
-      return filtered;
-    });
     setBulkActionType(null);
     setBulkComments("");
-    setSelectedIds([]);
     await fetchPendingApprovals();
-    setBulkActionLoading(false);
   };
 
   const isEdited = () => {
@@ -1067,8 +1063,10 @@ export default function ApprovalPage() {
                     </Button>
                   </Space>
                 ),
-              },
             ]}
+          />
+        )}
+      </Card>
       </div>
 
       {/* ================= DETAIL SINGLE REVIEW AND EDIT MODAL ================= */}
