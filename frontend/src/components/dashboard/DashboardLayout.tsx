@@ -291,6 +291,13 @@ export default function DashboardLayout() {
     allowedWindows = ["home", "profile", "help", "expense"];
   }
 
+  // Ensure default core windows (home, profile, help, expense) are ALWAYS enabled for ALL users
+  ["home", "profile", "help", "expense"].forEach(w => {
+    if (!allowedWindows.includes(w)) {
+      allowedWindows.push(w);
+    }
+  });
+
   // Force-enable specified windows for special roles
   if (isAlwaysAllowedAll) {
     const forced = ["home", "analysis", "report", "consolidated_report", "profile", "help"];
