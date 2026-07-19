@@ -12,9 +12,7 @@ import {
   Input, 
   Typography, 
   Avatar, 
-  Checkbox,
-  Row,
-  Col
+  Checkbox
 } from "antd";
 import { approvalService } from "../services/approvalService";
 import { expenseService } from "../services/expenseService";
@@ -26,14 +24,11 @@ import {
   Eye, 
   Search,
   FileText, 
-  User, 
   MapPin, 
   Info, 
   AlertTriangle,
   ExternalLink,
   ChevronRight,
-  ThumbsUp,
-  ThumbsDown,
   Loader2,
   RotateCcw
 } from "lucide-react";
@@ -182,7 +177,7 @@ export default function ApprovalPage() {
   const [bulkComments, setBulkComments] = useState("");
   const [bulkActionLoading, setBulkActionLoading] = useState(false);
 
-  const aiReport = (() => {
+  const _aiReport = (() => {
     if (!expenseDetails || !expenseDetails.ai_analysis) return null;
     try {
       return typeof expenseDetails.ai_analysis === "string" 
