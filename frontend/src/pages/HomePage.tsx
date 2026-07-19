@@ -26,6 +26,19 @@ import {
 
 const { Title, Text } = Typography;
 const { TextArea } = Input;
+
+const getSegmentedClass = (status: string) => {
+  switch (status) {
+    case "approved":
+      return "status-segmented-approved";
+    case "rejected":
+      return "status-segmented-rejected";
+    case "pending":
+      return "status-segmented-pending";
+    default:
+      return "status-segmented-all";
+  }
+};
 import { 
   FileSpreadsheet, 
   BarChart3, 
@@ -635,6 +648,32 @@ export default function HomePage() {
 
   return (
     <>
+      <style>{`
+        .status-segmented-all .ant-segmented-item-selected {
+          background-color: #4f46e5 !important;
+        }
+        .status-segmented-all .ant-segmented-item-selected * {
+          color: white !important;
+        }
+        .status-segmented-pending .ant-segmented-item-selected {
+          background-color: #f97316 !important;
+        }
+        .status-segmented-pending .ant-segmented-item-selected * {
+          color: white !important;
+        }
+        .status-segmented-approved .ant-segmented-item-selected {
+          background-color: #10b981 !important;
+        }
+        .status-segmented-approved .ant-segmented-item-selected * {
+          color: white !important;
+        }
+        .status-segmented-rejected .ant-segmented-item-selected {
+          background-color: #ef4444 !important;
+        }
+        .status-segmented-rejected .ant-segmented-item-selected * {
+          color: white !important;
+        }
+      `}</style>
       <div className="space-y-3 sm:space-y-4 animate-fadeIn text-[#212529] p-0 sm:p-2 md:p-4 w-full max-w-none">
         
         {/* Welcome Banner - Clean Premium Card */}
@@ -817,7 +856,7 @@ export default function HomePage() {
                                 { label: <span className="text-[9px] xs:text-[10px] tracking-tight">Approved</span>, value: 'approved' },
                                 { label: <span className="text-[9px] xs:text-[10px] tracking-tight">Rejected</span>, value: 'rejected' }
                               ]}
-                              className="font-bold text-[10px] uppercase tracking-wider"
+                              className={`font-bold text-[10px] uppercase tracking-wider ${getSegmentedClass(homeStatusFilter)}`}
                             />
                           </div>
                         </div>
@@ -910,7 +949,7 @@ export default function HomePage() {
                                 <Card
                                   key={exp.id}
                                   onClick={() => handleOpenClaimDetails(exp.id)}
-                                  className="border border-gray-205 cursor-pointer active:bg-gray-50 transition-colors shadow-xs"
+                                  className="border border-slate-200 bg-[#f8fafc] hover:bg-[#f1f5f9] cursor-pointer transition-colors shadow-xs"
                                   size="small"
                                 >
                                   <div className="flex justify-between items-center pb-2 border-b border-gray-150">
@@ -984,6 +1023,8 @@ export default function HomePage() {
                                     value={filterZone} 
                                     onChange={(val) => setFilterZone(val)}
                                     className="w-full text-xs font-semibold"
+                                    popupMatchSelectWidth={false}
+                                    dropdownStyle={{ fontSize: "12px" }}
                                   >
                                     <Select.Option value="all">All Zones</Select.Option>
                                     {uniqueZones.map(z => (
@@ -1002,6 +1043,8 @@ export default function HomePage() {
                                   value={filterEmployee} 
                                   onChange={(val) => setFilterEmployee(val)}
                                   className="w-full text-xs font-semibold"
+                                  popupMatchSelectWidth={false}
+                                  dropdownStyle={{ fontSize: "12px" }}
                                 >
                                   <Select.Option value="all">All Members</Select.Option>
                                   {uniqueEmployees.map(emp => (
@@ -1019,6 +1062,8 @@ export default function HomePage() {
                                   value={filterMode} 
                                   onChange={(val) => setFilterMode(val)}
                                   className="w-full text-xs font-semibold"
+                                  popupMatchSelectWidth={false}
+                                  dropdownStyle={{ fontSize: "12px" }}
                                 >
                                   <Select.Option value="all">All Modes</Select.Option>
                                   {uniqueModes.map(m => (
@@ -1041,7 +1086,7 @@ export default function HomePage() {
                                 { label: <span className="text-[9px] xs:text-[10px] tracking-tight">Approved</span>, value: 'approved' },
                                 { label: <span className="text-[9px] xs:text-[10px] tracking-tight">Rejected</span>, value: 'rejected' }
                               ]}
-                              className="font-bold text-[10px] uppercase tracking-wider"
+                              className={`font-bold text-[10px] uppercase tracking-wider ${getSegmentedClass(homeStatusFilter)}`}
                             />
                           </div>
                         </div>
@@ -1191,7 +1236,7 @@ export default function HomePage() {
 
                             {/* Pagination Controls */}
                             {filteredTeamExpenses.length > 100 && (
-                              <div className="flex justify-between items-center bg-gray-50 border border-gray-200 rounded-lg p-2.5 mt-4">
+                              <div className="flex justify-between items-center bg-gray-50 border border-gray-200 rounded-lg p-2.5 mt-4 mb-16 lg:mb-0">
                                 <Button
                                   disabled={teamPage === 1}
                                   onClick={() => setTeamPage(prev => Math.max(prev - 1, 1))}
@@ -1901,11 +1946,23 @@ export default function HomePage() {
                                         {c.status || "Attend"}
                                       </span>
                                     </div>
-                                    <div className="grid grid-cols-2 gap-x-2 gap-y-1 text-[9px] text-gray-600 font-bold border-t border-blue-100/50 pt-1.5">
-                                      <div>District: <span className="text-gray-800">{c.asset_details?.district_name || "—"}</span></div>
-                                      <div>Model: <span className="text-gray-800">{c.asset_details?.model_name || "—"}</span></div>
-                                      <div>Barcode: <span className="text-gray-800 font-mono">{c.barcode}</span></div>
-                                      <div>Type: <span className="text-gray-800">{c.type || "Support Call"}</span></div>
+                                    <div className="grid grid-cols-2 gap-x-3 gap-y-1.5 text-[9.5px] text-gray-500 font-bold border-t border-blue-100/50 pt-2">
+                                      <div className="flex justify-between border-b border-gray-100/30 pb-0.5">
+                                        <span>District:</span>
+                                        <span className="text-gray-800 font-extrabold">{c.asset_details?.district_name || "—"}</span>
+                                      </div>
+                                      <div className="flex justify-between border-b border-gray-100/30 pb-0.5">
+                                        <span>Model:</span>
+                                        <span className="text-gray-800 font-extrabold">{c.asset_details?.model_name || "—"}</span>
+                                      </div>
+                                      <div className="flex justify-between">
+                                        <span>Barcode:</span>
+                                        <span className="text-gray-800 font-mono font-extrabold">{c.barcode || "—"}</span>
+                                      </div>
+                                      <div className="flex justify-between">
+                                        <span>Type:</span>
+                                        <span className="text-gray-800 font-extrabold">{c.type || "Support"}</span>
+                                      </div>
                                     </div>
                                     {c.photo_url && (
                                       <div className="pt-2">
@@ -1947,11 +2004,23 @@ export default function HomePage() {
                                         {p.frequency || "3 month"}
                                       </span>
                                     </div>
-                                    <div className="grid grid-cols-2 gap-x-2 gap-y-1 text-[9px] text-gray-600 font-bold border-t border-amber-100/50 pt-1.5">
-                                      <div>District: <span className="text-gray-800">{p.asset_details?.district_name || "—"}</span></div>
-                                      <div>Model: <span className="text-gray-800">{p.asset_details?.model_name || "—"}</span></div>
-                                      <div>Barcode: <span className="text-gray-800 font-mono">{p.barcode}</span></div>
-                                      <div>Status: <span className="text-gray-800">{p.asset_details?.inventory_status || "Active"}</span></div>
+                                    <div className="grid grid-cols-2 gap-x-3 gap-y-1.5 text-[9.5px] text-gray-500 font-bold border-t border-amber-100/50 pt-2">
+                                      <div className="flex justify-between border-b border-gray-100/30 pb-0.5">
+                                        <span>District:</span>
+                                        <span className="text-gray-800 font-extrabold">{p.asset_details?.district_name || "—"}</span>
+                                      </div>
+                                      <div className="flex justify-between border-b border-gray-100/30 pb-0.5">
+                                        <span>Model:</span>
+                                        <span className="text-gray-800 font-extrabold">{p.asset_details?.model_name || "—"}</span>
+                                      </div>
+                                      <div className="flex justify-between">
+                                        <span>Barcode:</span>
+                                        <span className="text-gray-800 font-mono font-extrabold">{p.barcode || "—"}</span>
+                                      </div>
+                                      <div className="flex justify-between">
+                                        <span>Status:</span>
+                                        <span className="text-gray-800 font-extrabold">{p.asset_details?.inventory_status || "Active"}</span>
+                                      </div>
                                     </div>
                                     {p.photo_url && (
                                       <div className="pt-2">
@@ -2046,6 +2115,60 @@ export default function HomePage() {
                     })}
                   </div>
                 )}
+              </div>
+            )}
+
+            {/* Approval History Section */}
+            {claimDetails.logs && claimDetails.logs.some((log: any) => (log.field_name || "").toLowerCase() === "status") && (
+              <div className="border border-gray-200 rounded overflow-hidden">
+                <div className="px-3 py-2 bg-slate-50 border-b border-gray-200">
+                  <h4 className="text-[10px] font-bold uppercase text-gray-655 tracking-wider">Approval History &amp; Decision Remarks</h4>
+                </div>
+                <div className="p-3 bg-white space-y-3">
+                  {claimDetails.logs
+                    .filter((log: any) => (log.field_name || "").toLowerCase() === "status")
+                    .map((log: any, idx: number) => {
+                      const statusVal = (log.comment || "").toLowerCase();
+                      const isApproved = statusVal.includes("approve") || statusVal.includes("approved");
+                      const isRejected = statusVal.includes("reject") || statusVal.includes("rejected");
+                      
+                      let statusBadge = (
+                        <Tag color="orange" className="font-bold text-[8px] uppercase tracking-wider">Pending/Returned</Tag>
+                      );
+                      if (isApproved) {
+                        statusBadge = (
+                          <Tag color="success" className="font-bold text-[8px] uppercase tracking-wider">Approved</Tag>
+                        );
+                      } else if (isRejected) {
+                        statusBadge = (
+                          <Tag color="error" className="font-bold text-[8px] uppercase tracking-wider">Rejected</Tag>
+                        );
+                      }
+
+                      return (
+                        <div key={idx} className="flex gap-3 text-xs border-l-2 border-indigo-500 pl-3 py-1 bg-slate-50/50 p-2.5 rounded shadow-2xs">
+                          <div className="flex-1 space-y-1">
+                            <div className="flex items-center justify-between">
+                              <div>
+                                <span className="font-bold text-gray-800">{log.editor_name}</span>
+                                <span className="text-[9px] text-gray-455 font-bold uppercase ml-1.5">({log.editor_role})</span>
+                              </div>
+                              <span className="text-[9px] text-gray-400 font-mono">{formatDateTime(log.created_at)}</span>
+                            </div>
+                            <div className="flex items-center gap-2 mt-0.5">
+                              <span className="text-gray-400 font-bold text-[8px] uppercase">Decision:</span>
+                              {statusBadge}
+                            </div>
+                            {log.comment && (
+                              <p className="text-gray-655 italic bg-white p-2 rounded border border-gray-150 mt-1.5 text-[11px] leading-relaxed">
+                                "{log.comment}"
+                              </p>
+                            )}
+                          </div>
+                        </div>
+                      );
+                    })}
+                </div>
               </div>
             )}
 
@@ -2259,6 +2382,9 @@ export default function HomePage() {
         width={750}
         bodyStyle={{ padding: 16, textAlign: "center", background: "#111827" }}
         className="lightbox-modal"
+        closeIcon={
+          <div className="bg-slate-800 hover:bg-slate-700 text-white rounded-full w-8 h-8 flex items-center justify-center text-sm border border-slate-700 transition-colors shadow-lg font-bold">✕</div>
+        }
         centered
       >
         {isConvertingHeic ? (
