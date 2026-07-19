@@ -25,6 +25,8 @@ import {
   ChevronUp
 } from "lucide-react";
 import api from "../services/api";
+import { DatePicker, ConfigProvider } from "antd";
+import dayjs, { Dayjs } from "dayjs";
 
 const API_BASE = (api.defaults.baseURL || "").replace(/\/api$/, "");
 
@@ -967,19 +969,11 @@ export default function ExpensePage() {
     }
   };
 
-  const checkExistingExpense = () => {
-    if (editExpenseId && date === originalExpenseDate) {
-      return; // Permitted to keep the original date in edit mode
-    }
-    if (submittedDates.includes(date)) {
-      toast.error("An expense claim for this date has already been submitted.");
-      setDate(editExpenseId ? (originalExpenseDate || "") : "");
-    }
-  };
+  // Note: date-submitted check is inlined in DatePicker onChange below
 
   const addItinerary = () => {
-    if (itineraries.length >= 10) {
-      toast.error("You can add a maximum of 10 visits.");
+    if (itineraries.length >= 15) {
+      toast.error("You can add a maximum of 15 visits.");
       return;
     }
     const nextLeg = itineraries.length + 1;
@@ -987,6 +981,19 @@ export default function ExpensePage() {
     const hDist = user.district || user.home_district || "Jodhpur";
     newLeg.district_from = hDist;
     newLeg.district = hDist;
+
+    // Auto-fill: next leg's From = previous leg's To
+    const prevLeg = itineraries[itineraries.length - 1];
+    if (prevLeg && prevLeg.to) {
+      newLeg.from = prevLeg.to;
+      // If previous leg's To was a custom entry, mark this leg's From as custom too
+      newLeg.from_custom = !!prevLeg.to_custom;
+      // Carry forward district from previous leg's destination
+      if (prevLeg.district) {
+        newLeg.district_from = prevLeg.district;
+        newLeg.district = prevLeg.district;
+      }
+    }
     
     setItineraries(prev => [...prev, newLeg]);
     setFiles(prev => ({ ...prev, [nextLeg]: createDefaultFiles() }));
@@ -1395,9 +1402,30 @@ export default function ExpensePage() {
         }
       }
 
+      // 3. Auto-propagate "To" changes → next leg's "From"
+      if (field === "to" || field === "to_custom" || field === "district") {
+        const changedLegIndex = updatedLegs.findIndex(l => l.leg === legNum);
+        const nextLeg = updatedLegs[changedLegIndex + 1];
+        if (nextLeg) {
+          if (field === "to") {
+            nextLeg.from = value;
+          }
+          if (field === "to_custom") {
+            nextLeg.from_custom = value;
+          }
+          if (field === "district") {
+            nextLeg.district_from = value;
+            if (nextLeg.travel_type === "In-District") {
+              nextLeg.district = value;
+            }
+          }
+        }
+      }
+
       return updatedLegs;
     });
   };
+
 
   // Compress an image file to ≤50KB JPEG using Canvas API (fast, in-browser)
   const compressImage = (file: File): Promise<File> => {
@@ -1515,6 +1543,21 @@ export default function ExpensePage() {
 
 
 
+  // ── TA/DA Rule E: Special base locations where DA is ALLOWED even during base-only travel ──
+  // Employees based at PBM Medical College (Bikaner) or Mathura Das Mathur Hospital (Jodhpur)
+  // receive DA even during base-location-only travel days.
+  const SPECIAL_BASE_LOCATIONS = [
+    "pbm medical college and hospital", "pbm medical college", "pbm hospital", "pbm",
+    "mathura das mathur hospital", "mathura das mathur", "mdm hospital", "mdm"
+  ];
+
+  const isSpecialBaseLocation = (baseLocs: string[]): boolean => {
+    return baseLocs.some(loc =>
+      SPECIAL_BASE_LOCATIONS.some(special => loc.includes(special))
+    );
+  };
+  // ────────────────────────────────────────────────────────────────────────
+
   const matchesBase = (locText: string, baseLocations: string[]) => {
     const text = (locText || "").trim().toLowerCase();
     if (!text) return false;
@@ -1627,9 +1670,8 @@ export default function ExpensePage() {
       return fromLoc.includes("market") || toLoc.includes("market");
     });
 
-    const isDaAllowedBaseLocation = baseLocations.some((loc: string) => 
-      loc.includes("pbm") || loc.includes("mathura das mathur") || loc.includes("mdm")
-    );
+    // Rule E: PBM Bikaner / MDM Jodhpur → DA allowed even in base-only travel (if no market visit)
+    const isDaAllowedBaseLocation = isSpecialBaseLocation(baseLocations);
 
     if (hasStation) {
       // Station rule: Only allowed if travel type is Outdoor. But Outdoor travel disables the policy
@@ -1816,6 +1858,19 @@ export default function ExpensePage() {
           message: "Please enter the starting location (From)."
         });
         return false;
+      }
+      // Leg 1 In-District: From must contain Home, Room, or Hotel (case-insensitive)
+      if (legNum === 1 && leg.travel_type === "In-District") {
+        const fromLower = leg.from.trim().toLowerCase();
+        const hasResidenceWord = ["home", "room", "hotel"].some(w => fromLower.includes(w));
+        if (!hasResidenceWord) {
+          setValidationModal({
+            show: true,
+            title: "Visit 1: Invalid Starting Location",
+            message: "For In-District expense, the Starting Location (From) must mention where you started from.\n\nIt must contain one of:\n\u2022 Home  \u2022 Room  \u2022 Hotel\n\nExamples: \"My Home, Jodhpur\", \"Rented Room\", \"Hotel XYZ\"\n\nPlease update the Starting Location (From) field."
+          });
+          return false;
+        }
       }
       if (!leg.to.trim()) {
         setValidationModal({
@@ -2175,15 +2230,19 @@ export default function ExpensePage() {
       const deductionItems: { leg: number; from: string; to: string; taDeducted: number; daDeducted: number }[] = [];
       let policyMsg = "";
 
-      if (!isDAAllowed) {
-        policyMsg = "Under base location policy, both Travel Allowance (TA) and Daily Allowance (DA) are not eligible.";
-      } else {
-        policyMsg = "Under base location policy, Travel Allowance (TA) is not eligible.";
-      }
-
       const baseLocs = user.base_reporting_location
         ? user.base_reporting_location.split(",").map((x: string) => x.trim().toLowerCase()).filter(Boolean)
         : [];
+      const isSpecialBase = isSpecialBaseLocation(baseLocs);
+
+      if (!isDAAllowed) {
+        policyMsg = "Base Location Policy (Standard): Both Travel Allowance (TA) and Daily Allowance (DA) are not eligible for commute legs to/from your base hospital.";
+      } else if (isSpecialBase) {
+        // Rule E: PBM Bikaner / MDM Jodhpur — DA is allowed, only commute-leg TA is deducted
+        policyMsg = "Base Location Policy (Rule E — PBM/MDM): TA is not eligible for commute legs. However, Daily Allowance (DA) is still granted as per policy for your base hospital.";
+      } else {
+        policyMsg = "Base Location Policy: Travel Allowance (TA) is not eligible for direct commute legs between your residence and base hospital.";
+      }
 
       processedItineraries.forEach((leg, idx) => {
         const legNum = idx + 1;
@@ -2881,18 +2940,74 @@ export default function ExpensePage() {
               </div>
               <div className="p-4 max-w-xs">
                 <label className="label-lte">Choose Travel Date <span className="text-red-500">*</span></label>
-                <input 
-                  type="date" 
-                  required 
-                  min={minDate}
-                  max={maxDate}
-                  value={date}
-                  onChange={(e) => {
-                    setDate(e.target.value);
-                    checkExistingExpense();
+                <ConfigProvider
+                  theme={{
+                    token: {
+                      colorPrimary: "#4f46e5",
+                      borderRadius: 8,
+                      fontFamily: "inherit",
+                      fontSize: 12,
+                    }
                   }}
-                  className="input-lte font-bold"
-                />
+                >
+                  <DatePicker
+                    value={date ? dayjs(date) : null}
+                    format="YYYY-MM-DD"
+                    allowClear={false}
+                    inputReadOnly
+                    style={{ width: "100%" }}
+                    disabledDate={(current: Dayjs) => {
+                      if (!current) return false;
+                      const dateStr = current.format("YYYY-MM-DD");
+                      if (maxDate && dateStr > maxDate) return true;
+                      if (minDate && dateStr < minDate) return true;
+                      if (editExpenseId && dateStr === originalExpenseDate) return false;
+                      if (submittedDates.includes(dateStr)) return true;
+                      return false;
+                    }}
+                    cellRender={(current: string | number | Dayjs, _info: any) => {
+                      // current can be string|number|Dayjs in antd — cast safely
+                      const d = dayjs.isDayjs(current) ? current : dayjs(current);
+                      const dateStr = d.format("YYYY-MM-DD");
+                      const isSubmitted = submittedDates.includes(dateStr);
+                      const isInRange = (!minDate || dateStr >= minDate) && (!maxDate || dateStr <= maxDate);
+                      const isEditOriginal = !!(editExpenseId && dateStr === originalExpenseDate);
+                      const isAvailable = isInRange && !isSubmitted;
+                      return (
+                        <div className="ant-picker-cell-inner" style={{ position: "relative" }}>
+                          {d.date()}
+                          {(isAvailable || isEditOriginal) && isInRange && (
+                            <span style={{
+                              position: "absolute",
+                              bottom: 1,
+                              left: "50%",
+                              transform: "translateX(-50%)",
+                              width: 5,
+                              height: 5,
+                              borderRadius: "50%",
+                              background: "#22c55e",
+                              display: "block"
+                            }} />
+                          )}
+                        </div>
+                      );
+                    }}
+                    onChange={(dayjsVal: Dayjs | null) => {
+                      if (!dayjsVal) return;
+                      const newDate = dayjsVal.format("YYYY-MM-DD");
+                      setDate(newDate);
+                      if (editExpenseId && newDate === originalExpenseDate) return;
+                      if (submittedDates.includes(newDate)) {
+                        toast.error("An expense claim for this date has already been submitted.");
+                        setDate(editExpenseId ? (originalExpenseDate || "") : "");
+                      }
+                    }}
+                  />
+                </ConfigProvider>
+                <p className="text-[10px] text-gray-400 font-medium mt-1.5 flex items-center gap-1">
+                  <span style={{ display: "inline-block", width: 6, height: 6, borderRadius: "50%", background: "#22c55e", flexShrink: 0 }} />
+                  Green dot = available &nbsp;|&nbsp; Greyed = already submitted
+                </p>
               </div>
             </div>
 
@@ -2900,7 +3015,7 @@ export default function ExpensePage() {
             <div className="space-y-4">
               <div className="flex items-center justify-between">
                 <h3 className="text-xs font-bold text-gray-650 uppercase tracking-wider">Travel & Visits</h3>
-                <span className="text-[10px] text-gray-400 font-bold uppercase">(Visits: {itineraries.length} / 10)</span>
+                <span className="text-[10px] text-gray-400 font-bold uppercase">(Visits: {itineraries.length} / 15)</span>
               </div>
 
               {itineraries.map((leg, index) => {
@@ -3020,7 +3135,8 @@ export default function ExpensePage() {
                             <div>
                               <div className="flex justify-between items-center mb-1">
                                 <label className="label-lte mb-0">Facility / Location Name <span className="text-red-500">*</span></label>
-                                {leg.district_from && getFacilitiesForDistrict(leg.district_from).length > 0 && (
+                                {/* Leg 1 In-District: no toggle button (always manual). All other legs: show toggle */}
+                                {!(isFirst && leg.travel_type === "In-District") && leg.district_from && getFacilitiesForDistrict(leg.district_from).length > 0 && (
                                   <button
                                     type="button"
                                     onClick={() => {
@@ -3033,7 +3149,23 @@ export default function ExpensePage() {
                                   </button>
                                 )}
                               </div>
-                              {leg.district_from && getFacilitiesForDistrict(leg.district_from).length > 0 && !leg.from_custom ? (
+                              {/* Leg 1 In-District: always manual text input with Home/Room/Hotel hint */}
+                              {isFirst && leg.travel_type === "In-District" ? (
+                                <div>
+                                  <input
+                                    type="text"
+                                    required
+                                    value={leg.from}
+                                    placeholder="e.g. My Home / My Room / Hotel Name..."
+                                    onChange={(e) => handleItineraryChange(leg.leg, "from", e.target.value)}
+                                    className="input-lte font-semibold border-gray-305"
+                                  />
+                                  <p className="text-[10px] text-amber-700 font-semibold mt-1 flex items-center gap-1">
+                                    <span>⚠️</span>
+                                    <span>Must contain: <strong>Home</strong>, <strong>Room</strong>, or <strong>Hotel</strong></span>
+                                  </p>
+                                </div>
+                              ) : leg.district_from && getFacilitiesForDistrict(leg.district_from).length > 0 && !leg.from_custom ? (
                                 <select
                                   required
                                   value={leg.from}
@@ -4999,58 +5131,93 @@ export default function ExpensePage() {
 
 
       {/* ================= LIMIT APPROVAL DIALOG ================= */}
-      {showApprovalModal && (
-        <div className="modal-lte-overlay">
-          <div className="modal-lte-content max-w-md">
-            <h3 className="text-sm font-extrabold uppercase tracking-wider border-b border-gray-200 pb-3 text-red-600 text-left flex items-center gap-1.5">
-              <AlertTriangle className="w-5 h-5 text-red-500" />
-              Monthly Reimbursement Limit Exceeded
-            </h3>
+      {showApprovalModal && (() => {
+        // Check if user already submitted a limit extension for this type this month
+        const hasExistingRequest = exceededType === "KM" ? !!existingKmReq : !!existingAutoReq;
+        const existingReq = exceededType === "KM" ? existingKmReq : existingAutoReq;
+        return (
+          <div className="modal-lte-overlay">
+            <div className="modal-lte-content max-w-md">
+              <h3 className="text-sm font-extrabold uppercase tracking-wider border-b border-gray-200 pb-3 text-red-600 text-left flex items-center gap-1.5">
+                <AlertTriangle className="w-5 h-5 text-red-500" />
+                Monthly Reimbursement Limit Exceeded
+              </h3>
 
-            <div className="space-y-4 mt-4 text-left text-xs font-semibold">
-              <p className="leading-relaxed font-medium text-gray-600">
-                The current claim exceeds your monthly {exceededType} allowance. You must request a temporary extension from your Level 1 Manager to submit this claim.
-              </p>
+              <div className="space-y-4 mt-4 text-left text-xs font-semibold">
+                <p className="leading-relaxed font-medium text-gray-600">
+                  The current claim exceeds your monthly {exceededType} allowance. You must request a temporary extension from your Level 1 Manager to submit this claim.
+                </p>
 
-              <div className="p-3 bg-red-50 border border-red-150 text-red-800 rounded font-bold">
-                Exceeded Overflow: {excess.toFixed(1)} {exceededType === "KM" ? "KM" : "₹"}
-              </div>
+                <div className="p-3 bg-red-50 border border-red-150 text-red-800 rounded font-bold">
+                  Exceeded Overflow: {excess.toFixed(1)} {exceededType === "KM" ? "KM" : "₹"}
+                </div>
 
-              <div className="space-y-1.5">
-                <label className="label-lte">Requested Additional {exceededType}</label>
-                <input
-                  type="number"
-                  min="0.01"
-                  step="any"
-                  value={reqAdditional}
-                  onChange={(e) => setReqAdditional(e.target.value)}
-                  className="input-lte font-bold"
-                />
-              </div>
+                {hasExistingRequest ? (
+                  /* Already submitted a request this month — show status, block re-submit */
+                  <div className="p-3 bg-amber-50 border border-amber-300 rounded space-y-2">
+                    <p className="font-bold text-amber-800 flex items-center gap-1.5">
+                      <Info className="w-3.5 h-3.5 shrink-0" />
+                      Limit Extension Already Requested This Month
+                    </p>
+                    <p className="text-amber-700 font-medium leading-relaxed">
+                      You have already submitted a limit extension request for {exceededType} this month. You can only submit one request per month.
+                    </p>
+                    {existingReq && (
+                      <div className={`text-xs font-bold px-2 py-1 rounded inline-block ${
+                        existingReq.status === "Approved" ? "bg-emerald-100 text-emerald-700" :
+                        existingReq.status === "Rejected" ? "bg-rose-100 text-rose-700" :
+                        "bg-blue-100 text-blue-700"
+                      }`}>
+                        Status: {existingReq.status === "Approved" ? "✓ Approved" :
+                                 existingReq.status === "Rejected" ? "❌ Rejected" :
+                                 "⏳ Pending"} — Requested: +{existingReq.requested_value} {exceededType === "KM" ? "KM" : "₹"}
+                      </div>
+                    )}
+                    <p className="text-[10px] text-gray-500 font-medium italic">
+                      Your extension request will reset next month.
+                    </p>
+                  </div>
+                ) : (
+                  /* Allow new request */
+                  <div className="space-y-1.5">
+                    <label className="label-lte">Requested Additional {exceededType}</label>
+                    <input
+                      type="number"
+                      min="0.01"
+                      step="any"
+                      value={reqAdditional}
+                      onChange={(e) => setReqAdditional(e.target.value)}
+                      className="input-lte font-bold"
+                    />
+                  </div>
+                )}
 
-              <div className="flex justify-end gap-3 pt-3 border-t border-gray-200 mt-6">
-                <button
-                  type="button"
-                  onClick={() => setShowApprovalModal(false)}
-                  className="btn-lte-secondary"
-                  disabled={sendingRequest}
-                >
-                  Cancel
-                </button>
-                <button
-                  type="button"
-                  onClick={sendApprovalRequest}
-                  disabled={sendingRequest}
-                  className="btn-lte-primary px-5 py-2 flex items-center justify-center gap-1.5 border-0"
-                >
-                  {sendingRequest && <Loader2 className="w-3.5 h-3.5 animate-spin" />}
-                  <span>Send Request</span>
-                </button>
+                <div className="flex justify-end gap-3 pt-3 border-t border-gray-200 mt-6">
+                  <button
+                    type="button"
+                    onClick={() => setShowApprovalModal(false)}
+                    className="btn-lte-secondary"
+                    disabled={sendingRequest}
+                  >
+                    {hasExistingRequest ? "Close" : "Cancel"}
+                  </button>
+                  {!hasExistingRequest && (
+                    <button
+                      type="button"
+                      onClick={sendApprovalRequest}
+                      disabled={sendingRequest}
+                      className="btn-lte-primary px-5 py-2 flex items-center justify-center gap-1.5 border-0"
+                    >
+                      {sendingRequest && <Loader2 className="w-3.5 h-3.5 animate-spin" />}
+                      <span>Send Request</span>
+                    </button>
+                  )}
+                </div>
               </div>
             </div>
           </div>
-        </div>
-      )}
+        );
+      })()}
 
       {/* ================= CUSTOM VALIDATION WARNING MODAL ================= */}
       {validationModal.show && (
