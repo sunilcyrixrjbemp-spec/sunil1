@@ -1221,162 +1221,167 @@ export default function HomePage() {
           {/* Right Sidebar: Dynamic Charts & Filters */}
           <Col xs={24} lg={8} className="space-y-4">
             
-            {/* Claims Breakdown Chart Card */}
-            <Card 
-              size="small" 
-              className="border border-gray-200 shadow-xs"
-              title={
-                <div className="space-y-0.5">
-                  <span className="text-indigo-650 font-extrabold text-[9px] uppercase tracking-widest block">Claims Analytics</span>
-                  <Title level={5} style={{ margin: 0, fontSize: "12px", color: "#1F2937" }} className="uppercase font-bold tracking-wider flex items-center gap-1.5">
-                    <BarChart3 size={14} className="text-indigo-500" />
-                    {activeTab === "my-claims" ? "Personal Mode Breakdown" : "Zone-wise Compare"}
-                  </Title>
-                </div>
-              }
-            >
-              {activeTab === "my-claims" ? (
-                safeMyExpenses.length === 0 ? (
-                  <div className="py-8 text-center text-gray-400 text-[10px] font-bold uppercase tracking-wider">
-                    No claims to analyze
+            <div className="hidden lg:block">
+  {/* Claims Breakdown Chart Card */}
+              <Card 
+                size="small" 
+                className="border border-gray-200 shadow-xs"
+                title={
+                  <div className="space-y-0.5">
+                    <span className="text-indigo-650 font-extrabold text-[9px] uppercase tracking-widest block">Claims Analytics</span>
+                    <Title level={5} style={{ margin: 0, fontSize: "12px", color: "#1F2937" }} className="uppercase font-bold tracking-wider flex items-center gap-1.5">
+                      <BarChart3 size={14} className="text-indigo-500" />
+                      {activeTab === "my-claims" ? "Personal Mode Breakdown" : "Zone-wise Compare"}
+                    </Title>
                   </div>
-                ) : (
-                  <>
-                    <div style={{ height: 140 }} className="relative flex justify-center items-center">
-                      <ResponsivePie
-                        data={getPersonalChartData().map((c, i) => ({ id: c.label, label: c.label, value: c.amount, color: GALLERY_COLORS[i % GALLERY_COLORS.length] }))}
-                        margin={{ top: 5, right: 5, bottom: 5, left: 5 }}
-                        innerRadius={0.72}
-                        padAngle={3}
-                        colors={{ datum: 'data.color' }}
-                        borderWidth={2}
-                        borderColor="#ffffff"
-                        enableArcLinkLabels={false}
-                        enableArcLabels={false}
-                        tooltip={({ datum }) => (
-                          <div className="bg-slate-900/95 backdrop-blur-md text-white border border-slate-800 shadow-2xl rounded-xl p-3 text-xs min-w-[120px] font-sans pointer-events-none z-50">
-                            <p className="font-extrabold text-[10px] uppercase text-slate-400 tracking-wider mb-1.5">{datum.label}</p>
-                            <div className="flex items-center justify-between gap-4">
-                              <span className="flex items-center gap-1.5 text-slate-300">
-                                <span className="w-2 h-2 rounded-full" style={{ backgroundColor: datum.color }} />
-                                Amount:
-                              </span>
-                              <span className="font-mono font-bold text-white">₹{datum.value?.toLocaleString()}</span>
-                            </div>
-                          </div>
-                        )}
-                      />
-                      <div className="absolute flex flex-col items-center justify-center pointer-events-none" style={{ top: '50%', left: '50%', transform: 'translate(-50%, -50%)' }}>
-                        <span className="text-[7px] text-gray-400 font-bold uppercase tracking-wider">Total Claimed</span>
-                        <span className="text-[11px] font-black text-slate-800 font-mono mt-0.5">
-                          ₹{getPersonalChartData().reduce((sum, item) => sum + item.amount, 0).toLocaleString()}
-                        </span>
-                      </div>
-                    </div>
-                    <div className="flex flex-wrap justify-center gap-x-2.5 gap-y-1 mt-2">
-                      {getPersonalChartData().map((item, i) => (
-                        <div key={i} className="flex items-center gap-1 text-[8px] font-bold text-slate-505">
-                          <span className="w-1.5 h-1.5 rounded-full shrink-0" style={{ backgroundColor: GALLERY_COLORS[i % GALLERY_COLORS.length] }} />
-                          <span>{item.label}</span>
-                        </div>
-                      ))}
-                    </div>
-                  </>
-                )
-              ) : (
-                <div className="space-y-4">
-                  {/* Filter Metrics Box */}
-                  <div className="border border-indigo-50 p-3 bg-indigo-50/20 rounded-xl space-y-2 text-xs font-semibold text-gray-700">
-                    <h4 className="text-[9px] font-black text-indigo-800 uppercase tracking-widest leading-none">Filtered Team Totals</h4>
-                    <Row gutter={8}>
-                      <Col span={12}>
-                        <div className="bg-white p-2 border border-slate-100 rounded-lg text-center space-y-0.5 shadow-sm">
-                          <span className="text-slate-400 font-bold uppercase tracking-wider block text-[7px] leading-none">Distance</span>
-                          <span className="text-xs font-black text-indigo-605 font-mono leading-none">{totalFilteredKm.toFixed(1)} KM</span>
-                        </div>
-                      </Col>
-                      <Col span={12}>
-                        <div className="bg-white p-2 border border-slate-100 rounded-lg text-center space-y-0.5 shadow-sm">
-                          <span className="text-slate-400 font-bold uppercase tracking-wider block text-[7px] leading-none">Auto Expense</span>
-                          <span className="text-xs font-black text-indigo-605 font-mono leading-none">₹{totalFilteredAuto.toLocaleString()}</span>
-                        </div>
-                      </Col>
-                    </Row>
-                    <div className="bg-white p-2 border border-slate-100 rounded-lg text-center shadow-sm">
-                      <span className="text-slate-400 font-bold uppercase tracking-wider block text-[7px] leading-none">Aggregate Reimbursement</span>
-                      <span className="text-xs font-black text-indigo-750 font-mono">₹{totalFilteredAmount.toLocaleString()}</span>
-                    </div>
-                  </div>
-
-                  {/* SVG compare chart */}
-                  {filteredTeamExpenses.length === 0 ? (
-                    <div className="py-8 text-center text-gray-400 text-[10px] font-semibold uppercase tracking-wider">
-                      No matching claims
+                }
+              >
+                {activeTab === "my-claims" ? (
+                  safeMyExpenses.length === 0 ? (
+                    <div className="py-8 text-center text-gray-400 text-[10px] font-bold uppercase tracking-wider">
+                      No claims to analyze
                     </div>
                   ) : (
-                    <div className="space-y-2 border-t border-gray-100 pt-3">
-                      <Text type="secondary" className="text-[9px] font-extrabold uppercase block tracking-wider text-center">Zone Expenditures Comparison</Text>
-                      {(() => {
-                        const chartData = getTeamChartData();
-                        if (chartData.length === 0) return null;
-                        return (
-                          <>
-                            <div style={{ height: 140 }} className="relative flex justify-center items-center">
-                              <ResponsivePie
-                                data={chartData.map((c, i) => ({ id: c.name, label: c.name, value: c.amount, color: GALLERY_COLORS[i % GALLERY_COLORS.length] }))}
-                                margin={{ top: 5, right: 5, bottom: 5, left: 5 }}
-                                innerRadius={0.72}
-                                padAngle={3}
-                                colors={{ datum: 'data.color' }}
-                                borderWidth={2}
-                                borderColor="#ffffff"
-                                enableArcLinkLabels={false}
-                                enableArcLabels={false}
-                                tooltip={({ datum }) => (
-                                  <div className="bg-slate-900/95 backdrop-blur-md text-white border border-slate-800 shadow-2xl rounded-xl p-3 text-xs min-w-[120px] font-sans pointer-events-none z-50">
-                                    <p className="font-extrabold text-[10px] uppercase text-slate-400 tracking-wider mb-1.5">{datum.label}</p>
-                                    <div className="flex items-center justify-between gap-4">
-                                      <span className="flex items-center gap-1.5 text-slate-305">
-                                        <span className="w-2 h-2 rounded-full" style={{ backgroundColor: datum.color }} />
-                                        Amount:
-                                      </span>
-                                      <span className="font-mono font-bold text-white">₹{datum.value?.toLocaleString()}</span>
-                                    </div>
-                                  </div>
-                                )}
-                              />
-                              <div className="absolute flex flex-col items-center justify-center pointer-events-none" style={{ top: '50%', left: '50%', transform: 'translate(-50%, -50%)' }}>
-                                <span className="text-[7px] text-gray-400 font-bold uppercase tracking-wider">Total Team</span>
-                                <span className="text-[11px] font-black text-slate-800 font-mono mt-0.5">
-                                  ₹{chartData.reduce((sum, item) => sum + item.amount, 0).toLocaleString()}
+                    <>
+                      <div style={{ height: 140 }} className="relative flex justify-center items-center">
+                        <ResponsivePie
+                          data={getPersonalChartData().map((c, i) => ({ id: c.label, label: c.label, value: c.amount, color: GALLERY_COLORS[i % GALLERY_COLORS.length] }))}
+                          margin={{ top: 5, right: 5, bottom: 5, left: 5 }}
+                          innerRadius={0.72}
+                          padAngle={3}
+                          colors={{ datum: 'data.color' }}
+                          borderWidth={2}
+                          borderColor="#ffffff"
+                          enableArcLinkLabels={false}
+                          enableArcLabels={false}
+                          tooltip={({ datum }) => (
+                            <div className="bg-slate-900/95 backdrop-blur-md text-white border border-slate-800 shadow-2xl rounded-xl p-3 text-xs min-w-[120px] font-sans pointer-events-none z-50">
+                              <p className="font-extrabold text-[10px] uppercase text-slate-400 tracking-wider mb-1.5">{datum.label}</p>
+                              <div className="flex items-center justify-between gap-4">
+                                <span className="flex items-center gap-1.5 text-slate-300">
+                                  <span className="w-2 h-2 rounded-full" style={{ backgroundColor: datum.color }} />
+                                  Amount:
                                 </span>
+                                <span className="font-mono font-bold text-white">₹{datum.value?.toLocaleString()}</span>
                               </div>
                             </div>
-                            <div className="flex flex-wrap justify-center gap-x-2.5 gap-y-1">
-                              {chartData.map((item, i) => (
-                                <div key={i} className="flex items-center gap-1 text-[8px] font-bold text-slate-505">
-                                  <span className="w-1.5 h-1.5 rounded-full shrink-0" style={{ backgroundColor: GALLERY_COLORS[i % GALLERY_COLORS.length] }} />
-                                  <span>{item.name}</span>
-                                </div>
-                              ))}
-                            </div>
-                          </>
-                        );
-                      })()}
+                          )}
+                        />
+                        <div className="absolute flex flex-col items-center justify-center pointer-events-none" style={{ top: '50%', left: '50%', transform: 'translate(-50%, -50%)' }}>
+                          <span className="text-[7px] text-gray-400 font-bold uppercase tracking-wider">Total Claimed</span>
+                          <span className="text-[11px] font-black text-slate-800 font-mono mt-0.5">
+                            ₹{getPersonalChartData().reduce((sum, item) => sum + item.amount, 0).toLocaleString()}
+                          </span>
+                        </div>
+                      </div>
+                      <div className="flex flex-wrap justify-center gap-x-2.5 gap-y-1 mt-2">
+                        {getPersonalChartData().map((item, i) => (
+                          <div key={i} className="flex items-center gap-1 text-[8px] font-bold text-slate-505">
+                            <span className="w-1.5 h-1.5 rounded-full shrink-0" style={{ backgroundColor: GALLERY_COLORS[i % GALLERY_COLORS.length] }} />
+                            <span>{item.label}</span>
+                          </div>
+                        ))}
+                      </div>
+                    </>
+                  )
+                ) : (
+                  <div className="space-y-4">
+                    {/* Filter Metrics Box */}
+                    <div className="border border-indigo-50 p-3 bg-indigo-50/20 rounded-xl space-y-2 text-xs font-semibold text-gray-700">
+                      <h4 className="text-[9px] font-black text-indigo-800 uppercase tracking-widest leading-none">Filtered Team Totals</h4>
+                      <Row gutter={8}>
+                        <Col span={12}>
+                          <div className="bg-white p-2 border border-slate-100 rounded-lg text-center space-y-0.5 shadow-sm">
+                            <span className="text-slate-400 font-bold uppercase tracking-wider block text-[7px] leading-none">Distance</span>
+                            <span className="text-xs font-black text-indigo-605 font-mono leading-none">{totalFilteredKm.toFixed(1)} KM</span>
+                          </div>
+                        </Col>
+                        <Col span={12}>
+                          <div className="bg-white p-2 border border-slate-100 rounded-lg text-center space-y-0.5 shadow-sm">
+                            <span className="text-slate-400 font-bold uppercase tracking-wider block text-[7px] leading-none">Auto Expense</span>
+                            <span className="text-xs font-black text-indigo-605 font-mono leading-none">₹{totalFilteredAuto.toLocaleString()}</span>
+                          </div>
+                        </Col>
+                      </Row>
+                      <div className="bg-white p-2 border border-slate-100 rounded-lg text-center shadow-sm">
+                        <span className="text-slate-400 font-bold uppercase tracking-wider block text-[7px] leading-none">Aggregate Reimbursement</span>
+                        <span className="text-xs font-black text-indigo-750 font-mono">₹{totalFilteredAmount.toLocaleString()}</span>
+                      </div>
                     </div>
-                  )}
-                </div>
-              )}
-            </Card>
 
-            {/* Expense Calendar Tracker Section */}
-            <Card size="small" className="border border-gray-200 shadow-xs p-1">
-              <ExpenseCalendar 
-                expenses={activeTab === "my-claims" ? safeMyExpenses : filteredTeamExpenses} 
-                isTeamView={activeTab !== "my-claims"}
-                selectMonth={selectMonth}
-              />
-            </Card>
+                    {/* SVG compare chart */}
+                    {filteredTeamExpenses.length === 0 ? (
+                      <div className="py-8 text-center text-gray-400 text-[10px] font-semibold uppercase tracking-wider">
+                        No matching claims
+                      </div>
+                    ) : (
+                      <div className="space-y-2 border-t border-gray-100 pt-3">
+                        <Text type="secondary" className="text-[9px] font-extrabold uppercase block tracking-wider text-center">Zone Expenditures Comparison</Text>
+                        {(() => {
+                          const chartData = getTeamChartData();
+                          if (chartData.length === 0) return null;
+                          return (
+                            <>
+                              <div style={{ height: 140 }} className="relative flex justify-center items-center">
+                                <ResponsivePie
+                                  data={chartData.map((c, i) => ({ id: c.name, label: c.name, value: c.amount, color: GALLERY_COLORS[i % GALLERY_COLORS.length] }))}
+                                  margin={{ top: 5, right: 5, bottom: 5, left: 5 }}
+                                  innerRadius={0.72}
+                                  padAngle={3}
+                                  colors={{ datum: 'data.color' }}
+                                  borderWidth={2}
+                                  borderColor="#ffffff"
+                                  enableArcLinkLabels={false}
+                                  enableArcLabels={false}
+                                  tooltip={({ datum }) => (
+                                    <div className="bg-slate-900/95 backdrop-blur-md text-white border border-slate-800 shadow-2xl rounded-xl p-3 text-xs min-w-[120px] font-sans pointer-events-none z-50">
+                                      <p className="font-extrabold text-[10px] uppercase text-slate-400 tracking-wider mb-1.5">{datum.label}</p>
+                                      <div className="flex items-center justify-between gap-4">
+                                        <span className="flex items-center gap-1.5 text-slate-305">
+                                          <span className="w-2 h-2 rounded-full" style={{ backgroundColor: datum.color }} />
+                                          Amount:
+                                        </span>
+                                        <span className="font-mono font-bold text-white">₹{datum.value?.toLocaleString()}</span>
+                                      </div>
+                                    </div>
+                                  )}
+                                />
+                                <div className="absolute flex flex-col items-center justify-center pointer-events-none" style={{ top: '50%', left: '50%', transform: 'translate(-50%, -50%)' }}>
+                                  <span className="text-[7px] text-gray-400 font-bold uppercase tracking-wider">Total Team</span>
+                                  <span className="text-[11px] font-black text-slate-800 font-mono mt-0.5">
+                                    ₹{chartData.reduce((sum, item) => sum + item.amount, 0).toLocaleString()}
+                                  </span>
+                                </div>
+                              </div>
+                              <div className="flex flex-wrap justify-center gap-x-2.5 gap-y-1">
+                                {chartData.map((item, i) => (
+                                  <div key={i} className="flex items-center gap-1 text-[8px] font-bold text-slate-505">
+                                    <span className="w-1.5 h-1.5 rounded-full shrink-0" style={{ backgroundColor: GALLERY_COLORS[i % GALLERY_COLORS.length] }} />
+                                    <span>{item.name}</span>
+                                  </div>
+                                ))}
+                              </div>
+                            </>
+                          );
+                        })()}
+                      </div>
+                    )}
+                  </div>
+                )}
+              </Card>
+            </div>
+
+            <div className="hidden lg:block">
+  {/* Expense Calendar Tracker Section */}
+              <Card size="small" className="border border-gray-200 shadow-xs p-1">
+                <ExpenseCalendar 
+                  expenses={activeTab === "my-claims" ? safeMyExpenses : filteredTeamExpenses} 
+                  isTeamView={activeTab !== "my-claims"}
+                  selectMonth={selectMonth}
+                />
+              </Card>
+            </div>
+
           </Col>
         </Row>
       </div>
@@ -1499,18 +1504,18 @@ export default function HomePage() {
               </div>
             </div>
 
-            {/* Visit Details Legs Table */}
+{/* Legs Table */}
             {claimDetails.category !== "Limit Request" && claimDetails.itineraries && claimDetails.itineraries.length > 0 && (
               <div className="border border-gray-200 rounded overflow-hidden">
                 <div className="px-3 py-2 bg-gray-50 border-b border-gray-200">
                   <h4 className="text-[10px] font-bold uppercase text-gray-600 tracking-wider">Visit Details</h4>
                 </div>
                 
-                {/* Desktop View Legs Table */}
+                {/* Desktop View Table */}
                 <div className="hidden lg:block overflow-x-auto">
                   <table className="table-lte">
                     <thead>
-                      <tr className="border-b border-gray-200 text-[9px] uppercase font-bold tracking-wider text-gray-455 bg-gray-50">
+                      <tr className="border-b border-gray-200 text-[9px] uppercase font-bold tracking-wider text-gray-400 bg-gray-50">
                         <th className="py-2 px-3 text-center w-10">#</th>
                         <th className="py-2 px-3">Route</th>
                         <th className="py-2 px-3">Mode</th>
@@ -1564,18 +1569,18 @@ export default function HomePage() {
 
                         return (
                           <React.Fragment key={idx}>
-                            <tr className="hover:bg-gray-50 transition-colors text-xs">
+                            <tr className="hover:bg-gray-50 transition-colors">
                               <td className="py-2.5 px-3 text-center font-bold text-gray-400">{leg.leg}</td>
                               <td className="py-2.5 px-3">
-                                <span className="font-bold text-gray-805">{leg.from_district === leg.to_district ? leg.to_district : `${leg.from_district} → ${leg.to_district}`}</span>
-                                <span className="text-[9px] text-gray-455 block">{leg.from || "Start"} → {leg.to || "End"}</span>
+                                <span className="font-bold text-gray-850">{leg.from_district === leg.to_district ? leg.to_district : `${leg.from_district} → ${leg.to_district}`}</span>
+                                <span className="text-[10px] text-gray-400 block">{leg.from || "Start"} → {leg.to || "End"}</span>
                               </td>
                               <td className="py-2.5 px-3">
-                                <Tag color="blue" style={{ fontSize: "9px" }}>{leg.mode}</Tag>
-                                {leg.sub_mode && <Tag color="purple" style={{ fontSize: "9px" }} className="ml-0.5">+{leg.sub_mode}</Tag>}
+                                <span className="text-[9px] font-bold uppercase bg-blue-50 text-blue-700 px-1.5 py-0.5 rounded border border-blue-100">{leg.mode}</span>
+                                {leg.sub_mode && <span className="text-[9px] font-bold uppercase bg-purple-50 text-purple-700 px-1.5 py-0.5 rounded border border-purple-100 ml-1">+{leg.sub_mode}</span>}
                               </td>
                               <td className="py-2.5 px-3 text-right font-mono font-semibold text-gray-600">{leg.km || 0} KM</td>
-                              <td className="py-2.5 px-3 text-right font-mono font-semibold">
+                              <td className="py-2.5 px-3 text-right font-mono font-semibold text-gray-650">
                                 <div className="flex flex-col items-end">
                                   <span>₹{(travelCost + subCost).toLocaleString()}</span>
                                   {taDeducted > 0 && (
@@ -1587,7 +1592,7 @@ export default function HomePage() {
                               </td>
                               <td className="py-2.5 px-3 text-right font-mono font-semibold">
                                 <div className="flex flex-col items-end">
-                                  <span>₹{daCost.toLocaleString()}</span>
+                                  <span className="text-gray-650">₹{daCost.toLocaleString()}</span>
                                   {daDeducted > 0 && (
                                     <span className="text-[8px] font-bold text-rose-500 line-through" title="Claimed before policy deduction">
                                       ₹{origDA.toLocaleString()}
@@ -1599,9 +1604,9 @@ export default function HomePage() {
                               <td className="py-2.5 px-3 text-right font-mono font-semibold">₹{lpCost.toLocaleString()}</td>
                               <td className="py-2.5 px-3">
                                 <span className="font-mono font-bold">₹{otherCost.toLocaleString()}</span>
-                                {leg.oth_desc && <span className="text-[9px] text-gray-400 block truncate max-w-[80px]" title={leg.oth_desc}>{leg.oth_desc}</span>}
+                                {leg.oth_desc && <span className="text-[9px] text-gray-400 block truncate max-w-[100px]" title={leg.oth_desc}>{leg.oth_desc}</span>}
                               </td>
-                              <td className="py-2.5 px-3 text-[10px] text-gray-550">
+                              <td className="py-2.5 px-3 text-[10px] text-gray-500">
                                 <span>W:{leg.ws_assigned||0}</span> <span className="text-green-600">D:{leg.ws_closed||0}</span> <span>P:{leg.ws_pms||0}</span> <span>A:{leg.ws_asset||0}</span>
                               </td>
                               <td className="py-2.5 px-3 text-right font-bold font-mono text-gray-900">
@@ -1617,35 +1622,122 @@ export default function HomePage() {
                             </tr>
 
                             {hasActivities && (
-                              <tr className="bg-slate-50/50 text-[11px] text-slate-700">
-                                <td colSpan={11} className="py-2 px-3 border-t border-gray-150">
-                                  <div className="flex flex-col gap-1.5 p-1 bg-white rounded border border-gray-100 shadow-xs">
-                                    <div className="flex flex-wrap gap-x-4 gap-y-1 font-bold text-[9.5px] uppercase tracking-wider text-slate-500">
-                                      {selectedActs.includes("pm") && <span>⚙️ PM Completed ({pmsList.length})</span>}
-                                      {selectedActs.includes("breakdown") && <span>🛠️ Calls Closed ({callsList.length})</span>}
-                                      {selectedActs.includes("asset_mobilise") && <span>📦 Asset Mobilised ({mobiliseCount})</span>}
-                                      {selectedActs.includes("calibration") && <span>📐 Calibration Done ({calibrationCount})</span>}
-                                      {selectedActs.includes("other") && <span>📝 Other: {activityOtherDesc}</span>}
+                              <tr className="bg-slate-50/50">
+                                <td colSpan={11} className="py-2.5 px-4 border-t border-gray-150">
+                                  <div className="flex flex-col gap-2.5 text-left">
+                                    <div className="flex flex-wrap gap-2">
+                                      <span className="text-[9px] font-bold text-gray-500 uppercase mr-2 mt-0.5">Activities:</span>
+                                      {selectedActs.map((act: string, actIdx: number) => (
+                                        <span key={actIdx} className="px-1.5 py-0.5 rounded bg-gray-100 border border-gray-200 text-[8px] font-bold text-gray-700 uppercase">
+                                          {act}
+                                        </span>
+                                      ))}
                                     </div>
-                                    
-                                    {pmsList.length > 0 && (
-                                      <div className="text-[10px] text-gray-600 bg-gray-50 p-1.5 rounded">
-                                        <span className="font-extrabold uppercase text-[8px] text-gray-400 block tracking-wider mb-0.5">PM Assets:</span>
-                                        <span>{pmsList.join(", ")}</span>
+
+                                    {/* Sub-table for Calls */}
+                                    {selectedActs.includes("Calls") && callsList.length > 0 && (
+                                      <div className="space-y-1.5 max-w-full">
+                                        <div className="text-[9px] font-black text-indigo-700 uppercase tracking-wider">Support Calls Logs</div>
+                                        <div className="flex flex-wrap gap-2">
+                                          {callsList.map((c: any, cIdx: number) => (
+                                            <div key={cIdx} className="bg-white border border-gray-300 p-2.5 shadow-xs text-[10px] w-full sm:w-[220px] flex flex-col justify-between hover:border-indigo-400 transition-colors">
+                                              <div className="flex justify-between items-center border-b border-gray-100 pb-1 mb-1">
+                                                <span className="font-mono font-bold text-indigo-600">{c.barcode}</span>
+                                                <span className="px-1.5 py-0.2 rounded-sm font-black text-[7px] uppercase bg-blue-50 text-blue-700 border border-blue-100">{c.status || "Attend"}</span>
+                                              </div>
+                                              <div className="space-y-0.5 flex-1">
+                                                <p className="font-bold text-gray-800 line-clamp-1">{c.asset_details?.equipment_name || "—"}</p>
+                                                <p className="text-gray-500 truncate">{c.asset_details?.hospital_name || "—"}</p>
+                                                <p className="text-gray-400 text-[8px] uppercase tracking-wider">{c.asset_details?.district_name || "—"} | {c.type || "Support"}</p>
+                                              </div>
+                                              {c.photo_url && (
+                                                <button 
+                                                  onClick={() => setLightboxImage(`${API_BASE}${c.photo_url}`)}
+                                                  className="mt-1.5 w-full bg-slate-50 hover:bg-slate-100 py-1 text-center font-bold text-slate-700 rounded border border-gray-300 cursor-pointer text-[8px] uppercase"
+                                                >
+                                                  View Photo
+                                                </button>
+                                              )}
+                                            </div>
+                                          ))}
+                                        </div>
                                       </div>
                                     )}
-                                    {callsList.length > 0 && (
-                                      <div className="text-[10px] text-gray-600 bg-gray-50 p-1.5 rounded">
-                                        <span className="font-extrabold uppercase text-[8px] text-gray-400 block tracking-wider mb-0.5">Closed Tickets:</span>
-                                        <span>{callsList.join(", ")}</span>
+
+                                    {/* Sub-table for PMS */}
+                                    {selectedActs.includes("PMS") && pmsList.length > 0 && (
+                                      <div className="space-y-1.5 max-w-full">
+                                        <div className="text-[9px] font-black text-amber-700 uppercase tracking-wider">PMS Service Logs</div>
+                                        <div className="flex flex-wrap gap-2">
+                                          {pmsList.map((p: any, pIdx: number) => (
+                                            <div key={pIdx} className="bg-white border border-gray-300 p-2.5 shadow-xs text-[10px] w-full sm:w-[220px] flex flex-col justify-between hover:border-amber-400 transition-colors">
+                                              <div className="flex justify-between items-center border-b border-gray-100 pb-1 mb-1">
+                                                <span className="font-mono font-bold text-amber-600">{p.barcode}</span>
+                                                <span className="px-1.5 py-0.2 rounded-sm font-black text-[7px] uppercase bg-green-50 text-green-700 border border-green-205">{p.asset_details?.inventory_status || "Active"}</span>
+                                              </div>
+                                              <div className="space-y-0.5 flex-1">
+                                                <p className="font-bold text-gray-800 line-clamp-1">{p.asset_details?.equipment_name || "—"}</p>
+                                                <p className="text-gray-500 truncate">{p.asset_details?.hospital_name || "—"}</p>
+                                                <p className="text-gray-400 text-[8px] uppercase tracking-wider">{p.asset_details?.district_name || "—"} | Freq: {p.frequency || "3M"}</p>
+                                              </div>
+                                              {p.photo_url && (
+                                                <button 
+                                                  onClick={() => setLightboxImage(`${API_BASE}${p.photo_url}`)}
+                                                  className="mt-1.5 w-full bg-slate-50 hover:bg-slate-100 py-1 text-center font-bold text-slate-700 rounded border border-gray-300 cursor-pointer text-[8px] uppercase"
+                                                >
+                                                  View Photo
+                                                </button>
+                                              )}
+                                            </div>
+                                          ))}
+                                        </div>
                                       </div>
                                     )}
-                                    {assetsList.length > 0 && (
-                                      <div className="text-[10px] text-gray-600 bg-gray-50 p-1.5 rounded">
-                                        <span className="font-extrabold uppercase text-[8px] text-gray-400 block tracking-wider mb-0.5">Mobilised Assets:</span>
-                                        <span>{assetsList.join(", ")}</span>
+
+                                    {/* Sub-table for Asset Tagging */}
+                                    {selectedActs.includes("Asset Tagging") && assetsList.length > 0 && (
+                                      <div className="space-y-1.5 max-w-full">
+                                        <div className="text-[9px] font-black text-emerald-700 uppercase tracking-wider">Asset Tagging Records</div>
+                                        <div className="flex flex-wrap gap-2">
+                                          {assetsList.map((a: any, aIdx: number) => {
+                                            const qty = parseInt(a.quantity || "0") || 0;
+                                            return (
+                                              <div key={aIdx} className="bg-white border border-gray-300 p-2.5 shadow-xs text-[10px] w-full sm:w-[180px] flex items-center justify-between hover:border-emerald-400 transition-colors">
+                                                <div className="space-y-0.5">
+                                                  <p className="font-bold text-gray-800 line-clamp-1">{a.equipment_name}</p>
+                                                  <span className="text-[7px] text-gray-400 uppercase tracking-wider">Asset Tagged</span>
+                                                </div>
+                                                <div className="bg-emerald-50 text-emerald-700 font-extrabold text-xs px-2.5 py-1 rounded border border-emerald-100">
+                                                  {qty}
+                                                </div>
+                                              </div>
+                                            );
+                                          })}
+                                        </div>
                                       </div>
                                     )}
+
+                                    {/* Quantities for Mobilise, Calibration or Other */}
+                                    <div className="flex flex-wrap gap-4 text-[10px] text-gray-600 bg-white p-2 rounded border border-gray-100 max-w-4xl">
+                                      {selectedActs.includes("Mobilise Asset Update") && (
+                                        <div>
+                                          <span className="font-bold text-gray-400 uppercase text-[8px] block">Mobilise Qty</span>
+                                          <span className="font-bold text-indigo-700">{mobiliseCount} units</span>
+                                        </div>
+                                      )}
+                                      {selectedActs.includes("Calibration") && (
+                                        <div>
+                                          <span className="font-bold text-gray-400 uppercase text-[8px] block">Calibration Qty</span>
+                                          <span className="font-bold text-purple-700">{calibrationCount} units</span>
+                                        </div>
+                                      )}
+                                      {selectedActs.includes("Other") && activityOtherDesc && (
+                                        <div className="flex-1">
+                                          <span className="font-bold text-gray-400 uppercase text-[8px] block">Other Activity Description</span>
+                                          <span className="italic text-gray-700">{activityOtherDesc}</span>
+                                        </div>
+                                      )}
+                                    </div>
                                   </div>
                                 </td>
                               </tr>
@@ -1657,26 +1749,268 @@ export default function HomePage() {
                   </table>
                 </div>
 
-                {/* Mobile View Legs List */}
-                <div className="block lg:hidden space-y-2 p-2">
+                {/* Mobile View Card List */}
+                <div className="block lg:hidden space-y-3 p-3 bg-gray-50/30">
                   {claimDetails.itineraries.map((leg: any, idx: number) => {
-                    const legTotal = (leg.amount || 0) + (leg.sub_amount || 0) + (leg.da || 0) + (leg.hotel || 0) + (leg.local_purchase || 0) + (leg.oth_amount || 0);
+                    const travelCost = leg.amount || 0;
+                    const subCost = leg.sub_amount || 0;
+                    const daCost = leg.da || 0;
+                    const hotelCost = leg.hotel || 0;
+                    const lpCost = leg.local_purchase || 0;
+                    const otherCost = leg.oth_amount || 0;
+
+                    const origTA = parseFloat(leg.original_amount ?? leg.amount ?? 0);
+                    const origSub = parseFloat(leg.original_sub_amount ?? leg.sub_amount ?? 0);
+                    const origDA = parseFloat(leg.original_da ?? leg.da ?? 0);
+
+                    const taDeducted = (origTA - travelCost) + (origSub - subCost);
+                    const daDeducted = origDA - daCost;
+
+                    const legTotal = travelCost + subCost + daCost + hotelCost + lpCost + otherCost;
+                    const origTotal = origTA + origSub + origDA + hotelCost + lpCost + otherCost;
+
+                    let actDetails: any = null;
+                    try {
+                      if (leg.activity_details) {
+                        actDetails = typeof leg.activity_details === "string" ? JSON.parse(leg.activity_details) : leg.activity_details;
+                      }
+                    } catch (e) {
+                      console.error("Error parsing activity details", e);
+                    }
+
+                    const callsList = actDetails?.calls_list || [];
+                    const pmsList = actDetails?.pms_list || [];
+                    const assetsList = actDetails?.assets_list || [];
+                    const selectedActs = actDetails?.selected_activities || leg.selected_activities || [];
+                    const mobiliseCount = parseInt(actDetails?.mobilise_asset_count || leg.mobilise_asset_count || "0") || 0;
+                    const calibrationCount = parseInt(actDetails?.calibration_count || leg.calibration_count || "0") || 0;
+                    const activityOtherDesc = actDetails?.activity_other_desc || leg.activity_other_desc || "";
+
+                    const hasActivities = selectedActs.length > 0 || callsList.length > 0 || pmsList.length > 0 || assetsList.length > 0;
+
                     return (
-                      <div key={idx} className="bg-white border border-gray-200 rounded p-2.5 space-y-2 text-xs">
-                        <div className="flex justify-between items-center pb-1.5 border-b border-gray-100">
-                          <span className="font-black text-gray-455 uppercase text-[9px]">Leg {leg.leg}</span>
-                          <Tag color="blue">{leg.mode}</Tag>
+                      <div key={idx} className="bg-white border border-gray-200 rounded-lg p-3.5 space-y-3 shadow-xs">
+                        {/* Card Header */}
+                        <div className="flex justify-between items-center border-b border-gray-100 pb-2">
+                          <span className="font-extrabold text-blue-600 font-mono text-xs">Visit #{leg.leg}</span>
+                          <div className="flex flex-col items-end">
+                            <span className="font-extrabold text-gray-900 text-sm">₹{legTotal.toLocaleString()}</span>
+                            {origTotal > legTotal && (
+                              <span className="text-[8px] font-bold text-rose-500 line-through">₹{origTotal.toLocaleString()}</span>
+                            )}
+                          </div>
                         </div>
-                        <div className="grid grid-cols-2 gap-1.5">
+
+                        {/* Route & Mode */}
+                        <div className="space-y-1.5">
                           <div>
-                            <span className="text-gray-400 text-[8px] font-bold uppercase block">Route</span>
-                            <span className="font-bold text-gray-800">{leg.from_district} → {leg.to_district}</span>
+                            <span className="text-[9px] text-gray-400 font-bold uppercase block">Route</span>
+                            <span className="font-bold text-gray-800 text-[11px]">
+                              {leg.from_district === leg.to_district ? leg.to_district : `${leg.from_district} → ${leg.to_district}`}
+                            </span>
+                            <span className="text-[10px] text-gray-500 block">
+                              {leg.from || "Start"} → {leg.to || "End"}
+                            </span>
                           </div>
-                          <div className="text-right">
-                            <span className="text-gray-400 text-[8px] font-bold uppercase block">Total</span>
-                            <span className="font-extrabold text-indigo-600">₹{legTotal.toLocaleString()}</span>
+
+                          <div className="flex flex-wrap gap-1.5 pt-0.5">
+                            <span className="text-[9px] font-bold uppercase bg-blue-50 text-blue-700 px-1.5 py-0.5 rounded border border-blue-100">
+                              {leg.mode}
+                            </span>
+                            {leg.sub_mode && (
+                              <span className="text-[9px] font-bold uppercase bg-purple-50 text-purple-700 px-1.5 py-0.5 rounded border border-purple-100">
+                                +{leg.sub_mode}
+                              </span>
+                            )}
+                            {leg.km > 0 && (
+                              <span className="text-[9px] font-bold uppercase bg-gray-50 text-gray-650 px-1.5 py-0.5 rounded border border-gray-200 font-mono">
+                                {leg.km} KM
+                              </span>
+                            )}
                           </div>
                         </div>
+
+                        {/* Breakdown of costs */}
+                        <div className="grid grid-cols-2 gap-2.5 bg-gray-50/50 p-2.5 rounded-lg border border-gray-150 text-[10px] font-bold">
+                          <div>
+                            <span className="text-gray-400 text-[8px] uppercase block">TA / Fare</span>
+                            <span className="text-gray-700 font-mono">₹{(travelCost + subCost).toLocaleString()}</span>
+                            {taDeducted > 0 && (
+                              <span className="text-[8px] font-bold text-rose-500 line-through block">₹{(origTA + origSub).toLocaleString()}</span>
+                            )}
+                          </div>
+                          <div>
+                            <span className="text-gray-400 text-[8px] uppercase block">DA</span>
+                            <span className="text-gray-700 font-mono">₹{daCost.toLocaleString()}</span>
+                            {daDeducted > 0 && (
+                              <span className="text-[8px] font-bold text-rose-500 line-through block">₹{origDA.toLocaleString()}</span>
+                            )}
+                          </div>
+                          <div>
+                            <span className="text-gray-400 text-[8px] uppercase block">Hotel</span>
+                            <span className="text-gray-700 font-mono">₹{hotelCost.toLocaleString()}</span>
+                          </div>
+                          <div>
+                            <span className="text-gray-400 text-[8px] uppercase block">Local Purc.</span>
+                            <span className="text-gray-700 font-mono">₹{lpCost.toLocaleString()}</span>
+                          </div>
+                          {otherCost > 0 && (
+                            <div className="col-span-2 border-t border-gray-100 pt-1.5 mt-0.5">
+                              <span className="text-gray-400 text-[8px] uppercase block">Other/Misc (₹{otherCost.toLocaleString()})</span>
+                              <span className="text-gray-655 block text-[9px] font-normal italic">{leg.oth_desc || "No description"}</span>
+                            </div>
+                          )}
+                        </div>
+
+                        {/* Work Summary */}
+                        <div className="text-[10px] text-gray-500 bg-gray-50/50 px-2.5 py-1.5 rounded border border-gray-100 flex justify-between font-bold">
+                          <span>Work: {leg.ws_assigned||0}</span>
+                          <span className="text-green-600">Done: {leg.ws_closed||0}</span>
+                          <span>PMS: {leg.ws_pms||0}</span>
+                          <span>Asset: {leg.ws_asset||0}</span>
+                        </div>
+
+                        {/* Activities & Sub logs */}
+                        {hasActivities && (
+                          <div className="border-t border-gray-100 pt-2.5 space-y-3">
+                            <div className="flex flex-wrap gap-1.5">
+                              {selectedActs.map((act: string, actIdx: number) => (
+                                <span key={actIdx} className="px-1.5 py-0.5 rounded bg-gray-100 border border-gray-200 text-[8px] font-bold text-gray-700 uppercase">
+                                  {act}
+                                </span>
+                              ))}
+                            </div>
+
+                            {/* Calls card list */}
+                            {selectedActs.includes("Calls") && callsList.length > 0 && (
+                              <div className="space-y-2">
+                                <div className="text-[9px] font-bold text-blue-700 uppercase">Support Calls Logs</div>
+                                {callsList.map((c: any, cIdx: number) => (
+                                  <div key={cIdx} className="bg-blue-50/30 border border-blue-100 rounded-lg p-2.5 space-y-2 text-[10px] text-left">
+                                    <div className="flex justify-between items-start">
+                                      <div>
+                                        <span className="font-extrabold text-gray-805 block">{c.asset_details?.equipment_name || "—"}</span>
+                                        <span className="text-[9px] text-gray-500">{c.asset_details?.hospital_name || "—"}</span>
+                                      </div>
+                                      <span className="px-1.5 py-0.5 rounded font-extrabold text-[8px] uppercase bg-blue-50 text-blue-700 border border-blue-100">
+                                        {c.status || "Attend"}
+                                      </span>
+                                    </div>
+                                    <div className="grid grid-cols-2 gap-x-2 gap-y-1 text-[9px] text-gray-600 font-bold border-t border-blue-100/50 pt-1.5">
+                                      <div>District: <span className="text-gray-800">{c.asset_details?.district_name || "—"}</span></div>
+                                      <div>Model: <span className="text-gray-800">{c.asset_details?.model_name || "—"}</span></div>
+                                      <div>Barcode: <span className="text-gray-800 font-mono">{c.barcode}</span></div>
+                                      <div>Type: <span className="text-gray-800">{c.type || "Support Call"}</span></div>
+                                    </div>
+                                    {c.photo_url && (
+                                      <div className="pt-2">
+                                        <span className="text-gray-400 text-[8px] uppercase block mb-1">Attachment Photo</span>
+                                        <div className="relative rounded overflow-hidden border border-blue-100 bg-white">
+                                          <img
+                                            src={c.photo_url ? `${API_BASE}${c.photo_url}` : undefined}
+                                            alt="Call verification"
+                                            className="w-full h-auto object-cover max-h-48 cursor-pointer"
+                                            onClick={() => setLightboxImage(`${API_BASE}${c.photo_url}`)}
+                                          />
+                                          <button
+                                            type="button"
+                                            onClick={() => setLightboxImage(`${API_BASE}${c.photo_url}`)}
+                                            className="absolute bottom-1 right-1 bg-black/60 text-white font-bold text-[8px] px-2 py-0.5 rounded cursor-pointer border-0"
+                                          >
+                                            Full View
+                                          </button>
+                                        </div>
+                                      </div>
+                                    )}
+                                  </div>
+                                ))}
+                              </div>
+                            )}
+
+                            {/* PMS card list */}
+                            {selectedActs.includes("PMS") && pmsList.length > 0 && (
+                              <div className="space-y-2">
+                                <div className="text-[9px] font-bold text-amber-700 uppercase">PMS Service Logs</div>
+                                {pmsList.map((p: any, pIdx: number) => (
+                                  <div key={pIdx} className="bg-amber-50/30 border border-amber-100 rounded-lg p-2.5 space-y-2 text-[10px] text-left">
+                                    <div className="flex justify-between items-start">
+                                      <div>
+                                        <span className="font-extrabold text-gray-850 block">{p.asset_details?.equipment_name || "—"}</span>
+                                        <span className="text-[9px] text-gray-500">{p.asset_details?.hospital_name || "—"}</span>
+                                      </div>
+                                      <span className="px-1.5 py-0.5 rounded font-extrabold text-[8px] uppercase bg-green-50 text-green-700 border border-green-200">
+                                        {p.frequency || "3 month"}
+                                      </span>
+                                    </div>
+                                    <div className="grid grid-cols-2 gap-x-2 gap-y-1 text-[9px] text-gray-600 font-bold border-t border-amber-100/50 pt-1.5">
+                                      <div>District: <span className="text-gray-800">{p.asset_details?.district_name || "—"}</span></div>
+                                      <div>Model: <span className="text-gray-800">{p.asset_details?.model_name || "—"}</span></div>
+                                      <div>Barcode: <span className="text-gray-800 font-mono">{p.barcode}</span></div>
+                                      <div>Status: <span className="text-gray-800">{p.asset_details?.inventory_status || "Active"}</span></div>
+                                    </div>
+                                    {p.photo_url && (
+                                      <div className="pt-2">
+                                        <span className="text-gray-400 text-[8px] uppercase block mb-1">Attachment Photo</span>
+                                        <div className="relative rounded overflow-hidden border border-amber-100 bg-white">
+                                          <img
+                                            src={p.photo_url ? `${API_BASE}${p.photo_url}` : undefined}
+                                            alt="PMS verification"
+                                            className="w-full h-auto object-cover max-h-48 cursor-pointer"
+                                            onClick={() => setLightboxImage(`${API_BASE}${p.photo_url}`)}
+                                          />
+                                          <button
+                                            type="button"
+                                            onClick={() => setLightboxImage(`${API_BASE}${p.photo_url}`)}
+                                            className="absolute bottom-1 right-1 bg-black/60 text-white font-bold text-[8px] px-2 py-0.5 rounded cursor-pointer border-0"
+                                          >
+                                            Full View
+                                          </button>
+                                        </div>
+                                      </div>
+                                    )}
+                                  </div>
+                                ))}
+                              </div>
+                            )}
+
+                            {/* Asset Tagging list */}
+                            {selectedActs.includes("Asset Tagging") && assetsList.length > 0 && (
+                              <div className="space-y-2">
+                                <div className="text-[9px] font-bold text-emerald-700 uppercase">Asset Tagging Records</div>
+                                {assetsList.map((a: any, aIdx: number) => (
+                                  <div key={aIdx} className="bg-emerald-50/30 border border-emerald-100 rounded-lg p-2.5 flex justify-between items-center text-[10px] text-left">
+                                    <span className="font-extrabold text-gray-800">{a.equipment_name}</span>
+                                    <span className="px-2 py-0.5 rounded bg-white border border-emerald-200 text-gray-700 font-bold font-mono">Qty: {a.quantity}</span>
+                                  </div>
+                                ))}
+                              </div>
+                            )}
+
+                            {/* Quantities for Mobilise, Calibration or Other */}
+                            {(selectedActs.includes("Mobilise Asset Update") || selectedActs.includes("Calibration") || (selectedActs.includes("Other") && activityOtherDesc)) && (
+                              <div className="bg-gray-50/50 p-2.5 rounded-lg border border-gray-150 text-[10px] font-bold space-y-1">
+                                {selectedActs.includes("Mobilise Asset Update") && (
+                                  <div className="flex justify-between">
+                                    <span className="text-gray-500">Mobilise Qty:</span>
+                                    <span className="text-indigo-700 font-extrabold">{mobiliseCount} units</span>
+                                  </div>
+                                )}
+                                {selectedActs.includes("Calibration") && (
+                                  <div className="flex justify-between">
+                                    <span className="text-gray-500">Calibration Qty:</span>
+                                    <span className="text-purple-700 font-extrabold">{calibrationCount} units</span>
+                                  </div>
+                                )}
+                                {selectedActs.includes("Other") && activityOtherDesc && (
+                                  <div className="border-t border-gray-100 pt-1.5 mt-1 font-normal text-left">
+                                    <span className="text-gray-400 text-[8px] uppercase block font-bold">Other Activity Description</span>
+                                    <span className="italic text-gray-700 block">{activityOtherDesc}</span>
+                                  </div>
+                                )}
+                              </div>
+                            )}
+                          </div>
+                        )}
                       </div>
                     );
                   })}
@@ -1684,7 +2018,7 @@ export default function HomePage() {
               </div>
             )}
 
-            {/* Attachments Section */}
+                        {/* Attachments Section */}
             {claimDetails.category !== "Limit Request" && (
               <div className="space-y-1.5">
                 <Text type="secondary" className="text-[9px] uppercase font-bold tracking-wider block">Receipt Invoices &amp; Attachments</Text>
