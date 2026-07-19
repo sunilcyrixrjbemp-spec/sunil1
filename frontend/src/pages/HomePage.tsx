@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import { useNavigate } from "react-router-dom";
 import { authService } from "../services/authService";
 import { expenseService } from "../services/expenseService";
 import { approvalService } from "../services/approvalService";
@@ -9,6 +9,23 @@ import { checkIsHeic, convertHeicToJpegUrl } from "../utils/heic";
 import { ResponsivePie } from "@nivo/pie";
 import ExpenseCalendar from "../components/common/ExpenseCalendar";
 import { 
+  Card, 
+  Button, 
+  Table, 
+  Modal, 
+  Select, 
+  Tabs, 
+  Row, 
+  Col, 
+  Alert, 
+  Typography, 
+  Tag,
+  Input
+} from "antd";
+
+const { Title, Text } = Typography;
+const { TextArea } = Input;
+import { 
   FileSpreadsheet, 
   BarChart3, 
   Clock, 
@@ -17,11 +34,10 @@ import {
   Compass, 
   Layers,
   Users,
-  Check,
-  X,
   Loader2,
   ShieldCheck,
-  AlertTriangle
+  AlertTriangle,
+  Download
 } from "lucide-react";
 
 import api from "../services/api";
@@ -129,9 +145,9 @@ export default function HomePage() {
   };
 
   // Read-only Details Modal states
-  const [selectedClaimId, setSelectedClaimId] = useState<number | string | null>(null);
+  const [_selectedClaimId, setSelectedClaimId] = useState<number | string | null>(null);
   const [claimDetails, setClaimDetails] = useState<any>(null);
-  const [loadingDetails, setLoadingDetails] = useState(false);
+  const [_loadingDetails, setLoadingDetails] = useState(false);
   const [showDetailsModal, setShowDetailsModal] = useState(false);
   const [comments, setComments] = useState("");
   const [actionLoading, setActionLoading] = useState(false);
@@ -618,1713 +634,1296 @@ export default function HomePage() {
 
   return (
     <>
-      <div className="space-y-6 animate-fadeIn text-[#212529]">
+      <div className="space-y-6 animate-fadeIn text-[#212529] p-4 md:p-6 max-w-7xl mx-auto">
         
         {/* Welcome Banner - Clean Premium Card */}
-        <div className="relative overflow-hidden rounded-lg bg-gradient-to-br from-indigo-600 via-indigo-700 to-indigo-800 py-2 px-3 text-white shadow-sm">
+        <div className="relative overflow-hidden rounded-lg bg-gradient-to-br from-indigo-600 via-indigo-700 to-indigo-800 py-3 px-4 text-white shadow-sm mb-4">
           <div className="absolute -right-8 -top-8 h-16 w-16 rounded-full bg-white/5 blur-lg"></div>
           <div className="absolute -left-8 -bottom-8 h-16 w-16 rounded-full bg-white/5 blur-lg"></div>
           
           <div className="relative flex items-center justify-between gap-4">
             <div>
               <h2 className="text-sm font-bold tracking-tight text-white leading-none">Hi, {user.name} 👋</h2>
-              <p className="text-indigo-200 text-[9px] font-medium mt-0.5">Claims summary &amp; operations.</p>
+              <p className="text-indigo-200 text-[10px] font-medium mt-1">Claims summary &amp; operations center.</p>
             </div>
           </div>
         </div>
 
-      {isReviewerRole && pendingLimitRequestsCount > 0 && (
-        <div className="bg-amber-50/50 border border-amber-250 p-4 rounded-3xl shadow-sm flex items-center justify-between animate-fadeIn mb-4">
-          <div className="flex items-center gap-3">
-            <AlertTriangle className="w-5 h-5 text-amber-600 shrink-0" />
-            <div>
-              <h4 className="text-xs font-bold text-amber-800 uppercase tracking-wider">Pending Limit Extension Requests</h4>
-              <p className="text-[11px] text-amber-700 font-semibold mt-0.5">
-                You have {pendingLimitRequestsCount} pending limit request{pendingLimitRequestsCount > 1 ? 's' : ''} from your team awaiting your review.
-              </p>
+        {isReviewerRole && pendingLimitRequestsCount > 0 && (
+          <Alert
+            message={<strong>Pending Limit Extension Requests</strong>}
+            description={`You have ${pendingLimitRequestsCount} pending limit request${pendingLimitRequestsCount > 1 ? 's' : ''} from your team awaiting your review.`}
+            type="warning"
+            showIcon
+            icon={<AlertTriangle className="text-amber-600 shrink-0" size={18} />}
+            className="mb-4 rounded-lg bg-amber-50/50 border-amber-200"
+            action={
+              <Button size="small" type="primary" className="bg-amber-600 hover:bg-amber-700 text-white font-bold" onClick={() => navigate("/approval-center")}>
+                Review Now
+              </Button>
+            }
+          />
+        )}
+
+        {/* Quick Stats Grid */}
+        <div className="space-y-3">
+          <div className="flex items-center justify-between">
+            <Title level={5} style={{ margin: 0, fontSize: "12px", color: "#4B5563" }} className="uppercase font-bold tracking-wider">
+              {activeTab === "my-claims" ? "My Expense Summary" : "Team Expense Summary"}
+            </Title>
+            
+            <div className="flex items-center gap-2">
+              <Text className="text-[10px] font-bold uppercase text-gray-400 tracking-wider">Select Month:</Text>
+              <input 
+                type="month"
+                value={selectMonth}
+                onChange={(e) => setSelectMonth(e.target.value)}
+                className="bg-white border border-gray-250 rounded px-2 py-0.5 text-xs font-semibold text-gray-800 focus:outline-none focus:border-indigo-500 shadow-xs cursor-pointer"
+              />
             </div>
           </div>
-          <Link 
-            to="/approval-center" 
-            className="bg-amber-600 hover:bg-amber-700 text-white px-3.5 py-2 rounded-2xl text-[10px] font-black uppercase tracking-wider shadow-sm transition-all duration-200 no-underline"
-          >
-            Review Now
-          </Link>
-        </div>
-      )}
-
-      {/* Navigation Quick Cards replaced by Stats Cards */}
-      <div className="space-y-3">
-        <div className="flex items-center justify-between">
-          <h3 className="text-xs font-bold text-slate-500 uppercase tracking-wider">
-            {activeTab === "my-claims" ? "My Expense Summary" : "Team Expense Summary"}
-          </h3>
           
-          {/* Month selector element */}
-          <div className="flex items-center gap-2">
-            <span className="text-[9px] font-black uppercase text-slate-400 tracking-wider">Select Month:</span>
-            <input 
-              type="month"
-              value={selectMonth}
-              onChange={(e) => setSelectMonth(e.target.value)}
-              className="bg-white border border-slate-200 rounded-2xl px-3 py-1.5 text-[10px] font-bold text-slate-800 focus:outline-none focus:border-indigo-500 shadow-sm cursor-pointer transition-colors"
-            />
-          </div>
-        </div>
-        
-        {/* Metric Cards Grid */}
-        <div className="grid grid-cols-4 gap-1.5 sm:gap-4">
-          {/* Card 1: Total Claimed */}
-          <div 
-            onClick={() => handleOpenStatsModal("Total Claimed", statsTotalClaims)}
-            className="info-box-lte cursor-pointer animate-fadeIn"
-          >
-            <div className="info-box-icon bg-blue-50 text-blue-600 shrink-0">
-              <FileSpreadsheet className="w-5 h-5" />
-            </div>
-            <div className="info-box-content min-w-0">
-              <span className="text-[9px] sm:text-[10px] font-black uppercase tracking-wider text-slate-400 block leading-none">Total Claimed</span>
-              <span className="text-xs sm:text-lg font-black text-slate-800 font-mono block mt-0.5 sm:mt-1">₹{(totalAmount || 0).toLocaleString()}</span>
-              <span className="text-[8px] sm:text-[9px] text-blue-600 font-black block mt-0.5">{statsTotalClaims.length} Claims</span>
-            </div>
-          </div>
-
-          {/* Card 2: Approved */}
-          <div 
-            onClick={() => handleOpenStatsModal("Approved", statsApprovedClaims)}
-            className="info-box-lte cursor-pointer animate-fadeIn"
-          >
-            <div className="info-box-icon bg-emerald-50 text-emerald-600 shrink-0">
-              <CheckCircle2 className="w-5 h-5" />
-            </div>
-            <div className="info-box-content min-w-0">
-              <span className="text-[9px] sm:text-[10px] font-black uppercase tracking-wider text-slate-400 block leading-none">Approved</span>
-              <span className="text-xs sm:text-lg font-black text-slate-800 font-mono block mt-0.5 sm:mt-1">₹{(approvedAmount || 0).toLocaleString()}</span>
-              <span className="text-[8px] sm:text-[9px] text-emerald-600 font-black block mt-0.5">{statsApprovedClaims.length} Approved</span>
-            </div>
-          </div>
-
-          {/* Card 3: Pending */}
-          <div 
-            onClick={() => handleOpenStatsModal("Pending", statsPendingClaims)}
-            className="info-box-lte cursor-pointer animate-fadeIn"
-          >
-            <div className="info-box-icon bg-amber-50 text-amber-600 shrink-0">
-              <Clock className="w-5 h-5" />
-            </div>
-            <div className="info-box-content min-w-0">
-              <span className="text-[9px] sm:text-[10px] font-black uppercase tracking-wider text-slate-400 block leading-none">Pending Review</span>
-              <span className="text-xs sm:text-lg font-black text-slate-800 font-mono block mt-0.5 sm:mt-1">₹{(pendingAmount || 0).toLocaleString()}</span>
-              <span className="text-[8px] sm:text-[9px] text-amber-600 font-black block mt-0.5">{statsPendingClaims.length} Pending</span>
-            </div>
-          </div>
-
-          {/* Card 4: Rejected */}
-          <div 
-            onClick={() => handleOpenStatsModal("Rejected", statsRejectedClaims)}
-            className="info-box-lte cursor-pointer animate-fadeIn"
-          >
-            <div className="info-box-icon bg-rose-50 text-rose-600 shrink-0">
-              <XCircle className="w-5 h-5" />
-            </div>
-            <div className="info-box-content min-w-0">
-              <span className="text-[9px] sm:text-[10px] font-black uppercase tracking-wider text-slate-400 block leading-none">Rejected</span>
-              <span className="text-xs sm:text-lg font-black text-slate-800 font-mono block mt-0.5 sm:mt-1">₹{(rejectedAmount || 0).toLocaleString()}</span>
-              <span className="text-[8px] sm:text-[9px] text-rose-600 font-black block mt-0.5">{statsRejectedClaims.length} Rejected</span>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      {/* Main Grid Content */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        
-        {/* Left Area: Tab list and Limits */}
-        <div className="lg:col-span-2 space-y-6">
-
-          {/* TAB SYSTEM: My Claims vs Team Claims */}
-          <div className="bg-white border border-slate-100 rounded-xl sm:rounded-3xl shadow-sm overflow-hidden flex flex-col">
-            {/* Tab Header bar */}
-            <div className="px-3 pt-3 pb-1 border-b-0 flex">
-              <div className="dashboard-tabs-header">
-                <button
-                  type="button"
-                  onClick={() => handleTabChange("my-claims")}
-                  className={`dashboard-tab-btn ${
-                    activeTab === "my-claims" ? "active" : ""
-                  }`}
-                >
-                  <Layers className="w-3 h-3" />
-                  My Claims ({filteredPersonalExpenses.length})
-                </button>
-
-                {isReviewerRole && (
-                  <button
-                    type="button"
-                    onClick={() => handleTabChange("team-claims")}
-                    className={`dashboard-tab-btn ${
-                      activeTab === "team-claims" ? "active" : ""
-                    }`}
-                  >
-                    <Users className="w-3 h-3" />
-                    Team Claims ({filteredTeamExpenses.length})
-                  </button>
-                )}
-              </div>
-            </div>
-            {/* Contextual Filters Row — matches ExpensePage compact filter style */}
-            <div className="border-b border-slate-100 px-3 sm:px-4 py-1.5 sm:py-2">
-              {activeTab === "my-claims" ? (
-                /* My Self Tab Filters */
-                <div className="dashboard-filters-box bg-slate-50/50 border border-slate-100 rounded-lg p-2 flex flex-col gap-1.5 text-[10px] font-bold text-slate-700">
-                  {/* Row 1: Month dropdown */}
-                  <div className="flex flex-col gap-0.5 max-w-[130px]">
-                    <span className="text-[7.5px] font-black uppercase text-slate-400">Month</span>
-                    <input 
-                      type="month"
-                      value={selectMonth}
-                      onChange={(e) => setSelectMonth(e.target.value)}
-                      className="bg-white border border-slate-200 rounded-md px-2 py-0.5 text-[9.5px] font-black text-slate-800 cursor-pointer focus:outline-none focus:border-indigo-500 w-full"
-                    />
+          {/* Metric Cards Grid */}
+          <Row gutter={[12, 12]}>
+            {/* Card 1: Total Claimed */}
+            <Col xs={12} sm={6}>
+              <Card 
+                size="small" 
+                hoverable 
+                className="border border-gray-200 border-l-4 border-l-indigo-600 cursor-pointer shadow-xs"
+                bodyStyle={{ padding: "10px" }}
+                onClick={() => handleOpenStatsModal("Total Claimed", statsTotalClaims)}
+              >
+                <div className="flex items-center gap-2">
+                  <div className="p-1.5 bg-indigo-50 text-indigo-600 rounded">
+                    <FileSpreadsheet size={16} />
                   </div>
-                  {/* Row 2: Status buttons */}
-                  <div className="flex items-center gap-1 overflow-x-auto no-scrollbar py-0.5 border-t border-slate-100 pt-1.5">
-                    {(["all", "pending", "approved", "rejected"] as const).map((status) => (
-                      <button
-                        key={status}
-                        onClick={() => setHomeStatusFilter(status)}
-                        className={`px-1.5 py-0.5 rounded text-[7.5px] font-black uppercase tracking-wider transition-all cursor-pointer border whitespace-nowrap ${
-                          homeStatusFilter === status
-                            ? "bg-indigo-600 text-white border-indigo-600 font-extrabold shadow-sm"
-                            : "bg-white text-slate-500 border-slate-200 hover:bg-slate-50 hover:text-slate-800"
-                        }`}
-                      >
-                        {status === "all" ? "All" : status}
-                      </button>
-                    ))}
+                  <div>
+                    <Text type="secondary" className="text-[9px] uppercase font-bold tracking-wider block leading-none">Total Claimed</Text>
+                    <Text strong className="text-sm font-mono block mt-1">₹{(totalAmount || 0).toLocaleString()}</Text>
+                    <Text className="text-[9px] text-indigo-600 font-bold block mt-0.5">{statsTotalClaims.length} Claims</Text>
                   </div>
                 </div>
-              ) : (
-                /* Team / Engineer Claims Tab Filters */
-                <div className="dashboard-filters-box bg-slate-50/50 border border-slate-100 rounded-lg p-2 flex flex-col gap-1.5 text-[10px] font-bold text-slate-700">
-                  {/* Row 1: Month, Zone (Admin only), and Engineer dropdowns with labels on top */}
-                  <div className={`grid ${isReviewerRole ? "grid-cols-3" : "grid-cols-2"} gap-2 w-full`}>
-                    <div className="flex flex-col gap-0.5">
-                      <span className="text-[7.5px] font-black uppercase text-slate-400">Month</span>
-                      <input 
-                        type="month"
-                        value={selectMonth}
-                        onChange={(e) => setSelectMonth(e.target.value)}
-                        className="bg-white border border-slate-200 rounded-md px-2 py-0.5 text-[9.5px] font-black text-slate-800 cursor-pointer focus:outline-none focus:border-indigo-500 w-full"
-                      />
-                    </div>
+              </Card>
+            </Col>
 
-                    {isReviewerRole && (
-                      <div className="flex flex-col gap-0.5">
-                        <span className="text-[7.5px] font-black uppercase text-slate-400">Zone</span>
-                        <select 
-                          value={filterZone} 
-                          onChange={(e) => setFilterZone(e.target.value)}
-                          className="bg-white border border-slate-200 rounded-md px-2 py-0.5 text-[9.5px] font-black text-slate-800 cursor-pointer focus:outline-none focus:border-indigo-500 w-full"
-                        >
-                          <option value="all">All Zones</option>
-                          {uniqueZones.map(z => (
-                            <option key={z} value={z}>{z}</option>
-                          ))}
-                        </select>
-                      </div>
-                    )}
-
-                    <div className="flex flex-col gap-0.5">
-                      <span className="text-[7.5px] font-black uppercase text-slate-400">Engineer</span>
-                      <select 
-                        value={filterEmployee} 
-                        onChange={(e) => setFilterEmployee(e.target.value)}
-                        className="bg-white border border-slate-200 rounded-md px-2 py-0.5 text-[9.5px] font-black text-slate-800 cursor-pointer focus:outline-none focus:border-indigo-500 w-full"
-                      >
-                        <option value="all">All Members</option>
-                        {uniqueEmployees.map(emp => (
-                          <option key={emp.code} value={emp.code}>{emp.name}</option>
-                        ))}
-                      </select>
-                    </div>
+            {/* Card 2: Approved */}
+            <Col xs={12} sm={6}>
+              <Card 
+                size="small" 
+                hoverable 
+                className="border border-gray-205 border-l-4 border-l-green-600 cursor-pointer shadow-xs"
+                bodyStyle={{ padding: "10px" }}
+                onClick={() => handleOpenStatsModal("Approved", statsApprovedClaims)}
+              >
+                <div className="flex items-center gap-2">
+                  <div className="p-1.5 bg-green-50 text-green-605 rounded">
+                    <CheckCircle2 size={16} />
                   </div>
-
-                  {/* Row 2: Status buttons */}
-                  <div className="flex items-center gap-1 overflow-x-auto no-scrollbar py-0.5 border-t border-slate-100 pt-1.5">
-                    {(["all", "pending", "approved", "rejected"] as const).map((status) => (
-                      <button
-                        key={status}
-                        onClick={() => setHomeStatusFilter(status)}
-                        className={`px-1.5 py-0.5 rounded text-[7.5px] font-black uppercase tracking-wider transition-all cursor-pointer border whitespace-nowrap ${
-                          homeStatusFilter === status
-                            ? "bg-indigo-600 text-white border-indigo-600 font-extrabold shadow-sm"
-                            : "bg-white text-slate-500 border-slate-200 hover:bg-slate-50 hover:text-slate-800"
-                        }`}
-                      >
-                        {status === "all" ? "All" : status}
-                      </button>
-                    ))}
+                  <div>
+                    <Text type="secondary" className="text-[9px] uppercase font-bold tracking-wider block leading-none">Approved</Text>
+                    <Text strong className="text-sm font-mono block mt-1">₹{(approvedAmount || 0).toLocaleString()}</Text>
+                    <Text className="text-[9px] text-green-600 font-bold block mt-0.5">{statsApprovedClaims.length} Claims</Text>
                   </div>
                 </div>
-              )}
-            </div>
+              </Card>
+            </Col>
 
-            {/* Tab Content Tables */}
-            <div className="overflow-x-auto p-4 flex-1 bg-slate-50/30">
-               {/* MY CLAIMS TAB */}
-              {activeTab === "my-claims" && (
-                loadingMyExpenses ? (
-                  <Loader message="Loading your claims..." />
-                ) : filteredPersonalExpenses.length === 0 ? (
-                  <div className="py-16 text-center text-gray-400 text-xs">
-                    <Compass className="w-8 h-8 mx-auto mb-2 text-gray-300" />
-                    <p className="font-bold">No expense claims found for this month.</p>
+            {/* Card 3: Pending */}
+            <Col xs={12} sm={6}>
+              <Card 
+                size="small" 
+                hoverable 
+                className="border border-gray-200 border-l-4 border-l-amber-600 cursor-pointer shadow-xs"
+                bodyStyle={{ padding: "10px" }}
+                onClick={() => handleOpenStatsModal("Pending", statsPendingClaims)}
+              >
+                <div className="flex items-center gap-2">
+                  <div className="p-1.5 bg-amber-50 text-amber-600 rounded">
+                    <Clock size={16} />
                   </div>
-                ) : (
-                  <>
-                    <table className="hidden md:table table-lte">
-                      <thead>
-                        <tr className="bg-slate-800 text-slate-100 text-[9px] uppercase font-black tracking-wider border-b border-slate-700">
-                          <th className="py-2.5 px-3 whitespace-nowrap text-left">Claim ID</th>
-                          <th className="py-2.5 px-3 whitespace-nowrap text-left">Date</th>
-                          <th className="py-2.5 px-3 whitespace-nowrap text-left">Purpose</th>
-                          <th className="py-2.5 px-3 whitespace-nowrap text-left">Travel Mode</th>
-                          <th className="py-2.5 px-3 whitespace-nowrap text-left">Distance</th>
-                          <th className="py-2.5 px-3 whitespace-nowrap text-left">Auto Fare</th>
-                          <th className="py-2.5 px-3 whitespace-nowrap text-left">Amount</th>
-                          <th className="py-2.5 px-3 whitespace-nowrap text-right">Status</th>
-                        </tr>
-                      </thead>
-                      <tbody className="divide-y divide-gray-100 bg-white">
-                        {filteredPersonalExpenses.map((exp) => (
-                          <tr 
-                            key={exp.id} 
-                            onClick={() => handleOpenClaimDetails(exp.id)}
-                            className="hover:bg-blue-50/20 transition-colors cursor-pointer"
-                          >
-                            <td className="py-3 px-3 font-semibold font-mono text-blue-600 uppercase whitespace-nowrap">{exp.expense_code}</td>
-                            <td className="py-3 px-3 text-slate-600 whitespace-nowrap">{exp.itinerary}</td>
-                            <td className="py-3 px-3 font-semibold text-gray-800 truncate max-w-[150px] whitespace-nowrap" title={exp.description}>{exp.description}</td>
-                            <td className="py-3 px-3 text-gray-500 whitespace-nowrap">{exp.travel_mode}</td>
-                            <td className="py-3 px-3 font-mono font-semibold text-slate-700 whitespace-nowrap">{exp.total_km ? `${exp.total_km.toFixed(1)} KM` : "—"}</td>
-                            <td className="py-3 px-3 font-mono font-semibold text-slate-700 whitespace-nowrap">{exp.total_auto ? `₹${exp.total_auto.toLocaleString()}` : "—"}</td>
-                            <td className="py-3 px-3 font-bold text-gray-900 whitespace-nowrap">₹{exp.amount.toLocaleString()}</td>
-                            <td className="py-3 px-3 text-right whitespace-nowrap">
-                              <span className={`inline-flex items-center px-2 py-0.5 rounded border text-[9px] font-bold uppercase tracking-wider ${getStatusBadgeClass(exp.status)}`}>
-                                {getStatusLabel(exp.status)}
-                              </span>
-                            </td>
-                          </tr>
-                        ))}
-                      </tbody>
-                    </table>
-
-                    {/* Mobile Card List View */}
-                    <div className="block md:hidden space-y-3 pb-24">
-                      {filteredPersonalExpenses.map((exp) => (
-                        <div
-                          key={exp.id}
-                          onClick={() => handleOpenClaimDetails(exp.id)}
-                          className="bg-white border border-gray-200 rounded-xl p-3.5 space-y-3.5 active:bg-gray-50 transition-colors shadow-sm cursor-pointer"
-                        >
-                          <div className="flex justify-between items-center pb-2.5 border-b border-gray-100">
-                            <span className="font-bold font-mono text-blue-600 text-xs uppercase">{exp.expense_code}</span>
-                            <span className={`inline-flex items-center px-2 py-0.5 rounded border text-[8px] font-bold uppercase tracking-wider ${getStatusBadgeClass(exp.status)}`}>
-                              {getStatusLabel(exp.status)}
-                            </span>
-                          </div>
-                          
-                          <div className="grid grid-cols-2 gap-2 text-[11px] py-1">
-                            <div>
-                              <span className="text-gray-400 font-bold uppercase text-[9px] block">Date</span>
-                              <span className="text-gray-700 font-semibold">{exp.itinerary || exp.date}</span>
-                            </div>
-                            <div>
-                              <span className="text-gray-400 font-bold uppercase text-[9px] block">Travel Mode</span>
-                              <span className="inline-block border border-blue-200 bg-blue-50 text-blue-700 font-black px-1.5 py-0.5 rounded text-[8px] uppercase tracking-wider mt-0.5">
-                                {exp.travel_mode || exp.category}
-                              </span>
-                            </div>
-                            <div>
-                              <span className="text-gray-400 font-bold uppercase text-[9px] block">Distance / Auto</span>
-                              <span className="text-gray-700 font-semibold">
-                                {exp.total_km ? `${exp.total_km.toFixed(1)} KM` : "—"}
-                                {exp.total_auto ? ` / ₹${exp.total_auto.toLocaleString()}` : ""}
-                              </span>
-                            </div>
-                            <div>
-                              <span className="text-gray-400 font-bold uppercase text-[9px] block">Total Amount</span>
-                              <span className="text-gray-900 font-extrabold text-xs">₹{exp.amount.toLocaleString()}</span>
-                            </div>
-                          </div>
-                          
-                          {exp.description && (
-                            <div className="border-t border-gray-100 pt-2.5 text-[10px]">
-                              <span className="text-gray-400 font-bold uppercase text-[8px] block">Purpose</span>
-                              <p className="text-gray-600 font-semibold mt-0.5 truncate">{exp.description}</p>
-                            </div>
-                          )}
-                        </div>
-                      ))}
-                    </div>
-                  </>
-                )
-              )}
-
-              {/* TEAM CLAIMS TAB */}
-              {activeTab === "team-claims" && (
-                loadingTeamExpenses ? (
-                  <Loader message="Loading team claims..." />
-                ) : safeTeamExpenses.length === 0 ? (
-                  <div className="py-16 text-center text-gray-400 text-xs">
-                    <Users className="w-8 h-8 mx-auto mb-2 text-gray-300" />
-                    <p className="font-bold">No claims submitted by your team members yet.</p>
+                  <div>
+                    <Text type="secondary" className="text-[9px] uppercase font-bold tracking-wider block leading-none">Pending Review</Text>
+                    <Text strong className="text-sm font-mono block mt-1">₹{(pendingAmount || 0).toLocaleString()}</Text>
+                    <Text className="text-[9px] text-amber-600 font-bold block mt-0.5">{statsPendingClaims.length} Claims</Text>
                   </div>
-                ) : (
-                  <>
-                    <table className="hidden md:table table-lte">
-                      <thead>
-                        <tr className="bg-slate-800 text-slate-100 text-[9px] uppercase font-black tracking-wider border-b border-slate-700">
-                          <th className="py-2.5 px-3 whitespace-nowrap text-left">Employee</th>
-                          <th className="py-2.5 px-3 whitespace-nowrap text-left">Claim ID</th>
-                          <th className="py-2.5 px-3 whitespace-nowrap text-left">Date</th>
-                          <th className="py-2.5 px-3 whitespace-nowrap text-left">Purpose</th>
-                          <th className="py-2.5 px-3 whitespace-nowrap text-left">Mode</th>
-                          <th className="py-2.5 px-3 whitespace-nowrap text-left">Distance</th>
-                          <th className="py-2.5 px-3 whitespace-nowrap text-left">Auto Fare</th>
-                          <th className="py-2.5 px-3 whitespace-nowrap text-left">Amount</th>
-                          <th className="py-2.5 px-3 whitespace-nowrap text-right">Status</th>
-                        </tr>
-                      </thead>
-                      <tbody className="divide-y divide-gray-100 bg-white">
-                        {paginatedTeamExpenses.map((exp) => (
-                          <tr 
-                            key={exp.id} 
-                            onClick={() => handleOpenClaimDetails(exp.id)}
-                            className="hover:bg-blue-50/20 transition-colors cursor-pointer"
-                          >
-                            <td className="py-3 px-3 whitespace-nowrap">
-                              <p className="font-bold leading-none submitter-name-text" style={{ color: '#0f172a' }}>{exp.submitter_name}</p>
-                              <span className="text-[8px] font-mono uppercase block mt-0.5 submitter-code-text" style={{ color: '#2563eb' }}>{exp.submitter_code}</span>
-                            </td>
-                            <td className="py-3 px-3 font-semibold font-mono text-blue-600 uppercase whitespace-nowrap">{exp.expense_code}</td>
-                            <td className="py-3 px-3 text-slate-600 whitespace-nowrap">{exp.itinerary || exp.date || exp.created_at}</td>
-                            <td className="py-3 px-3 font-semibold text-gray-800 truncate max-w-[120px] whitespace-nowrap" title={exp.description || exp.purpose}>{exp.description || exp.purpose}</td>
-                            <td className="py-3 px-3 whitespace-nowrap">
-                              <span className="inline-block border border-blue-200 bg-blue-50 text-blue-700 font-bold px-1.5 py-0.5 rounded text-[8px] uppercase tracking-wider">
-                                {exp.travel_mode || exp.category}
-                              </span>
-                            </td>
-                            <td className="py-3 px-3 font-mono font-semibold text-slate-700 whitespace-nowrap">{exp.total_km ? `${exp.total_km.toFixed(1)} KM` : "—"}</td>
-                            <td className="py-3 px-3 font-mono font-semibold text-slate-700 whitespace-nowrap">{exp.total_auto ? `₹${exp.total_auto.toLocaleString()}` : "—"}</td>
-                            <td className="py-3 px-3 font-bold text-gray-900 whitespace-nowrap">₹{exp.amount.toLocaleString()}</td>
-                            <td className="py-3 px-3 text-right whitespace-nowrap">
-                              <span className={`inline-flex items-center px-2 py-0.5 rounded border text-[9px] font-bold uppercase tracking-wider ${getStatusBadgeClass(exp.status)}`}>
-                                {getStatusLabel(exp.status)}
-                              </span>
-                            </td>
-                          </tr>
-                        ))}
-                      </tbody>
-                    </table>
+                </div>
+              </Card>
+            </Col>
 
-                    {/* Mobile Card List View */}
-                    <div className="block md:hidden space-y-3 pb-24">
-                      {paginatedTeamExpenses.map((exp) => (
-                        <div
-                          key={exp.id}
-                          onClick={() => handleOpenClaimDetails(exp.id)}
-                          className="bg-white border border-gray-200 rounded-xl p-3.5 space-y-3.5 active:bg-gray-50 transition-colors shadow-sm cursor-pointer"
-                        >
-                          <div className="flex justify-between items-center pb-2.5 border-b border-gray-100">
-                            <div>
-                              <p className="font-bold text-xs leading-none submitter-name-text" style={{ color: '#0f172a' }}>{exp.submitter_name}</p>
-                              <span className="text-[8px] font-mono font-bold uppercase block mt-1 submitter-code-text" style={{ color: '#2563eb' }}>{exp.submitter_code}</span>
-                            </div>
-                            <span className={`inline-flex items-center px-2 py-0.5 rounded border text-[8px] font-bold uppercase tracking-wider ${getStatusBadgeClass(exp.status)}`}>
-                              {getStatusLabel(exp.status)}
-                            </span>
-                          </div>
-                          
-                          <div className="grid grid-cols-2 gap-2 text-[11px] py-1">
-                            <div>
-                              <span className="text-gray-400 font-bold uppercase text-[9px] block">Claim ID / Date</span>
-                              <span className="text-gray-700 font-semibold">{exp.expense_code} ({exp.date || exp.itinerary})</span>
-                            </div>
-                            <div>
-                              <span className="text-gray-400 font-bold uppercase text-[9px] block">Mode</span>
-                              <span className="inline-block border border-blue-200 bg-blue-50 text-blue-705 font-black px-1.5 py-0.5 rounded text-[8px] uppercase tracking-wider mt-0.5">
-                                {exp.category || exp.travel_mode}
-                              </span>
-                            </div>
-                            <div>
-                              <span className="text-gray-400 font-bold uppercase text-[9px] block">Distance / Auto</span>
-                              <span className="text-gray-700 font-semibold">
-                                {exp.total_km ? `${exp.total_km.toFixed(1)} KM` : "—"}
-                                {exp.total_auto ? ` / ₹${exp.total_auto.toLocaleString()}` : ""}
-                              </span>
-                            </div>
-                            <div>
-                              <span className="text-gray-400 font-bold uppercase text-[9px] block">Amount</span>
-                              <span className="text-gray-900 font-extrabold text-xs">₹{exp.amount.toLocaleString()}</span>
-                            </div>
-                          </div>
-                          
-                          {exp.purpose && (
-                            <div className="border-t border-gray-100 pt-2.5 text-[10px]">
-                              <span className="text-gray-400 font-bold uppercase text-[8px] block">Purpose</span>
-                              <p className="text-gray-600 font-semibold mt-0.5 truncate">{exp.purpose}</p>
-                            </div>
-                          )}
-                        </div>
-                      ))}
-                    </div>
-
-                    {/* Pagination Controls */}
-                    {filteredTeamExpenses.length > 100 && (
-                      <div className="flex justify-between items-center bg-white border border-slate-100 rounded-xl p-3 shadow-sm mt-4">
-                        <button
-                          type="button"
-                          disabled={teamPage === 1}
-                          onClick={() => setTeamPage(prev => Math.max(prev - 1, 1))}
-                          className="px-4 py-2 border border-gray-300 rounded text-xs font-bold bg-white text-slate-700 disabled:opacity-50 hover:bg-slate-50 cursor-pointer disabled:cursor-not-allowed border-0 shadow-sm"
-                        >
-                          Prev
-                        </button>
-                        <span className="text-xs font-bold text-slate-700">
-                          Page {teamPage} of {Math.ceil(filteredTeamExpenses.length / 100)} (Total {filteredTeamExpenses.length} claims)
-                        </span>
-                        <button
-                          type="button"
-                          disabled={teamPage >= Math.ceil(filteredTeamExpenses.length / 100)}
-                          onClick={() => setTeamPage(prev => Math.min(prev + 1, Math.ceil(filteredTeamExpenses.length / 100)))}
-                          className="px-4 py-2 border border-gray-300 rounded text-xs font-bold bg-white text-slate-700 disabled:opacity-50 hover:bg-slate-50 cursor-pointer disabled:cursor-not-allowed border-0 shadow-sm"
-                        >
-                          Next
-                        </button>
-                      </div>
-                    )}
-                  </>
-                )
-              )}
-
-            </div>
-          </div>
-
+            {/* Card 4: Rejected */}
+            <Col xs={12} sm={6}>
+              <Card 
+                size="small" 
+                hoverable 
+                className="border border-gray-200 border-l-4 border-l-red-600 cursor-pointer shadow-xs"
+                bodyStyle={{ padding: "10px" }}
+                onClick={() => handleOpenStatsModal("Rejected", statsRejectedClaims)}
+              >
+                <div className="flex items-center gap-2">
+                  <div className="p-1.5 bg-red-50 text-red-650 rounded">
+                    <XCircle size={16} />
+                  </div>
+                  <div>
+                    <Text type="secondary" className="text-[9px] uppercase font-bold tracking-wider block leading-none">Rejected</Text>
+                    <Text strong className="text-sm font-mono block mt-1">₹{(rejectedAmount || 0).toLocaleString()}</Text>
+                    <Text className="text-[9px] text-red-600 font-bold block mt-0.5">{statsRejectedClaims.length} Claims</Text>
+                  </div>
+                </div>
+              </Card>
+            </Col>
+          </Row>
         </div>
 
-        {/* Right Sidebar: Dynamic Charts & Filters */}
-        <div className="hidden lg:block space-y-4 font-sans">
-          {activeTab === "my-claims" ? (
-            /* PERSONAL CLAIMS CHART BOX */
-            <div className="bg-white border border-slate-100 rounded-3xl p-5 shadow-sm space-y-4">
-              <div className="space-y-1">
-                <span className="text-indigo-600 font-extrabold text-[9px] uppercase tracking-widest block">Claims Analytics</span>
-                <h3 className="text-xs font-bold text-slate-800 uppercase tracking-wider flex items-center gap-1.5">
-                  <BarChart3 className="w-4 h-4 text-indigo-500" />
-                  Personal Mode Breakdown
-                </h3>
-              </div>
-              {safeMyExpenses.length === 0 ? (
-                <div className="py-8 text-center text-slate-450 text-[10px] font-bold uppercase tracking-wider">
-                  No claims to analyze
-                </div>
-              ) : (
-                <>
-                  <div style={{ height: 140 }} className="relative flex justify-center items-center">
-                    <ResponsivePie
-                      data={getPersonalChartData().map((c, i) => ({ id: c.label, label: c.label, value: c.amount, color: GALLERY_COLORS[i % GALLERY_COLORS.length] }))}
-                      margin={{ top: 5, right: 5, bottom: 5, left: 5 }}
-                      innerRadius={0.72}
-                      padAngle={3}
-                      colors={{ datum: 'data.color' }}
-                      borderWidth={2}
-                      borderColor="#ffffff"
-                      enableArcLinkLabels={false}
-                      enableArcLabels={false}
-                      tooltip={({ datum }) => (
-                        <div className="bg-slate-900/95 backdrop-blur-md text-white border border-slate-800 shadow-2xl rounded-xl p-3 text-xs min-w-[120px] font-sans pointer-events-none z-50">
-                          <p className="font-extrabold text-[10px] uppercase text-slate-400 tracking-wider mb-1.5">{datum.label}</p>
-                          <div className="flex items-center justify-between gap-4">
-                            <span className="flex items-center gap-1.5 text-slate-300">
-                              <span className="w-2 h-2 rounded-full" style={{ backgroundColor: datum.color }} />
-                              Amount:
-                            </span>
-                            <span className="font-mono font-bold text-white">₹{datum.value?.toLocaleString()}</span>
+        {/* Main Grid Content */}
+        <Row gutter={[16, 16]}>
+          
+          {/* Left Area: Tab list and Limits */}
+          <Col xs={24} lg={16} className="space-y-4">
+
+            {/* TAB SYSTEM: My Claims vs Team Claims */}
+            <Card size="small" className="border border-gray-200 shadow-xs">
+              <Tabs 
+                activeKey={activeTab} 
+                onChange={(key) => handleTabChange(key as any)}
+                type="card"
+                items={[
+                  {
+                    key: "my-claims",
+                    label: `My Claims (${filteredPersonalExpenses.length})`,
+                    children: (
+                      <div className="space-y-3 pt-2">
+                        {/* Filters Row */}
+                        <div className="bg-gray-50 border border-gray-200 rounded-lg p-2 flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                          <div className="flex items-center gap-2">
+                            <Text type="secondary" className="text-[10px] uppercase font-bold tracking-wider">Select Month:</Text>
+                            <input 
+                              type="month"
+                              value={selectMonth}
+                              onChange={(e) => setSelectMonth(e.target.value)}
+                              className="bg-white border border-gray-200 rounded px-2.5 py-0.5 text-xs font-semibold text-gray-850 cursor-pointer w-32 focus:outline-none"
+                            />
+                          </div>
+                          <div className="flex items-center gap-1 overflow-x-auto no-scrollbar">
+                            {(["all", "pending", "approved", "rejected"] as const).map((status) => (
+                              <Button
+                                key={status}
+                                size="small"
+                                type={homeStatusFilter === status ? "primary" : "default"}
+                                onClick={() => setHomeStatusFilter(status)}
+                                className={homeStatusFilter === status ? "bg-indigo-600 border-indigo-655 text-white font-semibold text-[10px] uppercase tracking-wider" : "text-gray-505 font-semibold text-[10px] uppercase tracking-wider"}
+                              >
+                                {status === "all" ? "All" : status}
+                              </Button>
+                            ))}
                           </div>
                         </div>
-                      )}
-                    />
-                    <div className="absolute flex flex-col items-center justify-center pointer-events-none" style={{ top: '50%', left: '50%', transform: 'translate(-50%, -50%)' }}>
-                      <span className="text-[7px] text-slate-400 font-bold uppercase tracking-wider">Total Claimed</span>
-                      <span className="text-[11px] font-black text-slate-800 font-mono mt-0.5">
-                        ₹{getPersonalChartData().reduce((sum, item) => sum + item.amount, 0).toLocaleString()}
-                      </span>
-                    </div>
-                  </div>
-                  <div className="flex flex-wrap justify-center gap-x-2.5 gap-y-1 mt-2">
-                    {getPersonalChartData().map((item, i) => (
-                      <div key={i} className="flex items-center gap-1 text-[8px] font-bold text-slate-500">
-                        <span className="w-1.5 h-1.5 rounded-full shrink-0" style={{ backgroundColor: GALLERY_COLORS[i % GALLERY_COLORS.length] }} />
-                        <span>{item.label}</span>
+
+                        {/* Claims Listing Table */}
+                        {loadingMyExpenses ? (
+                          <Loader message="Loading your claims..." />
+                        ) : filteredPersonalExpenses.length === 0 ? (
+                          <div className="py-12 text-center text-gray-400 text-xs">
+                            <Compass className="w-8 h-8 mx-auto mb-2 text-gray-300" />
+                            <p className="font-bold">No expense claims found for this month.</p>
+                          </div>
+                        ) : (
+                          <>
+                            {/* Desktop Table */}
+                            <div className="hidden md:block border border-gray-100 rounded-lg overflow-hidden">
+                              <Table
+                                dataSource={filteredPersonalExpenses}
+                                rowKey="id"
+                                pagination={{ pageSize: 25, size: "small" }}
+                                size="small"
+                                onRow={(record) => ({
+                                  onClick: () => handleOpenClaimDetails(record.id),
+                                  className: "cursor-pointer hover:bg-indigo-50/15"
+                                })}
+                                columns={[
+                                  {
+                                    title: "Claim ID",
+                                    dataIndex: "expense_code",
+                                    key: "expense_code",
+                                    render: (text) => <Text className="font-mono font-bold text-indigo-600">{text}</Text>,
+                                  },
+                                  {
+                                    title: "Date",
+                                    dataIndex: "itinerary",
+                                    key: "itinerary",
+                                  },
+                                  {
+                                    title: "Purpose",
+                                    dataIndex: "description",
+                                    key: "description",
+                                    ellipsis: true,
+                                    render: (text) => <Text className="font-semibold text-gray-700">{text}</Text>,
+                                  },
+                                  {
+                                    title: "Travel Mode",
+                                    dataIndex: "travel_mode",
+                                    key: "travel_mode",
+                                    render: (text) => <Tag color="blue">{text}</Tag>,
+                                  },
+                                  {
+                                    title: "Distance",
+                                    dataIndex: "total_km",
+                                    key: "total_km",
+                                    align: "right" as const,
+                                    render: (val) => val ? `${val.toFixed(1)} KM` : "—",
+                                  },
+                                  {
+                                    title: "Auto Fare",
+                                    dataIndex: "total_auto",
+                                    key: "total_auto",
+                                    align: "right" as const,
+                                    render: (val) => val ? `₹${val.toLocaleString()}` : "—",
+                                  },
+                                  {
+                                    title: "Amount",
+                                    dataIndex: "amount",
+                                    key: "amount",
+                                    align: "right" as const,
+                                    render: (val) => <Text className="font-bold text-gray-900">₹{val.toLocaleString()}</Text>,
+                                  },
+                                  {
+                                    title: "Status",
+                                    dataIndex: "status",
+                                    key: "status",
+                                    align: "right" as const,
+                                    render: (status) => (
+                                      <span className={`inline-flex items-center px-2 py-0.5 rounded border text-[9px] font-bold uppercase tracking-wider ${getStatusBadgeClass(status)}`}>
+                                        {getStatusLabel(status)}
+                                      </span>
+                                    ),
+                                  }
+                                ]}
+                              />
+                            </div>
+
+                            {/* Mobile Card List View */}
+                            <div className="block md:hidden space-y-3 pb-20">
+                              {filteredPersonalExpenses.map((exp) => (
+                                <Card
+                                  key={exp.id}
+                                  onClick={() => handleOpenClaimDetails(exp.id)}
+                                  className="border border-gray-205 cursor-pointer active:bg-gray-50 transition-colors shadow-xs"
+                                  size="small"
+                                >
+                                  <div className="flex justify-between items-center pb-2 border-b border-gray-150">
+                                    <Text strong className="font-mono text-indigo-650 text-xs">{exp.expense_code}</Text>
+                                    <span className={`inline-flex items-center px-2 py-0.5 rounded border text-[8px] font-bold uppercase tracking-wider ${getStatusBadgeClass(exp.status)}`}>
+                                      {getStatusLabel(exp.status)}
+                                    </span>
+                                  </div>
+                                  
+                                  <Row gutter={[4, 4]} className="text-[11px] pt-2">
+                                    <Col span={12}>
+                                      <span className="text-gray-400 font-bold uppercase text-[9px] block">Date</span>
+                                      <span className="text-gray-700 font-semibold">{exp.itinerary || exp.date}</span>
+                                    </Col>
+                                    <Col span={12}>
+                                      <span className="text-gray-400 font-bold uppercase text-[9px] block">Travel Mode</span>
+                                      <Tag color="blue" style={{ margin: 0, fontSize: "9px" }} className="uppercase font-bold">{exp.travel_mode || exp.category}</Tag>
+                                    </Col>
+                                    <Col span={12} className="mt-1.5">
+                                      <span className="text-gray-400 font-bold uppercase text-[9px] block">Distance / Auto</span>
+                                      <span className="text-gray-700 font-semibold">
+                                        {exp.total_km ? `${exp.total_km.toFixed(1)} KM` : "—"}{exp.total_auto ? ` / ₹${exp.total_auto.toLocaleString()}` : ""}
+                                      </span>
+                                    </Col>
+                                    <Col span={12} className="mt-1.5">
+                                      <span className="text-gray-400 font-bold uppercase text-[9px] block">Total Amount</span>
+                                      <span className="text-indigo-655 font-black">₹{exp.amount.toLocaleString()}</span>
+                                    </Col>
+                                  </Row>
+                                  
+                                  {exp.description && (
+                                    <div className="border-t border-gray-100 mt-2.5 pt-2 text-[10px]">
+                                      <span className="text-gray-400 font-bold uppercase text-[8px] block">Purpose</span>
+                                      <p className="text-gray-655 font-semibold mt-0.5 truncate">{exp.description}</p>
+                                    </div>
+                                  )}
+                                </Card>
+                              ))}
+                            </div>
+                          </>
+                        )}
                       </div>
-                    ))}
-                  </div>
-                </>
-              )}
-            </div>
-          ) : (
-            /* TEAM CLAIMS ANALYTICS & CHART BOX */
-            <div className="bg-white border border-slate-100 rounded-3xl p-5 shadow-sm space-y-4">
-              <div className="space-y-1">
-                <span className="text-indigo-600 font-extrabold text-[9px] uppercase tracking-widest block">Team Performance</span>
-                <h3 className="text-xs font-bold text-slate-800 uppercase tracking-wider flex items-center gap-1.5">
-                  <BarChart3 className="w-4 h-4 text-indigo-500" />
-                  Team Claims Analytics
-                </h3>
-              </div>
+                    )
+                  },
+                  isReviewerRole ? {
+                    key: "team-claims",
+                    label: `Team Claims (${filteredTeamExpenses.length})`,
+                    children: (
+                      <div className="space-y-3 pt-2">
+                        {/* Filters Row */}
+                        <div className="bg-gray-50 border border-gray-255 rounded-lg p-2.5 space-y-2 text-xs font-bold text-slate-705">
+                          <Row gutter={[8, 8]}>
+                            <Col xs={12} sm={6}>
+                              <div className="flex flex-col gap-0.5">
+                                <span className="text-[8px] uppercase font-bold text-gray-400">Month</span>
+                                <input 
+                                  type="month"
+                                  value={selectMonth}
+                                  onChange={(e) => setSelectMonth(e.target.value)}
+                                  className="bg-white border border-gray-200 rounded px-2.5 py-0.5 text-xs font-semibold text-gray-800 cursor-pointer w-full focus:outline-none"
+                                />
+                              </div>
+                            </Col>
 
-              {/* Filters Panel */}
-              <div className="space-y-3 p-4 bg-slate-50/50 rounded-2xl border border-slate-100 text-[10px] font-bold text-slate-700">
-                <span className="uppercase tracking-widest text-[8px] font-black text-slate-400 block">Filter Controls</span>
-                <div className="space-y-2">
-                  {isReviewerRole && (
-                    <div className="space-y-0.5">
-                      <label className="block text-[8px] uppercase tracking-wider text-slate-400">Zone</label>
-                      <select 
-                        value={filterZone} 
-                        onChange={(e) => setFilterZone(e.target.value)}
-                        className="w-full bg-white border border-slate-200 rounded-xl px-2.5 py-1.5 text-[10px] font-bold text-slate-800 focus:outline-none focus:border-indigo-500 transition-colors"
-                      >
-                        <option value="all">All Zones</option>
-                        {uniqueZones.map(z => (
-                          <option key={z} value={z}>{z}</option>
-                        ))}
-                      </select>
-                    </div>
-                  )}
-                  <div className="space-y-0.5">
-                    <label className="block text-[8px] uppercase tracking-wider text-slate-400">Employee</label>
-                    <select 
-                      value={filterEmployee} 
-                      onChange={(e) => setFilterEmployee(e.target.value)}
-                      className="w-full bg-white border border-slate-200 rounded-xl px-2.5 py-1.5 text-[10px] font-bold text-slate-800 focus:outline-none focus:border-indigo-500 transition-colors"
-                    >
-                      <option value="all">All Team Members</option>
-                      {uniqueEmployees.map(emp => (
-                        <option key={emp.code} value={emp.code}>{emp.name} ({emp.code})</option>
-                      ))}
-                    </select>
-                  </div>
-                  <div className="space-y-0.5">
-                    <label className="block text-[8px] uppercase tracking-wider text-slate-400">Travel Mode</label>
-                    <select 
-                      value={filterMode} 
-                      onChange={(e) => setFilterMode(e.target.value)}
-                      className="w-full bg-white border border-slate-200 rounded-xl px-2.5 py-1.5 text-[10px] font-bold text-slate-800 focus:outline-none focus:border-indigo-500 transition-colors"
-                    >
-                      <option value="all">All Modes</option>
-                      {uniqueModes.map(m => (
-                        <option key={m} value={m}>{m}</option>
-                      ))}
-                    </select>
-                  </div>
-                  <div className="space-y-0.5">
-                    <label className="block text-[8px] uppercase tracking-wider text-slate-400">Claim Month</label>
-                    <input 
-                      type="month" 
-                      value={selectMonth}
-                      onChange={(e) => setSelectMonth(e.target.value)}
-                      className="w-full bg-white border border-slate-200 rounded-xl px-2.5 py-1.5 text-[10px] font-bold text-slate-800 focus:outline-none focus:border-indigo-500 transition-colors"
-                    />
-                  </div>
-                </div>
-              </div>
-
-              {/* Dynamic Filter Metrics box */}
-              <div className="border border-indigo-50 p-4 bg-indigo-50/20 rounded-2xl space-y-3">
-                <h4 className="text-[9px] font-black text-indigo-800 uppercase tracking-widest leading-none">Filtered Team Totals</h4>
-                <div className="grid grid-cols-2 gap-2.5">
-                  <div className="bg-white p-2.5 border border-slate-100 rounded-xl text-center space-y-0.5 shadow-sm">
-                    <span className="text-slate-400 font-bold uppercase tracking-wider block text-[7px] leading-none">Total Distance</span>
-                    <span className="text-xs font-black text-indigo-600 font-mono leading-none">{totalFilteredKm.toFixed(1)} KM</span>
-                  </div>
-                  <div className="bg-white p-2.5 border border-slate-100 rounded-xl text-center space-y-0.5 shadow-sm">
-                    <span className="text-slate-400 font-bold uppercase tracking-wider block text-[7px] leading-none">Auto Expense</span>
-                    <span className="text-xs font-black text-indigo-600 font-mono leading-none">₹{totalFilteredAuto.toLocaleString()}</span>
-                  </div>
-                </div>
-                <div className="bg-white p-2 border border-slate-100 rounded-xl text-center shadow-sm">
-                  <span className="text-slate-400 font-bold uppercase tracking-wider block text-[7px] leading-none">Aggregate Reimbursement</span>
-                  <span className="text-sm font-black text-indigo-700 font-mono">₹{totalFilteredAmount.toLocaleString()}</span>
-                </div>
-              </div>
-
-              {/* Top Employees Chart (SVG) */}
-              {filteredTeamExpenses.length === 0 ? (
-                <div className="py-8 text-center text-gray-400 text-[10px] font-semibold uppercase tracking-wider">
-                  No matching claims
-                </div>
-              ) : (
-                <div className="space-y-2.5">
-                  <h4 className="text-[9px] font-extrabold uppercase text-gray-400 tracking-wider">Zone-wise Expenditures Comparison</h4>
-                  {(() => {
-                    const chartData = getTeamChartData();
-                    if (chartData.length === 0) return null;
-                    return (
-                      <>
-                        <div style={{ height: 140 }} className="relative flex justify-center items-center">
-                          <ResponsivePie
-                            data={chartData.map((c, i) => ({ id: c.name, label: c.name, value: c.amount, color: GALLERY_COLORS[i % GALLERY_COLORS.length] }))}
-                            margin={{ top: 5, right: 5, bottom: 5, left: 5 }}
-                            innerRadius={0.72}
-                            padAngle={3}
-                            colors={{ datum: 'data.color' }}
-                            borderWidth={2}
-                            borderColor="#ffffff"
-                            enableArcLinkLabels={false}
-                            enableArcLabels={false}
-                            tooltip={({ datum }) => (
-                              <div className="bg-slate-900/95 backdrop-blur-md text-white border border-slate-800 shadow-2xl rounded-xl p-3 text-xs min-w-[120px] font-sans pointer-events-none z-50">
-                                <p className="font-extrabold text-[10px] uppercase text-slate-400 tracking-wider mb-1.5">{datum.label}</p>
-                                <div className="flex items-center justify-between gap-4">
-                                  <span className="flex items-center gap-1.5 text-slate-300">
-                                    <span className="w-2 h-2 rounded-full" style={{ backgroundColor: datum.color }} />
-                                    Amount:
-                                  </span>
-                                  <span className="font-mono font-bold text-white">₹{datum.value?.toLocaleString()}</span>
+                            {isReviewerRole && (
+                              <Col xs={12} sm={6}>
+                                <div className="flex flex-col gap-0.5">
+                                  <span className="text-[8px] uppercase font-bold text-gray-400">Zone</span>
+                                  <Select 
+                                    size="small"
+                                    value={filterZone} 
+                                    onChange={(val) => setFilterZone(val)}
+                                    className="w-full text-xs font-semibold"
+                                  >
+                                    <Select.Option value="all">All Zones</Select.Option>
+                                    {uniqueZones.map(z => (
+                                      <Select.Option key={z} value={z}>{z}</Select.Option>
+                                    ))}
+                                  </Select>
                                 </div>
+                              </Col>
+                            )}
+
+                            <Col xs={12} sm={6}>
+                              <div className="flex flex-col gap-0.5">
+                                <span className="text-[8px] uppercase font-bold text-gray-400">Engineer</span>
+                                <Select 
+                                  size="small"
+                                  value={filterEmployee} 
+                                  onChange={(val) => setFilterEmployee(val)}
+                                  className="w-full text-xs font-semibold"
+                                >
+                                  <Select.Option value="all">All Members</Select.Option>
+                                  {uniqueEmployees.map(emp => (
+                                    <Select.Option key={emp.code} value={emp.code}>{emp.name}</Select.Option>
+                                  ))}
+                                </Select>
+                              </div>
+                            </Col>
+
+                            <Col xs={12} sm={6}>
+                              <div className="flex flex-col gap-0.5">
+                                <span className="text-[8px] uppercase font-bold text-gray-400">Travel Mode</span>
+                                <Select 
+                                  size="small"
+                                  value={filterMode} 
+                                  onChange={(val) => setFilterMode(val)}
+                                  className="w-full text-xs font-semibold"
+                                >
+                                  <Select.Option value="all">All Modes</Select.Option>
+                                  {uniqueModes.map(m => (
+                                    <Select.Option key={m} value={m.toLowerCase()}>{m}</Select.Option>
+                                  ))}
+                                </Select>
+                              </div>
+                            </Col>
+                          </Row>
+
+                          <div className="flex items-center gap-1 overflow-x-auto no-scrollbar border-t border-gray-200 pt-2">
+                            {(["all", "pending", "approved", "rejected"] as const).map((status) => (
+                              <Button
+                                key={status}
+                                size="small"
+                                type={homeStatusFilter === status ? "primary" : "default"}
+                                onClick={() => setHomeStatusFilter(status)}
+                                className={homeStatusFilter === status ? "bg-indigo-600 border-indigo-655 text-white font-semibold text-[10px] uppercase tracking-wider" : "text-gray-505 font-semibold text-[10px] uppercase tracking-wider"}
+                              >
+                                {status === "all" ? "All" : status}
+                              </Button>
+                            ))}
+                          </div>
+                        </div>
+
+                        {/* Team Claims Listing Table */}
+                        {loadingTeamExpenses ? (
+                          <Loader message="Loading team claims..." />
+                        ) : safeTeamExpenses.length === 0 ? (
+                          <div className="py-12 text-center text-gray-400 text-xs">
+                            <Users className="w-8 h-8 mx-auto mb-2 text-gray-300" />
+                            <p className="font-bold">No claims submitted by your team members yet.</p>
+                          </div>
+                        ) : (
+                          <>
+                            {/* Desktop View Table */}
+                            <div className="hidden md:block border border-gray-100 rounded-lg overflow-hidden">
+                              <Table
+                                dataSource={paginatedTeamExpenses}
+                                rowKey="id"
+                                pagination={false}
+                                size="small"
+                                onRow={(record) => ({
+                                  onClick: () => handleOpenClaimDetails(record.id),
+                                  className: "cursor-pointer hover:bg-indigo-50/15"
+                                })}
+                                columns={[
+                                  {
+                                    title: "Employee",
+                                    key: "employee",
+                                    render: (_, record) => (
+                                      <div>
+                                        <Text strong className="text-gray-900 block leading-none">{record.submitter_name}</Text>
+                                        <span className="text-[8px] font-mono uppercase block mt-0.5 text-blue-600 font-bold">{record.submitter_code}</span>
+                                      </div>
+                                    )
+                                  },
+                                  {
+                                    title: "Claim ID",
+                                    dataIndex: "expense_code",
+                                    key: "expense_code",
+                                    render: (text) => <Text className="font-mono font-bold text-indigo-600">{text}</Text>,
+                                  },
+                                  {
+                                    title: "Date",
+                                    dataIndex: "date",
+                                    key: "date",
+                                    render: (_, record) => record.itinerary || record.date || record.created_at,
+                                  },
+                                  {
+                                    title: "Purpose",
+                                    dataIndex: "description",
+                                    key: "description",
+                                    ellipsis: true,
+                                    render: (text, record) => <Text className="font-semibold text-gray-700">{text || record.purpose}</Text>,
+                                  },
+                                  {
+                                    title: "Mode",
+                                    dataIndex: "travel_mode",
+                                    key: "travel_mode",
+                                    render: (text, record) => <Tag color="blue">{text || record.category}</Tag>,
+                                  },
+                                  {
+                                    title: "Distance",
+                                    dataIndex: "total_km",
+                                    key: "total_km",
+                                    align: "right" as const,
+                                    render: (val) => val ? `${val.toFixed(1)} KM` : "—",
+                                  },
+                                  {
+                                    title: "Auto Fare",
+                                    dataIndex: "total_auto",
+                                    key: "total_auto",
+                                    align: "right" as const,
+                                    render: (val) => val ? `₹${val.toLocaleString()}` : "—",
+                                  },
+                                  {
+                                    title: "Amount",
+                                    dataIndex: "amount",
+                                    key: "amount",
+                                    align: "right" as const,
+                                    render: (val) => <Text className="font-bold text-gray-900">₹{val.toLocaleString()}</Text>,
+                                  },
+                                  {
+                                    title: "Status",
+                                    dataIndex: "status",
+                                    key: "status",
+                                    align: "right" as const,
+                                    render: (status) => (
+                                      <span className={`inline-flex items-center px-2 py-0.5 rounded border text-[9px] font-bold uppercase tracking-wider ${getStatusBadgeClass(status)}`}>
+                                        {getStatusLabel(status)}
+                                      </span>
+                                    ),
+                                  }
+                                ]}
+                              />
+                            </div>
+
+                            {/* Mobile Card List View */}
+                            <div className="block md:hidden space-y-3 pb-20">
+                              {paginatedTeamExpenses.map((exp) => (
+                                <Card
+                                  key={exp.id}
+                                  onClick={() => handleOpenClaimDetails(exp.id)}
+                                  className="border border-gray-200 cursor-pointer active:bg-gray-50 transition-colors shadow-xs"
+                                  size="small"
+                                >
+                                  <div className="flex justify-between items-center pb-2 border-b border-gray-150">
+                                    <div>
+                                      <Text strong className="text-xs leading-none text-gray-900 block">{exp.submitter_name}</Text>
+                                      <span className="text-[8px] font-mono font-bold uppercase block mt-0.5 text-blue-600">{exp.submitter_code}</span>
+                                    </div>
+                                    <span className={`inline-flex items-center px-2 py-0.5 rounded border text-[8px] font-bold uppercase tracking-wider ${getStatusBadgeClass(exp.status)}`}>
+                                      {getStatusLabel(exp.status)}
+                                    </span>
+                                  </div>
+                                  
+                                  <Row gutter={[4, 4]} className="text-[11px] pt-2">
+                                    <Col span={12}>
+                                      <span className="text-gray-400 font-bold uppercase text-[9px] block">Claim ID / Date</span>
+                                      <span className="text-gray-700 font-semibold">{exp.expense_code} ({exp.date || exp.itinerary})</span>
+                                    </Col>
+                                    <Col span={12}>
+                                      <span className="text-gray-400 font-bold uppercase text-[9px] block">Mode</span>
+                                      <Tag color="blue" style={{ margin: 0, fontSize: "9px" }} className="uppercase font-bold">{exp.category || exp.travel_mode}</Tag>
+                                    </Col>
+                                    <Col span={12} className="mt-1.5">
+                                      <span className="text-gray-400 font-bold uppercase text-[9px] block">Distance / Auto</span>
+                                      <span className="text-gray-700 font-semibold">
+                                        {exp.total_km ? `${exp.total_km.toFixed(1)} KM` : "—"}{exp.total_auto ? ` / ₹${exp.total_auto.toLocaleString()}` : ""}
+                                      </span>
+                                    </Col>
+                                    <Col span={12} className="mt-1.5">
+                                      <span className="text-gray-400 font-bold uppercase text-[9px] block">Amount</span>
+                                      <span className="text-indigo-650 font-black">₹{exp.amount.toLocaleString()}</span>
+                                    </Col>
+                                  </Row>
+                                  
+                                  {exp.purpose && (
+                                    <div className="border-t border-gray-100 mt-2.5 pt-2 text-[10px]">
+                                      <span className="text-gray-400 font-bold uppercase text-[8px] block">Purpose</span>
+                                      <p className="text-gray-655 font-semibold mt-0.5 truncate">{exp.purpose}</p>
+                                    </div>
+                                  )}
+                                </Card>
+                              ))}
+                            </div>
+
+                            {/* Pagination Controls */}
+                            {filteredTeamExpenses.length > 100 && (
+                              <div className="flex justify-between items-center bg-gray-50 border border-gray-200 rounded-lg p-2.5 mt-4">
+                                <Button
+                                  disabled={teamPage === 1}
+                                  onClick={() => setTeamPage(prev => Math.max(prev - 1, 1))}
+                                  size="small"
+                                  className="font-bold text-xs"
+                                >
+                                  Prev
+                                </Button>
+                                <span className="text-xs font-bold text-slate-655">
+                                  Page {teamPage} of {Math.ceil(filteredTeamExpenses.length / 100)} (Total {filteredTeamExpenses.length} claims)
+                                </span>
+                                <Button
+                                  disabled={teamPage >= Math.ceil(filteredTeamExpenses.length / 100)}
+                                  onClick={() => setTeamPage(prev => Math.min(prev + 1, Math.ceil(filteredTeamExpenses.length / 100)))}
+                                  size="small"
+                                  className="font-bold text-xs"
+                                >
+                                  Next
+                                </Button>
                               </div>
                             )}
-                          />
-                          <div className="absolute flex flex-col items-center justify-center pointer-events-none" style={{ top: '50%', left: '50%', transform: 'translate(-50%, -50%)' }}>
-                            <span className="text-[7px] text-gray-400 font-bold uppercase tracking-wider">Total Team</span>
-                            <span className="text-[11px] font-black text-slate-800 font-mono mt-0.5">
-                              ₹{chartData.reduce((sum, item) => sum + item.amount, 0).toLocaleString()}
-                            </span>
-                          </div>
-                        </div>
-                        <div className="flex flex-wrap justify-center gap-x-2.5 gap-y-1 mt-2">
-                          {chartData.map((item, i) => (
-                            <div key={i} className="flex items-center gap-1 text-[8px] font-bold text-slate-500">
-                              <span className="w-1.5 h-1.5 rounded-full shrink-0" style={{ backgroundColor: GALLERY_COLORS[i % GALLERY_COLORS.length] }} />
-                              <span>{item.name}</span>
-                            </div>
-                          ))}
-                        </div>
-                      </>
-                    );
-                  })()}
-                </div>
-              )}
-            </div>
-          )}
+                          </>
+                        )}
+                      </div>
+                    )
+                  } : null
+                ].filter(Boolean) as any}
+              />
+            </Card>
+          </Col>
 
-          {/* Expense Calendar Tracker Section */}
-          <ExpenseCalendar 
-            expenses={activeTab === "my-claims" ? safeMyExpenses : filteredTeamExpenses} 
-            isTeamView={activeTab !== "my-claims"}
-            selectMonth={selectMonth}
-          />
-        </div>
-      </div>
-      </div>
-
-      {/* ================= INTERACTIVE READ-ONLY CLAIM DETAILS POPUP MODAL ================= */}
-      {showDetailsModal && selectedClaimId && (
-        <div className="modal-lte-overlay">
-          <div className="modal-lte-content max-w-5xl max-h-[90vh] flex flex-col">
+          {/* Right Sidebar: Dynamic Charts & Filters */}
+          <Col xs={24} lg={8} className="space-y-4">
             
-            {/* Modal Header */}
-            <div className="px-4 py-3 bg-gradient-to-r from-slate-50 to-gray-100 border-b border-gray-200 flex items-center justify-between shrink-0">
-              <h3 className="text-sm font-extrabold uppercase tracking-wider text-gray-800 flex items-center gap-2">
-                <Layers className="w-4 h-4 text-blue-600" />
-                <span>Claim Details {claimDetails ? `— ${claimDetails.expense_code}` : ""}</span>
-                {loadingDetails && <Loader2 className="w-3.5 h-3.5 animate-spin text-blue-500 shrink-0" />}
-              </h3>
-              <button 
-                onClick={() => { setShowDetailsModal(false); setClaimDetails(null); }}
-                className="w-7 h-7 rounded-full border border-red-200 bg-red-50 text-red-500 hover:bg-red-100 hover:text-red-700 transition-all cursor-pointer flex items-center justify-center font-bold text-xs"
-              >
-                ✕
-              </button>
-            </div>
-
-            {/* Modal Content */}
-            <div className="flex-1 overflow-y-auto p-4 space-y-4 bg-slate-50/70">
-              {!claimDetails ? (
-                <Loader message="Loading claim details..." />
-              ) : (
-                <>
-                  {/* Summary Info */}
-                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 text-xs">
-                    <div className="p-3 bg-gray-50 border border-gray-200 rounded">
-                      <span className="text-[9px] text-gray-400 font-bold uppercase block">Submitted By</span>
-                      <span className="font-bold text-gray-800 block mt-0.5">{claimDetails.submitter_name || user?.name || "Sunil Vishnoi"}</span>
-                      <span className="text-[10px] text-gray-500 font-mono">{claimDetails.submitter_code || user?.user_id || "E1704"}</span>
-                    </div>
-                    <div className="p-3 bg-gray-50 border border-gray-200 rounded">
-                      <span className="text-[9px] text-gray-400 font-bold uppercase block">Travel Date</span>
-                      <span className="font-bold text-gray-800 block mt-0.5">{claimDetails.date}</span>
-                      <span className="text-[10px] text-gray-500">{claimDetails.month} {claimDetails.year}</span>
-                    </div>
-                    <div className="p-3 bg-gray-50 border border-gray-200 rounded">
-                      <span className="text-[9px] text-gray-400 font-bold uppercase block">Submitted At</span>
-                      <span className="font-bold text-gray-800 block mt-0.5">{formatDateTime(claimDetails.created_at)}</span>
-                    </div>
-                    <div className="p-3 bg-gray-50 border border-gray-200 rounded">
-                      <span className="text-[9px] text-gray-400 font-bold uppercase block">Status</span>
-                      <span className={`inline-flex items-center px-2 py-0.5 rounded border text-[9px] font-bold uppercase tracking-wider mt-1 ${getStatusBadgeClass(claimDetails.status)}`}>
-                        {getStatusLabel(claimDetails.status)}
-                      </span>
-                    </div>
+            {/* Claims Breakdown Chart Card */}
+            <Card 
+              size="small" 
+              className="border border-gray-200 shadow-xs"
+              title={
+                <div className="space-y-0.5">
+                  <span className="text-indigo-650 font-extrabold text-[9px] uppercase tracking-widest block">Claims Analytics</span>
+                  <Title level={5} style={{ margin: 0, fontSize: "12px", color: "#1F2937" }} className="uppercase font-bold tracking-wider flex items-center gap-1.5">
+                    <BarChart3 size={14} className="text-indigo-500" />
+                    {activeTab === "my-claims" ? "Personal Mode Breakdown" : "Zone-wise Compare"}
+                  </Title>
+                </div>
+              }
+            >
+              {activeTab === "my-claims" ? (
+                safeMyExpenses.length === 0 ? (
+                  <div className="py-8 text-center text-gray-400 text-[10px] font-bold uppercase tracking-wider">
+                    No claims to analyze
                   </div>
-
-                  {claimDetails.original_amount > claimDetails.amount && (
-                    <div className="bg-amber-50 border border-amber-200 rounded-lg p-3 flex items-start gap-2.5 text-xs text-amber-855 shadow-xs">
-                      <AlertTriangle className="w-4 h-4 text-amber-600 shrink-0 mt-0.5" />
-                      <div>
-                        <p className="font-extrabold uppercase tracking-wider text-[10px] text-amber-700">Policy Deductions Applied</p>
-                        <p className="mt-1 leading-relaxed">
-                          A total deduction of <span className="font-bold text-rose-600">₹{(claimDetails.original_amount - claimDetails.amount).toFixed(0)}</span> was applied to this claim in accordance with the base location policy.
-                        </p>
-                      </div>
-                    </div>
-                  )}
-
-                  {/* Purpose & Total */}
-                  <div className="flex items-center justify-between p-3 bg-blue-50 border border-blue-200 rounded text-xs">
-                    <div>
-                      <span className="text-[9px] text-gray-500 font-bold uppercase">Purpose:</span>
-                      <span className="font-semibold text-gray-800 ml-1">{claimDetails.purpose || claimDetails.description || "Field visits"}</span>
-                    </div>
-                    <div className="text-right">
-                      {claimDetails.category === "Limit Request" ? (
-                        <div className="space-y-1">
-                          <div>
-                            <span className="text-[9px] text-gray-400 font-bold uppercase block">Requested Limit</span>
-                            <span className="text-xs font-bold text-gray-600 font-mono">
-                              {claimDetails.travel_mode === "KM" ? `${claimDetails.requested_value || claimDetails.total_km} KM` : `₹${(claimDetails.requested_value || claimDetails.amount).toLocaleString()}`}
-                            </span>
-                          </div>
-                          {claimDetails.status.toLowerCase() === "approved" && (
-                            <div>
-                              <span className="text-[9px] text-emerald-600 font-extrabold uppercase block">Approved Limit</span>
-                              <span className="text-sm font-black text-emerald-700 font-mono">
-                                {claimDetails.travel_mode === "KM" ? `${claimDetails.approved_value ?? (claimDetails.requested_value || claimDetails.total_km)} KM` : `₹${(claimDetails.approved_value ?? (claimDetails.requested_value || claimDetails.amount)).toLocaleString()}`}
+                ) : (
+                  <>
+                    <div style={{ height: 140 }} className="relative flex justify-center items-center">
+                      <ResponsivePie
+                        data={getPersonalChartData().map((c, i) => ({ id: c.label, label: c.label, value: c.amount, color: GALLERY_COLORS[i % GALLERY_COLORS.length] }))}
+                        margin={{ top: 5, right: 5, bottom: 5, left: 5 }}
+                        innerRadius={0.72}
+                        padAngle={3}
+                        colors={{ datum: 'data.color' }}
+                        borderWidth={2}
+                        borderColor="#ffffff"
+                        enableArcLinkLabels={false}
+                        enableArcLabels={false}
+                        tooltip={({ datum }) => (
+                          <div className="bg-slate-900/95 backdrop-blur-md text-white border border-slate-800 shadow-2xl rounded-xl p-3 text-xs min-w-[120px] font-sans pointer-events-none z-50">
+                            <p className="font-extrabold text-[10px] uppercase text-slate-400 tracking-wider mb-1.5">{datum.label}</p>
+                            <div className="flex items-center justify-between gap-4">
+                              <span className="flex items-center gap-1.5 text-slate-300">
+                                <span className="w-2 h-2 rounded-full" style={{ backgroundColor: datum.color }} />
+                                Amount:
                               </span>
+                              <span className="font-mono font-bold text-white">₹{datum.value?.toLocaleString()}</span>
                             </div>
-                          )}
+                          </div>
+                        )}
+                      />
+                      <div className="absolute flex flex-col items-center justify-center pointer-events-none" style={{ top: '50%', left: '50%', transform: 'translate(-50%, -50%)' }}>
+                        <span className="text-[7px] text-gray-400 font-bold uppercase tracking-wider">Total Claimed</span>
+                        <span className="text-[11px] font-black text-slate-800 font-mono mt-0.5">
+                          ₹{getPersonalChartData().reduce((sum, item) => sum + item.amount, 0).toLocaleString()}
+                        </span>
+                      </div>
+                    </div>
+                    <div className="flex flex-wrap justify-center gap-x-2.5 gap-y-1 mt-2">
+                      {getPersonalChartData().map((item, i) => (
+                        <div key={i} className="flex items-center gap-1 text-[8px] font-bold text-slate-505">
+                          <span className="w-1.5 h-1.5 rounded-full shrink-0" style={{ backgroundColor: GALLERY_COLORS[i % GALLERY_COLORS.length] }} />
+                          <span>{item.label}</span>
                         </div>
-                      ) : (
-                        <>
-                          <span className="text-[9px] text-gray-500 font-bold uppercase block">Total</span>
-                          <span className="text-lg font-black text-blue-700 font-mono">
-                            ₹{claimDetails.amount.toLocaleString()}
-                          </span>
-                        </>
-                      )}
+                      ))}
+                    </div>
+                  </>
+                )
+              ) : (
+                <div className="space-y-4">
+                  {/* Filter Metrics Box */}
+                  <div className="border border-indigo-50 p-3 bg-indigo-50/20 rounded-xl space-y-2 text-xs font-semibold text-gray-700">
+                    <h4 className="text-[9px] font-black text-indigo-800 uppercase tracking-widest leading-none">Filtered Team Totals</h4>
+                    <Row gutter={8}>
+                      <Col span={12}>
+                        <div className="bg-white p-2 border border-slate-100 rounded-lg text-center space-y-0.5 shadow-sm">
+                          <span className="text-slate-400 font-bold uppercase tracking-wider block text-[7px] leading-none">Distance</span>
+                          <span className="text-xs font-black text-indigo-605 font-mono leading-none">{totalFilteredKm.toFixed(1)} KM</span>
+                        </div>
+                      </Col>
+                      <Col span={12}>
+                        <div className="bg-white p-2 border border-slate-100 rounded-lg text-center space-y-0.5 shadow-sm">
+                          <span className="text-slate-400 font-bold uppercase tracking-wider block text-[7px] leading-none">Auto Expense</span>
+                          <span className="text-xs font-black text-indigo-605 font-mono leading-none">₹{totalFilteredAuto.toLocaleString()}</span>
+                        </div>
+                      </Col>
+                    </Row>
+                    <div className="bg-white p-2 border border-slate-100 rounded-lg text-center shadow-sm">
+                      <span className="text-slate-400 font-bold uppercase tracking-wider block text-[7px] leading-none">Aggregate Reimbursement</span>
+                      <span className="text-xs font-black text-indigo-750 font-mono">₹{totalFilteredAmount.toLocaleString()}</span>
                     </div>
                   </div>
 
-                  {/* Legs Table */}
-                  {claimDetails.category !== "Limit Request" && claimDetails.itineraries && claimDetails.itineraries.length > 0 && (
-                    <div className="border border-gray-200 rounded overflow-hidden">
-                      <div className="px-3 py-2 bg-gray-50 border-b border-gray-200">
-                        <h4 className="text-[10px] font-bold uppercase text-gray-600 tracking-wider">Visit Details</h4>
-                      </div>
-                      
-                      {/* Desktop View Table */}
-                      <div className="hidden lg:block overflow-x-auto">
-                        <table className="table-lte">
-                          <thead>
-                            <tr className="border-b border-gray-200 text-[9px] uppercase font-bold tracking-wider text-gray-400 bg-gray-50">
-                              <th className="py-2 px-3 text-center w-10">#</th>
-                              <th className="py-2 px-3">Route</th>
-                              <th className="py-2 px-3">Mode</th>
-                              <th className="py-2 px-3 text-right">KM</th>
-                              <th className="py-2 px-3 text-right">TA / Fare</th>
-                              <th className="py-2 px-3 text-right">DA</th>
-                              <th className="py-2 px-3 text-right">Hotel</th>
-                              <th className="py-2 px-3 text-right">Local Purchase</th>
-                              <th className="py-2 px-3">Other / Misc</th>
-                              <th className="py-2 px-3">Metrics</th>
-                              <th className="py-2 px-3 text-right font-bold">Total</th>
-                            </tr>
-                          </thead>
-                          <tbody className="divide-y divide-gray-100">
-                            {claimDetails.itineraries.map((leg: any, idx: number) => {
-                              const travelCost = leg.amount || 0;
-                              const subCost = leg.sub_amount || 0;
-                              const daCost = leg.da || 0;
-                              const hotelCost = leg.hotel || 0;
-                              const lpCost = leg.local_purchase || 0;
-                              const otherCost = leg.oth_amount || 0;
-                              
-                              const origTA = parseFloat(leg.original_amount ?? leg.amount ?? 0);
-                              const origSub = parseFloat(leg.original_sub_amount ?? leg.sub_amount ?? 0);
-                              const origDA = parseFloat(leg.original_da ?? leg.da ?? 0);
-
-                              const taDeducted = (origTA - travelCost) + (origSub - subCost);
-                              const daDeducted = origDA - daCost;
-
-                              const legTotal = travelCost + subCost + daCost + hotelCost + lpCost + otherCost;
-                              const origTotal = origTA + origSub + origDA + hotelCost + lpCost + otherCost;
-
-                              let actDetails: any = null;
-                              try {
-                                if (leg.activity_details) {
-                                  actDetails = typeof leg.activity_details === "string" ? JSON.parse(leg.activity_details) : leg.activity_details;
-                                }
-                              } catch (e) {
-                                console.error("Error parsing activity details", e);
-                              }
-
-                              const callsList = actDetails?.calls_list || [];
-                              const pmsList = actDetails?.pms_list || [];
-                              const assetsList = actDetails?.assets_list || [];
-                              const selectedActs = actDetails?.selected_activities || leg.selected_activities || [];
-                              const mobiliseCount = parseInt(actDetails?.mobilise_asset_count || leg.mobilise_asset_count || "0") || 0;
-                              const calibrationCount = parseInt(actDetails?.calibration_count || leg.calibration_count || "0") || 0;
-                              const activityOtherDesc = actDetails?.activity_other_desc || leg.activity_other_desc || "";
-
-                              const hasActivities = selectedActs.length > 0 || callsList.length > 0 || pmsList.length > 0 || assetsList.length > 0;
-
-                              return (
-                                <React.Fragment key={idx}>
-                                  <tr className="hover:bg-gray-50 transition-colors">
-                                    <td className="py-2.5 px-3 text-center font-bold text-gray-400">{leg.leg}</td>
-                                    <td className="py-2.5 px-3">
-                                      <span className="font-bold text-gray-850">{leg.from_district === leg.to_district ? leg.to_district : `${leg.from_district} → ${leg.to_district}`}</span>
-                                      <span className="text-[10px] text-gray-400 block">{leg.from || "Start"} → {leg.to || "End"}</span>
-                                    </td>
-                                    <td className="py-2.5 px-3">
-                                      <span className="text-[9px] font-bold uppercase bg-blue-50 text-blue-700 px-1.5 py-0.5 rounded border border-blue-100">{leg.mode}</span>
-                                      {leg.sub_mode && <span className="text-[9px] font-bold uppercase bg-purple-50 text-purple-700 px-1.5 py-0.5 rounded border border-purple-100 ml-1">+{leg.sub_mode}</span>}
-                                    </td>
-                                    <td className="py-2.5 px-3 text-right font-mono font-semibold text-gray-600">{leg.km || 0} KM</td>
-                                    <td className="py-2.5 px-3 text-right font-mono font-semibold text-gray-650">
-                                      <div className="flex flex-col items-end">
-                                        <span>₹{(travelCost + subCost).toLocaleString()}</span>
-                                        {taDeducted > 0 && (
-                                          <span className="text-[8px] font-bold text-rose-500 line-through" title="Claimed before policy deduction">
-                                            ₹{(origTA + origSub).toLocaleString()}
-                                          </span>
-                                        )}
-                                      </div>
-                                    </td>
-                                    <td className="py-2.5 px-3 text-right font-mono font-semibold">
-                                      <div className="flex flex-col items-end">
-                                        <span className="text-gray-650">₹{daCost.toLocaleString()}</span>
-                                        {daDeducted > 0 && (
-                                          <span className="text-[8px] font-bold text-rose-500 line-through" title="Claimed before policy deduction">
-                                            ₹{origDA.toLocaleString()}
-                                          </span>
-                                        )}
-                                      </div>
-                                    </td>
-                                    <td className="py-2.5 px-3 text-right font-mono font-semibold">₹{hotelCost.toLocaleString()}</td>
-                                    <td className="py-2.5 px-3 text-right font-mono font-semibold">₹{lpCost.toLocaleString()}</td>
-                                    <td className="py-2.5 px-3">
-                                      <span className="font-mono font-bold">₹{otherCost.toLocaleString()}</span>
-                                      {leg.oth_desc && <span className="text-[9px] text-gray-400 block truncate max-w-[100px]" title={leg.oth_desc}>{leg.oth_desc}</span>}
-                                    </td>
-                                    <td className="py-2.5 px-3 text-[10px] text-gray-500">
-                                      <span>W:{leg.ws_assigned||0}</span> <span className="text-green-600">D:{leg.ws_closed||0}</span> <span>P:{leg.ws_pms||0}</span> <span>A:{leg.ws_asset||0}</span>
-                                    </td>
-                                    <td className="py-2.5 px-3 text-right font-bold font-mono text-gray-900">
-                                      <div className="flex flex-col items-end">
-                                        <span>₹{legTotal.toLocaleString()}</span>
-                                        {origTotal > legTotal && (
-                                          <span className="text-[8px] font-bold text-rose-500 line-through" title="Claimed before policy deduction">
-                                            ₹{origTotal.toLocaleString()}
-                                          </span>
-                                        )}
-                                      </div>
-                                    </td>
-                                  </tr>
-
-                                  {hasActivities && (
-                                    <tr className="bg-slate-50/50">
-                                      <td colSpan={11} className="py-2.5 px-4 border-t border-gray-150">
-                                        <div className="flex flex-col gap-2.5 text-left">
-                                          <div className="flex flex-wrap gap-2">
-                                            <span className="text-[9px] font-bold text-gray-500 uppercase mr-2 mt-0.5">Activities:</span>
-                                            {selectedActs.map((act: string, actIdx: number) => (
-                                              <span key={actIdx} className="px-1.5 py-0.5 rounded bg-gray-100 border border-gray-200 text-[8px] font-bold text-gray-700 uppercase">
-                                                {act}
-                                              </span>
-                                            ))}
-                                          </div>
-
-                                          {/* Sub-table for Calls */}
-                                          {selectedActs.includes("Calls") && callsList.length > 0 && (
-                                            <div className="space-y-1.5 max-w-full">
-                                              <div className="text-[9px] font-black text-indigo-700 uppercase tracking-wider">Support Calls Logs</div>
-                                              <div className="flex flex-wrap gap-2">
-                                                {callsList.map((c: any, cIdx: number) => (
-                                                  <div key={cIdx} className="bg-white border border-gray-300 p-2.5 shadow-xs text-[10px] w-full sm:w-[220px] flex flex-col justify-between hover:border-indigo-400 transition-colors">
-                                                    <div className="flex justify-between items-center border-b border-gray-100 pb-1 mb-1">
-                                                      <span className="font-mono font-bold text-indigo-600">{c.barcode}</span>
-                                                      <span className="px-1.5 py-0.2 rounded-sm font-black text-[7px] uppercase bg-blue-50 text-blue-700 border border-blue-100">{c.status || "Attend"}</span>
-                                                    </div>
-                                                    <div className="space-y-0.5 flex-1">
-                                                      <p className="font-bold text-gray-800 line-clamp-1">{c.asset_details?.equipment_name || "—"}</p>
-                                                      <p className="text-gray-500 truncate">{c.asset_details?.hospital_name || "—"}</p>
-                                                      <p className="text-gray-400 text-[8px] uppercase tracking-wider">{c.asset_details?.district_name || "—"} | {c.type || "Support"}</p>
-                                                    </div>
-                                                    {c.photo_url && (
-                                                      <button 
-                                                        onClick={() => setLightboxImage(`${API_BASE}${c.photo_url}`)}
-                                                        className="mt-1.5 w-full bg-slate-50 hover:bg-slate-100 py-1 text-center font-bold text-slate-700 rounded border border-gray-300 cursor-pointer text-[8px] uppercase"
-                                                      >
-                                                        View Photo
-                                                      </button>
-                                                    )}
-                                                  </div>
-                                                ))}
-                                              </div>
-                                            </div>
-                                          )}
-
-                                          {/* Sub-table for PMS */}
-                                          {selectedActs.includes("PMS") && pmsList.length > 0 && (
-                                            <div className="space-y-1.5 max-w-full">
-                                              <div className="text-[9px] font-black text-amber-700 uppercase tracking-wider">PMS Service Logs</div>
-                                              <div className="flex flex-wrap gap-2">
-                                                {pmsList.map((p: any, pIdx: number) => (
-                                                  <div key={pIdx} className="bg-white border border-gray-300 p-2.5 shadow-xs text-[10px] w-full sm:w-[220px] flex flex-col justify-between hover:border-amber-400 transition-colors">
-                                                    <div className="flex justify-between items-center border-b border-gray-100 pb-1 mb-1">
-                                                      <span className="font-mono font-bold text-amber-600">{p.barcode}</span>
-                                                      <span className="px-1.5 py-0.2 rounded-sm font-black text-[7px] uppercase bg-green-50 text-green-700 border border-green-205">{p.asset_details?.inventory_status || "Active"}</span>
-                                                    </div>
-                                                    <div className="space-y-0.5 flex-1">
-                                                      <p className="font-bold text-gray-800 line-clamp-1">{p.asset_details?.equipment_name || "—"}</p>
-                                                      <p className="text-gray-500 truncate">{p.asset_details?.hospital_name || "—"}</p>
-                                                      <p className="text-gray-400 text-[8px] uppercase tracking-wider">{p.asset_details?.district_name || "—"} | Freq: {p.frequency || "3M"}</p>
-                                                    </div>
-                                                    {p.photo_url && (
-                                                      <button 
-                                                        onClick={() => setLightboxImage(`${API_BASE}${p.photo_url}`)}
-                                                        className="mt-1.5 w-full bg-slate-50 hover:bg-slate-100 py-1 text-center font-bold text-slate-700 rounded border border-gray-300 cursor-pointer text-[8px] uppercase"
-                                                      >
-                                                        View Photo
-                                                      </button>
-                                                    )}
-                                                  </div>
-                                                ))}
-                                              </div>
-                                            </div>
-                                          )}
-
-                                          {/* Sub-table for Asset Tagging */}
-                                          {selectedActs.includes("Asset Tagging") && assetsList.length > 0 && (
-                                            <div className="space-y-1.5 max-w-full">
-                                              <div className="text-[9px] font-black text-emerald-700 uppercase tracking-wider">Asset Tagging Records</div>
-                                              <div className="flex flex-wrap gap-2">
-                                                {assetsList.map((a: any, aIdx: number) => {
-                                                  const qty = parseInt(a.quantity || "0") || 0;
-                                                  return (
-                                                    <div key={aIdx} className="bg-white border border-gray-300 p-2.5 shadow-xs text-[10px] w-full sm:w-[180px] flex items-center justify-between hover:border-emerald-400 transition-colors">
-                                                      <div className="space-y-0.5">
-                                                        <p className="font-bold text-gray-800 line-clamp-1">{a.equipment_name}</p>
-                                                        <span className="text-[7px] text-gray-400 uppercase tracking-wider">Asset Tagged</span>
-                                                      </div>
-                                                      <div className="bg-emerald-50 text-emerald-700 font-extrabold text-xs px-2.5 py-1 rounded border border-emerald-100">
-                                                        {qty}
-                                                      </div>
-                                                    </div>
-                                                  );
-                                                })}
-                                              </div>
-                                            </div>
-                                          )}
-
-                                          {/* Quantities for Mobilise, Calibration or Other */}
-                                          <div className="flex flex-wrap gap-4 text-[10px] text-gray-600 bg-white p-2 rounded border border-gray-100 max-w-4xl">
-                                            {selectedActs.includes("Mobilise Asset Update") && (
-                                              <div>
-                                                <span className="font-bold text-gray-400 uppercase text-[8px] block">Mobilise Qty</span>
-                                                <span className="font-bold text-indigo-700">{mobiliseCount} units</span>
-                                              </div>
-                                            )}
-                                            {selectedActs.includes("Calibration") && (
-                                              <div>
-                                                <span className="font-bold text-gray-400 uppercase text-[8px] block">Calibration Qty</span>
-                                                <span className="font-bold text-purple-700">{calibrationCount} units</span>
-                                              </div>
-                                            )}
-                                            {selectedActs.includes("Other") && activityOtherDesc && (
-                                              <div className="flex-1">
-                                                <span className="font-bold text-gray-400 uppercase text-[8px] block">Other Activity Description</span>
-                                                <span className="italic text-gray-700">{activityOtherDesc}</span>
-                                              </div>
-                                            )}
-                                          </div>
-                                        </div>
-                                      </td>
-                                    </tr>
-                                  )}
-                                </React.Fragment>
-                              );
-                            })}
-                          </tbody>
-                        </table>
-                      </div>
-
-                      {/* Mobile View Card List */}
-                      <div className="block lg:hidden space-y-3 p-3 bg-gray-50/30">
-                        {claimDetails.itineraries.map((leg: any, idx: number) => {
-                          const travelCost = leg.amount || 0;
-                          const subCost = leg.sub_amount || 0;
-                          const daCost = leg.da || 0;
-                          const hotelCost = leg.hotel || 0;
-                          const lpCost = leg.local_purchase || 0;
-                          const otherCost = leg.oth_amount || 0;
-
-                          const origTA = parseFloat(leg.original_amount ?? leg.amount ?? 0);
-                          const origSub = parseFloat(leg.original_sub_amount ?? leg.sub_amount ?? 0);
-                          const origDA = parseFloat(leg.original_da ?? leg.da ?? 0);
-
-                          const taDeducted = (origTA - travelCost) + (origSub - subCost);
-                          const daDeducted = origDA - daCost;
-
-                          const legTotal = travelCost + subCost + daCost + hotelCost + lpCost + otherCost;
-                          const origTotal = origTA + origSub + origDA + hotelCost + lpCost + otherCost;
-
-                          let actDetails: any = null;
-                          try {
-                            if (leg.activity_details) {
-                              actDetails = typeof leg.activity_details === "string" ? JSON.parse(leg.activity_details) : leg.activity_details;
-                            }
-                          } catch (e) {
-                            console.error("Error parsing activity details", e);
-                          }
-
-                          const callsList = actDetails?.calls_list || [];
-                          const pmsList = actDetails?.pms_list || [];
-                          const assetsList = actDetails?.assets_list || [];
-                          const selectedActs = actDetails?.selected_activities || leg.selected_activities || [];
-                          const mobiliseCount = parseInt(actDetails?.mobilise_asset_count || leg.mobilise_asset_count || "0") || 0;
-                          const calibrationCount = parseInt(actDetails?.calibration_count || leg.calibration_count || "0") || 0;
-                          const activityOtherDesc = actDetails?.activity_other_desc || leg.activity_other_desc || "";
-
-                          const hasActivities = selectedActs.length > 0 || callsList.length > 0 || pmsList.length > 0 || assetsList.length > 0;
-
-                          return (
-                            <div key={idx} className="bg-white border border-gray-200 rounded-lg p-3.5 space-y-3 shadow-xs">
-                              {/* Card Header */}
-                              <div className="flex justify-between items-center border-b border-gray-100 pb-2">
-                                <span className="font-extrabold text-blue-600 font-mono text-xs">Visit #{leg.leg}</span>
-                                <div className="flex flex-col items-end">
-                                  <span className="font-extrabold text-gray-900 text-sm">₹{legTotal.toLocaleString()}</span>
-                                  {origTotal > legTotal && (
-                                    <span className="text-[8px] font-bold text-rose-500 line-through">₹{origTotal.toLocaleString()}</span>
-                                  )}
-                                </div>
-                              </div>
-
-                              {/* Route & Mode */}
-                              <div className="space-y-1.5">
-                                <div>
-                                  <span className="text-[9px] text-gray-400 font-bold uppercase block">Route</span>
-                                  <span className="font-bold text-gray-800 text-[11px]">
-                                    {leg.from_district === leg.to_district ? leg.to_district : `${leg.from_district} → ${leg.to_district}`}
-                                  </span>
-                                  <span className="text-[10px] text-gray-500 block">
-                                    {leg.from || "Start"} → {leg.to || "End"}
-                                  </span>
-                                </div>
-
-                                <div className="flex flex-wrap gap-1.5 pt-0.5">
-                                  <span className="text-[9px] font-bold uppercase bg-blue-50 text-blue-700 px-1.5 py-0.5 rounded border border-blue-100">
-                                    {leg.mode}
-                                  </span>
-                                  {leg.sub_mode && (
-                                    <span className="text-[9px] font-bold uppercase bg-purple-50 text-purple-700 px-1.5 py-0.5 rounded border border-purple-100">
-                                      +{leg.sub_mode}
-                                    </span>
-                                  )}
-                                  {leg.km > 0 && (
-                                    <span className="text-[9px] font-bold uppercase bg-gray-50 text-gray-650 px-1.5 py-0.5 rounded border border-gray-200 font-mono">
-                                      {leg.km} KM
-                                    </span>
-                                  )}
-                                </div>
-                              </div>
-
-                              {/* Breakdown of costs */}
-                              <div className="grid grid-cols-2 gap-2.5 bg-gray-50/50 p-2.5 rounded-lg border border-gray-150 text-[10px] font-bold">
-                                <div>
-                                  <span className="text-gray-400 text-[8px] uppercase block">TA / Fare</span>
-                                  <span className="text-gray-700 font-mono">₹{(travelCost + subCost).toLocaleString()}</span>
-                                  {taDeducted > 0 && (
-                                    <span className="text-[8px] font-bold text-rose-500 line-through block">₹{(origTA + origSub).toLocaleString()}</span>
-                                  )}
-                                </div>
-                                <div>
-                                  <span className="text-gray-400 text-[8px] uppercase block">DA</span>
-                                  <span className="text-gray-700 font-mono">₹{daCost.toLocaleString()}</span>
-                                  {daDeducted > 0 && (
-                                    <span className="text-[8px] font-bold text-rose-500 line-through block">₹{origDA.toLocaleString()}</span>
-                                  )}
-                                </div>
-                                <div>
-                                  <span className="text-gray-400 text-[8px] uppercase block">Hotel</span>
-                                  <span className="text-gray-700 font-mono">₹{hotelCost.toLocaleString()}</span>
-                                </div>
-                                <div>
-                                  <span className="text-gray-400 text-[8px] uppercase block">Local Purc.</span>
-                                  <span className="text-gray-700 font-mono">₹{lpCost.toLocaleString()}</span>
-                                </div>
-                                {otherCost > 0 && (
-                                  <div className="col-span-2 border-t border-gray-100 pt-1.5 mt-0.5">
-                                    <span className="text-gray-400 text-[8px] uppercase block">Other/Misc (₹{otherCost.toLocaleString()})</span>
-                                    <span className="text-gray-655 block text-[9px] font-normal italic">{leg.oth_desc || "No description"}</span>
+                  {/* SVG compare chart */}
+                  {filteredTeamExpenses.length === 0 ? (
+                    <div className="py-8 text-center text-gray-400 text-[10px] font-semibold uppercase tracking-wider">
+                      No matching claims
+                    </div>
+                  ) : (
+                    <div className="space-y-2 border-t border-gray-100 pt-3">
+                      <Text type="secondary" className="text-[9px] font-extrabold uppercase block tracking-wider text-center">Zone Expenditures Comparison</Text>
+                      {(() => {
+                        const chartData = getTeamChartData();
+                        if (chartData.length === 0) return null;
+                        return (
+                          <>
+                            <div style={{ height: 140 }} className="relative flex justify-center items-center">
+                              <ResponsivePie
+                                data={chartData.map((c, i) => ({ id: c.name, label: c.name, value: c.amount, color: GALLERY_COLORS[i % GALLERY_COLORS.length] }))}
+                                margin={{ top: 5, right: 5, bottom: 5, left: 5 }}
+                                innerRadius={0.72}
+                                padAngle={3}
+                                colors={{ datum: 'data.color' }}
+                                borderWidth={2}
+                                borderColor="#ffffff"
+                                enableArcLinkLabels={false}
+                                enableArcLabels={false}
+                                tooltip={({ datum }) => (
+                                  <div className="bg-slate-900/95 backdrop-blur-md text-white border border-slate-800 shadow-2xl rounded-xl p-3 text-xs min-w-[120px] font-sans pointer-events-none z-50">
+                                    <p className="font-extrabold text-[10px] uppercase text-slate-400 tracking-wider mb-1.5">{datum.label}</p>
+                                    <div className="flex items-center justify-between gap-4">
+                                      <span className="flex items-center gap-1.5 text-slate-305">
+                                        <span className="w-2 h-2 rounded-full" style={{ backgroundColor: datum.color }} />
+                                        Amount:
+                                      </span>
+                                      <span className="font-mono font-bold text-white">₹{datum.value?.toLocaleString()}</span>
+                                    </div>
                                   </div>
                                 )}
+                              />
+                              <div className="absolute flex flex-col items-center justify-center pointer-events-none" style={{ top: '50%', left: '50%', transform: 'translate(-50%, -50%)' }}>
+                                <span className="text-[7px] text-gray-400 font-bold uppercase tracking-wider">Total Team</span>
+                                <span className="text-[11px] font-black text-slate-800 font-mono mt-0.5">
+                                  ₹{chartData.reduce((sum, item) => sum + item.amount, 0).toLocaleString()}
+                                </span>
                               </div>
-
-                              {/* Work Summary */}
-                              <div className="text-[10px] text-gray-500 bg-gray-50/50 px-2.5 py-1.5 rounded border border-gray-100 flex justify-between font-bold">
-                                <span>Work: {leg.ws_assigned||0}</span>
-                                <span className="text-green-600">Done: {leg.ws_closed||0}</span>
-                                <span>PMS: {leg.ws_pms||0}</span>
-                                <span>Asset: {leg.ws_asset||0}</span>
-                              </div>
-
-                              {/* Activities & Sub logs */}
-                              {hasActivities && (
-                                <div className="border-t border-gray-100 pt-2.5 space-y-3">
-                                  <div className="flex flex-wrap gap-1.5">
-                                    {selectedActs.map((act: string, actIdx: number) => (
-                                      <span key={actIdx} className="px-1.5 py-0.5 rounded bg-gray-100 border border-gray-200 text-[8px] font-bold text-gray-700 uppercase">
-                                        {act}
-                                      </span>
-                                    ))}
-                                  </div>
-
-                                  {/* Calls card list */}
-                                  {selectedActs.includes("Calls") && callsList.length > 0 && (
-                                    <div className="space-y-2">
-                                      <div className="text-[9px] font-bold text-blue-700 uppercase">Support Calls Logs</div>
-                                      {callsList.map((c: any, cIdx: number) => (
-                                        <div key={cIdx} className="bg-blue-50/30 border border-blue-100 rounded-lg p-2.5 space-y-2 text-[10px] text-left">
-                                          <div className="flex justify-between items-start">
-                                            <div>
-                                              <span className="font-extrabold text-gray-805 block">{c.asset_details?.equipment_name || "—"}</span>
-                                              <span className="text-[9px] text-gray-500">{c.asset_details?.hospital_name || "—"}</span>
-                                            </div>
-                                            <span className="px-1.5 py-0.5 rounded font-extrabold text-[8px] uppercase bg-blue-50 text-blue-700 border border-blue-100">
-                                              {c.status || "Attend"}
-                                            </span>
-                                          </div>
-                                          <div className="grid grid-cols-2 gap-x-2 gap-y-1 text-[9px] text-gray-600 font-bold border-t border-blue-100/50 pt-1.5">
-                                            <div>District: <span className="text-gray-800">{c.asset_details?.district_name || "—"}</span></div>
-                                            <div>Model: <span className="text-gray-800">{c.asset_details?.model_name || "—"}</span></div>
-                                            <div>Barcode: <span className="text-gray-800 font-mono">{c.barcode}</span></div>
-                                            <div>Type: <span className="text-gray-800">{c.type || "Support Call"}</span></div>
-                                          </div>
-                                          {c.photo_url && (
-                                            <div className="pt-2">
-                                              <span className="text-gray-400 text-[8px] uppercase block mb-1">Attachment Photo</span>
-                                              <div className="relative rounded overflow-hidden border border-blue-100 bg-white">
-                                                <img
-                                                  src={`${API_BASE}${c.photo_url}`}
-                                                  alt="Call verification"
-                                                  className="w-full h-auto object-cover max-h-48 cursor-pointer"
-                                                  onClick={() => setLightboxImage(`${API_BASE}${c.photo_url}`)}
-                                                />
-                                                <button
-                                                  type="button"
-                                                  onClick={() => setLightboxImage(`${API_BASE}${c.photo_url}`)}
-                                                  className="absolute bottom-1 right-1 bg-black/60 text-white font-bold text-[8px] px-2 py-0.5 rounded cursor-pointer border-0"
-                                                >
-                                                  Full View
-                                                </button>
-                                              </div>
-                                            </div>
-                                          )}
-                                        </div>
-                                      ))}
-                                    </div>
-                                  )}
-
-                                  {/* PMS card list */}
-                                  {selectedActs.includes("PMS") && pmsList.length > 0 && (
-                                    <div className="space-y-2">
-                                      <div className="text-[9px] font-bold text-amber-700 uppercase">PMS Service Logs</div>
-                                      {pmsList.map((p: any, pIdx: number) => (
-                                        <div key={pIdx} className="bg-amber-50/30 border border-amber-100 rounded-lg p-2.5 space-y-2 text-[10px] text-left">
-                                          <div className="flex justify-between items-start">
-                                            <div>
-                                              <span className="font-extrabold text-gray-850 block">{p.asset_details?.equipment_name || "—"}</span>
-                                              <span className="text-[9px] text-gray-500">{p.asset_details?.hospital_name || "—"}</span>
-                                            </div>
-                                            <span className="px-1.5 py-0.5 rounded font-extrabold text-[8px] uppercase bg-green-50 text-green-700 border border-green-200">
-                                              {p.frequency || "3 month"}
-                                            </span>
-                                          </div>
-                                          <div className="grid grid-cols-2 gap-x-2 gap-y-1 text-[9px] text-gray-600 font-bold border-t border-amber-100/50 pt-1.5">
-                                            <div>District: <span className="text-gray-800">{p.asset_details?.district_name || "—"}</span></div>
-                                            <div>Model: <span className="text-gray-800">{p.asset_details?.model_name || "—"}</span></div>
-                                            <div>Barcode: <span className="text-gray-800 font-mono">{p.barcode}</span></div>
-                                            <div>Status: <span className="text-gray-800">{p.asset_details?.inventory_status || "Active"}</span></div>
-                                          </div>
-                                          {p.photo_url && (
-                                            <div className="pt-2">
-                                              <span className="text-gray-400 text-[8px] uppercase block mb-1">Attachment Photo</span>
-                                              <div className="relative rounded overflow-hidden border border-amber-100 bg-white">
-                                                <img
-                                                  src={`${API_BASE}${p.photo_url}`}
-                                                  alt="PMS verification"
-                                                  className="w-full h-auto object-cover max-h-48 cursor-pointer"
-                                                  onClick={() => setLightboxImage(`${API_BASE}${p.photo_url}`)}
-                                                />
-                                                <button
-                                                  type="button"
-                                                  onClick={() => setLightboxImage(`${API_BASE}${p.photo_url}`)}
-                                                  className="absolute bottom-1 right-1 bg-black/60 text-white font-bold text-[8px] px-2 py-0.5 rounded cursor-pointer border-0"
-                                                >
-                                                  Full View
-                                                </button>
-                                              </div>
-                                            </div>
-                                          )}
-                                        </div>
-                                      ))}
-                                    </div>
-                                  )}
-
-                                  {/* Asset Tagging list */}
-                                  {selectedActs.includes("Asset Tagging") && assetsList.length > 0 && (
-                                    <div className="space-y-2">
-                                      <div className="text-[9px] font-bold text-emerald-700 uppercase">Asset Tagging Records</div>
-                                      {assetsList.map((a: any, aIdx: number) => (
-                                        <div key={aIdx} className="bg-emerald-50/30 border border-emerald-100 rounded-lg p-2.5 flex justify-between items-center text-[10px] text-left">
-                                          <span className="font-extrabold text-gray-800">{a.equipment_name}</span>
-                                          <span className="px-2 py-0.5 rounded bg-white border border-emerald-200 text-gray-700 font-bold font-mono">Qty: {a.quantity}</span>
-                                        </div>
-                                      ))}
-                                    </div>
-                                  )}
-
-                                  {/* Quantities for Mobilise, Calibration or Other */}
-                                  {(selectedActs.includes("Mobilise Asset Update") || selectedActs.includes("Calibration") || (selectedActs.includes("Other") && activityOtherDesc)) && (
-                                    <div className="bg-gray-50/50 p-2.5 rounded-lg border border-gray-150 text-[10px] font-bold space-y-1">
-                                      {selectedActs.includes("Mobilise Asset Update") && (
-                                        <div className="flex justify-between">
-                                          <span className="text-gray-500">Mobilise Qty:</span>
-                                          <span className="text-indigo-700 font-extrabold">{mobiliseCount} units</span>
-                                        </div>
-                                      )}
-                                      {selectedActs.includes("Calibration") && (
-                                        <div className="flex justify-between">
-                                          <span className="text-gray-500">Calibration Qty:</span>
-                                          <span className="text-purple-700 font-extrabold">{calibrationCount} units</span>
-                                        </div>
-                                      )}
-                                      {selectedActs.includes("Other") && activityOtherDesc && (
-                                        <div className="border-t border-gray-100 pt-1.5 mt-1 font-normal text-left">
-                                          <span className="text-gray-400 text-[8px] uppercase block font-bold">Other Activity Description</span>
-                                          <span className="italic text-gray-700 block">{activityOtherDesc}</span>
-                                        </div>
-                                      )}
-                                    </div>
-                                  )}
+                            </div>
+                            <div className="flex flex-wrap justify-center gap-x-2.5 gap-y-1">
+                              {chartData.map((item, i) => (
+                                <div key={i} className="flex items-center gap-1 text-[8px] font-bold text-slate-505">
+                                  <span className="w-1.5 h-1.5 rounded-full shrink-0" style={{ backgroundColor: GALLERY_COLORS[i % GALLERY_COLORS.length] }} />
+                                  <span>{item.name}</span>
                                 </div>
-                              )}
+                              ))}
                             </div>
-                          );
-                        })}
-                      </div>
+                          </>
+                        );
+                      })()}
                     </div>
                   )}
+                </div>
+              )}
+            </Card>
 
-                  {/* Cumulative stats for Limit Requests */}
-                  {claimDetails.category === "Limit Request" && claimDetails.user_monthly_stats && (
-                    <div className="border border-gray-200 rounded overflow-hidden">
-                      <div className="px-3 py-2 bg-gray-50 border-b border-gray-200 flex items-center justify-between">
-                        <h4 className="text-[10px] font-bold uppercase text-gray-600 tracking-wider flex items-center gap-1.5">
-                          <Users className="w-3.5 h-3.5 text-blue-500" />
-                          Requester's Current Monthly Statistics
-                        </h4>
-                        <span className="text-[10px] text-gray-500 font-bold">Month: {claimDetails.month} {claimDetails.year}</span>
-                      </div>
-                      <div className="p-4 grid grid-cols-1 sm:grid-cols-3 gap-4 text-xs">
-                        <div className="p-3.5 bg-blue-50/50 border border-blue-100 rounded-lg">
-                          <span className="text-[9px] text-blue-500 font-extrabold uppercase tracking-wider block mb-1">Bike/Car Cumulative Distance</span>
-                          <div className="flex items-baseline gap-1.5 mt-1">
-                            <span className="text-xl font-black text-blue-700 font-mono">{(claimDetails.user_monthly_stats.total_bike_km || 0).toFixed(1)}</span>
-                            <span className="text-[10px] text-blue-600 font-extrabold">KM Used</span>
-                          </div>
-                          <span className="text-[10px] text-gray-500 block mt-2 font-semibold">
-                            Total Approved Limit: {(claimDetails.user_monthly_stats.max_km || 2000).toFixed(1)} KM
-                          </span>
-                        </div>
+            {/* Expense Calendar Tracker Section */}
+            <Card size="small" className="border border-gray-200 shadow-xs p-1">
+              <ExpenseCalendar 
+                expenses={activeTab === "my-claims" ? safeMyExpenses : filteredTeamExpenses} 
+                isTeamView={activeTab !== "my-claims"}
+                selectMonth={selectMonth}
+              />
+            </Card>
+          </Col>
+        </Row>
+      </div>
 
-                        <div className="p-3.5 bg-purple-50/50 border border-purple-100 rounded-lg">
-                          <span className="text-[9px] text-purple-500 font-extrabold uppercase tracking-wider block mb-1">Local Conveyance (Auto)</span>
-                          <div className="flex items-baseline gap-1.5 mt-1">
-                            <span className="text-xl font-black text-purple-700 font-mono">₹{(claimDetails.user_monthly_stats.total_auto || 0).toLocaleString()}</span>
-                            <span className="text-[10px] text-purple-600 font-extrabold">Spent</span>
-                          </div>
-                          <span className="text-[10px] text-gray-500 block mt-2 font-semibold">
-                            Total Approved Limit: ₹{(claimDetails.user_monthly_stats.max_auto || 1000).toLocaleString()}
-                          </span>
-                        </div>
-
-                        <div className="p-3.5 bg-emerald-50/50 border border-emerald-100 rounded-lg">
-                          <span className="text-[9px] text-emerald-500 font-extrabold uppercase tracking-wider block mb-1">Total Verified Field Work</span>
-                          <div className="grid grid-cols-2 gap-x-2 gap-y-1 mt-2 text-[10px] text-gray-600 font-bold">
-                            <div>Calls: <span className="text-emerald-700 font-mono">{claimDetails.user_monthly_stats.calls_completed || 0}</span></div>
-                            <div>PMS: <span className="text-emerald-700 font-mono">{claimDetails.user_monthly_stats.pms_count || 0}</span></div>
-                            <div>Tagging: <span className="text-emerald-700 font-mono">{claimDetails.user_monthly_stats.asset_tagging || 0}</span></div>
-                            <div>Calibration: <span className="text-emerald-700 font-mono">{claimDetails.user_monthly_stats.calibration_count || 0}</span></div>
-                            <div className="col-span-2">Mobilise Verif: <span className="text-emerald-700 font-mono">{claimDetails.user_monthly_stats.mobilise_count || 0}</span></div>
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-                  )}
-
-                  {/* Attachments */}
-                  {getAttachmentsArray(claimDetails.attachments).length > 0 && (
-                    <div className="border border-gray-200 rounded overflow-hidden">
-                      <div className="px-3 py-2 bg-gray-50 border-b border-gray-200">
-                        <h4 className="text-[10px] font-bold uppercase text-gray-600 tracking-wider">Attachments / Receipts</h4>
-                      </div>
-                      <div className="p-3 flex flex-wrap gap-2">
-                        {getAttachmentsArray(claimDetails.attachments).map((url: string, attIdx: number) => {
-                          const filename = url.split("/").pop() || "Receipt";
-                          let cleanType = "Receipt";
-                          if (url.includes("_Bike_")) cleanType = "Bike Fuel";
-                          else if (url.includes("_Car_")) cleanType = "Car Fuel";
-                          else if (url.includes("_Auto_")) cleanType = "Auto Fare";
-                          else if (url.includes("_Bus_")) cleanType = "Bus Ticket";
-                          else if (url.includes("_Train_")) cleanType = "Train Ticket";
-                          else if (url.includes("_Hotel_")) cleanType = "Hotel Invoice";
-                          else if (url.includes("_Communication_Mail_")) cleanType = "Approval Mail";
-                          else if (url.includes("_Other_Expense_")) cleanType = "Purchase Bill";
-                          const fullUrl = url.startsWith("http") ? url : `${API_BASE}${url}`;
-                          return (
-                            <div key={attIdx} className="inline-flex items-center gap-2 p-2 bg-gray-50 border border-gray-200 rounded text-xs">
-                              <span className="font-bold text-gray-700">{cleanType}</span>
-                              <button type="button" onClick={() => setLightboxImage(fullUrl)} className="text-blue-600 hover:text-blue-800 font-bold border-0 bg-transparent cursor-pointer text-[10px] underline">Preview</button>
-                              <a href={fullUrl} download={filename} target="_blank" rel="noopener noreferrer" className="text-green-600 hover:text-green-800 font-bold text-[10px] underline">Download</a>
-                            </div>
-                          );
-                        })}
-                      </div>
-                    </div>
-                  )}
-
-                  {/* Approval Logs - Simple Table */}
-                  {claimDetails.approvals && claimDetails.approvals.length > 0 && (
-                    <div className="border border-gray-200 rounded overflow-hidden">
-                      <div className="px-3 py-2 bg-gray-50 border-b border-gray-200">
-                        <h4 className="text-[10px] font-bold uppercase text-gray-600 tracking-wider">Approval Review History</h4>
-                      </div>
-                      <div className="overflow-x-auto">
-                        <table className="table-lte">
-                          <thead>
-                            <tr className="border-b border-gray-200 text-[9px] uppercase font-bold tracking-wider text-gray-400 bg-gray-50">
-                              <th className="py-2 px-3 w-12">Level</th>
-                              <th className="py-2 px-3">Reviewer</th>
-                              <th className="py-2 px-3">Role</th>
-                              <th className="py-2 px-3">Status</th>
-                              <th className="py-2 px-3">Comments</th>
-                              <th className="py-2 px-3 text-right">Date</th>
-                            </tr>
-                          </thead>
-                          <tbody className="divide-y divide-gray-100">
-                            {claimDetails.approvals.map((app: any, appIdx: number) => {
-                              const statusClass = app.status === "approved" ? "bg-green-50 border-green-200 text-green-700" 
-                                : app.status === "rejected" ? "bg-red-50 border-red-200 text-red-700"
-                                : app.status === "pending" ? "bg-amber-50 border-amber-200 text-amber-700"
-                                : "bg-gray-50 border-gray-200 text-gray-500";
-                              return (
-                                <tr key={appIdx} className="hover:bg-gray-50">
-                                  <td className="py-2.5 px-3 font-mono font-bold text-gray-500">L{app.level_number}</td>
-                                  <td className="py-2.5 px-3">
-                                    <span className="font-bold text-gray-800">{app.approver_name}</span>
-                                    <span className="text-[9px] text-gray-400 font-mono block">{app.approver_code}</span>
-                                  </td>
-                                  <td className="py-2.5 px-3 text-gray-500">{app.approver_role || "Reviewer"}</td>
-                                  <td className="py-2.5 px-3">
-                                    <span className={`inline-flex items-center px-2 py-0.5 rounded border text-[9px] font-bold uppercase tracking-wider ${statusClass}`}>{app.status}</span>
-                                  </td>
-                                  <td className="py-2.5 px-3 text-gray-600 italic whitespace-normal break-words min-w-[150px] max-w-[250px]" title={app.comments || ""}>{app.comments || "—"}</td>
-                                  <td className="py-2.5 px-3 text-right text-gray-500 font-mono text-[10px]">
-                                    {app.status !== "waiting" && app.status !== "pending" && app.status !== "cancelled" ? formatDateTime(app.updated_at) : "—"}
-                                  </td>
-                                </tr>
-                              );
-                            })}
-                          </tbody>
-                        </table>
-                      </div>
-                    </div>
-                  )}
-
-                  {/* Detailed Edit Logs & Change History */}
-                  {claimDetails.edit_history && claimDetails.edit_history.length > 0 && (
-                    <div className="border border-amber-200 rounded overflow-hidden mt-4 text-left">
-                      <div className="px-3 py-2 bg-amber-50/50 border-b border-amber-200">
-                        <h4 className="text-[10px] font-bold uppercase text-amber-800 tracking-wider">Adjustment & Edit Log History</h4>
-                      </div>
-                      <div className="overflow-x-auto">
-                        <table className="table-lte">
-                          <thead>
-                            <tr className="border-b border-amber-200 text-[9px] uppercase font-bold tracking-wider text-amber-700 bg-amber-50/20">
-                              <th className="py-2 px-3 w-12">Leg</th>
-                              <th className="py-2 px-3">Field Edited</th>
-                              <th className="py-2 px-3">Original Value</th>
-                              <th className="py-2 px-3">Updated Value</th>
-                              <th className="py-2 px-3">Reason / Remark</th>
-                              <th className="py-2 px-3">Edited By</th>
-                              <th className="py-2 px-3 text-right">Date</th>
-                            </tr>
-                          </thead>
-                          <tbody className="divide-y divide-amber-100">
-                            {claimDetails.edit_history.map((log: any, logIdx: number) => {
-                              const cleanField = log.field_name === "travel_amount" ? "Travel Amount"
-                                : log.field_name === "sub_amount" ? "Local Conveyance"
-                                : log.field_name === "hotel_amount" ? "Hotel stay"
-                                : log.field_name === "other_amount" ? "Other / Misc"
-                                : log.field_name === "distance_km" ? "Distance KM"
-                                : log.field_name === "da_amount" ? "DA Amount"
-                                : log.field_name === "local_purchase" ? "Local Purchase"
-                                : log.field_name;
-                              return (
-                                <tr key={logIdx} className="hover:bg-amber-50/10 text-slate-700 bg-white">
-                                  <td className="py-2.5 px-3 font-mono font-bold text-gray-500">Facility Visit {log.leg_number}</td>
-                                  <td className="py-2.5 px-3 font-semibold text-gray-800">{cleanField}</td>
-                                  <td className="py-2.5 px-3 font-mono text-gray-500">{log.field_name === "distance_km" ? `${log.old_value} KM` : `₹${parseFloat(log.old_value || "0").toLocaleString()}`}</td>
-                                  <td className="py-2.5 px-3 font-mono font-bold text-blue-600">{log.field_name === "distance_km" ? `${log.new_value} KM` : `₹${parseFloat(log.new_value || "0").toLocaleString()}`}</td>
-                                  <td className="py-2.5 px-3 italic text-gray-600 whitespace-normal break-words min-w-[150px] max-w-[250px]" title={log.comment}>{log.comment || "—"}</td>
-                                  <td className="py-2.5 px-3 font-semibold text-slate-800">
-                                    {log.editor_name} <span className="text-[8px] text-amber-600 font-bold block">{log.editor_role}</span>
-                                  </td>
-                                  <td className="py-2.5 px-3 text-right text-gray-500 font-mono text-[10px]">{formatDateTime(log.created_at)}</td>
-                                </tr>
-                              );
-                            })}
-                          </tbody>
-                        </table>
-                      </div>
-                    </div>
-                  )}
-
-                  {/* Approver Decision Center */}
-                  {pendingApprovalStep && (
-                    <div className="p-3 bg-amber-50 border border-amber-200 rounded text-xs space-y-2">
-                      <div className="font-bold text-amber-800 uppercase tracking-wide flex items-center gap-1">
-                        <ShieldCheck className="w-4 h-4 text-amber-600" />
-                        <span>Approver Action Center</span>
-                      </div>
-                      <div className="space-y-1">
-                        <label className="text-[9px] font-bold text-gray-600 uppercase block">
-                          Remarks / Comments <span className="text-red-500 font-bold">* Required for Rejection</span>
-                        </label>
-                        <textarea
-                          value={comments}
-                          onChange={(e) => setComments(e.target.value)}
-                          placeholder="Enter your review remarks or rejection reason..."
-                          className="w-full text-xs p-2 border border-gray-300 rounded focus:outline-none focus:border-blue-500 font-sans text-gray-800 bg-white"
-                          rows={2}
-                        />
-                      </div>
-                      <div className="flex gap-2">
-                        <button
-                          type="button"
-                          disabled={actionLoading}
-                          onClick={handleApprove}
-                          className="flex-1 py-1.5 bg-emerald-600 hover:bg-emerald-700 disabled:opacity-50 text-white rounded text-xs font-bold transition-all flex items-center justify-center gap-1.5 cursor-pointer border-0"
-                        >
-                          {actionLoading ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Check className="w-3.5 h-3.5" />}
-                          Approve
-                        </button>
-                        <button
-                          type="button"
-                          disabled={actionLoading}
-                          onClick={handleReject}
-                          className="flex-1 py-1.5 bg-rose-600 hover:bg-rose-700 disabled:opacity-50 text-white rounded text-xs font-bold transition-all flex items-center justify-center gap-1.5 cursor-pointer border-0"
-                        >
-                          {actionLoading ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <X className="w-3.5 h-3.5" />}
-                          Reject
-                        </button>
-                      </div>
-                    </div>
-                  )}
+      {/* ================= CLAIM DETAILS POPUP MODAL ================= */}
+      <Modal
+        title={
+          <Title level={5} style={{ margin: 0 }} className="flex items-center gap-2 text-gray-805">
+            <Layers className="w-4 h-4 text-indigo-650" />
+            <span>Claim Details {claimDetails ? `— ${claimDetails.expense_code}` : ""}</span>
+          </Title>
+        }
+        open={showDetailsModal}
+        onCancel={() => { setShowDetailsModal(false); setClaimDetails(null); }}
+        width={1000}
+        footer={[
+          <div className="flex justify-between items-center w-full" key="claim-details-footer">
+            <div className="flex gap-2">
+              {claimDetails && (claimDetails.submitter_code === user.user_id || claimDetails.user_id === user.id) && ["draft", "submitted", "returned_to_draft"].includes(claimDetails.status?.toLowerCase()) && (
+                <>
+                  <Button
+                    type="primary"
+                    onClick={() => navigate(`/submit-expense?edit=${claimDetails.id}`)}
+                    className="bg-amber-500 hover:bg-amber-600 border-amber-655"
+                  >
+                    ✏️ Edit
+                  </Button>
+                  <Button
+                    danger
+                    onClick={() => handleDeleteClaim(claimDetails.id)}
+                  >
+                    🗑️ Delete
+                  </Button>
                 </>
               )}
             </div>
+            <Button onClick={() => { setShowDetailsModal(false); setClaimDetails(null); }}>
+              Close
+            </Button>
+          </div>
+        ]}
+        bodyStyle={{ maxHeight: "70vh", overflowY: "auto", padding: "12px" }}
+      >
+        {!claimDetails ? (
+          <Loader message="Loading claim details..." />
+        ) : (
+          <div className="space-y-4 text-xs">
+            {/* Summary Info Cards */}
+            <Row gutter={[8, 8]}>
+              <Col xs={12} sm={6}>
+                <div className="p-2.5 bg-gray-50 border border-gray-200 rounded">
+                  <span className="text-[8px] text-gray-400 font-bold uppercase block">Submitted By</span>
+                  <span className="font-bold text-gray-850 block mt-0.5 text-xs">{claimDetails.submitter_name || user?.name}</span>
+                  <span className="text-[9px] text-gray-550 font-mono block">{claimDetails.submitter_code || user?.user_id}</span>
+                </div>
+              </Col>
+              <Col xs={12} sm={6}>
+                <div className="p-2.5 bg-gray-50 border border-gray-200 rounded">
+                  <span className="text-[8px] text-gray-400 font-bold uppercase block">Travel Date</span>
+                  <span className="font-bold text-gray-850 block mt-0.5 text-xs">{claimDetails.date}</span>
+                  <span className="text-[9px] text-gray-550 block">{claimDetails.month} {claimDetails.year}</span>
+                </div>
+              </Col>
+              <Col xs={12} sm={6}>
+                <div className="p-2.5 bg-gray-50 border border-gray-200 rounded">
+                  <span className="text-[8px] text-gray-400 font-bold uppercase block">Submitted At</span>
+                  <span className="font-bold text-gray-850 block mt-0.5 text-xs">{formatDateTime(claimDetails.created_at)}</span>
+                </div>
+              </Col>
+              <Col xs={12} sm={6}>
+                <div className="p-2.5 bg-gray-50 border border-gray-200 rounded">
+                  <span className="text-[8px] text-gray-400 font-bold uppercase block">Status</span>
+                  <span className={`inline-flex items-center px-2 py-0.5 rounded border text-[8px] font-bold uppercase tracking-wider mt-1 ${getStatusBadgeClass(claimDetails.status)}`}>
+                    {getStatusLabel(claimDetails.status)}
+                  </span>
+                </div>
+              </Col>
+            </Row>
 
-            {/* Modal Footer */}
-            <div className="px-4 py-3 border-t border-gray-200 bg-gray-50 flex items-center justify-between shrink-0">
-              <div className="flex gap-2">
-                {claimDetails && (claimDetails.submitter_code === user.user_id || claimDetails.user_id === user.id) && ["draft", "submitted", "returned_to_draft"].includes(claimDetails.status?.toLowerCase()) && (
+            {claimDetails.original_amount > claimDetails.amount && (
+              <Alert
+                message={<strong>Policy Deductions Applied</strong>}
+                description={`A total deduction of ₹ ${(claimDetails.original_amount - claimDetails.amount).toFixed(0)} was applied to this claim in accordance with the base location policy.`}
+                type="warning"
+                showIcon
+                className="text-xs mb-2"
+              />
+            )}
+
+            {/* Purpose & Total Banner */}
+            <div className="flex items-center justify-between p-3 bg-blue-50/50 border border-blue-200 rounded text-xs">
+              <div>
+                <span className="text-[9px] text-gray-400 font-bold uppercase block">Purpose:</span>
+                <span className="font-semibold text-gray-805 text-xs">{claimDetails.purpose || claimDetails.description || "Field visits"}</span>
+              </div>
+              <div className="text-right">
+                {claimDetails.category === "Limit Request" ? (
+                  <div className="space-y-0.5">
+                    <span className="text-[8px] text-gray-455 font-bold uppercase block">Requested Limit</span>
+                    <span className="text-xs font-bold text-gray-655 font-mono">
+                      {claimDetails.travel_mode === "KM" ? `${claimDetails.requested_value || claimDetails.total_km} KM` : `₹${(claimDetails.requested_value || claimDetails.amount).toLocaleString()}`}
+                    </span>
+                    {claimDetails.status.toLowerCase() === "approved" && (
+                      <div className="mt-1">
+                        <span className="text-[8px] text-emerald-650 font-black uppercase block">Approved Limit</span>
+                        <span className="text-xs font-black text-emerald-705 font-mono">
+                          {claimDetails.travel_mode === "KM" ? `${claimDetails.approved_value ?? (claimDetails.requested_value || claimDetails.total_km)} KM` : `₹${(claimDetails.approved_value ?? (claimDetails.requested_value || claimDetails.amount)).toLocaleString()}`}
+                        </span>
+                      </div>
+                    )}
+                  </div>
+                ) : (
                   <>
-                    <button
-                      type="button"
-                      onClick={() => navigate(`/submit-expense?edit=${claimDetails.id}`)}
-                      className="px-3 py-1.5 bg-amber-500 hover:bg-amber-600 text-white rounded text-xs font-bold transition-all cursor-pointer border-0 flex items-center gap-1"
-                    >
-                      ✏️ Edit
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => handleDeleteClaim(claimDetails.id)}
-                      className="px-3 py-1.5 bg-rose-600 hover:bg-rose-700 text-white rounded text-xs font-bold transition-all cursor-pointer border-0 flex items-center gap-1 animate-none"
-                    >
-                      🗑️ Delete
-                    </button>
+                    <span className="text-[8px] text-gray-455 font-bold uppercase block">Total Reimbursement</span>
+                    <span className="text-base font-black text-indigo-700 font-mono">
+                      ₹{claimDetails.amount.toLocaleString()}
+                    </span>
                   </>
                 )}
               </div>
-              <button
-                type="button"
-                onClick={() => { setShowDetailsModal(false); setClaimDetails(null); }}
-                className="px-4 py-1.5 bg-gray-200 hover:bg-gray-300 text-gray-700 rounded text-xs font-bold transition-all cursor-pointer border-0"
-              >
-                Close
-              </button>
             </div>
 
-          </div>
-        </div>
-      )}
-
-      {/* ================= STATS CLAIMS POPUP MODAL ================= */}
-      {showStatsModal && (
-        <div className="modal-lte-overlay">
-          <div className="modal-lte-content max-w-4xl max-h-[85vh] flex flex-col">
-            
-            {/* Modal Header */}
-            <div className="px-5 py-4 border-b border-gray-200 bg-gradient-to-r from-slate-50 to-gray-100 flex items-center justify-between shrink-0">
-              <div className="flex items-center gap-2">
-                <FileSpreadsheet className="w-5 h-5 text-blue-600" />
-                <h3 className="text-sm font-extrabold uppercase tracking-wider text-gray-800">
-                  {statsModalType} Claims ({statsModalClaims.length})
-                </h3>
-              </div>
-              <button 
-                onClick={() => { setShowStatsModal(false); setStatsModalClaims([]); }}
-                className="text-red-600 hover:text-red-800 border-0 bg-transparent text-lg font-black cursor-pointer transition-colors"
-              >
-                ✕
-              </button>
-            </div>
-
-            {/* Modal Content */}
-            <div className="flex-1 overflow-y-auto p-5">
-              {statsModalClaims.length === 0 ? (
-                <div className="py-16 text-center text-gray-400 text-xs">
-                  <p className="font-bold">No claims found in this category.</p>
+            {/* Visit Details Legs Table */}
+            {claimDetails.category !== "Limit Request" && claimDetails.itineraries && claimDetails.itineraries.length > 0 && (
+              <div className="border border-gray-200 rounded overflow-hidden">
+                <div className="px-3 py-2 bg-gray-50 border-b border-gray-200">
+                  <h4 className="text-[10px] font-bold uppercase text-gray-600 tracking-wider">Visit Details</h4>
                 </div>
-              ) : (
-                <div className="overflow-x-auto">
+                
+                {/* Desktop View Legs Table */}
+                <div className="hidden lg:block overflow-x-auto">
                   <table className="table-lte">
                     <thead>
-                      <tr className="border-b border-gray-200 text-[9px] uppercase font-bold tracking-wider text-gray-400 bg-gray-50/50">
-                        {activeTab === "team-claims" && <th className="py-2.5 px-3">Employee</th>}
-                        <th className="py-2.5 px-3">Claim ID</th>
-                        <th className="py-2.5 px-3">Date</th>
-                        <th className="py-2.5 px-3">Purpose</th>
-                        <th className="py-2.5 px-3">Travel Mode</th>
-                        <th className="py-2.5 px-3">Distance</th>
-                        <th className="py-2.5 px-3">Auto Fare</th>
-                        <th className="py-2.5 px-3">Amount</th>
-                        <th className="py-2.5 px-3 text-right">Status</th>
+                      <tr className="border-b border-gray-200 text-[9px] uppercase font-bold tracking-wider text-gray-455 bg-gray-50">
+                        <th className="py-2 px-3 text-center w-10">#</th>
+                        <th className="py-2 px-3">Route</th>
+                        <th className="py-2 px-3">Mode</th>
+                        <th className="py-2 px-3 text-right">KM</th>
+                        <th className="py-2 px-3 text-right">TA / Fare</th>
+                        <th className="py-2 px-3 text-right">DA</th>
+                        <th className="py-2 px-3 text-right">Hotel</th>
+                        <th className="py-2 px-3 text-right">Local Purchase</th>
+                        <th className="py-2 px-3">Other / Misc</th>
+                        <th className="py-2 px-3">Metrics</th>
+                        <th className="py-2 px-3 text-right font-bold">Total</th>
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-gray-100">
-                      {statsModalClaims.map((exp) => (
-                        <tr 
-                          key={exp.id} 
-                          onClick={() => {
-                            setShowStatsModal(false);
-                            handleOpenClaimDetails(exp.id);
-                          }}
-                          className="hover:bg-blue-50/20 transition-colors cursor-pointer"
-                        >
-                          {activeTab === "team-claims" && (
-                            <td className="py-3 px-3">
-                              <p className="font-bold leading-none submitter-name-text" style={{ color: '#0f172a' }}>{exp.submitter_name}</p>
-                              <span className="text-[8px] font-mono uppercase block mt-0.5 submitter-code-text" style={{ color: '#2563eb' }}>{exp.submitter_code}</span>
-                            </td>
-                          )}
-                          <td className="py-3 px-3 font-semibold font-mono text-blue-600 uppercase">{exp.expense_code}</td>
-                          <td className="py-3 px-3 text-slate-500">{exp.itinerary || exp.date}</td>
-                          <td className="py-3 px-3 font-semibold text-slate-800 truncate max-w-[150px]" title={exp.description || exp.purpose}>{exp.description || exp.purpose}</td>
-                          <td className="py-3 px-3">
-                            <span className="inline-block border border-blue-200 bg-blue-50 text-blue-700 font-bold px-1.5 py-0.5 rounded text-[8px] uppercase tracking-wider">
-                              {exp.travel_mode || exp.category}
-                            </span>
-                          </td>
-                          <td className="py-3 px-3 font-mono font-semibold text-slate-700">{exp.total_km ? `${exp.total_km.toFixed(1)} KM` : "—"}</td>
-                          <td className="py-3 px-3 font-mono font-semibold text-slate-700">{exp.total_auto ? `₹${exp.total_auto.toLocaleString()}` : "—"}</td>
-                          <td className="py-3 px-3 font-bold text-gray-900">₹{(exp.amount || 0).toLocaleString()}</td>
-                          <td className="py-3 px-3 text-right">
-                            <span className={`inline-flex items-center px-2 py-0.5 rounded border text-[9px] font-bold uppercase tracking-wider ${getStatusBadgeClass(exp.status)}`}>
-                              {getStatusLabel(exp.status)}
-                            </span>
-                          </td>
-                        </tr>
-                      ))}
+                      {claimDetails.itineraries.map((leg: any, idx: number) => {
+                        const travelCost = leg.amount || 0;
+                        const subCost = leg.sub_amount || 0;
+                        const daCost = leg.da || 0;
+                        const hotelCost = leg.hotel || 0;
+                        const lpCost = leg.local_purchase || 0;
+                        const otherCost = leg.oth_amount || 0;
+                        
+                        const origTA = parseFloat(leg.original_amount ?? leg.amount ?? 0);
+                        const origSub = parseFloat(leg.original_sub_amount ?? leg.sub_amount ?? 0);
+                        const origDA = parseFloat(leg.original_da ?? leg.da ?? 0);
+
+                        const taDeducted = (origTA - travelCost) + (origSub - subCost);
+                        const daDeducted = origDA - daCost;
+
+                        const legTotal = travelCost + subCost + daCost + hotelCost + lpCost + otherCost;
+                        const origTotal = origTA + origSub + origDA + hotelCost + lpCost + otherCost;
+
+                        let actDetails: any = null;
+                        try {
+                          if (leg.activity_details) {
+                            actDetails = typeof leg.activity_details === "string" ? JSON.parse(leg.activity_details) : leg.activity_details;
+                          }
+                        } catch (e) {
+                          console.error("Error parsing activity details", e);
+                        }
+
+                        const callsList = actDetails?.calls_list || [];
+                        const pmsList = actDetails?.pms_list || [];
+                        const assetsList = actDetails?.assets_list || [];
+                        const selectedActs = actDetails?.selected_activities || leg.selected_activities || [];
+                        const mobiliseCount = parseInt(actDetails?.mobilise_asset_count || leg.mobilise_asset_count || "0") || 0;
+                        const calibrationCount = parseInt(actDetails?.calibration_count || leg.calibration_count || "0") || 0;
+                        const activityOtherDesc = actDetails?.activity_other_desc || leg.activity_other_desc || "";
+
+                        const hasActivities = selectedActs.length > 0 || callsList.length > 0 || pmsList.length > 0 || assetsList.length > 0;
+
+                        return (
+                          <React.Fragment key={idx}>
+                            <tr className="hover:bg-gray-50 transition-colors text-xs">
+                              <td className="py-2.5 px-3 text-center font-bold text-gray-400">{leg.leg}</td>
+                              <td className="py-2.5 px-3">
+                                <span className="font-bold text-gray-805">{leg.from_district === leg.to_district ? leg.to_district : `${leg.from_district} → ${leg.to_district}`}</span>
+                                <span className="text-[9px] text-gray-455 block">{leg.from || "Start"} → {leg.to || "End"}</span>
+                              </td>
+                              <td className="py-2.5 px-3">
+                                <Tag color="blue" style={{ fontSize: "9px" }}>{leg.mode}</Tag>
+                                {leg.sub_mode && <Tag color="purple" style={{ fontSize: "9px" }} className="ml-0.5">+{leg.sub_mode}</Tag>}
+                              </td>
+                              <td className="py-2.5 px-3 text-right font-mono font-semibold text-gray-600">{leg.km || 0} KM</td>
+                              <td className="py-2.5 px-3 text-right font-mono font-semibold">
+                                <div className="flex flex-col items-end">
+                                  <span>₹{(travelCost + subCost).toLocaleString()}</span>
+                                  {taDeducted > 0 && (
+                                    <span className="text-[8px] font-bold text-rose-500 line-through" title="Claimed before policy deduction">
+                                      ₹{(origTA + origSub).toLocaleString()}
+                                    </span>
+                                  )}
+                                </div>
+                              </td>
+                              <td className="py-2.5 px-3 text-right font-mono font-semibold">
+                                <div className="flex flex-col items-end">
+                                  <span>₹{daCost.toLocaleString()}</span>
+                                  {daDeducted > 0 && (
+                                    <span className="text-[8px] font-bold text-rose-500 line-through" title="Claimed before policy deduction">
+                                      ₹{origDA.toLocaleString()}
+                                    </span>
+                                  )}
+                                </div>
+                              </td>
+                              <td className="py-2.5 px-3 text-right font-mono font-semibold">₹{hotelCost.toLocaleString()}</td>
+                              <td className="py-2.5 px-3 text-right font-mono font-semibold">₹{lpCost.toLocaleString()}</td>
+                              <td className="py-2.5 px-3">
+                                <span className="font-mono font-bold">₹{otherCost.toLocaleString()}</span>
+                                {leg.oth_desc && <span className="text-[9px] text-gray-400 block truncate max-w-[80px]" title={leg.oth_desc}>{leg.oth_desc}</span>}
+                              </td>
+                              <td className="py-2.5 px-3 text-[10px] text-gray-550">
+                                <span>W:{leg.ws_assigned||0}</span> <span className="text-green-600">D:{leg.ws_closed||0}</span> <span>P:{leg.ws_pms||0}</span> <span>A:{leg.ws_asset||0}</span>
+                              </td>
+                              <td className="py-2.5 px-3 text-right font-bold font-mono text-gray-900">
+                                <div className="flex flex-col items-end">
+                                  <span>₹{legTotal.toLocaleString()}</span>
+                                  {origTotal > legTotal && (
+                                    <span className="text-[8px] font-bold text-rose-500 line-through" title="Claimed before policy deduction">
+                                      ₹{origTotal.toLocaleString()}
+                                    </span>
+                                  )}
+                                </div>
+                              </td>
+                            </tr>
+
+                            {hasActivities && (
+                              <tr className="bg-slate-50/50 text-[11px] text-slate-700">
+                                <td colSpan={11} className="py-2 px-3 border-t border-gray-150">
+                                  <div className="flex flex-col gap-1.5 p-1 bg-white rounded border border-gray-100 shadow-xs">
+                                    <div className="flex flex-wrap gap-x-4 gap-y-1 font-bold text-[9.5px] uppercase tracking-wider text-slate-500">
+                                      {selectedActs.includes("pm") && <span>⚙️ PM Completed ({pmsList.length})</span>}
+                                      {selectedActs.includes("breakdown") && <span>🛠️ Calls Closed ({callsList.length})</span>}
+                                      {selectedActs.includes("asset_mobilise") && <span>📦 Asset Mobilised ({mobiliseCount})</span>}
+                                      {selectedActs.includes("calibration") && <span>📐 Calibration Done ({calibrationCount})</span>}
+                                      {selectedActs.includes("other") && <span>📝 Other: {activityOtherDesc}</span>}
+                                    </div>
+                                    
+                                    {pmsList.length > 0 && (
+                                      <div className="text-[10px] text-gray-600 bg-gray-50 p-1.5 rounded">
+                                        <span className="font-extrabold uppercase text-[8px] text-gray-400 block tracking-wider mb-0.5">PM Assets:</span>
+                                        <span>{pmsList.join(", ")}</span>
+                                      </div>
+                                    )}
+                                    {callsList.length > 0 && (
+                                      <div className="text-[10px] text-gray-600 bg-gray-50 p-1.5 rounded">
+                                        <span className="font-extrabold uppercase text-[8px] text-gray-400 block tracking-wider mb-0.5">Closed Tickets:</span>
+                                        <span>{callsList.join(", ")}</span>
+                                      </div>
+                                    )}
+                                    {assetsList.length > 0 && (
+                                      <div className="text-[10px] text-gray-600 bg-gray-50 p-1.5 rounded">
+                                        <span className="font-extrabold uppercase text-[8px] text-gray-400 block tracking-wider mb-0.5">Mobilised Assets:</span>
+                                        <span>{assetsList.join(", ")}</span>
+                                      </div>
+                                    )}
+                                  </div>
+                                </td>
+                              </tr>
+                            )}
+                          </React.Fragment>
+                        );
+                      })}
                     </tbody>
                   </table>
                 </div>
-              )}
-            </div>
 
-            {/* Modal Footer */}
-            <div className="px-5 py-4 border-t border-gray-200 bg-gray-50 flex items-center justify-end shrink-0">
-              <button
-                type="button"
-                onClick={() => { setShowStatsModal(false); setStatsModalClaims([]); }}
-                className="btn-lte-secondary px-6"
-              >
-                Close List
-              </button>
-            </div>
-
-          </div>
-        </div>
-      )}
-
-      {/* ================= RECEIPT IMAGE LIGHTBOX POPUP ================= */}
-      {lightboxImage && (
-        <div 
-          className="fixed inset-0 bg-black/90 flex items-center justify-center p-4 z-[99999] animate-fadeIn"
-          onClick={() => setLightboxImage(null)}
-        >
-          <div className="relative max-w-4xl max-h-[90vh] bg-transparent flex flex-col items-center justify-center">
-            <button
-              onClick={() => setLightboxImage(null)}
-              className="absolute -top-10 right-0 text-red-500 hover:text-red-700 text-xl font-black bg-transparent border-0 cursor-pointer"
-            >
-              ✕ Close Preview
-            </button>
-            {isConvertingHeic ? (
-              <div className="text-white flex flex-col items-center justify-center gap-3 p-8 rounded bg-slate-900/50 border border-slate-700/50 shadow-lg select-none pointer-events-auto" onClick={(e) => e.stopPropagation()}>
-                <Loader2 className="w-10 h-10 animate-spin text-blue-500" />
-                <span className="text-sm font-bold tracking-wide">Converting Apple HEIC image...</span>
+                {/* Mobile View Legs List */}
+                <div className="block lg:hidden space-y-2 p-2">
+                  {claimDetails.itineraries.map((leg: any, idx: number) => {
+                    const legTotal = (leg.amount || 0) + (leg.sub_amount || 0) + (leg.da || 0) + (leg.hotel || 0) + (leg.local_purchase || 0) + (leg.oth_amount || 0);
+                    return (
+                      <div key={idx} className="bg-white border border-gray-200 rounded p-2.5 space-y-2 text-xs">
+                        <div className="flex justify-between items-center pb-1.5 border-b border-gray-100">
+                          <span className="font-black text-gray-455 uppercase text-[9px]">Leg {leg.leg}</span>
+                          <Tag color="blue">{leg.mode}</Tag>
+                        </div>
+                        <div className="grid grid-cols-2 gap-1.5">
+                          <div>
+                            <span className="text-gray-400 text-[8px] font-bold uppercase block">Route</span>
+                            <span className="font-bold text-gray-800">{leg.from_district} → {leg.to_district}</span>
+                          </div>
+                          <div className="text-right">
+                            <span className="text-gray-400 text-[8px] font-bold uppercase block">Total</span>
+                            <span className="font-extrabold text-indigo-600">₹{legTotal.toLocaleString()}</span>
+                          </div>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
               </div>
-            ) : (
-              <img 
-                src={displayImageUrl || lightboxImage} 
-                alt="Receipt Invoice Lightbox" 
-                className="max-w-full max-h-[80vh] rounded shadow-2xl border border-white/10 object-contain select-none pointer-events-auto"
-                onClick={(e) => e.stopPropagation()}
-              />
+            )}
+
+            {/* Attachments Section */}
+            {claimDetails.category !== "Limit Request" && (
+              <div className="space-y-1.5">
+                <Text type="secondary" className="text-[9px] uppercase font-bold tracking-wider block">Receipt Invoices &amp; Attachments</Text>
+                {getAttachmentsArray(claimDetails.attachments).length === 0 ? (
+                  <Text type="secondary" className="italic text-xs block pl-1">No file attachments uploaded for this claim.</Text>
+                ) : (
+                  <div className="flex flex-wrap gap-2">
+                    {getAttachmentsArray(claimDetails.attachments).map((url: string, index: number) => {
+                      const filename = url.substring(url.lastIndexOf("/") + 1) || `Receipt-${index + 1}`;
+                      return (
+                        <Tag 
+                          key={index} 
+                          color="blue" 
+                          className="cursor-pointer font-medium hover:border-indigo-400 px-2 py-0.5 flex items-center gap-1.5"
+                          onClick={() => setLightboxImage(url.startsWith("http") ? url : `${API_BASE}${url}`)}
+                        >
+                          <Download size={10} className="inline mr-1" /> {filename}
+                        </Tag>
+                      );
+                    })}
+                  </div>
+                )}
+              </div>
+            )}
+
+            {/* Audit Log / History list */}
+            {claimDetails.logs && claimDetails.logs.length > 0 && (
+              <div className="border border-gray-200 rounded overflow-hidden">
+                <div className="px-3 py-2 bg-gray-50 border-b border-gray-200">
+                  <h4 className="text-[10px] font-bold uppercase text-gray-655 tracking-wider">Audit Log &amp; Workflow History</h4>
+                </div>
+                <div className="max-h-40 overflow-y-auto">
+                  <table className="table-lte">
+                    <thead>
+                      <tr className="border-b border-gray-200 text-[8.5px] uppercase font-bold tracking-wider text-gray-455 bg-gray-50">
+                        <th className="py-2 px-3">Field</th>
+                        <th className="py-2 px-3">Comment / Reason Remarks</th>
+                        <th className="py-2 px-3">Actor</th>
+                        <th className="py-2 px-3 text-right">Timestamp</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-gray-100 text-xs text-gray-700">
+                      {claimDetails.logs.map((log: any, logIdx: number) => {
+                        let cleanField = (log.field_name || "").replace(/_/g, " ").toUpperCase();
+                        if (cleanField === "STATUS") cleanField = "DECISION";
+                        return (
+                          <tr key={logIdx} className="hover:bg-gray-50 bg-white">
+                            <td className="py-2 px-3 font-semibold text-gray-655">{cleanField}</td>
+                            <td className="py-2 px-3 italic text-gray-600 max-w-[200px] break-words" title={log.comment}>{log.comment || "—"}</td>
+                            <td className="py-2 px-3">
+                              <span className="font-semibold block">{log.editor_name}</span>
+                              <span className="text-[8px] text-amber-600 font-bold block">{log.editor_role}</span>
+                            </td>
+                            <td className="py-2 px-3 text-right text-gray-500 font-mono text-[9px]">{formatDateTime(log.created_at)}</td>
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            )}
+
+            {/* Approver Decision Center */}
+            {pendingApprovalStep && (
+              <div className="p-3 bg-amber-50 border border-amber-250 rounded space-y-3">
+                <div className="font-bold text-amber-805 uppercase tracking-wide flex items-center gap-1.5 text-xs">
+                  <ShieldCheck className="w-4 h-4 text-amber-605 animate-pulse" />
+                  <span>Approver Decision Center</span>
+                </div>
+                <div className="space-y-1 text-xs">
+                  <label className="text-[9px] font-bold text-gray-550 uppercase block">
+                    Remarks / Decision Comments <span className="text-red-500 font-bold">* Required for Rejection</span>
+                  </label>
+                  <TextArea
+                    value={comments}
+                    onChange={(e: any) => setComments(e.target.value)}
+                    placeholder="Enter approval remarks or rejection comments reason..."
+                    rows={2}
+                    className="text-xs"
+                  />
+                </div>
+                <div className="flex gap-2">
+                  <Button
+                    type="primary"
+                    disabled={actionLoading}
+                    onClick={handleApprove}
+                    className="flex-1 bg-emerald-600 hover:bg-emerald-700 border-emerald-600 text-white font-bold"
+                  >
+                    Approve Claim
+                  </Button>
+                  <Button
+                    danger
+                    disabled={actionLoading}
+                    onClick={handleReject}
+                    className="flex-1 bg-rose-600 hover:bg-rose-700 border-rose-600 text-white font-bold"
+                  >
+                    Reject Claim
+                  </Button>
+                </div>
+              </div>
             )}
           </div>
-        </div>
-      )}
+        )}
+      </Modal>
 
+      {/* ================= STATS CLAIMS POPUP MODAL ================= */}
+      <Modal
+        title={
+          <Title level={5} style={{ margin: 0 }} className="flex items-center gap-2 text-gray-805">
+            <FileSpreadsheet className="w-4 h-4 text-indigo-650" />
+            <span>{statsModalType} Claims ({statsModalClaims.length})</span>
+          </Title>
+        }
+        open={showStatsModal}
+        onCancel={() => { setShowStatsModal(false); setStatsModalClaims([]); }}
+        width={950}
+        footer={[
+          <Button key="stats-close" onClick={() => { setShowStatsModal(false); setStatsModalClaims([]); }}>
+            Close List
+          </Button>
+        ]}
+        bodyStyle={{ maxHeight: "70vh", overflowY: "auto", padding: "12px" }}
+      >
+        {statsModalClaims.length === 0 ? (
+          <div className="py-12 text-center text-gray-455 text-xs">
+            <p className="font-bold">No claims found in this category.</p>
+          </div>
+        ) : (
+          <div className="overflow-x-auto">
+            <Table
+              dataSource={statsModalClaims}
+              rowKey="id"
+              pagination={{ pageSize: 15, size: "small" }}
+              size="small"
+              onRow={(record) => ({
+                onClick: () => {
+                  setShowStatsModal(false);
+                  handleOpenClaimDetails(record.id);
+                },
+                className: "cursor-pointer hover:bg-indigo-50/15"
+              })}
+              columns={[
+                ...(activeTab === "team-claims" ? [{
+                  title: "Employee",
+                  key: "employee",
+                  render: (_: any, record: any) => (
+                    <div>
+                      <Text strong className="text-gray-900 block leading-none">{record.submitter_name}</Text>
+                      <span className="text-[8px] font-mono uppercase block mt-0.5 text-blue-605 font-bold">{record.submitter_code}</span>
+                    </div>
+                  )
+                }] : []),
+                {
+                  title: "Claim ID",
+                  dataIndex: "expense_code",
+                  key: "expense_code",
+                  render: (text) => <Text className="font-mono font-bold text-indigo-600">{text}</Text>,
+                },
+                {
+                  title: "Date",
+                  dataIndex: "date",
+                  key: "date",
+                  render: (_, record) => record.itinerary || record.date,
+                },
+                {
+                  title: "Purpose",
+                  dataIndex: "description",
+                  key: "description",
+                  ellipsis: true,
+                  render: (text, record) => <Text className="font-semibold text-gray-750">{text || record.purpose || "—"}</Text>,
+                },
+                {
+                  title: "Travel Mode",
+                  dataIndex: "travel_mode",
+                  key: "travel_mode",
+                  render: (text, record) => <Tag color="blue">{text || record.category}</Tag>,
+                },
+                {
+                  title: "Distance",
+                  dataIndex: "total_km",
+                  key: "total_km",
+                  align: "right" as const,
+                  render: (val) => val ? `${val.toFixed(1)} KM` : "—",
+                },
+                {
+                  title: "Auto Fare",
+                  dataIndex: "total_auto",
+                  key: "total_auto",
+                  align: "right" as const,
+                  render: (val) => val ? `₹${val.toLocaleString()}` : "—",
+                },
+                {
+                  title: "Amount",
+                  dataIndex: "amount",
+                  key: "amount",
+                  align: "right" as const,
+                  render: (val) => <Text className="font-bold text-gray-900">₹{(val || 0).toLocaleString()}</Text>,
+                },
+                {
+                  title: "Status",
+                  dataIndex: "status",
+                  key: "status",
+                  align: "right" as const,
+                  render: (status) => (
+                    <span className={`inline-flex items-center px-2 py-0.5 rounded border text-[9px] font-bold uppercase tracking-wider ${getStatusBadgeClass(status)}`}>
+                      {getStatusLabel(status)}
+                    </span>
+                  ),
+                }
+              ]}
+            />
+          </div>
+        )}
+      </Modal>
+
+      {/* ================= RECEIPT IMAGE LIGHTBOX POPUP ================= */}
+      <Modal
+        open={!!lightboxImage}
+        footer={null}
+        onCancel={() => setLightboxImage(null)}
+        width={750}
+        bodyStyle={{ padding: 16, textAlign: "center", background: "#111827" }}
+        className="lightbox-modal"
+        centered
+      >
+        {isConvertingHeic ? (
+          <div className="text-white flex flex-col items-center justify-center gap-3 p-8">
+            <Loader2 className="w-8 h-8 animate-spin text-blue-500" />
+            <span className="text-xs font-bold tracking-wide">Converting Apple HEIC image...</span>
+          </div>
+        ) : (
+          <img 
+            src={displayImageUrl || lightboxImage || undefined} 
+            alt="Receipt Invoice Lightbox" 
+            className="max-w-full max-h-[75vh] rounded object-contain mx-auto"
+          />
+        )}
+      </Modal>
     </>
   );
 }
