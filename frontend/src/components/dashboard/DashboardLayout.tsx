@@ -22,7 +22,6 @@ import {
   UploadCloud,
   ShieldAlert,
   Package,
-  Plus,
   Activity,
   Server,
   Database,
