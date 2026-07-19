@@ -1464,34 +1464,11 @@ span.submitter-code-text {
   width: 100% !important;
 }
 
-/* ================= ANTD MODAL SCROLL FIX ================= */
-/*
- * Root cause of scroll-lock: touch-action:none on .ant-modal-wrap discards
- * ALL touch events at the overlay level, preventing pan-y on the modal body
- * from ever firing — this breaks scroll in ALL modals.
- *
- * Fix: use overscroll-behavior:contain ONLY to stop background page bleed.
- * Each modal's bodyStyle sets its own maxHeight + overflowY:auto + touchAction:pan-y.
- * That is sufficient for scroll to work on iOS/Android.
- */
-
-.ant-modal-wrap {
-  overscroll-behavior: contain;    /* Prevent background page scroll bleed */
-}
-
-.ant-modal-content {
-  overflow: hidden;
-}
-
 /* Mobile */
 @media (max-width: 767px) {
   .ant-modal {
     max-width: 96vw !important;
     margin: 8px auto !important;
-  }
-
-  .ant-modal-wrap {
-    overscroll-behavior: contain;
   }
 
   .ant-modal-footer {
@@ -1536,4 +1513,36 @@ span.submitter-code-text {
   .ant-table-tbody > tr > td {
     padding: 8px 10px !important;
   }
+}
+
+/* ================= ISOLATED MODAL SCROLL FIX (My Claims + Approval Center Modals Only) ================= */
+/* Restrict wrapper overlay locking and body scroll optimization to My Claims and Approval Center wraps only.
+   This guarantees that other modals (like Team Claims Stats modal) are completely unaffected. */
+
+.my-claims-modal-wrap,
+.approval-review-modal-wrap {
+  overflow: hidden !important;
+  overscroll-behavior: contain !important;
+  touch-action: none !important;     /* Block background touches on specific overlays only */
+}
+
+.my-claims-modal-wrap .ant-modal-body,
+.approval-review-modal-wrap .ant-modal-body {
+  overflow-y: auto !important;
+  overflow-x: hidden !important;
+  -webkit-overflow-scrolling: touch !important;
+  overscroll-behavior-y: contain !important;
+  touch-action: pan-y !important;    /* Allow vertical gestures inside modal body */
+  will-change: scroll-position !important;
+}
+
+.my-claims-modal-wrap .ant-modal-content,
+.approval-review-modal-wrap .ant-modal-content {
+  touch-action: pan-y !important;
+  overflow: hidden !important;
+}
+
+.my-claims-modal-wrap .ant-modal,
+.approval-review-modal-wrap .ant-modal {
+  touch-action: pan-y !important;
 }

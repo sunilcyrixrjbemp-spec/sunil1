@@ -1596,6 +1596,7 @@ export default function HomePage() {
       {/* ================= CLAIM DETAILS POPUP MODAL ================= */}
       <Modal
         className="rounded-none-modal"
+        wrapClassName="my-claims-modal-wrap"
         title={
           <Title level={5} style={{ margin: 0 }} className="flex items-center gap-2 text-gray-805">
             <Layers className="w-4 h-4 text-indigo-650" />
@@ -2660,10 +2661,7 @@ export default function HomePage() {
           maxHeight: "70vh", 
           overflowY: "auto", 
           padding: "12px",
-          background: "#ffffff",
-          WebkitOverflowScrolling: "touch",
-          overscrollBehaviorY: "contain",
-          touchAction: "pan-y"
+          background: "#ffffff"
         }}
       >
         {statsModalClaims.length === 0 ? (

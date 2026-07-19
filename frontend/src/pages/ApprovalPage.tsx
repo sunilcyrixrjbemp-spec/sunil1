@@ -1356,6 +1356,7 @@ export default function ApprovalPage() {
         width={950}
         style={{ maxWidth: "96vw", top: 16 }}
         className="approval-review-modal"
+        wrapClassName="approval-review-modal-wrap"
         destroyOnClose
         bodyStyle={{
           maxHeight: "70vh",
