@@ -30,7 +30,8 @@ import {
   Activity,
   Server,
   Database,
-  TrendingUp
+  TrendingUp,
+  Bell
 } from "lucide-react";
 
 interface MenuItem {
@@ -492,29 +493,70 @@ export default function DashboardLayout() {
       {/* MAIN CONTAINER WORKSPACE */}
       <div className="flex-1 flex flex-col min-w-0 min-h-0">
         
-        {/* TOP NAVBAR - ADMINLTE WHITE NAVBAR */}
-        <header className="h-14 bg-slate-900 border-b border-slate-800 flex items-center justify-between px-4 sticky top-0 z-40 shrink-0 shadow-md">
+        {/* TOP NAVBAR - ANT DESIGN ENTERPRISE HEADER */}
+        <header className="h-14 bg-gradient-to-r from-slate-900 via-slate-900 to-slate-950 border-b border-slate-800/90 flex items-center justify-between px-3 md:px-5 sticky top-0 z-40 shrink-0 shadow-md">
           
           {/* Left Actions */}
           <div className="flex items-center gap-2">
             <button
               onClick={() => setIsSidebarCollapsed(!isSidebarCollapsed)}
-              className="hidden lg:flex h-9 w-9 items-center justify-center text-slate-300 hover:text-white hover:bg-slate-800 transition-colors"
+              className="hidden lg:flex h-9 w-9 items-center justify-center text-slate-300 hover:text-white hover:bg-slate-800/80 rounded-lg transition-all border-0 bg-transparent cursor-pointer"
+              title="Toggle Sidebar"
             >
               <Menu className="w-5 h-5" />
             </button>
-            <h1 className="text-lg md:text-3xl font-black text-white uppercase tracking-wider lg:ml-6 truncate max-w-[200px] md:max-w-none">
-              {currentActiveItem ? currentActiveItem.name : "Dashboard"}
-            </h1>
+
+            {/* Ant Design Section Pill Header */}
+            <div className="flex items-center gap-2 bg-slate-800/80 border border-slate-700/60 rounded-xl px-3 py-1 text-white shadow-inner">
+              {currentActiveItem && currentActiveItem.icon && (
+                <currentActiveItem.icon className="w-4 h-4 text-indigo-400 shrink-0 stroke-[2.5]" />
+              )}
+              <h1 className="text-xs sm:text-sm md:text-base font-black text-white uppercase tracking-wider truncate max-w-[150px] sm:max-w-[240px] md:max-w-none m-0 leading-none">
+                {currentActiveItem ? currentActiveItem.name : "Dashboard"}
+              </h1>
+            </div>
           </div>
 
-          {/* Right Actions — logo on desktop & mobile (separated from title) */}
-          <div className="flex items-center gap-3">
-            <img 
-              src={brandLogo} 
-              alt="Cyrix" 
-              className="h-8 lg:h-9 w-auto max-w-[100px] lg:max-w-[120px] rounded border border-gray-200 object-contain bg-white px-1.5 lg:px-2 py-0.5 shadow-sm" 
-            />
+          {/* Right Actions — Notifications, User Avatar & Framed Logo */}
+          <div className="flex items-center gap-2 sm:gap-3">
+            {/* Notification Bell Badge Trigger */}
+            <button
+              type="button"
+              onClick={() => setIsNotifOpen(!isNotifOpen)}
+              className="relative p-1.5 rounded-xl text-slate-300 hover:text-white hover:bg-slate-800/80 transition-all border-0 bg-transparent cursor-pointer flex items-center justify-center"
+              title="Notifications Center"
+            >
+              <Bell className="w-5 h-5" />
+              {unreadNotifCount > 0 && (
+                <span className="absolute -top-0.5 -right-0.5 bg-red-500 text-white text-[9px] font-black rounded-full h-4 min-w-[16px] px-1 flex items-center justify-center border-2 border-slate-900 shadow-xs animate-pulse">
+                  {unreadNotifCount > 99 ? "99+" : unreadNotifCount}
+                </span>
+              )}
+            </button>
+
+            {/* User Profile Quick Link */}
+            <Link
+              to="/profile"
+              className="hidden sm:flex items-center gap-2 p-1 rounded-xl bg-slate-800/60 hover:bg-slate-800 border border-slate-700/60 text-white transition-all no-underline shadow-2xs"
+            >
+              <div className="h-7 w-7 rounded-full bg-indigo-600 flex items-center justify-center text-white font-extrabold text-xs shadow-xs overflow-hidden">
+                {avatarUrl && !avatarError ? (
+                  <img src={avatarUrl} alt="Avatar" className="h-full w-full object-cover" onError={() => setAvatarError(true)} />
+                ) : (
+                  user?.name ? user.name.charAt(0).toUpperCase() : "U"
+                )}
+              </div>
+              <span className="text-xs font-bold text-slate-200 hidden lg:inline max-w-[100px] truncate pr-1">{user?.name?.split(" ")[0]}</span>
+            </Link>
+
+            {/* Cyrix Brand Logo Container */}
+            <div className="bg-white rounded-lg px-2 py-1 shadow-xs border border-slate-200/50 flex items-center justify-center">
+              <img 
+                src={brandLogo} 
+                alt="Cyrix" 
+                className="h-6 sm:h-7 lg:h-8 w-auto max-w-[85px] sm:max-w-[105px] lg:max-w-[120px] object-contain" 
+              />
+            </div>
           </div>
         </header>
 
@@ -652,53 +694,65 @@ export default function DashboardLayout() {
         </main>
       </div>
 
-      {/* MOBILE BOTTOM NAVIGATION BAR */}
-      <nav className="lg:hidden fixed bottom-0 left-0 right-0 h-14 bg-white border-t border-gray-200 flex items-center justify-around px-2 z-[999] shadow-lg pb-safe">
+      {/* MOBILE BOTTOM NAVIGATION BAR - ANT DESIGN ENTERPRISE DOCK */}
+      <nav className="lg:hidden fixed bottom-0 left-0 right-0 h-15 bg-white/95 backdrop-blur-md border-t border-slate-200/80 shadow-[0_-4px_20px_rgba(0,0,0,0.06)] flex items-center justify-around px-2 z-[999] pb-safe">
         {/* Home Tab */}
         <Link
           to="/home"
           onMouseEnter={() => preloadRoute("/home")}
-          className={`flex flex-col items-center justify-center w-16 h-12 rounded-xl transition-all relative ${
-            currentActiveItem?.id === "home" ? "bg-indigo-50/50 text-indigo-600 font-extrabold" : "text-slate-500 hover:text-slate-700"
+          className={`flex flex-col items-center justify-center py-1 px-3 rounded-xl transition-all relative no-underline ${
+            currentActiveItem?.id === "home" 
+              ? "bg-indigo-50 border border-indigo-100 text-indigo-600 scale-105 shadow-2xs" 
+              : "text-slate-500 hover:text-slate-800"
           }`}
         >
-          <Home className={`w-5 h-5 transition-all ${currentActiveItem?.id === "home" ? "text-indigo-600 scale-110" : ""}`} />
-          <span className={`text-[8px] font-bold uppercase tracking-wider mt-0.5 ${currentActiveItem?.id === "home" ? "text-indigo-600" : ""}`}>Home</span>
+          <Home className={`w-5 h-5 transition-all ${currentActiveItem?.id === "home" ? "text-indigo-600 stroke-[2.5]" : "stroke-[1.75]"}`} />
+          <span className={`text-[9px] font-bold uppercase tracking-tight mt-0.5 ${currentActiveItem?.id === "home" ? "text-indigo-600 font-black" : "text-slate-500"}`}>
+            Home
+          </span>
           {currentActiveItem?.id === "home" && (
-            <span className="absolute bottom-0 left-1/2 -translate-x-1/2 h-[3px] w-8 rounded-full bg-indigo-600"></span>
+            <span className="absolute -bottom-1 left-1/2 -translate-x-1/2 w-1.5 h-1.5 rounded-full bg-indigo-600 shadow-xs"></span>
           )}
         </Link>
 
-        {/* Submit Claim Tab (Inline layout!) */}
+        {/* Submit Claim Tab */}
         {allowedWindows.includes("expense") && (
           <Link
             to="/submit-expense"
             onMouseEnter={() => preloadRoute("/submit-expense")}
-            className={`flex flex-col items-center justify-center w-16 h-12 rounded-xl transition-all relative ${
-              currentActiveItem?.id === "expense" ? "bg-indigo-50/50 text-indigo-600 font-extrabold" : "text-slate-500 hover:text-slate-700"
+            className={`flex flex-col items-center justify-center py-1 px-3 rounded-xl transition-all relative no-underline ${
+              currentActiveItem?.id === "expense" 
+                ? "bg-indigo-50 border border-indigo-100 text-indigo-600 scale-105 shadow-2xs" 
+                : "text-slate-500 hover:text-slate-800"
             }`}
           >
-            <Plus className={`w-5 h-5 transition-all ${currentActiveItem?.id === "expense" ? "text-indigo-600 scale-110" : ""}`} />
-            <span className={`text-[8px] font-bold uppercase tracking-wider mt-0.5 ${currentActiveItem?.id === "expense" ? "text-indigo-600" : ""}`}>Claim</span>
+            <Plus className={`w-5 h-5 transition-all ${currentActiveItem?.id === "expense" ? "text-indigo-600 stroke-[2.5]" : "stroke-[1.75]"}`} />
+            <span className={`text-[9px] font-bold uppercase tracking-tight mt-0.5 ${currentActiveItem?.id === "expense" ? "text-indigo-600 font-black" : "text-slate-500"}`}>
+              Claim
+            </span>
             {currentActiveItem?.id === "expense" && (
-              <span className="absolute bottom-0 left-1/2 -translate-x-1/2 h-[3px] w-8 rounded-full bg-indigo-600"></span>
+              <span className="absolute -bottom-1 left-1/2 -translate-x-1/2 w-1.5 h-1.5 rounded-full bg-indigo-600 shadow-xs"></span>
             )}
           </Link>
         )}
 
-        {/* Approval Center Tab (Inline layout!) */}
+        {/* Approval Center Tab */}
         {allowedWindows.includes("approval") && (
           <Link
             to="/approval-center"
             onMouseEnter={() => preloadRoute("/approval-center")}
-            className={`flex flex-col items-center justify-center w-16 h-12 rounded-xl transition-all relative ${
-              currentActiveItem?.id === "approval" ? "bg-indigo-50/50 text-indigo-600 font-extrabold" : "text-slate-500 hover:text-slate-700"
+            className={`flex flex-col items-center justify-center py-1 px-3 rounded-xl transition-all relative no-underline ${
+              currentActiveItem?.id === "approval" 
+                ? "bg-indigo-50 border border-indigo-100 text-indigo-600 scale-105 shadow-2xs" 
+                : "text-slate-500 hover:text-slate-800"
             }`}
           >
-            <CheckSquare className={`w-5 h-5 transition-all ${currentActiveItem?.id === "approval" ? "text-indigo-600 scale-110" : ""}`} />
-            <span className={`text-[8px] font-bold uppercase tracking-wider mt-0.5 ${currentActiveItem?.id === "approval" ? "text-indigo-600" : ""}`}>Approval</span>
+            <CheckSquare className={`w-5 h-5 transition-all ${currentActiveItem?.id === "approval" ? "text-indigo-600 stroke-[2.5]" : "stroke-[1.75]"}`} />
+            <span className={`text-[9px] font-bold uppercase tracking-tight mt-0.5 ${currentActiveItem?.id === "approval" ? "text-indigo-600 font-black" : "text-slate-500"}`}>
+              Approval
+            </span>
             {currentActiveItem?.id === "approval" && (
-              <span className="absolute bottom-0 left-1/2 -translate-x-1/2 h-[3px] w-8 rounded-full bg-indigo-600"></span>
+              <span className="absolute -bottom-1 left-1/2 -translate-x-1/2 w-1.5 h-1.5 rounded-full bg-indigo-600 shadow-xs"></span>
             )}
           </Link>
         )}
@@ -707,55 +761,63 @@ export default function DashboardLayout() {
         <Link
           to="/profile"
           onMouseEnter={() => preloadRoute("/profile")}
-          className={`flex flex-col items-center justify-center w-16 h-12 rounded-xl transition-all relative ${
-            currentActiveItem?.id === "profile" ? "bg-indigo-50/50 text-indigo-600 font-extrabold" : "text-slate-500 hover:text-slate-700"
+          className={`flex flex-col items-center justify-center py-1 px-3 rounded-xl transition-all relative no-underline ${
+            currentActiveItem?.id === "profile" 
+              ? "bg-indigo-50 border border-indigo-100 text-indigo-600 scale-105 shadow-2xs" 
+              : "text-slate-500 hover:text-slate-800"
           }`}
         >
-          <User className={`w-5 h-5 transition-all ${currentActiveItem?.id === "profile" ? "text-indigo-600 scale-110" : ""}`} />
-          <span className={`text-[8px] font-bold uppercase tracking-wider mt-0.5 ${currentActiveItem?.id === "profile" ? "text-indigo-600" : ""}`}>Profile</span>
+          <User className={`w-5 h-5 transition-all ${currentActiveItem?.id === "profile" ? "text-indigo-600 stroke-[2.5]" : "stroke-[1.75]"}`} />
+          <span className={`text-[9px] font-bold uppercase tracking-tight mt-0.5 ${currentActiveItem?.id === "profile" ? "text-indigo-600 font-black" : "text-slate-500"}`}>
+            Profile
+          </span>
           {currentActiveItem?.id === "profile" && (
-            <span className="absolute bottom-0 left-1/2 -translate-x-1/2 h-[3px] w-8 rounded-full bg-indigo-600"></span>
+            <span className="absolute -bottom-1 left-1/2 -translate-x-1/2 w-1.5 h-1.5 rounded-full bg-indigo-600 shadow-xs"></span>
           )}
         </Link>
 
-        {/* More Tab - always visible for everyone to access Help Center, etc. */}
+        {/* More Tab */}
         <button
           onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
-          className={`flex flex-col items-center justify-center w-16 h-12 rounded-xl transition-all border-0 bg-transparent cursor-pointer relative ${
-            isMobileMenuOpen ? "bg-indigo-50/50 text-indigo-600 font-extrabold" : "text-slate-500 hover:text-slate-700"
+          className={`flex flex-col items-center justify-center py-1 px-3 rounded-xl transition-all border-0 bg-transparent cursor-pointer relative ${
+            isMobileMenuOpen 
+              ? "bg-indigo-50 border border-indigo-100 text-indigo-600 scale-105 shadow-2xs" 
+              : "text-slate-500 hover:text-slate-800"
           }`}
         >
           <MenuGridIcon />
-          <span className={`text-[8px] font-bold uppercase tracking-wider mt-0.5 ${isMobileMenuOpen ? "text-indigo-600" : ""}`}>More</span>
+          <span className={`text-[9px] font-bold uppercase tracking-tight mt-0.5 ${isMobileMenuOpen ? "text-indigo-600 font-black" : "text-slate-500"}`}>
+            More
+          </span>
           {isMobileMenuOpen && (
-            <span className="absolute bottom-0 left-1/2 -translate-x-1/2 h-[3px] w-8 rounded-full bg-indigo-600"></span>
+            <span className="absolute -bottom-1 left-1/2 -translate-x-1/2 w-1.5 h-1.5 rounded-full bg-indigo-600 shadow-xs"></span>
           )}
         </button>
       </nav>
 
       {/* MOBILE FULL NAVIGATION OVERLAY MODAL */}
       {isMobileMenuOpen && (
-        <div className="fixed inset-0 bg-[#f4f6f9] z-[999] flex flex-col lg:hidden animate-fadeIn">
+        <div className="fixed inset-0 bg-[#f8fafc] z-[999] flex flex-col lg:hidden animate-fadeIn">
           {/* Header */}
-          <div className="h-14 px-4 bg-[#0f172a] border-b-0 flex items-center justify-between shrink-0 shadow-md">
-            <span className="text-xs font-bold uppercase tracking-wider text-white flex items-center gap-1.5">
+          <div className="h-14 px-4 bg-slate-900 border-b border-slate-800 flex items-center justify-between shrink-0 shadow-md">
+            <span className="text-xs font-black uppercase tracking-wider text-white flex items-center gap-2">
               <MenuGridIcon /> Navigation Menu
             </span>
             <button 
               onClick={() => setIsMobileMenuOpen(false)}
-              className="p-1.5 rounded-full border-0 bg-red-650 text-white hover:bg-red-700 transition-all cursor-pointer flex items-center justify-center shadow-md"
+              className="w-7 h-7 rounded-full border border-slate-700 bg-slate-800 text-white hover:bg-red-600 transition-all cursor-pointer flex items-center justify-center shadow-xs"
             >
               <X className="w-4 h-4 text-white" />
             </button>
           </div>
 
-          {/* User Info Bar */}
+          {/* User Info Bar (AntD Card style) */}
           <Link 
             to="/profile" 
             onClick={() => setIsMobileMenuOpen(false)}
-            className="p-4 bg-white border-b border-gray-150 shrink-0 flex items-center gap-3 text-gray-800 hover:bg-gray-50 transition-colors no-underline block"
+            className="m-3 p-3.5 bg-gradient-to-r from-slate-900 via-slate-900 to-indigo-950 border border-slate-800 rounded-xl shrink-0 flex items-center gap-3 text-white hover:border-indigo-500 transition-all no-underline shadow-md"
           >
-            <div className="h-10 w-10 rounded-full bg-indigo-650 flex items-center justify-center text-white font-black text-sm shadow-sm select-none overflow-hidden">
+            <div className="h-11 w-11 rounded-full bg-indigo-600 border-2 border-indigo-400 flex items-center justify-center text-white font-black text-base shadow-sm shrink-0 overflow-hidden">
               {avatarUrl && !avatarError ? (
                 <img 
                   src={avatarUrl} 
@@ -767,41 +829,44 @@ export default function DashboardLayout() {
                 user?.name ? user.name.charAt(0).toUpperCase() : "U"
               )}
             </div>
-            <div>
-              <p className="text-xs font-bold text-gray-800 leading-tight">{user?.name || "Employee"}</p>
-              <p className="text-[10px] text-gray-550 font-mono mt-0.5">{user?.user_id}</p>
+            <div className="min-w-0 flex-1">
+              <p className="text-xs font-extrabold text-white leading-tight truncate">{user?.name || "Employee"}</p>
+              <p className="text-[10px] text-slate-300 font-mono mt-0.5 truncate">{user?.user_id}</p>
             </div>
-            <div className="ml-auto bg-green-50 border border-green-200 rounded px-2 py-0.5">
-              <span className="text-[9px] text-green-700 font-bold uppercase tracking-wide">{userRole}</span>
+            <div className="bg-emerald-500/20 border border-emerald-400/40 rounded-lg px-2 py-0.5 shrink-0">
+              <span className="text-[9px] text-emerald-300 font-black uppercase tracking-wider">{userRole}</span>
             </div>
           </Link>
 
-          {/* Menu Items Grid - scrollable from top */}
-          <div className="flex-1 overflow-y-auto flex flex-col items-center justify-start py-8 px-6">
-            <div className="w-full max-w-sm grid grid-cols-3 gap-3 text-center">
+          {/* Menu Items Grid */}
+          <div className="flex-1 overflow-y-auto py-2 px-3">
+            <p className="text-[10px] font-extrabold text-gray-400 uppercase tracking-wider mb-2 px-1">All Applications</p>
+            <div className="grid grid-cols-3 gap-2.5">
               {allowedMenuItems.map((item) => {
                 const Icon = item.icon;
                 const isActive = currentActiveItem?.id === item.id;
-                               return (
+                return (
                   <Link
                     key={item.id}
                     to={item.path}
                     onMouseEnter={() => preloadRoute(item.path)}
                     onClick={() => setIsMobileMenuOpen(false)}
-                    className={`flex flex-col items-center justify-center p-3 rounded-lg border transition-all ${
+                    className={`flex flex-col items-center justify-center p-3 rounded-xl border transition-all no-underline ${
                       isActive 
-                        ? "bg-blue-600 border-blue-600 text-white font-extrabold shadow-md" 
-                        : "bg-white border-gray-200 hover:bg-emerald-50 hover:text-emerald-700 text-gray-700 shadow-sm"
+                        ? "bg-indigo-600 border-indigo-600 text-white font-extrabold shadow-md scale-[1.02]" 
+                        : "bg-white border-gray-200/80 hover:border-indigo-300 text-gray-800 shadow-2xs hover:shadow-xs"
                     }`}
                   >
-                    <div className={`p-2.5 rounded-full ${
+                    <div className={`p-2.5 rounded-xl mb-1.5 ${
                       isActive 
                         ? "bg-white/20 text-white" 
-                        : "bg-gray-50 text-gray-500 border border-gray-100 shadow-inner"
+                        : "bg-indigo-50/70 text-indigo-600 border border-indigo-100/60"
                     }`}>
                       <Icon className="w-5 h-5" />
                     </div>
-                    <span className="text-[10px] font-bold uppercase tracking-wider mt-2 leading-tight truncate w-full">
+                    <span className={`text-[10px] font-bold text-center leading-tight tracking-tight uppercase ${
+                      isActive ? "text-white font-black" : "text-gray-700"
+                    }`}>
                       {item.name}
                     </span>
                   </Link>
