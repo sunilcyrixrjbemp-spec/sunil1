@@ -15,7 +15,6 @@ import {
   Radio,
   Typography,
   Space,
-  Input,
   Progress
 } from "antd";
 import {
@@ -478,17 +477,6 @@ export default function AnalysisPage() {
       .sort((a, b) => b.value - a.value);
   }, [allZoneExpenses, user, isPrivilegedRole]);
 
-  // F. Category-wise (travel mode breakdown)
-  const categoryData = useMemo(() => {
-    const map: Record<string, number> = {};
-    activeExpenses.forEach(e => {
-      const mode = e.travel_mode || e.category || "Other";
-      map[mode] = (map[mode] || 0) + (e.amount || 0);
-    });
-    return Object.entries(map)
-      .map(([name, amount]) => ({ name, amount }))
-      .sort((a, b) => b.amount - a.amount);
-  }, [activeExpenses]);
 
   // Available years from data
   const availableYears = useMemo(() => {
@@ -564,7 +552,75 @@ export default function AnalysisPage() {
   }
 
   return (
-    <div className="space-y-4 p-4 lg:p-6 pb-36 md:pb-6" style={{ fontFamily: "'Plus Jakarta Sans', sans-serif" }}>
+    <div className="space-y-4 p-4 lg:p-6" style={{ fontFamily: "'Plus Jakarta Sans', sans-serif" }}>
+      <style>{`
+        /* Polish filters style and fix conflicting global styling */
+        .ant-select {
+          height: 38px !important;
+          width: 100% !important;
+        }
+        .ant-select .ant-select-selector {
+          border: 1.5px solid #cbd5e1 !important;
+          border-radius: 12px !important;
+          height: 38px !important;
+          padding: 0 12px !important;
+          background-color: #ffffff !important;
+          display: flex !important;
+          align-items: center !important;
+          box-shadow: none !important;
+        }
+        .ant-select-selector input,
+        .ant-select-selection-search-input,
+        .ant-select-selection-search-input-hidden {
+          border: none !important;
+          background: transparent !important;
+          background-image: none !important;
+          box-shadow: none !important;
+          padding: 0 !important;
+          margin: 0 !important;
+          height: 100% !important;
+          min-height: unset !important;
+          border-radius: 0 !important;
+        }
+        .ant-select-selection-item {
+          line-height: 34px !important;
+          font-size: 12px !important;
+          font-weight: 600 !important;
+          color: #0f172a !important;
+        }
+        .ant-select-selection-placeholder {
+          line-height: 34px !important;
+          font-size: 12px !important;
+          color: #94a3b8 !important;
+        }
+        .ant-select-arrow {
+          color: #64748b !important;
+        }
+        
+        /* Date Inputs style fixes */
+        .analysis-date-input {
+          height: 38px !important;
+          min-height: 38px !important;
+          border: 1.5px solid #cbd5e1 !important;
+          border-radius: 12px !important;
+          padding: 0 12px !important;
+          font-size: 12px !important;
+          font-weight: 600 !important;
+          background-color: #ffffff !important;
+          background-image: none !important;
+          color: #0f172a !important;
+          width: 100% !important;
+          box-sizing: border-box !important;
+          -webkit-appearance: none !important;
+          appearance: none !important;
+          font-family: inherit !important;
+        }
+        .analysis-date-input:focus {
+          border-color: #4f46e5 !important;
+          outline: none !important;
+          box-shadow: 0 0 0 2px rgba(79, 70, 229, 0.1) !important;
+        }
+      `}</style>
       
       {/* Page Header */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 pb-2 border-b border-gray-100">
@@ -706,22 +762,22 @@ export default function AnalysisPage() {
           <Col xs={24} md={12} lg={6}>
             <span className="text-[9px] font-bold text-gray-400 uppercase block mb-1">Custom Date Range</span>
             <div className="flex items-center gap-2">
-              <Input
+              <input
                 type="date"
                 value={startDate}
                 min={minDateStr}
                 max={maxDateStr}
                 onChange={(e) => setStartDate(e.target.value)}
-                style={{ width: "100%" }}
+                className="analysis-date-input"
               />
               <span className="text-gray-400 text-xs">to</span>
-              <Input
+              <input
                 type="date"
                 value={endDate}
                 min={minDateStr}
                 max={maxDateStr}
                 onChange={(e) => setEndDate(e.target.value)}
-                style={{ width: "100%" }}
+                className="analysis-date-input"
               />
               {(startDate || endDate) && (
                 <Button
@@ -834,34 +890,11 @@ export default function AnalysisPage() {
         </Card>
       )}
 
-      {/* Content Section when count > 0 */}
       {count > 0 && (
         <Row gutter={[16, 16]}>
           {/* Mobile Breakdown Progress Lists (Visible only on mobile/tablet) */}
           <Col xs={24} md={0}>
             <div className="space-y-3">
-              {/* Category Wise spend */}
-              <Card 
-                size="small"
-                title={<span className="text-[10px] font-extrabold uppercase tracking-wider text-gray-700">Spend by Travel Mode</span>}
-                className="border border-gray-200 rounded-xl shadow-xs"
-              >
-                <div className="space-y-3">
-                  {categoryData.slice(0, 5).map((cat, i) => {
-                    const pct = totalAmount > 0 ? Math.round((cat.amount / totalAmount) * 100) : 0;
-                    return (
-                      <div key={i} className="space-y-1">
-                        <div className="flex justify-between items-center text-[10px] font-bold">
-                          <span className="text-gray-700">{cat.name}</span>
-                          <span className="font-mono text-gray-950">₹{cat.amount.toLocaleString()} ({pct}%)</span>
-                        </div>
-                        <Progress percent={pct} strokeColor="#4f46e5" size="small" showInfo={false} />
-                      </div>
-                    );
-                  })}
-                </div>
-              </Card>
-
               {/* Top Districts */}
               <Card 
                 size="small"
@@ -888,7 +921,7 @@ export default function AnalysisPage() {
               {viewMode === "team" && userWiseData.length > 0 && (
                 <Card 
                   size="small"
-                  title={<span className="text-[10px] font-extrabold uppercase tracking-wider text-gray-700">Top Spenders</span>}
+                  title={<span className="text-[10px] font-extrabold uppercase tracking-wider text-gray-700">Top Spenders (Highest Engineers)</span>}
                   className="border border-gray-200 rounded-xl shadow-xs"
                 >
                   <div className="space-y-3">
@@ -913,7 +946,61 @@ export default function AnalysisPage() {
           {/* Desktop/Tablet Nivo Charts (Visible only on md and larger) */}
           <Col xs={0} md={24}>
             <Row gutter={[16, 16]}>
-              {/* Chart 1: Top Spenders (User-wise) */}
+              {/* Chart 1: District-wise Expenditure (Now District Wise is first!) */}
+              <Col xs={24} lg={12}>
+                <Card 
+                  size="small"
+                  title={<span className="text-xs font-bold text-gray-700 uppercase tracking-wider">District Wise Expenditure</span>}
+                  extra={<span className="text-[10px] text-gray-400">Expense distribution across districts</span>}
+                  className="shadow-sm border border-gray-200 rounded-xl"
+                >
+                  <div style={{ height: 280 }}>
+                    {districtWiseData.length > 0 ? (
+                      <ResponsiveBar
+                        data={districtWiseData}
+                        keys={["amount"]}
+                        indexBy="name"
+                        margin={{ top: 15, right: 15, bottom: 35, left: 45 }}
+                        padding={0.35}
+                        colors={GALLERY_COLORS}
+                        colorBy="indexValue"
+                        borderRadius={6}
+                        borderWidth={0}
+                        enableLabel={false}
+                        axisTop={null}
+                        axisRight={null}
+                        axisBottom={{ tickSize: 0, tickPadding: 8, tickRotation: 0 }}
+                        axisLeft={{
+                          tickSize: 0,
+                          tickPadding: 8,
+                          tickRotation: 0,
+                          format: (v) => `₹${(v / 1000).toFixed(0)}k`
+                        }}
+                        theme={{
+                          grid: { line: { stroke: '#f1f5f9', strokeWidth: 1 } },
+                          axis: { ticks: { text: { fontSize: 8, fontWeight: 'bold', fill: '#64748b' } } }
+                        }}
+                        tooltip={({ value, color, indexValue }) => (
+                          <div className="bg-slate-900/95 backdrop-blur-md text-white border border-slate-800 shadow-2xl rounded-xl p-3 text-xs min-w-[120px] font-sans pointer-events-none z-50">
+                            <p className="font-extrabold text-[10px] uppercase text-slate-400 tracking-wider mb-1.5">{indexValue}</p>
+                            <div className="flex items-center justify-between gap-4">
+                              <span className="flex items-center gap-1.5 text-slate-300">
+                                <span className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: color }} />
+                                Amount:
+                              </span>
+                              <span className="font-mono font-bold text-white">₹{value.toLocaleString()}</span>
+                            </div>
+                          </div>
+                        )}
+                      />
+                    ) : (
+                      <div className="flex items-center justify-center h-full text-gray-400 text-xs">No district data</div>
+                    )}
+                  </div>
+                </Card>
+              </Col>
+
+              {/* Chart 2: Top Spenders / Highest Engineers (Now second!) */}
               {viewMode === "team" && (
                 <Col xs={24} lg={12}>
                   <Card 
@@ -974,8 +1061,69 @@ export default function AnalysisPage() {
                 </Col>
               )}
 
-              {/* Chart 2: Claim Status Distribution */}
+              {/* Chart 3: Date-wise Expense Trend (Now third!) */}
               <Col xs={24} lg={viewMode === "team" ? 12 : 24}>
+                <Card 
+                  size="small"
+                  title={<span className="text-xs font-bold text-gray-700 uppercase tracking-wider">Date Wise Expense Trend</span>}
+                  extra={<span className="text-[10px] text-gray-400">Daily spending pattern for last active dates</span>}
+                  className="shadow-sm border border-gray-200 rounded-xl"
+                >
+                  <div style={{ height: 280 }}>
+                    {last5DaysData.length > 0 ? (
+                      <ResponsiveLine
+                        data={[
+                          {
+                            id: "Amount",
+                            color: "#007bff",
+                            data: last5DaysData.map(d => ({ x: d.date, y: d.amount }))
+                          }
+                        ]}
+                        margin={{ top: 15, right: 15, bottom: 35, left: 45 }}
+                        xScale={{ type: 'point' }}
+                        yScale={{ type: 'linear', min: 'auto', max: 'auto' }}
+                        curve="monotoneX"
+                        colors={d => d.color}
+                        lineWidth={2}
+                        enableArea={true}
+                        areaOpacity={0.12}
+                        enablePoints={false}
+                        useMesh={true}
+                        axisTop={null}
+                        axisRight={null}
+                        axisBottom={{ tickSize: 0, tickPadding: 8, tickRotation: 0 }}
+                        axisLeft={{
+                          tickSize: 0,
+                          tickPadding: 8,
+                          tickRotation: 0,
+                          format: (v) => `₹${(v / 1000).toFixed(0)}k`
+                        }}
+                        theme={{
+                          grid: { line: { stroke: '#f1f5f9', strokeWidth: 1 } },
+                          axis: { ticks: { text: { fontSize: 8, fontWeight: 'bold', fill: '#64748b' } } }
+                        }}
+                        tooltip={({ point }) => (
+                          <div className="bg-slate-900/95 backdrop-blur-md text-white border border-slate-800 shadow-2xl rounded-xl p-3 text-xs min-w-[120px] font-sans pointer-events-none z-50">
+                            <p className="font-extrabold text-[10px] uppercase text-slate-400 tracking-wider mb-1.5">{String(point.data.x)}</p>
+                            <div className="flex items-center justify-between gap-4">
+                              <span className="flex items-center gap-1.5 text-slate-300">
+                                <span className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: point.color }} />
+                                Amount:
+                              </span>
+                              <span className="font-mono font-bold text-white">₹{(point.data.y as number).toLocaleString()}</span>
+                            </div>
+                          </div>
+                        )}
+                      />
+                    ) : (
+                      <div className="flex items-center justify-center h-full text-gray-400 text-xs">No date data</div>
+                    )}
+                  </div>
+                </Card>
+              </Col>
+
+              {/* Chart 4: Claim Status Distribution */}
+              <Col xs={24} lg={12}>
                 <Card 
                   size="small"
                   title={<span className="text-xs font-bold text-gray-700 uppercase tracking-wider">Claim Status Distribution</span>}
@@ -1032,121 +1180,6 @@ export default function AnalysisPage() {
                       </>
                     ) : (
                       <div className="flex items-center justify-center h-full text-gray-400 text-xs">No status data</div>
-                    )}
-                  </div>
-                </Card>
-              </Col>
-
-              {/* Chart 3: District-wise Expenditure */}
-              <Col xs={24} lg={12}>
-                <Card 
-                  size="small"
-                  title={<span className="text-xs font-bold text-gray-700 uppercase tracking-wider">District Wise Expenditure</span>}
-                  extra={<span className="text-[10px] text-gray-400">Expense distribution across districts</span>}
-                  className="shadow-sm border border-gray-200 rounded-xl"
-                >
-                  <div style={{ height: 280 }}>
-                    {districtWiseData.length > 0 ? (
-                      <ResponsiveBar
-                        data={districtWiseData}
-                        keys={["amount"]}
-                        indexBy="name"
-                        margin={{ top: 15, right: 15, bottom: 35, left: 45 }}
-                        padding={0.35}
-                        colors={GALLERY_COLORS}
-                        colorBy="indexValue"
-                        borderRadius={6}
-                        borderWidth={0}
-                        enableLabel={false}
-                        axisTop={null}
-                        axisRight={null}
-                        axisBottom={{ tickSize: 0, tickPadding: 8, tickRotation: 0 }}
-                        axisLeft={{
-                          tickSize: 0,
-                          tickPadding: 8,
-                          tickRotation: 0,
-                          format: (v) => `₹${(v / 1000).toFixed(0)}k`
-                        }}
-                        theme={{
-                          grid: { line: { stroke: '#f1f5f9', strokeWidth: 1 } },
-                          axis: { ticks: { text: { fontSize: 8, fontWeight: 'bold', fill: '#64748b' } } }
-                        }}
-                        tooltip={({ value, color, indexValue }) => (
-                          <div className="bg-slate-900/95 backdrop-blur-md text-white border border-slate-800 shadow-2xl rounded-xl p-3 text-xs min-w-[120px] font-sans pointer-events-none z-50">
-                            <p className="font-extrabold text-[10px] uppercase text-slate-400 tracking-wider mb-1.5">{indexValue}</p>
-                            <div className="flex items-center justify-between gap-4">
-                              <span className="flex items-center gap-1.5 text-slate-300">
-                                <span className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: color }} />
-                                Amount:
-                              </span>
-                              <span className="font-mono font-bold text-white">₹{value.toLocaleString()}</span>
-                            </div>
-                          </div>
-                        )}
-                      />
-                    ) : (
-                      <div className="flex items-center justify-center h-full text-gray-400 text-xs">No district data</div>
-                    )}
-                  </div>
-                </Card>
-              </Col>
-
-              {/* Chart 4: Date-wise Expense Trend */}
-              <Col xs={24} lg={12}>
-                <Card 
-                  size="small"
-                  title={<span className="text-xs font-bold text-gray-700 uppercase tracking-wider">Date Wise Expense Trend</span>}
-                  extra={<span className="text-[10px] text-gray-400">Daily spending pattern for last active dates</span>}
-                  className="shadow-sm border border-gray-200 rounded-xl"
-                >
-                  <div style={{ height: 280 }}>
-                    {last5DaysData.length > 0 ? (
-                      <ResponsiveLine
-                        data={[
-                          {
-                            id: "Amount",
-                            color: "#007bff",
-                            data: last5DaysData.map(d => ({ x: d.date, y: d.amount }))
-                          }
-                        ]}
-                        margin={{ top: 15, right: 15, bottom: 35, left: 45 }}
-                        xScale={{ type: 'point' }}
-                        yScale={{ type: 'linear', min: 'auto', max: 'auto' }}
-                        curve="monotoneX"
-                        colors={d => d.color}
-                        lineWidth={2}
-                        enableArea={true}
-                        areaOpacity={0.12}
-                        enablePoints={false}
-                        useMesh={true}
-                        axisTop={null}
-                        axisRight={null}
-                        axisBottom={{ tickSize: 0, tickPadding: 8, tickRotation: 0 }}
-                        axisLeft={{
-                          tickSize: 0,
-                          tickPadding: 8,
-                          tickRotation: 0,
-                          format: (v) => `₹${(v / 1000).toFixed(0)}k`
-                        }}
-                        theme={{
-                          grid: { line: { stroke: '#f1f5f9', strokeWidth: 1 } },
-                          axis: { ticks: { text: { fontSize: 8, fontWeight: 'bold', fill: '#64748b' } } }
-                        }}
-                        tooltip={({ point }) => (
-                          <div className="bg-slate-900/95 backdrop-blur-md text-white border border-slate-800 shadow-2xl rounded-xl p-3 text-xs min-w-[120px] font-sans pointer-events-none z-50">
-                            <p className="font-extrabold text-[10px] uppercase text-slate-400 tracking-wider mb-1.5">{String(point.data.x)}</p>
-                            <div className="flex items-center justify-between gap-4">
-                              <span className="flex items-center gap-1.5 text-slate-300">
-                                <span className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: point.color }} />
-                                Amount:
-                              </span>
-                              <span className="font-mono font-bold text-white">₹{(point.data.y as number).toLocaleString()}</span>
-                            </div>
-                          </div>
-                        )}
-                      />
-                    ) : (
-                      <div className="flex items-center justify-center h-full text-gray-400 text-xs">No date data</div>
                     )}
                   </div>
                 </Card>
@@ -1215,61 +1248,7 @@ export default function AnalysisPage() {
                 </Card>
               </Col>
 
-              {/* Chart 6: Travel Mode / Category Breakdown */}
-              <Col xs={24} lg={12}>
-                <Card 
-                  size="small"
-                  title={<span className="text-xs font-bold text-gray-700 uppercase tracking-wider">Travel Mode / Category Breakdown</span>}
-                  extra={<span className="text-[10px] text-gray-400 font-bold">Expenditure by travel mode</span>}
-                  className="shadow-sm border border-gray-200 rounded-xl"
-                >
-                  <div style={{ height: 280 }}>
-                    {categoryData.length > 0 ? (
-                      <ResponsiveBar
-                        data={categoryData}
-                        keys={["amount"]}
-                        indexBy="name"
-                        margin={{ top: 15, right: 15, bottom: 35, left: 45 }}
-                        padding={0.35}
-                        colors={GALLERY_COLORS}
-                        colorBy="indexValue"
-                        borderRadius={6}
-                        borderWidth={0}
-                        enableLabel={false}
-                        axisTop={null}
-                        axisRight={null}
-                        axisBottom={{ tickSize: 0, tickPadding: 8, tickRotation: 0 }}
-                        axisLeft={{
-                          tickSize: 0,
-                          tickPadding: 8,
-                          tickRotation: 0,
-                          format: (v) => `₹${(v / 1000).toFixed(0)}k`
-                        }}
-                        theme={{
-                          grid: { line: { stroke: '#f1f5f9', strokeWidth: 1 } },
-                          axis: { ticks: { text: { fontSize: 8, fontWeight: 'bold', fill: '#64748b' } } }
-                        }}
-                        tooltip={({ value, color, indexValue }) => (
-                          <div className="bg-slate-900/95 backdrop-blur-md text-white border border-slate-800 shadow-2xl rounded-xl p-3 text-xs min-w-[120px] font-sans pointer-events-none z-50">
-                            <p className="font-extrabold text-[10px] uppercase text-slate-400 tracking-wider mb-1.5">{indexValue}</p>
-                            <div className="flex items-center justify-between gap-4">
-                              <span className="flex items-center gap-1.5 text-slate-300">
-                                <span className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: color }} />
-                                Amount:
-                              </span>
-                              <span className="font-mono font-bold text-white">₹{value.toLocaleString()}</span>
-                            </div>
-                          </div>
-                        )}
-                      />
-                    ) : (
-                      <div className="flex items-center justify-center h-full text-gray-400 text-xs">No category data</div>
-                    )}
-                  </div>
-                </Card>
-              </Col>
-
-              {/* Chart 7: Operations Activity Metrics */}
+              {/* Chart 6: Operations Activity Metrics */}
               <Col xs={24}>
                 <Card 
                   size="small"
@@ -1323,6 +1302,8 @@ export default function AnalysisPage() {
           </Col>
         </Row>
       )}
+      {/* Extra spacer at the bottom to prevent layout elements from being cut off by the navigation bar */}
+      <div className="h-32 md:h-8" />
     </div>
   );
 }
