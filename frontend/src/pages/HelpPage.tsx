@@ -28,7 +28,8 @@ import {
   LockOutlined, 
   UndoOutlined, 
   CustomerServiceOutlined,
-  TagOutlined
+  TagOutlined,
+  FilterOutlined
 } from "@ant-design/icons";
 import { ticketService, TicketCreatePayload } from "../services/ticketService";
 import { expenseService } from "../services/expenseService";
