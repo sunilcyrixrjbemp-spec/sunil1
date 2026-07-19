@@ -1597,8 +1597,9 @@ export default function ExpensePage() {
     const f = (leg.from || "").trim().toLowerCase();
     const t = (leg.to || "").trim().toLowerCase();
 
+    // NOTE: "local" removed — too ambiguous ("local market", "local office" are work locations)
     const RESIDENCE_WORDS = ["home", "residence", "room", "quarter", "house", "flat", "pg", "stay",
-      "village", "vill", "rent", "address", "dera", "deri", "local", "hotel"];
+      "village", "vill", "rent", "address", "dera", "deri", "hotel"];
     const WORK_WORDS = ["market", "bazaar", "bazar", "mandi", "haat", "station", "railway",
       "bus stand", "bus stop", "bus depot", "bus adda", "rly", "tower", "office", "repair",
       "collection", "hospital", "chc", "phc", "dh", "sdh", "clinic", "lab", "store", "shop",
@@ -1612,14 +1613,17 @@ export default function ExpensePage() {
     const isFirstLeg = index === 0;
     const isLastLeg  = (totalLegs !== undefined && index !== undefined) ? (index === totalLegs - 1) : false;
 
-    // Residence detection: content-first (from_custom is a booster, not a requirement)
+    // CRITICAL FIX: Residence detection requires BOTH residence word AND no work word.
+    // "Local Market" has "local" (residence) + "market" (work) → NOT a residence.
+    // "My Home, Jodhpur" has "home" (residence) + no work word → IS a residence.
+    // from_custom is an additional BOOSTER for ambiguous non-work-word cases.
     const fromIsResidence =
-      fromHasResidenceWord
-      || (!!leg.from_custom && (fromHasResidenceWord || (isFirstLeg && !fromHasWorkWord)))
+      (fromHasResidenceWord && !fromHasWorkWord)  // content-first: has residence keyword AND no work keyword
+      || (!!leg.from_custom && !fromHasWorkWord && (fromHasResidenceWord || (isFirstLeg && !fromHasWorkWord)))
       || (isFirstLeg && !fromHasWorkWord && !matchesBase(f, baseLocations) && f.length > 0);
     const toIsResidence =
-      toHasResidenceWord
-      || (!!leg.to_custom   && (toHasResidenceWord   || (isLastLeg  && !toHasWorkWord)))
+      (toHasResidenceWord && !toHasWorkWord)      // content-first: has residence keyword AND no work keyword
+      || (!!leg.to_custom   && !toHasWorkWord   && (toHasResidenceWord   || (isLastLeg  && !toHasWorkWord)))
       || (isLastLeg  && !toHasWorkWord   && !matchesBase(t, baseLocations) && t.length > 0);
 
     const fromIsBase = matchesBase(f, baseLocations);

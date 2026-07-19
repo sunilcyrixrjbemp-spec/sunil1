@@ -159,7 +159,7 @@ export function checkIsCommuteLeg(leg, baseLocations, index, totalLegs) {
   const f = (leg.from || "").trim().toLowerCase();
   const t = (leg.to || "").trim().toLowerCase();
 
-  const RESIDENCE_WORDS = ["home", "residence", "room", "quarter", "house", "flat", "pg", "stay", "village", "vill", "rent", "address", "dera", "deri", "local", "hotel"];
+  const RESIDENCE_WORDS = ["home", "residence", "room", "quarter", "house", "flat", "pg", "stay", "village", "vill", "rent", "address", "dera", "deri", "hotel"];
   const WORK_WORDS = ["market", "bazaar", "bazar", "mandi", "haat", "station", "railway", "bus stand", "bus stop", "bus depot", "bus adda", "rly", "tower", "office", "repair", "collection", "hospital", "chc", "phc", "dh", "sdh", "clinic", "lab", "store", "shop", "vendor", "customer", "site", "service", "work"];
 
   const fromHasResidenceWord = RESIDENCE_WORDS.some(w => f.includes(w));
@@ -170,20 +170,16 @@ export function checkIsCommuteLeg(leg, baseLocations, index, totalLegs) {
   const isFirstLeg = index === 0;
   const isLastLeg  = (totalLegs !== undefined && index !== undefined) ? (index === totalLegs - 1) : false;
 
-  // FIX: Residence detection uses content (residence words) as PRIMARY signal.
-  // from_custom flag is a BOOSTER — helps in ambiguous cases but is NOT required.
-  // This ensures Leg 1 "My Home, Jodhpur" (from_custom may be false) is still detected as residence.
-  const fromIsResidence = fromHasResidenceWord
-    || (!!leg.from_custom && (fromHasResidenceWord || (isFirstLeg && !fromHasWorkWord)))
+  const fromIsResidence = (fromHasResidenceWord && !fromHasWorkWord)
+    || (!!leg.from_custom && !fromHasWorkWord && (fromHasResidenceWord || (isFirstLeg && !fromHasWorkWord)))
     || (isFirstLeg && !fromHasWorkWord && !matchesBase(f, baseLocations) && f.length > 0);
-  const toIsResidence   = toHasResidenceWord
-    || (!!leg.to_custom   && (toHasResidenceWord   || (isLastLeg  && !toHasWorkWord)))
-    || (isLastLeg  && !toHasWorkWord   && !matchesBase(t, baseLocations) && t.length > 0);
+  const toIsResidence = (toHasResidenceWord && !toHasWorkWord)
+    || (!!leg.to_custom && !toHasWorkWord && (toHasResidenceWord || (isLastLeg && !toHasWorkWord)))
+    || (isLastLeg && !toHasWorkWord && !matchesBase(t, baseLocations) && t.length > 0);
 
   const fromIsBase = matchesBase(f, baseLocations);
   const toIsBase   = matchesBase(t, baseLocations);
 
-  // Edge-case: a location cannot be both residence AND base at the same time
   if (fromIsResidence && fromIsBase) return false;
   if (toIsResidence   && toIsBase)   return false;
   if (fromIsResidence && toIsBase)   return true;  // Home → Base
