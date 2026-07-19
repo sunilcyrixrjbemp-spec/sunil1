@@ -2735,7 +2735,7 @@ export default function ExpensePage() {
 
   return (
     <>
-      <div className="space-y-6 animate-fadeIn text-[#212529] pb-2 text-xs font-sans">
+      <div className="space-y-6 animate-fadeIn text-[#212529] pb-32 md:pb-8 text-xs font-sans">
       
       {/* Header Info */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between border-b border-slate-100 pb-3 gap-2">
@@ -4761,52 +4761,56 @@ export default function ExpensePage() {
                         <div
                           key={exp.id}
                           onClick={() => handleViewDetails(exp.id)}
-                          className="bg-white border border-gray-200 rounded-lg p-3.5 space-y-3 active:bg-gray-50 transition-colors shadow-sm cursor-pointer text-xs"
+                          className="sharp-card bg-white border border-slate-200 hover:border-indigo-300 rounded-xl p-3.5 space-y-3 active:bg-slate-50 transition-all shadow-xs hover:shadow-md cursor-pointer text-xs"
                         >
-                          <div className="flex justify-between items-center">
-                            <span className="font-bold font-mono text-blue-600 text-xs uppercase">{exp.expense_code}</span>
-                            <span className={`inline-flex items-center px-2 py-0.5 rounded border text-[8px] font-bold uppercase tracking-wider ${getStatusBadgeClass(exp.status)}`}>
-                              {getStatusLabel(exp.status)}
-                            </span>
+                          <div className="flex justify-between items-center border-b border-slate-100 pb-2">
+                            <span className="font-extrabold font-mono text-indigo-600 text-xs uppercase">{exp.expense_code}</span>
+                            {renderAntdStatusTag(exp.status)}
                           </div>
                           
                           <div className="grid grid-cols-2 gap-2 text-[11px]">
                             <div>
-                              <span className="text-gray-400 font-bold uppercase text-[9px] block">Date</span>
-                              <span className="text-gray-700 font-semibold">{exp.itinerary}</span>
+                              <span className="text-slate-400 font-bold uppercase text-[9px] block">Travel Date</span>
+                              <span className="text-slate-700 font-semibold">{exp.itinerary}</span>
                             </div>
                             <div>
-                              <span className="text-gray-400 font-bold uppercase text-[9px] block">Mode</span>
-                              <span className="text-gray-700 font-semibold">{exp.travel_mode || "Other"}</span>
+                              <span className="text-slate-400 font-bold uppercase text-[9px] block">Travel Mode</span>
+                              <span className="text-slate-700 font-semibold">{exp.travel_mode || "Other"}</span>
                             </div>
                             <div>
-                              <span className="text-gray-400 font-bold uppercase text-[9px] block">Amount</span>
-                              <span className="text-gray-900 font-extrabold text-xs">₹{exp.amount.toLocaleString()}</span>
+                              <span className="text-slate-400 font-bold uppercase text-[9px] block">Total Claimed</span>
+                              <span className="text-slate-900 font-black text-sm text-blue-700">₹{exp.amount.toLocaleString()}</span>
                             </div>
-                            <div className="flex items-center justify-end" onClick={(e) => e.stopPropagation()}>
+                            <div className="flex items-center justify-end gap-1.5" onClick={(e) => e.stopPropagation()}>
                               {(exp.status === "draft" || exp.status === "submitted" || exp.status === "returned_to_draft") && (
-                                <div className="flex gap-1.5">
-                                  <button
+                                <>
+                                  <Button
+                                    size="small"
+                                    type="primary"
+                                    icon={<EditOutlined />}
                                     onClick={() => handleEditFromModal(exp.id)}
-                                    className="p-1 text-amber-600 hover:text-amber-800 rounded bg-amber-50 border border-amber-200 cursor-pointer text-[10px] font-bold px-2 py-0.5 transition-all"
+                                    className="bg-amber-500 hover:bg-amber-600 font-bold text-[10px] border-0"
                                   >
                                     Edit
-                                  </button>
-                                  <button
+                                  </Button>
+                                  <Button
+                                    size="small"
+                                    danger
+                                    icon={<DeleteOutlined />}
                                     onClick={() => handleDeleteClaim(exp.id)}
-                                    className="p-1 text-rose-600 hover:text-rose-800 rounded bg-rose-50 border border-rose-200 cursor-pointer text-[10px] font-bold px-2 py-0.5 transition-all"
+                                    className="font-bold text-[10px]"
                                   >
                                     Delete
-                                  </button>
-                                </div>
+                                  </Button>
+                                </>
                               )}
                             </div>
                           </div>
 
                           {exp.description && (
-                            <div className="border-t border-gray-100 pt-2 text-[10px]">
-                              <span className="text-gray-400 font-bold uppercase text-[8px] block">Purpose</span>
-                              <p className="text-gray-600 font-semibold mt-0.5 truncate">{exp.description}</p>
+                            <div className="border-t border-slate-100 pt-2 text-[10px]">
+                              <span className="text-slate-400 font-bold uppercase text-[8px] block">Purpose / Work Summary</span>
+                              <p className="text-slate-700 font-medium mt-0.5 truncate m-0">{exp.description}</p>
                             </div>
                           )}
                         </div>
@@ -4870,44 +4874,44 @@ export default function ExpensePage() {
                         return (
                           <div
                             key={idx}
-                            className="bg-white border border-gray-200 rounded-lg p-3.5 space-y-3 shadow-sm"
+                            className="sharp-card bg-white border border-slate-200 hover:border-indigo-300 rounded-xl p-3.5 space-y-3 transition-all shadow-xs hover:shadow-md text-xs"
                           >
-                            <div className="flex justify-between items-center">
-                              <span className="font-bold font-mono text-blue-600 text-xs uppercase">{leg.parentCode}</span>
-                              <span className="text-[10px] font-bold text-gray-400">Visit {leg.leg}</span>
+                            <div className="flex justify-between items-center border-b border-slate-100 pb-2">
+                              <span className="font-extrabold font-mono text-indigo-600 text-xs uppercase">{leg.parentCode}</span>
+                              <Tag color="blue" className="font-bold text-[10px] px-2 py-0.5 rounded-full uppercase">Visit {leg.leg}</Tag>
                             </div>
 
                             <div className="grid grid-cols-2 gap-2 text-[11px]">
                               <div>
-                                <span className="text-gray-400 font-bold uppercase text-[9px] block">Date</span>
-                                <span className="text-gray-700 font-semibold">{leg.parentDate}</span>
+                                <span className="text-slate-400 font-bold uppercase text-[9px] block">Travel Date</span>
+                                <span className="text-slate-700 font-semibold">{leg.parentDate}</span>
                               </div>
                               <div>
-                                <span className="text-gray-400 font-bold uppercase text-[9px] block">Route</span>
-                                <span className="text-gray-800 font-bold block leading-tight">{leg.from_district === leg.to_district ? leg.to_district : `${leg.from_district} → ${leg.to_district}`}</span>
-                                <span className="text-[9px] text-gray-400 block mt-0.5">{leg.from || "Start"} → {leg.to || "End"}</span>
+                                <span className="text-slate-400 font-bold uppercase text-[9px] block">Route</span>
+                                <span className="text-slate-800 font-bold block leading-tight">{leg.from_district === leg.to_district ? leg.to_district : `${leg.from_district} → ${leg.to_district}`}</span>
+                                <span className="text-[9px] text-slate-400 block mt-0.5">{leg.from || "Start"} → {leg.to || "End"}</span>
                               </div>
                               <div>
-                                <span className="text-gray-400 font-bold uppercase text-[9px] block">Mode / Distance</span>
+                                <span className="text-slate-400 font-bold uppercase text-[9px] block">Mode / Distance</span>
                                 <span className="text-[9px] font-bold uppercase bg-blue-50 text-blue-700 px-1.5 py-0.5 rounded border border-blue-100 inline-block mr-1">{leg.mode || "Other"}</span>
                                 {hasSub && <span className="text-[9px] font-bold uppercase bg-purple-50 text-purple-700 px-1.5 py-0.5 rounded border border-purple-100 inline-block mr-1">+{leg.sub_mode}</span>}
-                                <span className="text-gray-700 font-semibold">{leg.km || 0} KM</span>
+                                <span className="text-slate-700 font-semibold">{leg.km || 0} KM</span>
                               </div>
                               <div>
-                                <span className="text-gray-400 font-bold uppercase text-[9px] block">Fare / DA / Hotel</span>
-                                <span className="text-gray-700 font-semibold">
+                                <span className="text-slate-400 font-bold uppercase text-[9px] block">Fare / DA / Hotel</span>
+                                <span className="text-slate-700 font-semibold">
                                   ₹{(parseFloat(leg.amount) || 0).toLocaleString()} / ₹{(parseFloat(leg.da) || 0).toLocaleString()} / ₹{(parseFloat(leg.hotel) || 0).toLocaleString()}
                                 </span>
                               </div>
                               <div>
-                                <span className="text-gray-400 font-bold uppercase text-[9px] block">Local Purchase / Other</span>
-                                <span className="text-gray-700 font-semibold">
+                                <span className="text-slate-400 font-bold uppercase text-[9px] block">Local Purchase / Other</span>
+                                <span className="text-slate-700 font-semibold">
                                   ₹{(parseFloat(leg.local_purchase) || 0).toLocaleString()} / ₹{(parseFloat(leg.other_amount) || 0).toLocaleString()}
                                 </span>
                               </div>
                               <div>
-                                <span className="text-gray-400 font-bold uppercase text-[9px] block">Purpose</span>
-                                <span className="text-gray-600 font-semibold leading-snug block">{leg.visit_purpose || "Field visit"}</span>
+                                <span className="text-slate-400 font-bold uppercase text-[9px] block">Purpose</span>
+                                <span className="text-slate-600 font-semibold leading-snug block">{leg.visit_purpose || "Field visit"}</span>
                               </div>
                             </div>
                           </div>
