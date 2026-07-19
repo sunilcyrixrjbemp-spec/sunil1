@@ -686,6 +686,10 @@ export default function HomePage() {
         .rounded-none-modal * {
           border-radius: 0px !important;
         }
+        .sharp-card,
+        .sharp-card * {
+          border-radius: 0px !important;
+        }
       `}</style>
       <div className="space-y-3 sm:space-y-4 animate-fadeIn text-[#212529] p-0 sm:p-2 md:p-4 w-full max-w-none">
         
@@ -961,8 +965,7 @@ export default function HomePage() {
                               {filteredPersonalExpenses.map((exp) => (
                                 <Card
                                   key={exp.id}
-                                  onClick={() => handleOpenClaimDetails(exp.id)}
-                                  className="border border-slate-300 bg-[#f1f5f9] hover:bg-slate-200 cursor-pointer transition-colors shadow-sm"
+                                  className="border border-slate-300 bg-[#f1f5f9] transition-colors shadow-sm sharp-card"
                                   size="small"
                                 >
                                   <div className="flex justify-between items-center pb-2 border-b border-gray-150">
@@ -1210,8 +1213,7 @@ export default function HomePage() {
                               {paginatedTeamExpenses.map((exp) => (
                                 <Card
                                   key={exp.id}
-                                  onClick={() => handleOpenClaimDetails(exp.id)}
-                                  className="border border-slate-300 bg-[#f1f5f9] hover:bg-slate-200 cursor-pointer transition-colors shadow-sm"
+                                  className="border border-slate-300 bg-[#f1f5f9] transition-colors shadow-sm sharp-card"
                                   size="small"
                                 >
                                   <div className="flex justify-between items-center pb-2 border-b border-gray-150">
