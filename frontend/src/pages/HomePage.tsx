@@ -47,6 +47,20 @@ const uniqueMonths = Array.from({ length: 12 }, (_, i) => {
   const label = d.toLocaleDateString("en-US", { month: "short", year: "numeric" });
   return { value: yyyyMm, label };
 });
+
+const getStatusCardStyle = (status: string) => {
+  const s = (status || "").toLowerCase();
+  if (s.includes("approve") || s.includes("approved")) {
+    return "border-emerald-300 bg-[#f0fdf4] hover:bg-[#e6fcf0] cursor-pointer transition-colors shadow-sm sharp-card";
+  }
+  if (s.includes("reject") || s.includes("rejected")) {
+    return "border-rose-300 bg-[#fef2f2] hover:bg-[#fde8e8] cursor-pointer transition-colors shadow-sm sharp-card";
+  }
+  if (s.includes("pending") || s.includes("submitted") || s.includes("return")) {
+    return "border-amber-300 bg-[#fffbeb] hover:bg-[#fef3c7] cursor-pointer transition-colors shadow-sm sharp-card";
+  }
+  return "border-slate-300 bg-[#f1f5f9] hover:bg-slate-200 cursor-pointer transition-colors shadow-sm sharp-card";
+};
 import { 
   FileSpreadsheet, 
   BarChart3, 
@@ -958,7 +972,7 @@ export default function HomePage() {
                                 <Card
                                   key={exp.id}
                                   onClick={() => handleOpenClaimDetails(exp.id)}
-                                  className="border border-slate-300 bg-[#f1f5f9] hover:bg-slate-200 cursor-pointer transition-colors shadow-sm sharp-card"
+                                  className={`border ${getStatusCardStyle(exp.status)}`}
                                   size="small"
                                 >
                                   <div className="flex justify-between items-center pb-2 border-b border-gray-150">
@@ -1207,7 +1221,7 @@ export default function HomePage() {
                                 <Card
                                   key={exp.id}
                                   onClick={() => handleOpenClaimDetails(exp.id)}
-                                  className="border border-slate-300 bg-[#f1f5f9] hover:bg-slate-200 cursor-pointer transition-colors shadow-sm sharp-card"
+                                  className={`border ${getStatusCardStyle(exp.status)}`}
                                   size="small"
                                 >
                                   <div className="flex justify-between items-center pb-2 border-b border-gray-150">
@@ -1491,7 +1505,17 @@ export default function HomePage() {
             </Button>
           </div>
         ]}
-        bodyStyle={{ maxHeight: "70vh", overflowY: "auto", padding: "12px" }}
+        bodyStyle={{ 
+          maxHeight: "70vh", 
+          overflowY: "auto", 
+          padding: "12px",
+          background: claimDetails ? (
+            (claimDetails.status || "").toLowerCase().includes("approved") ? "#f0fdf4" :
+            (claimDetails.status || "").toLowerCase().includes("rejected") ? "#fef2f2" :
+            (claimDetails.status || "").toLowerCase().includes("pending") || (claimDetails.status || "").toLowerCase().includes("submitted") || (claimDetails.status || "").toLowerCase().includes("return") ? "#fffbeb" :
+            "#ffffff"
+          ) : "#ffffff"
+        }}
       >
         {!claimDetails ? (
           <Loader message="Loading claim details..." />
@@ -2340,7 +2364,17 @@ export default function HomePage() {
             Close List
           </Button>
         ]}
-        bodyStyle={{ maxHeight: "70vh", overflowY: "auto", padding: "12px" }}
+        bodyStyle={{ 
+          maxHeight: "70vh", 
+          overflowY: "auto", 
+          padding: "12px",
+          background: claimDetails ? (
+            (claimDetails.status || "").toLowerCase().includes("approved") ? "#f0fdf4" :
+            (claimDetails.status || "").toLowerCase().includes("rejected") ? "#fef2f2" :
+            (claimDetails.status || "").toLowerCase().includes("pending") || (claimDetails.status || "").toLowerCase().includes("submitted") || (claimDetails.status || "").toLowerCase().includes("return") ? "#fffbeb" :
+            "#ffffff"
+          ) : "#ffffff"
+        }}
       >
         {statsModalClaims.length === 0 ? (
           <div className="py-12 text-center text-gray-455 text-xs">
