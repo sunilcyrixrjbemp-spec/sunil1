@@ -1465,34 +1465,31 @@ span.submitter-code-text {
 }
 
 /* ================= ANTD MODAL SCROLL FIX (My Claims + Approval Center) ================= */
-/* Root cause: On iOS/Android, when modal body reaches scroll boundary (top or bottom),
-   the touch event propagates to the parent .ant-modal-wrap which then scrolls the page behind.
-   Fix: Contain overscroll on the wrap AND ensure body has correct touch-action. */
+/*
+ * Pattern: bodyStyle-driven scroll (matches Team Claims Stats modal)
+ *   Each modal sets its own: maxHeight, overflowY:"auto", touchAction:"pan-y"
+ *   via bodyStyle prop. ant-modal-wrap blocks background scroll.
+ */
 
-/* 1. Modal wrap: prevent background page scroll */
+/* Block background page scroll while modal is open */
 .ant-modal-wrap {
   overflow: hidden !important;
   overscroll-behavior: contain !important;
-  touch-action: none !important;     /* Block all touch on overlay — only body should scroll */
+  touch-action: none !important;
 }
 
-/* 2. Modal body: allow vertical scroll, GPU-accelerated, bounce-contained */
+/* Modal body: touch-action passthrough — actual overflow set per-modal via bodyStyle */
 .ant-modal-body {
-  overflow-y: auto !important;
-  overflow-x: hidden !important;
   -webkit-overflow-scrolling: touch !important;
   overscroll-behavior-y: contain !important;
-  touch-action: pan-y !important;    /* Body gets vertical touch events */
-  will-change: scroll-position !important;
+  touch-action: pan-y !important;
 }
 
-/* 3. Modal content wrapper: allow touch-pan through to body */
+/* Allow touch through content and root */
 .ant-modal-content {
   touch-action: pan-y !important;
   overflow: hidden !important;
 }
-
-/* 4. Ensure modal root allows touch */
 .ant-modal {
   touch-action: pan-y !important;
 }
@@ -1504,24 +1501,16 @@ span.submitter-code-text {
     margin: 8px auto !important;
   }
 
-  /* Wrap must block background scroll completely on mobile */
   .ant-modal-wrap {
     overflow: hidden !important;
     overscroll-behavior: contain !important;
     touch-action: none !important;
   }
 
-  /* Modal body: tall enough to scroll, properly touch-enabled */
   .ant-modal-body {
-    padding: 12px 14px !important;
-    max-height: 65vh !important;
-    min-height: 100px !important;
-    overflow-y: auto !important;
-    overflow-x: hidden !important;
     -webkit-overflow-scrolling: touch !important;
     overscroll-behavior-y: contain !important;
     touch-action: pan-y !important;
-    will-change: scroll-position !important;
   }
 
   .ant-modal-footer {

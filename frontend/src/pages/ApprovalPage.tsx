@@ -1358,9 +1358,14 @@ export default function ApprovalPage() {
         className="approval-review-modal"
         destroyOnClose
         bodyStyle={{
-          padding: 0,
-          overflow: "hidden",
-          background: "#ffffff"
+          maxHeight: "70vh",
+          overflowY: "auto",
+          overflowX: "hidden",
+          padding: "16px",
+          background: "#ffffff",
+          WebkitOverflowScrolling: "touch",
+          overscrollBehaviorY: "contain",
+          touchAction: "pan-y"
         }}
         title={
           <Space>
