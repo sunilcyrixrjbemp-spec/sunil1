@@ -1464,37 +1464,26 @@ span.submitter-code-text {
   width: 100% !important;
 }
 
-/* ================= ANTD MODAL SCROLL FIX (My Claims + Approval Center) ================= */
+/* ================= ANTD MODAL SCROLL FIX ================= */
 /*
- * Pattern: bodyStyle-driven scroll (matches Team Claims Stats modal)
- *   Each modal sets its own: maxHeight, overflowY:"auto", touchAction:"pan-y"
- *   via bodyStyle prop. ant-modal-wrap blocks background scroll.
+ * Root cause of scroll-lock: touch-action:none on .ant-modal-wrap discards
+ * ALL touch events at the overlay level, preventing pan-y on the modal body
+ * from ever firing — this breaks scroll in ALL modals.
+ *
+ * Fix: use overscroll-behavior:contain ONLY to stop background page bleed.
+ * Each modal's bodyStyle sets its own maxHeight + overflowY:auto + touchAction:pan-y.
+ * That is sufficient for scroll to work on iOS/Android.
  */
 
-/* Block background page scroll while modal is open */
 .ant-modal-wrap {
-  overflow: hidden !important;
-  overscroll-behavior: contain !important;
-  touch-action: none !important;
+  overscroll-behavior: contain;    /* Prevent background page scroll bleed */
 }
 
-/* Modal body: touch-action passthrough — actual overflow set per-modal via bodyStyle */
-.ant-modal-body {
-  -webkit-overflow-scrolling: touch !important;
-  overscroll-behavior-y: contain !important;
-  touch-action: pan-y !important;
-}
-
-/* Allow touch through content and root */
 .ant-modal-content {
-  touch-action: pan-y !important;
-  overflow: hidden !important;
-}
-.ant-modal {
-  touch-action: pan-y !important;
+  overflow: hidden;
 }
 
-/* Mobile-specific antd Modal fixes */
+/* Mobile */
 @media (max-width: 767px) {
   .ant-modal {
     max-width: 96vw !important;
@@ -1502,15 +1491,7 @@ span.submitter-code-text {
   }
 
   .ant-modal-wrap {
-    overflow: hidden !important;
-    overscroll-behavior: contain !important;
-    touch-action: none !important;
-  }
-
-  .ant-modal-body {
-    -webkit-overflow-scrolling: touch !important;
-    overscroll-behavior-y: contain !important;
-    touch-action: pan-y !important;
+    overscroll-behavior: contain;
   }
 
   .ant-modal-footer {
