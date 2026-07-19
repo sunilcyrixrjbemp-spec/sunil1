@@ -51,13 +51,13 @@ const uniqueMonths = Array.from({ length: 12 }, (_, i) => {
 const getStatusCardStyle = (status: string) => {
   const s = (status || "").toLowerCase();
   if (s.includes("approve") || s.includes("approved")) {
-    return "border-emerald-300 bg-[#f0fdf4] hover:bg-[#e6fcf0] cursor-pointer transition-colors shadow-sm sharp-card";
+    return "border-emerald-300 bg-[#f1f5f9] hover:bg-slate-200 cursor-pointer transition-colors sharp-card shadow-[0_4px_12px_-1px_rgba(16,185,129,0.3),0_2px_4px_-2px_rgba(16,185,129,0.3)]";
   }
   if (s.includes("reject") || s.includes("rejected")) {
-    return "border-rose-300 bg-[#fef2f2] hover:bg-[#fde8e8] cursor-pointer transition-colors shadow-sm sharp-card";
+    return "border-rose-300 bg-[#f1f5f9] hover:bg-slate-200 cursor-pointer transition-colors sharp-card shadow-[0_4px_12px_-1px_rgba(239,68,68,0.3),0_2px_4px_-2px_rgba(239,68,68,0.3)]";
   }
   if (s.includes("pending") || s.includes("submitted") || s.includes("return")) {
-    return "border-amber-300 bg-[#fffbeb] hover:bg-[#fef3c7] cursor-pointer transition-colors shadow-sm sharp-card";
+    return "border-amber-300 bg-[#f1f5f9] hover:bg-slate-200 cursor-pointer transition-colors sharp-card shadow-[0_4px_12px_-1px_rgba(245,158,11,0.3),0_2px_4px_-2px_rgba(245,158,11,0.3)]";
   }
   return "border-slate-300 bg-[#f1f5f9] hover:bg-slate-200 cursor-pointer transition-colors shadow-sm sharp-card";
 };
@@ -704,6 +704,35 @@ export default function HomePage() {
         .sharp-card * {
           border-radius: 0px !important;
         }
+        /* Complete reset for Ant Design Select input field to avoid global styles collision */
+        .ant-select-selector input,
+        .ant-select-selection-search input,
+        .ant-select-selection-search-input {
+          min-height: unset !important;
+          height: 100% !important;
+          padding: 0 !important;
+          margin: 0 !important;
+          border-radius: 0 !important;
+          background-color: transparent !important;
+          border: none !important;
+          box-shadow: none !important;
+        }
+        .ant-select-selector {
+          height: 32px !important;
+          min-height: 32px !important;
+          padding: 0 8px !important;
+          border-radius: 4px !important;
+          border: 1px solid #cbd5e1 !important;
+          background-color: #ffffff !important;
+          display: flex !important;
+          align-items: center !important;
+        }
+        .ant-select-selection-item {
+          line-height: 30px !important;
+          font-size: 11px !important;
+          font-weight: 600 !important;
+          color: #0f172a !important;
+        }
       `}</style>
       <div className="space-y-3 sm:space-y-4 animate-fadeIn text-[#212529] p-0 sm:p-2 md:p-4 w-full max-w-none">
         
@@ -1267,7 +1296,7 @@ export default function HomePage() {
 
                             {/* Pagination Controls */}
                             {filteredTeamExpenses.length > 100 && (
-                              <div className="flex justify-between items-center bg-gray-50 border border-gray-200 rounded-lg p-2.5 mt-4 mb-16 lg:mb-0">
+                              <div className="flex justify-between items-center bg-gray-50 border border-gray-200 rounded-lg p-2.5 mt-4 mb-32 lg:mb-0">
                                 <Button
                                   disabled={teamPage === 1}
                                   onClick={() => setTeamPage(prev => Math.max(prev - 1, 1))}
@@ -1509,12 +1538,7 @@ export default function HomePage() {
           maxHeight: "70vh", 
           overflowY: "auto", 
           padding: "12px",
-          background: claimDetails ? (
-            (claimDetails.status || "").toLowerCase().includes("approved") ? "#f0fdf4" :
-            (claimDetails.status || "").toLowerCase().includes("rejected") ? "#fef2f2" :
-            (claimDetails.status || "").toLowerCase().includes("pending") || (claimDetails.status || "").toLowerCase().includes("submitted") || (claimDetails.status || "").toLowerCase().includes("return") ? "#fffbeb" :
-            "#ffffff"
-          ) : "#ffffff"
+          background: "#ffffff"
         }}
       >
         {!claimDetails ? (
@@ -2161,55 +2185,60 @@ export default function HomePage() {
             )}
 
             {/* Approval History Section */}
-            {claimDetails.logs && claimDetails.logs.some((log: any) => (log.field_name || "").toLowerCase() === "status") && (
+            {claimDetails.approvals && claimDetails.approvals.length > 0 && (
               <div className="border border-gray-200 rounded overflow-hidden">
                 <div className="px-3 py-2 bg-slate-50 border-b border-gray-200">
                   <h4 className="text-[10px] font-bold uppercase text-gray-655 tracking-wider">Approval History &amp; Decision Remarks</h4>
                 </div>
                 <div className="p-3 bg-white space-y-3">
-                  {claimDetails.logs
-                    .filter((log: any) => (log.field_name || "").toLowerCase() === "status")
-                    .map((log: any, idx: number) => {
-                      const statusVal = (log.comment || "").toLowerCase();
-                      const isApproved = statusVal.includes("approve") || statusVal.includes("approved");
-                      const isRejected = statusVal.includes("reject") || statusVal.includes("rejected");
-                      
-                      let statusBadge = (
-                        <Tag color="orange" className="font-bold text-[8px] uppercase tracking-wider">Pending/Returned</Tag>
-                      );
-                      if (isApproved) {
-                        statusBadge = (
-                          <Tag color="success" className="font-bold text-[8px] uppercase tracking-wider">Approved</Tag>
-                        );
-                      } else if (isRejected) {
-                        statusBadge = (
-                          <Tag color="error" className="font-bold text-[8px] uppercase tracking-wider">Rejected</Tag>
-                        );
-                      }
+                  {claimDetails.approvals.map((app: any, idx: number) => {
+                    const statusVal = (app.status || "").toLowerCase();
+                    const isApproved = statusVal === "approved";
+                    const isRejected = statusVal === "rejected";
 
-                      return (
-                        <div key={idx} className="flex gap-3 text-xs border-l-2 border-indigo-500 pl-3 py-1 bg-slate-50/50 p-2.5 rounded shadow-2xs">
-                          <div className="flex-1 space-y-1">
-                            <div className="flex items-center justify-between">
-                              <div>
-                                <span className="font-bold text-gray-800">{log.editor_name}</span>
-                                <span className="text-[9px] text-gray-455 font-bold uppercase ml-1.5">({log.editor_role})</span>
-                              </div>
-                              <span className="text-[9px] text-gray-400 font-mono">{formatDateTime(log.created_at)}</span>
-                            </div>
-                            <div className="flex items-center gap-2 mt-0.5">
-                              <span className="text-gray-400 font-bold text-[8px] uppercase">Decision:</span>
-                              {statusBadge}
-                            </div>
-                            {log.comment && (
-                              <p className="text-gray-655 italic bg-white p-2 rounded border border-gray-150 mt-1.5 text-[11px] leading-relaxed">
-                                "{log.comment}"
-                              </p>
-                            )}
-                          </div>
-                        </div>
+                    
+                    let statusBadge = (
+                      <Tag color="orange" className="font-bold text-[8px] uppercase tracking-wider">Pending/Returned</Tag>
+                    );
+                    if (isApproved) {
+                      statusBadge = (
+                        <Tag color="success" className="font-bold text-[8px] uppercase tracking-wider">Approved</Tag>
                       );
-                    })}
+                    } else if (isRejected) {
+                      statusBadge = (
+                        <Tag color="error" className="font-bold text-[8px] uppercase tracking-wider">Rejected</Tag>
+                      );
+                    } else if (statusVal === "waiting") {
+                      statusBadge = (
+                        <Tag color="default" className="font-bold text-[8px] uppercase tracking-wider">Waiting</Tag>
+                      );
+                    }
+
+                    return (
+                      <div key={idx} className="flex gap-3 text-xs border-l-2 border-indigo-500 pl-3 py-1 bg-slate-50/50 p-2.5 rounded shadow-2xs">
+                        <div className="flex-1 space-y-1">
+                          <div className="flex items-center justify-between">
+                            <div>
+                              <span className="font-bold text-gray-800">{app.approver_name}</span>
+                              <span className="text-[9px] text-gray-455 font-bold uppercase ml-1.5">({app.approver_role || `L${app.level_number} Approver`})</span>
+                            </div>
+                            <span className="text-[9px] text-gray-400 font-mono">
+                              {app.updated_at ? formatDateTime(app.updated_at) : "—"}
+                            </span>
+                          </div>
+                          <div className="flex items-center gap-2 mt-0.5">
+                            <span className="text-gray-400 font-bold text-[8px] uppercase">Decision:</span>
+                            {statusBadge}
+                          </div>
+                          {app.comments && (
+                            <p className="text-gray-655 italic bg-white p-2 rounded border border-gray-150 mt-1.5 text-[11px] leading-relaxed">
+                              "{app.comments}"
+                            </p>
+                          )}
+                        </div>
+                      </div>
+                    );
+                  })}
                 </div>
               </div>
             )}
@@ -2368,12 +2397,7 @@ export default function HomePage() {
           maxHeight: "70vh", 
           overflowY: "auto", 
           padding: "12px",
-          background: claimDetails ? (
-            (claimDetails.status || "").toLowerCase().includes("approved") ? "#f0fdf4" :
-            (claimDetails.status || "").toLowerCase().includes("rejected") ? "#fef2f2" :
-            (claimDetails.status || "").toLowerCase().includes("pending") || (claimDetails.status || "").toLowerCase().includes("submitted") || (claimDetails.status || "").toLowerCase().includes("return") ? "#fffbeb" :
-            "#ffffff"
-          ) : "#ffffff"
+          background: "#ffffff"
         }}
       >
         {statsModalClaims.length === 0 ? (
