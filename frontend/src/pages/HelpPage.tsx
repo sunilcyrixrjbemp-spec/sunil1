@@ -3,7 +3,6 @@ import toast from "react-hot-toast";
 import { 
   Card, 
   Button, 
-  Select, 
   Input, 
   Tag, 
   Space, 
@@ -891,53 +890,50 @@ export default function HelpPage() {
             </div>
 
             {/* Follow-up Filter */}
-            <div className="flex items-center gap-1.5 w-full sm:w-auto">
+            <div className="flex flex-col sm:flex-row sm:items-center gap-1 w-full sm:w-auto">
               <span className="text-[10px] font-bold uppercase text-slate-400">Flag:</span>
-              <Select
+              <select
                 value={filterFollowup}
-                onChange={(val) => setFilterFollowup(val)}
-                className="w-full sm:w-36"
-                options={[
-                  { label: "All Concerns", value: "all" },
-                  { label: "⭐ Flagged Only", value: "flagged" },
-                  { label: "Unflagged Only", value: "normal" }
-                ]}
-              />
+                onChange={(e) => setFilterFollowup(e.target.value as any)}
+                className="w-full sm:w-36 bg-white border border-slate-300 rounded-xl px-3 py-2 text-xs font-bold text-slate-800 cursor-pointer shadow-2xs focus:outline-none focus:border-indigo-500"
+              >
+                <option value="all">All Concerns</option>
+                <option value="flagged">⭐ Flagged Only</option>
+                <option value="normal">Unflagged Only</option>
+              </select>
             </div>
 
             {/* Status Filter */}
-            <div className="flex items-center gap-1.5 w-full sm:w-auto">
+            <div className="flex flex-col sm:flex-row sm:items-center gap-1 w-full sm:w-auto">
               <span className="text-[10px] font-bold uppercase text-slate-400">Status:</span>
-              <Select
+              <select
                 value={filterStatus}
-                onChange={(val) => setFilterStatus(val)}
-                className="w-full sm:w-36"
-                options={[
-                  { label: "All Statuses", value: "all" },
-                  { label: "Open", value: "Open" },
-                  { label: "Re-opened", value: "Re-opened" },
-                  { label: "Updated", value: "Updated" },
-                  { label: "Closed", value: "Closed" },
-                  { label: "Final Closed", value: "Final Closed" }
-                ]}
-              />
+                onChange={(e) => setFilterStatus(e.target.value)}
+                className="w-full sm:w-36 bg-white border border-slate-300 rounded-xl px-3 py-2 text-xs font-bold text-slate-800 cursor-pointer shadow-2xs focus:outline-none focus:border-indigo-500"
+              >
+                <option value="all">All Statuses</option>
+                <option value="Open">Open</option>
+                <option value="Re-opened">Re-opened</option>
+                <option value="Updated">Updated</option>
+                <option value="Closed">Closed</option>
+                <option value="Final Closed">Final Closed</option>
+              </select>
             </div>
 
             {/* Category Filter */}
-            <div className="flex items-center gap-1.5 w-full sm:w-auto">
+            <div className="flex flex-col sm:flex-row sm:items-center gap-1 w-full sm:w-auto">
               <span className="text-[10px] font-bold uppercase text-slate-400">Category:</span>
-              <Select
+              <select
                 value={filterCategory}
-                onChange={(val) => setFilterCategory(val)}
-                className="w-full sm:w-36"
-                options={[
-                  { label: "All Categories", value: "all" },
-                  { label: "Expense", value: "Expense" },
-                  { label: "TA / DA", value: "TA/DA" },
-                  { label: "Profile", value: "Profile" },
-                  { label: "Other", value: "Other" }
-                ]}
-              />
+                onChange={(e) => setFilterCategory(e.target.value)}
+                className="w-full sm:w-36 bg-white border border-slate-300 rounded-xl px-3 py-2 text-xs font-bold text-slate-800 cursor-pointer shadow-2xs focus:outline-none focus:border-indigo-500"
+              >
+                <option value="all">All Categories</option>
+                <option value="Expense">Expense</option>
+                <option value="TA/DA">TA / DA</option>
+                <option value="Profile">Profile</option>
+                <option value="Other">Other</option>
+              </select>
             </div>
           </div>
 
@@ -972,18 +968,16 @@ export default function HelpPage() {
               {/* Concern type dropdown */}
               <div>
                 <Text className="text-xs font-bold text-slate-600 block mb-1">Concern Field *</Text>
-                <Select
+                <select
                   value={concernType}
-                  onChange={(val) => setConcernType(val)}
-                  className="w-full"
-                  size="large"
-                  options={[
-                    { label: "Expense Claim Reference", value: "Expense" },
-                    { label: "TA / DA Allowance Cap", value: "TA/DA" },
-                    { label: "Profile Mappings", value: "Profile" },
-                    { label: "Other / Custom Issue", value: "Other" }
-                  ]}
-                />
+                  onChange={(e) => setConcernType(e.target.value)}
+                  className="w-full bg-white border border-slate-300 rounded-xl px-3 py-2.5 text-xs font-bold text-slate-800 cursor-pointer shadow-2xs focus:outline-none focus:border-indigo-500"
+                >
+                  <option value="Expense">Expense Claim Reference</option>
+                  <option value="TA/DA">TA / DA Allowance Cap</option>
+                  <option value="Profile">Profile Mappings</option>
+                  <option value="Other">Other / Custom Issue</option>
+                </select>
               </div>
 
               {/* Custom Category Input */}
@@ -1004,17 +998,18 @@ export default function HelpPage() {
               {concernType === "Expense" && (
                 <div>
                   <Text className="text-xs font-bold text-slate-600 block mb-1">Select Claim Reference *</Text>
-                  <Select
+                  <select
                     value={selectedExpenseId}
-                    onChange={(val) => setSelectedExpenseId(val)}
-                    placeholder="-- Select Related Expense Claim --"
-                    className="w-full"
-                    size="large"
-                    options={myExpenses.map(exp => ({
-                      label: `${exp.expense_code} — ${exp.itinerary} (₹${exp.amount.toLocaleString()})`,
-                      value: String(exp.id)
-                    }))}
-                  />
+                    onChange={(e) => setSelectedExpenseId(e.target.value)}
+                    className="w-full bg-white border border-slate-300 rounded-xl px-3 py-2.5 text-xs font-bold text-slate-800 cursor-pointer shadow-2xs focus:outline-none focus:border-indigo-500"
+                  >
+                    <option value="">-- Select Related Expense Claim --</option>
+                    {myExpenses.map(exp => (
+                      <option key={exp.id} value={String(exp.id)}>
+                        {exp.expense_code} — {exp.itinerary} (₹{exp.amount.toLocaleString()})
+                      </option>
+                    ))}
+                  </select>
                 </div>
               )}
 
@@ -1022,17 +1017,21 @@ export default function HelpPage() {
               {concernType !== "Profile" ? (
                 <div>
                   <Text className="text-xs font-bold text-slate-600 block mb-1">Assign Target Supervisor *</Text>
-                  <Select
+                  <select
                     value={assignedToName}
-                    onChange={(val) => setAssignedToName(val)}
-                    className="w-full"
-                    size="large"
-                    options={[
-                      ...(currentUser?.manager ? [{ label: `Reporting Manager: ${currentUser.manager}`, value: currentUser.manager }] : []),
-                      ...(currentUser?.coordinator ? [{ label: `Zonal Coordinator: ${currentUser.coordinator}`, value: currentUser.coordinator }] : []),
-                      ...((!currentUser?.manager && !currentUser?.coordinator) ? [{ label: "Admin System", value: "Admin System" }] : [])
-                    ]}
-                  />
+                    onChange={(e) => setAssignedToName(e.target.value)}
+                    className="w-full bg-white border border-slate-300 rounded-xl px-3 py-2.5 text-xs font-bold text-slate-800 cursor-pointer shadow-2xs focus:outline-none focus:border-indigo-500"
+                  >
+                    {currentUser?.manager && (
+                      <option value={currentUser.manager}>Reporting Manager: {currentUser.manager}</option>
+                    )}
+                    {currentUser?.coordinator && (
+                      <option value={currentUser.coordinator}>Zonal Coordinator: {currentUser.coordinator}</option>
+                    )}
+                    {(!currentUser?.manager && !currentUser?.coordinator) && (
+                      <option value="Admin System">Admin System</option>
+                    )}
+                  </select>
                 </div>
               ) : (
                 <div>
@@ -1046,18 +1045,16 @@ export default function HelpPage() {
               {/* Priority */}
               <div>
                 <Text className="text-xs font-bold text-slate-600 block mb-1">Priority Level *</Text>
-                <Select
+                <select
                   value={priority}
-                  onChange={(val) => setPriority(val)}
-                  className="w-full"
-                  size="large"
-                  options={[
-                    { label: "Low (General Query)", value: "Low" },
-                    { label: "Medium (Delay/Discrepancy)", value: "Medium" },
-                    { label: "High (Urgent Action)", value: "High" },
-                    { label: "Critical (System Lockout)", value: "Critical" }
-                  ]}
-                />
+                  onChange={(e) => setPriority(e.target.value)}
+                  className="w-full bg-white border border-slate-300 rounded-xl px-3 py-2.5 text-xs font-bold text-slate-800 cursor-pointer shadow-2xs focus:outline-none focus:border-indigo-500"
+                >
+                  <option value="Low">Low (General Query)</option>
+                  <option value="Medium">Medium (Delay/Discrepancy)</option>
+                  <option value="High">High (Urgent Action)</option>
+                  <option value="Critical">Critical (System Lockout)</option>
+                </select>
               </div>
 
               {/* Description */}
