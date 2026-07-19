@@ -37,7 +37,6 @@ import api from "../services/api";
 import { ResponsiveBar } from "@nivo/bar";
 
 const { Title, Text, Paragraph } = Typography;
-const { Option } = Select;
 const { TextArea } = Input;
 
 const GALLERY_COLORS = ["#4f46e5", "#10b981", "#f59e0b", "#8b5cf6", "#f43f5e", "#06b6d4", "#ec4899"];
@@ -851,34 +850,12 @@ export default function HelpPage() {
 
       </div>
 
-      {/* Global CSS overrides for Ant Design Select and Segmented to ensure full text visibility on mobile */}
+      {/* Ant Design Select and Segmented styling */}
       <style>{`
-        .ant-select-selector input,
-        .ant-select-selection-search input,
-        .ant-select-selection-search-input {
-          min-height: unset !important;
-          height: 100% !important;
-          padding: 0 !important;
-          margin: 0 !important;
-          border-radius: 0 !important;
-          background-color: transparent !important;
-          border: none !important;
-          box-shadow: none !important;
-        }
-        .ant-select-selector {
-          min-height: 40px !important;
-          padding: 4px 11px !important;
+        .ant-select-single:not(.ant-select-customize-input) .ant-select-selector {
           border-radius: 10px !important;
-          border: 1px solid #cbd5e1 !important;
+          border-color: #cbd5e1 !important;
           background-color: #ffffff !important;
-          display: flex !important;
-          align-items: center !important;
-        }
-        .ant-select-selection-item {
-          line-height: 28px !important;
-          font-size: 12px !important;
-          font-weight: 600 !important;
-          color: #0f172a !important;
         }
         .help-tab-segmented .ant-segmented-item-selected {
           background-color: #4f46e5 !important;
@@ -906,50 +883,62 @@ export default function HelpPage() {
 
       {/* Home-style Filter Toolbar */}
       {activeTab !== "raise" && (
-        <div className="bg-white border border-slate-200/80 rounded-2xl p-3.5 shadow-2xs flex flex-wrap items-center justify-between gap-3">
-          <div className="flex flex-wrap items-center gap-3 w-full sm:w-auto">
+        <div className="bg-white border border-slate-200/80 rounded-2xl p-3.5 shadow-2xs flex flex-col md:flex-row items-center justify-between gap-3">
+          <div className="flex flex-wrap items-center gap-3 w-full md:w-auto">
             <div className="flex items-center gap-1.5 text-xs font-extrabold text-slate-700 uppercase tracking-wider shrink-0">
               <FilterOutlined className="text-indigo-600 text-sm" />
               <span>Filter Concerns:</span>
             </div>
 
             {/* Follow-up Filter */}
-            <Select
-              value={filterFollowup}
-              onChange={(val) => setFilterFollowup(val)}
-              className="w-full sm:w-36"
-            >
-              <Option value="all">All Concerns</Option>
-              <Option value="flagged">⭐ Flagged Only</Option>
-              <Option value="normal">Unflagged Only</Option>
-            </Select>
+            <div className="flex items-center gap-1.5 w-full sm:w-auto">
+              <span className="text-[10px] font-bold uppercase text-slate-400">Flag:</span>
+              <Select
+                value={filterFollowup}
+                onChange={(val) => setFilterFollowup(val)}
+                className="w-full sm:w-36"
+                options={[
+                  { label: "All Concerns", value: "all" },
+                  { label: "⭐ Flagged Only", value: "flagged" },
+                  { label: "Unflagged Only", value: "normal" }
+                ]}
+              />
+            </div>
 
             {/* Status Filter */}
-            <Select
-              value={filterStatus}
-              onChange={(val) => setFilterStatus(val)}
-              className="w-full sm:w-36"
-            >
-              <Option value="all">All Statuses</Option>
-              <Option value="Open">Open</Option>
-              <Option value="Re-opened">Re-opened</Option>
-              <Option value="Updated">Updated</Option>
-              <Option value="Closed">Closed</Option>
-              <Option value="Final Closed">Final Closed</Option>
-            </Select>
+            <div className="flex items-center gap-1.5 w-full sm:w-auto">
+              <span className="text-[10px] font-bold uppercase text-slate-400">Status:</span>
+              <Select
+                value={filterStatus}
+                onChange={(val) => setFilterStatus(val)}
+                className="w-full sm:w-36"
+                options={[
+                  { label: "All Statuses", value: "all" },
+                  { label: "Open", value: "Open" },
+                  { label: "Re-opened", value: "Re-opened" },
+                  { label: "Updated", value: "Updated" },
+                  { label: "Closed", value: "Closed" },
+                  { label: "Final Closed", value: "Final Closed" }
+                ]}
+              />
+            </div>
 
             {/* Category Filter */}
-            <Select
-              value={filterCategory}
-              onChange={(val) => setFilterCategory(val)}
-              className="w-full sm:w-36"
-            >
-              <Option value="all">All Categories</Option>
-              <Option value="Expense">Expense</Option>
-              <Option value="TA/DA">TA / DA</Option>
-              <Option value="Profile">Profile</Option>
-              <Option value="Other">Other</Option>
-            </Select>
+            <div className="flex items-center gap-1.5 w-full sm:w-auto">
+              <span className="text-[10px] font-bold uppercase text-slate-400">Category:</span>
+              <Select
+                value={filterCategory}
+                onChange={(val) => setFilterCategory(val)}
+                className="w-full sm:w-36"
+                options={[
+                  { label: "All Categories", value: "all" },
+                  { label: "Expense", value: "Expense" },
+                  { label: "TA / DA", value: "TA/DA" },
+                  { label: "Profile", value: "Profile" },
+                  { label: "Other", value: "Other" }
+                ]}
+              />
+            </div>
           </div>
 
           <Button 
@@ -958,7 +947,7 @@ export default function HelpPage() {
               setFilterStatus("all");
               setFilterCategory("all");
             }}
-            className="text-xs font-bold text-slate-600 rounded-xl hover:text-indigo-600 border-slate-200"
+            className="text-xs font-bold text-slate-600 rounded-xl hover:text-indigo-600 border-slate-200 self-end md:self-auto"
           >
             Reset Filters
           </Button>
@@ -988,12 +977,13 @@ export default function HelpPage() {
                   onChange={(val) => setConcernType(val)}
                   className="w-full"
                   size="large"
-                >
-                  <Option value="Expense">Expense Claim Reference</Option>
-                  <Option value="TA/DA">TA / DA Allowance Cap</Option>
-                  <Option value="Profile">Profile Mappings</Option>
-                  <Option value="Other">Other / Custom Issue</Option>
-                </Select>
+                  options={[
+                    { label: "Expense Claim Reference", value: "Expense" },
+                    { label: "TA / DA Allowance Cap", value: "TA/DA" },
+                    { label: "Profile Mappings", value: "Profile" },
+                    { label: "Other / Custom Issue", value: "Other" }
+                  ]}
+                />
               </div>
 
               {/* Custom Category Input */}
@@ -1020,13 +1010,11 @@ export default function HelpPage() {
                     placeholder="-- Select Related Expense Claim --"
                     className="w-full"
                     size="large"
-                  >
-                    {myExpenses.map(exp => (
-                      <Option key={exp.id} value={String(exp.id)}>
-                        {exp.expense_code} — {exp.itinerary} (₹{exp.amount.toLocaleString()})
-                      </Option>
-                    ))}
-                  </Select>
+                    options={myExpenses.map(exp => ({
+                      label: `${exp.expense_code} — ${exp.itinerary} (₹${exp.amount.toLocaleString()})`,
+                      value: String(exp.id)
+                    }))}
+                  />
                 </div>
               )}
 
@@ -1039,17 +1027,12 @@ export default function HelpPage() {
                     onChange={(val) => setAssignedToName(val)}
                     className="w-full"
                     size="large"
-                  >
-                    {currentUser?.manager && (
-                      <Option value={currentUser.manager}>Reporting Manager: {currentUser.manager}</Option>
-                    )}
-                    {currentUser?.coordinator && (
-                      <Option value={currentUser.coordinator}>Zonal Coordinator: {currentUser.coordinator}</Option>
-                    )}
-                    {(!currentUser?.manager && !currentUser?.coordinator) && (
-                      <Option value="Admin System">Admin System</Option>
-                    )}
-                  </Select>
+                    options={[
+                      ...(currentUser?.manager ? [{ label: `Reporting Manager: ${currentUser.manager}`, value: currentUser.manager }] : []),
+                      ...(currentUser?.coordinator ? [{ label: `Zonal Coordinator: ${currentUser.coordinator}`, value: currentUser.coordinator }] : []),
+                      ...((!currentUser?.manager && !currentUser?.coordinator) ? [{ label: "Admin System", value: "Admin System" }] : [])
+                    ]}
+                  />
                 </div>
               ) : (
                 <div>
@@ -1068,12 +1051,13 @@ export default function HelpPage() {
                   onChange={(val) => setPriority(val)}
                   className="w-full"
                   size="large"
-                >
-                  <Option value="Low">Low (General Query)</Option>
-                  <Option value="Medium">Medium (Delay/Discrepancy)</Option>
-                  <Option value="High">High (Urgent Action)</Option>
-                  <Option value="Critical">Critical (System Lockout)</Option>
-                </Select>
+                  options={[
+                    { label: "Low (General Query)", value: "Low" },
+                    { label: "Medium (Delay/Discrepancy)", value: "Medium" },
+                    { label: "High (Urgent Action)", value: "High" },
+                    { label: "Critical (System Lockout)", value: "Critical" }
+                  ]}
+                />
               </div>
 
               {/* Description */}
