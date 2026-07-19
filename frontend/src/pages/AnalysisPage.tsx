@@ -12,8 +12,6 @@ import {
   Statistic,
   Button,
   Radio,
-  Typography,
-  Space,
   Progress,
   Segmented
 } from "antd";
@@ -30,8 +28,6 @@ import {
   InfoCircleOutlined
 } from "@ant-design/icons";
 
-const { Title, Text } = Typography;
-
 const getSegmentedClass = (status: string) => {
   switch (status) {
     case "approved":
@@ -45,7 +41,7 @@ const getSegmentedClass = (status: string) => {
   }
 };
 
-const GALLERY_COLORS = ["#2f5bb7", "#2b7d50", "#d28b2a", "#854aa5", "#d83b01", "#00a2ad", "#e81123"];
+const GALLERY_COLORS = ["#4f46e5", "#8b5cf6", "#10b981", "#06b6d4", "#f59e0b", "#f43f5e", "#0ea5e9", "#14b8a6"];
 
 const months = [
   "January", "February", "March", "April", "May", "June",
@@ -561,10 +557,8 @@ export default function AnalysisPage() {
         <Loader message="Loading analysis dashboard..." />
       </div>
     );
-  }
-
-  return (
-    <div className="space-y-4 p-4 lg:p-6" style={{ fontFamily: "'Plus Jakarta Sans', sans-serif" }}>
+  }  return (
+    <div className="space-y-3 p-1.5 md:p-6" style={{ fontFamily: "'Plus Jakarta Sans', sans-serif" }}>
       <style>{`
         /* Polish filters style and fix conflicting global styling */
         .ant-select {
@@ -609,8 +603,29 @@ export default function AnalysisPage() {
           color: #64748b !important;
         }
         
-        /* Date Inputs style fixes */
-        .analysis-date-input {
+        /* Force highly specific select overrides to prevent global 44px min-height style */
+        select.analysis-select-input {
+          min-height: 34px !important;
+          height: 34px !important;
+          border-radius: 6px !important;
+          padding: 0 8px !important;
+          font-size: 11px !important;
+          font-weight: 600 !important;
+          background-color: #ffffff !important;
+          color: #1f2937 !important;
+          border: 1px solid #d1d5db !important;
+          width: 100% !important;
+          box-sizing: border-box !important;
+          outline: none !important;
+          cursor: pointer !important;
+        }
+        select.analysis-select-input:focus {
+          border-color: #6366f1 !important;
+          box-shadow: 0 0 0 2px rgba(99, 102, 241, 0.1) !important;
+        }
+
+        /* Force highly specific date input overrides to prevent global 44px style */
+        input[type="date"].analysis-date-input {
           height: 34px !important;
           min-height: 34px !important;
           border: 1px solid #d1d5db !important;
@@ -619,13 +634,13 @@ export default function AnalysisPage() {
           font-size: 11px !important;
           font-weight: 600 !important;
           background-color: #ffffff !important;
-          background-image: none !important;
           color: #1f2937 !important;
           width: 100% !important;
           box-sizing: border-box !important;
           font-family: inherit !important;
+          outline: none !important;
         }
-        .analysis-date-input:focus {
+        input[type="date"].analysis-date-input:focus {
           border-color: #6366f1 !important;
           outline: none !important;
           box-shadow: 0 0 0 2px rgba(99, 102, 241, 0.1) !important;
@@ -658,53 +673,64 @@ export default function AnalysisPage() {
         }
       `}</style>
       
-      {/* Page Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 pb-2 border-b border-gray-100">
-        <div>
-          <Title level={4} style={{ margin: 0, fontSize: "18px", color: "#1F2937" }} className="uppercase font-bold tracking-wider flex items-center gap-2">
-            <DashboardOutlined className="text-indigo-600" /> Expense Analysis
-          </Title>
-          <Text type="secondary" className="text-xs">Real-time expense data visualization & insights</Text>
-        </div>
+      {/* Page Header Card */}
+      <div className="bg-gradient-to-r from-indigo-50/70 to-blue-50/40 border border-indigo-100/70 rounded-xl p-3 shadow-2xs">
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2.5">
+          <div className="flex items-center gap-2.5">
+            <div className="w-8 h-8 rounded-full bg-indigo-600 flex items-center justify-center text-white shrink-0 shadow-xs">
+              <DashboardOutlined className="text-white text-base" />
+            </div>
+            <div>
+              <h1 className="text-xs sm:text-base font-bold text-gray-800 uppercase tracking-wider leading-none m-0">
+                Expense Analysis
+              </h1>
+              <p className="text-gray-500 text-[10px] font-medium mt-1 leading-none hidden sm:block">
+                Real-time expense data visualization & insights
+              </p>
+            </div>
+          </div>
 
-        {/* Actions Toolbar */}
-        <div className="flex flex-wrap items-center gap-2">
-          {isReviewer && (
-            <Radio.Group
-              value={viewMode}
-              onChange={(e) => setViewMode(e.target.value as "my" | "team")}
-              optionType="button"
-              buttonStyle="solid"
-              size="middle"
+          {/* Actions Toolbar */}
+          <div className="flex items-center gap-2 justify-between sm:justify-end w-full sm:w-auto mt-1 sm:mt-0">
+            {isReviewer && (
+              <Radio.Group
+                value={viewMode}
+                onChange={(e) => setViewMode(e.target.value as "my" | "team")}
+                optionType="button"
+                buttonStyle="solid"
+                size="small"
+                className="shadow-2xs shrink-0"
+              >
+                <Radio.Button value="my" className="font-bold text-[10px] uppercase">
+                  My Data
+                </Radio.Button>
+                <Radio.Button value="team" className="font-bold text-[10px] uppercase">
+                  Team Data
+                </Radio.Button>
+              </Radio.Group>
+            )}
+            <Button
+              type="primary"
+              size="small"
+              icon={<FileExcelOutlined />}
+              style={{ backgroundColor: "#10b981", borderColor: "#10b981" }}
+              onClick={downloadCSV}
+              disabled={activeExpenses.length === 0}
+              className="font-bold text-[10px] uppercase flex items-center justify-center shrink-0 h-6 px-3"
             >
-              <Radio.Button value="my">
-                <Space><UserOutlined />My Data</Space>
-              </Radio.Button>
-              <Radio.Button value="team">
-                <Space><TeamOutlined />Team Data</Space>
-              </Radio.Button>
-            </Radio.Group>
-          )}
-          <Button
-            type="primary"
-            icon={<FileExcelOutlined />}
-            style={{ backgroundColor: "#10b981", borderColor: "#10b981" }}
-            onClick={downloadCSV}
-            disabled={activeExpenses.length === 0}
-            className="font-bold text-xs"
-          >
-            Export CSV
-          </Button>
+              Export CSV
+            </Button>
+          </div>
         </div>
       </div>
 
       {/* Filters Panel Card */}
-      <Card size="small" className="border border-gray-200 shadow-xs">
-        <Row gutter={[12, 12]} align="middle">
+      <div className="bg-white border border-gray-200 rounded-xl p-3 shadow-2xs">
+        <Row gutter={[8, 8]} align="middle">
           {/* Header */}
-          <Col xs={24} className="flex items-center gap-1.5 text-gray-400 font-bold mb-1 lg:mb-0">
-            <FilterOutlined style={{ fontSize: 13 }} />
-            <span className="text-[10px] uppercase tracking-wider">Filters</span>
+          <Col xs={24} className="flex items-center gap-1.5 text-gray-400 font-bold mb-0.5">
+            <FilterOutlined style={{ fontSize: 11 }} />
+            <span className="text-[9px] uppercase tracking-wider">Filters</span>
           </Col>
 
           {/* Dynamic selectors */}
@@ -712,12 +738,11 @@ export default function AnalysisPage() {
             <>
               {/* Zone Filter */}
               <Col xs={12} sm={8} md={6} lg={4}>
-                <span className="text-[9px] font-bold text-gray-400 uppercase block mb-1">Zone</span>
+                <span className="text-[9px] font-bold text-gray-400 uppercase block mb-0.5">Zone</span>
                 <select
                   value={selectedZone}
                   onChange={(e) => setSelectedZone(e.target.value)}
-                  className="w-full bg-white border border-gray-300 rounded px-2 py-1 text-xs font-semibold text-gray-800 shadow-2xs focus:outline-none focus:border-indigo-500 cursor-pointer"
-                  style={{ minHeight: "34px", height: "34px", borderRadius: "6px", fontSize: "11px", lineHeight: "1.2" }}
+                  className="analysis-select-input"
                 >
                   <option value="all">Zone: All</option>
                   {uniqueZones.map(z => (
@@ -728,12 +753,11 @@ export default function AnalysisPage() {
 
               {/* District Filter */}
               <Col xs={12} sm={8} md={6} lg={4}>
-                <span className="text-[9px] font-bold text-gray-400 uppercase block mb-1">District</span>
+                <span className="text-[9px] font-bold text-gray-400 uppercase block mb-0.5">District</span>
                 <select
                   value={selectedDistrict}
                   onChange={(e) => setSelectedDistrict(e.target.value)}
-                  className="w-full bg-white border border-gray-300 rounded px-2 py-1 text-xs font-semibold text-gray-800 shadow-2xs focus:outline-none focus:border-indigo-500 cursor-pointer"
-                  style={{ minHeight: "34px", height: "34px", borderRadius: "6px", fontSize: "11px", lineHeight: "1.2" }}
+                  className="analysis-select-input"
                 >
                   <option value="all">District: All</option>
                   {filterOptions.districts.map(d => (
@@ -744,12 +768,11 @@ export default function AnalysisPage() {
 
               {/* Engineer Filter */}
               <Col xs={24} sm={8} md={6} lg={4}>
-                <span className="text-[9px] font-bold text-gray-400 uppercase block mb-1">Engineer</span>
+                <span className="text-[9px] font-bold text-gray-400 uppercase block mb-0.5">Engineer</span>
                 <select
                   value={selectedEngineer}
                   onChange={(e) => setSelectedEngineer(e.target.value)}
-                  className="w-full bg-white border border-gray-300 rounded px-2 py-1 text-xs font-semibold text-gray-800 shadow-2xs focus:outline-none focus:border-indigo-500 cursor-pointer"
-                  style={{ minHeight: "34px", height: "34px", borderRadius: "6px", fontSize: "11px", lineHeight: "1.2" }}
+                  className="analysis-select-input"
                 >
                   <option value="all">Engineer: All</option>
                   {filterOptions.engineers.map(name => (
@@ -762,13 +785,12 @@ export default function AnalysisPage() {
 
           {/* Month Filter */}
           <Col xs={12} sm={8} md={6} lg={3}>
-            <span className="text-[9px] font-bold text-gray-400 uppercase block mb-1">Month</span>
+            <span className="text-[9px] font-bold text-gray-400 uppercase block mb-0.5">Month</span>
             <select
               value={selectedMonth}
               onChange={(e) => setSelectedMonth(Number(e.target.value))}
               disabled={!!startDate || !!endDate}
-              className="w-full bg-white border border-gray-300 rounded px-2 py-1 text-xs font-semibold text-gray-800 shadow-2xs focus:outline-none focus:border-indigo-500 cursor-pointer disabled:opacity-50"
-              style={{ minHeight: "34px", height: "34px", borderRadius: "6px", fontSize: "11px", lineHeight: "1.2" }}
+              className="analysis-select-input disabled:opacity-50"
             >
               {months.map((m, i) => (
                 <option key={i} value={i}>{m}</option>
@@ -778,13 +800,12 @@ export default function AnalysisPage() {
 
           {/* Year Filter */}
           <Col xs={12} sm={8} md={6} lg={3}>
-            <span className="text-[9px] font-bold text-gray-400 uppercase block mb-1">Year</span>
+            <span className="text-[9px] font-bold text-gray-400 uppercase block mb-0.5">Year</span>
             <select
               value={selectedYear}
               onChange={(e) => setSelectedYear(Number(e.target.value))}
               disabled={!!startDate || !!endDate}
-              className="w-full bg-white border border-gray-300 rounded px-2 py-1 text-xs font-semibold text-gray-800 shadow-2xs focus:outline-none focus:border-indigo-500 cursor-pointer disabled:opacity-50"
-              style={{ minHeight: "34px", height: "34px", borderRadius: "6px", fontSize: "11px", lineHeight: "1.2" }}
+              className="analysis-select-input disabled:opacity-50"
             >
               {availableYears.map(y => (
                 <option key={y} value={y}>{y}</option>
@@ -794,9 +815,10 @@ export default function AnalysisPage() {
 
           {/* Status Filter */}
           <Col xs={24} md={12} lg={6}>
-            <span className="text-[9px] font-bold text-gray-400 uppercase block mb-1">Status</span>
+            <span className="text-[9px] font-bold text-gray-400 uppercase block mb-0.5">Status</span>
             <Segmented
               block
+              size="small"
               value={selectedStatus}
               onChange={(val) => setSelectedStatus(val as any)}
               options={[
@@ -811,7 +833,7 @@ export default function AnalysisPage() {
 
           {/* Date Range Filters */}
           <Col xs={24} md={12} lg={6}>
-            <span className="text-[9px] font-bold text-gray-400 uppercase block mb-1">Custom Date Range</span>
+            <span className="text-[9px] font-bold text-gray-400 uppercase block mb-0.5">Custom Date Range</span>
             <div className="flex items-center gap-2">
               <input
                 type="date"
@@ -841,7 +863,7 @@ export default function AnalysisPage() {
             </div>
           </Col>
         </Row>
-      </Card>
+      </div>
 
       {/* Key Stats Grid */}
       <Row gutter={[12, 12]}>
@@ -1126,7 +1148,7 @@ export default function AnalysisPage() {
                         data={[
                           {
                             id: "Amount",
-                            color: "#007bff",
+                            color: "#4f46e5",
                             data: last5DaysData.map(d => ({ x: d.date, y: d.amount }))
                           }
                         ]}
@@ -1190,7 +1212,7 @@ export default function AnalysisPage() {
                               id: d.name,
                               label: d.name,
                               value: d.value,
-                              color: d.name === "Approved" ? "#2e7d32" : d.name === "Rejected" ? "#d32f2f" : "#f57c00"
+                              color: d.name === "Approved" ? "#10b981" : d.name === "Rejected" ? "#ef4444" : "#f97316"
                             }))}
                             margin={{ top: 10, right: 10, bottom: 10, left: 10 }}
                             innerRadius={0.7}
