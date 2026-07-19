@@ -3,7 +3,6 @@ import { useNavigate, Outlet, useLocation, Link } from "react-router-dom";
 import { authService } from "../../services/authService";
 import { preloadRoute } from "../../utils/preload";
 import api, { getActiveBaseURL } from "../../services/api";
-import { notificationService, NotificationItem } from "../../services/notificationService";
 import brandLogo from "../../assets/images/brand.png";
 import { 
   Home, 
@@ -30,8 +29,7 @@ import {
   Activity,
   Server,
   Database,
-  TrendingUp,
-  Bell
+  TrendingUp
 } from "lucide-react";
 
 interface MenuItem {
@@ -96,25 +94,6 @@ export default function DashboardLayout() {
     window.addEventListener("backend-server-swap", handleSwap);
     return () => window.removeEventListener("backend-server-swap", handleSwap);
   }, []);
-  
-  // Notification State (loads instantly from cache for maximum speed)
-  const [notifications, setNotifications] = useState<NotificationItem[]>(() => {
-    try {
-      const currentUser = JSON.parse(localStorage.getItem("user") || "null");
-      if (currentUser) {
-        const cached = localStorage.getItem(`notifications_${currentUser.user_id}`);
-        if (cached) {
-          const parsed = JSON.parse(cached);
-          if (Array.isArray(parsed)) {
-            return parsed.slice(0, 10);
-          }
-        }
-      }
-    } catch (_) {}
-    return [];
-  });
-  const [isNotifOpen, setIsNotifOpen] = useState(false);
-  const unreadNotifCount = notifications.filter(n => !n.read).length;
 
   useEffect(() => {
     const handleResize = () => {
@@ -148,7 +127,6 @@ export default function DashboardLayout() {
       navigate("/login");
     } else {
       setUser(currentUser);
-      fetchNotifications(currentUser);
 
       // Auto-sync profile to get fresh permissions and details
       authService.getProfile()
@@ -226,74 +204,6 @@ export default function DashboardLayout() {
       return "—";
     }
   };
-
-  const fetchNotifications = async (currentUser: any) => {
-    try {
-      const list = await notificationService.getNotifications();
-      if (Array.isArray(list)) {
-        setNotifications(list.slice(0, 10)); // Display top 10 most recent in nav dropdown
-        localStorage.setItem(`notifications_${currentUser.user_id}`, JSON.stringify(list));
-
-        // Trigger local browser push notification for unread alerts (PWA features)
-        if (typeof window !== "undefined" && "Notification" in window && Notification.permission === "granted") {
-          let notifiedIds = [];
-          try {
-            const notifiedIdsString = localStorage.getItem("pwa_notified_ids");
-            if (notifiedIdsString) {
-              const parsedNotified = JSON.parse(notifiedIdsString);
-              if (Array.isArray(parsedNotified)) {
-                notifiedIds = parsedNotified;
-              }
-            }
-          } catch (_) {}
-
-          let hasNew = false;
-          list.forEach(n => {
-            if (!n) return;
-            const stringId = String(n.id);
-            if (!n.read && !notifiedIds.includes(stringId)) {
-              new Notification(n.title || "Notification", {
-                body: n.description || "",
-                icon: brandLogo,
-                tag: stringId
-              });
-              notifiedIds.push(stringId);
-              hasNew = true;
-            }
-          });
-          if (hasNew) {
-            localStorage.setItem("pwa_notified_ids", JSON.stringify(notifiedIds));
-          }
-        }
-      } else {
-        console.warn("getNotifications did not return an array:", list);
-        setNotifications([]);
-      }
-    } catch (err) {
-      console.error("Failed to fetch notifications:", err);
-      setNotifications([]);
-    }
-  };
-
-  const markAsRead = async (id: number) => {
-    setNotifications(prev => prev.map(n => n.id === id ? { ...n, read: true } : n));
-    try {
-      await notificationService.markAsRead(id);
-    } catch (err) {
-      console.error("Failed to mark notification as read:", err);
-    }
-  };
-
-  const markAllAsRead = async () => {
-    setNotifications(prev => prev.map(n => ({ ...n, read: true })));
-    try {
-      await notificationService.markAllAsRead();
-    } catch (err) {
-      console.error("Failed to mark all as read:", err);
-    }
-  };
-
-
 
   if (!user) return null;
 
@@ -518,23 +428,8 @@ export default function DashboardLayout() {
             </div>
           </div>
 
-          {/* Right Actions — Notifications, User Avatar & Framed Logo */}
+          {/* Right Actions — User Avatar & Framed Logo */}
           <div className="flex items-center gap-2 sm:gap-3">
-            {/* Notification Bell Badge Trigger */}
-            <button
-              type="button"
-              onClick={() => setIsNotifOpen(!isNotifOpen)}
-              className="relative p-1.5 rounded-xl text-slate-300 hover:text-white hover:bg-slate-800/80 transition-all border-0 bg-transparent cursor-pointer flex items-center justify-center"
-              title="Notifications Center"
-            >
-              <Bell className="w-5 h-5" />
-              {unreadNotifCount > 0 && (
-                <span className="absolute -top-0.5 -right-0.5 bg-red-500 text-white text-[9px] font-black rounded-full h-4 min-w-[16px] px-1 flex items-center justify-center border-2 border-slate-900 shadow-xs animate-pulse">
-                  {unreadNotifCount > 99 ? "99+" : unreadNotifCount}
-                </span>
-              )}
-            </button>
-
             {/* User Profile Quick Link */}
             <Link
               to="/profile"
@@ -560,107 +455,6 @@ export default function DashboardLayout() {
             </div>
           </div>
         </header>
-
-        {/* Notification Dropdown Panel - Rendered outside header to bypass mobile CSS styles */}
-        {isNotifOpen && (
-          <>
-            <div className="fixed inset-0 z-[9998] bg-black/50 sm:bg-transparent" onClick={() => setIsNotifOpen(false)} />
-            
-            {/* MOBILE FULL-SCREEN NOTIFICATION CENTER & DESKTOP DROPDOWN */}
-            <div className="fixed inset-0 sm:fixed sm:top-14 sm:right-4 sm:bottom-auto sm:left-auto sm:w-85 bg-slate-100 border sm:border-slate-250 rounded-none sm:rounded-xl shadow-2xl z-[9999] overflow-hidden text-xs text-gray-700 animate-fadeIn flex flex-col h-full sm:h-auto sm:max-h-[80vh]">
-              
-              {/* Header */}
-              <div className="px-4 py-3 bg-slate-800 text-white flex items-center justify-between shrink-0 h-14 shadow-md">
-                <div className="flex items-center gap-3">
-                  <button
-                    type="button"
-                    onClick={() => setIsNotifOpen(false)}
-                    className="sm:hidden w-7 h-7 rounded-full border border-slate-700 bg-slate-750 text-slate-350 hover:bg-slate-700 hover:text-white transition-all cursor-pointer flex items-center justify-center font-bold text-xs"
-                  >
-                    ✕
-                  </button>
-                  <span className="uppercase tracking-widest text-[10px] font-black text-white">Notifications Center</span>
-                </div>
-                
-                <button
-                  type="button"
-                  onClick={markAllAsRead}
-                  className="text-[10px] text-[#a5d8e8] hover:text-white font-black uppercase bg-transparent border-0 cursor-pointer transition-colors"
-                >
-                  Mark all read
-                </button>
-              </div>
-
-              {/* Notification List Panel */}
-              <div className="flex-1 overflow-y-auto p-3 space-y-3">
-                {safeNotifications.length === 0 ? (
-                  <div className="py-12 text-center text-slate-400 font-bold uppercase tracking-wider text-[10px]">
-                    No notifications
-                  </div>
-                ) : (
-                  safeNotifications.map((n) => (
-                    <Link
-                      key={n.id}
-                      to={n.link}
-                      onClick={() => {
-                        markAsRead(n.id);
-                        setIsNotifOpen(false);
-                      }}
-                      className={`flex gap-3.5 p-3.5 transition-all no-underline rounded-xl border shadow-xs items-start ${
-                        n.read 
-                          ? "bg-white hover:bg-slate-50 border-slate-200/80 text-slate-700" 
-                          : "bg-[#a5d8e8]/15 hover:bg-[#a5d8e8]/25 border-slate-300 border-l-4 border-l-blue-600 text-slate-900"
-                      }`}
-                    >
-                      {/* Circular Icon Container */}
-                      <div 
-                        className={`w-9 h-9 rounded-full shrink-0 flex items-center justify-center text-white shadow-xs ${
-                          n.type === "warning" ? "bg-amber-600" :
-                          n.type === "success" ? "bg-emerald-600" :
-                          n.type === "error" ? "bg-rose-600" : "bg-blue-600"
-                        }`}
-                      >
-                        {n.type === "warning" && <AlertTriangle className="w-4 h-4 text-white" />}
-                        {n.type === "success" && <Check className="w-4 h-4 text-white" />}
-                        {n.type === "error" && <X className="w-4 h-4 text-white" />}
-                        {n.type !== "warning" && n.type !== "success" && n.type !== "error" && <Info className="w-4 h-4 text-white" />}
-                      </div>
-
-                      {/* Text Content */}
-                      <div className="flex-1 min-w-0">
-                        <div className="flex items-center justify-between gap-2 flex-wrap mb-1">
-                          <span className={`font-black uppercase text-[8px] px-2 py-0.5 rounded-full tracking-wide text-white shadow-xs ${
-                            n.type === "warning" ? "bg-amber-600" :
-                            n.type === "success" ? "bg-emerald-600" :
-                            n.type === "error" ? "bg-rose-600" : "bg-blue-600"
-                          }`}>
-                            {n.title || "Notification"}
-                          </span>
-
-                          <div className="flex items-center gap-1.5">
-                            {!n.read && (
-                              <span className="h-1.5 w-1.5 rounded-full bg-blue-600 animate-pulse"></span>
-                            )}
-                            <span className="text-[10px] font-black shrink-0 font-mono" style={{ color: '#000000' }}>
-                              {formatDateTime(n.created_at)}
-                            </span>
-                          </div>
-                        </div>
-                        <p className="text-slate-900 font-extrabold text-xs mt-1.5 leading-relaxed" style={{ color: '#1e293b' }}>
-                          {n.description}
-                        </p>
-                      </div>
-                    </Link>
-                  ))
-                )}
-              </div>
-
-              <Link to="/notifications" onClick={() => setIsNotifOpen(false)} className="block py-3 text-center bg-white border-t border-slate-200 text-[10px] text-blue-600 hover:text-blue-800 font-extrabold uppercase tracking-widest shrink-0 shadow-lg sm:shadow-none mb-safe transition-colors">
-                See All Notifications
-              </Link>
-            </div>
-          </>
-        )}
 
         {/* MAIN AREA WORKSPACE */}
         <main className="flex-1 p-2 sm:p-4 pb-16 lg:pb-4 overflow-y-auto min-w-0 overflow-x-hidden w-full">
