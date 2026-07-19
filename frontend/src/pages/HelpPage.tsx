@@ -1,18 +1,50 @@
 import React, { useState, useEffect, useRef } from "react";
 import toast from "react-hot-toast";
+import { 
+  Card, 
+  Button, 
+  Select, 
+  Input, 
+  Tag, 
+  Space, 
+  Row, 
+  Col, 
+  Typography, 
+  Segmented, 
+  Spin, 
+  Empty, 
+  Drawer
+} from "antd";
+import { 
+  ReloadOutlined, 
+  PlusOutlined, 
+  MessageOutlined, 
+  ClockCircleOutlined, 
+  CheckCircleOutlined, 
+  ExclamationCircleOutlined, 
+  SendOutlined, 
+  StarOutlined,
+  StarFilled,
+  LockOutlined, 
+  UndoOutlined, 
+  CustomerServiceOutlined,
+  TagOutlined
+} from "@ant-design/icons";
 import { ticketService, TicketCreatePayload } from "../services/ticketService";
 import { expenseService } from "../services/expenseService";
-import Loader from "../components/common/Loader";
 import api from "../services/api";
 import { ResponsiveBar } from "@nivo/bar";
 
-const GALLERY_COLORS = ["#2f5bb7", "#2b7d50", "#d28b2a", "#854aa5", "#d83b01", "#00a2ad", "#e81123"];
+const { Title, Text, Paragraph } = Typography;
+const { Option } = Select;
+const { TextArea } = Input;
+
+const GALLERY_COLORS = ["#4f46e5", "#10b981", "#f59e0b", "#8b5cf6", "#f43f5e", "#06b6d4", "#ec4899"];
 
 // Helper to format date strings to user-friendly local browser dates
 function formatDateTime(dateVal: any) {
   if (!dateVal) return "—";
   try {
-    // Check if it matches 'DD-MMM-YYYY HH:MM:SS' format from backend comments
     const match = String(dateVal).match(/^(\d{1,2})-([A-Za-z]{3})-(\d{4})\s+(\d{2}):(\d{2}):(\d{2})$/);
     let d: Date;
     if (match) {
@@ -58,10 +90,7 @@ function formatDuration(totalHours: number) {
   return parts.join(" ");
 }
 
-
-
 export default function HelpPage() {
-
   // Auth User
   const [currentUser] = useState<any>(() => {
     return JSON.parse(localStorage.getItem("user") || "null");
@@ -74,6 +103,7 @@ export default function HelpPage() {
     window.addEventListener("resize", handleResize);
     return () => window.removeEventListener("resize", handleResize);
   }, []);
+
   const [tickets, setTickets] = useState<any[]>(() => {
     const currentUserId = (() => { try { const u = JSON.parse(localStorage.getItem("user") || "{}"); return u.user_id || "Admin"; } catch(e) { return "Admin"; } })().trim();
     const cached = localStorage.getItem(`cache_support_tickets_${currentUserId}`);
@@ -206,7 +236,6 @@ export default function HelpPage() {
       setLoading(true);
     }
     try {
-      // Fetch tickets and expenses concurrently for faster load
       const [ticketList, expenseList] = await Promise.all([
         ticketService.getTickets(),
         currentUser ? expenseService.getExpenses() : Promise.resolve([])
@@ -248,7 +277,6 @@ export default function HelpPage() {
       return;
     }
 
-    // Determine category name
     let finalCategory = concernType;
     if (concernType === "Other") {
       const cat = otherCategory.trim();
@@ -283,6 +311,7 @@ export default function HelpPage() {
       // Reload tickets
       const updated = await ticketService.getTickets();
       setTickets(updated);
+      setActiveTab("my-tickets");
     } catch (err: any) {
       toast.error(err.response?.data?.detail || "Failed to raise support ticket.");
     } finally {
@@ -315,7 +344,6 @@ export default function HelpPage() {
     if (socket && socket.readyState === WebSocket.OPEN) {
       socket.send(JSON.stringify({ type: "message", text: newComment.trim() }));
       
-      // Reset typing indicator state
       if (typingTimeoutRef.current) clearTimeout(typingTimeoutRef.current);
       setIsTypingState(false);
       if (socket.readyState === WebSocket.OPEN) {
@@ -323,7 +351,6 @@ export default function HelpPage() {
       }
       setNewComment("");
     } else {
-      // HTTP API Fallback
       await handleAddComment(e);
     }
   };
@@ -356,7 +383,7 @@ export default function HelpPage() {
   };
 
   const handleToggleFollowup = async (e: React.MouseEvent, ticketId: number) => {
-    e.stopPropagation(); // Prevent opening ticket details
+    e.stopPropagation();
     try {
       const updated = await ticketService.toggleFollowup(ticketId);
       if (updated.needs_followup) {
@@ -384,7 +411,6 @@ export default function HelpPage() {
     return diffHours <= 36;
   };
 
-  // Filter list based on tabs & active filters
   const myRaisedTickets = tickets.filter(t => t.created_by_code === currentUser?.user_id);
   const assignedTickets = tickets.filter(t => {
     const isAssignee = t.assigned_to_name === currentUser?.name;
@@ -393,9 +419,7 @@ export default function HelpPage() {
     return isAssignee || isRoleMatched || isAdminProfile;
   });
 
-  // Turn Around Time (TAT) Calculations
   const getTicketAnalytics = () => {
-    // Filter analytics calculation based on the active tab's list of tickets
     const activeAnalyticsList = activeTab === "my-tickets" ? myRaisedTickets : assignedTickets;
 
     const closedTkts = activeAnalyticsList.filter(t => (t.status === "Closed" || t.status === "Final Closed") && t.closed_at);
@@ -411,11 +435,8 @@ export default function HelpPage() {
     const avgTat = closedTkts.length > 0 ? (totalTatHours / closedTkts.length) : 0;
     const formattedAvgTat = closedTkts.length > 0 ? formatDuration(avgTat) : "0m";
     
-    // Priority counts
     const priorityCounts: Record<string, number> = { Low: 0, Medium: 0, High: 0, Critical: 0 };
-    // Category counts (mapped to standard buckets)
     const categoryCounts: Record<string, number> = { Expense: 0, Profile: 0, "TA/DA": 0, Other: 0 };
-    // Status counts
     const statusCounts: Record<string, number> = { Open: 0, "Re-opened": 0, Updated: 0, Closed: 0, "Final Closed": 0 };
 
     activeAnalyticsList.forEach(t => {
@@ -436,7 +457,7 @@ export default function HelpPage() {
     });
 
     const categoryChart = [
-      { label: "Expense Claims", amount: categoryCounts["Expense"], color: "#3b82f6" },
+      { label: "Expense Claims", amount: categoryCounts["Expense"], color: "#4f46e5" },
       { label: "Profile Settings", amount: categoryCounts["Profile"], color: "#ec4899" },
       { label: "TA/DA Allowances", amount: categoryCounts["TA/DA"], color: "#f59e0b" },
       { label: "Other Category", amount: categoryCounts["Other"], color: "#8b5cf6" }
@@ -446,14 +467,14 @@ export default function HelpPage() {
       { label: "Low Priority", amount: priorityCounts["Low"], color: "#10b981" },
       { label: "Medium Priority", amount: priorityCounts["Medium"], color: "#6366f1" },
       { label: "High Priority", amount: priorityCounts["High"], color: "#a855f7" },
-      { label: "Critical Priority", amount: priorityCounts["Critical"], color: "#ef4444" }
+      { label: "Critical Priority", amount: priorityCounts["Critical"], color: "#f43f5e" }
     ];
 
     const statusChart = [
       { label: "Open Concern", amount: statusCounts["Open"], color: "#eab308" },
       { label: "Re-opened", amount: statusCounts["Re-opened"], color: "#a855f7" },
       { label: "Updated Res", amount: statusCounts["Updated"], color: "#3b82f6" },
-      { label: "Closed Resolution", amount: statusCounts["Closed"] + statusCounts["Final Closed"], color: "#22c55e" }
+      { label: "Closed Resolution", amount: statusCounts["Closed"] + statusCounts["Final Closed"], color: "#10b981" }
     ];
 
     return {
@@ -467,41 +488,33 @@ export default function HelpPage() {
   };
 
   const analytics = getTicketAnalytics();
-
   const baseList = activeTab === "my-tickets" ? myRaisedTickets : assignedTickets;
 
-  // Apply sub-filters
   const filteredList = baseList.filter(tkt => {
-    // 1. Follow-up filter
     if (filterFollowup === "flagged" && !tkt.needs_followup) return false;
     if (filterFollowup === "normal" && tkt.needs_followup) return false;
-
-    // 2. Status filter
     if (filterStatus !== "all" && tkt.status !== filterStatus) return false;
-
-    // 3. Category filter
     if (filterCategory !== "all") {
       const normCat = ["Expense", "Profile", "TA/DA"].includes(tkt.concern_type) ? tkt.concern_type : "Other";
       if (filterCategory === "Other" && normCat !== "Other") return false;
       if (filterCategory !== "Other" && tkt.concern_type !== filterCategory) return false;
     }
-
     return true;
   });
 
-  const getPriorityBadgeClass = (pri: string) => {
-    if (pri === "Critical") return "bg-red-50 border-red-200 text-red-700 font-extrabold";
-    if (pri === "High") return "bg-purple-50 border-purple-200 text-purple-700 font-bold";
-    if (pri === "Medium") return "bg-blue-50 border-blue-200 text-blue-700 font-semibold";
-    return "bg-gray-50 border-gray-200 text-gray-500";
+  const getPriorityTagColor = (pri: string) => {
+    if (pri === "Critical") return "red";
+    if (pri === "High") return "purple";
+    if (pri === "Medium") return "blue";
+    return "default";
   };
 
-  const getStatusBadgeClass = (stat: string) => {
-    if (stat === "Open") return "bg-yellow-50 border-yellow-255 text-yellow-700 font-bold";
-    if (stat === "Re-opened") return "bg-purple-50 border-purple-200 text-purple-700 font-bold";
-    if (stat === "Updated") return "bg-blue-50 border-blue-200 text-blue-700 font-bold";
-    if (stat === "Closed") return "bg-green-55 border-green-200 text-green-700 font-bold";
-    return "bg-slate-100 border-slate-300 text-slate-500 font-normal text-[9px]"; // Final Closed
+  const getStatusTagColor = (stat: string) => {
+    if (stat === "Open") return "gold";
+    if (stat === "Re-opened") return "purple";
+    if (stat === "Updated") return "blue";
+    if (stat === "Closed") return "green";
+    return "default";
   };
 
   const hasAccessToAssignedTab = currentUser?.role === "Admin" || 
@@ -511,35 +524,254 @@ export default function HelpPage() {
     currentUser?.role === "Project Head" || 
     currentUser?.role === "VP";
 
-  return (
-    <div className="space-y-6 animate-fadeIn text-gray-800 font-sans">
-      
-      {/* Header Info */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-        <div>
-          <h2 className="text-2xl font-black text-slate-800 uppercase tracking-wide flex items-center gap-2">
-            <i className="fas fa-headset text-indigo-600 animate-pulse"></i>
-            FieldOps Help Desk
-          </h2>
-          <p className="text-slate-550 text-xs mt-0.5">
-            Log technical concerns, track Turn Around Time (TAT), and manage resolution logs with supervisor mapping.
-          </p>
-        </div>
-        <button
-          onClick={fetchInitialData}
-          className="px-3.5 py-2 bg-white hover:bg-slate-50 text-slate-700 text-xs font-bold uppercase tracking-wider rounded-full border border-slate-200 cursor-pointer flex items-center gap-1.5 self-start transition-all shadow-sm"
-        >
-          <i className="fas fa-sync-alt"></i>
-          Refresh desk
-        </button>
-      </div>
+  // Detail View Content block (used in side panel for desktop & drawer for mobile)
+  const renderTicketDetail = () => {
+    if (!selectedTicket) return null;
+    return (
+      <div className="space-y-4">
+        {/* Header bar */}
+        <div className="flex items-start justify-between border-b border-slate-200/80 pb-3">
+          <div>
+            <Space align="center" size="small">
+              <Text className="text-base font-black font-mono text-slate-800">{selectedTicket.ticket_code}</Text>
+              <button
+                type="button"
+                onClick={(e) => handleToggleFollowup(e, selectedTicket.id)}
+                className="bg-transparent border-0 cursor-pointer p-0"
+              >
+                {selectedTicket.needs_followup ? (
+                  <StarFilled className="text-amber-500 text-sm" />
+                ) : (
+                  <StarOutlined className="text-slate-300 hover:text-amber-500 text-sm transition-colors" />
+                )}
+              </button>
+              <Tag color={getStatusTagColor(selectedTicket.status)} className="font-extrabold text-[10px] uppercase m-0">
+                {selectedTicket.status}
+              </Tag>
+            </Space>
+            <div className="mt-1">
+              <Text className="text-xs text-slate-500 font-bold uppercase">
+                Category: <span className="text-indigo-600 font-black">{selectedTicket.concern_type}</span>
+                {selectedTicket.expense_code && ` (Claim Code: ${selectedTicket.expense_code})`}
+              </Text>
+            </div>
+          </div>
 
-      {/* Analytics block */}
+          <Space>
+            {["Open", "Updated", "Re-opened"].includes(selectedTicket.status) && (
+              <Button
+                type="primary"
+                danger
+                size="small"
+                icon={<CheckCircleOutlined />}
+                onClick={() => handleCloseTicket(selectedTicket.id)}
+                className="font-bold text-xs"
+              >
+                Resolve
+              </Button>
+            )}
+            {canReopen(selectedTicket) && (
+              <Button
+                type="default"
+                size="small"
+                icon={<UndoOutlined />}
+                onClick={() => handleReopenTicket(selectedTicket.id)}
+                className="font-bold text-xs border-amber-500 text-amber-600 hover:bg-amber-50"
+              >
+                Reopen
+              </Button>
+            )}
+            {isMobile && (
+              <Button size="small" onClick={() => setSelectedTicket(null)}>
+                Close
+              </Button>
+            )}
+          </Space>
+        </div>
+
+        {/* Priority & Status Badges */}
+        <Row gutter={[12, 12]}>
+          <Col span={12}>
+            <Card className="bg-slate-50/70 border-slate-200/60 shadow-2xs rounded-xl" bodyStyle={{ padding: "10px" }}>
+              <Text className="text-[9px] font-black text-slate-400 uppercase block mb-1">Priority Level</Text>
+              <Tag color={getPriorityTagColor(selectedTicket.priority)} className="font-bold uppercase text-[10px] m-0">
+                {selectedTicket.priority}
+              </Tag>
+            </Card>
+          </Col>
+          <Col span={12}>
+            <Card className="bg-slate-50/70 border-slate-200/60 shadow-2xs rounded-xl" bodyStyle={{ padding: "10px" }}>
+              <Text className="text-[9px] font-black text-slate-400 uppercase block mb-1">Resolution TAT</Text>
+              <Text className="text-xs font-mono font-black text-indigo-600">
+                {selectedTicket.closed_at ? (
+                  formatDuration((new Date(selectedTicket.closed_at).getTime() - new Date(selectedTicket.created_at).getTime()) / (1000 * 60 * 60))
+                ) : (
+                  "In Progress"
+                )}
+              </Text>
+            </Card>
+          </Col>
+        </Row>
+
+        {/* Remarks / Description */}
+        <Card className="bg-slate-50/80 border-slate-200/80 shadow-2xs rounded-xl" bodyStyle={{ padding: "12px" }}>
+          <Text className="text-[9px] font-black text-slate-400 uppercase block mb-1">Issue Description</Text>
+          <Paragraph className="text-xs text-slate-800 font-medium m-0 leading-relaxed whitespace-pre-wrap">
+            {selectedTicket.description}
+          </Paragraph>
+        </Card>
+
+        {/* Discussion Logs Stream */}
+        <div className="space-y-2">
+          <div className="flex justify-between items-center">
+            <Text className="text-[10px] font-black uppercase tracking-wider text-slate-500">
+              <MessageOutlined className="mr-1 text-indigo-600" /> Discussion Thread & Updates
+            </Text>
+            <Tag color="cyan" className="text-[9px] font-bold uppercase m-0">Live Sync</Tag>
+          </div>
+          
+          <div 
+            className="rounded-xl p-3 min-h-[220px] max-h-[360px] overflow-y-auto flex flex-col gap-2.5 shadow-inner border border-slate-200"
+            style={{
+              backgroundColor: "#f8fafc",
+              backgroundImage: "radial-gradient(#e2e8f0 1px, transparent 1px)",
+              backgroundSize: "16px 16px"
+            }}
+          >
+            {!selectedTicket.comments || !selectedTicket.comments.trim() ? (
+              <div className="my-auto text-center py-8 text-slate-400 font-bold uppercase text-[10px] tracking-wider select-none">
+                No replies logged yet. Start the conversation below.
+              </div>
+            ) : (
+              selectedTicket.comments.split("\n").map((cmt: string, cIdx: number) => {
+                if (!cmt.trim()) return null;
+                
+                const openParenIdx = cmt.indexOf(" (");
+                const closeParenIdx = cmt.indexOf("): ");
+                let senderName = "System";
+                let dateTime = "";
+                let content = cmt;
+
+                if (openParenIdx !== -1 && closeParenIdx !== -1 && openParenIdx < closeParenIdx) {
+                  senderName = cmt.substring(0, openParenIdx).trim();
+                  const rawTime = cmt.substring(openParenIdx + 2, closeParenIdx).trim();
+                  content = cmt.substring(closeParenIdx + 3).trim();
+                  
+                  try {
+                    dateTime = formatDateTime(rawTime);
+                  } catch (e) {
+                    dateTime = rawTime;
+                  }
+                }
+                
+                const isSystem = senderName === "System" || cmt.startsWith("System:") || !cmt.includes("): ");
+                if (isSystem) {
+                  return (
+                    <div key={cIdx} className="flex justify-center my-1">
+                      <span className="bg-white border border-slate-200 text-slate-500 text-[9px] font-bold px-3 py-1 rounded-full uppercase tracking-wider shadow-2xs select-none">
+                        {content}
+                      </span>
+                    </div>
+                  );
+                }
+
+                const isOwn = senderName.toLowerCase() === currentUser?.name?.toLowerCase() || 
+                              senderName.toLowerCase().startsWith(currentUser?.name?.toLowerCase().substring(0, 5));
+
+                return (
+                  <div key={cIdx} className={`flex w-full ${isOwn ? "justify-end" : "justify-start"}`}>
+                    <div 
+                      className={`px-3 py-2 rounded-xl max-w-[85%] sm:max-w-[75%] shadow-2xs relative flex flex-col gap-0.5 ${
+                        isOwn 
+                          ? "bg-indigo-600 text-white rounded-tr-none" 
+                          : "bg-white text-slate-800 border border-slate-200/80 rounded-tl-none"
+                      }`}
+                    >
+                      {!isOwn && (
+                        <Text className="font-extrabold text-[10px] text-indigo-600 block leading-none select-none mb-0.5">
+                          {senderName}
+                        </Text>
+                      )}
+                      <Paragraph className={`text-xs font-medium leading-relaxed whitespace-pre-wrap break-words m-0 ${isOwn ? "text-white" : "text-slate-800"}`}>
+                        {content}
+                      </Paragraph>
+                      <Text className={`text-[8px] font-bold select-none text-right block leading-none mt-1 ${isOwn ? "text-indigo-200" : "text-slate-400"}`}>
+                        {dateTime} {isOwn && <span className="ml-0.5 text-white">✓✓</span>}
+                      </Text>
+                    </div>
+                  </div>
+                );
+              })
+            )}
+          </div>
+
+          {typingUser && (
+            <div className="px-3 py-1 text-[10px] text-indigo-600 italic font-semibold">
+              {typingUser} is typing...
+            </div>
+          )}
+
+          {/* Reply Form */}
+          {selectedTicket.status !== "Final Closed" && (
+            <form onSubmit={handleSendCommentMessage} className="flex gap-2 pt-2">
+              <Input
+                placeholder={selectedTicket.status === "Closed" ? "Ticket is closed. Reopen to reply..." : "Type reply message..."}
+                value={newComment}
+                onChange={(e) => handleInputChange(e.target.value)}
+                disabled={selectedTicket.status === "Closed" || commenting}
+                className="rounded-xl border-slate-200 font-medium"
+                size="large"
+              />
+              <Button
+                type="primary"
+                htmlType="submit"
+                loading={commenting}
+                disabled={selectedTicket.status === "Closed" || !newComment.trim()}
+                icon={<SendOutlined />}
+                size="large"
+                className="rounded-xl bg-indigo-600 font-bold"
+              />
+            </form>
+          )}
+        </div>
+      </div>
+    );
+  };
+
+  return (
+    <div className="space-y-6 animate-fadeIn p-2 sm:p-4 text-slate-800 font-sans max-w-[1600px] mx-auto">
+      
+      {/* Ant Design Header Banner */}
+      <Card className="bg-gradient-to-r from-slate-900 via-indigo-950 to-slate-900 border-slate-800 text-white rounded-2xl shadow-md">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+          <div className="flex items-center gap-3.5">
+            <div className="h-12 w-12 rounded-2xl bg-indigo-600/30 border border-indigo-500/40 flex items-center justify-center text-indigo-400 shadow-sm shrink-0">
+              <CustomerServiceOutlined className="text-2xl" />
+            </div>
+            <div>
+              <Title level={4} className="text-white m-0 uppercase tracking-wide font-black flex items-center gap-2">
+                FieldOps Help Desk
+              </Title>
+              <Text className="text-slate-300 text-xs mt-0.5 block">
+                Log technical concerns, track Turn Around Time (TAT), and interact with supervisors in real time.
+              </Text>
+            </div>
+          </div>
+          <Button
+            icon={<ReloadOutlined />}
+            onClick={fetchInitialData}
+            className="bg-white/10 border-white/20 text-white hover:bg-white/20 hover:text-white font-bold rounded-xl self-start sm:self-center"
+          >
+            Refresh Desk
+          </Button>
+        </div>
+      </Card>
+
+      {/* Analytics Grid Cards */}
       <div className="hidden lg:grid grid-cols-1 lg:grid-cols-3 gap-6">
         
-        {/* Bar Chart 1: Category */}
-        <div className="card border border-slate-100 p-4 bg-white shadow-sm rounded-3xl">
-          <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest block border-b border-slate-100 pb-2 mb-3">Concerns by Category</span>
+        {/* Category Chart */}
+        <Card title={<Text className="text-xs font-black text-slate-600 uppercase tracking-wider"><TagOutlined className="mr-1 text-indigo-600" /> Concerns by Category</Text>} className="rounded-2xl border-slate-200/80 shadow-xs">
           <div style={{ height: 160 }}>
             <ResponsiveBar
               data={analytics.categoryChart}
@@ -551,56 +783,21 @@ export default function HelpPage() {
               colors={GALLERY_COLORS}
               colorBy="indexValue"
               borderRadius={6}
-              borderWidth={0}
               enableLabel={false}
               axisTop={null}
               axisRight={null}
-              axisBottom={{
-                tickSize: 0,
-                tickPadding: 6,
-                tickRotation: 0
-              }}
-              axisLeft={{
-                tickSize: 0,
-                tickPadding: 6,
-                tickRotation: 0
-              }}
+              axisBottom={{ tickSize: 0, tickPadding: 6 }}
+              axisLeft={{ tickSize: 0, tickPadding: 6 }}
               theme={{
-                grid: {
-                  line: {
-                    stroke: '#f1f5f9',
-                    strokeWidth: 1
-                  }
-                },
-                axis: {
-                  ticks: {
-                    text: {
-                      fontSize: 8,
-                      fontWeight: 'bold',
-                      fill: '#64748b'
-                    }
-                  }
-                }
+                grid: { line: { stroke: '#f1f5f9', strokeWidth: 1 } },
+                axis: { ticks: { text: { fontSize: 8, fontWeight: 'bold', fill: '#64748b' } } }
               }}
-              tooltip={({ value, color, indexValue }) => (
-                <div className="bg-slate-900/95 backdrop-blur-md text-white border border-slate-800 shadow-2xl rounded-xl p-3 text-xs min-w-[120px] font-sans pointer-events-none z-50">
-                  <p className="font-extrabold text-[10px] uppercase text-slate-400 tracking-wider mb-1.5">{indexValue}</p>
-                  <div className="flex items-center justify-between gap-4">
-                    <span className="flex items-center gap-1.5 text-slate-300">
-                      <span className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: color }} />
-                      Concerns:
-                    </span>
-                    <span className="font-mono font-bold text-white">{value}</span>
-                  </div>
-                </div>
-              )}
             />
           </div>
-        </div>
+        </Card>
 
-        {/* Bar Chart 2: Priority */}
-        <div className="card border border-slate-100 p-4 bg-white shadow-sm rounded-3xl">
-          <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest block border-b border-slate-100 pb-2 mb-3">Concerns by Priority</span>
+        {/* Priority Chart */}
+        <Card title={<Text className="text-xs font-black text-slate-600 uppercase tracking-wider"><ExclamationCircleOutlined className="mr-1 text-amber-500" /> Concerns by Priority</Text>} className="rounded-2xl border-slate-200/80 shadow-xs">
           <div style={{ height: 160 }}>
             <ResponsiveBar
               data={analytics.priorityChart}
@@ -612,56 +809,21 @@ export default function HelpPage() {
               colors={GALLERY_COLORS}
               colorBy="indexValue"
               borderRadius={6}
-              borderWidth={0}
               enableLabel={false}
               axisTop={null}
               axisRight={null}
-              axisBottom={{
-                tickSize: 0,
-                tickPadding: 6,
-                tickRotation: 0
-              }}
-              axisLeft={{
-                tickSize: 0,
-                tickPadding: 6,
-                tickRotation: 0
-              }}
+              axisBottom={{ tickSize: 0, tickPadding: 6 }}
+              axisLeft={{ tickSize: 0, tickPadding: 6 }}
               theme={{
-                grid: {
-                  line: {
-                    stroke: '#f1f5f9',
-                    strokeWidth: 1
-                  }
-                },
-                axis: {
-                  ticks: {
-                    text: {
-                      fontSize: 8,
-                      fontWeight: 'bold',
-                      fill: '#64748b'
-                    }
-                  }
-                }
+                grid: { line: { stroke: '#f1f5f9', strokeWidth: 1 } },
+                axis: { ticks: { text: { fontSize: 8, fontWeight: 'bold', fill: '#64748b' } } }
               }}
-              tooltip={({ value, color, indexValue }) => (
-                <div className="bg-slate-900/95 backdrop-blur-md text-white border border-slate-800 shadow-2xl rounded-xl p-3 text-xs min-w-[120px] font-sans pointer-events-none z-50">
-                  <p className="font-extrabold text-[10px] uppercase text-slate-400 tracking-wider mb-1.5">{indexValue}</p>
-                  <div className="flex items-center justify-between gap-4">
-                    <span className="flex items-center gap-1.5 text-slate-300">
-                      <span className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: color }} />
-                      Concerns:
-                    </span>
-                    <span className="font-mono font-bold text-white">{value}</span>
-                  </div>
-                </div>
-              )}
             />
           </div>
-        </div>
+        </Card>
 
-        {/* Bar Chart 3: Status */}
-        <div className="card border border-slate-100 p-4 bg-white shadow-sm rounded-3xl">
-          <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest block border-b border-slate-100 pb-2 mb-3">Concerns by Status</span>
+        {/* Status Chart */}
+        <Card title={<Text className="text-xs font-black text-slate-600 uppercase tracking-wider"><ClockCircleOutlined className="mr-1 text-emerald-500" /> Concerns by Status</Text>} className="rounded-2xl border-slate-200/80 shadow-xs">
           <div style={{ height: 160 }}>
             <ResponsiveBar
               data={analytics.statusChart}
@@ -673,333 +835,234 @@ export default function HelpPage() {
               colors={GALLERY_COLORS}
               colorBy="indexValue"
               borderRadius={6}
-              borderWidth={0}
               enableLabel={false}
               axisTop={null}
               axisRight={null}
-              axisBottom={{
-                tickSize: 0,
-                tickPadding: 6,
-                tickRotation: 0
-              }}
-              axisLeft={{
-                tickSize: 0,
-                tickPadding: 6,
-                tickRotation: 0
-              }}
+              axisBottom={{ tickSize: 0, tickPadding: 6 }}
+              axisLeft={{ tickSize: 0, tickPadding: 6 }}
               theme={{
-                grid: {
-                  line: {
-                    stroke: '#f1f5f9',
-                    strokeWidth: 1
-                  }
-                },
-                axis: {
-                  ticks: {
-                    text: {
-                      fontSize: 8,
-                      fontWeight: 'bold',
-                      fill: '#64748b'
-                    }
-                  }
-                }
+                grid: { line: { stroke: '#f1f5f9', strokeWidth: 1 } },
+                axis: { ticks: { text: { fontSize: 8, fontWeight: 'bold', fill: '#64748b' } } }
               }}
-              tooltip={({ value, color, indexValue }) => (
-                <div className="bg-slate-900/95 backdrop-blur-md text-white border border-slate-800 shadow-2xl rounded-xl p-3 text-xs min-w-[120px] font-sans pointer-events-none z-50">
-                  <p className="font-extrabold text-[10px] uppercase text-slate-400 tracking-wider mb-1.5">{indexValue}</p>
-                  <div className="flex items-center justify-between gap-4">
-                    <span className="flex items-center gap-1.5 text-slate-300">
-                      <span className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: color }} />
-                      Concerns:
-                    </span>
-                    <span className="font-mono font-bold text-white">{value}</span>
-                  </div>
-                </div>
-              )}
             />
           </div>
-        </div>
+        </Card>
 
       </div>
 
-      {/* Standalone Mobile Tab Selector */}
-      <div className="xl:hidden bg-slate-50 border border-slate-100 p-1.5 flex rounded-2xl gap-1 shadow-sm mb-3">
-        <button
-          type="button"
-          onClick={() => { handleTabChange("my-tickets"); setSelectedTicket(null); }}
-          className={`flex-1 py-2.5 text-center font-black text-[10px] uppercase rounded-xl border-0 cursor-pointer transition-all ${
-            activeTab === "my-tickets"
-              ? "bg-indigo-600 text-white shadow-sm font-extrabold"
-              : "bg-transparent text-slate-500 hover:text-slate-700 hover:bg-slate-100/50"
-          }`}
-        >
-          My Tickets ({myRaisedTickets.length})
-        </button>
-        <button
-          type="button"
-          onClick={() => { handleTabChange("raise"); setSelectedTicket(null); }}
-          className={`flex-1 py-2.5 text-center font-black text-[10px] uppercase rounded-xl border-0 cursor-pointer transition-all ${
-            activeTab === "raise"
-              ? "bg-indigo-600 text-white shadow-sm font-extrabold"
-              : "bg-transparent text-slate-500 hover:text-slate-700 hover:bg-slate-100/50"
-          }`}
-        >
-          File Ticket
-        </button>
-        {hasAccessToAssignedTab && (
-          <button
-            type="button"
-            onClick={() => { handleTabChange("assigned-tickets"); setSelectedTicket(null); }}
-            className={`flex-1 py-2.5 text-center font-black text-[10px] uppercase rounded-xl border-0 cursor-pointer transition-all ${
-              activeTab === "assigned-tickets"
-                ? "bg-indigo-600 text-white shadow-sm font-extrabold"
-                : "bg-transparent text-slate-500 hover:text-slate-700 hover:bg-slate-100/50"
-            }`}
-          >
-            Assigned ({assignedTickets.length})
-          </button>
-        )}
-      </div>
-
-      {/* Main Workspace layout */}
-      <div className="grid grid-cols-1 xl:grid-cols-3 gap-6">
+      {/* Main Workspace Layout */}
+      <Row gutter={[20, 20]}>
         
-        {/* Left column: Raise ticket Form */}
-        <div className={`xl:col-span-1 space-y-6 ${activeTab === "raise" ? "block" : "hidden xl:block"}`}>
-                    <div className="card-lte-success p-5 space-y-4 bg-white shadow-sm">
-            <h3 className="text-xs font-bold text-gray-700 uppercase tracking-wider flex items-center gap-1.5">
-              <i className="fas fa-ticket-alt text-green-600"></i>
-              File Support Ticket
-            </h3>
-
-            <form onSubmit={handleRaiseTicket} className="space-y-4 text-xs font-medium">
+        {/* Left Column: File Ticket Form */}
+        <Col xs={24} lg={8} className={activeTab === "raise" ? "block" : "hidden xl:block"}>
+          <Card 
+            title={
+              <Text className="text-xs font-black text-slate-800 uppercase tracking-wider flex items-center gap-2">
+                <PlusOutlined className="text-indigo-600" /> File Support Ticket
+              </Text>
+            } 
+            className="rounded-2xl border-slate-200/80 shadow-sm"
+          >
+            <form onSubmit={handleRaiseTicket} className="space-y-4">
               
               {/* Concern type dropdown */}
               <div>
-                <label className="label-lte">Concern Field *</label>
-                <select
+                <Text className="text-xs font-bold text-slate-600 block mb-1">Concern Field *</Text>
+                <Select
                   value={concernType}
-                  onChange={(e) => setConcernType(e.target.value)}
-                  className="input-lte focus:border-green-600 focus:ring-green-600/50"
+                  onChange={(val) => setConcernType(val)}
+                  className="w-full"
+                  size="large"
                 >
-                  <option value="Expense">Expense Claim Reference</option>
-                  <option value="TA/DA">TA / DA Allowance Cap</option>
-                  <option value="Profile">Profile Mappings</option>
-                  <option value="Other">Other / Custom Issue</option>
-                </select>
+                  <Option value="Expense">Expense Claim Reference</Option>
+                  <Option value="TA/DA">TA / DA Allowance Cap</Option>
+                  <Option value="Profile">Profile Mappings</Option>
+                  <Option value="Other">Other / Custom Issue</Option>
+                </Select>
               </div>
 
-              {/* Custom Other category name input */}
+              {/* Custom Category Input */}
               {concernType === "Other" && (
-                <div className="animate-fadeIn">
-                  <label className="label-lte">Specify custom category *</label>
-                  <input
-                    type="text"
+                <div>
+                  <Text className="text-xs font-bold text-slate-600 block mb-1">Specify Custom Category *</Text>
+                  <Input
                     placeholder="e.g. System Crash, Fuel Rates, Sim Card"
                     value={otherCategory}
                     onChange={(e) => setOtherCategory(e.target.value)}
-                    className="input-lte focus:border-green-600 focus:ring-green-600/50"
+                    size="large"
                     required
                   />
                 </div>
               )}
 
-              {/* Select Expense Claim Dropdown (visible only if Expense selected) */}
+              {/* Select Expense Claim Dropdown */}
               {concernType === "Expense" && (
-                <div className="animate-fadeIn">
-                  <label className="label-lte">Select Claim Reference *</label>
-                  <select
+                <div>
+                  <Text className="text-xs font-bold text-slate-600 block mb-1">Select Claim Reference *</Text>
+                  <Select
                     value={selectedExpenseId}
-                    onChange={(e) => setSelectedExpenseId(e.target.value)}
-                    className="input-lte focus:border-green-600 focus:ring-green-600/50"
-                    required
+                    onChange={(val) => setSelectedExpenseId(val)}
+                    placeholder="-- Select Related Expense Claim --"
+                    className="w-full"
+                    size="large"
                   >
-                    <option value="" disabled>-- Select Related Expense Claim --</option>
                     {myExpenses.map(exp => (
-                      <option key={exp.id} value={exp.id}>
+                      <Option key={exp.id} value={String(exp.id)}>
                         {exp.expense_code} — {exp.itinerary} (₹{exp.amount.toLocaleString()})
-                      </option>
+                      </Option>
                     ))}
-                  </select>
+                  </Select>
                 </div>
               )}
-              {/* Select Assignee (Manager or Zonal Coordinator) */}
+
+              {/* Select Assignee */}
               {concernType !== "Profile" ? (
                 <div>
-                  <label className="label-lte">Assign Concern Target *</label>
-                  <select
+                  <Text className="text-xs font-bold text-slate-600 block mb-1">Assign Target Supervisor *</Text>
+                  <Select
                     value={assignedToName}
-                    onChange={(e) => setAssignedToName(e.target.value)}
-                    className="input-lte focus:border-green-600 focus:ring-green-600/50"
-                    required
+                    onChange={(val) => setAssignedToName(val)}
+                    className="w-full"
+                    size="large"
                   >
                     {currentUser?.manager && (
-                      <option value={currentUser.manager}>Reporting Manager: {currentUser.manager}</option>
+                      <Option value={currentUser.manager}>Reporting Manager: {currentUser.manager}</Option>
                     )}
                     {currentUser?.coordinator && (
-                      <option value={currentUser.coordinator}>Zonal Coordinator: {currentUser.coordinator}</option>
+                      <Option value={currentUser.coordinator}>Zonal Coordinator: {currentUser.coordinator}</Option>
                     )}
                     {(!currentUser?.manager && !currentUser?.coordinator) && (
-                      <option value="Admin System">Admin System</option>
+                      <Option value="Admin System">Admin System</Option>
                     )}
-                  </select>
+                  </Select>
                 </div>
               ) : (
                 <div>
-                  <label className="label-lte">Assign Concern Target</label>
-                  <div className="p-2 bg-gray-50 border border-gray-200 rounded text-gray-550 flex items-center gap-1.5 font-bold">
-                    <i className="fas fa-lock text-gray-400"></i>
-                    Locked to Admin System
-                  </div>
+                  <Text className="text-xs font-bold text-slate-600 block mb-1">Assign Target Supervisor</Text>
+                  <Tag color="blue" className="w-full py-1.5 px-3 text-xs font-bold flex items-center justify-center gap-1">
+                    <LockOutlined /> Locked to Admin System
+                  </Tag>
                 </div>
               )}
 
               {/* Priority */}
               <div>
-                <label className="label-lte">Priority Level *</label>
-                <select
+                <Text className="text-xs font-bold text-slate-600 block mb-1">Priority Level *</Text>
+                <Select
                   value={priority}
-                  onChange={(e) => setPriority(e.target.value)}
-                  className="input-lte focus:border-green-600 focus:ring-green-600/50"
+                  onChange={(val) => setPriority(val)}
+                  className="w-full"
+                  size="large"
                 >
-                  <option value="Low">Low (General Query)</option>
-                  <option value="Medium">Medium (Delay/Discrepancy)</option>
-                  <option value="High">High (Urgent Action)</option>
-                  <option value="Critical">Critical (System Lockout)</option>
-                </select>
+                  <Option value="Low">Low (General Query)</Option>
+                  <Option value="Medium">Medium (Delay/Discrepancy)</Option>
+                  <Option value="High">High (Urgent Action)</Option>
+                  <Option value="Critical">Critical (System Lockout)</Option>
+                </Select>
               </div>
 
               {/* Description */}
               <div>
-                <label className="label-lte">Detailed Remarks / Concern Description *</label>
-                <textarea
-                  rows={3}
-                  placeholder="Explain your concern with details..."
+                <Text className="text-xs font-bold text-slate-600 block mb-1">Detailed Remarks / Description *</Text>
+                <TextArea
+                  rows={4}
+                  placeholder="Explain your concern with clear details..."
                   value={description}
                   onChange={(e) => setDescription(e.target.value)}
-                  className="w-full px-3 py-2 bg-white border border-gray-300 rounded text-xs text-gray-800 focus:outline-none focus:border-green-600 focus:ring-1 focus:ring-green-600/50 resize-none font-sans font-medium"
+                  className="rounded-xl border-slate-200"
                   required
                 />
               </div>
 
-              <button
-                type="submit"
-                disabled={raising}
-                className="w-full h-9 rounded bg-[#28a745] hover:bg-[#218838] disabled:bg-gray-200 disabled:text-gray-400 text-white font-extrabold text-xs flex items-center justify-center shadow-sm border-0 transition-all cursor-pointer uppercase tracking-wider"
+              <Button
+                type="primary"
+                htmlType="submit"
+                loading={raising}
+                block
+                size="large"
+                className="bg-emerald-600 hover:bg-emerald-700 font-extrabold text-xs uppercase tracking-wider rounded-xl h-11"
               >
-                {raising ? "Filing support request..." : "Raise Ticket"}
-              </button>
+                {raising ? "Filing Support Request..." : "Submit Ticket"}
+              </Button>
 
             </form>
-          </div>
+          </Card>
+        </Col>
 
-        </div>
-
-        {/* Right column: Filter headers, listing tabs, and chat timeline logs */}
-        <div className={`xl:col-span-2 space-y-6 ${activeTab === "raise" ? "hidden xl:block" : "block"}`}>
+        {/* Right Column: Listing & Thread */}
+        <Col xs={24} lg={16} className={activeTab === "raise" ? "hidden xl:block" : "block"}>
           
-          {/* Support Ticket Listing container */}
-          <div className="card-lte flex flex-col bg-white">
-                    {/* List Tab Headers */}
-            <div className="hidden xl:flex border-b border-gray-200 bg-gray-50 items-center justify-between px-4">
-              <div className="flex">
-                <button
-                  onClick={() => { handleTabChange("my-tickets"); setSelectedTicket(null); }}
-                  style={{
-                    backgroundColor: activeTab === "my-tickets" ? "#a5d8e8" : undefined
-                  }}
-                  className={`py-2 px-4.5 font-black text-xs uppercase tracking-wider transition-all cursor-pointer rounded-t-lg ${
-                    activeTab === "my-tickets"
-                      ? "text-slate-900 font-black border-t-2 border-x border-[#8ec7d9]"
-                      : "text-gray-500 hover:text-gray-900 hover:bg-gray-100"
-                  }`}
-                >
-                  My Raised Tickets ({myRaisedTickets.length})
-                </button>
-                
-                {hasAccessToAssignedTab && (
-                  <button
-                    onClick={() => { handleTabChange("assigned-tickets"); setSelectedTicket(null); }}
-                    style={{
-                      backgroundColor: activeTab === "assigned-tickets" ? "#a5d8e8" : undefined
-                    }}
-                    className={`py-2 px-4.5 font-black text-xs uppercase tracking-wider transition-all cursor-pointer rounded-t-lg ${
-                      activeTab === "assigned-tickets"
-                        ? "text-slate-900 font-black border-t-2 border-x border-[#8ec7d9]"
-                        : "text-gray-500 hover:text-gray-900 hover:bg-gray-100"
-                    }`}
-                  >
-                    Assigned Concerns ({assignedTickets.length})
-                  </button>
-                )}
-              </div>
-            </div>
-
-            {/* Structured filters block */}
-            <div className="p-3 bg-slate-100 border-b border-gray-250 flex items-center gap-4 text-[10px] font-bold text-gray-500 uppercase overflow-x-auto whitespace-nowrap scrollbar-none">
+          <Card className="rounded-2xl border-slate-200/80 shadow-sm overflow-hidden" bodyStyle={{ padding: 0 }}>
+            
+            {/* Header Tabs & Filters Toolbar */}
+            <div className="p-4 bg-slate-50 border-b border-slate-200/80 flex flex-col md:flex-row md:items-center justify-between gap-4">
               
-              {/* Filter Follow-up flag */}
-              <div className="flex items-center gap-1.5 shrink-0">
-                <i className="fas fa-filter text-gray-400"></i>
-                <span className="text-gray-700">Follow-up:</span>
-                <select
+              {/* Segmented Tab Switcher */}
+              <Segmented
+                value={activeTab}
+                onChange={(val) => { handleTabChange(val as any); setSelectedTicket(null); }}
+                options={[
+                  { label: `My Tickets (${myRaisedTickets.length})`, value: "my-tickets" },
+                  { label: "File Ticket", value: "raise" },
+                  ...(hasAccessToAssignedTab ? [{ label: `Assigned (${assignedTickets.length})`, value: "assigned-tickets" }] : [])
+                ]}
+                className="bg-slate-200/70 p-1 font-bold text-xs"
+              />
+
+              {/* Sub-Filters */}
+              <Space flex-wrap>
+                <Select
                   value={filterFollowup}
-                  onChange={(e: any) => setFilterFollowup(e.target.value)}
-                  className="bg-white border border-gray-300 rounded-none px-2 py-1 text-[10px] text-gray-800 font-black focus:outline-none focus:border-indigo-500"
+                  onChange={(val) => setFilterFollowup(val)}
+                  size="small"
+                  className="w-32"
                 >
-                  <option value="all">All Concerns</option>
-                  <option value="flagged">Flagged Only</option>
-                  <option value="normal">Unflagged Only</option>
-                </select>
-              </div>
+                  <Option value="all">All Concerns</Option>
+                  <Option value="flagged">Flagged Only</Option>
+                  <Option value="normal">Unflagged Only</Option>
+                </Select>
 
-              {/* Filter Status */}
-              <div className="flex items-center gap-1.5 border-l border-gray-300 pl-4 shrink-0">
-                <span className="text-gray-700">Status:</span>
-                <select
+                <Select
                   value={filterStatus}
-                  onChange={(e: any) => setFilterStatus(e.target.value)}
-                  className="bg-white border border-gray-300 rounded-none px-2 py-1 text-[10px] text-gray-800 font-black focus:outline-none focus:border-indigo-500"
+                  onChange={(val) => setFilterStatus(val)}
+                  size="small"
+                  className="w-32"
                 >
-                  <option value="all">All Statuses</option>
-                  <option value="Open">Open</option>
-                  <option value="Re-opened">Re-opened</option>
-                  <option value="Updated">Updated</option>
-                  <option value="Closed">Closed</option>
-                  <option value="Final Closed">Final Closed</option>
-                </select>
-              </div>
+                  <Option value="all">All Statuses</Option>
+                  <Option value="Open">Open</Option>
+                  <Option value="Re-opened">Re-opened</Option>
+                  <Option value="Updated">Updated</Option>
+                  <Option value="Closed">Closed</Option>
+                  <Option value="Final Closed">Final Closed</Option>
+                </Select>
 
-              {/* Filter Category */}
-              <div className="flex items-center gap-1.5 border-l border-gray-300 pl-4 shrink-0">
-                <span className="text-gray-700">Category:</span>
-                <select
+                <Select
                   value={filterCategory}
-                  onChange={(e: any) => setFilterCategory(e.target.value)}
-                  className="bg-white border border-gray-300 rounded-none px-2 py-1 text-[10px] text-gray-800 font-black focus:outline-none focus:border-indigo-500"
+                  onChange={(val) => setFilterCategory(val)}
+                  size="small"
+                  className="w-32"
                 >
-                  <option value="all">All Categories</option>
-                  <option value="Expense">Expense</option>
-                  <option value="TA/DA">TA / DA</option>
-                  <option value="Profile">Profile</option>
-                  <option value="Other">Other Category</option>
-                </select>
-              </div>
+                  <Option value="all">All Categories</Option>
+                  <Option value="Expense">Expense</Option>
+                  <Option value="TA/DA">TA / DA</Option>
+                  <Option value="Profile">Profile</Option>
+                  <Option value="Other">Other</Option>
+                </Select>
+              </Space>
 
             </div>
 
-            {/* Content List */}
+            {/* Ticket Cards List */}
             {loading ? (
               <div className="p-12 text-center">
-                <Loader message="Loading support desk..." />
+                <Spin size="large" tip="Loading support desk tickets..." />
               </div>
             ) : filteredList.length === 0 ? (
-              <div className="py-20 text-center text-gray-400 text-xs">
-                <i className="fas fa-exclamation-circle fa-2x mx-auto mb-2 text-gray-300 animate-pulse"></i>
-                <p className="font-bold uppercase tracking-wider text-[10px]">No support concerns matched these filters.</p>
+              <div className="py-16 text-center">
+                <Empty description={<Text className="font-bold text-slate-400 uppercase text-xs">No tickets match active filters</Text>} />
               </div>
             ) : (
-              <div className="divide-y divide-gray-100 max-h-[460px] overflow-y-auto">
+              <div className="divide-y divide-slate-100 max-h-[500px] overflow-y-auto">
                 {filteredList.map(tkt => {
                   const isSelected = selectedTicket && selectedTicket.id === tkt.id;
                   
@@ -1007,405 +1070,80 @@ export default function HelpPage() {
                     <div 
                       key={tkt.id} 
                       onClick={() => setSelectedTicket(tkt)}
-                      className={`p-4 transition-colors cursor-pointer flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-l-[3px] ${
+                      className={`p-4 transition-all cursor-pointer flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-l-4 ${
                         isSelected 
-                          ? "bg-blue-50/10 border-l-blue-600" 
-                          : "bg-white hover:bg-gray-50 border-l-transparent"
+                          ? "bg-indigo-50/50 border-l-indigo-600" 
+                          : "bg-white hover:bg-slate-50 border-l-transparent"
                       }`}
                     >
-                      <div className="space-y-1.5 min-w-0 flex-1">
-                        <div className="flex flex-wrap items-center gap-2 text-[10px]">
-                          {/* Followup star flag button */}
+                      <div className="space-y-1 min-w-0 flex-1">
+                        <Space flex-wrap size="small">
                           <button
                             type="button"
                             onClick={(e) => handleToggleFollowup(e, tkt.id)}
-                            className="p-0.5 hover:bg-gray-100 rounded border-0 bg-transparent cursor-pointer"
+                            className="bg-transparent border-0 cursor-pointer p-0"
                             title="Toggle follow-up flag"
                           >
-                            <i className={`fas fa-bookmark text-xs transition-all ${
-                              tkt.needs_followup ? "text-amber-500" : "text-gray-300"
-                            }`}></i>
+                            {tkt.needs_followup ? (
+                              <StarFilled className="text-amber-500 text-xs" />
+                            ) : (
+                              <StarOutlined className="text-slate-300 hover:text-amber-500 text-xs transition-colors" />
+                            )}
                           </button>
-                          
-                          <span className="font-mono font-bold text-blue-600 uppercase tracking-wider">{tkt.ticket_code}</span>
-                          <span className="font-bold text-gray-300">•</span>
-                          <span className="font-bold text-gray-600 uppercase bg-gray-100 border border-gray-200 px-1.5 py-0.5 rounded text-[8px]">{tkt.concern_type}</span>
-                          <span className="font-bold text-gray-300">•</span>
-                          <span className="text-gray-400 font-semibold">{new Date(tkt.created_at).toLocaleDateString()}</span>
-                        </div>
-                        
-                        <h4 className="text-xs font-bold text-gray-800 truncate pr-6 font-sans" title={tkt.description}>
+
+                          <Text className="font-mono font-black text-indigo-600 text-xs">{tkt.ticket_code}</Text>
+                          <Tag className="font-bold text-[9px] uppercase m-0">{tkt.concern_type}</Tag>
+                          <Text className="text-[10px] text-slate-400 font-semibold">{new Date(tkt.created_at).toLocaleDateString()}</Text>
+                        </Space>
+
+                        <Text className="text-xs font-bold text-slate-800 block truncate pr-4" title={tkt.description}>
                           {tkt.description}
-                        </h4>
-                        
-                        <div className="flex flex-wrap items-center gap-2 text-[9px] text-gray-500 font-bold uppercase">
-                          <span>By: {tkt.created_by_name} ({tkt.created_by_code})</span>
-                          <span>•</span>
-                          <span>Assigned To: {tkt.assigned_to_name}</span>
-                        </div>
+                        </Text>
+
+                        <Text className="text-[10px] text-slate-400 font-bold block uppercase">
+                          By: {tkt.created_by_name} ({tkt.created_by_code}) • Assigned To: {tkt.assigned_to_name}
+                        </Text>
                       </div>
 
-                      <div className="flex items-center gap-2.5 shrink-0 self-end sm:self-center">
-                        <span className={`inline-flex items-center px-2 py-0.5 rounded border text-[8px] uppercase tracking-wider ${getPriorityBadgeClass(tkt.priority)}`}>
+                      <Space className="shrink-0 self-end sm:self-center">
+                        <Tag color={getPriorityTagColor(tkt.priority)} className="font-bold text-[9px] uppercase m-0">
                           {tkt.priority}
-                        </span>
-                        <span className={`inline-flex items-center px-2 py-0.5 rounded border text-[8px] uppercase tracking-wider ${getStatusBadgeClass(tkt.status)}`}>
+                        </Tag>
+                        <Tag color={getStatusTagColor(tkt.status)} className="font-bold text-[9px] uppercase m-0">
                           {tkt.status}
-                        </span>
-                      </div>
+                        </Tag>
+                      </Space>
                     </div>
                   );
                 })}
               </div>
             )}
-          </div>
+          </Card>
 
-          {/* Ticket Thread detail panel */}
-          {selectedTicket && (
-            isMobile ? (
-              <div className="fixed inset-0 bg-black/60 z-[2000] flex items-end justify-center animate-fadeIn" onClick={() => setSelectedTicket(null)}>
-                <div className="bg-white rounded-t-[24px] w-full max-h-[90vh] flex flex-col shadow-xl animate-slideUp text-xs overflow-hidden" onClick={e => e.stopPropagation()}>
-                  
-                  {/* Top Drag Handle Indicator */}
-                  <div className="w-12 h-1.5 bg-gray-350 rounded-full mx-auto my-3 cursor-pointer" onClick={() => setSelectedTicket(null)}></div>
-                  
-                  {/* Detail Body */}
-                  <div className="flex-1 overflow-y-auto px-4 pb-28 space-y-4 text-left">
-                    {/* Detail Header */}
-                    <div className="flex items-start justify-between border-b border-gray-150 pb-3 pt-1">
-                      <div className="space-y-1">
-                        <div className="flex items-center gap-2">
-                          <h3 className="text-sm font-bold text-gray-955 font-mono flex items-center gap-1.5">
-                            {selectedTicket.ticket_code}
-                            <i className={`fas fa-bookmark text-xs ${
-                              selectedTicket.needs_followup ? "text-amber-500" : "text-gray-300"
-                            }`}></i>
-                          </h3>
-                        </div>
-                        <p className="text-[10px] text-gray-500 font-bold uppercase tracking-wider">
-                          Category: <span className="text-indigo-650">{selectedTicket.concern_type}</span>
-                          {selectedTicket.expense_code && ` (Claim Code: ${selectedTicket.expense_code})`}
-                        </p>
-                      </div>
-
-                      <div className="flex gap-2">
-                        {["Open", "Updated", "Re-opened"].includes(selectedTicket.status) && (
-                          <button
-                            onClick={() => handleCloseTicket(selectedTicket.id)}
-                            className="bg-red-650 hover:bg-red-700 text-white px-2.5 py-1 text-[9px] min-h-0 uppercase tracking-wider font-extrabold flex items-center gap-1 border-0 rounded cursor-pointer"
-                          >
-                            <i className="fas fa-check-circle"></i> Resolve
-                          </button>
-                        )}
-                        {canReopen(selectedTicket) && (
-                          <button
-                            onClick={() => handleReopenTicket(selectedTicket.id)}
-                            className="bg-amber-500 hover:bg-amber-600 text-white px-2.5 py-1 text-[9px] min-h-0 uppercase tracking-wider font-extrabold flex items-center gap-1 border-0 rounded cursor-pointer"
-                          >
-                            <i className="fas fa-undo"></i> Reopen
-                          </button>
-                        )}
-                        <button
-                          onClick={() => setSelectedTicket(null)}
-                          className="bg-gray-100 hover:bg-gray-250 border border-gray-300 text-gray-700 font-extrabold px-2.5 py-1 text-[9px] rounded uppercase tracking-wider cursor-pointer"
-                        >
-                          Close
-                        </button>
-                      </div>
-                    </div>
-
-                    {/* Status and Priority Info Cards */}
-                    <div className="grid grid-cols-2 gap-2 text-[10px]">
-                      <div className="p-2 border border-gray-150 rounded-lg bg-gray-50/50">
-                        <span className="text-gray-400 block font-bold uppercase text-[8px] tracking-wider mb-0.5">Status</span>
-                        <span className={`inline-block px-2 py-0.5 rounded border ${getStatusBadgeClass(selectedTicket.status)}`}>
-                          {selectedTicket.status}
-                        </span>
-                      </div>
-                      <div className="p-2 border border-gray-150 rounded-lg bg-gray-50/50">
-                        <span className="text-gray-450 block font-bold uppercase text-[8px] tracking-wider mb-0.5">Priority</span>
-                        <span className={`inline-block px-2 py-0.5 rounded border ${getPriorityBadgeClass(selectedTicket.priority)}`}>
-                          {selectedTicket.priority}
-                        </span>
-                      </div>
-                    </div>
-
-                    {/* Ticket Description / Remarks */}
-                    <div className="bg-gray-50 border border-gray-150 rounded-xl p-3">
-                      <span className="text-[8px] font-bold text-gray-400 uppercase tracking-wider block mb-1">Issue Description</span>
-                      <p className="text-xs text-gray-800 font-medium whitespace-pre-wrap leading-relaxed">
-                        {selectedTicket.description}
-                      </p>
-                      {selectedTicket.closed_at && (
-                        <div className="mt-2.5 pt-2 border-t border-gray-150 flex items-center justify-between text-[9px] font-bold text-gray-500 uppercase">
-                          <span>Resolved In:</span>
-                          <span className="font-mono text-indigo-650">
-                            {formatDuration((new Date(selectedTicket.closed_at).getTime() - new Date(selectedTicket.created_at).getTime()) / (1000 * 60 * 60))}
-                          </span>
-                        </div>
-                      )}
-                    </div>
-
-                    {/* Discussion logs */}
-                    <div className="space-y-2">
-                      <div className="flex justify-between items-center">
-                        <h4 className="text-[10px] font-bold uppercase tracking-wider text-gray-400">Discussion Logs & Updates</h4>
-                        <span className="text-[9px] font-bold text-gray-400 uppercase select-none">💬 Live Chat</span>
-                      </div>
-                      
-                      <div 
-                        className="rounded-lg p-4 min-h-[220px] max-h-[320px] overflow-y-auto flex flex-col gap-3 relative shadow-inner border border-gray-250"
-                        style={{
-                          backgroundColor: "#efeae2",
-                          backgroundImage: "radial-gradient(#dfdcd6 1px, transparent 1px)",
-                          backgroundSize: "16px 16px"
-                        }}
-                      >
-                        {!selectedTicket.comments || !selectedTicket.comments.trim() ? (
-                          <div className="my-auto text-center py-6 text-gray-450 font-bold uppercase text-[9px] tracking-wider">
-                            No log comments recorded
-                          </div>
-                        ) : (
-                          selectedTicket.comments.split("\n").map((cmt: string, cIdx: number) => {
-                            if (!cmt.trim()) return null;
-                            const isSystem = cmt.startsWith("[SYSTEM]");
-                            const isEmployee = cmt.startsWith("[EMPLOYEE]");
-                            const cleanText = cmt.replace(/^\[SYSTEM\]\s*|^\[EMPLOYEE\]\s*/, "");
-                            return (
-                              <div
-                                key={cIdx}
-                                className={`p-2 rounded-lg text-xs leading-normal border shadow-2xs ${
-                                  isSystem
-                                    ? "bg-amber-50/60 border-amber-100/70 text-gray-700"
-                                    : isEmployee
-                                    ? "bg-indigo-50/60 border-indigo-100/70 text-indigo-950"
-                                    : "bg-white border-gray-150 text-gray-800"
-                                }`}
-                              >
-                                <p className="font-medium whitespace-pre-wrap">{cleanText}</p>
-                              </div>
-                            );
-                          })
-                        )}
-                      </div>
-                    </div>
-
-                    {/* Chat Reply Form */}
-                    {selectedTicket.status !== "Final Closed" && (
-                      <div className="pt-2 border-t border-gray-100 pb-20">
-                        <form onSubmit={handleSendCommentMessage} className="flex gap-2 items-center bg-gray-50 p-1.5 rounded-full border border-gray-200">
-                          <input
-                            type="text"
-                            placeholder={selectedTicket.status === "Closed" ? "Ticket is closed. Reopen to chat..." : "Type reply message..."}
-                            value={newComment}
-                            onChange={(e) => handleInputChange(e.target.value)}
-                            disabled={selectedTicket.status === "Closed" || commenting}
-                            className="flex-1 px-4 py-2 bg-white border border-gray-300 rounded-full text-xs text-gray-800 placeholder-gray-400 focus:outline-none focus:ring-1 focus:ring-indigo-500 focus:border-indigo-500 outline-none font-medium h-9"
-                            required
-                          />
-                          <button
-                            type="submit"
-                            disabled={selectedTicket.status === "Closed" || commenting || !newComment.trim()}
-                            className="h-9 w-9 bg-green-600 hover:bg-green-700 disabled:bg-gray-300 disabled:text-gray-400 text-white rounded-full flex items-center justify-center shadow-md shrink-0 border-0 transition-colors cursor-pointer"
-                            title="Send message"
-                          >
-                            <i className="fas fa-paper-plane text-xs"></i>
-                          </button>
-                        </form>
-                      </div>
-                    )}
-
-                  </div>
-                </div>
-              </div>
-            ) : (
-              <div className="card-lte-primary p-5 space-y-4 bg-white shadow-md animate-scaleIn text-xs">
-                
-                {/* Detail Header */}
-                <div className="flex items-start justify-between border-b border-gray-150 pb-3">
-                  <div className="space-y-1">
-                    <div className="flex items-center gap-2">
-                      <h3 className="text-sm font-bold text-gray-955 font-mono flex items-center gap-1.5">
-                        {selectedTicket.ticket_code}
-                        <i className={`fas fa-bookmark text-xs ${
-                          selectedTicket.needs_followup ? "text-amber-500" : "text-gray-300"
-                        }`}></i>
-                      </h3>
-                      
-                      <span className={`inline-flex items-center px-2 py-0.5 rounded border text-[8px] uppercase font-bold tracking-wider ${getStatusBadgeClass(selectedTicket.status)}`}>
-                        {selectedTicket.status}
-                      </span>
-                    </div>
-                    
-                    <p className="text-[10px] text-gray-550 font-bold uppercase">
-                      Category: <span className="text-gray-800">{selectedTicket.concern_type}</span>
-                      {selectedTicket.expense_code && ` (Claim Code: ${selectedTicket.expense_code})`}
-                    </p>
-                  </div>
-
-                  <div className="flex items-center gap-2">
-                    {/* Close ticket button */}
-                    {["Open", "Updated", "Re-opened"].includes(selectedTicket.status) && (
-                      <button
-                        onClick={() => handleCloseTicket(selectedTicket.id)}
-                        className="px-3 py-1 bg-red-600 hover:bg-red-700 text-white rounded text-[10px] font-bold uppercase tracking-wider cursor-pointer border-0 shadow-sm transition-colors flex items-center gap-1"
-                      >
-                        <i className="fas fa-check-circle"></i>
-                        Resolve Concern
-                      </button>
-                    )}
-
-                    {/* Re-open ticket button */}
-                    {canReopen(selectedTicket) && (
-                      <button
-                        onClick={() => handleReopenTicket(selectedTicket.id)}
-                        className="px-3 py-1 bg-amber-500 hover:bg-amber-600 text-white rounded text-[10px] font-bold uppercase tracking-wider cursor-pointer border-0 shadow-sm transition-colors flex items-center gap-1"
-                      >
-                        <i className="fas fa-redo fa-spin-slow"></i>
-                        Re-open (36h limit)
-                      </button>
-                    )}
-                  </div>
-                </div>
-
-                {/* Concern details card */}
-                <div className="p-3.5 bg-gray-50 border border-gray-200 rounded text-xs space-y-2">
-                  <div className="flex justify-between items-center text-[9px] font-bold text-gray-400 uppercase">
-                    <span>Concern remarks</span>
-                    <span className={selectedTicket.priority === "Critical" ? "text-red-600 font-black" : ""}>Priority: {selectedTicket.priority}</span>
-                  </div>
-                  <p className="text-gray-700 font-bold leading-relaxed">
-                    {selectedTicket.description}
-                  </p>
-
-                  {/* Show individual TAT if closed */}
-                  {selectedTicket.closed_at && (
-                    <div className="mt-2.5 pt-2 border-t border-gray-200 flex items-center gap-1.5 text-[9px] text-gray-400 font-bold uppercase">
-                      <i className="fas fa-clock text-gray-450"></i>
-                      <span>Resolution TAT:</span>
-                      <span className="text-blue-700 font-mono">
-                        {formatDuration(
-                          (new Date(selectedTicket.closed_at).getTime() - new Date(selectedTicket.created_at).getTime()) / (1000 * 60 * 60)
-                        )}
-                      </span>
-                    </div>
-                  )}
-                </div>
-
-                {/* Discussion logs */}
-                <div className="space-y-2">
-                  <div className="flex justify-between items-center">
-                    <h4 className="text-[10px] font-bold uppercase tracking-wider text-gray-400">Discussion Logs & Updates</h4>
-                    <span className="text-[9px] font-bold text-gray-400 uppercase select-none">💬 Live Chat</span>
-                  </div>
-                  
-                  <div 
-                    className="rounded-lg p-4 min-h-[320px] max-h-[420px] overflow-y-auto flex flex-col gap-3 relative shadow-inner border border-gray-250"
-                    style={{
-                      backgroundColor: "#efeae2",
-                      backgroundImage: "radial-gradient(#dfdcd6 1px, transparent 1px)",
-                      backgroundSize: "16px 16px"
-                    }}
-                  >
-                    {!selectedTicket.comments || !selectedTicket.comments.trim() ? (
-                      <div className="my-auto text-center py-6 text-gray-450 font-bold uppercase text-[10px] tracking-wider select-none bg-white/70 rounded p-4 mx-4 shadow-sm border border-gray-200">
-                        No replies logged yet. Type a message below to start the discussion thread.
-                      </div>
-                    ) : (
-                      selectedTicket.comments.split("\n").map((cmt: string, cIdx: number) => {
-                        if (!cmt.trim()) return null;
-                        
-                        const openParenIdx = cmt.indexOf(" (");
-                        const closeParenIdx = cmt.indexOf("): ");
-                        let senderName = "System";
-                        let dateTime = "";
-                        let content = cmt;
-
-                        if (openParenIdx !== -1 && closeParenIdx !== -1 && openParenIdx < closeParenIdx) {
-                          senderName = cmt.substring(0, openParenIdx).trim();
-                          const rawTime = cmt.substring(openParenIdx + 2, closeParenIdx).trim();
-                          content = cmt.substring(closeParenIdx + 3).trim();
-                          
-                          try {
-                            dateTime = formatDateTime(rawTime);
-                          } catch (e) {
-                            dateTime = rawTime;
-                          }
-                        }
-                        
-                        const isSystem = senderName === "System" || cmt.startsWith("System:") || !cmt.includes("): ");
-                        if (isSystem) {
-                          return (
-                            <div key={cIdx} className="flex justify-center my-1">
-                              <span className="bg-white/90 border border-gray-200/60 text-gray-500 text-[9px] font-bold px-3 py-1 rounded-md uppercase tracking-wider shadow-2xs select-none">
-                                {content}
-                              </span>
-                            </div>
-                          );
-                        }
-
-                        const isOwn = senderName.toLowerCase() === currentUser?.name?.toLowerCase() || 
-                                      senderName.toLowerCase().startsWith(currentUser?.name?.toLowerCase().substring(0, 5));
-
-                        return (
-                          <div key={cIdx} className={`flex w-full ${isOwn ? "justify-end" : "justify-start"}`}>
-                            <div 
-                              className={`px-3 py-2 rounded-lg max-w-[85%] sm:max-w-[70%] shadow-xs relative flex flex-col gap-0.5 ${
-                                isOwn 
-                                  ? "bg-[#d9fdd3] text-gray-800 rounded-tr-none border border-[#c1e9bb]" 
-                                  : "bg-white text-gray-800 rounded-tl-none border border-gray-200"
-                              }`}
-                            >
-                              {!isOwn && (
-                                <span className="font-extrabold text-[10px] text-green-600 block leading-none select-none">
-                                  {senderName}
-                                </span>
-                              )}
-                              <p className="text-xs font-medium leading-relaxed whitespace-pre-wrap text-gray-850 break-words">
-                                {content}
-                              </p>
-                              <span className="text-[8px] text-gray-400 font-bold select-none text-right block leading-none mt-1">
-                                {dateTime} {isOwn && <span className="text-blue-500 ml-0.5">✓✓</span>}
-                              </span>
-                            </div>
-                          </div>
-                        );
-                      })
-                    )}
-                  </div>
-                  {typingUser && (
-                    <div className="px-4 py-1 text-[10px] text-gray-500 italic bg-[#efeae2] border-t border-gray-200 shrink-0 text-left font-semibold">
-                      {typingUser} is typing...
-                    </div>
-                  )}
-
-                  {/* Input area (WhatsApp style) */}
-                  <form onSubmit={handleAddComment} className="flex items-center gap-2 p-3 bg-[#f0f2f5] border-t border-gray-200 shrink-0">
-                    <input
-                      type="text"
-                      placeholder={selectedTicket.status === "Closed" ? "This ticket is closed" : "Type a reply..."}
-                      value={newComment}
-                      onChange={(e) => handleInputChange(e.target.value)}
-                      disabled={selectedTicket.status === "Closed" || commenting}
-                      className="flex-1 px-4 py-2 bg-white border border-gray-300 rounded-full text-xs text-gray-800 placeholder-gray-400 focus:outline-none focus:ring-1 focus:ring-green-500 focus:border-green-500 outline-none font-medium h-9"
-                      required
-                    />
-                    <button
-                      type="submit"
-                      disabled={selectedTicket.status === "Closed" || commenting || !newComment.trim()}
-                      className="h-9 w-9 bg-green-600 hover:bg-green-700 disabled:bg-gray-300 disabled:text-gray-400 text-white rounded-full flex items-center justify-center shadow-md shrink-0 border-0 transition-colors cursor-pointer"
-                      title="Send message"
-                    >
-                      <i className="fas fa-paper-plane text-xs"></i>
-                    </button>
-                  </form>
-                </div>
-              </div>
-            )
+          {/* Ticket Discussion Thread Panel (Desktop) */}
+          {selectedTicket && !isMobile && (
+            <Card className="mt-6 rounded-2xl border-slate-200/80 shadow-md">
+              {renderTicketDetail()}
+            </Card>
           )}
-        </div>
 
-      </div>
+          {/* Ticket Discussion Drawer (Mobile) */}
+          {selectedTicket && isMobile && (
+            <Drawer
+              open={!!selectedTicket}
+              onClose={() => setSelectedTicket(null)}
+              placement="bottom"
+              height="88vh"
+              className="rounded-t-2xl"
+              bodyStyle={{ padding: "16px" }}
+            >
+              {renderTicketDetail()}
+            </Drawer>
+          )}
+
+        </Col>
+
+      </Row>
     </div>
   );
 }
