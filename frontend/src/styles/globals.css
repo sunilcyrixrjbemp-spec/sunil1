@@ -445,7 +445,6 @@ svg, path, g, sector, .recharts-pie-sector, .recharts-sector, .recharts-pie, .re
   input[type="number"],
   input[type="date"],
   input[type="month"],
-  select,
   textarea {
     min-height: 44px !important;
     padding: 0.6rem 1rem !important;
@@ -456,6 +455,19 @@ svg, path, g, sector, .recharts-pie-sector, .recharts-sector, .recharts-pie, .re
     font-weight: 500 !important;
     color: #0f172a !important;
     transition: all 0.15s ease !important;
+    box-shadow: none !important;
+    width: 100% !important;
+  }
+
+  select {
+    min-height: 38px !important;
+    padding: 0.4rem 0.75rem !important;
+    font-size: 12px !important;
+    border-radius: 8px !important;
+    border: 1px solid #cbd5e1 !important;
+    background-color: #ffffff !important;
+    font-weight: 600 !important;
+    color: #0f172a !important;
     box-shadow: none !important;
     width: 100% !important;
   }

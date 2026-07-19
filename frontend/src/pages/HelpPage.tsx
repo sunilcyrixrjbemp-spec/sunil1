@@ -849,12 +849,32 @@ export default function HelpPage() {
 
       </div>
 
-      {/* Ant Design Select and Segmented styling */}
+      {/* Ant Design Select, Custom Select and Segmented styling */}
       <style>{`
-        .ant-select-single:not(.ant-select-customize-input) .ant-select-selector {
-          border-radius: 10px !important;
-          border-color: #cbd5e1 !important;
+        .help-custom-select {
+          appearance: none !important;
+          -webkit-appearance: none !important;
+          -moz-appearance: none !important;
+          background-image: url("data:image/svg+xml;charset=UTF-8,%3csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%23475569' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'%3e%3cpolyline points='6 9 12 15 18 9'%3e%3c/polyline%3e%3c/svg%3e") !important;
+          background-repeat: no-repeat !important;
+          background-position: right 10px center !important;
+          background-size: 14px 14px !important;
+          padding: 0 30px 0 12px !important;
+          border-radius: 8px !important;
+          min-height: 38px !important;
+          height: 38px !important;
+          border: 1px solid #cbd5e1 !important;
           background-color: #ffffff !important;
+          font-size: 12px !important;
+          font-weight: 700 !important;
+          color: #0f172a !important;
+          outline: none !important;
+          box-shadow: none !important;
+          cursor: pointer !important;
+        }
+        .help-custom-select:focus {
+          border-color: #4f46e5 !important;
+          box-shadow: 0 0 0 2px rgba(79, 70, 229, 0.1) !important;
         }
         .help-tab-segmented .ant-segmented-item-selected {
           background-color: #4f46e5 !important;
@@ -895,7 +915,7 @@ export default function HelpPage() {
               <select
                 value={filterFollowup}
                 onChange={(e) => setFilterFollowup(e.target.value as any)}
-                className="w-full sm:w-36 bg-white border border-slate-300 rounded-xl px-3 py-2 text-xs font-bold text-slate-800 cursor-pointer shadow-2xs focus:outline-none focus:border-indigo-500"
+                className="help-custom-select w-full sm:w-36"
               >
                 <option value="all">All Concerns</option>
                 <option value="flagged">⭐ Flagged Only</option>
@@ -909,7 +929,7 @@ export default function HelpPage() {
               <select
                 value={filterStatus}
                 onChange={(e) => setFilterStatus(e.target.value)}
-                className="w-full sm:w-36 bg-white border border-slate-300 rounded-xl px-3 py-2 text-xs font-bold text-slate-800 cursor-pointer shadow-2xs focus:outline-none focus:border-indigo-500"
+                className="help-custom-select w-full sm:w-36"
               >
                 <option value="all">All Statuses</option>
                 <option value="Open">Open</option>
@@ -926,7 +946,7 @@ export default function HelpPage() {
               <select
                 value={filterCategory}
                 onChange={(e) => setFilterCategory(e.target.value)}
-                className="w-full sm:w-36 bg-white border border-slate-300 rounded-xl px-3 py-2 text-xs font-bold text-slate-800 cursor-pointer shadow-2xs focus:outline-none focus:border-indigo-500"
+                className="help-custom-select w-full sm:w-36"
               >
                 <option value="all">All Categories</option>
                 <option value="Expense">Expense</option>
@@ -971,7 +991,7 @@ export default function HelpPage() {
                 <select
                   value={concernType}
                   onChange={(e) => setConcernType(e.target.value)}
-                  className="w-full bg-white border border-slate-300 rounded-xl px-3 py-2.5 text-xs font-bold text-slate-800 cursor-pointer shadow-2xs focus:outline-none focus:border-indigo-500"
+                  className="help-custom-select w-full"
                 >
                   <option value="Expense">Expense Claim Reference</option>
                   <option value="TA/DA">TA / DA Allowance Cap</option>
@@ -1001,7 +1021,7 @@ export default function HelpPage() {
                   <select
                     value={selectedExpenseId}
                     onChange={(e) => setSelectedExpenseId(e.target.value)}
-                    className="w-full bg-white border border-slate-300 rounded-xl px-3 py-2.5 text-xs font-bold text-slate-800 cursor-pointer shadow-2xs focus:outline-none focus:border-indigo-500"
+                    className="help-custom-select w-full"
                   >
                     <option value="">-- Select Related Expense Claim --</option>
                     {myExpenses.map(exp => (
@@ -1020,7 +1040,7 @@ export default function HelpPage() {
                   <select
                     value={assignedToName}
                     onChange={(e) => setAssignedToName(e.target.value)}
-                    className="w-full bg-white border border-slate-300 rounded-xl px-3 py-2.5 text-xs font-bold text-slate-800 cursor-pointer shadow-2xs focus:outline-none focus:border-indigo-500"
+                    className="help-custom-select w-full"
                   >
                     {currentUser?.manager && (
                       <option value={currentUser.manager}>Reporting Manager: {currentUser.manager}</option>
@@ -1048,7 +1068,7 @@ export default function HelpPage() {
                 <select
                   value={priority}
                   onChange={(e) => setPriority(e.target.value)}
-                  className="w-full bg-white border border-slate-300 rounded-xl px-3 py-2.5 text-xs font-bold text-slate-800 cursor-pointer shadow-2xs focus:outline-none focus:border-indigo-500"
+                  className="help-custom-select w-full"
                 >
                   <option value="Low">Low (General Query)</option>
                   <option value="Medium">Medium (Delay/Discrepancy)</option>
