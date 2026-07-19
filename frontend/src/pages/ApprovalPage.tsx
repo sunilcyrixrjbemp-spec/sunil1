@@ -2148,59 +2148,13 @@ export default function ApprovalPage() {
                       </div>
                     </div>
                   )}
-                </>
+                </div>
               ) : (
                 <div className="py-20 text-center text-gray-400">
                   <AlertTriangle className="w-10 h-10 text-red-500 mx-auto mb-3" />
                   <p className="font-bold">Error: Could not retrieve claim data.</p>
                 </div>
               )}
-            </div>
-
-            {/* Modal Footer */}
-            <div className="px-4 py-3 bg-gray-50 border-t border-gray-200 flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 shrink-0">
-              <button
-                type="button"
-                onClick={() => { setShowDetailModal(false); setSelectedApproval(null); }}
-                className="w-full sm:w-auto px-5 py-2.5 bg-slate-500 hover:bg-slate-600 active:bg-slate-700 text-white font-bold rounded-lg text-xs uppercase tracking-wider transition-all cursor-pointer border-0 shadow-sm flex items-center justify-center gap-1.5"
-                disabled={actionLoading}
-              >
-                <X className="w-3.5 h-3.5" />
-                <span>Close Window</span>
-              </button>
-
-              <div className="flex flex-col sm:flex-row gap-2.5 w-full sm:w-auto">
-                <button
-                  type="button"
-                  onClick={() => handleProcessAction("reject")}
-                  disabled={actionLoading || loadingDetails}
-                  className="w-full sm:w-auto px-5 py-2.5 bg-rose-600 hover:bg-rose-700 active:bg-rose-800 text-white font-bold rounded-lg text-xs uppercase tracking-wider transition-all cursor-pointer border-0 shadow-sm flex items-center justify-center gap-1.5 min-w-[120px]"
-                >
-                  {actionLoading && _actionType === "reject" ? (
-                    <span className="w-3.5 h-3.5 rounded-full border-2 border-white/35 border-t-white animate-spin shrink-0"/>
-                  ) : (
-                    <X className="w-3.5 h-3.5" />
-                  )}
-                  <span>{actionLoading && _actionType === "reject" ? "Rejecting..." : "Reject Claim"}</span>
-                </button>
-                {isCoordinator && selectedApproval && selectedApproval.category !== "Limit Request" && (
-                  <button
-                    type="button"
-                    onClick={() => handleOpenReturnModal(selectedApproval.expense_id)}
-                    disabled={actionLoading || loadingDetails}
-                    className="w-full sm:w-auto px-5 py-2.5 bg-orange-600 hover:bg-orange-700 active:bg-orange-800 text-white font-bold rounded-lg text-xs uppercase tracking-wider transition-all cursor-pointer border-0 shadow-sm flex items-center justify-center gap-1.5 min-w-[145px]"
-                  >
-                    <RotateCcw className="w-3.5 h-3.5" />
-                    <span>Return to Draft</span>
-                  </button>
-                )}
-          </div>
-        ) : (
-          <div className="py-20 text-center text-gray-400">
-            <AlertTriangle className="w-10 h-10 text-red-500 mx-auto mb-3" />
-            <p className="font-bold">Error: Could not retrieve claim data.</p>
-          </div>
-        )}
       </Modal>
 
       {/* ================= BATCH ACTION CONFIRMATION MODAL ================= */}
