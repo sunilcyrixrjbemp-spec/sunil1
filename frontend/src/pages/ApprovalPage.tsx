@@ -177,17 +177,7 @@ export default function ApprovalPage() {
   const [bulkComments, setBulkComments] = useState("");
   const [bulkActionLoading, setBulkActionLoading] = useState(false);
 
-  const _aiReport = (() => {
-    if (!expenseDetails || !expenseDetails.ai_analysis) return null;
-    try {
-      return typeof expenseDetails.ai_analysis === "string" 
-        ? JSON.parse(expenseDetails.ai_analysis) 
-        : expenseDetails.ai_analysis;
-    } catch (e) {
-      console.error("Error parsing AI report", e);
-      return null;
-    }
-  })();
+
 
   // In-app Lightbox state
   const [lightboxImage, setLightboxImage] = useState<string | null>(null);
