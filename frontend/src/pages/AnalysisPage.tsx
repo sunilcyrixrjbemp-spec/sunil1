@@ -671,6 +671,29 @@ export default function AnalysisPage() {
         .status-segmented-rejected .ant-segmented-item-selected * {
           color: white !important;
         }
+
+        /* Custom Radio Button switcher styles */
+        .ant-radio-button-wrapper {
+          color: #4b5563 !important;
+          background-color: #ffffff !important;
+          border-color: #d1d5db !important;
+          font-weight: 700 !important;
+          font-size: 10px !important;
+          display: inline-flex !important;
+          align-items: center !important;
+          justify-content: center !important;
+        }
+        .ant-radio-button-wrapper span {
+          color: inherit !important;
+        }
+        .ant-radio-button-wrapper-checked:not(.ant-radio-button-wrapper-disabled) {
+          color: #ffffff !important;
+          background-color: #4f46e5 !important;
+          border-color: #4f46e5 !important;
+        }
+        .ant-radio-button-wrapper-checked:not(.ant-radio-button-wrapper-disabled) span {
+          color: #ffffff !important;
+        }
       `}</style>
       
       {/* Page Header Card */}
@@ -937,18 +960,6 @@ export default function AnalysisPage() {
               value={activityStats.assetTaggingCount + activityStats.calibrationCount}
               valueStyle={{ fontSize: "16px", fontWeight: 800, color: "#1F2937", fontFamily: "monospace" }}
               prefix={<GlobalOutlined className="text-cyan-500 mr-1.5" />}
-            />
-          </Card>
-        </Col>
-
-        {/* Card 7: Scope / View Mode */}
-        <Col xs={12} sm={8} md={6} lg={4} xl={3.4}>
-          <Card size="small" bordered={false} className="shadow-xs border border-gray-150 rounded-xl">
-            <Statistic
-              title={<span className="text-[9px] font-bold uppercase tracking-wider text-gray-400">Scope</span>}
-              value={viewMode === "team" ? "Team Data" : "My Data"}
-              valueStyle={{ fontSize: "14px", fontWeight: 800, color: "#1F2937" }}
-              prefix={viewMode === "team" ? <TeamOutlined className="text-purple-500 mr-1" /> : <UserOutlined className="text-purple-500 mr-1" />}
             />
           </Card>
         </Col>
