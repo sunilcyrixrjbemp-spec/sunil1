@@ -1386,3 +1386,158 @@ span.submitter-code-text {
   cursor: not-allowed !important;
 }
 
+/* ================= ANT DESIGN COMPONENT OVERRIDES (CRITICAL — PREVENT GLOBAL MOBILE CSS FROM BREAKING ANTD) ================= */
+/* The broad mobile input/select selectors above override antd internal inputs/selects.
+   These rules restore antd's native appearance for its own components. */
+
+/* Antd Select internal input — undo global input override */
+.ant-select .ant-select-selector,
+.ant-select .ant-select-selector input {
+  border-radius: inherit !important;
+  min-height: unset !important;
+  height: auto !important;
+  padding: inherit !important;
+  width: auto !important;
+  border: none !important;
+  box-shadow: none !important;
+  background-color: transparent !important;
+}
+
+/* Antd Input wrapper — keep antd border/radius, proper sizing */
+.ant-input-affix-wrapper {
+  border-radius: 6px !important;
+  border: 1px solid #d9d9d9 !important;
+  background-color: #ffffff !important;
+  width: 100% !important;
+  min-height: 32px !important;
+  box-sizing: border-box !important;
+  display: flex !important;
+  align-items: center !important;
+}
+
+.ant-input-affix-wrapper .ant-input,
+.ant-input-affix-wrapper input {
+  border: none !important;
+  border-radius: 0 !important;
+  min-height: unset !important;
+  height: auto !important;
+  padding: 0 !important;
+  box-shadow: none !important;
+  background-color: transparent !important;
+  width: 100% !important;
+}
+
+.ant-input-affix-wrapper-focused,
+.ant-input-affix-wrapper:focus-within {
+  border-color: #4f46e5 !important;
+  box-shadow: 0 0 0 2px rgba(79, 70, 229, 0.1) !important;
+}
+
+/* Antd standalone Input */
+.ant-input {
+  border-radius: 6px !important;
+  border: 1px solid #d9d9d9 !important;
+  min-height: unset !important;
+  height: auto !important;
+  width: 100% !important;
+  background-color: #ffffff !important;
+}
+
+/* Antd Checkbox internal input — must not get min-height 44px */
+.ant-checkbox-input {
+  min-height: unset !important;
+  width: 16px !important;
+  height: 16px !important;
+  border-radius: 2px !important;
+  padding: 0 !important;
+  border: none !important;
+}
+
+/* Antd InputNumber internal input */
+.ant-input-number input {
+  min-height: unset !important;
+  border-radius: 0 !important;
+  padding: 0 4px !important;
+  border: none !important;
+  box-shadow: none !important;
+  background-color: transparent !important;
+  width: 100% !important;
+}
+
+/* ================= ANTD MODAL SCROLL FIX (My Claims + Approval Center) ================= */
+/* Root cause: scroll stuck at bottom on iOS Safari / Android Chrome.
+   The fix: ensure the modal body allows vertical touch events (pan-y) instead of blocking them. */
+.ant-modal-body {
+  -webkit-overflow-scrolling: touch !important;
+  overflow-y: auto !important;
+  overscroll-behavior-y: contain !important;
+  touch-action: pan-y !important;
+}
+
+/* The modal wrap overlay and content must allow vertical scroll touch events through */
+.ant-modal-wrap {
+  touch-action: pan-y !important;
+}
+
+.ant-modal-content {
+  touch-action: pan-y !important;
+}
+
+/* Mobile-specific antd Modal fixes */
+@media (max-width: 767px) {
+  .ant-modal {
+    max-width: 96vw !important;
+    margin: 8px auto !important;
+  }
+
+  .ant-modal-body {
+    padding: 12px 14px !important;
+    max-height: 68vh !important;
+    overflow-y: auto !important;
+    -webkit-overflow-scrolling: touch !important;
+    overscroll-behavior-y: contain !important;
+    touch-action: pan-y !important;
+  }
+
+  .ant-modal-footer {
+    padding: 10px 14px !important;
+  }
+
+  .ant-modal-header {
+    padding: 12px 14px !important;
+  }
+
+  /* Antd Select filter — full-width, 40px touch-friendly height */
+  .approval-filter-select {
+    width: 100% !important;
+  }
+
+  .approval-filter-select .ant-select-selector {
+    min-height: 40px !important;
+    height: 40px !important;
+    display: flex !important;
+    align-items: center !important;
+    border-radius: 6px !important;
+  }
+
+  /* Antd Input filter — full-width, 40px touch-friendly height */
+  .approval-filter-input.ant-input-affix-wrapper {
+    min-height: 40px !important;
+    border-radius: 6px !important;
+    width: 100% !important;
+  }
+
+  /* Antd Table in Approval section — horizontal scroll, no letter-wrapping headers */
+  .ant-table-wrapper {
+    overflow-x: auto !important;
+  }
+
+  .ant-table-thead > tr > th {
+    white-space: nowrap !important;
+    padding: 8px 10px !important;
+  }
+
+  .ant-table-tbody > tr > td {
+    padding: 8px 10px !important;
+  }
+}

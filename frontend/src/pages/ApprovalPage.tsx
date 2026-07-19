@@ -12,7 +12,9 @@ import {
   Input, 
   Typography, 
   Avatar, 
-  Checkbox
+  Checkbox,
+  Row,
+  Col
 } from "antd";
 import { approvalService } from "../services/approvalService";
 import { expenseService } from "../services/expenseService";
@@ -22,6 +24,7 @@ import {
   Check, 
   X, 
   Eye, 
+  Search,
   FileText, 
   User, 
   MapPin, 
@@ -768,38 +771,36 @@ export default function ApprovalPage() {
 
       {/* Contextual Ant Design Filters & Bulk Actions Toolbar */}
       <Card size="small" className="border border-gray-200 shadow-xs mb-4">
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-          <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2.5 w-full sm:w-auto">
-            <div className="flex items-center gap-2 w-full sm:w-auto">
-              <Text type="secondary" className="text-[10px] uppercase font-bold tracking-wider shrink-0">Month:</Text>
-              <Select
-                size="middle"
-                value={filterMonth}
-                onChange={(val) => setFilterMonth(val)}
-                className="w-full sm:w-36 text-xs font-semibold"
-                options={[
-                  { label: "All Months", value: "" },
-                  ...["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"].map(m => ({ label: m, value: m }))
-                ]}
-              />
-            </div>
-            <div className="flex items-center gap-2 w-full sm:w-auto">
-              <Text type="secondary" className="text-[10px] uppercase font-bold tracking-wider shrink-0">Search:</Text>
-              <Input
-                size="middle"
-                value={filterEngineer}
-                onChange={(e) => setFilterEngineer(e.target.value)}
-                placeholder="Name or Code..."
-                prefix={<Search size={14} className="text-gray-400" />}
-                className="w-full sm:w-48 text-xs font-semibold"
-                allowClear
-              />
-            </div>
+        <div className="flex flex-col gap-3">
+          {/* Filter Row: Month + Search — full-width on mobile */}
+          <div className="flex flex-col sm:flex-row gap-2">
+            <Select
+              size="large"
+              value={filterMonth}
+              onChange={(val) => setFilterMonth(val)}
+              style={{ width: "100%" }}
+              className="approval-filter-select"
+              placeholder="📅 All Months"
+              options={[
+                { label: "All Months", value: "" },
+                ...["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"].map(m => ({ label: m, value: m }))
+              ]}
+            />
+            <Input
+              size="large"
+              value={filterEngineer}
+              onChange={(e) => setFilterEngineer(e.target.value)}
+              placeholder="Search by Name or Code..."
+              prefix={<Search size={14} className="text-gray-400" />}
+              style={{ width: "100%" }}
+              className="approval-filter-input"
+              allowClear
+            />
           </div>
 
           {/* Bulk Toolbar — Only for authorized Coordinator & Project Head roles */}
           {isBulkAuthorized && claimRequests.length > 0 && (
-            <div className="flex flex-wrap items-center justify-between sm:justify-end gap-2 pt-2 sm:pt-0 border-t sm:border-t-0 border-gray-150">
+            <div className="flex flex-wrap items-center gap-2 pt-2 border-t border-gray-100">
               <Checkbox
                 checked={selectedIds.length > 0 && selectedIds.length === claimRequests.length}
                 onChange={toggleSelectAll}
@@ -807,14 +808,14 @@ export default function ApprovalPage() {
               >
                 Select All ({selectedIds.length})
               </Checkbox>
-              <div className="flex items-center gap-2">
+              <div className="flex items-center gap-2 flex-wrap">
                 <Button
                   type="primary"
                   size="middle"
                   style={{ backgroundColor: "#10b981", borderColor: "#10b981" }}
                   disabled={selectedIds.length === 0}
                   onClick={() => handleOpenBulkAction("approve")}
-                  icon={<ThumbsUp size={14} />}
+                  icon={<Check size={14} />}
                   className="font-bold text-xs"
                 >
                   Bulk Approve ({selectedIds.length})
@@ -825,7 +826,7 @@ export default function ApprovalPage() {
                   size="middle"
                   disabled={selectedIds.length === 0}
                   onClick={() => handleOpenBulkAction("reject")}
-                  icon={<ThumbsDown size={14} />}
+                  icon={<X size={14} />}
                   className="font-bold text-xs"
                 >
                   Bulk Reject ({selectedIds.length})
@@ -1067,23 +1068,30 @@ export default function ApprovalPage() {
               />
             </div>
 
-            {/* Mobile Responsive Card List View */}
-            <div className="block md:hidden space-y-3 pb-6 touch-pan-y overscroll-y-contain">
+            {/* Mobile Responsive Card List View — antd Card based, one card per claim */}
+            <div className="block md:hidden space-y-3 pb-6">
               {claimRequests.map((req) => {
                 const isChecked = selectedIds.includes(req.expense_id);
+                const isAutoApproved = req.is_auto_approved || req.auto_approved || req.status === "auto_approved";
                 return (
                   <Card
                     key={req.expense_id || req.id}
                     size="small"
                     onClick={() => handleOpenDetails(req)}
-                    className={`border cursor-pointer shadow-xs transition-all ${
-                      isChecked ? "border-indigo-400 bg-indigo-50/20" : "border-gray-200 bg-white"
-                    }`}
+                    style={{
+                      border: isChecked ? "1.5px solid #6366f1" : "1px solid #e5e7eb",
+                      background: isChecked ? "#f5f3ff" : "#ffffff",
+                      borderRadius: 12,
+                      boxShadow: "0 1px 4px rgba(0,0,0,0.06)",
+                      cursor: "pointer"
+                    }}
+                    bodyStyle={{ padding: "12px 14px" }}
                   >
-                    <div className="flex items-center justify-between pb-2 border-b border-gray-150">
-                      <div className="flex items-center gap-2">
+                    {/* Top row: Avatar + Name + Status Tag */}
+                    <div className="flex items-center justify-between pb-2 border-b border-gray-100 mb-2">
+                      <div className="flex items-center gap-2 min-w-0">
                         {isBulkAuthorized && (
-                          <div onClick={(e) => e.stopPropagation()}>
+                          <div onClick={(e) => e.stopPropagation()} style={{ flexShrink: 0 }}>
                             <Checkbox
                               checked={isChecked}
                               onChange={() => {
@@ -1096,52 +1104,59 @@ export default function ApprovalPage() {
                             />
                           </div>
                         )}
-                        <Avatar size="small" className="bg-indigo-600 font-bold text-xs">
+                        <Avatar
+                          size={32}
+                          style={{ backgroundColor: "#4f46e5", fontWeight: 700, fontSize: 13, flexShrink: 0 }}
+                        >
                           {req.employeeName ? req.employeeName.charAt(0).toUpperCase() : "U"}
                         </Avatar>
-                        <div>
-                          <Text className="font-bold text-gray-800 text-xs block leading-tight">{req.employeeName}</Text>
-                          <Text className="text-[9px] text-indigo-600 font-mono font-bold block">{req.eCode}</Text>
+                        <div className="min-w-0">
+                          <div style={{ fontWeight: 700, fontSize: 12, color: "#1f2937", lineHeight: 1.3 }} className="truncate">{req.employeeName}</div>
+                          <div style={{ fontWeight: 700, fontSize: 10, color: "#4f46e5", fontFamily: "monospace" }}>{req.eCode}</div>
                         </div>
                       </div>
-                      {req.is_auto_approved || req.auto_approved || req.status === "auto_approved" ? (
-                        <Tag color="success" className="font-bold border-0 bg-emerald-100 text-emerald-800 text-[9px] m-0">⚡ Auto Approved</Tag>
+                      {isAutoApproved ? (
+                        <Tag color="success" style={{ margin: 0, fontSize: 10, fontWeight: 700, flexShrink: 0 }}>⚡ Auto</Tag>
                       ) : (
-                        <Tag color="warning" className="font-bold border-0 bg-amber-50 text-amber-700 text-[9px] m-0">Pending</Tag>
+                        <Tag color="warning" style={{ margin: 0, fontSize: 10, fontWeight: 700, flexShrink: 0 }}>Pending</Tag>
                       )}
                     </div>
 
-                    <Row gutter={[4, 4]} className="text-[11px] pt-2">
-                      <Col span={12}>
-                        <span className="text-gray-400 font-bold uppercase text-[9px] block">Claim ID / Date</span>
-                        <Text className="font-mono font-bold text-indigo-600 text-xs block">{req.expense_code}</Text>
-                        <Text className="text-gray-600 font-medium text-[9px] block">{req.date}</Text>
-                      </Col>
-                      <Col span={12}>
-                        <span className="text-gray-400 font-bold uppercase text-[9px] block">Category</span>
-                        <Tag color="blue" className="font-bold text-[9px] uppercase">{req.category}</Tag>
-                      </Col>
-                      <Col span={12} className="mt-1">
-                        <span className="text-gray-400 font-bold uppercase text-[9px] block">Total Amount</span>
-                        <Text className="font-mono font-bold text-gray-900 text-xs">₹{(Number(req.amount) || 0).toLocaleString()}</Text>
-                      </Col>
-                      <Col span={12} className="mt-1 flex items-end justify-end">
-                        <Button
-                          type="default"
-                          size="small"
-                          icon={<Eye size={12} />}
-                          onClick={(e) => { e.stopPropagation(); handleOpenDetails(req); }}
-                          className="text-[10px] font-bold"
-                        >
-                          Review
-                        </Button>
-                      </Col>
-                    </Row>
+                    {/* Detail row: Claim ID + Category + Amount + Review button */}
+                    <div className="flex items-center justify-between gap-2 flex-wrap">
+                      <div className="flex items-center gap-3 flex-wrap">
+                        <div>
+                          <div style={{ fontSize: 9, color: "#9ca3af", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.04em" }}>Claim ID</div>
+                          <div style={{ fontSize: 11, fontWeight: 700, color: "#4f46e5", fontFamily: "monospace" }}>{req.expense_code}</div>
+                        </div>
+                        <div>
+                          <div style={{ fontSize: 9, color: "#9ca3af", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.04em" }}>Date</div>
+                          <div style={{ fontSize: 11, fontWeight: 600, color: "#374151" }}>{req.date}</div>
+                        </div>
+                        <div>
+                          <div style={{ fontSize: 9, color: "#9ca3af", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.04em" }}>Category</div>
+                          <Tag color="blue" style={{ margin: 0, fontSize: 10, fontWeight: 700 }}>{req.category}</Tag>
+                        </div>
+                        <div>
+                          <div style={{ fontSize: 9, color: "#9ca3af", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.04em" }}>Amount</div>
+                          <div style={{ fontSize: 12, fontWeight: 800, color: "#111827", fontFamily: "monospace" }}>₹{(Number(req.amount) || 0).toLocaleString()}</div>
+                        </div>
+                      </div>
+                      <Button
+                        type="default"
+                        size="middle"
+                        icon={<Eye size={14} />}
+                        onClick={(e) => { e.stopPropagation(); handleOpenDetails(req); }}
+                        style={{ fontWeight: 700, fontSize: 11, flexShrink: 0 }}
+                      >
+                        Review
+                      </Button>
+                    </div>
 
                     {req.purpose && (
-                      <div className="border-t border-gray-100 mt-2 pt-1.5 text-[10px]">
-                        <span className="text-gray-400 font-bold uppercase text-[8px] block">Purpose</span>
-                        <Text className="text-gray-700 font-semibold text-[10px] truncate block">{req.purpose}</Text>
+                      <div style={{ borderTop: "1px solid #f3f4f6", marginTop: 8, paddingTop: 6 }}>
+                        <div style={{ fontSize: 9, color: "#9ca3af", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.04em" }}>Purpose</div>
+                        <div style={{ fontSize: 11, fontWeight: 600, color: "#374151", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{req.purpose}</div>
                       </div>
                     )}
                   </Card>
@@ -1158,7 +1173,18 @@ export default function ApprovalPage() {
         open={showDetailModal && !!selectedApproval}
         onCancel={() => { setShowDetailModal(false); setSelectedApproval(null); }}
         width={950}
-        style={{ maxWidth: "95vw", top: 20 }}
+        style={{ maxWidth: "96vw", top: 16 }}
+        styles={{
+          body: {
+            maxHeight: "72vh",
+            overflowY: "auto",
+            overflowX: "hidden",
+            padding: "16px",
+            WebkitOverflowScrolling: "touch",
+            overscrollBehavior: "contain",
+            touchAction: "pan-y"
+          }
+        }}
         title={
           <div className="flex items-center gap-2">
             <FileText size={18} className="text-indigo-600" />
@@ -1167,8 +1193,8 @@ export default function ApprovalPage() {
             </span>
           </div>
         }
-        footer={[
-          <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 w-full" key="modal-footer">
+        footer={
+          <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-2 w-full">
             <Button
               onClick={() => { setShowDetailModal(false); setSelectedApproval(null); }}
               disabled={actionLoading}
@@ -1213,14 +1239,7 @@ export default function ApprovalPage() {
               </Button>
             </div>
           </div>
-        ]}
-        bodyStyle={{
-          maxHeight: "75vh",
-          overflowY: "auto",
-          padding: "16px",
-          WebkitOverflowScrolling: "touch",
-          overscrollBehaviorY: "contain"
-        }}
+        }
       >
         {loadingDetails ? (
           <Loader message="Retrieving itineraries & receipts..." />

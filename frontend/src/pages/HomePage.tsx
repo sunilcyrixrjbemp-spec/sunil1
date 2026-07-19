@@ -1637,7 +1637,8 @@ export default function HomePage() {
           padding: "16px",
           background: "#ffffff",
           WebkitOverflowScrolling: "touch",
-          overscrollBehaviorY: "contain"
+          overscrollBehaviorY: "contain",
+          touchAction: "pan-y"
         }}
       >
         {!claimDetails ? (
