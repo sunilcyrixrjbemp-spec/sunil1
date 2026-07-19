@@ -653,9 +653,6 @@ export default function HomePage() {
     return isCarAllowed ? items : items.filter(item => item.label !== "Car Travel");
   };
 
-  const PRIVILEGED_ROLES_HOME = ["admin", "project head", "mis", "travel desk", "travel tesk", "vp", "accountant", "hr"];
-  const isPrivilegedRoleHome = PRIVILEGED_ROLES_HOME.includes((user?.role || "").trim().toLowerCase());
-
   // All team expenses for the selected month (no zone/employee/mode filter) — for zone chart
   const allMonthTeamExpenses = safeTeamExpenses.filter(exp => {
     const rawDate = exp.date || exp.itinerary;
