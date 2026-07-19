@@ -17,8 +17,6 @@ import {
 } from "antd";
 import {
   FilterOutlined,
-  UserOutlined,
-  TeamOutlined,
   CloseOutlined,
   FileExcelOutlined,
   DashboardOutlined,
