@@ -22,7 +22,7 @@ import {
 } from "./routes/users.js";
 
 // Import Approval handlers
-import { handleGetApprovals, handleApprove, handleReject, handleReturnToDraft, handleAutoApprovalExpiry } from "./routes/approval.js";
+import { handleGetApprovals, handleApprove, handleReject, handleReturnToDraft, handleAutoApprovalExpiry, handleBulkApprove } from "./routes/approval.js";
 
 // Import Admin handlers
 import {
@@ -185,11 +185,13 @@ router.post("/api/users/change-password", handleChangePassword, true);
 // ─── Approval Endpoints — Two path aliases for compatibility ───────────────────
 // Frontend calls /api/approval/ (Python backend prefix)
 router.get("/api/approval", handleGetApprovals, true);
+router.post("/api/approval/bulk-approve", handleBulkApprove, true);
 router.post("/api/approval/:expense_id/approve", handleApprove, true);
 router.post("/api/approval/:expense_id/reject", handleReject, true);
 router.post("/api/approval/:expense_id/return-to-draft", handleReturnToDraft, true);
 // Also handle /api/approvals (worker-style)
 router.get("/api/approvals", handleGetApprovals, true);
+router.post("/api/approvals/bulk-approve", handleBulkApprove, true);
 router.post("/api/approvals/:expense_id/approve", handleApprove, true);
 router.post("/api/approvals/:expense_id/reject", handleReject, true);
 router.post("/api/approvals/:expense_id/return-to-draft", handleReturnToDraft, true);

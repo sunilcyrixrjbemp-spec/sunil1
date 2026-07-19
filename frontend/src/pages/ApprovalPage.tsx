@@ -1,5 +1,20 @@
 import { useEffect, useState } from "react";
 import toast from "react-hot-toast";
+import { 
+  Card, 
+  Table, 
+  Tag, 
+  Button, 
+  Select, 
+  Modal, 
+  Alert, 
+  Badge, 
+  Space, 
+  Input, 
+  Typography, 
+  Avatar, 
+  Checkbox
+} from "antd";
 import { approvalService } from "../services/approvalService";
 import { expenseService } from "../services/expenseService";
 import Loader from "../components/common/Loader";
@@ -15,8 +30,6 @@ import {
   AlertTriangle,
   ExternalLink,
   ChevronRight,
-  Square,
-  CheckSquare,
   ThumbsUp,
   ThumbsDown,
   Loader2,
@@ -25,6 +38,7 @@ import {
 
 import api from "../services/api";
 
+const { Text, Title } = Typography;
 const API_BASE = (api.defaults.baseURL || "").replace(/\/api$/, "");
 
 const getAttachmentsArray = (attachments: any): string[] => {
@@ -114,7 +128,9 @@ export default function ApprovalPage() {
   const [returnExpenseId, setReturnExpenseId] = useState<number | null>(null);
 
   const currentUser = JSON.parse(localStorage.getItem("user") || "{}");
-  const isCoordinator = (currentUser.role || "").trim() === "Coordinator" || (currentUser.role || "").trim() === "Admin";
+  const userRoleLower = (currentUser.role || "").trim().toLowerCase();
+  const isManagerRole = userRoleLower === "manager";
+  const isCoordinator = userRoleLower === "coordinator" || userRoleLower === "admin";
 
   // Edit single itineraries state
   const [editedLegs, setEditedLegs] = useState<any[]>([]);
@@ -505,7 +521,38 @@ export default function ApprovalPage() {
       } else {
         if (type === "approve") {
           await approvalService.approveExpense(selectedApproval.expense_id, comments.trim(), itineraryEdits, undefined, removedAttachments);
-          toast.success(`Claim ${selectedApproval.expense_code} approved!`);
+          const isAuto = selectedApproval.is_auto_approved || selectedApproval.auto_approved || expenseDetails?.is_auto_approved || (calculateAdjustedTotal() === 0);
+          if (isAuto) {
+            Modal.success({
+              title: "⚡ Claim Auto-Approved by System",
+              content: (
+                <div className="space-y-2 text-xs py-2 font-sans">
+                  <Alert
+                    type="success"
+                    showIcon
+                    message="System Policy Auto-Approval Applied"
+                    description="This claim was automatically approved based on system rules (zero reimbursable amount or policy auto-approval rules applied)."
+                    className="rounded-lg mb-2"
+                  />
+                  <p>Claim ID: <strong className="font-mono text-indigo-600">{selectedApproval.expense_code}</strong></p>
+                  <p>Employee: <strong>{selectedApproval.employeeName}</strong></p>
+                </div>
+              ),
+              okText: "Got It"
+            });
+          } else {
+            Modal.success({
+              title: "Claim Reimbursement Approved",
+              content: (
+                <div className="space-y-1.5 text-xs py-2 font-sans">
+                  <p>Claim ID: <strong className="font-mono text-indigo-600">{selectedApproval.expense_code}</strong></p>
+                  <p>Employee: <strong>{selectedApproval.employeeName}</strong></p>
+                  <p>Reimbursable Amount: <strong className="font-mono text-emerald-700">₹{(calculateAdjustedTotal() || selectedApproval.amount || 0).toLocaleString()}</strong></p>
+                </div>
+              ),
+              okText: "Done"
+            });
+          }
         } else {
           await approvalService.rejectExpense(selectedApproval.expense_id, comments.trim(), itineraryEdits, removedAttachments);
           toast.error(`Claim ${selectedApproval.expense_code} rejected.`);
@@ -595,17 +642,14 @@ export default function ApprovalPage() {
       }
     });
   };
-
-  const toggleSelectAll = () => {
-    if (selectedIds.length === claimRequests.length) {
-      setSelectedIds([]);
-    } else {
-      setSelectedIds(claimRequests.map(item => item.expense_id));
-    }
+}, 0);
   };
 
-  // Bulk Actions
   const handleOpenBulkAction = (type: "approve" | "reject") => {
+    if (isManagerRole) {
+      toast.error("Manager role is restricted to individual claim approvals only.");
+      return;
+    }
     if (selectedIds.length === 0) {
       toast.error("Please select at least one claim first.");
       return;
@@ -616,6 +660,11 @@ export default function ApprovalPage() {
   };
 
   const handleBulkSubmit = async () => {
+    if (isManagerRole) {
+      toast.error("Manager role is restricted to individual claim approvals only.");
+      setShowBulkModal(false);
+      return;
+    }
     if (!bulkActionType) return;
     
     if (bulkActionType === "reject" && !bulkComments.trim()) {
@@ -627,8 +676,11 @@ export default function ApprovalPage() {
     let successCount = 0;
     let failCount = 0;
 
-    // Process all selected approvals concurrently
     try {
+      const res = await approvalService.bulkApproveExpenses(selectedIds, bulkActionType, bulkComments.trim());
+      successCount = res.successCount || selectedIds.length;
+      failCount = res.failCount || 0;
+    } catch (err) {
       const results = await Promise.all(selectedIds.map(async (id) => {
         try {
           if (bulkActionType === "approve") {
@@ -637,30 +689,29 @@ export default function ApprovalPage() {
             await approvalService.rejectExpense(id, bulkComments.trim());
           }
           return { success: true };
-        } catch (err) {
-          console.error(`Failed to process bulk action for claim ${id}:`, err);
+        } catch (e) {
           return { success: false };
         }
       }));
       successCount = results.filter(r => r.success).length;
       failCount = results.filter(r => !r.success).length;
-    } catch (err) {
-      console.error("Bulk action failed:", err);
     }
 
     if (successCount > 0) {
-      toast.success(`Successfully processed ${successCount} claim(s).`);
+      Modal.success({
+        title: `Bulk ${bulkActionType === "approve" ? "Approval" : "Rejection"} Completed`,
+        content: `Successfully processed ${successCount} claim(s).`,
+        okText: "Done"
+      });
+      setPendingApprovals(prev => prev.filter(a => !selectedIds.includes(a.expense_id)));
+      setSelectedIds([]);
     }
     if (failCount > 0) {
       toast.error(`Failed to process ${failCount} claim(s).`);
     }
 
+    setBulkActionLoading(false);
     setShowBulkModal(false);
-    const processedIds = [...selectedIds];
-    setPendingApprovals(prev => {
-      const filtered = prev.filter((a: any) => !processedIds.includes(a.expense_id));
-      localStorage.setItem("cache_pending_approvals", JSON.stringify(filtered));
-      const currentUserStr = localStorage.getItem("user");
       if (currentUserStr) {
         try {
           const currentUser = JSON.parse(currentUserStr);
@@ -700,531 +751,324 @@ export default function ApprovalPage() {
 
   return (
     <>
-      <div className="space-y-5 animate-fadeIn text-[#212529]">
+      <div className="space-y-4 animate-fadeIn text-[#212529]">
       
-      {/* Header Info */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-        <div>
-          <h2 className="text-xl font-extrabold text-slate-800 uppercase tracking-wide">
-            Approval Center
-          </h2>
-          <p className="text-slate-500 text-xs mt-1">Review operational, local purchase, and travel claims submitted by staff.</p>
+      {/* Header Info Card */}
+      <Card size="small" className="border border-gray-200 shadow-xs mb-4">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+          <div>
+            <span className="text-indigo-650 font-extrabold text-[9px] uppercase tracking-widest block">Operational Review</span>
+            <Title level={4} style={{ margin: 0, fontSize: "18px", color: "#1F2937" }} className="uppercase font-bold tracking-wider flex items-center gap-2">
+              <FileText size={20} className="text-indigo-600" />
+              Approval Center
+            </Title>
+            <Text type="secondary" className="text-xs">Review operational, local purchase, and travel claims submitted by staff.</Text>
+          </div>
+          <div className="flex items-center gap-2 flex-wrap">
+            <Tag color="processing" className="font-bold border-0 bg-indigo-50 text-indigo-700 px-3 py-1 text-xs">
+              Pending Claims: <strong>{claimRequests.length}</strong>
+            </Tag>
+            {limitRequests.length > 0 && (
+              <Tag color="cyan" className="font-bold border-0 bg-cyan-50 text-cyan-700 px-3 py-1 text-xs">
+                Limit Extensions: <strong>{limitRequests.length}</strong>
+              </Tag>
+            )}
+            {isManagerRole && (
+              <Tag color="warning" className="font-bold border-0 bg-amber-50 text-amber-800 px-3 py-1 text-xs">
+                Role: Manager (Individual Approvals Only)
+              </Tag>
+            )}
+          </div>
         </div>
-        <div className="flex items-center gap-2.5 flex-wrap">
-          <span className="px-3.5 py-1.5 rounded-full bg-indigo-50 border border-indigo-100 text-indigo-700 text-xs font-black uppercase tracking-wider shadow-sm">
-            Pending Claims: <strong>{claimRequests.length}</strong>
-          </span>
-          {limitRequests.length > 0 && (
-            <span className="px-3.5 py-1.5 rounded-full bg-cyan-50 border border-cyan-100 text-cyan-700 text-xs font-black uppercase tracking-wider shadow-sm">
-              Limit Extensions: <strong>{limitRequests.length}</strong>
-            </span>
-          )}
-          {selectedIds.length > 0 && (
-            <span className="px-3.5 py-1.5 rounded-full bg-amber-50 border border-amber-200 text-amber-800 text-xs font-black uppercase tracking-wider animate-pulse shadow-sm">
-              Selected: <strong>{selectedIds.length}</strong>
-            </span>
-          )}
-        </div>
-      </div>
+      </Card>
 
-      {/* Pending Grid with Bulk Actions Toolbar */}
-      <div className="card-lte-primary p-5 space-y-4">
-        
-        {/* Contextual Two-Line Compact Filters Row */}
-        <div className="bg-slate-50/50 border border-slate-100 rounded-2xl p-3.5 flex flex-col gap-3 text-[10px] font-bold text-slate-700">
-          {/* Row 1: Dropdown and Search filters with labels on top */}
-          <div className="grid grid-cols-2 gap-3 w-full">
-            <div className="flex flex-col gap-1">
-              <span className="text-[8px] font-black uppercase text-slate-400">Month</span>
-              <select 
-                value={filterMonth} 
-                onChange={(e) => setFilterMonth(e.target.value)}
-                className="bg-white border border-slate-200 rounded-xl px-2.5 py-1.5 text-[10px] font-black text-slate-800 cursor-pointer focus:outline-none focus:border-indigo-500 w-full"
-              >
-                <option value="">All Months</option>
-                {["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"].map(m => (
-                  <option key={m} value={m}>{m}</option>
-                ))}
-              </select>
+      {/* Contextual Ant Design Filters & Bulk Actions Toolbar */}
+      <Card size="small" className="border border-gray-200 shadow-xs mb-4">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+          <div className="flex flex-wrap items-center gap-3">
+            <div className="flex items-center gap-2">
+              <Text type="secondary" className="text-[10px] uppercase font-bold tracking-wider">Month:</Text>
+              <Select
+                size="small"
+                value={filterMonth}
+                onChange={(val) => setFilterMonth(val)}
+                className="w-32 text-xs font-semibold"
+                options={[
+                  { label: "All Months", value: "" },
+                  ...["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"].map(m => ({ label: m, value: m }))
+                ]}
+              />
             </div>
-
-            <div className="flex flex-col gap-1">
-              <span className="text-[8px] font-black uppercase text-slate-400">Search</span>
-              <input 
-                type="text" 
-                value={filterEngineer} 
+            <div className="flex items-center gap-2">
+              <Text type="secondary" className="text-[10px] uppercase font-bold tracking-wider">Search:</Text>
+              <Input
+                size="small"
+                value={filterEngineer}
                 onChange={(e) => setFilterEngineer(e.target.value)}
                 placeholder="Name or Code..."
-                className="bg-white border border-slate-200 rounded-xl px-2.5 py-1.5 text-[10px] font-black text-slate-800 focus:outline-none focus:border-indigo-500 w-full"
+                className="w-44 text-xs font-semibold"
+                allowClear
               />
             </div>
           </div>
 
-          {/* Row 2: Active filter status indicator only */}
-          <div className="flex items-center gap-1.5 py-0.5 border-t border-slate-100 pt-3">
-            <span className="px-3 py-1 rounded-full text-[9px] font-black uppercase tracking-wider border bg-indigo-600 text-white border-indigo-650 font-extrabold shadow-sm">
-              Pending / Claimed Reviews
-            </span>
-          </div>
-        </div>
-
-        {/* Bulk Toolbar */}
-        {claimRequests.length > 0 && (
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 p-3 bg-gray-50 border border-gray-200 rounded text-xs shrink-0">
-            <button
-              onClick={toggleSelectAll}
-              className="flex items-center gap-2 font-bold text-gray-700 uppercase tracking-wider bg-transparent border-0 cursor-pointer self-start sm:self-center"
-            >
-              {selectedIds.length === claimRequests.length ? (
-                <CheckSquare className="w-4.5 h-4.5 text-blue-600 shrink-0" />
-              ) : (
-                <Square className="w-4.5 h-4.5 text-gray-400 shrink-0" />
-              )}
-              <span>
-                {selectedIds.length === claimRequests.length ? "Deselect All" : "Select All Pending"}
-              </span>
-            </button>
-
-            <div className="flex gap-2">
-              <button
+          {/* Bulk Toolbar — Only for authorized non-manager roles */}
+          {!isManagerRole && claimRequests.length > 0 && (
+            <div className="flex items-center gap-2">
+              <Checkbox
+                checked={selectedIds.length > 0 && selectedIds.length === claimRequests.length}
+                onChange={toggleSelectAll}
+                className="text-xs font-bold text-gray-700"
+              >
+                Select All ({selectedIds.length})
+              </Checkbox>
+              <Button
+                type="primary"
+                size="small"
+                style={{ backgroundColor: "#10b981", borderColor: "#10b981" }}
+                disabled={selectedIds.length === 0}
                 onClick={() => handleOpenBulkAction("approve")}
-                disabled={selectedIds.length === 0}
-                className="btn-lte-success px-4 py-1.5 flex items-center justify-center gap-1.5 disabled:opacity-50 text-[11px]"
+                icon={<ThumbsUp size={12} />}
+                className="font-bold text-xs"
               >
-                <ThumbsUp className="w-3.5 h-3.5" />
                 Bulk Approve ({selectedIds.length})
-              </button>
-              <button
-                onClick={() => handleOpenBulkAction("reject")}
+              </Button>
+              <Button
+                type="primary"
+                danger
+                size="small"
                 disabled={selectedIds.length === 0}
-                className="btn-lte-danger px-4 py-1.5 flex items-center justify-center gap-1.5 disabled:opacity-50 text-[11px]"
+                onClick={() => handleOpenBulkAction("reject")}
+                icon={<ThumbsDown size={12} />}
+                className="font-bold text-xs"
               >
-                <ThumbsDown className="w-3.5 h-3.5" />
                 Bulk Reject ({selectedIds.length})
-              </button>
+              </Button>
             </div>
-          </div>
-        )}
+          )}
+        </div>
+      </Card>
 
-        {/* ================= LIMIT EXTENSION REQUESTS SECTION ================= */}
-        {limitRequests.length > 0 && (
-          <div className="space-y-3 mb-6">
-            <h3 className="text-xs font-bold text-gray-700 uppercase tracking-wide flex items-center gap-2 pt-1">
-              <span className="w-2.5 h-2.5 rounded-full bg-blue-600 animate-pulse"></span>
-              Limit Extension Requests
-            </h3>
-            <div className="overflow-x-auto border border-gray-250 rounded shadow-sm bg-white p-3 md:p-0">
-              <table className="hidden md:table w-full text-left border-collapse text-xs">
-                <thead>
-                  <tr className="bg-gray-50 border-b border-gray-250 text-gray-500 font-bold uppercase tracking-wider text-[10px]">
-                    <th className="px-4 py-3">Employee Details</th>
-                    <th className="px-4 py-3">Limit Type</th>
-                    <th className="px-4 py-3 text-center">Month</th>
-                    <th className="px-4 py-3">Purpose</th>
-                    <th className="px-4 py-3">Requested Extension</th>
-                    <th className="px-4 py-3 text-center">Actions</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-gray-150">
-                  {limitRequests.map((req) => {
-                    const reqVal = req.amount;
-                    const currentValue = editedLimits[req.id] !== undefined ? editedLimits[req.id] : reqVal;
-                    
-                    return (
-                      <tr key={req.id} className="hover:bg-slate-50 transition-colors">
-                        <td className="px-4 py-3.5">
-                          <div className="flex items-center gap-2">
-                            <div className="h-7 w-7 rounded-full bg-blue-600/10 border border-blue-500/20 text-blue-600 flex items-center justify-center font-bold text-xs uppercase shadow-sm">
-                              {req.employeeName ? req.employeeName.charAt(0) : "U"}
-                            </div>
-                            <div>
-                              <div className="font-bold text-gray-800 leading-tight">{req.employeeName}</div>
-                              <div className="text-[9px] text-blue-600 font-mono font-bold mt-0.5">{req.eCode}</div>
-                            </div>
-                          </div>
-                        </td>
-                        <td className="px-4 py-3.5">
-                          <span className={`text-[9px] px-2 py-0.5 rounded font-bold uppercase tracking-wider border ${
-                            req.purpose.toLowerCase().includes("km") 
-                              ? "text-cyan-700 bg-cyan-50 border-cyan-200" 
-                              : "text-amber-700 bg-amber-50 border-amber-200"
-                          }`}>
-                            {req.purpose.toLowerCase().includes("km") ? "KM Limit" : "Auto Limit"}
-                          </span>
-                        </td>
-                        <td className="px-4 py-3.5 text-center text-gray-600 font-medium">
-                          {req.date}
-                        </td>
-                        <td className="px-4 py-3.5 text-gray-600 font-medium">
-                          {req.purpose}
-                        </td>
-                        <td className="px-4 py-3.5">
-                          <div className="flex items-center gap-1.5" onClick={(e) => e.stopPropagation()}>
-                            <input
-                              type="number"
-                              value={currentValue}
-                              onChange={(e) => handleEditLimitChange(req.id, parseFloat(e.target.value))}
-                              className="w-24 bg-white border border-gray-300 rounded px-2 py-1 text-xs font-bold text-gray-800 focus:outline-none focus:border-blue-500 shadow-xs"
-                              min="0"
-                              step="any"
-                            />
-                            <span className="font-bold text-gray-500">
-                              {req.purpose.toLowerCase().includes("km") ? "KM" : "₹"}
-                            </span>
-                          </div>
-                        </td>
-                        <td className="px-4 py-3.5 text-center" onClick={(e) => e.stopPropagation()}>
-                          <div className="flex items-center justify-center gap-2">
-                            <button
-                              onClick={() => handleOpenDetails(req)}
-                              className="btn-lte-primary px-2.5 py-1 flex items-center justify-center gap-1 cursor-pointer"
-                              title="Review details & monthly stats"
-                            >
-                              <Eye className="w-3.5 h-3.5" />
-                              <span>Review</span>
-                            </button>
-                            <button
-                               onClick={() => handleApproveLimit(req.expense_id, currentValue)}
-                               disabled={actionLoading}
-                               className="p-1.5 rounded-full bg-green-50 border border-green-200 text-green-600 hover:bg-green-100 transition-colors shadow-xs cursor-pointer flex items-center justify-center w-8 h-8 shrink-0"
-                               title="Approve Request"
-                             >
-                               {actionLoading && processingLimitId === req.expense_id && processingLimitType === "approve" ? (
-                                 <span className="w-4 h-4 rounded-full border-2 border-green-600/35 border-t-green-600 animate-spin shrink-0"/>
-                               ) : (
-                                 <Check className="w-4.5 h-4.5" />
-                               )}
-                             </button>
-                             <button
-                               onClick={() => handleRejectLimit(req.expense_id)}
-                               disabled={actionLoading}
-                               className="p-1.5 rounded-full bg-red-50 border border-red-200 text-red-600 hover:bg-red-100 transition-colors shadow-xs cursor-pointer flex items-center justify-center w-8 h-8 shrink-0"
-                               title="Reject Request"
-                             >
-                               {actionLoading && processingLimitId === req.expense_id && processingLimitType === "reject" ? (
-                                 <span className="w-4 h-4 rounded-full border-2 border-red-600/35 border-t-red-600 animate-spin shrink-0"/>
-                               ) : (
-                                 <X className="w-4.5 h-4.5" />
-                               )}
-                             </button>
-                          </div>
-                        </td>
-                      </tr>
-                    );
-                  })}
-                </tbody>
-              </table>
-
-              {/* Mobile view for Limit Extension Requests */}
-              <div className="block md:hidden space-y-3">
-                {limitRequests.map((req) => {
+      {/* ================= LIMIT EXTENSION REQUESTS SECTION ================= */}
+      {limitRequests.length > 0 && (
+        <Card size="small" className="border border-gray-200 shadow-xs mb-4" title={
+          <span className="font-extrabold text-xs uppercase tracking-wider text-gray-700 flex items-center gap-2">
+            <span className="w-2.5 h-2.5 rounded-full bg-blue-600 animate-pulse" />
+            Limit Extension Requests ({limitRequests.length})
+          </span>
+        }>
+          <Table
+            dataSource={limitRequests}
+            rowKey="id"
+            size="small"
+            pagination={false}
+            columns={[
+              {
+                title: "Employee Details",
+                dataIndex: "employeeName",
+                key: "employeeName",
+                render: (name, req) => (
+                  <div className="flex items-center gap-2">
+                    <Avatar size="small" className="bg-blue-600 font-bold text-xs">
+                      {name ? name.charAt(0).toUpperCase() : "U"}
+                    </Avatar>
+                    <div>
+                      <Text className="font-bold text-gray-800 block text-xs leading-tight">{name}</Text>
+                      <Text className="text-[9px] text-blue-600 font-mono font-bold block">{req.eCode}</Text>
+                    </div>
+                  </div>
+                ),
+              },
+              {
+                title: "Limit Type",
+                dataIndex: "purpose",
+                key: "limit_type",
+                render: (p) => (
+                  <Tag color={p?.toLowerCase().includes("km") ? "cyan" : "gold"} className="font-bold text-[10px]">
+                    {p?.toLowerCase().includes("km") ? "KM Limit" : "Auto Limit"}
+                  </Tag>
+                ),
+              },
+              {
+                title: "Month",
+                dataIndex: "date",
+                key: "date",
+                align: "center" as const,
+              },
+              {
+                title: "Purpose",
+                dataIndex: "purpose",
+                key: "purpose",
+              },
+              {
+                title: "Requested Extension",
+                key: "requested",
+                render: (_, req) => {
                   const reqVal = req.amount;
                   const currentValue = editedLimits[req.id] !== undefined ? editedLimits[req.id] : reqVal;
                   return (
-                    <div
-                      key={req.id}
-                      className="bg-white rounded-lg p-3 space-y-3.5"
-                    >
-                      <div className="flex justify-between items-center">
-                        <div className="flex items-center gap-2">
-                          <div className="h-7 w-7 rounded-full bg-blue-600/10 border border-blue-500/20 text-blue-600 flex items-center justify-center font-bold text-xs uppercase shadow-sm">
-                            {req.employeeName ? req.employeeName.charAt(0) : "U"}
-                          </div>
-                          <div>
-                            <div className="font-bold text-gray-800 leading-tight">{req.employeeName}</div>
-                            <span className="text-[8px] text-blue-600 font-mono font-bold mt-0.5">{req.eCode}</span>
-                          </div>
-                        </div>
-                        <span className={`text-[9px] px-2 py-0.5 rounded font-bold uppercase tracking-wider border ${
-                          req.purpose.toLowerCase().includes("km") 
-                            ? "text-cyan-700 bg-cyan-50 border-cyan-200" 
-                            : "text-amber-700 bg-amber-50 border-amber-200"
-                        }`}>
-                          {req.purpose.toLowerCase().includes("km") ? "KM Limit" : "Auto Limit"}
-                        </span>
-                      </div>
-
-                      <div className="grid grid-cols-2 gap-2 text-[11px]">
-                        <div>
-                          <span className="text-gray-400 font-bold uppercase text-[9px] block">Month</span>
-                          <span className="text-gray-700 font-semibold">{req.date}</span>
-                        </div>
-                        <div>
-                          <span className="text-gray-400 font-bold uppercase text-[9px] block">Requested Limit</span>
-                          <div className="flex items-center gap-1.5 mt-1" onClick={(e) => e.stopPropagation()}>
-                            <input
-                              type="number"
-                              value={currentValue}
-                              onChange={(e) => handleEditLimitChange(req.id, parseFloat(e.target.value))}
-                              className="w-20 bg-white border border-gray-300 rounded px-1.5 py-0.5 text-xs font-bold text-gray-800 focus:outline-none focus:border-blue-500 shadow-xs"
-                              min="0"
-                              step="any"
-                            />
-                            <span className="font-bold text-gray-500">
-                              {req.purpose.toLowerCase().includes("km") ? "KM" : "₹"}
-                            </span>
-                          </div>
-                        </div>
-                      </div>
-
-                      {req.purpose && (
-                        <div className="border-t border-gray-100 pt-2 text-[10px]">
-                          <span className="text-gray-400 font-bold uppercase text-[8px] block">Purpose</span>
-                          <p className="text-gray-600 font-semibold mt-0.5">{req.purpose}</p>
-                        </div>
-                      )}
-
-                      <div className="border-t border-gray-100 pt-3 flex items-center justify-between gap-2">
-                        <button
-                          onClick={() => handleOpenDetails(req)}
-                          className="btn-lte-primary py-1.5 px-3 flex-1 flex items-center justify-center gap-1 text-[10px]"
-                        >
-                          <Eye className="w-3.5 h-3.5" />
-                          <span>Details</span>
-                        </button>
-                        <button
-                          onClick={() => handleApproveLimit(req.expense_id, currentValue)}
-                          disabled={actionLoading}
-                          className="py-1.5 px-3 rounded bg-green-600 text-white font-bold hover:bg-green-700 transition-all text-[10px] flex-1 flex items-center justify-center gap-1 cursor-pointer border-0 shadow-xs min-h-[28px]"
-                        >
-                          {actionLoading && processingLimitId === req.expense_id && processingLimitType === "approve" ? (
-                            <span className="w-3.5 h-3.5 rounded-full border-2 border-white/35 border-t-white animate-spin shrink-0"/>
-                          ) : (
-                            <Check className="w-3.5 h-3.5" />
-                          )}
-                          <span>{actionLoading && processingLimitId === req.expense_id && processingLimitType === "approve" ? "Processing" : "Approve"}</span>
-                        </button>
-                        <button
-                          onClick={() => handleRejectLimit(req.expense_id)}
-                          disabled={actionLoading}
-                          className="py-1.5 px-3 rounded bg-red-600 text-white font-bold hover:bg-red-700 transition-all text-[10px] flex-1 flex items-center justify-center gap-1 cursor-pointer border-0 shadow-xs min-h-[28px]"
-                        >
-                          {actionLoading && processingLimitId === req.expense_id && processingLimitType === "reject" ? (
-                            <span className="w-3.5 h-3.5 rounded-full border-2 border-white/35 border-t-white animate-spin shrink-0"/>
-                          ) : (
-                            <X className="w-3.5 h-3.5" />
-                          )}
-                          <span>{actionLoading && processingLimitId === req.expense_id && processingLimitType === "reject" ? "Processing" : "Reject"}</span>
-                        </button>
-                      </div>
+                    <div className="flex items-center gap-1.5" onClick={(e) => e.stopPropagation()}>
+                      <Input
+                        type="number"
+                        size="small"
+                        value={currentValue}
+                        onChange={(e) => handleEditLimitChange(req.id, parseFloat(e.target.value))}
+                        className="w-24 font-bold text-xs"
+                      />
+                      <Text className="font-bold text-gray-500 text-xs">
+                        {req.purpose?.toLowerCase().includes("km") ? "KM" : "₹"}
+                      </Text>
                     </div>
                   );
-                })}
-              </div>
+                }
+              },
+              {
+                title: "Actions",
+                key: "actions",
+                align: "center" as const,
+                render: (_, req) => {
+                  const reqVal = req.amount;
+                  const currentValue = editedLimits[req.id] !== undefined ? editedLimits[req.id] : reqVal;
+                  return (
+                    <Space size="small" onClick={(e) => e.stopPropagation()}>
+                      <Button
+                        type="default"
+                        size="small"
+                        icon={<Eye size={12} />}
+                        onClick={() => handleOpenDetails(req)}
+                        className="text-[10px] font-bold"
+                      >
+                        Review
+                      </Button>
+                      <Button
+                        type="primary"
+                        size="small"
+                        icon={<Check size={12} />}
+                        style={{ backgroundColor: "#10b981", borderColor: "#10b981" }}
+                        onClick={() => handleApproveLimit(req.expense_id, currentValue)}
+                        loading={actionLoading && processingLimitId === req.expense_id && processingLimitType === "approve"}
+                      />
+                      <Button
+                        type="primary"
+                        danger
+                        size="small"
+                        icon={<X size={12} />}
+                        onClick={() => handleRejectLimit(req.expense_id)}
+                        loading={actionLoading && processingLimitId === req.expense_id && processingLimitType === "reject"}
+                      />
+                    </Space>
+                  );
+                }
+              }
+            ]}
+          />
+        </Card>
+      )}
 
-            </div>
-          </div>
-        )}
-
-        <h3 className="text-xs font-bold text-gray-700 uppercase tracking-wide flex items-center gap-2 pt-1">
-          <span className="w-2.5 h-2.5 rounded-full bg-amber-500 animate-pulse"></span>
-          Claims Awaiting Actions
-        </h3>
-
+      {/* ================= CLAIMS AWAITING ACTIONS SECTION ================= */}
+      <Card size="small" className="border border-gray-200 shadow-xs mb-4" title={
+        <span className="font-extrabold text-xs uppercase tracking-wider text-gray-700 flex items-center gap-2">
+          <span className="w-2.5 h-2.5 rounded-full bg-amber-500 animate-pulse" />
+          Claims Awaiting Actions ({claimRequests.length})
+        </span>
+      }>
         {loading ? (
           <Loader message="Loading pending reviews..." />
-        ) : claimRequests.length === 0 ? (
-          <div className="py-16 text-center text-gray-400 text-xs space-y-2">
-            <div className="h-10 w-10 rounded-full bg-green-50 border border-green-200 text-green-600 flex items-center justify-center mx-auto text-base">✓</div>
-            <p className="font-bold uppercase tracking-wider text-gray-600">Great! All pending claims have been processed.</p>
-          </div>
         ) : (
-          <div className="overflow-x-auto border border-gray-250 rounded shadow-sm bg-white p-3 md:p-0">
-            <table className="hidden md:table w-full text-left border-collapse text-xs">
-              <thead>
-                <tr className="bg-gray-50 border-b border-gray-250 text-gray-500 font-bold uppercase tracking-wider text-[10px]">
-                  <th className="px-4 py-3 w-12 text-center">Select</th>
-                  <th className="px-4 py-3">Employee Details</th>
-                  <th className="px-4 py-3">Claim ID</th>
-                  <th className="px-4 py-3">Category</th>
-                  <th className="px-4 py-3 text-center">Date / Month</th>
-                  <th className="px-4 py-3">Purpose</th>
-                  <th className="px-4 py-3 text-right">Total Amount</th>
-                  <th className="px-4 py-3 text-center">Actions</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-gray-150">
-                {claimRequests.slice((approvalsPage - 1) * 25, approvalsPage * 25).map((req) => {
-                  const isChecked = selectedIds.includes(req.expense_id);
-                  return (
-                    <tr 
-                      key={req.id} 
-                      onClick={() => handleOpenDetails(req)}
-                      className={`hover:bg-slate-50 transition-colors cursor-pointer ${
-                        isChecked ? "bg-blue-50/20" : ""
-                      }`}
-                    >
-                      {/* Checkbox column */}
-                      <td 
-                        className="px-4 py-3.5 text-center" 
-                        onClick={(e) => { e.stopPropagation(); toggleSelectClaim(req.expense_id); }}
-                      >
-                        <button className="bg-transparent border-0 p-0 text-gray-400 hover:text-blue-600 cursor-pointer">
-                          {isChecked ? (
-                            <CheckSquare className="w-4.5 h-4.5 text-blue-600" />
-                          ) : (
-                            <Square className="w-4.5 h-4.5 text-gray-300" />
-                          )}
-                        </button>
-                      </td>
-
-                      {/* Employee details column */}
-                      <td className="px-4 py-3.5">
-                        <div className="flex items-center gap-2">
-                          <div className="h-7 w-7 rounded-full bg-blue-600/10 border border-blue-500/20 text-blue-600 flex items-center justify-center font-bold text-xs uppercase shadow-sm">
-                            {req.employeeName ? req.employeeName.charAt(0) : "U"}
-                          </div>
-                          <div>
-                            <div className="font-bold text-gray-800 leading-tight">{req.employeeName}</div>
-                            <div className="text-[9px] text-blue-600 font-mono font-bold mt-0.5">{req.eCode}</div>
-                          </div>
-                        </div>
-                      </td>
-
-                      {/* Claim Code column */}
-                      <td className="px-4 py-3.5 font-bold text-gray-700 font-mono">
-                        {req.expense_code}
-                      </td>
-
-                      {/* Category column */}
-                      <td className="px-4 py-3.5">
-                        <span className="text-[9px] text-blue-600 bg-blue-50 border border-blue-200 px-2 py-0.5 rounded font-bold uppercase tracking-wider">
-                          {req.category}
-                        </span>
-                      </td>
-
-                      {/* Date column */}
-                      <td className="px-4 py-3.5 text-center text-gray-600 font-medium">
-                        {req.date}
-                      </td>
-
-                      {/* Purpose column */}
-                      <td className="px-4 py-3.5 text-gray-600 font-semibold max-w-[200px] truncate" title={req.purpose}>
-                        {req.purpose}
-                      </td>
-
-                      {/* Amount column */}
-                      <td className="px-4 py-3.5 text-right font-extrabold text-gray-900 text-sm">
-                        ₹{(Number(req.amount) || 0).toLocaleString()}
-                      </td>
-
-                      {/* Review details eye button column */}
-                      <td className="px-4 py-3.5 text-center" onClick={(e) => e.stopPropagation()}>
-                        <button
-                          onClick={() => handleOpenDetails(req)}
-                          className="btn-lte-primary px-3 py-1.5 flex items-center justify-center gap-1 mx-auto"
-                        >
-                          <Eye className="w-3.5 h-3.5" />
-                          <span>Review</span>
-                        </button>
-                      </td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
-
-            {/* Mobile Card List View */}
-            <div className="block md:hidden space-y-3">
-              {claimRequests.slice((approvalsPage - 1) * 25, approvalsPage * 25).map((req) => {
-                const isChecked = selectedIds.includes(req.expense_id);
-                return (
-                  <div
-                    key={req.id}
-                    onClick={() => handleOpenDetails(req)}
-                    className={`bg-white border rounded-lg p-3.5 space-y-3.5 shadow-sm active:bg-gray-50 transition-all cursor-pointer text-xs ${
-                      isChecked ? "border-blue-300 bg-blue-50/10" : "border-gray-200"
-                    }`}
-                  >
-                    <div className="flex justify-between items-start">
-                      <div className="flex items-center gap-2">
-                        <div className="h-7 w-7 rounded-full bg-blue-600/10 border border-blue-500/20 text-blue-600 flex items-center justify-center font-bold text-xs uppercase shadow-sm">
-                          {req.employeeName ? req.employeeName.charAt(0) : "U"}
-                        </div>
-                        <div>
-                          <div className="font-bold text-gray-800 leading-tight">{req.employeeName}</div>
-                          <span className="text-[8px] text-blue-600 font-mono font-bold mt-0.5">{req.eCode}</span>
-                        </div>
-                      </div>
-                      
-                      <div className="flex items-center gap-2" onClick={(e) => e.stopPropagation()}>
-                        <button 
-                          onClick={() => toggleSelectClaim(req.expense_id)}
-                          className="bg-transparent border-0 p-1 text-gray-400 hover:text-blue-600 cursor-pointer"
-                        >
-                          {isChecked ? (
-                            <CheckSquare className="w-5 h-5 text-blue-600" />
-                          ) : (
-                            <Square className="w-5 h-5 text-gray-300" />
-                          )}
-                        </button>
-                      </div>
+          <Table
+            dataSource={claimRequests}
+            rowKey="expense_id"
+            size="small"
+            pagination={{ pageSize: 25, size: "small" }}
+            rowSelection={!isManagerRole ? {
+              selectedRowKeys: selectedIds,
+              onChange: (keys) => setSelectedIds(keys as number[]),
+            } : undefined}
+            onRow={(record) => ({
+              onClick: () => handleOpenDetails(record),
+              className: "cursor-pointer hover:bg-indigo-50/15"
+            })}
+            columns={[
+              {
+                title: "Employee Details",
+                dataIndex: "employeeName",
+                key: "employeeName",
+                render: (name, req) => (
+                  <div className="flex items-center gap-2">
+                    <Avatar size="small" className="bg-indigo-600 font-bold text-xs">
+                      {name ? name.charAt(0).toUpperCase() : "U"}
+                    </Avatar>
+                    <div>
+                      <Text className="font-bold text-gray-800 block text-xs leading-tight">{name}</Text>
+                      <Text className="text-[9px] text-indigo-600 font-mono font-bold block">{req.eCode}</Text>
                     </div>
-
-                    <div className="grid grid-cols-2 gap-2 text-[11px]">
-                      <div>
-                        <span className="text-gray-400 font-bold uppercase text-[9px] block">Claim ID / Date</span>
-                        <span className="text-gray-700 font-semibold font-mono uppercase">{req.expense_code}</span>
-                        <span className="text-gray-550 block text-[9px] mt-0.5">{req.date}</span>
-                      </div>
-                      <div>
-                        <span className="text-gray-400 font-bold uppercase text-[9px] block">Category</span>
-                        <span className="text-[9px] text-blue-600 bg-blue-50 border border-blue-200 px-2 py-0.5 rounded font-bold uppercase tracking-wider inline-block mt-0.5">
-                          {req.category}
-                        </span>
-                      </div>
-                      <div>
-                        <span className="text-gray-400 font-bold uppercase text-[9px] block">Total Amount</span>
-                        <span className="text-gray-950 font-extrabold text-sm">₹{(Number(req.amount) || 0).toLocaleString()}</span>
-                      </div>
-                      <div className="flex items-center justify-end">
-                        <button
-                          onClick={() => handleOpenDetails(req)}
-                          className="btn-lte-primary py-1 px-3 flex items-center justify-center gap-1 text-[10px]"
-                        >
-                          <Eye className="w-3.5 h-3.5" />
-                          <span>Review</span>
-                        </button>
-                      </div>
-                    </div>
-
-                    {req.purpose && (
-                      <div className="border-t border-gray-100 pt-2 text-[10px]">
-                        <span className="text-gray-400 font-bold uppercase text-[8px] block">Purpose</span>
-                        <p className="text-gray-600 font-semibold mt-0.5 truncate">{req.purpose}</p>
-                      </div>
-                    )}
                   </div>
-                );
-              })}
-            </div>
-
-            {claimRequests.length > 25 && (
-              <div className="px-5 py-3 border-t border-gray-200 bg-slate-50 flex items-center justify-between text-xs text-gray-500">
-                <span>Showing {((approvalsPage - 1) * 25) + 1} to {Math.min(approvalsPage * 25, claimRequests.length)} of {claimRequests.length} items</span>
-                <div className="flex gap-2">
-                  <button
-                    type="button"
-                    disabled={approvalsPage === 1}
-                    onClick={() => setApprovalsPage(p => Math.max(p - 1, 1))}
-                    className="px-3 py-1 border border-gray-300 rounded bg-white text-gray-700 font-bold hover:bg-gray-50 disabled:opacity-50 disabled:hover:bg-white active:scale-95 transition-all cursor-pointer"
-                  >
-                    Prev
-                  </button>
-                  <button
-                    type="button"
-                    disabled={approvalsPage >= Math.ceil(claimRequests.length / 25)}
-                    onClick={() => setApprovalsPage(p => Math.min(p + 1, Math.ceil(claimRequests.length / 25)))}
-                    className="px-3 py-1 border border-gray-300 rounded bg-white text-gray-700 font-bold hover:bg-gray-50 disabled:opacity-50 disabled:hover:bg-white active:scale-95 transition-all cursor-pointer"
-                  >
-                    Next
-                  </button>
-                </div>
-              </div>
-            )}
-          </div>
-        )}
-      </div>
+                ),
+              },
+              {
+                title: "Claim ID",
+                dataIndex: "expense_code",
+                key: "expense_code",
+                render: (code) => <Text className="font-mono font-bold text-indigo-600 text-xs">{code}</Text>,
+              },
+              {
+                title: "Category",
+                dataIndex: "category",
+                key: "category",
+                render: (cat) => <Tag color="blue" className="font-bold text-[10px]">{cat}</Tag>,
+              },
+              {
+                title: "Date / Month",
+                dataIndex: "date",
+                key: "date",
+                align: "center" as const,
+                render: (d) => <Text className="text-gray-600 font-semibold text-xs">{d}</Text>,
+              },
+              {
+                title: "Purpose",
+                dataIndex: "purpose",
+                key: "purpose",
+                ellipsis: true,
+                render: (p) => <Text className="text-gray-700 font-semibold text-xs">{p || "—"}</Text>,
+              },
+              {
+                title: "Total Amount",
+                dataIndex: "amount",
+                key: "amount",
+                align: "right" as const,
+                render: (amt) => <Text className="font-mono font-bold text-gray-900 text-xs">₹{(Number(amt) || 0).toLocaleString()}</Text>,
+              },
+              {
+                title: "Status",
+                dataIndex: "status",
+                key: "status",
+                align: "center" as const,
+                render: (_, req) => {
+                  if (req.is_auto_approved || req.auto_approved || req.status === "auto_approved") {
+                    return <Tag color="success" className="font-bold border-0 bg-emerald-100 text-emerald-800 text-[9px]">⚡ Auto Approved</Tag>;
+                  }
+                  return <Tag color="warning" className="font-bold border-0 bg-amber-50 text-amber-700 text-[9px]">Pending</Tag>;
+                }
+              },
+              {
+                title: "Actions",
+                key: "actions",
+                align: "center" as const,
+                render: (_, req) => (
+                  <Space size="small" onClick={(e) => e.stopPropagation()}>
+                    <Button
+                      type="default"
+                      size="small"
+                      icon={<Eye size={12} />}
+                      onClick={() => handleOpenDetails(req)}
+                      className="text-[10px] font-bold"
+                    >
+                      Review
+                    </Button>
+                  </Space>
+                ),
+              },
+            ]}
       </div>
 
       {/* ================= DETAIL SINGLE REVIEW AND EDIT MODAL ================= */}

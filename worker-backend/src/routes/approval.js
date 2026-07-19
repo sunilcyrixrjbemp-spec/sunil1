@@ -970,4 +970,67 @@ export async function handleAutoApprovalExpiry(env) {
   return { success: true, processed: results };
 }
 
+export async function handleBulkApprove(request, env, params, query, user) {
+  const userRoleClean = (user.role || "").trim().toLowerCase();
+  
+  // Requirement 3: Server-side validation for Manager Role restriction
+  if (userRoleClean === "manager") {
+    return jsonResponse({
+      error: "Forbidden: Bulk approval is restricted for Manager role. Please review and approve claims individually."
+    }, 403);
+  }
+
+  let body;
+  try {
+    body = await request.json();
+  } catch (e) {
+    body = {};
+  }
+
+  const { expense_ids, action_type, comments } = body;
+  if (!Array.isArray(expense_ids) || expense_ids.length === 0) {
+    return jsonResponse({ error: "Invalid or empty expense_ids array" }, 400);
+  }
+
+  let successCount = 0;
+  let failCount = 0;
+
+  for (const expId of expense_ids) {
+    try {
+      const mockParams = { expense_id: String(expId) };
+      const mockRequest = new Request(request.url, {
+        method: "POST",
+        headers: request.headers,
+        body: JSON.stringify({
+          comments: comments || ("Bulk " + (action_type === "reject" ? "rejection" : "approval")),
+          client_timestamp: new Date().toISOString()
+        })
+      });
+
+      let res;
+      if (action_type === "reject") {
+        res = await handleReject(mockRequest, env, mockParams, query, user);
+      } else {
+        res = await handleApprove(mockRequest, env, mockParams, query, user);
+      }
+
+      if (res && res.status >= 200 && res.status < 300) {
+        successCount++;
+      } else {
+        failCount++;
+      }
+    } catch (err) {
+      console.error(`Error processing bulk claim ID ${expId}:`, err);
+      failCount++;
+    }
+  }
+
+  return jsonResponse({
+    message: "Bulk operation completed",
+    successCount,
+    failCount
+  });
+}
+
+
 

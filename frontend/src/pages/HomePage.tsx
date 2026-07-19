@@ -409,17 +409,19 @@ export default function HomePage() {
   const isSpecialViewRole = ["admin", "project head", "mis", "travel desk", "travel tesk", "vp", "accountant", "hr"].includes(userRoleLower);
   const isReviewerRole = allowedWindows.includes("approval") || isSpecialViewRole;
 
-  const getStatusBadgeClass = (status: string) => {
+  const getStatusBadgeClass = (status: string, record?: any) => {
     const s = (status || "").toLowerCase();
-    if (s === "approved") return "bg-green-50 border-green-200 text-green-700";
-    if (s === "rejected") return "bg-red-50 border-red-200 text-red-700";
-    if (s === "returned_to_draft") return "bg-orange-50 border-orange-200 text-orange-700";
-    if (s.startsWith("submitted")) return "bg-yellow-50 border-yellow-250 text-yellow-750 font-bold";
-    return "bg-gray-50 border-gray-200 text-gray-600";
+    if (s === "auto_approved" || record?.is_auto_approved || record?.auto_approved) return "bg-emerald-100 border-emerald-300 text-emerald-800 font-extrabold";
+    if (s === "approved") return "bg-emerald-50 border-emerald-200 text-emerald-700 font-bold";
+    if (s === "rejected") return "bg-red-50 border-red-200 text-red-700 font-bold";
+    if (s === "returned_to_draft") return "bg-orange-50 border-orange-200 text-orange-700 font-bold";
+    if (s.startsWith("submitted")) return "bg-amber-50 border-amber-250 text-amber-800 font-bold";
+    return "bg-gray-50 border-gray-200 text-gray-600 font-bold";
   };
 
-  const getStatusLabel = (status: string) => {
+  const getStatusLabel = (status: string, record?: any) => {
     const s = (status || "").toLowerCase();
+    if (s === "auto_approved" || record?.is_auto_approved || record?.auto_approved) return "⚡ Auto Approved";
     if (s === "approved") return "Approved";
     if (s === "rejected") return "Rejected";
     if (s === "returned_to_draft") return "Returned";
