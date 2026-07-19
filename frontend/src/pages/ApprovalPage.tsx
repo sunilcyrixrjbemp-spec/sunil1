@@ -144,6 +144,7 @@ export default function ApprovalPage() {
     isBulk?: boolean;
     bulkCount?: number;
     actionType?: "approve" | "reject";
+    isLimit?: boolean;
   } | null>(null);
 
   const currentUser = JSON.parse(localStorage.getItem("user") || "{}");

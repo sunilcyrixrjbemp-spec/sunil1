@@ -6,14 +6,12 @@ import toast from "react-hot-toast";
 import { 
   Card, 
   Button, 
-  Avatar, 
   Tabs, 
   Input, 
   Typography, 
   Row, 
   Col, 
   Space, 
-  Divider, 
   Alert, 
   Spin, 
   Tag, 
@@ -24,7 +22,7 @@ import {
   Mail,
   Phone,
   Calendar,
-  IdCard,
+  CreditCard,
   Award,
   Shield,
   MapPin,
@@ -34,19 +32,13 @@ import {
   RefreshCw,
   Trash2,
   Camera,
-  Save,
-  X,
   User,
   Briefcase,
-  Smartphone,
-  ChevronUp
+  Smartphone
 } from "lucide-react";
 
-const { Title, Text } = Typography;
+const { Text } = Typography;
 
-const LteSpinner = () => (
-  <span className="animate-spin rounded-full h-3.5 w-3.5 border-2 border-slate-200 border-t-blue-600 inline-block mr-1.5 shrink-0"></span>
-);
 
 
 
@@ -769,7 +761,7 @@ export default function ProfilePage() {
           <DetailRow
             label="Employee Code"
             value={user.e_code || "-"}
-            icon={<IdCard className="w-4 h-4 text-blue-500" />}
+            icon={<CreditCard className="w-4 h-4 text-blue-500" />}
           />
           <DetailRow
             label="Grade"
