@@ -98,16 +98,16 @@ export default function ApprovalPage() {
     const cached = localStorage.getItem("cache_pending_approvals");
     return cached ? JSON.parse(cached) : [];
   });
-  const [filterMonth, setFilterMonth] = useState("");
   const [filterEngineer, setFilterEngineer] = useState("");
 
   const filteredApprovals = pendingApprovals.filter((a: any) => {
-    if (filterMonth && (!a.month || !a.month.toLowerCase().includes(filterMonth.toLowerCase()))) return false;
     if (filterEngineer) {
       const q = filterEngineer.toLowerCase();
       const nameMatch = a.employeeName && a.employeeName.toLowerCase().includes(q);
       const codeMatch = a.eCode && a.eCode.toLowerCase().includes(q);
-      if (!nameMatch && !codeMatch) return false;
+      const districtMatch = a.district && a.district.toLowerCase().includes(q);
+      const fromDistrictMatch = a.from_district && a.from_district.toLowerCase().includes(q);
+      if (!nameMatch && !codeMatch && !districtMatch && !fromDistrictMatch) return false;
     }
     return true;
   });
@@ -765,46 +765,36 @@ export default function ApprovalPage() {
         </div>
       </Card>
 
-      {/* Contextual Ant Design Filters & Bulk Actions Toolbar */}
-      <Card size="small" className="border border-gray-200 shadow-xs mb-4">
-        <div className="flex flex-col gap-3">
-          {/* Filter Row: Month + Search — full-width on mobile */}
-          <div className="flex flex-col sm:flex-row gap-2">
-            <Select
-              size="large"
-              value={filterMonth}
-              onChange={(val) => setFilterMonth(val)}
-              style={{ width: "100%" }}
-              className="approval-filter-select"
-              placeholder="📅 All Months"
-              options={[
-                { label: "All Months", value: "" },
-                ...["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"].map(m => ({ label: m, value: m }))
-              ]}
-            />
-            <Input
-              size="large"
-              value={filterEngineer}
-              onChange={(e) => setFilterEngineer(e.target.value)}
-              placeholder="Search by Name or Code..."
-              prefix={<Search size={14} className="text-gray-400" />}
-              style={{ width: "100%" }}
-              className="approval-filter-input"
-              allowClear
-            />
-          </div>
-
-          {/* Bulk Toolbar — Only for authorized Coordinator & Project Head roles */}
-          {isBulkAuthorized && claimRequests.length > 0 && (
-            <div className="flex flex-wrap items-center gap-2 pt-2 border-t border-gray-100">
-              <Checkbox
-                checked={selectedIds.length > 0 && selectedIds.length === claimRequests.length}
-                onChange={toggleSelectAll}
-                className="text-xs font-bold text-gray-700"
-              >
-                Select All ({selectedIds.length})
-              </Checkbox>
-              <div className="flex items-center gap-2 flex-wrap">
+      {/* Filters — hidden on mobile, desktop-only search bar */}
+      <div className="hidden sm:block mb-4">
+        <Card size="small" className="border border-gray-200 shadow-xs">
+          <div className="flex flex-col sm:flex-row gap-3 items-start sm:items-center">
+            <div style={{ flex: 1, maxWidth: 400 }}>
+              <Input
+                size="large"
+                value={filterEngineer}
+                onChange={(e) => setFilterEngineer(e.target.value)}
+                placeholder="🔍  Search by Name or District..."
+                prefix={<Search size={14} className="text-gray-400" />}
+                style={{ width: "100%", borderRadius: 8 }}
+                allowClear
+              />
+            </div>
+            {filterEngineer && (
+              <Typography.Text type="secondary" style={{ fontSize: 11 }}>
+                {filteredApprovals.length} result{filteredApprovals.length !== 1 ? "s" : ""} found
+              </Typography.Text>
+            )}
+            {/* Bulk Toolbar — Only for authorized roles */}
+            {isBulkAuthorized && claimRequests.length > 0 && (
+              <div className="flex flex-wrap items-center gap-2">
+                <Checkbox
+                  checked={selectedIds.length > 0 && selectedIds.length === claimRequests.length}
+                  onChange={toggleSelectAll}
+                  className="text-xs font-bold text-gray-700"
+                >
+                  Select All ({selectedIds.length})
+                </Checkbox>
                 <Button
                   type="primary"
                   size="middle"
@@ -828,10 +818,10 @@ export default function ApprovalPage() {
                   Bulk Reject ({selectedIds.length})
                 </Button>
               </div>
-            </div>
-          )}
-        </div>
-      </Card>
+            )}
+          </div>
+        </Card>
+      </div>
 
       {/* ================= LIMIT EXTENSION REQUESTS SECTION ================= */}
       {limitRequests.length > 0 && (
@@ -1366,6 +1356,7 @@ export default function ApprovalPage() {
                                 )}
                               </Space>
                             </div>
+                            <div className="bg-slate-50 border-b border-gray-200 p-3">
                               <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
                                 <div className="bg-white p-2.5 border border-gray-200 rounded-lg flex flex-col justify-between">
                                   <div>
