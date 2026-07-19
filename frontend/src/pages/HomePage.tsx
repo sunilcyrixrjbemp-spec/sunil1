@@ -176,7 +176,7 @@ export default function HomePage() {
 
   // Popup modal for clicked stats card
   const [showStatsModal, setShowStatsModal] = useState(false);
-  const [statsModalType, setStatsModalType] = useState<"Total Claimed" | "Approved" | "Pending" | "Rejected">("Total Claimed");
+  const [statsModalType, _setStatsModalType] = useState<"Total Claimed" | "Approved" | "Pending" | "Rejected">("Total Claimed");
   const [statsModalClaims, setStatsModalClaims] = useState<any[]>([]);
 
   // In-app Lightbox state
@@ -648,11 +648,11 @@ export default function HomePage() {
   const pendingAmount = getStatsSums(statsPendingClaims);
   const rejectedAmount = getStatsSums(statsRejectedClaims);
 
-  const handleOpenStatsModal = (type: "Total Claimed" | "Approved" | "Pending" | "Rejected", list: any[]) => {
-    setStatsModalType(type);
-    setStatsModalClaims(list);
-    setShowStatsModal(true);
-  };
+  // const handleOpenStatsModal = (type: "Total Claimed" | "Approved" | "Pending" | "Rejected", list: any[]) => {
+  //   setStatsModalType(type);
+  //   setStatsModalClaims(list);
+  //   setShowStatsModal(true);
+  // };
 
   return (
     <>
@@ -746,10 +746,8 @@ export default function HomePage() {
             <Col xs={12} sm={6}>
               <Card 
                 size="small" 
-                hoverable 
-                className="border border-gray-200 border-l-4 border-l-indigo-600 cursor-pointer shadow-xs"
+                className="border border-gray-200 border-l-4 border-l-indigo-600 shadow-xs"
                 bodyStyle={{ padding: "10px" }}
-                onClick={() => handleOpenStatsModal("Total Claimed", statsTotalClaims)}
               >
                 <div className="flex items-center gap-2">
                   <div className="p-1.5 bg-indigo-50 text-indigo-600 rounded">
@@ -768,10 +766,8 @@ export default function HomePage() {
             <Col xs={12} sm={6}>
               <Card 
                 size="small" 
-                hoverable 
-                className="border border-gray-205 border-l-4 border-l-green-600 cursor-pointer shadow-xs"
+                className="border border-gray-205 border-l-4 border-l-green-600 shadow-xs"
                 bodyStyle={{ padding: "10px" }}
-                onClick={() => handleOpenStatsModal("Approved", statsApprovedClaims)}
               >
                 <div className="flex items-center gap-2">
                   <div className="p-1.5 bg-green-50 text-green-605 rounded">
@@ -790,10 +786,8 @@ export default function HomePage() {
             <Col xs={12} sm={6}>
               <Card 
                 size="small" 
-                hoverable 
-                className="border border-gray-200 border-l-4 border-l-amber-600 cursor-pointer shadow-xs"
+                className="border border-gray-200 border-l-4 border-l-amber-600 shadow-xs"
                 bodyStyle={{ padding: "10px" }}
-                onClick={() => handleOpenStatsModal("Pending", statsPendingClaims)}
               >
                 <div className="flex items-center gap-2">
                   <div className="p-1.5 bg-amber-50 text-amber-600 rounded">
@@ -812,10 +806,8 @@ export default function HomePage() {
             <Col xs={12} sm={6}>
               <Card 
                 size="small" 
-                hoverable 
-                className="border border-gray-200 border-l-4 border-l-red-600 cursor-pointer shadow-xs"
+                className="border border-gray-200 border-l-4 border-l-red-600 shadow-xs"
                 bodyStyle={{ padding: "10px" }}
-                onClick={() => handleOpenStatsModal("Rejected", statsRejectedClaims)}
               >
                 <div className="flex items-center gap-2">
                   <div className="p-1.5 bg-red-50 text-red-650 rounded">
@@ -965,7 +957,8 @@ export default function HomePage() {
                               {filteredPersonalExpenses.map((exp) => (
                                 <Card
                                   key={exp.id}
-                                  className="border border-slate-300 bg-[#f1f5f9] transition-colors shadow-sm sharp-card"
+                                  onClick={() => handleOpenClaimDetails(exp.id)}
+                                  className="border border-slate-300 bg-[#f1f5f9] hover:bg-slate-200 cursor-pointer transition-colors shadow-sm sharp-card"
                                   size="small"
                                 >
                                   <div className="flex justify-between items-center pb-2 border-b border-gray-150">
@@ -1017,8 +1010,8 @@ export default function HomePage() {
                       <div className="space-y-3 pt-2">
                         {/* Filters Row */}
                         <div className="bg-gray-50 border border-gray-255 rounded-lg p-2.5 space-y-2 text-xs font-bold text-slate-705">
-                          <Row gutter={[8, 8]}>
-                            <Col xs={12} sm={6}>
+                          <Row gutter={[8, 8]} align="middle">
+                            <Col xs={24} sm={6}>
                               <div className="flex flex-col gap-0.5">
                                 <span className="text-[8px] uppercase font-bold text-gray-400">Month</span>
                                 <Select 
@@ -1039,7 +1032,7 @@ export default function HomePage() {
                             </Col>
 
                             {isReviewerRole && (
-                              <Col xs={12} sm={6}>
+                              <Col xs={24} sm={6}>
                                 <div className="flex flex-col gap-0.5">
                                   <span className="text-[8px] uppercase font-bold text-gray-400">Zone</span>
                                   <Select 
@@ -1059,7 +1052,7 @@ export default function HomePage() {
                               </Col>
                             )}
 
-                            <Col xs={12} sm={6}>
+                            <Col xs={24} sm={6}>
                               <div className="flex flex-col gap-0.5">
                                 <span className="text-[8px] uppercase font-bold text-gray-400">Engineer</span>
                                 <Select 
@@ -1078,7 +1071,7 @@ export default function HomePage() {
                               </div>
                             </Col>
 
-                            <Col xs={12} sm={6}>
+                            <Col xs={24} sm={6}>
                               <div className="flex flex-col gap-0.5">
                                 <span className="text-[8px] uppercase font-bold text-gray-400">Travel Mode</span>
                                 <Select 
@@ -1213,7 +1206,8 @@ export default function HomePage() {
                               {paginatedTeamExpenses.map((exp) => (
                                 <Card
                                   key={exp.id}
-                                  className="border border-slate-300 bg-[#f1f5f9] transition-colors shadow-sm sharp-card"
+                                  onClick={() => handleOpenClaimDetails(exp.id)}
+                                  className="border border-slate-300 bg-[#f1f5f9] hover:bg-slate-200 cursor-pointer transition-colors shadow-sm sharp-card"
                                   size="small"
                                 >
                                   <div className="flex justify-between items-center pb-2 border-b border-gray-150">
