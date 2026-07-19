@@ -20,7 +20,8 @@ import {
   Alert, 
   Typography, 
   Tag,
-  Input
+  Input,
+  Segmented
 } from "antd";
 
 const { Title, Text } = Typography;
@@ -804,18 +805,20 @@ export default function HomePage() {
                               className="bg-white border border-gray-200 rounded px-2.5 py-0.5 text-xs font-semibold text-gray-850 cursor-pointer w-32 focus:outline-none"
                             />
                           </div>
-                          <div className="flex items-center gap-1 overflow-x-auto no-scrollbar">
-                            {(["all", "pending", "approved", "rejected"] as const).map((status) => (
-                              <Button
-                                key={status}
-                                size="small"
-                                type={homeStatusFilter === status ? "primary" : "default"}
-                                onClick={() => setHomeStatusFilter(status)}
-                                className={homeStatusFilter === status ? "bg-indigo-600 border-indigo-655 text-white font-semibold text-[10px] uppercase tracking-wider" : "text-gray-505 font-semibold text-[10px] uppercase tracking-wider"}
-                              >
-                                {status === "all" ? "All" : status}
-                              </Button>
-                            ))}
+                          <div className="flex-1 w-full max-w-md">
+                            <Segmented
+                              block
+                              size="small"
+                              value={homeStatusFilter}
+                              onChange={(val) => setHomeStatusFilter(val as any)}
+                              options={[
+                                { label: 'ALL', value: 'all' },
+                                { label: 'PENDING', value: 'pending' },
+                                { label: 'APPROVED', value: 'approved' },
+                                { label: 'REJECTED', value: 'rejected' }
+                              ]}
+                              className="font-bold text-[10px] uppercase tracking-wider"
+                            />
                           </div>
                         </div>
 
@@ -1026,18 +1029,20 @@ export default function HomePage() {
                             </Col>
                           </Row>
 
-                          <div className="flex items-center gap-1 overflow-x-auto no-scrollbar border-t border-gray-200 pt-2">
-                            {(["all", "pending", "approved", "rejected"] as const).map((status) => (
-                              <Button
-                                key={status}
-                                size="small"
-                                type={homeStatusFilter === status ? "primary" : "default"}
-                                onClick={() => setHomeStatusFilter(status)}
-                                className={homeStatusFilter === status ? "bg-indigo-600 border-indigo-655 text-white font-semibold text-[10px] uppercase tracking-wider" : "text-gray-505 font-semibold text-[10px] uppercase tracking-wider"}
-                              >
-                                {status === "all" ? "All" : status}
-                              </Button>
-                            ))}
+                          <div className="border-t border-gray-200 pt-2 w-full">
+                            <Segmented
+                              block
+                              size="small"
+                              value={homeStatusFilter}
+                              onChange={(val) => setHomeStatusFilter(val as any)}
+                              options={[
+                                { label: 'ALL', value: 'all' },
+                                { label: 'PENDING', value: 'pending' },
+                                { label: 'APPROVED', value: 'approved' },
+                                { label: 'REJECTED', value: 'rejected' }
+                              ]}
+                              className="font-bold text-[10px] uppercase tracking-wider"
+                            />
                           </div>
                         </div>
 
