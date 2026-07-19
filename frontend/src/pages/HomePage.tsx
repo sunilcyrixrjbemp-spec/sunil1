@@ -635,7 +635,7 @@ export default function HomePage() {
 
   return (
     <>
-      <div className="space-y-6 animate-fadeIn text-[#212529] p-4 md:p-6 max-w-7xl mx-auto">
+      <div className="space-y-3 sm:space-y-4 animate-fadeIn text-[#212529] p-0 sm:p-2 md:p-4 w-full max-w-none">
         
         {/* Welcome Banner - Clean Premium Card */}
         <div className="relative overflow-hidden rounded-lg bg-gradient-to-br from-indigo-600 via-indigo-700 to-indigo-800 py-3 px-4 text-white shadow-sm mb-4">
@@ -812,10 +812,10 @@ export default function HomePage() {
                               value={homeStatusFilter}
                               onChange={(val) => setHomeStatusFilter(val as any)}
                               options={[
-                                { label: 'ALL', value: 'all' },
-                                { label: 'PENDING', value: 'pending' },
-                                { label: 'APPROVED', value: 'approved' },
-                                { label: 'REJECTED', value: 'rejected' }
+                                { label: <span className="text-[9px] xs:text-[10px] tracking-tight">All</span>, value: 'all' },
+                                { label: <span className="text-[9px] xs:text-[10px] tracking-tight">Pending</span>, value: 'pending' },
+                                { label: <span className="text-[9px] xs:text-[10px] tracking-tight">Approved</span>, value: 'approved' },
+                                { label: <span className="text-[9px] xs:text-[10px] tracking-tight">Rejected</span>, value: 'rejected' }
                               ]}
                               className="font-bold text-[10px] uppercase tracking-wider"
                             />
@@ -1036,10 +1036,10 @@ export default function HomePage() {
                               value={homeStatusFilter}
                               onChange={(val) => setHomeStatusFilter(val as any)}
                               options={[
-                                { label: 'ALL', value: 'all' },
-                                { label: 'PENDING', value: 'pending' },
-                                { label: 'APPROVED', value: 'approved' },
-                                { label: 'REJECTED', value: 'rejected' }
+                                { label: <span className="text-[9px] xs:text-[10px] tracking-tight">All</span>, value: 'all' },
+                                { label: <span className="text-[9px] xs:text-[10px] tracking-tight">Pending</span>, value: 'pending' },
+                                { label: <span className="text-[9px] xs:text-[10px] tracking-tight">Approved</span>, value: 'approved' },
+                                { label: <span className="text-[9px] xs:text-[10px] tracking-tight">Rejected</span>, value: 'rejected' }
                               ]}
                               className="font-bold text-[10px] uppercase tracking-wider"
                             />
@@ -2159,6 +2159,8 @@ export default function HomePage() {
               rowKey="id"
               pagination={{ pageSize: 15, size: "small" }}
               size="small"
+              sticky={true}
+              scroll={{ x: "max-content", y: 380 }}
               onRow={(record) => ({
                 onClick: () => {
                   setShowStatsModal(false);
@@ -2170,6 +2172,7 @@ export default function HomePage() {
                 ...(activeTab === "team-claims" ? [{
                   title: "Employee",
                   key: "employee",
+                  width: 140,
                   render: (_: any, record: any) => (
                     <div>
                       <Text strong className="text-gray-900 block leading-none">{record.submitter_name}</Text>
@@ -2181,18 +2184,21 @@ export default function HomePage() {
                   title: "Claim ID",
                   dataIndex: "expense_code",
                   key: "expense_code",
+                  width: 100,
                   render: (text) => <Text className="font-mono font-bold text-indigo-600">{text}</Text>,
                 },
                 {
                   title: "Date",
                   dataIndex: "date",
                   key: "date",
+                  width: 100,
                   render: (_, record) => record.itinerary || record.date,
                 },
                 {
                   title: "Purpose",
                   dataIndex: "description",
                   key: "description",
+                  width: 160,
                   ellipsis: true,
                   render: (text, record) => <Text className="font-semibold text-gray-750">{text || record.purpose || "—"}</Text>,
                 },
@@ -2200,12 +2206,14 @@ export default function HomePage() {
                   title: "Travel Mode",
                   dataIndex: "travel_mode",
                   key: "travel_mode",
+                  width: 100,
                   render: (text, record) => <Tag color="blue">{text || record.category}</Tag>,
                 },
                 {
                   title: "Distance",
                   dataIndex: "total_km",
                   key: "total_km",
+                  width: 90,
                   align: "right" as const,
                   render: (val) => val ? `${val.toFixed(1)} KM` : "—",
                 },
@@ -2213,6 +2221,7 @@ export default function HomePage() {
                   title: "Auto Fare",
                   dataIndex: "total_auto",
                   key: "total_auto",
+                  width: 95,
                   align: "right" as const,
                   render: (val) => val ? `₹${val.toLocaleString()}` : "—",
                 },
@@ -2220,6 +2229,7 @@ export default function HomePage() {
                   title: "Amount",
                   dataIndex: "amount",
                   key: "amount",
+                  width: 100,
                   align: "right" as const,
                   render: (val) => <Text className="font-bold text-gray-900">₹{(val || 0).toLocaleString()}</Text>,
                 },
@@ -2227,6 +2237,7 @@ export default function HomePage() {
                   title: "Status",
                   dataIndex: "status",
                   key: "status",
+                  width: 100,
                   align: "right" as const,
                   render: (status) => (
                     <span className={`inline-flex items-center px-2 py-0.5 rounded border text-[9px] font-bold uppercase tracking-wider ${getStatusBadgeClass(status)}`}>

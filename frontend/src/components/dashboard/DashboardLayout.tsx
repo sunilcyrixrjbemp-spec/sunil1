@@ -620,7 +620,7 @@ export default function DashboardLayout() {
         )}
 
         {/* MAIN AREA WORKSPACE */}
-        <main className="flex-1 p-4 pb-20 lg:pb-4 overflow-y-auto min-w-0 overflow-x-hidden w-full">
+        <main className="flex-1 p-2 sm:p-4 pb-20 lg:pb-4 overflow-y-auto min-w-0 overflow-x-hidden w-full">
           {hasAccess ? (
             <Outlet />
           ) : (
