@@ -454,8 +454,10 @@ export default function ApprovalPage() {
         setExpenseDetails(details);
         initLegs(details);
         localStorage.setItem(cacheKey, JSON.stringify(details));
-      } catch (err) {
-        toast.error("Failed to load expense itinerary details.");
+      } catch (err: any) {
+        console.error("Error loading expense details:", err);
+        const errMsg = err?.response?.data?.error || err?.message || String(err);
+        toast.error(`Failed to load expense itinerary details: ${errMsg}`);
         setShowDetailModal(false);
       } finally {
         setLoadingDetails(false);
