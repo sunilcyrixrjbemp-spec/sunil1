@@ -133,6 +133,18 @@ export default function ApprovalPage() {
   const [returnLoading, setReturnLoading] = useState(false);
   const [returnExpenseId, setReturnExpenseId] = useState<number | null>(null);
 
+  // Success popup state (replaces Modal.success for centered mobile display)
+  const [successModal, setSuccessModal] = useState<{
+    visible: boolean;
+    isAuto: boolean;
+    claimCode: string;
+    empName: string;
+    amount?: number;
+    isBulk?: boolean;
+    bulkCount?: number;
+    actionType?: "approve" | "reject";
+  } | null>(null);
+
   const currentUser = JSON.parse(localStorage.getItem("user") || "{}");
   const userRoleLower = (currentUser.role || "").trim().toLowerCase();
   const isBulkAuthorized = ["coordinator", "project head"].includes(userRoleLower);
@@ -518,37 +530,14 @@ export default function ApprovalPage() {
         if (type === "approve") {
           await approvalService.approveExpense(selectedApproval.expense_id, comments.trim(), itineraryEdits, undefined, removedAttachments);
           const isAuto = selectedApproval.is_auto_approved || selectedApproval.auto_approved || expenseDetails?.is_auto_approved || (calculateAdjustedTotal() === 0);
-          if (isAuto) {
-            Modal.success({
-              title: "⚡ Claim Auto-Approved by System",
-              content: (
-                <div className="space-y-2 text-xs py-2 font-sans">
-                  <Alert
-                    type="success"
-                    showIcon
-                    message="System Policy Auto-Approval Applied"
-                    description="This claim was automatically approved based on system rules (zero reimbursable amount or policy auto-approval rules applied)."
-                    className="rounded-lg mb-2"
-                  />
-                  <p>Claim ID: <strong className="font-mono text-indigo-600">{selectedApproval.expense_code}</strong></p>
-                  <p>Employee: <strong>{selectedApproval.employeeName}</strong></p>
-                </div>
-              ),
-              okText: "Got It"
-            });
-          } else {
-            Modal.success({
-              title: "Claim Reimbursement Approved",
-              content: (
-                <div className="space-y-1.5 text-xs py-2 font-sans">
-                  <p>Claim ID: <strong className="font-mono text-indigo-600">{selectedApproval.expense_code}</strong></p>
-                  <p>Employee: <strong>{selectedApproval.employeeName}</strong></p>
-                  <p>Reimbursable Amount: <strong className="font-mono text-emerald-700">₹{(calculateAdjustedTotal() || selectedApproval.amount || 0).toLocaleString()}</strong></p>
-                </div>
-              ),
-              okText: "Done"
-            });
-          }
+          setSuccessModal({
+            visible: true,
+            isAuto,
+            claimCode: selectedApproval.expense_code,
+            empName: selectedApproval.employeeName,
+            amount: calculateAdjustedTotal() || selectedApproval.amount || 0,
+            actionType: "approve"
+          });
         } else {
           await approvalService.rejectExpense(selectedApproval.expense_id, comments.trim(), itineraryEdits, removedAttachments);
           toast.error(`Claim ${selectedApproval.expense_code} rejected.`);
@@ -690,10 +679,14 @@ export default function ApprovalPage() {
     }
 
     if (successCount > 0) {
-      Modal.success({
-        title: `Bulk ${bulkActionType === "approve" ? "Approval" : "Rejection"} Completed`,
-        content: `Successfully processed ${successCount} claim(s).`,
-        okText: "Done"
+      setSuccessModal({
+        visible: true,
+        isAuto: false,
+        claimCode: "",
+        empName: "",
+        isBulk: true,
+        bulkCount: successCount,
+        actionType: bulkActionType as "approve" | "reject"
       });
       setPendingApprovals(prev => prev.filter(a => !selectedIds.includes(a.expense_id)));
       setSelectedIds([]);
@@ -733,6 +726,209 @@ export default function ApprovalPage() {
 
   return (
     <>
+      {/* ================= ANIMATED SUCCESS MODAL (Centered on mobile) ================= */}
+      <style>{`
+        @keyframes ap-check-draw {
+          from { stroke-dashoffset: 100; opacity: 0; }
+          to   { stroke-dashoffset: 0;   opacity: 1; }
+        }
+        @keyframes ap-ring-pulse {
+          0%   { transform: scale(0.6); opacity: 0; }
+          60%  { transform: scale(1.1); opacity: 1; }
+          100% { transform: scale(1);   opacity: 1; }
+        }
+        @keyframes ap-ring-glow {
+          0%, 100% { box-shadow: 0 0 0 0 rgba(16,185,129,0.5); }
+          50%       { box-shadow: 0 0 0 14px rgba(16,185,129,0); }
+        }
+        @keyframes ap-modal-in {
+          0%   { transform: scale(0.7) translateY(30px); opacity: 0; }
+          70%  { transform: scale(1.04) translateY(-4px); opacity: 1; }
+          100% { transform: scale(1) translateY(0); }
+        }
+        @keyframes ap-float-up {
+          0%   { transform: translateY(0) rotate(0deg) scale(0); opacity: 1; }
+          100% { transform: translateY(-120px) rotate(720deg) scale(1); opacity: 0; }
+        }
+        @keyframes ap-auto-ring-pulse {
+          0%, 100% { box-shadow: 0 0 0 0 rgba(99,102,241,0.5); }
+          50%       { box-shadow: 0 0 0 14px rgba(99,102,241,0); }
+        }
+        .ap-success-modal-content {
+          animation: ap-modal-in 0.55s cubic-bezier(0.34,1.56,0.64,1) both;
+        }
+        .ap-check-ring {
+          animation: ap-ring-pulse 0.5s ease-out 0.1s both, ap-ring-glow 1.4s ease-in-out 0.6s infinite;
+        }
+        .ap-auto-ring {
+          animation: ap-ring-pulse 0.5s ease-out 0.1s both, ap-auto-ring-pulse 1.4s ease-in-out 0.6s infinite;
+        }
+        .ap-check-svg path {
+          stroke-dasharray: 100;
+          animation: ap-check-draw 0.45s ease-out 0.35s both;
+        }
+        .ap-particle {
+          position: absolute;
+          width: 8px; height: 8px;
+          border-radius: 50%;
+          animation: ap-float-up 1.2s ease-out forwards;
+        }
+      `}</style>
+
+      <Modal
+        open={!!successModal?.visible}
+        centered
+        footer={null}
+        closable={false}
+        width={340}
+        style={{ maxWidth: "92vw" }}
+        onCancel={() => setSuccessModal(null)}
+        styles={{ body: { padding: 0, borderRadius: 16, overflow: "hidden" } }}
+      >
+        {successModal && (
+          <div className="ap-success-modal-content" style={{ borderRadius: 16, overflow: "hidden", background: "#fff", textAlign: "center" }}>
+            {/* Gradient header */}
+            <div style={{
+              background: successModal.isAuto
+                ? "linear-gradient(135deg, #4f46e5 0%, #7c3aed 100%)"
+                : "linear-gradient(135deg, #059669 0%, #10b981 100%)",
+              padding: "32px 24px 24px",
+              position: "relative",
+              overflow: "hidden"
+            }}>
+              {/* Confetti particles */}
+              {[
+                { color: "#fde68a", left: "12%", delay: "0.4s" },
+                { color: "#a5f3fc", left: "28%", delay: "0.5s" },
+                { color: "#fca5a5", left: "44%", delay: "0.3s" },
+                { color: "#bbf7d0", left: "60%", delay: "0.6s" },
+                { color: "#ddd6fe", left: "76%", delay: "0.45s" },
+                { color: "#fde68a", left: "88%", delay: "0.35s" },
+                { color: "#a5f3fc", left: "20%", delay: "0.7s" },
+                { color: "#fca5a5", left: "70%", delay: "0.55s" },
+              ].map((p, i) => (
+                <div key={i} className="ap-particle" style={{
+                  background: p.color,
+                  left: p.left,
+                  bottom: "10px",
+                  animationDelay: p.delay,
+                  animationDuration: `${1.1 + i * 0.1}s`
+                }} />
+              ))}
+
+              {/* Animated icon ring */}
+              <div style={{ display: "flex", justifyContent: "center", marginBottom: 12 }}>
+                <div
+                  className={successModal.isAuto ? "ap-auto-ring" : "ap-check-ring"}
+                  style={{
+                    width: 80, height: 80,
+                    borderRadius: "50%",
+                    background: "rgba(255,255,255,0.18)",
+                    border: "3px solid rgba(255,255,255,0.6)",
+                    display: "flex", alignItems: "center", justifyContent: "center",
+                    backdropFilter: "blur(4px)"
+                  }}
+                >
+                  {successModal.isAuto ? (
+                    <span style={{ fontSize: 38, lineHeight: 1 }}>⚡</span>
+                  ) : successModal.isBulk ? (
+                    <span style={{ fontSize: 38, lineHeight: 1 }}>
+                      {successModal.actionType === "approve" ? "✅" : "❌"}
+                    </span>
+                  ) : (
+                    <svg className="ap-check-svg" width="44" height="44" viewBox="0 0 52 52" fill="none">
+                      <path
+                        d="M14 27 L23 36 L38 18"
+                        stroke="white"
+                        strokeWidth="4.5"
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        fill="none"
+                      />
+                    </svg>
+                  )}
+                </div>
+              </div>
+
+              {/* Title */}
+              <div style={{ color: "#fff", fontWeight: 800, fontSize: 17, letterSpacing: "0.01em", lineHeight: 1.3 }}>
+                {successModal.isBulk
+                  ? `Bulk ${successModal.actionType === "approve" ? "Approval" : "Rejection"} Done!`
+                  : successModal.isAuto
+                    ? "Auto-Approved! ⚡"
+                    : "Claim Approved! 🎉"}
+              </div>
+              {!successModal.isBulk && (
+                <div style={{ color: "rgba(255,255,255,0.82)", fontSize: 12, marginTop: 4, fontWeight: 500 }}>
+                  {successModal.isAuto ? "System policy auto-approval applied" : "Reimbursement has been sanctioned"}
+                </div>
+              )}
+            </div>
+
+            {/* Body details */}
+            <div style={{ padding: "20px 24px" }}>
+              {successModal.isBulk ? (
+                <div style={{ background: "#f0fdf4", border: "1px solid #bbf7d0", borderRadius: 10, padding: "14px 16px", marginBottom: 16 }}>
+                  <div style={{ fontSize: 13, fontWeight: 700, color: "#065f46" }}>
+                    Successfully processed <span style={{ fontSize: 22, fontWeight: 900, color: "#059669" }}>{successModal.bulkCount}</span> claim{(successModal.bulkCount || 0) > 1 ? "s" : ""}
+                  </div>
+                </div>
+              ) : (
+                <div style={{ background: successModal.isAuto ? "#eef2ff" : "#f0fdf4", border: `1px solid ${successModal.isAuto ? "#c7d2fe" : "#bbf7d0"}`, borderRadius: 10, padding: "12px 14px", marginBottom: 16, textAlign: "left" }}>
+                  <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+                    <div style={{ display: "flex", justifyContent: "space-between", fontSize: 12 }}>
+                      <span style={{ color: "#6b7280", fontWeight: 600 }}>Claim ID</span>
+                      <span style={{ fontFamily: "monospace", fontWeight: 800, color: successModal.isAuto ? "#4f46e5" : "#059669" }}>
+                        {successModal.claimCode}
+                      </span>
+                    </div>
+                    <div style={{ display: "flex", justifyContent: "space-between", fontSize: 12 }}>
+                      <span style={{ color: "#6b7280", fontWeight: 600 }}>Employee</span>
+                      <span style={{ fontWeight: 700, color: "#111827" }}>{successModal.empName}</span>
+                    </div>
+                    {!successModal.isAuto && (successModal.amount || 0) > 0 && (
+                      <div style={{ display: "flex", justifyContent: "space-between", fontSize: 12 }}>
+                        <span style={{ color: "#6b7280", fontWeight: 600 }}>Amount</span>
+                        <span style={{ fontFamily: "monospace", fontWeight: 900, color: "#059669", fontSize: 14 }}>
+                          ₹{(successModal.amount || 0).toLocaleString()}
+                        </span>
+                      </div>
+                    )}
+                    {successModal.isAuto && (
+                      <div style={{ fontSize: 11, color: "#4338ca", fontWeight: 600, marginTop: 2 }}>
+                        ℹ️ Zero reimbursable amount — auto-approved by policy
+                      </div>
+                    )}
+                  </div>
+                </div>
+              )}
+
+              <Button
+                type="primary"
+                block
+                size="large"
+                onClick={() => setSuccessModal(null)}
+                style={{
+                  background: successModal.isAuto
+                    ? "linear-gradient(135deg, #4f46e5, #7c3aed)"
+                    : "linear-gradient(135deg, #059669, #10b981)",
+                  border: "none",
+                  borderRadius: 10,
+                  fontWeight: 800,
+                  fontSize: 14,
+                  height: 46,
+                  boxShadow: successModal.isAuto
+                    ? "0 4px 14px rgba(79,70,229,0.35)"
+                    : "0 4px 14px rgba(16,185,129,0.35)"
+                }}
+              >
+                {successModal.isBulk ? "Close" : "Done ✓"}
+              </Button>
+            </div>
+          </div>
+        )}
+      </Modal>
+
       <div className="space-y-4 animate-fadeIn text-[#212529]">
       
       {/* Header Info Card */}
@@ -1162,14 +1358,9 @@ export default function ApprovalPage() {
         className="approval-review-modal"
         destroyOnClose
         bodyStyle={{
-          maxHeight: "72vh",
-          overflowY: "auto",
-          overflowX: "hidden",
-          padding: "16px",
-          background: "#ffffff",
-          WebkitOverflowScrolling: "touch",
-          overscrollBehaviorY: "contain",
-          touchAction: "pan-y"
+          padding: 0,
+          overflow: "hidden",
+          background: "#ffffff"
         }}
         title={
           <Space>

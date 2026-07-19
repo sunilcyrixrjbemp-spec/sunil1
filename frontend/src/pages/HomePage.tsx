@@ -1633,18 +1633,27 @@ export default function HomePage() {
           </div>
         ]}
         bodyStyle={{ 
-          maxHeight: "75vh", 
-          overflowY: "auto", 
-          padding: "16px",
-          background: "#ffffff",
-          WebkitOverflowScrolling: "touch",
-          overscrollBehaviorY: "contain",
-          touchAction: "pan-y"
+          padding: 0,
+          overflow: "hidden",
+          background: "#ffffff"
         }}
       >
         {!claimDetails ? (
-          <Loader message="Loading claim details..." />
+          <div style={{ padding: "16px" }}>
+            <Loader message="Loading claim details..." />
+          </div>
         ) : (
+          <div
+            style={{
+              overflowY: "auto",
+              overflowX: "hidden",
+              maxHeight: "70vh",
+              padding: "16px",
+              WebkitOverflowScrolling: "touch",
+              overscrollBehaviorY: "contain",
+              touchAction: "pan-y"
+            }}
+          >
           <div className="space-y-4 text-xs">
             {/* Summary Info Cards */}
             <Row gutter={[8, 8]}>
@@ -2635,7 +2644,8 @@ export default function HomePage() {
                 </div>
               </div>
             )}
-          </div>
+          </div>{/* end space-y-4 content */}
+          </div>{/* end inner scroll wrapper */}
         )}
       </Modal>
 
