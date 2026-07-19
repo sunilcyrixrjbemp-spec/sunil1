@@ -2705,7 +2705,7 @@ export default function HomePage() {
                   boxShadow: "0 4px 12px rgba(79, 70, 229, 0.4)",
                   display: "flex",
                   alignItems: "center",
-                  justify-content: "center",
+                  justifyContent: "center",
                   cursor: "pointer",
                   zIndex: 9999
                 }}
@@ -2888,7 +2888,7 @@ export default function HomePage() {
             boxShadow: "0 4px 12px rgba(79, 70, 229, 0.4)",
             display: "flex",
             alignItems: "center",
-            justify-content: "center",
+            justifyContent: "center",
             cursor: "pointer",
             zIndex: 999
           }}
