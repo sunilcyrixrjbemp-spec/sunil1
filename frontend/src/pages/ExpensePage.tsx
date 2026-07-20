@@ -25,7 +25,7 @@ import {
 } from "lucide-react";
 import api from "../services/api";
 import { 
-  DatePicker, ConfigProvider, Modal, Button, Tag, Space, Card, Segmented, Input, Select, Pagination 
+  DatePicker, ConfigProvider, Modal, Button, Tag, Space, Card, Segmented, Input, Pagination 
 } from "antd";
 import { 
   EditOutlined, DeleteOutlined, FileTextOutlined 
@@ -970,21 +970,12 @@ export default function ExpensePage() {
   };
 
   const fetchClaims = async () => {
-    const cacheKey = `cache_my_expenses_${currentUserId}_all`;
-    const cached = localStorage.getItem(cacheKey);
-    if (cached) {
-      try {
-        setClaims(JSON.parse(cached));
-      } catch (e) {}
-    } else {
-      setClaimsLoading(true);
-    }
-
+    setClaimsLoading(true);
     try {
       const data = await expenseService.getExpenses("all");
       if (Array.isArray(data)) {
-        localStorage.setItem(cacheKey, JSON.stringify(data));
         setClaims(data);
+        localStorage.setItem(`cache_my_expenses_${currentUserId}_all`, JSON.stringify(data));
       }
     } catch (err: any) {
       console.error("Failed to load claims list", err);
@@ -2585,29 +2576,38 @@ export default function ExpensePage() {
   };
 
   const getFilteredClaims = () => {
+    if (!Array.isArray(claims)) return [];
+
     const result = claims.filter(c => {
+      if (!c) return false;
+
       // 1. Month filter
-      if (claimsMonthFilter !== "all") {
-        const matchMonthName = c.month && c.month.toLowerCase() === claimsMonthFilter.toLowerCase();
-        const matchItinerary = c.itinerary && c.itinerary.startsWith(claimsMonthFilter);
-        const matchYearMonth = (c.year && c.month) ? `${c.year}-${c.month}`.toLowerCase() === claimsMonthFilter.toLowerCase() : false;
+      if (claimsMonthFilter && claimsMonthFilter !== "all") {
+        const qm = claimsMonthFilter.toLowerCase();
+        const matchMonthName = c.month && c.month.toLowerCase() === qm;
+        const matchItinerary = c.itinerary && String(c.itinerary).startsWith(claimsMonthFilter);
+        const matchYearMonth = (c.year && c.month) ? `${c.year}-${c.month}`.toLowerCase() === qm : false;
         if (!matchMonthName && !matchItinerary && !matchYearMonth) {
           return false;
         }
       }
+
       // 2. Status filter
-      if (claimsStatusFilter !== "all") {
-        const cStat = (c.status || "").toLowerCase();
-        const fStat = claimsStatusFilter.toLowerCase();
+      if (claimsStatusFilter && claimsStatusFilter !== "all") {
+        const cStat = (c.status || "").toLowerCase().trim();
+        const fStat = claimsStatusFilter.toLowerCase().trim();
         if (fStat === "returned_to_draft" || fStat === "returned") {
           if (!cStat.includes("returned") && cStat !== "returned_to_draft") return false;
+        } else if (fStat === "submitted" || fStat === "pending") {
+          if (!cStat.includes("submitted") && cStat !== "pending") return false;
         } else if (cStat !== fStat) {
           return false;
         }
       }
+
       // 3. Search query
-      if (claimsSearch.trim()) {
-        const q = claimsSearch.toLowerCase();
+      if (claimsSearch && claimsSearch.trim()) {
+        const q = claimsSearch.trim().toLowerCase();
         const codeMatch = c.expense_code?.toLowerCase().includes(q);
         const descMatch = c.description?.toLowerCase().includes(q);
         const modeMatch = c.travel_mode?.toLowerCase().includes(q);
@@ -2632,48 +2632,53 @@ export default function ExpensePage() {
 
     // Apply sorting
     if (claimsSortOrder === "date_desc") {
-      result.sort((a, b) => new Date(b.itinerary).getTime() - new Date(a.itinerary).getTime());
+      result.sort((a, b) => new Date(b.itinerary || "1970-01-01").getTime() - new Date(a.itinerary || "1970-01-01").getTime());
     } else if (claimsSortOrder === "date_asc") {
-      result.sort((a, b) => new Date(a.itinerary).getTime() - new Date(b.itinerary).getTime());
+      result.sort((a, b) => new Date(a.itinerary || "1970-01-01").getTime() - new Date(b.itinerary || "1970-01-01").getTime());
     } else if (claimsSortOrder === "amount_desc") {
-      result.sort((a, b) => (b.amount || 0) - (a.amount || 0));
+      result.sort((a, b) => (parseFloat(b.amount) || 0) - (parseFloat(a.amount) || 0));
     } else if (claimsSortOrder === "amount_asc") {
-      result.sort((a, b) => (a.amount || 0) - (b.amount || 0));
+      result.sort((a, b) => (parseFloat(a.amount) || 0) - (parseFloat(b.amount) || 0));
     }
     return result;
   };
 
   const getFilteredLegs = () => {
-    const filteredClaims = getFilteredClaims();
+    const currentFilteredClaims = getFilteredClaims();
+    if (!Array.isArray(currentFilteredClaims) || currentFilteredClaims.length === 0) return [];
+
     const legsList: any[] = [];
-    filteredClaims.forEach(c => {
-      const rawLegs = c.itineraries || c.legs || [];
-      const claimLegs = (Array.isArray(rawLegs) && rawLegs.length > 0)
-        ? rawLegs
-        : [{
-            leg: 1,
-            from_district: c.district || "Base",
-            to_district: c.district || "Base",
-            from: "",
-            to: "",
-            mode: c.travel_mode || c.category || "Travel",
-            sub_mode: "",
-            sub_amount: 0,
-            km: c.total_km || 0,
-            amount: c.amount || 0,
-            da: c.da_amount || 0,
-            hotel: c.hotel_amount || 0,
-            local_purchase: c.local_purchase_amount || 0,
-            other_amount: c.other_expense_amount || 0,
-            visit_purpose: c.description || "Field visit"
-          }];
+    currentFilteredClaims.forEach(c => {
+      if (!c) return;
+
+      const legsArray = (Array.isArray(c.itineraries) && c.itineraries.length > 0)
+        ? c.itineraries
+        : ((Array.isArray(c.legs) && c.legs.length > 0) ? c.legs : null);
+
+      const claimLegs = legsArray || [{
+        leg: 1,
+        from_district: c.district || "Base",
+        to_district: c.district || "Base",
+        from: "",
+        to: "",
+        mode: c.travel_mode || c.category || "Travel",
+        sub_mode: "",
+        sub_amount: 0,
+        km: c.total_km || 0,
+        amount: c.amount || 0,
+        da: c.da_amount || 0,
+        hotel: c.hotel_amount || 0,
+        local_purchase: c.local_purchase_amount || 0,
+        other_amount: c.other_expense_amount || 0,
+        visit_purpose: c.description || "Field visit"
+      }];
 
       claimLegs.forEach((l: any, idx: number) => {
         legsList.push({
-          parentCode: c.expense_code,
+          parentCode: c.expense_code || "EXP",
           parentDate: c.itinerary || c.date || "",
-          parentStatus: c.status,
-          parentAmount: c.amount,
+          parentStatus: c.status || "draft",
+          parentAmount: c.amount || 0,
           leg: l.leg || l.leg_number || (idx + 1),
           from_district: l.from_district || c.district || "",
           to_district: l.to_district || c.district || "",
@@ -2682,12 +2687,12 @@ export default function ExpensePage() {
           mode: l.mode || l.travel_mode || c.travel_mode || "Other",
           sub_mode: l.sub_mode || "",
           sub_amount: parseFloat(l.sub_amount) || 0,
-          km: parseFloat(l.km || l.distance_km || 0),
-          amount: parseFloat(l.amount || l.travel_amount || 0),
-          da: parseFloat(l.da || l.da_amount || 0),
-          hotel: parseFloat(l.hotel || l.hotel_amount || 0),
-          local_purchase: parseFloat(l.local_purchase || l.local_purchase_amount || 0),
-          other_amount: parseFloat(l.other_amount || l.other_expense_amount || l.oth_amount || 0),
+          km: parseFloat(l.km || l.distance_km) || 0,
+          amount: parseFloat(l.amount || l.travel_amount) || 0,
+          da: parseFloat(l.da || l.da_amount) || 0,
+          hotel: parseFloat(l.hotel || l.hotel_amount) || 0,
+          local_purchase: parseFloat(l.local_purchase || l.local_purchase_amount) || 0,
+          other_amount: parseFloat(l.other_amount || l.other_expense_amount || l.oth_amount) || 0,
           visit_purpose: l.visit_purpose || l.purpose || c.description || "Field visit"
         });
       });
@@ -2695,9 +2700,9 @@ export default function ExpensePage() {
 
     // Apply sorting to legs directly
     if (claimsSortOrder === "date_desc") {
-      legsList.sort((a, b) => new Date(b.parentDate).getTime() - new Date(a.parentDate).getTime());
+      legsList.sort((a, b) => new Date(b.parentDate || "1970-01-01").getTime() - new Date(a.parentDate || "1970-01-01").getTime());
     } else if (claimsSortOrder === "date_asc") {
-      legsList.sort((a, b) => new Date(a.parentDate).getTime() - new Date(b.parentDate).getTime());
+      legsList.sort((a, b) => new Date(a.parentDate || "1970-01-01").getTime() - new Date(b.parentDate || "1970-01-01").getTime());
     } else if (claimsSortOrder === "amount_desc") {
       legsList.sort((a, b) => {
         const amtA = (parseFloat(a.amount) || 0) + (parseFloat(a.da) || 0) + (parseFloat(a.hotel) || 0) + (parseFloat(a.local_purchase) || 0) + (parseFloat(a.other_amount) || 0);
@@ -4653,47 +4658,46 @@ export default function ExpensePage() {
           <div className="grid grid-cols-3 gap-2 w-full md:w-auto md:flex md:items-center">
             <div className="flex flex-col gap-0.5 w-full md:w-auto">
               <span className="text-[9px] font-extrabold uppercase text-slate-400">Month</span>
-              <Select
+              <select
                 value={claimsMonthFilter}
-                onChange={(val) => { setClaimsMonthFilter(val); setMyClaimsPage(1); }}
-                className="w-full md:w-36 ant-select-custom-fix"
-                options={[
-                  { label: "All Months", value: "all" },
-                  ...getUniqueMonths().map(m => ({ label: m, value: m }))
-                ]}
-              />
+                onChange={(e) => { setClaimsMonthFilter(e.target.value); setMyClaimsPage(1); }}
+                className="help-custom-select w-full md:w-36 text-[11px] font-bold"
+              >
+                <option value="all">All Months</option>
+                {getUniqueMonths().map(m => (
+                  <option key={m} value={m}>{m}</option>
+                ))}
+              </select>
             </div>
 
             <div className="flex flex-col gap-0.5 w-full md:w-auto">
               <span className="text-[9px] font-extrabold uppercase text-slate-400">Status</span>
-              <Select
+              <select
                 value={claimsStatusFilter}
-                onChange={(val) => { setClaimsStatusFilter(val as any); setMyClaimsPage(1); }}
-                className="w-full md:w-36 ant-select-custom-fix"
-                options={[
-                  { label: "All Statuses", value: "all" },
-                  { label: "Draft", value: "draft" },
-                  { label: "Submitted", value: "submitted" },
-                  { label: "Approved", value: "approved" },
-                  { label: "Rejected", value: "rejected" },
-                  { label: "Returned / Edit", value: "returned_to_draft" }
-                ]}
-              />
+                onChange={(e) => { setClaimsStatusFilter(e.target.value as any); setMyClaimsPage(1); }}
+                className="help-custom-select w-full md:w-36 text-[11px] font-bold"
+              >
+                <option value="all">All Statuses</option>
+                <option value="draft">Draft</option>
+                <option value="submitted">Submitted</option>
+                <option value="approved">Approved</option>
+                <option value="rejected">Rejected</option>
+                <option value="returned_to_draft">Returned / Edit</option>
+              </select>
             </div>
 
             <div className="flex flex-col gap-0.5 w-full md:w-auto">
               <span className="text-[9px] font-extrabold uppercase text-slate-400">Sort</span>
-              <Select
+              <select
                 value={claimsSortOrder}
-                onChange={(val) => { setClaimsSortOrder(val as any); setMyClaimsPage(1); }}
-                className="w-full md:w-36 ant-select-custom-fix"
-                options={[
-                  { label: "Newest Date", value: "date_desc" },
-                  { label: "Oldest Date", value: "date_asc" },
-                  { label: "Highest Amount", value: "amount_desc" },
-                  { label: "Lowest Amount", value: "amount_asc" }
-                ]}
-              />
+                onChange={(e) => { setClaimsSortOrder(e.target.value as any); setMyClaimsPage(1); }}
+                className="help-custom-select w-full md:w-36 text-[11px] font-bold"
+              >
+                <option value="date_desc">Newest Date</option>
+                <option value="date_asc">Oldest Date</option>
+                <option value="amount_desc">Highest Amount</option>
+                <option value="amount_asc">Lowest Amount</option>
+              </select>
             </div>
           </div>
         </div>
