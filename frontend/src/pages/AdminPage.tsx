@@ -2,10 +2,32 @@ import React, { useEffect, useState, useRef } from "react";
 import toast from "react-hot-toast";
 import { adminService, UserCreatePayload, UserEditPayload, ApprovalHierarchyResponse } from "../services/adminService";
 import { authService } from "../services/authService";
-import { Search, UploadCloud, Pencil, Trash2, Plus, LogOut, Download } from "lucide-react";
-import Loader from "../components/common/Loader";
+import { UploadCloud, Pencil, Trash2, Plus, Download } from "lucide-react";
 import { ResponsivePie } from "@nivo/pie";
 import { ResponsiveBar } from "@nivo/bar";
+import { 
+  Card, 
+  Table, 
+  Tag, 
+  Button, 
+  Input, 
+  Tooltip, 
+  Popconfirm, 
+  Alert, 
+  Spin, 
+  Space, 
+  Typography 
+} from "antd";
+import { 
+  PlusOutlined, 
+  UploadOutlined, 
+  EditOutlined, 
+  SearchOutlined, 
+  LogoutOutlined, 
+  ControlOutlined 
+} from "@ant-design/icons";
+
+const { Title, Text } = Typography;
 
 const LteSpinner = () => (
   <span className="animate-spin rounded-full h-3.5 w-3.5 border-2 border-slate-200 border-t-blue-600 inline-block mr-1.5 shrink-0"></span>
@@ -182,10 +204,8 @@ export default function AdminPage() {
   });
   const [error, setError] = useState<string | null>(null);
   const [searchTerm, setSearchTerm] = useState("");
-  const [currentPage, setCurrentPage] = useState(1);
   const [chartRoleFilter, setChartRoleFilter] = useState<string>("all");
   const [chartZoneFilter, setChartZoneFilter] = useState<string>("all");
-  const ITEMS_PER_PAGE = 25;
 
   // Modals visibility
   const [showSingleUserModal, setShowSingleUserModal] = useState(false);
@@ -311,9 +331,7 @@ export default function AdminPage() {
     fetchInitialData();
   }, []);
 
-  useEffect(() => {
-    setCurrentPage(1);
-  }, [searchTerm]);
+
 
   useEffect(() => {
     if (role === "Engineer") {
@@ -1114,10 +1132,7 @@ export default function AdminPage() {
     );
   });
 
-  const totalPages = Math.ceil(filteredUsers.length / ITEMS_PER_PAGE);
-  const startIndex = (currentPage - 1) * ITEMS_PER_PAGE;
-  const endIndex = startIndex + ITEMS_PER_PAGE;
-  const paginatedUsers = filteredUsers.slice(startIndex, endIndex);
+
 
   // Helper to filter users for charts
   const getFilteredUsersForCharts = () => {
@@ -1182,327 +1197,264 @@ export default function AdminPage() {
 
   return (
     <>
-      <div className="space-y-6 text-[#212529] animate-fadeIn">
-        {/* Header Info */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-        <div>
-          <h2 className="text-xl font-bold text-gray-800 uppercase tracking-wide">
-            Control Panel
-          </h2>
-          <p className="text-gray-500 text-xs mt-1">Configure screen permissions, assign hierarchy approval level mappings, and manage users.</p>
-        </div>
+      <div className="space-y-6 text-slate-800 animate-fadeIn p-2 sm:p-4 pb-32 sm:pb-24 lg:pb-8 max-w-[1600px] mx-auto min-h-screen font-sans">
+        
+        {/* Ant Design Executive Control Panel Banner */}
+        <Card className="bg-gradient-to-r from-slate-900 via-indigo-950 to-slate-900 border-slate-800 text-white rounded-2xl shadow-md">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+            <div className="flex items-center gap-3.5">
+              <div className="h-12 w-12 rounded-2xl bg-indigo-600/30 border border-indigo-500/40 flex items-center justify-center text-indigo-400 shadow-sm shrink-0">
+                <ControlOutlined className="text-2xl" />
+              </div>
+              <div>
+                <Title level={4} className="text-white m-0 uppercase tracking-wide font-black flex items-center gap-2">
+                  Control Panel
+                </Title>
+                <Text className="text-slate-300 text-xs mt-0.5 block">
+                  Configure screen permissions, assign hierarchy approval level mappings, and manage users.
+                </Text>
+              </div>
+            </div>
 
-        {/* Tab Selection - Premium Segmented Control */}
-        <div className="flex bg-slate-100 border border-gray-250/50 rounded-xl p-1 shrink-0 shadow-inner gap-1 overflow-x-auto">
-          <button
-            type="button"
-            onClick={() => handleTabChange("users")}
-            style={{ minHeight: 'auto' }}
-            className={`px-4 py-1.5 text-xs font-black uppercase tracking-wider rounded-lg transition-all cursor-pointer border-0 whitespace-nowrap ${
-              activeTab === "users"
-                ? "bg-[#a5d8e8] text-slate-900 font-extrabold shadow-sm"
-                : "bg-transparent text-gray-500 hover:text-gray-800 hover:bg-slate-200/50"
-            }`}
-          >
-            Users List
-          </button>
-          <button
-            type="button"
-            onClick={() => handleTabChange("approvals")}
-            style={{ minHeight: 'auto' }}
-            className={`px-4 py-1.5 text-xs font-black uppercase tracking-wider rounded-lg transition-all cursor-pointer border-0 whitespace-nowrap ${
-              activeTab === "approvals"
-                ? "bg-[#a5d8e8] text-slate-900 font-extrabold shadow-sm"
-                : "bg-transparent text-gray-500 hover:text-gray-800 hover:bg-slate-200/50"
-            }`}
-          >
-            Role Mappings
-          </button>
-          <button
-            type="button"
-            onClick={() => handleTabChange("analytics")}
-            style={{ minHeight: 'auto' }}
-            className={`px-4 py-1.5 text-xs font-black uppercase tracking-wider rounded-lg transition-all cursor-pointer border-0 whitespace-nowrap ${
-              activeTab === "analytics"
-                ? "bg-[#a5d8e8] text-slate-900 font-extrabold shadow-sm"
-                : "bg-transparent text-gray-500 hover:text-gray-800 hover:bg-slate-200/50"
-            }`}
-          >
-            Dashboard Charts
-          </button>
-          <button
-            type="button"
-            onClick={() => handleTabChange("settings")}
-            style={{ minHeight: 'auto' }}
-            className={`px-4 py-1.5 text-xs font-black uppercase tracking-wider rounded-lg transition-all cursor-pointer border-0 whitespace-nowrap ${
-              activeTab === "settings"
-                ? "bg-[#a5d8e8] text-slate-900 font-extrabold shadow-sm"
-                : "bg-transparent text-gray-500 hover:text-gray-800 hover:bg-slate-200/50"
-            }`}
-          >
-            System Settings
-          </button>
-        </div>
-      </div>
+            {/* Ant Design Styled Segmented Controls */}
+            <div className="flex bg-slate-800/80 p-1.5 rounded-xl border border-slate-700/60 shadow-inner gap-1 overflow-x-auto">
+              <button
+                type="button"
+                onClick={() => handleTabChange("users")}
+                className={`px-4 py-1.5 text-xs font-extrabold uppercase tracking-wider rounded-lg transition-all border-0 cursor-pointer ${
+                  activeTab === "users"
+                    ? "bg-indigo-600 text-white shadow-sm"
+                    : "bg-transparent text-slate-300 hover:text-white hover:bg-slate-700/50"
+                }`}
+              >
+                Users List
+              </button>
+              <button
+                type="button"
+                onClick={() => handleTabChange("approvals")}
+                className={`px-4 py-1.5 text-xs font-extrabold uppercase tracking-wider rounded-lg transition-all border-0 cursor-pointer ${
+                  activeTab === "approvals"
+                    ? "bg-indigo-600 text-white shadow-sm"
+                    : "bg-transparent text-slate-300 hover:text-white hover:bg-slate-700/50"
+                }`}
+              >
+                Role Mappings
+              </button>
+              <button
+                type="button"
+                onClick={() => handleTabChange("analytics")}
+                className={`px-4 py-1.5 text-xs font-extrabold uppercase tracking-wider rounded-lg transition-all border-0 cursor-pointer ${
+                  activeTab === "analytics"
+                    ? "bg-indigo-600 text-white shadow-sm"
+                    : "bg-transparent text-slate-300 hover:text-white hover:bg-slate-700/50"
+                }`}
+              >
+                Dashboard Charts
+              </button>
+              <button
+                type="button"
+                onClick={() => handleTabChange("settings")}
+                className={`px-4 py-1.5 text-xs font-extrabold uppercase tracking-wider rounded-lg transition-all border-0 cursor-pointer ${
+                  activeTab === "settings"
+                    ? "bg-indigo-600 text-white shadow-sm"
+                    : "bg-transparent text-slate-300 hover:text-white hover:bg-slate-700/50"
+                }`}
+              >
+                System Settings
+              </button>
+            </div>
+          </div>
+        </Card>
 
-      {error && (
-        <div className="p-3 border border-red-200 bg-red-50 rounded text-xs text-red-700 font-semibold shadow-sm">
-          {error}
-        </div>
-      )}
+        {error && (
+          <Alert message={error} type="error" showIcon className="rounded-xl font-bold" />
+        )}
 
-      {activeTab === "users" ? (
-        /* ================= USERS LIST TAB ================= */
-        <div className="card-lte-primary">
-          {/* Filters & Actions Bar */}
-          <div className="p-4 border-b border-gray-200 bg-gray-50 flex flex-col md:flex-row md:items-center justify-between gap-4">
-            
-            {/* Search Input */}
-            <div className="relative flex-1 max-w-md">
-              <span className="absolute inset-y-0 left-0 pl-3 flex items-center text-gray-400 pointer-events-none">
-                <Search className="w-4 h-4" />
-              </span>
-              <input
-                type="text"
+        {activeTab === "users" ? (
+          /* ================= USERS LIST TAB ================= */
+          <Card className="rounded-2xl border-slate-200/90 shadow-sm overflow-hidden" bodyStyle={{ padding: "0" }}>
+            {/* Filters & Actions Bar */}
+            <div className="p-4 border-b border-slate-200/80 bg-slate-50/80 flex flex-col md:flex-row md:items-center justify-between gap-4">
+              
+              {/* Ant Design Search Input */}
+              <Input
                 placeholder="Search by Employee Code, Name, Role..."
+                prefix={<SearchOutlined className="text-slate-400" />}
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
-                className="input-lte-icon"
+                size="large"
+                className="max-w-md rounded-xl font-medium border-slate-200"
+                allowClear
               />
-            </div>
 
-            {/* User Controls */}
-            <div className="flex flex-wrap gap-2 shrink-0">
-              <button
-                onClick={() => {
-                  setSingleUserError(null);
-                  setShowSingleUserModal(true);
-                }}
-                className="btn-lte-primary uppercase tracking-wider font-bold"
-              >
-                + Single User
-              </button>
-              <button
-                onClick={() => {
-                  setCsvText("");
-                  setBulkResult(null);
-                  setShowBulkUploadModal(true);
-                }}
-                className="btn-lte-outline uppercase tracking-wider font-bold"
-              >
-                Bulk CSV Import
-              </button>
-              <button
-                onClick={handleForceLogoutAll}
-                className="px-3 py-1.5 bg-red-600 hover:bg-red-700 text-white rounded text-xs font-bold uppercase tracking-wider transition-colors flex items-center gap-1.5 border-0 cursor-pointer"
-                title="Log out all active users from their current devices"
-              >
-                <LogOut className="w-3.5 h-3.5" />
-                Force Logout All
-              </button>
-            </div>
-          </div>
-
-          {/* Table Container */}
-          <div className="overflow-x-auto">
-            {loading ? (
-              <div className="py-12 flex flex-col items-center justify-center">
-                <Loader message="Loading employees..." />
+              {/* Ant Design Action Controls */}
+              <div className="flex flex-wrap gap-2 shrink-0">
+                <Button
+                  type="primary"
+                  icon={<PlusOutlined />}
+                  onClick={() => {
+                    setSingleUserError(null);
+                    setShowSingleUserModal(true);
+                  }}
+                  size="large"
+                  className="bg-indigo-600 hover:bg-indigo-700 font-extrabold rounded-xl text-xs uppercase tracking-wider h-10"
+                >
+                  Single User
+                </Button>
+                <Button
+                  icon={<UploadOutlined />}
+                  onClick={() => {
+                    setCsvText("");
+                    setBulkResult(null);
+                    setShowBulkUploadModal(true);
+                  }}
+                  size="large"
+                  className="font-extrabold rounded-xl border-slate-200 text-xs uppercase tracking-wider h-10"
+                >
+                  Bulk CSV Import
+                </Button>
+                <Popconfirm
+                  title="Force Logout All Users?"
+                  description="This will log out all active users from their devices."
+                  onConfirm={handleForceLogoutAll}
+                  okText="Yes, Logout All"
+                  cancelText="Cancel"
+                  okButtonProps={{ danger: true }}
+                >
+                  <Button
+                    danger
+                    icon={<LogoutOutlined />}
+                    size="large"
+                    className="font-extrabold rounded-xl text-xs uppercase tracking-wider h-10"
+                  >
+                    Force Logout All
+                  </Button>
+                </Popconfirm>
               </div>
-            ) : filteredUsers.length === 0 ? (
-              <div className="py-12 text-center text-xs uppercase tracking-wider text-gray-500 font-semibold">
-                No users found.
+            </div>
+
+          {/* Ant Design Table Container */}
+          <div className="p-4">
+            {loading ? (
+              <div className="py-16 text-center">
+                <Spin size="large" tip="Loading system employees database..." />
               </div>
             ) : (
-              <>
-                <table className="hidden md:table w-full text-left border-collapse text-xs">
-                  <thead>
-                    <tr className="bg-gray-100 border-b border-gray-200 text-gray-700 font-bold uppercase tracking-wider text-[10px]">
-                      <th className="py-3 px-4">Emp Code</th>
-                      <th className="py-3 px-4">Full Name</th>
-                      <th className="py-3 px-4">Designation</th>
-                      <th className="py-3 px-4">Role</th>
-                      <th className="py-3 px-4">Mobile / Email</th>
-                      <th className="py-3 px-4">District / Zone</th>
-                      <th className="py-3 px-4">Status</th>
-                      <th className="py-3 px-4 text-right">Actions</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-gray-200">
-                    {paginatedUsers.map((u) => (
-                      <tr key={u.id} className="hover:bg-gray-50 transition-colors">
-                        <td className="py-3 px-4 font-mono font-bold text-blue-600">{u.e_code || "-"}</td>
-                        <td className="py-3 px-4 font-semibold text-gray-800">{u.name}</td>
-                        <td className="py-3 px-4 text-gray-600">{u.designation || "-"}</td>
-                        <td className="py-3 px-4">
-                          <span className="px-2 py-0.5 rounded text-[9px] font-bold uppercase bg-gray-100 border border-gray-200 text-gray-600">
-                            {u.role}
-                          </span>
-                        </td>
-                        <td className="py-3 px-4 space-y-0.5">
-                          <div className="font-semibold text-gray-800">{u.mobile_number || "-"}</div>
-                          <div className="text-gray-500 text-[10px]">{u.mail_id || "-"}</div>
-                        </td>
-                        <td className="py-3 px-4 space-y-0.5">
-                          <div className="font-semibold text-gray-800">{u.district || "-"}</div>
-                          <div className="text-gray-500 text-[10px] uppercase tracking-wider">{u.zone || "-"}</div>
-                        </td>
-                        <td className="py-3 px-4">
-                          <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded text-[9px] font-bold uppercase border ${
-                            u.user_status === "active"
-                              ? "bg-green-50 border-green-200 text-green-700"
-                              : u.user_status === "locked"
-                              ? "bg-amber-50 border-amber-200 text-amber-700"
-                              : "bg-red-50 border-red-200 text-red-700"
-                          }`}>
-                            <span className={`h-1.5 w-1.5 rounded-full ${
-                              u.user_status === "active" ? "bg-green-500" : u.user_status === "locked" ? "bg-amber-500" : "bg-red-500"
-                            }`}></span>
-                            {u.user_status}
-                          </span>
-                        </td>
-                        <td className="py-3 px-4 text-right flex items-center justify-end gap-1.5">
-                          <button
-                            onClick={() => handleOpenEditUserModal(u)}
-                            className="px-2 py-1 bg-white hover:bg-gray-100 border border-gray-300 rounded text-gray-700 transition-all cursor-pointer"
-                            title="Edit User Config"
-                          >
-                            <Pencil className="w-3.5 h-3.5" />
-                          </button>
-                          <button
-                            onClick={() => handleForceLogoutSingle(u.user_id, u.name)}
-                            className="px-2 py-1 bg-rose-50 hover:bg-rose-100 border border-rose-200 text-rose-600 rounded transition-all cursor-pointer"
-                            title="Force Logout Session"
-                          >
-                            <LogOut className="w-3.5 h-3.5" />
-                          </button>
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-
-                {/* Mobile Card List View */}
-                <div className="block md:hidden space-y-3 p-1">
-                  {paginatedUsers.map((u) => (
-                    <div
-                      key={u.id}
-                      className="bg-white border border-gray-200 rounded-lg p-3.5 space-y-3 shadow-sm text-xs"
-                    >
-                      <div className="flex justify-between items-start">
-                        <div>
-                          <div className="font-bold text-gray-800 leading-tight">{u.name}</div>
-                          <span className="text-[9px] text-gray-400 font-mono mt-0.5">{u.e_code || "-"}</span>
-                        </div>
-                        <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded text-[9px] font-bold uppercase border ${
-                          u.user_status === "active"
-                            ? "bg-green-50 border-green-200 text-green-700"
-                            : u.user_status === "locked"
-                            ? "bg-amber-50 border-amber-200 text-amber-700"
-                            : "bg-red-50 border-red-200 text-red-700"
-                        }`}>
-                          <span className={`h-1.5 w-1.5 rounded-full ${
-                            u.user_status === "active" ? "bg-green-500" : u.user_status === "locked" ? "bg-amber-500" : "bg-red-500"
-                          }`}></span>
-                          {u.user_status}
-                        </span>
-                      </div>
-
-                      <div className="grid grid-cols-2 gap-2 text-[11px] border-t border-gray-100 pt-2.5">
-                        <div>
-                          <span className="text-gray-400 font-bold uppercase text-[9px] block">Role / Designation</span>
-                          <span className="px-2 py-0.5 rounded text-[9px] font-bold uppercase bg-gray-100 border border-gray-200 text-gray-600 inline-block mt-0.5">{u.role}</span>
-                          <span className="text-gray-700 font-semibold block mt-1">{u.designation || "-"}</span>
-                        </div>
-                        <div>
-                          <span className="text-gray-400 font-bold uppercase text-[9px] block">District / Zone</span>
-                          <span className="text-gray-700 font-semibold">{u.district || "-"}</span>
-                          <span className="text-gray-500 block text-[9px] mt-0.5 uppercase tracking-wider">{u.zone || "-"}</span>
-                        </div>
-                        <div>
-                          <span className="text-gray-400 font-bold uppercase text-[9px] block">Mobile / Email</span>
-                          <span className="text-gray-700 font-semibold block">{u.mobile_number || "-"}</span>
-                          <span className="text-gray-550 block text-[9px] break-all">{u.mail_id || "-"}</span>
-                        </div>
-                      </div>
-
-                      <div className="border-t border-gray-100 pt-3 flex justify-end gap-2">
-                        <button
-                          onClick={() => handleOpenEditUserModal(u)}
-                          className="px-3 py-1.5 bg-white hover:bg-gray-100 border border-gray-300 rounded text-gray-700 transition-all cursor-pointer flex items-center justify-center gap-1 text-[10px] font-bold shadow-xs active:scale-95"
-                          title="Edit User Config"
-                        >
-                          <Pencil className="w-3.5 h-3.5" />
-                          <span>Edit</span>
-                        </button>
-                        <button
-                          onClick={() => handleForceLogoutSingle(u.user_id, u.name)}
-                          className="px-3 py-1.5 bg-rose-50 hover:bg-rose-100 border border-rose-200 text-rose-600 rounded transition-all cursor-pointer flex items-center justify-center gap-1 text-[10px] font-bold shadow-xs active:scale-95"
-                          title="Force Logout Session"
-                        >
-                          <LogOut className="w-3.5 h-3.5" />
-                          <span>Logout Session</span>
-                        </button>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-
-                {/* Pagination Controls */}
-                {totalPages > 1 && (
-                  <div className="flex items-center justify-between border-t border-gray-200 bg-white px-4 py-3 sm:px-6 mt-4 mb-2 sm:mb-0">
-                    <div className="flex flex-1 justify-between sm:hidden">
-                      <button
-                        onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
-                        disabled={currentPage === 1}
-                        className="relative inline-flex items-center rounded-md border border-gray-300 bg-white px-4 py-2 text-xs font-semibold text-gray-700 hover:bg-gray-50 disabled:opacity-50 cursor-pointer shadow-sm"
-                      >
-                        Previous
-                      </button>
-                      <button
-                        onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))}
-                        disabled={currentPage === totalPages}
-                        className="relative ml-3 inline-flex items-center rounded-md border border-gray-300 bg-white px-4 py-2 text-xs font-semibold text-gray-700 hover:bg-gray-50 disabled:opacity-50 cursor-pointer shadow-sm"
-                      >
-                        Next
-                      </button>
-                    </div>
-                    <div className="hidden sm:flex sm:flex-1 sm:items-center sm:justify-between">
+              <Table
+                dataSource={filteredUsers}
+                rowKey={(record) => record.id || record.user_id || record.e_code}
+                pagination={{
+                  pageSize: 25,
+                  showSizeChanger: true,
+                  pageSizeOptions: ["10", "25", "50", "100"],
+                  showTotal: (total, range) => `Showing ${range[0]}-${range[1]} of ${total} employees`
+                }}
+                className="ant-table-striped"
+                scroll={{ x: 800 }}
+                columns={[
+                  {
+                    title: "EMP CODE",
+                    dataIndex: "e_code",
+                    key: "e_code",
+                    render: (code: string) => (
+                      <span className="bg-slate-900 text-white font-mono font-extrabold text-xs px-2.5 py-1 rounded-md shadow-2xs">
+                        {code || "—"}
+                      </span>
+                    )
+                  },
+                  {
+                    title: "FULL NAME",
+                    dataIndex: "name",
+                    key: "name",
+                    render: (name: string, record: any) => (
                       <div>
-                        <p className="text-xs text-gray-700">
-                          Showing <span className="font-semibold">{startIndex + 1}</span> to{" "}
-                          <span className="font-semibold">{Math.min(endIndex, filteredUsers.length)}</span> of{" "}
-                          <span className="font-semibold">{filteredUsers.length}</span> employees
-                        </p>
+                        <div className="font-extrabold text-slate-900 text-sm">{name}</div>
+                        <div className="text-[11px] text-slate-500 font-semibold">{record.designation || "Engineer"}</div>
                       </div>
-                      <div>
-                        <nav className="isolate inline-flex -space-x-px rounded-md shadow-sm" aria-label="Pagination">
-                          <button
-                            onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
-                            disabled={currentPage === 1}
-                            className="relative inline-flex items-center rounded-l-md border border-gray-300 bg-white px-3 py-2 text-xs font-semibold text-gray-600 hover:bg-gray-50 disabled:opacity-50 cursor-pointer transition-colors shadow-sm"
-                          >
-                            Previous
-                          </button>
-                          <span className="relative inline-flex items-center border-t border-b border-gray-300 bg-gray-50 px-4 py-2 text-xs font-bold text-gray-700 font-mono">
-                            {currentPage} / {totalPages}
-                          </span>
-                          <button
-                            onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))}
-                            disabled={currentPage === totalPages}
-                            className="relative inline-flex items-center rounded-r-md border border-gray-300 bg-white px-3 py-2 text-xs font-semibold text-gray-600 hover:bg-gray-50 disabled:opacity-50 cursor-pointer transition-colors shadow-sm"
-                          >
-                            Next
-                          </button>
-                        </nav>
+                    )
+                  },
+                  {
+                    title: "ROLE",
+                    dataIndex: "role",
+                    key: "role",
+                    render: (roleStr: string) => {
+                      const r = (roleStr || "").toLowerCase();
+                      let color = "blue";
+                      if (r.includes("admin")) color = "magenta";
+                      else if (r.includes("manager")) color = "purple";
+                      else if (r.includes("mis") || r.includes("vp") || r.includes("accountant")) color = "gold";
+                      return <Tag color={color} className="font-black uppercase text-[10px] px-2 py-0.5 rounded-md">{roleStr}</Tag>;
+                    }
+                  },
+                  {
+                    title: "MOBILE / EMAIL",
+                    key: "contact",
+                    render: (_: any, record: any) => (
+                      <div className="space-y-0.5 text-xs">
+                        <div className="font-extrabold text-slate-800">{record.mobile_number || "—"}</div>
+                        <div className="text-slate-400 font-mono text-[10px]">{record.mail_id || "—"}</div>
                       </div>
-                    </div>
-                  </div>
-                )}
-              </>
+                    )
+                  },
+                  {
+                    title: "DISTRICT / ZONE",
+                    key: "location",
+                    render: (_: any, record: any) => (
+                      <div className="space-y-1">
+                        <div className="font-extrabold text-slate-900 text-xs">{record.district || "—"}</div>
+                        <Tag color="cyan" className="font-bold text-[9px] uppercase">{record.zone || "No Zone"}</Tag>
+                      </div>
+                    )
+                  },
+                  {
+                    title: "STATUS",
+                    dataIndex: "user_status",
+                    key: "user_status",
+                    render: (status: string) => {
+                      if (status === "active") return <Tag color="success" className="font-black text-[10px] uppercase">🟢 ACTIVE</Tag>;
+                      if (status === "locked") return <Tag color="warning" className="font-black text-[10px] uppercase">🟡 LOCKED</Tag>;
+                      return <Tag color="error" className="font-black text-[10px] uppercase">🔴 INACTIVE</Tag>;
+                    }
+                  },
+                  {
+                    title: "ACTIONS",
+                    key: "actions",
+                    align: "right",
+                    render: (_: any, record: any) => (
+                      <Space size="small">
+                        <Tooltip title="Edit User Config">
+                          <Button
+                            type="default"
+                            icon={<EditOutlined className="text-indigo-600" />}
+                            onClick={() => handleOpenEditUserModal(record)}
+                            className="border-slate-200 hover:border-indigo-500 rounded-lg"
+                          />
+                        </Tooltip>
+                        <Tooltip title="Force Logout Session">
+                          <Popconfirm
+                            title="Force logout user?"
+                            description={`Log out ${record.name} from active session?`}
+                            onConfirm={() => handleForceLogoutSingle(record.user_id, record.name)}
+                            okText="Logout"
+                            cancelText="Cancel"
+                            okButtonProps={{ danger: true }}
+                          >
+                            <Button
+                              type="default"
+                              danger
+                              icon={<LogoutOutlined />}
+                              className="rounded-lg"
+                            />
+                          </Popconfirm>
+                        </Tooltip>
+                      </Space>
+                    )
+                  }
+                ]}
+              />
             )}
           </div>
-        </div>
+        </Card>
       ) : activeTab === "analytics" ? (
         /* ================= ANALYTICS DASHBOARD TAB ================= */
         <div className="space-y-6 animate-fadeIn">
