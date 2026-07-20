@@ -300,7 +300,8 @@ export default function HelpPage() {
       };
 
       const newTkt = await ticketService.createTicket(payload);
-      toast.success(`Support ticket raised successfully! ID: ${newTkt.ticket_code}`);
+      const codeStr = newTkt.ticket_code || newTkt.ticketCode || "CYR-RJ-0000001";
+      toast.success(`Support ticket raised successfully! ID: ${codeStr}`);
       
       // Reset form
       setDescription("");
@@ -309,10 +310,13 @@ export default function HelpPage() {
       
       // Reload tickets
       const updated = await ticketService.getTickets();
-      setTickets(updated);
+      if (Array.isArray(updated)) {
+        setTickets(updated);
+        localStorage.setItem(`cache_support_tickets_${currentUserId}`, JSON.stringify(updated));
+      }
       setActiveTab("my-tickets");
     } catch (err: any) {
-      toast.error(err.response?.data?.detail || "Failed to raise support ticket.");
+      toast.error(err.response?.data?.error || err.response?.data?.detail || "Failed to raise support ticket.");
     } finally {
       setRaising(false);
     }
@@ -410,11 +414,18 @@ export default function HelpPage() {
     return diffHours <= 36;
   };
 
-  const myRaisedTickets = tickets.filter(t => t.created_by_code === currentUser?.user_id);
+  const myRaisedTickets = tickets.filter(t => 
+    (t.created_by_code || t.createdByCode) === currentUser?.user_id ||
+    (t.created_by_id || t.createdById) === currentUser?.id ||
+    (t.created_by_name || t.createdByName) === currentUser?.name
+  );
   const assignedTickets = tickets.filter(t => {
-    const isAssignee = t.assigned_to_name === currentUser?.name;
-    const isRoleMatched = t.assigned_to_role === currentUser?.role;
-    const isAdminProfile = currentUser?.role === "Admin" && t.concern_type === "Profile";
+    const aName = t.assigned_to_name || t.assignedToName;
+    const aRole = t.assigned_to_role || t.assignedToRole;
+    const cType = t.concern_type || t.concernType;
+    const isAssignee = aName === currentUser?.name;
+    const isRoleMatched = aRole === currentUser?.role;
+    const isAdminProfile = currentUser?.role === "Admin" && cType === "Profile";
     return isAssignee || isRoleMatched || isAdminProfile;
   });
 
@@ -532,13 +543,13 @@ export default function HelpPage() {
         <div className="flex items-start justify-between border-b border-slate-200/80 pb-3">
           <div>
             <Space align="center" size="small">
-              <Text className="text-base font-black font-mono text-slate-800">{selectedTicket.ticket_code}</Text>
+              <Text className="text-base font-black font-mono text-slate-800">{selectedTicket.ticket_code || selectedTicket.ticketCode || "CYR-RJ-0000001"}</Text>
               <button
                 type="button"
                 onClick={(e) => handleToggleFollowup(e, selectedTicket.id)}
                 className="bg-transparent border-0 cursor-pointer p-0"
               >
-                {selectedTicket.needs_followup ? (
+                {(selectedTicket.needs_followup || selectedTicket.needsFollowup) ? (
                   <StarFilled className="text-amber-500 text-sm" />
                 ) : (
                   <StarOutlined className="text-slate-300 hover:text-amber-500 text-sm transition-colors" />
@@ -550,8 +561,8 @@ export default function HelpPage() {
             </Space>
             <div className="mt-1">
               <Text className="text-xs text-slate-500 font-bold uppercase">
-                Category: <span className="text-indigo-600 font-black">{selectedTicket.concern_type}</span>
-                {selectedTicket.expense_code && ` (Claim Code: ${selectedTicket.expense_code})`}
+                Category: <span className="text-indigo-600 font-black">{selectedTicket.concern_type || selectedTicket.concernType}</span>
+                {(selectedTicket.expense_code || selectedTicket.expenseCode) && ` (Claim Code: ${selectedTicket.expense_code || selectedTicket.expenseCode})`}
               </Text>
             </div>
           </div>
@@ -1156,9 +1167,9 @@ export default function HelpPage() {
                             )}
                           </button>
 
-                          <Text className="font-mono font-black text-indigo-600 text-xs">{tkt.ticket_code}</Text>
-                          <Tag className="font-bold text-[9px] uppercase m-0">{tkt.concern_type}</Tag>
-                          <Text className="text-[10px] text-slate-400 font-semibold">{new Date(tkt.created_at).toLocaleDateString()}</Text>
+                          <Text className="font-mono font-black text-indigo-600 text-xs">{tkt.ticket_code || tkt.ticketCode || "CYR-RJ-0000001"}</Text>
+                          <Tag className="font-bold text-[9px] uppercase m-0">{tkt.concern_type || tkt.concernType}</Tag>
+                          <Text className="text-[10px] text-slate-400 font-semibold">{new Date(tkt.created_at || tkt.createdAt || Date.now()).toLocaleDateString()}</Text>
                         </Space>
 
                         <Text className="text-xs font-bold text-slate-800 block truncate pr-4" title={tkt.description}>
@@ -1166,7 +1177,7 @@ export default function HelpPage() {
                         </Text>
 
                         <Text className="text-[10px] text-slate-400 font-bold block uppercase">
-                          By: {tkt.created_by_name} ({tkt.created_by_code}) • Assigned To: {tkt.assigned_to_name}
+                          By: {tkt.created_by_name || tkt.createdByName || "User"} ({tkt.created_by_code || tkt.createdByCode || ""}) • Assigned To: {tkt.assigned_to_name || tkt.assignedToName || "Support Desk"}
                         </Text>
                       </div>
 

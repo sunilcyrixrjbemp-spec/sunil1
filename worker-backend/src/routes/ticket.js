@@ -9,6 +9,61 @@ function jsonResponse(data, status = 200) {
   });
 }
 
+function formatTicketResponse(ticket) {
+  if (!ticket) return null;
+  const tCode = ticket.ticketCode || ticket.ticket_code || "";
+  const cByCode = ticket.createdByCode || ticket.created_by_code || "";
+  const cByName = ticket.createdByName || ticket.created_by_name || "";
+  const cById = ticket.createdById || ticket.created_by_id || null;
+  const cType = ticket.concernType || ticket.concern_type || "";
+  const expId = ticket.expenseId || ticket.expense_id || null;
+  const expCode = ticket.expenseCode || ticket.expense_code || null;
+  const pri = ticket.priority || "Medium";
+  const desc = ticket.description || "";
+  const aRole = ticket.assignedToRole || ticket.assigned_to_role || "";
+  const aName = ticket.assignedToName || ticket.assigned_to_name || "";
+  const stat = ticket.status || "Open";
+  const comms = ticket.comments || "";
+  const fUp = ticket.needsFollowup !== undefined ? ticket.needsFollowup : (ticket.needs_followup || 0);
+  const cAt = ticket.closedAt || ticket.closed_at || null;
+  const crAt = ticket.createdAt || ticket.created_at || new Date().toISOString();
+  const uAt = ticket.updatedAt || ticket.updated_at || crAt;
+
+  return {
+    id: ticket.id,
+    ticketCode: tCode,
+    ticket_code: tCode,
+    createdById: cById,
+    created_by_id: cById,
+    createdByName: cByName,
+    created_by_name: cByName,
+    createdByCode: cByCode,
+    created_by_code: cByCode,
+    concernType: cType,
+    concern_type: cType,
+    expenseId: expId,
+    expense_id: expId,
+    expenseCode: expCode,
+    expense_code: expCode,
+    priority: pri,
+    description: desc,
+    assignedToRole: aRole,
+    assigned_to_role: aRole,
+    assignedToName: aName,
+    assigned_to_name: aName,
+    status: stat,
+    comments: comms,
+    needsFollowup: fUp,
+    needs_followup: fUp,
+    closedAt: cAt,
+    closed_at: cAt,
+    createdAt: crAt,
+    created_at: crAt,
+    updatedAt: uAt,
+    updated_at: uAt
+  };
+}
+
 /**
  * Bulk-update closed tickets to Final Closed if closed > 36 hours
  */
@@ -48,7 +103,8 @@ export async function handleGetTickets(request, env, params, query, user) {
       .orderBy(desc(supportTickets.createdAt));
   }
 
-  return jsonResponse(results);
+  const formatted = (results || []).map(formatTicketResponse);
+  return jsonResponse(formatted);
 }
 
 /**
@@ -64,38 +120,42 @@ export async function handleCreateTicket(request, env, params, query, user) {
   }
 
   const { concern_type, expense_id, expense_code, priority, description, assigned_to_name } = body;
-  if (!concern_type || !description) {
-    return jsonResponse({ error: "concern_type and description are required" }, 400);
+  const finalDesc = (description || "").trim();
+  const concernType = concern_type || "General Support";
+
+  if (!finalDesc) {
+    return jsonResponse({ error: "Ticket description is required" }, 400);
   }
 
   let assignedRole = "Admin";
-  let assignedName = "Admin System";
+  let assignedName = "Support Desk";
 
-  if (concern_type !== "Profile") {
-    assignedName = (assigned_to_name || "").trim();
-    
+  if (assigned_to_name && assigned_to_name.trim() && assigned_to_name.trim() !== "System Admin" && assigned_to_name.trim() !== "Support Desk") {
+    const targetName = assigned_to_name.trim();
     const [assignedUser] = await db.select()
       .from(users)
-      .where(eq(users.name, assignedName))
+      .where(eq(users.name, targetName))
       .limit(1);
 
-    if (!assignedUser) {
-      return jsonResponse({ error: `Assigned staff '${assignedName}' not found.` }, 404);
+    if (assignedUser) {
+      assignedName = assignedUser.name;
+      assignedRole = assignedUser.role || "Admin";
     }
-    assignedRole = assignedUser.role;
   }
 
-  // Generate ticket code TKT-YYYYMMDD-XXXX
-  const todayStr = new Date().toISOString().slice(0, 10).replace(/-/g, "");
-  
+  // Generate unique ticket code CYR-RJ-0000001
+  const [maxResult] = await db.select({
+    maxId: sql`MAX(id)`
+  }).from(supportTickets);
+
   const [countResult] = await db.select({
     cnt: sql`COUNT(*)`
-  })
-  .from(supportTickets)
-  .where(like(supportTickets.ticketCode, `TKT-${todayStr}-%`));
-  
+  }).from(supportTickets);
+
+  const maxId = maxResult?.maxId || 0;
   const count = countResult?.cnt || 0;
-  const ticketCode = `TKT-${todayStr}-${String(count + 1).padStart(4, "0")}`;
+  const nextNum = Math.max(maxId, count) + 1;
+  const ticketCode = `CYR-RJ-${String(nextNum).padStart(7, "0")}`;
   const timestamp = new Date().toISOString();
 
   await db.insert(supportTickets).values({
@@ -103,11 +163,11 @@ export async function handleCreateTicket(request, env, params, query, user) {
     createdById: user.id,
     createdByName: user.name,
     createdByCode: user.user_id,
-    concernType: concern_type,
+    concernType: concernType,
     expenseId: expense_id || null,
     expenseCode: expense_code || null,
     priority: priority || "Medium",
-    description: description.trim(),
+    description: finalDesc,
     assignedToRole: assignedRole,
     assignedToName: assignedName,
     status: 'Open',
@@ -121,7 +181,13 @@ export async function handleCreateTicket(request, env, params, query, user) {
     .where(eq(supportTickets.ticketCode, ticketCode))
     .limit(1);
 
-  return jsonResponse(created, 201);
+  return jsonResponse(formatTicketResponse(created || {
+    ticketCode,
+    created_by_code: user.user_id,
+    concern_type: concernType,
+    description: finalDesc,
+    status: 'Open'
+  }), 201);
 }
 
 /**
@@ -192,7 +258,7 @@ export async function handleAddComment(request, env, params, query, user) {
     .where(eq(supportTickets.id, ticketId))
     .limit(1);
 
-  return jsonResponse(updated);
+  return jsonResponse(formatTicketResponse(updated));
 }
 
 /**
@@ -231,7 +297,7 @@ export async function handleCloseTicket(request, env, params, query, user) {
     .where(eq(supportTickets.id, ticketId))
     .limit(1);
 
-  return jsonResponse(updated);
+  return jsonResponse(formatTicketResponse(updated));
 }
 
 /**
@@ -280,7 +346,7 @@ export async function handleReopenTicket(request, env, params, query, user) {
     .where(eq(supportTickets.id, ticketId))
     .limit(1);
 
-  return jsonResponse(updated);
+  return jsonResponse(formatTicketResponse(updated));
 }
 
 /**
@@ -320,5 +386,5 @@ export async function handleToggleFollowup(request, env, params, query, user) {
     .where(eq(supportTickets.id, ticketId))
     .limit(1);
 
-  return jsonResponse(updated);
+  return jsonResponse(formatTicketResponse(updated));
 }
