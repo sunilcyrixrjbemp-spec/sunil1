@@ -160,12 +160,15 @@ const ITEM_GRADIENTS: Record<string, string> = {
   profile: "bg-gradient-to-br from-orange-400 to-amber-500 text-white shadow-orange-200"
 };
 
+import ProgressLoader from "../common/ProgressLoader";
+
 export default function DashboardLayout() {
   const navigate = useNavigate();
   const location = useLocation();
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(window.innerWidth < 1024);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [isMobileScreen, setIsMobileScreen] = useState(window.innerWidth < 1024);
+  const [navLoading, setNavLoading] = useState(false);
   const [user, setUser] = useState<any>(null);
   const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
   const [avatarError, setAvatarError] = useState(false);
@@ -655,11 +658,14 @@ export default function DashboardLayout() {
         </button>
       </nav>
 
+      {/* Full-screen nav loader when switching modules from mobile menu */}
+      {navLoading && <ProgressLoader message="Opening Module..." fullPage />}
+
       {/* MOBILE FULL NAVIGATION OVERLAY MODAL */}
       {isMobileMenuOpen && (
         <div className="fixed inset-0 bg-[#f8fafc] z-[999] flex flex-col lg:hidden animate-fadeIn">
           {/* Header */}
-          <div className="h-14 px-4 bg-slate-900 border-b border-slate-800 flex items-center justify-between shrink-0 shadow-md">
+          <div className="h-14 px-4 bg-slate-900 border-b border-slate-800 flex items-center justify-between shrink-0 shadow-md relative">
             <span className="text-xs font-black uppercase tracking-wider text-white flex items-center gap-2">
               <MoreSvgIcon active={true} /> Navigation Menu
             </span>
@@ -669,12 +675,21 @@ export default function DashboardLayout() {
             >
               <X className="w-4 h-4 text-white" />
             </button>
+
+            {/* Top Animated Progress Strip inside Mobile Menu */}
+            <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-slate-800 overflow-hidden">
+              <div className="h-full bg-gradient-to-r from-indigo-500 via-cyan-400 to-emerald-400 animate-pulse w-full"></div>
+            </div>
           </div>
 
           {/* User Info Bar (AntD Card style) */}
           <Link 
             to="/profile" 
-            onClick={() => setIsMobileMenuOpen(false)}
+            onClick={() => {
+              setIsMobileMenuOpen(false);
+              setNavLoading(true);
+              setTimeout(() => setNavLoading(false), 500);
+            }}
             className="m-3 p-3.5 bg-gradient-to-r from-slate-900 via-slate-900 to-indigo-950 border border-slate-800 rounded-xl shrink-0 flex items-center gap-3 text-white hover:border-indigo-500 transition-all no-underline shadow-md"
           >
             <div className="h-11 w-11 rounded-full bg-indigo-600 border-2 border-indigo-400 flex items-center justify-center text-white font-black text-base shadow-sm shrink-0 overflow-hidden">
@@ -700,7 +715,10 @@ export default function DashboardLayout() {
 
           {/* Menu Items Grid */}
           <div className="flex-1 overflow-y-auto py-2 px-3">
-            <p className="text-[10px] font-extrabold text-gray-400 uppercase tracking-wider mb-2 px-1">All Applications</p>
+            <p className="text-[10px] font-extrabold text-gray-400 uppercase tracking-wider mb-2 px-1 flex items-center justify-between">
+              <span>All Applications</span>
+              <span className="text-emerald-500 font-mono text-[9px] font-bold">Live Sync</span>
+            </p>
             <div className="grid grid-cols-3 gap-2.5">
               {allowedMenuItems.map((item) => {
                 const Icon = item.icon;
@@ -711,7 +729,11 @@ export default function DashboardLayout() {
                     key={item.id}
                     to={item.path}
                     onMouseEnter={() => preloadRoute(item.path)}
-                    onClick={() => setIsMobileMenuOpen(false)}
+                    onClick={() => {
+                      setIsMobileMenuOpen(false);
+                      setNavLoading(true);
+                      setTimeout(() => setNavLoading(false), 500);
+                    }}
                     className={`flex flex-col items-center justify-center p-3 rounded-xl border transition-all no-underline ${
                       isActive 
                         ? "bg-white border-indigo-500 text-indigo-900 font-extrabold shadow-md scale-[1.03] ring-2 ring-indigo-500/30" 
@@ -738,6 +760,8 @@ export default function DashboardLayout() {
               type="button"
               onClick={() => {
                 setIsMobileMenuOpen(false);
+                setNavLoading(true);
+                setTimeout(() => setNavLoading(false), 500);
                 navigate("/home");
               }}
               className="flex-1 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold transition-all cursor-pointer border-0 flex items-center justify-center gap-1.5 shadow-sm"
