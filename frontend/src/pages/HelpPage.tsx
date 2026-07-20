@@ -1162,7 +1162,7 @@ export default function HelpPage() {
       <Row gutter={[20, 20]}>
         
         {/* Left Column: File Ticket Form */}
-        <Col xs={24} lg={8} className={activeTab === "raise" ? "block" : "hidden lg:block"}>
+        <Col xs={24} lg={8} className={activeTab === "raise" ? "block pb-48 lg:pb-0" : "hidden lg:block pb-48 lg:pb-0"}>
           <Card 
             title={
               <Text className="text-xs font-black text-slate-800 uppercase tracking-wider flex items-center gap-2">
@@ -1308,12 +1308,12 @@ export default function HelpPage() {
             </div>
 
             {/* Ticket Cards List */}
-            {loading ? (
-              <div className="p-12 text-center bg-white border border-slate-200 rounded-b-2xl shadow-xs">
+            {loading && tickets.length === 0 ? (
+              <div className="p-12 text-center bg-white border border-slate-200/90 rounded-b-2xl shadow-xs">
                 <Spin size="large" tip="Loading support desk tickets..." />
               </div>
             ) : filteredList.length === 0 ? (
-              <div className="py-16 text-center bg-white border border-slate-200 rounded-b-2xl shadow-xs">
+              <div className="py-16 text-center bg-white border border-slate-200/90 rounded-b-2xl shadow-xs">
                 <Empty description={<Text className="font-bold text-slate-400 uppercase text-xs">No tickets match active filters</Text>} />
               </div>
             ) : (
