@@ -624,17 +624,17 @@ export default function HelpPage() {
     return <span className="px-2.5 py-1 text-[10px] font-black uppercase tracking-wider rounded-md bg-slate-600 text-white">{stat}</span>;
   };
 
-  const getCardStatusGlowClass = (status: string) => {
+  const getCardTopStatusBorder = (status: string) => {
     if (status === "Closed" || status === "Final Closed") {
-      return "border-2 border-emerald-300 bg-[#f1f5f9] hover:bg-slate-200 cursor-pointer transition-all sharp-card shadow-[0_4px_12px_-1px_rgba(16,185,129,0.25)]";
+      return "border-slate-200/90 border-t-4 border-t-emerald-600 shadow-xs hover:border-emerald-400";
     }
     if (status === "Updated" || status === "In Progress") {
-      return "border-2 border-blue-300 bg-[#f1f5f9] hover:bg-slate-200 cursor-pointer transition-all sharp-card shadow-[0_4px_12px_-1px_rgba(59,130,246,0.25)]";
+      return "border-slate-200/90 border-t-4 border-t-blue-600 shadow-xs hover:border-blue-400";
     }
     if (status === "Re-opened") {
-      return "border-2 border-purple-300 bg-[#f1f5f9] hover:bg-slate-200 cursor-pointer transition-all sharp-card shadow-[0_4px_12px_-1px_rgba(168,85,247,0.25)]";
+      return "border-slate-200/90 border-t-4 border-t-purple-600 shadow-xs hover:border-purple-400";
     }
-    return "border-2 border-amber-300 bg-[#f1f5f9] hover:bg-slate-200 cursor-pointer transition-all sharp-card shadow-[0_4px_12px_-1px_rgba(245,158,11,0.25)]";
+    return "border-slate-200/90 border-t-4 border-t-amber-500 shadow-xs hover:border-amber-400";
   };
 
   const hasAccessToAssignedTab = currentUser?.role === "Admin" || 
@@ -1321,20 +1321,21 @@ export default function HelpPage() {
                 {filteredList.map(tkt => {
                   const isSelected = selectedTicket && selectedTicket.id === tkt.id;
                   const codeDisplay = getFormattedTicketCode(tkt);
-                  const glowClass = getCardStatusGlowClass(tkt.status);
+                  const statusBorderClass = getCardTopStatusBorder(tkt.status);
+                  const claimCodeStr = tkt.expense_code || tkt.expenseCode;
                   
                   return (
                     <div 
                       key={tkt.id} 
                       onClick={() => setSelectedTicket(tkt)}
-                      className={`sharp-card border-2 p-4 space-y-3.5 transition-all cursor-pointer shadow-md hover:shadow-xl ${
+                      className={`bg-white border rounded-xl p-4 space-y-3 transition-all cursor-pointer group shadow-sm hover:shadow-md ${statusBorderClass} ${
                         isSelected 
-                          ? "ring-2 ring-indigo-600 border-indigo-600 bg-indigo-50/90 shadow-lg" 
-                          : `${glowClass}`
+                          ? "ring-2 ring-indigo-600 border-indigo-600 bg-indigo-50/40" 
+                          : ""
                       }`}
                     >
-                      {/* Top Header Row */}
-                      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-slate-200/90 pb-2.5">
+                      {/* Top Bar: Code + Category + Claim Ref + Priority + Status */}
+                      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-slate-100 pb-2.5">
                         <div className="flex items-center gap-2 flex-wrap">
                           <button
                             type="button"
@@ -1349,17 +1350,19 @@ export default function HelpPage() {
                             )}
                           </button>
 
-                          <span className="bg-slate-900 text-white font-extrabold py-1 px-3 sharp-card text-xs font-mono shadow-xs">
+                          <span className="bg-slate-900 text-white font-extrabold py-1 px-2.5 rounded-md text-xs font-mono shadow-xs">
                             {codeDisplay}
                           </span>
 
-                          <span className="bg-indigo-100 text-indigo-800 font-extrabold px-2.5 py-1 text-[10px] uppercase sharp-card border border-indigo-200 shadow-2xs">
+                          <span className="bg-indigo-50 text-indigo-700 font-extrabold px-2.5 py-1 text-[10px] uppercase rounded-md border border-indigo-200">
                             {tkt.concern_type || tkt.concernType}
                           </span>
 
-                          <span className="text-[11px] text-slate-500 font-bold font-mono">
-                            📅 {new Date(tkt.created_at || tkt.createdAt || Date.now()).toLocaleDateString("en-GB", { day: '2-digit', month: '2-digit', year: 'numeric' })}
-                          </span>
+                          {claimCodeStr && (
+                            <span className="bg-purple-50 text-purple-700 font-mono font-extrabold text-[10px] px-2 py-0.5 rounded-md border border-purple-200">
+                              Claim: {claimCodeStr}
+                            </span>
+                          )}
                         </div>
 
                         <div className="flex items-center gap-2 self-start sm:self-center">
@@ -1368,32 +1371,39 @@ export default function HelpPage() {
                         </div>
                       </div>
 
-                      {/* Main Description / Remarks Box */}
-                      <div className="bg-white border border-slate-200/90 p-3 sharp-card space-y-1 shadow-2xs">
-                        <span className="text-[9px] font-black uppercase text-slate-400 tracking-wider block">CONCERN / REASON DETAILS</span>
-                        <p className="text-sm font-black text-slate-900 leading-snug m-0 whitespace-pre-wrap" title={tkt.description}>
+                      {/* Problem Statement Box */}
+                      <div className="bg-slate-50/90 rounded-lg p-3 border border-slate-200/70 space-y-0.5">
+                        <span className="text-[9px] font-black uppercase text-slate-400 tracking-wider block">CONCERN DETAILS</span>
+                        <p className="text-sm font-extrabold text-slate-900 leading-snug m-0 whitespace-pre-wrap" title={tkt.description}>
                           {tkt.description}
                         </p>
-                        {(tkt.expense_code || tkt.expenseCode) && (
-                          <div className="pt-1">
-                            <span className="inline-block bg-indigo-50 text-indigo-700 px-2 py-0.5 text-[10px] font-mono font-black border border-indigo-200">
-                              Claim Ref: {tkt.expense_code || tkt.expenseCode}
-                            </span>
-                          </div>
-                        )}
                       </div>
 
-                      {/* Meta Footer Row */}
-                      <div className="flex flex-wrap items-center justify-between gap-2 pt-1.5 text-[11px] font-bold text-slate-600 border-t border-slate-200/90">
-                        <div className="flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-3 text-[10px] uppercase font-bold tracking-wide text-slate-600">
-                          <span>BY: <strong className="text-slate-900">{tkt.created_by_name || tkt.createdByName || "USER"} ({tkt.created_by_code || tkt.createdByCode || ""})</strong></span>
-                          <span className="hidden sm:inline text-slate-300">•</span>
-                          <span>ASSIGNED: <strong className="text-indigo-700">{tkt.assigned_to_name || tkt.assignedToName || "SUPPORT DESK"}</strong></span>
+                      {/* Structured Metadata Chips Grid */}
+                      <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 text-[11px] font-bold text-slate-600 bg-slate-100/70 p-2.5 rounded-lg border border-slate-200/60">
+                        <div className="truncate">
+                          <span className="text-slate-400 font-extrabold uppercase text-[9px] block">Raised By</span>
+                          <span className="text-slate-900 font-black">{tkt.created_by_name || tkt.createdByName || "User"}</span>
+                          <span className="text-slate-400 text-[10px]"> ({tkt.created_by_code || tkt.createdByCode || ""})</span>
                         </div>
 
-                        <span className="text-[10px] font-extrabold text-indigo-600 hover:text-indigo-800 flex items-center gap-1 uppercase tracking-wider">
-                          Tap to Chat & Details →
-                        </span>
+                        <div className="truncate">
+                          <span className="text-slate-400 font-extrabold uppercase text-[9px] block">Assigned Supervisor</span>
+                          <span className="text-indigo-700 font-black">{tkt.assigned_to_name || tkt.assignedToName || "Support Desk"}</span>
+                        </div>
+
+                        <div className="truncate">
+                          <span className="text-slate-400 font-extrabold uppercase text-[9px] block">Submitted Date</span>
+                          <span className="text-slate-700 font-mono font-bold">
+                            {new Date(tkt.created_at || tkt.createdAt || Date.now()).toLocaleDateString("en-GB", { day: '2-digit', month: 'short', year: 'numeric' })}
+                          </span>
+                        </div>
+                      </div>
+
+                      {/* CTA Action Button Bar */}
+                      <div className="bg-indigo-600 group-hover:bg-indigo-700 text-white font-extrabold text-xs py-2 px-3 rounded-md flex items-center justify-between transition-colors shadow-2xs">
+                        <span>Tap to View Discussion & Reply</span>
+                        <span className="group-hover:translate-x-1 transition-transform font-mono">→</span>
                       </div>
                     </div>
                   );
