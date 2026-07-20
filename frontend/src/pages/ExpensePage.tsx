@@ -2283,18 +2283,19 @@ export default function ExpensePage() {
     if (!validateClaim(processedItineraries)) return;
 
     // ── Compute base-location deduction breakdown for confirm modal ──
+    const hasOutdoorLeg = processedItineraries.some(leg => (leg.travel_type || "").trim().toLowerCase() === "outdoor");
     const isBaseLocOnly = isBaseLocationOnlyTravel(processedItineraries);
     const isDAAllowed = isDailyAllowanceAllowed(processedItineraries);
-    if (isBaseLocOnly) {
-      const deductionItems: { leg: number; from: string; to: string; taDeducted: number; daDeducted: number }[] = [];
-      let policyMsg = "";
+    const deductionItems: { leg: number; from: string; to: string; taDeducted: number; daDeducted: number }[] = [];
+    let policyMsg = "";
 
-      const baseLocs = user.base_reporting_location
-        ? user.base_reporting_location.split(",").map((x: string) => x.trim().toLowerCase()).filter(Boolean)
-        : [];
-      const isSpecialBase = isSpecialBaseLocation(baseLocs);
+    const baseLocs = user.base_reporting_location
+      ? user.base_reporting_location.split(",").map((x: string) => x.trim().toLowerCase()).filter(Boolean)
+      : [];
+    const isSpecialBase = isSpecialBaseLocation(baseLocs);
 
-      if (!isDAAllowed) {
+    if (!hasOutdoorLeg) {
+      if (isBaseLocOnly && !isDAAllowed) {
         policyMsg = "Base Location Policy (Standard): Both Travel Allowance (TA) and Daily Allowance (DA) are not eligible for commute legs to/from your base hospital.";
       } else if (isSpecialBase) {
         // Rule E: PBM Bikaner / MDM Jodhpur — DA is allowed, only commute-leg TA is deducted
@@ -2316,9 +2317,11 @@ export default function ExpensePage() {
           deductionItems.push({ leg: legNum, from: leg.from, to: leg.to, taDeducted, daDeducted });
         }
       });
+    }
 
+    if (deductionItems.length > 0) {
       setBaseLocDeductions({
-        hasDeductions: deductionItems.length > 0,
+        hasDeductions: true,
         policyMessage: policyMsg,
         items: deductionItems
       });
@@ -2350,6 +2353,7 @@ export default function ExpensePage() {
       };
       formData.append("client_timestamp", getLocalTimestamp());
 
+      const hasOutdoorLeg = itineraries.some(l => (l.travel_type || "").trim().toLowerCase() === "outdoor");
       const isBaseLocOnly = isBaseLocationOnlyTravel();
       const isDAAllowed = isDailyAllowanceAllowed();
 
@@ -2357,11 +2361,11 @@ export default function ExpensePage() {
       const deductionItems: { leg: number; from: string; to: string; taDeducted: number; daDeducted: number }[] = [];
       let policyMsg = "";
 
-      if (isBaseLocOnly) {
-        if (!isDAAllowed) {
+      if (!hasOutdoorLeg) {
+        if (isBaseLocOnly && !isDAAllowed) {
           policyMsg = "Under base location policy, both Travel Allowance (TA) and Daily Allowance (DA) are not eligible.";
         } else {
-          policyMsg = "Under base location policy, Travel Allowance (TA) is not eligible.";
+          policyMsg = "Under base location policy, Travel Allowance (TA) for commute legs (Home ↔ Base Hospital) is not eligible.";
         }
 
         const baseLocs2 = user.base_reporting_location
@@ -2427,6 +2431,8 @@ export default function ExpensePage() {
           assets_list: assetsList
         };
 
+        const isLegCommute = !hasOutdoorLeg && isCommuteLeg(leg, baseLocs3, index, itineraries.length);
+
         return {
           leg: legNum,
           travel_type: leg.travel_type,
@@ -2440,10 +2446,10 @@ export default function ExpensePage() {
           to_custom: !!leg.to_custom,
           mode: leg.mode,
           km: leg.km,
-          // Only zero TA for actual commute legs (Home ↔ Base Hospital); other legs like market trips keep their TA
-          amount: (isBaseLocOnly && isCommuteLeg(leg, baseLocs3, index, itineraries.length)) ? "0" : leg.amount,
+          // Only zero TA for actual commute legs (Home ↔ Base Hospital); other legs keep their TA
+          amount: isLegCommute ? "0" : leg.amount,
           sub_mode: leg.sub_mode,
-          sub_amount: (isBaseLocOnly && isCommuteLeg(leg, baseLocs3, index, itineraries.length)) ? "0" : leg.sub_amount,
+          sub_amount: isLegCommute ? "0" : leg.sub_amount,
           da: legNum === 1 ? (isDAAllowed ? leg.da : "0") : "0",
           hotel: legNum === 1 ? leg.hotel : "0",
           local_purchase: legNum === 1 ? leg.local_purchase : "0",

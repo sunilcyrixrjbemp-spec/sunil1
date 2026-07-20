@@ -2024,9 +2024,11 @@ export async function handleSubmitExpense(request, env, params, query, user) {
   let newAuto = 0.0;
   let calculatedTotal = 0.0;
 
+  const hasOutdoorLeg = itineraries.some(leg => (leg.travel_type || "").trim().toLowerCase() === "outdoor");
+
   for (let idx = 0; idx < itineraries.length; idx++) {
     const iti = itineraries[idx];
-    const isCommute = isBaseLocOnly && checkIsCommuteLeg(iti, baseLocations, idx, itineraries.length);
+    const isCommute = !hasOutdoorLeg && checkIsCommuteLeg(iti, baseLocations, idx, itineraries.length);
     const travelAmt = isCommute ? 0.0 : parseFloat(iti.amount || "0.0");
     const subAmt    = isCommute ? 0.0 : parseFloat(iti.sub_amount || "0.0");
     const daAmt     = isDaAllowed ? parseFloat(iti.da || "0.0") : 0.0;
@@ -2263,7 +2265,7 @@ export async function handleSubmitExpense(request, env, params, query, user) {
     const itiId = `${expenseCode}-${legNum}`;
     const fromDist = iti.district_from || user.district || "Jodhpur";
     const toDist = iti.district || "Jodhpur";
-    const isCommute = isBaseLocOnly && checkIsCommuteLeg(iti, baseLocations, idx, itineraries.length);
+    const isCommute = !hasOutdoorLeg && checkIsCommuteLeg(iti, baseLocations, idx, itineraries.length);
     
     await runWrite(env, `
       INSERT INTO expense_itineraries (
@@ -2549,7 +2551,8 @@ export async function handleRetroactiveBasePolicyCheck(request, env, params, que
       legs
     );
 
-    if (!isBaseLocOnly) continue; // No restriction applies to this expense
+    const hasOutdoorLeg = legs.some(leg => (leg.travel_type || "").trim().toLowerCase() === "outdoor");
+    if (hasOutdoorLeg) continue; // No restriction applies to Outdoor expenses
 
     let expenseDeducted = 0;
     let policyApplied = false;
@@ -2557,7 +2560,7 @@ export async function handleRetroactiveBasePolicyCheck(request, env, params, que
 
     for (let idx = 0; idx < legs.length; idx++) {
       const leg = legs[idx];
-      const isCommute = checkIsCommuteLeg(leg, baseLocations, idx, legs.length);
+      const isCommute = !hasOutdoorLeg && checkIsCommuteLeg(leg, baseLocations, idx, legs.length);
       const currentTA = parseFloat(leg.travel_amount || "0");
       const currentSubAmt = parseFloat(leg.sub_amount || "0");
       const currentDA = parseFloat(leg.da_amount || "0");

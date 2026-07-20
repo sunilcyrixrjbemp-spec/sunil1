@@ -77,7 +77,8 @@ async function runRetroactivePolicyCheck(env, existingUser, newBaseLocation, tim
     });
 
     const { isBaseLocOnly, isDaAllowed } = computeBaseLocPolicy(newBaseLocation, legs);
-    if (!isBaseLocOnly) continue;
+    const hasOutdoorLeg = legs.some(leg => (leg.travel_type || "").trim().toLowerCase() === "outdoor");
+    if (hasOutdoorLeg) continue;
 
     let expenseDeducted = 0;
     let policyApplied = false;
@@ -85,7 +86,7 @@ async function runRetroactivePolicyCheck(env, existingUser, newBaseLocation, tim
 
     for (let idx = 0; idx < legs.length; idx++) {
       const leg = legs[idx];
-      const isCommute = checkIsCommuteLeg(leg, baseLocations, idx, legs.length);
+      const isCommute = !hasOutdoorLeg && checkIsCommuteLeg(leg, baseLocations, idx, legs.length);
       const currentTA = parseFloat(leg.travel_amount || "0");
       const currentSubAmt = parseFloat(leg.sub_amount || "0");
       const currentDA = parseFloat(leg.da_amount || "0");
