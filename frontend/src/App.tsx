@@ -31,12 +31,10 @@ import DBMonitoringPage from "./pages/DBMonitoringPage";
 import NotFoundPage from "./pages/NotFoundPage";
 import DesignSystemPage from "./pages/DesignSystemPage";
 
+import ProgressLoader from "./components/common/ProgressLoader";
+
 function PageLoader() {
-  return (
-    <div className="flex items-center justify-center min-h-[60vh] w-full p-6">
-      <div className="w-10 h-10 rounded-full border-4 border-slate-200 border-t-blue-600 animate-spin"></div>
-    </div>
-  );
+  return <ProgressLoader message="Loading System..." fullPage />;
 }
 import { useFCMNotifications } from "./hooks/useFCMNotifications";
 

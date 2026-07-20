@@ -5,6 +5,7 @@ import { expenseService } from "../services/expenseService";
 import { approvalService } from "../services/approvalService";
 import toast from "react-hot-toast";
 import Loader from "../components/common/Loader";
+import ProgressLoader from "../components/common/ProgressLoader";
 import { checkIsHeic, convertHeicToJpegUrl } from "../utils/heic";
 import { ResponsivePie } from "@nivo/pie";
 import ExpenseCalendar from "../components/common/ExpenseCalendar";
@@ -1068,7 +1069,7 @@ export default function HomePage() {
 
                         {/* Claims Listing Table */}
                         {loadingMyExpenses ? (
-                          <Loader message="Loading your claims..." />
+                          <ProgressLoader message="Syncing your claims & analytics..." fullPage={false} />
                         ) : filteredPersonalExpenses.length === 0 ? (
                           <div className="py-12 text-center text-gray-400 text-xs">
                             <Compass className="w-8 h-8 mx-auto mb-2 text-gray-300" />
@@ -1327,7 +1328,7 @@ export default function HomePage() {
 
                         {/* Team Claims Listing Table */}
                         {loadingTeamExpenses ? (
-                          <Loader message="Loading team claims..." />
+                          <ProgressLoader message="Syncing team claims & analytics..." fullPage={false} />
                         ) : safeTeamExpenses.length === 0 ? (
                           <div className="py-12 text-center text-gray-400 text-xs">
                             <Users className="w-8 h-8 mx-auto mb-2 text-gray-300" />

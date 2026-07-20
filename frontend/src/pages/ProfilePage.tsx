@@ -13,7 +13,6 @@ import {
   Col, 
   Space, 
   Alert, 
-  Spin, 
   Tag, 
   Modal as AntdModal,
   Segmented
@@ -30,8 +29,6 @@ import {
   Lock,
   Database,
   RefreshCw,
-  Trash2,
-  Camera,
   User,
   Briefcase,
   Smartphone
@@ -263,101 +260,10 @@ export default function ProfilePage() {
     });
   };
 
-  const handleUploadCropped = async () => {
-    setPhotoLoading(true);
-    setNotice(null);
-    try {
-      const cropped = await generateCroppedImage();
-      const compressed = await compressImage(cropped);
-      
-      if (compressed.size > 2 * 1024 * 1024) {
-        setNotice({ type: "error", text: "Compressed image file size must be less than 2MB." });
-        setPhotoLoading(false);
-        return;
-      }
-      
-      const updatedUser = await authService.updateProfilePhoto(compressed);
-      localStorage.setItem("user", JSON.stringify(updatedUser));
-      setUser(updatedUser);
-      
-      const reader = new FileReader();
-      reader.onloadend = () => {
-        const base64 = reader.result as string;
-        const cacheKey = `cached_avatar_${updatedUser.user_id || updatedUser.id || 'default'}`;
-        localStorage.setItem(cacheKey, base64);
-        setAvatarUrl(base64);
-        setAvatarError(false);
-        window.dispatchEvent(new Event("storage"));
-      };
-      reader.readAsDataURL(compressed);
-      
-      setNotice({ type: "success", text: "Profile picture updated successfully!" });
-      setShowCropModal(false);
-      setSelectedPhotoFile(null);
-      setPreviewSrc(null);
-      setTimeout(() => setNotice(null), 3000);
-    } catch (err: any) {
-      console.error(err);
-      setNotice({ type: "error", text: err.response?.data?.detail || "Failed to upload cropped photo to Google Drive." });
-    } finally {
-      setPhotoLoading(false);
-    }
-  };
-
-  const handleRemovePhoto = async () => {
-    if (!window.confirm("Are you sure you want to remove your profile picture?")) return;
-    
-    setPhotoLoading(true);
-    setNotice(null);
-    try {
-      const updatedUser = await authService.deleteProfilePhoto();
-      localStorage.setItem("user", JSON.stringify(updatedUser));
-      setUser(updatedUser);
-      
-      const cacheKey = `cached_avatar_${updatedUser.user_id || updatedUser.id || 'default'}`;
-      localStorage.removeItem(cacheKey);
-      setAvatarUrl(null);
-      setAvatarError(false);
-      
-      window.dispatchEvent(new Event("storage"));
-      
-      setNotice({ type: "success", text: "Profile picture removed successfully!" });
-      setTimeout(() => setNotice(null), 3000);
-    } catch (err: any) {
-      console.error(err);
-      setNotice({ type: "error", text: err.response?.data?.detail || "Failed to remove profile photo." });
-    } finally {
-      setPhotoLoading(false);
-    }
-  };
-
-  const handlePhotoChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const files = e.target.files;
-    if (!files || files.length === 0) return;
-    const file = files[0];
-    
-    const ext = file.name.substring(file.name.lastIndexOf(".")).toLowerCase();
-    if (![".jpg", ".jpeg", ".png"].includes(ext)) {
-      setNotice({ type: "error", text: "Only JPG, JPEG, and PNG images are allowed." });
-      return;
-    }
-    
-    if (file.size > 10 * 1024 * 1024) {
-      setNotice({ type: "error", text: "Selected file is too large. Please choose an image smaller than 10MB." });
-      return;
-    }
-
-    const reader = new FileReader();
-    reader.onload = () => {
-      setPreviewSrc(reader.result as string);
-      setSelectedPhotoFile(file);
-      setZoom(1);
-      setPosition({ x: 0, y: 0 });
-      setShowCropModal(true);
-      e.target.value = "";
-    };
-    reader.readAsDataURL(file);
-  };
+  // Profile photo system has been disabled per user request
+  const handleRemovePhoto = async () => {};
+  const handlePhotoChange = (_e: React.ChangeEvent<HTMLInputElement>) => {};
+  const handleUploadCropped = async () => {};
   
   // Tab control: "info" | "password" - persisted on refresh
   const [activeTab, setActiveTab] = useState<"info" | "password">((() => {
