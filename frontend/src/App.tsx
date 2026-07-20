@@ -1,7 +1,7 @@
 import { HashRouter as Router, Routes, Route, Navigate } from "react-router-dom";
 import { Toaster, toast } from "react-hot-toast";
 import { tokenPersistence, nativeConfig } from "./utils/persistence";
-import { useState, useEffect, useCallback, useRef, lazy, Suspense } from "react";
+import { useState, useEffect, useCallback, useRef, Suspense } from "react";
 import { isNativeApp, biometricAuth } from "./utils/capacitor";
 import { Fingerprint, Lock, ScanFace } from "lucide-react";
 import ProtectedRoute from "./components/auth/ProtectedRoute";
@@ -11,26 +11,25 @@ import NewDashboardPage from "./pages/NewDashboardPage";
 import { ConfigProvider } from "antd";
 import { antdTheme } from "./styles/themeConfig";
 
-// Lazy-loaded page components for fast initial loading
-const LoginPage = lazy(() => import("./pages/LoginPage"));
-const HomePage = lazy(() => import("./pages/HomePage"));
-const ApprovalPage = lazy(() => import("./pages/ApprovalPage"));
-const ExpensePage = lazy(() => import("./pages/ExpensePage"));
-const MISReportPage = lazy(() => import("./pages/MISReportPage"));
-const KPIDashboardPage = lazy(() => import("./pages/KPIDashboardPage"));
-const UploadDataPage = lazy(() => import("./pages/UploadDataPage"));
-const AssetUploadPage = lazy(() => import("./pages/AssetUploadPage"));
-const PenaltyReportPage = lazy(() => import("./pages/PenaltyReportPage"));
-const AnalysisPage = lazy(() => import("./pages/AnalysisPage"));
-const MonthSummaryPage = lazy(() => import("./pages/MonthSummaryPage"));
-const ConsolidatedReportPage = lazy(() => import("./pages/ConsolidatedReportPage"));
-const NotificationsPage = lazy(() => import("./pages/NotificationsPage"));
-const HelpPage = lazy(() => import("./pages/HelpPage"));
-const ProfilePage = lazy(() => import("./pages/ProfilePage"));
-const AdminPage = lazy(() => import("./pages/AdminPage"));
-const DBMonitoringPage = lazy(() => import("./pages/DBMonitoringPage"));
-const NotFoundPage = lazy(() => import("./pages/NotFoundPage"));
-const DesignSystemPage = lazy(() => import("./pages/DesignSystemPage"));
+import LoginPage from "./pages/LoginPage";
+import HomePage from "./pages/HomePage";
+import ApprovalPage from "./pages/ApprovalPage";
+import ExpensePage from "./pages/ExpensePage";
+import MISReportPage from "./pages/MISReportPage";
+import KPIDashboardPage from "./pages/KPIDashboardPage";
+import UploadDataPage from "./pages/UploadDataPage";
+import AssetUploadPage from "./pages/AssetUploadPage";
+import PenaltyReportPage from "./pages/PenaltyReportPage";
+import AnalysisPage from "./pages/AnalysisPage";
+import MonthSummaryPage from "./pages/MonthSummaryPage";
+import ConsolidatedReportPage from "./pages/ConsolidatedReportPage";
+import NotificationsPage from "./pages/NotificationsPage";
+import HelpPage from "./pages/HelpPage";
+import ProfilePage from "./pages/ProfilePage";
+import AdminPage from "./pages/AdminPage";
+import DBMonitoringPage from "./pages/DBMonitoringPage";
+import NotFoundPage from "./pages/NotFoundPage";
+import DesignSystemPage from "./pages/DesignSystemPage";
 
 function PageLoader() {
   return (

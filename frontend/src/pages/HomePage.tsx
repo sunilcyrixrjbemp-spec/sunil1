@@ -321,52 +321,77 @@ export default function HomePage() {
     const isSpecialViewRole = ["admin", "project head", "mis", "travel desk", "travel tesk", "vp", "accountant", "hr"].includes(userRoleLower);
     const isReviewer = allowedWindows.includes("approval") || isSpecialViewRole;
 
+    // Fire ALL API requests in PARALLEL via Promise.allSettled for maximum priority speed!
+    const promises: Promise<any>[] = [
+      expenseService.getExpenses(selectMonth),
+      expenseService.getExpenseInit(uId, selectMonth)
+    ];
+
     if (isReviewer) {
-      approvalService.getPendingApprovals()
-        .then(data => {
-          const limitCount = data.filter((a: any) => a.category === "Limit Request").length;
-          const standardCount = data.filter((a: any) => a.category !== "Limit Request").length;
-          setPendingApprovalsCount(standardCount);
-          setPendingLimitRequestsCount(limitCount);
-          localStorage.setItem(`cache_approvals_count_${uId}`, standardCount.toString());
-          localStorage.setItem(`cache_limit_approvals_count_${uId}`, limitCount.toString());
-        })
-        .catch(err => console.error("Error fetching approvals count:", err));
-      
-      expenseService.getTeamExpenses(selectMonth)
-        .then(data => {
-          setTeamExpenses(data);
-          localStorage.setItem(`cache_team_expenses_${uId}`, JSON.stringify(data));
-        })
-        .catch(err => console.error("Error fetching team expenses:", err))
-        .finally(() => setLoadingTeamExpenses(false));
+      promises.push(approvalService.getPendingApprovals());
+      promises.push(expenseService.getTeamExpenses(selectMonth));
     }
 
-    expenseService.getExpenses(selectMonth)
-      .then(data => {
-        setMyExpenses(data);
-        localStorage.setItem(`cache_my_expenses_${uId}`, JSON.stringify(data));
-      })
-      .catch(err => console.error("Error fetching own expenses:", err))
-      .finally(() => setLoadingMyExpenses(false));
+    try {
+      const results = await Promise.allSettled(promises);
+      
+      // Index 0: My Expenses
+      if (results[0].status === "fulfilled") {
+        const myData = results[0].value;
+        if (Array.isArray(myData)) {
+          setMyExpenses(myData);
+          localStorage.setItem(`cache_my_expenses_${uId}`, JSON.stringify(myData));
+        }
+      }
+      setLoadingMyExpenses(false);
 
-    expenseService.getExpenseInit(uId, selectMonth)
-      .then(data => {
-        if (data.allowance) {
+      // Index 1: Allowance Stats
+      if (results[1].status === "fulfilled") {
+        const initData = results[1].value;
+        if (initData && initData.allowance) {
           const stats = {
-            currentKm: data.allowance.current_month_km || 0,
-            maxKm: (data.allowance.max_km_per_month || 2000) + (data.approved_km || 0),
-            currentAuto: data.allowance.current_month_auto || 0,
-            maxAuto: (data.allowance.max_auto_per_month || 1000) + (data.approved_auto || 0),
-            vehicleType: data.allowance.vehicle_type || "Bike",
-            rateBike: data.allowance.rate_bike || 0,
-            rateCar: data.allowance.rate_car || 0
+            currentKm: initData.allowance.current_month_km || 0,
+            maxKm: (initData.allowance.max_km_per_month || 2000) + (initData.approved_km || 0),
+            currentAuto: initData.allowance.current_month_auto || 0,
+            maxAuto: (initData.allowance.max_auto_per_month || 1000) + (initData.approved_auto || 0),
+            vehicleType: initData.allowance.vehicle_type || "Bike",
+            rateBike: initData.allowance.rate_bike || 0,
+            rateCar: initData.allowance.rate_car || 0
           };
           setAllowanceStats(stats);
           localStorage.setItem(`cache_allowance_stats_${uId}`, JSON.stringify(stats));
         }
-      })
-      .catch(err => console.error("Error fetching allowance stats:", err));
+      }
+
+      if (isReviewer) {
+        // Index 2: Approvals Count
+        if (results[2] && results[2].status === "fulfilled") {
+          const appData = results[2].value;
+          if (Array.isArray(appData)) {
+            const limitCount = appData.filter((a: any) => a.category === "Limit Request").length;
+            const standardCount = appData.filter((a: any) => a.category !== "Limit Request").length;
+            setPendingApprovalsCount(standardCount);
+            setPendingLimitRequestsCount(limitCount);
+            localStorage.setItem(`cache_approvals_count_${uId}`, standardCount.toString());
+            localStorage.setItem(`cache_limit_approvals_count_${uId}`, limitCount.toString());
+          }
+        }
+
+        // Index 3: Team Expenses
+        if (results[3] && results[3].status === "fulfilled") {
+          const teamData = results[3].value;
+          if (Array.isArray(teamData)) {
+            setTeamExpenses(teamData);
+            localStorage.setItem(`cache_team_expenses_${uId}`, JSON.stringify(teamData));
+          }
+        }
+        setLoadingTeamExpenses(false);
+      }
+    } catch (err) {
+      console.error("Parallel refresh dashboard error:", err);
+      setLoadingMyExpenses(false);
+      setLoadingTeamExpenses(false);
+    }
   };
 
   const formatDateTime = (dateVal: any) => {
