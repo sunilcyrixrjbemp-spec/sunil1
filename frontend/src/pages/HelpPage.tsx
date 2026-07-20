@@ -312,7 +312,8 @@ export default function HelpPage() {
       const updated = await ticketService.getTickets();
       if (Array.isArray(updated)) {
         setTickets(updated);
-        localStorage.setItem(`cache_support_tickets_${currentUserId}`, JSON.stringify(updated));
+        const uid = currentUser?.user_id || "Admin";
+        localStorage.setItem(`cache_support_tickets_${uid}`, JSON.stringify(updated));
       }
       setActiveTab("my-tickets");
     } catch (err: any) {
