@@ -235,11 +235,11 @@ export async function fetchPendingApprovals(env, user) {
     const legacyRows = await env.DB.prepare(`
       SELECT m.exp_id, m.user_id, m.expense_date, m.total_amount, m.status, m.visit_purpose, m.calls_assigned, m.calls_completed, u.name as full_name, u.e_code
       FROM expense_master m
-      JOIN users u ON LOWER(m.user_id) = LOWER(u.user_id)
+      JOIN users u ON m.user_id = u.user_id
       WHERE 
-        ((m.status = 'Pending L1' OR m.status = 'Pending') AND LOWER(m.level_first_approver) = LOWER(?))
+        ((m.status = 'Pending L1' OR m.status = 'Pending') AND m.level_first_approver = ?)
         OR
-        (m.status = 'Pending L2' AND LOWER(m.level_second_approver) = LOWER(?))
+        (m.status = 'Pending L2' AND m.level_second_approver = ?)
     `).bind(user.user_id, user.user_id).all();
 
     const legacyList = legacyRows.results || [];

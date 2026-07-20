@@ -483,8 +483,8 @@ export default function ApprovalPage() {
       const targetTypeLower = (billType || "").trim().toLowerCase();
       return aLegNum === legNum && (a.bill_type === billType || aBillTypeLower === targetTypeLower);
     });
-    if (!found) return null;
-    return found.file_url.startsWith("http") ? found.file_url : `${API_BASE}${found.file_url}`;
+    if (!found || !found.file_url) return null;
+    return authService.getAbsoluteImageUrl(found.file_url);
   };
 
   const handleLegAmountChange = (index: number, field: string, value: string) => {

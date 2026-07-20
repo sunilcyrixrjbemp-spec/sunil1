@@ -964,19 +964,9 @@ export default function ProfilePage() {
         <div className="space-y-4">
           {/* Mobile Profile Card Header Banner */}
           <div className="bg-gradient-to-br from-slate-900 via-slate-800 to-indigo-950 text-white border border-slate-700/50 rounded-2xl shadow-xl p-6 text-center relative overflow-hidden">
-            {/* Avatar Circle with interactive upload */}
+            {/* Avatar Circle */}
             <div className="relative h-24 w-24 mx-auto mb-3">
-              <label htmlFor="profile-photo-input-mob" className="cursor-pointer block relative h-full w-full rounded-full overflow-hidden border-4 border-slate-800 shadow-md select-none bg-slate-850">
-                {photoLoading ? (
-                  <div className="absolute inset-0 bg-black/45 flex items-center justify-center text-white z-10">
-                    <Spin size="small" />
-                  </div>
-                ) : (
-                  <div className="absolute inset-0 bg-black/0 hover:bg-black/40 flex flex-col items-center justify-center text-white opacity-0 hover:opacity-100 transition-all z-10">
-                    <Camera className="w-4 h-4 text-white mb-0.5" />
-                    <span className="text-[8px] font-bold uppercase tracking-wider">Change</span>
-                  </div>
-                )}
+              <div className="h-full w-full rounded-full overflow-hidden border-4 border-slate-800 shadow-md select-none bg-slate-800 text-indigo-300 flex items-center justify-center font-bold text-3xl uppercase">
                 {avatarUrl && !avatarError ? (
                   <img 
                     src={avatarUrl} 
@@ -985,34 +975,10 @@ export default function ProfilePage() {
                     onError={() => setAvatarError(true)}
                   />
                 ) : (
-                  <div className="h-full w-full bg-slate-800 text-indigo-300 flex items-center justify-center font-bold text-3xl uppercase">
-                    {user.name ? user.name.charAt(0).toUpperCase() : "U"}
-                  </div>
+                  user.name ? user.name.charAt(0).toUpperCase() : "U"
                 )}
-              </label>
-              <input 
-                type="file" 
-                id="profile-photo-input-mob" 
-                accept="image/jpeg,image/png,image/jpg" 
-                onChange={handlePhotoChange} 
-                className="hidden" 
-                disabled={photoLoading}
-              />
+              </div>
             </div>
-
-            {avatarUrl && !avatarError && (
-              <Button
-                type="text"
-                danger
-                size="small"
-                icon={<Trash2 className="w-3.5 h-3.5" />}
-                onClick={handleRemovePhoto}
-                disabled={photoLoading}
-                className="text-rose-400 hover:text-rose-350 text-[9px] font-bold uppercase tracking-wider h-auto p-0 mx-auto block hover:underline border-0 bg-transparent"
-              >
-                Remove Photo
-              </Button>
-            )}
 
             <h3 className="text-base font-extrabold text-white mt-2 leading-tight">{user.name || "Employee"}</h3>
             <p className="text-[10px] text-indigo-200 font-bold uppercase tracking-wider mt-0.5">{user.designation || "Staff"}</p>
@@ -1046,19 +1012,9 @@ export default function ProfilePage() {
           {/* Left Column - Sidebar profile summary */}
           <Col xs={24} lg={8}>
             <div className="bg-gradient-to-br from-slate-900 via-slate-800 to-indigo-950 text-white border border-slate-700/50 rounded-2xl p-6 text-center lg:sticky lg:top-20 shadow-xl overflow-hidden">
-              {/* Avatar Circle with interactive upload */}
-              <div className="relative h-28 w-28 mx-auto group mb-4">
-                <label htmlFor="profile-photo-input" className="cursor-pointer block relative h-full w-full rounded-full overflow-hidden border-4 border-slate-700/30 shadow-md select-none group-hover:border-indigo-350 transition-all bg-slate-850">
-                  {photoLoading ? (
-                    <div className="absolute inset-0 bg-black/40 flex items-center justify-center text-white z-10">
-                      <Spin size="small" />
-                    </div>
-                  ) : (
-                    <div className="absolute inset-0 bg-black/0 group-hover:bg-black/40 flex flex-col items-center justify-center text-white opacity-0 group-hover:opacity-100 transition-all z-10">
-                      <Camera className="w-5 h-5 text-white mb-0.5" />
-                      <span className="text-[8px] font-bold uppercase tracking-wider">Change</span>
-                    </div>
-                  )}
+              {/* Avatar Circle */}
+              <div className="relative h-28 w-28 mx-auto mb-4">
+                <div className="h-full w-full rounded-full overflow-hidden border-4 border-slate-700/30 shadow-md select-none bg-slate-800 text-indigo-300 flex items-center justify-center font-bold text-4xl uppercase">
                   {avatarUrl && !avatarError ? (
                     <img 
                       src={avatarUrl} 
@@ -1067,34 +1023,10 @@ export default function ProfilePage() {
                       onError={() => setAvatarError(true)}
                     />
                   ) : (
-                    <div className="h-full w-full bg-slate-800 text-indigo-300 flex items-center justify-center font-bold text-4xl uppercase">
-                      {user.name ? user.name.charAt(0).toUpperCase() : "U"}
-                    </div>
+                    user.name ? user.name.charAt(0).toUpperCase() : "U"
                   )}
-                </label>
-                <input 
-                  type="file" 
-                  id="profile-photo-input" 
-                  accept="image/jpeg,image/png,image/jpg" 
-                  onChange={handlePhotoChange} 
-                  className="hidden" 
-                  disabled={photoLoading}
-                />
+                </div>
               </div>
-
-              {avatarUrl && !avatarError && (
-                <Button
-                  type="text"
-                  danger
-                  size="small"
-                  icon={<Trash2 className="w-3.5 h-3.5" />}
-                  onClick={handleRemovePhoto}
-                  disabled={photoLoading}
-                  className="text-rose-455 hover:text-rose-400 text-[10px] font-bold uppercase tracking-wider h-auto p-0 mx-auto block hover:underline border-0 bg-transparent"
-                >
-                  Remove Photo
-                </Button>
-              )}
 
               <h3 className="text-lg font-black text-white mt-4 leading-tight">{user.name || "Employee"}</h3>
               <p className="text-[10px] text-indigo-200 font-bold uppercase tracking-wider mt-1">{user.designation || "Staff Member"}</p>

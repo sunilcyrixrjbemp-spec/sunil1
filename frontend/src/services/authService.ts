@@ -170,10 +170,11 @@ export const authService = {
     const refreshToken = localStorage.getItem("refresh_token")
       || document.cookie.split("; ").find(r => r.startsWith("fallback_refresh_token="))?.split("=")[1]?.replace(/%[0-9A-F]{2}/gi, c => decodeURIComponent(c))
       || "";
-    if (accessToken) {
-      await tokenPersistence.save(accessToken, refreshToken, response.data);
+    const updatedUser = response.data?.user;
+    if (accessToken && updatedUser && updatedUser.user_id) {
+      await tokenPersistence.save(accessToken, refreshToken, updatedUser);
     }
-    return response.data;
+    return updatedUser || response.data;
   },
 
   changePassword: async (data: ChangePasswordRequest): Promise<any> => {
@@ -189,10 +190,11 @@ export const authService = {
     const refreshToken = localStorage.getItem("refresh_token")
       || document.cookie.split("; ").find(r => r.startsWith("fallback_refresh_token="))?.split("=")[1]?.replace(/%[0-9A-F]{2}/gi, c => decodeURIComponent(c))
       || "";
-    if (accessToken) {
-      await tokenPersistence.save(accessToken, refreshToken, response.data);
+    const updatedUser = response.data?.user;
+    if (accessToken && updatedUser && updatedUser.user_id) {
+      await tokenPersistence.save(accessToken, refreshToken, updatedUser);
     }
-    return response.data;
+    return updatedUser || response.data;
   },
 
   getAbsoluteImageUrl: (url: string | null): string | null => {
