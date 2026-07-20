@@ -484,8 +484,8 @@ export async function handleLogin(request, env, params, query) {
     date_of_birth: profile.dateOfBirth,
     e_upkaran_id: profile.eUpkaranId,
     base_reporting_location: profile.baseReportingLocation,
-    allowed_windows: profile.allowedWindows,
-    profile_photo: profile.profilePhoto,
+    profile_photo: profile.profilePicUrl,
+    profile_pic_url: profile.profilePicUrl,
     created_at: profile.createdAt,
     updated_at: profile.updatedAt
   };

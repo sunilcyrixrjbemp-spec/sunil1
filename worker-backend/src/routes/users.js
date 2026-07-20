@@ -189,7 +189,7 @@ export async function handleUploadProfilePhoto(request, env, params, query, user
 
     // Update user record
     await db.update(users)
-      .set({ profilePhoto: photoUrl, updatedAt: timestamp })
+      .set({ profilePicUrl: photoUrl, updatedAt: timestamp })
       .where(eq(users.id, user.id));
 
     const [updatedUser] = await db.select()
@@ -202,10 +202,15 @@ export async function handleUploadProfilePhoto(request, env, params, query, user
       .where(eq(userRoles.userId, user.user_id))
       .limit(1);
 
-    const result = { ...updatedUser, role: roleRow?.role || "user" };
+    const result = {
+      ...updatedUser,
+      role: roleRow?.role || "user",
+      profile_pic_url: photoUrl,
+      profile_photo: photoUrl
+    };
     delete result.hashed_password;
 
-    return jsonResponse({ status: "success", profile_photo: photoUrl, user: result });
+    return jsonResponse({ status: "success", profile_pic_url: photoUrl, profile_photo: photoUrl, user: result });
   } catch (e) {
     return jsonResponse({ error: "Failed to upload photo: " + e.message }, 500);
   }
@@ -219,15 +224,16 @@ export async function handleDeleteProfilePhoto(request, env, params, query, user
   const db = getDrizzleDb(env, request);
   const timestamp = new Date().toISOString();
 
+  const currentPhoto = user.profile_pic_url || user.profile_photo;
   // Try to delete from Google Drive if it exists
-  if (user.profile_photo && user.profile_photo.includes("/gdrive/")) {
-    const fileId = user.profile_photo.split("/gdrive/").pop();
+  if (currentPhoto && currentPhoto.includes("/gdrive/")) {
+    const fileId = currentPhoto.split("/gdrive/").pop();
     await deleteFromGoogleDrive(env, fileId).catch(() => {});
   }
 
   // Clear from DB
   await db.update(users)
-    .set({ profilePhoto: null, updatedAt: timestamp })
+    .set({ profilePicUrl: null, updatedAt: timestamp })
     .where(eq(users.id, user.id));
 
   const [updatedUser] = await db.select()
@@ -240,7 +246,12 @@ export async function handleDeleteProfilePhoto(request, env, params, query, user
     .where(eq(userRoles.userId, user.user_id))
     .limit(1);
 
-  const result = { ...updatedUser, role: roleRow?.role || "user" };
+  const result = {
+    ...updatedUser,
+    role: roleRow?.role || "user",
+    profile_pic_url: null,
+    profile_photo: null
+  };
   delete result.hashed_password;
 
   return jsonResponse({ status: "success", message: "Profile photo removed successfully", user: result });

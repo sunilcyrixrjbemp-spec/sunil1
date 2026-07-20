@@ -163,11 +163,7 @@ export const authService = {
   updateProfilePhoto: async (file: File): Promise<any> => {
     const formData = new FormData();
     formData.append("file", file);
-    const response = await api.post("/users/profile/photo", formData, {
-      headers: {
-        "Content-Type": "multipart/form-data"
-      }
-    });
+    const response = await api.post("/users/profile/photo", formData);
     const accessToken = localStorage.getItem("access_token")
       || document.cookie.split("; ").find(r => r.startsWith("fallback_access_token="))?.split("=")[1]?.replace(/%[0-9A-F]{2}/gi, c => decodeURIComponent(c))
       || "";

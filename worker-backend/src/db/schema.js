@@ -26,7 +26,6 @@ export const users = sqliteTable("users", {
   allowedWindows: text("allowed_windows").default("home,expense,help,profile"),
   createdAt: text("created_at"),
   updatedAt: text("updated_at"),
-  profilePhoto: text("profile_photo"),
   failedAttempt: integer("failed_attempt").default(0),
   activeSessionId: text("active_session_id"),
   fcmToken: text("fcm_token"),
