@@ -357,35 +357,22 @@ export async function serializeExpenses(env, expenses, submittersMap) {
 export async function handleListExpenses(request, env, params, query, user) {
   const month = query.get("month");
 
-  if (!month) {
-    // Default to current month & year to minimize reads
-    const now = new Date();
-    const currentMonthName = MONTH_NAMES[now.getMonth()];
-    const currentYear = now.getFullYear();
-
-    const expensesRows = await env.DB.prepare(`
-      SELECT * FROM expenses WHERE user_id = ? AND year = ? AND month = ? ORDER BY created_at DESC
-    `).bind(user.id, currentYear, currentMonthName).all();
-
-    const submittersMap = { [user.id]: user };
-    const serialized = await serializeExpenses(env, expensesRows.results || [], submittersMap);
-    return jsonResponse(serialized);
-  }
-
   let querySql = "SELECT * FROM expenses WHERE user_id = ?";
   const binds = [user.id];
 
-  if (month.includes("-") && month.length === 7) {
-    const parts = month.split("-");
-    const yr = parseInt(parts[0], 10);
-    const monNum = parseInt(parts[1], 10);
-    const monName = MONTH_NAMES[monNum - 1];
+  if (month && month.toLowerCase() !== "all" && month.toLowerCase() !== "all_time") {
+    if (month.includes("-") && month.length === 7) {
+      const parts = month.split("-");
+      const yr = parseInt(parts[0], 10);
+      const monNum = parseInt(parts[1], 10);
+      const monName = MONTH_NAMES[monNum - 1];
 
-    querySql += " AND year = ? AND month = ?";
-    binds.push(yr, monName);
-  } else {
-    querySql += " AND LOWER(month) LIKE ?";
-    binds.push(`%${month.toLowerCase()}%`);
+      querySql += " AND year = ? AND month = ?";
+      binds.push(yr, monName);
+    } else {
+      querySql += " AND LOWER(month) LIKE ?";
+      binds.push(`%${month.toLowerCase()}%`);
+    }
   }
 
   querySql += " ORDER BY created_at DESC";

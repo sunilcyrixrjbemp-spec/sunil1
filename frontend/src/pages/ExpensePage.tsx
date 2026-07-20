@@ -970,20 +970,22 @@ export default function ExpensePage() {
   };
 
   const fetchClaims = async () => {
-    const currentMonth = date ? date.substring(0, 7) : new Date().toISOString().substring(0, 7);
-    const cacheKey = `cache_my_expenses_${currentUserId}_${currentMonth}`;
+    const cacheKey = `cache_my_expenses_${currentUserId}_all`;
     const cached = localStorage.getItem(cacheKey);
     if (cached) {
-      setClaims(JSON.parse(cached));
-      setClaimsLoading(false);
+      try {
+        setClaims(JSON.parse(cached));
+      } catch (e) {}
     } else {
       setClaimsLoading(true);
     }
 
     try {
-      const data = await expenseService.getExpenses(currentMonth);
-      localStorage.setItem(cacheKey, JSON.stringify(data));
-      setClaims(data);
+      const data = await expenseService.getExpenses("all");
+      if (Array.isArray(data)) {
+        localStorage.setItem(cacheKey, JSON.stringify(data));
+        setClaims(data);
+      }
     } catch (err: any) {
       console.error("Failed to load claims list", err);
     } finally {
@@ -2567,9 +2569,16 @@ export default function ExpensePage() {
 
   const getUniqueMonths = () => {
     const uniqueMap = new Map<string, string>();
+    const curMonth = date ? date.slice(0, 7) : new Date().toISOString().slice(0, 7);
+    if (curMonth) uniqueMap.set(curMonth, curMonth);
+
     claims.forEach(c => {
       if (c.month) {
         uniqueMap.set(c.month, c.month);
+      }
+      if (c.itinerary && c.itinerary.length >= 7) {
+        const ym = c.itinerary.slice(0, 7);
+        uniqueMap.set(ym, ym);
       }
     });
     return Array.from(uniqueMap.values());
@@ -2578,12 +2587,23 @@ export default function ExpensePage() {
   const getFilteredClaims = () => {
     const result = claims.filter(c => {
       // 1. Month filter
-      if (claimsMonthFilter !== "all" && c.month !== claimsMonthFilter) {
-        return false;
+      if (claimsMonthFilter !== "all") {
+        const matchMonthName = c.month && c.month.toLowerCase() === claimsMonthFilter.toLowerCase();
+        const matchItinerary = c.itinerary && c.itinerary.startsWith(claimsMonthFilter);
+        const matchYearMonth = (c.year && c.month) ? `${c.year}-${c.month}`.toLowerCase() === claimsMonthFilter.toLowerCase() : false;
+        if (!matchMonthName && !matchItinerary && !matchYearMonth) {
+          return false;
+        }
       }
       // 2. Status filter
-      if (claimsStatusFilter !== "all" && c.status.toLowerCase() !== claimsStatusFilter.toLowerCase()) {
-        return false;
+      if (claimsStatusFilter !== "all") {
+        const cStat = (c.status || "").toLowerCase();
+        const fStat = claimsStatusFilter.toLowerCase();
+        if (fStat === "returned_to_draft" || fStat === "returned") {
+          if (!cStat.includes("returned") && cStat !== "returned_to_draft") return false;
+        } else if (cStat !== fStat) {
+          return false;
+        }
       }
       // 3. Search query
       if (claimsSearch.trim()) {
@@ -2592,8 +2612,18 @@ export default function ExpensePage() {
         const descMatch = c.description?.toLowerCase().includes(q);
         const modeMatch = c.travel_mode?.toLowerCase().includes(q);
         const itineraryMatch = c.itinerary?.toLowerCase().includes(q);
+        const statusMatch = c.status?.toLowerCase().includes(q);
         const amtMatch = c.amount?.toString().includes(q);
-        if (!codeMatch && !descMatch && !modeMatch && !itineraryMatch && !amtMatch) {
+
+        const legMatch = (c.legs || c.itineraries || []).some((l: any) =>
+          (l.from_district || "").toLowerCase().includes(q) ||
+          (l.to_district || "").toLowerCase().includes(q) ||
+          (l.from || "").toLowerCase().includes(q) ||
+          (l.to || "").toLowerCase().includes(q) ||
+          (l.visit_purpose || "").toLowerCase().includes(q)
+        );
+
+        if (!codeMatch && !descMatch && !modeMatch && !itineraryMatch && !statusMatch && !amtMatch && !legMatch) {
           return false;
         }
       }
@@ -4655,6 +4685,7 @@ export default function ExpensePage() {
                 <option value="submitted">Submitted</option>
                 <option value="approved">Approved</option>
                 <option value="rejected">Rejected</option>
+                <option value="returned_to_draft">Returned / Edit</option>
               </select>
             </div>
 
