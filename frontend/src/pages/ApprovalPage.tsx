@@ -2756,6 +2756,7 @@ export default function ApprovalPage() {
         open={showReturnModal}
         onCancel={() => setShowReturnModal(false)}
         width={450}
+        zIndex={2000}
         title={
           <span className="font-bold text-sm uppercase text-orange-850 flex items-center gap-2">
             <RotateCcw size={16} className="text-orange-600" />
