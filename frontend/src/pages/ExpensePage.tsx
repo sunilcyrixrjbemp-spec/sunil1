@@ -2647,7 +2647,27 @@ export default function ExpensePage() {
     const filteredClaims = getFilteredClaims();
     const legsList: any[] = [];
     filteredClaims.forEach(c => {
-      const claimLegs = c.itineraries || c.legs || [];
+      const rawLegs = c.itineraries || c.legs || [];
+      const claimLegs = (Array.isArray(rawLegs) && rawLegs.length > 0)
+        ? rawLegs
+        : [{
+            leg: 1,
+            from_district: c.district || "Base",
+            to_district: c.district || "Base",
+            from: "",
+            to: "",
+            mode: c.travel_mode || c.category || "Travel",
+            sub_mode: "",
+            sub_amount: 0,
+            km: c.total_km || 0,
+            amount: c.amount || 0,
+            da: c.da_amount || 0,
+            hotel: c.hotel_amount || 0,
+            local_purchase: c.local_purchase_amount || 0,
+            other_amount: c.other_expense_amount || 0,
+            visit_purpose: c.description || "Field visit"
+          }];
+
       claimLegs.forEach((l: any, idx: number) => {
         legsList.push({
           parentCode: c.expense_code,
@@ -2659,7 +2679,7 @@ export default function ExpensePage() {
           to_district: l.to_district || c.district || "",
           from: l.from || l.from_location || "",
           to: l.to || l.to_location || "",
-          mode: l.mode || l.travel_mode || "Other",
+          mode: l.mode || l.travel_mode || c.travel_mode || "Other",
           sub_mode: l.sub_mode || "",
           sub_amount: parseFloat(l.sub_amount) || 0,
           km: parseFloat(l.km || l.distance_km || 0),
@@ -2667,7 +2687,7 @@ export default function ExpensePage() {
           da: parseFloat(l.da || l.da_amount || 0),
           hotel: parseFloat(l.hotel || l.hotel_amount || 0),
           local_purchase: parseFloat(l.local_purchase || l.local_purchase_amount || 0),
-          other_amount: parseFloat(l.other_amount || l.other_expense_amount || 0),
+          other_amount: parseFloat(l.other_amount || l.other_expense_amount || l.oth_amount || 0),
           visit_purpose: l.visit_purpose || l.purpose || c.description || "Field visit"
         });
       });
@@ -4630,13 +4650,13 @@ export default function ExpensePage() {
             allowClear
           />
 
-          <div className="flex flex-wrap items-center gap-2.5 w-full md:w-auto justify-end">
-            <div className="flex items-center gap-1">
-              <span className="text-[10px] font-bold uppercase text-slate-400">Month:</span>
+          <div className="grid grid-cols-3 gap-2 w-full md:w-auto md:flex md:items-center">
+            <div className="flex flex-col gap-0.5 w-full md:w-auto">
+              <span className="text-[9px] font-extrabold uppercase text-slate-400">Month</span>
               <Select
                 value={claimsMonthFilter}
                 onChange={(val) => { setClaimsMonthFilter(val); setMyClaimsPage(1); }}
-                className="w-36"
+                className="w-full md:w-36 ant-select-custom-fix"
                 options={[
                   { label: "All Months", value: "all" },
                   ...getUniqueMonths().map(m => ({ label: m, value: m }))
@@ -4644,12 +4664,12 @@ export default function ExpensePage() {
               />
             </div>
 
-            <div className="flex items-center gap-1">
-              <span className="text-[10px] font-bold uppercase text-slate-400">Status:</span>
+            <div className="flex flex-col gap-0.5 w-full md:w-auto">
+              <span className="text-[9px] font-extrabold uppercase text-slate-400">Status</span>
               <Select
                 value={claimsStatusFilter}
                 onChange={(val) => { setClaimsStatusFilter(val as any); setMyClaimsPage(1); }}
-                className="w-36"
+                className="w-full md:w-36 ant-select-custom-fix"
                 options={[
                   { label: "All Statuses", value: "all" },
                   { label: "Draft", value: "draft" },
@@ -4661,12 +4681,12 @@ export default function ExpensePage() {
               />
             </div>
 
-            <div className="flex items-center gap-1">
-              <span className="text-[10px] font-bold uppercase text-slate-400">Sort:</span>
+            <div className="flex flex-col gap-0.5 w-full md:w-auto">
+              <span className="text-[9px] font-extrabold uppercase text-slate-400">Sort</span>
               <Select
                 value={claimsSortOrder}
                 onChange={(val) => { setClaimsSortOrder(val as any); setMyClaimsPage(1); }}
-                className="w-36"
+                className="w-full md:w-36 ant-select-custom-fix"
                 options={[
                   { label: "Newest Date", value: "date_desc" },
                   { label: "Oldest Date", value: "date_asc" },

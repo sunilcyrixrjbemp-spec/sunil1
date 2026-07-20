@@ -1512,6 +1512,39 @@ span.submitter-code-text {
     width: 100% !important;
   }
 
+  /* Custom Ant Design Select Override for My Claims Filter Bar (No curved line artifacts) */
+  .ant-select-custom-fix {
+    width: 100% !important;
+  }
+  .ant-select-custom-fix .ant-select-selector {
+    border-radius: 8px !important;
+    border: 1px solid #cbd5e1 !important;
+    background-color: #ffffff !important;
+    height: 34px !important;
+    min-height: 34px !important;
+    padding: 0 8px !important;
+    display: flex !important;
+    align-items: center !important;
+    box-shadow: none !important;
+  }
+  .ant-select-custom-fix .ant-select-selection-item,
+  .ant-select-custom-fix .ant-select-selection-placeholder,
+  .ant-select-custom-fix .ant-select-selection-search,
+  .ant-select-custom-fix input {
+    font-size: 11px !important;
+    font-weight: 600 !important;
+    color: #1e293b !important;
+    line-height: 32px !important;
+    min-height: unset !important;
+    height: 32px !important;
+    padding: 0 !important;
+    margin: 0 !important;
+    border: none !important;
+    border-radius: 0 !important;
+    box-shadow: none !important;
+    background: transparent !important;
+  }
+
   /* Antd Table in Approval section — horizontal scroll, no letter-wrapping headers */
   .ant-table-wrapper {
     overflow-x: auto !important;
