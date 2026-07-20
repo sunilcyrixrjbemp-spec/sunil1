@@ -479,7 +479,9 @@ export default function ApprovalPage() {
       if (!a.itinerary_id) return false;
       const parts = a.itinerary_id.split("-");
       const aLegNum = parseInt(parts[parts.length - 1]);
-      return aLegNum === legNum && a.bill_type === billType;
+      const aBillTypeLower = (a.bill_type || "").trim().toLowerCase();
+      const targetTypeLower = (billType || "").trim().toLowerCase();
+      return aLegNum === legNum && (a.bill_type === billType || aBillTypeLower === targetTypeLower);
     });
     if (!found) return null;
     return found.file_url.startsWith("http") ? found.file_url : `${API_BASE}${found.file_url}`;
