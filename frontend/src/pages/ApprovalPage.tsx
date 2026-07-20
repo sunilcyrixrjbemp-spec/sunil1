@@ -2130,84 +2130,91 @@ export default function ApprovalPage() {
                                           </tr>
                                         </thead>
                                         <tbody className="divide-y divide-gray-100">
-                                          {callsList.map((c: any, cIdx: number) => (
-                                            <tr key={cIdx}>
-                                              <td className="py-1 px-2 text-gray-700">{c.asset_details?.district_name || "—"}</td>
-                                              <td className="py-1 px-2 text-gray-700">{c.asset_details?.hospital_name || "—"}</td>
-                                              <td className="py-1 px-2 text-gray-855 font-bold">{c.asset_details?.equipment_name || "—"}</td>
-                                              <td className="py-1 px-2 text-gray-700">{c.asset_details?.model_name || "—"}</td>
-                                              <td className="py-1 px-2 font-mono font-bold text-gray-700">{c.barcode}</td>
-                                              <td className="py-1 px-2">
-                                                <span className="px-1 py-0.2 rounded font-extrabold text-[7px] uppercase bg-green-50 text-green-700 border border-green-200">
-                                                  {c.asset_details?.inventory_status || "Active"}
-                                                </span>
-                                              </td>
-                                              <td className="py-1 px-2 text-gray-650">{c.type || "Support Call"}</td>
-                                              <td className="py-1 px-2">
-                                                <span className="px-1 py-0.2 rounded font-extrabold text-[7px] uppercase bg-blue-50 text-blue-700 border border-blue-100">
-                                                  {c.status || "Attend"}
-                                                </span>
-                                              </td>
-                                              <td className="py-1 px-2 text-center">
-                                                {c.photo_url ? (
-                                                  <a
-                                                    href={`${API_BASE}${c.photo_url}`}
-                                                    target="_blank"
-                                                    rel="noreferrer"
-                                                    className="text-xs text-blue-600 font-bold hover:underline"
-                                                  >
-                                                    View
-                                                  </a>
-                                                ) : (
-                                                  <span className="text-[10px] text-gray-400">—</span>
-                                                )}
-                                              </td>
-                                            </tr>
-                                          ))}
+                                          {callsList.map((c: any, cIdx: number) => {
+                                            const callPhoto = c.photo_url || c.calls_photo_url || c.photo;
+                                            const fullPhotoUrl = callPhoto ? (callPhoto.startsWith("http") ? callPhoto : `${API_BASE}${callPhoto.startsWith('/') ? '' : '/'}${callPhoto}`) : null;
+                                            return (
+                                              <tr key={cIdx}>
+                                                <td className="py-1 px-2 text-gray-700">{c.asset_details?.district_name || "—"}</td>
+                                                <td className="py-1 px-2 text-gray-700">{c.asset_details?.hospital_name || "—"}</td>
+                                                <td className="py-1 px-2 text-gray-855 font-bold">{c.asset_details?.equipment_name || "—"}</td>
+                                                <td className="py-1 px-2 text-gray-700">{c.asset_details?.model_name || "—"}</td>
+                                                <td className="py-1 px-2 font-mono font-bold text-gray-700">{c.barcode}</td>
+                                                <td className="py-1 px-2">
+                                                  <span className="px-1 py-0.2 rounded font-extrabold text-[7px] uppercase bg-green-50 text-green-700 border border-green-200">
+                                                    {c.asset_details?.inventory_status || "Active"}
+                                                  </span>
+                                                </td>
+                                                <td className="py-1 px-2 text-gray-650">{c.type || "Support Call"}</td>
+                                                <td className="py-1 px-2">
+                                                  <span className="px-1 py-0.2 rounded font-extrabold text-[7px] uppercase bg-blue-50 text-blue-700 border border-blue-100">
+                                                    {c.status || "Attend"}
+                                                  </span>
+                                                </td>
+                                                <td className="py-1 px-2 text-center">
+                                                  {fullPhotoUrl ? (
+                                                    <button
+                                                      type="button"
+                                                      onClick={() => setLightboxImage(fullPhotoUrl)}
+                                                      className="text-xs text-blue-600 font-bold hover:underline border-0 bg-transparent cursor-pointer"
+                                                    >
+                                                      View
+                                                    </button>
+                                                  ) : (
+                                                    <span className="text-[10px] text-gray-400">—</span>
+                                                  )}
+                                                </td>
+                                              </tr>
+                                            );
+                                          })}
                                         </tbody>
                                       </table>
                                     </div>
 
                                     {/* Mobile View Card List */}
                                     <div className="block lg:hidden space-y-2 p-2.5 bg-gray-50/20">
-                                      {callsList.map((c: any, cIdx: number) => (
-                                        <div key={cIdx} className="bg-white border border-gray-150 rounded-lg p-2.5 space-y-2">
-                                          <div className="flex justify-between items-start">
-                                            <div>
-                                              <span className="font-extrabold text-gray-805 block">{c.asset_details?.equipment_name || "—"}</span>
-                                              <span className="text-[9px] text-gray-500">{c.asset_details?.hospital_name || "—"}</span>
-                                            </div>
-                                            <span className="px-1.5 py-0.5 rounded font-extrabold text-[8px] uppercase bg-blue-50 text-blue-700 border border-blue-100 shrink-0">
-                                              {c.status || "Attend"}
-                                            </span>
-                                          </div>
-                                          <div className="grid grid-cols-2 gap-x-2 gap-y-1 text-[9px] text-gray-600 font-bold border-t border-gray-100 pt-1.5">
-                                            <div>District: <span className="text-gray-800">{c.asset_details?.district_name || "—"}</span></div>
-                                            <div>Model: <span className="text-gray-800">{c.asset_details?.model_name || "—"}</span></div>
-                                            <div>Barcode: <span className="text-gray-800 font-mono">{c.barcode}</span></div>
-                                            <div>Type: <span className="text-gray-800">{c.type || "Support Call"}</span></div>
-                                          </div>
-                                          {c.photo_url && (
-                                            <div className="pt-2">
-                                              <div className="relative rounded overflow-hidden border border-blue-100 bg-white">
-                                                <img
-                                                  src={`${API_BASE}${c.photo_url}`}
-                                                  alt="Call verification"
-                                                  className="w-full h-auto object-cover max-h-48 cursor-pointer"
-                                                  onClick={() => setLightboxImage(`${API_BASE}${c.photo_url}`)}
-                                                />
-                                                <button
-                                                  type="button"
-                                                  onClick={() => setLightboxImage(`${API_BASE}${c.photo_url}`)}
-                                                  className="absolute bottom-1 right-1 bg-black/60 text-white font-bold text-[8px] px-2 py-0.5 rounded cursor-pointer border-0"
-                                                >
-                                                  Full View
-                                                </button>
+                                      {callsList.map((c: any, cIdx: number) => {
+                                        const callPhoto = c.photo_url || c.calls_photo_url || c.photo;
+                                        const fullPhotoUrl = callPhoto ? (callPhoto.startsWith("http") ? callPhoto : `${API_BASE}${callPhoto.startsWith('/') ? '' : '/'}${callPhoto}`) : null;
+                                        return (
+                                          <div key={cIdx} className="bg-white border border-gray-150 rounded-lg p-2.5 space-y-2">
+                                            <div className="flex justify-between items-start">
+                                              <div>
+                                                <span className="font-extrabold text-gray-805 block">{c.asset_details?.equipment_name || "—"}</span>
+                                                <span className="text-[9px] text-gray-500">{c.asset_details?.hospital_name || "—"}</span>
                                               </div>
+                                              <span className="px-1.5 py-0.5 rounded font-extrabold text-[8px] uppercase bg-blue-50 text-blue-700 border border-blue-100 shrink-0">
+                                                {c.status || "Attend"}
+                                              </span>
                                             </div>
-                                          )}
-                                        </div>
-                                      ))}
+                                            <div className="grid grid-cols-2 gap-x-2 gap-y-1 text-[9px] text-gray-600 font-bold border-t border-gray-100 pt-1.5">
+                                              <div>District: <span className="text-gray-800">{c.asset_details?.district_name || "—"}</span></div>
+                                              <div>Model: <span className="text-gray-800">{c.asset_details?.model_name || "—"}</span></div>
+                                              <div>Barcode: <span className="text-gray-800 font-mono">{c.barcode}</span></div>
+                                              <div>Type: <span className="text-gray-800">{c.type || "Support Call"}</span></div>
+                                            </div>
+                                            {fullPhotoUrl && (
+                                              <div className="pt-2">
+                                                <div className="relative rounded overflow-hidden border border-blue-100 bg-white">
+                                                  <img
+                                                    src={fullPhotoUrl}
+                                                    alt="Call verification"
+                                                    className="w-full h-auto object-cover max-h-48 cursor-pointer"
+                                                    onClick={() => setLightboxImage(fullPhotoUrl)}
+                                                  />
+                                                  <button
+                                                    type="button"
+                                                    onClick={() => setLightboxImage(fullPhotoUrl)}
+                                                    className="absolute bottom-1 right-1 bg-black/60 text-white font-bold text-[8px] px-2 py-0.5 rounded cursor-pointer border-0"
+                                                  >
+                                                    Full View
+                                                  </button>
+                                                </div>
+                                              </div>
+                                            )}
+                                          </div>
+                                        );
+                                      })}
                                     </div>
                                   </div>
                                 )}

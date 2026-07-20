@@ -1,20 +1,11 @@
 import { verifyPassword, signJwt, verifyJwt, getPasswordHash } from "../utils/security.js";
+import { jsonResponse } from "../utils/http.js";
 import { DESIGNATIONS, ZONE_DISTRICTS, ROLES, MONTH_NAMES } from "../utils/constants.js";
 import { getExpenseInitData, getActualZone } from "./expense.js";
 import { fetchPendingApprovals } from "./approval.js";
 import { getDrizzleDb } from "../db/client.js";
 import { users, userRoles, passwordHistories, allowanceMaster, expenses, loginLogs, hierarchyApprovers, hierarchyRequesters, facilityDetails, noTaDaHospitals } from "../db/schema.js";
 import { eq, and, or, sql, desc, inArray } from "drizzle-orm";
-
-/**
- * Helper to build JSON responses in routes
- */
-function jsonResponse(data, status = 200) {
-  return new Response(JSON.stringify(data), {
-    status,
-    headers: { "Content-Type": "application/json" }
-  });
-}
 
 /**
  * Audit log login attempts to database

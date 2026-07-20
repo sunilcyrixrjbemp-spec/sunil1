@@ -1,13 +1,7 @@
 import { runWrite, runBatchWrite } from "../utils/db.js";
 import { getPasswordHash, verifyPassword } from "../utils/security.js";
 import { computeBaseLocPolicy, checkIsCommuteLeg, buildPolicyComment } from "./expense.js";
-
-function jsonResponse(data, status = 200) {
-  return new Response(JSON.stringify(data), {
-    status,
-    headers: { "Content-Type": "application/json" }
-  });
-}
+import { jsonResponse } from "../utils/http.js";
 
 /**
  * Internal helper: Re-evaluate existing expenses for a user when their base location changes.
@@ -27,13 +21,19 @@ async function runRetroactivePolicyCheck(env, existingUser, newBaseLocation, tim
     FROM expenses
     WHERE user_id = ? AND LOWER(month) = LOWER(?) AND year = ?
       AND LOWER(status) NOT IN ('rejected', 'returned_to_draft')
-  `).bind(existingUser.id, currentMonth, currentYear).all().catch(() => ({ results: [] }));
+  `).bind(existingUser.id, currentMonth, currentYear).all().catch(err => {
+    console.error("Database query failed in runRetroactivePolicyCheck (expenses):", err);
+    return { results: [] };
+  });
 
   const expenses = expensesRes.results || [];
   if (expenses.length === 0) return { affected_expenses: 0, total_deducted: 0 };
 
   // Fetch official hospitals list to resolve dropdown vs custom locations retroactively
-  const hospitalsRes = await env.DB.prepare("SELECT DISTINCT hospital_name FROM assets_inventory WHERE hospital_name IS NOT NULL").all().catch(() => ({ results: [] }));
+  const hospitalsRes = await env.DB.prepare("SELECT DISTINCT hospital_name FROM assets_inventory WHERE hospital_name IS NOT NULL").all().catch(err => {
+    console.error("Database query failed in runRetroactivePolicyCheck (hospitals):", err);
+    return { results: [] };
+  });
   const officialHospitals = new Set((hospitalsRes.results || []).map(h => h.hospital_name.trim().toLowerCase()));
 
   const baseLocations = (newBaseLocation || "").split(",").map(x => x.trim().toLowerCase()).filter(Boolean);
@@ -42,13 +42,24 @@ async function runRetroactivePolicyCheck(env, existingUser, newBaseLocation, tim
   let totalDeducted = 0;
   const batchStatements = [];
 
-  for (const exp of expenses) {
-    const legsRes = await env.DB.prepare(`
-      SELECT itinerary_id, leg_number, from_location, to_location, travel_mode, sub_mode,
-        distance_km, travel_amount, sub_amount, da_amount, hotel_amount, local_purchase,
-        other_amount, from_district, to_district
-      FROM expense_itineraries WHERE exp_id = ? ORDER BY leg_number ASC
-    `).bind(exp.expense_code).all().catch(() => ({ results: [] }));
+  // Fetch legs for all expenses in PARALLEL to eliminate sequential latency
+  const allLegsResponses = await Promise.all(
+    expenses.map(exp =>
+      env.DB.prepare(`
+        SELECT itinerary_id, leg_number, from_location, to_location, travel_mode, sub_mode,
+          distance_km, travel_amount, sub_amount, da_amount, hotel_amount, local_purchase,
+          other_amount, from_district, to_district
+        FROM expense_itineraries WHERE exp_id = ? ORDER BY leg_number ASC
+      `).bind(exp.expense_code).all().catch(err => {
+        console.error(`Database query failed for legs of expense ${exp.expense_code}:`, err);
+        return { results: [] };
+      })
+    )
+  );
+
+  for (let expIdx = 0; expIdx < expenses.length; expIdx++) {
+    const exp = expenses[expIdx];
+    const legsRes = allLegsResponses[expIdx];
 
     const legs = (legsRes.results || []).map(leg => {
       const fromLoc = (leg.from_location || "").trim().toLowerCase();

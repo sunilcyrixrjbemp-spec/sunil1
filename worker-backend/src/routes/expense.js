@@ -2958,16 +2958,30 @@ export async function handleGetEngineerMonthClaims(request, env, params, query, 
       legsMap[leg.exp_id].push(leg);
     }
 
-    // Batch fetch all asset taggings for all legs in a single query
+    // Batch fetch all asset taggings, breakdown calls, and PMS calls for all legs in a single query
     const itiIds = allLegs.map(l => l.itinerary_id).filter(Boolean);
     let allTaggings = [];
+    let allCalls = [];
+    let allPms = [];
     if (itiIds.length > 0) {
       const placeholders = itiIds.map(() => "?").join(",");
-      const tagRes = await env.DB.prepare(`
-        SELECT * FROM expense_asset_taggings 
-        WHERE itinerary_id IN (${placeholders})
-      `).bind(...itiIds).all();
+      const [tagRes, callsRes, pmsRes] = await Promise.all([
+        env.DB.prepare(`
+          SELECT * FROM expense_asset_taggings 
+          WHERE itinerary_id IN (${placeholders})
+        `).bind(...itiIds).all().catch(() => ({ results: [] })),
+        env.DB.prepare(`
+          SELECT * FROM expense_breakdown_calls 
+          WHERE itinerary_id IN (${placeholders})
+        `).bind(...itiIds).all().catch(() => ({ results: [] })),
+        env.DB.prepare(`
+          SELECT * FROM expense_pms_calls 
+          WHERE itinerary_id IN (${placeholders})
+        `).bind(...itiIds).all().catch(() => ({ results: [] }))
+      ]);
       allTaggings = tagRes.results || [];
+      allCalls = callsRes.results || [];
+      allPms = pmsRes.results || [];
     }
 
     const taggingsMap = {};
@@ -2976,6 +2990,18 @@ export async function handleGetEngineerMonthClaims(request, env, params, query, 
         taggingsMap[t.itinerary_id] = [];
       }
       taggingsMap[t.itinerary_id].push(t);
+    }
+
+    const callsDbMap = {};
+    for (const call of allCalls) {
+      if (!callsDbMap[call.itinerary_id]) callsDbMap[call.itinerary_id] = {};
+      if (call.barcode) callsDbMap[call.itinerary_id][call.barcode] = call;
+    }
+
+    const pmsDbMap = {};
+    for (const p of allPms) {
+      if (!pmsDbMap[p.itinerary_id]) pmsDbMap[p.itinerary_id] = {};
+      if (p.barcode) pmsDbMap[p.itinerary_id][p.barcode] = p;
     }
 
     for (const exp of expenses) {
@@ -2987,14 +3013,27 @@ export async function handleGetEngineerMonthClaims(request, env, params, query, 
           try {
             const act = typeof leg.activity_details === 'string' ? JSON.parse(leg.activity_details) : leg.activity_details;
             if (act && typeof act === 'object') {
+              const itiCallsMap = callsDbMap[leg.itinerary_id] || {};
               for (const item of (act.calls_list || [])) {
-                if (item.barcode) barcodes.push(item.barcode);
-              }
-              for (const item of (act.pms_list || [])) {
-                if (item.barcode && !barcodes.includes(item.barcode)) {
+                if (item.barcode) {
                   barcodes.push(item.barcode);
+                  const dbCall = itiCallsMap[item.barcode];
+                  if (dbCall && dbCall.photo_url) {
+                    item.photo_url = dbCall.photo_url;
+                  }
                 }
               }
+              const itiPmsMap = pmsDbMap[leg.itinerary_id] || {};
+              for (const item of (act.pms_list || [])) {
+                if (item.barcode) {
+                  if (!barcodes.includes(item.barcode)) barcodes.push(item.barcode);
+                  const dbPms = itiPmsMap[item.barcode];
+                  if (dbPms && dbPms.photo_url) {
+                    item.photo_url = dbPms.photo_url;
+                  }
+                }
+              }
+              leg.activity_details = JSON.stringify(act);
             }
           } catch (err) {}
         }
