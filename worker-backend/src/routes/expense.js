@@ -36,12 +36,17 @@ export function getActualZone(zone, district) {
 }
 
 async function queryInChunks(db, queryTemplate, ids, chunkSize = 50) {
-  let allResults = [];
+  if (!ids || ids.length === 0) return [];
+  const promises = [];
   for (let i = 0; i < ids.length; i += chunkSize) {
     const chunk = ids.slice(i, i + chunkSize);
     const placeholders = chunk.map(() => "?").join(",");
     const sql = queryTemplate.replace("?", placeholders);
-    const res = await db.prepare(sql).bind(...chunk).all();
+    promises.push(db.prepare(sql).bind(...chunk).all());
+  }
+  const responses = await Promise.all(promises);
+  let allResults = [];
+  for (const res of responses) {
     if (res.results) {
       allResults = allResults.concat(res.results);
     }
@@ -670,10 +675,18 @@ export async function handleGetTeamExpenses(request, env, params, query, user) {
     binds.push(now.getFullYear(), MONTH_NAMES[now.getMonth()]);
   }
 
-  querySql += " ORDER BY created_at DESC";
-  console.log("DEBUG: querySql =", querySql, "binds =", JSON.stringify(binds));
+  const teamUserCodes = isAdminOrReportViewer
+    ? teamUsers.map(u => u.user_id)
+    : teamUsers.map(u => u.user_id).filter(uc => uc !== user.user_id);
 
-  const expensesRows = await env.DB.prepare(querySql).bind(...binds).all();
+  const limitReqsPromise = teamUserCodes.length > 0
+    ? env.DB.prepare(`SELECT * FROM limit_approval_requests WHERE user_id IN (${teamUserCodes.map(() => "?").join(",")})`).bind(...teamUserCodes).all()
+    : Promise.resolve({ results: [] });
+
+  const [expensesRows, limitReqsRes] = await Promise.all([
+    env.DB.prepare(querySql).bind(...binds).all(),
+    limitReqsPromise
+  ]);
   const expenses = expensesRows.results || [];
   console.log("DEBUG: fetched expenses count =", expenses.length);
 
@@ -780,17 +793,9 @@ export async function handleGetTeamExpenses(request, env, params, query, user) {
     }
   }
 
-  // 3. Fetch team members' limit requests
-  const teamUserCodes = isAdminOrReportViewer
-    ? teamUsers.map(u => u.user_id)
-    : teamUsers.map(u => u.user_id).filter(uc => uc !== user.user_id);
-  if (teamUserCodes.length > 0) {
-    const codePlaceholders = teamUserCodes.map(() => "?").join(",");
-    const limitReqsRes = await env.DB.prepare(`
-      SELECT * FROM limit_approval_requests WHERE user_id IN (${codePlaceholders})
-    `).bind(...teamUserCodes).all();
-
-    for (const pl of (limitReqsRes.results || [])) {
+  // 3. Process pre-fetched team members' limit requests
+  if (limitReqsRes && limitReqsRes.results) {
+    for (const pl of limitReqsRes.results) {
       const submitter = teamUsers.find(u => u.user_id === pl.user_id);
       if (!submitter) continue;
 
