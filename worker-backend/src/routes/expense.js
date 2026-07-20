@@ -2028,6 +2028,7 @@ export async function handleSubmitExpense(request, env, params, query, user) {
 
   for (let idx = 0; idx < itineraries.length; idx++) {
     const iti = itineraries[idx];
+    const legNum = idx + 1;
     const isCommute = !hasOutdoorLeg && checkIsCommuteLeg(iti, baseLocations, idx, itineraries.length);
     const travelAmt = isCommute ? 0.0 : parseFloat(iti.amount || "0.0");
     const subAmt    = isCommute ? 0.0 : parseFloat(iti.sub_amount || "0.0");
@@ -2035,6 +2036,110 @@ export async function handleSubmitExpense(request, env, params, query, user) {
     const hotelAmt = parseFloat(iti.hotel || "0.0");
     const otherAmt = parseFloat(iti.oth_amount || "0.0");
     const lpAmt = parseFloat(iti.local_purchase || "0.0");
+
+    // ── Server-side mandatory bill attachment validations ──
+    const modeLower = (iti.mode || "").trim().toLowerCase();
+    const mainBillFile = formData.get(`main_bill_${legNum}`);
+    const hasMainBillUpload = mainBillFile && typeof mainBillFile === "object" && mainBillFile.name;
+    let hasMainAttachment = hasMainBillUpload;
+    if (editExpenseId && !hasMainAttachment) {
+      const existingAtt = await env.DB.prepare(
+        "SELECT id FROM expense_attachments WHERE exp_id = ? AND itinerary_id = ?"
+      ).bind(expenseCode, `${expenseCode}-${legNum}`).first();
+      if (existingAtt) hasMainAttachment = true;
+    }
+
+    if (modeLower === "train" && travelAmt >= 1 && !hasMainAttachment) {
+      return jsonResponse({ error: `Validation Error (Visit ${legNum}): Train ticket upload is mandatory for Train travel (Fare: ₹${travelAmt}).` }, 400);
+    }
+    if (modeLower !== "bike" && modeLower !== "train" && travelAmt >= 300 && !hasMainAttachment) {
+      return jsonResponse({ error: `Validation Error (Visit ${legNum}): Ticket/receipt upload is mandatory for ${iti.mode} travel when fare is ₹300 or more (Fare: ₹${travelAmt}).` }, 400);
+    }
+
+    if (iti.sub_mode) {
+      const subModeLower = (iti.sub_mode || "").trim().toLowerCase();
+      const subBillFile = formData.get(`sub_bill_${legNum}`);
+      const hasSubBillUpload = subBillFile && typeof subBillFile === "object" && subBillFile.name;
+      let hasSubAttachment = hasSubBillUpload;
+      if (editExpenseId && !hasSubAttachment) {
+        const existingSubAtt = await env.DB.prepare(
+          "SELECT id FROM expense_attachments WHERE exp_id = ? AND itinerary_id = ? AND bill_type = ?"
+        ).bind(expenseCode, `${expenseCode}-${legNum}`, iti.sub_mode).first();
+        if (existingSubAtt) hasSubAttachment = true;
+      }
+
+      if (subModeLower === "train" && subAmt >= 1 && !hasSubAttachment) {
+        return jsonResponse({ error: `Validation Error (Visit ${legNum}): Sub-connection Train ticket upload is mandatory (Fare: ₹${subAmt}).` }, 400);
+      }
+      if (subModeLower !== "bike" && subModeLower !== "train" && subAmt >= 300 && !hasSubAttachment) {
+        return jsonResponse({ error: `Validation Error (Visit ${legNum}): Sub-connection receipt is mandatory for ${iti.sub_mode} travel when fare is ₹300 or more (Fare: ₹${subAmt}).` }, 400);
+      }
+    }
+
+    if (legNum === 1) {
+      if (hotelAmt >= 1) {
+        const hotelBillFile = formData.get("hotel_bill_1");
+        const hasHotelUpload = hotelBillFile && typeof hotelBillFile === "object" && hotelBillFile.name;
+        let hasHotelAttachment = hasHotelUpload;
+        if (editExpenseId && !hasHotelAttachment) {
+          const existingHotel = await env.DB.prepare(
+            "SELECT id FROM expense_attachments WHERE exp_id = ? AND bill_type = 'Hotel'"
+          ).bind(expenseCode).first();
+          if (existingHotel) hasHotelAttachment = true;
+        }
+        if (!hasHotelAttachment) {
+          return jsonResponse({ error: `Validation Error (Visit 1): Hotel stay receipt is mandatory for hotel expenses (Amount: ₹${hotelAmt}).` }, 400);
+        }
+      }
+
+      if (lpAmt >= 300) {
+        const lpBillFile = formData.get("local_purchase_bill_1");
+        const hasLpUpload = lpBillFile && typeof lpBillFile === "object" && lpBillFile.name;
+        let hasLpAttachment = hasLpUpload;
+        if (editExpenseId && !hasLpAttachment) {
+          const existingLp = await env.DB.prepare(
+            "SELECT id FROM expense_attachments WHERE exp_id = ? AND bill_type = 'Local_Purchase'"
+          ).bind(expenseCode).first();
+          if (existingLp) hasLpAttachment = true;
+        }
+        if (!hasLpAttachment) {
+          return jsonResponse({ error: `Validation Error (Visit 1): Local Purchase receipt is mandatory when amount is ₹300 or more (Amount: ₹${lpAmt}).` }, 400);
+        }
+      }
+    }
+
+    if (iti.oth_desc && iti.oth_desc.trim() && otherAmt >= 300) {
+      const othBillFile = formData.get(`oth_bill_${legNum}`);
+      const hasOthUpload = othBillFile && typeof othBillFile === "object" && othBillFile.name;
+      let hasOthAttachment = hasOthUpload;
+      if (editExpenseId && !hasOthAttachment) {
+        const existingOth = await env.DB.prepare(
+          "SELECT id FROM expense_attachments WHERE exp_id = ? AND itinerary_id = ? AND bill_type = 'Other_Expense'"
+        ).bind(expenseCode, `${expenseCode}-${legNum}`).first();
+        if (existingOth) hasOthAttachment = true;
+      }
+      if (!hasOthAttachment) {
+        return jsonResponse({ error: `Validation Error (Visit ${legNum}): Receipt for other expense "${iti.oth_desc}" is mandatory when amount is ₹300 or more (Amount: ₹${otherAmt}).` }, 400);
+      }
+    }
+
+    // ── Calls Service Report Validation (Compulsory for all Calls) ──
+    if (iti.activity_details) {
+      try {
+        const act = typeof iti.activity_details === "string" ? JSON.parse(iti.activity_details) : iti.activity_details;
+        const selectedActs = act?.selected_activities || [];
+        if (selectedActs.includes("Calls")) {
+          const callsList = act?.calls_list || [];
+          if (callsList.length === 0) {
+            return jsonResponse({ error: `Validation Error (Visit ${legNum}): Calls activity selected but no call entries were added.` }, 400);
+          }
+          const missingPhoto = callsList.filter(c => !c.photo_url || !c.photo_url.trim());
+          if (missingPhoto.length > 0) {
+            return jsonResponse({ error: `Validation Error (Visit ${legNum}): Service Report photo is compulsory for all Calls. ${missingPhoto.length} call entry(s) are missing a Service Report photo.` }, 400);
+          }
+        }
+      } catch (e) {}
+    }
 
     totalDa += daAmt;
     totalHotel += hotelAmt;

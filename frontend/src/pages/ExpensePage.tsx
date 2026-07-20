@@ -667,12 +667,14 @@ export default function ExpensePage() {
 
   const hasExistingFile = (legNum: number, billType: string) => {
     if (!editExpenseId) return false;
-    const isDeletedLocally = deletedAttachments.some(d => d.leg === legNum && d.type === billType);
+    const isDeletedLocally = deletedAttachments.some(d => d.leg === legNum && d.type.toLowerCase() === (billType || "").toLowerCase());
     if (isDeletedLocally) return false;
     return existingAttachmentsDetailed.some(a => {
       const parts = a.itinerary_id.split("-");
       const aLegNum = parseInt(parts[parts.length - 1]);
-      return aLegNum === legNum && a.bill_type === billType;
+      const billTypeLower = (a.bill_type || "").trim().toLowerCase();
+      const checkLower = (billType || "").trim().toLowerCase();
+      return aLegNum === legNum && (a.bill_type === billType || billTypeLower === checkLower);
     });
   };
 
@@ -1980,49 +1982,27 @@ export default function ExpensePage() {
       }
 
       const mainBill = files[legNum]?.main_bill;
-      const hasMainAttachment = mainBill || hasExistingFile(legNum, leg.mode);
+      const modeLower = (leg.mode || "").trim().toLowerCase();
+      const hasMainAttachment = mainBill || hasExistingFile(legNum, leg.mode) || hasExistingFile(legNum, modeLower);
       const mainAmt = parseFloat(leg.amount) || 0;
 
-      if (leg.mode === "Train") {
+      if (modeLower === "train") {
         // Train: bill always required (any amount ≥ ₹1)
         if (mainAmt >= 1 && !hasMainAttachment) {
           setValidationModal({
             show: true,
             title: `Visit ${legNum}: Train Ticket Required`,
-            message: "Train ticket / receipt upload is mandatory. Please attach your train ticket before submitting."
+            message: "Train ticket / receipt upload is mandatory for Train travel. Please attach your train ticket before submitting."
           });
           return false;
         }
-      } else if (leg.mode === "Auto" || leg.mode === "Bus") {
-        // Auto / Bus: bill required when fare ≥ ₹300
+      } else if (modeLower !== "bike") {
+        // All non-bike paid modes (Auto, Bus, Car, Taxi, Flight, Company Provided, etc.): bill required when fare ≥ ₹300
         if (mainAmt >= 300 && !hasMainAttachment) {
           setValidationModal({
             show: true,
             title: `Visit ${legNum}: ${leg.mode} Receipt Required`,
             message: `${leg.mode} fare is ₹${mainAmt.toFixed(0)} (₹300 or more). Please upload the ${leg.mode} receipt / ticket before submitting.`
-          });
-          return false;
-        }
-      } else if (leg.mode === "Company Provided") {
-        const isJodhpur = (leg.district_from || "").toLowerCase().includes("jodhpur") || 
-                          (leg.district || "").toLowerCase().includes("jodhpur") ||
-                          (leg.from || "").toLowerCase().includes("jodhpur") ||
-                          (leg.to || "").toLowerCase().includes("jodhpur");
-        if (!isJodhpur && mainAmt >= 300 && !hasMainAttachment) {
-          setValidationModal({
-            show: true,
-            title: `Visit ${legNum}: Missing Attachment`,
-            message: "Please upload a receipt for company provided travel since the amount is ₹300 or more."
-          });
-          return false;
-        }
-      } else if (leg.mode !== "Bike" && leg.mode !== "Car") {
-        // All other paid modes (Flight, etc.): bill required when fare ≥ ₹300
-        if (mainAmt >= 300 && !hasMainAttachment) {
-          setValidationModal({
-            show: true,
-            title: `Visit ${legNum}: Missing Ticket Receipt`,
-            message: `Please upload a receipt / ticket for travel mode "${leg.mode}" since the fare is ₹300 or more.`
           });
           return false;
         }
@@ -2039,10 +2019,11 @@ export default function ExpensePage() {
           return false;
         }
         const subBill = files[legNum]?.sub_bill;
-        const hasSubAttachment = subBill || hasExistingFile(legNum, leg.sub_mode);
+        const subModeLower = (leg.sub_mode || "").trim().toLowerCase();
+        const hasSubAttachment = subBill || hasExistingFile(legNum, leg.sub_mode) || hasExistingFile(legNum, subModeLower);
 
-        if (leg.sub_mode === "Train") {
-          // Sub Train: bill always required
+        if (subModeLower === "train") {
+          // Sub Train: bill always required (any amount ≥ ₹1)
           if (subAmt >= 1 && !hasSubAttachment) {
             setValidationModal({
               show: true,
@@ -2051,35 +2032,13 @@ export default function ExpensePage() {
             });
             return false;
           }
-        } else if (leg.sub_mode === "Auto" || leg.sub_mode === "Bus") {
-          // Sub Auto / Bus: bill required when fare ≥ ₹300
+        } else if (subModeLower !== "bike") {
+          // Non-bike sub-modes: bill required when fare ≥ ₹300
           if (subAmt >= 300 && !hasSubAttachment) {
             setValidationModal({
               show: true,
               title: `Visit ${legNum}: Sub-connection ${leg.sub_mode} Receipt Required`,
               message: `Sub-connection ${leg.sub_mode} fare is ₹${subAmt.toFixed(0)} (₹300 or more). Please upload the receipt before submitting.`
-            });
-            return false;
-          }
-        } else if (leg.sub_mode === "Company Provided") {
-          const isJodhpur = (leg.district_from || "").toLowerCase().includes("jodhpur") || 
-                            (leg.district || "").toLowerCase().includes("jodhpur") ||
-                            (leg.from || "").toLowerCase().includes("jodhpur") ||
-                            (leg.to || "").toLowerCase().includes("jodhpur");
-          if (!isJodhpur && subAmt >= 300 && !hasSubAttachment) {
-            setValidationModal({
-              show: true,
-              title: `Visit ${legNum}: Missing Sub-connection Attachment`,
-              message: "Please upload a receipt for sub-connection company provided travel since the amount is ₹300 or more."
-            });
-            return false;
-          }
-        } else if (leg.sub_mode !== "Bike" && leg.sub_mode !== "Car") {
-          if (subAmt >= 300 && !hasSubAttachment) {
-            setValidationModal({
-              show: true,
-              title: `Visit ${legNum}: Missing Sub-connection Receipt`,
-              message: `Please upload a sub-connection receipt since the fare is ₹300 or more.`
             });
             return false;
           }
