@@ -198,7 +198,7 @@ select.input-lte option {
 
 /* Info Box layouts */
 .info-box-lte {
-  @apply bg-white border border-gray-300 rounded shadow-sm flex items-stretch overflow-hidden min-h-[64px] hover:shadow-md transition-shadow;
+  @apply bg-white border border-gray-300 rounded-none sharp-card shadow-sm flex items-stretch overflow-hidden min-h-[64px] hover:shadow-md transition-shadow;
 }
 
 .info-box-icon {

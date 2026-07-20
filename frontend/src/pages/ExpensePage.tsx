@@ -3140,30 +3140,24 @@ export default function ExpensePage() {
                 const distOpts = Array.from(new Set([...rawDistOpts, hDist, "Jaipur", "Kota"])).filter(Boolean).filter(d => d !== "All");
 
                 return (
-                  <div key={leg.leg} className={`card-lte bg-white animate-fadeIn text-xs mb-6 shadow-sm border-t-4 ${
+                  <div key={leg.leg} className={`card-lte bg-white animate-fadeIn text-xs mb-6 shadow-sm border border-slate-300 sharp-card rounded-none border-t-4 ${
                     leg.travel_type === "In-District"
-                      ? "border-t-indigo-500"
+                      ? "border-t-indigo-600"
                       : "border-t-amber-500"
                   }`}>
                     
-                    {/* Leg Header */}
-                    <div className={`border-b border-gray-200 p-3 flex items-center justify-between ${
+                    {/* Leg Header with Full Solid Background Color & Square Corners */}
+                    <div className={`p-3 flex items-center justify-between text-white rounded-none ${
                       leg.travel_type === "In-District"
-                        ? "bg-indigo-50"
-                        : "bg-amber-50"
+                        ? "bg-indigo-700"
+                        : "bg-amber-600"
                     }`}>
-                      <h3 className="text-xs font-black uppercase tracking-wider text-gray-700 flex items-center gap-2">
-                        <span className={`text-white h-5 w-5 rounded-full flex items-center justify-center text-[10px] font-bold ${
-                          leg.travel_type === "In-District" ? "bg-indigo-600" : "bg-amber-500"
-                        }`}>
-                          {legNum}
+                      <h3 className="text-xs font-black uppercase tracking-wider text-white flex items-center gap-2.5 m-0">
+                        <span className="bg-white text-slate-900 h-5 px-2 rounded-none flex items-center justify-center text-[10px] font-black font-mono shadow-xs">
+                          #{legNum}
                         </span>
-                        Facility Visit {legNum}
-                        <span className={`text-[8px] font-black uppercase px-2 py-0.5 rounded-full tracking-wider ${
-                          leg.travel_type === "In-District"
-                            ? "bg-indigo-100 text-indigo-700 border border-indigo-200"
-                            : "bg-amber-100 text-amber-700 border border-amber-200"
-                        }`}>
+                        <span>Facility Visit {legNum}</span>
+                        <span className="text-[9px] font-black uppercase px-2 py-0.5 rounded-none tracking-wider bg-white/20 text-white border border-white/30">
                           {leg.travel_type === "In-District" ? "In-District" : "Outdoor"}
                         </span>
                       </h3>
@@ -3171,9 +3165,9 @@ export default function ExpensePage() {
                         <button
                           type="button"
                           onClick={() => removeItinerary(leg.leg)}
-                          className="text-red-600 hover:text-red-800 text-[10px] font-bold flex items-center gap-1 border-0 bg-transparent cursor-pointer"
+                          className="bg-red-500 hover:bg-red-600 text-white text-[10px] font-extrabold uppercase px-2.5 py-1 rounded-none border-0 cursor-pointer flex items-center gap-1 transition-colors shadow-xs"
                         >
-                          <Trash2 className="w-3.5 h-3.5" /> Remove Facility Visit
+                          <Trash2 className="w-3.5 h-3.5" /> Remove Visit
                         </button>
                       )}
                     </div>
@@ -3191,7 +3185,7 @@ export default function ExpensePage() {
                             key="In-District"
                             type="button"
                             onClick={() => handleItineraryChange(leg.leg, "travel_type", "In-District")}
-                            className={`px-4 py-1.5 text-xs font-black rounded border transition-all cursor-pointer shadow-sm ${
+                            className={`px-4 py-1.5 text-xs font-black rounded-none sharp-card border transition-all cursor-pointer shadow-sm ${
                               leg.travel_type === "In-District"
                                 ? "border-indigo-650 bg-indigo-600 text-white font-extrabold"
                                 : "border-gray-300 bg-white text-gray-600 hover:bg-slate-50"
@@ -3203,7 +3197,7 @@ export default function ExpensePage() {
                             key="Outdoor"
                             type="button"
                             onClick={() => handleItineraryChange(leg.leg, "travel_type", "Outdoor")}
-                            className={`px-4 py-1.5 text-xs font-black rounded border transition-all cursor-pointer shadow-sm ${
+                            className={`px-4 py-1.5 text-xs font-black rounded-none sharp-card border transition-all cursor-pointer shadow-sm ${
                               leg.travel_type === "Outdoor"
                                 ? "border-amber-600 bg-amber-500 text-white font-extrabold"
                                 : "border-gray-300 bg-white text-gray-600 hover:bg-slate-50"
