@@ -236,10 +236,12 @@ export default function HelpPage() {
     }
   };
 
+  const [refreshing, setRefreshing] = useState(false);
+
   const fetchInitialData = async () => {
     const currentUserId = currentUser?.user_id || "Admin";
     const hasCache = !!localStorage.getItem(`cache_support_tickets_${currentUserId}`);
-    if (!hasCache) {
+    if (!hasCache && tickets.length === 0) {
       setLoading(true);
     }
     try {
@@ -247,19 +249,49 @@ export default function HelpPage() {
         ticketService.getTickets(),
         currentUser ? expenseService.getExpenses() : Promise.resolve([])
       ]);
-      setTickets(ticketList);
-      setMyExpenses(expenseList);
-      localStorage.setItem(`cache_support_tickets_${currentUserId}`, JSON.stringify(ticketList));
-      if (currentUser) {
-        localStorage.setItem(`cache_my_expenses_${currentUserId}`, JSON.stringify(expenseList));
+      if (Array.isArray(ticketList)) {
+        setTickets(ticketList);
+        localStorage.setItem(`cache_support_tickets_${currentUserId}`, JSON.stringify(ticketList));
+      }
+      if (Array.isArray(expenseList)) {
+        setMyExpenses(expenseList);
+        if (currentUser) {
+          localStorage.setItem(`cache_my_expenses_${currentUserId}`, JSON.stringify(expenseList));
+        }
       }
     } catch (e) {
       console.error("Failed to load help center tickets", e);
-      if (!hasCache) {
+      if (!hasCache && tickets.length === 0) {
         toast.error("Failed to load support tickets.");
       }
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleManualRefresh = async () => {
+    setRefreshing(true);
+    const currentUserId = currentUser?.user_id || "Admin";
+    try {
+      const [ticketList, expenseList] = await Promise.all([
+        ticketService.getTickets(),
+        currentUser ? expenseService.getExpenses() : Promise.resolve([])
+      ]);
+      if (Array.isArray(ticketList)) {
+        setTickets(ticketList);
+        localStorage.setItem(`cache_support_tickets_${currentUserId}`, JSON.stringify(ticketList));
+      }
+      if (Array.isArray(expenseList)) {
+        setMyExpenses(expenseList);
+        if (currentUser) {
+          localStorage.setItem(`cache_my_expenses_${currentUserId}`, JSON.stringify(expenseList));
+        }
+      }
+      toast.success("Support tickets refreshed!");
+    } catch (e) {
+      toast.error("Failed to refresh support tickets.");
+    } finally {
+      setRefreshing(false);
     }
   };
 
@@ -885,8 +917,9 @@ export default function HelpPage() {
               <span className="h-1.5 w-1.5 rounded-full bg-emerald-400 animate-pulse" /> Live Realtime Sync
             </Tag>
             <Button
-              icon={<ReloadOutlined />}
-              onClick={fetchInitialData}
+              icon={<ReloadOutlined spin={refreshing} />}
+              loading={refreshing}
+              onClick={handleManualRefresh}
               className="bg-white/10 border-white/20 text-white hover:bg-white/20 hover:text-white font-bold rounded-xl self-start sm:self-center"
             >
               Refresh Desk
@@ -1263,26 +1296,28 @@ export default function HelpPage() {
         {/* Right Column: Listing & Thread */}
         <Col xs={24} lg={16} className={activeTab === "raise" ? "hidden lg:block" : "block"}>
           
-          <Card className="rounded-2xl border-slate-200/80 shadow-sm overflow-hidden" bodyStyle={{ padding: 0 }}>
+          <div className="space-y-4">
             
             {/* List Header Title */}
-            <div className="px-4 py-3 bg-slate-50 border-b border-slate-200/80 flex items-center justify-between">
-              <Text className="font-extrabold text-xs uppercase tracking-wider text-slate-700">
-                {activeTab === "assigned-tickets" ? "Assigned Concerns" : "My Support Tickets"} ({filteredList.length})
+            <div className="px-4 py-3 bg-white border border-slate-200/90 shadow-2xs rounded-t-2xl flex items-center justify-between">
+              <Text className="font-extrabold text-xs uppercase tracking-wider text-slate-800 flex items-center gap-2">
+                <MessageOutlined className="text-indigo-600" />
+                {activeTab === "assigned-tickets" ? "Assigned Concerns Queue" : "My Support Tickets Queue"} ({filteredList.length})
               </Text>
+              <span className="text-[10px] font-mono text-slate-400 font-bold uppercase">Sorted: Newest First</span>
             </div>
 
             {/* Ticket Cards List */}
             {loading ? (
-              <div className="p-12 text-center">
+              <div className="p-12 text-center bg-white border border-slate-200 rounded-b-2xl shadow-xs">
                 <Spin size="large" tip="Loading support desk tickets..." />
               </div>
             ) : filteredList.length === 0 ? (
-              <div className="py-16 text-center">
+              <div className="py-16 text-center bg-white border border-slate-200 rounded-b-2xl shadow-xs">
                 <Empty description={<Text className="font-bold text-slate-400 uppercase text-xs">No tickets match active filters</Text>} />
               </div>
             ) : (
-              <div className="p-4 space-y-4 max-h-[600px] overflow-y-auto pb-32 lg:pb-6">
+              <div className="space-y-4 pb-48 lg:pb-12">
                 {filteredList.map(tkt => {
                   const isSelected = selectedTicket && selectedTicket.id === tkt.id;
                   const codeDisplay = getFormattedTicketCode(tkt);
@@ -1292,14 +1327,14 @@ export default function HelpPage() {
                     <div 
                       key={tkt.id} 
                       onClick={() => setSelectedTicket(tkt)}
-                      className={`p-4 transition-all cursor-pointer sharp-card border-2 space-y-3 ${
+                      className={`sharp-card border-2 p-4 space-y-3.5 transition-all cursor-pointer shadow-md hover:shadow-xl ${
                         isSelected 
-                          ? "ring-2 ring-indigo-600 border-indigo-600 bg-indigo-50/90 shadow-md" 
+                          ? "ring-2 ring-indigo-600 border-indigo-600 bg-indigo-50/90 shadow-lg" 
                           : `${glowClass}`
                       }`}
                     >
                       {/* Top Header Row */}
-                      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-slate-200/80 pb-2.5">
+                      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-slate-200/90 pb-2.5">
                         <div className="flex items-center gap-2 flex-wrap">
                           <button
                             type="button"
@@ -1314,11 +1349,11 @@ export default function HelpPage() {
                             )}
                           </button>
 
-                          <span className="bg-indigo-600 text-white font-extrabold py-1 px-3 sharp-card text-xs font-mono shadow-xs">
+                          <span className="bg-slate-900 text-white font-extrabold py-1 px-3 sharp-card text-xs font-mono shadow-xs">
                             {codeDisplay}
                           </span>
 
-                          <span className="text-[10px] font-black uppercase px-2.5 py-1 bg-white text-slate-800 border border-slate-300 sharp-card shadow-2xs">
+                          <span className="bg-indigo-100 text-indigo-800 font-extrabold px-2.5 py-1 text-[10px] uppercase sharp-card border border-indigo-200 shadow-2xs">
                             {tkt.concern_type || tkt.concernType}
                           </span>
 
@@ -1333,9 +1368,10 @@ export default function HelpPage() {
                         </div>
                       </div>
 
-                      {/* Main Description / Remarks */}
-                      <div className="space-y-1 py-0.5">
-                        <p className="text-sm font-extrabold text-slate-900 leading-snug m-0" title={tkt.description}>
+                      {/* Main Description / Remarks Box */}
+                      <div className="bg-white border border-slate-200/90 p-3 sharp-card space-y-1 shadow-2xs">
+                        <span className="text-[9px] font-black uppercase text-slate-400 tracking-wider block">CONCERN / REASON DETAILS</span>
+                        <p className="text-sm font-black text-slate-900 leading-snug m-0 whitespace-pre-wrap" title={tkt.description}>
                           {tkt.description}
                         </p>
                         {(tkt.expense_code || tkt.expenseCode) && (
@@ -1348,12 +1384,15 @@ export default function HelpPage() {
                       </div>
 
                       {/* Meta Footer Row */}
-                      <div className="flex flex-wrap items-center justify-between gap-2 pt-2 text-[11px] font-bold text-slate-600 border-t border-slate-200/80">
-                        <span className="uppercase text-[10px] tracking-wide">
-                          BY: <strong className="text-slate-900">{tkt.created_by_name || tkt.createdByName || "USER"} ({tkt.created_by_code || tkt.createdByCode || ""})</strong>
-                        </span>
-                        <span className="uppercase text-[10px] tracking-wide">
-                          ASSIGNED TO: <strong className="text-indigo-700">{tkt.assigned_to_name || tkt.assignedToName || "SUPPORT DESK"}</strong>
+                      <div className="flex flex-wrap items-center justify-between gap-2 pt-1.5 text-[11px] font-bold text-slate-600 border-t border-slate-200/90">
+                        <div className="flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-3 text-[10px] uppercase font-bold tracking-wide text-slate-600">
+                          <span>BY: <strong className="text-slate-900">{tkt.created_by_name || tkt.createdByName || "USER"} ({tkt.created_by_code || tkt.createdByCode || ""})</strong></span>
+                          <span className="hidden sm:inline text-slate-300">•</span>
+                          <span>ASSIGNED: <strong className="text-indigo-700">{tkt.assigned_to_name || tkt.assignedToName || "SUPPORT DESK"}</strong></span>
+                        </div>
+
+                        <span className="text-[10px] font-extrabold text-indigo-600 hover:text-indigo-800 flex items-center gap-1 uppercase tracking-wider">
+                          Tap to Chat & Details →
                         </span>
                       </div>
                     </div>
@@ -1361,7 +1400,7 @@ export default function HelpPage() {
                 })}
               </div>
             )}
-          </Card>
+          </div>
 
           {/* Ticket Discussion Thread Panel (Desktop) */}
           {selectedTicket && !isMobile && (
