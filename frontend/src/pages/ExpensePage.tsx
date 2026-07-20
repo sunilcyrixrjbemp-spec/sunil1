@@ -3146,26 +3146,27 @@ export default function ExpensePage() {
                       : "border-t-amber-500"
                   }`}>
                     
-                    {/* Leg Header with Full Solid Background Color & Square Corners */}
-                    <div className={`p-3 flex items-center justify-between text-white rounded-none ${
+                    {/* Leg Header with Light Soft Background & Square Styling */}
+                    <div className={`px-4 py-2.5 flex items-center justify-between border-b ${
                       leg.travel_type === "In-District"
-                        ? "bg-indigo-700"
-                        : "bg-amber-600"
+                        ? "bg-indigo-50/80 border-indigo-200"
+                        : "bg-amber-50/80 border-amber-200"
                     }`}>
-                      <h3 className="text-xs font-black uppercase tracking-wider text-white flex items-center gap-2.5 m-0">
-                        <span className="bg-white text-slate-900 h-5 px-2 rounded-none flex items-center justify-center text-[10px] font-black font-mono shadow-xs">
+                      <h3 className="text-xs font-black uppercase tracking-wider text-slate-800 flex items-center gap-2.5 m-0">
+                        <span className={`h-5 px-2 rounded-none flex items-center justify-center text-[10px] font-black font-mono border ${
+                          leg.travel_type === "In-District"
+                            ? "bg-indigo-600 text-white border-indigo-700"
+                            : "bg-amber-500 text-white border-amber-600"
+                        }`}>
                           #{legNum}
                         </span>
                         <span>Facility Visit {legNum}</span>
-                        <span className="text-[9px] font-black uppercase px-2 py-0.5 rounded-none tracking-wider bg-white/20 text-white border border-white/30">
-                          {leg.travel_type === "In-District" ? "In-District" : "Outdoor"}
-                        </span>
                       </h3>
                       {legNum > 1 && (
                         <button
                           type="button"
                           onClick={() => removeItinerary(leg.leg)}
-                          className="bg-red-500 hover:bg-red-600 text-white text-[10px] font-extrabold uppercase px-2.5 py-1 rounded-none border-0 cursor-pointer flex items-center gap-1 transition-colors shadow-xs"
+                          className="bg-rose-50 hover:bg-rose-100 text-rose-600 border border-rose-200 text-[10px] font-extrabold uppercase px-2.5 py-1 rounded-none cursor-pointer flex items-center gap-1 transition-colors"
                         >
                           <Trash2 className="w-3.5 h-3.5" /> Remove Visit
                         </button>
