@@ -368,7 +368,7 @@ export default function HelpPage() {
     setCommenting(true);
 
     // Optimistic UI update (0ms latency for sender)
-    const dateOptions = { day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false };
+    const dateOptions: Intl.DateTimeFormatOptions = { day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false };
     const nowStr = new Date().toLocaleString('en-GB', dateOptions).replace(/,/g, '');
     const myName = currentUser?.name || "User";
     const optimisticLine = `${myName} (${nowStr}): ${commentText}`;
