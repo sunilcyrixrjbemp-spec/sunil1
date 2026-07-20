@@ -594,15 +594,15 @@ export default function HelpPage() {
 
   const getCardStatusGlowClass = (status: string) => {
     if (status === "Closed" || status === "Final Closed") {
-      return "border-emerald-300 shadow-[0_4px_16px_rgba(16,185,129,0.12)] bg-gradient-to-r from-emerald-50/30 to-white";
+      return "border-2 border-emerald-300 bg-[#f1f5f9] hover:bg-slate-200 cursor-pointer transition-all sharp-card shadow-[0_4px_12px_-1px_rgba(16,185,129,0.25)]";
     }
     if (status === "Updated" || status === "In Progress") {
-      return "border-blue-300 shadow-[0_4px_16px_rgba(59,130,246,0.12)] bg-gradient-to-r from-blue-50/30 to-white";
+      return "border-2 border-blue-300 bg-[#f1f5f9] hover:bg-slate-200 cursor-pointer transition-all sharp-card shadow-[0_4px_12px_-1px_rgba(59,130,246,0.25)]";
     }
     if (status === "Re-opened") {
-      return "border-purple-300 shadow-[0_4px_16px_rgba(168,85,247,0.12)] bg-gradient-to-r from-purple-50/30 to-white";
+      return "border-2 border-purple-300 bg-[#f1f5f9] hover:bg-slate-200 cursor-pointer transition-all sharp-card shadow-[0_4px_12px_-1px_rgba(168,85,247,0.25)]";
     }
-    return "border-amber-300 shadow-[0_4px_16px_rgba(245,158,11,0.12)] bg-gradient-to-r from-amber-50/30 to-white";
+    return "border-2 border-amber-300 bg-[#f1f5f9] hover:bg-slate-200 cursor-pointer transition-all sharp-card shadow-[0_4px_12px_-1px_rgba(245,158,11,0.25)]";
   };
 
   const hasAccessToAssignedTab = currentUser?.role === "Admin" || 
@@ -1282,7 +1282,7 @@ export default function HelpPage() {
                 <Empty description={<Text className="font-bold text-slate-400 uppercase text-xs">No tickets match active filters</Text>} />
               </div>
             ) : (
-              <div className="p-3 max-h-[520px] overflow-y-auto pb-20 lg:pb-0 space-y-3">
+              <div className="p-4 space-y-4 max-h-[600px] overflow-y-auto pb-32 lg:pb-6">
                 {filteredList.map(tkt => {
                   const isSelected = selectedTicket && selectedTicket.id === tkt.id;
                   const codeDisplay = getFormattedTicketCode(tkt);
@@ -1292,13 +1292,14 @@ export default function HelpPage() {
                     <div 
                       key={tkt.id} 
                       onClick={() => setSelectedTicket(tkt)}
-                      className={`p-3.5 transition-all cursor-pointer sharp-card border-2 ${
+                      className={`p-4 transition-all cursor-pointer sharp-card border-2 space-y-3 ${
                         isSelected 
-                          ? "ring-2 ring-indigo-600 border-indigo-600 bg-indigo-50/70" 
-                          : `${glowClass} hover:border-indigo-400`
+                          ? "ring-2 ring-indigo-600 border-indigo-600 bg-indigo-50/90 shadow-md" 
+                          : `${glowClass}`
                       }`}
                     >
-                      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-slate-200/60 pb-2 mb-2">
+                      {/* Top Header Row */}
+                      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-slate-200/80 pb-2.5">
                         <div className="flex items-center gap-2 flex-wrap">
                           <button
                             type="button"
@@ -1307,44 +1308,53 @@ export default function HelpPage() {
                             title="Toggle follow-up flag"
                           >
                             {tkt.needs_followup ? (
-                              <StarFilled className="text-amber-500 text-sm" />
+                              <StarFilled className="text-amber-500 text-base" />
                             ) : (
-                              <StarOutlined className="text-slate-300 hover:text-amber-500 text-sm transition-colors" />
+                              <StarOutlined className="text-slate-300 hover:text-amber-500 text-base transition-colors" />
                             )}
                           </button>
 
-                          <span className="font-mono font-black text-indigo-700 text-xs bg-indigo-50 px-2 py-0.5 border border-indigo-200">
+                          <span className="bg-indigo-600 text-white font-extrabold py-1 px-3 sharp-card text-xs font-mono shadow-xs">
                             {codeDisplay}
                           </span>
 
-                          <span className="text-[10px] font-extrabold uppercase px-2 py-0.5 bg-slate-100 text-slate-700 border border-slate-200">
+                          <span className="text-[10px] font-black uppercase px-2.5 py-1 bg-white text-slate-800 border border-slate-300 sharp-card shadow-2xs">
                             {tkt.concern_type || tkt.concernType}
                           </span>
 
-                          <span className="text-[10px] text-slate-500 font-bold">
-                            📅 {new Date(tkt.created_at || tkt.createdAt || Date.now()).toLocaleDateString("en-GB", { day: '2-digit', month: 'short' })}
+                          <span className="text-[11px] text-slate-500 font-bold font-mono">
+                            📅 {new Date(tkt.created_at || tkt.createdAt || Date.now()).toLocaleDateString("en-GB", { day: '2-digit', month: '2-digit', year: 'numeric' })}
                           </span>
                         </div>
 
-                        <div className="flex items-center gap-1.5 self-start sm:self-center">
+                        <div className="flex items-center gap-2 self-start sm:self-center">
                           {getPriorityBadge(tkt.priority)}
                           {getStatusBadge(tkt.status)}
                         </div>
                       </div>
 
-                      <div className="space-y-1">
-                        <p className="text-xs font-extrabold text-slate-900 line-clamp-2 m-0" title={tkt.description}>
+                      {/* Main Description / Remarks */}
+                      <div className="space-y-1 py-0.5">
+                        <p className="text-sm font-extrabold text-slate-900 leading-snug m-0" title={tkt.description}>
                           {tkt.description}
                         </p>
+                        {(tkt.expense_code || tkt.expenseCode) && (
+                          <div className="pt-1">
+                            <span className="inline-block bg-indigo-50 text-indigo-700 px-2 py-0.5 text-[10px] font-mono font-black border border-indigo-200">
+                              Claim Ref: {tkt.expense_code || tkt.expenseCode}
+                            </span>
+                          </div>
+                        )}
+                      </div>
 
-                        <div className="flex flex-wrap items-center justify-between gap-2 pt-1.5 text-[10px] font-bold text-slate-500 border-t border-slate-100 mt-2">
-                          <span>
-                            By: <strong className="text-slate-700">{tkt.created_by_name || tkt.createdByName || "User"}</strong> ({tkt.created_by_code || tkt.createdByCode || ""})
-                          </span>
-                          <span>
-                            Assigned: <strong className="text-indigo-600">{tkt.assigned_to_name || tkt.assignedToName || "Support Desk"}</strong>
-                          </span>
-                        </div>
+                      {/* Meta Footer Row */}
+                      <div className="flex flex-wrap items-center justify-between gap-2 pt-2 text-[11px] font-bold text-slate-600 border-t border-slate-200/80">
+                        <span className="uppercase text-[10px] tracking-wide">
+                          BY: <strong className="text-slate-900">{tkt.created_by_name || tkt.createdByName || "USER"} ({tkt.created_by_code || tkt.createdByCode || ""})</strong>
+                        </span>
+                        <span className="uppercase text-[10px] tracking-wide">
+                          ASSIGNED TO: <strong className="text-indigo-700">{tkt.assigned_to_name || tkt.assignedToName || "SUPPORT DESK"}</strong>
+                        </span>
                       </div>
                     </div>
                   );
