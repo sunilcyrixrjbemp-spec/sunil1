@@ -1591,3 +1591,8 @@ span.submitter-code-text {
 .approval-review-modal-wrap .ant-modal {
   touch-action: pan-y !important;
 }
+
+.sharp-card,
+.sharp-card * {
+  border-radius: 0px !important;
+}

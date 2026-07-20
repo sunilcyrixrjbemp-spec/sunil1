@@ -54,19 +54,16 @@ const renderAntdStatusTag = (status: string) => {
 
 const getCardStatusClass = (status: string) => {
   const s = (status || "").toLowerCase().trim();
-  if (s === "approved") {
-    return "border-t-4 border-t-emerald-500 shadow-md shadow-emerald-500/10 hover:shadow-lg hover:shadow-emerald-500/20";
+  if (s.includes("approve") || s.includes("approved")) {
+    return "border border-emerald-300 bg-[#f1f5f9] hover:bg-slate-200 cursor-pointer transition-colors sharp-card shadow-[0_4px_12px_-1px_rgba(16,185,129,0.3),0_2px_4px_-2px_rgba(16,185,129,0.3)]";
   }
-  if (s === "rejected") {
-    return "border-t-4 border-t-rose-500 shadow-md shadow-rose-500/10 hover:shadow-lg hover:shadow-rose-500/20";
+  if (s.includes("reject") || s.includes("rejected")) {
+    return "border border-rose-300 bg-[#f1f5f9] hover:bg-slate-200 cursor-pointer transition-colors sharp-card shadow-[0_4px_12px_-1px_rgba(239,68,68,0.3),0_2px_4px_-2px_rgba(239,68,68,0.3)]";
   }
-  if (s === "returned_to_draft" || s === "returned") {
-    return "border-t-4 border-t-orange-500 shadow-md shadow-orange-500/10 hover:shadow-lg hover:shadow-orange-500/20";
+  if (s.includes("pending") || s.includes("submitted") || s.includes("return")) {
+    return "border border-amber-300 bg-[#f1f5f9] hover:bg-slate-200 cursor-pointer transition-colors sharp-card shadow-[0_4px_12px_-1px_rgba(245,158,11,0.3),0_2px_4px_-2px_rgba(245,158,11,0.3)]";
   }
-  if (s === "submitted" || s === "pending" || s.startsWith("submitted_l")) {
-    return "border-t-4 border-t-amber-500 shadow-md shadow-amber-500/10 hover:shadow-lg hover:shadow-amber-500/20";
-  }
-  return "border-t-4 border-t-indigo-500 shadow-md shadow-indigo-500/10 hover:shadow-lg hover:shadow-indigo-500/20";
+  return "border border-slate-300 bg-[#f1f5f9] hover:bg-slate-200 cursor-pointer transition-colors shadow-sm sharp-card";
 };
 
 const getAttachmentsArray = (attachments: any): string[] => {
@@ -2813,7 +2810,7 @@ export default function ExpensePage() {
         </div>
         <div className="flex items-center gap-2 self-start sm:self-center">
           <span className="text-[10px] text-slate-400 font-bold uppercase">Expense ID:</span>
-          <span className="bg-indigo-600 text-white font-extrabold py-1 px-3.5 rounded-2xl text-[11px] font-mono shadow-sm">
+          <span className="bg-indigo-600 text-white font-extrabold py-1 px-3.5 sharp-card rounded-none text-[11px] font-mono shadow-sm">
             {nextExpId}
           </span>
         </div>
@@ -2952,7 +2949,7 @@ export default function ExpensePage() {
         
         {showPolicyPanel && (
           <div className="card-body p-5 space-y-4 animate-fadeIn">
-            <div className="flex items-center gap-2 text-indigo-600 bg-indigo-50/50 p-2.5 rounded-2xl border border-indigo-100/30">
+            <div className="flex items-center gap-2 text-indigo-600 bg-indigo-50/50 p-2.5 sharp-card rounded-none border border-indigo-100/30">
               <Info className="w-4 h-4 shrink-0 text-indigo-500" />
               <p className="text-[10px] font-semibold leading-relaxed text-slate-655">
                 These are the active reimbursement rules for your grade loaded dynamically from the database. Claims exceeding these limits are auto-flagged and subject to deduction.
@@ -4602,37 +4599,37 @@ export default function ExpensePage() {
         {/* Visit Activities Metrics Summary Grid of Box Cards */}
         <div className="mt-3 grid grid-cols-6 gap-1.5 w-full text-xs font-semibold">
           {/* Card 1: Calls Attended */}
-          <div className="bg-white border border-gray-200 rounded-lg p-1 shadow-xs text-center flex flex-col justify-center items-center h-11 transition-all hover:shadow-md">
+          <div className="bg-white border border-gray-200 sharp-card rounded-none p-1 shadow-xs text-center flex flex-col justify-center items-center h-11 transition-all hover:shadow-md">
             <span className="text-gray-400 uppercase text-[6px] tracking-wider font-black mb-0.5 block leading-tight">Attended</span>
             <span className="text-gray-900 font-mono font-black text-xs leading-none">{totalCallsAttended}</span>
           </div>
 
           {/* Card 2: Calls Closed */}
-          <div className="bg-white border border-gray-200 rounded-lg p-1 shadow-xs text-center flex flex-col justify-center items-center h-11 transition-all hover:shadow-md border-t-2 border-t-green-500">
+          <div className="bg-white border border-gray-200 sharp-card rounded-none p-1 shadow-xs text-center flex flex-col justify-center items-center h-11 transition-all hover:shadow-md border-t-2 border-t-green-500">
             <span className="text-gray-400 uppercase text-[6px] tracking-wider font-black mb-0.5 block leading-tight">Closed</span>
             <span className="text-green-700 font-mono font-black text-xs leading-none">{totalCallsClosed}</span>
           </div>
 
           {/* Card 3: PMs Done */}
-          <div className="bg-white border border-gray-200 rounded-lg p-1 shadow-xs text-center flex flex-col justify-center items-center h-11 transition-all hover:shadow-md border-t-2 border-t-amber-500">
+          <div className="bg-white border border-gray-200 sharp-card rounded-none p-1 shadow-xs text-center flex flex-col justify-center items-center h-11 transition-all hover:shadow-md border-t-2 border-t-amber-500">
             <span className="text-gray-400 uppercase text-[6px] tracking-wider font-black mb-0.5 block leading-tight">PMs</span>
             <span className="text-amber-700 font-mono font-black text-xs leading-none">{totalPmsDone}</span>
           </div>
 
           {/* Card 4: Assets Tagged */}
-          <div className="bg-white border border-gray-200 rounded-lg p-1 shadow-xs text-center flex flex-col justify-center items-center h-11 transition-all hover:shadow-md border-t-2 border-t-emerald-500">
+          <div className="bg-white border border-gray-200 sharp-card rounded-none p-1 shadow-xs text-center flex flex-col justify-center items-center h-11 transition-all hover:shadow-md border-t-2 border-t-emerald-500">
             <span className="text-gray-400 uppercase text-[6px] tracking-wider font-black mb-0.5 block leading-tight">Tagged</span>
             <span className="text-emerald-700 font-mono font-black text-xs leading-none">{totalAssetsTagged}</span>
           </div>
 
           {/* Card 5: Mobilise Assets */}
-          <div className="bg-white border border-gray-200 rounded-lg p-1 shadow-xs text-center flex flex-col justify-center items-center h-11 transition-all hover:shadow-md border-t-2 border-t-indigo-500">
+          <div className="bg-white border border-gray-200 sharp-card rounded-none p-1 shadow-xs text-center flex flex-col justify-center items-center h-11 transition-all hover:shadow-md border-t-2 border-t-indigo-500">
             <span className="text-gray-400 uppercase text-[6px] tracking-wider font-black mb-0.5 block leading-tight">Mobilise</span>
             <span className="text-indigo-700 font-mono font-black text-xs leading-none">{totalMobiliseAsset}</span>
           </div>
 
           {/* Card 6: Calibrations */}
-          <div className="bg-white border border-gray-200 rounded-lg p-1 shadow-xs text-center flex flex-col justify-center items-center h-11 transition-all hover:shadow-md border-t-2 border-t-purple-500">
+          <div className="bg-white border border-gray-200 sharp-card rounded-none p-1 shadow-xs text-center flex flex-col justify-center items-center h-11 transition-all hover:shadow-md border-t-2 border-t-purple-500">
             <span className="text-gray-400 uppercase text-[6px] tracking-wider font-black mb-0.5 block leading-tight">Calib</span>
             <span className="text-purple-700 font-mono font-black text-xs leading-none">{totalCalibration}</span>
           </div>
@@ -4642,7 +4639,7 @@ export default function ExpensePage() {
 
       {/* Full Width Bottom Section: Recent Submissions table with Ant Design Tabs and Filters */}
       <Card
-        className="rounded-2xl border-slate-200/80 shadow-xs overflow-hidden mt-6"
+        className="sharp-card rounded-none border-slate-200/80 shadow-xs overflow-hidden mt-6"
         bodyStyle={{ padding: 0 }}
       >
         {/* Card Header with Segmented Tab Switcher */}
@@ -5094,7 +5091,7 @@ export default function ExpensePage() {
       {/* ================= SUBMISSION STATUS MODAL (SUCCESS/ERROR) ================= */}
       {submitStatus && (
         <div className="modal-lte-overlay">
-        <div className={`modal-lte-content max-w-sm p-0 overflow-hidden rounded-2xl shadow-2xl border-0 ${
+        <div className={`modal-lte-content max-w-sm p-0 overflow-hidden sharp-card rounded-none shadow-2xl border-0 ${
             submitStatus.type === "success"
               ? submitStatus.title === "Auto Approved!"
                 ? "ring-1 ring-indigo-200"
@@ -5312,7 +5309,7 @@ export default function ExpensePage() {
       {/* ================= CUSTOM VALIDATION WARNING MODAL ================= */}
       {validationModal.show && (
         <div className="modal-lte-overlay z-[9999]">
-          <div className="modal-lte-content max-w-md w-full bg-white rounded-2xl shadow-2xl p-5 border border-red-100 transform transition-all duration-300 scale-100 flex flex-col gap-4">
+          <div className="modal-lte-content max-w-md w-full bg-white sharp-card rounded-none shadow-2xl p-5 border border-red-100 transform transition-all duration-300 scale-100 flex flex-col gap-4">
             {/* Header Icon + Title */}
             <div className="flex items-center gap-3 pb-2 border-b border-red-50">
               <span className="w-10 h-10 rounded-full bg-rose-50 text-rose-500 border border-rose-100 flex items-center justify-center text-lg shrink-0">
@@ -5349,6 +5346,8 @@ export default function ExpensePage() {
       <Modal
         open={showDetailsModal}
         onCancel={() => { setShowDetailsModal(false); setSelectedClaim(null); }}
+        className="rounded-none-modal sharp-card"
+        wrapClassName="my-claims-modal-wrap"
         footer={
           <div className="flex items-center justify-between pt-2 border-t border-slate-200">
             <Space className="gap-2">
@@ -5387,7 +5386,6 @@ export default function ExpensePage() {
         }
         width={1000}
         centered
-        className="rounded-2xl"
         title={
           <div className="flex items-center gap-2 pb-2 border-b border-slate-100">
             <FileTextOutlined className="text-blue-600 text-lg" />
