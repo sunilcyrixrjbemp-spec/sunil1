@@ -65,7 +65,24 @@ const DetailRow = ({ label, value, icon }: DetailRowProps) => (
 
 export default function ProfilePage() {
   const [user, setUser] = useState<any>(null);
-  // Tab control: "info" | "password" - persisted on refresh
+  const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
+  const [avatarError, setAvatarError] = useState(false);
+
+  // System Maintenance
+  const [migrationLoading, setMigrationLoading] = useState(false);
+  const [migrationResult, setMigrationResult] = useState<{ success: boolean; message: string } | null>(null);
+  const [policyLoading, setPolicyLoading] = useState(false);
+  const [policyResult, setPolicyResult] = useState<{ success: boolean; message: string } | null>(null);
+
+  // Check screen size for mobile view
+  const [isMobile, setIsMobile] = useState(window.innerWidth < 1024);
+  useEffect(() => {
+    const handleResize = () => setIsMobile(window.innerWidth < 1024);
+    window.addEventListener("resize", handleResize);
+    return () => window.removeEventListener("resize", handleResize);
+  }, []);
+
+  const [activeMobileSection, setActiveMobileSection] = useState<string>("personal");
   
   // Tab control: "info" | "password" - persisted on refresh
   const [activeTab, setActiveTab] = useState<"info" | "password">((() => {
@@ -806,95 +823,6 @@ export default function ProfilePage() {
           </Col>
         </Row>
       )}
-
-      {/* Profile Photo Crop & Adjust Modal */}
-      <AntdModal
-        title={
-          <span className="font-bold text-sm uppercase text-gray-800 tracking-wide">
-            Adjust Profile Photo
-          </span>
-        }
-        open={showCropModal}
-        onCancel={() => { setShowCropModal(false); setSelectedPhotoFile(null); setPreviewSrc(null); }}
-        footer={[
-          <Button key="cancel" onClick={() => { setShowCropModal(false); setSelectedPhotoFile(null); setPreviewSrc(null); }} disabled={photoLoading}>
-            Cancel
-          </Button>,
-          <Button key="upload" type="primary" onClick={handleUploadCropped} loading={photoLoading} className="bg-indigo-650 border-indigo-650">
-            Confirm & Upload
-          </Button>
-        ]}
-        width={380}
-        centered
-        destroyOnClose
-      >
-        <div className="py-4 flex flex-col items-center">
-          <p className="text-[10px] text-gray-400 font-bold uppercase tracking-wider mb-4">
-            Drag to position • Slide to Zoom
-          </p>
-
-          <div 
-            className="relative w-60 h-60 bg-slate-100 rounded-lg overflow-hidden border border-gray-200 cursor-move select-none shadow-inner"
-            onMouseDown={handleMouseDown}
-            onMouseMove={handleMouseMove}
-            onMouseUp={handleMouseUp}
-            onMouseLeave={handleMouseUp}
-            onTouchStart={handleTouchStart}
-            onTouchMove={handleTouchMove}
-            onTouchEnd={handleMouseUp}
-          >
-            <div 
-              className="absolute inset-0 flex items-center justify-center"
-              style={{ pointerEvents: 'none' }}
-            >
-              <img 
-                src={previewSrc || ""} 
-                alt="Crop Preview" 
-                className="origin-center"
-                onLoad={handleImageLoad}
-                style={{
-                  transform: `translate(${position.x}px, ${position.y}px) scale(${zoom})`,
-                  transition: isDragging ? 'none' : 'transform 0.1s ease-out',
-                  width: `${getDisplaySize().width}px`,
-                  height: `${getDisplaySize().height}px`,
-                  maxWidth: 'none',
-                  maxHeight: 'none',
-                  display: 'block'
-                }}
-              />
-            </div>
-
-            <div className="absolute inset-0 pointer-events-none flex items-center justify-center">
-              <svg className="w-full h-full">
-                <defs>
-                  <mask id="circle-mask">
-                    <rect x="0" y="0" width="100%" height="100%" fill="white" />
-                    <circle cx="50%" cy="50%" r="90" fill="black" />
-                  </mask>
-                </defs>
-                <rect x="0" y="0" width="100%" height="100%" fill="black" fillOpacity="0.5" mask="url(#circle-mask)" />
-                <circle cx="50%" cy="50%" r="90" fill="none" stroke="#6366f1" strokeWidth="2" strokeDasharray="4 2" />
-              </svg>
-            </div>
-          </div>
-
-          <div className="w-full max-w-xs mt-6 space-y-2">
-            <div className="flex items-center justify-between text-[10px] text-gray-500 font-bold uppercase tracking-wider">
-              <span>Zoom</span>
-              <span className="font-mono">{zoom.toFixed(1)}x</span>
-            </div>
-            <input 
-              type="range" 
-              min="1" 
-              max="3" 
-              step="0.05"
-              value={zoom}
-              onChange={(e) => setZoom(parseFloat(e.target.value))}
-              className="w-full h-1.5 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-indigo-650"
-            />
-          </div>
-        </div>
-      </AntdModal>
     </div>
   );
 }
