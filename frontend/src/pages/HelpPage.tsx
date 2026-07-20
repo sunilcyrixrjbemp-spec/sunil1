@@ -1317,7 +1317,7 @@ export default function HelpPage() {
                 <Empty description={<Text className="font-bold text-slate-400 uppercase text-xs">No tickets match active filters</Text>} />
               </div>
             ) : (
-              <div className="space-y-4 pb-48 lg:pb-12">
+              <div className="space-y-3 pb-48 lg:pb-12">
                 {filteredList.map(tkt => {
                   const isSelected = selectedTicket && selectedTicket.id === tkt.id;
                   const codeDisplay = getFormattedTicketCode(tkt);
@@ -1328,80 +1328,77 @@ export default function HelpPage() {
                     <div 
                       key={tkt.id} 
                       onClick={() => setSelectedTicket(tkt)}
-                      className={`bg-white border rounded-xl p-4 space-y-3 transition-all cursor-pointer group shadow-sm hover:shadow-md ${statusBorderClass} ${
+                      className={`bg-white border rounded-xl p-3 space-y-2.5 transition-all cursor-pointer group shadow-2xs hover:shadow-md ${statusBorderClass} ${
                         isSelected 
                           ? "ring-2 ring-indigo-600 border-indigo-600 bg-indigo-50/40" 
                           : ""
                       }`}
                     >
-                      {/* Top Bar: Code + Category + Claim Ref + Priority + Status */}
-                      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-slate-100 pb-2.5">
-                        <div className="flex items-center gap-2 flex-wrap">
-                          <button
-                            type="button"
-                            onClick={(e) => handleToggleFollowup(e, tkt.id)}
-                            className="bg-transparent border-0 cursor-pointer p-0"
-                            title="Toggle follow-up flag"
-                          >
-                            {tkt.needs_followup ? (
-                              <StarFilled className="text-amber-500 text-base" />
-                            ) : (
-                              <StarOutlined className="text-slate-300 hover:text-amber-500 text-base transition-colors" />
-                            )}
-                          </button>
-
-                          <span className="bg-slate-900 text-white font-extrabold py-1 px-2.5 rounded-md text-xs font-mono shadow-xs">
+                      {/* Top Header Section (Strict 2 Horizontal Lines) */}
+                      <div className="border-b border-slate-100 pb-2 space-y-1.5">
+                        {/* Horizontal Line 1: Ticket ID (Left) & Priority + Status (Right) */}
+                        <div className="flex items-center justify-between gap-2">
+                          <span className="bg-slate-900 text-white font-extrabold py-0.5 px-2.5 rounded-md text-xs font-mono shadow-2xs">
                             {codeDisplay}
                           </span>
 
-                          <span className="bg-indigo-50 text-indigo-700 font-extrabold px-2.5 py-1 text-[10px] uppercase rounded-md border border-indigo-200">
-                            {tkt.concern_type || tkt.concernType}
-                          </span>
-
-                          {claimCodeStr && (
-                            <span className="bg-purple-50 text-purple-700 font-mono font-extrabold text-[10px] px-2 py-0.5 rounded-md border border-purple-200">
-                              Claim: {claimCodeStr}
-                            </span>
-                          )}
+                          <div className="flex items-center gap-1.5 shrink-0">
+                            {getPriorityBadge(tkt.priority)}
+                            {getStatusBadge(tkt.status)}
+                          </div>
                         </div>
 
-                        <div className="flex items-center gap-2 self-start sm:self-center">
-                          {getPriorityBadge(tkt.priority)}
-                          {getStatusBadge(tkt.status)}
+                        {/* Horizontal Line 2: Category & Claim Ref (Left) & Submitted Date (Right) */}
+                        <div className="flex items-center justify-between gap-2">
+                          <div className="flex items-center gap-1.5 flex-wrap">
+                            <span className="bg-indigo-50 text-indigo-700 font-extrabold px-2 py-0.5 text-[10px] uppercase rounded-md border border-indigo-200">
+                              {tkt.concern_type || tkt.concernType}
+                            </span>
+
+                            {claimCodeStr && (
+                              <span className="bg-purple-50 text-purple-700 font-mono font-extrabold text-[10px] px-2 py-0.5 rounded-md border border-purple-200">
+                                Claim: {claimCodeStr}
+                              </span>
+                            )}
+                          </div>
+
+                          <span className="text-[10px] text-slate-400 font-bold font-mono shrink-0">
+                            📅 {new Date(tkt.created_at || tkt.createdAt || Date.now()).toLocaleDateString("en-GB", { day: '2-digit', month: 'short', year: 'numeric' })}
+                          </span>
                         </div>
                       </div>
 
                       {/* Problem Statement Box */}
-                      <div className="bg-slate-50/90 rounded-lg p-3 border border-slate-200/70 space-y-0.5">
+                      <div className="bg-slate-50/90 rounded-md p-2.5 border border-slate-200/70 space-y-0.5">
                         <span className="text-[9px] font-black uppercase text-slate-400 tracking-wider block">CONCERN DETAILS</span>
-                        <p className="text-sm font-extrabold text-slate-900 leading-snug m-0 whitespace-pre-wrap" title={tkt.description}>
+                        <p className="text-xs sm:text-sm font-extrabold text-slate-900 leading-snug m-0 whitespace-pre-wrap" title={tkt.description}>
                           {tkt.description}
                         </p>
                       </div>
 
-                      {/* Structured Metadata Chips Grid */}
-                      <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 text-[11px] font-bold text-slate-600 bg-slate-100/70 p-2.5 rounded-lg border border-slate-200/60">
+                      {/* Structured Metadata Grid Chips */}
+                      <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 text-[10px] sm:text-[11px] font-bold text-slate-600 bg-slate-100/70 p-2 rounded-md border border-slate-200/60">
                         <div className="truncate">
-                          <span className="text-slate-400 font-extrabold uppercase text-[9px] block">Raised By</span>
+                          <span className="text-slate-400 font-extrabold uppercase text-[8px] block">Raised By</span>
                           <span className="text-slate-900 font-black">{tkt.created_by_name || tkt.createdByName || "User"}</span>
-                          <span className="text-slate-400 text-[10px]"> ({tkt.created_by_code || tkt.createdByCode || ""})</span>
+                          <span className="text-slate-400 text-[9px]"> ({tkt.created_by_code || tkt.createdByCode || ""})</span>
                         </div>
 
                         <div className="truncate">
-                          <span className="text-slate-400 font-extrabold uppercase text-[9px] block">Assigned Supervisor</span>
+                          <span className="text-slate-400 font-extrabold uppercase text-[8px] block">Assigned Supervisor</span>
                           <span className="text-indigo-700 font-black">{tkt.assigned_to_name || tkt.assignedToName || "Support Desk"}</span>
                         </div>
 
-                        <div className="truncate">
-                          <span className="text-slate-400 font-extrabold uppercase text-[9px] block">Submitted Date</span>
+                        <div className="truncate hidden sm:block">
+                          <span className="text-slate-400 font-extrabold uppercase text-[8px] block">TAT / Status</span>
                           <span className="text-slate-700 font-mono font-bold">
-                            {new Date(tkt.created_at || tkt.createdAt || Date.now()).toLocaleDateString("en-GB", { day: '2-digit', month: 'short', year: 'numeric' })}
+                            {tkt.closed_at ? "Resolved" : "In Progress"}
                           </span>
                         </div>
                       </div>
 
                       {/* CTA Action Button Bar */}
-                      <div className="bg-indigo-600 group-hover:bg-indigo-700 text-white font-extrabold text-xs py-2 px-3 rounded-md flex items-center justify-between transition-colors shadow-2xs">
+                      <div className="bg-indigo-600 group-hover:bg-indigo-700 text-white font-extrabold text-xs py-1.5 px-3 rounded-md flex items-center justify-between transition-colors shadow-2xs">
                         <span>Tap to View Discussion & Reply</span>
                         <span className="group-hover:translate-x-1 transition-transform font-mono">→</span>
                       </div>
