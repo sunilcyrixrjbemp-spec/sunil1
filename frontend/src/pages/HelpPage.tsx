@@ -905,25 +905,23 @@ export default function HelpPage() {
             </div>
             <div>
               <Title level={4} className="text-white m-0 uppercase tracking-wide font-black flex items-center gap-2">
-                FieldOps Enterprise Query Desk
+                Query Desk
               </Title>
-              <Text className="text-slate-300 text-xs mt-0.5 block">
-                Log technical concerns, track Turn Around Time (TAT), and interact with supervisors in real time.
-              </Text>
             </div>
           </div>
           <div className="flex items-center gap-2">
             <Tag color="green" className="font-extrabold text-[10px] uppercase py-0.5 px-2 flex items-center gap-1 m-0">
               <span className="h-1.5 w-1.5 rounded-full bg-emerald-400 animate-pulse" /> Live Realtime Sync
             </Tag>
-            <Button
-              icon={<ReloadOutlined spin={refreshing} />}
-              loading={refreshing}
+            <button
+              type="button"
               onClick={handleManualRefresh}
-              className="bg-white/10 border-white/20 text-white hover:bg-white/20 hover:text-white font-bold rounded-xl self-start sm:self-center"
+              disabled={refreshing}
+              className="bg-indigo-600 hover:bg-indigo-700 active:bg-indigo-800 text-white font-extrabold text-xs px-3.5 py-2 rounded-xl border border-indigo-500 shadow-sm flex items-center gap-1.5 cursor-pointer transition-all active:scale-95 disabled:opacity-80"
             >
-              Refresh Desk
-            </Button>
+              <ReloadOutlined spin={refreshing} className="text-white text-xs" />
+              <span>{refreshing ? "Refreshing..." : "Refresh Desk"}</span>
+            </button>
           </div>
         </div>
       </Card>
