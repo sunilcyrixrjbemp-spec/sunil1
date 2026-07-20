@@ -3975,12 +3975,15 @@ function computeBaseLocPolicy(baseReportingLocation, itineraries) {
   );
   if (!hasVisitedBase)
     return { isBaseLocOnly: false, isDaAllowed: true, baseLocations: baseLocations2 };
+  const RESIDENCE_WORDS_CHK = ["home", "residence", "room", "quarter", "house", "flat", "pg", "stay", "village", "vill", "rent", "address", "dera", "deri", "hotel"];
   const visitedNonBase = itineraries.some((leg) => {
     const f = (leg.from || "").trim().toLowerCase();
     const t = (leg.to || "").trim().toLowerCase();
-    if (!leg.from_custom && !matchesBase(f, baseLocations2))
+    const fromIsResidenceText = RESIDENCE_WORDS_CHK.some((w) => f.includes(w));
+    const toIsResidenceText = RESIDENCE_WORDS_CHK.some((w) => t.includes(w));
+    if (!leg.from_custom && !matchesBase(f, baseLocations2) && !fromIsResidenceText)
       return true;
-    if (!leg.to_custom && !matchesBase(t, baseLocations2))
+    if (!leg.to_custom && !matchesBase(t, baseLocations2) && !toIsResidenceText)
       return true;
     return false;
   });
@@ -4009,7 +4012,7 @@ __name(computeBaseLocPolicy, "computeBaseLocPolicy");
 function checkIsCommuteLeg(leg, baseLocations2, index, totalLegs) {
   const f = (leg.from || "").trim().toLowerCase();
   const t = (leg.to || "").trim().toLowerCase();
-  const RESIDENCE_WORDS = ["home", "residence", "room", "quarter", "house", "flat", "pg", "stay", "village", "vill", "rent", "address", "dera", "deri", "local"];
+  const RESIDENCE_WORDS = ["home", "residence", "room", "quarter", "house", "flat", "pg", "stay", "village", "vill", "rent", "address", "dera", "deri", "hotel"];
   const WORK_WORDS = ["market", "bazaar", "bazar", "mandi", "haat", "station", "railway", "bus stand", "bus stop", "bus depot", "bus adda", "rly", "tower", "office", "repair", "collection", "hospital", "chc", "phc", "dh", "sdh", "clinic", "lab", "store", "shop", "vendor", "customer", "site", "service", "work"];
   const fromHasResidenceWord = RESIDENCE_WORDS.some((w) => f.includes(w));
   const toHasResidenceWord = RESIDENCE_WORDS.some((w) => t.includes(w));
@@ -4017,8 +4020,8 @@ function checkIsCommuteLeg(leg, baseLocations2, index, totalLegs) {
   const toHasWorkWord = WORK_WORDS.some((w) => t.includes(w));
   const isFirstLeg = index === 0;
   const isLastLeg = totalLegs !== void 0 && index !== void 0 ? index === totalLegs - 1 : false;
-  const fromIsResidence = !!leg.from_custom && (fromHasResidenceWord || isFirstLeg && !fromHasWorkWord);
-  const toIsResidence = !!leg.to_custom && (toHasResidenceWord || isLastLeg && !toHasWorkWord);
+  const fromIsResidence = fromHasResidenceWord && !fromHasWorkWord || !!leg.from_custom && !fromHasWorkWord && (fromHasResidenceWord || isFirstLeg && !fromHasWorkWord) || isFirstLeg && !fromHasWorkWord && !matchesBase(f, baseLocations2) && f.length > 0;
+  const toIsResidence = toHasResidenceWord && !toHasWorkWord || !!leg.to_custom && !toHasWorkWord && (toHasResidenceWord || isLastLeg && !toHasWorkWord) || isLastLeg && !toHasWorkWord && !matchesBase(t, baseLocations2) && t.length > 0;
   const fromIsBase = matchesBase(f, baseLocations2);
   const toIsBase = matchesBase(t, baseLocations2);
   if (fromIsResidence && fromIsBase)
@@ -4156,29 +4159,20 @@ async function serializeExpenses(env, expenses2, submittersMap) {
 __name(serializeExpenses, "serializeExpenses");
 async function handleListExpenses(request, env, params, query, user) {
   const month = query.get("month");
-  if (!month) {
-    const now = /* @__PURE__ */ new Date();
-    const currentMonthName = MONTH_NAMES[now.getMonth()];
-    const currentYear = now.getFullYear();
-    const expensesRows2 = await env.DB.prepare(`
-      SELECT * FROM expenses WHERE user_id = ? AND year = ? AND month = ? ORDER BY created_at DESC
-    `).bind(user.id, currentYear, currentMonthName).all();
-    const submittersMap2 = { [user.id]: user };
-    const serialized2 = await serializeExpenses(env, expensesRows2.results || [], submittersMap2);
-    return jsonResponse3(serialized2);
-  }
   let querySql = "SELECT * FROM expenses WHERE user_id = ?";
   const binds = [user.id];
-  if (month.includes("-") && month.length === 7) {
-    const parts = month.split("-");
-    const yr = parseInt(parts[0], 10);
-    const monNum = parseInt(parts[1], 10);
-    const monName = MONTH_NAMES[monNum - 1];
-    querySql += " AND year = ? AND month = ?";
-    binds.push(yr, monName);
-  } else {
-    querySql += " AND LOWER(month) LIKE ?";
-    binds.push(`%${month.toLowerCase()}%`);
+  if (month && month.toLowerCase() !== "all" && month.toLowerCase() !== "all_time") {
+    if (month.includes("-") && month.length === 7) {
+      const parts = month.split("-");
+      const yr = parseInt(parts[0], 10);
+      const monNum = parseInt(parts[1], 10);
+      const monName = MONTH_NAMES[monNum - 1];
+      querySql += " AND year = ? AND month = ?";
+      binds.push(yr, monName);
+    } else {
+      querySql += " AND LOWER(month) LIKE ?";
+      binds.push(`%${month.toLowerCase()}%`);
+    }
   }
   querySql += " ORDER BY created_at DESC";
   const expensesRows = await env.DB.prepare(querySql).bind(...binds).all();

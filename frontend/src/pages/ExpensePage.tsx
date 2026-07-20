@@ -6,7 +6,7 @@ import { expenseService } from "../services/expenseService";
 import { uploadService } from "../services/uploadService";
 import { checkIsHeic, convertHeicToJpegUrl } from "../utils/heic";
 import { 
-  Trash2, Pencil, Plus, Calendar, 
+  Trash2, Plus, Calendar, 
   AlertTriangle, Check, Loader2,
   TrendingUp,
   Info,
@@ -25,7 +25,7 @@ import {
 } from "lucide-react";
 import api from "../services/api";
 import { 
-  DatePicker, ConfigProvider, Modal, Button, Tag, Space 
+  DatePicker, ConfigProvider, Modal, Button, Tag, Space, Card, Segmented, Input, Select, Pagination 
 } from "antd";
 import { 
   EditOutlined, DeleteOutlined, FileTextOutlined 
@@ -2647,14 +2647,28 @@ export default function ExpensePage() {
     const filteredClaims = getFilteredClaims();
     const legsList: any[] = [];
     filteredClaims.forEach(c => {
-      const claimLegs = c.legs || [];
-      claimLegs.forEach((l: any) => {
+      const claimLegs = c.itineraries || c.legs || [];
+      claimLegs.forEach((l: any, idx: number) => {
         legsList.push({
           parentCode: c.expense_code,
-          parentDate: c.itinerary,
+          parentDate: c.itinerary || c.date || "",
           parentStatus: c.status,
           parentAmount: c.amount,
-          ...l
+          leg: l.leg || l.leg_number || (idx + 1),
+          from_district: l.from_district || c.district || "",
+          to_district: l.to_district || c.district || "",
+          from: l.from || l.from_location || "",
+          to: l.to || l.to_location || "",
+          mode: l.mode || l.travel_mode || "Other",
+          sub_mode: l.sub_mode || "",
+          sub_amount: parseFloat(l.sub_amount) || 0,
+          km: parseFloat(l.km || l.distance_km || 0),
+          amount: parseFloat(l.amount || l.travel_amount || 0),
+          da: parseFloat(l.da || l.da_amount || 0),
+          hotel: parseFloat(l.hotel || l.hotel_amount || 0),
+          local_purchase: parseFloat(l.local_purchase || l.local_purchase_amount || 0),
+          other_amount: parseFloat(l.other_amount || l.other_expense_amount || 0),
+          visit_purpose: l.visit_purpose || l.purpose || c.description || "Field visit"
         });
       });
     });
@@ -2734,28 +2748,7 @@ export default function ExpensePage() {
     }
   };
 
-  const getStatusBadgeClass = (status: string) => {
-    const s = status.toLowerCase();
-    if (s === "approved") return "bg-green-50 border-green-200 text-green-700";
-    if (s === "rejected") return "bg-red-50 border-red-200 text-red-700";
-    if (s === "returned_to_draft") return "bg-orange-50 border-orange-200 text-orange-700";
-    if (s.startsWith("submitted_l")) {
-      return "bg-blue-50 border-blue-200 text-blue-700";
-    }
-    return "bg-amber-55 border-amber-250 text-amber-800 font-bold";
-  };
 
-  const getStatusLabel = (status: string) => {
-    if (status === "approved") return "Approved";
-    if (status === "rejected") return "Rejected";
-    if (status === "returned_to_draft") return "Returned";
-    if (status === "submitted") return "Pending L1";
-    if (status.startsWith("submitted_l")) {
-      const lvl = status.replace("submitted_l", "");
-      return `Pending L${lvl}`;
-    }
-    return status.toUpperCase();
-  };
 
   if (initLoading) {
     return <Loader message="Initializing Expense Builder..." />;
@@ -4605,108 +4598,88 @@ export default function ExpensePage() {
 
       </form>
 
-      {/* Full Width Bottom Section: Recent Submissions table with Tabs and Filters */}
-      <div className="bg-white border border-gray-250 rounded shadow-sm overflow-hidden flex flex-col mt-6">
-        {/* Header with Windows Selector */}
-        <div className="px-3 sm:px-5 py-3.5 bg-slate-50 flex flex-wrap items-center justify-between gap-3" style={{ borderBottom: '1px solid #e2e8f0' }}>
-          <h3 className="text-xs font-bold text-gray-700 uppercase tracking-wide">My Claims Dashboard</h3>
-          <div className="flex bg-[#e9eff6] p-1 rounded-xl border border-gray-250/50 shadow-inner gap-1 overflow-x-auto max-w-full scrollbar-none flex-nowrap">
-            <button
-              type="button"
-              onClick={() => { setActiveClaimsTab("sheets"); setMyClaimsPage(1); }}
-              style={{
-                minHeight: 'auto',
-                backgroundColor: activeClaimsTab === "sheets" ? "#a5d8e8" : undefined
-              }}
-              className={`px-3 py-1 text-[10px] font-black uppercase tracking-wider rounded-lg cursor-pointer transition-all border-0 whitespace-nowrap ${
-                activeClaimsTab === "sheets" 
-                  ? "text-slate-900 shadow-sm font-extrabold" 
-                  : "bg-transparent text-slate-600 hover:text-slate-900 hover:bg-slate-200/50"
-              }`}
-            >
-              Expense Sheets
-            </button>
-            <button
-              type="button"
-              onClick={() => { setActiveClaimsTab("legs"); setMyClaimsPage(1); }}
-              style={{
-                minHeight: 'auto',
-                backgroundColor: activeClaimsTab === "legs" ? "#a5d8e8" : undefined
-              }}
-              className={`px-3 py-1 text-[10px] font-black uppercase tracking-wider rounded-lg cursor-pointer transition-all border-0 whitespace-nowrap ${
-                activeClaimsTab === "legs" 
-                  ? "text-slate-900 shadow-sm font-extrabold" 
-                  : "bg-transparent text-slate-600 hover:text-slate-900 hover:bg-slate-200/50"
-              }`}
-            >
-              Legs Details
-            </button>
+      {/* Full Width Bottom Section: Recent Submissions table with Ant Design Tabs and Filters */}
+      <Card
+        className="rounded-2xl border-slate-200/80 shadow-xs overflow-hidden mt-6"
+        bodyStyle={{ padding: 0 }}
+      >
+        {/* Card Header with Segmented Tab Switcher */}
+        <div className="px-4 py-3.5 bg-slate-50/80 border-b border-slate-200/80 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
+          <div className="flex items-center gap-2">
+            <FileTextOutlined className="text-indigo-600 text-base" />
+            <h3 className="text-xs font-black text-slate-800 uppercase tracking-wider m-0">My Claims Dashboard</h3>
           </div>
+          <Segmented
+            value={activeClaimsTab}
+            onChange={(val: any) => { setActiveClaimsTab(val); setMyClaimsPage(1); }}
+            options={[
+              { label: `Expense Sheets (${getFilteredClaims().length})`, value: "sheets" },
+              { label: `Legs Details (${getFilteredLegs().length})`, value: "legs" }
+            ]}
+            className="help-tab-segmented font-extrabold text-xs"
+          />
         </div>
 
-        {/* Search & Advanced Filters */}
-        <div className="p-2.5 border-b border-gray-150 bg-slate-50 flex flex-col gap-2 text-[10px] font-bold text-gray-700">
-          {/* Row 1: Search input */}
-          <div className="w-full">
-            <input
-              type="text"
-              placeholder="Search by Purpose, Mode, Amount..."
-              value={claimsSearch}
-              onChange={(e) => { setClaimsSearch(e.target.value); setMyClaimsPage(1); }}
-              className="w-full bg-white border border-gray-300 rounded px-2.5 py-1 text-[10px] font-medium text-gray-800 shadow-xs focus:outline-none focus:border-blue-500"
-            />
-          </div>
-          
-          {/* Row 2: Three dropdown filters in one line */}
-          <div className="grid grid-cols-3 gap-2 w-full">
-            <div className="flex flex-col gap-1">
-              <span className="text-[7px] font-black uppercase text-gray-400">Month:</span>
-              <select
+        {/* Ant Design Filter Toolbar */}
+        <div className="p-3 bg-white border-b border-slate-200/80 flex flex-col md:flex-row items-center justify-between gap-3">
+          <Input.Search
+            placeholder="Search code, purpose, mode, route, amount..."
+            value={claimsSearch}
+            onChange={(e) => { setClaimsSearch(e.target.value); setMyClaimsPage(1); }}
+            className="w-full md:w-72"
+            allowClear
+          />
+
+          <div className="flex flex-wrap items-center gap-2.5 w-full md:w-auto justify-end">
+            <div className="flex items-center gap-1">
+              <span className="text-[10px] font-bold uppercase text-slate-400">Month:</span>
+              <Select
                 value={claimsMonthFilter}
-                onChange={(e) => { setClaimsMonthFilter(e.target.value); setMyClaimsPage(1); }}
-                className="w-full bg-white border border-gray-300 rounded px-1.5 py-1 text-[9px] font-black text-gray-800 cursor-pointer shadow-xs focus:outline-none focus:border-blue-500"
-              >
-                <option value="all">All Months</option>
-                {getUniqueMonths().map(m => (
-                  <option key={m} value={m}>{m}</option>
-                ))}
-              </select>
+                onChange={(val) => { setClaimsMonthFilter(val); setMyClaimsPage(1); }}
+                className="w-36"
+                options={[
+                  { label: "All Months", value: "all" },
+                  ...getUniqueMonths().map(m => ({ label: m, value: m }))
+                ]}
+              />
             </div>
 
-            <div className="flex flex-col gap-1">
-              <span className="text-[7px] font-black uppercase text-gray-400">Status:</span>
-              <select
+            <div className="flex items-center gap-1">
+              <span className="text-[10px] font-bold uppercase text-slate-400">Status:</span>
+              <Select
                 value={claimsStatusFilter}
-                onChange={(e) => { setClaimsStatusFilter(e.target.value as any); setMyClaimsPage(1); }}
-                className="w-full bg-white border border-gray-300 rounded px-1.5 py-1 text-[9px] font-black text-gray-800 cursor-pointer shadow-xs focus:outline-none focus:border-blue-500"
-              >
-                <option value="all">All Statuses</option>
-                <option value="draft">Draft</option>
-                <option value="submitted">Submitted</option>
-                <option value="approved">Approved</option>
-                <option value="rejected">Rejected</option>
-                <option value="returned_to_draft">Returned / Edit</option>
-              </select>
+                onChange={(val) => { setClaimsStatusFilter(val as any); setMyClaimsPage(1); }}
+                className="w-36"
+                options={[
+                  { label: "All Statuses", value: "all" },
+                  { label: "Draft", value: "draft" },
+                  { label: "Submitted", value: "submitted" },
+                  { label: "Approved", value: "approved" },
+                  { label: "Rejected", value: "rejected" },
+                  { label: "Returned / Edit", value: "returned_to_draft" }
+                ]}
+              />
             </div>
 
-            <div className="flex flex-col gap-1">
-              <span className="text-[7px] font-black uppercase text-gray-400">Sort By:</span>
-              <select
+            <div className="flex items-center gap-1">
+              <span className="text-[10px] font-bold uppercase text-slate-400">Sort:</span>
+              <Select
                 value={claimsSortOrder}
-                onChange={(e) => { setClaimsSortOrder(e.target.value as any); setMyClaimsPage(1); }}
-                className="w-full bg-white border border-gray-300 rounded px-1.5 py-1 text-[9px] font-black text-gray-800 cursor-pointer shadow-xs focus:outline-none focus:border-blue-500"
-              >
-                <option value="date_desc">Newest Date</option>
-                <option value="date_asc">Oldest Date</option>
-                <option value="amount_desc">Highest Amount</option>
-                <option value="amount_asc">Lowest Amount</option>
-              </select>
+                onChange={(val) => { setClaimsSortOrder(val as any); setMyClaimsPage(1); }}
+                className="w-36"
+                options={[
+                  { label: "Newest Date", value: "date_desc" },
+                  { label: "Oldest Date", value: "date_asc" },
+                  { label: "Highest Amount", value: "amount_desc" },
+                  { label: "Lowest Amount", value: "amount_asc" }
+                ]}
+              />
             </div>
           </div>
         </div>
 
-        {/* Table Content */}
-        <div className="overflow-x-auto p-4">
+        {/* Table / Cards Content */}
+        <div className="p-3 sm:p-4">
           {claimsLoading ? (
             <Loader message="Loading claims data..." />
           ) : (
@@ -4719,8 +4692,8 @@ export default function ExpensePage() {
 
               if (totalItems === 0) {
                 return (
-                  <div className="py-12 text-center text-gray-400 text-xs font-semibold">
-                    No matching records found.
+                  <div className="py-12 text-center text-slate-400 text-xs font-bold uppercase tracking-wider">
+                    No matching claim records found.
                   </div>
                 );
               }
@@ -4728,53 +4701,55 @@ export default function ExpensePage() {
               if (activeClaimsTab === "sheets") {
                 return (
                   <>
-                    <table className="hidden md:table table-lte">
+                    <table className="hidden md:table table-lte w-full text-xs">
                       <thead>
                         <tr className="bg-slate-800 text-slate-100 text-[9px] uppercase font-black tracking-wider border-b border-slate-700">
-                          <th className="py-2.5 px-3 whitespace-nowrap text-left">Claim ID</th>
-                          <th className="py-2.5 px-3 whitespace-nowrap text-left">Date</th>
-                          <th className="py-2.5 px-3 whitespace-nowrap text-left">Purpose</th>
-                          <th className="py-2.5 px-3 whitespace-nowrap text-left">Travel Mode</th>
-                          <th className="py-2.5 px-3 whitespace-nowrap text-left">Amount</th>
-                          <th className="py-2.5 px-3 whitespace-nowrap text-left">Status</th>
-                          <th className="py-2.5 px-3 whitespace-nowrap text-right">Actions</th>
+                          <th className="py-2.5 px-3 text-left">Claim ID</th>
+                          <th className="py-2.5 px-3 text-left">Date</th>
+                          <th className="py-2.5 px-3 text-left">Purpose</th>
+                          <th className="py-2.5 px-3 text-left">Travel Mode</th>
+                          <th className="py-2.5 px-3 text-left">Amount</th>
+                          <th className="py-2.5 px-3 text-left">Status</th>
+                          <th className="py-2.5 px-3 text-right">Actions</th>
                         </tr>
                       </thead>
-                      <tbody className="divide-y divide-gray-100 bg-white">
+                      <tbody className="divide-y divide-slate-100 bg-white">
                         {slicedItems.map((exp: any) => (
                           <tr
                             key={exp.id}
                             onClick={() => handleViewDetails(exp.id)}
                             className="hover:bg-slate-50 cursor-pointer transition-colors"
                           >
-                            <td className="py-3 px-3 font-semibold font-mono text-blue-600 uppercase whitespace-nowrap">{exp.expense_code}</td>
-                            <td className="py-3 px-3 text-slate-500 whitespace-nowrap">{exp.itinerary}</td>
+                            <td className="py-3 px-3 font-semibold font-mono text-indigo-600 uppercase whitespace-nowrap">{exp.expense_code}</td>
+                            <td className="py-3 px-3 text-slate-600 font-medium whitespace-nowrap">{exp.itinerary}</td>
                             <td className="py-3 px-3 font-semibold text-slate-800 truncate max-w-[200px] whitespace-nowrap" title={exp.description}>{exp.description}</td>
-                            <td className="py-3 px-3 text-slate-500 whitespace-nowrap">{exp.travel_mode}</td>
-                            <td className="py-3 px-3 font-bold text-slate-900 whitespace-nowrap">₹{exp.amount.toLocaleString()}</td>
+                            <td className="py-3 px-3 text-slate-600 whitespace-nowrap">{exp.travel_mode}</td>
+                            <td className="py-3 px-3 font-black text-slate-900 whitespace-nowrap text-blue-700">₹{exp.amount.toLocaleString()}</td>
                             <td className="py-3 px-3 whitespace-nowrap">
-                              <span className={`inline-flex items-center px-2 py-0.5 rounded border text-[9px] font-bold uppercase tracking-wider ${getStatusBadgeClass(exp.status)}`}>
-                                {getStatusLabel(exp.status)}
-                              </span>
+                              {renderAntdStatusTag(exp.status)}
                             </td>
                             <td className="py-3 px-3 text-right whitespace-nowrap" onClick={(e) => e.stopPropagation()}>
                               {(exp.status === "draft" || exp.status === "submitted" || exp.status === "returned_to_draft") && (
-                                <div className="flex items-center justify-end gap-1">
-                                  <button
+                                <Space size="small">
+                                  <Button
+                                    size="small"
+                                    type="primary"
+                                    icon={<EditOutlined />}
                                     onClick={() => handleEditFromModal(exp.id)}
-                                    className="p-1.5 text-amber-600 hover:text-amber-800 rounded-lg hover:bg-amber-50 border border-transparent hover:border-amber-200 cursor-pointer transition-all active:scale-95"
-                                    title="Edit Claim"
+                                    className="bg-amber-500 hover:bg-amber-600 font-bold text-[10px] border-0"
                                   >
-                                    <Pencil className="w-3.5 h-3.5" />
-                                  </button>
-                                  <button
+                                    Edit
+                                  </Button>
+                                  <Button
+                                    size="small"
+                                    danger
+                                    icon={<DeleteOutlined />}
                                     onClick={() => handleDeleteClaim(exp.id)}
-                                    className="p-1.5 text-rose-600 hover:text-rose-800 rounded-lg hover:bg-rose-50 border border-transparent hover:border-rose-200 cursor-pointer transition-all active:scale-95"
-                                    title="Delete Claim Draft"
+                                    className="font-bold text-[10px]"
                                   >
-                                    <Trash2 className="w-3.5 h-3.5" />
-                                  </button>
-                                </div>
+                                    Delete
+                                  </Button>
+                                </Space>
                               )}
                             </td>
                           </tr>
@@ -4783,7 +4758,7 @@ export default function ExpensePage() {
                     </table>
 
                     {/* Mobile Card List View */}
-                    <div className="block md:hidden space-y-3">
+                    <div className="block md:hidden space-y-3 text-xs">
                       {slicedItems.map((exp: any) => (
                         <div
                           key={exp.id}
@@ -4848,45 +4823,47 @@ export default function ExpensePage() {
               } else {
                 return (
                   <>
-                    <table className="hidden md:table table-lte">
+                    <table className="hidden md:table table-lte w-full text-xs">
                       <thead>
                         <tr className="bg-slate-800 text-slate-100 text-[9px] uppercase font-black tracking-wider border-b border-slate-700">
-                          <th className="py-2.5 px-3 whitespace-nowrap text-left">Parent ID</th>
-                          <th className="py-2.5 px-3 whitespace-nowrap text-left">Travel Date</th>
-                          <th className="py-2.5 px-3 whitespace-nowrap text-center">Leg</th>
-                          <th className="py-2.5 px-3 whitespace-nowrap text-left">Route</th>
-                          <th className="py-2.5 px-3 whitespace-nowrap text-left">Mode</th>
-                          <th className="py-2.5 px-3 whitespace-nowrap text-right">KM</th>
-                          <th className="py-2.5 px-3 whitespace-nowrap text-right">Fare</th>
-                          <th className="py-2.5 px-3 whitespace-nowrap text-right">DA</th>
-                          <th className="py-2.5 px-3 whitespace-nowrap text-right">Hotel</th>
-                          <th className="py-2.5 px-3 whitespace-nowrap text-right">Local Purchase</th>
-                          <th className="py-2.5 px-3 whitespace-nowrap text-right">Other</th>
-                          <th className="py-2.5 px-3 whitespace-nowrap text-left">Purpose</th>
+                          <th className="py-2.5 px-3 text-left">Parent ID</th>
+                          <th className="py-2.5 px-3 text-left">Travel Date</th>
+                          <th className="py-2.5 px-3 text-center">Leg</th>
+                          <th className="py-2.5 px-3 text-left">Route</th>
+                          <th className="py-2.5 px-3 text-left">Mode</th>
+                          <th className="py-2.5 px-3 text-right">KM</th>
+                          <th className="py-2.5 px-3 text-right">Fare</th>
+                          <th className="py-2.5 px-3 text-right">DA</th>
+                          <th className="py-2.5 px-3 text-right">Hotel</th>
+                          <th className="py-2.5 px-3 text-right">Local Purchase</th>
+                          <th className="py-2.5 px-3 text-right">Other</th>
+                          <th className="py-2.5 px-3 text-left">Purpose</th>
                         </tr>
                       </thead>
-                      <tbody className="divide-y divide-gray-100 bg-white">
+                      <tbody className="divide-y divide-slate-100 bg-white">
                         {slicedItems.map((leg: any, idx: number) => {
                           const hasSub = leg.sub_mode && (parseFloat(leg.sub_amount) || 0) > 0;
                           return (
                             <tr key={idx} className="hover:bg-slate-50 transition-colors">
-                              <td className="py-3 px-3 font-semibold font-mono text-blue-600 uppercase whitespace-nowrap">{leg.parentCode}</td>
+                              <td className="py-3 px-3 font-semibold font-mono text-indigo-600 uppercase whitespace-nowrap">{leg.parentCode}</td>
                               <td className="py-3 px-3 text-slate-500 whitespace-nowrap">{leg.parentDate}</td>
-                              <td className="py-3 px-3 text-center font-bold text-gray-400 whitespace-nowrap">{leg.leg}</td>
-                              <td className="py-3 px-3 whitespace-nowrap">
-                                <span className="font-bold text-gray-800">{leg.from_district === leg.to_district ? leg.to_district : `${leg.from_district} → ${leg.to_district}`}</span>
-                                <span className="text-[9px] text-gray-400 block">{leg.from || "Start"} → {leg.to || "End"}</span>
+                              <td className="py-3 px-3 text-center font-bold text-slate-400 whitespace-nowrap">
+                                <Tag color="blue" className="font-bold text-[10px] uppercase">Visit {leg.leg}</Tag>
                               </td>
                               <td className="py-3 px-3 whitespace-nowrap">
-                                <span className="text-[9px] font-bold uppercase bg-blue-50 text-blue-700 px-1.5 py-0.5 border border-blue-100">{leg.mode || "Other"}</span>
-                                {hasSub && <span className="text-[9px] font-bold uppercase bg-purple-50 text-purple-700 px-1.5 py-0.5 border border-purple-100 ml-1">+{leg.sub_mode}</span>}
+                                <span className="font-bold text-slate-800">{leg.from_district === leg.to_district ? leg.to_district : `${leg.from_district} → ${leg.to_district}`}</span>
+                                <span className="text-[9px] text-slate-400 block">{leg.from || "Start"} → {leg.to || "End"}</span>
                               </td>
-                              <td className="py-3 px-3 text-right font-mono font-semibold text-gray-650 whitespace-nowrap">{leg.km || 0} KM</td>
-                              <td className="py-3 px-3 text-right font-mono font-semibold text-gray-900 whitespace-nowrap">₹{(parseFloat(leg.amount) || 0).toLocaleString()}</td>
-                              <td className="py-3 px-3 text-right font-mono font-semibold text-gray-900 whitespace-nowrap">₹{(parseFloat(leg.da) || 0).toLocaleString()}</td>
-                              <td className="py-3 px-3 text-right font-mono font-semibold text-gray-900 whitespace-nowrap">₹{(parseFloat(leg.hotel) || 0).toLocaleString()}</td>
-                              <td className="py-3 px-3 text-right font-mono font-semibold text-gray-900 whitespace-nowrap">₹{(parseFloat(leg.local_purchase) || 0).toLocaleString()}</td>
-                              <td className="py-3 px-3 text-right font-mono font-semibold text-gray-900 whitespace-nowrap">₹{(parseFloat(leg.other_amount) || 0).toLocaleString()}</td>
+                              <td className="py-3 px-3 whitespace-nowrap">
+                                <span className="text-[9px] font-bold uppercase bg-blue-50 text-blue-700 px-1.5 py-0.5 rounded border border-blue-100">{leg.mode || "Other"}</span>
+                                {hasSub && <span className="text-[9px] font-bold uppercase bg-purple-50 text-purple-700 px-1.5 py-0.5 rounded border border-purple-100 ml-1">+{leg.sub_mode}</span>}
+                              </td>
+                              <td className="py-3 px-3 text-right font-mono font-semibold text-slate-650 whitespace-nowrap">{leg.km || 0} KM</td>
+                              <td className="py-3 px-3 text-right font-mono font-semibold text-slate-900 whitespace-nowrap">₹{(parseFloat(leg.amount) || 0).toLocaleString()}</td>
+                              <td className="py-3 px-3 text-right font-mono font-semibold text-slate-900 whitespace-nowrap">₹{(parseFloat(leg.da) || 0).toLocaleString()}</td>
+                              <td className="py-3 px-3 text-right font-mono font-semibold text-slate-900 whitespace-nowrap">₹{(parseFloat(leg.hotel) || 0).toLocaleString()}</td>
+                              <td className="py-3 px-3 text-right font-mono font-semibold text-slate-900 whitespace-nowrap">₹{(parseFloat(leg.local_purchase) || 0).toLocaleString()}</td>
+                              <td className="py-3 px-3 text-right font-mono font-semibold text-slate-900 whitespace-nowrap">₹{(parseFloat(leg.other_amount) || 0).toLocaleString()}</td>
                               <td className="py-3 px-3 text-slate-600 max-w-[150px] truncate whitespace-nowrap" title={leg.visit_purpose}>{leg.visit_purpose || "Field visit"}</td>
                             </tr>
                           );
@@ -4952,43 +4929,32 @@ export default function ExpensePage() {
           )}
         </div>
 
-        {/* Pagination controls */}
+        {/* Ant Design Pagination controls */}
         {!claimsLoading && (
           (() => {
             const filteredClaims = getFilteredClaims();
             const filteredLegs = getFilteredLegs();
             const itemsList = activeClaimsTab === "sheets" ? filteredClaims : filteredLegs;
             const totalItems = itemsList.length;
-            const totalPages = Math.ceil(totalItems / 10) || 1;
 
             if (totalItems <= 10) return null;
 
             return (
-              <div className="px-5 py-3.5 border-t border-gray-200 bg-slate-50 flex items-center justify-between text-xs text-gray-500 mb-2 md:mb-0">
+              <div className="px-5 py-3.5 border-t border-slate-200/80 bg-slate-50/80 flex flex-col sm:flex-row items-center justify-between gap-2 text-xs text-slate-500 mb-2 md:mb-0">
                 <span>Showing {((myClaimsPage - 1) * 10) + 1} to {Math.min(myClaimsPage * 10, totalItems)} of {totalItems} entries</span>
-                <div className="flex gap-2">
-                  <button
-                    type="button"
-                    disabled={myClaimsPage === 1}
-                    onClick={() => setMyClaimsPage(p => Math.max(p - 1, 1))}
-                    className="px-3 py-1 border border-gray-300 rounded bg-white text-gray-700 font-bold hover:bg-gray-50 disabled:opacity-50 disabled:hover:bg-white active:scale-95 transition-all cursor-pointer"
-                  >
-                    Prev
-                  </button>
-                  <button
-                    type="button"
-                    disabled={myClaimsPage >= totalPages}
-                    onClick={() => setMyClaimsPage(p => Math.min(p + 1, totalPages))}
-                    className="px-3 py-1 border border-gray-300 rounded bg-white text-gray-700 font-bold hover:bg-gray-50 disabled:opacity-50 disabled:hover:bg-white active:scale-95 transition-all cursor-pointer"
-                  >
-                    Next
-                  </button>
-                </div>
+                <Pagination
+                  current={myClaimsPage}
+                  total={totalItems}
+                  pageSize={10}
+                  onChange={(p) => setMyClaimsPage(p)}
+                  showSizeChanger={false}
+                  size="small"
+                />
               </div>
             );
           })()
         )}
-      </div>
+      </Card>
       </div>
 
       {/* ================= STEP 3 CONFIRMATION SUBMIT DIALOG ================= */}
