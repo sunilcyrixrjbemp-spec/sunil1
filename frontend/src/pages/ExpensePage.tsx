@@ -52,6 +52,23 @@ const renderAntdStatusTag = (status: string) => {
   }
 };
 
+const getCardStatusClass = (status: string) => {
+  const s = (status || "").toLowerCase().trim();
+  if (s === "approved") {
+    return "border-t-4 border-t-emerald-500 shadow-md shadow-emerald-500/10 hover:shadow-lg hover:shadow-emerald-500/20";
+  }
+  if (s === "rejected") {
+    return "border-t-4 border-t-rose-500 shadow-md shadow-rose-500/10 hover:shadow-lg hover:shadow-rose-500/20";
+  }
+  if (s === "returned_to_draft" || s === "returned") {
+    return "border-t-4 border-t-orange-500 shadow-md shadow-orange-500/10 hover:shadow-lg hover:shadow-orange-500/20";
+  }
+  if (s === "submitted" || s === "pending" || s.startsWith("submitted_l")) {
+    return "border-t-4 border-t-amber-500 shadow-md shadow-amber-500/10 hover:shadow-lg hover:shadow-amber-500/20";
+  }
+  return "border-t-4 border-t-indigo-500 shadow-md shadow-indigo-500/10 hover:shadow-lg hover:shadow-indigo-500/20";
+};
+
 const getAttachmentsArray = (attachments: any): string[] => {
   if (!attachments) return [];
   if (Array.isArray(attachments)) return attachments.filter(Boolean);
@@ -4787,7 +4804,7 @@ export default function ExpensePage() {
                         <div
                           key={exp.id}
                           onClick={() => handleViewDetails(exp.id)}
-                          className="sharp-card bg-white border border-slate-200 hover:border-indigo-300 rounded-xl p-3.5 space-y-3 active:bg-slate-50 transition-all shadow-xs hover:shadow-md cursor-pointer text-xs"
+                          className={`sharp-card bg-white border border-slate-200 rounded-xl p-3.5 space-y-3 active:bg-slate-50 transition-all cursor-pointer text-xs ${getCardStatusClass(exp.status)}`}
                         >
                           <div className="flex justify-between items-center border-b border-slate-100 pb-2">
                             <span className="font-extrabold font-mono text-indigo-600 text-xs uppercase">{exp.expense_code}</span>
@@ -4902,7 +4919,7 @@ export default function ExpensePage() {
                         return (
                           <div
                             key={idx}
-                            className="sharp-card bg-white border border-slate-200 hover:border-indigo-300 rounded-xl p-3.5 space-y-3 transition-all shadow-xs hover:shadow-md text-xs"
+                            className={`sharp-card bg-white border border-slate-200 rounded-xl p-3.5 space-y-3 transition-all cursor-pointer text-xs ${getCardStatusClass(leg.parentStatus)}`}
                           >
                             <div className="flex justify-between items-center border-b border-slate-100 pb-2">
                               <span className="font-extrabold font-mono text-indigo-600 text-xs uppercase">{leg.parentCode}</span>
@@ -5606,7 +5623,7 @@ export default function ExpensePage() {
                                       {leg.oth_desc && <span className="text-[9px] text-gray-400 block truncate max-w-[100px]" title={leg.oth_desc}>{leg.oth_desc}</span>}
                                     </td>
                                     <td className="py-2.5 px-3 text-[10px] text-gray-500">
-                                      <span>W:{leg.ws_assigned||0}</span> <span className="text-green-600">D:{leg.ws_closed||0}</span> <span>P:{leg.ws_pms||0}</span> <span>A:{leg.ws_asset||0}</span>
+                                      <span>Call Attended: {leg.ws_assigned||0}</span> <span className="text-green-600 font-bold">Call Closed: {leg.ws_closed||0}</span> <span>P:{leg.ws_pms||0}</span> <span>A:{leg.ws_asset||0}</span>
                                     </td>
                                     <td className="py-2.5 px-3 text-right font-bold font-mono text-gray-900">
                                       <div className="flex flex-col items-end">
@@ -5882,8 +5899,8 @@ export default function ExpensePage() {
 
                               {/* Work Summary */}
                               <div className="text-[10px] text-gray-500 bg-gray-50/50 px-2.5 py-1.5 rounded border border-gray-100 flex justify-between font-bold">
-                                <span>Work: {leg.ws_assigned||0}</span>
-                                <span className="text-green-600">Done: {leg.ws_closed||0}</span>
+                                <span>Call Attended: {leg.ws_assigned||0}</span>
+                                <span className="text-green-600">Call Closed: {leg.ws_closed||0}</span>
                                 <span>PMS: {leg.ws_pms||0}</span>
                                 <span>Asset: {leg.ws_asset||0}</span>
                               </div>
