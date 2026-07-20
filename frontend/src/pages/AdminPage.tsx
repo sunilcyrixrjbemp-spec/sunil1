@@ -1855,128 +1855,160 @@ export default function AdminPage() {
         </div>
       ) : (
         /* ================= SYSTEM SETTINGS TAB ================= */
-        <div className="space-y-6 animate-fadeIn">
-          <div className="bg-white border border-gray-200 rounded p-4 shadow-sm">
-            <h3 className="text-sm font-bold text-gray-800 uppercase tracking-wide">Global System Settings</h3>
-            <p className="text-gray-500 text-xs mt-1">Configure global expense submission policies, monthly cutoff dates, and auto-approval expiry rules.</p>
-          </div>
-
-          <form onSubmit={handleSaveSettings} className="bg-white border border-gray-205 rounded-lg shadow-sm p-6 space-y-6 max-w-3xl">
-            {/* Expense Date Submission Limits */}
-            <div className="space-y-4">
-              <h4 className="text-xs font-bold uppercase tracking-wider text-blue-600 border-b border-gray-100 pb-2">1. Expense Submission Policies</h4>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <div>
-                  <label className="label-lte block text-xs font-bold text-gray-700 mb-1">
-                    Allowed Past Days Window
-                  </label>
-                  <input
-                    type="number"
-                    min="1"
-                    required
-                    value={settings.max_past_days_limit || ""}
-                    onChange={(e) => setSettings({ ...settings, max_past_days_limit: e.target.value })}
-                    className="w-full p-2 border border-gray-300 rounded text-xs focus:ring-1 focus:ring-blue-500 focus:outline-none"
-                    placeholder="e.g. 15"
-                  />
-                  <p className="text-[10px] text-gray-500 mt-1">
-                    Number of past days (from today) for which engineers can submit expense claims. Older claims will be blocked.
-                  </p>
-                </div>
-
-                <div>
-                  <label className="label-lte block text-xs font-bold text-gray-700 mb-1">
-                    Monthly Cutoff Day (of next month)
-                  </label>
-                  <input
-                    type="number"
-                    min="1"
-                    max="28"
-                    required
-                    value={settings.monthly_cutoff_day || ""}
-                    onChange={(e) => setSettings({ ...settings, monthly_cutoff_day: e.target.value })}
-                    className="w-full p-2 border border-gray-300 rounded text-xs focus:ring-1 focus:ring-blue-500 focus:outline-none"
-                    placeholder="e.g. 3"
-                  />
-                  <p className="text-[10px] text-gray-500 mt-1">
-                    After this calendar day of the current month, previous month's expense submissions will be blocked (e.g. set to 3 to block by 4th of month).
-                  </p>
-                </div>
-              </div>
+        <div className="space-y-6 animate-fadeIn max-w-4xl">
+          <Card className="rounded-2xl border-slate-200/90 shadow-sm" bodyStyle={{ padding: "24px" }}>
+            <div className="border-b border-slate-100 pb-4 mb-6">
+              <Title level={4} className="text-slate-900 m-0 uppercase tracking-wide font-black flex items-center gap-2">
+                <ControlOutlined className="text-indigo-600" /> Global System Settings & Policies
+              </Title>
+              <Text className="text-slate-400 text-xs mt-1 block">
+                Configure global expense submission windows, monthly cutoff dates, and auto-approval/rejection expiry routing rules.
+              </Text>
             </div>
 
-            {/* Auto-Expiry Approval Rules */}
-            <div className="space-y-4 pt-4 border-t border-gray-100">
-              <h4 className="text-xs font-bold uppercase tracking-wider text-blue-600 border-b border-gray-100 pb-2">2. Auto-Approval / Expiry Rules</h4>
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                <div>
-                  <label className="label-lte block text-xs font-bold text-gray-700 mb-1">
-                    Pending Days Threshold
-                  </label>
-                  <input
-                    type="number"
-                    min="0"
-                    required
-                    value={settings.pending_auto_expiry_days || ""}
-                    onChange={(e) => setSettings({ ...settings, pending_auto_expiry_days: e.target.value })}
-                    className="w-full p-2 border border-gray-300 rounded text-xs focus:ring-1 focus:ring-blue-500 focus:outline-none"
-                    placeholder="e.g. 5"
-                  />
-                  <p className="text-[10px] text-gray-500 mt-1">
-                    Days a claim can remain pending at any level before system auto-actions it. Set to 0 to disable.
-                  </p>
+            <form onSubmit={handleSaveSettings} className="space-y-6">
+              
+              {/* Section 1: Expense Submission Policies */}
+              <div className="bg-slate-50/80 p-4 rounded-xl border border-slate-200/70 space-y-4">
+                <Text className="text-xs font-black uppercase tracking-wider text-indigo-700 block border-b border-slate-200/60 pb-2">
+                  1. Expense Submission Window & Cutoff Policies
+                </Text>
+                
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-xs font-bold text-slate-700 mb-1">
+                      Allowed Past Days Submission Window *
+                    </label>
+                    <Input
+                      type="number"
+                      min={1}
+                      required
+                      value={settings.max_past_days_limit || "15"}
+                      onChange={(e) => setSettings({ ...settings, max_past_days_limit: e.target.value })}
+                      className="rounded-xl font-bold text-sm h-10 border-slate-200"
+                      placeholder="e.g. 15"
+                    />
+                    <span className="text-[10px] text-slate-400 font-medium mt-1 block">
+                      Number of past calendar days (from today) allowed for engineers to log claims. Older days are locked.
+                    </span>
+                  </div>
+
+                  <div>
+                    <label className="block text-xs font-bold text-slate-700 mb-1">
+                      Monthly Cutoff Day (of next month) *
+                    </label>
+                    <Input
+                      type="number"
+                      min={1}
+                      max={28}
+                      required
+                      value={settings.monthly_cutoff_day || "3"}
+                      onChange={(e) => setSettings({ ...settings, monthly_cutoff_day: e.target.value })}
+                      className="rounded-xl font-bold text-sm h-10 border-slate-200"
+                      placeholder="e.g. 3"
+                    />
+                    <span className="text-[10px] text-slate-400 font-medium mt-1 block">
+                      Day of the month after which previous month claims are blocked (e.g. set 3 to block on the 4th).
+                    </span>
+                  </div>
+                </div>
+              </div>
+
+              {/* Section 2: Auto-Expiry & Approval System Rules */}
+              <div className="bg-slate-50/80 p-4 rounded-xl border border-slate-200/70 space-y-4">
+                <Text className="text-xs font-black uppercase tracking-wider text-indigo-700 block border-b border-slate-200/60 pb-2">
+                  2. Auto-Approval / Expiry Rules & Routing Levels
+                </Text>
+
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                  <div>
+                    <label className="block text-xs font-bold text-slate-700 mb-1">
+                      Pending Days Threshold *
+                    </label>
+                    <Input
+                      type="number"
+                      min={0}
+                      required
+                      value={settings.pending_auto_expiry_days || "5"}
+                      onChange={(e) => setSettings({ ...settings, pending_auto_expiry_days: e.target.value })}
+                      className="rounded-xl font-bold text-sm h-10 border-slate-200"
+                      placeholder="e.g. 5"
+                    />
+                    <span className="text-[10px] text-slate-400 font-medium mt-1 block">
+                      Days a claim can stay pending at any level before system auto-action triggers (0 to disable).
+                    </span>
+                  </div>
+
+                  <div>
+                    <label className="block text-xs font-bold text-slate-700 mb-1">
+                      Auto-Expiry Action Type *
+                    </label>
+                    <select
+                      value={settings.pending_auto_action || "approve"}
+                      onChange={(e) => setSettings({ ...settings, pending_auto_action: e.target.value })}
+                      className="help-custom-select w-full h-10 rounded-xl"
+                    >
+                      <option value="approve">⚡ Auto Approve Current Level</option>
+                      <option value="reject">❌ Auto Reject Claim</option>
+                      <option value="disabled">🚫 Disabled (Manual Action Only)</option>
+                    </select>
+                    <span className="text-[10px] text-slate-400 font-medium mt-1 block">
+                      System behavior when threshold days are reached without manager action.
+                    </span>
+                  </div>
+
+                  <div>
+                    <label className="block text-xs font-bold text-slate-700 mb-1">
+                      Auto-Approve Target Routing Level
+                    </label>
+                    <select
+                      value={settings.auto_approve_target_level || "next_level"}
+                      onChange={(e) => setSettings({ ...settings, auto_approve_target_level: e.target.value })}
+                      className="help-custom-select w-full h-10 rounded-xl"
+                    >
+                      <option value="next_level">⏩ Forward to Next Manager Level (L1 → L2)</option>
+                      <option value="l1_only">1️⃣ Auto-Approve L1 Only</option>
+                      <option value="full_final">✅ Complete Final Auto-Approval (All Levels)</option>
+                    </select>
+                    <span className="text-[10px] text-slate-400 font-medium mt-1 block">
+                      When auto-approved, specifies which level the claim automatically routes to.
+                    </span>
+                  </div>
                 </div>
 
-                <div>
-                  <label className="label-lte block text-xs font-bold text-gray-700 mb-1">
-                    Auto-Expiry Action
-                  </label>
-                  <select
-                    value={settings.pending_auto_action || "reject"}
-                    onChange={(e) => setSettings({ ...settings, pending_auto_action: e.target.value })}
-                    className="w-full p-2 border border-gray-300 rounded text-xs bg-white focus:ring-1 focus:ring-blue-500 focus:outline-none"
-                  >
-                    <option value="approve">Auto Approve</option>
-                    <option value="reject">Auto Reject</option>
-                  </select>
-                  <p className="text-[10px] text-gray-500 mt-1">
-                    Action to perform automatically (approve current level or reject the claim entirely).
-                  </p>
-                </div>
-
-                <div>
-                  <label className="label-lte block text-xs font-bold text-gray-700 mb-1">
+                <div className="pt-2">
+                  <label className="block text-xs font-bold text-slate-700 mb-1">
                     Rejection Fallback Routing Level
                   </label>
                   <select
                     value={settings.rejection_fallback_level || "creator"}
                     onChange={(e) => setSettings({ ...settings, rejection_fallback_level: e.target.value })}
-                    className="w-full p-2 border border-gray-300 rounded text-xs bg-white focus:ring-1 focus:ring-blue-500 focus:outline-none"
+                    className="help-custom-select w-full h-10 rounded-xl"
                   >
-                    <option value="creator">Return to Draft (Creator)</option>
-                    <option value="level_1">Reset to Level 1 Approval</option>
-                    <option value="previous_level">Return to Previous Level</option>
+                    <option value="creator">↩️ Return to Submitter / Drafts (For Edit & Re-submit)</option>
+                    <option value="previous_level">◀️ Return to Previous Manager Level</option>
+                    <option value="final_reject">🛑 Permanent Rejection (Closed)</option>
                   </select>
-                  <p className="text-[10px] text-gray-500 mt-1">
-                    Where a rejected claim (both manual rejections and auto-rejections) is sent for re-approval/edit.
-                  </p>
+                  <span className="text-[10px] text-slate-400 font-medium mt-1 block">
+                    Target destination when a claim is rejected (both manual and auto-rejections).
+                  </span>
                 </div>
               </div>
-            </div>
 
-            {/* Submit Button */}
-            <div className="flex justify-end pt-4 border-t border-gray-100">
-              <button
-                type="submit"
-                disabled={savingSettings}
-                className={`px-6 py-2.5 text-xs font-bold uppercase tracking-wider rounded-lg border-0 shadow cursor-pointer text-white transition-all ${
-                  savingSettings ? "bg-slate-400" : "bg-blue-600 hover:bg-blue-700"
-                }`}
-              >
-                {savingSettings ? "Saving Settings..." : "Save System Settings"}
-              </button>
-            </div>
-          </form>
+              {/* Submit Action Bar */}
+              <div className="flex justify-end pt-2">
+                <Button
+                  type="primary"
+                  htmlType="submit"
+                  loading={savingSettings}
+                  size="large"
+                  className="bg-indigo-600 hover:bg-indigo-700 font-extrabold text-xs uppercase tracking-wider rounded-xl h-11 px-8 shadow-sm"
+                >
+                  {savingSettings ? "Saving Settings..." : "Save System Settings"}
+                </Button>
+              </div>
+            </form>
+          </Card>
 
           {/* Override Rejected Claims Panel */}
           <div className="bg-white border border-gray-200 rounded-lg shadow-sm p-6 space-y-6 max-w-3xl mt-6">
