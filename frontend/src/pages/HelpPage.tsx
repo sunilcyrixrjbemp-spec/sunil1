@@ -5,7 +5,6 @@ import {
   Button, 
   Input, 
   Tag, 
-  Space, 
   Row, 
   Col, 
   Typography, 
@@ -564,19 +563,46 @@ export default function HelpPage() {
     return true;
   });
 
-  const getPriorityTagColor = (pri: string) => {
-    if (pri === "Critical") return "red";
-    if (pri === "High") return "purple";
-    if (pri === "Medium") return "blue";
-    return "default";
+  const getPriorityBadge = (pri: string) => {
+    if (pri === "Critical" || pri === "Urgent") {
+      return <span className="px-2 py-0.5 text-[10px] font-black uppercase tracking-wider rounded-md bg-rose-100 text-rose-700 border border-rose-300">🔥 Critical</span>;
+    }
+    if (pri === "High") {
+      return <span className="px-2 py-0.5 text-[10px] font-black uppercase tracking-wider rounded-md bg-orange-100 text-orange-700 border border-orange-300">⚡ High</span>;
+    }
+    if (pri === "Medium") {
+      return <span className="px-2 py-0.5 text-[10px] font-black uppercase tracking-wider rounded-md bg-amber-100 text-amber-700 border border-amber-300">⚖️ Medium</span>;
+    }
+    return <span className="px-2 py-0.5 text-[10px] font-black uppercase tracking-wider rounded-md bg-slate-100 text-slate-700 border border-slate-300">🔹 Low</span>;
   };
 
-  const getStatusTagColor = (stat: string) => {
-    if (stat === "Open") return "gold";
-    if (stat === "Re-opened") return "purple";
-    if (stat === "Updated") return "blue";
-    if (stat === "Closed") return "green";
-    return "default";
+  const getStatusBadge = (stat: string) => {
+    if (stat === "Open") {
+      return <span className="px-2.5 py-1 text-[10px] font-black uppercase tracking-wider rounded-md bg-amber-500 text-white shadow-xs">🟡 Open</span>;
+    }
+    if (stat === "Updated" || stat === "In Progress") {
+      return <span className="px-2.5 py-1 text-[10px] font-black uppercase tracking-wider rounded-md bg-blue-600 text-white shadow-xs">🔵 In Progress</span>;
+    }
+    if (stat === "Re-opened") {
+      return <span className="px-2.5 py-1 text-[10px] font-black uppercase tracking-wider rounded-md bg-purple-600 text-white shadow-xs">🟣 Re-opened</span>;
+    }
+    if (stat === "Closed" || stat === "Final Closed") {
+      return <span className="px-2.5 py-1 text-[10px] font-black uppercase tracking-wider rounded-md bg-emerald-600 text-white shadow-xs">🟢 Resolved</span>;
+    }
+    return <span className="px-2.5 py-1 text-[10px] font-black uppercase tracking-wider rounded-md bg-slate-600 text-white">{stat}</span>;
+  };
+
+  const getCardStatusGlowClass = (status: string) => {
+    if (status === "Closed" || status === "Final Closed") {
+      return "border-emerald-300 shadow-[0_4px_16px_rgba(16,185,129,0.12)] bg-gradient-to-r from-emerald-50/30 to-white";
+    }
+    if (status === "Updated" || status === "In Progress") {
+      return "border-blue-300 shadow-[0_4px_16px_rgba(59,130,246,0.12)] bg-gradient-to-r from-blue-50/30 to-white";
+    }
+    if (status === "Re-opened") {
+      return "border-purple-300 shadow-[0_4px_16px_rgba(168,85,247,0.12)] bg-gradient-to-r from-purple-50/30 to-white";
+    }
+    return "border-amber-300 shadow-[0_4px_16px_rgba(245,158,11,0.12)] bg-gradient-to-r from-amber-50/30 to-white";
   };
 
   const hasAccessToAssignedTab = currentUser?.role === "Admin" || 
@@ -589,99 +615,134 @@ export default function HelpPage() {
   // Detail View Content block (used in side panel for desktop & drawer for mobile)
   const renderTicketDetail = () => {
     if (!selectedTicket) return null;
+    const ticketCodeStr = getFormattedTicketCode(selectedTicket);
+    const categoryName = selectedTicket.concern_type || selectedTicket.concernType || "General";
+    const claimCodeStr = selectedTicket.expense_code || selectedTicket.expenseCode;
+
     return (
       <div className="space-y-4">
         {/* Header bar */}
-        <div className="flex items-start justify-between border-b border-slate-200/80 pb-3">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between border-b border-slate-200/80 pb-3 gap-3">
           <div>
-            <Space align="center" size="small">
-              <Text className="text-base font-black font-mono text-slate-800">{selectedTicket.ticket_code || selectedTicket.ticketCode || "CYR-RJ-0000001"}</Text>
+            <div className="flex items-center gap-2 flex-wrap">
+              <span className="font-mono font-black text-lg text-slate-900 bg-slate-100 px-2.5 py-1 border border-slate-300 shadow-2xs">
+                {ticketCodeStr}
+              </span>
               <button
                 type="button"
                 onClick={(e) => handleToggleFollowup(e, selectedTicket.id)}
-                className="bg-transparent border-0 cursor-pointer p-0"
+                className="bg-transparent border-0 cursor-pointer p-1"
+                title="Toggle Follow-up Star"
               >
                 {(selectedTicket.needs_followup || selectedTicket.needsFollowup) ? (
-                  <StarFilled className="text-amber-500 text-sm" />
+                  <StarFilled className="text-amber-500 text-lg" />
                 ) : (
-                  <StarOutlined className="text-slate-300 hover:text-amber-500 text-sm transition-colors" />
+                  <StarOutlined className="text-slate-300 hover:text-amber-500 text-lg transition-colors" />
                 )}
               </button>
-              <Tag color={getStatusTagColor(selectedTicket.status)} className="font-extrabold text-[10px] uppercase m-0">
-                {selectedTicket.status}
-              </Tag>
-            </Space>
-            <div className="mt-1">
-              <Text className="text-xs text-slate-500 font-bold uppercase">
-                Category: <span className="text-indigo-600 font-black">{selectedTicket.concern_type || selectedTicket.concernType}</span>
-                {(selectedTicket.expense_code || selectedTicket.expenseCode) && ` (Claim Code: ${selectedTicket.expense_code || selectedTicket.expenseCode})`}
-              </Text>
+              {getStatusBadge(selectedTicket.status)}
+              {getPriorityBadge(selectedTicket.priority)}
+            </div>
+            <div className="mt-1.5 flex items-center gap-2 text-xs font-bold text-slate-600">
+              <span>Category: <span className="text-indigo-600 font-extrabold">{categoryName}</span></span>
+              {claimCodeStr && (
+                <span className="bg-indigo-50 text-indigo-700 px-2 py-0.5 font-mono text-[11px] border border-indigo-200 font-extrabold">
+                  Claim: {claimCodeStr}
+                </span>
+              )}
             </div>
           </div>
 
-          <Space>
+          <div className="flex items-center gap-2 self-start sm:self-center">
             {["Open", "Updated", "Re-opened"].includes(selectedTicket.status) && (
               <Button
                 type="primary"
                 danger
-                size="small"
+                size="middle"
                 icon={<CheckCircleOutlined />}
                 onClick={() => handleCloseTicket(selectedTicket.id)}
-                className="font-bold text-xs"
+                className="font-extrabold text-xs uppercase tracking-wider rounded-none shadow-xs"
               >
-                Resolve
+                Resolve Ticket
               </Button>
             )}
             {canReopen(selectedTicket) && (
               <Button
                 type="default"
-                size="small"
+                size="middle"
                 icon={<UndoOutlined />}
                 onClick={() => handleReopenTicket(selectedTicket.id)}
-                className="font-bold text-xs border-amber-500 text-amber-600 hover:bg-amber-50"
+                className="font-extrabold text-xs border-amber-500 text-amber-700 bg-amber-50 hover:bg-amber-100 rounded-none"
               >
-                Reopen
+                Reopen Ticket
               </Button>
             )}
             {isMobile && (
-              <Button size="small" onClick={() => setSelectedTicket(null)}>
+              <Button size="middle" onClick={() => setSelectedTicket(null)} className="font-bold">
                 Close
               </Button>
             )}
-          </Space>
+          </div>
         </div>
 
-        {/* Priority & Status Badges */}
-        <Row gutter={[12, 12]}>
-          <Col span={12}>
-            <Card className="bg-slate-50/70 border-slate-200/60 shadow-2xs rounded-xl" bodyStyle={{ padding: "10px" }}>
-              <Text className="text-[9px] font-black text-slate-400 uppercase block mb-1">Priority Level</Text>
-              <Tag color={getPriorityTagColor(selectedTicket.priority)} className="font-bold uppercase text-[10px] m-0">
-                {selectedTicket.priority}
-              </Tag>
-            </Card>
-          </Col>
-          <Col span={12}>
-            <Card className="bg-slate-50/70 border-slate-200/60 shadow-2xs rounded-xl" bodyStyle={{ padding: "10px" }}>
-              <Text className="text-[9px] font-black text-slate-400 uppercase block mb-1">Resolution TAT</Text>
-              <Text className="text-xs font-mono font-black text-indigo-600">
-                {selectedTicket.closed_at ? (
-                  formatDuration((new Date(selectedTicket.closed_at).getTime() - new Date(selectedTicket.created_at).getTime()) / (1000 * 60 * 60))
-                ) : (
-                  "In Progress"
-                )}
-              </Text>
-            </Card>
-          </Col>
-        </Row>
+        {/* 4 Crystal Clear Detail Cards Grid */}
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-2.5">
+          <div className="bg-slate-50 border border-slate-200 p-2.5 sharp-card">
+            <span className="text-[9px] font-black uppercase text-slate-400 block tracking-wider">Submitted By</span>
+            <span className="text-xs font-extrabold text-slate-900 block truncate mt-0.5">
+              {selectedTicket.created_by_name || selectedTicket.createdByName || "User"}
+            </span>
+            <span className="text-[10px] font-mono text-slate-500 font-bold block">
+              ID: {selectedTicket.created_by_code || selectedTicket.createdByCode || "—"}
+            </span>
+          </div>
 
-        {/* Remarks / Description */}
-        <Card className="bg-slate-50/80 border-slate-200/80 shadow-2xs rounded-xl" bodyStyle={{ padding: "12px" }}>
-          <Text className="text-[9px] font-black text-slate-400 uppercase block mb-1">Issue Description</Text>
-          <Paragraph className="text-xs text-slate-800 font-medium m-0 leading-relaxed whitespace-pre-wrap">
+          <div className="bg-slate-50 border border-slate-200 p-2.5 sharp-card">
+            <span className="text-[9px] font-black uppercase text-slate-400 block tracking-wider">Target Supervisor</span>
+            <span className="text-xs font-extrabold text-indigo-700 block truncate mt-0.5">
+              {selectedTicket.assigned_to_name || selectedTicket.assignedToName || "Support Desk"}
+            </span>
+            <span className="text-[10px] text-slate-500 font-bold block">
+              Role: {selectedTicket.assigned_to_role || selectedTicket.assignedToRole || "Admin"}
+            </span>
+          </div>
+
+          <div className="bg-slate-50 border border-slate-200 p-2.5 sharp-card">
+            <span className="text-[9px] font-black uppercase text-slate-400 block tracking-wider">Date Raised</span>
+            <span className="text-xs font-bold text-slate-800 block mt-0.5">
+              {new Date(selectedTicket.created_at || selectedTicket.createdAt || Date.now()).toLocaleDateString("en-GB", { day: '2-digit', month: 'short', year: 'numeric' })}
+            </span>
+            <span className="text-[10px] text-slate-400 font-mono block">
+              {new Date(selectedTicket.created_at || selectedTicket.createdAt || Date.now()).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+            </span>
+          </div>
+
+          <div className="bg-slate-50 border border-slate-200 p-2.5 sharp-card">
+            <span className="text-[9px] font-black uppercase text-slate-400 block tracking-wider">Resolution TAT</span>
+            <span className="text-xs font-mono font-black text-indigo-600 block mt-0.5">
+              {selectedTicket.closed_at ? (
+                formatDuration((new Date(selectedTicket.closed_at).getTime() - new Date(selectedTicket.created_at).getTime()) / (1000 * 60 * 60))
+              ) : (
+                "In Progress"
+              )}
+            </span>
+            <span className="text-[10px] text-slate-400 font-bold block uppercase">
+              {selectedTicket.closed_at ? "Closed" : "Active Queue"}
+            </span>
+          </div>
+        </div>
+
+        {/* Issue Remarks Description Box */}
+        <div className="bg-white border-2 border-slate-200/90 p-3.5 sharp-card shadow-2xs">
+          <div className="flex items-center justify-between border-b border-slate-100 pb-1.5 mb-2">
+            <span className="text-[10px] font-black uppercase tracking-wider text-slate-500 flex items-center gap-1">
+              📋 Detailed Concern & Problem Statement
+            </span>
+          </div>
+          <p className="text-xs text-slate-900 font-bold leading-relaxed whitespace-pre-wrap m-0">
             {selectedTicket.description}
-          </Paragraph>
-        </Card>
+          </p>
+        </div>
 
         {/* Discussion Logs Stream */}
         <div className="space-y-2">
@@ -1221,23 +1282,24 @@ export default function HelpPage() {
                 <Empty description={<Text className="font-bold text-slate-400 uppercase text-xs">No tickets match active filters</Text>} />
               </div>
             ) : (
-              <div className="divide-y divide-slate-100 max-h-[520px] overflow-y-auto pb-20 lg:pb-0">
+              <div className="p-3 max-h-[520px] overflow-y-auto pb-20 lg:pb-0 space-y-3">
                 {filteredList.map(tkt => {
                   const isSelected = selectedTicket && selectedTicket.id === tkt.id;
                   const codeDisplay = getFormattedTicketCode(tkt);
+                  const glowClass = getCardStatusGlowClass(tkt.status);
                   
                   return (
                     <div 
                       key={tkt.id} 
                       onClick={() => setSelectedTicket(tkt)}
-                      className={`p-4 transition-all cursor-pointer flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-l-4 ${
+                      className={`p-3.5 transition-all cursor-pointer sharp-card border-2 ${
                         isSelected 
-                          ? "bg-indigo-50/50 border-l-indigo-600" 
-                          : "bg-white hover:bg-slate-50 border-l-transparent"
+                          ? "ring-2 ring-indigo-600 border-indigo-600 bg-indigo-50/70" 
+                          : `${glowClass} hover:border-indigo-400`
                       }`}
                     >
-                      <div className="space-y-1 min-w-0 flex-1">
-                        <Space flex-wrap size="small">
+                      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-slate-200/60 pb-2 mb-2">
+                        <div className="flex items-center gap-2 flex-wrap">
                           <button
                             type="button"
                             onClick={(e) => handleToggleFollowup(e, tkt.id)}
@@ -1245,34 +1307,45 @@ export default function HelpPage() {
                             title="Toggle follow-up flag"
                           >
                             {tkt.needs_followup ? (
-                              <StarFilled className="text-amber-500 text-xs" />
+                              <StarFilled className="text-amber-500 text-sm" />
                             ) : (
-                              <StarOutlined className="text-slate-300 hover:text-amber-500 text-xs transition-colors" />
+                              <StarOutlined className="text-slate-300 hover:text-amber-500 text-sm transition-colors" />
                             )}
                           </button>
 
-                          <Text className="font-mono font-black text-indigo-600 text-xs">{codeDisplay}</Text>
-                          <Tag className="font-bold text-[9px] uppercase m-0">{tkt.concern_type || tkt.concernType}</Tag>
-                          <Text className="text-[10px] text-slate-400 font-semibold">{new Date(tkt.created_at || tkt.createdAt || Date.now()).toLocaleDateString()}</Text>
-                        </Space>
+                          <span className="font-mono font-black text-indigo-700 text-xs bg-indigo-50 px-2 py-0.5 border border-indigo-200">
+                            {codeDisplay}
+                          </span>
 
-                        <Text className="text-xs font-bold text-slate-800 block truncate pr-4" title={tkt.description}>
-                          {tkt.description}
-                        </Text>
+                          <span className="text-[10px] font-extrabold uppercase px-2 py-0.5 bg-slate-100 text-slate-700 border border-slate-200">
+                            {tkt.concern_type || tkt.concernType}
+                          </span>
 
-                        <Text className="text-[10px] text-slate-400 font-bold block uppercase">
-                          By: {tkt.created_by_name || tkt.createdByName || "User"} ({tkt.created_by_code || tkt.createdByCode || ""}) • Assigned To: {tkt.assigned_to_name || tkt.assignedToName || "Support Desk"}
-                        </Text>
+                          <span className="text-[10px] text-slate-500 font-bold">
+                            📅 {new Date(tkt.created_at || tkt.createdAt || Date.now()).toLocaleDateString("en-GB", { day: '2-digit', month: 'short' })}
+                          </span>
+                        </div>
+
+                        <div className="flex items-center gap-1.5 self-start sm:self-center">
+                          {getPriorityBadge(tkt.priority)}
+                          {getStatusBadge(tkt.status)}
+                        </div>
                       </div>
 
-                      <Space className="shrink-0 self-end sm:self-center">
-                        <Tag color={getPriorityTagColor(tkt.priority)} className="font-bold text-[9px] uppercase m-0">
-                          {tkt.priority}
-                        </Tag>
-                        <Tag color={getStatusTagColor(tkt.status)} className="font-bold text-[9px] uppercase m-0">
-                          {tkt.status}
-                        </Tag>
-                      </Space>
+                      <div className="space-y-1">
+                        <p className="text-xs font-extrabold text-slate-900 line-clamp-2 m-0" title={tkt.description}>
+                          {tkt.description}
+                        </p>
+
+                        <div className="flex flex-wrap items-center justify-between gap-2 pt-1.5 text-[10px] font-bold text-slate-500 border-t border-slate-100 mt-2">
+                          <span>
+                            By: <strong className="text-slate-700">{tkt.created_by_name || tkt.createdByName || "User"}</strong> ({tkt.created_by_code || tkt.createdByCode || ""})
+                          </span>
+                          <span>
+                            Assigned: <strong className="text-indigo-600">{tkt.assigned_to_name || tkt.assignedToName || "Support Desk"}</strong>
+                          </span>
+                        </div>
+                      </div>
                     </div>
                   );
                 })}
