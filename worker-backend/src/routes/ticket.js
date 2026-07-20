@@ -11,7 +11,11 @@ function jsonResponse(data, status = 200) {
 
 function formatTicketResponse(ticket) {
   if (!ticket) return null;
-  const tCode = ticket.ticketCode || ticket.ticket_code || "";
+  let tCode = ticket.ticketCode || ticket.ticket_code || "";
+  if (!tCode || !tCode.startsWith("CYR-RJ-")) {
+    const num = ticket.id || 1;
+    tCode = `CYR-RJ-${String(num).padStart(7, "0")}`;
+  }
   const cByCode = ticket.createdByCode || ticket.created_by_code || "";
   const cByName = ticket.createdByName || ticket.created_by_name || "";
   const cById = ticket.createdById || ticket.created_by_id || null;

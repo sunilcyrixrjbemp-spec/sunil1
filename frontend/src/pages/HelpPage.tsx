@@ -74,6 +74,15 @@ function formatDateTime(dateVal: any) {
   }
 }
 
+// Helper to ensure clean CYR-RJ-0000001 sequence formatting
+function getFormattedTicketCode(tkt: any): string {
+  if (!tkt) return "CYR-RJ-0000001";
+  if (tkt.ticket_code && tkt.ticket_code.startsWith("CYR-RJ-")) return tkt.ticket_code;
+  if (tkt.ticketCode && tkt.ticketCode.startsWith("CYR-RJ-")) return tkt.ticketCode;
+  const num = tkt.id || 1;
+  return `CYR-RJ-${String(num).padStart(7, "0")}`;
+}
+
 // Helper to format hours duration into Jira-style string (e.g. 1d 4h 12m)
 function formatDuration(totalHours: number) {
   if (isNaN(totalHours) || totalHours <= 0) return "N/A";
@@ -259,6 +268,33 @@ export default function HelpPage() {
     fetchInitialData();
   }, []);
 
+  // Real-time instant message sync (auto-poll every 2.5s)
+  useEffect(() => {
+    const syncInterval = setInterval(async () => {
+      try {
+        const freshList = await ticketService.getTickets();
+        if (Array.isArray(freshList) && freshList.length > 0) {
+          setTickets(freshList);
+          const currentUid = currentUser?.user_id || "Admin";
+          localStorage.setItem(`cache_support_tickets_${currentUid}`, JSON.stringify(freshList));
+
+          setSelectedTicket((currentSel: any) => {
+            if (!currentSel || !currentSel.id) return currentSel;
+            const updated = freshList.find((t: any) => t.id === currentSel.id);
+            if (updated && (updated.comments !== currentSel.comments || updated.status !== currentSel.status)) {
+              return updated;
+            }
+            return currentSel;
+          });
+        }
+      } catch (err) {
+        // silent sync
+      }
+    }, 2500);
+
+    return () => clearInterval(syncInterval);
+  }, []);
+
   // Autofill assigned name based on concern type
   useEffect(() => {
     if (!currentUser) return;
@@ -327,15 +363,32 @@ export default function HelpPage() {
     e.preventDefault();
     if (!selectedTicket || !newComment.trim()) return;
 
+    const commentText = newComment.trim();
+    setNewComment("");
     setCommenting(true);
+
+    // Optimistic UI update (0ms latency for sender)
+    const dateOptions = { day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false };
+    const nowStr = new Date().toLocaleString('en-GB', dateOptions).replace(/,/g, '');
+    const myName = currentUser?.name || "User";
+    const optimisticLine = `${myName} (${nowStr}): ${commentText}`;
+
+    setSelectedTicket((prev: any) => {
+      if (!prev) return prev;
+      const existing = prev.comments || "";
+      const newComms = existing ? `${existing}\n${optimisticLine}` : optimisticLine;
+      return { ...prev, comments: newComms };
+    });
+
     try {
-      const updated = await ticketService.addComment(selectedTicket.id, newComment.trim());
-      toast.success("Comment sent.");
-      setNewComment("");
-      setSelectedTicket(updated);
-      setTickets(prev => prev.map(t => t.id === updated.id ? updated : t));
+      const updated = await ticketService.addComment(selectedTicket.id, commentText);
+      if (updated && updated.id) {
+        setSelectedTicket(updated);
+        setTickets(prev => prev.map(t => t.id === updated.id ? updated : t));
+      }
     } catch (err: any) {
-      toast.error(err.response?.data?.detail || "Failed to add reply.");
+      toast.error(err.response?.data?.detail || err.response?.data?.error || "Failed to send comment.");
+      fetchInitialData();
     } finally {
       setCommenting(false);
     }
@@ -347,16 +400,14 @@ export default function HelpPage() {
 
     if (socket && socket.readyState === WebSocket.OPEN) {
       socket.send(JSON.stringify({ type: "message", text: newComment.trim() }));
-      
       if (typingTimeoutRef.current) clearTimeout(typingTimeoutRef.current);
       setIsTypingState(false);
       if (socket.readyState === WebSocket.OPEN) {
         socket.send(JSON.stringify({ type: "typing", is_typing: false }));
       }
-      setNewComment("");
-    } else {
-      await handleAddComment(e);
     }
+
+    await handleAddComment(e);
   };
 
   const handleCloseTicket = async (ticketId: number) => {
@@ -750,7 +801,7 @@ export default function HelpPage() {
   };
 
   return (
-    <div className="space-y-6 animate-fadeIn p-2 sm:p-4 text-slate-800 font-sans max-w-[1600px] mx-auto">
+    <div className="space-y-6 animate-fadeIn p-2 sm:p-4 pb-32 sm:pb-24 lg:pb-8 text-slate-800 font-sans max-w-[1600px] mx-auto min-h-screen">
       
       {/* Ant Design Header Banner */}
       <Card className="bg-gradient-to-r from-slate-900 via-indigo-950 to-slate-900 border-slate-800 text-white rounded-2xl shadow-md">
@@ -761,22 +812,53 @@ export default function HelpPage() {
             </div>
             <div>
               <Title level={4} className="text-white m-0 uppercase tracking-wide font-black flex items-center gap-2">
-                FieldOps Help Desk
+                FieldOps Enterprise Query Desk
               </Title>
               <Text className="text-slate-300 text-xs mt-0.5 block">
                 Log technical concerns, track Turn Around Time (TAT), and interact with supervisors in real time.
               </Text>
             </div>
           </div>
-          <Button
-            icon={<ReloadOutlined />}
-            onClick={fetchInitialData}
-            className="bg-white/10 border-white/20 text-white hover:bg-white/20 hover:text-white font-bold rounded-xl self-start sm:self-center"
-          >
-            Refresh Desk
-          </Button>
+          <div className="flex items-center gap-2">
+            <Tag color="green" className="font-extrabold text-[10px] uppercase py-0.5 px-2 flex items-center gap-1 m-0">
+              <span className="h-1.5 w-1.5 rounded-full bg-emerald-400 animate-pulse" /> Live Realtime Sync
+            </Tag>
+            <Button
+              icon={<ReloadOutlined />}
+              onClick={fetchInitialData}
+              className="bg-white/10 border-white/20 text-white hover:bg-white/20 hover:text-white font-bold rounded-xl self-start sm:self-center"
+            >
+              Refresh Desk
+            </Button>
+          </div>
         </div>
       </Card>
+
+      {/* Quick KPI Summary Bar (Visible on Mobile & Desktop) */}
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+        <Card className="rounded-2xl border-indigo-200/70 bg-gradient-to-br from-indigo-50/80 to-white shadow-2xs" bodyStyle={{ padding: "14px" }}>
+          <Text className="text-[10px] font-black uppercase text-indigo-500 tracking-wider block">Total Raised</Text>
+          <div className="text-xl font-extrabold font-mono text-indigo-900 mt-1">{baseList.length}</div>
+        </Card>
+        <Card className="rounded-2xl border-amber-200/70 bg-gradient-to-br from-amber-50/80 to-white shadow-2xs" bodyStyle={{ padding: "14px" }}>
+          <Text className="text-[10px] font-black uppercase text-amber-600 tracking-wider block">Open & Active</Text>
+          <div className="text-xl font-extrabold font-mono text-amber-700 mt-1">
+            {baseList.filter(t => t.status === "Open" || t.status === "Re-opened").length}
+          </div>
+        </Card>
+        <Card className="rounded-2xl border-blue-200/70 bg-gradient-to-br from-blue-50/80 to-white shadow-2xs" bodyStyle={{ padding: "14px" }}>
+          <Text className="text-[10px] font-black uppercase text-blue-600 tracking-wider block">Updated / In Progress</Text>
+          <div className="text-xl font-extrabold font-mono text-blue-700 mt-1">
+            {baseList.filter(t => t.status === "Updated").length}
+          </div>
+        </Card>
+        <Card className="rounded-2xl border-emerald-200/70 bg-gradient-to-br from-emerald-50/80 to-white shadow-2xs" bodyStyle={{ padding: "14px" }}>
+          <Text className="text-[10px] font-black uppercase text-emerald-600 tracking-wider block">Resolved & Closed</Text>
+          <div className="text-xl font-extrabold font-mono text-emerald-700 mt-1">
+            {baseList.filter(t => t.status === "Closed" || t.status === "Final Closed").length}
+          </div>
+        </Card>
+      </div>
 
       {/* Analytics Grid Cards */}
       <div className="hidden lg:grid grid-cols-1 lg:grid-cols-3 gap-6">
@@ -1139,9 +1221,10 @@ export default function HelpPage() {
                 <Empty description={<Text className="font-bold text-slate-400 uppercase text-xs">No tickets match active filters</Text>} />
               </div>
             ) : (
-              <div className="divide-y divide-slate-100 max-h-[500px] overflow-y-auto">
+              <div className="divide-y divide-slate-100 max-h-[520px] overflow-y-auto pb-20 lg:pb-0">
                 {filteredList.map(tkt => {
                   const isSelected = selectedTicket && selectedTicket.id === tkt.id;
+                  const codeDisplay = getFormattedTicketCode(tkt);
                   
                   return (
                     <div 
@@ -1168,7 +1251,7 @@ export default function HelpPage() {
                             )}
                           </button>
 
-                          <Text className="font-mono font-black text-indigo-600 text-xs">{tkt.ticket_code || tkt.ticketCode || "CYR-RJ-0000001"}</Text>
+                          <Text className="font-mono font-black text-indigo-600 text-xs">{codeDisplay}</Text>
                           <Tag className="font-bold text-[9px] uppercase m-0">{tkt.concern_type || tkt.concernType}</Tag>
                           <Text className="text-[10px] text-slate-400 font-semibold">{new Date(tkt.created_at || tkt.createdAt || Date.now()).toLocaleDateString()}</Text>
                         </Space>
@@ -1210,9 +1293,9 @@ export default function HelpPage() {
               open={!!selectedTicket}
               onClose={() => setSelectedTicket(null)}
               placement="bottom"
-              height="88vh"
+              height="90vh"
               className="rounded-t-2xl"
-              bodyStyle={{ padding: "16px" }}
+              bodyStyle={{ padding: "16px", paddingBottom: "110px" }}
             >
               {renderTicketDetail()}
             </Drawer>
