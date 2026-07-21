@@ -1821,14 +1821,15 @@ export async function handleReverseExpense(request, env, params, query, user) {
  */
 export async function handleSubmitExpense(request, env, params, query, user) {
   let formData = null;
+  let jsonBody = null;
   let payloadStr = null;
   let editExpenseId = null;
   const contentType = request.headers.get("content-type") || "";
 
   try {
     if (contentType.includes("application/json")) {
-      const jsonBody = await request.json();
-      payloadStr = jsonBody.payload ? (typeof jsonBody.payload === "string" ? jsonBody.payload : JSON.stringify(jsonBody.payload)) : JSON.stringify(jsonBody);
+      jsonBody = await request.json();
+      payloadStr = jsonBody.payload ? (typeof jsonBody.payload === "string" ? jsonBody.payload : JSON.stringify(jsonBody.payload)) : null;
       editExpenseId = jsonBody.edit_expense_id || null;
     } else {
       formData = await request.formData();
@@ -1837,8 +1838,14 @@ export async function handleSubmitExpense(request, env, params, query, user) {
     }
   } catch (e) {
     console.error("Error parsing submit expense body:", e);
-    return jsonResponse({ error: "Invalid multipart form data or request body: " + e.message }, 400);
+    return jsonResponse({ error: "Invalid form data or request body: " + e.message }, 400);
   }
+
+  const getFormVal = (key) => {
+    if (formData && typeof formData.get === "function") return formData.get(key);
+    if (jsonBody && jsonBody[key] !== undefined && jsonBody[key] !== null) return jsonBody[key];
+    return null;
+  };
 
   let date, amount, itineraries, claim_month, claim_year, description = "";
   
@@ -1849,8 +1856,8 @@ export async function handleSubmitExpense(request, env, params, query, user) {
     } catch (e) {
       return jsonResponse({ error: "Invalid payload JSON" }, 400);
     }
-    date = payload.date;
-    amount = payload.amount;
+    date = payload.date || payload.exp_date;
+    amount = payload.amount || payload.total_amount;
     itineraries = payload.itinerary_legs || payload.itineraries || [];
     claim_month = payload.claim_month;
     claim_year = payload.claim_year;
@@ -1858,14 +1865,15 @@ export async function handleSubmitExpense(request, env, params, query, user) {
     if (payload.edit_expense_id) editExpenseId = payload.edit_expense_id;
   } else {
     // Read from individual form fields sent by frontend
-    date = formData.get("exp_date");
-    amount = parseFloat(formData.get("total_amount") || "0.0");
-    const itinerariesStr = formData.get("itineraries");
+    date = getFormVal("exp_date");
+    const rawAmt = getFormVal("total_amount");
+    amount = parseFloat(rawAmt || "0.0");
+    const itinerariesStr = getFormVal("itineraries");
     if (!date || !itinerariesStr) {
       return jsonResponse({ error: "exp_date and itineraries are required" }, 400);
     }
     try {
-      itineraries = JSON.parse(itinerariesStr);
+      itineraries = typeof itinerariesStr === "object" ? itinerariesStr : JSON.parse(itinerariesStr);
     } catch (e) {
       return jsonResponse({ error: "Invalid itineraries JSON" }, 400);
     }
@@ -1878,10 +1886,10 @@ export async function handleSubmitExpense(request, env, params, query, user) {
     ];
     claim_month = months[dt.getMonth()];
     claim_year = dt.getFullYear();
-    description = formData.get("description") || "";
+    description = getFormVal("description") || "";
   }
 
-  const rawClientTs = formData.get("client_timestamp") || null;
+  const rawClientTs = getFormVal("client_timestamp");
   // Prefer the client-provided timestamp so all dates come from frontend
   const timestamp = rawClientTs ? new Date(rawClientTs).toISOString() : new Date().toISOString();
 
@@ -2050,7 +2058,7 @@ export async function handleSubmitExpense(request, env, params, query, user) {
 
     // ── Server-side mandatory bill attachment validations ──
     const modeLower = (iti.mode || "").trim().toLowerCase();
-    const mainBillFile = formData.get(`main_bill_${legNum}`);
+    const mainBillFile = formData ? formData.get(`main_bill_${legNum}`) : null;
     const hasMainBillUpload = mainBillFile && typeof mainBillFile === "object" && mainBillFile.name;
     let hasMainAttachment = hasMainBillUpload;
     if (editExpenseId && !hasMainAttachment) {
@@ -2069,7 +2077,7 @@ export async function handleSubmitExpense(request, env, params, query, user) {
 
     if (iti.sub_mode) {
       const subModeLower = (iti.sub_mode || "").trim().toLowerCase();
-      const subBillFile = formData.get(`sub_bill_${legNum}`);
+      const subBillFile = formData ? formData.get(`sub_bill_${legNum}`) : null;
       const hasSubBillUpload = subBillFile && typeof subBillFile === "object" && subBillFile.name;
       let hasSubAttachment = hasSubBillUpload;
       if (editExpenseId && !hasSubAttachment) {
@@ -2089,7 +2097,7 @@ export async function handleSubmitExpense(request, env, params, query, user) {
 
     if (legNum === 1) {
       if (hotelAmt >= 1) {
-        const hotelBillFile = formData.get("hotel_bill_1");
+        const hotelBillFile = formData ? formData.get("hotel_bill_1") : null;
         const hasHotelUpload = hotelBillFile && typeof hotelBillFile === "object" && hotelBillFile.name;
         let hasHotelAttachment = hasHotelUpload;
         if (editExpenseId && !hasHotelAttachment) {
@@ -2104,7 +2112,7 @@ export async function handleSubmitExpense(request, env, params, query, user) {
       }
 
       if (lpAmt >= 300) {
-        const lpBillFile = formData.get("local_purchase_bill_1");
+        const lpBillFile = formData ? formData.get("local_purchase_bill_1") : null;
         const hasLpUpload = lpBillFile && typeof lpBillFile === "object" && lpBillFile.name;
         let hasLpAttachment = hasLpUpload;
         if (editExpenseId && !hasLpAttachment) {
@@ -2120,7 +2128,7 @@ export async function handleSubmitExpense(request, env, params, query, user) {
     }
 
     if (iti.oth_desc && iti.oth_desc.trim() && otherAmt >= 300) {
-      const othBillFile = formData.get(`oth_bill_${legNum}`);
+      const othBillFile = formData ? formData.get(`oth_bill_${legNum}`) : null;
       const hasOthUpload = othBillFile && typeof othBillFile === "object" && othBillFile.name;
       let hasOthAttachment = hasOthUpload;
       if (editExpenseId && !hasOthAttachment) {
@@ -2349,7 +2357,7 @@ export async function handleSubmitExpense(request, env, params, query, user) {
 
   // Helper for attachments upload with fallback
   const handleAttachment = async (fileKey, billType, legNum) => {
-    const file = formData.get(fileKey);
+    const file = formData ? formData.get(fileKey) : null;
     if (file && typeof file === "object" && file.name) {
       const ext = file.name.split(".").pop().toLowerCase() || "jpg";
       const filename = `${expenseCode}_leg${legNum}_${billType}_${Date.now()}.${ext}`;
