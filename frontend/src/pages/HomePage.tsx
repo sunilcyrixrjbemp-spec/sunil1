@@ -135,29 +135,34 @@ export default function HomePage() {
   const [myExpenses, setMyExpenses] = useState<any[]>(() => {
     const currentUser = JSON.parse(localStorage.getItem("user") || "null");
     if (!currentUser) return [];
-    const cached = localStorage.getItem(`cache_my_expenses_${currentUser.user_id}`);
+    const curMonth = new Date().toISOString().substring(0, 7);
+    const cached = localStorage.getItem(`cache_my_expenses_${currentUser.user_id}_${curMonth}`) || localStorage.getItem(`cache_my_expenses_${currentUser.user_id}`);
     return cached ? JSON.parse(cached) : [];
   });
   const [teamExpenses, setTeamExpenses] = useState<any[]>(() => {
     const currentUser = JSON.parse(localStorage.getItem("user") || "null");
     if (!currentUser) return [];
-    const cached = localStorage.getItem(`cache_team_expenses_${currentUser.user_id}`);
+    const curMonth = new Date().toISOString().substring(0, 7);
+    const cached = localStorage.getItem(`cache_team_expenses_${currentUser.user_id}_${curMonth}`) || localStorage.getItem(`cache_team_expenses_${currentUser.user_id}`);
     return cached ? JSON.parse(cached) : [];
   });
   const [loadingMyExpenses, setLoadingMyExpenses] = useState(() => {
     const currentUser = JSON.parse(localStorage.getItem("user") || "null");
-    if (!currentUser) return true;
-    return !localStorage.getItem(`cache_my_expenses_${currentUser.user_id}`);
+    if (!currentUser) return false;
+    const curMonth = new Date().toISOString().substring(0, 7);
+    return !localStorage.getItem(`cache_my_expenses_${currentUser.user_id}_${curMonth}`) && !localStorage.getItem(`cache_my_expenses_${currentUser.user_id}`);
   });
   const [loadingTeamExpenses, setLoadingTeamExpenses] = useState(() => {
     const currentUser = JSON.parse(localStorage.getItem("user") || "null");
-    if (!currentUser) return true;
-    return !localStorage.getItem(`cache_team_expenses_${currentUser.user_id}`);
+    if (!currentUser) return false;
+    const curMonth = new Date().toISOString().substring(0, 7);
+    return !localStorage.getItem(`cache_team_expenses_${currentUser.user_id}_${curMonth}`) && !localStorage.getItem(`cache_team_expenses_${currentUser.user_id}`);
   });
   const [allowanceStats, setAllowanceStats] = useState<any>(() => {
     const currentUser = JSON.parse(localStorage.getItem("user") || "null");
     if (!currentUser) return null;
-    const cached = localStorage.getItem(`cache_allowance_stats_${currentUser.user_id}`);
+    const curMonth = new Date().toISOString().substring(0, 7);
+    const cached = localStorage.getItem(`cache_allowance_stats_${currentUser.user_id}_${curMonth}`) || localStorage.getItem(`cache_allowance_stats_${currentUser.user_id}`);
     return cached ? JSON.parse(cached) : null;
   });
 
@@ -326,6 +331,7 @@ export default function HomePage() {
       .then((myData) => {
         if (Array.isArray(myData)) {
           setMyExpenses(myData);
+          localStorage.setItem(`cache_my_expenses_${uId}_${selectMonth}`, JSON.stringify(myData));
           localStorage.setItem(`cache_my_expenses_${uId}`, JSON.stringify(myData));
         }
         setLoadingMyExpenses(false);
@@ -349,6 +355,7 @@ export default function HomePage() {
             rateCar: initData.allowance.rate_car || 0
           };
           setAllowanceStats(stats);
+          localStorage.setItem(`cache_allowance_stats_${uId}_${selectMonth}`, JSON.stringify(stats));
           localStorage.setItem(`cache_allowance_stats_${uId}`, JSON.stringify(stats));
         }
       })
@@ -374,6 +381,7 @@ export default function HomePage() {
         .then((teamData) => {
           if (Array.isArray(teamData)) {
             setTeamExpenses(teamData);
+            localStorage.setItem(`cache_team_expenses_${uId}_${selectMonth}`, JSON.stringify(teamData));
             localStorage.setItem(`cache_team_expenses_${uId}`, JSON.stringify(teamData));
           }
           setLoadingTeamExpenses(false);
@@ -446,6 +454,29 @@ export default function HomePage() {
       return;
     }
     setUser(currentUser);
+
+    const uId = currentUser.user_id;
+    const cachedMy = localStorage.getItem(`cache_my_expenses_${uId}_${selectMonth}`);
+    if (cachedMy) {
+      try {
+        setMyExpenses(JSON.parse(cachedMy));
+        setLoadingMyExpenses(false);
+      } catch (e) {}
+    }
+    const cachedTeam = localStorage.getItem(`cache_team_expenses_${uId}_${selectMonth}`);
+    if (cachedTeam) {
+      try {
+        setTeamExpenses(JSON.parse(cachedTeam));
+        setLoadingTeamExpenses(false);
+      } catch (e) {}
+    }
+    const cachedStats = localStorage.getItem(`cache_allowance_stats_${uId}_${selectMonth}`);
+    if (cachedStats) {
+      try {
+        setAllowanceStats(JSON.parse(cachedStats));
+      } catch (e) {}
+    }
+
     refreshDashboardData();
   }, [navigate, selectMonth]);
 
