@@ -832,18 +832,28 @@ export default function HomePage() {
       : allMonthTeamExpenses;
 
     baseList.forEach(e => {
-      if (e.category === "Limit Request") return;
-      let zone = (e.zone || "").trim();
-      if (!zone || zone.toLowerCase() === "unknown") zone = "Unassigned Zone";
-      else zone = zone.replace(/\s*[Zz]one\s*$/i, "");
-      
-      if (!grouped[zone]) {
-        grouped[zone] = { name: zone, amount: 0 };
+      if (!e || e.category === "Limit Request") return;
+
+      let key = "";
+      if (filterZone !== "all" && filterDistrict !== "all") {
+        key = (e.submitter_name || "Unknown Engineer").trim();
+      } else if (filterZone !== "all") {
+        const d = (e.district || e.submitter_district || e.home_district || e.from_district || "").trim();
+        key = (!d || d.toLowerCase() === "unknown") ? "Unassigned District" : d;
+      } else {
+        let zone = (e.zone || "").trim();
+        if (!zone || zone.toLowerCase() === "unknown") zone = "Unassigned Zone";
+        else zone = zone.replace(/\s*[Zz]one\s*$/i, "");
+        key = zone;
       }
-      grouped[zone].amount += (e.amount || 0);
+
+      if (!grouped[key]) {
+        grouped[key] = { name: key, amount: 0 };
+      }
+      grouped[key].amount += (e.amount || 0);
     });
-    return Object.values(grouped)
-      .sort((a, b) => b.amount - a.amount);
+
+    return Object.values(grouped).sort((a, b) => b.amount - a.amount);
   };
 
   // Stats calculations based on current active tab, respecting zone, employee, and mode filters, but NOT the status tab filter
@@ -1644,7 +1654,13 @@ export default function HomePage() {
                       </div>
                     ) : (
                       <div className="space-y-2 border-t border-gray-100 pt-3">
-                        <Text type="secondary" className="text-[9px] font-extrabold uppercase block tracking-wider text-center">Zone Expenditures Comparison</Text>
+                        <Text type="secondary" className="text-[9px] font-extrabold uppercase block tracking-wider text-center">
+                          {filterZone !== "all" && filterDistrict !== "all"
+                            ? `${filterDistrict} Engineer Expenditures`
+                            : filterZone !== "all"
+                            ? `${filterZone} District Expenditures`
+                            : "Zone Expenditures Comparison"}
+                        </Text>
                         {(() => {
                           const chartData = getTeamChartData();
                           if (chartData.length === 0) return null;
@@ -1675,7 +1691,13 @@ export default function HomePage() {
                                   )}
                                 />
                                 <div className="absolute flex flex-col items-center justify-center pointer-events-none" style={{ top: '50%', left: '50%', transform: 'translate(-50%, -50%)' }}>
-                                  <span className="text-[7px] text-gray-400 font-bold uppercase tracking-wider">Total Team</span>
+                                  <span className="text-[7px] text-gray-400 font-bold uppercase tracking-wider">
+                                    {filterZone !== "all" && filterDistrict !== "all"
+                                      ? filterDistrict.toUpperCase()
+                                      : filterZone !== "all"
+                                      ? filterZone.toUpperCase()
+                                      : "TOTAL TEAM"}
+                                  </span>
                                   <span className="text-[11px] font-black text-slate-800 font-mono mt-0.5">
                                     ₹{chartData.reduce((sum, item) => sum + item.amount, 0).toLocaleString()}
                                   </span>
