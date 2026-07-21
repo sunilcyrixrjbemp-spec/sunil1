@@ -1059,9 +1059,7 @@ export default function HomePage() {
                         </div>
 
                         {/* Claims Listing Table */}
-                        {loadingMyExpenses ? (
-                          <ProgressLoader message="Syncing your claims & analytics..." fullPage={false} />
-                        ) : filteredPersonalExpenses.length === 0 ? (
+                        {filteredPersonalExpenses.length === 0 && !loadingMyExpenses ? (
                           <div className="py-12 text-center text-gray-400 text-xs">
                             <Compass className="w-8 h-8 mx-auto mb-2 text-gray-300" />
                             <p className="font-bold">No expense claims found for this month.</p>
@@ -1071,6 +1069,7 @@ export default function HomePage() {
                             {/* Desktop Table */}
                             <div className="hidden md:block border border-gray-100 rounded-lg overflow-hidden">
                               <Table
+                                loading={loadingMyExpenses && filteredPersonalExpenses.length === 0}
                                 dataSource={filteredPersonalExpenses}
                                 rowKey="id"
                                 pagination={{ pageSize: 25, size: "small" }}
@@ -1318,9 +1317,7 @@ export default function HomePage() {
                         </div>
 
                         {/* Team Claims Listing Table */}
-                        {loadingTeamExpenses ? (
-                          <ProgressLoader message="Syncing team claims & analytics..." fullPage={false} />
-                        ) : safeTeamExpenses.length === 0 ? (
+                        {safeTeamExpenses.length === 0 && !loadingTeamExpenses ? (
                           <div className="py-12 text-center text-gray-400 text-xs">
                             <Users className="w-8 h-8 mx-auto mb-2 text-gray-300" />
                             <p className="font-bold">No claims submitted by your team members yet.</p>
@@ -1330,6 +1327,7 @@ export default function HomePage() {
                             {/* Desktop View Table */}
                             <div className="hidden md:block border border-gray-100 rounded-lg overflow-hidden">
                               <Table
+                                loading={loadingTeamExpenses && safeTeamExpenses.length === 0}
                                 dataSource={paginatedTeamExpenses}
                                 rowKey="id"
                                 pagination={false}
