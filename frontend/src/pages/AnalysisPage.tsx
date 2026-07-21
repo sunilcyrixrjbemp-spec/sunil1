@@ -423,25 +423,69 @@ export default function AnalysisPage() {
       .slice(0, 5);
   }, [activeExpenses, user]);
 
-  // D. Last 5 Days (date-wise spend)
-  const last5DaysData = useMemo(() => {
-    const map: Record<string, number> = {};
+  // D. Full Month Date-wise Expense Trend (Chronological 1st to last day of month)
+  const fullMonthTrendData = useMemo(() => {
+    // Build map of YYYY-MM-DD -> total amount from activeExpenses
+    const dailyAmountMap: Record<string, number> = {};
     activeExpenses.forEach(e => {
+      if (!e) return;
       const rawDate = e.date || e.itinerary;
       if (!rawDate) return;
-      try {
-        const match = String(rawDate).match(/^(\d{4})-(\d{2})-(\d{2})$/);
-        if (match) {
-          const d = new Date(parseInt(match[1]), parseInt(match[2]) - 1, parseInt(match[3]));
-          const lbl = `${d.getDate()} ${d.toLocaleString("en-US", { month: "short" })}`;
-          map[lbl] = (map[lbl] || 0) + (e.amount || 0);
-        }
-      } catch (ex) {}
+      const cleanStr = String(rawDate).trim();
+      const match = cleanStr.match(/^(\d{4})-(\d{2})-(\d{2})/);
+      if (match) {
+        const dateKey = `${match[1]}-${match[2]}-${match[3]}`;
+        dailyAmountMap[dateKey] = (dailyAmountMap[dateKey] || 0) + (e.amount || 0);
+      }
     });
-    return Object.entries(map)
-      .map(([date, amount]) => ({ date, amount }))
-      .slice(-5);
-  }, [activeExpenses]);
+
+    const result: { date: string; amount: number; fullDate: string }[] = [];
+
+    if (startDate && endDate) {
+      // Custom date range
+      const start = new Date(startDate);
+      const end = new Date(endDate);
+      const curr = new Date(start);
+
+      while (curr <= end) {
+        const yyyy = curr.getFullYear();
+        const mm = String(curr.getMonth() + 1).padStart(2, "0");
+        const dd = String(curr.getDate()).padStart(2, "0");
+        const dateKey = `${yyyy}-${mm}-${dd}`;
+        const monthShort = curr.toLocaleString("en-US", { month: "short" });
+        const label = `${curr.getDate()} ${monthShort}`;
+
+        result.push({
+          date: label,
+          amount: dailyAmountMap[dateKey] || 0,
+          fullDate: dateKey
+        });
+
+        curr.setDate(curr.getDate() + 1);
+      }
+    } else {
+      // Full selected month (selectedYear, selectedMonth: 0-11)
+      const year = selectedYear;
+      const monthIdx = selectedMonth; // 0 = Jan, 1 = Feb, etc.
+      const daysInMonth = new Date(year, monthIdx + 1, 0).getDate();
+      const monthShort = months[monthIdx] ? months[monthIdx].substring(0, 3) : "Jul";
+
+      for (let day = 1; day <= daysInMonth; day++) {
+        const mm = String(monthIdx + 1).padStart(2, "0");
+        const dd = String(day).padStart(2, "0");
+        const dateKey = `${year}-${mm}-${dd}`;
+        const label = `${day} ${monthShort}`;
+
+        result.push({
+          date: label,
+          amount: dailyAmountMap[dateKey] || 0,
+          fullDate: dateKey
+        });
+      }
+    }
+
+    return result;
+  }, [activeExpenses, selectedMonth, selectedYear, startDate, endDate]);
 
   // E. Zone-wise (from user.zone database field)
   // Uses ALL month expenses (ignores zone/district/engineer filter) so every zone shows up
@@ -1143,42 +1187,57 @@ export default function AnalysisPage() {
                 </Col>
               )}
 
-              {/* Chart 3: Date-wise Expense Trend (Now third!) */}
+              {/* Chart 3: Full Month Date-wise Expense Trend */}
               <Col xs={24} lg={viewMode === "team" ? 12 : 24}>
                 <Card 
                   size="small"
                   title={<span className="text-xs font-bold text-gray-700 uppercase tracking-wider">Date Wise Expense Trend</span>}
-                  extra={<span className="text-[10px] text-gray-400">Daily spending pattern for last active dates</span>}
+                  extra={<span className="text-[10px] text-gray-400">Full month daily spending trend ({months[selectedMonth]} {selectedYear})</span>}
                   className="shadow-sm border border-gray-200 rounded-xl"
                 >
                   <div style={{ height: 280 }}>
-                    {last5DaysData.length > 0 ? (
+                    {fullMonthTrendData.length > 0 ? (
                       <ResponsiveLine
                         data={[
                           {
                             id: "Amount",
                             color: "#4f46e5",
-                            data: last5DaysData.map(d => ({ x: d.date, y: d.amount }))
+                            data: fullMonthTrendData.map(d => ({ x: d.date, y: d.amount }))
                           }
                         ]}
                         margin={{ top: 15, right: 15, bottom: 35, left: 45 }}
                         xScale={{ type: 'point' }}
-                        yScale={{ type: 'linear', min: 'auto', max: 'auto' }}
+                        yScale={{ type: 'linear', min: 0, max: 'auto' }}
                         curve="monotoneX"
                         colors={d => d.color}
                         lineWidth={2}
                         enableArea={true}
                         areaOpacity={0.12}
-                        enablePoints={false}
+                        enablePoints={fullMonthTrendData.length <= 15}
+                        pointSize={5}
                         useMesh={true}
                         axisTop={null}
                         axisRight={null}
-                        axisBottom={{ tickSize: 0, tickPadding: 8, tickRotation: 0 }}
+                        axisBottom={{
+                          tickSize: 0,
+                          tickPadding: 8,
+                          tickRotation: 0,
+                          format: (val) => {
+                            const str = String(val);
+                            const dayNum = parseInt(str);
+                            if (isNaN(dayNum)) return str;
+                            // Display tick label for day 1, multiples of 5, or final day
+                            if (dayNum === 1 || dayNum % 5 === 0 || dayNum >= fullMonthTrendData.length - 1) {
+                              return str;
+                            }
+                            return "";
+                          }
+                        }}
                         axisLeft={{
                           tickSize: 0,
                           tickPadding: 8,
                           tickRotation: 0,
-                          format: (v) => `₹${(v / 1000).toFixed(0)}k`
+                          format: (v) => v >= 1000 ? `₹${(v / 1000).toFixed(0)}k` : `₹${v}`
                         }}
                         theme={{
                           grid: { line: { stroke: '#f1f5f9', strokeWidth: 1 } },
