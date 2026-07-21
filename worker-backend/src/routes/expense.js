@@ -460,6 +460,10 @@ export async function getExpenseInitData(env, targetUser, monthStr) {
   const existingKmReq = kmReqs.length > 0 ? { status: kmReqs[0].status, requested_value: kmReqs[0].requested_value } : null;
   const existingAutoReq = autoReqs.length > 0 ? { status: autoReqs[0].status, requested_value: autoReqs[0].requested_value } : null;
 
+  const fallbackBikeRate = defaultBike?.rate_per_km || 3.0;
+  const fallbackCarRate = defaultCar?.rate_per_km || 9.0;
+
+  const allowanceDict = {
     daily_out_district: allowance?.daily_out_district ?? 200,
     daily_hotel: allowance?.daily_hotel ?? 300,
     daily_out_state: allowance?.daily_out_state ?? 400,
@@ -468,12 +472,11 @@ export async function getExpenseInitData(env, targetUser, monthStr) {
     max_km_per_month: allowance?.max_km_per_month ?? 2000,
     rate_bike: allowance?.vehicle_type === "Bike" ? allowance?.rate_per_km : fallbackBikeRate,
     rate_car: allowance?.vehicle_type === "Car" ? allowance?.rate_per_km : fallbackCarRate,
-    vehicle_type: allowance?.vehicle_type ?? "Bike"
+    vehicle_type: allowance?.vehicle_type ?? "Bike",
+    current_month_km: statsRes?.total_km || 0.0,
+    current_month_auto: statsRes?.total_auto || 0.0,
+    max_auto_per_month: 1000
   };
-
-  allowanceDict.current_month_km = statsRes?.total_km || 0.0;
-  allowanceDict.current_month_auto = statsRes?.total_auto || 0.0;
-  allowanceDict.max_auto_per_month = 1000;
 
   const mm = String(monthInt).padStart(2, "0");
   const yy = String(yearVal).substring(2);
