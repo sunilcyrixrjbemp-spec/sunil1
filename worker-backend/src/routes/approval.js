@@ -864,7 +864,7 @@ export async function handleAutoApprovalExpiry(env) {
     if (row.key === "pending_auto_action") autoAction = row.value;
   }
   
-  if (expiryDays === null || expiryDays <= 0 || !autoAction) {
+  if (expiryDays === null || expiryDays <= 0 || !autoAction || autoAction === "disabled") {
     return { success: true, message: "Auto-expiry settings disabled or not configured." };
   }
   

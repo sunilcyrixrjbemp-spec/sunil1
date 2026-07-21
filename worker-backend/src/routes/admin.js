@@ -219,12 +219,56 @@ export async function handleListUsers(request, env, params, query, user) {
     return jsonResponse({ error: "Access denied" }, 403);
   }
 
-  const users = await env.DB.prepare(`
+  const getParam = (k) => (query && typeof query.get === "function") ? query.get(k) : (query?.[k] || null);
+  const zone = getParam("zone");
+  const district = getParam("district");
+  const managerId = getParam("manager_id");
+  const roleParam = getParam("role");
+  const statusParam = getParam("status");
+  const searchQ = getParam("q");
+
+  let sql = `
     SELECT u.*, r.role
     FROM users u
     LEFT JOIN user_roles r ON u.user_id = r.user_id
-    ORDER BY u.name ASC
-  `).all();
+  `;
+  const conditions = [];
+  const binds = [];
+
+  if (zone && zone !== "all") {
+    conditions.push("LOWER(TRIM(u.zone)) = LOWER(TRIM(?))");
+    binds.push(zone);
+  }
+  if (district && district !== "all") {
+    conditions.push("LOWER(TRIM(u.district)) = LOWER(TRIM(?))");
+    binds.push(district);
+  }
+  if (managerId && managerId !== "all") {
+    conditions.push("(LOWER(TRIM(u.manager)) = LOWER(TRIM(?)) OR LOWER(TRIM(u.zonal_manager)) = LOWER(TRIM(?)))");
+    binds.push(managerId, managerId);
+  }
+  if (roleParam && roleParam !== "all") {
+    conditions.push("LOWER(TRIM(r.role)) = LOWER(TRIM(?))");
+    binds.push(roleParam);
+  }
+  if (statusParam && statusParam !== "all") {
+    conditions.push("LOWER(TRIM(u.user_status)) = LOWER(TRIM(?))");
+    binds.push(statusParam);
+  }
+  if (searchQ && searchQ.trim()) {
+    const qClean = `%${searchQ.trim().toLowerCase()}%`;
+    conditions.push("(LOWER(u.name) LIKE ? OR LOWER(u.user_id) LIKE ? OR LOWER(u.e_code) LIKE ? OR LOWER(u.mobile_number) LIKE ?)");
+    binds.push(qClean, qClean, qClean, qClean);
+  }
+
+  if (conditions.length > 0) {
+    sql += " WHERE " + conditions.join(" AND ");
+  }
+
+  sql += " ORDER BY u.name ASC";
+
+  const stmt = env.DB.prepare(sql);
+  const users = binds.length > 0 ? await stmt.bind(...binds).all() : await stmt.all();
 
   return jsonResponse(users.results || []);
 }
@@ -1516,5 +1560,77 @@ export async function handleOneTimeAdjust(request, env, params, query, adminUser
       diagnostics: { diagTotalUsers, diagMappedUsers, diagJulyClaims, diagSampleMonths, diagSampleBases, diagSampleUsers, sampleExpenseUserIds, diagTrace }
     }
   });
+}
+
+/**
+ * GET /api/admin/allowance-rates
+ */
+export async function handleGetAllowanceRates(request, env, params, query, adminUser) {
+  if (adminUser.role !== "Admin") {
+    return jsonResponse({ error: "Access denied" }, 403);
+  }
+  const rows = await env.DB.prepare("SELECT * FROM allowance_master ORDER BY id ASC").all();
+  return jsonResponse(rows.results || []);
+}
+
+/**
+ * POST /api/admin/allowance-rates
+ */
+export async function handleSaveAllowanceRates(request, env, params, query, adminUser) {
+  if (adminUser.role !== "Admin") {
+    return jsonResponse({ error: "Access denied" }, 403);
+  }
+
+  let body;
+  try {
+    body = await request.json();
+  } catch (e) {
+    return jsonResponse({ error: "Invalid JSON body" }, 400);
+  }
+
+  const rates = Array.isArray(body) ? body : (body.rates || []);
+  if (rates.length === 0) {
+    return jsonResponse({ error: "No allowance rates data provided" }, 400);
+  }
+
+  const statements = [];
+  for (const r of rates) {
+    if (!r.id) continue;
+    statements.push({
+      sql: `UPDATE allowance_master SET 
+              hotel_in_state_s = ?, 
+              hotel_in_state_d = ?, 
+              hotel_out_state_s = ?, 
+              hotel_out_state_d = ?, 
+              daily_in_district = ?, 
+              daily_out_district = ?, 
+              daily_hotel = ?, 
+              daily_out_state = ?, 
+              vehicle_type = ?, 
+              rate_per_km = ?, 
+              max_km_per_month = ?
+            WHERE id = ?`,
+      params: [
+        parseFloat(r.hotel_in_state_s || 0),
+        parseFloat(r.hotel_in_state_d || 0),
+        parseFloat(r.hotel_out_state_s || 0),
+        parseFloat(r.hotel_out_state_d || 0),
+        parseFloat(r.daily_in_district || 0),
+        parseFloat(r.daily_out_district || 0),
+        parseFloat(r.daily_hotel || 0),
+        parseFloat(r.daily_out_state || 0),
+        r.vehicle_type || "Bike",
+        parseFloat(r.rate_per_km || 0),
+        parseInt(r.max_km_per_month || 0, 10),
+        r.id
+      ]
+    });
+  }
+
+  if (statements.length > 0) {
+    await runBatchWrite(env, statements);
+  }
+
+  return jsonResponse({ status: "success", message: "Allowance rates updated successfully." });
 }
 

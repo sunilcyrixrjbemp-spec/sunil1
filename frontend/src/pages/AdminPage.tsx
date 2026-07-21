@@ -1,5 +1,6 @@
-import React, { useEffect, useState, useRef } from "react";
+import React, { useEffect, useState, useRef, useMemo } from "react";
 import toast from "react-hot-toast";
+import * as XLSX from "xlsx";
 import { adminService, UserCreatePayload, UserEditPayload, ApprovalHierarchyResponse } from "../services/adminService";
 import { authService } from "../services/authService";
 import { UploadCloud, Pencil, Trash2, Plus, Download } from "lucide-react";
@@ -16,7 +17,9 @@ import {
   Alert, 
   Spin, 
   Space, 
-  Typography 
+  Typography,
+  Select,
+  InputNumber
 } from "antd";
 import { 
   PlusOutlined, 
@@ -24,7 +27,8 @@ import {
   EditOutlined, 
   SearchOutlined, 
   LogoutOutlined, 
-  ControlOutlined 
+  ControlOutlined,
+  FileExcelOutlined
 } from "@ant-design/icons";
 
 const { Title, Text } = Typography;
@@ -177,6 +181,7 @@ export default function AdminPage() {
     window.scrollTo({ top: 0, behavior: "instant" });
     if (tab === "settings") {
       fetchRejectedClaims("");
+      fetchAllowanceRates();
     }
   };
   const [users, setUsers] = useState<any[]>(() => {
@@ -204,7 +209,18 @@ export default function AdminPage() {
     return true;
   });
   const [error, setError] = useState<string | null>(null);
-  const [searchTerm, setSearchTerm] = useState("");
+  const [userSearchTerm, setUserSearchTerm] = useState("");
+  const [userZoneFilter, setUserZoneFilter] = useState<string>("all");
+  const [userDistrictFilter, setUserDistrictFilter] = useState<string>("all");
+  const [userManagerFilter, setUserManagerFilter] = useState<string>("all");
+  const [userRoleFilter, setUserRoleFilter] = useState<string>("all");
+  const [userStatusFilter, setUserStatusFilter] = useState<string>("all");
+
+  // Section 3: Allowance Master state
+  const [allowanceRates, setAllowanceRates] = useState<any[]>([]);
+  const [loadingRates, setLoadingRates] = useState<boolean>(false);
+  const [savingRates, setSavingRates] = useState<boolean>(false);
+
   const [chartRoleFilter, setChartRoleFilter] = useState<string>("all");
   const [chartZoneFilter, setChartZoneFilter] = useState<string>("all");
   const [chartDistrictFilter, setChartDistrictFilter] = useState<string>("all");
@@ -1066,10 +1082,23 @@ export default function AdminPage() {
         setHierarchyError(`Approver is not assigned for Level ${row.level}.`);
         return;
       }
+      if (selectedRequesterIds.includes(appVal)) {
+        const u = safeUsers.find(userObj => userObj.id === appVal);
+        setHierarchyError(`Self-approval error: ${u ? u.name : 'User'} is mapped as a requester and cannot approve their own requests.`);
+        return;
+      }
       formattedApprovers.push({
         level_number: row.level,
         approver_id: appVal
       });
+    }
+
+    // Check for duplicate consecutive level approvers
+    for (let i = 0; i < formattedApprovers.length - 1; i++) {
+      if (formattedApprovers[i].approver_id === formattedApprovers[i + 1].approver_id) {
+        setHierarchyError(`Duplicate level error: The same user cannot be mapped as approver for both Level ${formattedApprovers[i].level_number} and Level ${formattedApprovers[i + 1].level_number}.`);
+        return;
+      }
     }
 
     setHierarchyLoading(true);
@@ -1120,19 +1149,124 @@ export default function AdminPage() {
     });
   };
 
-  const eligibleApprovers = safeUsers;
+  const getUsersByRole = (allowedRoles: string[]) => {
+    const rolesLower = allowedRoles.map(r => r.toLowerCase());
+    return safeUsers.filter(u => {
+      const r = (u.role || "").trim().toLowerCase();
+      const d = (u.designation || "").trim().toLowerCase();
+      return rolesLower.includes(r) || rolesLower.some(ar => d.includes(ar));
+    });
+  };
 
-  const filteredUsers = safeUsers.filter(u => {
-    const term = searchTerm.toLowerCase().trim();
-    if (!term) return true;
-    return (
-      u.name.toLowerCase().includes(term) ||
-      u.user_id.toLowerCase().includes(term) ||
-      (u.e_code && u.e_code.toLowerCase().includes(term)) ||
-      u.role.toLowerCase().includes(term) ||
-      (u.designation && u.designation.toLowerCase().includes(term))
-    );
-  });
+  const availableUserZones = useMemo(() => {
+    const zones = new Set<string>();
+    safeUsers.forEach(u => {
+      if (u.zone && u.zone.trim() && u.zone.trim().toLowerCase() !== "all") {
+        zones.add(u.zone.trim());
+      }
+    });
+    return Array.from(zones).sort();
+  }, [safeUsers]);
+
+  const availableUserDistricts = useMemo(() => {
+    const districts = new Set<string>();
+    safeUsers.forEach(u => {
+      if (userZoneFilter !== "all" && (u.zone || "").trim().toLowerCase() !== userZoneFilter.trim().toLowerCase()) {
+        return;
+      }
+      if (u.district && u.district.trim() && u.district.trim().toLowerCase() !== "all") {
+        districts.add(u.district.trim());
+      }
+    });
+    return Array.from(districts).sort();
+  }, [safeUsers, userZoneFilter]);
+
+  const availableUserManagers = useMemo(() => {
+    const managers = new Set<string>();
+    safeUsers.forEach(u => {
+      if (u.manager && u.manager.trim()) managers.add(u.manager.trim());
+      if (u.zonal_manager && u.zonal_manager.trim()) managers.add(u.zonal_manager.trim());
+    });
+    return Array.from(managers).sort();
+  }, [safeUsers]);
+
+  const ALL_ROLES_LIST = [
+    "Admin", "Manager", "Zonal Manager", "Coordinator", "Engineer", 
+    "Service Engineer", "Technician", "MIS", "VP", "Project Head", 
+    "Accountant", "HR", "Travel Desk"
+  ];
+
+  const filteredUsers = useMemo(() => {
+    return safeUsers.filter(u => {
+      if (userZoneFilter !== "all" && (u.zone || "").trim().toLowerCase() !== userZoneFilter.trim().toLowerCase()) return false;
+      if (userDistrictFilter !== "all" && (u.district || "").trim().toLowerCase() !== userDistrictFilter.trim().toLowerCase()) return false;
+      if (userManagerFilter !== "all" && (u.manager || "").trim().toLowerCase() !== userManagerFilter.trim().toLowerCase() && (u.zonal_manager || "").trim().toLowerCase() !== userManagerFilter.trim().toLowerCase()) return false;
+      if (userRoleFilter !== "all" && (u.role || "").trim().toLowerCase() !== userRoleFilter.trim().toLowerCase()) return false;
+      if (userStatusFilter !== "all" && (u.user_status || "active").trim().toLowerCase() !== userStatusFilter.trim().toLowerCase()) return false;
+      if (userSearchTerm.trim()) {
+        const q = userSearchTerm.trim().toLowerCase();
+        const nameMatch = (u.name || "").toLowerCase().includes(q);
+        const codeMatch = (u.user_id || u.e_code || "").toLowerCase().includes(q);
+        const mobileMatch = (u.mobile_number || "").toLowerCase().includes(q);
+        if (!nameMatch && !codeMatch && !mobileMatch) return false;
+      }
+      return true;
+    });
+  }, [safeUsers, userZoneFilter, userDistrictFilter, userManagerFilter, userRoleFilter, userStatusFilter, userSearchTerm]);
+
+  const handleExportUsersExcel = () => {
+    if (filteredUsers.length === 0) {
+      toast.error("No employees to export.");
+      return;
+    }
+    const exportData = filteredUsers.map(u => ({
+      "Employee Code": u.e_code || u.user_id || "—",
+      "Name": u.name || "—",
+      "Designation": u.designation || "Engineer",
+      "Grade": u.grade || "—",
+      "Zone": u.zone || "—",
+      "District": u.district || "—",
+      "Manager": u.manager || "—",
+      "Zonal Manager": u.zonal_manager || "—",
+      "Coordinator": u.coordinator || "—",
+      "Mobile": u.mobile_number || "—",
+      "Role": u.role || "Engineer",
+      "Status": (u.user_status || "active").toUpperCase(),
+      "Created Date": u.created_at ? new Date(u.created_at).toLocaleDateString() : "—"
+    }));
+
+    const worksheet = XLSX.utils.json_to_sheet(exportData);
+    const workbook = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(workbook, worksheet, "Employees");
+    const dateTag = new Date().toISOString().split("T")[0];
+    const filterTag = userZoneFilter !== "all" ? userZoneFilter : "all";
+    XLSX.writeFile(workbook, `users_export_${filterTag}_${dateTag}.xlsx`);
+    toast.success(`Exported ${filteredUsers.length} employees to Excel!`);
+  };
+
+  const fetchAllowanceRates = async () => {
+    setLoadingRates(true);
+    try {
+      const data = await adminService.getAllowanceRates();
+      setAllowanceRates(Array.isArray(data) ? data : []);
+    } catch (e) {
+      console.error("Error fetching allowance rates:", e);
+    } finally {
+      setLoadingRates(false);
+    }
+  };
+
+  const handleSaveAllowanceRates = async () => {
+    setSavingRates(true);
+    try {
+      await adminService.saveAllowanceRates(allowanceRates);
+      toast.success("Allowance rates updated successfully!");
+    } catch (e: any) {
+      toast.error(e.response?.data?.error || "Failed to update allowance rates");
+    } finally {
+      setSavingRates(false);
+    }
+  };
 
 
 
@@ -1284,21 +1418,95 @@ export default function AdminPage() {
           /* ================= USERS LIST TAB ================= */
           <Card className="rounded-2xl border-slate-200/90 shadow-sm overflow-hidden" bodyStyle={{ padding: "0" }}>
             {/* Filters & Actions Bar */}
-            <div className="p-4 border-b border-slate-200/80 bg-slate-50/80 flex flex-col md:flex-row md:items-center justify-between gap-4">
-              
-              {/* Ant Design Search Input */}
-              <Input
-                placeholder="Search by Employee Code, Name, Role..."
-                prefix={<SearchOutlined className="text-slate-400" />}
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                size="large"
-                className="max-w-md rounded-xl font-medium border-slate-200"
-                allowClear
-              />
+            <div className="p-4 border-b border-slate-200/80 bg-slate-50/80 space-y-3">
+              <div className="flex flex-wrap items-center justify-between gap-3">
+                <div className="flex flex-wrap items-center gap-2 flex-1">
+                  {/* Search Input */}
+                  <Input
+                    placeholder="Search Name, Code, Mobile..."
+                    prefix={<SearchOutlined className="text-slate-400" />}
+                    value={userSearchTerm}
+                    onChange={(e) => setUserSearchTerm(e.target.value)}
+                    className="w-48 rounded-xl font-medium border-slate-200"
+                    allowClear
+                  />
+                  {/* Zone Filter */}
+                  <Select
+                    value={userZoneFilter}
+                    onChange={(val) => {
+                      setUserZoneFilter(val);
+                      setUserDistrictFilter("all");
+                    }}
+                    className="w-36 rounded-xl"
+                    placeholder="All Zones"
+                  >
+                    <Select.Option value="all">All Zones</Select.Option>
+                    {availableUserZones.map((z: string) => (
+                      <Select.Option key={z} value={z}>{z}</Select.Option>
+                    ))}
+                  </Select>
+                  {/* District Filter */}
+                  <Select
+                    value={userDistrictFilter}
+                    onChange={setUserDistrictFilter}
+                    className="w-36 rounded-xl"
+                    placeholder="All Districts"
+                  >
+                    <Select.Option value="all">All Districts</Select.Option>
+                    {availableUserDistricts.map((d: string) => (
+                      <Select.Option key={d} value={d}>{d}</Select.Option>
+                    ))}
+                  </Select>
+                  {/* Manager Filter */}
+                  <Select
+                    value={userManagerFilter}
+                    onChange={setUserManagerFilter}
+                    className="w-40 rounded-xl"
+                    placeholder="All Managers"
+                  >
+                    <Select.Option value="all">All Managers</Select.Option>
+                    {availableUserManagers.map((m: string) => (
+                      <Select.Option key={m} value={m}>{m}</Select.Option>
+                    ))}
+                  </Select>
+                  {/* Role Filter */}
+                  <Select
+                    value={userRoleFilter}
+                    onChange={setUserRoleFilter}
+                    className="w-36 rounded-xl"
+                    placeholder="All Roles"
+                  >
+                    <Select.Option value="all">All Roles</Select.Option>
+                    {ALL_ROLES_LIST.map((r: string) => (
+                      <Select.Option key={r} value={r}>{r}</Select.Option>
+                    ))}
+                  </Select>
+                  {/* Status Filter */}
+                  <Select
+                    value={userStatusFilter}
+                    onChange={setUserStatusFilter}
+                    className="w-32 rounded-xl"
+                    placeholder="All Status"
+                  >
+                    <Select.Option value="all">All Status</Select.Option>
+                    <Select.Option value="active">Active</Select.Option>
+                    <Select.Option value="inactive">Inactive</Select.Option>
+                    <Select.Option value="locked">Locked</Select.Option>
+                  </Select>
+                </div>
 
-              {/* Ant Design Action Controls */}
-              <div className="flex flex-wrap gap-2 shrink-0">
+                <Button
+                  type="default"
+                  icon={<FileExcelOutlined className="text-emerald-600" />}
+                  onClick={handleExportUsersExcel}
+                  className="font-extrabold rounded-xl border-emerald-300 text-emerald-700 hover:text-emerald-800 hover:border-emerald-500 text-xs uppercase tracking-wider h-9"
+                >
+                  Export Excel
+                </Button>
+              </div>
+
+              {/* Action Controls Row */}
+              <div className="flex flex-wrap gap-2 justify-end pt-1 border-t border-slate-200/60">
                 <Button
                   type="primary"
                   icon={<PlusOutlined />}
@@ -1306,8 +1514,7 @@ export default function AdminPage() {
                     setSingleUserError(null);
                     setShowSingleUserModal(true);
                   }}
-                  size="large"
-                  className="bg-indigo-600 hover:bg-indigo-700 font-extrabold rounded-xl text-xs uppercase tracking-wider h-10"
+                  className="bg-indigo-600 hover:bg-indigo-700 font-extrabold rounded-xl text-xs uppercase tracking-wider h-9"
                 >
                   Single User
                 </Button>
@@ -1318,8 +1525,7 @@ export default function AdminPage() {
                     setBulkResult(null);
                     setShowBulkUploadModal(true);
                   }}
-                  size="large"
-                  className="font-extrabold rounded-xl border-slate-200 text-xs uppercase tracking-wider h-10"
+                  className="font-extrabold rounded-xl border-slate-200 text-xs uppercase tracking-wider h-9"
                 >
                   Bulk CSV Import
                 </Button>
@@ -1334,8 +1540,7 @@ export default function AdminPage() {
                   <Button
                     danger
                     icon={<LogoutOutlined />}
-                    size="large"
-                    className="font-extrabold rounded-xl text-xs uppercase tracking-wider h-10"
+                    className="font-extrabold rounded-xl text-xs uppercase tracking-wider h-9"
                   >
                     Force Logout All
                   </Button>
@@ -2020,6 +2225,186 @@ export default function AdminPage() {
                   <span className="text-[10px] text-slate-400 font-medium mt-1 block">
                     Target destination when a claim is rejected (both manual and auto-rejections).
                   </span>
+                </div>
+              </div>
+
+              {/* Section 3: Allowance Master TA/DA Rates & Hotel Caps */}
+              <div className="bg-slate-50/80 p-4 rounded-xl border border-slate-200/70 space-y-4">
+                <div className="flex items-center justify-between border-b border-slate-200/60 pb-2">
+                  <Text className="text-xs font-black uppercase tracking-wider text-indigo-700 block">
+                    3. Allowance Master — TA / DA Rates & Hotel Caps
+                  </Text>
+                  <Button
+                    type="primary"
+                    size="small"
+                    loading={savingRates}
+                    onClick={handleSaveAllowanceRates}
+                    className="bg-emerald-600 hover:bg-emerald-700 font-extrabold text-[11px] uppercase tracking-wider rounded-lg h-7"
+                  >
+                    Save Allowance Rates
+                  </Button>
+                </div>
+
+                <div className="overflow-x-auto">
+                  <Table
+                    dataSource={allowanceRates}
+                    rowKey="id"
+                    loading={loadingRates}
+                    pagination={false}
+                    size="small"
+                    className="ant-table-striped"
+                    columns={[
+                      {
+                        title: "GRADE / LEVEL",
+                        key: "grade_level",
+                        render: (_: any, r: any) => (
+                          <div className="space-y-0.5">
+                            <Tag color="purple" className="font-extrabold text-[10px] uppercase">
+                              {r.grade ? `Grade ${r.grade}` : (r.level || "—")}
+                            </Tag>
+                            <div className="text-[10px] text-slate-500 font-semibold">{r.category || ""}</div>
+                          </div>
+                        )
+                      },
+                      {
+                        title: "VEHICLE",
+                        key: "vehicle_type",
+                        render: (_: any, r: any, idx: number) => (
+                          <select
+                            value={r.vehicle_type || "Bike"}
+                            onChange={(e) => {
+                              const updated = [...allowanceRates];
+                              updated[idx].vehicle_type = e.target.value;
+                              setAllowanceRates(updated);
+                            }}
+                            className="text-xs p-1 border border-slate-200 rounded font-semibold bg-white"
+                          >
+                            <option value="Bike">Bike</option>
+                            <option value="Car">Car</option>
+                            <option value="Public">Public</option>
+                          </select>
+                        )
+                      },
+                      {
+                        title: "RATE / KM (₹)",
+                        key: "rate_per_km",
+                        render: (_: any, r: any, idx: number) => (
+                          <InputNumber
+                            min={0}
+                            step={0.1}
+                            size="small"
+                            value={r.rate_per_km}
+                            onChange={(val) => {
+                              const updated = [...allowanceRates];
+                              updated[idx].rate_per_km = val || 0;
+                              setAllowanceRates(updated);
+                            }}
+                            className="w-20 font-bold"
+                          />
+                        )
+                      },
+                      {
+                        title: "IN-DIST DA (₹)",
+                        key: "daily_in_district",
+                        render: (_: any, r: any, idx: number) => (
+                          <InputNumber
+                            min={0}
+                            size="small"
+                            value={r.daily_in_district}
+                            onChange={(val) => {
+                              const updated = [...allowanceRates];
+                              updated[idx].daily_in_district = val || 0;
+                              setAllowanceRates(updated);
+                            }}
+                            className="w-20 font-bold"
+                          />
+                        )
+                      },
+                      {
+                        title: "OUT-DIST DA (₹)",
+                        key: "daily_out_district",
+                        render: (_: any, r: any, idx: number) => (
+                          <InputNumber
+                            min={0}
+                            size="small"
+                            value={r.daily_out_district}
+                            onChange={(val) => {
+                              const updated = [...allowanceRates];
+                              updated[idx].daily_out_district = val || 0;
+                              setAllowanceRates(updated);
+                            }}
+                            className="w-20 font-bold"
+                          />
+                        )
+                      },
+                      {
+                        title: "HOTEL DA (₹)",
+                        key: "daily_hotel",
+                        render: (_: any, r: any, idx: number) => (
+                          <InputNumber
+                            min={0}
+                            size="small"
+                            value={r.daily_hotel}
+                            onChange={(val) => {
+                              const updated = [...allowanceRates];
+                              updated[idx].daily_hotel = val || 0;
+                              setAllowanceRates(updated);
+                            }}
+                            className="w-20 font-bold"
+                          />
+                        )
+                      },
+                      {
+                        title: "HOTEL CAP IN-STATE S/D (₹)",
+                        key: "hotel_in_state",
+                        render: (_: any, r: any, idx: number) => (
+                          <div className="flex gap-1">
+                            <InputNumber
+                              min={0}
+                              size="small"
+                              placeholder="Single"
+                              value={r.hotel_in_state_s}
+                              onChange={(val) => {
+                                const updated = [...allowanceRates];
+                                updated[idx].hotel_in_state_s = val || 0;
+                                setAllowanceRates(updated);
+                              }}
+                              className="w-16 font-bold text-xs"
+                            />
+                            <InputNumber
+                              min={0}
+                              size="small"
+                              placeholder="Double"
+                              value={r.hotel_in_state_d}
+                              onChange={(val) => {
+                                const updated = [...allowanceRates];
+                                updated[idx].hotel_in_state_d = val || 0;
+                                setAllowanceRates(updated);
+                              }}
+                              className="w-16 font-bold text-xs"
+                            />
+                          </div>
+                        )
+                      },
+                      {
+                        title: "MAX KM / MO",
+                        key: "max_km_per_month",
+                        render: (_: any, r: any, idx: number) => (
+                          <InputNumber
+                            min={0}
+                            size="small"
+                            value={r.max_km_per_month}
+                            onChange={(val) => {
+                              const updated = [...allowanceRates];
+                              updated[idx].max_km_per_month = val || 0;
+                              setAllowanceRates(updated);
+                            }}
+                            className="w-20 font-bold"
+                          />
+                        )
+                      }
+                    ]}
+                  />
                 </div>
               </div>
 
@@ -3148,7 +3533,7 @@ export default function AdminPage() {
                                 className="w-full max-w-md px-2 py-1 bg-white border border-gray-300 rounded text-xs text-gray-800 focus:outline-none"
                               >
                                 <option value="">-- Select level approver --</option>
-                                {eligibleApprovers.map((u) => (
+                                {getUsersByRole(["Manager", "Zonal Manager", "Coordinator", "VP", "Project Head", "MIS", "Admin"]).map((u) => (
                                   <option key={u.id} value={u.id}>
                                     {u.name} ({u.user_id}) | {u.role}
                                   </option>

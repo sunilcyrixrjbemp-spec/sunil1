@@ -33,7 +33,7 @@ import {
   handleExportHierarchies, handleBulkImportHierarchies,
   handleGetSystemSettings, handleSaveSystemSettings,
   handleSearchRejectedExpenses, handleResubmitRejectedExpense,
-  handleOneTimeAdjust
+  handleOneTimeAdjust, handleGetAllowanceRates, handleSaveAllowanceRates
 } from "./routes/admin.js";
 
 
@@ -198,6 +198,8 @@ router.post("/api/approvals/:expense_id/return-to-draft", handleReturnToDraft, t
 
 // ─── Admin Endpoints (Requires Auth) ──────────────────────────────────────────
 // NOTE: Specific routes BEFORE wildcard :user_id routes to avoid conflicts
+router.get("/api/admin/allowance-rates", handleGetAllowanceRates, true);
+router.post("/api/admin/allowance-rates", handleSaveAllowanceRates, true);
 router.get("/api/admin/settings", handleGetSystemSettings, true);
 router.post("/api/admin/settings", handleSaveSystemSettings, true);
 router.get("/api/admin/expenses/rejected", handleSearchRejectedExpenses, true);

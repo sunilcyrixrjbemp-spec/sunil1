@@ -168,5 +168,15 @@ export const adminService = {
   runOneTimeAdjust: async (): Promise<any> => {
     const response = await api.post("/admin/one-time-adjust");
     return response.data;
+  },
+
+  getAllowanceRates: async (): Promise<any[]> => {
+    const response = await api.get("/admin/allowance-rates");
+    return response.data;
+  },
+
+  saveAllowanceRates: async (rates: any[]): Promise<any> => {
+    const response = await api.post("/admin/allowance-rates", { rates });
+    return response.data;
   }
 };
