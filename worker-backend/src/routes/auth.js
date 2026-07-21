@@ -595,7 +595,7 @@ export async function handleGetDropdowns(request, env, params, query) {
 }
 
 /**
- * Helper to send email via Google Apps Script Web App
+ * Helper to send email via Google Apps Script Web App with exponential backoff retries and correlation ID tracking
  */
 async function sendEmail(to, subject, body, env) {
   const gasUrl = (env && env.GAS_WEB_APP_URL) || "https://script.google.com/macros/s/AKfycbwxh5LQLCGtwGflfF7V5HKyL7viFNlAkAbsgz5xEDQo8Eg_f1kw47EjxrzSAC891sm1/exec";
@@ -605,6 +605,7 @@ async function sendEmail(to, subject, body, env) {
   
   const otpMatch = body.match(/\b\d{6}\b/);
   const otp = otpMatch ? otpMatch[0] : "";
+  const correlationId = `otp_${Date.now()}_${Math.random().toString(36).substring(2, 8)}`;
 
   const payload = {
     to: to,
@@ -613,27 +614,47 @@ async function sendEmail(to, subject, body, env) {
     purpose: purpose,
     subject: subject,
     body: plainText,
-    htmlBody: body
+    htmlBody: body,
+    correlationId: correlationId
   };
 
-  const res = await fetch(gasUrl, {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json"
-    },
-    body: JSON.stringify(payload)
-  });
+  const maxRetries = 3;
+  let lastError = null;
+  let delayMs = 2000;
 
-  if (!res.ok) {
-    const errText = await res.text();
-    console.error("Google Apps Script email error:", errText);
-    throw new Error("Email dispatch failed: " + errText);
+  for (let attempt = 1; attempt <= maxRetries; attempt++) {
+    try {
+      console.log(`[OTP] Attempt ${attempt}/${maxRetries} sending to ${to} (CorrelationID: ${correlationId})`);
+      const res = await fetch(gasUrl, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload)
+      });
+
+      if (!res.ok) {
+        const errText = await res.text();
+        throw new Error(`HTTP ${res.status}: ${errText}`);
+      }
+
+      const result = await res.json();
+      if (!result.success) {
+        throw new Error(result.error || "GAS returned success: false");
+      }
+
+      console.log(`[OTP SUCCESS] Delivered to ${to} (CorrelationID: ${correlationId})`);
+      return result;
+    } catch (err) {
+      lastError = err;
+      console.warn(`[OTP WARNING] Attempt ${attempt} failed for ${to} (CorrelationID: ${correlationId}): ${err.message}`);
+      if (attempt < maxRetries) {
+        await new Promise(r => setTimeout(r, delayMs));
+        delayMs *= 2; // exponential backoff 2s, 4s, 8s
+      }
+    }
   }
 
-  const result = await res.json();
-  if (!result.success) {
-    throw new Error("Email dispatch failed: " + (result.error || "Unknown error"));
-  }
+  console.error(`[OTP FAILURE] All ${maxRetries} attempts failed for ${to} (CorrelationID: ${correlationId}): ${lastError.message}`);
+  throw new Error(`OTP email dispatch failed after ${maxRetries} attempts. Ref: ${correlationId}. Detail: ${lastError.message}`);
 }
 
 /**

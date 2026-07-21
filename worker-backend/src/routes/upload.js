@@ -317,6 +317,9 @@ export async function handleServeFile(request, env, params, query, user) {
             status: 200,
             headers: {
               "Content-Type": contentType,
+              "Content-Length": String(bytes.byteLength),
+              "X-File-Type": contentType,
+              "Content-Disposition": contentType.includes("pdf") ? "inline; filename=\"document.pdf\"" : "inline",
               "Cache-Control": "public, max-age=31536000"
             }
           });

@@ -216,6 +216,7 @@ export default function ApprovalPage() {
   const [lightboxImage, setLightboxImage] = useState<string | null>(null);
   const [displayImageUrl, setDisplayImageUrl] = useState<string | null>(null);
   const [isConvertingHeic, setIsConvertingHeic] = useState(false);
+  const [imageLoadError, setImageLoadError] = useState(false);
 
   const [showModalScrollTop, setShowModalScrollTop] = useState(false);
 
@@ -267,6 +268,7 @@ export default function ApprovalPage() {
   useEffect(() => {
     let active = true;
     let localUrl: string | null = null;
+    setImageLoadError(false);
 
     if (!lightboxImage) {
       setDisplayImageUrl(null);
@@ -2721,31 +2723,53 @@ export default function ApprovalPage() {
         </div>
       </Modal>
 
-      {/* ================= RECEIPT IMAGE LIGHTBOX POPUP ================= */}
+      {/* ================= RECEIPT IMAGE / DOCUMENT LIGHTBOX POPUP ================= */}
       {lightboxImage && (
         <div 
           className="fixed inset-0 bg-black/90 flex items-center justify-center p-4 animate-fadeIn"
           style={{ zIndex: 9999999 }}
           onClick={() => setLightboxImage(null)}
         >
-          <div className="relative max-w-4xl max-h-[90vh] bg-transparent flex flex-col items-center justify-center">
-            <button
-              onClick={() => setLightboxImage(null)}
-              className="absolute -top-10 right-0 text-white hover:text-gray-350 text-xl font-bold bg-transparent border-0 cursor-pointer"
-            >
-              ✕ Close Preview
-            </button>
+          <div className="relative w-full max-w-4xl max-h-[90vh] bg-slate-900 border border-slate-700 rounded-lg p-3 flex flex-col items-center justify-center select-none pointer-events-auto shadow-2xl" onClick={(e) => e.stopPropagation()}>
+            <div className="flex justify-between items-center w-full mb-2 pb-2 border-b border-slate-700">
+              <span className="text-xs font-bold text-slate-200">Attachment Document Preview</span>
+              <div className="flex gap-2">
+                <a 
+                  href={lightboxImage} 
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  download
+                  className="px-2.5 py-1 bg-blue-600 hover:bg-blue-700 text-white rounded text-[11px] font-bold no-underline flex items-center gap-1"
+                >
+                  ⬇ Download File
+                </a>
+                <button
+                  onClick={() => setLightboxImage(null)}
+                  className="px-2.5 py-1 bg-red-600 hover:bg-red-700 text-white rounded text-[11px] font-bold border-0 cursor-pointer transition-colors"
+                >
+                  ✕ Close
+                </button>
+              </div>
+            </div>
             {isConvertingHeic ? (
-              <div className="text-white flex flex-col items-center justify-center gap-3 p-8 rounded bg-slate-900/50 border border-slate-700/50 shadow-lg select-none pointer-events-auto" onClick={(e) => e.stopPropagation()}>
+              <div className="text-white flex flex-col items-center justify-center gap-3 p-8 rounded bg-slate-900/50 select-none">
                 <Loader2 className="w-10 h-10 animate-spin text-blue-500" />
                 <span className="text-sm font-bold tracking-wide">Converting Apple HEIC image...</span>
+              </div>
+            ) : (imageLoadError || lightboxImage?.toLowerCase().includes(".pdf") || lightboxImage?.toLowerCase().includes("pdf") || lightboxImage?.includes("gdrive/")) ? (
+              <div className="w-full flex flex-col items-center">
+                <iframe 
+                  src={displayImageUrl || lightboxImage} 
+                  title="Document Preview"
+                  className="w-full h-[70vh] border border-slate-700 rounded bg-white"
+                />
               </div>
             ) : (
               <img 
                 src={displayImageUrl || lightboxImage} 
                 alt="Receipt Invoice Lightbox" 
-                className="max-w-full max-h-[80vh] rounded shadow-2xl border border-white/10 object-contain select-none pointer-events-auto"
-                onClick={(e) => e.stopPropagation()}
+                className="max-w-full max-h-[75vh] rounded shadow-2xl border border-white/10 object-contain select-none pointer-events-auto"
+                onError={() => setImageLoadError(true)}
               />
             )}
           </div>

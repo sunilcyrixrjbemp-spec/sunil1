@@ -596,10 +596,12 @@ export default function ExpensePage() {
   const [lightboxImage, setLightboxImage] = useState<string | null>(null);
   const [displayImageUrl, setDisplayImageUrl] = useState<string | null>(null);
   const [isConvertingHeic, setIsConvertingHeic] = useState(false);
+  const [imageLoadError, setImageLoadError] = useState(false);
 
   useEffect(() => {
     let active = true;
     let localUrl: string | null = null;
+    setImageLoadError(false);
 
     if (!lightboxImage) {
       setDisplayImageUrl(null);
@@ -6235,10 +6237,10 @@ export default function ExpensePage() {
                 </button>
               </div>
             </div>
-            {lightboxImage?.toLowerCase().includes(".pdf") || lightboxImage?.toLowerCase().includes("pdf") ? (
+            {imageLoadError || lightboxImage?.toLowerCase().includes(".pdf") || lightboxImage?.toLowerCase().includes("pdf") || lightboxImage?.includes("gdrive/") ? (
               <iframe 
-                src={lightboxImage} 
-                title="Receipt PDF Preview"
+                src={displayImageUrl || lightboxImage} 
+                title="Receipt Document Preview"
                 className="w-[85vw] h-[65vh] max-w-4xl border border-gray-200"
               />
             ) : isConvertingHeic ? (
@@ -6251,6 +6253,9 @@ export default function ExpensePage() {
                 src={displayImageUrl || lightboxImage} 
                 alt="Receipt Invoice Lightbox" 
                 className="max-w-full max-h-[70vh] border border-gray-200 object-contain"
+                onError={() => setImageLoadError(true)}
+              />
+            )}
               />
             )}
           </div>
