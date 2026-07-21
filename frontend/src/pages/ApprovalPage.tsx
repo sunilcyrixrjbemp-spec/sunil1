@@ -32,6 +32,7 @@ import { approvalService } from "../services/approvalService";
 import { expenseService } from "../services/expenseService";
 import { authService } from "../services/authService";
 import Loader from "../components/common/Loader";
+import { prefetchManager } from "../utils/prefetchManager";
 import { checkIsHeic, convertHeicToJpegUrl } from "../utils/heic";
 import { 
   Check, 
@@ -362,7 +363,7 @@ export default function ApprovalPage() {
       await approvalService.approveExpense(expenseId, "Approved limit extension", undefined, approvedValue);
       toast.success("Limit extension request approved successfully!");
       setPendingApprovals(prev => prev.filter((a: any) => a.expense_id !== expenseId));
-      fetchPendingApprovals();
+      fetchPendingApprovals(true);
     } catch (err: any) {
       console.error("Failed to approve limit", err);
       toast.error(err.response?.data?.detail || "Failed to approve limit extension.");
@@ -381,7 +382,7 @@ export default function ApprovalPage() {
       await approvalService.rejectExpense(expenseId, "Limit extension rejected");
       toast.success("Limit extension request rejected.");
       setPendingApprovals(prev => prev.filter((a: any) => a.expense_id !== expenseId));
-      fetchPendingApprovals();
+      fetchPendingApprovals(true);
     } catch (err: any) {
       console.error("Failed to reject limit", err);
       toast.error(err.response?.data?.detail || "Failed to reject limit extension.");
@@ -406,9 +407,14 @@ export default function ApprovalPage() {
     }
   };
 
-  const fetchPendingApprovals = async () => {
+  const fetchPendingApprovals = async (forceRefresh?: boolean) => {
     setSelectedIds([]);
     const cacheKey = "cache_pending_approvals";
+    
+    if (forceRefresh) {
+      prefetchManager.invalidateApprovals(currentUser.user_id || "");
+    }
+
     const cached = localStorage.getItem(cacheKey);
     if (cached) {
       setPendingApprovals(JSON.parse(cached));
@@ -418,7 +424,8 @@ export default function ApprovalPage() {
     }
 
     try {
-      const data = await approvalService.getPendingApprovals();
+      // Use memory-cache check to skip API calls if fresh (<30s)
+      const data = await prefetchManager.getOrFetch("pending_approvals", () => approvalService.getPendingApprovals(), 30000);
       safeSetLocalStorage(cacheKey, JSON.stringify(data));
       setPendingApprovals(data);
       
@@ -782,7 +789,7 @@ export default function ApprovalPage() {
       setExpenseDetails(null);
       setEditedLegs([]);
       setRemovedAttachments([]);
-      await fetchPendingApprovals();
+      await fetchPendingApprovals(true);
     } catch (err: any) {
       toast.error(err.response?.data?.detail || "Action failed.");
     } finally {
@@ -829,7 +836,7 @@ export default function ApprovalPage() {
         setEditedLegs([]);
         setRemovedAttachments([]);
       }
-      await fetchPendingApprovals();
+      await fetchPendingApprovals(true);
     } catch (err: any) {
       toast.error(err.response?.data?.error || "Failed to return claim.");
     } finally {
@@ -919,7 +926,7 @@ export default function ApprovalPage() {
     setShowBulkModal(false);
     setBulkActionType(null);
     setBulkComments("");
-    await fetchPendingApprovals();
+    await fetchPendingApprovals(true);
   };
 
   const isEdited = () => {

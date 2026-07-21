@@ -4,6 +4,7 @@ import { authService } from "../services/authService";
 import { expenseService } from "../services/expenseService";
 import { approvalService } from "../services/approvalService";
 import toast from "react-hot-toast";
+import { prefetchManager } from "../utils/prefetchManager";
 import Loader from "../components/common/Loader";
 import { checkIsHeic, convertHeicToJpegUrl } from "../utils/heic";
 import { ResponsivePie } from "@nivo/pie";
@@ -326,8 +327,8 @@ export default function HomePage() {
     const isSpecialViewRole = ["admin", "project head", "mis", "travel desk", "travel tesk", "vp", "accountant", "hr"].includes(userRoleLower);
     const isReviewer = allowedWindows.includes("approval") || isSpecialViewRole;
 
-    // 1. My Expenses - INSTANT (< 200ms)
-    expenseService.getExpenses(selectMonth)
+    // 1. My Expenses - memory cached / prefetch optimized
+    prefetchManager.getOrFetch(`my_expenses_${uId}_${selectMonth}`, () => expenseService.getExpenses(selectMonth), 30000)
       .then((myData) => {
         if (Array.isArray(myData)) {
           setMyExpenses(myData);
@@ -341,15 +342,16 @@ export default function HomePage() {
         setLoadingMyExpenses(false);
       });
 
-    // 2. Allowance Stats - INSTANT (< 200ms)
-    expenseService.getExpenseInit(uId, selectMonth)
+    // 2. Allowance Stats - memory cached / prefetch optimized
+    prefetchManager.getOrFetch(`allowance_stats_${uId}_${selectMonth}`, () => expenseService.getExpenseInit(uId, selectMonth), 30000)
       .then((initData) => {
         if (initData && initData.allowance) {
           const stats = {
+            policy_missing: !!initData.allowance.policy_missing || initData.allowance.daily_in_district === null || initData.allowance.daily_in_district === undefined,
             currentKm: initData.allowance.current_month_km || 0,
-            maxKm: (initData.allowance.max_km_per_month || 2000) + (initData.approved_km || 0),
+            maxKm: (initData.allowance.max_km_per_month || 0) + (initData.approved_km || 0),
             currentAuto: initData.allowance.current_month_auto || 0,
-            maxAuto: (initData.allowance.max_auto_per_month || 1000) + (initData.approved_auto || 0),
+            maxAuto: (initData.allowance.max_auto_per_month || 0) + (initData.approved_auto || 0),
             vehicleType: initData.allowance.vehicle_type || "Bike",
             rateBike: initData.allowance.rate_bike || 0,
             rateCar: initData.allowance.rate_car || 0
@@ -362,8 +364,8 @@ export default function HomePage() {
       .catch((err) => console.error("Error fetching allowance stats:", err));
 
     if (isReviewer) {
-      // 3. Pending Approvals & Extension Count - INSTANT (< 150ms)
-      approvalService.getPendingApprovals()
+      // 3. Pending Approvals & Extension Count - memory cached / prefetch optimized
+      prefetchManager.getOrFetch("pending_approvals", () => approvalService.getPendingApprovals(), 30000)
         .then((appData) => {
           if (Array.isArray(appData)) {
             const limitCount = appData.filter((a: any) => a.category === "Limit Request").length;
@@ -376,8 +378,8 @@ export default function HomePage() {
         })
         .catch((err) => console.error("Error fetching approvals count:", err));
 
-      // 4. Team Expenses - ASYNC BACKGROUND FETCH
-      expenseService.getTeamExpenses(selectMonth)
+      // 4. Team Expenses - memory cached / prefetch optimized
+      prefetchManager.getOrFetch(`team_expenses_${uId}_${selectMonth}`, () => expenseService.getTeamExpenses(selectMonth), 30000)
         .then((teamData) => {
           if (Array.isArray(teamData)) {
             setTeamExpenses(teamData);
@@ -419,6 +421,8 @@ export default function HomePage() {
       toast.success(`Claim ${claimDetails.expense_code} approved!`);
       setShowDetailsModal(false);
       setClaimDetails(null);
+      // Invalidate memory cache on action success
+      prefetchManager.invalidateApprovals(user?.user_id || "");
       await refreshDashboardData();
     } catch (err: any) {
       toast.error(err.response?.data?.detail || "Approval failed.");
@@ -439,6 +443,8 @@ export default function HomePage() {
       toast.error(`Claim ${claimDetails.expense_code} rejected.`);
       setShowDetailsModal(false);
       setClaimDetails(null);
+      // Invalidate memory cache on action success
+      prefetchManager.invalidateApprovals(user?.user_id || "");
       await refreshDashboardData();
     } catch (err: any) {
       toast.error(err.response?.data?.detail || "Rejection failed.");
@@ -923,6 +929,17 @@ export default function HomePage() {
             </div>
           </div>
         </div>
+
+        {allowanceStats?.policy_missing && (
+          <Alert
+            message={<strong>Policy Data Missing</strong>}
+            description="Policy data load नहीं हुआ, कृपया page reload करें"
+            type="error"
+            showIcon
+            icon={<AlertTriangle className="text-red-600 shrink-0" size={18} />}
+            className="mb-4 rounded-lg bg-red-50 border-red-200"
+          />
+        )}
 
         {isReviewerRole && pendingLimitRequestsCount > 0 && (
           <Alert

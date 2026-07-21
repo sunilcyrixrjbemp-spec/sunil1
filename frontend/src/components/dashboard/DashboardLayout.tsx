@@ -2,6 +2,7 @@ import React, { useState, useEffect } from "react";
 import { useNavigate, Outlet, useLocation, Link } from "react-router-dom";
 import { authService } from "../../services/authService";
 import { preloadRoute } from "../../utils/preload";
+import { prefetchManager } from "../../utils/prefetchManager";
 import api, { getActiveBaseURL } from "../../services/api";
 import brandLogo from "../../assets/images/brand.png";
 import { 
@@ -205,6 +206,9 @@ export default function DashboardLayout() {
       navigate("/login");
     } else {
       setUser(currentUser);
+      
+      // Prefetch critical data in the background instantly
+      prefetchManager.triggerGlobalPrefetch(currentUser);
 
       // Auto-sync profile to get fresh permissions and details
       authService.getProfile()
@@ -212,6 +216,8 @@ export default function DashboardLayout() {
           if (freshProfile) {
             localStorage.setItem("user", JSON.stringify(freshProfile));
             setUser(freshProfile);
+            // Re-trigger prefetch with fresh profile details
+            prefetchManager.triggerGlobalPrefetch(freshProfile);
           }
         })
         .catch(err => console.warn("Failed to sync profile on mount:", err));

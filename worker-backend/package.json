@@ -12,6 +12,7 @@
     "drizzle-orm": "^0.30.10"
   },
   "devDependencies": {
-    "drizzle-kit": "^0.21.4"
+    "drizzle-kit": "^0.21.4",
+    "wrangler": "^4.112.0"
   }
 }

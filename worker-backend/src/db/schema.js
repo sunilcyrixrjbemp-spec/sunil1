@@ -1,4 +1,4 @@
-import { sqliteTable, integer, text, real, primaryKey } from "drizzle-orm/sqlite-core";
+import { sqliteTable, integer, text, real, primaryKey, index } from "drizzle-orm/sqlite-core";
 
 // 1. Users Table
 export const users = sqliteTable("users", {
@@ -30,7 +30,13 @@ export const users = sqliteTable("users", {
   activeSessionId: text("active_session_id"),
   fcmToken: text("fcm_token"),
   profilePicUrl: text("profile_pic_url"),
-});
+}, (table) => ({
+  userIdIdx: index("idx_users_user_id").on(table.userId),
+  statusIdx: index("idx_users_status").on(table.userStatus),
+  managerIdx: index("idx_users_manager").on(table.manager),
+  zonalManagerIdx: index("idx_users_zonal_manager").on(table.zonalManager),
+  coordinatorIdx: index("idx_users_coordinator").on(table.coordinator),
+}));
 
 // 2. User Roles Table
 export const userRoles = sqliteTable("user_roles", {
@@ -189,7 +195,11 @@ export const expenses = sqliteTable("expenses", {
   mobiliseCount: integer("mobilise_count").default(0),
   createdAt: text("created_at"),
   updatedAt: text("updated_at"),
-});
+}, (table) => ({
+  userMonthYearIdx: index("idx_expenses_user_month_year").on(table.userId, table.month, table.year),
+  statusIdx: index("idx_expenses_status").on(table.status),
+  createdAtIdx: index("idx_expenses_created_at").on(table.createdAt),
+}));
 
 // 13. Expense Master Table (Legacy)
 export const expenseMaster = sqliteTable("expense_master", {
@@ -235,7 +245,9 @@ export const expenseItineraries = sqliteTable("expense_itineraries", {
   originalLocalPurchase: real("original_local_purchase"),
   calibrationCount: integer("calibration_count"),
   mobiliseCount: integer("mobilise_count"),
-});
+}, (table) => ({
+  expIdIdx: index("idx_itineraries_exp_id").on(table.expId),
+}));
 
 // 15. Expense Asset Taggings Table
 export const expenseAssetTaggings = sqliteTable("expense_asset_taggings", {
@@ -255,7 +267,10 @@ export const approvals = sqliteTable("approvals", {
   comments: text("comments"),
   createdAt: text("created_at"),
   updatedAt: text("updated_at"),
-});
+}, (table) => ({
+  approverStatusIdx: index("idx_approvals_approver_status").on(table.approverId, table.status),
+  expenseStatusIdx: index("idx_approvals_expense_status").on(table.expenseId, table.status),
+}));
 
 // 17. Approval Hierarchies Table
 export const approvalHierarchies = sqliteTable("approval_hierarchies", {
@@ -268,7 +283,10 @@ export const hierarchyRequesters = sqliteTable("hierarchy_requesters", {
   id: integer("id").primaryKey({ autoIncrement: true }),
   hierarchyId: integer("hierarchy_id").notNull(),
   userId: integer("user_id").notNull(),
-});
+}, (table) => ({
+  hierarchyIdx: index("idx_hier_requesters_hierarchy").on(table.hierarchyId),
+  userIdx: index("idx_hier_requesters_user").on(table.userId),
+}));
 
 // 19. Hierarchy Approvers Table
 export const hierarchyApprovers = sqliteTable("hierarchy_approvers", {
@@ -276,7 +294,9 @@ export const hierarchyApprovers = sqliteTable("hierarchy_approvers", {
   hierarchyId: integer("hierarchy_id").notNull(),
   levelNumber: integer("level_number").notNull(),
   approverId: integer("approver_id").notNull(),
-});
+}, (table) => ({
+  approverIdx: index("idx_hier_approvers_approver").on(table.approverId),
+}));
 
 // 20. Limit Approval Requests Table
 export const limitApprovalRequests = sqliteTable("limit_approval_requests", {
@@ -290,12 +310,25 @@ export const limitApprovalRequests = sqliteTable("limit_approval_requests", {
   managerId: text("manager_id").notNull(),
   createdAt: text("created_at"),
   updatedAt: text("updated_at"),
-});
+}, (table) => ({
+  userMonthIdx: index("idx_limit_reqs_user_month").on(table.userId, table.forMonth),
+  managerStatusIdx: index("idx_limit_reqs_manager").on(table.managerId, table.status),
+}));
 
 // 21. Allowance Master Table
 export const allowanceMaster = sqliteTable("allowance_master", {
   id: integer("id").primaryKey({ autoIncrement: true }),
+  level: text("level"),
   grade: text("grade").notNull(),
+  category: text("category"),
+  hotelInStateS: real("hotel_in_state_s"),
+  hotelInStateD: real("hotel_in_state_d"),
+  hotelOutStateS: real("hotel_out_state_s"),
+  hotelOutStateD: real("hotel_out_state_d"),
+  dailyInDistrict: real("daily_in_district"),
+  dailyOutDistrict: real("daily_out_district"),
+  dailyHotel: real("daily_hotel"),
+  dailyOutState: real("daily_out_state"),
   vehicleType: text("vehicle_type").notNull(),
   ratePerKm: real("rate_per_km").notNull(),
   maxKmPerMonth: integer("max_km_per_month"),

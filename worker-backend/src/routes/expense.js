@@ -460,22 +460,26 @@ export async function getExpenseInitData(env, targetUser, monthStr) {
   const existingKmReq = kmReqs.length > 0 ? { status: kmReqs[0].status, requested_value: kmReqs[0].requested_value } : null;
   const existingAutoReq = autoReqs.length > 0 ? { status: autoReqs[0].status, requested_value: autoReqs[0].requested_value } : null;
 
-  const fallbackBikeRate = defaultBike?.rate_per_km || 3.0;
+  const fallbackBikeRate = defaultBike?.rate_per_km || 4.5;
   const fallbackCarRate = defaultCar?.rate_per_km || 9.0;
 
   const allowanceDict = {
-    daily_out_district: allowance?.daily_out_district ?? 200,
-    daily_hotel: allowance?.daily_hotel ?? 300,
-    daily_out_state: allowance?.daily_out_state ?? 400,
-    hotel_in_state_s: allowance?.hotel_in_state_s ?? 1000,
-    hotel_out_state_s: allowance?.hotel_out_state_s ?? 2000,
-    max_km_per_month: allowance?.max_km_per_month ?? 2000,
-    rate_bike: allowance?.vehicle_type === "Bike" ? allowance?.rate_per_km : fallbackBikeRate,
-    rate_car: allowance?.vehicle_type === "Car" ? allowance?.rate_per_km : fallbackCarRate,
-    vehicle_type: allowance?.vehicle_type ?? "Bike",
+    policy_missing: !allowance,
+    daily_in_district: allowance ? allowance.daily_in_district : null,
+    daily_out_district: allowance ? allowance.daily_out_district : null,
+    daily_hotel: allowance ? allowance.daily_hotel : null,
+    daily_out_state: allowance ? allowance.daily_out_state : null,
+    hotel_in_state_s: allowance ? allowance.hotel_in_state_s : null,
+    hotel_in_state_d: allowance ? allowance.hotel_in_state_d : null,
+    hotel_out_state_s: allowance ? allowance.hotel_out_state_s : null,
+    hotel_out_state_d: allowance ? allowance.hotel_out_state_d : null,
+    max_km_per_month: allowance ? allowance.max_km_per_month : null,
+    rate_bike: allowance ? (allowance.vehicle_type === "Bike" ? allowance.rate_per_km : fallbackBikeRate) : null,
+    rate_car: allowance ? (allowance.vehicle_type === "Car" ? allowance.rate_per_km : fallbackCarRate) : null,
+    vehicle_type: allowance ? allowance.vehicle_type : null,
     current_month_km: statsRes?.total_km || 0.0,
     current_month_auto: statsRes?.total_auto || 0.0,
-    max_auto_per_month: 1000
+    max_auto_per_month: allowance ? 1000 : null
   };
 
   const mm = String(monthInt).padStart(2, "0");
@@ -586,33 +590,33 @@ export async function handleGetTeamExpenses(request, env, params, query, user) {
     const isAdminOrReportViewer = ["admin", "mis", "vp", "accountant", "hr", "project head", "travel desk", "travel tesk"].includes(userRoleClean);
 
     if (isAdminOrReportViewer) {
-      const res = await env.DB.prepare("SELECT * FROM users").all();
+      const res = await env.DB.prepare("SELECT id, user_id, name, designation, grade, district, zone, manager, zonal_manager, coordinator, role FROM users").all();
       teamUsers = res.results || [];
       console.log("DEBUG: fetched all users, count =", teamUsers.length);
     } else {
       const nameClean = (user.name || "").trim();
       const uidClean = (user.user_id || "").trim();
 
-      // Query direct reports
-      const directReportsRes = await env.DB.prepare(`
-        SELECT * FROM users
-        WHERE LOWER(TRIM(manager)) = ? OR LOWER(TRIM(manager)) = ?
-           OR LOWER(TRIM(coordinator)) = ? OR LOWER(TRIM(coordinator)) = ?
-           OR LOWER(TRIM(zonal_manager)) = ? OR LOWER(TRIM(zonal_manager)) = ?
-      `).bind(nameClean.toLowerCase(), uidClean.toLowerCase(), nameClean.toLowerCase(), uidClean.toLowerCase(), nameClean.toLowerCase(), uidClean.toLowerCase()).all();
+      // Query direct reports and hierarchy approvals in parallel
+      const [directReportsRes, hierarchyApprovals] = await Promise.all([
+        env.DB.prepare(`
+          SELECT id, user_id, name, designation, grade, district, zone, manager, zonal_manager, coordinator, role FROM users
+          WHERE LOWER(TRIM(manager)) = ? OR LOWER(TRIM(manager)) = ?
+             OR LOWER(TRIM(coordinator)) = ? OR LOWER(TRIM(coordinator)) = ?
+             OR LOWER(TRIM(zonal_manager)) = ? OR LOWER(TRIM(zonal_manager)) = ?
+        `).bind(nameClean.toLowerCase(), uidClean.toLowerCase(), nameClean.toLowerCase(), uidClean.toLowerCase(), nameClean.toLowerCase(), uidClean.toLowerCase()).all(),
+        env.DB.prepare(`
+          SELECT hierarchy_id FROM hierarchy_approvers WHERE approver_id = ?
+        `).bind(user.id).all()
+      ]);
       const directReports = directReportsRes.results || [];
-
-      // Query hierarchy reports
-      const hierarchyApprovals = await env.DB.prepare(`
-        SELECT hierarchy_id FROM hierarchy_approvers WHERE approver_id = ?
-      `).bind(user.id).all();
       
       let hierarchyReports = [];
       if (hierarchyApprovals.results && hierarchyApprovals.results.length > 0) {
         const hIds = hierarchyApprovals.results.map(h => h.hierarchy_id);
         const placeholders = hIds.map(() => "?").join(",");
         const reqsRes = await env.DB.prepare(`
-          SELECT u.* FROM users u
+          SELECT u.id, u.user_id, u.name, u.designation, u.grade, u.district, u.zone, u.manager, u.zonal_manager, u.coordinator, u.role FROM users u
           JOIN hierarchy_requesters hr ON u.id = hr.user_id
           WHERE hr.hierarchy_id IN (${placeholders})
         `).bind(...hIds).all();
@@ -646,8 +650,10 @@ export async function handleGetTeamExpenses(request, env, params, query, user) {
   let querySql = "";
   let binds = [];
 
+  const expSelectCols = "id, user_id, month, year, amount, status, travel_mode, itinerary, description, expense_code, da_amount, hotel_amount, other_expense_amount, calls_assigned, calls_completed, pms_count, asset_tagging, local_purchase_amount, calibration_count, mobilise_count, created_at";
+
   if (isAdminOrReportViewer) {
-    querySql = "SELECT * FROM expenses WHERE 1=1";
+    querySql = `SELECT ${expSelectCols} FROM expenses WHERE 1=1`;
     // Default to current month to avoid loading entire expense history
     if (!month) {
       const now = new Date();
@@ -656,7 +662,7 @@ export async function handleGetTeamExpenses(request, env, params, query, user) {
     }
   } else {
     const placeholders = teamUserIds.map(() => "?").join(",");
-    querySql = `SELECT * FROM expenses WHERE user_id IN (${placeholders})`;
+    querySql = `SELECT ${expSelectCols} FROM expenses WHERE user_id IN (${placeholders})`;
     binds = [...teamUserIds];
   }
 
@@ -684,9 +690,10 @@ export async function handleGetTeamExpenses(request, env, params, query, user) {
     ? teamUsers.map(u => u.user_id)
     : teamUsers.map(u => u.user_id).filter(uc => uc !== user.user_id);
 
+  // FIX: Use queryInChunks to prevent D1_ERROR (too many SQL variables > 256) when teamUserCodes is large
   const limitReqsPromise = teamUserCodes.length > 0
-    ? env.DB.prepare(`SELECT * FROM limit_approval_requests WHERE user_id IN (${teamUserCodes.map(() => "?").join(",")})`).bind(...teamUserCodes).all()
-    : Promise.resolve({ results: [] });
+    ? queryInChunks(env.DB, "SELECT id, user_id, request_type, requested_value, approved_value, status, for_month, manager_id, created_at FROM limit_approval_requests WHERE user_id IN (?)", teamUserCodes, 50)
+    : Promise.resolve([]);
 
   const [expensesRows, limitReqsRes] = await Promise.all([
     env.DB.prepare(querySql).bind(...binds).all(),
@@ -799,8 +806,9 @@ export async function handleGetTeamExpenses(request, env, params, query, user) {
   }
 
   // 3. Process pre-fetched team members' limit requests
-  if (limitReqsRes && limitReqsRes.results) {
-    for (const pl of limitReqsRes.results) {
+  const limitReqsList = Array.isArray(limitReqsRes) ? limitReqsRes : (limitReqsRes?.results || []);
+  if (limitReqsList.length > 0) {
+    for (const pl of limitReqsList) {
       const submitter = teamUsers.find(u => u.user_id === pl.user_id);
       if (!submitter) continue;
 

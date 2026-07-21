@@ -6,6 +6,7 @@ import Loader from "../components/common/Loader";
 import { expenseService } from "../services/expenseService";
 import { uploadService } from "../services/uploadService";
 import { checkIsHeic, convertHeicToJpegUrl } from "../utils/heic";
+import { prefetchManager } from "../utils/prefetchManager";
 import { checkIsPdf, convertPdfToJpgFile } from "../utils/pdf";
 import { 
   Trash2, Plus, Calendar, 
@@ -828,7 +829,7 @@ export default function ExpensePage() {
             da: (leg.da || 0).toString(),
             hotel: leg.hotel !== undefined && leg.hotel !== null && parseFloat(leg.hotel.toString()) === 0 ? "0" : (leg.hotel && parseFloat(leg.hotel.toString()) !== 0 ? leg.hotel.toString() : ""),
             company_provided: leg.hotel !== undefined && leg.hotel !== null && parseFloat(leg.hotel.toString()) === 0 && 
-              (parseFloat((leg.da || 0).toString()) === (allowance?.daily_hotel || 350) || parseFloat((leg.da || 0).toString()) === (allowance?.daily_out_state || 600)),
+              (parseFloat((leg.da || 0).toString()) === (allowance?.daily_hotel || 0) || parseFloat((leg.da || 0).toString()) === (allowance?.daily_out_state || 0)),
             local_purchase: leg.local_purchase && parseFloat(leg.local_purchase) !== 0 ? leg.local_purchase.toString() : "",
             oth_desc: leg.oth_desc || "",
             oth_amount: (leg.oth_amount || 0).toString(),
@@ -978,18 +979,18 @@ export default function ExpensePage() {
 
           const allowanceObj = data.allowance || {};
           if (leg1.company_provided) {
-            leg1.da = (allowanceObj.daily_hotel || 350).toString();
+            leg1.da = (allowanceObj.daily_hotel || 0).toString();
           } else if (hotelAmt > 0) {
             // Hotel stay: always use daily_hotel rate (no out-of-state logic)
-            leg1.da = (allowanceObj.daily_hotel || 350).toString();
+            leg1.da = (allowanceObj.daily_hotel || 0).toString();
           } else if (hasOutDistrictLeg) {
-            leg1.da = (allowanceObj.daily_out_district || 400).toString();
+            leg1.da = (allowanceObj.daily_out_district || 0).toString();
           } else {
             const hasAnyDistrict = updated.some(l => l.district);
             if (!hasAnyDistrict) {
               leg1.da = "0";
             } else {
-              leg1.da = (allowanceObj.daily_in_district || 250).toString();
+              leg1.da = (allowanceObj.daily_in_district || 0).toString();
             }
           }
         }
@@ -1462,18 +1463,18 @@ export default function ExpensePage() {
         if (field !== "da") {
           const hotelAmt = parseFloat(leg1.hotel) || 0;
           if (leg1.company_provided) {
-            leg1.da = (allowance.daily_hotel || 350).toString();
+            leg1.da = (allowance.daily_hotel || 0).toString();
           } else if (hotelAmt > 0) {
             // Hotel stay: always use daily_hotel rate (no out-of-state logic)
-            leg1.da = (allowance.daily_hotel || 350).toString();
+            leg1.da = (allowance.daily_hotel || 0).toString();
           } else if (hasOutDistrictLeg) {
-            leg1.da = (allowance.daily_out_district || 400).toString();
+            leg1.da = (allowance.daily_out_district || 0).toString();
           } else {
             const hasAnyDistrict = updatedLegs.some(l => l.district);
             if (!hasAnyDistrict) {
               leg1.da = "0";
             } else {
-              leg1.da = (allowance.daily_in_district || 250).toString();
+              leg1.da = (allowance.daily_in_district || 0).toString();
             }
           }
         }
@@ -1894,8 +1895,8 @@ export default function ExpensePage() {
   }, 0);
 
   const checkLimitsExceeded = () => {
-    const maxKmAllowed = (allowance.max_km_per_month || 2000) + approvedKm;
-    const maxAutoAllowed = (allowance.max_auto_per_month || 1000) + approvedAuto;
+    const maxKmAllowed = (allowance.max_km_per_month || 0) + approvedKm;
+    const maxAutoAllowed = (allowance.max_auto_per_month || 0) + approvedAuto;
 
     let limitType: "KM" | "AUTO" | null = null;
     let excess = 0;
@@ -2528,6 +2529,9 @@ export default function ExpensePage() {
         const cacheKey = `cache_month_limits_${currentUserId}_${targetMonth}`;
         localStorage.removeItem(cacheKey);
         
+        // Invalidate prefetch memory cache
+        prefetchManager.invalidateMyExpenses(currentUserId || "");
+        
         await fetchMonthLimits(targetMonth, false);
         await fetchClaims();
       }
@@ -2813,6 +2817,7 @@ export default function ExpensePage() {
     return <Loader message="Initializing Expense Builder..." />;
   }
 
+  const policyMissing = !initLoading && (!allowance || allowance.policy_missing || allowance.daily_in_district === null || allowance.daily_in_district === undefined);
   const limitPillLabel = allowance.vehicle_type === "None" ? "Allowances" : `${allowance.vehicle_type} Limits`;
 
   return (
@@ -2835,6 +2840,16 @@ export default function ExpensePage() {
           </span>
         </div>
       </div>
+
+      {policyMissing && (
+        <div className="p-3.5 bg-rose-50 border border-rose-200 text-rose-800 rounded-lg flex items-start gap-2.5 font-medium shadow-sm animate-pulse">
+          <AlertTriangle className="w-5 h-5 shrink-0 mt-0.5 text-rose-650" />
+          <div className="min-w-0 flex-1">
+            <p className="font-bold text-sm">Policy data load नहीं हुआ, कृपया page reload करें</p>
+            <p className="text-[10px] mt-0.5 text-rose-600 leading-relaxed font-semibold">Your grade-specific policy limits could not be retrieved from the database. Claim creation and updates have been disabled to prevent incorrect calculations.</p>
+          </div>
+        </div>
+      )}
 
       {/* 4 Info-Box Widgets (Unified Mobile/Desktop) */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
@@ -2890,12 +2905,12 @@ export default function ExpensePage() {
               {limitPillLabel}
             </span>
             <span className="text-xs font-bold text-slate-800 block font-mono">
-              {allowance.current_month_km || 0} / {((allowance.max_km_per_month || 2000) + approvedKm)} KM
+              {allowance.current_month_km || 0} / {((allowance.max_km_per_month || 0) + approvedKm)} KM
             </span>
             <div className="w-full bg-slate-100 rounded-full h-1 mt-1.5 overflow-hidden">
               <div 
                 className="bg-blue-650 h-1 rounded-full transition-all duration-300"
-                style={{ width: `${getProgressPercentage(allowance.current_month_km || 0, ((allowance.max_km_per_month || 2000) + approvedKm))}%` }}
+                style={{ width: `${getProgressPercentage(allowance.current_month_km || 0, ((allowance.max_km_per_month || 0) + approvedKm))}%` }}
               ></div>
             </div>
             {existingKmReq && (
@@ -2925,12 +2940,12 @@ export default function ExpensePage() {
               Monthly Auto Cap
             </span>
             <span className="text-xs font-bold text-slate-800 block font-mono">
-              ₹{(allowance.current_month_auto || 0).toLocaleString()} / ₹{(1000 + approvedAuto).toLocaleString()}
+              ₹{(allowance.current_month_auto || 0).toLocaleString()} / ₹{((allowance.max_auto_per_month || 0) + approvedAuto).toLocaleString()}
             </span>
             <div className="w-full bg-slate-100 rounded-full h-1 mt-1.5 overflow-hidden">
               <div 
                 className="bg-amber-500 h-1 rounded-full transition-all duration-300"
-                style={{ width: `${getProgressPercentage(allowance.current_month_auto || 0, (1000 + approvedAuto))}%` }}
+                style={{ width: `${getProgressPercentage(allowance.current_month_auto || 0, ((allowance.max_auto_per_month || 0) + approvedAuto))}%` }}
               ></div>
             </div>
             {existingAutoReq && (
@@ -3036,14 +3051,14 @@ export default function ExpensePage() {
               {/* 9. Max KM per month */}
               <div className="p-3.5 bg-slate-50/40 border border-slate-100/70 rounded-2xl">
                 <span className="text-[9px] font-black uppercase tracking-wider text-indigo-650 block mb-0.5">Monthly Travel Cap</span>
-                <span className="text-sm font-extrabold text-slate-800 block mb-1 font-mono">{allowance.max_km_per_month || 2000} KM</span>
+                <span className="text-sm font-extrabold text-slate-800 block mb-1 font-mono">{allowance.max_km_per_month || 0} KM</span>
                 <p className="text-[9px] text-slate-450 leading-normal font-medium">Maximum reimbursable distance allowed per month.</p>
               </div>
 
               {/* 10. Max Auto per month */}
               <div className="p-3.5 bg-slate-50/40 border border-slate-100/70 rounded-2xl">
                 <span className="text-[9px] font-black uppercase tracking-wider text-indigo-650 block mb-0.5">Monthly Auto Cap</span>
-                <span className="text-sm font-extrabold text-slate-800 block mb-1 font-mono">₹{(allowance.max_auto_per_month || 1000).toFixed(2)}</span>
+                <span className="text-sm font-extrabold text-slate-800 block mb-1 font-mono">₹{(allowance.max_auto_per_month || 0).toFixed(2)}</span>
                 <p className="text-[9px] text-slate-450 leading-normal font-medium">Maximum reimbursable amount allowed for auto/cab fares per month.</p>
               </div>
 
@@ -4579,15 +4594,16 @@ export default function ExpensePage() {
               <button
                 type="button"
                 onClick={() => setShowApprovalModal(true)}
-                className="btn-lte-warning py-1.5 px-3 rounded text-[10px] font-extrabold uppercase cursor-pointer"
+                disabled={policyMissing}
+                className="btn-lte-warning py-1.5 px-3 rounded text-[10px] font-extrabold uppercase cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 Extend Limit
               </button>
             )}
             <button
               type="submit"
-              disabled={isLimitExceeded || submitting}
-              className="btn-lte-success py-2 px-6 font-bold uppercase tracking-wider flex items-center justify-center gap-1.5 border-0 cursor-pointer text-xs"
+              disabled={isLimitExceeded || submitting || policyMissing}
+              className="btn-lte-success py-2 px-6 font-bold uppercase tracking-wider flex items-center justify-center gap-1.5 border-0 cursor-pointer text-xs disabled:opacity-50 disabled:cursor-not-allowed"
             >
               {submitting ? (
                 <>

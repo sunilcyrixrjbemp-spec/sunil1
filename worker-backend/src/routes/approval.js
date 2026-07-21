@@ -137,20 +137,71 @@ export async function getLegacyExpenseHashId(expId) {
   return -200000 - val;
 }
 
+let expenseMasterExists = null;
+async function checkExpenseMasterExists(db) {
+  if (expenseMasterExists !== null) return expenseMasterExists;
+  try {
+    const res = await db.prepare("SELECT name FROM sqlite_master WHERE type='table' AND name='expense_master'").first();
+    expenseMasterExists = !!res;
+  } catch (err) {
+    expenseMasterExists = false;
+  }
+  return expenseMasterExists;
+}
+
 export async function fetchPendingApprovals(env, user) {
   const result = [];
-  const userRoleClean = (user.role || "").trim().toLowerCase();
-  const isAdmin = userRoleClean === "admin";
+  const hasExpenseMaster = await checkExpenseMasterExists(env.DB);
 
-  // 1. Fetch pending limit requests (joining users table to avoid N+1 query loop)
-  const pendingLimits = await env.DB.prepare(`
-    SELECT pl.*, u.name AS submitter_name
-    FROM limit_approval_requests pl
-    LEFT JOIN users u ON u.user_id = pl.user_id
-    WHERE pl.manager_id = ? AND pl.status = 'Pending'
-  `).bind(user.user_id).all();
+  // Run independent pending approval queries in PARALLEL
+  const dbPromises = [
+    env.DB.prepare(`
+      SELECT pl.id, pl.user_id, pl.request_type, pl.requested_value, pl.for_month, pl.created_at, pl.updated_at, u.name AS submitter_name
+      FROM limit_approval_requests pl
+      LEFT JOIN users u ON u.user_id = pl.user_id
+      WHERE pl.manager_id = ? AND pl.status = 'Pending'
+    `).bind(user.user_id).all().catch(() => ({ results: [] })),
 
-  for (const pl of (pendingLimits.results || [])) {
+    env.DB.prepare(`
+      SELECT a.id, a.expense_id, a.approver_id, a.level_number, a.status, a.comments, a.created_at, a.updated_at,
+             e.expense_code, e.amount, e.description, e.travel_mode, e.itinerary, e.user_id as submitter_user_id,
+             e.calls_assigned, e.calls_completed,
+             u.name AS submitter_name, u.user_id AS submitter_code,
+             (SELECT COUNT(*) FROM expense_itineraries WHERE exp_id = e.expense_code) as itineraries_count
+      FROM approvals a
+      JOIN expenses e ON a.expense_id = e.id
+      LEFT JOIN users u ON e.user_id = u.id
+      WHERE a.approver_id = ? AND a.status = 'pending'
+        AND EXISTS (
+          SELECT 1 
+          FROM hierarchy_requesters hr 
+          JOIN hierarchy_approvers ha ON hr.hierarchy_id = ha.hierarchy_id 
+          WHERE hr.user_id = e.user_id AND ha.approver_id = a.approver_id
+        )
+      ORDER BY a.level_number ASC, a.created_at DESC
+    `).bind(user.id).all().catch(() => ({ results: [] }))
+  ];
+
+  if (hasExpenseMaster) {
+    dbPromises.push(
+      env.DB.prepare(`
+        SELECT m.exp_id, m.user_id, m.expense_date, m.total_amount, m.status, m.visit_purpose, m.calls_assigned, m.calls_completed, u.name as full_name, u.e_code
+        FROM expense_master m
+        JOIN users u ON m.user_id = u.user_id
+        WHERE 
+          ((m.status = 'Pending L1' OR m.status = 'Pending') AND m.level_first_approver = ?)
+          OR
+          (m.status = 'Pending L2' AND m.level_second_approver = ?)
+      `).bind(user.user_id, user.user_id).all().catch(() => ({ results: [] }))
+    );
+  } else {
+    dbPromises.push(Promise.resolve({ results: [] }));
+  }
+
+  const [pendingLimitsRes, approvalsRes, legacyRowsRes] = await Promise.all(dbPromises);
+
+  // 1. Process pending limit requests
+  for (const pl of (pendingLimitsRes.results || [])) {
     result.push({
       id: -pl.id,
       expense_id: -pl.id,
@@ -163,51 +214,17 @@ export async function fetchPendingApprovals(env, user) {
       expense_code: `LIMIT-${pl.request_type}-${pl.id}`,
       employeeName: pl.submitter_name || `Employee ${pl.user_id}`,
       eCode: pl.user_id,
-      purpose: `Request additional ${parseFloat(pl.requested_value).toFixed(1)} ${pl.request_type} limit for month ${pl.for_month}`,
+      purpose: `Request additional ${parseFloat(pl.requested_value || 0).toFixed(1)} ${pl.request_type} limit for month ${pl.for_month}`,
       category: "Limit Request",
-      amount: parseFloat(pl.requested_value),
+      amount: parseFloat(pl.requested_value || 0),
       date: pl.for_month,
       itinerariesCount: 0
     });
   }
 
-  // 2. Fetch normal approvals (joining users table to avoid N+1 query loop)
-  const approvals = await env.DB.prepare(`
-    SELECT a.*, e.expense_code, e.amount, e.description, e.travel_mode, e.itinerary, e.user_id as submitter_user_id,
-           e.calls_assigned, e.calls_completed,
-           u.name AS submitter_name, u.user_id AS submitter_code
-    FROM approvals a
-    JOIN expenses e ON a.expense_id = e.id
-    LEFT JOIN users u ON e.user_id = u.id
-    WHERE a.approver_id = ? AND a.status = 'pending'
-      AND EXISTS (
-        SELECT 1 
-        FROM hierarchy_requesters hr 
-        JOIN hierarchy_approvers ha ON hr.hierarchy_id = ha.hierarchy_id 
-        WHERE hr.user_id = e.user_id AND ha.approver_id = a.approver_id
-      )
-    ORDER BY a.level_number ASC, a.created_at DESC
-  `).bind(user.id).all();
-
-  const approvalsList = approvals.results || [];
-  
-  // Batch fetch itineraries count for all approval expense codes in chunks of 50 to avoid SQL parameter limit
-  const expenseCodes = approvalsList.map(a => a.expense_code).filter(Boolean);
-  const itiCounts = {};
-  if (expenseCodes.length > 0) {
-    const countResults = await queryInChunks(
-      env.DB,
-      "SELECT exp_id, COUNT(*) as cnt FROM expense_itineraries WHERE exp_id IN (?) GROUP BY exp_id",
-      expenseCodes
-    );
-    for (const row of countResults) {
-      itiCounts[row.exp_id] = row.cnt;
-    }
-  }
-
+  // 2. Process normal approvals
+  const approvalsList = approvalsRes.results || [];
   for (const app of approvalsList) {
-    const itiCount = itiCounts[app.expense_code] || 0;
-
     result.push({
       id: app.id,
       expense_id: app.expense_id,
@@ -224,60 +241,48 @@ export async function fetchPendingApprovals(env, user) {
       category: app.travel_mode || "Travel",
       amount: parseFloat(app.amount || 0),
       date: app.itinerary,
-      itinerariesCount: itiCount,
+      itinerariesCount: app.itineraries_count || 0,
       calls_assigned: app.calls_assigned || 0,
       calls_completed: app.calls_completed || 0
     });
   }
 
-  // 3. Fetch legacy pending claims
-  try {
-    const legacyRows = await env.DB.prepare(`
-      SELECT m.exp_id, m.user_id, m.expense_date, m.total_amount, m.status, m.visit_purpose, m.calls_assigned, m.calls_completed, u.name as full_name, u.e_code
-      FROM expense_master m
-      JOIN users u ON m.user_id = u.user_id
-      WHERE 
-        ((m.status = 'Pending L1' OR m.status = 'Pending') AND m.level_first_approver = ?)
-        OR
-        (m.status = 'Pending L2' AND m.level_second_approver = ?)
-    `).bind(user.user_id, user.user_id).all();
+  // 3. Process legacy pending claims
+  const legacyList = legacyRowsRes.results || [];
+  if (legacyList.length > 0) {
+    const legacyCodes = legacyList.map(r => r.exp_id);
 
-    const legacyList = legacyRows.results || [];
+    const [countResults, firstLegs] = await Promise.all([
+      queryInChunks(
+        env.DB,
+        "SELECT exp_id, COUNT(*) as cnt FROM expense_itineraries WHERE exp_id IN (?) GROUP BY exp_id",
+        legacyCodes
+      ),
+      queryInChunks(
+        env.DB,
+        `SELECT exp_id, travel_mode 
+         FROM expense_itineraries 
+         WHERE exp_id IN (?) 
+         AND leg = 1`,
+        legacyCodes
+      )
+    ]);
 
-    if (legacyList.length > 0) {
-      // BATCH fetch itinerary counts + first travel mode — chunked to avoid SQLite limit
-      const legacyCodes = legacyList.map(r => r.exp_id);
+    const countMap = {};
+    for (const r of countResults) countMap[r.exp_id] = r.cnt;
+    const modeMap = {};
+    for (const r of firstLegs) {
+      if (!modeMap[r.exp_id]) modeMap[r.exp_id] = r.travel_mode;
+    }
 
-      const [countResults, firstLegs] = await Promise.all([
-        queryInChunks(
-          env.DB,
-          "SELECT exp_id, COUNT(*) as cnt FROM expense_itineraries WHERE exp_id IN (?) GROUP BY exp_id",
-          legacyCodes
-        ),
-        queryInChunks(
-          env.DB,
-          `SELECT exp_id, travel_mode 
-           FROM expense_itineraries 
-           WHERE exp_id IN (?) 
-           AND leg = 1`,
-          legacyCodes
-        )
-      ]);
-
-      const countMap = {};
-      for (const r of countResults) countMap[r.exp_id] = r.cnt;
-      const modeMap = {};
-      for (const r of firstLegs) {
-        if (!modeMap[r.exp_id]) modeMap[r.exp_id] = r.travel_mode;
-      }
-
-      for (const row of legacyList) {
+    const legacyItems = await Promise.all(
+      legacyList.map(async (row) => {
         const mockId = await getLegacyExpenseHashId(row.exp_id);
         const levelNumber = row.status === "Pending L2" ? 2 : 1;
         const itiCount = countMap[row.exp_id] || 0;
         const category = modeMap[row.exp_id] || "Travel";
 
-        result.push({
+        return {
           id: mockId,
           expense_id: mockId,
           approver_id: user.id,
@@ -296,11 +301,11 @@ export async function fetchPendingApprovals(env, user) {
           itinerariesCount: itiCount,
           calls_assigned: row.calls_assigned || 0,
           calls_completed: row.calls_completed || 0
-        });
-      }
-    }
-  } catch (error) {
-    console.warn("Legacy table expense_master not found or query failed, skipping legacy pending claims:", error.message);
+        };
+      })
+    );
+
+    result.push(...legacyItems);
   }
 
   return result;
