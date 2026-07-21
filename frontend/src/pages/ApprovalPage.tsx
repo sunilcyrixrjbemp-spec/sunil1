@@ -597,7 +597,8 @@ export default function ApprovalPage() {
     if (Array.isArray(details.attachments_detailed)) {
       details.attachments_detailed.forEach((a: any) => {
         if (!a || !a.file_url) return;
-        const fullUrl = authService.getAbsoluteImageUrl(a.file_url);
+        const fullUrl = authService.getAbsoluteImageUrl(a.file_url) || (a.file_url.startsWith("http") ? a.file_url : `${API_BASE}${a.file_url.startsWith('/') ? '' : '/'}${a.file_url}`);
+        if (!fullUrl) return;
         const filename = a.file_url.split("/").pop() || "Attachment";
         const isPdf = filename.toLowerCase().endsWith(".pdf") || fullUrl.toLowerCase().includes(".pdf");
         map.set(fullUrl, { url: fullUrl, billType: a.bill_type || "Receipt", filename, isPdf });
@@ -607,7 +608,8 @@ export default function ApprovalPage() {
     const arrayAtts = getAttachmentsArray(details.attachments);
     arrayAtts.forEach((rawUrl: string) => {
       if (!rawUrl) return;
-      const fullUrl = authService.getAbsoluteImageUrl(rawUrl);
+      const fullUrl = authService.getAbsoluteImageUrl(rawUrl) || (rawUrl.startsWith("http") ? rawUrl : `${API_BASE}${rawUrl.startsWith('/') ? '' : '/'}${rawUrl}`);
+      if (!fullUrl) return;
       if (!map.has(fullUrl)) {
         const filename = rawUrl.split("/").pop() || "Attachment";
         const isPdf = filename.toLowerCase().endsWith(".pdf") || fullUrl.toLowerCase().includes(".pdf");
