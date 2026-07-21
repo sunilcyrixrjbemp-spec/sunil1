@@ -597,16 +597,48 @@ export default function ExpensePage() {
   const [displayImageUrl, setDisplayImageUrl] = useState<string | null>(null);
   const [isConvertingHeic, setIsConvertingHeic] = useState(false);
   const [imageLoadError, setImageLoadError] = useState(false);
+  const [isLoadingPdf, setIsLoadingPdf] = useState(false);
 
   useEffect(() => {
     let active = true;
     let localUrl: string | null = null;
     setImageLoadError(false);
+    setIsLoadingPdf(false);
 
     if (!lightboxImage) {
       setDisplayImageUrl(null);
       setIsConvertingHeic(false);
       return;
+    }
+
+    const isPdfUrl = lightboxImage.toLowerCase().includes(".pdf") || 
+                     lightboxImage.toLowerCase().includes("pdf") || 
+                     lightboxImage.includes("gdrive/");
+
+    if (isPdfUrl) {
+      setIsLoadingPdf(true);
+      fetch(lightboxImage)
+        .then(async (res) => {
+          if (!res.ok) throw new Error(`HTTP ${res.status}`);
+          const blob = await res.blob();
+          if (!active) return;
+          const pdfBlob = new Blob([blob], { type: "application/pdf" });
+          localUrl = URL.createObjectURL(pdfBlob);
+          setDisplayImageUrl(localUrl);
+          setIsLoadingPdf(false);
+        })
+        .catch((err) => {
+          console.warn("Failed to fetch PDF blob, falling back to direct URL:", err);
+          if (active) {
+            setDisplayImageUrl(lightboxImage);
+            setIsLoadingPdf(false);
+          }
+        });
+
+      return () => {
+        active = false;
+        if (localUrl) URL.revokeObjectURL(localUrl);
+      };
     }
 
     checkIsHeic(lightboxImage).then(isHeicImg => {
@@ -6220,14 +6252,24 @@ export default function ExpensePage() {
         >
           <div className="relative max-w-4xl max-h-[90vh] bg-white border border-gray-300 rounded p-4 flex flex-col items-center justify-center select-none pointer-events-auto" onClick={(e) => e.stopPropagation()}>
             <div className="flex justify-between items-center w-full mb-2 pb-2 border-b border-gray-200">
-              <span className="text-xs font-bold text-gray-800">Image Preview</span>
-              <div className="flex gap-2">
+              <span className="text-xs font-bold text-gray-800">Document / Image Preview</span>
+              <div className="flex gap-2 items-center">
                 <a 
-                  href={lightboxImage} 
-                  download="receipt_image.png" 
+                  href={`https://docs.google.com/gview?url=${encodeURIComponent(lightboxImage)}&embedded=true`} 
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="px-2 py-1 bg-purple-600 hover:bg-purple-700 text-white rounded text-[10px] font-bold no-underline"
+                >
+                  ↗ Google PDF Viewer
+                </a>
+                <a 
+                  href={displayImageUrl || lightboxImage} 
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  download="document.pdf" 
                   className="px-2 py-1 bg-green-600 hover:bg-green-700 text-white rounded text-[10px] font-bold no-underline"
                 >
-                  Download
+                  ⬇ Download
                 </a>
                 <button
                   onClick={() => setLightboxImage(null)}
@@ -6237,11 +6279,16 @@ export default function ExpensePage() {
                 </button>
               </div>
             </div>
-            {imageLoadError || lightboxImage?.toLowerCase().includes(".pdf") || lightboxImage?.toLowerCase().includes("pdf") || lightboxImage?.includes("gdrive/") ? (
+            {isLoadingPdf ? (
+              <div className="text-slate-700 flex flex-col items-center justify-center gap-3 p-12 select-none">
+                <Loader2 className="w-10 h-10 animate-spin text-blue-500" />
+                <span className="text-sm font-bold tracking-wide">Loading PDF Document...</span>
+              </div>
+            ) : imageLoadError || lightboxImage?.toLowerCase().includes(".pdf") || lightboxImage?.toLowerCase().includes("pdf") || lightboxImage?.includes("gdrive/") ? (
               <iframe 
                 src={displayImageUrl || lightboxImage} 
                 title="Receipt Document Preview"
-                className="w-[85vw] h-[65vh] max-w-4xl border border-gray-200"
+                className="w-[85vw] h-[65vh] max-w-4xl border border-gray-200 bg-white"
               />
             ) : isConvertingHeic ? (
               <div className="text-white flex flex-col items-center justify-center gap-3 p-8 rounded bg-slate-900/50 border border-slate-700/50 shadow-lg select-none pointer-events-auto" onClick={(e) => e.stopPropagation()}>

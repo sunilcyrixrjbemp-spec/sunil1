@@ -269,11 +269,42 @@ export default function ApprovalPage() {
     let active = true;
     let localUrl: string | null = null;
     setImageLoadError(false);
+    setIsLoadingPdf(false);
 
     if (!lightboxImage) {
       setDisplayImageUrl(null);
       setIsConvertingHeic(false);
       return;
+    }
+
+    const isPdfUrl = lightboxImage.toLowerCase().includes(".pdf") || 
+                     lightboxImage.toLowerCase().includes("pdf") || 
+                     lightboxImage.includes("gdrive/");
+
+    if (isPdfUrl) {
+      setIsLoadingPdf(true);
+      fetch(lightboxImage)
+        .then(async (res) => {
+          if (!res.ok) throw new Error(`HTTP ${res.status}`);
+          const blob = await res.blob();
+          if (!active) return;
+          const pdfBlob = new Blob([blob], { type: "application/pdf" });
+          localUrl = URL.createObjectURL(pdfBlob);
+          setDisplayImageUrl(localUrl);
+          setIsLoadingPdf(false);
+        })
+        .catch((err) => {
+          console.warn("Failed to fetch PDF blob, falling back to direct URL:", err);
+          if (active) {
+            setDisplayImageUrl(lightboxImage);
+            setIsLoadingPdf(false);
+          }
+        });
+
+      return () => {
+        active = false;
+        if (localUrl) URL.revokeObjectURL(localUrl);
+      };
     }
 
     checkIsHeic(lightboxImage).then(isHeicImg => {
@@ -2733,15 +2764,23 @@ export default function ApprovalPage() {
           <div className="relative w-full max-w-4xl max-h-[90vh] bg-slate-900 border border-slate-700 rounded-lg p-3 flex flex-col items-center justify-center select-none pointer-events-auto shadow-2xl" onClick={(e) => e.stopPropagation()}>
             <div className="flex justify-between items-center w-full mb-2 pb-2 border-b border-slate-700">
               <span className="text-xs font-bold text-slate-200">Attachment Document Preview</span>
-              <div className="flex gap-2">
+              <div className="flex gap-2 items-center">
                 <a 
-                  href={lightboxImage} 
+                  href={`https://docs.google.com/gview?url=${encodeURIComponent(lightboxImage)}&embedded=true`} 
                   target="_blank"
                   rel="noopener noreferrer"
-                  download
+                  className="px-2.5 py-1 bg-purple-600 hover:bg-purple-700 text-white rounded text-[11px] font-bold no-underline flex items-center gap-1"
+                >
+                  ↗ Google PDF Viewer
+                </a>
+                <a 
+                  href={displayImageUrl || lightboxImage} 
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  download="document.pdf"
                   className="px-2.5 py-1 bg-blue-600 hover:bg-blue-700 text-white rounded text-[11px] font-bold no-underline flex items-center gap-1"
                 >
-                  ⬇ Download File
+                  ⬇ Download
                 </a>
                 <button
                   onClick={() => setLightboxImage(null)}
@@ -2751,7 +2790,12 @@ export default function ApprovalPage() {
                 </button>
               </div>
             </div>
-            {isConvertingHeic ? (
+            {isLoadingPdf ? (
+              <div className="text-white flex flex-col items-center justify-center gap-3 p-12 rounded bg-slate-900/50 select-none">
+                <Loader2 className="w-10 h-10 animate-spin text-blue-500" />
+                <span className="text-sm font-bold tracking-wide">Loading PDF Document...</span>
+              </div>
+            ) : isConvertingHeic ? (
               <div className="text-white flex flex-col items-center justify-center gap-3 p-8 rounded bg-slate-900/50 select-none">
                 <Loader2 className="w-10 h-10 animate-spin text-blue-500" />
                 <span className="text-sm font-bold tracking-wide">Converting Apple HEIC image...</span>
