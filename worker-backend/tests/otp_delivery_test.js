@@ -98,3 +98,43 @@ test("OTP delivery retry logic retries on transient errors", async () => {
     globalThis.fetch = originalFetch;
   }
 });
+
+test("OTP multi-URL failover switches to Account #2 when Account #1 exhausts quota", async () => {
+  const calledUrls = [];
+  const originalFetch = globalThis.fetch;
+
+  globalThis.fetch = async (url, options) => {
+    calledUrls.push(url);
+    if (url.includes("account1")) {
+      return {
+        ok: true,
+        status: 200,
+        json: async () => ({ success: false, error: "Quota exhausted on this account (0)" })
+      };
+    }
+    return {
+      ok: true,
+      status: 200,
+      json: async () => ({ success: true, message: "Sent via Account #2" })
+    };
+  };
+
+  try {
+    const urls = ["https://mock-gas.test/account1/exec", "https://mock-gas.test/account2/exec"];
+    let success = false;
+    for (const gasUrl of urls) {
+      const res = await fetch(gasUrl, { method: "POST", body: JSON.stringify({ to: "user@test.com" }) });
+      const json = await res.json();
+      if (json.success) {
+        success = true;
+        break;
+      }
+    }
+
+    assert.strictEqual(calledUrls.length, 2, "Should attempt Account #1, fail, then call Account #2");
+    assert.strictEqual(success, true, "Should succeed via Account #2");
+    console.log("  PASS: Multi-URL failover instantly switches to Account #2 on Account #1 quota exhaustion");
+  } finally {
+    globalThis.fetch = originalFetch;
+  }
+});

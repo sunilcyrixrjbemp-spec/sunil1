@@ -12,6 +12,7 @@ CORS_ORIGIN = "*"
 API_SECRET = "012001@Sunil"
 SKIP_PRIMARY_SYNC = "true"
 GAS_WEB_APP_URL = "https://script.google.com/macros/s/AKfycbwxh5LQLCGtwGflfF7V5HKyL7viFNlAkAbsgz5xEDQo8Eg_f1kw47EjxrzSAC891sm1/exec"
+GAS_WEB_APP_URLS = "https://script.google.com/macros/s/AKfycbwxh5LQLCGtwGflfF7V5HKyL7viFNlAkAbsgz5xEDQo8Eg_f1kw47EjxrzSAC891sm1/exec,https://script.google.com/macros/s/AKfycbwrK97nxv0aXpL5whXzn6CBiXschDpVju6smu4_Wx7-qrF7ljbU6Qom9lVKHr5veNCh/exec,https://script.google.com/macros/s/AKfycbyFRbkKZfvXBEAzB1BVyKSER_n99ONSyLSpygFVkrpyhjQnYzJAM0HdbIgH02_BAY9DSQ/exec"
 
 # Primary DB sync credentials (replicate writes back to Primary)
 PRIMARY_CLOUDFLARE_ACCOUNT_ID = "befbd2e0ff580a1d0d0865f011002053"

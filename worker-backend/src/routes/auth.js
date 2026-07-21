@@ -594,9 +594,22 @@ export async function handleGetDropdowns(request, env, params, query) {
   });
 }
 
+// Global round-robin counter for rotating OTP emails evenly across all accounts
+let gasUrlRotationIndex = 0;
+
 /**
- * Helper to send email via Google Apps Script Web App with multi-URL failover across up to 10 accounts,
- * exponential backoff retries, and correlation ID tracking.
+ * Hardcoded default GAS Web App URLs for OTP email dispatches (300 mails/day capacity).
+ * Add more URLs to this array or set GAS_WEB_APP_URLS in wrangler.toml / environment variables.
+ */
+const DEFAULT_GAS_OTP_URLS = [
+  "https://script.google.com/macros/s/AKfycbwxh5LQLCGtwGflfF7V5HKyL7viFNlAkAbsgz5xEDQo8Eg_f1kw47EjxrzSAC891sm1/exec",
+  "https://script.google.com/macros/s/AKfycbwrK97nxv0aXpL5whXzn6CBiXschDpVju6smu4_Wx7-qrF7ljbU6Qom9lVKHr5veNCh/exec",
+  "https://script.google.com/macros/s/AKfycbyFRbkKZfvXBEAzB1BVyKSER_n99ONSyLSpygFVkrpyhjQnYzJAM0HdbIgH02_BAY9DSQ/exec"
+];
+
+/**
+ * Helper to send email via Google Apps Script Web App with Round-Robin Rotation,
+ * multi-account automatic failover, and correlation ID tracking.
  */
 async function sendEmail(to, subject, body, env) {
   // Support comma-separated list of URLs via env.GAS_WEB_APP_URLS or single env.GAS_WEB_APP_URL
@@ -608,7 +621,7 @@ async function sendEmail(to, subject, body, env) {
     urls = [env.GAS_WEB_APP_URL.trim()];
   }
   if (urls.length === 0) {
-    urls = ["https://script.google.com/macros/s/AKfycbwxh5LQLCGtwGflfF7V5HKyL7viFNlAkAbsgz5xEDQo8Eg_f1kw47EjxrzSAC891sm1/exec"];
+    urls = DEFAULT_GAS_OTP_URLS;
   }
 
   const plainText = body.replace(/<[^>]*>/g, ""); // strip HTML tags for plain text fallback
@@ -631,10 +644,13 @@ async function sendEmail(to, subject, body, env) {
 
   let lastError = null;
 
-  // Try each configured GAS URL in order (Failover across 10 accounts)
-  for (let urlIndex = 0; urlIndex < urls.length; urlIndex++) {
+  // Round-Robin: Start at current rotation index and cycle through all URLs
+  const startIndex = (gasUrlRotationIndex++) % urls.length;
+
+  for (let i = 0; i < urls.length; i++) {
+    const urlIndex = (startIndex + i) % urls.length;
     const gasUrl = urls[urlIndex];
-    console.log(`[OTP FAILOVER] Trying Account #${urlIndex + 1}/${urls.length} (CorrelationID: ${correlationId})`);
+    console.log(`[OTP ROTATION] Attempting Account #${urlIndex + 1}/${urls.length} (CorrelationID: ${correlationId})`);
 
     const maxRetries = 2;
     for (let attempt = 1; attempt <= maxRetries; attempt++) {
@@ -666,7 +682,7 @@ async function sendEmail(to, subject, body, env) {
       }
     }
 
-    console.warn(`[OTP FAILOVER] Account #${urlIndex + 1}/${urls.length} failed all attempts. Switching to next account...`);
+    console.warn(`[OTP FAILOVER] Account #${urlIndex + 1}/${urls.length} failed all attempts. Rotating to next account...`);
   }
 
   console.error(`[OTP FAILURE] All ${urls.length} mail accounts failed to send OTP to ${to} (CorrelationID: ${correlationId}): ${lastError.message}`);
