@@ -511,34 +511,14 @@ export default function AnalysisPage() {
     return result;
   }, [activeExpenses, selectedMonth, selectedYear, startDate, endDate]);
 
-  // E. Zone-wise (from user.zone database field)
-  // Uses ALL month expenses (ignores zone/district/engineer filter) so every zone shows up
+  // E. Zone-wise (from user.zone database field) - respects active filters
   const PRIVILEGED_ROLES = ["admin", "project head", "mis", "travel desk", "travel tesk", "vp", "accountant", "hr"];
   const isPrivilegedRole = PRIVILEGED_ROLES.includes((user?.role || "").trim().toLowerCase());
 
-  // All expenses for selected month (no zone/district/engineer filter) — for the zone chart
-  const allZoneExpenses = useMemo(() => {
-    const source = viewMode === "team" && isReviewer ? teamExpenses : myExpenses;
-    let list = [];
-    if (startDate || endDate) {
-      list = source.filter(e => {
-        const rawDate = e.date || e.itinerary || "";
-        const cleanDateStr = String(rawDate).trim();
-        if (!cleanDateStr) return false;
-        if (startDate && cleanDateStr < startDate) return false;
-        if (endDate && cleanDateStr > endDate) return false;
-        return true;
-      });
-    } else {
-      list = filterByMonth(source);
-    }
-    return list;
-  }, [viewMode, myExpenses, teamExpenses, selectedMonth, selectedYear, startDate, endDate]);
-
   const zoneWiseData = useMemo(() => {
     const map: Record<string, number> = {};
-    allZoneExpenses.forEach(e => {
-      // Use expense's actual zone from DB — show ALL zones
+    activeExpenses.forEach(e => {
+      // Use expense's actual zone from DB
       let z = (e.zone || "").trim();
       if (!z || z.toLowerCase() === "all") {
         z = isPrivilegedRole ? "Unknown" : (user?.zone || "Unknown");
@@ -549,11 +529,12 @@ export default function AnalysisPage() {
       .map(([name, value]) => ({ name, value }))
       .filter(d => d.value > 0)
       .sort((a, b) => b.value - a.value);
-  }, [allZoneExpenses, user, isPrivilegedRole]);
+  }, [activeExpenses, user, isPrivilegedRole]);
 
+  // F. Coordinator-wise - respects active filters
   const coordinatorWiseData = useMemo(() => {
     const map: Record<string, number> = {};
-    allZoneExpenses.forEach(e => {
+    activeExpenses.forEach(e => {
       let c = (e.coordinator || e.coordinator_name || e.zonal_coordinator || "").trim();
 
       const submitterCode = String(e.submitter_code || e.user_id || e.e_code || "").trim().toLowerCase();
@@ -592,7 +573,7 @@ export default function AnalysisPage() {
       .map(([name, value]) => ({ name, value }))
       .filter(d => d.value > 0)
       .sort((a, b) => b.value - a.value);
-  }, [allZoneExpenses, usersMap]);
+  }, [activeExpenses, usersMap]);
 
 
   // Available years from data
