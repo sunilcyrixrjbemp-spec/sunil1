@@ -825,24 +825,42 @@ export async function handleUpdateUser(request, env, params, query, adminUser) {
     updates.push("role = ?"); bindings.push(body.role);
   }
 
-  // UPDATE USERS TABLE FIRST so new_user_id exists in users before child tables reference it
+  // 1. Prepare role & target user_id values
+  const targetRole = body.role || user.role;
+  const targetUid = isUidChanged ? newUserId : user.user_id;
+
+  // Deleting user_roles FIRST avoids SQLITE_CONSTRAINT_FOREIGNKEY when updating users(user_id)
+  batchStatements.push({
+    sql: "DELETE FROM user_roles WHERE user_id = ? OR user_id = ?",
+    params: [user.user_id, targetUid]
+  });
+
+  // 2. UPDATE USERS TABLE
   if (updates.length > 0) {
     bindings.push(timestamp);
     bindings.push(user.id);
-    batchStatements.unshift({
+    batchStatements.push({
       sql: `UPDATE users SET ${updates.join(", ")}, updated_at = ? WHERE id = ?`,
       params: bindings
     });
   }
 
-  // Cascading updates for child tables storing user_id AFTER users table is updated
+  // 3. Re-insert user_roles entry with targetUid (which now exists in users table)
+  if (targetRole) {
+    batchStatements.push({
+      sql: "INSERT INTO user_roles (user_id, role, assigned_at) VALUES (?, ?, ?)",
+      params: [targetUid, targetRole, timestamp]
+    });
+  }
+
+  // 4. Cascading updates for child tables storing user_id / e_code / names
   if (isUidChanged) {
     batchStatements.push({
-      sql: "UPDATE user_roles SET user_id = ? WHERE user_id = ?",
+      sql: "UPDATE expenses SET submitter_code = ? WHERE submitter_code = ?",
       params: [newUserId, user.user_id]
     });
     batchStatements.push({
-      sql: "UPDATE notifications SET user_id = ? WHERE user_id = ?",
+      sql: "UPDATE approvals SET approver_code = ? WHERE approver_code = ?",
       params: [newUserId, user.user_id]
     });
     batchStatements.push({
@@ -862,6 +880,10 @@ export async function handleUpdateUser(request, env, params, query, adminUser) {
       params: [newUserId, user.user_id]
     });
     batchStatements.push({
+      sql: "UPDATE engineer_advances SET created_by = ? WHERE created_by = ?",
+      params: [newUserId, user.user_id]
+    });
+    batchStatements.push({
       sql: "UPDATE login_logs SET user_id = ? WHERE user_id = ?",
       params: [newUserId, user.user_id]
     });
@@ -869,18 +891,56 @@ export async function handleUpdateUser(request, env, params, query, adminUser) {
       sql: "UPDATE otps SET user_id = ? WHERE user_id = ?",
       params: [newUserId, user.user_id]
     });
-  }
-
-  // Clean role update in user_roles table
-  if (body.role !== undefined) {
-    const targetUid = isUidChanged ? newUserId : user.user_id;
     batchStatements.push({
-      sql: "DELETE FROM user_roles WHERE user_id = ? OR user_id = ?",
-      params: [user.user_id, targetUid]
+      sql: "UPDATE db_op_logs SET user_id = ? WHERE user_id = ?",
+      params: [newUserId, user.user_id]
     });
     batchStatements.push({
-      sql: "INSERT INTO user_roles (user_id, role, assigned_at) VALUES (?, ?, ?)",
-      params: [targetUid, body.role, timestamp]
+      sql: "UPDATE users SET manager = ? WHERE manager = ?",
+      params: [newUserId, user.user_id]
+    });
+    batchStatements.push({
+      sql: "UPDATE users SET zonal_manager = ? WHERE zonal_manager = ?",
+      params: [newUserId, user.user_id]
+    });
+    batchStatements.push({
+      sql: "UPDATE users SET coordinator = ? WHERE coordinator = ?",
+      params: [newUserId, user.user_id]
+    });
+  }
+
+  if (isEcodeChanged && newECode !== newUserId) {
+    batchStatements.push({
+      sql: "UPDATE expenses SET submitter_code = ? WHERE submitter_code = ?",
+      params: [newECode, user.e_code]
+    });
+    batchStatements.push({
+      sql: "UPDATE approvals SET approver_code = ? WHERE approver_code = ?",
+      params: [newECode, user.e_code]
+    });
+  }
+
+  if (body.name && body.name.trim() !== user.name) {
+    const newName = body.name.trim();
+    batchStatements.push({
+      sql: "UPDATE expenses SET submitter_name = ? WHERE user_id = ?",
+      params: [newName, user.id]
+    });
+    batchStatements.push({
+      sql: "UPDATE approvals SET approver_name = ? WHERE approver_id = ?",
+      params: [newName, user.id]
+    });
+    batchStatements.push({
+      sql: "UPDATE users SET manager = ? WHERE manager = ?",
+      params: [newName, user.name]
+    });
+    batchStatements.push({
+      sql: "UPDATE users SET zonal_manager = ? WHERE zonal_manager = ?",
+      params: [newName, user.name]
+    });
+    batchStatements.push({
+      sql: "UPDATE users SET coordinator = ? WHERE coordinator = ?",
+      params: [newName, user.name]
     });
   }
 
