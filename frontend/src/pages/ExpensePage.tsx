@@ -5,6 +5,7 @@ import Loader from "../components/common/Loader";
 import { expenseService } from "../services/expenseService";
 import { uploadService } from "../services/uploadService";
 import { checkIsHeic, convertHeicToJpegUrl } from "../utils/heic";
+import { checkIsPdf, convertPdfToJpgFile } from "../utils/pdf";
 import { 
   Trash2, Plus, Calendar, 
   AlertTriangle, Check, Loader2,
@@ -1557,33 +1558,42 @@ export default function ExpensePage() {
       return;
     }
     
-    // Any file format is allowed
-    const isImage = file.type.startsWith("image/");
     let processedFile = file;
+
+    // Automatic PDF to JPG Conversion — PDF files are NEVER saved directly
+    if (checkIsPdf(file)) {
+      const toastId = toast.loading("Converting PDF document to JPG image...");
+      try {
+        processedFile = await convertPdfToJpgFile(file);
+        toast.dismiss(toastId);
+        toast.success(`PDF converted to JPG image (${Math.round(processedFile.size / 1024)}KB) ✓`, { duration: 3000 });
+      } catch (err) {
+        console.error("PDF to JPG conversion failed:", err);
+        toast.dismiss(toastId);
+        toast.error("Failed to convert PDF document to JPG image.");
+        return;
+      }
+    }
+    
+    const isImage = processedFile.type.startsWith("image/");
     
     if (isImage) {
       // Compress images larger than 50KB to make sure they are well under 2MB
-      if (file.size > 50 * 1024) {
-        const toastId = toast.loading(`Compressing image... (${Math.round(file.size / 1024)}KB)`);
+      if (processedFile.size > 50 * 1024) {
+        const toastId = toast.loading(`Compressing image... (${Math.round(processedFile.size / 1024)}KB)`);
         try {
-          processedFile = await compressImage(file);
+          processedFile = await compressImage(processedFile);
           toast.dismiss(toastId);
           toast.success(`Compressed to ${Math.round(processedFile.size / 1024)}KB ✓`, { duration: 2000 });
         } catch {
           toast.dismiss(toastId);
-          processedFile = file;
         }
       }
     }
     
     // Validate final size (maximum 2MB)
     if (processedFile.size > 2 * 1024 * 1024) {
-      const isPDF = processedFile.type === "application/pdf" || processedFile.name.toLowerCase().endsWith(".pdf");
-      if (isPDF) {
-        toast.error("PDF file size cannot exceed 2MB!");
-      } else {
-        toast.error("File size exceeds the 2MB limit. Please upload a smaller file.");
-      }
+      toast.error("File size exceeds the 2MB limit. Please upload a smaller file.");
       return;
     }
     

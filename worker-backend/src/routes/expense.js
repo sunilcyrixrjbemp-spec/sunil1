@@ -2359,7 +2359,8 @@ export async function handleSubmitExpense(request, env, params, query, user) {
   const handleAttachment = async (fileKey, billType, legNum) => {
     const file = formData ? formData.get(fileKey) : null;
     if (file && typeof file === "object" && file.name) {
-      const ext = file.name.split(".").pop().toLowerCase() || "jpg";
+      const rawExt = file.name.split(".").pop().toLowerCase() || "jpg";
+      const ext = rawExt === "pdf" ? "jpg" : rawExt;
       const filename = `${expenseCode}_leg${legNum}_${billType}_${Date.now()}.${ext}`;
       
       const now = new Date();
