@@ -510,17 +510,112 @@ export default function ApprovalPage() {
   };
 
   const getLegAttachmentUrl = (legNum: number, billType: string) => {
-    if (!expenseDetails?.attachments_detailed) return null;
-    const found = expenseDetails.attachments_detailed.find((a: any) => {
-      if (!a.itinerary_id) return false;
-      const parts = a.itinerary_id.split("-");
-      const aLegNum = parseInt(parts[parts.length - 1]);
-      const aBillTypeLower = (a.bill_type || "").trim().toLowerCase();
-      const targetTypeLower = (billType || "").trim().toLowerCase();
-      return aLegNum === legNum && (a.bill_type === billType || aBillTypeLower === targetTypeLower);
+    if (!expenseDetails) return null;
+
+    const targetTypeLower = (billType || "").trim().toLowerCase();
+
+    // 1. Check attachments_detailed array if available
+    if (Array.isArray(expenseDetails.attachments_detailed) && expenseDetails.attachments_detailed.length > 0) {
+      const found = expenseDetails.attachments_detailed.find((a: any) => {
+        if (!a || !a.file_url) return false;
+        
+        let aLegNum: number | null = null;
+        if (a.leg) {
+          aLegNum = parseInt(String(a.leg), 10);
+        } else if (a.itinerary_id) {
+          const match = String(a.itinerary_id).match(/leg[_-]?(\d+)|-(\d+)$/i);
+          if (match) {
+            aLegNum = parseInt(match[1] || match[2], 10);
+          } else {
+            const parts = String(a.itinerary_id).split("-");
+            const parsed = parseInt(parts[parts.length - 1], 10);
+            if (!isNaN(parsed)) aLegNum = parsed;
+          }
+        }
+        if (aLegNum === null || isNaN(aLegNum)) {
+          const urlMatch = String(a.file_url).match(/_leg(\d+)_/i);
+          if (urlMatch) aLegNum = parseInt(urlMatch[1], 10);
+        }
+
+        const aBillTypeLower = (a.bill_type || "").trim().toLowerCase();
+
+        const legMatches = aLegNum === null || isNaN(aLegNum) || aLegNum === legNum;
+
+        const typeMatches = 
+          a.bill_type === billType ||
+          aBillTypeLower === targetTypeLower ||
+          aBillTypeLower.includes(targetTypeLower) ||
+          targetTypeLower.includes(aBillTypeLower) ||
+          (targetTypeLower === "hotel" && aBillTypeLower.includes("hotel")) ||
+          (targetTypeLower === "local_purchase" && (aBillTypeLower.includes("local_purchase") || aBillTypeLower.includes("lp"))) ||
+          (targetTypeLower === "communication_mail" && (aBillTypeLower.includes("comm") || aBillTypeLower.includes("mail"))) ||
+          (targetTypeLower === "other" && (aBillTypeLower.includes("other") || aBillTypeLower.includes("oth")));
+
+        return legMatches && typeMatches;
+      });
+
+      if (found && found.file_url) {
+        return authService.getAbsoluteImageUrl(found.file_url);
+      }
+    }
+
+    // 2. Fallback check: match in expenseDetails.attachments array or string
+    const allAtts = getAttachmentsArray(expenseDetails.attachments);
+    for (const rawUrl of allAtts) {
+      if (!rawUrl) continue;
+      const lowerUrl = rawUrl.toLowerCase();
+
+      const urlLegMatch = lowerUrl.match(/_leg(\d+)_/);
+      if (urlLegMatch && parseInt(urlLegMatch[1], 10) !== legNum) {
+        continue;
+      }
+
+      if (
+        (targetTypeLower === "hotel" && lowerUrl.includes("_hotel_")) ||
+        (targetTypeLower === "local_purchase" && (lowerUrl.includes("_local_purchase_") || lowerUrl.includes("_lp_"))) ||
+        (targetTypeLower === "communication_mail" && (lowerUrl.includes("_communication_mail_") || lowerUrl.includes("_comm_"))) ||
+        (targetTypeLower === "other" && lowerUrl.includes("_other_")) ||
+        lowerUrl.includes(targetTypeLower) ||
+        targetTypeLower.includes(lowerUrl)
+      ) {
+        return authService.getAbsoluteImageUrl(rawUrl);
+      }
+    }
+
+    // 3. Final fallback for leg 1 if only 1 attachment exists
+    if (legNum === 1 && allAtts.length === 1) {
+      return authService.getAbsoluteImageUrl(allAtts[0]);
+    }
+
+    return null;
+  };
+
+  const getAllExpenseAttachments = (details: any): { url: string; billType: string; filename: string; isPdf: boolean }[] => {
+    if (!details) return [];
+    const map = new Map<string, { url: string; billType: string; filename: string; isPdf: boolean }>();
+
+    if (Array.isArray(details.attachments_detailed)) {
+      details.attachments_detailed.forEach((a: any) => {
+        if (!a || !a.file_url) return;
+        const fullUrl = authService.getAbsoluteImageUrl(a.file_url);
+        const filename = a.file_url.split("/").pop() || "Attachment";
+        const isPdf = filename.toLowerCase().endsWith(".pdf") || fullUrl.toLowerCase().includes(".pdf");
+        map.set(fullUrl, { url: fullUrl, billType: a.bill_type || "Receipt", filename, isPdf });
+      });
+    }
+
+    const arrayAtts = getAttachmentsArray(details.attachments);
+    arrayAtts.forEach((rawUrl: string) => {
+      if (!rawUrl) return;
+      const fullUrl = authService.getAbsoluteImageUrl(rawUrl);
+      if (!map.has(fullUrl)) {
+        const filename = rawUrl.split("/").pop() || "Attachment";
+        const isPdf = filename.toLowerCase().endsWith(".pdf") || fullUrl.toLowerCase().includes(".pdf");
+        map.set(fullUrl, { url: fullUrl, billType: "Receipt", filename, isPdf });
+      }
     });
-    if (!found || !found.file_url) return null;
-    return authService.getAbsoluteImageUrl(found.file_url);
+
+    return Array.from(map.values());
   };
 
   const handleLegAmountChange = (index: number, field: string, value: string) => {
@@ -1414,6 +1509,43 @@ export default function ApprovalPage() {
                     key: "purpose",
                     ellipsis: true,
                     render: (p) => <Text className="text-gray-700 font-semibold text-xs">{p || "—"}</Text>,
+                  },
+                  {
+                    title: "Attachments",
+                    key: "attachments",
+                    align: "center" as const,
+                    render: (_, req) => {
+                      const atts = getAttachmentsArray(req.attachments || req.attachment_urls || req.attachments_detailed);
+                      if (atts.length === 0) {
+                        return <span className="text-[10px] text-gray-400 font-semibold">— No file —</span>;
+                      }
+                      return (
+                        <div className="flex items-center justify-center gap-1 flex-wrap" onClick={(e) => e.stopPropagation()}>
+                          {atts.slice(0, 2).map((url, i) => {
+                            const fullUrl = authService.getAbsoluteImageUrl(url);
+                            const isPdf = url.toLowerCase().endsWith(".pdf") || url.toLowerCase().includes("pdf");
+                            return (
+                              <button
+                                key={i}
+                                type="button"
+                                onClick={() => setLightboxImage(fullUrl)}
+                                className={`px-2 py-0.5 rounded text-[9px] font-bold border-0 cursor-pointer shadow-2xs transition-transform hover:scale-105 ${
+                                  isPdf ? "bg-red-100 text-red-700 hover:bg-red-200" : "bg-blue-100 text-blue-700 hover:bg-blue-200"
+                                }`}
+                                title={`View ${isPdf ? 'PDF Document' : 'Attachment Image'}`}
+                              >
+                                {isPdf ? "📄 PDF" : "📷 JPG"}
+                              </button>
+                            );
+                          })}
+                          {atts.length > 2 && (
+                            <span className="text-[9px] text-gray-500 font-extrabold bg-gray-100 px-1.5 py-0.5 rounded">
+                              +{atts.length - 2}
+                            </span>
+                          )}
+                        </div>
+                      );
+                    }
                   },
                   {
                     title: "Total Amount",
@@ -2447,7 +2579,7 @@ export default function ApprovalPage() {
                   )}
 
                   {/* ATTACHMENTS VIEW LIST WITH LIGHTBOX */}
-                  {getAttachmentsArray(expenseDetails.attachments).length > 0 && (
+                  {getAllExpenseAttachments(expenseDetails).length > 0 && (
                     <Card
                       size="small"
                       style={{ borderColor: "#e5e7eb", borderRadius: 8 }}
@@ -2456,15 +2588,15 @@ export default function ApprovalPage() {
                         <Space>
                           <PaperClipOutlined style={{ color: "#6366f1" }} />
                           <Typography.Text strong style={{ fontSize: 11, textTransform: "uppercase", letterSpacing: "0.04em" }}>
-                            Uploaded Receipt Attachments
+                            Uploaded Receipt Attachments ({getAllExpenseAttachments(expenseDetails).length})
                           </Typography.Text>
                         </Space>
                       }
                     >
                       <div className="flex flex-wrap gap-3">
-                        {getAttachmentsArray(expenseDetails.attachments).map((url: string, attIdx: number) => {
-                          const filename = url.split("/").pop() || "Receipt";
-                          let cleanType = "Receipt Bill";
+                        {getAllExpenseAttachments(expenseDetails).map((att, attIdx: number) => {
+                          const { url, billType, filename, isPdf } = att;
+                          let cleanType = billType || "Receipt Bill";
                           if (url.includes("_Bike_")) cleanType = "Bike Fuel Receipt";
                           else if (url.includes("_Car_")) cleanType = "Car Fuel Receipt";
                           else if (url.includes("_Auto_")) cleanType = "Auto Fare Bill";
@@ -2472,9 +2604,8 @@ export default function ApprovalPage() {
                           else if (url.includes("_Train_")) cleanType = "Train Ticket";
                           else if (url.includes("_Hotel_")) cleanType = "Hotel Stay Invoice";
                           else if (url.includes("_Communication_Mail_")) cleanType = "Approval Mail Screenshot";
-                          else if (url.includes("_Other_Expense_")) cleanType = "Local Purchase Invoice";
+                          else if (url.includes("_Other_Expense_") || url.includes("_Local_Purchase_")) cleanType = "Local Purchase Invoice";
 
-                          const fullUrl = url.startsWith("http") ? url : `${API_BASE}${url}`;
                           const isRemoved = removedAttachments.includes(url);
                           if (isRemoved) {
                             return (
@@ -2495,10 +2626,16 @@ export default function ApprovalPage() {
                             <div key={attIdx} className="relative">
                               <button
                                 type="button"
-                                onClick={() => setLightboxImage(fullUrl)}
-                                className="inline-flex items-center gap-2 p-2 bg-gray-50 border border-gray-205 rounded text-xs font-bold text-blue-600 hover:bg-blue-50 transition-colors shadow-sm cursor-pointer border-0"
+                                onClick={() => setLightboxImage(url)}
+                                className={`inline-flex items-center gap-2 p-2 border rounded text-xs font-bold hover:bg-blue-50 transition-colors shadow-2xs cursor-pointer border-0 ${
+                                  isPdf ? "bg-red-50 text-red-700 border-red-200" : "bg-gray-50 text-blue-600 border-gray-200"
+                                }`}
                               >
-                                <div className="h-6 w-6 bg-red-100 text-red-600 rounded flex items-center justify-center text-[10px] font-extrabold shrink-0">IMG</div>
+                                <div className={`h-6 px-1.5 rounded flex items-center justify-center text-[9px] font-extrabold shrink-0 ${
+                                  isPdf ? "bg-red-200 text-red-800" : "bg-blue-100 text-blue-800"
+                                }`}>
+                                  {isPdf ? "PDF" : "IMG"}
+                                </div>
                                 <div className="text-left leading-tight pr-1">
                                   <p className="text-gray-800 text-[10px] font-bold">{cleanType}</p>
                                   <span className="text-[8px] text-gray-400 font-mono truncate block max-w-[130px]">{filename}</span>
