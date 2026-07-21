@@ -4,6 +4,7 @@ import { ResponsivePie } from "@nivo/pie";
 import { ResponsiveLine } from "@nivo/line";
 import { expenseService } from "../services/expenseService";
 import { authService } from "../services/authService";
+import { adminService } from "../services/adminService";
 import Loader from "../components/common/Loader";
 import {
   Card,
@@ -170,6 +171,29 @@ export default function AnalysisPage() {
   const user = authService.getCurrentUser();
   const allowedWindows = (user?.allowed_windows || "").split(",").map((w: string) => w.trim().toLowerCase());
   const isReviewer = allowedWindows.includes("approval") || ["admin", "project head", "mis", "travel desk", "travel tesk", "vp", "accountant", "hr"].includes((user?.role || "").trim().toLowerCase());
+
+  const [usersMap, setUsersMap] = useState<Record<string, any>>({});
+
+  useEffect(() => {
+    const fetchUsers = async () => {
+      try {
+        const usersList = await adminService.getUsers();
+        if (Array.isArray(usersList)) {
+          const map: Record<string, any> = {};
+          usersList.forEach(u => {
+            if (u.user_id) map[String(u.user_id).trim().toLowerCase()] = u;
+            if (u.e_code) map[String(u.e_code).trim().toLowerCase()] = u;
+            if (u.name) map[String(u.name).trim().toLowerCase()] = u;
+            if (u.id) map[String(u.id)] = u;
+          });
+          setUsersMap(map);
+        }
+      } catch (e) {
+        // Handled gracefully if not privileged
+      }
+    };
+    fetchUsers();
+  }, []);
 
   useEffect(() => {
     const currentUser = authService.getCurrentUser();
@@ -531,16 +555,44 @@ export default function AnalysisPage() {
     const map: Record<string, number> = {};
     allZoneExpenses.forEach(e => {
       let c = (e.coordinator || e.coordinator_name || e.zonal_coordinator || "").trim();
+
+      const submitterCode = String(e.submitter_code || e.user_id || e.e_code || "").trim().toLowerCase();
+      const submitterName = String(e.submitter_name || "").trim().toLowerCase();
+      const matchedUser = usersMap[submitterCode] || usersMap[submitterName];
+
+      // If coordinator is missing/unknown, check matched user from user DB
+      if ((!c || c.toLowerCase() === "unknown" || c.toLowerCase() === "null") && matchedUser) {
+        if (matchedUser.coordinator) {
+          c = matchedUser.coordinator.trim();
+        }
+      }
+
+      // If submitter is a Coordinator, use submitter's name
+      if ((!c || c.toLowerCase() === "unknown" || c.toLowerCase() === "null") && matchedUser) {
+        const roleClean = (matchedUser.role || "").trim().toLowerCase();
+        const desigClean = (matchedUser.designation || "").trim().toLowerCase();
+        if (roleClean === "coordinator" || desigClean.includes("coordinator")) {
+          c = matchedUser.name;
+        }
+      }
+
+      // Fallback: If still unknown, check if submitter name is available
+      if ((!c || c.toLowerCase() === "unknown" || c.toLowerCase() === "null") && e.submitter_name && e.submitter_name !== "Unknown") {
+        c = e.submitter_name;
+      }
+
       if (!c || c.toLowerCase() === "unknown" || c.toLowerCase() === "null") {
         c = "Unassigned Coordinator";
       }
+
       map[c] = (map[c] || 0) + (e.amount || 0);
     });
+
     return Object.entries(map)
       .map(([name, value]) => ({ name, value }))
       .filter(d => d.value > 0)
       .sort((a, b) => b.value - a.value);
-  }, [allZoneExpenses]);
+  }, [allZoneExpenses, usersMap]);
 
 
   // Available years from data
