@@ -487,6 +487,19 @@ export default function HomePage() {
   }, [navigate, selectMonth]);
 
   useEffect(() => {
+    const handleProfileSync = () => {
+      console.log("[HomePage] User profile synced, refreshing data...");
+      const freshUser = authService.getCurrentUser();
+      if (freshUser) {
+        setUser(freshUser);
+        refreshDashboardData();
+      }
+    };
+    window.addEventListener("user-profile-synced", handleProfileSync);
+    return () => window.removeEventListener("user-profile-synced", handleProfileSync);
+  }, []);
+
+  useEffect(() => {
     const handlePullRefresh = () => {
       const currentUser = authService.getCurrentUser() || user;
       if (currentUser) {

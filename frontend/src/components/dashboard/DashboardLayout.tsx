@@ -216,6 +216,8 @@ export default function DashboardLayout() {
           if (freshProfile) {
             localStorage.setItem("user", JSON.stringify(freshProfile));
             setUser(freshProfile);
+            // Dispatch custom event to notify child components (like HomePage)
+            window.dispatchEvent(new Event("user-profile-synced"));
             // Re-trigger prefetch with fresh profile details
             prefetchManager.triggerGlobalPrefetch(freshProfile);
           }
@@ -273,7 +275,7 @@ export default function DashboardLayout() {
     preloadImage();
   }, [user?.profile_pic_url, user?.user_id, user?.id]);
 
-  if (!user) return null;
+  if (!user) return <ProgressLoader message="Initializing Workspace..." fullPage />;
 
   const userRole = user.role || "Engineer";
   const userRoleClean = userRole.trim().toLowerCase();
@@ -328,12 +330,15 @@ export default function DashboardLayout() {
 
 
   const handleLogout = async () => {
+    // Force clear all cached data and user personal/financial records
+    prefetchManager.clearAllUserData();
+    
     try {
       await authService.logout();
     } catch (e) {
       console.warn("Logout error:", e);
     }
-    navigate("/login");
+    navigate("/login", { replace: true });
   };
 
   // Active route validation

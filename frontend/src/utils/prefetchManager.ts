@@ -8,10 +8,11 @@ interface CacheEntry {
 
 const memoryCache: Record<string, CacheEntry> = {};
 
-// Helper to get current month name format (e.g. "July") or the selectMonth key
-const getCurrentMonthName = () => {
-  const months = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
-  return months[new Date().getMonth()];
+// Helper to get current month key in YYYY-MM format to match selectMonth initial value
+const getCurrentMonthKey = () => {
+  const d = new Date();
+  const pad = (n: number) => n.toString().padStart(2, "0");
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}`;
 };
 
 export const prefetchManager = {
@@ -85,9 +86,9 @@ export const prefetchManager = {
   triggerGlobalPrefetch: (user: any) => {
     if (!user) return;
     const uId = user.user_id;
-    const month = getCurrentMonthName();
+    const month = getCurrentMonthKey();
     
-    console.log(`[PrefetchManager] Starting parallel global prefetch for user: ${uId}`);
+    console.log(`[PrefetchManager] Starting parallel global prefetch for user: ${uId} (month: ${month})`);
 
     // Prefetch My Expenses
     prefetchManager.prefetch(`my_expenses_${uId}_${month}`, () => expenseService.getExpenses(month));
@@ -105,5 +106,34 @@ export const prefetchManager = {
       prefetchManager.prefetch("pending_approvals", () => approvalService.getPendingApprovals());
       prefetchManager.prefetch(`team_expenses_${uId}_${month}`, () => expenseService.getTeamExpenses(month));
     }
+  },
+
+  // Clear memory cache + localStorage except for biometric settings
+  clearAllUserData: () => {
+    // 1. Clear memory cache
+    prefetchManager.clearAll();
+
+    // 2. Clear localStorage except for biometric configuration / app state persistence keys
+    const keysToKeep = [
+      "biometric_login_enabled",
+      "biometric_username",
+      "biometric_password",
+      "has_shown_biometric_setup",
+      "remember_me",
+      "theme"
+    ];
+    
+    const keysToRemove: string[] = [];
+    for (let i = 0; i < localStorage.length; i++) {
+      const key = localStorage.key(i);
+      if (key && !keysToKeep.includes(key)) {
+        keysToRemove.push(key);
+      }
+    }
+    
+    keysToRemove.forEach(k => {
+      localStorage.removeItem(k);
+      console.log(`[PrefetchManager] Cleared localStorage key: ${k}`);
+    });
   }
 };
