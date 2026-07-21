@@ -527,6 +527,21 @@ export default function AnalysisPage() {
       .sort((a, b) => b.value - a.value);
   }, [allZoneExpenses, user, isPrivilegedRole]);
 
+  const coordinatorWiseData = useMemo(() => {
+    const map: Record<string, number> = {};
+    allZoneExpenses.forEach(e => {
+      let c = (e.coordinator || e.coordinator_name || e.zonal_coordinator || "").trim();
+      if (!c || c.toLowerCase() === "unknown" || c.toLowerCase() === "null") {
+        c = "Unassigned Coordinator";
+      }
+      map[c] = (map[c] || 0) + (e.amount || 0);
+    });
+    return Object.entries(map)
+      .map(([name, value]) => ({ name, value }))
+      .filter(d => d.value > 0)
+      .sort((a, b) => b.value - a.value);
+  }, [allZoneExpenses]);
+
 
   // Available years from data
   const availableYears = useMemo(() => {
@@ -1384,6 +1399,69 @@ export default function AnalysisPage() {
                       </>
                     ) : (
                       <div className="flex items-center justify-center h-full text-gray-400 text-xs">No zone data</div>
+                    )}
+                  </div>
+                </Card>
+              </Col>
+
+              {/* Chart 6: Coordinator-wise Distribution (Fills 4th position in 2x2 grid) */}
+              <Col xs={24} lg={12}>
+                <Card 
+                  size="small"
+                  title={<span className="text-xs font-bold text-gray-700 uppercase tracking-wider">Coordinator Wise Distribution</span>}
+                  extra={<span className="text-[10px] text-gray-400">Expenses grouped by coordinator</span>}
+                  className="shadow-sm border border-gray-200 rounded-xl"
+                >
+                  <div style={{ height: 280 }}>
+                    {coordinatorWiseData.length > 0 ? (
+                      <>
+                        <div className="relative flex justify-center items-center h-[210px]">
+                          <ResponsivePie
+                            data={coordinatorWiseData.map((c, i) => ({
+                              id: c.name,
+                              label: c.name,
+                              value: c.value,
+                              color: GALLERY_COLORS[(i + 2) % GALLERY_COLORS.length]
+                            }))}
+                            margin={{ top: 10, right: 10, bottom: 10, left: 10 }}
+                            innerRadius={0.7}
+                            padAngle={3}
+                            colors={{ datum: 'data.color' }}
+                            borderWidth={2}
+                            borderColor="#ffffff"
+                            enableArcLinkLabels={false}
+                            enableArcLabels={false}
+                            tooltip={({ datum }) => (
+                              <div className="bg-slate-900/95 backdrop-blur-md text-white border border-slate-800 shadow-2xl rounded-xl p-3 text-xs min-w-[120px] font-sans pointer-events-none z-50">
+                                <p className="font-extrabold text-[10px] uppercase text-slate-400 tracking-wider mb-1.5">{datum.label}</p>
+                                <div className="flex items-center justify-between gap-4">
+                                  <span className="flex items-center gap-1.5 text-slate-300">
+                                    <span className="w-2 h-2 rounded-full" style={{ backgroundColor: datum.color }} />
+                                    Amount:
+                                  </span>
+                                  <span className="font-mono font-bold text-white">₹{datum.value?.toLocaleString()}</span>
+                                </div>
+                              </div>
+                            )}
+                          />
+                          <div className="absolute flex flex-col items-center justify-center pointer-events-none" style={{ top: '50%', left: '50%', transform: 'translate(-50%, -50%)' }}>
+                            <span className="text-[7px] text-gray-400 font-bold uppercase tracking-wider">Total Coordinator</span>
+                            <span className="text-[11px] font-black text-slate-800 font-mono mt-0.5">
+                              ₹{coordinatorWiseData.reduce((sum, item) => sum + item.value, 0).toLocaleString()}
+                            </span>
+                          </div>
+                        </div>
+                        <div className="flex flex-wrap justify-center gap-x-2.5 gap-y-1 mt-2">
+                          {coordinatorWiseData.map((item, i) => (
+                            <div key={i} className="flex items-center gap-1 text-[8px] font-bold text-slate-500">
+                              <span className="w-1.5 h-1.5 rounded-full shrink-0" style={{ backgroundColor: GALLERY_COLORS[(i + 2) % GALLERY_COLORS.length] }} />
+                              <span>{item.name}</span>
+                            </div>
+                          ))}
+                        </div>
+                      </>
+                    ) : (
+                      <div className="flex items-center justify-center h-full text-gray-400 text-xs">No coordinator data</div>
                     )}
                   </div>
                 </Card>
