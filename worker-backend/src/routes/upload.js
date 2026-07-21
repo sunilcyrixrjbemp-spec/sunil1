@@ -27,13 +27,43 @@ async function arrayBufferToBase64(buffer) {
 }
 
 /**
- * Helper to upload file to Google Drive via Google Apps Script Web App
+ * Create a File-like object from an already-read ArrayBuffer so the buffer
+ * can be passed through the pipeline without re-reading the consumed stream.
  */
-export async function uploadToGoogleDrive(env, file, folderName, filename) {
+function makeFileFromBuffer(arrayBuffer, originalFile) {
+  return {
+    arrayBuffer: async () => arrayBuffer,
+    name: originalFile.name,
+    type: originalFile.type || "application/octet-stream",
+    size: arrayBuffer.byteLength
+  };
+}
+
+/**
+ * Helper to upload file to Google Drive via Google Apps Script Web App.
+ * Accepts either a File/Blob object OR a pre-read ArrayBuffer (to avoid
+ * consuming the stream twice in Cloudflare Workers).
+ */
+export async function uploadToGoogleDrive(env, fileOrBuffer, folderName, filename, mimeType) {
   const gasUrl = env.GAS_WEB_APP_URL || "https://script.google.com/macros/s/AKfycbwxh5LQLCGtwGflfF7V5HKyL7viFNlAkAbsgz5xEDQo8Eg_f1kw47EjxrzSAC891sm1/exec";
   const parentFolderId = "1oiX3ZTlnMQ9RYn8uXhLx2mrmzz_K98Nu"; // Default parent folder ID from settings
 
-  const arrayBuffer = await file.arrayBuffer();
+  // Support pre-read ArrayBuffer to avoid double-read bug in Cloudflare Workers
+  let arrayBuffer;
+  let fileMimeType = mimeType;
+  if (fileOrBuffer instanceof ArrayBuffer) {
+    arrayBuffer = fileOrBuffer;
+    fileMimeType = fileMimeType || "application/octet-stream";
+  } else {
+    // fileOrBuffer is a File/Blob — read once here
+    arrayBuffer = await fileOrBuffer.arrayBuffer();
+    fileMimeType = fileMimeType || fileOrBuffer.type || "application/octet-stream";
+  }
+
+  if (!arrayBuffer || arrayBuffer.byteLength === 0) {
+    throw new Error("File buffer is empty — cannot upload an empty file to Google Drive.");
+  }
+
   const base64Content = await arrayBufferToBase64(arrayBuffer);
 
   const payload = {
@@ -42,7 +72,7 @@ export async function uploadToGoogleDrive(env, file, folderName, filename) {
     folderName: folderName,
     filename: filename,
     fileBase64: base64Content,
-    mimeType: file.type || "application/octet-stream"
+    mimeType: fileMimeType
   };
 
   const response = await fetch(gasUrl, {
@@ -134,12 +164,16 @@ async function uploadToR2(env, file, key) {
   }
 }
 
-export async function uploadFileWithFallback(env, file, subfolder, filename) {
+/**
+ * Upload file to Google Drive. Accepts a pre-read ArrayBuffer + mimeType to
+ * avoid the Cloudflare Worker double-read stream bug.
+ */
+export async function uploadFileWithFallback(env, fileOrBuffer, subfolder, filename, mimeType) {
   const safeName = makeSafeFilename(filename);
 
   // Upload strictly to Google Drive
   try {
-    const fileId = await uploadToGoogleDrive(env, file, subfolder, safeName);
+    const fileId = await uploadToGoogleDrive(env, fileOrBuffer, subfolder, safeName, mimeType);
     return `/api/upload/file/gdrive/${fileId}`;
   } catch (driveErr) {
     console.error("Google Drive upload failed:", driveErr);
@@ -163,19 +197,28 @@ export async function handleUploadImage(request, env, params, query, user) {
 
   // Accept any file format/extension uploaded by the client
 
+  // ✅ FIX: Read the buffer ONCE here — Cloudflare Worker streams can only be
+  // consumed once. Passing the same File object into uploadToGoogleDrive would
+  // cause a second .arrayBuffer() call on an already-consumed stream, resulting
+  // in an empty buffer → empty base64 → GAS upload failure.
   const fileBuffer = await file.arrayBuffer();
   if (fileBuffer.byteLength > 10 * 1024 * 1024) {
     return jsonResponse({ error: "File size exceeds the limit of 10MB." }, 400);
   }
+  if (fileBuffer.byteLength === 0) {
+    return jsonResponse({ error: "Uploaded file is empty." }, 400);
+  }
 
-  const safeName = makeSafeFilename(file.name);
   const now = new Date();
   const monthName = now.toLocaleString("en-US", { month: "long" });
   const yearVal = now.getFullYear();
   const folderName = `${monthName}_${yearVal}`;
+  const mimeType = file.type || "application/octet-stream";
 
   try {
-    const fileUrl = await uploadFileWithFallback(env, file, folderName, file.name);
+    // Pass the pre-read buffer + mimeType so the upload function never
+    // needs to re-read the already-consumed stream.
+    const fileUrl = await uploadFileWithFallback(env, fileBuffer, folderName, file.name, mimeType);
     return jsonResponse({
       filename: file.name,
       url: fileUrl
@@ -200,14 +243,23 @@ export async function handleUploadDocument(request, env, params, query, user) {
   const file = formData.get("file");
   if (!file) return jsonResponse({ error: "No file uploaded" }, 400);
 
-  const safeName = makeSafeFilename(file.name);
+  // ✅ FIX: Read buffer ONCE — same double-read protection as handleUploadImage
+  const fileBuffer = await file.arrayBuffer();
+  if (fileBuffer.byteLength > 10 * 1024 * 1024) {
+    return jsonResponse({ error: "File size exceeds the limit of 10MB." }, 400);
+  }
+  if (fileBuffer.byteLength === 0) {
+    return jsonResponse({ error: "Uploaded file is empty." }, 400);
+  }
+
   const now = new Date();
   const monthName = now.toLocaleString("en-US", { month: "long" });
   const yearVal = now.getFullYear();
   const folderName = `${monthName}_${yearVal}`;
+  const mimeType = file.type || "application/octet-stream";
 
   try {
-    const fileUrl = await uploadFileWithFallback(env, file, folderName, file.name);
+    const fileUrl = await uploadFileWithFallback(env, fileBuffer, folderName, file.name, mimeType);
     return jsonResponse({
       filename: file.name,
       url: fileUrl
