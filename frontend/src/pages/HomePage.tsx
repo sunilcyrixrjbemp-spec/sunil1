@@ -2870,6 +2870,7 @@ export default function HomePage() {
       {/* ================= RECEIPT IMAGE LIGHTBOX POPUP ================= */}
       <Modal
         open={!!lightboxImage}
+        zIndex={99999999}
         footer={null}
         onCancel={() => setLightboxImage(null)}
         width={750}

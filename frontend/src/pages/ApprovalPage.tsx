@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { createPortal } from "react-dom";
 import toast from "react-hot-toast";
 import { 
   Card, 
@@ -2756,10 +2757,10 @@ export default function ApprovalPage() {
       </Modal>
 
       {/* ================= RECEIPT IMAGE / DOCUMENT LIGHTBOX POPUP ================= */}
-      {lightboxImage && (
+      {lightboxImage && createPortal(
         <div 
           className="fixed inset-0 bg-black/90 flex items-center justify-center p-4 animate-fadeIn"
-          style={{ zIndex: 9999999 }}
+          style={{ zIndex: 99999999 }}
           onClick={() => setLightboxImage(null)}
         >
           <div className="relative w-full max-w-4xl max-h-[90vh] bg-slate-900 border border-slate-700 rounded-lg p-3 flex flex-col items-center justify-center select-none pointer-events-auto shadow-2xl" onClick={(e) => e.stopPropagation()}>
@@ -2798,8 +2799,8 @@ export default function ApprovalPage() {
               </div>
             ) : isConvertingHeic ? (
               <div className="text-white flex flex-col items-center justify-center gap-3 p-8 rounded bg-slate-900/50 select-none">
-                <Loader2 className="w-10 h-10 animate-spin text-blue-500" />
-                <span className="text-sm font-bold tracking-wide">Converting Apple HEIC image...</span>
+                <Loader2 className="w-8 h-8 animate-spin text-blue-500" />
+                <span className="text-xs font-bold tracking-wide">Converting Apple HEIC image...</span>
               </div>
             ) : (imageLoadError || lightboxImage?.toLowerCase().includes(".pdf") || lightboxImage?.toLowerCase().includes("pdf") || lightboxImage?.includes("gdrive/")) ? (
               <div className="w-full flex flex-col items-center">
@@ -2818,7 +2819,8 @@ export default function ApprovalPage() {
               />
             )}
           </div>
-        </div>
+        </div>,
+        document.body
       )}
 
       {/* Return to Draft Modal */}

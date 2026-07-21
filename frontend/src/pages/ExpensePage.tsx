@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from "react";
+import { createPortal } from "react-dom";
 import { useNavigate, useLocation } from "react-router-dom";
 import toast from "react-hot-toast";
 import Loader from "../components/common/Loader";
@@ -6254,10 +6255,10 @@ export default function ExpensePage() {
       </Modal>
 
       {/* ================= RECEIPT IMAGE LIGHTBOX POPUP ================= */}
-      {lightboxImage && (
+      {lightboxImage && createPortal(
         <div 
           className="fixed inset-0 bg-black/90 flex items-center justify-center p-4 animate-fadeIn"
-          style={{ zIndex: 9999999 }}
+          style={{ zIndex: 99999999 }}
           onClick={() => setLightboxImage(null)}
         >
           <div className="relative max-w-4xl max-h-[90vh] bg-white border border-gray-300 rounded p-4 flex flex-col items-center justify-center select-none pointer-events-auto" onClick={(e) => e.stopPropagation()}>
@@ -6314,12 +6315,13 @@ export default function ExpensePage() {
               />
             )}
           </div>
-        </div>
+        </div>,
+        document.body
       )}
 
       {/* 📹 Inline Camera Capture Modal */}
       {(activeCameraTarget || activeActivityCameraTarget) && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4">
+        <div className="fixed inset-0 flex items-center justify-center bg-black/60 p-4" style={{ zIndex: 999999 }}>
           <div className="bg-white border-t-4 border-t-blue-500 rounded shadow-lg max-w-md w-full overflow-hidden animate-scaleIn pointer-events-auto">
             <div className="px-4 py-3 bg-gray-50 border-b border-gray-200 flex items-center justify-between font-bold text-xs uppercase tracking-wider text-gray-700">
               <span className="flex items-center gap-1.5">
