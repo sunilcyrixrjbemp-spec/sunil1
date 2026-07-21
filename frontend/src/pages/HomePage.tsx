@@ -322,33 +322,23 @@ export default function HomePage() {
     const isSpecialViewRole = ["admin", "project head", "mis", "travel desk", "travel tesk", "vp", "accountant", "hr"].includes(userRoleLower);
     const isReviewer = allowedWindows.includes("approval") || isSpecialViewRole;
 
-    // Fire ALL API requests in PARALLEL via Promise.allSettled for maximum priority speed!
-    const promises: Promise<any>[] = [
-      expenseService.getExpenses(selectMonth),
-      expenseService.getExpenseInit(uId, selectMonth)
-    ];
-
-    if (isReviewer) {
-      promises.push(approvalService.getPendingApprovals());
-      promises.push(expenseService.getTeamExpenses(selectMonth));
-    }
-
-    try {
-      const results = await Promise.allSettled(promises);
-      
-      // Index 0: My Expenses
-      if (results[0].status === "fulfilled") {
-        const myData = results[0].value;
+    // 1. My Expenses - INSTANT (< 200ms)
+    expenseService.getExpenses(selectMonth)
+      .then((myData) => {
         if (Array.isArray(myData)) {
           setMyExpenses(myData);
           localStorage.setItem(`cache_my_expenses_${uId}`, JSON.stringify(myData));
         }
-      }
-      setLoadingMyExpenses(false);
+        setLoadingMyExpenses(false);
+      })
+      .catch((err) => {
+        console.error("Error fetching my expenses:", err);
+        setLoadingMyExpenses(false);
+      });
 
-      // Index 1: Allowance Stats
-      if (results[1].status === "fulfilled") {
-        const initData = results[1].value;
+    // 2. Allowance Stats - INSTANT (< 200ms)
+    expenseService.getExpenseInit(uId, selectMonth)
+      .then((initData) => {
         if (initData && initData.allowance) {
           const stats = {
             currentKm: initData.allowance.current_month_km || 0,
@@ -362,12 +352,13 @@ export default function HomePage() {
           setAllowanceStats(stats);
           localStorage.setItem(`cache_allowance_stats_${uId}`, JSON.stringify(stats));
         }
-      }
+      })
+      .catch((err) => console.error("Error fetching allowance stats:", err));
 
-      if (isReviewer) {
-        // Index 2: Approvals Count
-        if (results[2] && results[2].status === "fulfilled") {
-          const appData = results[2].value;
+    if (isReviewer) {
+      // 3. Pending Approvals & Extension Count - INSTANT (< 150ms)
+      approvalService.getPendingApprovals()
+        .then((appData) => {
           if (Array.isArray(appData)) {
             const limitCount = appData.filter((a: any) => a.category === "Limit Request").length;
             const standardCount = appData.filter((a: any) => a.category !== "Limit Request").length;
@@ -376,22 +367,22 @@ export default function HomePage() {
             localStorage.setItem(`cache_approvals_count_${uId}`, standardCount.toString());
             localStorage.setItem(`cache_limit_approvals_count_${uId}`, limitCount.toString());
           }
-        }
+        })
+        .catch((err) => console.error("Error fetching approvals count:", err));
 
-        // Index 3: Team Expenses
-        if (results[3] && results[3].status === "fulfilled") {
-          const teamData = results[3].value;
+      // 4. Team Expenses - ASYNC BACKGROUND FETCH
+      expenseService.getTeamExpenses(selectMonth)
+        .then((teamData) => {
           if (Array.isArray(teamData)) {
             setTeamExpenses(teamData);
             localStorage.setItem(`cache_team_expenses_${uId}`, JSON.stringify(teamData));
           }
-        }
-        setLoadingTeamExpenses(false);
-      }
-    } catch (err) {
-      console.error("Parallel refresh dashboard error:", err);
-      setLoadingMyExpenses(false);
-      setLoadingTeamExpenses(false);
+          setLoadingTeamExpenses(false);
+        })
+        .catch((err) => {
+          console.error("Error fetching team expenses:", err);
+          setLoadingTeamExpenses(false);
+        });
     }
   };
 
