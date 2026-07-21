@@ -640,7 +640,8 @@ export default function HomePage() {
         .filter((e) => filterZone === "all" || cleanZone(e.zone) === cleanZone(filterZone))
         .map(e => [e.submitter_code, e.submitter_name])
     ).entries()
-  ).map(([code, name]) => ({ code: String(code), name: String(name) }));
+  ).map(([code, name]) => ({ code: String(code), name: String(name) }))
+    .sort((a, b) => a.name.localeCompare(b.name));
 
   // Role-based zone restrictions for filter dropdown
   const currentUserObj = JSON.parse(localStorage.getItem("user") || "null") || user;
@@ -663,7 +664,7 @@ export default function HomePage() {
         .filter(Boolean)
     )
   );
-  const allAvailableZones = Array.from(new Set([...allPossibleZones, ...dataZones]));
+  const allAvailableZones = Array.from(new Set([...allPossibleZones, ...dataZones])).sort((a, b) => a.localeCompare(b));
   let uniqueZones = allAvailableZones;
 
   if (!isGlobalAdminRole && userZonesList.length > 0) {
@@ -1315,9 +1316,9 @@ export default function HomePage() {
                                     className="w-full bg-white border border-gray-300 rounded px-2 py-1 text-xs font-semibold text-gray-800 shadow-2xs focus:outline-none focus:border-indigo-500 cursor-pointer"
                                     style={{ minHeight: "34px", height: "34px", borderRadius: "6px", fontSize: "11px", lineHeight: "1.2" }}
                                   >
-                                    {isGlobalAdminRole && <option value="all">Zone: All</option>}
+                                    {isGlobalAdminRole && <option value="all">All Zones</option>}
                                     {uniqueZones.map(z => (
-                                      <option key={z} value={z}>Zone: {z}</option>
+                                      <option key={z} value={z}>{z}</option>
                                     ))}
                                   </select>
                                 </div>
@@ -1333,9 +1334,9 @@ export default function HomePage() {
                                   className="w-full bg-white border border-gray-300 rounded px-2 py-1 text-xs font-semibold text-gray-800 shadow-2xs focus:outline-none focus:border-indigo-500 cursor-pointer"
                                   style={{ minHeight: "34px", height: "34px", borderRadius: "6px", fontSize: "11px", lineHeight: "1.2" }}
                                 >
-                                  <option value="all">Engineer: All</option>
+                                  <option value="all">All Engineers</option>
                                   {uniqueEmployees.map(emp => (
-                                    <option key={emp.code} value={emp.code}>Engineer: {emp.name}</option>
+                                    <option key={emp.code} value={emp.code}>{emp.name}</option>
                                   ))}
                                 </select>
                               </div>
