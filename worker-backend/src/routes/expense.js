@@ -1820,21 +1820,32 @@ export async function handleReverseExpense(request, env, params, query, user) {
  * Submit itinerary expense claim
  */
 export async function handleSubmitExpense(request, env, params, query, user) {
-  let formData;
+  let formData = null;
+  let payloadStr = null;
+  let editExpenseId = null;
+  const contentType = request.headers.get("content-type") || "";
+
   try {
-    formData = await request.formData();
+    if (contentType.includes("application/json")) {
+      const jsonBody = await request.json();
+      payloadStr = jsonBody.payload ? (typeof jsonBody.payload === "string" ? jsonBody.payload : JSON.stringify(jsonBody.payload)) : JSON.stringify(jsonBody);
+      editExpenseId = jsonBody.edit_expense_id || null;
+    } else {
+      formData = await request.formData();
+      payloadStr = formData.get("payload");
+      editExpenseId = formData.get("edit_expense_id") || null;
+    }
   } catch (e) {
-    return jsonResponse({ error: "Invalid multipart form data" }, 400);
+    console.error("Error parsing submit expense body:", e);
+    return jsonResponse({ error: "Invalid multipart form data or request body: " + e.message }, 400);
   }
 
-  const payloadStr = formData.get("payload");
   let date, amount, itineraries, claim_month, claim_year, description = "";
-  let editExpenseId = formData.get("edit_expense_id") || null;
   
   if (payloadStr) {
     let payload;
     try {
-      payload = JSON.parse(payloadStr);
+      payload = typeof payloadStr === "object" ? payloadStr : JSON.parse(payloadStr);
     } catch (e) {
       return jsonResponse({ error: "Invalid payload JSON" }, 400);
     }

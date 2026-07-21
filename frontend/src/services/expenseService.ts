@@ -23,7 +23,11 @@ export const expenseService = {
   },
 
   submitItineraryExpense: async (formData: FormData): Promise<any> => {
-    const response = await api.post("/expense/", formData);
+    const response = await api.post("/expense/", formData, {
+      headers: {
+        "Content-Type": "multipart/form-data"
+      }
+    });
     return response.data;
   },
 
