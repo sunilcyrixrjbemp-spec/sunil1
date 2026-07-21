@@ -6256,8 +6256,6 @@ export default function ExpensePage() {
                 onError={() => setImageLoadError(true)}
               />
             )}
-              />
-            )}
           </div>
         </div>
       )}
