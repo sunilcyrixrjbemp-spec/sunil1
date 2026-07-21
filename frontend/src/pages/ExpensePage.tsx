@@ -6295,16 +6295,30 @@ export default function ExpensePage() {
                 <Loader2 className="w-10 h-10 animate-spin text-blue-500" />
                 <span className="text-sm font-bold tracking-wide">Loading PDF Document...</span>
               </div>
-            ) : imageLoadError || lightboxImage?.toLowerCase().includes(".pdf") || lightboxImage?.toLowerCase().includes("pdf") || lightboxImage?.includes("gdrive/") ? (
+            ) : isConvertingHeic ? (
+              <div className="text-white flex flex-col items-center justify-center gap-3 p-8 rounded bg-slate-900/50 border border-slate-700/50 shadow-lg select-none pointer-events-auto" onClick={(e) => e.stopPropagation()}>
+                <Loader2 className="w-10 h-10 animate-spin text-blue-500" />
+                <span className="text-sm font-bold tracking-wide">Converting Apple HEIC image...</span>
+              </div>
+            ) : (lightboxImage?.toLowerCase().endsWith(".pdf") || lightboxImage?.toLowerCase().includes(".pdf?")) ? (
               <iframe 
                 src={displayImageUrl || lightboxImage} 
                 title="Receipt Document Preview"
                 className="w-[85vw] h-[65vh] max-w-4xl border border-gray-200 bg-white"
               />
-            ) : isConvertingHeic ? (
-              <div className="text-white flex flex-col items-center justify-center gap-3 p-8 rounded bg-slate-900/50 border border-slate-700/50 shadow-lg select-none pointer-events-auto" onClick={(e) => e.stopPropagation()}>
-                <Loader2 className="w-10 h-10 animate-spin text-blue-500" />
-                <span className="text-sm font-bold tracking-wide">Converting Apple HEIC image...</span>
+            ) : imageLoadError ? (
+              <div className="flex flex-col items-center justify-center p-8 text-center bg-gray-50 rounded border border-gray-200 max-w-md my-4 select-none">
+                <span className="text-amber-500 text-3xl font-bold mb-2">⚠️</span>
+                <p className="text-sm font-bold text-gray-800 mb-1">Image Preview Unavailable</p>
+                <p className="text-xs text-gray-500 mb-4">Click below to open or download the attachment file directly.</p>
+                <a
+                  href={displayImageUrl || lightboxImage}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded text-xs font-bold no-underline"
+                >
+                  Open File in New Tab ↗
+                </a>
               </div>
             ) : (
               <img 

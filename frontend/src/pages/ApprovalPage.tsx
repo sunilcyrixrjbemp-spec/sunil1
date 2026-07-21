@@ -2941,13 +2941,27 @@ export default function ApprovalPage() {
                 <Loader2 className="w-8 h-8 animate-spin text-blue-500" />
                 <span className="text-xs font-bold tracking-wide">Converting Apple HEIC image...</span>
               </div>
-            ) : (imageLoadError || lightboxImage?.toLowerCase().includes(".pdf") || lightboxImage?.toLowerCase().includes("pdf") || lightboxImage?.includes("gdrive/")) ? (
+            ) : (lightboxImage?.toLowerCase().endsWith(".pdf") || lightboxImage?.toLowerCase().includes(".pdf?")) ? (
               <div className="w-full flex flex-col items-center">
                 <iframe 
                   src={displayImageUrl || lightboxImage} 
                   title="Document Preview"
                   className="w-full h-[70vh] border border-slate-700 rounded bg-white"
                 />
+              </div>
+            ) : imageLoadError ? (
+              <div className="flex flex-col items-center justify-center p-8 text-center bg-slate-800/80 rounded border border-slate-700 max-w-md my-4 select-none">
+                <span className="text-amber-400 text-3xl font-bold mb-2">⚠️</span>
+                <p className="text-sm font-bold text-white mb-1">Image Preview Unavailable</p>
+                <p className="text-xs text-slate-300 mb-4">Click below to open or download the attachment file directly.</p>
+                <a
+                  href={displayImageUrl || lightboxImage}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded text-xs font-bold no-underline"
+                >
+                  Open File in New Tab ↗
+                </a>
               </div>
             ) : (
               <img 
