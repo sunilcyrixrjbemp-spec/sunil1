@@ -217,6 +217,7 @@ export default function ApprovalPage() {
   const [displayImageUrl, setDisplayImageUrl] = useState<string | null>(null);
   const [isConvertingHeic, setIsConvertingHeic] = useState(false);
   const [imageLoadError, setImageLoadError] = useState(false);
+  const [isLoadingPdf, setIsLoadingPdf] = useState(false);
 
   const [showModalScrollTop, setShowModalScrollTop] = useState(false);
 
