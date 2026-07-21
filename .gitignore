@@ -7,6 +7,10 @@ frontend/.env.local
 frontend/.env.*.local
 frontend/.vite/
 
+# Worker Backend
+worker-backend/node_modules/
+worker-backend/dist/
+
 # Backend
 backend/venv/
 backend/.venv/
