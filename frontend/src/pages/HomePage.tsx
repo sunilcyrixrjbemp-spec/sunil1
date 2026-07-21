@@ -9,6 +9,7 @@ import Loader from "../components/common/Loader";
 import { checkIsHeic, convertHeicToJpegUrl } from "../utils/heic";
 import { ResponsivePie } from "@nivo/pie";
 import ExpenseCalendar from "../components/common/ExpenseCalendar";
+import LocationFilters from "../components/common/LocationFilters";
 import { 
   Card, 
   Button, 
@@ -296,7 +297,7 @@ export default function HomePage() {
 
   // Filters state for team claims tab
   const [filterEmployee, setFilterEmployee] = useState<string>("all");
-  const [filterMode, setFilterMode] = useState<string>("all");
+  const [filterDistrict, setFilterDistrict] = useState<string>("all");
   const [filterZone, setFilterZone] = useState<string>("all");
   const [teamPage, setTeamPage] = useState<number>(1);
   const [personalPage, setPersonalPage] = useState<number>(1);
@@ -309,11 +310,16 @@ export default function HomePage() {
   useEffect(() => {
     setTeamPage(1);
     setPersonalPage(1);
-  }, [filterEmployee, filterMode, selectMonth, homeStatusFilter, filterZone]);
+  }, [filterEmployee, filterDistrict, selectMonth, homeStatusFilter, filterZone]);
+
+  useEffect(() => {
+    setFilterDistrict("all");
+    setFilterEmployee("all");
+  }, [filterZone]);
 
   useEffect(() => {
     setFilterEmployee("all");
-  }, [filterZone]);
+  }, [filterDistrict]);
 
   const refreshDashboardData = async () => {
     const currentUser = authService.getCurrentUser() || user;
@@ -633,15 +639,40 @@ export default function HomePage() {
   const safeMyExpenses = Array.isArray(myExpenses) ? myExpenses : [];
   const safeTeamExpenses = Array.isArray(teamExpenses) ? teamExpenses : [];
 
-  const uniqueEmployees = Array.from(
-    new Map(
-      safeTeamExpenses
-        .filter((e): e is any => !!e && !!e.submitter_code && !!e.submitter_name)
-        .filter((e) => filterZone === "all" || cleanZone(e.zone) === cleanZone(filterZone))
-        .map(e => [e.submitter_code, e.submitter_name])
-    ).entries()
-  ).map(([code, name]) => ({ code: String(code), name: String(name) }))
-    .sort((a, b) => a.name.localeCompare(b.name));
+  const uniqueDistricts = React.useMemo(() => {
+    const districtsSet = new Set<string>();
+    safeTeamExpenses.forEach(exp => {
+      if (!exp) return;
+      const expZone = exp.zone || "";
+      if (filterZone === "all" || cleanZone(expZone) === cleanZone(filterZone)) {
+        const d = exp.district || exp.submitter_district || exp.home_district || exp.from_district || "";
+        const cleanDist = String(d).trim();
+        if (cleanDist && cleanDist.toLowerCase() !== "unknown") {
+          districtsSet.add(cleanDist);
+        }
+      }
+    });
+    return Array.from(districtsSet).sort((a, b) => a.localeCompare(b));
+  }, [safeTeamExpenses, filterZone]);
+
+  const uniqueEmployees = React.useMemo(() => {
+    const empMap = new Map<string, string>();
+    safeTeamExpenses.forEach(exp => {
+      if (!exp || !exp.submitter_code || !exp.submitter_name) return;
+      const expZone = exp.zone || "";
+      const expDist = exp.district || exp.submitter_district || exp.home_district || exp.from_district || "";
+      
+      const matchesZone = filterZone === "all" || cleanZone(expZone) === cleanZone(filterZone);
+      const matchesDistrict = filterDistrict === "all" || String(expDist).trim().toLowerCase() === filterDistrict.trim().toLowerCase();
+      
+      if (matchesZone && matchesDistrict) {
+        empMap.set(String(exp.submitter_code), String(exp.submitter_name));
+      }
+    });
+    return Array.from(empMap.entries())
+      .map(([code, name]) => ({ code: String(code), name: String(name) }))
+      .sort((a, b) => a.name.localeCompare(b.name));
+  }, [safeTeamExpenses, filterZone, filterDistrict]);
 
   // Role-based zone restrictions for filter dropdown
   const currentUserObj = JSON.parse(localStorage.getItem("user") || "null") || user;
@@ -699,18 +730,7 @@ export default function HomePage() {
     }
   }, [safeTeamExpenses]);
 
-  // Unique categories/modes for dropdown filter
-  const uniqueModes = Array.from(
-    new Set(
-      safeTeamExpenses
-        .filter((e): e is any => !!e && !!e.category)
-        .map(e => {
-          const raw = String(e.category).trim();
-          if (raw.toLowerCase() === "limit request") return "Limit Request";
-          return raw.charAt(0).toUpperCase() + raw.slice(1).toLowerCase();
-        })
-    )
-  );
+
 
   // Filter personal claims to match currently selected selectMonth (YYYY-MM format)
   const getFilteredPersonalExpenses = () => {
@@ -740,8 +760,11 @@ export default function HomePage() {
       const rawDate = exp.date || exp.itinerary;
       if (rawDate && !rawDate.startsWith(selectMonth)) return false;
       if (filterZone !== "all" && cleanZone(exp.zone) !== cleanZone(filterZone)) return false;
+      if (filterDistrict !== "all") {
+        const expDist = String(exp.district || exp.submitter_district || exp.home_district || exp.from_district || "").trim();
+        if (expDist.toLowerCase() !== filterDistrict.trim().toLowerCase()) return false;
+      }
       if (filterEmployee !== "all" && String(exp.submitter_code || "").trim().toLowerCase() !== filterEmployee.trim().toLowerCase()) return false;
-      if (filterMode !== "all" && String(exp.category || "").trim().toLowerCase() !== filterMode.trim().toLowerCase()) return false;
       if (homeStatusFilter !== "all") {
         const s = (exp.status || "").toLowerCase();
         if (homeStatusFilter === "pending") {
@@ -804,7 +827,7 @@ export default function HomePage() {
 
   const getTeamChartData = () => {
     const grouped: Record<string, { name: string, amount: number }> = {};
-    const baseList = (filterZone !== "all" || filterEmployee !== "all" || filterMode !== "all" || homeStatusFilter !== "all")
+    const baseList = (filterZone !== "all" || filterDistrict !== "all" || filterEmployee !== "all" || homeStatusFilter !== "all")
       ? filteredTeamExpenses
       : allMonthTeamExpenses;
 
@@ -835,8 +858,11 @@ export default function HomePage() {
     const rawDate = exp.date || exp.itinerary;
     if (rawDate && !rawDate.startsWith(selectMonth)) return false;
     if (filterZone !== "all" && cleanZone(exp.zone) !== cleanZone(filterZone)) return false;
+    if (filterDistrict !== "all") {
+      const expDist = String(exp.district || exp.submitter_district || exp.home_district || exp.from_district || "").trim();
+      if (expDist.toLowerCase() !== filterDistrict.trim().toLowerCase()) return false;
+    }
     if (filterEmployee !== "all" && String(exp.submitter_code || "").trim().toLowerCase() !== filterEmployee.trim().toLowerCase()) return false;
-    if (filterMode !== "all" && String(exp.category || "").trim().toLowerCase() !== filterMode.trim().toLowerCase()) return false;
     return true;
   });
 
@@ -1306,58 +1332,20 @@ export default function HomePage() {
                               </div>
                             </Col>
 
-                            {isReviewerRole && (
-                              <Col xs={12} sm={6}>
-                                <div className="flex flex-col gap-1">
-                                  <span className="text-[9px] uppercase font-bold text-gray-500 tracking-wider">Zone</span>
-                                  <select 
-                                    value={filterZone} 
-                                    onChange={(e) => setFilterZone(e.target.value)}
-                                    className="w-full bg-white border border-gray-300 rounded px-2 py-1 text-xs font-semibold text-gray-800 shadow-2xs focus:outline-none focus:border-indigo-500 cursor-pointer"
-                                    style={{ minHeight: "34px", height: "34px", borderRadius: "6px", fontSize: "11px", lineHeight: "1.2" }}
-                                  >
-                                    {isGlobalAdminRole && <option value="all">All Zones</option>}
-                                    {uniqueZones.map(z => (
-                                      <option key={z} value={z}>{z}</option>
-                                    ))}
-                                  </select>
-                                </div>
-                              </Col>
-                            )}
-
-                            <Col xs={12} sm={6}>
-                              <div className="flex flex-col gap-1">
-                                <span className="text-[9px] uppercase font-bold text-gray-500 tracking-wider">Engineer</span>
-                                <select 
-                                  value={filterEmployee} 
-                                  onChange={(e) => setFilterEmployee(e.target.value)}
-                                  className="w-full bg-white border border-gray-300 rounded px-2 py-1 text-xs font-semibold text-gray-800 shadow-2xs focus:outline-none focus:border-indigo-500 cursor-pointer"
-                                  style={{ minHeight: "34px", height: "34px", borderRadius: "6px", fontSize: "11px", lineHeight: "1.2" }}
-                                >
-                                  <option value="all">All Engineers</option>
-                                  {uniqueEmployees.map(emp => (
-                                    <option key={emp.code} value={emp.code}>{emp.name}</option>
-                                  ))}
-                                </select>
-                              </div>
-                            </Col>
-
-                            <Col xs={12} sm={6}>
-                              <div className="flex flex-col gap-1">
-                                <span className="text-[9px] uppercase font-bold text-gray-500 tracking-wider">Travel Mode</span>
-                                <select 
-                                  value={filterMode} 
-                                  onChange={(e) => setFilterMode(e.target.value)}
-                                  className="w-full bg-white border border-gray-300 rounded px-2 py-1 text-xs font-semibold text-gray-800 shadow-2xs focus:outline-none focus:border-indigo-500 cursor-pointer"
-                                  style={{ minHeight: "34px", height: "34px", borderRadius: "6px", fontSize: "11px", lineHeight: "1.2" }}
-                                >
-                                  <option value="all">Mode: All</option>
-                                  {uniqueModes.map(m => (
-                                    <option key={m} value={m.toLowerCase()}>Mode: {m}</option>
-                                  ))}
-                                </select>
-                              </div>
-                            </Col>
+                            <LocationFilters
+                              showZone={isReviewerRole}
+                              isGlobalAdmin={isGlobalAdminRole}
+                              selectedZone={filterZone}
+                              onZoneChange={setFilterZone}
+                              zones={uniqueZones}
+                              selectedDistrict={filterDistrict}
+                              onDistrictChange={setFilterDistrict}
+                              districts={uniqueDistricts}
+                              selectedEngineer={filterEmployee}
+                              onEngineerChange={setFilterEmployee}
+                              engineers={uniqueEmployees}
+                              colProps={{ xs: 12, sm: 6 }}
+                            />
                           </Row>
 
                           <div className="border-t border-gray-200 pt-2 w-full">
