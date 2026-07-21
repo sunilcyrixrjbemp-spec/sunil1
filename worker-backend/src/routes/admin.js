@@ -285,14 +285,13 @@ export async function handleSaveUser(request, env, params, query, adminUser) {
       updates.push("hashed_password = ?");
       bindings.push(newHash);
       
-      // Add to password history
+      // Add to password history (record the OLD password before overwriting)
       await runWrite(env, "INSERT INTO password_histories (user_id, hashed_password, created_at) VALUES (?, ?, ?)", [
         existing.id, existing.hashed_password, timestamp
       ]);
     }
 
     if (updates.length > 0) {
-      bindings.push(id);
       await runWrite(env, `
         UPDATE users SET ${updates.join(", ")}, updated_at = ? WHERE id = ?
       `, [...bindings, timestamp, id]);

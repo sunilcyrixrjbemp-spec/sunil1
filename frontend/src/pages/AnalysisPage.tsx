@@ -254,8 +254,8 @@ export default function AnalysisPage() {
     });
 
     return {
-      districts: Array.from(districts),
-      engineers: Array.from(engineers)
+      districts: Array.from(districts).sort((a, b) => a.localeCompare(b)),
+      engineers: Array.from(engineers).sort((a, b) => a.localeCompare(b))
     };
   }, [viewMode, myExpenses, teamExpenses, selectedMonth, selectedYear, selectedDistrict, selectedEngineer, selectedZone]);
 
@@ -765,7 +765,7 @@ export default function AnalysisPage() {
                   onChange={(e) => setSelectedZone(e.target.value)}
                   className="analysis-select-input"
                 >
-                  <option value="all">Zone: All</option>
+                  <option value="all">All Zones</option>
                   {uniqueZones.map(z => (
                     <option key={z} value={z}>{z}</option>
                   ))}
@@ -780,7 +780,7 @@ export default function AnalysisPage() {
                   onChange={(e) => setSelectedDistrict(e.target.value)}
                   className="analysis-select-input"
                 >
-                  <option value="all">District: All</option>
+                  <option value="all">All Districts</option>
                   {filterOptions.districts.map(d => (
                     <option key={d} value={d}>{d}</option>
                   ))}
@@ -795,7 +795,7 @@ export default function AnalysisPage() {
                   onChange={(e) => setSelectedEngineer(e.target.value)}
                   className="analysis-select-input"
                 >
-                  <option value="all">Engineer: All</option>
+                  <option value="all">All Engineers</option>
                   {filterOptions.engineers.map(name => (
                     <option key={name} value={name}>{name}</option>
                   ))}

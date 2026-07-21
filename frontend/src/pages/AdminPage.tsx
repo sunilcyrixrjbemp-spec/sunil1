@@ -174,6 +174,7 @@ export default function AdminPage() {
   const handleTabChange = (tab: "users" | "approvals" | "analytics" | "settings") => {
     setActiveTab(tab);
     localStorage.setItem("admin_active_tab", tab);
+    window.scrollTo({ top: 0, behavior: "instant" });
     if (tab === "settings") {
       fetchRejectedClaims("");
     }
@@ -206,6 +207,7 @@ export default function AdminPage() {
   const [searchTerm, setSearchTerm] = useState("");
   const [chartRoleFilter, setChartRoleFilter] = useState<string>("all");
   const [chartZoneFilter, setChartZoneFilter] = useState<string>("all");
+  const [chartDistrictFilter, setChartDistrictFilter] = useState<string>("all");
 
   // Modals visibility
   const [showSingleUserModal, setShowSingleUserModal] = useState(false);
@@ -1139,9 +1141,17 @@ export default function AdminPage() {
     return safeUsers.filter(u => {
       if (chartRoleFilter !== "all" && u.role?.toLowerCase() !== chartRoleFilter.toLowerCase()) return false;
       if (chartZoneFilter !== "all" && u.zone?.toLowerCase() !== chartZoneFilter.toLowerCase()) return false;
+      if (chartDistrictFilter !== "all" && u.district?.toLowerCase() !== chartDistrictFilter.toLowerCase()) return false;
       return true;
     });
   };
+
+  // Districts available for the currently selected zone (for the filter dropdown)
+  const chartZoneDistricts = Array.from(
+    new Set(safeUsers
+      .filter(u => chartZoneFilter === "all" || u.zone?.trim().toLowerCase() === chartZoneFilter.toLowerCase())
+      .map(u => u.district?.trim()).filter(Boolean))
+  ).sort((a, b) => a!.localeCompare(b!));
 
   // 1. Calculate District-wise distribution
   const getDistrictData = () => {
@@ -1487,12 +1497,30 @@ export default function AdminPage() {
                 <label className="text-xs font-bold text-gray-600">Zone:</label>
                 <select
                   value={chartZoneFilter}
-                  onChange={(e) => setChartZoneFilter(e.target.value)}
+                  onChange={(e) => { setChartZoneFilter(e.target.value); setChartDistrictFilter("all"); }}
                   className="px-2 py-1 text-xs border border-gray-300 rounded bg-white font-semibold text-gray-700 outline-none focus:border-blue-500 cursor-pointer"
                 >
                   <option value="all">All Zones</option>
-                  {Array.from(new Set(safeUsers.map(u => u.zone?.trim()).filter(Boolean))).map(zone => (
+                  {Array.from(new Set(safeUsers.map(u => u.zone?.trim()).filter(Boolean))).sort((a, b) => a!.localeCompare(b!)).map(zone => (
                     <option key={zone} value={zone}>{zone}</option>
+                  ))}
+                </select>
+              </div>
+
+              {/* District Filter (dependent on Zone) */}
+              <div className="flex items-center gap-2">
+                <label className="text-xs font-bold text-gray-600">District:</label>
+                <select
+                  value={chartDistrictFilter}
+                  onChange={(e) => setChartDistrictFilter(e.target.value)}
+                  disabled={chartZoneFilter === "all"}
+                  className={`px-2 py-1 text-xs border border-gray-300 rounded bg-white font-semibold outline-none focus:border-blue-500 ${
+                    chartZoneFilter === "all" ? "text-gray-400 cursor-not-allowed opacity-60" : "text-gray-700 cursor-pointer"
+                  }`}
+                >
+                  <option value="all">{chartZoneFilter === "all" ? "Select Zone first" : "All Districts"}</option>
+                  {chartZoneDistricts.map(d => (
+                    <option key={d} value={d}>{d}</option>
                   ))}
                 </select>
               </div>
