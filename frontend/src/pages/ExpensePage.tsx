@@ -877,24 +877,29 @@ export default function ExpensePage() {
     }
   };
 
-  const setupDateRules = (referenceDate?: string) => {
+  const [systemSettings, setSystemSettings] = useState<any>(null);
+
+  const setupDateRules = (referenceDate?: string, sysSettings?: any) => {
+    const activeSettings = sysSettings || systemSettings;
+    const maxPastDays = activeSettings?.max_past_days_limit ? parseInt(activeSettings.max_past_days_limit, 10) : 15;
+    const monthlyCutoffDay = activeSettings?.monthly_cutoff_day ? parseInt(activeSettings.monthly_cutoff_day, 10) : 3;
+
     const today = new Date();
     const pad = (n: number) => n.toString().padStart(2, "0");
     
     // Max date: today (prevent future date submissions)
     const maxStr = `${today.getFullYear()}-${pad(today.getMonth() + 1)}-${pad(today.getDate())}`;
 
-    // Min date based on 15 days logic
-    const fifteenDaysAgo = new Date();
-    fifteenDaysAgo.setDate(today.getDate() - 15);
-    const fifteenDaysAgoStr = `${fifteenDaysAgo.getFullYear()}-${pad(fifteenDaysAgo.getMonth() + 1)}-${pad(fifteenDaysAgo.getDate())}`;
+    // Min date based on System Setting max_past_days_limit
+    const pastDaysAgo = new Date();
+    pastDaysAgo.setDate(today.getDate() - maxPastDays);
+    const pastDaysAgoStr = `${pastDaysAgo.getFullYear()}-${pad(pastDaysAgo.getMonth() + 1)}-${pad(pastDaysAgo.getDate())}`;
 
-    // Min date based on 2nd day of current month cut off
-    // If today is past the 2nd day of current month, previous month is cut off (must be >= 1st of current month).
-    let minStr = fifteenDaysAgoStr;
-    if (today.getDate() > 2) {
+    // Min date based on monthly cutoff day from System Settings
+    let minStr = pastDaysAgoStr;
+    if (today.getDate() > monthlyCutoffDay) {
       const currentMonthStartStr = `${today.getFullYear()}-${pad(today.getMonth() + 1)}-01`;
-      if (fifteenDaysAgoStr < currentMonthStartStr) {
+      if (pastDaysAgoStr < currentMonthStartStr) {
         minStr = currentMonthStartStr;
       }
     }
@@ -941,6 +946,11 @@ export default function ExpensePage() {
       setApprovedAuto(data.approved_auto || 0);
       setExistingKmReq(data.existing_km_req);
       setExistingAutoReq(data.existing_auto_req);
+
+      if (data.system_settings) {
+        setSystemSettings(data.system_settings);
+        setupDateRules(originalExpenseDate || undefined, data.system_settings);
+      }
 
       // Populate initial leg default values
       setItineraries(prev => {

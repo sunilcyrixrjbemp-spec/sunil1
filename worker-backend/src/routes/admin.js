@@ -758,9 +758,7 @@ export async function handleUpdateUser(request, env, params, query, adminUser) {
   const timestamp = new Date().toISOString();
   const updates = [];
   const bindings = [];
-
   const batchStatements = [];
-  batchStatements.push({ sql: "PRAGMA foreign_keys = OFF", params: [] });
 
   // Handle sensitive fields: new_user_id, new_e_code, password
   const newUserId = body.new_user_id?.trim();
@@ -792,39 +790,6 @@ export async function handleUpdateUser(request, env, params, query, adminUser) {
       });
     }
     if (isUidChanged) {
-      // Cascading updates for all tables storing user_id
-      batchStatements.push({
-        sql: "UPDATE user_roles SET user_id = ? WHERE user_id = ?",
-        params: [newUserId, user.user_id]
-      });
-      batchStatements.push({
-        sql: "UPDATE notifications SET user_id = ? WHERE user_id = ?",
-        params: [newUserId, user.user_id]
-      });
-      batchStatements.push({
-        sql: "UPDATE limit_approval_requests SET user_id = ? WHERE user_id = ?",
-        params: [newUserId, user.user_id]
-      });
-      batchStatements.push({
-        sql: "UPDATE limit_approval_requests SET manager_id = ? WHERE manager_id = ?",
-        params: [newUserId, user.user_id]
-      });
-      batchStatements.push({
-        sql: "UPDATE kpi_appraisals SET user_id = ? WHERE user_id = ?",
-        params: [newUserId, user.user_id]
-      });
-      batchStatements.push({
-        sql: "UPDATE engineer_advances SET user_id = ? WHERE user_id = ?",
-        params: [newUserId, user.user_id]
-      });
-      batchStatements.push({
-        sql: "UPDATE login_logs SET user_id = ? WHERE user_id = ?",
-        params: [newUserId, user.user_id]
-      });
-      batchStatements.push({
-        sql: "UPDATE otps SET user_id = ? WHERE user_id = ?",
-        params: [newUserId, user.user_id]
-      });
       updates.push("user_id = ?"); bindings.push(newUserId);
     }
     if (isEcodeChanged || isUidChanged) {
@@ -858,33 +823,69 @@ export async function handleUpdateUser(request, env, params, query, adminUser) {
   }
 
   if (body.role !== undefined) {
-    const oldRole = user.role;
-    if (oldRole !== body.role) {
-      batchStatements.push({
-        sql: "DELETE FROM user_roles WHERE user_id = ? AND role = ?",
-        params: [user.user_id, oldRole]
-      });
-      const roleUserId = isUidChanged ? newUserId : user.user_id;
-      batchStatements.push({
-        sql: "INSERT INTO user_roles (user_id, role, assigned_at) VALUES (?, ?, ?)",
-        params: [roleUserId, body.role, timestamp]
-      });
-    }
     updates.push("role = ?"); bindings.push(body.role);
   }
 
+  // UPDATE USERS TABLE FIRST so new_user_id exists in users before child tables reference it
   if (updates.length > 0) {
     bindings.push(timestamp);
     bindings.push(user.id);
-    batchStatements.push({
+    batchStatements.unshift({
       sql: `UPDATE users SET ${updates.join(", ")}, updated_at = ? WHERE id = ?`,
       params: bindings
     });
   }
 
-  batchStatements.push({ sql: "PRAGMA foreign_keys = ON", params: [] });
+  // Cascading updates for child tables storing user_id AFTER users table is updated
+  if (isUidChanged) {
+    batchStatements.push({
+      sql: "UPDATE user_roles SET user_id = ? WHERE user_id = ?",
+      params: [newUserId, user.user_id]
+    });
+    batchStatements.push({
+      sql: "UPDATE notifications SET user_id = ? WHERE user_id = ?",
+      params: [newUserId, user.user_id]
+    });
+    batchStatements.push({
+      sql: "UPDATE limit_approval_requests SET user_id = ? WHERE user_id = ?",
+      params: [newUserId, user.user_id]
+    });
+    batchStatements.push({
+      sql: "UPDATE limit_approval_requests SET manager_id = ? WHERE manager_id = ?",
+      params: [newUserId, user.user_id]
+    });
+    batchStatements.push({
+      sql: "UPDATE kpi_appraisals SET user_id = ? WHERE user_id = ?",
+      params: [newUserId, user.user_id]
+    });
+    batchStatements.push({
+      sql: "UPDATE engineer_advances SET user_id = ? WHERE user_id = ?",
+      params: [newUserId, user.user_id]
+    });
+    batchStatements.push({
+      sql: "UPDATE login_logs SET user_id = ? WHERE user_id = ?",
+      params: [newUserId, user.user_id]
+    });
+    batchStatements.push({
+      sql: "UPDATE otps SET user_id = ? WHERE user_id = ?",
+      params: [newUserId, user.user_id]
+    });
+  }
 
-  if (batchStatements.length > 2) { // more than just enabling/disabling foreign keys
+  // Clean role update in user_roles table
+  if (body.role !== undefined) {
+    const targetUid = isUidChanged ? newUserId : user.user_id;
+    batchStatements.push({
+      sql: "DELETE FROM user_roles WHERE user_id = ? OR user_id = ?",
+      params: [user.user_id, targetUid]
+    });
+    batchStatements.push({
+      sql: "INSERT INTO user_roles (user_id, role, assigned_at) VALUES (?, ?, ?)",
+      params: [targetUid, body.role, timestamp]
+    });
+  }
+
+  if (batchStatements.length > 0) {
     await runBatchWrite(env, batchStatements);
   }
 

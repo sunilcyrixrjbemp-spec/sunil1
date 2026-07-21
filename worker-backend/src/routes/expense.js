@@ -399,7 +399,7 @@ export async function getExpenseInitData(env, targetUser, monthStr) {
 
   const gradeToLookup = (targetUser.designation || "").toLowerCase().includes("specialist") ? "O1" : targetUser.grade;
 
-  // Run all 8 independent DB queries in PARALLEL — reduces 8 round trips to 1
+  // Run all 9 independent DB queries in PARALLEL — reduces 9 round trips to 1
   const [
     facilitiesRows,
     submittedRows,
@@ -408,7 +408,8 @@ export async function getExpenseInitData(env, targetUser, monthStr) {
     allowance,
     defaultBike,
     defaultCar,
-    statsRes
+    statsRes,
+    settingsRows
   ] = await Promise.all([
     env.DB.prepare(`SELECT DISTINCT district_name, facility_name FROM facility_details`).all(),
     env.DB.prepare(`SELECT itinerary FROM expenses WHERE user_id = ? AND month = ? AND year = ?`
@@ -433,7 +434,8 @@ export async function getExpenseInitData(env, targetUser, monthStr) {
       FROM expense_itineraries i
       JOIN expenses e ON i.exp_id = e.expense_code
       WHERE e.user_id = ? AND e.month = ? AND e.year = ? AND e.status NOT IN ('rejected', 'returned_to_draft')
-    `).bind(targetUser.id, monthName, yearVal).first()
+    `).bind(targetUser.id, monthName, yearVal).first(),
+    env.DB.prepare(`SELECT key, value FROM system_settings WHERE key IN ('max_past_days_limit', 'monthly_cutoff_day')`).all()
   ]);
 
   // Build facilities map
@@ -441,6 +443,11 @@ export async function getExpenseInitData(env, targetUser, monthStr) {
   for (const f of (facilitiesRows.results || [])) {
     if (!facilities[f.district_name]) facilities[f.district_name] = [];
     facilities[f.district_name].push(f.facility_name);
+  }
+
+  const sysSettingsMap = {};
+  for (const s of (settingsRows.results || [])) {
+    sysSettingsMap[s.key] = s.value;
   }
 
   const submittedDates = (submittedRows.results || []).map(r => r.itinerary).filter(Boolean);
@@ -453,11 +460,6 @@ export async function getExpenseInitData(env, targetUser, monthStr) {
   const existingKmReq = kmReqs.length > 0 ? { status: kmReqs[0].status, requested_value: kmReqs[0].requested_value } : null;
   const existingAutoReq = autoReqs.length > 0 ? { status: autoReqs[0].status, requested_value: autoReqs[0].requested_value } : null;
 
-  const fallbackBikeRate = defaultBike?.rate_per_km || 4.5;
-  const fallbackCarRate = defaultCar?.rate_per_km || 9.0;
-
-  let allowanceDict = {
-    daily_in_district: allowance?.daily_in_district ?? 150,
     daily_out_district: allowance?.daily_out_district ?? 200,
     daily_hotel: allowance?.daily_hotel ?? 300,
     daily_out_state: allowance?.daily_out_state ?? 400,
