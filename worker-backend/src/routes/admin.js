@@ -856,14 +856,6 @@ export async function handleUpdateUser(request, env, params, query, adminUser) {
   // 4. Cascading updates for child tables storing user_id / e_code / names
   if (isUidChanged) {
     batchStatements.push({
-      sql: "UPDATE expenses SET submitter_code = ? WHERE submitter_code = ?",
-      params: [newUserId, user.user_id]
-    });
-    batchStatements.push({
-      sql: "UPDATE approvals SET approver_code = ? WHERE approver_code = ?",
-      params: [newUserId, user.user_id]
-    });
-    batchStatements.push({
       sql: "UPDATE limit_approval_requests SET user_id = ? WHERE user_id = ?",
       params: [newUserId, user.user_id]
     });
@@ -909,26 +901,11 @@ export async function handleUpdateUser(request, env, params, query, adminUser) {
     });
   }
 
-  if (isEcodeChanged && newECode !== newUserId) {
-    batchStatements.push({
-      sql: "UPDATE expenses SET submitter_code = ? WHERE submitter_code = ?",
-      params: [newECode, user.e_code]
-    });
-    batchStatements.push({
-      sql: "UPDATE approvals SET approver_code = ? WHERE approver_code = ?",
-      params: [newECode, user.e_code]
-    });
-  }
-
   if (body.name && body.name.trim() !== user.name) {
     const newName = body.name.trim();
     batchStatements.push({
-      sql: "UPDATE expenses SET submitter_name = ? WHERE user_id = ?",
-      params: [newName, user.id]
-    });
-    batchStatements.push({
-      sql: "UPDATE approvals SET approver_name = ? WHERE approver_id = ?",
-      params: [newName, user.id]
+      sql: "UPDATE db_op_logs SET user_name = ? WHERE user_name = ?",
+      params: [newName, user.name]
     });
     batchStatements.push({
       sql: "UPDATE users SET manager = ? WHERE manager = ?",
