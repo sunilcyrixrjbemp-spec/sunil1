@@ -503,7 +503,8 @@ export async function getExpenseInitData(env, targetUser, monthStr) {
     approved_auto: approvedAuto,
     existing_km_req: existingKmReq,
     existing_auto_req: existingAutoReq,
-    next_exp_id: `RJ-${mm}/${yy}-PENDING`
+    next_exp_id: `RJ-${mm}/${yy}-PENDING`,
+    system_settings: sysSettingsMap
   };
 }
 
