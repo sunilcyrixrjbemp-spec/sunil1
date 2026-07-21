@@ -5,7 +5,6 @@ import { expenseService } from "../services/expenseService";
 import { approvalService } from "../services/approvalService";
 import toast from "react-hot-toast";
 import Loader from "../components/common/Loader";
-import ProgressLoader from "../components/common/ProgressLoader";
 import { checkIsHeic, convertHeicToJpegUrl } from "../utils/heic";
 import { ResponsivePie } from "@nivo/pie";
 import ExpenseCalendar from "../components/common/ExpenseCalendar";
