@@ -595,11 +595,22 @@ export async function handleGetDropdowns(request, env, params, query) {
 }
 
 /**
- * Helper to send email via Google Apps Script Web App with exponential backoff retries and correlation ID tracking
+ * Helper to send email via Google Apps Script Web App with multi-URL failover across up to 10 accounts,
+ * exponential backoff retries, and correlation ID tracking.
  */
 async function sendEmail(to, subject, body, env) {
-  const gasUrl = (env && env.GAS_WEB_APP_URL) || "https://script.google.com/macros/s/AKfycbwxh5LQLCGtwGflfF7V5HKyL7viFNlAkAbsgz5xEDQo8Eg_f1kw47EjxrzSAC891sm1/exec";
-  
+  // Support comma-separated list of URLs via env.GAS_WEB_APP_URLS or single env.GAS_WEB_APP_URL
+  let urls = [];
+  if (env && env.GAS_WEB_APP_URLS) {
+    urls = env.GAS_WEB_APP_URLS.split(",").map(u => u.trim()).filter(Boolean);
+  }
+  if (urls.length === 0 && env && env.GAS_WEB_APP_URL) {
+    urls = [env.GAS_WEB_APP_URL.trim()];
+  }
+  if (urls.length === 0) {
+    urls = ["https://script.google.com/macros/s/AKfycbwxh5LQLCGtwGflfF7V5HKyL7viFNlAkAbsgz5xEDQo8Eg_f1kw47EjxrzSAC891sm1/exec"];
+  }
+
   const plainText = body.replace(/<[^>]*>/g, ""); // strip HTML tags for plain text fallback
   const purpose = subject.toLowerCase().includes("unlock") ? "account_unlock" : "password_reset";
   
@@ -618,43 +629,48 @@ async function sendEmail(to, subject, body, env) {
     correlationId: correlationId
   };
 
-  const maxRetries = 3;
   let lastError = null;
-  let delayMs = 2000;
 
-  for (let attempt = 1; attempt <= maxRetries; attempt++) {
-    try {
-      console.log(`[OTP] Attempt ${attempt}/${maxRetries} sending to ${to} (CorrelationID: ${correlationId})`);
-      const res = await fetch(gasUrl, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(payload)
-      });
+  // Try each configured GAS URL in order (Failover across 10 accounts)
+  for (let urlIndex = 0; urlIndex < urls.length; urlIndex++) {
+    const gasUrl = urls[urlIndex];
+    console.log(`[OTP FAILOVER] Trying Account #${urlIndex + 1}/${urls.length} (CorrelationID: ${correlationId})`);
 
-      if (!res.ok) {
-        const errText = await res.text();
-        throw new Error(`HTTP ${res.status}: ${errText}`);
-      }
+    const maxRetries = 2;
+    for (let attempt = 1; attempt <= maxRetries; attempt++) {
+      try {
+        const res = await fetch(gasUrl, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(payload)
+        });
 
-      const result = await res.json();
-      if (!result.success) {
-        throw new Error(result.error || "GAS returned success: false");
-      }
+        if (!res.ok) {
+          const errText = await res.text();
+          throw new Error(`HTTP ${res.status}: ${errText}`);
+        }
 
-      console.log(`[OTP SUCCESS] Delivered to ${to} (CorrelationID: ${correlationId})`);
-      return result;
-    } catch (err) {
-      lastError = err;
-      console.warn(`[OTP WARNING] Attempt ${attempt} failed for ${to} (CorrelationID: ${correlationId}): ${err.message}`);
-      if (attempt < maxRetries) {
-        await new Promise(r => setTimeout(r, delayMs));
-        delayMs *= 2; // exponential backoff 2s, 4s, 8s
+        const result = await res.json();
+        if (!result.success) {
+          throw new Error(result.error || "GAS returned success: false");
+        }
+
+        console.log(`[OTP SUCCESS] Delivered to ${to} via Account #${urlIndex + 1}/${urls.length} (CorrelationID: ${correlationId})`);
+        return result;
+      } catch (err) {
+        lastError = err;
+        console.warn(`[OTP WARNING] Account #${urlIndex + 1} attempt ${attempt} failed: ${err.message}`);
+        if (attempt < maxRetries) {
+          await new Promise(r => setTimeout(r, 1000));
+        }
       }
     }
+
+    console.warn(`[OTP FAILOVER] Account #${urlIndex + 1}/${urls.length} failed all attempts. Switching to next account...`);
   }
 
-  console.error(`[OTP FAILURE] All ${maxRetries} attempts failed for ${to} (CorrelationID: ${correlationId}): ${lastError.message}`);
-  throw new Error(`OTP email dispatch failed after ${maxRetries} attempts. Ref: ${correlationId}. Detail: ${lastError.message}`);
+  console.error(`[OTP FAILURE] All ${urls.length} mail accounts failed to send OTP to ${to} (CorrelationID: ${correlationId}): ${lastError.message}`);
+  throw new Error(`OTP email dispatch failed across all ${urls.length} configured mail accounts. Ref: ${correlationId}. Detail: ${lastError.message}`);
 }
 
 /**
