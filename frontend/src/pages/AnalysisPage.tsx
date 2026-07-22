@@ -532,38 +532,56 @@ export default function AnalysisPage() {
   }, [activeExpenses, user, isPrivilegedRole]);
 
   // F. Coordinator-wise - respects active filters
+  // RULE: Only group by actual coordinator names.
+  //   1. Use e.coordinator from backend (submitter's coordinator DB field)
+  //   2. Fallback: look up coordinator in usersMap via submitter code
+  //   3. If the SUBMITTER themselves is a Coordinator role, use their name
+  //   4. Otherwise: "Unassigned" — NEVER use a random submitter_name (Engineer/HR/etc.)
   const coordinatorWiseData = useMemo(() => {
     const map: Record<string, number> = {};
     activeExpenses.forEach(e => {
-      let c = (e.coordinator || e.coordinator_name || e.zonal_coordinator || "").trim();
+      // Step 1: coordinator field from backend (comes from submitter's users.coordinator column)
+      let c = (e.coordinator || e.coordinator_name || "").trim();
 
-      const submitterCode = String(e.submitter_code || e.user_id || e.e_code || "").trim().toLowerCase();
-      const submitterName = String(e.submitter_name || "").trim().toLowerCase();
-      const matchedUser = usersMap[submitterCode] || usersMap[submitterName];
+      // Step 2: if missing, look up in usersMap via submitter's code/name
+      if (!c || c.toLowerCase() === "unknown" || c.toLowerCase() === "null") {
+        const submitterCode = String(e.submitter_code || e.user_id || "").trim().toLowerCase();
+        const submitterName = String(e.submitter_name || "").trim().toLowerCase();
+        const matchedUser = usersMap[submitterCode] || usersMap[submitterName];
 
-      // If coordinator is missing/unknown, check matched user from user DB
-      if ((!c || c.toLowerCase() === "unknown" || c.toLowerCase() === "null") && matchedUser) {
-        if (matchedUser.coordinator) {
+        if (matchedUser?.coordinator) {
           c = matchedUser.coordinator.trim();
+        } else if (matchedUser) {
+          // Step 3: if the submitter IS a Coordinator, count their own expenses under their name
+          const roleClean = (matchedUser.role || "").trim().toLowerCase();
+          const desigClean = (matchedUser.designation || "").trim().toLowerCase();
+          if (roleClean === "coordinator" || desigClean.includes("coordinator")) {
+            c = matchedUser.name;
+          }
         }
+        // Step 4: no fallback to submitter_name — that would add Engineers/HR/etc. as coordinators
       }
 
-      // If submitter is a Coordinator, use submitter's name
-      if ((!c || c.toLowerCase() === "unknown" || c.toLowerCase() === "null") && matchedUser) {
-        const roleClean = (matchedUser.role || "").trim().toLowerCase();
-        const desigClean = (matchedUser.designation || "").trim().toLowerCase();
-        if (roleClean === "coordinator" || desigClean.includes("coordinator")) {
-          c = matchedUser.name;
+      // Validate: the resolved coordinator name must belong to an actual Coordinator in usersMap
+      if (c && c.toLowerCase() !== "unknown" && c.toLowerCase() !== "null") {
+        const cLower = c.trim().toLowerCase();
+        const coordinatorUser = Object.values(usersMap).find(
+          (u: any) => (u.name || "").trim().toLowerCase() === cLower
+        ) as any;
+        // If we found this person in usersMap but they're NOT a Coordinator role, skip their name
+        if (coordinatorUser) {
+          const cRole = (coordinatorUser.role || "").trim().toLowerCase();
+          const cDesig = (coordinatorUser.designation || "").trim().toLowerCase();
+          if (cRole !== "coordinator" && !cDesig.includes("coordinator")) {
+            // Person exists but wrong role — do not count under their name, mark unassigned
+            c = "";
+          }
         }
-      }
-
-      // Fallback: If still unknown, check if submitter name is available
-      if ((!c || c.toLowerCase() === "unknown" || c.toLowerCase() === "null") && e.submitter_name && e.submitter_name !== "Unknown") {
-        c = e.submitter_name;
+        // If person not found in usersMap at all, still allow (name may be from legacy data)
       }
 
       if (!c || c.toLowerCase() === "unknown" || c.toLowerCase() === "null") {
-        c = "Unassigned Coordinator";
+        c = "Unassigned";
       }
 
       map[c] = (map[c] || 0) + (e.amount || 0);
@@ -571,7 +589,7 @@ export default function AnalysisPage() {
 
     return Object.entries(map)
       .map(([name, value]) => ({ name, value }))
-      .filter(d => d.value > 0)
+      .filter(d => d.value > 0 && d.name !== "Unassigned")  // hide unassigned from chart
       .sort((a, b) => b.value - a.value);
   }, [activeExpenses, usersMap]);
 
