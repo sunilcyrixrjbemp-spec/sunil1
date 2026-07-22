@@ -819,11 +819,6 @@ export default function HomePage() {
     return isCarAllowed ? items : items.filter(item => item.label !== "Car Travel");
   };
 
-  // All team expenses for the selected month (no zone/employee/mode filter) — for zone chart
-  const allMonthTeamExpenses = safeTeamExpenses.filter(exp => {
-    const rawDate = exp.date || exp.itinerary;
-    return rawDate && rawDate.startsWith(selectMonth);
-  });
 
   const getTeamChartTitle = () => {
     if (filterZone !== "all" && filterDistrict !== "all") {
