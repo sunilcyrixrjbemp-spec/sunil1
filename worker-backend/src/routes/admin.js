@@ -466,11 +466,12 @@ export async function handleBulkCreateUsers(request, env, params, query, adminUs
     const roleCl = String(item.role || "").trim();
     const typeCl = String(item.type || "Employee").trim();
 
-    const autoWindows = roleCl.toLowerCase() === "engineer"
+    const roleLower = roleCl.toLowerCase();
+    const autoWindows = roleLower === "engineer"
       ? "home,expense,help,profile"
-      : roleCl.toLowerCase() === "manager"
+      : roleLower === "manager" || roleLower === "coordinator" || roleLower === "division manager"
         ? "home,approval,expense,help,profile"
-        : "home,approval,expense,analysis,report,help,profile";
+        : "home,approval,expense,analysis,report,consolidated_report,mis_report,kpi,penalty_report,help,profile";
 
     try {
       if (existing) {
