@@ -825,13 +825,19 @@ export default function HomePage() {
     return rawDate && rawDate.startsWith(selectMonth);
   });
 
+  const getTeamChartTitle = () => {
+    if (filterZone !== "all" && filterDistrict !== "all") {
+      return "Engineer-wise Compare";
+    } else if (filterZone !== "all") {
+      return "District-wise Compare";
+    } else {
+      return "Zone-wise Compare";
+    }
+  };
+
   const getTeamChartData = () => {
     const grouped: Record<string, { name: string, amount: number }> = {};
-    const baseList = (filterZone !== "all" || filterDistrict !== "all" || filterEmployee !== "all" || homeStatusFilter !== "all")
-      ? filteredTeamExpenses
-      : allMonthTeamExpenses;
-
-    baseList.forEach(e => {
+    filteredTeamExpenses.forEach(e => {
       if (!e || e.category === "Limit Request") return;
 
       let key = "";
@@ -1569,7 +1575,7 @@ export default function HomePage() {
                     <span className="text-indigo-650 font-extrabold text-[9px] uppercase tracking-widest block">Claims Analytics</span>
                     <Title level={5} style={{ margin: 0, fontSize: "12px", color: "#1F2937" }} className="uppercase font-bold tracking-wider flex items-center gap-1.5">
                       <BarChart3 size={14} className="text-indigo-500" />
-                      {activeTab === "my-claims" ? "Personal Mode Breakdown" : "Zone-wise Compare"}
+                      {activeTab === "my-claims" ? "Personal Mode Breakdown" : getTeamChartTitle()}
                     </Title>
                   </div>
                 }
