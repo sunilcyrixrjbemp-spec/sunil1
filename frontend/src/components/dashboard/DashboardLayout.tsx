@@ -278,9 +278,6 @@ export default function DashboardLayout() {
   if (!user) return <ProgressLoader message="Initializing Workspace..." fullPage />;
 
   const userRole = user.role || "Engineer";
-  const userRoleClean = userRole.trim().toLowerCase();
-  const isAlwaysAllowedAll = ["admin", "project head", "mis", "travel desk", "travel tesk", "vp", "accountant", "hr"].includes(userRoleClean);
-
   const isAdmin = ["Admin", "admin", "Super Admin", "super_admin"].includes(userRole);
 
   let allowedWindows: string[] = [];
@@ -309,15 +306,7 @@ export default function DashboardLayout() {
     }
   });
 
-  // Force-enable specified windows for special roles
-  if (isAlwaysAllowedAll) {
-    const forced = ["home", "analysis", "report", "consolidated_report", "mis_report", "kpi", "penalty_report", "profile", "help"];
-    forced.forEach(w => {
-      if (!allowedWindows.includes(w)) {
-        allowedWindows.push(w);
-      }
-    });
-  }
+
 
   // Check if user has permission for menu items based on allowed_windows
   const allowedMenuItems = MENU_ITEMS.filter((item) => {
