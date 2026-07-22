@@ -401,7 +401,13 @@ export default {
         return jsonResponse({ error: "Session expired or invalid token" }, 401, origin);
       }
 
-      user = await env.DB.prepare("SELECT * FROM users WHERE user_id = ?").bind(payload.sub).first();
+      // Fetch user + their admin-assigned role from user_roles (overrides users.role column)
+      user = await env.DB.prepare(`
+        SELECT u.*, COALESCE(r.role, u.role) as role, u.allowed_windows
+        FROM users u
+        LEFT JOIN user_roles r ON u.user_id = r.user_id
+        WHERE u.user_id = ?
+      `).bind(payload.sub).first();
       if (!user) {
         return jsonResponse({ error: "Invalid session" }, 401, origin);
       }
