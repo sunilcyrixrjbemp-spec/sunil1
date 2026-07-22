@@ -4,6 +4,26 @@ import { resolveLegacyExpenseId } from "../utils/legacy-resolver.js";
 import { uploadFileWithFallback } from "./upload.js";
 import { MONTH_NAMES } from "../utils/constants.js";
 
+// ─── FULL ACCESS ROLES ────────────────────────────────────────────────────────
+// Roles that see ALL data (all users, all zones, all records) across every report.
+// To add/remove full access for a role: edit ONLY this list — no other changes needed.
+// NOTE: stored in lowercase for case-insensitive .includes() checks.
+const FULL_ACCESS_ROLES = [
+  "admin",
+  "project head",
+  "mis",
+  "travel desk",
+  "travel tesk",  // legacy typo variant kept for backward compat
+  "vp",
+  "accountant",
+  "hr",
+];
+// Helper: returns true if the given role string (any case) has full data access.
+function hasFullAccess(roleString) {
+  return FULL_ACCESS_ROLES.includes((roleString || "").trim().toLowerCase());
+}
+// ─────────────────────────────────────────────────────────────────────────────
+
 function jsonResponse(data, status = 200) {
   return new Response(JSON.stringify(data), {
     status,
@@ -587,9 +607,9 @@ export async function handleGetTeamExpenses(request, env, params, query, user) {
     
     // 1. Fetch team users
     let teamUsers = [];
-    // FIX: define userRoleClean locally (was missing, causing isAdminOrReportViewer to always be false)
+    // FULL_ACCESS_ROLES group: see top of file — single source of truth
     const userRoleClean = (user.role || "").trim().toLowerCase();
-    const isAdminOrReportViewer = ["admin", "mis", "vp", "accountant", "hr", "project head", "travel desk", "travel tesk"].includes(userRoleClean);
+    const isAdminOrReportViewer = hasFullAccess(userRoleClean);
 
     if (isAdminOrReportViewer) {
       const res = await env.DB.prepare("SELECT id, user_id, name, designation, grade, district, zone, manager, zonal_manager, coordinator, role FROM users").all();
@@ -2822,7 +2842,7 @@ export async function handleGetMonthSummary(request, env, params, query, user) {
   const engineer = query.get("engineer");
 
   const userRoleClean = (user.role || "").trim().toLowerCase();
-  const isAdminOrReportViewer = ["admin", "mis", "vp", "accountant", "hr", "project head", "travel desk", "travel tesk"].includes(userRoleClean);
+  const isAdminOrReportViewer = hasFullAccess(userRoleClean);
 
   // Build filters for new expenses table
   const whereClauses = ["1=1"];
@@ -3530,7 +3550,7 @@ export async function handleGetConsolidatedReport(request, env, params, query, u
 
   // Determine allowed users based on role and hierarchy mapping
   const userRoleClean = (user.role || "").trim().toLowerCase();
-  const isAdminOrReportViewer = ["admin", "mis", "vp", "accountant", "hr", "project head", "travel desk", "travel tesk"].includes(userRoleClean);
+  const isAdminOrReportViewer = hasFullAccess(userRoleClean);
 
   const allowedUserCodesSet = new Set();
   let filteredUsers = [];
@@ -4032,7 +4052,7 @@ export async function handleServeExpenseAttachment(request, env, params, query, 
 export async function handleGetTeamUsers(request, env, params, query, user) {
   let teamUsers = [];
   const userRoleClean = (user.role || "").trim().toLowerCase();
-  const isAdminOrReportViewer = ["admin", "mis", "vp", "accountant", "hr", "project head", "travel desk", "travel tesk"].includes(userRoleClean);
+  const isAdminOrReportViewer = hasFullAccess(userRoleClean);
 
   if (isAdminOrReportViewer) {
     const res = await env.DB.prepare("SELECT id, user_id, name, role, zone, district, designation, manager FROM users ORDER BY name ASC").all();

@@ -35,6 +35,7 @@ import { ResponsivePie } from "@nivo/pie";
 import { ResponsiveLine } from "@nivo/line";
 import { authService } from "../services/authService";
 import { expenseService } from "../services/expenseService";
+import { hasFullAccess } from "../utils/constants";
 import toast from "react-hot-toast";
 
 const API_KEY =
@@ -209,7 +210,7 @@ export default function NewDashboardPage() {
   const userCoordinator = currentUser?.coordinator || null;
 
   useEffect(() => {
-    const isPowerUser = ["Admin", "VP", "MIS", "Accountant", "Travel Desk", "Travel Tesk"].includes(userRole);
+    const isPowerUser = hasFullAccess(userRole);
     if (!isPowerUser) {
       if (userZone) setSelectedZone(userZone);
       if (userCoordinator) setSelectedCoordinator(userCoordinator);
@@ -339,7 +340,7 @@ export default function NewDashboardPage() {
   }, []);
 
   const handleResetFilters = () => {
-    const isPowerUser = ["Admin", "VP", "MIS", "Accountant", "Travel Desk", "Travel Tesk"].includes(userRole);
+    const isPowerUser = hasFullAccess(userRole);
     setSelectedZone(isPowerUser ? "" : (userZone || ""));
     setSelectedDistrict("");
     setSelectedCoordinator(isPowerUser ? "" : (userCoordinator || ""));
@@ -949,9 +950,9 @@ export default function NewDashboardPage() {
 
         <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-3 mb-3">
           {[
-            { label: "Zone", value: selectedZone, options: filterOptions.zones, onChange: (v: string) => { setSelectedZone(v); setSelectedDistrict(""); setSelectedCoordinator(""); setSelectedDI(""); }, disabled: !!userZone && !["Admin","VP","MIS","Accountant","Travel Desk","Travel Tesk"].includes(userRole), placeholder: "All Zones" },
+            { label: "Zone", value: selectedZone, options: filterOptions.zones, onChange: (v: string) => { setSelectedZone(v); setSelectedDistrict(""); setSelectedCoordinator(""); setSelectedDI(""); }, disabled: !!userZone && !hasFullAccess(userRole), placeholder: "All Zones" },
             { label: "District", value: selectedDistrict, options: filterOptions.districts, onChange: (v: string) => { setSelectedDistrict(v); setSelectedCoordinator(""); setSelectedDI(""); }, placeholder: "All Districts" },
-            { label: "Coordinator", value: selectedCoordinator, options: filterOptions.coordinators, onChange: (v: string) => { setSelectedCoordinator(v); setSelectedDI(""); }, disabled: !!userCoordinator && !["Admin","VP","MIS","Accountant","Travel Desk","Travel Tesk"].includes(userRole), placeholder: "All Coordinators" },
+            { label: "Coordinator", value: selectedCoordinator, options: filterOptions.coordinators, onChange: (v: string) => { setSelectedCoordinator(v); setSelectedDI(""); }, disabled: !!userCoordinator && !hasFullAccess(userRole), placeholder: "All Coordinators" },
             { label: "District Incharge", value: selectedDI, options: filterOptions.dis, onChange: (v: string) => setSelectedDI(v), placeholder: "All DIs" },
             { label: "Month", value: selectedMonth, options: filterOptions.months, onChange: (v: string) => setSelectedMonth(v), placeholder: "All Months" },
           ].map((f: any) => (

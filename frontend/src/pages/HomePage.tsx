@@ -7,6 +7,7 @@ import toast from "react-hot-toast";
 import { prefetchManager } from "../utils/prefetchManager";
 import Loader from "../components/common/Loader";
 import { checkIsHeic, convertHeicToJpegUrl } from "../utils/heic";
+import { hasFullAccess } from "../utils/constants";
 import { ResponsivePie } from "@nivo/pie";
 import ExpenseCalendar from "../components/common/ExpenseCalendar";
 import LocationFilters from "../components/common/LocationFilters";
@@ -174,8 +175,7 @@ export default function HomePage() {
     if (saved === "my-claims" || saved === "team-claims") return saved;
     const currentUser = JSON.parse(localStorage.getItem("user") || "null");
     if (currentUser) {
-      const roleLower = (currentUser.role || "").trim().toLowerCase();
-      if (["admin", "project head", "mis", "travel desk", "travel tesk", "vp", "accountant", "hr"].includes(roleLower)) {
+      if (hasFullAccess(currentUser.role)) {
         return "team-claims";
       }
     }

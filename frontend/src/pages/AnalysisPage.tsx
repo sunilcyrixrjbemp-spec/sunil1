@@ -26,6 +26,7 @@ import {
   CheckOutlined,
   InfoCircleOutlined
 } from "@ant-design/icons";
+import { hasFullAccess } from "../utils/constants";
 
 const getSegmentedClass = (status: string) => {
   switch (status) {
@@ -91,8 +92,7 @@ export default function AnalysisPage() {
     const currentUser = authService.getCurrentUser();
     const role = currentUser?.role || "Engineer";
     const allowed = (currentUser?.allowed_windows || "").split(",").map((w: string) => w.trim().toLowerCase());
-    const roleLower = role.trim().toLowerCase();
-    if (["admin", "project head", "mis", "travel desk", "travel tesk", "vp", "accountant", "hr"].includes(roleLower) || allowed.includes("approval")) {
+    if (hasFullAccess(role) || allowed.includes("approval")) {
       return "team";
     }
     return "my";
@@ -170,7 +170,7 @@ export default function AnalysisPage() {
 
   const user = authService.getCurrentUser();
   const allowedWindows = (user?.allowed_windows || "").split(",").map((w: string) => w.trim().toLowerCase());
-  const isReviewer = allowedWindows.includes("approval") || ["admin", "project head", "mis", "travel desk", "travel tesk", "vp", "accountant", "hr"].includes((user?.role || "").trim().toLowerCase());
+  const isReviewer = allowedWindows.includes("approval") || hasFullAccess(user?.role);
 
   const [usersMap, setUsersMap] = useState<Record<string, any>>({});
 
@@ -512,8 +512,8 @@ export default function AnalysisPage() {
   }, [activeExpenses, selectedMonth, selectedYear, startDate, endDate]);
 
   // E. Zone-wise (from user.zone database field) - respects active filters
-  const PRIVILEGED_ROLES = ["admin", "project head", "mis", "travel desk", "travel tesk", "vp", "accountant", "hr"];
-  const isPrivilegedRole = PRIVILEGED_ROLES.includes((user?.role || "").trim().toLowerCase());
+  // FULL_ACCESS_ROLES: single source of truth — see utils/constants.ts
+  const isPrivilegedRole = hasFullAccess(user?.role);
 
   const zoneWiseData = useMemo(() => {
     const map: Record<string, number> = {};

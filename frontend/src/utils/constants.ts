@@ -21,6 +21,31 @@ export const ROLES = [
   "Admin"
 ];
 
+// ─── FULL ACCESS ROLES ────────────────────────────────────────────────────────
+// Roles that see ALL data (all users, zones, records) across all 4 reporting
+// modules: Home, Analysis, Monthly Report, Consolidated Report.
+// To grant/revoke full access: edit ONLY this list — no other changes needed.
+// Stored in ORIGINAL case as displayed in the app (DB values must match exactly).
+export const FULL_ACCESS_ROLES = [
+  "Admin",
+  "Project Head",
+  "MIS",
+  "Travel Desk",
+  "Travel Tesk",  // legacy typo variant — keep for backward compat
+  "VP",
+  "Accountant",
+  "HR",
+] as const;
+
+// Helper: returns true if the user's role belongs to the full-access group.
+// Case-insensitive comparison guards against typos / case mismatches in DB.
+export function hasFullAccess(role: string | null | undefined): boolean {
+  const roleLower = (role || "").trim().toLowerCase();
+  return FULL_ACCESS_ROLES.some(r => r.toLowerCase() === roleLower);
+}
+// ─────────────────────────────────────────────────────────────────────────────
+
+
 export const DESIGNATIONS = [
   "Accountant",
   "Accounts Manager",
