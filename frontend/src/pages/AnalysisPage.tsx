@@ -1,4 +1,5 @@
 import { useEffect, useState, useMemo } from "react";
+import * as XLSX from "xlsx";
 import { ResponsiveBar } from "@nivo/bar";
 import { ResponsivePie } from "@nivo/pie";
 import { ResponsiveLine } from "@nivo/line";
@@ -592,12 +593,21 @@ export default function AnalysisPage() {
     return result;
   }, [activeExpenses, selectedMonth, selectedYear, startDate, endDate]);
 
-  // State for Asset Tagging Detailed Breakdown Modal
+  // State for Breakdown Modals
+  const [activeModal, setActiveModal] = useState<"none" | "asset_tagging" | "pms" | "calls">("none");
   const [isTaggingModalOpen, setIsTaggingModalOpen] = useState(false);
   const [selectedTaggingDate, setSelectedTaggingDate] = useState<string | null>(null);
   const [taggingSearchQuery, setTaggingSearchQuery] = useState("");
   const [taggingPageSize, setTaggingPageSize] = useState(10);
   const [taggingMobilePage, setTaggingMobilePage] = useState(1);
+
+  const [pmsSearchQuery, setPmsSearchQuery] = useState("");
+  const [pmsPageSize, setPmsPageSize] = useState(10);
+  const [pmsMobilePage, setPmsMobilePage] = useState(1);
+
+  const [callsSearchQuery, setCallsSearchQuery] = useState("");
+  const [callsPageSize, setCallsPageSize] = useState(10);
+  const [callsMobilePage, setCallsMobilePage] = useState(1);
 
   // Flatten asset tagging details for active expenses
   const taggingBreakdownData = useMemo(() => {
@@ -752,6 +762,264 @@ export default function AnalysisPage() {
       sorter: (a: any, b: any) => a.total_val - b.total_val
     }
   ];
+
+  // PMS Done Breakdown Data
+  const pmsBreakdownData = useMemo(() => {
+    const list: {
+      key: string;
+      date: string;
+      engineer: string;
+      district: string;
+      zone: string;
+      pms_count: number;
+      purpose: string;
+    }[] = [];
+
+    let counter = 1;
+    activeExpenses.forEach(e => {
+      if (!e) return;
+      const pmsCount = Number(e.pms_count || 0);
+      if (pmsCount <= 0) return;
+
+      const engineerName = e.submitter_name || "Self";
+      const districtName = e.district || e.submitter_district || e.home_district || "Ganganagar";
+      const zoneName = e.zone || "Unassigned";
+      const mainDate = String(e.date || e.itinerary || "").trim();
+
+      list.push({
+        key: `pms_${counter++}`,
+        date: mainDate,
+        engineer: engineerName,
+        district: districtName,
+        zone: zoneName,
+        pms_count: pmsCount,
+        purpose: e.purpose || e.description || "Preventive Maintenance Service"
+      });
+    });
+
+    return list;
+  }, [activeExpenses]);
+
+  const filteredPmsBreakdown = useMemo(() => {
+    return pmsBreakdownData.filter(item => {
+      if (pmsSearchQuery.trim()) {
+        const q = pmsSearchQuery.trim().toLowerCase();
+        const matchEng = item.engineer.toLowerCase().includes(q);
+        const matchDist = item.district.toLowerCase().includes(q);
+        const matchPurp = item.purpose.toLowerCase().includes(q);
+        const matchZone = item.zone.toLowerCase().includes(q);
+        if (!matchEng && !matchDist && !matchPurp && !matchZone) return false;
+      }
+      return true;
+    });
+  }, [pmsBreakdownData, pmsSearchQuery]);
+
+  const pmsTableColumns = [
+    {
+      title: "Date",
+      dataIndex: "date",
+      key: "date",
+      width: 110,
+      render: (val: string) => <span className="font-mono text-xs font-semibold text-slate-700">{val || "—"}</span>,
+      sorter: (a: any, b: any) => (a.date || "").localeCompare(b.date || "")
+    },
+    {
+      title: "Engineer Name",
+      dataIndex: "engineer",
+      key: "engineer",
+      render: (val: string) => <span className="font-bold text-xs text-indigo-900">{val}</span>,
+      sorter: (a: any, b: any) => a.engineer.localeCompare(b.engineer)
+    },
+    {
+      title: "District / Zone",
+      key: "district_zone",
+      width: 140,
+      render: (_: any, record: any) => <span className="text-xs text-slate-600 font-medium">{record.district} ({record.zone})</span>,
+      sorter: (a: any, b: any) => a.district.localeCompare(b.district)
+    },
+    {
+      title: "PMS Done",
+      dataIndex: "pms_count",
+      key: "pms_count",
+      width: 110,
+      align: "center" as const,
+      render: (val: number) => <span className="font-mono font-extrabold text-xs text-teal-600 bg-teal-50 border border-teal-200 px-2 py-0.5 rounded-md">{val} Completed</span>,
+      sorter: (a: any, b: any) => a.pms_count - b.pms_count
+    },
+    {
+      title: "Purpose / Details",
+      dataIndex: "purpose",
+      key: "purpose",
+      render: (val: string) => <span className="text-xs text-slate-700">{val || "—"}</span>
+    }
+  ];
+
+  // Calls Activity Breakdown Data
+  const callsBreakdownData = useMemo(() => {
+    const list: {
+      key: string;
+      date: string;
+      engineer: string;
+      district: string;
+      zone: string;
+      calls_assigned: number;
+      calls_completed: number;
+      completion_rate: number;
+      purpose: string;
+    }[] = [];
+
+    let counter = 1;
+    activeExpenses.forEach(e => {
+      if (!e) return;
+      const assigned = Number(e.calls_assigned || 0);
+      const completed = Number(e.calls_completed || 0);
+      if (assigned <= 0 && completed <= 0) return;
+
+      const engineerName = e.submitter_name || "Self";
+      const districtName = e.district || e.submitter_district || e.home_district || "Ganganagar";
+      const zoneName = e.zone || "Unassigned";
+      const mainDate = String(e.date || e.itinerary || "").trim();
+      const rate = assigned > 0 ? Math.min(100, Math.round((completed / assigned) * 100)) : (completed > 0 ? 100 : 0);
+
+      list.push({
+        key: `call_${counter++}`,
+        date: mainDate,
+        engineer: engineerName,
+        district: districtName,
+        zone: zoneName,
+        calls_assigned: assigned,
+        calls_completed: completed,
+        completion_rate: rate,
+        purpose: e.purpose || e.description || "Service Call"
+      });
+    });
+
+    return list;
+  }, [activeExpenses]);
+
+  const filteredCallsBreakdown = useMemo(() => {
+    return callsBreakdownData.filter(item => {
+      if (callsSearchQuery.trim()) {
+        const q = callsSearchQuery.trim().toLowerCase();
+        const matchEng = item.engineer.toLowerCase().includes(q);
+        const matchDist = item.district.toLowerCase().includes(q);
+        const matchPurp = item.purpose.toLowerCase().includes(q);
+        const matchZone = item.zone.toLowerCase().includes(q);
+        if (!matchEng && !matchDist && !matchPurp && !matchZone) return false;
+      }
+      return true;
+    });
+  }, [callsBreakdownData, callsSearchQuery]);
+
+  const callsTableColumns = [
+    {
+      title: "Date",
+      dataIndex: "date",
+      key: "date",
+      width: 100,
+      render: (val: string) => <span className="font-mono text-xs font-semibold text-slate-700">{val || "—"}</span>,
+      sorter: (a: any, b: any) => (a.date || "").localeCompare(b.date || "")
+    },
+    {
+      title: "Engineer Name",
+      dataIndex: "engineer",
+      key: "engineer",
+      render: (val: string) => <span className="font-bold text-xs text-indigo-900">{val}</span>,
+      sorter: (a: any, b: any) => a.engineer.localeCompare(b.engineer)
+    },
+    {
+      title: "District / Zone",
+      key: "district_zone",
+      width: 130,
+      render: (_: any, record: any) => <span className="text-xs text-slate-600 font-medium">{record.district} ({record.zone})</span>,
+      sorter: (a: any, b: any) => a.district.localeCompare(b.district)
+    },
+    {
+      title: "Calls Assigned",
+      dataIndex: "calls_assigned",
+      key: "calls_assigned",
+      width: 110,
+      align: "center" as const,
+      render: (val: number) => <span className="font-mono text-xs text-slate-700">{val}</span>,
+      sorter: (a: any, b: any) => a.calls_assigned - b.calls_assigned
+    },
+    {
+      title: "Calls Completed",
+      dataIndex: "calls_completed",
+      key: "calls_completed",
+      width: 120,
+      align: "center" as const,
+      render: (val: number) => <span className="font-mono font-bold text-xs text-indigo-700">{val}</span>,
+      sorter: (a: any, b: any) => a.calls_completed - b.calls_completed
+    },
+    {
+      title: "Completion Rate",
+      dataIndex: "completion_rate",
+      key: "completion_rate",
+      width: 130,
+      align: "center" as const,
+      render: (val: number) => (
+        <span className={`font-mono font-bold text-xs px-2 py-0.5 rounded-md ${val >= 80 ? 'bg-emerald-50 text-emerald-700 border border-emerald-200' : 'bg-amber-50 text-amber-700 border border-amber-200'}`}>
+          {val}%
+        </span>
+      ),
+      sorter: (a: any, b: any) => a.completion_rate - b.completion_rate
+    }
+  ];
+
+  // Excel Export Handler
+  const handleExportToExcel = (modalType: "asset_tagging" | "pms" | "calls") => {
+    const monthName = months[selectedMonth];
+    const monthQuery = `${monthName}_${selectedYear}`;
+    let exportData: any[] = [];
+    let fileName = "";
+
+    if (modalType === "asset_tagging") {
+      exportData = filteredTaggingBreakdown.map((item, idx) => ({
+        "S.No": idx + 1,
+        "Date": item.date || "—",
+        "Engineer Name": item.engineer,
+        "District": item.district,
+        "Zone": item.zone,
+        "Equipment Name": item.equipment_name,
+        "Quantity (Units)": item.quantity,
+        "Unit Price (INR)": item.unit_cost,
+        "Total Tagged Value (INR)": item.total_val
+      }));
+      fileName = `Asset_Tagging_Breakdown_${monthQuery}.xlsx`;
+    } else if (modalType === "pms") {
+      exportData = filteredPmsBreakdown.map((item, idx) => ({
+        "S.No": idx + 1,
+        "Date": item.date || "—",
+        "Engineer Name": item.engineer,
+        "District": item.district,
+        "Zone": item.zone,
+        "PMS Done Count": item.pms_count,
+        "Purpose / Details": item.purpose
+      }));
+      fileName = `PMS_Done_Breakdown_${monthQuery}.xlsx`;
+    } else if (modalType === "calls") {
+      exportData = filteredCallsBreakdown.map((item, idx) => ({
+        "S.No": idx + 1,
+        "Date": item.date || "—",
+        "Engineer Name": item.engineer,
+        "District": item.district,
+        "Zone": item.zone,
+        "Calls Assigned": item.calls_assigned,
+        "Calls Completed": item.calls_completed,
+        "Completion Rate (%)": `${item.completion_rate}%`,
+        "Purpose / Details": item.purpose
+      }));
+      fileName = `Calls_Activity_Breakdown_${monthQuery}.xlsx`;
+    }
+
+    if (exportData.length === 0) return;
+
+    const worksheet = XLSX.utils.json_to_sheet(exportData);
+    const workbook = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(workbook, worksheet, "Breakdown");
+    XLSX.writeFile(workbook, fileName);
+  };
 
   // E. Zone-wise (from user.zone database field) - respects active filters
   // FULL_ACCESS_ROLES: single source of truth — see utils/constants.ts
@@ -1280,9 +1548,14 @@ export default function AnalysisPage() {
 
         {/* Card 4: Calls Completed / Assigned */}
         <Col xs={12} sm={8} md={6} lg={4} xl={3.4}>
-          <Card size="small" bordered={false} className="shadow-xs border border-gray-150 rounded-xl">
+          <Card 
+            size="small" 
+            bordered={false} 
+            className="shadow-xs border border-gray-150 rounded-xl cursor-pointer hover:border-indigo-400 hover:shadow-md transition-all group"
+            onClick={() => setActiveModal("calls")}
+          >
             <Statistic
-              title={<span className="text-[9px] font-bold uppercase tracking-wider text-gray-400">Calls Done</span>}
+              title={<span className="text-[9px] font-bold uppercase tracking-wider text-gray-400 group-hover:text-indigo-600">Calls Done 🔍</span>}
               value={`${activityStats.callsCompleted} / ${activityStats.callsAssigned}`}
               valueStyle={{ fontSize: "16px", fontWeight: 800, color: "#1F2937", fontFamily: "monospace" }}
               prefix={<FundOutlined className="text-indigo-500 mr-1.5" />}
@@ -1292,9 +1565,14 @@ export default function AnalysisPage() {
 
         {/* Card 5: PMS Completed */}
         <Col xs={12} sm={8} md={6} lg={4} xl={3.4}>
-          <Card size="small" bordered={false} className="shadow-xs border border-gray-150 rounded-xl">
+          <Card 
+            size="small" 
+            bordered={false} 
+            className="shadow-xs border border-gray-150 rounded-xl cursor-pointer hover:border-teal-400 hover:shadow-md transition-all group"
+            onClick={() => setActiveModal("pms")}
+          >
             <Statistic
-              title={<span className="text-[9px] font-bold uppercase tracking-wider text-gray-400">PMS Done</span>}
+              title={<span className="text-[9px] font-bold uppercase tracking-wider text-gray-400 group-hover:text-teal-600">PMS Done 🔍</span>}
               value={activityStats.pmsCount}
               valueStyle={{ fontSize: "16px", fontWeight: 800, color: "#1F2937", fontFamily: "monospace" }}
               prefix={<CheckOutlined className="text-teal-500 mr-1.5" />}
@@ -1948,8 +2226,8 @@ export default function AnalysisPage() {
 
       {/* Asset Tagging Detailed Breakdown Modal */}
       <Modal
-        open={isTaggingModalOpen}
-        onCancel={() => setIsTaggingModalOpen(false)}
+        open={isTaggingModalOpen || activeModal === "asset_tagging"}
+        onCancel={() => { setIsTaggingModalOpen(false); setActiveModal("none"); }}
         footer={null}
         width={950}
         centered
@@ -1967,16 +2245,28 @@ export default function AnalysisPage() {
                 {selectedTaggingDate ? `Filtered for ${selectedTaggingDate}` : `${months[selectedMonth]} ${selectedYear} — All Tagged Equipment`}
               </p>
             </div>
-            {selectedTaggingDate && (
+            <div className="flex items-center gap-2">
               <Button
                 size="small"
-                type="dashed"
-                onClick={() => setSelectedTaggingDate(null)}
-                className="text-xs text-indigo-600 font-bold self-start sm:self-auto"
+                type="primary"
+                icon={<FileExcelOutlined />}
+                style={{ backgroundColor: "#10b981", borderColor: "#10b981" }}
+                onClick={() => handleExportToExcel("asset_tagging")}
+                className="text-xs font-bold shadow-2xs"
               >
-                Clear Date Filter (Show All)
+                Export Excel
               </Button>
-            )}
+              {selectedTaggingDate && (
+                <Button
+                  size="small"
+                  type="dashed"
+                  onClick={() => setSelectedTaggingDate(null)}
+                  className="text-xs text-indigo-600 font-bold"
+                >
+                  Clear Date Filter
+                </Button>
+              )}
+            </div>
           </div>
         }
       >
@@ -2115,6 +2405,362 @@ export default function AnalysisPage() {
                 showSizeChanger: true,
                 pageSizeOptions: ["10", "25", "50", "100"],
                 showTotal: (total, range) => `${range[0]}-${range[1]} of ${total} tagged items`
+              }}
+              bordered
+              scroll={{ x: 750, y: 380 }}
+              className="shadow-xs text-xs"
+            />
+          </div>
+        </div>
+      </Modal>
+
+      {/* PMS Done Detailed Breakdown Modal */}
+      <Modal
+        open={activeModal === "pms"}
+        onCancel={() => setActiveModal("none")}
+        footer={null}
+        width={900}
+        centered
+        style={{ maxWidth: "96vw", top: 10 }}
+        bodyStyle={{ padding: "12px 16px 16px 16px" }}
+        className="pms-breakdown-modal"
+        title={
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-gray-200 pb-3 pr-6">
+            <div>
+              <span className="text-xs sm:text-sm font-extrabold text-slate-800 uppercase tracking-wide flex items-center gap-2">
+                <CheckOutlined className="text-teal-500" />
+                PMS Done Detailed Breakdown
+              </span>
+              <p className="text-[10px] sm:text-[11px] text-gray-500 font-normal m-0 mt-0.5">
+                {months[selectedMonth]} {selectedYear} — Preventive Maintenance Records
+              </p>
+            </div>
+            <Button
+              size="small"
+              type="primary"
+              icon={<FileExcelOutlined />}
+              style={{ backgroundColor: "#10b981", borderColor: "#10b981" }}
+              onClick={() => handleExportToExcel("pms")}
+              className="text-xs font-bold shadow-2xs self-start sm:self-auto"
+            >
+              Export Excel
+            </Button>
+          </div>
+        }
+      >
+        <div className="space-y-3 pt-1">
+          {/* Summary Badges & Search Bar */}
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 bg-slate-50 p-2.5 rounded-xl border border-slate-200">
+            <div className="flex flex-wrap items-center gap-2">
+              <div className="bg-white border border-slate-200 px-2.5 py-1 rounded-lg shadow-2xs">
+                <span className="text-[9px] text-gray-400 font-bold uppercase block">Total Records</span>
+                <span className="text-xs font-black text-slate-800 font-mono">{filteredPmsBreakdown.length} entries</span>
+              </div>
+              <div className="bg-white border border-slate-200 px-2.5 py-1 rounded-lg shadow-2xs">
+                <span className="text-[9px] text-gray-400 font-bold uppercase block">Total PMS Completed</span>
+                <span className="text-xs font-black text-teal-600 font-mono">
+                  {filteredPmsBreakdown.reduce((sum, item) => sum + item.pms_count, 0)} PMS
+                </span>
+              </div>
+            </div>
+
+            <div className="w-full sm:w-64">
+              <Input
+                placeholder="Search engineer, district, or details..."
+                prefix={<SearchOutlined className="text-gray-400" />}
+                value={pmsSearchQuery}
+                onChange={(e) => {
+                  setPmsSearchQuery(e.target.value);
+                  setPmsMobilePage(1);
+                }}
+                allowClear
+                size="small"
+                className="rounded-lg text-xs"
+              />
+            </div>
+          </div>
+
+          {/* Mobile Cards View (<768px) */}
+          <div className="block md:hidden space-y-2.5 max-h-[60vh] overflow-y-auto pr-1">
+            {filteredPmsBreakdown.length === 0 ? (
+              <div className="py-8 text-center text-gray-400 text-xs font-bold">
+                No PMS records found for this selection
+              </div>
+            ) : (
+              (() => {
+                const totalMobileItems = filteredPmsBreakdown.length;
+                const slicedMobile = filteredPmsBreakdown.slice(
+                  (pmsMobilePage - 1) * pmsPageSize,
+                  pmsMobilePage * pmsPageSize
+                );
+                const maxMobilePage = Math.ceil(totalMobileItems / pmsPageSize) || 1;
+
+                return (
+                  <>
+                    <div className="space-y-2">
+                      {slicedMobile.map((item) => (
+                        <div key={item.key} className="bg-white border border-slate-200 rounded-xl p-3 shadow-2xs hover:border-teal-300 transition-all">
+                          <div className="flex items-start justify-between gap-2 border-b border-slate-100 pb-2 mb-2">
+                            <span className="font-bold text-xs text-indigo-900">
+                              {item.engineer}
+                            </span>
+                            <span className="font-mono font-extrabold text-xs text-teal-600 bg-teal-50 border border-teal-200 px-2 py-0.5 rounded-md shrink-0">
+                              {item.pms_count} PMS
+                            </span>
+                          </div>
+
+                          <div className="grid grid-cols-2 gap-2 text-[11px]">
+                            <div>
+                              <span className="text-gray-400 text-[9px] uppercase font-bold block">District / Zone</span>
+                              <span className="font-semibold text-slate-700">{item.district} ({item.zone})</span>
+                            </div>
+                            <div>
+                              <span className="text-gray-400 text-[9px] uppercase font-bold block">Date</span>
+                              <span className="font-mono text-slate-600">{item.date || "—"}</span>
+                            </div>
+                            <div className="col-span-2">
+                              <span className="text-gray-400 text-[9px] uppercase font-bold block">Purpose / Details</span>
+                              <span className="text-slate-700">{item.purpose}</span>
+                            </div>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+
+                    {/* Mobile Pagination Controls */}
+                    <div className="pt-2 flex items-center justify-between gap-2 bg-slate-50 p-2 rounded-xl border border-slate-200 text-xs">
+                      <span className="text-[10px] text-slate-500 font-medium">
+                        {((pmsMobilePage - 1) * pmsPageSize) + 1}-{Math.min(pmsMobilePage * pmsPageSize, totalMobileItems)} of {totalMobileItems}
+                      </span>
+                      <div className="flex items-center gap-1.5">
+                        <Button
+                          size="small"
+                          disabled={pmsMobilePage === 1}
+                          onClick={() => setPmsMobilePage(p => Math.max(1, p - 1))}
+                          className="text-[11px] px-2 font-bold"
+                        >
+                          Prev
+                        </Button>
+                        <span className="font-mono text-[11px] font-bold text-slate-700 px-1">
+                          {pmsMobilePage}/{maxMobilePage}
+                        </span>
+                        <Button
+                          size="small"
+                          disabled={pmsMobilePage >= maxMobilePage}
+                          onClick={() => setPmsMobilePage(p => p + 1)}
+                          className="text-[11px] px-2 font-bold"
+                        >
+                          Next
+                        </Button>
+                      </div>
+                    </div>
+                  </>
+                );
+              })()
+            )}
+          </div>
+
+          {/* Desktop Table View (≥768px) */}
+          <div className="hidden md:block">
+            <Table
+              columns={pmsTableColumns}
+              dataSource={filteredPmsBreakdown}
+              size="small"
+              pagination={{
+                pageSize: pmsPageSize,
+                onChange: (_, size) => setPmsPageSize(size),
+                onShowSizeChange: (_, size) => setPmsPageSize(size),
+                showSizeChanger: true,
+                pageSizeOptions: ["10", "25", "50", "100"],
+                showTotal: (total, range) => `${range[0]}-${range[1]} of ${total} PMS records`
+              }}
+              bordered
+              scroll={{ x: 700, y: 380 }}
+              className="shadow-xs text-xs"
+            />
+          </div>
+        </div>
+      </Modal>
+
+      {/* Calls Activity Detailed Breakdown Modal */}
+      <Modal
+        open={activeModal === "calls"}
+        onCancel={() => setActiveModal("none")}
+        footer={null}
+        width={950}
+        centered
+        style={{ maxWidth: "96vw", top: 10 }}
+        bodyStyle={{ padding: "12px 16px 16px 16px" }}
+        className="calls-breakdown-modal"
+        title={
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-gray-200 pb-3 pr-6">
+            <div>
+              <span className="text-xs sm:text-sm font-extrabold text-slate-800 uppercase tracking-wide flex items-center gap-2">
+                <FundOutlined className="text-indigo-500" />
+                Calls Activity Detailed Breakdown
+              </span>
+              <p className="text-[10px] sm:text-[11px] text-gray-500 font-normal m-0 mt-0.5">
+                {months[selectedMonth]} {selectedYear} — Service Calls Assigned vs Completed
+              </p>
+            </div>
+            <Button
+              size="small"
+              type="primary"
+              icon={<FileExcelOutlined />}
+              style={{ backgroundColor: "#10b981", borderColor: "#10b981" }}
+              onClick={() => handleExportToExcel("calls")}
+              className="text-xs font-bold shadow-2xs self-start sm:self-auto"
+            >
+              Export Excel
+            </Button>
+          </div>
+        }
+      >
+        <div className="space-y-3 pt-1">
+          {/* Summary Badges & Search Bar */}
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 bg-slate-50 p-2.5 rounded-xl border border-slate-200">
+            <div className="grid grid-cols-2 sm:flex sm:flex-wrap items-center gap-2">
+              <div className="bg-white border border-slate-200 px-2.5 py-1 rounded-lg shadow-2xs">
+                <span className="text-[9px] text-gray-400 font-bold uppercase block">Total Records</span>
+                <span className="text-xs font-black text-slate-800 font-mono">{filteredCallsBreakdown.length} entries</span>
+              </div>
+              <div className="bg-white border border-slate-200 px-2.5 py-1 rounded-lg shadow-2xs">
+                <span className="text-[9px] text-gray-400 font-bold uppercase block">Calls Assigned</span>
+                <span className="text-xs font-black text-slate-700 font-mono">
+                  {filteredCallsBreakdown.reduce((sum, item) => sum + item.calls_assigned, 0)}
+                </span>
+              </div>
+              <div className="bg-white border border-slate-200 px-2.5 py-1 rounded-lg shadow-2xs">
+                <span className="text-[9px] text-gray-400 font-bold uppercase block">Calls Completed</span>
+                <span className="text-xs font-black text-indigo-700 font-mono">
+                  {filteredCallsBreakdown.reduce((sum, item) => sum + item.calls_completed, 0)}
+                </span>
+              </div>
+              <div className="bg-white border border-slate-200 px-2.5 py-1 rounded-lg shadow-2xs">
+                <span className="text-[9px] text-gray-400 font-bold uppercase block">Overall Rate</span>
+                <span className="text-xs font-black text-emerald-600 font-mono">
+                  {(() => {
+                    const totAssigned = filteredCallsBreakdown.reduce((sum, item) => sum + item.calls_assigned, 0);
+                    const totDone = filteredCallsBreakdown.reduce((sum, item) => sum + item.calls_completed, 0);
+                    return totAssigned > 0 ? Math.min(100, Math.round((totDone / totAssigned) * 100)) : 100;
+                  })()}%
+                </span>
+              </div>
+            </div>
+
+            <div className="w-full sm:w-64">
+              <Input
+                placeholder="Search engineer, district, or details..."
+                prefix={<SearchOutlined className="text-gray-400" />}
+                value={callsSearchQuery}
+                onChange={(e) => {
+                  setCallsSearchQuery(e.target.value);
+                  setCallsMobilePage(1);
+                }}
+                allowClear
+                size="small"
+                className="rounded-lg text-xs"
+              />
+            </div>
+          </div>
+
+          {/* Mobile Cards View (<768px) */}
+          <div className="block md:hidden space-y-2.5 max-h-[60vh] overflow-y-auto pr-1">
+            {filteredCallsBreakdown.length === 0 ? (
+              <div className="py-8 text-center text-gray-400 text-xs font-bold">
+                No calls activity records found for this selection
+              </div>
+            ) : (
+              (() => {
+                const totalMobileItems = filteredCallsBreakdown.length;
+                const slicedMobile = filteredCallsBreakdown.slice(
+                  (callsMobilePage - 1) * callsPageSize,
+                  callsMobilePage * callsPageSize
+                );
+                const maxMobilePage = Math.ceil(totalMobileItems / callsPageSize) || 1;
+
+                return (
+                  <>
+                    <div className="space-y-2">
+                      {slicedMobile.map((item) => (
+                        <div key={item.key} className="bg-white border border-slate-200 rounded-xl p-3 shadow-2xs hover:border-indigo-300 transition-all">
+                          <div className="flex items-start justify-between gap-2 border-b border-slate-100 pb-2 mb-2">
+                            <span className="font-bold text-xs text-indigo-900">
+                              {item.engineer}
+                            </span>
+                            <span className={`font-mono font-bold text-xs px-2 py-0.5 rounded-md ${item.completion_rate >= 80 ? 'bg-emerald-50 text-emerald-700 border border-emerald-200' : 'bg-amber-50 text-amber-700 border border-amber-200'}`}>
+                              {item.completion_rate}% Rate
+                            </span>
+                          </div>
+
+                          <div className="grid grid-cols-2 gap-2 text-[11px]">
+                            <div>
+                              <span className="text-gray-400 text-[9px] uppercase font-bold block">District / Zone</span>
+                              <span className="font-semibold text-slate-700">{item.district} ({item.zone})</span>
+                            </div>
+                            <div>
+                              <span className="text-gray-400 text-[9px] uppercase font-bold block">Date</span>
+                              <span className="font-mono text-slate-600">{item.date || "—"}</span>
+                            </div>
+                            <div>
+                              <span className="text-gray-400 text-[9px] uppercase font-bold block">Calls Done / Assigned</span>
+                              <span className="font-mono text-slate-800 font-bold">{item.calls_completed} / {item.calls_assigned}</span>
+                            </div>
+                            <div>
+                              <span className="text-gray-400 text-[9px] uppercase font-bold block">Purpose</span>
+                              <span className="text-slate-700 truncate block">{item.purpose}</span>
+                            </div>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+
+                    {/* Mobile Pagination Controls */}
+                    <div className="pt-2 flex items-center justify-between gap-2 bg-slate-50 p-2 rounded-xl border border-slate-200 text-xs">
+                      <span className="text-[10px] text-slate-500 font-medium">
+                        {((callsMobilePage - 1) * callsPageSize) + 1}-{Math.min(callsMobilePage * callsPageSize, totalMobileItems)} of {totalMobileItems}
+                      </span>
+                      <div className="flex items-center gap-1.5">
+                        <Button
+                          size="small"
+                          disabled={callsMobilePage === 1}
+                          onClick={() => setCallsMobilePage(p => Math.max(1, p - 1))}
+                          className="text-[11px] px-2 font-bold"
+                        >
+                          Prev
+                        </Button>
+                        <span className="font-mono text-[11px] font-bold text-slate-700 px-1">
+                          {callsMobilePage}/{maxMobilePage}
+                        </span>
+                        <Button
+                          size="small"
+                          disabled={callsMobilePage >= maxMobilePage}
+                          onClick={() => setCallsMobilePage(p => p + 1)}
+                          className="text-[11px] px-2 font-bold"
+                        >
+                          Next
+                        </Button>
+                      </div>
+                    </div>
+                  </>
+                );
+              })()
+            )}
+          </div>
+
+          {/* Desktop Table View (≥768px) */}
+          <div className="hidden md:block">
+            <Table
+              columns={callsTableColumns}
+              dataSource={filteredCallsBreakdown}
+              size="small"
+              pagination={{
+                pageSize: callsPageSize,
+                onChange: (_, size) => setCallsPageSize(size),
+                onShowSizeChange: (_, size) => setCallsPageSize(size),
+                showSizeChanger: true,
+                pageSizeOptions: ["10", "25", "50", "100"],
+                showTotal: (total, range) => `${range[0]}-${range[1]} of ${total} calls records`
               }}
               bordered
               scroll={{ x: 750, y: 380 }}
