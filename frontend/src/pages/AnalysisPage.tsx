@@ -204,8 +204,8 @@ export default function AnalysisPage() {
     const monthQueryParam = `${selectedYear}-${monthStr}`;
     
     const fetchData = async () => {
-      const cacheKeyMy = `cache_my_expenses_${uId}_${monthQueryParam}`;
-      const cacheKeyTeam = `cache_team_expenses_${uId}_${monthQueryParam}`;
+      const cacheKeyMy = `cache_v3_my_expenses_${uId}_${monthQueryParam}`;
+      const cacheKeyTeam = `cache_v3_team_expenses_${uId}_${monthQueryParam}`;
       const hasCache = uId && localStorage.getItem(cacheKeyMy);
       if (!hasCache) {
         setLoading(true);
