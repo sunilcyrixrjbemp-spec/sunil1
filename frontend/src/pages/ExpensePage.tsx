@@ -1570,23 +1570,20 @@ export default function ExpensePage() {
       return;
     }
     
-    let processedFile = file;
+    // Explicitly block PDF files (FIX #2 Requirement)
+    if (checkIsPdf(file) || file.type === "application/pdf" || file.name.toLowerCase().endsWith(".pdf")) {
+      toast.error("PDF allowed nahi hai, sirf image (JPG/PNG) upload karein.");
+      return;
+    }
 
-    // Automatic PDF to JPG Conversion — PDF files are NEVER saved directly
-    if (checkIsPdf(file)) {
-      const toastId = toast.loading("Converting PDF document to JPG image...");
-      try {
-        processedFile = await convertPdfToJpgFile(file);
-        toast.dismiss(toastId);
-        toast.success(`PDF converted to JPG image (${Math.round(processedFile.size / 1024)}KB) ✓`, { duration: 3000 });
-      } catch (err) {
-        console.error("PDF to JPG conversion failed:", err);
-        toast.dismiss(toastId);
-        toast.error("Failed to convert PDF document to JPG image.");
-        return;
-      }
+    // Explicitly block HEIC files with clear error message (Item 1 Requirement)
+    const isHeic = file.name.toLowerCase().endsWith(".heic") || file.name.toLowerCase().endsWith(".heif") || file.type.includes("heic") || file.type.includes("heif");
+    if (isHeic) {
+      toast.error("HEIC format supported nahi hai, kripya JPG/PNG image upload karein.");
+      return;
     }
     
+    let processedFile = file;
     const isImage = processedFile.type.startsWith("image/");
     
     if (isImage) {
@@ -1801,6 +1798,33 @@ export default function ExpensePage() {
   const isDailyAllowanceAllowed = (legs: ItineraryLeg[] = itineraries) => {
     if (!isBaseLocationOnlyTravel(legs)) return true;
     if (!user || !user.base_reporting_location) return true;
+
+    // CRITICAL FIX: If ANY leg in the day has official activities (PMS, Calls, Asset Tagging, Calibration, Mobilisation) or work, DA IS ALLOWED!
+    const hasActivities = legs.some(leg => {
+      const acts = leg.selected_activities || [];
+      if (acts.length > 0) return true;
+
+      const pmsCount = parseInt((leg.ws_pms || "0").toString(), 10) || 0;
+      const callsAssigned = parseInt((leg.ws_assigned || "0").toString(), 10) || 0;
+      const callsClosed = parseInt((leg.ws_closed || "0").toString(), 10) || 0;
+      const assetCount = parseInt((leg.ws_asset || "0").toString(), 10) || 0;
+      const calibCount = parseInt((leg.calibration_count || "0").toString(), 10) || 0;
+      const mobCount = parseInt((leg.mobilise_asset_count || "0").toString(), 10) || 0;
+
+      if (pmsCount > 0 || callsAssigned > 0 || callsClosed > 0 || assetCount > 0 || calibCount > 0 || mobCount > 0) return true;
+
+      const callsList = leg.calls_list || [];
+      const pmsList = leg.pms_list || [];
+      const assetsList = leg.assets_list || [];
+      if (callsList.length > 0 || pmsList.length > 0 || assetsList.length > 0) return true;
+
+      const purpose = (leg.visit_purpose || "").toLowerCase();
+      if (purpose.includes("activity") || purpose.includes("activities") || purpose.includes("pms") || purpose.includes("call") || purpose.includes("tagging") || purpose.includes("service")) return true;
+
+      return false;
+    });
+
+    if (hasActivities) return true;
 
     const baseLocations = user.base_reporting_location
       ? user.base_reporting_location.split(",").map((x: string) => x.trim().toLowerCase()).filter(Boolean)
@@ -3548,7 +3572,7 @@ export default function ExpensePage() {
                             {!files[leg.leg]?.comm_mail && !hasExistingFile(leg.leg, "Communication_Mail") ? (
                               <input
                                   type="file"
-                                  accept="*/*"
+                                  accept="image/*"
                                   onChange={(e) => handleLegFileChange(leg.leg, "comm_mail", e.target.files ? e.target.files[0] : null)}
                                   className="text-xs file:mr-4 file:py-1.5 file:px-3 file:rounded file:border file:border-indigo-300 file:text-[10px] file:font-bold file:uppercase file:bg-white file:text-indigo-700 hover:file:bg-indigo-50 cursor-pointer w-full"
                                 />
@@ -3657,7 +3681,7 @@ export default function ExpensePage() {
                                   <div className="mt-1.5">
                                     <input
                                       type="file"
-                                      accept="*/*"
+                                      accept="image/*"
                                       onChange={(e) => handleLegFileChange(leg.leg, "sub_bill", e.target.files ? e.target.files[0] : null)}
                                       className="text-xs file:mr-4 file:py-1 file:px-2 file:rounded file:border-0 file:text-[9px] file:font-bold file:uppercase file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100 cursor-pointer w-full"
                                     />
@@ -3757,7 +3781,7 @@ export default function ExpensePage() {
                               <div className="mt-1.5">
                                 <input
                                   type="file"
-                                  accept="*/*"
+                                  accept="image/*"
                                   onChange={(e) => handleLegFileChange(leg.leg, "hotel_bill", e.target.files ? e.target.files[0] : null)}
                                   className="text-xs file:mr-4 file:py-1 file:px-2 file:rounded file:border-0 file:text-[9px] file:font-bold file:uppercase file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100 cursor-pointer w-full"
                                 />
@@ -3813,7 +3837,7 @@ export default function ExpensePage() {
                               <div className="mt-1.5">
                                 <input
                                   type="file"
-                                  accept="*/*"
+                                  accept="image/*"
                                   onChange={(e) => handleLegFileChange(leg.leg, "local_purchase_bill", e.target.files ? e.target.files[0] : null)}
                                   className="text-xs file:mr-4 file:py-1 file:px-2 file:rounded file:border-0 file:text-[9px] file:font-bold file:uppercase file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100 cursor-pointer w-full"
                                 />
@@ -3882,7 +3906,7 @@ export default function ExpensePage() {
                             {!files[leg.leg]?.oth_bill && !hasExistingFile(leg.leg, "Other") ? (
                               <input
                                   type="file"
-                                  accept="*/*"
+                                  accept="image/*"
                                   onChange={(e) => handleLegFileChange(leg.leg, "oth_bill", e.target.files ? e.target.files[0] : null)}
                                   className="text-xs file:mr-4 file:py-1 file:px-2 file:rounded file:border-0 file:text-[9px] file:font-bold file:uppercase file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100 cursor-pointer w-full"
                                 />
@@ -4076,7 +4100,7 @@ export default function ExpensePage() {
                                         <span>Add</span>
                                         <input
                                           type="file"
-                                          accept="*/*"
+                                          accept="image/*"
                                           onChange={(e) => {
                                             const file = e.target.files?.[0];
                                             if (file) uploadActivityPhoto(leg.leg, "Calls", file);
@@ -4279,7 +4303,7 @@ export default function ExpensePage() {
                                         <span>Add</span>
                                         <input
                                           type="file"
-                                          accept="*/*"
+                                          accept="image/*"
                                           onChange={(e) => {
                                             const file = e.target.files?.[0];
                                             if (file) uploadActivityPhoto(leg.leg, "PMS", file);

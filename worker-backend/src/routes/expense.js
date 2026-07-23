@@ -152,6 +152,46 @@ export function computeBaseLocPolicy(baseReportingLocation, itineraries) {
   if (visitedNonBase) return { isBaseLocOnly: false, isDaAllowed: true, baseLocations };
 
   // Determine DA eligibility
+  // CRITICAL FIX: If ANY leg in the day has official activities (PMS, Calls, Asset Tagging, Calibration, Mobilisation) or official field work, DA IS ALLOWED!
+  const hasOfficialWorkOrActivities = itineraries.some(leg => {
+    // 1. Check selected_activities array or JSON
+    let acts = leg.selected_activities || [];
+    if (typeof acts === "string" && acts.trim()) {
+      try { acts = JSON.parse(acts); } catch(e) { acts = []; }
+    }
+    if (Array.isArray(acts) && acts.length > 0) return true;
+
+    // 2. Check activity_details string/object
+    let details = leg.activity_details;
+    if (typeof details === "string" && details.trim()) {
+      try { details = JSON.parse(details); } catch(e) { details = null; }
+    }
+    if (details && Array.isArray(details.selected_activities) && details.selected_activities.length > 0) return true;
+
+    // 3. Check activity / work counts (PMS, Calls, Asset Tagging, Calibration, Mobilise)
+    const pmsCount = parseInt(leg.pms_count || leg.ws_pms || "0", 10) || 0;
+    const callsCount = parseInt(leg.calls_assigned || leg.calls_completed || leg.ws_assigned || leg.ws_closed || "0", 10) || 0;
+    const assetCount = parseInt(leg.asset_tagging || leg.ws_asset || "0", 10) || 0;
+    const calibCount = parseInt(leg.calibration_count || "0", 10) || 0;
+    const mobCount   = parseInt(leg.mobilise_asset_count || leg.mobilise_count || "0", 10) || 0;
+    if (pmsCount > 0 || callsCount > 0 || assetCount > 0 || calibCount > 0 || mobCount > 0) return true;
+
+    // 4. Check visit purpose or lists
+    const purpose = (leg.visit_purpose || "").toLowerCase();
+    if (purpose.includes("activity") || purpose.includes("activities") || purpose.includes("pms") || purpose.includes("call") || purpose.includes("tagging") || purpose.includes("service")) return true;
+
+    const callsList = leg.calls_list || (details && details.calls_list) || [];
+    const pmsList = leg.pms_list || (details && details.pms_list) || [];
+    const assetsList = leg.assets_list || (details && details.assets_list) || [];
+    if (callsList.length > 0 || pmsList.length > 0 || assetsList.length > 0) return true;
+
+    return false;
+  });
+
+  if (hasOfficialWorkOrActivities) {
+    return { isBaseLocOnly: true, isDaAllowed: true, baseLocations };
+  }
+
   const hasStation = itineraries.some(leg => {
     const f = (leg.from || "").trim().toLowerCase();
     const t = (leg.to || "").trim().toLowerCase();
@@ -2378,73 +2418,132 @@ export async function handleSubmitExpense(request, env, params, query, user) {
     }
   }
 
-  if (existingExpense) {
-    await runWrite(env, `
-      UPDATE expenses 
-      SET month = ?, year = ?, amount = ?, status = ?, travel_mode = ?, itinerary = ?, description = ?,
-          da_amount = ?, hotel_amount = ?, other_expense_amount = ?, calls_assigned = ?, calls_completed = ?, 
-          pms_count = ?, asset_tagging = ?, local_purchase_amount = ?, original_amount = ?, original_da_amount = ?, 
-          original_hotel_amount = ?, original_other_expense_amount = ?, original_local_purchase_amount = ?, 
-          calibration_count = ?, mobilise_count = ?, updated_at = ?
-      WHERE id = ?
-    `, [
-      claim_month, claim_year, amount, status, majorMode, date, firstPurpose,
-      totalDa, totalHotel, totalOther, totalAssigned, totalCompleted, totalPms,
-      totalAsset, totalLocalPurchase, amount, totalDa, totalHotel, 
-      totalOther, totalLocalPurchase, totalCalibration, totalMobilise,
-      timestamp, newExpId
-    ]);
-  } else {
-    const expRes = await runWrite(env, `
-      INSERT INTO expenses (
-        user_id, month, year, amount, status, travel_mode, itinerary, description, expense_code, 
-        da_amount, hotel_amount, other_expense_amount, calls_assigned, calls_completed, pms_count, 
-        asset_tagging, local_purchase_amount, original_amount, original_da_amount, original_hotel_amount, 
-        original_other_expense_amount, original_local_purchase_amount, calibration_count, mobilise_count, 
-        created_at, updated_at
-      )
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-    `, [
-      user.id, claim_month, claim_year, amount, status, majorMode, date, firstPurpose, expenseCode,
-      totalDa, totalHotel, totalOther, totalAssigned, totalCompleted, totalPms,
-      totalAsset, totalLocalPurchase, amount, totalDa, totalHotel, 
-      totalOther, totalLocalPurchase, totalCalibration, totalMobilise,
-      timestamp, timestamp
-    ]);
-    newExpId = expRes.meta?.last_row_id;
-  }
-
-  if (!newExpId) return jsonResponse({ error: "Failed to save expense claim" }, 500);
-
-  // Helper for attachments upload with fallback
-  const handleAttachment = async (fileKey, billType, legNum) => {
+  // ── FIX #2: Format Validation & Collect All Files to Upload BEFORE DB Write ──
+  const filesToUpload = [];
+  const validateAndAddFile = (fileKey, billType, legNum) => {
     const file = formData ? formData.get(fileKey) : null;
     if (file && typeof file === "object" && file.name) {
-      const rawExt = file.name.split(".").pop().toLowerCase() || "jpg";
-      const ext = rawExt === "pdf" ? "jpg" : rawExt;
-      const filename = `${expenseCode}_leg${legNum}_${billType}_${Date.now()}.${ext}`;
+      const filenameLower = (file.name || "").toLowerCase();
+      const typeLower = (file.type || "").toLowerCase();
       
-      const now = new Date();
-      const monthName = now.toLocaleString("en-US", { month: "long" });
-      const yearVal = now.getFullYear();
-      const folderName = `${monthName}_${yearVal}`;
-      
-      let fileUrl = "";
-      try {
-        fileUrl = await uploadFileWithFallback(env, file, folderName, filename);
-      } catch (err) {
-        console.error(`Failed to upload ${fileKey} with fallback:`, err);
-        return;
+      // FIX #2: Explicitly reject PDF files
+      if (filenameLower.endsWith(".pdf") || typeLower.includes("pdf")) {
+        return `PDF allowed nahi hai, sirf image (JPG/PNG) upload karein. (Visit ${legNum} ${billType})`;
       }
       
-      await runWrite(env, `
-        INSERT INTO expense_attachments (exp_id, itinerary_id, bill_type, file_url)
-        VALUES (?, ?, ?, ?)
-      `, [expenseCode, `${expenseCode}-${legNum}`, billType, fileUrl]);
+      // Must be an image file
+      if (typeLower && !typeLower.startsWith("image/") && !/\.(jpg|jpeg|png|webp|heic|bmp)$/i.test(filenameLower)) {
+        return `Invalid file format for Visit ${legNum} (${billType}). Sirf image (JPG/PNG) upload karein.`;
+      }
+
+      filesToUpload.push({ fileKey, file, billType, legNum });
     }
+    return null;
   };
 
-  // Insert itinerary legs and process details
+  // Collect and validate all attachment files per leg
+  for (let idx = 0; idx < itineraries.length; idx++) {
+    const iti = itineraries[idx];
+    const legNum = parseInt(iti.leg || (idx + 1), 10);
+
+    let err = validateAndAddFile(`main_bill_${legNum}`, iti.mode || "Bill", legNum);
+    if (err) return jsonResponse({ error: err }, 400);
+
+    if (iti.sub_mode) {
+      err = validateAndAddFile(`sub_bill_${legNum}`, iti.sub_mode, legNum);
+      if (err) return jsonResponse({ error: err }, 400);
+    }
+
+    err = validateAndAddFile(`comm_mail_${legNum}`, "Communication_Mail", legNum);
+    if (err) return jsonResponse({ error: err }, 400);
+
+    err = validateAndAddFile(`oth_bill_${legNum}`, "Other", legNum);
+    if (err) return jsonResponse({ error: err }, 400);
+
+    if (legNum === 1) {
+      err = validateAndAddFile("hotel_bill_1", "Hotel", 1);
+      if (err) return jsonResponse({ error: err }, 400);
+
+      err = validateAndAddFile("local_purchase_bill_1", "Local_Purchase", 1);
+      if (err) return jsonResponse({ error: err }, 400);
+    }
+  }
+
+  // ── FIX #1: UPLOAD-FIRST PATTERN — Upload all files BEFORE DB insertion ──
+  const uploadedAttachments = [];
+  const now = new Date();
+  const monthName = now.toLocaleString("en-US", { month: "long" });
+  const yearVal = now.getFullYear();
+  const folderName = `${monthName}_${yearVal}`;
+
+  for (const item of filesToUpload) {
+    // FIX #2: Always save as .jpg extension and image/jpeg Content-Type
+    const filename = `${expenseCode}_leg${item.legNum}_${item.billType}_${Date.now()}.jpg`;
+    
+    let fileUrl = "";
+    try {
+      fileUrl = await uploadFileWithFallback(env, item.file, folderName, filename, "image/jpeg");
+    } catch (err) {
+      console.error(`Failed to upload ${item.fileKey}:`, err);
+      // FIX #1: Explicit HTTP 400/500 response — NO SILENT RETURN
+      return jsonResponse({
+        error: `File upload failed for Visit ${item.legNum} (${item.billType}). Detail: ${err.message || err}`
+      }, 400);
+    }
+
+    uploadedAttachments.push({
+      exp_id: expenseCode,
+      itinerary_id: `${expenseCode}-${item.legNum}`,
+      bill_type: item.billType,
+      file_url: fileUrl
+    });
+  }
+
+  // ── FIX #4: DB BATCH TRANSACTION — Single Atomic Write Transaction for All DB Tables ──
+  const dbBatchStatements = [];
+
+  if (existingExpense) {
+    dbBatchStatements.push({
+      sql: `
+        UPDATE expenses 
+        SET month = ?, year = ?, amount = ?, status = ?, travel_mode = ?, itinerary = ?, description = ?,
+            da_amount = ?, hotel_amount = ?, other_expense_amount = ?, calls_assigned = ?, calls_completed = ?, 
+            pms_count = ?, asset_tagging = ?, local_purchase_amount = ?, original_amount = ?, original_da_amount = ?, 
+            original_hotel_amount = ?, original_other_expense_amount = ?, original_local_purchase_amount = ?, 
+            calibration_count = ?, mobilise_count = ?, updated_at = ?
+        WHERE id = ?
+      `,
+      params: [
+        claim_month, claim_year, amount, status, majorMode, date, firstPurpose,
+        totalDa, totalHotel, totalOther, totalAssigned, totalCompleted, totalPms,
+        totalAsset, totalLocalPurchase, amount, totalDa, totalHotel, 
+        totalOther, totalLocalPurchase, totalCalibration, totalMobilise,
+        timestamp, newExpId
+      ]
+    });
+  } else {
+    dbBatchStatements.push({
+      sql: `
+        INSERT INTO expenses (
+          user_id, month, year, amount, status, travel_mode, itinerary, description, expense_code, 
+          da_amount, hotel_amount, other_expense_amount, calls_assigned, calls_completed, pms_count, 
+          asset_tagging, local_purchase_amount, original_amount, original_da_amount, original_hotel_amount, 
+          original_other_expense_amount, original_local_purchase_amount, calibration_count, mobilise_count, 
+          created_at, updated_at
+        )
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      `,
+      params: [
+        user.id, claim_month, claim_year, amount, status, majorMode, date, firstPurpose, expenseCode,
+        totalDa, totalHotel, totalOther, totalAssigned, totalCompleted, totalPms,
+        totalAsset, totalLocalPurchase, amount, totalDa, totalHotel, 
+        totalOther, totalLocalPurchase, totalCalibration, totalMobilise,
+        timestamp, timestamp
+      ]
+    });
+  }
+
+  // Insert itinerary legs and process details in batch
   for (let idx = 0; idx < itineraries.length; idx++) {
     const iti = itineraries[idx];
     const legNum = parseInt(iti.leg || (idx + 1), 10);
@@ -2453,34 +2552,37 @@ export async function handleSubmitExpense(request, env, params, query, user) {
     const toDist = iti.district || "Jodhpur";
     const isCommute = !hasOutdoorLeg && checkIsCommuteLeg(iti, baseLocations, idx, itineraries.length);
     
-    await runWrite(env, `
-      INSERT INTO expense_itineraries (
-        itinerary_id, exp_id, leg_number, from_district, to_district, from_location, to_location, 
-        travel_mode, distance_km, travel_amount, sub_mode, sub_km, sub_amount, da_amount, hotel_amount, 
-        local_purchase, other_desc, other_amount, calls_assigned, calls_completed, pms_count, asset_tagging, visit_purpose, 
-        activity_details, original_distance_km, original_travel_amount, original_sub_amount, original_da_amount, 
-        original_hotel_amount, original_other_amount, original_local_purchase, calibration_count, mobilise_count
-      )
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 0.0, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-    `, [
-      itiId, expenseCode, legNum, fromDist, toDist, iti.from || "", iti.to || "",
-      iti.mode || "Bike", parseFloat(iti.km || "0.0"),
-      isCommute ? 0.0 : parseFloat(iti.amount || "0.0"),
-      iti.sub_mode || null,
-      isCommute ? 0.0 : parseFloat(iti.sub_amount || "0.0"),
-      isDaAllowed ? parseFloat(iti.da || "0.0") : 0.0,
-      parseFloat(iti.hotel || "0.0"), parseFloat(iti.local_purchase || "0.0"), iti.oth_desc || null, parseFloat(iti.oth_amount || "0.0"),
-      parseInt(iti.ws_assigned || "0", 10), parseInt(iti.ws_closed || "0", 10),
-      parseInt(iti.ws_pms || "0", 10), parseInt(iti.ws_asset || "0", 10),
-      iti.visit_purpose || "Field visit",
-      typeof iti.activity_details === "string" ? iti.activity_details : JSON.stringify(iti.activity_details || {}),
-      parseFloat(iti.km || "0.0"),
-      isCommute ? 0.0 : parseFloat(iti.amount || "0.0"),
-      isCommute ? 0.0 : parseFloat(iti.sub_amount || "0.0"),
-      isDaAllowed ? parseFloat(iti.da || "0.0") : 0.0, parseFloat(iti.hotel || "0.0"), parseFloat(iti.oth_amount || "0.0"),
-      parseFloat(iti.local_purchase || "0.0"), parseInt(iti.calibration_count || "0", 10),
-      parseInt(iti.mobilise_asset_count || "0", 10)
-    ]);
+    dbBatchStatements.push({
+      sql: `
+        INSERT INTO expense_itineraries (
+          itinerary_id, exp_id, leg_number, from_district, to_district, from_location, to_location, 
+          travel_mode, distance_km, travel_amount, sub_mode, sub_km, sub_amount, da_amount, hotel_amount, 
+          local_purchase, other_desc, other_amount, calls_assigned, calls_completed, pms_count, asset_tagging, visit_purpose, 
+          activity_details, original_distance_km, original_travel_amount, original_sub_amount, original_da_amount, 
+          original_hotel_amount, original_other_amount, original_local_purchase, calibration_count, mobilise_count
+        )
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 0.0, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      `,
+      params: [
+        itiId, expenseCode, legNum, fromDist, toDist, iti.from || "", iti.to || "",
+        iti.mode || "Bike", parseFloat(iti.km || "0.0"),
+        isCommute ? 0.0 : parseFloat(iti.amount || "0.0"),
+        iti.sub_mode || null,
+        isCommute ? 0.0 : parseFloat(iti.sub_amount || "0.0"),
+        isDaAllowed ? parseFloat(iti.da || "0.0") : 0.0,
+        parseFloat(iti.hotel || "0.0"), parseFloat(iti.local_purchase || "0.0"), iti.oth_desc || null, parseFloat(iti.oth_amount || "0.0"),
+        parseInt(iti.ws_assigned || "0", 10), parseInt(iti.ws_closed || "0", 10),
+        parseInt(iti.ws_pms || "0", 10), parseInt(iti.ws_asset || "0", 10),
+        iti.visit_purpose || "Field visit",
+        typeof iti.activity_details === "string" ? iti.activity_details : JSON.stringify(iti.activity_details || {}),
+        parseFloat(iti.km || "0.0"),
+        isCommute ? 0.0 : parseFloat(iti.amount || "0.0"),
+        isCommute ? 0.0 : parseFloat(iti.sub_amount || "0.0"),
+        isDaAllowed ? parseFloat(iti.da || "0.0") : 0.0, parseFloat(iti.hotel || "0.0"), parseFloat(iti.oth_amount || "0.0"),
+        parseFloat(iti.local_purchase || "0.0"), parseInt(iti.calibration_count || "0", 10),
+        parseInt(iti.mobilise_asset_count || "0", 10)
+      ]
+    });
 
     let actDetails = null;
     if (iti.activity_details) {
@@ -2494,85 +2596,107 @@ export async function handleSubmitExpense(request, env, params, query, user) {
       if (selectedActs.includes("Calls")) {
         for (const call of actDetails.calls_list || []) {
           const asset = call.asset_details || {};
-          await runWrite(env, `
-            INSERT INTO expense_breakdown_calls (
-              itinerary_id, barcode, call_type, call_status, district_name, hospital_name, 
-              equipment_name, model_name, inventory_status, photo_url
-            )
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-          `, [
-            itiId, call.barcode, call.type, call.status, asset.district_name, asset.hospital_name,
-            asset.equipment_name, asset.model_name, asset.inventory_status, call.photo_url || ""
-          ]);
+          dbBatchStatements.push({
+            sql: `
+              INSERT INTO expense_breakdown_calls (
+                itinerary_id, barcode, call_type, call_status, district_name, hospital_name, 
+                equipment_name, model_name, inventory_status, photo_url
+              )
+              VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            `,
+            params: [
+              itiId, call.barcode, call.type, call.status, asset.district_name, asset.hospital_name,
+              asset.equipment_name, asset.model_name, asset.inventory_status, call.photo_url || ""
+            ]
+          });
         }
       }
 
       if (selectedActs.includes("PMS")) {
         for (const pms of actDetails.pms_list || []) {
           const asset = pms.asset_details || {};
-          await runWrite(env, `
-            INSERT INTO expense_pms_calls (
-              itinerary_id, barcode, pms_frequency, district_name, hospital_name, 
-              equipment_name, model_name, inventory_status, photo_url
-            )
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
-          `, [
-            itiId, pms.barcode, pms.frequency, asset.district_name, asset.hospital_name,
-            asset.equipment_name, asset.model_name, asset.inventory_status, pms.photo_url || ""
-          ]);
+          dbBatchStatements.push({
+            sql: `
+              INSERT INTO expense_pms_calls (
+                itinerary_id, barcode, pms_frequency, district_name, hospital_name, 
+                equipment_name, model_name, inventory_status, photo_url
+              )
+              VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+            `,
+            params: [
+              itiId, pms.barcode, pms.frequency, asset.district_name, asset.hospital_name,
+              asset.equipment_name, asset.model_name, asset.inventory_status, pms.photo_url || ""
+            ]
+          });
         }
       }
 
       if (selectedActs.includes("Asset Tagging")) {
         for (const asset of actDetails.assets_list || []) {
-          await runWrite(env, `
-            INSERT INTO expense_asset_taggings (itinerary_id, equipment_name, quantity)
-            VALUES (?, ?, ?)
-          `, [itiId, asset.equipment_name, parseInt(asset.quantity || "0", 10)]);
+          dbBatchStatements.push({
+            sql: `
+              INSERT INTO expense_asset_taggings (itinerary_id, equipment_name, quantity)
+              VALUES (?, ?, ?)
+            `,
+            params: [itiId, asset.equipment_name, parseInt(asset.quantity || "0", 10)]
+          });
         }
       }
 
       if (selectedActs.includes("Mobilise Asset Update")) {
         const qty = parseInt(actDetails.mobilise_asset_count || "0", 10);
         if (qty > 0) {
-          await runWrite(env, `
-            INSERT INTO expense_asset_mobilises (itinerary_id, quantity)
-            VALUES (?, ?)
-          `, [itiId, qty]);
+          dbBatchStatements.push({
+            sql: `
+              INSERT INTO expense_asset_mobilises (itinerary_id, quantity)
+              VALUES (?, ?)
+            `,
+            params: [itiId, qty]
+          });
         }
       }
 
       if (selectedActs.includes("Calibration")) {
         const qty = parseInt(actDetails.calibration_count || "0", 10);
         if (qty > 0) {
-          await runWrite(env, `
-            INSERT INTO expense_calibrations (itinerary_id, quantity)
-            VALUES (?, ?)
-          `, [itiId, qty]);
+          dbBatchStatements.push({
+            sql: `
+              INSERT INTO expense_calibrations (itinerary_id, quantity)
+              VALUES (?, ?)
+            `,
+            params: [itiId, qty]
+          });
         }
       }
 
       if (selectedActs.includes("Other")) {
         const otherDesc = actDetails.activity_other_desc || "";
         if (otherDesc && otherDesc.trim()) {
-          await runWrite(env, `
-            INSERT INTO expense_other_activities (itinerary_id, description)
-            VALUES (?, ?)
-          `, [itiId, otherDesc.trim()]);
+          dbBatchStatements.push({
+            sql: `
+              INSERT INTO expense_other_activities (itinerary_id, description)
+              VALUES (?, ?)
+            `,
+            params: [itiId, otherDesc.trim()]
+          });
         }
       }
     }
-
-    // Process file attachments
-    await handleAttachment(`main_bill_${legNum}`, iti.mode || "Bill", legNum);
-    if (iti.sub_mode) {
-      await handleAttachment(`sub_bill_${legNum}`, iti.sub_mode, legNum);
-    }
-    await handleAttachment(`comm_mail_${legNum}`, "Communication_Mail", legNum);
-    await handleAttachment(`oth_bill_${legNum}`, "Other", legNum);
-    await handleAttachment(`hotel_bill_${legNum}`, "Hotel", legNum);
-    await handleAttachment(`local_purchase_bill_${legNum}`, "Local_Purchase", legNum);
   }
+
+  // Insert all successfully uploaded attachments into batch
+  for (const att of uploadedAttachments) {
+    dbBatchStatements.push({
+      sql: `
+        INSERT INTO expense_attachments (exp_id, itinerary_id, bill_type, file_url)
+        VALUES (?, ?, ?, ?)
+      `,
+      params: [att.exp_id, att.itinerary_id, att.bill_type, att.file_url]
+    });
+  }
+
+  // Execute ALL DB statements in a SINGLE ATOMIC TRANSACTION
+  await runBatchWrite(env, dbBatchStatements);
 
   // Create approvals level sequence records
   for (const step of approvalsToInsert) {

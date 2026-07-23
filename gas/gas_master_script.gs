@@ -282,6 +282,16 @@ function handleFileUpload(data) {
 
     var decodedBytes = Utilities.base64Decode(base64Str);
     var blob = Utilities.newBlob(decodedBytes, mimeType, filename);
+    
+    // Server-side byte re-encoding to JPEG
+    if (mimeType.indexOf("image/") === 0 || filename.toLowerCase().indexOf(".jpg") !== -1) {
+      try {
+        blob = blob.getAs("image/jpeg").setName(filename);
+      } catch (convErr) {
+        console.warn("Native JPEG byte re-encoding fallback: " + convErr.toString());
+      }
+    }
+
     var createdFile = targetFolder.createFile(blob);
 
     return jsonResponse({
