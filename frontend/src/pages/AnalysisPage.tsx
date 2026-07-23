@@ -204,8 +204,8 @@ export default function AnalysisPage() {
     const monthQueryParam = `${selectedYear}-${monthStr}`;
     
     const fetchData = async () => {
-      const cacheKeyMy = `cache_v3_my_expenses_${uId}_${monthQueryParam}`;
-      const cacheKeyTeam = `cache_v3_team_expenses_${uId}_${monthQueryParam}`;
+      const cacheKeyMy = `cache_v4_my_expenses_${uId}_${monthQueryParam}`;
+      const cacheKeyTeam = `cache_v4_team_expenses_${uId}_${monthQueryParam}`;
       const hasCache = uId && localStorage.getItem(cacheKeyMy);
       if (!hasCache) {
         setLoading(true);
@@ -250,7 +250,8 @@ export default function AnalysisPage() {
 
   // Build filter list dropdowns options
   const filterOptions = useMemo(() => {
-    const source = viewMode === "team" && isReviewer ? teamExpenses : myExpenses;
+    const rawSource = viewMode === "team" && isReviewer ? teamExpenses : myExpenses;
+    const source = rawSource.filter(e => e && e.category !== "Limit Request" && e.request_type !== "limit");
     const monthlyList = filterByMonth(source);
     
     // 1. Filter engineers based on selectedDistrict and selectedZone
@@ -301,7 +302,8 @@ export default function AnalysisPage() {
   }, [selectedEngineer, filterOptions.districts]);
 
   const activeExpenses = useMemo(() => {
-    const source = viewMode === "team" && isReviewer ? teamExpenses : myExpenses;
+    const rawSource = viewMode === "team" && isReviewer ? teamExpenses : myExpenses;
+    const source = rawSource.filter(e => e && e.category !== "Limit Request" && e.request_type !== "limit");
     
     // 1. Filter by date range OR by month/year fallback
     let list = [];
