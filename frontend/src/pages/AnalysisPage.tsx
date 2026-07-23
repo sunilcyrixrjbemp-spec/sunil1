@@ -24,7 +24,10 @@ import {
   FundOutlined,
   GlobalOutlined,
   CheckOutlined,
-  InfoCircleOutlined
+  InfoCircleOutlined,
+  TagOutlined,
+  AimOutlined,
+  RocketOutlined
 } from "@ant-design/icons";
 import { hasFullAccess } from "../utils/constants";
 
@@ -366,6 +369,7 @@ export default function AnalysisPage() {
     let pmsCount = 0;
     let calibrationCount = 0;
     let assetTaggingCount = 0;
+    let assetTaggingValue = 0;
     let mobiliseCount = 0;
 
     activeExpenses.forEach(e => {
@@ -374,7 +378,8 @@ export default function AnalysisPage() {
       pmsCount += Number(e.pms_count || 0);
       calibrationCount += Number(e.calibration_count || 0);
       assetTaggingCount += Number(e.asset_tagging || 0);
-      mobiliseCount += Number(e.mobilise_asset_count || 0);
+      assetTaggingValue += Number(e.asset_tagging_value || e.asset_tagging_val || 0);
+      mobiliseCount += Number(e.mobilise_asset_count || e.mobilise_count || 0);
     });
 
     return {
@@ -383,6 +388,7 @@ export default function AnalysisPage() {
       pmsCount,
       calibrationCount,
       assetTaggingCount,
+      assetTaggingValue,
       mobiliseCount
     };
   }, [activeExpenses]);
@@ -392,8 +398,8 @@ export default function AnalysisPage() {
       { name: "Calls Assigned", count: activityStats.callsAssigned },
       { name: "Calls Done", count: activityStats.callsCompleted },
       { name: "PMS Done", count: activityStats.pmsCount },
-      { name: "Calibration Done", count: activityStats.calibrationCount },
       { name: "Asset Tagging", count: activityStats.assetTaggingCount },
+      { name: "Calibration", count: activityStats.calibrationCount },
       { name: "Asset Mobilised", count: activityStats.mobiliseCount }
     ];
   }, [activityStats]);
@@ -1060,14 +1066,43 @@ export default function AnalysisPage() {
           </Card>
         </Col>
 
-        {/* Card 6: Tag & Calib Done */}
-        <Col xs={12} sm={8} md={6} lg={4} xl={3.4}>
+        {/* Card 6: Asset Tagging */}
+        <Col xs={12} sm={8} md={6} lg={4} xl={3}>
           <Card size="small" bordered={false} className="shadow-xs border border-gray-150 rounded-xl">
             <Statistic
-              title={<span className="text-[9px] font-bold uppercase tracking-wider text-gray-400">Tag & Calib</span>}
-              value={activityStats.assetTaggingCount + activityStats.calibrationCount}
+              title={<span className="text-[9px] font-bold uppercase tracking-wider text-gray-400">Asset Tagging</span>}
+              value={activityStats.assetTaggingCount}
               valueStyle={{ fontSize: "16px", fontWeight: 800, color: "#1F2937", fontFamily: "monospace" }}
-              prefix={<GlobalOutlined className="text-cyan-500 mr-1.5" />}
+              prefix={<TagOutlined className="text-cyan-500 mr-1.5" />}
+              suffix={
+                <div className="text-[10px] font-extrabold text-emerald-600 mt-0.5 tracking-tight font-mono">
+                  Val: ₹{activityStats.assetTaggingValue.toLocaleString('en-IN')}
+                </div>
+              }
+            />
+          </Card>
+        </Col>
+
+        {/* Card 7: Calibration */}
+        <Col xs={12} sm={8} md={6} lg={4} xl={3}>
+          <Card size="small" bordered={false} className="shadow-xs border border-gray-150 rounded-xl">
+            <Statistic
+              title={<span className="text-[9px] font-bold uppercase tracking-wider text-gray-400">Calibration</span>}
+              value={activityStats.calibrationCount}
+              valueStyle={{ fontSize: "16px", fontWeight: 800, color: "#1F2937", fontFamily: "monospace" }}
+              prefix={<AimOutlined className="text-amber-500 mr-1.5" />}
+            />
+          </Card>
+        </Col>
+
+        {/* Card 8: Asset Mobilised */}
+        <Col xs={12} sm={8} md={6} lg={4} xl={3}>
+          <Card size="small" bordered={false} className="shadow-xs border border-gray-150 rounded-xl">
+            <Statistic
+              title={<span className="text-[9px] font-bold uppercase tracking-wider text-gray-400">Asset Mobilised</span>}
+              value={activityStats.mobiliseCount}
+              valueStyle={{ fontSize: "16px", fontWeight: 800, color: "#1F2937", fontFamily: "monospace" }}
+              prefix={<RocketOutlined className="text-purple-500 mr-1.5" />}
             />
           </Card>
         </Col>

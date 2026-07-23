@@ -334,6 +334,20 @@ export async function serializeExpenses(env, expenses, submittersMap) {
       ? legs.reduce((sum, l) => sum + (parseInt(l.asset_tagging) || 0), 0)
       : (parseInt(exp.asset_tagging) || 0);
 
+    const totAssetTaggingVal = legs.length > 0
+      ? legs.reduce((sum, l) => {
+          const taggings = taggingsMap[l.itinerary_id] || [];
+          let legVal = 0;
+          for (const t of taggings) {
+            const qty = t.quantity || 0;
+            const eqName = (t.equipment_name || "").trim().toLowerCase();
+            const cost = assetCosts[eqName] || 0.0;
+            legVal += qty * cost;
+          }
+          return sum + legVal;
+        }, 0.0)
+      : 0.0;
+
     const totCalibrationCount = legs.length > 0
       ? legs.reduce((sum, l) => sum + (parseInt(l.calibration_count) || 0), 0)
       : (parseInt(exp.calibration_count) || 0);
@@ -381,6 +395,7 @@ export async function serializeExpenses(env, expenses, submittersMap) {
       calls_completed: totCallsCompleted,
       pms_count: totPmsCount,
       asset_tagging: totAssetTagging,
+      asset_tagging_value: totAssetTaggingVal,
       calibration_count: totCalibrationCount,
       mobilise_count: totMobiliseCount,
       created_at: exp.created_at,
@@ -843,6 +858,20 @@ export async function handleGetTeamExpenses(request, env, params, query, user) {
         ? legs.reduce((sum, l) => sum + (parseInt(l.asset_tagging) || 0), 0)
         : (parseInt(exp.asset_tagging) || 0);
 
+      const totAssetTaggingVal = legs.length > 0
+        ? legs.reduce((sum, l) => {
+            const taggings = taggingsMap[l.itinerary_id] || [];
+            let legVal = 0;
+            for (const t of taggings) {
+              const qty = t.quantity || 0;
+              const eqName = (t.equipment_name || "").trim().toLowerCase();
+              const cost = assetCosts[eqName] || 0.0;
+              legVal += qty * cost;
+            }
+            return sum + legVal;
+          }, 0.0)
+        : 0.0;
+
       const totCalibrationCount = legs.length > 0
         ? legs.reduce((sum, l) => sum + (parseInt(l.calibration_count) || 0), 0)
         : (parseInt(exp.calibration_count) || 0);
@@ -887,6 +916,7 @@ export async function handleGetTeamExpenses(request, env, params, query, user) {
         calls_completed: totCallsCompleted,
         pms_count: totPmsCount,
         asset_tagging: totAssetTagging,
+        asset_tagging_value: totAssetTaggingVal,
         calibration_count: totCalibrationCount,
         mobilise_count: totMobiliseCount
       });
