@@ -609,13 +609,44 @@ export default function AnalysisPage() {
   const [callsPageSize, setCallsPageSize] = useState(10);
   const [callsMobilePage, setCallsMobilePage] = useState(1);
 
-  // Fix body scroll lock cleanup when modals are closed
+  // Helper to completely unfreeze page body and restore scrolling/clicks
+  const forceUnfreezePage = () => {
+    document.body.style.overflow = "";
+    document.body.style.overflowY = "";
+    document.body.style.pointerEvents = "";
+    document.body.classList.remove("ant-scrolling-effect");
+    document.documentElement.style.overflow = "";
+    document.documentElement.style.overflowY = "";
+    
+    // Clear residual backdrop overlays if left behind
+    setTimeout(() => {
+      document.body.style.overflow = "";
+      document.body.style.overflowY = "";
+      document.body.style.pointerEvents = "";
+      document.body.classList.remove("ant-scrolling-effect");
+      document.documentElement.style.overflow = "";
+      document.documentElement.style.overflowY = "";
+
+      const masks = document.querySelectorAll(".ant-modal-mask, .ant-modal-wrap");
+      masks.forEach(el => {
+        if (el && el.parentElement && activeModal === "none" && !isTaggingModalOpen) {
+          (el as HTMLElement).style.display = "none";
+        }
+      });
+    }, 150);
+  };
+
   useEffect(() => {
     if (activeModal === "none" && !isTaggingModalOpen) {
-      document.body.style.overflow = "unset";
-      document.body.style.pointerEvents = "auto";
+      forceUnfreezePage();
     }
   }, [activeModal, isTaggingModalOpen]);
+
+  useEffect(() => {
+    return () => {
+      forceUnfreezePage();
+    };
+  }, []);
 
   // Flatten asset tagging details for active expenses
   const taggingBreakdownData = useMemo(() => {
@@ -625,7 +656,9 @@ export default function AnalysisPage() {
       engineer: string;
       district: string;
       zone: string;
+      hospital_name: string;
       equipment_name: string;
+      barcode: string;
       quantity: number;
       unit_cost: number;
       total_val: number;
@@ -638,6 +671,8 @@ export default function AnalysisPage() {
       const districtName = e.district || e.submitter_district || e.home_district || "Ganganagar";
       const zoneName = e.zone || "Unassigned";
       const mainDate = String(e.date || e.itinerary || "").trim();
+      const fallbackHospital = e.hospital_name || e.destination || e.to || e.purpose || "Base Hospital / Site";
+      const fallbackBarcode = e.barcode || e.asset_code || e.serial_number || "N/A";
 
       const details = Array.isArray(e.tagging_details) ? e.tagging_details : [];
       if (details.length > 0) {
@@ -649,7 +684,9 @@ export default function AnalysisPage() {
             engineer: engineerName,
             district: districtName,
             zone: zoneName,
+            hospital_name: d.hospital_name || fallbackHospital,
             equipment_name: d.equipment_name || "Tagged Asset",
+            barcode: d.barcode || d.asset_code || fallbackBarcode,
             quantity: Number(d.quantity || 1),
             unit_cost: Number(d.unit_cost || 0),
             total_val: Number(d.total_val || (d.quantity * d.unit_cost) || 0)
@@ -665,7 +702,9 @@ export default function AnalysisPage() {
           engineer: engineerName,
           district: districtName,
           zone: zoneName,
+          hospital_name: fallbackHospital,
           equipment_name: "Asset Tagging",
+          barcode: fallbackBarcode,
           quantity: qty,
           unit_cost: unitCost,
           total_val: totalVal
@@ -743,6 +782,33 @@ export default function AnalysisPage() {
       sorter: (a: any, b: any) => a.equipment_name.localeCompare(b.equipment_name)
     },
     {
+      title: "Hospital / Location",
+      dataIndex: "hospital_name",
+      key: "hospital_name",
+      width: 140,
+      render: (val: string) => <span className="text-xs text-slate-700 font-medium">{val || "—"}</span>,
+      sorter: (a: any, b: any) => (a.hospital_name || "").localeCompare(b.hospital_name || "")
+    },
+    {
+      title: "Equipment Name",
+      dataIndex: "equipment_name",
+      key: "equipment_name",
+      render: (val: string) => (
+        <span className="font-semibold text-xs text-slate-800 bg-cyan-50 border border-cyan-200 px-2 py-0.5 rounded-md">
+          {val}
+        </span>
+      ),
+      sorter: (a: any, b: any) => a.equipment_name.localeCompare(b.equipment_name)
+    },
+    {
+      title: "Barcode / Asset ID",
+      dataIndex: "barcode",
+      key: "barcode",
+      width: 130,
+      render: (val: string) => <span className="font-mono text-xs text-indigo-700 font-bold bg-indigo-50 px-1.5 py-0.5 rounded border border-indigo-100">{val || "N/A"}</span>,
+      sorter: (a: any, b: any) => (a.barcode || "").localeCompare(b.barcode || "")
+    },
+    {
       title: "Quantity",
       dataIndex: "quantity",
       key: "quantity",
@@ -779,6 +845,11 @@ export default function AnalysisPage() {
       engineer: string;
       district: string;
       zone: string;
+      hospital_name: string;
+      equipment_name: string;
+      barcode: string;
+      pms_schedule: string;
+      pms_status: string;
       pms_count: number;
       purpose: string;
     }[] = [];
@@ -793,6 +864,10 @@ export default function AnalysisPage() {
       const districtName = e.district || e.submitter_district || e.home_district || "Ganganagar";
       const zoneName = e.zone || "Unassigned";
       const mainDate = String(e.date || e.itinerary || "").trim();
+      const hospitalName = e.hospital_name || e.destination || e.to || e.purpose || "District Hospital / Site";
+      const barcodeVal = e.barcode || e.asset_code || e.serial_number || "N/A";
+      const scheduleVal = e.pms_schedule || e.schedule || "Scheduled";
+      const statusVal = (e.status || "Completed").toLowerCase() === "approved" ? "Approved" : "Completed";
 
       list.push({
         key: `pms_${counter++}`,
@@ -800,6 +875,11 @@ export default function AnalysisPage() {
         engineer: engineerName,
         district: districtName,
         zone: zoneName,
+        hospital_name: hospitalName,
+        equipment_name: e.equipment_name || e.equipment || "Medical Equipment",
+        barcode: barcodeVal,
+        pms_schedule: scheduleVal,
+        pms_status: statusVal,
         pms_count: pmsCount,
         purpose: e.purpose || e.description || "Preventive Maintenance Service"
       });
@@ -814,9 +894,11 @@ export default function AnalysisPage() {
         const q = pmsSearchQuery.trim().toLowerCase();
         const matchEng = item.engineer.toLowerCase().includes(q);
         const matchDist = item.district.toLowerCase().includes(q);
-        const matchPurp = item.purpose.toLowerCase().includes(q);
+        const matchHosp = item.hospital_name.toLowerCase().includes(q);
+        const matchEq = item.equipment_name.toLowerCase().includes(q);
+        const matchCode = item.barcode.toLowerCase().includes(q);
         const matchZone = item.zone.toLowerCase().includes(q);
-        if (!matchEng && !matchDist && !matchPurp && !matchZone) return false;
+        if (!matchEng && !matchDist && !matchHosp && !matchEq && !matchCode && !matchZone) return false;
       }
       return true;
     });
@@ -827,7 +909,7 @@ export default function AnalysisPage() {
       title: "Date",
       dataIndex: "date",
       key: "date",
-      width: 110,
+      width: 100,
       render: (val: string) => <span className="font-mono text-xs font-semibold text-slate-700">{val || "—"}</span>,
       sorter: (a: any, b: any) => (a.date || "").localeCompare(b.date || "")
     },
@@ -841,9 +923,33 @@ export default function AnalysisPage() {
     {
       title: "District / Zone",
       key: "district_zone",
-      width: 140,
+      width: 130,
       render: (_: any, record: any) => <span className="text-xs text-slate-600 font-medium">{record.district} ({record.zone})</span>,
       sorter: (a: any, b: any) => a.district.localeCompare(b.district)
+    },
+    {
+      title: "Hospital / Location",
+      dataIndex: "hospital_name",
+      key: "hospital_name",
+      width: 140,
+      render: (val: string) => <span className="text-xs text-slate-700 font-medium">{val}</span>
+    },
+    {
+      title: "Equipment & Barcode",
+      key: "eq_barcode",
+      render: (_: any, record: any) => (
+        <div>
+          <span className="font-semibold text-xs text-slate-800 block">{record.equipment_name}</span>
+          <span className="font-mono text-[10px] text-teal-700 font-bold">BC: {record.barcode}</span>
+        </div>
+      )
+    },
+    {
+      title: "PMS Schedule",
+      dataIndex: "pms_schedule",
+      key: "pms_schedule",
+      width: 110,
+      render: (val: string) => <span className="text-xs font-semibold text-slate-600">{val}</span>
     },
     {
       title: "PMS Done",
@@ -853,12 +959,6 @@ export default function AnalysisPage() {
       align: "center" as const,
       render: (val: number) => <span className="font-mono font-extrabold text-xs text-teal-600 bg-teal-50 border border-teal-200 px-2 py-0.5 rounded-md">{val} Completed</span>,
       sorter: (a: any, b: any) => a.pms_count - b.pms_count
-    },
-    {
-      title: "Purpose / Details",
-      dataIndex: "purpose",
-      key: "purpose",
-      render: (val: string) => <span className="text-xs text-slate-700">{val || "—"}</span>
     }
   ];
 
@@ -870,6 +970,9 @@ export default function AnalysisPage() {
       engineer: string;
       district: string;
       zone: string;
+      hospital_name: string;
+      call_type: string;
+      call_status: string;
       calls_assigned: number;
       calls_completed: number;
       completion_rate: number;
@@ -887,6 +990,9 @@ export default function AnalysisPage() {
       const districtName = e.district || e.submitter_district || e.home_district || "Ganganagar";
       const zoneName = e.zone || "Unassigned";
       const mainDate = String(e.date || e.itinerary || "").trim();
+      const hospitalName = e.hospital_name || e.destination || e.to || e.purpose || "District Hospital / Site";
+      const callTypeVal = e.call_type || e.travel_mode || e.category || "Breakdown Service";
+      const callStatusVal = completed > 0 ? (completed >= assigned ? "Closed" : "Attended") : "Pending";
       const rate = assigned > 0 ? Math.min(100, Math.round((completed / assigned) * 100)) : (completed > 0 ? 100 : 0);
 
       list.push({
@@ -895,6 +1001,9 @@ export default function AnalysisPage() {
         engineer: engineerName,
         district: districtName,
         zone: zoneName,
+        hospital_name: hospitalName,
+        call_type: callTypeVal,
+        call_status: callStatusVal,
         calls_assigned: assigned,
         calls_completed: completed,
         completion_rate: rate,
@@ -911,9 +1020,11 @@ export default function AnalysisPage() {
         const q = callsSearchQuery.trim().toLowerCase();
         const matchEng = item.engineer.toLowerCase().includes(q);
         const matchDist = item.district.toLowerCase().includes(q);
-        const matchPurp = item.purpose.toLowerCase().includes(q);
+        const matchHosp = item.hospital_name.toLowerCase().includes(q);
+        const matchType = item.call_type.toLowerCase().includes(q);
+        const matchStat = item.call_status.toLowerCase().includes(q);
         const matchZone = item.zone.toLowerCase().includes(q);
-        if (!matchEng && !matchDist && !matchPurp && !matchZone) return false;
+        if (!matchEng && !matchDist && !matchHosp && !matchType && !matchStat && !matchZone) return false;
       }
       return true;
     });
@@ -943,28 +1054,44 @@ export default function AnalysisPage() {
       sorter: (a: any, b: any) => a.district.localeCompare(b.district)
     },
     {
-      title: "Calls Assigned",
-      dataIndex: "calls_assigned",
-      key: "calls_assigned",
-      width: 110,
-      align: "center" as const,
-      render: (val: number) => <span className="font-mono text-xs text-slate-700">{val}</span>,
-      sorter: (a: any, b: any) => a.calls_assigned - b.calls_assigned
+      title: "Hospital / Location",
+      dataIndex: "hospital_name",
+      key: "hospital_name",
+      width: 140,
+      render: (val: string) => <span className="text-xs text-slate-700 font-medium">{val}</span>
     },
     {
-      title: "Calls Completed",
-      dataIndex: "calls_completed",
-      key: "calls_completed",
+      title: "Call Type",
+      dataIndex: "call_type",
+      key: "call_type",
       width: 120,
+      render: (val: string) => <span className="font-bold text-xs text-indigo-600 bg-indigo-50 px-2 py-0.5 rounded border border-indigo-100">{val}</span>
+    },
+    {
+      title: "Call Status",
+      dataIndex: "call_status",
+      key: "call_status",
+      width: 110,
       align: "center" as const,
-      render: (val: number) => <span className="font-mono font-bold text-xs text-indigo-700">{val}</span>,
+      render: (val: string) => (
+        <span className={`font-extrabold text-xs px-2 py-0.5 rounded-md ${val === 'Closed' ? 'bg-emerald-50 text-emerald-700 border border-emerald-200' : 'bg-amber-50 text-amber-700 border border-amber-200'}`}>
+          {val}
+        </span>
+      )
+    },
+    {
+      title: "Calls Done / Assigned",
+      key: "calls_count",
+      width: 130,
+      align: "center" as const,
+      render: (_: any, record: any) => <span className="font-mono font-bold text-xs text-slate-800">{record.calls_completed} / {record.calls_assigned}</span>,
       sorter: (a: any, b: any) => a.calls_completed - b.calls_completed
     },
     {
       title: "Completion Rate",
       dataIndex: "completion_rate",
       key: "completion_rate",
-      width: 130,
+      width: 120,
       align: "center" as const,
       render: (val: number) => (
         <span className={`font-mono font-bold text-xs px-2 py-0.5 rounded-md ${val >= 80 ? 'bg-emerald-50 text-emerald-700 border border-emerald-200' : 'bg-amber-50 text-amber-700 border border-amber-200'}`}>
@@ -989,7 +1116,9 @@ export default function AnalysisPage() {
         "Engineer Name": item.engineer,
         "District": item.district,
         "Zone": item.zone,
+        "Hospital / Location": item.hospital_name,
         "Equipment Name": item.equipment_name,
+        "Barcode / Asset ID": item.barcode,
         "Quantity (Units)": item.quantity,
         "Unit Price (INR)": item.unit_cost,
         "Total Tagged Value (INR)": item.total_val
@@ -1002,6 +1131,11 @@ export default function AnalysisPage() {
         "Engineer Name": item.engineer,
         "District": item.district,
         "Zone": item.zone,
+        "Hospital / Location": item.hospital_name,
+        "Equipment Name": item.equipment_name,
+        "Barcode / Asset ID": item.barcode,
+        "PMS Schedule": item.pms_schedule,
+        "PMS Status": item.pms_status,
         "PMS Done Count": item.pms_count,
         "Purpose / Details": item.purpose
       }));
@@ -1013,6 +1147,9 @@ export default function AnalysisPage() {
         "Engineer Name": item.engineer,
         "District": item.district,
         "Zone": item.zone,
+        "Hospital / Location": item.hospital_name,
+        "Call Type": item.call_type,
+        "Call Status": item.call_status,
         "Calls Assigned": item.calls_assigned,
         "Calls Completed": item.calls_completed,
         "Completion Rate (%)": `${item.completion_rate}%`,
@@ -2238,13 +2375,11 @@ export default function AnalysisPage() {
         onCancel={() => { 
           setIsTaggingModalOpen(false); 
           setActiveModal("none"); 
-          document.body.style.overflow = "unset";
-          document.body.style.pointerEvents = "auto";
+          forceUnfreezePage();
         }}
         destroyOnClose={true}
         afterClose={() => {
-          document.body.style.overflow = "unset";
-          document.body.style.pointerEvents = "auto";
+          forceUnfreezePage();
         }}
         footer={null}
         width={950}
@@ -2365,6 +2500,14 @@ export default function AnalysisPage() {
                               <span className="font-semibold text-slate-700">{item.district} ({item.zone})</span>
                             </div>
                             <div>
+                              <span className="text-gray-400 text-[9px] uppercase font-bold block">Hospital / Location</span>
+                              <span className="font-medium text-slate-800 truncate block">{item.hospital_name}</span>
+                            </div>
+                            <div>
+                              <span className="text-gray-400 text-[9px] uppercase font-bold block">Barcode / Asset ID</span>
+                              <span className="font-mono text-indigo-700 font-bold">{item.barcode}</span>
+                            </div>
+                            <div>
                               <span className="text-gray-400 text-[9px] uppercase font-bold block">Date</span>
                               <span className="font-mono text-slate-600">{item.date || "—"}</span>
                             </div>
@@ -2437,13 +2580,11 @@ export default function AnalysisPage() {
         open={activeModal === "pms"}
         onCancel={() => { 
           setActiveModal("none"); 
-          document.body.style.overflow = "unset";
-          document.body.style.pointerEvents = "auto";
+          forceUnfreezePage();
         }}
         destroyOnClose={true}
         afterClose={() => {
-          document.body.style.overflow = "unset";
-          document.body.style.pointerEvents = "auto";
+          forceUnfreezePage();
         }}
         footer={null}
         width={900}
@@ -2538,12 +2679,20 @@ export default function AnalysisPage() {
 
                           <div className="grid grid-cols-2 gap-2 text-[11px]">
                             <div>
+                              <span className="text-gray-400 text-[9px] uppercase font-bold block">Hospital / Location</span>
+                              <span className="font-medium text-slate-800 truncate block">{item.hospital_name}</span>
+                            </div>
+                            <div>
+                              <span className="text-gray-400 text-[9px] uppercase font-bold block">Equipment / Barcode</span>
+                              <span className="font-semibold text-slate-700 truncate block">{item.equipment_name} (BC: {item.barcode})</span>
+                            </div>
+                            <div>
                               <span className="text-gray-400 text-[9px] uppercase font-bold block">District / Zone</span>
                               <span className="font-semibold text-slate-700">{item.district} ({item.zone})</span>
                             </div>
                             <div>
-                              <span className="text-gray-400 text-[9px] uppercase font-bold block">Date</span>
-                              <span className="font-mono text-slate-600">{item.date || "—"}</span>
+                              <span className="text-gray-400 text-[9px] uppercase font-bold block">Date & PMS Schedule</span>
+                              <span className="font-mono text-slate-600">{item.date} ({item.pms_schedule})</span>
                             </div>
                             <div className="col-span-2">
                               <span className="text-gray-400 text-[9px] uppercase font-bold block">Purpose / Details</span>
@@ -2614,13 +2763,11 @@ export default function AnalysisPage() {
         open={activeModal === "calls"}
         onCancel={() => { 
           setActiveModal("none"); 
-          document.body.style.overflow = "unset";
-          document.body.style.pointerEvents = "auto";
+          forceUnfreezePage();
         }}
         destroyOnClose={true}
         afterClose={() => {
-          document.body.style.overflow = "unset";
-          document.body.style.pointerEvents = "auto";
+          forceUnfreezePage();
         }}
         footer={null}
         width={950}
@@ -2730,6 +2877,14 @@ export default function AnalysisPage() {
                           </div>
 
                           <div className="grid grid-cols-2 gap-2 text-[11px]">
+                            <div>
+                              <span className="text-gray-400 text-[9px] uppercase font-bold block">Hospital / Location</span>
+                              <span className="font-medium text-slate-800 truncate block">{item.hospital_name}</span>
+                            </div>
+                            <div>
+                              <span className="text-gray-400 text-[9px] uppercase font-bold block">Call Type & Status</span>
+                              <span className="font-bold text-indigo-700 truncate block">{item.call_type} ({item.call_status})</span>
+                            </div>
                             <div>
                               <span className="text-gray-400 text-[9px] uppercase font-bold block">District / Zone</span>
                               <span className="font-semibold text-slate-700">{item.district} ({item.zone})</span>
