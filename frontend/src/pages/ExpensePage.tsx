@@ -1766,6 +1766,38 @@ export default function ExpensePage() {
   };
 
 
+  // ═══════════════════════════════════════════════════════════════════════════
+  // 🔒 LOCKED POLICY LOGIC — DO NOT MODIFY WITHOUT EXPLICIT USER APPROVAL 🔒
+  // TA/DA Base Location policy — confirmed & finalized business rule (mirrors
+  // backend computeBaseLocPolicy() in expense.js). AI assistants / developers:
+  // do NOT alter this rule's behavior, refactor it, "optimize" it, or change
+  // its conditions for ANY reason unless the user EXPLICITLY asks to change
+  // THIS specific rule. If unsure, STOP and ask first.
+  //
+  //   1. Home → Base (direct) or Base → Home (direct), nothing else that day
+  //        → TA NOT allowed on that leg (see isCommuteLeg — always denies
+  //          boundary residence↔base legs, no exceptions).
+  //   2. Home → Base → [market/bus-stand/courier/repairing/pickup errands]
+  //      → Base → Home
+  //        → TA allowed ONLY on the errand legs in between. Boundary legs
+  //          (Home→Base, Base→Home) still NEVER get TA.
+  //        → DA NOT allowed — no real "other facility" was visited — EXCEPT
+  //          for PBM (Bikaner) / MDM (Jodhpur) base locations, which ALWAYS
+  //          get DA in this scenario regardless of market/courier/repairing/
+  //          pickup errands (isDaAllowedBaseLocation does not depend on
+  //          hasMarket).
+  //        → Exception to the exception: if the errand involves a
+  //          station/bus-stand (hasStation), DA is NOT allowed even for
+  //          PBM/MDM — station/bus-stand travel is treated differently.
+  //   3. Home → Other facility → Home (base never touched that day)
+  //        → TA/DA fully allowed on all legs.
+  //   4. Home → Base → Other facility → Home
+  //        → TA NOT allowed only on the Home→Base leg; everything else
+  //          (TA and DA) is allowed.
+  //   5. Home → Other facility → Base → Home
+  //        → TA NOT allowed only on the Base→Home leg; everything else
+  //          (TA and DA) is allowed.
+  // ═══════════════════════════════════════════════════════════════════════════
   const isDailyAllowanceAllowed = (legs: ItineraryLeg[] = itineraries) => {
     if (!isBaseLocationOnlyTravel(legs)) return true;
     if (!user || !user.base_reporting_location) return true;
@@ -1781,13 +1813,8 @@ export default function ExpensePage() {
       return stationWords.some(w => fromLoc.includes(w) || toLoc.includes(w));
     });
 
-    const hasMarket = legs.some(leg => {
-      const fromLoc = (leg.from || "").trim().toLowerCase();
-      const toLoc = (leg.to || "").trim().toLowerCase();
-      return fromLoc.includes("market") || toLoc.includes("market");
-    });
-
-    // Rule E: PBM Bikaner / MDM Jodhpur → DA allowed even in base-only travel (if no market visit)
+    // Rule E: PBM Bikaner / MDM Jodhpur → DA always allowed in base-only travel,
+    // regardless of market/courier/repairing/pickup errands (see 🔒 LOCKED comment above).
     const isDaAllowedBaseLocation = isSpecialBaseLocation(baseLocations);
 
     if (hasStation) {
@@ -1796,7 +1823,7 @@ export default function ExpensePage() {
       return false;
     }
 
-    if (isDaAllowedBaseLocation && !hasMarket) {
+    if (isDaAllowedBaseLocation) {
       return true;
     }
 

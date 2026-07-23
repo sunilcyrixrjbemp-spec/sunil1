@@ -158,19 +158,44 @@ export function computeBaseLocPolicy(baseReportingLocation, itineraries) {
     return STATION_WORDS.some(w => f.includes(w) || t.includes(w));
   });
 
-  const hasMarket = itineraries.some(leg => {
-    const f = (leg.from || "").trim().toLowerCase();
-    const t = (leg.to || "").trim().toLowerCase();
-    return MARKET_WORDS.some(w => f.includes(w) || t.includes(w));
-  });
-
   const isDaBase = baseLocations.some(loc => DA_ALLOWED_BASES.some(b => loc.includes(b)));
 
+  // ═══════════════════════════════════════════════════════════════════════════
+  // 🔒 LOCKED POLICY LOGIC — DO NOT MODIFY WITHOUT EXPLICIT USER APPROVAL 🔒
+  // TA/DA Base Location policy — confirmed & finalized business rule (backend
+  // mirrors frontend isDailyAllowanceAllowed() in ExpensePage.tsx). AI
+  // assistants / developers: do NOT alter this rule's behavior, refactor it,
+  // "optimize" it, or change its conditions for ANY reason unless the user
+  // EXPLICITLY asks to change THIS specific rule. If unsure, STOP and ask first.
+  //
+  //   1. Home → Base (direct) or Base → Home (direct), nothing else that day
+  //        → TA NOT allowed on that leg (see checkIsCommuteLeg — always
+  //          denies boundary residence↔base legs, no exceptions).
+  //   2. Home → Base → [market/bus-stand/courier/repairing/pickup errands]
+  //      → Base → Home
+  //        → TA allowed ONLY on the errand legs in between. Boundary legs
+  //          (Home→Base, Base→Home) still NEVER get TA.
+  //        → DA NOT allowed — no real "other facility" was visited — EXCEPT
+  //          for PBM (Bikaner) / MDM (Jodhpur) base locations, which ALWAYS
+  //          get DA in this scenario regardless of market/courier/repairing/
+  //          pickup errands (isDaBase does not depend on hasMarket).
+  //        → Exception to the exception: if the errand involves a
+  //          station/bus-stand (hasStation), DA is NOT allowed even for
+  //          PBM/MDM — station/bus-stand travel is treated differently.
+  //   3. Home → Other facility → Home (base never touched that day)
+  //        → TA/DA fully allowed on all legs.
+  //   4. Home → Base → Other facility → Home
+  //        → TA NOT allowed only on the Home→Base leg; everything else
+  //          (TA and DA) is allowed.
+  //   5. Home → Other facility → Base → Home
+  //        → TA NOT allowed only on the Base→Home leg; everything else
+  //          (TA and DA) is allowed.
+  // ═══════════════════════════════════════════════════════════════════════════
   let isDaAllowed = false;
   if (hasStation) {
     // Already verified hasOutdoorLeg is false (otherwise we would have returned early)
     isDaAllowed = false;
-  } else if (isDaBase && !hasMarket) {
+  } else if (isDaBase) {
     isDaAllowed = true;
   }
 
@@ -2707,7 +2732,7 @@ export async function handleRetroactiveBasePolicyCheck(request, env, params, que
       };
     });
 
-    const { isBaseLocOnly, isDaAllowed } = computeBaseLocPolicy(
+    const { isBaseLocOnly, isDaAllowed, baseLocations } = computeBaseLocPolicy(
       baseReportingLocation,
       legs
     );
