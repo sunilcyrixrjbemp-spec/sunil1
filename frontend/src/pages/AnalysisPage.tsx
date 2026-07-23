@@ -609,6 +609,14 @@ export default function AnalysisPage() {
   const [callsPageSize, setCallsPageSize] = useState(10);
   const [callsMobilePage, setCallsMobilePage] = useState(1);
 
+  // Fix body scroll lock cleanup when modals are closed
+  useEffect(() => {
+    if (activeModal === "none" && !isTaggingModalOpen) {
+      document.body.style.overflow = "unset";
+      document.body.style.pointerEvents = "auto";
+    }
+  }, [activeModal, isTaggingModalOpen]);
+
   // Flatten asset tagging details for active expenses
   const taggingBreakdownData = useMemo(() => {
     const list: {
@@ -2227,7 +2235,17 @@ export default function AnalysisPage() {
       {/* Asset Tagging Detailed Breakdown Modal */}
       <Modal
         open={isTaggingModalOpen || activeModal === "asset_tagging"}
-        onCancel={() => { setIsTaggingModalOpen(false); setActiveModal("none"); }}
+        onCancel={() => { 
+          setIsTaggingModalOpen(false); 
+          setActiveModal("none"); 
+          document.body.style.overflow = "unset";
+          document.body.style.pointerEvents = "auto";
+        }}
+        destroyOnClose={true}
+        afterClose={() => {
+          document.body.style.overflow = "unset";
+          document.body.style.pointerEvents = "auto";
+        }}
         footer={null}
         width={950}
         centered
@@ -2417,7 +2435,16 @@ export default function AnalysisPage() {
       {/* PMS Done Detailed Breakdown Modal */}
       <Modal
         open={activeModal === "pms"}
-        onCancel={() => setActiveModal("none")}
+        onCancel={() => { 
+          setActiveModal("none"); 
+          document.body.style.overflow = "unset";
+          document.body.style.pointerEvents = "auto";
+        }}
+        destroyOnClose={true}
+        afterClose={() => {
+          document.body.style.overflow = "unset";
+          document.body.style.pointerEvents = "auto";
+        }}
         footer={null}
         width={900}
         centered
@@ -2585,7 +2612,16 @@ export default function AnalysisPage() {
       {/* Calls Activity Detailed Breakdown Modal */}
       <Modal
         open={activeModal === "calls"}
-        onCancel={() => setActiveModal("none")}
+        onCancel={() => { 
+          setActiveModal("none"); 
+          document.body.style.overflow = "unset";
+          document.body.style.pointerEvents = "auto";
+        }}
+        destroyOnClose={true}
+        afterClose={() => {
+          document.body.style.overflow = "unset";
+          document.body.style.pointerEvents = "auto";
+        }}
         footer={null}
         width={950}
         centered
