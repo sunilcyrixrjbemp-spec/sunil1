@@ -22,7 +22,6 @@ import {
   FileExcelOutlined,
   DashboardOutlined,
   FundOutlined,
-  GlobalOutlined,
   CheckOutlined,
   InfoCircleOutlined,
   TagOutlined,
