@@ -577,19 +577,18 @@ export default function MonthSummaryPage() {
 
   // Renders a full HTML document inside a hidden iframe, captures it with
   // html2canvas + jsPDF, and returns the PDF as a Blob.
-  // Uses smart row-aware slicing to prevent table rows from being cut across pages.
-  const renderHTMLToPDFBlob = (html: string): Promise<Blob> => {
+  // Renders the print HTML in a hidden iframe and converts it to a high-res PNG Image Blob using html2canvas.
+  const renderHTMLToImageBlob = (html: string): Promise<Blob> => {
     return new Promise((resolve, reject) => {
       const SCALE = 2;
-      const A4_W_CSS = 1122;  // A4 landscape at 96dpi
+      const A4_W_CSS = 1122;
 
       const iframe = document.createElement("iframe");
       iframe.style.position = "fixed";
       iframe.style.top = "0";
       iframe.style.left = "0";
       iframe.style.width = `${A4_W_CSS}px`;
-      // Tall enough that all content is in-viewport — getBoundingClientRect gives absolute positions
-      iframe.style.height = "20000px";
+      iframe.style.height = "10000px";
       iframe.style.opacity = "0";
       iframe.style.pointerEvents = "none";
       iframe.style.border = "none";
@@ -603,7 +602,6 @@ export default function MonthSummaryPage() {
       iDoc.write(html);
       iDoc.close();
 
-      // Wait for all images inside the iframe to fully load
       const waitIframeImages = () => new Promise<void>((res) => {
         const imgs = Array.from(iDoc.getElementsByTagName("img"));
         if (imgs.length === 0) { setTimeout(res, 400); return; }
@@ -619,147 +617,41 @@ export default function MonthSummaryPage() {
         try {
           await waitIframeImages();
           const h2c = (window as any).html2canvas;
-          const jsPDF = (window as any).jspdf?.jsPDF || (window as any).jsPDF;
-
           const body = iDoc.body;
-          const totalHeight = body.scrollHeight;
-          const totalWidth = A4_W_CSS;
-
-          // ── Minimum slice height (30 CSS px × scale) — skip thinner slices ──
-          const MIN_SLICE_PX = SCALE * 30;
-
-          // ── Collect tbody row bottom boundaries ──
-          const allRows = Array.from(iDoc.querySelectorAll("tbody tr"));
-          const rowBottomsPx: number[] = allRows.map(tr => {
-            return Math.ceil((tr as HTMLElement).getBoundingClientRect().bottom);
-          });
-
-          // ── Also snap at the bottom of the main .wrap form div ──
-          // This prevents footer/totals/signatures spilling onto a new near-blank page
           const wrapEl = iDoc.querySelector(".wrap");
-          // Pre-calculate wrapBottomPx HERE while iframe is still in DOM
-          // (after removeChild, getBoundingClientRect returns 0 on detached elements)
-          const wrapBottomPx = wrapEl
-            ? Math.ceil((wrapEl as HTMLElement).getBoundingClientRect().bottom)
-            : totalHeight;
-          if (wrapEl) {
-            rowBottomsPx.push(wrapBottomPx);
-          }
-          rowBottomsPx.sort((a, b) => a - b);
+          const totalHeight = wrapEl ? Math.ceil((wrapEl as HTMLElement).getBoundingClientRect().bottom) + 20 : body.scrollHeight;
 
-          // ── Collect attachment top AND bottom boundaries ──
-          const attachEls = Array.from(iDoc.querySelectorAll(".attachment-page"));
-          const attachTopsPx: number[] = attachEls.map(el =>
-            Math.floor((el as HTMLElement).getBoundingClientRect().top)
-          );
-          // Pre-calculate lastAttachBottom while iframe is still in DOM
-          const lastAttachBottom = attachEls.length > 0
-            ? Math.ceil((attachEls[attachEls.length - 1] as HTMLElement).getBoundingClientRect().bottom)
-            : null;
-
-          // ── Capture full-page canvas ──
           const canvas = await h2c(body, {
             scale: SCALE,
             useCORS: true,
             allowTaint: false,
             logging: false,
-            width: totalWidth,
+            width: A4_W_CSS,
             height: totalHeight,
             scrollX: 0,
             scrollY: 0,
-            windowWidth: totalWidth,
+            windowWidth: A4_W_CSS,
             windowHeight: totalHeight,
           });
 
-          // Remove iframe now — all DOM queries are done above
           if (document.body.contains(iframe)) document.body.removeChild(iframe);
 
-          // The true end of meaningful content in canvas pixels (using pre-calculated values)
-          const contentEndPx = lastAttachBottom !== null
-            ? Math.min(lastAttachBottom * SCALE, canvas.height)
-            : Math.min(wrapBottomPx * SCALE, canvas.height);
-
-          // ── PDF page dimensions ──
-          const margin = 5;        // mm
-          const contentWmm = 287;  // 297 - 5*2
-          const contentHmm = 200;  // 210 - 5*2
-          const pxPerMM = canvas.width / contentWmm;
-          const pageHpx = contentHmm * pxPerMM;
-
-          const pdf = new jsPDF({ unit: "mm", format: "a4", orientation: "landscape" });
-          let firstPage = true;
-          let currentPx = 0;
-
-          // Only iterate up to the end of real content — ignore trailing whitespace
-          while (currentPx < contentEndPx - MIN_SLICE_PX) {
-            const idealEndPx = currentPx + pageHpx;
-
-            let sliceEndPx = Math.min(idealEndPx, contentEndPx);
-
-            // ── Priority 1: Snap to attachment start (hard page boundary) ──
-            const nextAttach = attachTopsPx.find(y => {
-              const yCanvas = y * SCALE;
-              return yCanvas > currentPx + MIN_SLICE_PX && yCanvas <= idealEndPx + pageHpx * 0.15;
-            });
-            if (nextAttach !== undefined) {
-              const attachCanvasPx = nextAttach * SCALE;
-              sliceEndPx = Math.min(attachCanvasPx, contentEndPx);
-            } else {
-              // ── Priority 2: Snap to last row/.wrap bottom that fits this page ──
-              const fittingBottoms = rowBottomsPx
-                .map(y => y * SCALE)
-                .filter(y => y > currentPx + MIN_SLICE_PX && y <= idealEndPx);
-              if (fittingBottoms.length > 0) {
-                sliceEndPx = fittingBottoms[fittingBottoms.length - 1];
-              }
-            }
-
-            sliceEndPx = Math.min(sliceEndPx, contentEndPx);
-            // Safety guard — never infinite-loop
-            if (sliceEndPx <= currentPx) sliceEndPx = Math.min(currentPx + pageHpx, contentEndPx);
-
-            const sliceH = Math.ceil(sliceEndPx - currentPx);
-
-            // Skip near-empty slices (e.g. just a border line)
-            if (sliceH < MIN_SLICE_PX) {
-              currentPx = sliceEndPx;
-              continue;
-            }
-
-            if (!firstPage) pdf.addPage();
-            firstPage = false;
-
-            const sliceCanvas = document.createElement("canvas");
-            sliceCanvas.width = canvas.width;
-            sliceCanvas.height = sliceH;
-            const ctx = sliceCanvas.getContext("2d")!;
-            ctx.fillStyle = "#ffffff";
-            ctx.fillRect(0, 0, sliceCanvas.width, sliceCanvas.height);
-            ctx.drawImage(canvas, 0, currentPx, canvas.width, sliceH, 0, 0, canvas.width, sliceH);
-
-            const sliceData = sliceCanvas.toDataURL("image/jpeg", 0.96);
-            const sliceHmm = (sliceH / canvas.width) * contentWmm;
-
-            pdf.addImage(sliceData, "JPEG", margin, margin, contentWmm, sliceHmm);
-            currentPx = sliceEndPx;
-          }
-
-          resolve(pdf.output("blob"));
+          canvas.toBlob((blob: Blob | null) => {
+            if (blob) resolve(blob);
+            else reject(new Error("Failed to capture image blob"));
+          }, "image/png");
         } catch (e) {
           if (document.body.contains(iframe)) document.body.removeChild(iframe);
           reject(e);
         }
       };
 
-      // Guard: ensure doCapture only runs once even if both onload + setTimeout fire
       let _captured = false;
       const onceCaptured = () => { if (!_captured) { _captured = true; doCapture(); } };
 
-      // Trigger capture once iframe is fully rendered
       if (iframe.contentWindow) {
         iframe.contentWindow.onload = onceCaptured;
       }
-      // Fallback: if onload already fired before we could attach
       setTimeout(() => {
         if (iDoc.readyState === "complete") onceCaptured();
       }, 1000);
@@ -786,13 +678,11 @@ export default function MonthSummaryPage() {
       setPdfLoadingId(null);
     }
 
-    const downloadPDF = async (amount: number) => {
+    const downloadImage = async (amount: number) => {
       setPdfLoadingId(key);
-      const downloadTid = toast.loading(`Generating PDF for ${row.name}...`);
+      const downloadTid = toast.loading(`Generating Image for ${row.name}...`);
       try {
-        // Load html2canvas + jsPDF from CDN
         await loadScript("https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js");
-        await loadScript("https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js");
 
         const res = await expenseService.getEngineerMonthClaims(row.user_id, row.month, row.year);
         const userObj = res.user || row;
@@ -804,18 +694,18 @@ export default function MonthSummaryPage() {
         }
 
         const html = buildExcelPrintHTML(userObj, claims, attachments, amount, false);
-        const filename = `${(userObj.name || "Engineer").replace(/[^a-zA-Z0-9]/g, "_")}_Form_CYKL01.pdf`;
-        const pdfBlob = await renderHTMLToPDFBlob(html);
+        const filename = `${(userObj.name || "Engineer").replace(/[^a-zA-Z0-9]/g, "_")}_Form_CYKL01.png`;
+        const imageBlob = await renderHTMLToImageBlob(html);
 
         const link = document.createElement("a");
-        link.href = URL.createObjectURL(pdfBlob);
+        link.href = URL.createObjectURL(imageBlob);
         link.download = filename;
         document.body.appendChild(link);
         link.click();
         document.body.removeChild(link);
-        toast.success(`PDF downloaded successfully!`);
+        toast.success(`Form image downloaded successfully!`);
       } catch (err) {
-        toast.error("PDF download failed");
+        toast.error("Image download failed");
         console.error(err);
       } finally {
         toast.dismiss(downloadTid);
@@ -824,7 +714,7 @@ export default function MonthSummaryPage() {
     };
 
     if (exists || !isAllowedAdvance) {
-      await downloadPDF(savedAdvance);
+      await downloadImage(savedAdvance);
     } else {
       setAdvanceAmountInput("0");
       setAdvanceModalConfig({
@@ -844,7 +734,7 @@ export default function MonthSummaryPage() {
           } finally {
             toast.dismiss(saveTid);
           }
-          await downloadPDF(amount);
+          await downloadImage(amount);
         }
       });
       setShowAdvanceModal(true);
@@ -1084,7 +974,7 @@ export default function MonthSummaryPage() {
   };
 
   const generateZIPBlob = async (fetched: any[], advancesMap: Record<string, number>) => {
-    const tid = toast.loading("Generating PDFs and packing ZIP...");
+    const tid = toast.loading("Generating Images and packing ZIP...");
     try {
       const zip = new (window as any).JSZip();
       
@@ -1100,9 +990,9 @@ export default function MonthSummaryPage() {
         const html = buildExcelPrintHTML(userObj, claims, attachments, advance, false);
         const safeName = (userObj.name || "Engineer").replace(/[^a-zA-Z0-9]/g, "_");
         const safeMonth = (userObj.month || "Month").replace(/[^a-zA-Z0-9]/g, "_");
-        const fileName = `${safeName}_${userObj.e_code || userObj.user_id}_${safeMonth}_${userObj.year}.pdf`;
-        const pdfBlob = await renderHTMLToPDFBlob(html);
-        zip.file(fileName, pdfBlob);
+        const fileName = `${safeName}_${userObj.e_code || userObj.user_id}_${safeMonth}_${userObj.year}.png`;
+        const imageBlob = await renderHTMLToImageBlob(html);
+        zip.file(fileName, imageBlob);
       }
 
       const zipBlob = await zip.generateAsync({ type: "blob" });
@@ -1128,7 +1018,6 @@ export default function MonthSummaryPage() {
     try {
       await Promise.all([
         loadScript("https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"),
-        loadScript("https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"),
         loadScript("https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js")
       ]);
 
@@ -1410,10 +1299,10 @@ export default function MonthSummaryPage() {
                       </td>
                       <td className="py-3 px-3 text-center">
                         <button onClick={() => handlePDF(row)} disabled={isLoading}
-                          className="inline-flex items-center gap-1 px-2 py-1 rounded bg-red-600 hover:bg-red-700 text-white text-[10px] font-bold shadow-sm transition-all cursor-pointer disabled:opacity-60"
-                          title={`Download Reimbursement PDF Form CYKL01 for ${row.name}`}>
+                          className="inline-flex items-center gap-1 px-2 py-1 rounded bg-blue-600 hover:bg-blue-700 text-white text-[10px] font-bold shadow-sm transition-all cursor-pointer disabled:opacity-60"
+                          title={`Download Reimbursement Form Image for ${row.name}`}>
                           {isLoading ? <Loader2 className="w-3 h-3 animate-spin" /> : <Download className="w-3 h-3" />}
-                          {isLoading ? "..." : "Download PDF"}
+                          {isLoading ? "..." : "Download Image"}
                         </button>
                       </td>
                     </tr>
@@ -1501,10 +1390,10 @@ export default function MonthSummaryPage() {
 
                     <div className="border-t border-gray-150 pt-3.5 flex justify-end">
                       <button onClick={() => handlePDF(row)} disabled={isLoading}
-                        className="inline-flex items-center justify-center gap-1.5 px-3 py-1.5 rounded bg-red-600 hover:bg-red-700 text-white text-[10px] font-bold shadow-sm transition-all cursor-pointer disabled:opacity-60 border-0 active:scale-95"
+                        className="inline-flex items-center justify-center gap-1.5 px-3 py-1.5 rounded bg-blue-600 hover:bg-blue-700 text-white text-[10px] font-bold shadow-sm transition-all cursor-pointer disabled:opacity-60 border-0 active:scale-95"
                       >
                         {isLoading ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Download className="w-3.5 h-3.5" />}
-                        <span>Download PDF Form</span>
+                        <span>Download Form Image</span>
                       </button>
                     </div>
                   </div>

@@ -1102,63 +1102,38 @@ export default function AnalysisPage() {
     }
   ];
 
-  // Excel Export Handler
+  // Excel Export Handler - Exactly 10 fields in exact requested order (Issue 3)
   const handleExportToExcel = (modalType: "asset_tagging" | "pms" | "calls") => {
     const monthName = months[selectedMonth];
     const monthQuery = `${monthName}_${selectedYear}`;
-    let exportData: any[] = [];
+    let rawList: any[] = [];
     let fileName = "";
 
     if (modalType === "asset_tagging") {
-      exportData = filteredTaggingBreakdown.map((item, idx) => ({
-        "S.No": idx + 1,
-        "Date": item.date || "—",
-        "Engineer Name": item.engineer,
-        "District": item.district,
-        "Zone": item.zone,
-        "Hospital / Location": item.hospital_name,
-        "Equipment Name": item.equipment_name,
-        "Barcode / Asset ID": item.barcode,
-        "Quantity (Units)": item.quantity,
-        "Unit Price (INR)": item.unit_cost,
-        "Total Tagged Value (INR)": item.total_val
-      }));
+      rawList = filteredTaggingBreakdown;
       fileName = `Asset_Tagging_Breakdown_${monthQuery}.xlsx`;
     } else if (modalType === "pms") {
-      exportData = filteredPmsBreakdown.map((item, idx) => ({
-        "S.No": idx + 1,
-        "Date": item.date || "—",
-        "Engineer Name": item.engineer,
-        "District": item.district,
-        "Zone": item.zone,
-        "Hospital / Location": item.hospital_name,
-        "Equipment Name": item.equipment_name,
-        "Barcode / Asset ID": item.barcode,
-        "PMS Schedule": item.pms_schedule,
-        "PMS Status": item.pms_status,
-        "PMS Done Count": item.pms_count,
-        "Purpose / Details": item.purpose
-      }));
+      rawList = filteredPmsBreakdown;
       fileName = `PMS_Done_Breakdown_${monthQuery}.xlsx`;
     } else if (modalType === "calls") {
-      exportData = filteredCallsBreakdown.map((item, idx) => ({
-        "S.No": idx + 1,
-        "Date": item.date || "—",
-        "Engineer Name": item.engineer,
-        "District": item.district,
-        "Zone": item.zone,
-        "Hospital / Location": item.hospital_name,
-        "Call Type": item.call_type,
-        "Call Status": item.call_status,
-        "Calls Assigned": item.calls_assigned,
-        "Calls Completed": item.calls_completed,
-        "Completion Rate (%)": `${item.completion_rate}%`,
-        "Purpose / Details": item.purpose
-      }));
+      rawList = filteredCallsBreakdown;
       fileName = `Calls_Activity_Breakdown_${monthQuery}.xlsx`;
     }
 
-    if (exportData.length === 0) return;
+    if (rawList.length === 0) return;
+
+    const exportData = rawList.map((item) => ({
+      "District Name": item.district || "",
+      "Hospital Name": item.hospital_name || item.hospital || "",
+      "Equipment Name": item.equipment_name || "",
+      "Bar Code": item.barcode || "",
+      "PMS Schedule": item.pms_schedule || item.schedule || "",
+      "PMS Time": item.pms_time || item.time || "",
+      "Call Type": item.call_type || item.travel_mode || "",
+      "Call Date": item.date || item.call_date || "",
+      "Engineer Name": item.engineer || item.submitter_name || "",
+      "Call Status": item.call_status || item.pms_status || item.status || ""
+    }));
 
     const worksheet = XLSX.utils.json_to_sheet(exportData);
     const workbook = XLSX.utils.book_new();
@@ -2384,8 +2359,8 @@ export default function AnalysisPage() {
         footer={null}
         width={950}
         centered
-        style={{ maxWidth: "96vw", top: 10 }}
-        bodyStyle={{ padding: "12px 16px 16px 16px" }}
+        style={{ maxWidth: "96vw", top: 10, maxHeight: "85vh" }}
+        bodyStyle={{ padding: "12px 16px 16px 16px", maxHeight: "calc(85vh - 70px)", overflowY: "auto", WebkitOverflowScrolling: "touch" }}
         className="asset-tagging-breakdown-modal"
         title={
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-gray-200 pb-3 pr-6">
@@ -2554,7 +2529,7 @@ export default function AnalysisPage() {
           </div>
 
           {/* Desktop Table View (≥768px) */}
-          <div className="hidden md:block">
+          <div className="hidden md:block admin-data-table-wrapper rounded-xl border border-slate-200 overflow-x-auto shadow-2xs">
             <Table
               columns={taggingTableColumns}
               dataSource={filteredTaggingBreakdown}
@@ -2569,7 +2544,7 @@ export default function AnalysisPage() {
               }}
               bordered
               scroll={{ x: 750, y: 380 }}
-              className="shadow-xs text-xs"
+              className="admin-data-table text-xs"
             />
           </div>
         </div>
@@ -2589,8 +2564,8 @@ export default function AnalysisPage() {
         footer={null}
         width={900}
         centered
-        style={{ maxWidth: "96vw", top: 10 }}
-        bodyStyle={{ padding: "12px 16px 16px 16px" }}
+        style={{ maxWidth: "96vw", top: 10, maxHeight: "85vh" }}
+        bodyStyle={{ padding: "12px 16px 16px 16px", maxHeight: "calc(85vh - 70px)", overflowY: "auto", WebkitOverflowScrolling: "touch" }}
         className="pms-breakdown-modal"
         title={
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-gray-200 pb-3 pr-6">
@@ -2737,7 +2712,7 @@ export default function AnalysisPage() {
           </div>
 
           {/* Desktop Table View (≥768px) */}
-          <div className="hidden md:block">
+          <div className="hidden md:block admin-data-table-wrapper rounded-xl border border-slate-200 overflow-x-auto shadow-2xs">
             <Table
               columns={pmsTableColumns}
               dataSource={filteredPmsBreakdown}
@@ -2752,7 +2727,7 @@ export default function AnalysisPage() {
               }}
               bordered
               scroll={{ x: 700, y: 380 }}
-              className="shadow-xs text-xs"
+              className="admin-data-table text-xs"
             />
           </div>
         </div>
@@ -2772,8 +2747,8 @@ export default function AnalysisPage() {
         footer={null}
         width={950}
         centered
-        style={{ maxWidth: "96vw", top: 10 }}
-        bodyStyle={{ padding: "12px 16px 16px 16px" }}
+        style={{ maxWidth: "96vw", top: 10, maxHeight: "85vh" }}
+        bodyStyle={{ padding: "12px 16px 16px 16px", maxHeight: "calc(85vh - 70px)", overflowY: "auto", WebkitOverflowScrolling: "touch" }}
         className="calls-breakdown-modal"
         title={
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-gray-200 pb-3 pr-6">
@@ -2940,7 +2915,7 @@ export default function AnalysisPage() {
           </div>
 
           {/* Desktop Table View (≥768px) */}
-          <div className="hidden md:block">
+          <div className="hidden md:block admin-data-table-wrapper rounded-xl border border-slate-200 overflow-x-auto shadow-2xs">
             <Table
               columns={callsTableColumns}
               dataSource={filteredCallsBreakdown}
@@ -2955,13 +2930,53 @@ export default function AnalysisPage() {
               }}
               bordered
               scroll={{ x: 750, y: 380 }}
-              className="shadow-xs text-xs"
+              className="admin-data-table text-xs"
             />
           </div>
         </div>
       </Modal>
       {/* Extra spacer at the bottom to prevent layout elements from being cut off by the navigation bar */}
       <div className="h-32 md:h-8" />
+      <style>{`
+        .ant-modal-content {
+          max-height: 85vh !important;
+          display: flex !important;
+          flex-direction: column !important;
+        }
+        .ant-modal-body {
+          max-height: calc(85vh - 70px) !important;
+          overflow-y: auto !important;
+          -webkit-overflow-scrolling: touch !important;
+        }
+        .admin-data-table .ant-table-header th,
+        .admin-data-table .ant-table-thead > tr > th {
+          position: sticky !important;
+          top: 0 !important;
+          z-index: 10 !important;
+          background-color: #f1f5f9 !important;
+          color: #0f172a !important;
+          font-weight: 700 !important;
+          border-bottom: 2px solid #cbd5e1 !important;
+        }
+        .admin-data-table .ant-table-tbody > tr:nth-child(even) {
+          background-color: #f8fafc !important;
+        }
+        .admin-data-table .ant-table-tbody > tr:nth-child(odd) {
+          background-color: #ffffff !important;
+        }
+        .admin-data-table .ant-table-tbody > tr:hover > td {
+          background-color: #e0e7ff !important;
+        }
+        .admin-data-table .ant-table-cell {
+          padding: 10px 12px !important;
+          vertical-align: middle !important;
+          border-bottom: 1px solid #e2e8f0 !important;
+        }
+        .admin-data-table-wrapper {
+          overflow-x: auto !important;
+          -webkit-overflow-scrolling: touch !important;
+        }
+      `}</style>
     </div>
   );
 }

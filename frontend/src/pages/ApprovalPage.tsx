@@ -2953,24 +2953,16 @@ export default function ApprovalPage() {
         >
           <div className="relative w-full max-w-4xl max-h-[90vh] bg-slate-900 border border-slate-700 rounded-lg p-3 flex flex-col items-center justify-center select-none pointer-events-auto shadow-2xl" onClick={(e) => e.stopPropagation()}>
             <div className="flex justify-between items-center w-full mb-2 pb-2 border-b border-slate-700">
-              <span className="text-xs font-bold text-slate-200">Attachment Document Preview</span>
+              <span className="text-xs font-bold text-slate-200">Attachment Image Preview</span>
               <div className="flex gap-2 items-center">
-                <a 
-                  href={`https://docs.google.com/gview?url=${encodeURIComponent(lightboxImage)}&embedded=true`} 
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="px-2.5 py-1 bg-purple-600 hover:bg-purple-700 text-white rounded text-[11px] font-bold no-underline flex items-center gap-1"
-                >
-                  ↗ Google PDF Viewer
-                </a>
                 <a 
                   href={displayImageUrl || lightboxImage} 
                   target="_blank"
                   rel="noopener noreferrer"
-                  download="document.pdf"
+                  download="attachment_image.png"
                   className="px-2.5 py-1 bg-blue-600 hover:bg-blue-700 text-white rounded text-[11px] font-bold no-underline flex items-center gap-1"
                 >
-                  ⬇ Download
+                  ⬇ Download Image
                 </a>
                 <button
                   onClick={() => setLightboxImage(null)}

@@ -6346,24 +6346,16 @@ export default function ExpensePage() {
         >
           <div className="relative max-w-4xl max-h-[90vh] bg-white border border-gray-300 rounded p-4 flex flex-col items-center justify-center select-none pointer-events-auto" onClick={(e) => e.stopPropagation()}>
             <div className="flex justify-between items-center w-full mb-2 pb-2 border-b border-gray-200">
-              <span className="text-xs font-bold text-gray-800">Document / Image Preview</span>
+              <span className="text-xs font-bold text-gray-800">Image Preview</span>
               <div className="flex gap-2 items-center">
-                <a 
-                  href={`https://docs.google.com/gview?url=${encodeURIComponent(lightboxImage)}&embedded=true`} 
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="px-2 py-1 bg-purple-600 hover:bg-purple-700 text-white rounded text-[10px] font-bold no-underline"
-                >
-                  ↗ Google PDF Viewer
-                </a>
                 <a 
                   href={displayImageUrl || lightboxImage} 
                   target="_blank"
                   rel="noopener noreferrer"
-                  download="document.pdf" 
+                  download="attachment_image.png" 
                   className="px-2 py-1 bg-green-600 hover:bg-green-700 text-white rounded text-[10px] font-bold no-underline"
                 >
-                  ⬇ Download
+                  ⬇ Download Image
                 </a>
                 <button
                   onClick={() => setLightboxImage(null)}
