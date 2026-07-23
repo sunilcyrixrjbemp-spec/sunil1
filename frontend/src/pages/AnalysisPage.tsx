@@ -516,6 +516,76 @@ export default function AnalysisPage() {
     return result;
   }, [activeExpenses, selectedMonth, selectedYear, startDate, endDate]);
 
+  // E. Date-wise Tagged Asset Value Trend (₹)
+  const dayWiseAssetTaggingValueData = useMemo(() => {
+    const dailyValueMap: Record<string, { value: number; count: number }> = {};
+
+    activeExpenses.forEach(e => {
+      if (!e) return;
+      const rawDate = e.date || e.itinerary;
+      if (!rawDate) return;
+      const cleanStr = String(rawDate).trim();
+      const match = cleanStr.match(/^(\d{4})-(\d{2})-(\d{2})/);
+      if (match) {
+        const dateKey = `${match[1]}-${match[2]}-${match[3]}`;
+        if (!dailyValueMap[dateKey]) {
+          dailyValueMap[dateKey] = { value: 0, count: 0 };
+        }
+        const val = Number(e.asset_tagging_value || e.asset_tagging_val || 0);
+        const cnt = Number(e.asset_tagging || 0);
+        dailyValueMap[dateKey].value += val;
+        dailyValueMap[dateKey].count += cnt;
+      }
+    });
+
+    const result: { date: string; value: number; count: number; fullDate: string }[] = [];
+
+    if (startDate && endDate) {
+      const start = new Date(startDate);
+      const end = new Date(endDate);
+      const curr = new Date(start);
+
+      while (curr <= end) {
+        const yyyy = curr.getFullYear();
+        const mm = String(curr.getMonth() + 1).padStart(2, "0");
+        const dd = String(curr.getDate()).padStart(2, "0");
+        const dateKey = `${yyyy}-${mm}-${dd}`;
+        const monthShort = curr.toLocaleString("en-US", { month: "short" });
+        const label = `${curr.getDate()} ${monthShort}`;
+
+        result.push({
+          date: label,
+          value: dailyValueMap[dateKey]?.value || 0,
+          count: dailyValueMap[dateKey]?.count || 0,
+          fullDate: dateKey
+        });
+
+        curr.setDate(curr.getDate() + 1);
+      }
+    } else {
+      const year = selectedYear;
+      const monthIdx = selectedMonth;
+      const daysInMonth = new Date(year, monthIdx + 1, 0).getDate();
+      const monthShort = months[monthIdx] ? months[monthIdx].substring(0, 3) : "Jul";
+
+      for (let day = 1; day <= daysInMonth; day++) {
+        const mm = String(monthIdx + 1).padStart(2, "0");
+        const dd = String(day).padStart(2, "0");
+        const dateKey = `${year}-${mm}-${dd}`;
+        const label = `${day} ${monthShort}`;
+
+        result.push({
+          date: label,
+          value: dailyValueMap[dateKey]?.value || 0,
+          count: dailyValueMap[dateKey]?.count || 0,
+          fullDate: dateKey
+        });
+      }
+    }
+
+    return result;
+  }, [activeExpenses, selectedMonth, selectedYear, startDate, endDate]);
+
   // E. Zone-wise (from user.zone database field) - respects active filters
   // FULL_ACCESS_ROLES: single source of truth — see utils/constants.ts
   const isPrivilegedRole = hasFullAccess(user?.role);
@@ -1597,6 +1667,94 @@ export default function AnalysisPage() {
                     ) : (
                       <div className="flex items-center justify-center h-full text-gray-400 text-xs font-bold">
                         No operational activities recorded in this selection
+                      </div>
+                    )}
+                  </div>
+                </Card>
+              </Col>
+
+              {/* Chart 7: Date Wise Tagged Asset Value Trend */}
+              <Col xs={24}>
+                <Card 
+                  size="small"
+                  title={<span className="text-xs font-bold text-gray-700 uppercase tracking-wider">Date Wise Tagged Asset Value Trend</span>}
+                  extra={<span className="text-[10px] text-emerald-700 bg-emerald-50 border border-emerald-200 px-2 py-0.5 rounded font-extrabold uppercase">Tagged Asset Value (₹)</span>}
+                  className="shadow-sm border border-gray-200 rounded-xl"
+                >
+                  <div style={{ height: 300 }}>
+                    {dayWiseAssetTaggingValueData.some(d => d.value > 0 || d.count > 0) ? (
+                      <ResponsiveLine
+                        data={[
+                          {
+                            id: "Asset Value",
+                            color: "#059669",
+                            data: dayWiseAssetTaggingValueData.map(d => ({ x: d.date, y: d.value, count: d.count }))
+                          }
+                        ]}
+                        margin={{ top: 15, right: 15, bottom: 35, left: 55 }}
+                        xScale={{ type: 'point' }}
+                        yScale={{ type: 'linear', min: 0, max: 'auto' }}
+                        curve="monotoneX"
+                        colors={d => d.color}
+                        lineWidth={2.5}
+                        enableArea={true}
+                        areaOpacity={0.15}
+                        enablePoints={dayWiseAssetTaggingValueData.length <= 15}
+                        pointSize={6}
+                        useMesh={true}
+                        axisTop={null}
+                        axisRight={null}
+                        axisBottom={{
+                          tickSize: 0,
+                          tickPadding: 8,
+                          tickRotation: 0,
+                          format: (val) => {
+                            const str = String(val);
+                            const dayNum = parseInt(str);
+                            if (isNaN(dayNum)) return str;
+                            if (dayNum === 1 || dayNum % 5 === 0 || dayNum >= dayWiseAssetTaggingValueData.length - 1) {
+                              return str;
+                            }
+                            return "";
+                          }
+                        }}
+                        axisLeft={{
+                          tickSize: 0,
+                          tickPadding: 8,
+                          tickRotation: 0,
+                          format: (v) => v >= 1000 ? `₹${(v / 1000).toFixed(0)}k` : `₹${v}`
+                        }}
+                        theme={{
+                          grid: { line: { stroke: '#f1f5f9', strokeWidth: 1 } },
+                          axis: { ticks: { text: { fontSize: 8, fontWeight: 'bold', fill: '#64748b' } } }
+                        }}
+                        tooltip={({ point }) => {
+                          const dataPoint = dayWiseAssetTaggingValueData.find(d => d.date === String(point.data.x));
+                          return (
+                            <div className="bg-slate-900/95 backdrop-blur-md text-white border border-slate-800 shadow-2xl rounded-xl p-3 text-xs min-w-[140px] font-sans pointer-events-none z-50">
+                              <p className="font-extrabold text-[10px] uppercase text-slate-400 tracking-wider mb-1.5">{String(point.data.x)}</p>
+                              <div className="space-y-1">
+                                <div className="flex items-center justify-between gap-4">
+                                  <span className="flex items-center gap-1.5 text-slate-300">
+                                    <span className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: point.color }} />
+                                    Tagged Value:
+                                  </span>
+                                  <span className="font-mono font-bold text-emerald-400">₹{(point.data.y as number).toLocaleString('en-IN')}</span>
+                                </div>
+                                {dataPoint && dataPoint.count > 0 && (
+                                  <div className="flex items-center justify-between gap-4 text-[10px]">
+                                    <span className="text-slate-400">Tagged Quantity:</span>
+                                    <span className="font-mono font-bold text-slate-200">{dataPoint.count} units</span>
+                                  </div>
+                                )}
+                              </div>
+                            </div>
+                          );
+                        }}
+                      />
+                    ) : (
+                      <div className="flex items-center justify-center h-full text-gray-400 text-xs font-bold">
+                        No asset tagging values recorded in this selection
                       </div>
                     )}
                   </div>
