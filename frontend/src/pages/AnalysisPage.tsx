@@ -597,6 +597,7 @@ export default function AnalysisPage() {
   const [selectedTaggingDate, setSelectedTaggingDate] = useState<string | null>(null);
   const [taggingSearchQuery, setTaggingSearchQuery] = useState("");
   const [taggingPageSize, setTaggingPageSize] = useState(10);
+  const [taggingMobilePage, setTaggingMobilePage] = useState(1);
 
   // Flatten asset tagging details for active expenses
   const taggingBreakdownData = useMemo(() => {
@@ -1952,15 +1953,17 @@ export default function AnalysisPage() {
         footer={null}
         width={950}
         centered
+        style={{ maxWidth: "96vw", top: 10 }}
+        bodyStyle={{ padding: "12px 16px 16px 16px" }}
         className="asset-tagging-breakdown-modal"
         title={
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-gray-200 pb-3 pr-6">
             <div>
-              <span className="text-sm font-extrabold text-slate-800 uppercase tracking-wide flex items-center gap-2">
+              <span className="text-xs sm:text-sm font-extrabold text-slate-800 uppercase tracking-wide flex items-center gap-2">
                 <TagOutlined className="text-cyan-500" />
                 Asset Tagging Detailed Breakdown
               </span>
-              <p className="text-[11px] text-gray-500 font-normal m-0 mt-0.5">
+              <p className="text-[10px] sm:text-[11px] text-gray-500 font-normal m-0 mt-0.5">
                 {selectedTaggingDate ? `Filtered for ${selectedTaggingDate}` : `${months[selectedMonth]} ${selectedYear} — All Tagged Equipment`}
               </p>
             </div>
@@ -1969,7 +1972,7 @@ export default function AnalysisPage() {
                 size="small"
                 type="dashed"
                 onClick={() => setSelectedTaggingDate(null)}
-                className="text-xs text-indigo-600 font-bold"
+                className="text-xs text-indigo-600 font-bold self-start sm:self-auto"
               >
                 Clear Date Filter (Show All)
               </Button>
@@ -1977,23 +1980,23 @@ export default function AnalysisPage() {
           </div>
         }
       >
-        <div className="space-y-4 pt-2">
+        <div className="space-y-3 pt-1">
           {/* Summary Badges & Search Bar */}
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-slate-50 p-3 rounded-xl border border-slate-200">
-            <div className="flex flex-wrap items-center gap-3">
-              <div className="bg-white border border-slate-200 px-3 py-1.5 rounded-lg shadow-xs">
-                <span className="text-[10px] text-gray-400 font-bold uppercase block">Total Items</span>
-                <span className="text-sm font-black text-slate-800 font-mono">{filteredTaggingBreakdown.length} records</span>
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 bg-slate-50 p-2.5 rounded-xl border border-slate-200">
+            <div className="grid grid-cols-2 sm:flex sm:flex-wrap items-center gap-2">
+              <div className="bg-white border border-slate-200 px-2.5 py-1 rounded-lg shadow-2xs">
+                <span className="text-[9px] text-gray-400 font-bold uppercase block">Total Items</span>
+                <span className="text-xs font-black text-slate-800 font-mono">{filteredTaggingBreakdown.length} records</span>
               </div>
-              <div className="bg-white border border-slate-200 px-3 py-1.5 rounded-lg shadow-xs">
-                <span className="text-[10px] text-gray-400 font-bold uppercase block">Total Tagged Quantity</span>
-                <span className="text-sm font-black text-cyan-600 font-mono">
+              <div className="bg-white border border-slate-200 px-2.5 py-1 rounded-lg shadow-2xs">
+                <span className="text-[9px] text-gray-400 font-bold uppercase block">Tagged Quantity</span>
+                <span className="text-xs font-black text-cyan-600 font-mono">
                   {filteredTaggingBreakdown.reduce((sum, item) => sum + item.quantity, 0)} units
                 </span>
               </div>
-              <div className="bg-white border border-slate-200 px-3 py-1.5 rounded-lg shadow-xs">
-                <span className="text-[10px] text-gray-400 font-bold uppercase block">Total Tagged Value</span>
-                <span className="text-sm font-black text-emerald-600 font-mono">
+              <div className="col-span-2 sm:col-span-1 bg-white border border-slate-200 px-2.5 py-1 rounded-lg shadow-2xs">
+                <span className="text-[9px] text-gray-400 font-bold uppercase block">Total Tagged Value</span>
+                <span className="text-xs font-black text-emerald-600 font-mono">
                   ₹{filteredTaggingBreakdown.reduce((sum, item) => sum + item.total_val, 0).toLocaleString('en-IN')}
                 </span>
               </div>
@@ -2004,7 +2007,10 @@ export default function AnalysisPage() {
                 placeholder="Search engineer, district, or equipment..."
                 prefix={<SearchOutlined className="text-gray-400" />}
                 value={taggingSearchQuery}
-                onChange={(e) => setTaggingSearchQuery(e.target.value)}
+                onChange={(e) => {
+                  setTaggingSearchQuery(e.target.value);
+                  setTaggingMobilePage(1);
+                }}
                 allowClear
                 size="small"
                 className="rounded-lg text-xs"
@@ -2012,23 +2018,109 @@ export default function AnalysisPage() {
             </div>
           </div>
 
-          {/* Breakdown Table */}
-          <Table
-            columns={taggingTableColumns}
-            dataSource={filteredTaggingBreakdown}
-            size="small"
-            pagination={{
-              pageSize: taggingPageSize,
-              onChange: (_, size) => setTaggingPageSize(size),
-              onShowSizeChange: (_, size) => setTaggingPageSize(size),
-              showSizeChanger: true,
-              pageSizeOptions: ["10", "25", "50", "100"],
-              showTotal: (total, range) => `${range[0]}-${range[1]} of ${total} tagged items`
-            }}
-            bordered
-            scroll={{ x: 750, y: 380 }}
-            className="shadow-xs text-xs"
-          />
+          {/* Mobile Cards View (<768px) */}
+          <div className="block md:hidden space-y-2.5 max-h-[60vh] overflow-y-auto pr-1">
+            {filteredTaggingBreakdown.length === 0 ? (
+              <div className="py-8 text-center text-gray-400 text-xs font-bold">
+                No asset tagging records found for this selection
+              </div>
+            ) : (
+              (() => {
+                const totalMobileItems = filteredTaggingBreakdown.length;
+                const slicedMobile = filteredTaggingBreakdown.slice(
+                  (taggingMobilePage - 1) * taggingPageSize,
+                  taggingMobilePage * taggingPageSize
+                );
+                const maxMobilePage = Math.ceil(totalMobileItems / taggingPageSize) || 1;
+
+                return (
+                  <>
+                    <div className="space-y-2">
+                      {slicedMobile.map((item) => (
+                        <div key={item.key} className="bg-white border border-slate-200 rounded-xl p-3 shadow-2xs hover:border-cyan-300 transition-all">
+                          <div className="flex items-start justify-between gap-2 border-b border-slate-100 pb-2 mb-2">
+                            <span className="font-bold text-xs text-slate-800 bg-cyan-50 border border-cyan-200 px-2 py-0.5 rounded-md leading-snug">
+                              {item.equipment_name}
+                            </span>
+                            <span className="font-mono font-extrabold text-xs text-emerald-600 shrink-0">
+                              ₹{item.total_val.toLocaleString('en-IN')}
+                            </span>
+                          </div>
+
+                          <div className="grid grid-cols-2 gap-2 text-[11px]">
+                            <div>
+                              <span className="text-gray-400 text-[9px] uppercase font-bold block">Engineer</span>
+                              <span className="font-bold text-indigo-900">{item.engineer}</span>
+                            </div>
+                            <div>
+                              <span className="text-gray-400 text-[9px] uppercase font-bold block">District / Zone</span>
+                              <span className="font-semibold text-slate-700">{item.district} ({item.zone})</span>
+                            </div>
+                            <div>
+                              <span className="text-gray-400 text-[9px] uppercase font-bold block">Date</span>
+                              <span className="font-mono text-slate-600">{item.date || "—"}</span>
+                            </div>
+                            <div>
+                              <span className="text-gray-400 text-[9px] uppercase font-bold block">Qty & Unit Price</span>
+                              <span className="font-mono text-slate-700 font-semibold">{item.quantity} units @ ₹{item.unit_cost.toLocaleString('en-IN')}</span>
+                            </div>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+
+                    {/* Mobile Pagination Controls */}
+                    <div className="pt-2 flex items-center justify-between gap-2 bg-slate-50 p-2 rounded-xl border border-slate-200 text-xs">
+                      <span className="text-[10px] text-slate-500 font-medium">
+                        {((taggingMobilePage - 1) * taggingPageSize) + 1}-{Math.min(taggingMobilePage * taggingPageSize, totalMobileItems)} of {totalMobileItems}
+                      </span>
+                      <div className="flex items-center gap-1.5">
+                        <Button
+                          size="small"
+                          disabled={taggingMobilePage === 1}
+                          onClick={() => setTaggingMobilePage(p => Math.max(1, p - 1))}
+                          className="text-[11px] px-2 font-bold"
+                        >
+                          Prev
+                        </Button>
+                        <span className="font-mono text-[11px] font-bold text-slate-700 px-1">
+                          {taggingMobilePage}/{maxMobilePage}
+                        </span>
+                        <Button
+                          size="small"
+                          disabled={taggingMobilePage >= maxMobilePage}
+                          onClick={() => setTaggingMobilePage(p => p + 1)}
+                          className="text-[11px] px-2 font-bold"
+                        >
+                          Next
+                        </Button>
+                      </div>
+                    </div>
+                  </>
+                );
+              })()
+            )}
+          </div>
+
+          {/* Desktop Table View (≥768px) */}
+          <div className="hidden md:block">
+            <Table
+              columns={taggingTableColumns}
+              dataSource={filteredTaggingBreakdown}
+              size="small"
+              pagination={{
+                pageSize: taggingPageSize,
+                onChange: (_, size) => setTaggingPageSize(size),
+                onShowSizeChange: (_, size) => setTaggingPageSize(size),
+                showSizeChanger: true,
+                pageSizeOptions: ["10", "25", "50", "100"],
+                showTotal: (total, range) => `${range[0]}-${range[1]} of ${total} tagged items`
+              }}
+              bordered
+              scroll={{ x: 750, y: 380 }}
+              className="shadow-xs text-xs"
+            />
+          </div>
         </div>
       </Modal>
       {/* Extra spacer at the bottom to prevent layout elements from being cut off by the navigation bar */}
