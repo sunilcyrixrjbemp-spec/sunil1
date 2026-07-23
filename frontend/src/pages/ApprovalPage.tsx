@@ -1765,7 +1765,7 @@ export default function ApprovalPage() {
           </Space>
         }
         footer={
-          <div style={{ display: "flex", gap: 6, alignItems: "center", width: "100%", flexWrap: "nowrap", overflowX: "auto" }}>
+          <div style={{ display: "flex", gap: 6, alignItems: "center", width: "100%", flexWrap: "nowrap", overflowX: "auto", touchAction: "pan-x" }}>
             <Button
               onClick={() => { setShowDetailModal(false); setSelectedApproval(null); }}
               disabled={actionLoading}

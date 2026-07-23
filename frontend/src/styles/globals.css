@@ -1568,7 +1568,7 @@ span.submitter-code-text {
 .approval-review-modal-wrap {
   overflow: hidden !important;
   overscroll-behavior: contain !important;
-  touch-action: none !important;     /* Block background touches on specific overlays only */
+  touch-action: pan-y !important;     /* FIX A: Allow vertical pan gestures on modal wrappers */
 }
 
 .my-claims-modal-wrap .ant-modal-body,

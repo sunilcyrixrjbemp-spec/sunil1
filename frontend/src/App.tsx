@@ -102,34 +102,40 @@ function App() {
       });
     };
 
-    const handleScrollLock = () => {
-      const modals = document.querySelectorAll('.modal-lte-overlay, [class*="fixed"][class*="inset-0"][class*="bg-black/"]');
-      if (modals.length > 0) {
-        document.body.style.overflow = 'hidden';
-      } else {
-        document.body.style.overflow = '';
-      }
+    let lockTimer: any = null;
+    const debouncedHandleScrollLock = () => {
+      if (lockTimer) clearTimeout(lockTimer);
+      lockTimer = setTimeout(() => {
+        const modals = document.querySelectorAll('.modal-lte-overlay, .ant-modal-wrap, [class*="fixed"][class*="inset-0"][class*="bg-black/"]');
+        if (modals.length > 0) {
+          document.body.style.overflow = 'hidden';
+        } else {
+          document.body.style.overflow = '';
+        }
+      }, 150);
     };
 
-    handleScrollLock();
+    debouncedHandleScrollLock();
 
     const observer = new MutationObserver((mutations) => {
-      handleScrollLock();
-      // For every newly ADDED node, check if it is a modal overlay or contains one
+      debouncedHandleScrollLock();
+      // For every newly ADDED node, check if it is a modal root overlay
       for (const mutation of mutations) {
         for (const node of Array.from(mutation.addedNodes)) {
           if (!(node instanceof Element)) continue;
-          // Check if the added node itself is a modal overlay
-          if (
+          
+          const classNameStr = typeof node.className === 'string' ? node.className : '';
+          const isModalRoot = 
             node.classList.contains('modal-lte-overlay') ||
-            (node.className && typeof node.className === 'string' &&
-              node.className.includes('fixed') && node.className.includes('inset-0'))
-          ) {
+            node.classList.contains('ant-modal-wrap') ||
+            node.classList.contains('approval-review-modal-wrap') ||
+            node.classList.contains('my-claims-modal-wrap') ||
+            (classNameStr.includes('fixed') && classNameStr.includes('inset-0'));
+
+          // FIX B: Only reset scroll when an actual modal root is initially mounted
+          if (isModalRoot) {
             resetScrollForModal(node);
           }
-          // Also check children
-          const innerModals = node.querySelectorAll?.('.modal-lte-overlay');
-          innerModals?.forEach(resetScrollForModal);
         }
       }
     });
@@ -142,6 +148,7 @@ function App() {
     });
 
     return () => {
+      if (lockTimer) clearTimeout(lockTimer);
       observer.disconnect();
       document.body.style.overflow = '';
     };
