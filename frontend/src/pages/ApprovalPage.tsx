@@ -546,19 +546,42 @@ export default function ApprovalPage() {
 
         const aBillTypeLower = (a.bill_type || "").trim().toLowerCase();
 
-        const legMatches = aLegNum === null || isNaN(aLegNum) || aLegNum === legNum;
+        // Enforce strict leg matching if leg number is present
+        if (aLegNum !== null && !isNaN(aLegNum) && aLegNum !== legNum) {
+          return false;
+        }
 
-        const typeMatches = 
-          a.bill_type === billType ||
-          aBillTypeLower === targetTypeLower ||
-          aBillTypeLower.includes(targetTypeLower) ||
-          targetTypeLower.includes(aBillTypeLower) ||
-          (targetTypeLower === "hotel" && aBillTypeLower.includes("hotel")) ||
-          (targetTypeLower === "local_purchase" && (aBillTypeLower.includes("local_purchase") || aBillTypeLower.includes("lp"))) ||
-          (targetTypeLower === "communication_mail" && (aBillTypeLower.includes("comm") || aBillTypeLower.includes("mail"))) ||
-          (targetTypeLower === "other" && (aBillTypeLower.includes("other") || aBillTypeLower.includes("oth")));
+        // Categorized bill type matching to ensure receipts don't leak between categories
+        if (targetTypeLower === "hotel") {
+          return aBillTypeLower.includes("hotel");
+        }
+        if (targetTypeLower === "local_purchase") {
+          return aBillTypeLower.includes("local_purchase") || aBillTypeLower === "lp";
+        }
+        if (targetTypeLower === "communication_mail") {
+          return aBillTypeLower.includes("comm") || aBillTypeLower.includes("mail");
+        }
+        if (targetTypeLower === "other") {
+          return aBillTypeLower.includes("other") || aBillTypeLower.includes("oth");
+        }
 
-        return legMatches && typeMatches;
+        // Main or Sub Travel mode bill matching (e.g. Bus, Train, Bike, Car, Auto, Taxi, Flight, Bill)
+        const isExcludedFromTravel = aBillTypeLower.includes("hotel") || 
+                                     aBillTypeLower.includes("local_purchase") || 
+                                     aBillTypeLower.includes("comm") || 
+                                     aBillTypeLower.includes("mail") || 
+                                     aBillTypeLower.includes("other") || 
+                                     aBillTypeLower.includes("oth");
+
+        if (!isExcludedFromTravel) {
+          return aBillTypeLower === targetTypeLower || 
+                 aBillTypeLower === "bill" || 
+                 aBillTypeLower === "main_bill" || 
+                 aBillTypeLower === "ticket" ||
+                 aBillTypeLower.includes(targetTypeLower);
+        }
+
+        return false;
       });
 
       if (found && found.file_url) {
@@ -566,7 +589,7 @@ export default function ApprovalPage() {
       }
     }
 
-    // 2. Fallback check: match in expenseDetails.attachments array or string
+    // 2. Fallback check: match in expenseDetails.attachments array or string by URL path tokens
     const allAtts = getAttachmentsArray(expenseDetails.attachments);
     for (const rawUrl of allAtts) {
       if (!rawUrl) continue;
@@ -577,21 +600,32 @@ export default function ApprovalPage() {
         continue;
       }
 
-      if (
-        (targetTypeLower === "hotel" && lowerUrl.includes("_hotel_")) ||
-        (targetTypeLower === "local_purchase" && (lowerUrl.includes("_local_purchase_") || lowerUrl.includes("_lp_"))) ||
-        (targetTypeLower === "communication_mail" && (lowerUrl.includes("_communication_mail_") || lowerUrl.includes("_comm_"))) ||
-        (targetTypeLower === "other" && lowerUrl.includes("_other_")) ||
-        lowerUrl.includes(targetTypeLower) ||
-        targetTypeLower.includes(lowerUrl)
-      ) {
+      if (targetTypeLower === "hotel" && lowerUrl.includes("_hotel_")) {
         return authService.getAbsoluteImageUrl(rawUrl);
       }
-    }
+      if (targetTypeLower === "local_purchase" && (lowerUrl.includes("_local_purchase_") || lowerUrl.includes("_lp_"))) {
+        return authService.getAbsoluteImageUrl(rawUrl);
+      }
+      if (targetTypeLower === "communication_mail" && (lowerUrl.includes("_communication_mail_") || lowerUrl.includes("_comm_"))) {
+        return authService.getAbsoluteImageUrl(rawUrl);
+      }
+      if (targetTypeLower === "other" && (lowerUrl.includes("_other_") || lowerUrl.includes("_oth_"))) {
+        return authService.getAbsoluteImageUrl(rawUrl);
+      }
+      
+      const isExcludedUrlFromTravel = lowerUrl.includes("_hotel_") || 
+                                      lowerUrl.includes("_local_purchase_") || 
+                                      lowerUrl.includes("_lp_") || 
+                                      lowerUrl.includes("_communication_mail_") || 
+                                      lowerUrl.includes("_comm_") || 
+                                      lowerUrl.includes("_other_") || 
+                                      lowerUrl.includes("_oth_");
 
-    // 3. Final fallback for leg 1 if only 1 attachment exists
-    if (legNum === 1 && allAtts.length === 1) {
-      return authService.getAbsoluteImageUrl(allAtts[0]);
+      if (!isExcludedUrlFromTravel && targetTypeLower !== "hotel" && targetTypeLower !== "local_purchase" && targetTypeLower !== "communication_mail" && targetTypeLower !== "other") {
+        if (lowerUrl.includes(`_${targetTypeLower}_`) || lowerUrl.includes("_bill_") || lowerUrl.includes("_main_bill_")) {
+          return authService.getAbsoluteImageUrl(rawUrl);
+        }
+      }
     }
 
     return null;
