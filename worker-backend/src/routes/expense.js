@@ -294,6 +294,71 @@ export function buildPolicyComment(baseLocations, itineraries, isDaAllowed, date
   return `[Policy] Base: ${baseLabel} — ${parts.join("; ")}. Applied: ${date}.`;
 }
 
+export async function getAssetCostsMap(env) {
+  const assetCosts = {};
+  // 1. Primary: asset_value_master
+  try {
+    const res1 = await env.DB.prepare(`
+      SELECT equipment_name, 
+             rmsc_tender_cost,
+             asset_value
+      FROM asset_value_master
+    `).all();
+    for (const r of (res1.results || [])) {
+      if (r.equipment_name) {
+        const rawVal = r.rmsc_tender_cost || r.asset_value || 0;
+        const parsed = parseFloat(String(rawVal).replace(/,/g, '').replace(/₹/g, '').trim()) || 0;
+        if (parsed > 0) {
+          assetCosts[r.equipment_name.trim().toLowerCase()] = parsed;
+        }
+      }
+    }
+  } catch (e) {
+    console.warn("Failed to load asset_value_master:", e.message);
+  }
+
+  // 2. Fallback: assets_inventory
+  try {
+    const res2 = await env.DB.prepare(`
+      SELECT equipment_name, 
+             parsed_asset_value,
+             asset_value
+      FROM assets_inventory 
+      WHERE (parsed_asset_value IS NOT NULL AND parsed_asset_value > 0) 
+         OR (asset_value IS NOT NULL AND asset_value != '' AND asset_value != '0')
+    `).all();
+    for (const r of (res2.results || [])) {
+      if (r.equipment_name) {
+        const k = r.equipment_name.trim().toLowerCase();
+        if (!assetCosts[k]) {
+          const rawVal = r.parsed_asset_value || r.asset_value || 0;
+          const parsed = parseFloat(String(rawVal).replace(/,/g, '').replace(/₹/g, '').trim()) || 0;
+          if (parsed > 0) {
+            assetCosts[k] = parsed;
+          }
+        }
+      }
+    }
+  } catch (e) {
+    console.warn("Failed to load assets_inventory fallback:", e.message);
+  }
+
+  return assetCosts;
+}
+
+export function getEquipmentUnitCost(eqName, assetCosts) {
+  if (!eqName || !assetCosts) return 0.0;
+  const clean = eqName.trim().toLowerCase();
+  if (assetCosts[clean]) return assetCosts[clean];
+
+  // Substring match fallback
+  for (const [k, v] of Object.entries(assetCosts)) {
+    if (k.includes(clean) || clean.includes(k)) {
+      return v;
+    }
+  }
+  return 0.0;
+}
 
 export async function serializeExpenses(env, expenses, submittersMap) {
   if (!expenses || expenses.length === 0) return [];
@@ -306,12 +371,32 @@ export async function serializeExpenses(env, expenses, submittersMap) {
     allLegs = await queryInChunks(env.DB, "SELECT * FROM expense_itineraries WHERE exp_id IN (?)", expenseCodes);
   }
 
-  // Group legs by exp_id
+  // Group legs by exp_id and collect itinerary_ids
   const legsByCode = {};
+  const itiIds = [];
   for (const l of allLegs) {
     if (!legsByCode[l.exp_id]) legsByCode[l.exp_id] = [];
     legsByCode[l.exp_id].push(l);
+    if (l.itinerary_id) itiIds.push(l.itinerary_id);
   }
+
+  // Batch fetch taggings for all legs and load asset costs dictionary
+  let allTaggings = [];
+  if (itiIds.length > 0) {
+    try {
+      allTaggings = await queryInChunks(env.DB, "SELECT itinerary_id, equipment_name, quantity FROM expense_asset_taggings WHERE itinerary_id IN (?)", itiIds);
+    } catch (e) {
+      console.warn("Failed to fetch asset taggings in serializeExpenses:", e.message);
+    }
+  }
+
+  const taggingsMap = {};
+  for (const t of allTaggings) {
+    if (!taggingsMap[t.itinerary_id]) taggingsMap[t.itinerary_id] = [];
+    taggingsMap[t.itinerary_id].push(t);
+  }
+
+  const assetCosts = await getAssetCostsMap(env);
 
   const result = [];
   for (const exp of expenses) {
@@ -339,9 +424,8 @@ export async function serializeExpenses(env, expenses, submittersMap) {
           const taggings = taggingsMap[l.itinerary_id] || [];
           let legVal = 0;
           for (const t of taggings) {
-            const qty = t.quantity || 0;
-            const eqName = (t.equipment_name || "").trim().toLowerCase();
-            const cost = assetCosts[eqName] || 0.0;
+            const qty = parseInt(t.quantity || 0, 10) || 0;
+            const cost = getEquipmentUnitCost(t.equipment_name, assetCosts);
             legVal += qty * cost;
           }
           return sum + legVal;
@@ -814,10 +898,29 @@ export async function handleGetTeamExpenses(request, env, params, query, user) {
     }
 
     const legsByCode = {};
+    const itiIds = [];
     for (const l of allLegs) {
       if (!legsByCode[l.exp_id]) legsByCode[l.exp_id] = [];
       legsByCode[l.exp_id].push(l);
+      if (l.itinerary_id) itiIds.push(l.itinerary_id);
     }
+
+    let allTaggings = [];
+    if (itiIds.length > 0) {
+      try {
+        allTaggings = await queryInChunks(env.DB, "SELECT itinerary_id, equipment_name, quantity FROM expense_asset_taggings WHERE itinerary_id IN (?)", itiIds);
+      } catch (e) {
+        console.warn("Failed to fetch asset taggings in handleGetTeamExpenses:", e.message);
+      }
+    }
+
+    const taggingsMap = {};
+    for (const t of allTaggings) {
+      if (!taggingsMap[t.itinerary_id]) taggingsMap[t.itinerary_id] = [];
+      taggingsMap[t.itinerary_id].push(t);
+    }
+
+    const assetCosts = await getAssetCostsMap(env);
 
     for (const exp of expenses) {
       const submitter = submittersById[exp.user_id] || submittersById[String(exp.user_id)] || null;
@@ -863,9 +966,8 @@ export async function handleGetTeamExpenses(request, env, params, query, user) {
             const taggings = taggingsMap[l.itinerary_id] || [];
             let legVal = 0;
             for (const t of taggings) {
-              const qty = t.quantity || 0;
-              const eqName = (t.equipment_name || "").trim().toLowerCase();
-              const cost = assetCosts[eqName] || 0.0;
+              const qty = parseInt(t.quantity || 0, 10) || 0;
+              const cost = getEquipmentUnitCost(t.equipment_name, assetCosts);
               legVal += qty * cost;
             }
             return sum + legVal;
