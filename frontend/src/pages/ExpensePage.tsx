@@ -7,7 +7,7 @@ import { expenseService } from "../services/expenseService";
 import { uploadService } from "../services/uploadService";
 import { checkIsHeic, convertHeicToJpegUrl } from "../utils/heic";
 import { prefetchManager } from "../utils/prefetchManager";
-import { checkIsPdf, convertPdfToJpgFile } from "../utils/pdf";
+import { checkIsPdf } from "../utils/pdf";
 import { 
   Trash2, Plus, Calendar, 
   AlertTriangle, Check, Loader2,
