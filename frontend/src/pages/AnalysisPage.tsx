@@ -17,8 +17,7 @@ import {
   Segmented,
   Modal,
   Table,
-  Input,
-  Tag
+  Input
 } from "antd";
 import {
   FilterOutlined,
@@ -622,7 +621,7 @@ export default function AnalysisPage() {
 
       const details = Array.isArray(e.tagging_details) ? e.tagging_details : [];
       if (details.length > 0) {
-        details.forEach(d => {
+        details.forEach((d: any) => {
           const itemDate = d.itinerary_date || mainDate;
           list.push({
             key: `tag_${counter++}`,
