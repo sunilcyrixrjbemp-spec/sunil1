@@ -14,7 +14,11 @@ import {
   Button,
   Radio,
   Progress,
-  Segmented
+  Segmented,
+  Modal,
+  Table,
+  Input,
+  Tag
 } from "antd";
 import {
   FilterOutlined,
@@ -26,7 +30,8 @@ import {
   InfoCircleOutlined,
   TagOutlined,
   AimOutlined,
-  RocketOutlined
+  RocketOutlined,
+  SearchOutlined
 } from "@ant-design/icons";
 import { hasFullAccess } from "../utils/constants";
 
@@ -588,6 +593,165 @@ export default function AnalysisPage() {
     return result;
   }, [activeExpenses, selectedMonth, selectedYear, startDate, endDate]);
 
+  // State for Asset Tagging Detailed Breakdown Modal
+  const [isTaggingModalOpen, setIsTaggingModalOpen] = useState(false);
+  const [selectedTaggingDate, setSelectedTaggingDate] = useState<string | null>(null);
+  const [taggingSearchQuery, setTaggingSearchQuery] = useState("");
+
+  // Flatten asset tagging details for active expenses
+  const taggingBreakdownData = useMemo(() => {
+    const list: {
+      key: string;
+      date: string;
+      engineer: string;
+      district: string;
+      zone: string;
+      equipment_name: string;
+      quantity: number;
+      unit_cost: number;
+      total_val: number;
+    }[] = [];
+
+    let counter = 1;
+    activeExpenses.forEach(e => {
+      if (!e) return;
+      const engineerName = e.submitter_name || "Self";
+      const districtName = e.district || e.submitter_district || e.home_district || "Ganganagar";
+      const zoneName = e.zone || "Unassigned";
+      const mainDate = String(e.date || e.itinerary || "").trim();
+
+      const details = Array.isArray(e.tagging_details) ? e.tagging_details : [];
+      if (details.length > 0) {
+        details.forEach(d => {
+          const itemDate = d.itinerary_date || mainDate;
+          list.push({
+            key: `tag_${counter++}`,
+            date: itemDate,
+            engineer: engineerName,
+            district: districtName,
+            zone: zoneName,
+            equipment_name: d.equipment_name || "Tagged Asset",
+            quantity: Number(d.quantity || 1),
+            unit_cost: Number(d.unit_cost || 0),
+            total_val: Number(d.total_val || (d.quantity * d.unit_cost) || 0)
+          });
+        });
+      } else if (Number(e.asset_tagging || 0) > 0) {
+        const qty = Number(e.asset_tagging);
+        const totalVal = Number(e.asset_tagging_value || e.asset_tagging_val || 0);
+        const unitCost = qty > 0 ? Math.round(totalVal / qty) : totalVal;
+        list.push({
+          key: `tag_${counter++}`,
+          date: mainDate,
+          engineer: engineerName,
+          district: districtName,
+          zone: zoneName,
+          equipment_name: "Asset Tagging",
+          quantity: qty,
+          unit_cost: unitCost,
+          total_val: totalVal
+        });
+      }
+    });
+
+    return list;
+  }, [activeExpenses]);
+
+  // Filter breakdown data by selected date & search query
+  const filteredTaggingBreakdown = useMemo(() => {
+    return taggingBreakdownData.filter(item => {
+      if (selectedTaggingDate) {
+        const itemDateStr = String(item.date || "").trim();
+        const dateMatch = itemDateStr.match(/^(\d{4})-(\d{2})-(\d{2})/);
+        if (dateMatch) {
+          const monthIdx = parseInt(dateMatch[2], 10) - 1;
+          const dayNum = parseInt(dateMatch[3], 10);
+          const dateLabel = `${dayNum} ${months[monthIdx]?.substring(0, 3)}`;
+          if (dateLabel !== selectedTaggingDate && itemDateStr !== selectedTaggingDate) {
+            return false;
+          }
+        } else if (itemDateStr && itemDateStr !== selectedTaggingDate) {
+          return false;
+        }
+      }
+
+      if (taggingSearchQuery.trim()) {
+        const q = taggingSearchQuery.trim().toLowerCase();
+        const matchEng = item.engineer.toLowerCase().includes(q);
+        const matchDist = item.district.toLowerCase().includes(q);
+        const matchEq = item.equipment_name.toLowerCase().includes(q);
+        const matchZone = item.zone.toLowerCase().includes(q);
+        if (!matchEng && !matchDist && !matchEq && !matchZone) return false;
+      }
+
+      return true;
+    });
+  }, [taggingBreakdownData, selectedTaggingDate, taggingSearchQuery]);
+
+  const taggingTableColumns = [
+    {
+      title: "Date",
+      dataIndex: "date",
+      key: "date",
+      width: 100,
+      render: (val: string) => <span className="font-mono text-xs font-semibold text-slate-700">{val || "—"}</span>,
+      sorter: (a: any, b: any) => (a.date || "").localeCompare(b.date || "")
+    },
+    {
+      title: "Engineer Name",
+      dataIndex: "engineer",
+      key: "engineer",
+      render: (val: string) => <span className="font-bold text-xs text-indigo-900">{val}</span>,
+      sorter: (a: any, b: any) => a.engineer.localeCompare(b.engineer)
+    },
+    {
+      title: "District",
+      dataIndex: "district",
+      key: "district",
+      width: 120,
+      render: (val: string) => <span className="text-xs text-slate-600 font-medium">{val}</span>,
+      sorter: (a: any, b: any) => a.district.localeCompare(b.district)
+    },
+    {
+      title: "Equipment Name",
+      dataIndex: "equipment_name",
+      key: "equipment_name",
+      render: (val: string) => (
+        <span className="font-semibold text-xs text-slate-800 bg-cyan-50 border border-cyan-200 px-2 py-0.5 rounded-md">
+          {val}
+        </span>
+      ),
+      sorter: (a: any, b: any) => a.equipment_name.localeCompare(b.equipment_name)
+    },
+    {
+      title: "Quantity",
+      dataIndex: "quantity",
+      key: "quantity",
+      width: 95,
+      align: "center" as const,
+      render: (val: number) => <span className="font-mono font-extrabold text-xs text-slate-700">{val} units</span>,
+      sorter: (a: any, b: any) => a.quantity - b.quantity
+    },
+    {
+      title: "Unit Price (₹)",
+      dataIndex: "unit_cost",
+      key: "unit_cost",
+      width: 125,
+      align: "right" as const,
+      render: (val: number) => <span className="font-mono text-xs text-slate-600">₹{val.toLocaleString('en-IN')}</span>,
+      sorter: (a: any, b: any) => a.unit_cost - b.unit_cost
+    },
+    {
+      title: "Total Tagged Value (₹)",
+      dataIndex: "total_val",
+      key: "total_val",
+      width: 155,
+      align: "right" as const,
+      render: (val: number) => <span className="font-mono font-extrabold text-xs text-emerald-600">₹{val.toLocaleString('en-IN')}</span>,
+      sorter: (a: any, b: any) => a.total_val - b.total_val
+    }
+  ];
+
   // E. Zone-wise (from user.zone database field) - respects active filters
   // FULL_ACCESS_ROLES: single source of truth — see utils/constants.ts
   const isPrivilegedRole = hasFullAccess(user?.role);
@@ -1139,9 +1303,14 @@ export default function AnalysisPage() {
 
         {/* Card 6: Asset Tagging */}
         <Col xs={12} sm={8} md={6} lg={4} xl={3}>
-          <Card size="small" bordered={false} className="shadow-xs border border-gray-150 rounded-xl">
+          <Card 
+            size="small" 
+            bordered={false} 
+            className="shadow-xs border border-gray-150 rounded-xl cursor-pointer hover:border-cyan-400 hover:shadow-md transition-all group"
+            onClick={() => { setSelectedTaggingDate(null); setIsTaggingModalOpen(true); }}
+          >
             <Statistic
-              title={<span className="text-[9px] font-bold uppercase tracking-wider text-gray-400">Asset Tagging</span>}
+              title={<span className="text-[9px] font-bold uppercase tracking-wider text-gray-400 group-hover:text-cyan-600">Asset Tagging 🔍</span>}
               value={activityStats.assetTaggingCount}
               valueStyle={{ fontSize: "16px", fontWeight: 800, color: "#1F2937", fontFamily: "monospace" }}
               prefix={<TagOutlined className="text-cyan-500 mr-1.5" />}
@@ -1730,6 +1899,12 @@ export default function AnalysisPage() {
                           grid: { line: { stroke: '#f1f5f9', strokeWidth: 1 } },
                           axis: { ticks: { text: { fontSize: 8, fontWeight: 'bold', fill: '#64748b' } } }
                         }}
+                        onClick={(point: any) => {
+                          if (point && point.data && point.data.x) {
+                            setSelectedTaggingDate(String(point.data.x));
+                            setIsTaggingModalOpen(true);
+                          }
+                        }}
                         tooltip={({ point }) => {
                           const dataPoint = dayWiseAssetTaggingValueData.find(d => d.date === String(point.data.x));
                           return (
@@ -1749,6 +1924,9 @@ export default function AnalysisPage() {
                                     <span className="font-mono font-bold text-slate-200">{dataPoint.count} units</span>
                                   </div>
                                 )}
+                                <div className="text-[9px] text-cyan-300 font-extrabold mt-1 pt-1 border-t border-slate-800">
+                                  💡 Click to view detailed table breakdown
+                                </div>
                               </div>
                             </div>
                           );
@@ -1766,6 +1944,91 @@ export default function AnalysisPage() {
           </Col>
         </Row>
       )}
+
+      {/* Asset Tagging Detailed Breakdown Modal */}
+      <Modal
+        open={isTaggingModalOpen}
+        onCancel={() => setIsTaggingModalOpen(false)}
+        footer={null}
+        width={950}
+        centered
+        className="asset-tagging-breakdown-modal"
+        title={
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-gray-200 pb-3 pr-6">
+            <div>
+              <span className="text-sm font-extrabold text-slate-800 uppercase tracking-wide flex items-center gap-2">
+                <TagOutlined className="text-cyan-500" />
+                Asset Tagging Detailed Breakdown
+              </span>
+              <p className="text-[11px] text-gray-500 font-normal m-0 mt-0.5">
+                {selectedTaggingDate ? `Filtered for ${selectedTaggingDate}` : `${months[selectedMonth]} ${selectedYear} — All Tagged Equipment`}
+              </p>
+            </div>
+            {selectedTaggingDate && (
+              <Button
+                size="small"
+                type="dashed"
+                onClick={() => setSelectedTaggingDate(null)}
+                className="text-xs text-indigo-600 font-bold"
+              >
+                Clear Date Filter (Show All)
+              </Button>
+            )}
+          </div>
+        }
+      >
+        <div className="space-y-4 pt-2">
+          {/* Summary Badges & Search Bar */}
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-slate-50 p-3 rounded-xl border border-slate-200">
+            <div className="flex flex-wrap items-center gap-3">
+              <div className="bg-white border border-slate-200 px-3 py-1.5 rounded-lg shadow-xs">
+                <span className="text-[10px] text-gray-400 font-bold uppercase block">Total Items</span>
+                <span className="text-sm font-black text-slate-800 font-mono">{filteredTaggingBreakdown.length} records</span>
+              </div>
+              <div className="bg-white border border-slate-200 px-3 py-1.5 rounded-lg shadow-xs">
+                <span className="text-[10px] text-gray-400 font-bold uppercase block">Total Tagged Quantity</span>
+                <span className="text-sm font-black text-cyan-600 font-mono">
+                  {filteredTaggingBreakdown.reduce((sum, item) => sum + item.quantity, 0)} units
+                </span>
+              </div>
+              <div className="bg-white border border-slate-200 px-3 py-1.5 rounded-lg shadow-xs">
+                <span className="text-[10px] text-gray-400 font-bold uppercase block">Total Tagged Value</span>
+                <span className="text-sm font-black text-emerald-600 font-mono">
+                  ₹{filteredTaggingBreakdown.reduce((sum, item) => sum + item.total_val, 0).toLocaleString('en-IN')}
+                </span>
+              </div>
+            </div>
+
+            <div className="w-full sm:w-64">
+              <Input
+                placeholder="Search engineer, district, or equipment..."
+                prefix={<SearchOutlined className="text-gray-400" />}
+                value={taggingSearchQuery}
+                onChange={(e) => setTaggingSearchQuery(e.target.value)}
+                allowClear
+                size="small"
+                className="rounded-lg text-xs"
+              />
+            </div>
+          </div>
+
+          {/* Breakdown Table */}
+          <Table
+            columns={taggingTableColumns}
+            dataSource={filteredTaggingBreakdown}
+            size="small"
+            pagination={{
+              pageSize: 10,
+              showSizeChanger: true,
+              pageSizeOptions: ["10", "25", "50", "100"],
+              showTotal: (total, range) => `${range[0]}-${range[1]} of ${total} tagged items`
+            }}
+            bordered
+            scroll={{ x: 750, y: 380 }}
+            className="shadow-xs text-xs"
+          />
+        </div>
+      </Modal>
       {/* Extra spacer at the bottom to prevent layout elements from being cut off by the navigation bar */}
       <div className="h-32 md:h-8" />
     </div>

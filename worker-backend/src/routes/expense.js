@@ -444,6 +444,23 @@ export async function serializeExpenses(env, expenses, submittersMap) {
       .filter(l => ["bike", "car"].includes((l.travel_mode || "").trim().toLowerCase()))
       .reduce((sum, l) => sum + (parseFloat(l.distance_km) || 0.0), 0.0);
 
+    const tagDetails = [];
+    for (const l of legs) {
+      const taggings = taggingsMap[l.itinerary_id] || [];
+      for (const t of taggings) {
+        const qty = parseInt(t.quantity || 0, 10) || 0;
+        const cost = getEquipmentUnitCost(t.equipment_name, assetCosts);
+        const val = qty * cost;
+        tagDetails.push({
+          equipment_name: t.equipment_name,
+          quantity: qty,
+          unit_cost: cost,
+          total_val: val,
+          itinerary_date: l.date || l.itinerary_date || exp.itinerary || exp.date || ""
+        });
+      }
+    }
+
     const totAuto = legs
       .filter(l => (l.travel_mode || "").trim().toLowerCase() === "auto")
       .reduce((sum, l) => sum + (parseFloat(l.travel_amount) || 0.0), 0.0) +
@@ -480,6 +497,7 @@ export async function serializeExpenses(env, expenses, submittersMap) {
       pms_count: totPmsCount,
       asset_tagging: totAssetTagging,
       asset_tagging_value: totAssetTaggingVal,
+      tagging_details: tagDetails,
       calibration_count: totCalibrationCount,
       mobilise_count: totMobiliseCount,
       created_at: exp.created_at,
@@ -988,6 +1006,23 @@ export async function handleGetTeamExpenses(request, env, params, query, user) {
       const sDistrict = submitter?.district || exp.district || "Ganganar";
       const sZone = getActualZone(submitter?.zone, sDistrict) || getActualZone(exp.zone, sDistrict) || "Unassigned Zone";
 
+      const teamTagDetails = [];
+      for (const l of legs) {
+        const taggings = taggingsMap[l.itinerary_id] || [];
+        for (const t of taggings) {
+          const qty = parseInt(t.quantity || 0, 10) || 0;
+          const cost = getEquipmentUnitCost(t.equipment_name, assetCosts);
+          const val = qty * cost;
+          teamTagDetails.push({
+            equipment_name: t.equipment_name,
+            quantity: qty,
+            unit_cost: cost,
+            total_val: val,
+            itinerary_date: l.date || l.itinerary_date || exp.itinerary || exp.date || ""
+          });
+        }
+      }
+
       result.push({
         id: exp.id,
         expense_code: exp.expense_code,
@@ -1019,6 +1054,7 @@ export async function handleGetTeamExpenses(request, env, params, query, user) {
         pms_count: totPmsCount,
         asset_tagging: totAssetTagging,
         asset_tagging_value: totAssetTaggingVal,
+        tagging_details: teamTagDetails,
         calibration_count: totCalibrationCount,
         mobilise_count: totMobiliseCount
       });
