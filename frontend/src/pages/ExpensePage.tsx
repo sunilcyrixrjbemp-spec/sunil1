@@ -1576,18 +1576,13 @@ export default function ExpensePage() {
       return;
     }
 
-    // Explicitly block HEIC files with clear error message (Item 1 Requirement)
     const isHeic = file.name.toLowerCase().endsWith(".heic") || file.name.toLowerCase().endsWith(".heif") || file.type.includes("heic") || file.type.includes("heif");
-    if (isHeic) {
-      toast.error("HEIC format supported nahi hai, kripya JPG/PNG image upload karein.");
-      return;
-    }
     
     let processedFile = file;
-    const isImage = processedFile.type.startsWith("image/");
+    const isImage = processedFile.type.startsWith("image/") || isHeic;
     
-    if (isImage) {
-      // Compress images larger than 50KB to make sure they are well under 2MB
+    if (isImage && !isHeic) {
+      // Compress non-HEIC images larger than 50KB to make sure they are well under 2MB
       if (processedFile.size > 50 * 1024) {
         const toastId = toast.loading(`Compressing image... (${Math.round(processedFile.size / 1024)}KB)`);
         try {

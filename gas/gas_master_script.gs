@@ -283,8 +283,9 @@ function handleFileUpload(data) {
     var decodedBytes = Utilities.base64Decode(base64Str);
     var blob = Utilities.newBlob(decodedBytes, mimeType, filename);
     
-    // Server-side byte re-encoding to JPEG
-    if (mimeType.indexOf("image/") === 0 || filename.toLowerCase().indexOf(".jpg") !== -1) {
+    // Server-side byte re-encoding to JPEG (SKIP specifically for HEIC/HEIF files)
+    var isHeicFile = mimeType.indexOf("heic") !== -1 || mimeType.indexOf("heif") !== -1 || filename.toLowerCase().indexOf(".heic") !== -1 || filename.toLowerCase().indexOf(".heif") !== -1;
+    if (!isHeicFile && (mimeType.indexOf("image/") === 0 || filename.toLowerCase().indexOf(".jpg") !== -1)) {
       try {
         blob = blob.getAs("image/jpeg").setName(filename);
       } catch (convErr) {

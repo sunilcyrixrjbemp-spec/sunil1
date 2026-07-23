@@ -2428,12 +2428,12 @@ export async function handleSubmitExpense(request, env, params, query, user) {
       
       // FIX #2: Explicitly reject PDF files
       if (filenameLower.endsWith(".pdf") || typeLower.includes("pdf")) {
-        return `PDF allowed nahi hai, sirf image (JPG/PNG) upload karein. (Visit ${legNum} ${billType})`;
+        return `PDF allowed nahi hai, sirf image (JPG/PNG/HEIC) upload karein. (Visit ${legNum} ${billType})`;
       }
       
-      // Must be an image file
-      if (typeLower && !typeLower.startsWith("image/") && !/\.(jpg|jpeg|png|webp|heic|bmp)$/i.test(filenameLower)) {
-        return `Invalid file format for Visit ${legNum} (${billType}). Sirf image (JPG/PNG) upload karein.`;
+      // Must be an image file (including HEIC/HEIF)
+      if (typeLower && !typeLower.startsWith("image/") && !/\.(jpg|jpeg|png|webp|heic|heif|bmp)$/i.test(filenameLower)) {
+        return `Invalid file format for Visit ${legNum} (${billType}). Sirf image (JPG/PNG/HEIC) upload karein.`;
       }
 
       filesToUpload.push({ fileKey, file, billType, legNum });
@@ -2477,12 +2477,20 @@ export async function handleSubmitExpense(request, env, params, query, user) {
   const folderName = `${monthName}_${yearVal}`;
 
   for (const item of filesToUpload) {
-    // FIX #2: Always save as .jpg extension and image/jpeg Content-Type
-    const filename = `${expenseCode}_leg${item.legNum}_${item.billType}_${Date.now()}.jpg`;
+    const isItemHeic = item.file.name?.toLowerCase().endsWith(".heic") || item.file.name?.toLowerCase().endsWith(".heif") || item.file.type?.includes("heic") || item.file.type?.includes("heif");
+    
+    let ext = ".jpg";
+    let mimeType = "image/jpeg";
+    if (isItemHeic) {
+      ext = item.file.name?.toLowerCase().endsWith(".heif") ? ".heif" : ".heic";
+      mimeType = item.file.type?.includes("heif") ? "image/heif" : "image/heic";
+    }
+
+    const filename = `${expenseCode}_leg${item.legNum}_${item.billType}_${Date.now()}${ext}`;
     
     let fileUrl = "";
     try {
-      fileUrl = await uploadFileWithFallback(env, item.file, folderName, filename, "image/jpeg");
+      fileUrl = await uploadFileWithFallback(env, item.file, folderName, filename, mimeType);
     } catch (err) {
       console.error(`Failed to upload ${item.fileKey}:`, err);
       // FIX #1: Explicit HTTP 400/500 response — NO SILENT RETURN
