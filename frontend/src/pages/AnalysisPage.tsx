@@ -2019,8 +2019,8 @@ export default function AnalysisPage() {
             size="small"
             pagination={{
               pageSize: taggingPageSize,
-              onChange: (page, size) => setTaggingPageSize(size),
-              onShowSizeChange: (current, size) => setTaggingPageSize(size),
+              onChange: (_, size) => setTaggingPageSize(size),
+              onShowSizeChange: (_, size) => setTaggingPageSize(size),
               showSizeChanger: true,
               pageSizeOptions: ["10", "25", "50", "100"],
               showTotal: (total, range) => `${range[0]}-${range[1]} of ${total} tagged items`

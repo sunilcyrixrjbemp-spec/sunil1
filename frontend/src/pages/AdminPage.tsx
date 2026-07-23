@@ -1561,8 +1561,8 @@ export default function AdminPage() {
                 rowKey={(record) => record.id || record.user_id || record.e_code}
                 pagination={{
                   pageSize: adminUserPageSize,
-                  onChange: (page, size) => setAdminUserPageSize(size),
-                  onShowSizeChange: (current, size) => setAdminUserPageSize(size),
+                  onChange: (_, size) => setAdminUserPageSize(size),
+                  onShowSizeChange: (_, size) => setAdminUserPageSize(size),
                   showSizeChanger: true,
                   pageSizeOptions: ["10", "25", "50", "100"],
                   showTotal: (total, range) => `Showing ${range[0]}-${range[1]} of ${total} employees`

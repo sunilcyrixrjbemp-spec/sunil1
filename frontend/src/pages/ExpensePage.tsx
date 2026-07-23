@@ -5068,7 +5068,7 @@ export default function ExpensePage() {
                       setMyClaimsPageSize(size);
                     }
                   }}
-                  onShowSizeChange={(current, size) => {
+                  onShowSizeChange={(_, size) => {
                     setMyClaimsPageSize(size);
                     setMyClaimsPage(1);
                   }}

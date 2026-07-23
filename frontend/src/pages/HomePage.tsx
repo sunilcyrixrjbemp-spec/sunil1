@@ -1176,8 +1176,8 @@ export default function HomePage() {
                                   pageSize: homeClaimsPageSize, 
                                   showSizeChanger: true, 
                                   pageSizeOptions: ["10", "25", "50", "100"],
-                                  onChange: (page, size) => setHomeClaimsPageSize(size),
-                                  onShowSizeChange: (current, size) => setHomeClaimsPageSize(size),
+                                  onChange: (_, size) => setHomeClaimsPageSize(size),
+                                  onShowSizeChange: (_, size) => setHomeClaimsPageSize(size),
                                   size: "small" 
                                 }}
                                 size="small"
@@ -2859,8 +2859,8 @@ export default function HomePage() {
                 pageSize: homeModalPageSize, 
                 showSizeChanger: true, 
                 pageSizeOptions: ["10", "25", "50", "100"],
-                onChange: (page, size) => setHomeModalPageSize(size),
-                onShowSizeChange: (current, size) => setHomeModalPageSize(size),
+                onChange: (_, size) => setHomeModalPageSize(size),
+                onShowSizeChange: (_, size) => setHomeModalPageSize(size),
                 size: "small" 
               }}
               size="small"

@@ -1505,8 +1505,8 @@ export default function ApprovalPage() {
                   pageSize: approvalPageSize, 
                   showSizeChanger: true, 
                   pageSizeOptions: ["10", "25", "50", "100"],
-                  onChange: (page, size) => setApprovalPageSize(size),
-                  onShowSizeChange: (current, size) => setApprovalPageSize(size),
+                  onChange: (_, size) => setApprovalPageSize(size),
+                  onShowSizeChange: (_, size) => setApprovalPageSize(size),
                   size: "small" 
                 }}
                 scroll={{ x: 800 }}
