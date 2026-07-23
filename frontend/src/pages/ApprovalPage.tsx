@@ -109,6 +109,7 @@ export default function ApprovalPage() {
     const cached = localStorage.getItem("cache_pending_approvals");
     return cached ? JSON.parse(cached) : [];
   });
+  const [approvalPageSize, setApprovalPageSize] = useState(25);
   const [filterEngineer, setFilterEngineer] = useState("");
 
   const filteredApprovals = pendingApprovals.filter((a: any) => {
@@ -1500,7 +1501,14 @@ export default function ApprovalPage() {
                 dataSource={claimRequests}
                 rowKey="expense_id"
                 size="small"
-                pagination={{ pageSize: 25, size: "small" }}
+                pagination={{ 
+                  pageSize: approvalPageSize, 
+                  showSizeChanger: true, 
+                  pageSizeOptions: ["10", "25", "50", "100"],
+                  onChange: (page, size) => setApprovalPageSize(size),
+                  onShowSizeChange: (current, size) => setApprovalPageSize(size),
+                  size: "small" 
+                }}
                 scroll={{ x: 800 }}
                 rowSelection={isBulkAuthorized ? {
                   selectedRowKeys: selectedIds,

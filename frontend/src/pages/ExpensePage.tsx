@@ -573,6 +573,7 @@ export default function ExpensePage() {
     return !localStorage.getItem(`cache_my_expenses_${currentUserId}`);
   });
   const [myClaimsPage, setMyClaimsPage] = useState(1);
+  const [myClaimsPageSize, setMyClaimsPageSize] = useState(10);
   
   const [showConfirmModal, setShowConfirmModal] = useState(false);
   const [submitStatus, setSubmitStatus] = useState<{ type: "success" | "error"; title: string; message: string; claimCode?: string; deductions?: { policyMessage: string; items: { leg: number; from: string; to: string; taDeducted: number; daDeducted: number }[] } | null } | null>(null);
@@ -4803,7 +4804,7 @@ export default function ExpensePage() {
               const filteredLegs = getFilteredLegs();
               const itemsList = activeClaimsTab === "sheets" ? filteredClaims : filteredLegs;
               const totalItems = itemsList.length;
-              const slicedItems = itemsList.slice((myClaimsPage - 1) * 10, myClaimsPage * 10);
+              const slicedItems = itemsList.slice((myClaimsPage - 1) * myClaimsPageSize, myClaimsPage * myClaimsPageSize);
 
               if (totalItems === 0) {
                 return (
@@ -5052,17 +5053,27 @@ export default function ExpensePage() {
             const itemsList = activeClaimsTab === "sheets" ? filteredClaims : filteredLegs;
             const totalItems = itemsList.length;
 
-            if (totalItems <= 10) return null;
+            if (totalItems <= 10 && myClaimsPageSize === 10) return null;
 
             return (
               <div className="px-5 py-3.5 border-t border-slate-200/80 bg-slate-50/80 flex flex-col sm:flex-row items-center justify-between gap-2 text-xs text-slate-500 mb-2 md:mb-0">
-                <span>Showing {((myClaimsPage - 1) * 10) + 1} to {Math.min(myClaimsPage * 10, totalItems)} of {totalItems} entries</span>
+                <span>Showing {((myClaimsPage - 1) * myClaimsPageSize) + 1} to {Math.min(myClaimsPage * myClaimsPageSize, totalItems)} of {totalItems} entries</span>
                 <Pagination
                   current={myClaimsPage}
                   total={totalItems}
-                  pageSize={10}
-                  onChange={(p) => setMyClaimsPage(p)}
-                  showSizeChanger={false}
+                  pageSize={myClaimsPageSize}
+                  onChange={(p, size) => {
+                    setMyClaimsPage(p);
+                    if (size && size !== myClaimsPageSize) {
+                      setMyClaimsPageSize(size);
+                    }
+                  }}
+                  onShowSizeChange={(current, size) => {
+                    setMyClaimsPageSize(size);
+                    setMyClaimsPage(1);
+                  }}
+                  showSizeChanger={true}
+                  pageSizeOptions={["10", "25", "50", "100"]}
                   size="small"
                 />
               </div>

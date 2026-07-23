@@ -171,6 +171,7 @@ const ALL_WINDOWS = [
 ];
 
 export default function AdminPage() {
+  const [adminUserPageSize, setAdminUserPageSize] = useState(25);
   const [activeTab, setActiveTab] = useState<"users" | "approvals" | "analytics" | "settings">((() => {
     return (localStorage.getItem("admin_active_tab") as "users" | "approvals" | "analytics" | "settings") || "users";
   }));
@@ -1559,7 +1560,9 @@ export default function AdminPage() {
                 dataSource={filteredUsers}
                 rowKey={(record) => record.id || record.user_id || record.e_code}
                 pagination={{
-                  pageSize: 25,
+                  pageSize: adminUserPageSize,
+                  onChange: (page, size) => setAdminUserPageSize(size),
+                  onShowSizeChange: (current, size) => setAdminUserPageSize(size),
                   showSizeChanger: true,
                   pageSizeOptions: ["10", "25", "50", "100"],
                   showTotal: (total, range) => `Showing ${range[0]}-${range[1]} of ${total} employees`

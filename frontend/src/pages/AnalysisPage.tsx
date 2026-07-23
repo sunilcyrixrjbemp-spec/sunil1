@@ -596,6 +596,7 @@ export default function AnalysisPage() {
   const [isTaggingModalOpen, setIsTaggingModalOpen] = useState(false);
   const [selectedTaggingDate, setSelectedTaggingDate] = useState<string | null>(null);
   const [taggingSearchQuery, setTaggingSearchQuery] = useState("");
+  const [taggingPageSize, setTaggingPageSize] = useState(10);
 
   // Flatten asset tagging details for active expenses
   const taggingBreakdownData = useMemo(() => {
@@ -2017,7 +2018,9 @@ export default function AnalysisPage() {
             dataSource={filteredTaggingBreakdown}
             size="small"
             pagination={{
-              pageSize: 10,
+              pageSize: taggingPageSize,
+              onChange: (page, size) => setTaggingPageSize(size),
+              onShowSizeChange: (current, size) => setTaggingPageSize(size),
               showSizeChanger: true,
               pageSizeOptions: ["10", "25", "50", "100"],
               showTotal: (total, range) => `${range[0]}-${range[1]} of ${total} tagged items`

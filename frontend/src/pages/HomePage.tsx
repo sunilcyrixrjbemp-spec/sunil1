@@ -199,6 +199,8 @@ export default function HomePage() {
   const [showStatsModal, setShowStatsModal] = useState(false);
   const [statsModalType, _setStatsModalType] = useState<"Total Claimed" | "Approved" | "Pending" | "Rejected">("Total Claimed");
   const [statsModalClaims, setStatsModalClaims] = useState<any[]>([]);
+  const [homeClaimsPageSize, setHomeClaimsPageSize] = useState(25);
+  const [homeModalPageSize, setHomeModalPageSize] = useState(15);
 
   // In-app Lightbox state
   const [lightboxImage, setLightboxImage] = useState<string | null>(null);
@@ -1170,7 +1172,14 @@ export default function HomePage() {
                                 loading={loadingMyExpenses && filteredPersonalExpenses.length === 0}
                                 dataSource={filteredPersonalExpenses}
                                 rowKey="id"
-                                pagination={{ pageSize: 25, size: "small" }}
+                                pagination={{ 
+                                  pageSize: homeClaimsPageSize, 
+                                  showSizeChanger: true, 
+                                  pageSizeOptions: ["10", "25", "50", "100"],
+                                  onChange: (page, size) => setHomeClaimsPageSize(size),
+                                  onShowSizeChange: (current, size) => setHomeClaimsPageSize(size),
+                                  size: "small" 
+                                }}
                                 size="small"
                                 onRow={(record) => ({
                                   onClick: () => handleOpenClaimDetails(record.id),
@@ -2846,7 +2855,14 @@ export default function HomePage() {
             <Table
               dataSource={statsModalClaims}
               rowKey="id"
-              pagination={{ pageSize: 15, size: "small" }}
+              pagination={{ 
+                pageSize: homeModalPageSize, 
+                showSizeChanger: true, 
+                pageSizeOptions: ["10", "25", "50", "100"],
+                onChange: (page, size) => setHomeModalPageSize(size),
+                onShowSizeChange: (current, size) => setHomeModalPageSize(size),
+                size: "small" 
+              }}
               size="small"
               sticky={true}
               scroll={{ x: "max-content", y: 380 }}
