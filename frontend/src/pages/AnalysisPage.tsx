@@ -35,6 +35,26 @@ import {
 } from "@ant-design/icons";
 import { hasFullAccess } from "../utils/constants";
 
+const formatCompactNumber = (num: number): string => {
+  if (!num || isNaN(num)) return "0";
+  const abs = Math.abs(num);
+  if (abs >= 1e7) {
+    return `${(num / 1e7).toLocaleString('en-IN', { maximumFractionDigits: 1 })} Cr`;
+  }
+  if (abs >= 1e5) {
+    return `${(num / 1e5).toLocaleString('en-IN', { maximumFractionDigits: 1 })} L`;
+  }
+  if (abs >= 1e3) {
+    return `${(num / 1e3).toLocaleString('en-IN', { maximumFractionDigits: 1 })} K`;
+  }
+  return num.toLocaleString('en-IN');
+};
+
+const formatCompactCurrency = (num: number): string => {
+  if (!num || isNaN(num)) return "₹0";
+  return `₹${formatCompactNumber(num)}`;
+};
+
 const getSegmentedClass = (status: string) => {
   switch (status) {
     case "approved":
@@ -1705,17 +1725,16 @@ export default function AnalysisPage() {
           <Card 
             size="small" 
             bordered={false} 
-            className="shadow-xs border border-gray-150 rounded-xl cursor-pointer hover:border-cyan-400 hover:shadow-md transition-all group"
-            onClick={() => { setSelectedTaggingDate(null); setIsTaggingModalOpen(true); }}
+            className="shadow-xs border border-gray-150 rounded-xl transition-all group"
           >
             <Statistic
-              title={<span className="text-[9px] font-bold uppercase tracking-wider text-gray-400 group-hover:text-cyan-600">Asset Tagging 🔍</span>}
-              value={activityStats.assetTaggingCount}
-              valueStyle={{ fontSize: "16px", fontWeight: 800, color: "#1F2937", fontFamily: "monospace" }}
+              title={<span className="text-[9px] font-bold uppercase tracking-wider text-gray-500">Asset Tagging</span>}
+              value={activityStats.assetTaggingCount.toLocaleString('en-IN')}
+              valueStyle={{ fontSize: "15px", fontWeight: 800, color: "#1F2937", fontFamily: "monospace" }}
               prefix={<TagOutlined className="text-cyan-500 mr-1.5" />}
               suffix={
-                <div className="text-[10px] font-extrabold text-emerald-600 mt-0.5 tracking-tight font-mono">
-                  Val: ₹{activityStats.assetTaggingValue.toLocaleString('en-IN')}
+                <div className="text-[10px] font-extrabold text-emerald-600 mt-0.5 tracking-tight font-mono" title={`₹${activityStats.assetTaggingValue.toLocaleString('en-IN')}`}>
+                  Val: {formatCompactCurrency(activityStats.assetTaggingValue)}
                 </div>
               }
             />
@@ -2206,7 +2225,7 @@ export default function AnalysisPage() {
                         data={activityChartData}
                         keys={["count"]}
                         indexBy="name"
-                        margin={{ top: 15, right: 15, bottom: 35, left: 35 }}
+                        margin={{ top: 20, right: 20, bottom: 40, left: 70 }}
                         padding={0.35}
                         colors={GALLERY_COLORS}
                         colorBy="indexValue"
@@ -2216,7 +2235,12 @@ export default function AnalysisPage() {
                         axisTop={null}
                         axisRight={null}
                         axisBottom={{ tickSize: 0, tickPadding: 8, tickRotation: 0 }}
-                        axisLeft={{ tickSize: 0, tickPadding: 8, tickRotation: 0 }}
+                        axisLeft={{
+                          tickSize: 0,
+                          tickPadding: 8,
+                          tickRotation: 0,
+                          format: (v) => formatCompactNumber(Number(v))
+                        }}
                         theme={{
                           grid: { line: { stroke: '#f1f5f9', strokeWidth: 1 } },
                           axis: { ticks: { text: { fontSize: 8, fontWeight: 'bold', fill: '#64748b' } } }
@@ -2229,7 +2253,7 @@ export default function AnalysisPage() {
                                 <span className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: color }} />
                                 Count:
                               </span>
-                              <span className="font-mono font-bold text-white">{value}</span>
+                              <span className="font-mono font-bold text-white">{Number(value).toLocaleString('en-IN')}</span>
                             </div>
                           </div>
                         )}
@@ -2261,7 +2285,7 @@ export default function AnalysisPage() {
                             data: dayWiseAssetTaggingValueData.map(d => ({ x: d.date, y: d.value, count: d.count }))
                           }
                         ]}
-                        margin={{ top: 15, right: 15, bottom: 35, left: 55 }}
+                        margin={{ top: 20, right: 20, bottom: 40, left: 80 }}
                         xScale={{ type: 'point' }}
                         yScale={{ type: 'linear', min: 0, max: 'auto' }}
                         curve="monotoneX"
@@ -2292,17 +2316,11 @@ export default function AnalysisPage() {
                           tickSize: 0,
                           tickPadding: 8,
                           tickRotation: 0,
-                          format: (v) => v >= 1000 ? `₹${(v / 1000).toFixed(0)}k` : `₹${v}`
+                          format: (v) => formatCompactCurrency(Number(v))
                         }}
                         theme={{
                           grid: { line: { stroke: '#f1f5f9', strokeWidth: 1 } },
                           axis: { ticks: { text: { fontSize: 8, fontWeight: 'bold', fill: '#64748b' } } }
-                        }}
-                        onClick={(point: any) => {
-                          if (point && point.data && point.data.x) {
-                            setSelectedTaggingDate(String(point.data.x));
-                            setIsTaggingModalOpen(true);
-                          }
                         }}
                         tooltip={({ point }) => {
                           const dataPoint = dayWiseAssetTaggingValueData.find(d => d.date === String(point.data.x));
@@ -2318,14 +2336,11 @@ export default function AnalysisPage() {
                                   <span className="font-mono font-bold text-emerald-400">₹{(point.data.y as number).toLocaleString('en-IN')}</span>
                                 </div>
                                 {dataPoint && dataPoint.count > 0 && (
-                                  <div className="flex items-center justify-between gap-4 text-[10px]">
-                                    <span className="text-slate-400">Tagged Quantity:</span>
-                                    <span className="font-mono font-bold text-slate-200">{dataPoint.count} units</span>
+                                  <div className="flex items-center justify-between gap-4 text-slate-400 text-[10px]">
+                                    <span>Tagged Count:</span>
+                                    <span className="font-mono font-bold text-white">{dataPoint.count}</span>
                                   </div>
                                 )}
-                                <div className="text-[9px] text-cyan-300 font-extrabold mt-1 pt-1 border-t border-slate-800">
-                                  💡 Click to view detailed table breakdown
-                                </div>
                               </div>
                             </div>
                           );
