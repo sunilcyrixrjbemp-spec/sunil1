@@ -612,85 +612,97 @@ export default function MonthSummaryPage() {
 
   // Renders a full HTML document inside a hidden iframe, captures it with
   // html2canvas + jsPDF, and returns the PDF as a Blob.
-  // Renders the print HTML in a hidden iframe and converts it to a high-res PNG Image Blob using html2canvas.
-  const renderHTMLToImageBlob = (html: string): Promise<Blob> => {
-    return new Promise((resolve, reject) => {
-      const SCALE = 2;
-      const A4_W_CSS = 1122;
+  // Renders a full HTML document inside a hidden iframe, captures all pages (summary sheet + bill attachments),
+  // converts with html2canvas + jsPDF, and returns a genuine multi-page A4 Landscape PDF Blob.
+  const renderHTMLToPDFBlob = async (html: string): Promise<Blob> => {
+    await loadScript("https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js");
+    await loadScript("https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js");
 
-      const iframe = document.createElement("iframe");
-      iframe.style.position = "fixed";
-      iframe.style.top = "0";
-      iframe.style.left = "0";
-      iframe.style.width = `${A4_W_CSS}px`;
-      iframe.style.height = "10000px";
-      iframe.style.opacity = "0";
-      iframe.style.pointerEvents = "none";
-      iframe.style.border = "none";
-      iframe.style.zIndex = "-9999";
-      document.body.appendChild(iframe);
+    const { jsPDF } = (window as any).jspdf;
+    const h2c = (window as any).html2canvas;
 
-      const iDoc = iframe.contentDocument || iframe.contentWindow?.document;
-      if (!iDoc) { document.body.removeChild(iframe); reject(new Error("No iframe document")); return; }
+    const A4_W_CSS = 1122; // A4 landscape width at 96dpi
+    const SCALE = 2;
 
-      iDoc.open();
-      iDoc.write(html);
-      iDoc.close();
+    const iframe = document.createElement("iframe");
+    iframe.style.position = "fixed";
+    iframe.style.top = "0";
+    iframe.style.left = "0";
+    iframe.style.width = `${A4_W_CSS}px`;
+    iframe.style.height = "10000px";
+    iframe.style.opacity = "0";
+    iframe.style.pointerEvents = "none";
+    iframe.style.border = "none";
+    iframe.style.zIndex = "-9999";
+    document.body.appendChild(iframe);
 
-      const waitIframeImages = () => new Promise<void>((res) => {
-        const imgs = Array.from(iDoc.getElementsByTagName("img"));
-        if (imgs.length === 0) { setTimeout(res, 400); return; }
-        let done = 0;
-        const check = () => { done++; if (done >= imgs.length) setTimeout(res, 400); };
-        imgs.forEach((img) => {
-          if ((img as HTMLImageElement).complete) check();
-          else { img.onload = check; img.onerror = check; }
-        });
+    const iDoc = iframe.contentDocument || iframe.contentWindow?.document;
+    if (!iDoc) {
+      if (document.body.contains(iframe)) document.body.removeChild(iframe);
+      throw new Error("No iframe document available for PDF rendering");
+    }
+
+    iDoc.open();
+    iDoc.write(html);
+    iDoc.close();
+
+    // Wait for all embedded images / attachments to load
+    await new Promise<void>((resolve) => {
+      const imgs = Array.from(iDoc.getElementsByTagName("img"));
+      if (imgs.length === 0) { setTimeout(resolve, 500); return; }
+      let done = 0;
+      const check = () => { done++; if (done >= imgs.length) setTimeout(resolve, 500); };
+      imgs.forEach((img) => {
+        if ((img as HTMLImageElement).complete) check();
+        else { img.onload = check; img.onerror = check; }
+      });
+    });
+
+    // Query main summary page + all attachment pages
+    const pagesToRender: HTMLElement[] = [];
+    const mainWrap = iDoc.querySelector(".wrap") as HTMLElement;
+    if (mainWrap) pagesToRender.push(mainWrap);
+
+    const attPages = Array.from(iDoc.querySelectorAll(".attachment-page")) as HTMLElement[];
+    pagesToRender.push(...attPages);
+
+    const pdf = new jsPDF({
+      orientation: "landscape",
+      unit: "mm",
+      format: "a4",
+      compress: true
+    });
+
+    const pdfWidth = pdf.internal.pageSize.getWidth();   // 297 mm
+    const pdfHeight = pdf.internal.pageSize.getHeight(); // 210 mm
+
+    for (let i = 0; i < pagesToRender.length; i++) {
+      const el = pagesToRender[i];
+      const canvas = await h2c(el, {
+        scale: SCALE,
+        useCORS: true,
+        allowTaint: false,
+        logging: false,
+        width: A4_W_CSS,
+        height: el.offsetHeight || 793,
+        scrollX: 0,
+        scrollY: 0,
+        windowWidth: A4_W_CSS,
+        windowHeight: el.offsetHeight || 793,
       });
 
-      const doCapture = async () => {
-        try {
-          await waitIframeImages();
-          const h2c = (window as any).html2canvas;
-          const body = iDoc.body;
-          const wrapEl = iDoc.querySelector(".wrap");
-          const totalHeight = wrapEl ? Math.ceil((wrapEl as HTMLElement).getBoundingClientRect().bottom) + 20 : body.scrollHeight;
-
-          const canvas = await h2c(body, {
-            scale: SCALE,
-            useCORS: true,
-            allowTaint: false,
-            logging: false,
-            width: A4_W_CSS,
-            height: totalHeight,
-            scrollX: 0,
-            scrollY: 0,
-            windowWidth: A4_W_CSS,
-            windowHeight: totalHeight,
-          });
-
-          if (document.body.contains(iframe)) document.body.removeChild(iframe);
-
-          canvas.toBlob((blob: Blob | null) => {
-            if (blob) resolve(blob);
-            else reject(new Error("Failed to capture image blob"));
-          }, "image/png");
-        } catch (e) {
-          if (document.body.contains(iframe)) document.body.removeChild(iframe);
-          reject(e);
-        }
-      };
-
-      let _captured = false;
-      const onceCaptured = () => { if (!_captured) { _captured = true; doCapture(); } };
-
-      if (iframe.contentWindow) {
-        iframe.contentWindow.onload = onceCaptured;
+      const imgData = canvas.toDataURL("image/jpeg", 0.95);
+      if (i > 0) {
+        pdf.addPage("a4", "landscape");
       }
-      setTimeout(() => {
-        if (iDoc.readyState === "complete") onceCaptured();
-      }, 1000);
-    });
+      pdf.addImage(imgData, "JPEG", 0, 0, pdfWidth, pdfHeight);
+    }
+
+    if (document.body.contains(iframe)) {
+      document.body.removeChild(iframe);
+    }
+
+    return pdf.output("blob");
   };
 
   const handlePDF = async (row: any) => {
@@ -713,12 +725,10 @@ export default function MonthSummaryPage() {
       setPdfLoadingId(null);
     }
 
-    const downloadImage = async (amount: number) => {
+    const downloadPDFFile = async (amount: number) => {
       setPdfLoadingId(key);
-      const downloadTid = toast.loading(`Generating Image for ${row.name}...`);
+      const downloadTid = toast.loading(`Generating PDF Document for ${row.name}...`);
       try {
-        await loadScript("https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js");
-
         const res = await expenseService.getEngineerMonthClaims(row.user_id, row.month, row.year);
         const userObj = res.user || row;
         const claims = res.claims || [];
@@ -729,18 +739,18 @@ export default function MonthSummaryPage() {
         }
 
         const html = buildExcelPrintHTML(userObj, claims, attachments, amount, false);
-        const filename = `${(userObj.name || "Engineer").replace(/[^a-zA-Z0-9]/g, "_")}_Form_CYKL01.png`;
-        const imageBlob = await renderHTMLToImageBlob(html);
+        const filename = `${(userObj.name || "Engineer").replace(/[^a-zA-Z0-9]/g, "_")}_Expense_Summary_${row.month}_${row.year}.pdf`;
+        const pdfBlob = await renderHTMLToPDFBlob(html);
 
         const link = document.createElement("a");
-        link.href = URL.createObjectURL(imageBlob);
+        link.href = URL.createObjectURL(pdfBlob);
         link.download = filename;
         document.body.appendChild(link);
         link.click();
         document.body.removeChild(link);
-        toast.success(`Form image downloaded successfully!`);
+        toast.success(`PDF document downloaded successfully!`);
       } catch (err) {
-        toast.error("Image download failed");
+        toast.error("PDF generation failed");
         console.error(err);
       } finally {
         toast.dismiss(downloadTid);
@@ -749,7 +759,7 @@ export default function MonthSummaryPage() {
     };
 
     if (exists || !isAllowedAdvance) {
-      await downloadImage(savedAdvance);
+      await downloadPDFFile(savedAdvance);
     } else {
       setAdvanceAmountInput("0");
       setAdvanceModalConfig({
@@ -769,7 +779,7 @@ export default function MonthSummaryPage() {
           } finally {
             toast.dismiss(saveTid);
           }
-          await downloadImage(amount);
+          await downloadPDFFile(amount);
         }
       });
       setShowAdvanceModal(true);
