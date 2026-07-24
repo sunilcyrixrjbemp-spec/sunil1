@@ -134,6 +134,9 @@ export default function AnalysisPage() {
   const [selectedZone, setSelectedZone] = useState<string>(() => {
     return localStorage.getItem("analysis_selectedZone") || "all";
   });
+  const [selectedCoordinator, setSelectedCoordinator] = useState<string>(() => {
+    return localStorage.getItem("analysis_selectedCoordinator") || "all";
+  });
   const [selectedStatus, setSelectedStatus] = useState<string>(() => {
     return localStorage.getItem("analysis_selectedStatus") || "all";
   });
@@ -171,6 +174,10 @@ export default function AnalysisPage() {
   useEffect(() => {
     localStorage.setItem("analysis_selectedZone", selectedZone);
   }, [selectedZone]);
+
+  useEffect(() => {
+    localStorage.setItem("analysis_selectedCoordinator", selectedCoordinator);
+  }, [selectedCoordinator]);
 
   useEffect(() => {
     setSelectedDistrict("all");
@@ -303,6 +310,19 @@ export default function AnalysisPage() {
 
   const uniqueZones = ["Ajmer", "Bikaner", "Jaipur", "Jodhpur", "Udaipur"];
 
+  const coordinatorsList = useMemo(() => {
+    const rawSource = viewMode === "team" && isReviewer ? teamExpenses : myExpenses;
+    const source = rawSource.filter(e => e && e.category !== "Limit Request" && e.request_type !== "limit");
+    const set = new Set<string>();
+    source.forEach(e => {
+      const coord = e.coordinator_name || e.coordinator || e.submitter_coordinator || e.facility_coordinator;
+      if (coord && typeof coord === "string" && coord.trim() && coord !== "—") {
+        set.add(coord.trim());
+      }
+    });
+    return Array.from(set).sort((a, b) => a.localeCompare(b));
+  }, [viewMode, myExpenses, teamExpenses, isReviewer]);
+
   // Safety resets for dependent dropdowns
   useEffect(() => {
     if (selectedEngineer !== "all" && !filterOptions.engineers.includes(selectedEngineer)) {
@@ -367,10 +387,16 @@ export default function AnalysisPage() {
           return name.toLowerCase() === selectedEngineer.toLowerCase();
         });
       }
+      if (selectedCoordinator !== "all") {
+        list = list.filter(e => {
+          const coord = e.coordinator_name || e.coordinator || e.submitter_coordinator || e.facility_coordinator || "";
+          return coord.toLowerCase() === selectedCoordinator.toLowerCase();
+        });
+      }
     }
 
     return list;
-  }, [viewMode, myExpenses, teamExpenses, selectedMonth, selectedYear, selectedDistrict, selectedEngineer, selectedStatus, startDate, endDate, selectedZone]);
+  }, [viewMode, myExpenses, teamExpenses, selectedMonth, selectedYear, selectedDistrict, selectedEngineer, selectedCoordinator, selectedStatus, startDate, endDate, selectedZone]);
 
   // Date range limits based on selected month/year
   const monthStr = String(selectedMonth + 1).padStart(2, "0");
@@ -1538,7 +1564,7 @@ export default function AnalysisPage() {
               </Col>
 
               {/* Engineer Filter */}
-              <Col xs={24} sm={8} md={6} lg={4}>
+              <Col xs={12} sm={8} md={6} lg={3}>
                 <span className="text-[9px] font-bold text-gray-400 uppercase block mb-0.5">Engineer</span>
                 <select
                   value={selectedEngineer}
@@ -1547,6 +1573,21 @@ export default function AnalysisPage() {
                 >
                   <option value="all">All Engineers</option>
                   {filterOptions.engineers.map(name => (
+                    <option key={name} value={name}>{name}</option>
+                  ))}
+                </select>
+              </Col>
+
+              {/* Coordinator Filter */}
+              <Col xs={12} sm={8} md={6} lg={3}>
+                <span className="text-[9px] font-bold text-gray-400 uppercase block mb-0.5">Coordinator</span>
+                <select
+                  value={selectedCoordinator}
+                  onChange={(e) => setSelectedCoordinator(e.target.value)}
+                  className="analysis-select-input"
+                >
+                  <option value="all">All Coordinators</option>
+                  {coordinatorsList.map(name => (
                     <option key={name} value={name}>{name}</option>
                   ))}
                 </select>
