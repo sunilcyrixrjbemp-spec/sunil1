@@ -30,7 +30,7 @@ import {
   handleListHierarchies, handleSaveHierarchy,
   handleUpdateUser, handleBulkCreateUsers, handleGetEligibleApprovers,
   handleDeleteHierarchy, handleLogoutAllUsers, handleLogoutSingleUser,
-  handleExportHierarchies, handleBulkImportHierarchies,
+  handleExportHierarchies, handleBulkImportHierarchies, handleRepairStuckApprovals,
   handleGetSystemSettings, handleSaveSystemSettings,
   handleSearchRejectedExpenses, handleResubmitRejectedExpense,
   handleOneTimeAdjust, handleGetAllowanceRates, handleSaveAllowanceRates
@@ -214,6 +214,7 @@ router.get("/api/admin/eligible-approvers", handleGetEligibleApprovers, true);
 // Hierarchies — specific routes first
 router.get("/api/admin/hierarchies/export", handleExportHierarchies, true);   // BEFORE /:id
 router.post("/api/admin/hierarchies/bulk", handleBulkImportHierarchies, true);
+router.post("/api/admin/approvals/repair-stuck", handleRepairStuckApprovals, true);
 router.get("/api/admin/hierarchies", handleListHierarchies, true);
 router.post("/api/admin/hierarchies", handleSaveHierarchy, true);
 router.delete("/api/admin/hierarchies/:id", handleDeleteHierarchy, true);

@@ -3,6 +3,78 @@ import { getPasswordHash, verifyPassword } from "../utils/security.js";
 import { computeBaseLocPolicy, checkIsCommuteLeg, buildPolicyComment } from "./expense.js";
 import { jsonResponse } from "../utils/http.js";
 
+// ═══════════════════════════════════════════════════════════════════════════
+// 🔒 LOCKED — Approval hierarchy auto-reroute logic. DO NOT MODIFY WITHOUT
+// EXPLICIT USER APPROVAL.
+//
+// Root cause this fixes: the `approvals` table stores a SNAPSHOT of
+// approver_id taken at submission time (see expense.js's approvalChain
+// query). fetchPendingApprovals() in approval.js re-validates that snapshot
+// against the CURRENT hierarchy_requesters/hierarchy_approvers mapping via
+// an EXISTS subquery. If an admin edits a hierarchy (or re-imports via CSV),
+// the old hierarchy_requesters/hierarchy_approvers rows are deleted and
+// replaced — so any already-pending `approvals` row still pointing at the
+// OLD approver_id silently fails that EXISTS check. The claim stays
+// "Pending" in the expenses table forever, but shows up in NOBODY's
+// Approval Center (neither the old approver, who's no longer matched, nor
+// the new approver, who never got a row).
+//
+// Fix: every time a hierarchy's requesters/approvers are (re)written, call
+// this helper immediately after, for that hierarchy_id. It re-points any
+// still-pending/waiting approvals rows for that hierarchy's CURRENT
+// requesters to the CURRENT approver at the same level, so the claim
+// instantly becomes visible to whoever is now actually responsible for it.
+// ═══════════════════════════════════════════════════════════════════════════
+async function resyncPendingApprovalsForHierarchy(env, hierarchyId, timestamp) {
+  const approversRes = await env.DB.prepare(
+    "SELECT level_number, approver_id FROM hierarchy_approvers WHERE hierarchy_id = ?"
+  ).bind(hierarchyId).all();
+  const approverByLevel = {};
+  for (const a of (approversRes.results || [])) {
+    approverByLevel[a.level_number] = a.approver_id;
+  }
+  if (Object.keys(approverByLevel).length === 0) return { updated: 0, notified: 0 };
+
+  const requestersRes = await env.DB.prepare(
+    "SELECT user_id FROM hierarchy_requesters WHERE hierarchy_id = ?"
+  ).bind(hierarchyId).all();
+  const requesterIds = (requestersRes.results || []).map(r => r.user_id);
+  if (requesterIds.length === 0) return { updated: 0, notified: 0 };
+
+  let updated = 0;
+  let notified = 0;
+
+  for (const submitterInternalId of requesterIds) {
+    const pendingRows = await env.DB.prepare(`
+      SELECT a.id, a.level_number, a.approver_id, a.status, e.expense_code, e.amount
+      FROM approvals a
+      JOIN expenses e ON a.expense_id = e.id
+      WHERE e.user_id = ? AND a.status IN ('pending', 'waiting')
+    `).bind(submitterInternalId).all();
+
+    for (const row of (pendingRows.results || [])) {
+      const correctApproverId = approverByLevel[row.level_number];
+      if (correctApproverId && correctApproverId !== row.approver_id) {
+        await runWrite(env, "UPDATE approvals SET approver_id = ?, updated_at = ? WHERE id = ?", [correctApproverId, timestamp, row.id]);
+        updated++;
+
+        if (row.status === "pending") {
+          const newApprover = await env.DB.prepare("SELECT * FROM users WHERE id = ?").bind(correctApproverId).first();
+          if (newApprover) {
+            await runWrite(env,
+              "INSERT INTO notifications (user_id, title, description, type, read, link, created_at) VALUES (?, '📥 Claim Re-routed To You', ?, 'warning', 0, '/approval-center', ?)",
+              [newApprover.user_id, `Claim ${row.expense_code} (₹${row.amount}) was re-routed to you because the approval hierarchy was updated.`, timestamp]
+            );
+            notified++;
+          }
+        }
+      }
+    }
+  }
+
+  return { updated, notified };
+}
+
 /**
  * Internal helper: Re-evaluate existing expenses for a user when their base location changes.
  * Corrects travel_amount and da_amount on all current-month active expenses,
@@ -780,7 +852,10 @@ export async function handleSaveHierarchy(request, env, params, query, adminUser
     }
   }
 
-  return jsonResponse({ status: "success", message: "Hierarchy mappings saved successfully" });
+  // 🔒 Auto-reroute any pending claims that were orphaned by this hierarchy change — see LOCKED comment above resyncPendingApprovalsForHierarchy().
+  const resyncResult = await resyncPendingApprovalsForHierarchy(env, hId, timestamp);
+
+  return jsonResponse({ status: "success", message: "Hierarchy mappings saved successfully", rerouted_claims: resyncResult.updated });
 }
 
 /**
@@ -1202,6 +1277,9 @@ export async function handleBulkImportHierarchies(request, env, params, query, a
         }
       }
 
+      // 🔒 Auto-reroute any pending claims that were orphaned by this hierarchy change — see LOCKED comment above resyncPendingApprovalsForHierarchy().
+      await resyncPendingApprovalsForHierarchy(env, hId, new Date().toISOString());
+
       createdCount++;
     } catch (ex) {
       errors.push(`Row ${i + 1} (${hierarchyName}): ${ex.message}`);
@@ -1209,6 +1287,87 @@ export async function handleBulkImportHierarchies(request, env, params, query, a
   }
 
   return jsonResponse({ status: "success", created_count: createdCount, failed_count: errors.length, errors });
+}
+
+/**
+ * POST /api/admin/approvals/repair-stuck
+ * One-time repair pass: finds all pending/waiting `approvals` rows that are
+ * currently invisible to everyone (orphaned by a past hierarchy edit — see
+ * the 🔒 LOCKED comment above resyncPendingApprovalsForHierarchy()) and
+ * re-points each one to the submitter's CURRENT correctly-mapped approver
+ * for that level, so it shows back up in the right person's Approval Center.
+ * Claims whose submitter has no hierarchy mapping at all are left untouched
+ * and reported separately, since there's no correct approver to assign.
+ */
+export async function handleRepairStuckApprovals(request, env, params, query, adminUser) {
+  if (adminUser.role !== "Admin") {
+    return jsonResponse({ error: "Access denied" }, 403);
+  }
+
+  const timestamp = new Date().toISOString();
+
+  // Same orphan definition as fetchPendingApprovals()'s EXISTS check, inverted.
+  const stuckRes = await env.DB.prepare(`
+    SELECT a.id, a.expense_id, a.approver_id, a.level_number, e.expense_code, e.amount, e.user_id AS submitter_id
+    FROM approvals a
+    JOIN expenses e ON a.expense_id = e.id
+    WHERE a.status IN ('pending', 'waiting')
+      AND NOT EXISTS (
+        SELECT 1
+        FROM hierarchy_requesters hr
+        JOIN hierarchy_approvers ha ON hr.hierarchy_id = ha.hierarchy_id
+        WHERE hr.user_id = e.user_id AND ha.approver_id = a.approver_id
+      )
+  `).all();
+
+  const stuckRows = stuckRes.results || [];
+  let repaired = 0;
+  const unresolved = [];
+  const repairedDetails = [];
+
+  for (const row of stuckRows) {
+    // Submitter's current hierarchy (a submitter should map to exactly one hierarchy)
+    const currentHierarchy = await env.DB.prepare(
+      "SELECT hierarchy_id FROM hierarchy_requesters WHERE user_id = ? LIMIT 1"
+    ).bind(row.submitter_id).first();
+
+    if (!currentHierarchy) {
+      unresolved.push({ expense_code: row.expense_code, reason: "Submitter is not mapped to any approval hierarchy" });
+      continue;
+    }
+
+    const correctApprover = await env.DB.prepare(
+      "SELECT approver_id FROM hierarchy_approvers WHERE hierarchy_id = ? AND level_number = ?"
+    ).bind(currentHierarchy.hierarchy_id, row.level_number).first();
+
+    if (!correctApprover) {
+      unresolved.push({ expense_code: row.expense_code, reason: `No Level ${row.level_number} approver configured for the submitter's current hierarchy` });
+      continue;
+    }
+
+    if (correctApprover.approver_id !== row.approver_id) {
+      await runWrite(env, "UPDATE approvals SET approver_id = ?, updated_at = ? WHERE id = ?", [correctApprover.approver_id, timestamp, row.id]);
+      repaired++;
+      repairedDetails.push({ expense_code: row.expense_code, level_number: row.level_number, new_approver_id: correctApprover.approver_id });
+
+      const newApprover = await env.DB.prepare("SELECT * FROM users WHERE id = ?").bind(correctApprover.approver_id).first();
+      if (newApprover) {
+        await runWrite(env,
+          "INSERT INTO notifications (user_id, title, description, type, read, link, created_at) VALUES (?, '📥 Claim Re-routed To You', ?, 'warning', 0, '/approval-center', ?)",
+          [newApprover.user_id, `Claim ${row.expense_code} (₹${row.amount}) was re-routed to you during an approval-hierarchy repair.`, timestamp]
+        );
+      }
+    }
+  }
+
+  return jsonResponse({
+    status: "success",
+    scanned: stuckRows.length,
+    repaired,
+    unresolved_count: unresolved.length,
+    unresolved,
+    repaired_details: repairedDetails
+  });
 }
 
 /**
