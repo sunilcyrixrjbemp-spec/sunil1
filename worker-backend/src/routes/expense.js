@@ -3122,6 +3122,208 @@ export async function handleRetroactiveBasePolicyCheck(request, env, params, que
 }
 
 /**
+ * POST /api/expense/retroactive-policy-check-bulk
+ * Admin-only. Re-runs the base-location TA/DA policy (computeBaseLocPolicy /
+ * checkIsCommuteLeg — see the 🔒 LOCKED comment above computeBaseLocPolicy)
+ * against EVERY active (not rejected / not returned-to-draft) expense of
+ * EVERY user who has a base_reporting_location configured — pending AND
+ * already-approved claims, across ALL months, not just the current one.
+ *
+ * Use this to fix old claims whose TA/DA was calculated before a policy fix
+ * (e.g. removal of the "official activities" DA override). Optionally pass
+ * { month: "July", year: 2026 } in the body to scope it to one month if a
+ * full all-time pass is too slow / times out for your data volume.
+ */
+export async function handleBulkRetroactivePolicyCheck(request, env, params, query, adminUser) {
+  if (adminUser.role !== "Admin") {
+    return jsonResponse({ error: "Access denied" }, 403);
+  }
+
+  const body = await request.json().catch(() => ({}));
+  const scopeMonth = body.month || null;
+  const scopeYear = body.year || null;
+
+  const timestamp = new Date().toISOString();
+
+  const usersRes = await env.DB.prepare(
+    "SELECT id, user_id, name, base_reporting_location FROM users WHERE base_reporting_location IS NOT NULL AND TRIM(base_reporting_location) != ''"
+  ).all().catch(() => ({ results: [] }));
+  const targetUsers = usersRes.results || [];
+
+  const hospitalsRes = await env.DB.prepare("SELECT DISTINCT hospital_name FROM assets_inventory WHERE hospital_name IS NOT NULL").all().catch(() => ({ results: [] }));
+  const officialHospitals = new Set((hospitalsRes.results || []).map(h => h.hospital_name.trim().toLowerCase()));
+
+  let usersAffected = 0;
+  let totalExpensesAffected = 0;
+  let totalDeducted = 0;
+  const perUserSummary = [];
+
+  for (const targetUser of targetUsers) {
+    const baseReportingLocation = targetUser.base_reporting_location || "";
+
+    let expensesQuery = `
+      SELECT id, expense_code, itinerary, amount, original_amount
+      FROM expenses
+      WHERE user_id = ? AND LOWER(status) NOT IN ('rejected', 'returned_to_draft')
+    `;
+    const expensesBinds = [targetUser.id];
+    if (scopeMonth) { expensesQuery += " AND LOWER(month) = LOWER(?)"; expensesBinds.push(scopeMonth); }
+    if (scopeYear) { expensesQuery += " AND year = ?"; expensesBinds.push(scopeYear); }
+
+    const activeExpenses = await env.DB.prepare(expensesQuery).bind(...expensesBinds).all().catch(() => ({ results: [] }));
+    const expenses = activeExpenses.results || [];
+    if (expenses.length === 0) continue;
+
+    let userExpensesAffected = 0;
+    let userDeducted = 0;
+
+    for (const exp of expenses) {
+      const legsRes = await env.DB.prepare(`
+        SELECT itinerary_id, leg_number, from_location, to_location, travel_mode, sub_mode,
+          distance_km, travel_amount, sub_amount, da_amount, hotel_amount, local_purchase,
+          other_amount, original_travel_amount, original_sub_amount, original_da_amount,
+          from_district, to_district, from_location AS "from", to_location AS "to"
+        FROM expense_itineraries WHERE exp_id = ? ORDER BY leg_number ASC
+      `).bind(exp.expense_code).all().catch(() => ({ results: [] }));
+
+      const legs = (legsRes.results || []).map(leg => {
+        const fromLoc = (leg.from_location || "").trim().toLowerCase();
+        const toLoc = (leg.to_location || "").trim().toLowerCase();
+        const fromDist = (leg.from_district || "").trim().toLowerCase();
+        const toDist = (leg.to_district || "").trim().toLowerCase();
+
+        const isOutdoor = fromDist && toDist && fromDist !== toDist;
+        const travelType = isOutdoor ? "Outdoor" : "In-District";
+
+        const fromCustom = fromLoc && !officialHospitals.has(fromLoc);
+        const toCustom = toLoc && !officialHospitals.has(toLoc);
+
+        return {
+          ...leg,
+          from: leg.from_location || "",
+          to: leg.to_location || "",
+          from_custom: fromCustom,
+          to_custom: toCustom,
+          amount: leg.travel_amount,
+          sub_amount: leg.sub_amount,
+          da: leg.da_amount,
+          travel_type: travelType
+        };
+      });
+
+      const { isDaAllowed, baseLocations } = computeBaseLocPolicy(baseReportingLocation, legs);
+
+      const hasOutdoorLeg = legs.some(leg => (leg.travel_type || "").trim().toLowerCase() === "outdoor");
+      if (hasOutdoorLeg) continue;
+
+      let expenseDeducted = 0;
+      let policyApplied = false;
+      const retroLegLogs = [];
+
+      for (let idx = 0; idx < legs.length; idx++) {
+        const leg = legs[idx];
+        const isCommute = checkIsCommuteLeg(leg, baseLocations, idx, legs.length);
+        const currentTA = parseFloat(leg.travel_amount || "0");
+        const currentSubAmt = parseFloat(leg.sub_amount || "0");
+        const currentDA = parseFloat(leg.da_amount || "0");
+
+        const newTA = isCommute ? 0.0 : currentTA;
+        const newSubAmt = isCommute ? 0.0 : currentSubAmt;
+        const newDA = isDaAllowed ? currentDA : 0.0;
+
+        if (currentTA > newTA) {
+          retroLegLogs.push({ leg_number: leg.leg_number, field_name: "travel_amount", old_value: currentTA, new_value: newTA, comment: "[Retroactive Bulk] Base Location commute TA not eligible" });
+        }
+        if (currentSubAmt > newSubAmt) {
+          retroLegLogs.push({ leg_number: leg.leg_number, field_name: "sub_amount", old_value: currentSubAmt, new_value: newSubAmt, comment: "[Retroactive Bulk] Base Location commute local conveyance not eligible" });
+        }
+        if (currentDA > newDA) {
+          retroLegLogs.push({ leg_number: leg.leg_number, field_name: "da_amount", old_value: currentDA, new_value: newDA, comment: "[Retroactive Bulk] DA not applicable at base location" });
+        }
+
+        const diff = (currentTA - newTA) + (currentSubAmt - newSubAmt) + (currentDA - newDA);
+        if (diff > 0) {
+          policyApplied = true;
+          expenseDeducted += diff;
+
+          await runWrite(env, `
+            UPDATE expense_itineraries
+            SET travel_amount = ?, sub_amount = ?, da_amount = ?
+            WHERE itinerary_id = ?
+          `, [newTA, newSubAmt, newDA, leg.itinerary_id]);
+        }
+      }
+
+      if (policyApplied) {
+        const newTotals = await env.DB.prepare(`
+          SELECT SUM(travel_amount + sub_amount + da_amount + hotel_amount + other_amount + local_purchase) as new_total
+          FROM expense_itineraries WHERE exp_id = ?
+        `).bind(exp.expense_code).first().catch(() => ({ new_total: 0 }));
+
+        const newTotal = parseFloat(newTotals?.new_total || 0);
+
+        await runWrite(env, `
+          UPDATE expenses SET amount = ?, da_amount = (
+            SELECT SUM(da_amount) FROM expense_itineraries WHERE exp_id = ?
+          ), updated_at = ? WHERE id = ?
+        `, [newTotal, exp.expense_code, timestamp, exp.id]);
+
+        const policyComment = buildPolicyComment(baseLocations, legs, isDaAllowed, exp.itinerary || timestamp.split("T")[0]);
+        if (policyComment) {
+          await runWrite(env,
+            "INSERT INTO expense_edit_logs (expense_id, comment, editor_name, editor_role, editor_id) VALUES (?, ?, 'SYSTEM', 'Policy', 0)",
+            [exp.id, `[Retroactive Bulk] ${policyComment}`]
+          );
+        }
+
+        for (const log of retroLegLogs) {
+          await runWrite(env,
+            `INSERT INTO expense_edit_logs 
+             (expense_id, leg_number, field_name, old_value, new_value, comment, editor_name, editor_role, editor_id)
+             VALUES (?, ?, ?, ?, ?, ?, 'SYSTEM', 'Policy', 0)`,
+            [exp.id, log.leg_number, log.field_name, String(log.old_value), String(log.new_value), log.comment]
+          );
+        }
+
+        await runWrite(env,
+          "INSERT INTO notifications (user_id, title, description, type, read, link, created_at) VALUES (?, ?, ?, 'warning', 0, '/expense', ?)",
+          [
+            targetUser.user_id,
+            "⚠️ Expense Adjusted — Base Location Policy",
+            `Your expense for ${exp.itinerary || "this period"} has been adjusted as per base location TA/DA policy.`,
+            timestamp
+          ]
+        );
+
+        userExpensesAffected++;
+        userDeducted += expenseDeducted;
+      }
+    }
+
+    if (userExpensesAffected > 0) {
+      usersAffected++;
+      totalExpensesAffected += userExpensesAffected;
+      totalDeducted += userDeducted;
+      perUserSummary.push({
+        user_id: targetUser.user_id,
+        name: targetUser.name,
+        expenses_affected: userExpensesAffected,
+        deducted: Math.round(userDeducted * 100) / 100
+      });
+    }
+  }
+
+  return jsonResponse({
+    success: true,
+    message: `Bulk base-location policy repair complete. ${usersAffected} user(s), ${totalExpensesAffected} expense(s) adjusted. Total deducted: ₹${totalDeducted.toFixed(2)}.`,
+    users_affected: usersAffected,
+    total_expenses_affected: totalExpensesAffected,
+    total_deducted: Math.round(totalDeducted * 100) / 100,
+    per_user_summary: perUserSummary
+  });
+}
+
+/**
  * GET /api/expense/month-summary
  * Returns per-engineer summary for a given month (Managers/Admins see team; Engineers see self)
  */
