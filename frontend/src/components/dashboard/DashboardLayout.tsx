@@ -3,7 +3,7 @@ import { useNavigate, Outlet, useLocation, Link } from "react-router-dom";
 import { authService } from "../../services/authService";
 import { preloadRoute } from "../../utils/preload";
 import { prefetchManager } from "../../utils/prefetchManager";
-import api, { getActiveBaseURL } from "../../services/api";
+import api from "../../services/api";
 import brandLogo from "../../assets/images/brand.png";
 import { 
   Home, 
@@ -24,8 +24,6 @@ import {
   ShieldAlert,
   Package,
   Activity,
-  Server,
-  Database,
   TrendingUp
 } from "lucide-react";
 
@@ -173,18 +171,6 @@ export default function DashboardLayout() {
   const [user, setUser] = useState<any>(null);
   const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
   const [avatarError, setAvatarError] = useState(false);
-  const [currentBaseURL, setCurrentBaseURL] = useState(() => getActiveBaseURL());
-  
-  useEffect(() => {
-    const handleSwap = (e: Event) => {
-      const customEvent = e as CustomEvent;
-      if (customEvent.detail && customEvent.detail.baseURL) {
-        setCurrentBaseURL(customEvent.detail.baseURL);
-      }
-    };
-    window.addEventListener("backend-server-swap", handleSwap);
-    return () => window.removeEventListener("backend-server-swap", handleSwap);
-  }, []);
 
   useEffect(() => {
     const handleResize = () => {
