@@ -2099,8 +2099,8 @@ export default function ExpensePage() {
           });
           return false;
         }
-      } else if (modeLower !== "bike") {
-        // All non-bike paid modes (Auto, Bus, Car, Taxi, Flight, Company Provided, etc.): bill required when fare ≥ ₹300
+      } else if (modeLower !== "bike" && modeLower !== "car") {
+        // All non-bike, non-car paid modes (Auto, Bus, Taxi, Flight, Company Provided, etc.): bill required when fare ≥ ₹300
         if (mainAmt >= 300 && !hasMainAttachment) {
           setValidationModal({
             show: true,
@@ -2135,8 +2135,8 @@ export default function ExpensePage() {
             });
             return false;
           }
-        } else if (subModeLower !== "bike") {
-          // Non-bike sub-modes: bill required when fare ≥ ₹300
+        } else if (subModeLower !== "bike" && subModeLower !== "car") {
+          // Non-bike, non-car sub-modes: bill required when fare ≥ ₹300
           if (subAmt >= 300 && !hasSubAttachment) {
             setValidationModal({
               show: true,

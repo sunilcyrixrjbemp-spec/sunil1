@@ -2340,7 +2340,7 @@ export async function handleSubmitExpense(request, env, params, query, user) {
     if (modeLower === "train" && travelAmt >= 1 && !hasMainAttachment) {
       return jsonResponse({ error: `Validation Error (Visit ${legNum}): Train ticket upload is mandatory for Train travel (Fare: ₹${travelAmt}).` }, 400);
     }
-    if (modeLower !== "bike" && modeLower !== "train" && travelAmt >= 300 && !hasMainAttachment) {
+    if (modeLower !== "bike" && modeLower !== "car" && modeLower !== "train" && travelAmt >= 300 && !hasMainAttachment) {
       return jsonResponse({ error: `Validation Error (Visit ${legNum}): Ticket/receipt upload is mandatory for ${iti.mode} travel when fare is ₹300 or more (Fare: ₹${travelAmt}).` }, 400);
     }
 
@@ -2359,7 +2359,7 @@ export async function handleSubmitExpense(request, env, params, query, user) {
       if (subModeLower === "train" && subAmt >= 1 && !hasSubAttachment) {
         return jsonResponse({ error: `Validation Error (Visit ${legNum}): Sub-connection Train ticket upload is mandatory (Fare: ₹${subAmt}).` }, 400);
       }
-      if (subModeLower !== "bike" && subModeLower !== "train" && subAmt >= 300 && !hasSubAttachment) {
+      if (subModeLower !== "bike" && subModeLower !== "car" && subModeLower !== "train" && subAmt >= 300 && !hasSubAttachment) {
         return jsonResponse({ error: `Validation Error (Visit ${legNum}): Sub-connection receipt is mandatory for ${iti.sub_mode} travel when fare is ₹300 or more (Fare: ₹${subAmt}).` }, 400);
       }
     }
