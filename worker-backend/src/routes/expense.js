@@ -2930,6 +2930,9 @@ export async function handleSubmitExpense(request, env, params, query, user) {
     }
   }
 
+  // ── FIX: Delete any existing approval records for this expense before inserting new chain ──
+  await runWrite(env, "DELETE FROM approvals WHERE expense_id = ?", [newExpId]);
+
   // Create approvals level sequence records
   for (const step of approvalsToInsert) {
     await runWrite(env, `
