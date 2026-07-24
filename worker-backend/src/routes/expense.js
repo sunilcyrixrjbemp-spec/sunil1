@@ -781,6 +781,31 @@ export async function handleCreateLimitRequest(request, env, params, query, user
     return jsonResponse({ error: "Missing required parameters: user_id, type, amount, month" }, 400);
   }
 
+  const reqTypeUpper = (type || "").trim().toUpperCase();
+  const reqAmount = parseFloat(amount || 0);
+
+  // 1. MAXIMUM EXTENSION AMOUNT CAPS:
+  // AUTO max extension allowed: ₹2,500
+  // KM (Bike) max extension allowed: 1,500
+  const maxAllowedExtension = reqTypeUpper === "AUTO" ? 2500 : 1500;
+  if (reqAmount > maxAllowedExtension) {
+    const typeLabel = reqTypeUpper === "AUTO" ? "Auto is ₹2,500" : "Bike (KM) is 1,500";
+    return jsonResponse({ error: `Maximum limit extension allowed for ${typeLabel}. You cannot request more than this.` }, 400);
+  }
+
+  // 2. STRICT 1 REQUEST PER MONTH PER MODE (ANY STATUS: Approved, Rejected, Pending, Waiting)
+  const existingReq = await env.DB.prepare(`
+    SELECT * FROM limit_approval_requests 
+    WHERE user_id = ? AND UPPER(request_type) = ? AND for_month = ?
+  `).bind(user_id, reqTypeUpper, month).first();
+
+  if (existingReq) {
+    const typeLabel = reqTypeUpper === "AUTO" ? "Auto" : "Bike";
+    return jsonResponse({ 
+      error: `You have already submitted a limit extension request for ${typeLabel} in ${month} (Status: ${existingReq.status}). Only 1 request per month per travel mode is allowed.` 
+    }, 400);
+  }
+
   const timestamp = parseClientTimestamp(client_timestamp);
   
   // Find manager from user profile
@@ -802,7 +827,7 @@ export async function handleCreateLimitRequest(request, env, params, query, user
   await runWrite(env, `
     INSERT INTO limit_approval_requests (user_id, request_type, requested_value, status, for_month, manager_id, created_at, updated_at)
     VALUES (?, ?, ?, 'Pending', ?, ?, ?, ?)
-  `, [user_id, type, amount, month, managerId, timestamp, timestamp]);
+  `, [user_id, reqTypeUpper, reqAmount, month, managerId, timestamp, timestamp]);
 
   // Notify manager
   await runWrite(env, `
@@ -810,7 +835,7 @@ export async function handleCreateLimitRequest(request, env, params, query, user
     VALUES (?, '📥 New Limit Request', ?, 'warning', 0, '/approval-center', ?)
   `, [
     managerId,
-    `${requester.name} has requested extra ${amount} ${type} limit for ${month}.`,
+    `${requester.name} has requested extra ${reqAmount} ${reqTypeUpper} limit for ${month}.`,
     timestamp
   ]);
 
