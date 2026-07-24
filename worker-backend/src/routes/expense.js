@@ -158,18 +158,25 @@ export function computeBaseLocPolicy(baseReportingLocation, itineraries) {
   if (!hasVisitedBase) return { isBaseLocOnly: false, isDaAllowed: true, baseLocations };
 
   // Must NOT have visited any non-base official facility (dropdown selected)
-  // IMPORTANT: Custom-typed entries that are residence locations (home/room/hotel) must be
-  // exempted — they are NOT official dropdown facility selections.
+  // IMPORTANT: Residence locations (home/room/hotel), stations (bus stand/railway),
+  // and market/courier/repair errands in base city are NOT official healthcare facility visits.
   const RESIDENCE_WORDS_CHK = ["home", "residence", "room", "quarter", "house", "flat", "pg", "stay", "village", "vill", "rent", "address", "dera", "deri", "hotel"];
+  const NON_FACILITY_WORDS_CHK = [
+    ...RESIDENCE_WORDS_CHK,
+    ...STATION_WORDS,
+    ...MARKET_WORDS,
+    "shop", "store", "courier", "parcel", "office", "repair"
+  ];
+
   const visitedNonBase = itineraries.some(leg => {
     const f = (leg.from || "").trim().toLowerCase();
     const t = (leg.to || "").trim().toLowerCase();
-    // If the leg is a manual (custom) entry AND contains a residence word → it is a home/room
-    // location, NOT an official facility → do not flag it as "non-base official facility"
-    const fromIsResidenceText = RESIDENCE_WORDS_CHK.some(w => f.includes(w));
-    const toIsResidenceText   = RESIDENCE_WORDS_CHK.some(w => t.includes(w));
-    if (!leg.from_custom && !matchesBase(f, baseLocations) && !fromIsResidenceText) return true;
-    if (!leg.to_custom   && !matchesBase(t, baseLocations) && !toIsResidenceText)   return true;
+    const fromNorm = f.replace(/[-_]/g, " ");
+    const toNorm   = t.replace(/[-_]/g, " ");
+    const fromIsNonFacilityText = NON_FACILITY_WORDS_CHK.some(w => f.includes(w) || fromNorm.includes(w));
+    const toIsNonFacilityText   = NON_FACILITY_WORDS_CHK.some(w => t.includes(w) || toNorm.includes(w));
+    if (!leg.from_custom && !matchesBase(f, baseLocations) && !fromIsNonFacilityText) return true;
+    if (!leg.to_custom   && !matchesBase(t, baseLocations) && !toIsNonFacilityText)   return true;
     return false;
   });
 

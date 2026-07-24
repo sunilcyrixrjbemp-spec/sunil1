@@ -1736,22 +1736,34 @@ export default function ExpensePage() {
     if (!hasVisitedBaseLocation) return false;
 
     // Must NOT have visited any non-base OFFICIAL DROPDOWN facility.
-    // FIX: Manual text entries containing residence words (home/room/hotel) must be
-    // exempted — they are NOT official dropdown facility selections.
-    // Previously "My Home" in Leg 1 (from_custom=false) was incorrectly treated as
-    // a non-base official facility, making isBaseLocOnly return false.
+    // Residence locations (home/room/hotel), stations (bus stand/railway),
+    // and market/courier/repair errands in base city are NOT official healthcare facility visits.
     const RESIDENCE_WORDS_CHK = ["home", "residence", "room", "quarter", "house", "flat", "pg",
       "stay", "village", "vill", "rent", "address", "dera", "deri", "hotel"];
+    const MARKET_WORDS_CHK = ["market", "bazaar", "bazar", "mandi", "haat"];
+    const STATION_WORDS_CHK = [
+      "station", "railway", "rly", "bus stand", "busstand", "bus-stand",
+      "bus stop", "busstop", "bus-stop", "bus depot", "busdepot", "bus adda",
+      "busadda", "bus-adda", "stand", "depot"
+    ];
+    const NON_FACILITY_WORDS_CHK = [
+      ...RESIDENCE_WORDS_CHK,
+      ...STATION_WORDS_CHK,
+      ...MARKET_WORDS_CHK,
+      "shop", "store", "courier", "parcel", "office", "repair"
+    ];
 
     const visitedNonBaseOfficialFacility = legs.some(leg => {
       const fromLoc = (leg.from || "").trim().toLowerCase();
       const toLoc   = (leg.to   || "").trim().toLowerCase();
       const fromCustom = !!leg.from_custom;
       const toCustom   = !!leg.to_custom;
-      const fromIsResidenceText = RESIDENCE_WORDS_CHK.some(w => fromLoc.includes(w));
-      const toIsResidenceText   = RESIDENCE_WORDS_CHK.some(w => toLoc.includes(w));
-      if (!fromCustom && !matchesBase(fromLoc, baseLocations) && !fromIsResidenceText) return true;
-      if (!toCustom   && !matchesBase(toLoc,   baseLocations) && !toIsResidenceText)   return true;
+      const fromNorm = fromLoc.replace(/[-_]/g, " ");
+      const toNorm   = toLoc.replace(/[-_]/g, " ");
+      const fromIsNonFacilityText = NON_FACILITY_WORDS_CHK.some(w => fromLoc.includes(w) || fromNorm.includes(w));
+      const toIsNonFacilityText   = NON_FACILITY_WORDS_CHK.some(w => toLoc.includes(w) || toNorm.includes(w));
+      if (!fromCustom && !matchesBase(fromLoc, baseLocations) && !fromIsNonFacilityText) return true;
+      if (!toCustom   && !matchesBase(toLoc,   baseLocations) && !toIsNonFacilityText)   return true;
       return false;
     });
 
