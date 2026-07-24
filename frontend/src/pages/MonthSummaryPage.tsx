@@ -77,10 +77,31 @@ function fmtDate(d: string): string {
 // ─── PDF — EXACT CYRIX EXCEL FORMAT ──────────────────────────────────────────
 
 function buildExcelPrintHTML(user: any, claims: any[], attachments: any[] = [], advance: number = 0, autoPrint: boolean = false): string {
-  // Flatten: one row per leg
+  // Flatten: one row per leg, ensuring ONLY APPROVED amounts are included
   const allLegs: { date: string; expCode: string; leg: any }[] = [];
   for (const claim of claims) {
-    for (const leg of claim.legs) {
+    const claimStat = String(claim.status || "").toLowerCase();
+    if (claimStat && claimStat !== "approved" && claimStat !== "auto_approved" && claimStat !== "auto-approved") {
+      // Skip non-approved claims
+      continue;
+    }
+    for (const rawLeg of (claim.legs || [])) {
+      const legStat = String(rawLeg.status || "").toLowerCase();
+      if (legStat === "rejected") continue;
+
+      // Extract strictly approved amounts
+      const leg = {
+        ...rawLeg,
+        ta_amount: rawLeg.approved_ta_amount !== undefined ? parseFloat(rawLeg.approved_ta_amount || 0) : parseFloat(rawLeg.ta_amount || 0),
+        bike_amount: rawLeg.approved_bike_amount !== undefined ? parseFloat(rawLeg.approved_bike_amount || 0) : parseFloat(rawLeg.bike_amount || 0),
+        car_amount: rawLeg.approved_car_amount !== undefined ? parseFloat(rawLeg.approved_car_amount || 0) : parseFloat(rawLeg.car_amount || 0),
+        auto_amount: rawLeg.approved_auto_amount !== undefined ? parseFloat(rawLeg.approved_auto_amount || 0) : parseFloat(rawLeg.auto_amount || 0),
+        da_amount: rawLeg.approved_da_amount !== undefined ? parseFloat(rawLeg.approved_da_amount || 0) : parseFloat(rawLeg.da_amount || 0),
+        local_purchase: rawLeg.approved_local_purchase !== undefined ? parseFloat(rawLeg.approved_local_purchase || 0) : parseFloat(rawLeg.local_purchase || 0),
+        hotel_amount: rawLeg.approved_hotel_amount !== undefined ? parseFloat(rawLeg.approved_hotel_amount || 0) : parseFloat(rawLeg.hotel_amount || 0),
+        other_amount: rawLeg.approved_other_amount !== undefined ? parseFloat(rawLeg.approved_other_amount || 0) : parseFloat(rawLeg.other_amount || 0),
+      };
+
       allLegs.push({ date: claim.date, expCode: claim.expense_code, leg });
     }
   }
@@ -216,20 +237,34 @@ function buildExcelPrintHTML(user: any, claims: any[], attachments: any[] = [], 
     </tr>`;
   }).join("\n");
 
-  // Attached receipts HTML block — each on its own page
+  // Attached receipts HTML block — supports ALL file formats (JPG, PNG, WEBP, PDF, etc.)
   let attachmentsSection = "";
   if (attachments && attachments.length > 0) {
     attachmentsSection = attachments.map((att: any, index) => {
-      const absoluteUrl = getAbsoluteUrl(att.file_url);
+      const rawUrl = att.file_url || att.url || (typeof att === "string" ? att : "");
+      const absoluteUrl = getAbsoluteUrl(rawUrl);
       const dateStr = att.date ? fmtDate(att.date) : `Receipt #${index + 1}`;
-      // Fixed height = A4 landscape at 96dpi (793px) so it always fills exactly one PDF page
+      
+      const cleanUrl = rawUrl.toLowerCase().split("?")[0];
+      const isPdf = cleanUrl.endsWith(".pdf") || cleanUrl.includes("/pdf") || att.isPdf;
+
+      const mediaHtml = isPdf ? `
+        <object data="${absoluteUrl}#toolbar=0&navpanes=0" type="application/pdf" style="width:100%;max-width:1080px;height:640px;border:1px solid #ccc;">
+          <iframe src="${absoluteUrl}#toolbar=0&navpanes=0" style="width:100%;height:640px;border:none;">
+            <p style="text-align:center;padding:20px;font-weight:bold;">PDF Attachment: <a href="${absoluteUrl}" target="_blank">View PDF Document (${dateStr})</a></p>
+          </iframe>
+        </object>
+      ` : `
+        <img src="${absoluteUrl}" style="max-width:100%;max-height:640px;object-fit:contain;border:1px solid #ccc;" alt="Attachment ${dateStr}" />
+      `;
+
       return `
-        <div class="attachment-page" style="width:1122px;height:793px;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:10px 20px;box-sizing:border-box;background:#fff;overflow:hidden;">
+        <div class="attachment-page" style="width:1122px;height:793px;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:10px 20px;box-sizing:border-box;background:#fff;overflow:hidden;page-break-before:always;">
           <div style="width:100%;max-width:1080px;border:2px solid #1565C0;border-radius:6px;padding:12px 16px;background:#fff;box-sizing:border-box;display:flex;flex-direction:column;align-items:center;">
             <div style="width:100%;font-size:11pt;font-weight:900;color:#1565C0;text-align:left;border-bottom:2px solid #1565C0;padding-bottom:6px;margin-bottom:12px;text-transform:uppercase;font-family:Arial,Helvetica,sans-serif;letter-spacing:0.5px;">
-              BILL ATTACHMENT &mdash; DATE: ${dateStr}
+              BILL ATTACHMENT &mdash; DATE: ${dateStr} ${isPdf ? '(PDF DOCUMENT)' : ''}
             </div>
-            <img src="${absoluteUrl}" style="max-width:100%;max-height:640px;object-fit:contain;border:1px solid #ccc;" alt="Attachment ${dateStr}" />
+            ${mediaHtml}
           </div>
         </div>
       `;
