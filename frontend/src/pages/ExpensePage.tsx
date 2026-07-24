@@ -1638,13 +1638,48 @@ export default function ExpensePage() {
   };
   // ────────────────────────────────────────────────────────────────────────
 
+  const GENERIC_PREFIXES = [
+    "gov. hospital", "govt hospital", "district hospital", "g.h.", "sdh", "chc", "phc", "dh",
+    "m.g. hospital", "mg hospital", "r.k. hospital", "rk hospital"
+  ];
+
+  const parseBaseLocations = (baseReportingLocation: string): string[] => {
+    if (!baseReportingLocation) return [];
+    const raw = baseReportingLocation.trim();
+    const items = raw.split(",").map(x => x.trim().toLowerCase()).filter(Boolean);
+    const combined: string[] = [];
+    for (let i = 0; i < items.length; i++) {
+      const item = items[i];
+      if (GENERIC_PREFIXES.includes(item) && i + 1 < items.length) {
+        combined.push(`${item} ${items[i + 1]}`);
+        i++;
+      } else {
+        combined.push(item);
+      }
+    }
+    return combined;
+  };
+
   const matchesBase = (locText: string, baseLocations: string[]) => {
     const text = (locText || "").trim().toLowerCase();
     if (!text) return false;
+    const normText = text.replace(/,/g, " ").replace(/\s+/g, " ").trim();
+
     return baseLocations.some(base => {
       const cleanBase = base.trim().toLowerCase();
-      if (text === cleanBase) return true;
-      if (text.includes(cleanBase) || cleanBase.includes(text)) return true;
+      if (!cleanBase) return false;
+      const normBase = cleanBase.replace(/,/g, " ").replace(/\s+/g, " ").trim();
+
+      // 1. Exact match (raw or normalized)
+      if (text === cleanBase || normText === normBase) return true;
+
+      // 2. Ignore generic prefixes alone if cleanBase is just a generic prefix
+      if (GENERIC_PREFIXES.includes(cleanBase) || GENERIC_PREFIXES.includes(normBase)) {
+        return false;
+      }
+
+      // 3. Substring match on normalized strings
+      if (normText.includes(normBase) || normBase.includes(normText)) return true;
 
       // Check specific known abbreviations and names
       if (cleanBase.includes("mathura das mathur") || cleanBase.includes("mdm") || cleanBase.includes("jodhpur")) {
@@ -1719,9 +1754,7 @@ export default function ExpensePage() {
 
   const isBaseLocationOnlyTravel = (legs: ItineraryLeg[] = itineraries) => {
     if (!user || !user.base_reporting_location) return false;
-    const baseLocations = user.base_reporting_location
-      ? user.base_reporting_location.split(",").map((x: string) => x.trim().toLowerCase()).filter(Boolean)
-      : [];
+    const baseLocations = parseBaseLocations(user.base_reporting_location);
     if (baseLocations.length === 0) return false;
 
     // EXCLUSION: If any leg has travel_type === "Outdoor", policy is completely disabled

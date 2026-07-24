@@ -105,18 +105,58 @@ export function isStationLocation(locText) {
   return STATION_WORDS.some(w => clean.includes(w) || normalized.includes(w));
 }
 
+const GENERIC_PREFIXES = [
+  "gov. hospital", "govt hospital", "district hospital", "g.h.", "sdh", "chc", "phc", "dh",
+  "m.g. hospital", "mg hospital", "r.k. hospital", "rk hospital"
+];
+
+/**
+ * Parses base_reporting_location string safely, re-combining generic prefixes like "Gov. Hospital"
+ * with their actual hospital/city name if split by a comma.
+ */
+export function parseBaseLocations(baseReportingLocation) {
+  if (!baseReportingLocation) return [];
+  const raw = baseReportingLocation.trim();
+  const items = raw.split(",").map(x => x.trim().toLowerCase()).filter(Boolean);
+  
+  const combined = [];
+  for (let i = 0; i < items.length; i++) {
+    const item = items[i];
+    if (GENERIC_PREFIXES.includes(item) && i + 1 < items.length) {
+      combined.push(`${item} ${items[i + 1]}`);
+      i++;
+    } else {
+      combined.push(item);
+    }
+  }
+  return combined;
+}
+
 /**
  * Checks if a typed location matches any mapped base location (supports exact, substring, and abbreviations)
  */
 export function matchesBase(locText, baseLocations) {
   const text = (locText || "").trim().toLowerCase();
   if (!text) return false;
+  const normText = text.replace(/,/g, " ").replace(/\s+/g, " ").trim();
+
   return baseLocations.some(base => {
     const cleanBase = base.trim().toLowerCase();
-    if (text === cleanBase) return true;
-    if (text.includes(cleanBase) || cleanBase.includes(text)) return true;
+    if (!cleanBase) return false;
+    const normBase = cleanBase.replace(/,/g, " ").replace(/\s+/g, " ").trim();
 
-    // Check specific known abbreviations and names
+    // 1. Exact match (raw or normalized)
+    if (text === cleanBase || normText === normBase) return true;
+
+    // 2. Ignore generic prefixes alone if cleanBase is just a generic prefix
+    if (GENERIC_PREFIXES.includes(cleanBase) || GENERIC_PREFIXES.includes(normBase)) {
+      return false;
+    }
+
+    // 3. Substring match on normalized strings
+    if (normText.includes(normBase) || normBase.includes(normText)) return true;
+
+    // 4. Known specific abbreviation logic
     if (cleanBase.includes("mathura das mathur") || cleanBase.includes("mdm") || cleanBase.includes("jodhpur")) {
       if (text.includes("mdm") || text.includes("mathura das") || text.includes("mathur")) return true;
       if (text === "jodhpur" || text === "jodhpur base" || text === "mdm hospital") return true;
@@ -138,8 +178,7 @@ export function matchesBase(locText, baseLocations) {
  * Returns { isBaseLocOnly, isDaAllowed, baseLocations }
  */
 export function computeBaseLocPolicy(baseReportingLocation, itineraries) {
-  const baseLocations = (baseReportingLocation || "")
-    .split(",").map(x => x.trim().toLowerCase()).filter(Boolean);
+  const baseLocations = parseBaseLocations(baseReportingLocation);
 
   if (baseLocations.length === 0) return { isBaseLocOnly: false, isDaAllowed: true, baseLocations: [] };
 
