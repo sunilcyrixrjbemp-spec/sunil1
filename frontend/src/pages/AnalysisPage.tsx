@@ -1691,11 +1691,10 @@ export default function AnalysisPage() {
           <Card 
             size="small" 
             bordered={false} 
-            className="shadow-xs border border-gray-150 rounded-xl cursor-pointer hover:border-indigo-400 hover:shadow-md transition-all group"
-            onClick={() => setActiveModal("calls")}
+            className="shadow-xs border border-gray-150 rounded-xl transition-all group"
           >
             <Statistic
-              title={<span className="text-[9px] font-bold uppercase tracking-wider text-gray-400 group-hover:text-indigo-600">Calls Done 🔍</span>}
+              title={<span className="text-[9px] font-bold uppercase tracking-wider text-gray-500">Calls Done</span>}
               value={`${activityStats.callsCompleted} / ${activityStats.callsAssigned}`}
               valueStyle={{ fontSize: "16px", fontWeight: 800, color: "#1F2937", fontFamily: "monospace" }}
               prefix={<FundOutlined className="text-indigo-500 mr-1.5" />}
@@ -1708,11 +1707,10 @@ export default function AnalysisPage() {
           <Card 
             size="small" 
             bordered={false} 
-            className="shadow-xs border border-gray-150 rounded-xl cursor-pointer hover:border-teal-400 hover:shadow-md transition-all group"
-            onClick={() => setActiveModal("pms")}
+            className="shadow-xs border border-gray-150 rounded-xl transition-all group"
           >
             <Statistic
-              title={<span className="text-[9px] font-bold uppercase tracking-wider text-gray-400 group-hover:text-teal-600">PMS Done 🔍</span>}
+              title={<span className="text-[9px] font-bold uppercase tracking-wider text-gray-500">PMS Done</span>}
               value={activityStats.pmsCount}
               valueStyle={{ fontSize: "16px", fontWeight: 800, color: "#1F2937", fontFamily: "monospace" }}
               prefix={<CheckOutlined className="text-teal-500 mr-1.5" />}
