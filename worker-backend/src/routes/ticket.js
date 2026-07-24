@@ -86,9 +86,8 @@ async function checkAndAutoCloseTickets(env) {
 
 /**
  * GET /api/tickets
- * STRICT PRIVACY RULE:
- * A concern / ticket is ONLY visible to the user who created it OR the user to whom it is assigned.
- * It is NOT visible to anyone else under any circumstances.
+ * Admin sees ALL tickets in system regardless of assignee.
+ * Other roles ONLY see tickets created by them OR assigned specifically to them by name.
  */
 export async function handleGetTickets(request, env, params, query, user) {
   await checkAndAutoCloseTickets(env);
@@ -97,14 +96,21 @@ export async function handleGetTickets(request, env, params, query, user) {
   const uCode = String(user.user_id || "").trim();
   const uName = String(user.name || "").trim();
 
-  const results = await db.select()
-    .from(supportTickets)
-    .where(or(
-      eq(supportTickets.createdByCode, uCode),
-      eq(supportTickets.createdByName, uName),
-      eq(supportTickets.assignedToName, uName)
-    ))
-    .orderBy(desc(supportTickets.createdAt));
+  let results;
+  if (user.role === "Admin") {
+    results = await db.select()
+      .from(supportTickets)
+      .orderBy(desc(supportTickets.createdAt));
+  } else {
+    results = await db.select()
+      .from(supportTickets)
+      .where(or(
+        eq(supportTickets.createdByCode, uCode),
+        eq(supportTickets.createdByName, uName),
+        eq(supportTickets.assignedToName, uName)
+      ))
+      .orderBy(desc(supportTickets.createdAt));
+  }
 
   const formatted = (results || []).map(formatTicketResponse);
   return jsonResponse(formatted);

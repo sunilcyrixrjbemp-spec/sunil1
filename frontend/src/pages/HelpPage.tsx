@@ -503,6 +503,7 @@ export default function HelpPage() {
     (t.created_by_name || t.createdByName) === currentUser?.name
   );
   const assignedTickets = tickets.filter(t => {
+    if (currentUser?.role === "Admin") return true;
     const aName = (t.assigned_to_name || t.assignedToName || "").trim();
     const curName = (currentUser?.name || "").trim();
     const isAssignee = aName.toLowerCase() === curName.toLowerCase();
