@@ -155,29 +155,29 @@ export function computeBaseLocPolicy(baseReportingLocation, itineraries) {
     matchesBase(leg.to, baseLocations)
   );
 
-  if (!hasVisitedBase) return { isBaseLocOnly: false, isDaAllowed: true, baseLocations };
-
-  // Must NOT have visited any non-base official facility (dropdown selected)
-  // IMPORTANT: Residence locations (home/room/hotel), stations (bus stand/railway),
-  // and market/courier/repair errands in base city are NOT official healthcare facility visits.
-  const RESIDENCE_WORDS_CHK = ["home", "residence", "room", "quarter", "house", "flat", "pg", "stay", "village", "vill", "rent", "address", "dera", "deri", "hotel"];
-  const NON_FACILITY_WORDS_CHK = [
-    ...RESIDENCE_WORDS_CHK,
-    ...STATION_WORDS,
-    ...MARKET_WORDS,
-    "shop", "store", "courier", "parcel", "office", "repair"
+  // Healthcare facility keywords used to identify official CHC/PHC/SDH/DH/Hospital visits
+  const HEALTHCARE_FACILITY_KEYWORDS = [
+    "chc", "phc", "sdh", "dh", "hospital", "hosp", "college", "collage",
+    "dispensary", "subcenter", "sub-center", "sub center", "ddw", "warehouse",
+    "uphc", "up-hc", "up hc", "medical college", "medical collage"
   ];
 
+  const isOfficialNonBaseFacility = (locText) => {
+    if (!locText) return false;
+    const clean = locText.trim().toLowerCase();
+    const normalized = clean.replace(/[-_]/g, " ");
+
+    // If it matches base location → it is base, NOT a non-base facility
+    if (matchesBase(clean, baseLocations)) return false;
+
+    // Must contain an official healthcare facility keyword (CHC, PHC, SDH, DH, Hospital, College, etc.)
+    return HEALTHCARE_FACILITY_KEYWORDS.some(w => clean.includes(w) || normalized.includes(w));
+  };
+
   const visitedNonBase = itineraries.some(leg => {
-    const f = (leg.from || "").trim().toLowerCase();
-    const t = (leg.to || "").trim().toLowerCase();
-    const fromNorm = f.replace(/[-_]/g, " ");
-    const toNorm   = t.replace(/[-_]/g, " ");
-    const fromIsNonFacilityText = NON_FACILITY_WORDS_CHK.some(w => f.includes(w) || fromNorm.includes(w));
-    const toIsNonFacilityText   = NON_FACILITY_WORDS_CHK.some(w => t.includes(w) || toNorm.includes(w));
-    if (!leg.from_custom && !matchesBase(f, baseLocations) && !fromIsNonFacilityText) return true;
-    if (!leg.to_custom   && !matchesBase(t, baseLocations) && !toIsNonFacilityText)   return true;
-    return false;
+    const f = leg.from || "";
+    const t = leg.to || "";
+    return isOfficialNonBaseFacility(f) || isOfficialNonBaseFacility(t);
   });
 
   if (visitedNonBase) return { isBaseLocOnly: false, isDaAllowed: true, baseLocations };

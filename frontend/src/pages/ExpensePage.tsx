@@ -1735,36 +1735,29 @@ export default function ExpensePage() {
     );
     if (!hasVisitedBaseLocation) return false;
 
-    // Must NOT have visited any non-base OFFICIAL DROPDOWN facility.
-    // Residence locations (home/room/hotel), stations (bus stand/railway),
-    // and market/courier/repair errands in base city are NOT official healthcare facility visits.
-    const RESIDENCE_WORDS_CHK = ["home", "residence", "room", "quarter", "house", "flat", "pg",
-      "stay", "village", "vill", "rent", "address", "dera", "deri", "hotel"];
-    const MARKET_WORDS_CHK = ["market", "bazaar", "bazar", "mandi", "haat"];
-    const STATION_WORDS_CHK = [
-      "station", "railway", "rly", "bus stand", "busstand", "bus-stand",
-      "bus stop", "busstop", "bus-stop", "bus depot", "busdepot", "bus adda",
-      "busadda", "bus-adda", "stand", "depot"
-    ];
-    const NON_FACILITY_WORDS_CHK = [
-      ...RESIDENCE_WORDS_CHK,
-      ...STATION_WORDS_CHK,
-      ...MARKET_WORDS_CHK,
-      "shop", "store", "courier", "parcel", "office", "repair"
+    // Healthcare facility keywords used to identify official CHC/PHC/SDH/DH/Hospital visits
+    const HEALTHCARE_FACILITY_KEYWORDS = [
+      "chc", "phc", "sdh", "dh", "hospital", "hosp", "college", "collage",
+      "dispensary", "subcenter", "sub-center", "sub center", "ddw", "warehouse",
+      "uphc", "up-hc", "up hc", "medical college", "medical collage"
     ];
 
+    const isOfficialNonBaseFacility = (locText: string) => {
+      if (!locText) return false;
+      const clean = locText.trim().toLowerCase();
+      const normalized = clean.replace(/[-_]/g, " ");
+
+      // If it matches base location → it is base, NOT a non-base facility
+      if (matchesBase(clean, baseLocations)) return false;
+
+      // Must contain an official healthcare facility keyword (CHC, PHC, SDH, DH, Hospital, College, etc.)
+      return HEALTHCARE_FACILITY_KEYWORDS.some(w => clean.includes(w) || normalized.includes(w));
+    };
+
     const visitedNonBaseOfficialFacility = legs.some(leg => {
-      const fromLoc = (leg.from || "").trim().toLowerCase();
-      const toLoc   = (leg.to   || "").trim().toLowerCase();
-      const fromCustom = !!leg.from_custom;
-      const toCustom   = !!leg.to_custom;
-      const fromNorm = fromLoc.replace(/[-_]/g, " ");
-      const toNorm   = toLoc.replace(/[-_]/g, " ");
-      const fromIsNonFacilityText = NON_FACILITY_WORDS_CHK.some(w => fromLoc.includes(w) || fromNorm.includes(w));
-      const toIsNonFacilityText   = NON_FACILITY_WORDS_CHK.some(w => toLoc.includes(w) || toNorm.includes(w));
-      if (!fromCustom && !matchesBase(fromLoc, baseLocations) && !fromIsNonFacilityText) return true;
-      if (!toCustom   && !matchesBase(toLoc,   baseLocations) && !toIsNonFacilityText)   return true;
-      return false;
+      const fromLoc = leg.from || "";
+      const toLoc   = leg.to   || "";
+      return isOfficialNonBaseFacility(fromLoc) || isOfficialNonBaseFacility(toLoc);
     });
 
     return !visitedNonBaseOfficialFacility;
