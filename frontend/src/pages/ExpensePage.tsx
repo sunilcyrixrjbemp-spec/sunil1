@@ -1645,14 +1645,14 @@ export default function ExpensePage() {
 
   const parseBaseLocations = (baseReportingLocation: string): string[] => {
     if (!baseReportingLocation) return [];
-    const raw = baseReportingLocation.trim();
+    const raw = String(baseReportingLocation).trim();
     if (!raw) return [];
     const fullNorm = normalizeLoc(raw);
     const bases = [fullNorm];
-    const parts = raw.split(/[,;]/).map(x => normalizeLoc(x)).filter(Boolean);
-    for (const p of parts) {
-      if (p.split(" ").length >= 2 && !bases.includes(p)) {
-        bases.push(p);
+    if (raw.includes(";") || raw.includes("|") || raw.includes("\n")) {
+      const parts = raw.split(/[;|\n]/).map(x => normalizeLoc(x)).filter(Boolean);
+      for (const p of parts) {
+        if (p && !bases.includes(p)) bases.push(p);
       }
     }
     return bases;

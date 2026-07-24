@@ -115,19 +115,21 @@ function normalizeLoc(str) {
  */
 export function parseBaseLocations(baseReportingLocation) {
   if (!baseReportingLocation) return [];
-  const raw = baseReportingLocation.trim();
+  const raw = String(baseReportingLocation).trim();
   if (!raw) return [];
-  // Normalized full string
+
+  // The primary base location is the normalized full string
   const fullNorm = normalizeLoc(raw);
   const bases = [fullNorm];
 
-  // If contains distinct mapped hospitals separated by semicolon or comma where each part has a city/location name
-  const parts = raw.split(/[,;]/).map(x => normalizeLoc(x)).filter(Boolean);
-  for (const p of parts) {
-    if (p.split(" ").length >= 2 && !bases.includes(p)) {
-      bases.push(p);
+  // Only split if multiple distinct locations are separated by semicolon, pipe, or newlines
+  if (raw.includes(";") || raw.includes("|") || raw.includes("\n")) {
+    const parts = raw.split(/[;|\n]/).map(x => normalizeLoc(x)).filter(Boolean);
+    for (const p of parts) {
+      if (p && !bases.includes(p)) bases.push(p);
     }
   }
+
   return bases;
 }
 
