@@ -567,13 +567,17 @@ export async function getExpenseInitData(env, targetUser, monthStr) {
 
   const gradeToLookup = (targetUser.designation || "").toLowerCase().includes("specialist") ? "O1" : targetUser.grade;
 
-  // Run all 9 independent DB queries in PARALLEL — reduces 9 round trips to 1
+  // Run all 11 independent DB queries in PARALLEL — reduces round trips to 1
+  // BUG2A FIX: Fetch Bike and Car rates separately by grade+vehicle_type so both
+  // rates are grade-accurate regardless of employee's primary vehicle type.
   const [
     facilitiesRows,
     submittedRows,
     limits,
     limitReqs,
     allowance,
+    gradeBikeRate,
+    gradeCarRate,
     defaultBike,
     defaultCar,
     statsRes,
@@ -592,8 +596,14 @@ export async function getExpenseInitData(env, targetUser, monthStr) {
     env.DB.prepare(`SELECT * FROM limit_approval_requests WHERE user_id = ? AND for_month = ?`
     ).bind(targetUser.user_id, monthStr).all(),
     env.DB.prepare(`SELECT * FROM allowance_master WHERE grade = ?`).bind(gradeToLookup).first(),
-    env.DB.prepare(`SELECT rate_per_km FROM allowance_master WHERE vehicle_type = 'Bike' LIMIT 1`).first(),
-    env.DB.prepare(`SELECT rate_per_km FROM allowance_master WHERE vehicle_type = 'Car' LIMIT 1`).first(),
+    // Grade-specific Bike rate (most accurate)
+    env.DB.prepare(`SELECT rate_per_km FROM allowance_master WHERE grade = ? AND LOWER(TRIM(vehicle_type)) = 'bike' LIMIT 1`).bind(gradeToLookup).first(),
+    // Grade-specific Car rate (most accurate)
+    env.DB.prepare(`SELECT rate_per_km FROM allowance_master WHERE grade = ? AND LOWER(TRIM(vehicle_type)) = 'car' LIMIT 1`).bind(gradeToLookup).first(),
+    // Fallback: any-grade Bike rate
+    env.DB.prepare(`SELECT rate_per_km FROM allowance_master WHERE LOWER(TRIM(vehicle_type)) = 'bike' LIMIT 1`).first(),
+    // Fallback: any-grade Car rate
+    env.DB.prepare(`SELECT rate_per_km FROM allowance_master WHERE LOWER(TRIM(vehicle_type)) = 'car' LIMIT 1`).first(),
     env.DB.prepare(`
       SELECT 
         SUM(CASE WHEN LOWER(TRIM(i.travel_mode)) IN ('bike', 'car') THEN COALESCE(i.distance_km, 0.0) ELSE 0.0 END) as total_km,
@@ -628,8 +638,9 @@ export async function getExpenseInitData(env, targetUser, monthStr) {
   const existingKmReq = kmReqs.length > 0 ? { status: kmReqs[0].status, requested_value: kmReqs[0].requested_value } : null;
   const existingAutoReq = autoReqs.length > 0 ? { status: autoReqs[0].status, requested_value: autoReqs[0].requested_value } : null;
 
-  const fallbackBikeRate = defaultBike?.rate_per_km || 4.5;
-  const fallbackCarRate = defaultCar?.rate_per_km || 9.0;
+  // BUG2A FIX: Use grade-specific rates first; fallback to any-grade only if missing
+  const resolvedBikeRate = gradeBikeRate?.rate_per_km ?? defaultBike?.rate_per_km ?? 4.5;
+  const resolvedCarRate  = gradeCarRate?.rate_per_km  ?? defaultCar?.rate_per_km  ?? 9.0;
 
   const allowanceDict = {
     policy_missing: !allowance,
@@ -642,8 +653,8 @@ export async function getExpenseInitData(env, targetUser, monthStr) {
     hotel_out_state_s: allowance ? allowance.hotel_out_state_s : null,
     hotel_out_state_d: allowance ? allowance.hotel_out_state_d : null,
     max_km_per_month: allowance ? allowance.max_km_per_month : null,
-    rate_bike: allowance ? (allowance.vehicle_type === "Bike" ? allowance.rate_per_km : fallbackBikeRate) : null,
-    rate_car: allowance ? (allowance.vehicle_type === "Car" ? allowance.rate_per_km : fallbackCarRate) : null,
+    rate_bike: resolvedBikeRate,
+    rate_car: resolvedCarRate,
     vehicle_type: allowance ? allowance.vehicle_type : null,
     current_month_km: statsRes?.total_km || 0.0,
     current_month_auto: statsRes?.total_auto || 0.0,
@@ -2837,7 +2848,20 @@ export async function handleSubmitExpense(request, env, params, query, user) {
   }
 
   // Execute ALL DB statements in a SINGLE ATOMIC TRANSACTION
-  await runBatchWrite(env, dbBatchStatements);
+  const batchResults = await runBatchWrite(env, dbBatchStatements);
+
+  // ── BUG 1 FIX: Capture auto-increment ID for NEW expense inserts ──
+  // For edits, newExpId was already set from existingExpense.id (line 2199).
+  // For new inserts, the expense INSERT is the first statement in dbBatchStatements,
+  // so batchResults[0].meta.last_row_id gives the new row's integer primary key.
+  if (!existingExpense) {
+    const firstResult = batchResults && batchResults[0];
+    newExpId = firstResult?.meta?.last_row_id ?? firstResult?.lastRowId ?? null;
+    if (!newExpId) {
+      console.error("BUG1: Could not resolve newExpId after expense INSERT. batchResults[0]=", JSON.stringify(firstResult));
+      return jsonResponse({ error: "Expense saved but approval routing failed (could not resolve expense ID). Please contact admin." }, 500);
+    }
+  }
 
   // Create approvals level sequence records
   for (const step of approvalsToInsert) {
