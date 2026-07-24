@@ -1035,9 +1035,9 @@ export default function MonthSummaryPage() {
         const html = buildExcelPrintHTML(userObj, claims, attachments, advance, false);
         const safeName = (userObj.name || "Engineer").replace(/[^a-zA-Z0-9]/g, "_");
         const safeMonth = (userObj.month || "Month").replace(/[^a-zA-Z0-9]/g, "_");
-        const fileName = `${safeName}_${userObj.e_code || userObj.user_id}_${safeMonth}_${userObj.year}.png`;
-        const imageBlob = await renderHTMLToImageBlob(html);
-        zip.file(fileName, imageBlob);
+        const fileName = `${safeName}_${userObj.e_code || userObj.user_id}_${safeMonth}_${userObj.year}.pdf`;
+        const pdfBlob = await renderHTMLToPDFBlob(html);
+        zip.file(fileName, pdfBlob);
       }
 
       const zipBlob = await zip.generateAsync({ type: "blob" });
