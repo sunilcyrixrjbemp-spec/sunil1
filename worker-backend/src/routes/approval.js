@@ -9,6 +9,19 @@ function jsonResponse(data, status = 200) {
   });
 }
 
+function parseClientTimestamp(raw) {
+  if (!raw) return new Date().toISOString();
+  let str = String(raw).trim();
+  if (str.includes(" ") && !str.includes("T")) {
+    str = str.replace(" ", "T");
+  }
+  const d = new Date(str);
+  if (!isNaN(d.getTime())) {
+    return d.toISOString();
+  }
+  return new Date().toISOString();
+}
+
 async function queryInChunks(db, queryTemplate, ids, chunkSize = 50) {
   let allResults = [];
   for (let i = 0; i < ids.length; i += chunkSize) {
@@ -333,7 +346,7 @@ export async function handleApprove(request, env, params, query, user) {
   }
 
   const { comments, approved_value, client_timestamp, itinerary_edits, removed_attachments } = body;
-  const timestamp = client_timestamp || new Date().toISOString();
+  const timestamp = parseClientTimestamp(client_timestamp);
 
   // 1. Handle Legacy Expense (expenseId < 0 and <= -200000)
   if (expenseId <= -200000) {
@@ -532,7 +545,7 @@ export async function handleReject(request, env, params, query, user) {
     return jsonResponse({ error: "Rejection comments/remark is mandatory" }, 400);
   }
 
-  const timestamp = client_timestamp || new Date().toISOString();
+  const timestamp = parseClientTimestamp(client_timestamp);
 
   // 1. Handle Legacy Expense Rejection
   if (expenseId <= -200000) {
@@ -729,7 +742,7 @@ export async function handleReturnToDraft(request, env, params, query, user) {
     return jsonResponse({ error: "Comments/reason for returning is mandatory" }, 400);
   }
 
-  const timestamp = client_timestamp || new Date().toISOString();
+  const timestamp = parseClientTimestamp(client_timestamp);
 
   // Verify coordinator has a pending approval on this expense
   const activeApproval = await env.DB.prepare(`
@@ -1013,7 +1026,7 @@ export async function handleBulkApprove(request, env, params, query, user) {
         headers: request.headers,
         body: JSON.stringify({
           comments: comments || ("Bulk " + (action_type === "reject" ? "rejection" : "approval")),
-          client_timestamp: new Date().toISOString()
+          client_timestamp: parseClientTimestamp(body.client_timestamp)
         })
       });
 

@@ -22,6 +22,19 @@ const FULL_ACCESS_ROLES = [
 function hasFullAccess(roleString) {
   return FULL_ACCESS_ROLES.includes((roleString || "").trim().toLowerCase());
 }
+
+function parseClientTimestamp(raw) {
+  if (!raw) return new Date().toISOString();
+  let str = String(raw).trim();
+  if (str.includes(" ") && !str.includes("T")) {
+    str = str.replace(" ", "T");
+  }
+  const d = new Date(str);
+  if (!isNaN(d.getTime())) {
+    return d.toISOString();
+  }
+  return new Date().toISOString();
+}
 // ─────────────────────────────────────────────────────────────────────────────
 
 function jsonResponse(data, status = 200) {
@@ -712,12 +725,12 @@ export async function handleCreateLimitRequest(request, env, params, query, user
     return jsonResponse({ error: "Invalid JSON body" }, 400);
   }
 
-  const { user_id, type, amount, month } = body;
+  const { user_id, type, amount, month, client_timestamp } = body;
   if (!user_id || !type || !amount || !month) {
     return jsonResponse({ error: "Missing required parameters: user_id, type, amount, month" }, 400);
   }
 
-  const timestamp = new Date().toISOString();
+  const timestamp = parseClientTimestamp(client_timestamp);
   
   // Find manager from user profile
   const requester = await env.DB.prepare("SELECT * FROM users WHERE user_id = ?").bind(user_id).first();
@@ -2135,8 +2148,8 @@ export async function handleSubmitExpense(request, env, params, query, user) {
   }
 
   const rawClientTs = getFormVal("client_timestamp");
-  // Prefer the client-provided timestamp so all dates come from frontend
-  const timestamp = rawClientTs ? new Date(rawClientTs).toISOString() : new Date().toISOString();
+  // Prefer the client-provided timestamp so all dates come from frontend action time
+  const timestamp = parseClientTimestamp(rawClientTs);
 
   // ─── Policy Rules Checks (Allowed Past Days & Monthly Cutoff) ─────────────────
   try {
