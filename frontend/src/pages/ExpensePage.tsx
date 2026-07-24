@@ -1742,6 +1742,7 @@ export default function ExpensePage() {
     if (toIsResidence   && toIsBase)   return false;
     if (fromIsResidence && toIsBase)   return true;  // Home → Base
     if (fromIsBase      && toIsResidence) return true;  // Base → Home
+    if (fromIsBase      && toIsBase)   return true;  // Base → Base (e.g. JLN Medical College → JLN Hospital)
     return false;
   };
 
