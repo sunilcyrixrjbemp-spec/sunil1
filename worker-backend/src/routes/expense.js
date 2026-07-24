@@ -105,69 +105,64 @@ export function isStationLocation(locText) {
   return STATION_WORDS.some(w => clean.includes(w) || normalized.includes(w));
 }
 
-const GENERIC_PREFIXES = [
-  "gov. hospital", "govt hospital", "district hospital", "g.h.", "sdh", "chc", "phc", "dh",
-  "m.g. hospital", "mg hospital", "r.k. hospital", "rk hospital"
-];
+function normalizeLoc(str) {
+  if (!str) return "";
+  return str.toLowerCase().replace(/[,._-]/g, " ").replace(/\s+/g, " ").trim();
+}
 
 /**
- * Parses base_reporting_location string safely, re-combining generic prefixes like "Gov. Hospital"
- * with their actual hospital/city name if split by a comma.
+ * Parses base_reporting_location string safely from database.
  */
 export function parseBaseLocations(baseReportingLocation) {
   if (!baseReportingLocation) return [];
   const raw = baseReportingLocation.trim();
-  const items = raw.split(",").map(x => x.trim().toLowerCase()).filter(Boolean);
-  
-  const combined = [];
-  for (let i = 0; i < items.length; i++) {
-    const item = items[i];
-    if (GENERIC_PREFIXES.includes(item) && i + 1 < items.length) {
-      combined.push(`${item} ${items[i + 1]}`);
-      i++;
-    } else {
-      combined.push(item);
+  if (!raw) return [];
+  // Normalized full string
+  const fullNorm = normalizeLoc(raw);
+  const bases = [fullNorm];
+
+  // If contains distinct mapped hospitals separated by semicolon or comma where each part has a city/location name
+  const parts = raw.split(/[,;]/).map(x => normalizeLoc(x)).filter(Boolean);
+  for (const p of parts) {
+    if (p.split(" ").length >= 2 && !bases.includes(p)) {
+      bases.push(p);
     }
   }
-  return combined;
+  return bases;
 }
 
 /**
- * Checks if a typed location matches any mapped base location (supports exact, substring, and abbreviations)
+ * Checks if a typed location matches the employee's mapped base location from DB.
+ * Strictly uses the employee's mapped DB base location string.
  */
 export function matchesBase(locText, baseLocations) {
-  const text = (locText || "").trim().toLowerCase();
-  if (!text) return false;
-  const normText = text.replace(/,/g, " ").replace(/\s+/g, " ").trim();
+  const normText = normalizeLoc(locText);
+  if (!normText) return false;
 
-  return baseLocations.some(base => {
-    const cleanBase = base.trim().toLowerCase();
-    if (!cleanBase) return false;
-    const normBase = cleanBase.replace(/,/g, " ").replace(/\s+/g, " ").trim();
+  const bases = Array.isArray(baseLocations) ? baseLocations : parseBaseLocations(baseLocations);
 
-    // 1. Exact match (raw or normalized)
-    if (text === cleanBase || normText === normBase) return true;
+  return bases.some(base => {
+    const normBase = normalizeLoc(base);
+    if (!normBase) return false;
 
-    // 2. Ignore generic prefixes alone if cleanBase is just a generic prefix
-    if (GENERIC_PREFIXES.includes(cleanBase) || GENERIC_PREFIXES.includes(normBase)) {
-      return false;
-    }
+    // 1. Exact match
+    if (normText === normBase) return true;
 
-    // 3. Substring match on normalized strings
+    // 2. Substring match on normalized strings
     if (normText.includes(normBase) || normBase.includes(normText)) return true;
 
-    // 4. Known specific abbreviation logic
-    if (cleanBase.includes("mathura das mathur") || cleanBase.includes("mdm") || cleanBase.includes("jodhpur")) {
-      if (text.includes("mdm") || text.includes("mathura das") || text.includes("mathur")) return true;
-      if (text === "jodhpur" || text === "jodhpur base" || text === "mdm hospital") return true;
+    // 3. Known specific hospital abbreviation logic
+    if (normBase.includes("mathura das mathur") || normBase.includes("mdm")) {
+      if (normText.includes("mdm") || normText.includes("mathura das")) return true;
+      if (normText === "jodhpur" || normText === "jodhpur base" || normText === "mdm hospital") return true;
     }
-    if (cleanBase.includes("pbm") || cleanBase.includes("bikaner")) {
-      if (text.includes("pbm")) return true;
-      if (text === "bikaner" || text === "bikaner base" || text === "pbm hospital") return true;
+    if (normBase.includes("pbm") || normBase.includes("bikaner")) {
+      if (normText.includes("pbm")) return true;
+      if (normText === "bikaner" || normText === "bikaner base" || normText === "pbm hospital") return true;
     }
-    if (cleanBase.includes("jln") || cleanBase.includes("ajmer")) {
-      if (text.includes("jln")) return true;
-      if (text === "ajmer" || text === "ajmer base" || text === "jln hospital") return true;
+    if (normBase.includes("jln") || normBase.includes("ajmer")) {
+      if (normText.includes("jln")) return true;
+      if (normText === "ajmer" || normText === "ajmer base" || normText === "jln hospital") return true;
     }
     return false;
   });
