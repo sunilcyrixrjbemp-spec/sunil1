@@ -35,24 +35,14 @@ import {
 } from "@ant-design/icons";
 import { hasFullAccess } from "../utils/constants";
 
-const formatCompactNumber = (num: number): string => {
+const formatFullNumber = (num: number): string => {
   if (!num || isNaN(num)) return "0";
-  const abs = Math.abs(num);
-  if (abs >= 1e7) {
-    return `${(num / 1e7).toLocaleString('en-IN', { maximumFractionDigits: 1 })} Cr`;
-  }
-  if (abs >= 1e5) {
-    return `${(num / 1e5).toLocaleString('en-IN', { maximumFractionDigits: 1 })} L`;
-  }
-  if (abs >= 1e3) {
-    return `${(num / 1e3).toLocaleString('en-IN', { maximumFractionDigits: 1 })} K`;
-  }
   return num.toLocaleString('en-IN');
 };
 
-const formatCompactCurrency = (num: number): string => {
+const formatFullCurrency = (num: number): string => {
   if (!num || isNaN(num)) return "₹0";
-  return `₹${formatCompactNumber(num)}`;
+  return `₹${formatFullNumber(num)}`;
 };
 
 const getSegmentedClass = (status: string) => {
@@ -1731,8 +1721,8 @@ export default function AnalysisPage() {
               valueStyle={{ fontSize: "15px", fontWeight: 800, color: "#1F2937", fontFamily: "monospace" }}
               prefix={<TagOutlined className="text-cyan-500 mr-1.5" />}
               suffix={
-                <div className="text-[10px] font-extrabold text-emerald-600 mt-0.5 tracking-tight font-mono" title={`₹${activityStats.assetTaggingValue.toLocaleString('en-IN')}`}>
-                  Val: {formatCompactCurrency(activityStats.assetTaggingValue)}
+                <div className="text-[10px] font-extrabold text-emerald-600 mt-0.5 tracking-tight font-mono">
+                  Val: ₹{activityStats.assetTaggingValue.toLocaleString('en-IN')}
                 </div>
               }
             />
@@ -2237,7 +2227,7 @@ export default function AnalysisPage() {
                           tickSize: 0,
                           tickPadding: 8,
                           tickRotation: 0,
-                          format: (v) => formatCompactNumber(Number(v))
+                          format: (v) => formatFullNumber(Number(v))
                         }}
                         theme={{
                           grid: { line: { stroke: '#f1f5f9', strokeWidth: 1 } },
@@ -2314,7 +2304,7 @@ export default function AnalysisPage() {
                           tickSize: 0,
                           tickPadding: 8,
                           tickRotation: 0,
-                          format: (v) => formatCompactCurrency(Number(v))
+                          format: (v) => formatFullCurrency(Number(v))
                         }}
                         theme={{
                           grid: { line: { stroke: '#f1f5f9', strokeWidth: 1 } },
