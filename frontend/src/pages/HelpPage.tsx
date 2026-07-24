@@ -503,13 +503,10 @@ export default function HelpPage() {
     (t.created_by_name || t.createdByName) === currentUser?.name
   );
   const assignedTickets = tickets.filter(t => {
-    const aName = t.assigned_to_name || t.assignedToName;
-    const aRole = t.assigned_to_role || t.assignedToRole;
-    const cType = t.concern_type || t.concernType;
-    const isAssignee = aName === currentUser?.name;
-    const isRoleMatched = aRole === currentUser?.role;
-    const isAdminProfile = currentUser?.role === "Admin" && cType === "Profile";
-    return isAssignee || isRoleMatched || isAdminProfile;
+    const aName = (t.assigned_to_name || t.assignedToName || "").trim();
+    const curName = (currentUser?.name || "").trim();
+    const isAssignee = aName.toLowerCase() === curName.toLowerCase();
+    return isAssignee;
   });
 
   const getTicketAnalytics = () => {
