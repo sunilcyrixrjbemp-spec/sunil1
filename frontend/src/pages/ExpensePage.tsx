@@ -1798,6 +1798,18 @@ export default function ExpensePage() {
   //   defeated the whole point of this policy. Do NOT re-add an
   //   activity-based DA override here.
   // ═══════════════════════════════════════════════════════════════════════════
+  const isStationLocation = (locText: string) => {
+    if (!locText) return false;
+    const clean = locText.trim().toLowerCase();
+    const normalized = clean.replace(/[-_]/g, " ");
+    const stationWords = [
+      "station", "railway", "rly", "bus stand", "busstand", "bus-stand",
+      "bus stop", "busstop", "bus-stop", "bus depot", "busdepot", "bus adda",
+      "busadda", "bus-adda", "stand", "depot"
+    ];
+    return stationWords.some(w => clean.includes(w) || normalized.includes(w));
+  };
+
   const isDailyAllowanceAllowed = (legs: ItineraryLeg[] = itineraries) => {
     if (!isBaseLocationOnlyTravel(legs)) return true;
     if (!user || !user.base_reporting_location) return true;
@@ -1807,10 +1819,9 @@ export default function ExpensePage() {
       : [];
 
     const hasStation = legs.some(leg => {
-      const fromLoc = (leg.from || "").trim().toLowerCase();
-      const toLoc = (leg.to || "").trim().toLowerCase();
-      const stationWords = ["station", "railway", "bus stand", "bus stop", "bus depot"];
-      return stationWords.some(w => fromLoc.includes(w) || toLoc.includes(w));
+      const fromLoc = leg.from || "";
+      const toLoc = leg.to || "";
+      return isStationLocation(fromLoc) || isStationLocation(toLoc);
     });
 
     // Rule E: PBM Bikaner / MDM Jodhpur → DA always allowed in base-only travel,
@@ -1818,8 +1829,6 @@ export default function ExpensePage() {
     const isDaAllowedBaseLocation = isSpecialBaseLocation(baseLocations);
 
     if (hasStation) {
-      // Station rule: Only allowed if travel type is Outdoor. But Outdoor travel disables the policy
-      // entirely in isBaseLocationOnlyTravel(), so this wouldn't be reached if Outdoor is true.
       return false;
     }
 
@@ -3714,6 +3723,18 @@ export default function ExpensePage() {
                               readOnly
                               className="input-lte font-bold bg-gray-100 text-gray-500 cursor-not-allowed"
                             />
+                            {/* Reason audit badge */}
+                            <div className="mt-1 flex items-center gap-1 text-[9px]">
+                              {isDailyAllowanceAllowed() ? (
+                                <span className="bg-emerald-50 text-emerald-700 px-1.5 py-0.5 rounded font-semibold border border-emerald-200" title="DA Granted per policy">
+                                  ✓ DA Granted
+                                </span>
+                              ) : (
+                                <span className="bg-amber-50 text-amber-700 px-1.5 py-0.5 rounded font-semibold border border-amber-200" title="DA ₹0: Base location travel without outdoor or non-base facility visit">
+                                  ⚠️ DA ₹0 (Base Policy)
+                                </span>
+                              )}
+                            </div>
                           </div>
 
                           <div>

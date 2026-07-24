@@ -90,9 +90,20 @@ async function queryInChunks(db, queryTemplate, ids, chunkSize = 50) {
 // ─── Base Location Policy Shared Utilities ──────────────────────────────────
 // Keywords used across all policy checks
 const MARKET_WORDS = ["market", "bazaar", "bazar", "mandi", "haat"];
-const STATION_WORDS = ["station", "railway", "bus stand", "bus stop", "bus depot", "bus adda", "rly"];
+const STATION_WORDS = [
+  "station", "railway", "rly", "bus stand", "busstand", "bus-stand",
+  "bus stop", "busstop", "bus-stop", "bus depot", "busdepot", "bus adda",
+  "busadda", "bus-adda", "stand", "depot"
+];
 const DA_ALLOWED_BASES = ["pbm", "mathura das mathur", "mdm"];
 const RESIDENCE_SKIP_WORDS = [...MARKET_WORDS, ...STATION_WORDS];
+
+export function isStationLocation(locText) {
+  if (!locText) return false;
+  const clean = locText.trim().toLowerCase();
+  const normalized = clean.replace(/[-_]/g, " ");
+  return STATION_WORDS.some(w => clean.includes(w) || normalized.includes(w));
+}
 
 /**
  * Checks if a typed location matches any mapped base location (supports exact, substring, and abbreviations)
@@ -165,9 +176,9 @@ export function computeBaseLocPolicy(baseReportingLocation, itineraries) {
   if (visitedNonBase) return { isBaseLocOnly: false, isDaAllowed: true, baseLocations };
 
   const hasStation = itineraries.some(leg => {
-    const f = (leg.from || "").trim().toLowerCase();
-    const t = (leg.to || "").trim().toLowerCase();
-    return STATION_WORDS.some(w => f.includes(w) || t.includes(w));
+    const f = leg.from || "";
+    const t = leg.to || "";
+    return isStationLocation(f) || isStationLocation(t);
   });
 
   const isDaBase = baseLocations.some(loc => DA_ALLOWED_BASES.some(b => loc.includes(b)));
