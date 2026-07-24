@@ -2539,11 +2539,21 @@ export default function HomePage() {
                     const isReturned = statusVal === "returned" || statusVal === "returned_to_draft" || statusVal === "return";
                     const isCancelled = statusVal === "cancelled" || isPriorRejected || (claimStatusVal === "rejected" && !isApproved && !isRejected);
 
+                    const isAutoApproved = isApproved && (
+                      parseFloat(claimDetails.amount || claimDetails.approved_amount || 0) === 0 ||
+                      ((app.comments || "").toLowerCase().includes("auto-approved")) ||
+                      claimDetails.auto_approved === true
+                    );
+
                     let containerBgClass = "bg-amber-50/70 border-amber-300 border-l-4 text-amber-950";
                     let statusBadge = <Tag color="warning" className="font-bold text-[9px] uppercase tracking-wider">PENDING</Tag>;
                     let remarkBgClass = "bg-amber-100/60 border-amber-300 text-amber-950";
 
-                    if (isApproved) {
+                    if (isAutoApproved) {
+                      containerBgClass = "bg-cyan-50/70 border-cyan-400 border-l-4 text-cyan-950";
+                      statusBadge = <Tag color="cyan" className="font-bold text-[9px] uppercase tracking-wider">AUTO APPROVED</Tag>;
+                      remarkBgClass = "bg-cyan-100/60 border-cyan-300 text-cyan-950";
+                    } else if (isApproved) {
                       containerBgClass = "bg-emerald-50/70 border-emerald-400 border-l-4 text-emerald-950";
                       statusBadge = <Tag color="success" className="font-bold text-[9px] uppercase tracking-wider">APPROVED</Tag>;
                       remarkBgClass = "bg-emerald-100/60 border-emerald-300 text-emerald-950";
@@ -2565,7 +2575,7 @@ export default function HomePage() {
                       remarkBgClass = "bg-slate-100 border-slate-200 text-slate-900";
                     }
 
-                    const commentText = app.comments || app.remark || app.rejection_reason;
+                    const commentText = app.comments || app.remark || app.rejection_reason || (isAutoApproved ? "Auto-approved by System Policy: Total claim amount is ₹0.00 after base location policy evaluation. No manager approval required." : null);
 
                     return (
                       <div key={idx} className={`flex gap-3 text-xs pl-3 py-2 p-3 rounded-md shadow-2xs ${containerBgClass}`}>
