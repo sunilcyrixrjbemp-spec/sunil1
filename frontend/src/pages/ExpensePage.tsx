@@ -1790,37 +1790,17 @@ export default function ExpensePage() {
   //   5. Home → Other facility → Base → Home
   //        → TA NOT allowed only on the Base→Home leg; everything else
   //          (TA and DA) is allowed.
+  //
+  //   NOTE: An older "official activities" override (Calls/PMS/Asset Tagging/
+  //   Calibration present on a leg → auto-allow DA at base location) used to
+  //   sit right after the guard clauses below and silently bypass all 5 rules
+  //   above. It was explicitly removed on user instruction because it
+  //   defeated the whole point of this policy. Do NOT re-add an
+  //   activity-based DA override here.
   // ═══════════════════════════════════════════════════════════════════════════
   const isDailyAllowanceAllowed = (legs: ItineraryLeg[] = itineraries) => {
     if (!isBaseLocationOnlyTravel(legs)) return true;
     if (!user || !user.base_reporting_location) return true;
-
-    // CRITICAL FIX: If ANY leg in the day has official activities (PMS, Calls, Asset Tagging, Calibration, Mobilisation) or work, DA IS ALLOWED!
-    const hasActivities = legs.some(leg => {
-      const acts = leg.selected_activities || [];
-      if (acts.length > 0) return true;
-
-      const pmsCount = parseInt((leg.ws_pms || "0").toString(), 10) || 0;
-      const callsAssigned = parseInt((leg.ws_assigned || "0").toString(), 10) || 0;
-      const callsClosed = parseInt((leg.ws_closed || "0").toString(), 10) || 0;
-      const assetCount = parseInt((leg.ws_asset || "0").toString(), 10) || 0;
-      const calibCount = parseInt((leg.calibration_count || "0").toString(), 10) || 0;
-      const mobCount = parseInt((leg.mobilise_asset_count || "0").toString(), 10) || 0;
-
-      if (pmsCount > 0 || callsAssigned > 0 || callsClosed > 0 || assetCount > 0 || calibCount > 0 || mobCount > 0) return true;
-
-      const callsList = leg.calls_list || [];
-      const pmsList = leg.pms_list || [];
-      const assetsList = leg.assets_list || [];
-      if (callsList.length > 0 || pmsList.length > 0 || assetsList.length > 0) return true;
-
-      const purpose = (leg.visit_purpose || "").toLowerCase();
-      if (purpose.includes("activity") || purpose.includes("activities") || purpose.includes("pms") || purpose.includes("call") || purpose.includes("tagging") || purpose.includes("service")) return true;
-
-      return false;
-    });
-
-    if (hasActivities) return true;
 
     const baseLocations = user.base_reporting_location
       ? user.base_reporting_location.split(",").map((x: string) => x.trim().toLowerCase()).filter(Boolean)

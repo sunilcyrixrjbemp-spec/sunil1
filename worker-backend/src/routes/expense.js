@@ -151,47 +151,6 @@ export function computeBaseLocPolicy(baseReportingLocation, itineraries) {
 
   if (visitedNonBase) return { isBaseLocOnly: false, isDaAllowed: true, baseLocations };
 
-  // Determine DA eligibility
-  // CRITICAL FIX: If ANY leg in the day has official activities (PMS, Calls, Asset Tagging, Calibration, Mobilisation) or official field work, DA IS ALLOWED!
-  const hasOfficialWorkOrActivities = itineraries.some(leg => {
-    // 1. Check selected_activities array or JSON
-    let acts = leg.selected_activities || [];
-    if (typeof acts === "string" && acts.trim()) {
-      try { acts = JSON.parse(acts); } catch(e) { acts = []; }
-    }
-    if (Array.isArray(acts) && acts.length > 0) return true;
-
-    // 2. Check activity_details string/object
-    let details = leg.activity_details;
-    if (typeof details === "string" && details.trim()) {
-      try { details = JSON.parse(details); } catch(e) { details = null; }
-    }
-    if (details && Array.isArray(details.selected_activities) && details.selected_activities.length > 0) return true;
-
-    // 3. Check activity / work counts (PMS, Calls, Asset Tagging, Calibration, Mobilise)
-    const pmsCount = parseInt(leg.pms_count || leg.ws_pms || "0", 10) || 0;
-    const callsCount = parseInt(leg.calls_assigned || leg.calls_completed || leg.ws_assigned || leg.ws_closed || "0", 10) || 0;
-    const assetCount = parseInt(leg.asset_tagging || leg.ws_asset || "0", 10) || 0;
-    const calibCount = parseInt(leg.calibration_count || "0", 10) || 0;
-    const mobCount   = parseInt(leg.mobilise_asset_count || leg.mobilise_count || "0", 10) || 0;
-    if (pmsCount > 0 || callsCount > 0 || assetCount > 0 || calibCount > 0 || mobCount > 0) return true;
-
-    // 4. Check visit purpose or lists
-    const purpose = (leg.visit_purpose || "").toLowerCase();
-    if (purpose.includes("activity") || purpose.includes("activities") || purpose.includes("pms") || purpose.includes("call") || purpose.includes("tagging") || purpose.includes("service")) return true;
-
-    const callsList = leg.calls_list || (details && details.calls_list) || [];
-    const pmsList = leg.pms_list || (details && details.pms_list) || [];
-    const assetsList = leg.assets_list || (details && details.assets_list) || [];
-    if (callsList.length > 0 || pmsList.length > 0 || assetsList.length > 0) return true;
-
-    return false;
-  });
-
-  if (hasOfficialWorkOrActivities) {
-    return { isBaseLocOnly: true, isDaAllowed: true, baseLocations };
-  }
-
   const hasStation = itineraries.some(leg => {
     const f = (leg.from || "").trim().toLowerCase();
     const t = (leg.to || "").trim().toLowerCase();
@@ -230,6 +189,12 @@ export function computeBaseLocPolicy(baseReportingLocation, itineraries) {
   //   5. Home → Other facility → Base → Home
   //        → TA NOT allowed only on the Base→Home leg; everything else
   //          (TA and DA) is allowed.
+  //
+  //   NOTE: An older "official activities" override (Calls/PMS/Asset Tagging/
+  //   Calibration present on a leg → auto-allow DA at base location) used to
+  //   sit BEFORE this block and silently bypass all 5 rules above. It was
+  //   explicitly removed on user instruction because it defeated the whole
+  //   point of this policy. Do NOT re-add an activity-based DA override here.
   // ═══════════════════════════════════════════════════════════════════════════
   let isDaAllowed = false;
   if (hasStation) {
