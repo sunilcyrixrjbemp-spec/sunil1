@@ -1761,12 +1761,8 @@ export default function ExpensePage() {
     );
     if (!hasVisitedBaseLocation) return false;
 
-    // Healthcare facility keywords used to identify official CHC/PHC/SDH/DH/Hospital visits
-    const HEALTHCARE_FACILITY_KEYWORDS = [
-      "chc", "phc", "sdh", "dh", "hospital", "hosp", "college", "collage",
-      "dispensary", "subcenter", "sub-center", "sub center", "ddw", "warehouse",
-      "uphc", "up-hc", "up hc", "medical college", "medical collage"
-    ];
+    // Healthcare facility keywords matched at word boundaries to avoid matching substrings like "gandhi" (dh)
+    const HEALTHCARE_FACILITY_REGEX = /\b(chc|phc|sdh|dh|hospital|hosp|college|collage|dispensary|subcenter|sub-center|sub center|ddw|warehouse|uphc|up-hc|up hc)\b/i;
 
     const isOfficialNonBaseFacility = (locText: string) => {
       if (!locText) return false;
@@ -1776,8 +1772,8 @@ export default function ExpensePage() {
       // If it matches base location → it is base, NOT a non-base facility
       if (matchesBase(clean, baseLocations)) return false;
 
-      // Must contain an official healthcare facility keyword (CHC, PHC, SDH, DH, Hospital, College, etc.)
-      return HEALTHCARE_FACILITY_KEYWORDS.some(w => clean.includes(w) || normalized.includes(w));
+      // Must match an official healthcare facility keyword at word boundaries
+      return HEALTHCARE_FACILITY_REGEX.test(clean) || HEALTHCARE_FACILITY_REGEX.test(normalized);
     };
 
     const visitedNonBaseOfficialFacility = legs.some(leg => {
