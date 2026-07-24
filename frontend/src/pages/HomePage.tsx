@@ -2020,7 +2020,12 @@ export default function HomePage() {
                                 </div>
                               </td>
                               <td className="py-2.5 px-3 text-right font-mono font-semibold">₹{hotelCost.toLocaleString()}</td>
-                              <td className="py-2.5 px-3 text-right font-mono font-semibold">₹{lpCost.toLocaleString()}</td>
+                              <td className="py-2.5 px-3 text-right font-mono font-semibold">
+                                <span>₹{lpCost.toLocaleString()}</span>
+                                {leg.local_purchase_remark && (
+                                  <span className="text-[9px] text-amber-700 block font-normal truncate max-w-[120px]" title={leg.local_purchase_remark}>"{leg.local_purchase_remark}"</span>
+                                )}
+                              </td>
                               <td className="py-2.5 px-3">
                                 <span className="font-mono font-bold">₹{otherCost.toLocaleString()}</span>
                                 {leg.oth_desc && <span className="text-[9px] text-gray-400 block truncate max-w-[100px]" title={leg.oth_desc}>{leg.oth_desc}</span>}

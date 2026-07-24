@@ -2000,6 +2000,7 @@ export async function handleGetExpenseDetails(request, env, params, query, user)
       da: parseFloat(i.da_amount || 0.0),
       hotel: parseFloat(i.hotel_amount || 0.0),
       local_purchase: parseFloat(i.local_purchase || 0.0),
+      local_purchase_remark: i.local_purchase_remark || "",
       oth_desc: i.other_desc || "",
       oth_amount: parseFloat(i.other_amount || 0.0),
       ws_assigned: i.calls_assigned || 0,
@@ -2798,11 +2799,11 @@ export async function handleSubmitExpense(request, env, params, query, user) {
         INSERT INTO expense_itineraries (
           itinerary_id, exp_id, leg_number, from_district, to_district, from_location, to_location, 
           travel_mode, distance_km, travel_amount, sub_mode, sub_km, sub_amount, da_amount, hotel_amount, 
-          local_purchase, other_desc, other_amount, calls_assigned, calls_completed, pms_count, asset_tagging, visit_purpose, 
+          local_purchase, local_purchase_remark, other_desc, other_amount, calls_assigned, calls_completed, pms_count, asset_tagging, visit_purpose, 
           activity_details, original_distance_km, original_travel_amount, original_sub_amount, original_da_amount, 
           original_hotel_amount, original_other_amount, original_local_purchase, calibration_count, mobilise_count
         )
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 0.0, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 0.0, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
       `,
       params: [
         itiId, expenseCode, legNum, fromDist, toDist, iti.from || "", iti.to || "",
@@ -2811,7 +2812,7 @@ export async function handleSubmitExpense(request, env, params, query, user) {
         iti.sub_mode || null,
         isCommute ? 0.0 : parseFloat(iti.sub_amount || "0.0"),
         isDaAllowed ? parseFloat(iti.da || "0.0") : 0.0,
-        parseFloat(iti.hotel || "0.0"), parseFloat(iti.local_purchase || "0.0"), iti.oth_desc || null, parseFloat(iti.oth_amount || "0.0"),
+        parseFloat(iti.hotel || "0.0"), parseFloat(iti.local_purchase || "0.0"), iti.local_purchase_remark || iti.local_purchase_desc || null, iti.oth_desc || null, parseFloat(iti.oth_amount || "0.0"),
         parseInt(iti.ws_assigned || "0", 10), parseInt(iti.ws_closed || "0", 10),
         parseInt(iti.ws_pms || "0", 10), parseInt(iti.ws_asset || "0", 10),
         iti.visit_purpose || "Field visit",
@@ -4256,7 +4257,7 @@ export async function handleGetConsolidatedReport(request, env, params, query, u
     try {
       legs = await queryInChunks(
         env.DB,
-        "SELECT exp_id, travel_mode, sub_mode, distance_km, travel_amount, sub_amount, da_amount, local_purchase, hotel_amount, other_desc, other_amount, original_distance_km, original_travel_amount, original_sub_amount, original_da_amount, original_local_purchase, original_hotel_amount, original_other_amount FROM expense_itineraries WHERE exp_id IN (?)",
+        "SELECT exp_id, travel_mode, sub_mode, distance_km, travel_amount, sub_amount, da_amount, local_purchase, local_purchase_remark, hotel_amount, other_desc, other_amount, original_distance_km, original_travel_amount, original_sub_amount, original_da_amount, original_local_purchase, original_hotel_amount, original_other_amount FROM expense_itineraries WHERE exp_id IN (?)",
         expenseCodes
       );
     } catch (e) {

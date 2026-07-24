@@ -228,6 +228,7 @@ export const expenseItineraries = sqliteTable("expense_itineraries", {
   daAmount: real("da_amount"),
   hotelAmount: real("hotel_amount"),
   localPurchase: real("local_purchase"),
+  localPurchaseRemark: text("local_purchase_remark"),
   otherDesc: text("other_desc"),
   otherAmount: real("other_amount"),
   callsAssigned: integer("calls_assigned"),

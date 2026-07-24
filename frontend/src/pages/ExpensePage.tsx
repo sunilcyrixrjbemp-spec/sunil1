@@ -115,6 +115,7 @@ interface ItineraryLeg {
   da: string; // Leg 1 only
   hotel: string; // Leg 1 only
   local_purchase: string; // Leg 1 only
+  local_purchase_remark?: string; // Leg 1 only
   oth_desc: string;
   oth_amount: string;
   ws_assigned: string;
@@ -223,6 +224,7 @@ export default function ExpensePage() {
       da: "",
       hotel: "",
       local_purchase: "",
+      local_purchase_remark: "",
       oth_desc: "",
       oth_amount: "",
       ws_assigned: "",
@@ -307,6 +309,7 @@ export default function ExpensePage() {
       da: "",
       hotel: "",
       local_purchase: "",
+      local_purchase_remark: "",
       oth_desc: "",
       oth_amount: "",
       ws_assigned: "",
@@ -2208,6 +2211,15 @@ export default function ExpensePage() {
         }
 
         const lpAmt = parseFloat(leg.local_purchase) || 0;
+        if (lpAmt > 0 && !leg.local_purchase_remark?.trim()) {
+          setValidationModal({
+            show: true,
+            title: `Visit ${legNum}: Missing Local Purchase Remark`,
+            message: "Local Purchase Remark is compulsory when a local purchase amount is entered. Please describe what items were purchased."
+          });
+          return false;
+        }
+
         const lpBill = files[1]?.local_purchase_bill;
         const hasLpAttachment = lpBill || hasExistingFile(1, "Local_Purchase");
         if (lpAmt >= 300 && !hasLpAttachment) {
@@ -2532,6 +2544,7 @@ export default function ExpensePage() {
           da: legNum === 1 ? (isDAAllowed ? leg.da : "0") : "0",
           hotel: legNum === 1 ? leg.hotel : "0",
           local_purchase: legNum === 1 ? leg.local_purchase : "0",
+          local_purchase_remark: legNum === 1 ? (leg.local_purchase_remark || "") : "",
           company_provided: legNum === 1 ? !!leg.company_provided : false,
           oth_desc: leg.oth_desc,
           oth_amount: leg.oth_amount,
@@ -2793,7 +2806,8 @@ export default function ExpensePage() {
           amount: parseFloat(l.amount || l.travel_amount) || 0,
           da: parseFloat(l.da || l.da_amount) || 0,
           hotel: parseFloat(l.hotel || l.hotel_amount) || 0,
-          local_purchase: parseFloat(l.local_purchase || l.local_purchase_amount) || 0,
+          local_purchase: parseFloat(l.local_purchase) || 0,
+          local_purchase_remark: l.local_purchase_remark || "",
           other_amount: parseFloat(l.other_amount || l.other_expense_amount || l.oth_amount) || 0,
           visit_purpose: l.visit_purpose || l.purpose || c.description || "Field visit"
         });
@@ -3855,6 +3869,22 @@ export default function ExpensePage() {
                               className="input-lte font-bold"
                             />
                           </div>
+
+                          {parseFloat(leg.local_purchase) > 0 && (
+                            <div className="col-span-1 md:col-span-2">
+                              <label className="label-lte text-amber-900 font-bold">
+                                Local Purchase Remark / Details <span className="text-red-500">*</span>
+                              </label>
+                              <input
+                                type="text"
+                                value={leg.local_purchase_remark || ""}
+                                onChange={(e) => handleItineraryChange(leg.leg, "local_purchase_remark", e.target.value)}
+                                placeholder="Compulsory: Describe what was purchased (e.g. 2 Pin Connectors, MCB)"
+                                className="input-lte font-semibold bg-amber-50/70 border-amber-300 focus:border-amber-500"
+                                required
+                              />
+                            </div>
+                          )}
 
                           <div>
                             <label className="label-lte">
@@ -5009,7 +5039,12 @@ export default function ExpensePage() {
                               <td className="py-3 px-3 text-right font-mono font-semibold text-slate-900 whitespace-nowrap">₹{(parseFloat(leg.amount) || 0).toLocaleString()}</td>
                               <td className="py-3 px-3 text-right font-mono font-semibold text-slate-900 whitespace-nowrap">₹{(parseFloat(leg.da) || 0).toLocaleString()}</td>
                               <td className="py-3 px-3 text-right font-mono font-semibold text-slate-900 whitespace-nowrap">₹{(parseFloat(leg.hotel) || 0).toLocaleString()}</td>
-                              <td className="py-3 px-3 text-right font-mono font-semibold text-slate-900 whitespace-nowrap">₹{(parseFloat(leg.local_purchase) || 0).toLocaleString()}</td>
+                              <td className="py-3 px-3 text-right font-mono font-semibold text-slate-900 whitespace-nowrap">
+                                ₹{(parseFloat(leg.local_purchase) || 0).toLocaleString()}
+                                {leg.local_purchase_remark && (
+                                  <span className="text-[9.5px] text-amber-700 font-sans block font-normal truncate max-w-[120px]" title={leg.local_purchase_remark}>"{leg.local_purchase_remark}"</span>
+                                )}
+                              </td>
                               <td className="py-3 px-3 text-right font-mono font-semibold text-slate-900 whitespace-nowrap">₹{(parseFloat(leg.other_amount) || 0).toLocaleString()}</td>
                               <td className="py-3 px-3 text-slate-600 max-w-[150px] truncate whitespace-nowrap" title={leg.visit_purpose}>{leg.visit_purpose || "Field visit"}</td>
                             </tr>
