@@ -3463,7 +3463,9 @@ export default function ExpensePage() {
                               <option value="">Select Travel Mode</option>
                               {[
                                 { value: "Bike", label: "Bike", visible: allowance.vehicle_type === "Bike" || allowance.vehicle_type === "Car" },
-                                { value: "Car", label: "Car", visible: allowance.vehicle_type === "Car" },
+                                // 🔒 Per-user override: employee E1702 is allowed BOTH Bike and Car regardless of grade's
+                                // default vehicle_type policy. Do not extend this override to other users without being asked.
+                                { value: "Car", label: "Car", visible: allowance.vehicle_type === "Car" || user?.user_id === "E1702" || user?.e_code === "E1702" },
                                 { value: "Auto", label: "Auto", visible: true },
                                 { value: "Bus", label: "Bus", visible: true },
                                 { value: "Train", label: "Train", visible: true },
