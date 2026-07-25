@@ -262,22 +262,29 @@ export async function handleGetAssetsStats(request, env, params, query, user) {
   if (di) { whereClauses.push("di_name = ?"); bindings.push(di); }
 
   const whereSql = whereClauses.join(" AND ");
-
-  // Billing calculations
+  // Billing calculations & Month Filter logic
   const now = new Date();
   let targetYear = now.getFullYear();
   let targetMonth = now.getMonth() + 1;
+
+  const monthWhereClauses = [...whereClauses];
+  const monthBindings = [...bindings];
 
   if (month) {
     const parts = month.split("-");
     if (parts.length === 2) {
       targetYear = parseInt(parts[0], 10);
       targetMonth = parseInt(parts[1], 10);
+      // Filter for assets verified on or before the selected target month
+      monthWhereClauses.push("(moic_year IS NULL OR moic_year < ? OR (moic_year = ? AND moic_month <= ?))");
+      monthBindings.push(targetYear, targetYear, targetMonth);
     }
   }
 
-  // Fetch all 5 queries in PARALLEL — reduces 5 round trips to 1
-  const [aggRes, arrearRows, statusRows, typeRows, warrantyRows] = await Promise.all([
+  const monthWhereSql = monthWhereClauses.join(" AND ");
+
+  // Fetch all queries in PARALLEL
+  const [aggRes, arrearRes, statusRows, typeRows, warrantyRows] = await Promise.all([
     env.DB.prepare(`
       SELECT 
         COUNT(*) as total_equipment,
@@ -288,36 +295,37 @@ export async function handleGetAssetsStats(request, env, params, query, user) {
         SUM(CASE WHEN is_verified = 1 THEN parsed_asset_value ELSE 0 END) as verified_value,
         SUM(CASE WHEN is_verified = 1 AND warranty_expired = 1 THEN parsed_asset_value ELSE 0 END) as verified_out_of_warranty_value
       FROM assets_inventory
-      WHERE ${whereSql}
-    `).bind(...bindings).first(),
+      WHERE ${monthWhereSql}
+    `).bind(...monthBindings).first(),
     env.DB.prepare(`
-      SELECT parsed_asset_value, install_year, install_month
+      SELECT SUM(parsed_asset_value) as arrear_val
       FROM assets_inventory
       WHERE is_verified = 1 
+        AND warranty_expired = 1
         AND moic_year = ? 
         AND moic_month = ?
         AND ${whereSql}
-    `).bind(targetYear, targetMonth, ...bindings).all(),
+    `).bind(targetYear, targetMonth, ...bindings).first(),
     env.DB.prepare(`
       SELECT equipment_status, COUNT(*) as cnt 
       FROM assets_inventory 
-      WHERE ${whereSql} 
+      WHERE ${monthWhereSql} 
       GROUP BY equipment_status
-    `).bind(...bindings).all(),
+    `).bind(...monthBindings).all(),
     env.DB.prepare(`
       SELECT equipment_type, COUNT(*) as cnt 
       FROM assets_inventory 
-      WHERE ${whereSql} 
+      WHERE ${monthWhereSql} 
       GROUP BY equipment_type 
       ORDER BY cnt DESC 
       LIMIT 5
-    `).bind(...bindings).all(),
+    `).bind(...monthBindings).all(),
     env.DB.prepare(`
       SELECT warranty_expired, COUNT(*) as cnt 
       FROM assets_inventory 
-      WHERE ${whereSql} 
+      WHERE ${monthWhereSql} 
       GROUP BY warranty_expired
-    `).bind(...bindings).all()
+    `).bind(...monthBindings).all()
   ]);
 
   const total_equipment = aggRes?.total_equipment || 0;
@@ -328,16 +336,9 @@ export async function handleGetAssetsStats(request, env, params, query, user) {
   const verified_value = aggRes?.verified_value || 0.0;
   const verified_out_of_warranty_value = aggRes?.verified_out_of_warranty_value || 0.0;
 
-  let arrearBilling = 0.0;
-  for (const r of (arrearRows.results || [])) {
-    if (r.parsed_asset_value && r.install_year && r.install_month) {
-      const monthlyRate = (r.parsed_asset_value * 6.08 / 100) / 12;
-      const monthsDiff = (targetYear - r.install_year) * 12 + (targetMonth - r.install_month);
-      if (monthsDiff > 0) {
-        arrearBilling += monthlyRate * monthsDiff;
-      }
-    }
-  }
+  // Arrear Billing for newly verified items in target month
+  const arrearVal = arrearRes?.arrear_val || 0.0;
+  const arrearBilling = (arrearVal * 6.08 / 100) / 12;
 
   const monthlyValue = (verified_out_of_warranty_value * 6.08 / 100) / 12;
   const monthlyGst = monthlyValue * 0.18;
