@@ -237,16 +237,24 @@ function buildExcelPrintHTML(user: any, claims: any[], attachments: any[] = [], 
     </tr>`;
   }).join("\n");
 
-  // Collect ALL attachments uploaded during expense submission (top-level + leg receipts + activity proofs)
+  // Collect ONLY financial bill attachments associated with expense amounts
+  // Strictly EXCLUDE non-monetary service reports, breakdown call photos, or PMS photos!
   const allAttachmentsMap = new Map<string, { url: string; date: string; label: string }>();
 
   (attachments || []).forEach((att: any, idx: number) => {
     const rawUrl = att.file_url || att.url || (typeof att === "string" ? att : "");
-    if (rawUrl) {
+    const billType = (att.bill_type || att.billType || "").toLowerCase();
+    
+    // Exclude PMS, call, or service report photos
+    if (billType.includes("pms") || billType.includes("call") || billType.includes("service")) {
+      return;
+    }
+
+    if (rawUrl && !allAttachmentsMap.has(rawUrl)) {
       allAttachmentsMap.set(rawUrl, {
         url: rawUrl,
-        date: att.date ? fmtDate(att.date) : `Attachment #${idx + 1}`,
-        label: att.bill_type || att.billType || "Expense Bill Receipt"
+        date: att.date ? fmtDate(att.date) : `Bill #${idx + 1}`,
+        label: att.bill_type || att.billType || "Expense Bill Attachment"
       });
     }
   });
@@ -254,46 +262,39 @@ function buildExcelPrintHTML(user: any, claims: any[], attachments: any[] = [], 
   (claims || []).forEach((claim: any) => {
     const claimDate = claim.date ? fmtDate(claim.date) : "";
     (claim.legs || []).forEach((leg: any) => {
+      // Collect ONLY bill / receipt files linked to monetary amounts
       const urls = [
-        leg.receipt_url, leg.bill_url, leg.attachment_url, leg.file_url,
-        leg.hotel_receipt, leg.local_purchase_bill, leg.other_bill
+        { url: leg.hotel_receipt, label: "Hotel Bill Receipt" },
+        { url: leg.local_purchase_bill, label: "Local Purchase Bill" },
+        { url: leg.other_bill, label: "Other Expense Bill" },
+        { url: leg.receipt_url, label: "Travel / Bill Receipt" },
+        { url: leg.bill_url, label: "Travel Ticket" },
+        { url: leg.attachment_url, label: "Expense Bill Attachment" },
+        { url: leg.file_url, label: "Expense Bill Attachment" }
       ];
-      urls.forEach(u => {
+
+      urls.forEach(item => {
+        const u = item.url;
         if (u && typeof u === 'string' && u.trim() && !allAttachmentsMap.has(u)) {
-          allAttachmentsMap.set(u, { url: u, date: claimDate, label: "Expense Receipt" });
+          const lower = u.toLowerCase();
+          if (!lower.includes("pms") && !lower.includes("call") && !lower.includes("service")) {
+            allAttachmentsMap.set(u, { url: u, date: claimDate, label: item.label });
+          }
         }
       });
-
-      if (leg.activity_details) {
-        try {
-          const act = typeof leg.activity_details === 'string' ? JSON.parse(leg.activity_details) : leg.activity_details;
-          if (act && typeof act === 'object') {
-            (act.calls_list || []).forEach((item: any) => {
-              if (item.photo_url && !allAttachmentsMap.has(item.photo_url)) {
-                allAttachmentsMap.set(item.photo_url, { url: item.photo_url, date: claimDate, label: "Breakdown Call Attachment" });
-              }
-            });
-            (act.pms_list || []).forEach((item: any) => {
-              if (item.photo_url && !allAttachmentsMap.has(item.photo_url)) {
-                allAttachmentsMap.set(item.photo_url, { url: item.photo_url, date: claimDate, label: "PMS Call Attachment" });
-              }
-            });
-          }
-        } catch (e) {}
-      }
     });
   });
 
   const finalAttachments = Array.from(allAttachmentsMap.values());
 
-  // Attached receipts HTML block — supports ALL file formats (JPG, PNG, WEBP, PDF, etc.)
+  // Attached receipts HTML block — 1 dedicated full page per bill attachment!
   let attachmentsSection = "";
   if (finalAttachments.length > 0) {
     attachmentsSection = finalAttachments.map((att: any, index) => {
       const rawUrl = att.url;
       const absoluteUrl = getAbsoluteUrl(rawUrl);
       const dateStr = att.date || `Receipt #${index + 1}`;
-      const attLabel = att.label || "Expense Attachment";
+      const attLabel = att.label || "Expense Bill Attachment";
       
       const cleanUrl = rawUrl.toLowerCase().split("?")[0];
       const isPdf = cleanUrl.endsWith(".pdf") || cleanUrl.includes("/pdf");
@@ -319,6 +320,168 @@ function buildExcelPrintHTML(user: any, claims: any[], attachments: any[] = [], 
         </div>
       `;
     }).join("\n");
+  }
+
+  // ── Split expense table into multi-page chunks (14 rows per page) ──
+  const ROWS_PER_PAGE = 14;
+  const numPages = Math.max(1, Math.ceil(allLegs.length / ROWS_PER_PAGE));
+
+  let summaryPagesHtml = "";
+  for (let pageIdx = 0; pageIdx < numPages; pageIdx++) {
+    const isLastPage = pageIdx === numPages - 1;
+    const pageLegs = allLegs.slice(pageIdx * ROWS_PER_PAGE, (pageIdx + 1) * ROWS_PER_PAGE);
+
+    const pageRowsHtml = pageLegs.map((r, i) => {
+      const l = r.leg || {};
+      const taCol   = l.ta_amount || 0;
+      const bikeCarAmt = (l.bike_amount || 0) + (l.car_amount || 0);
+      const rowTotal = taCol + bikeCarAmt + (l.auto_amount || 0) + (l.da_amount || 0)
+                     + (l.local_purchase || 0) + (l.hotel_amount || 0) + (l.other_amount || 0);
+      const bg = i % 2 === 0 ? "#ffffff" : "#f0f7ff";
+      const c = `border:1px solid #000!important;padding:4px 5px;font-size:8.5pt;font-weight:600;color:#000;vertical-align:middle;word-wrap:break-word;`;
+      const pmsCalibCount = (l.pms_count || 0) + (l.calibration_count || 0);
+
+      return `<tr style="background:${bg}!important;">
+        <td style="${c}text-align:center;">${fmtDate(r.date)}</td>
+        <td style="${c}">${l.from_location || ""}</td>
+        <td style="${c}">${l.to_location || ""}</td>
+        <td style="${c}text-align:center;">${l.worked_district || ""}</td>
+        <td style="${c}text-align:center;font-weight:700;">${modeAbbr(l.travel_mode)}</td>
+        <td style="${c}text-align:center;">${l.distance_km > 0 ? l.distance_km.toFixed(1) : ""}</td>
+        <td style="${c}text-align:right;">${taCol > 0 ? taCol.toFixed(2) : ""}</td>
+        <td style="${c}text-align:right;">${l.auto_amount > 0 ? l.auto_amount.toFixed(2) : ""}</td>
+        <td style="${c}text-align:right;">${l.da_amount > 0 ? l.da_amount.toFixed(2) : ""}</td>
+        <td style="${c}text-align:right;">${l.local_purchase > 0 ? l.local_purchase.toFixed(2) : ""}</td>
+        <td style="${c}text-align:right;">${l.hotel_amount > 0 ? l.hotel_amount.toFixed(2) : ""}</td>
+        <td style="${c}font-size:8.5pt;">${getActivityOtherDesc(l)}</td>
+        <td style="${c}text-align:right;">${l.other_amount > 0 ? l.other_amount.toFixed(2) : ""}</td>
+        <td style="${c}text-align:right;font-weight:800;background:#e8f5e9!important;">${rowTotal > 0 ? rowTotal.toFixed(2) : ""}</td>
+        <td style="${c}font-size:8.5pt;">${getFormattedPurpose(l)}</td>
+        <td style="${c}font-size:8pt;font-family:monospace;">${l.barcode_ticket || ""}</td>
+        <td style="${c}text-align:center;">${pmsCalibCount}</td>
+        <td style="${c}text-align:center;">${l.calls_completed || 0}/${l.calls_assigned || 0}</td>
+      </tr>`;
+    }).join("\n");
+
+    summaryPagesHtml += `
+    <div class="wrap summary-page" style="width:1122px;min-height:793px;padding:4mm;background:#fff;box-sizing:border-box;margin-bottom:0;page-break-after:always;">
+      <table style="margin-bottom:0;">
+        <colgroup><col style="width:10%;"><col style="width:65%;"><col style="width:25%;"></colgroup>
+        <tr>
+          <td style="background:#fff!important;border:2px solid #0d1557;padding:0;text-align:center;vertical-align:middle;height:32px;overflow:hidden;">
+            <img src="${window.location.origin}/brand.png" style="height:100%; max-height:32px; width:100%; object-fit:contain; display:block; margin:0 auto;" alt="Logo" />
+          </td>
+          <td class="main-hdr">CYRIX &mdash; EXPENSES REIMBURSEMENT FORM ${numPages > 1 ? `(PAGE ${pageIdx + 1} OF ${numPages})` : ""}</td>
+          <td style="background:#1a237e!important;color:#fff!important;border:2px solid #0d1557;padding:4px 8px;font-size:8pt;font-weight:bold;text-align:center;vertical-align:middle;">
+            <div>Month-Year: ${user.month.toUpperCase().substring(0,3)} ${user.year}</div>
+          </td>
+        </tr>
+      </table>
+
+      <table class="info-tbl">
+        <colgroup><col style="width:6%;"><col style="width:23%;"><col style="width:7%;"><col style="width:10%;"><col style="width:8%;"><col style="width:10%;"><col style="width:12%;"><col style="width:12%;"><col style="width:6%;"><col style="width:6%;"><col style="width:7%;"><col style="width:11%;"></colgroup>
+        <tr>
+          <td class="info-lbl">NAME :</td><td class="info-val">${user.name}</td>
+          <td class="info-lbl">EECode:</td><td class="info-val">${user.e_code}</td>
+          <td class="info-lbl">PROJECT:</td><td class="info-val">RJBEMP</td>
+          <td class="info-lbl">BASE LOCATION:</td><td class="info-val">${(user.district || "").toUpperCase()}</td>
+          <td class="info-lbl">GRADE:</td><td class="info-val">${user.grade || "—"}</td>
+          <td class="info-lbl">MOBILE:</td><td class="info-val" style="border-right:none;">${user.mobile || "—"}</td>
+        </tr>
+      </table>
+
+      <table style="margin-bottom:0; border-top: none; border-bottom: none;">
+        <colgroup><col style="width:4.5%;"><col style="width:6.5%;"><col style="width:6.5%;"><col style="width:5%;"><col style="width:3.5%;"><col style="width:3.5%;"><col style="width:4.5%;"><col style="width:3.5%;"><col style="width:3.5%;"><col style="width:5%;"><col style="width:3.5%;"><col style="width:7.5%;"><col style="width:4%;"><col style="width:4.5%;"><col style="width:8%;"><col style="width:7%;"><col style="width:3.5%;"><col style="width:4%;"></colgroup>
+        <thead>
+          <tr>
+            <th class="col-h1" rowspan="2">Date<br>(DD-MM-YY)</th>
+            <th class="col-h1" colspan="2">Locations</th>
+            <th class="col-h1" rowspan="2">Worked<br>District</th>
+            <th class="col-h1" rowspan="2">Mode of<br>Trans.<br>(T/B/Bi/C)</th>
+            <th class="col-h1" rowspan="2">Distance<br>in (KM)</th>
+            <th class="col-h1" rowspan="2">TA (if mode<br>is Train(T)/<br>Bus(B))</th>
+            <th class="col-h1" rowspan="2">Auto<br>fare</th>
+            <th class="col-h1" rowspan="2">D.A.</th>
+            <th class="col-h1" rowspan="2">Local Spare<br>Purch. Rate</th>
+            <th class="col-h1" rowspan="2">Hotel</th>
+            <th class="col-h1" colspan="2">Other Expenses</th>
+            <th class="col-h1" rowspan="2">Total</th>
+            <th class="col-h1" rowspan="2">Remarks /<br>Purpose</th>
+            <th class="col-h1" rowspan="2">Barcode/<br>Asset No. and<br>Ticket No./MPT ID</th>
+            <th class="col-h1" rowspan="2">PMS/<br>Calibration</th>
+            <th class="col-h1" rowspan="2">Calls<br>(Done/Assign)</th>
+          </tr>
+          <tr>
+            <th class="col-h2">From</th>
+            <th class="col-h2">To</th>
+            <th class="col-h2">Description</th>
+            <th class="col-h2">Amount</th>
+          </tr>
+        </thead>
+        <tbody>
+          ${pageRowsHtml || `<tr><td colspan="18" style="text-align:center;padding:14px;color:#888;font-style:italic;font-size:8pt;">No expense leg data found for this period.</td></tr>`}
+        </tbody>
+        ${isLastPage ? `
+        <tfoot>
+          <tr style="background:#fff3cd!important;">
+            <td class="tot-lbl" colspan="5" style="text-align:center; border: 1.5px solid #000!important; text-transform:uppercase; background:#fff3cd!important;">
+              TOTAL EXPENSE CLAIMED
+            </td>
+            <td class="tot-num" style="border: 1.5px solid #000!important; background:#fff3cd!important; text-align:center;">${gKM > 0 ? gKM.toFixed(1) : ""}</td>
+            <td class="tot-num" style="border: 1.5px solid #000!important; background:#fff3cd!important;">${gTA > 0 ? gTA.toFixed(2) : ""}</td>
+            <td class="tot-num" style="border: 1.5px solid #000!important; background:#fff3cd!important;">${gAuto > 0 ? gAuto.toFixed(2) : ""}</td>
+            <td class="tot-num" style="border: 1.5px solid #000!important; background:#fff3cd!important;">${gDA > 0 ? gDA.toFixed(2) : ""}</td>
+            <td class="tot-num" style="border: 1.5px solid #000!important; background:#fff3cd!important;">${gLocal > 0 ? gLocal.toFixed(2) : ""}</td>
+            <td class="tot-num" style="border: 1.5px solid #000!important; background:#fff3cd!important;">${gHotel > 0 ? gHotel.toFixed(2) : ""}</td>
+            <td class="tot-lbl" style="text-align:center; font-size:6.5pt; border: 1.5px solid #000!important; background:#fff3cd!important;">Other Total</td>
+            <td class="tot-num" style="border: 1.5px solid #000!important; background:#fff3cd!important;">${gOther > 0 ? gOther.toFixed(2) : ""}</td>
+            <td class="tot-num" style="background:#fff3cd!important; font-weight:950; text-align:right; border: 1.5px solid #000!important;">${gTotal.toFixed(2)}</td>
+            <td class="tot-lbl" style="border: 1.5px solid #000!important; background:#fff3cd!important;"></td>
+            <td class="tot-lbl" style="border: 1.5px solid #000!important; font-size:6.5pt!important; text-align:center; font-weight:bold; background:#fff3cd!important;">
+              ${gAssetQty > 0 ? `Qty: ${gAssetQty} | ₹${gAssetVal.toLocaleString('en-IN', { maximumFractionDigits: 0 })}` : ""}
+            </td>
+            <td class="tot-num" style="border: 1.5px solid #000!important; text-align:center; font-weight:bold; background:#fff3cd!important;">${gPMSCalib}</td>
+            <td class="tot-num" style="border: 1.5px solid #000!important; text-align:center; font-weight:bold; background:#fff3cd!important;">${gCallsC}/${gCallsA}</td>
+          </tr>
+          <tr>
+            <td colspan="13" style="border: 1.5px solid #000!important; background:#fff!important; font-weight:900; text-align:center; padding:5px 6px; font-size:8pt; text-transform:uppercase;">ADVANCES</td>
+            <td style="border: 1.5px solid #000!important; background:#fff!important; font-weight:950; text-align:center; font-size:8.5pt!important;">${advance > 0 ? Math.round(advance) : ""}</td>
+            <td colspan="4" style="border: 1.5px solid #000!important; background:#fff!important;"></td>
+          </tr>
+          <tr style="background:#dcdcdc!important;">
+            <td class="net-lbl" colspan="13" style="border: 1.5px solid #000!important; background:#dcdcdc!important;">NET PAYABLE</td>
+            <td class="net-val" style="font-weight:950; font-size:8.5pt!important; border: 1.5px solid #000!important; background:#dcdcdc!important;">${Math.round(gTotal - advance)}</td>
+            <td colspan="4" style="border: 1.5px solid #000!important; background:#dcdcdc!important;"></td>
+          </tr>
+        </tfoot>
+        ` : ""}
+      </table>
+
+      ${isLastPage ? `
+        <div class="awords-box">Amount in words (including all pages): <strong>${amountWords(gTotal - advance).toUpperCase()}</strong></div>
+        <div class="remarks-box">REMARKS: APPROVED</div>
+        <table class="sig-tbl">
+          <colgroup><col style="width:25%;"><col style="width:25%;"><col style="width:25%;"><col style="width:25%;"></colgroup>
+          <tr>
+            <td class="sig-lbl">Claimed By: <strong>${user.name}</strong></td>
+            <td class="sig-lbl">Approved By:<br><strong>${user.manager || ""}</strong></td>
+            <td class="sig-lbl">Checked By: (Verifier)<br><strong>${user.coordinator || ""}</strong></td>
+            <td class="sig-lbl" style="border-right:none;">Accounted By: (Accounts)<br><strong>Amit Rawat</strong></td>
+          </tr>
+          <tr>
+            <td class="sig-val">Date: ${new Date().toLocaleDateString("en-IN", {timeZone: "Asia/Kolkata"})}</td>
+            <td class="sig-val">Date: ${new Date().toLocaleDateString("en-IN", {timeZone: "Asia/Kolkata"})}</td>
+            <td class="sig-val">Date: ${new Date().toLocaleDateString("en-IN", {timeZone: "Asia/Kolkata"})}</td>
+            <td class="sig-val" style="border-right:none;">Date: ${new Date().toLocaleDateString("en-IN", {timeZone: "Asia/Kolkata"})}</td>
+          </tr>
+        </table>
+      ` : `
+        <div style="font-size:8pt;font-weight:bold;text-align:right;padding:8px 4px;color:#444;font-style:italic;">
+          Summary continued on Page ${pageIdx + 2} of ${numPages} ...
+        </div>
+      `}
+    </div>
+    `;
   }
 
   return `<!DOCTYPE html>
@@ -370,148 +533,8 @@ function buildExcelPrintHTML(user: any, claims: any[], attachments: any[] = [], 
   </style>
 </head>
 <body>
-<div class="wrap">
-
-  <table style="margin-bottom:0;">
-    <colgroup>
-      <col style="width:10%;"><col style="width:65%;"><col style="width:25%;">
-    </colgroup>
-    <tr>
-      <td style="background:#fff!important;border:2px solid #0d1557;padding:0;text-align:center;vertical-align:middle;height:32px;overflow:hidden;">
-        <img src="${window.location.origin}/brand.png" style="height:100%; max-height:32px; width:100%; object-fit:contain; display:block; margin:0 auto;" alt="Logo" />
-      </td>
-      <td class="main-hdr">CYRIX &mdash; EXPENSES REIMBURSEMENT FORM</td>
-      <td style="background:#1a237e!important;color:#fff!important;border:2px solid #0d1557;padding:4px 8px;font-size:8pt;font-weight:bold;text-align:center;vertical-align:middle;">
-        <div>Month-Year: ${user.month.toUpperCase().substring(0,3)} ${user.year}</div>
-      </td>
-    </tr>
-  </table>
-
-  <table class="info-tbl">
-    <colgroup>
-      <col style="width:6%;"><col style="width:23%;"><col style="width:7%;"><col style="width:10%;"><col style="width:8%;"><col style="width:10%;"><col style="width:12%;"><col style="width:12%;"><col style="width:6%;"><col style="width:6%;"><col style="width:7%;"><col style="width:11%;">
-    </colgroup>
-    <tr>
-      <td class="info-lbl">NAME :</td>
-      <td class="info-val">${user.name}</td>
-      <td class="info-lbl">EECode:</td>
-      <td class="info-val">${user.e_code}</td>
-      <td class="info-lbl">PROJECT:</td>
-      <td class="info-val">RJBEMP</td>
-      <td class="info-lbl">BASE LOCATION:</td>
-      <td class="info-val">${(user.district || "").toUpperCase()}</td>
-      <td class="info-lbl">GRADE:</td>
-      <td class="info-val">${user.grade || "—"}</td>
-      <td class="info-lbl">MOBILE:</td>
-      <td class="info-val" style="border-right:none;">${user.mobile || "—"}</td>
-    </tr>
-  </table>
-
-  <table style="margin-bottom:0; border-top: none; border-bottom: none;">
-    <colgroup>
-      <col style="width:4.5%;"><col style="width:6.5%;"><col style="width:6.5%;"><col style="width:5%;"><col style="width:3.5%;"><col style="width:3.5%;"><col style="width:4.5%;"><col style="width:3.5%;"><col style="width:3.5%;"><col style="width:5%;"><col style="width:3.5%;"><col style="width:7.5%;"><col style="width:4%;"><col style="width:4.5%;"><col style="width:8%;"><col style="width:7%;"><col style="width:3.5%;"><col style="width:4%;">
-    </colgroup>
-    <thead>
-      <tr>
-        <th class="col-h1" rowspan="2">Date<br>(DD-MM-YY)</th>
-        <th class="col-h1" colspan="2">Locations</th>
-        <th class="col-h1" rowspan="2">Worked<br>District</th>
-        <th class="col-h1" rowspan="2">Mode of<br>Trans.<br>(T/B/Bi/C)</th>
-        <th class="col-h1" rowspan="2">Distance<br>in (KM)</th>
-        <th class="col-h1" rowspan="2">TA (if mode<br>is Train(T)/<br>Bus(B))</th>
-        <th class="col-h1" rowspan="2">Auto<br>fare</th>
-        <th class="col-h1" rowspan="2">D.A.</th>
-        <th class="col-h1" rowspan="2">Local Spare<br>Purch. Rate</th>
-        <th class="col-h1" rowspan="2">Hotel</th>
-        <th class="col-h1" colspan="2">Other Expenses</th>
-        <th class="col-h1" rowspan="2">Total</th>
-        <th class="col-h1" rowspan="2">Remarks /<br>Purpose</th>
-        <th class="col-h1" rowspan="2">Barcode/<br>Asset No. and<br>Ticket No./MPT ID</th>
-        <th class="col-h1" rowspan="2">PMS/<br>Calibration</th>
-        <th class="col-h1" rowspan="2">Calls<br>(Done/Assign)</th>
-      </tr>
-      <tr>
-        <th class="col-h2">From</th>
-        <th class="col-h2">To</th>
-        <th class="col-h2">Description</th>
-        <th class="col-h2">Amount</th>
-      </tr>
-    </thead>
-    <tbody>
-      ${dataRows || `<tr><td colspan="18" style="text-align:center;padding:14px;color:#888;font-style:italic;font-size:8pt;">No expense leg data found for this period.</td></tr>`}
-    </tbody>
-    <tfoot>
-      <!-- TOTAL EXPENSE CLAIMED row -->
-      <tr style="background:#fff3cd!important;">
-        <td class="tot-lbl" colspan="5" style="text-align:center; border: 1.5px solid #000!important; text-transform:uppercase; background:#fff3cd!important;">
-          TOTAL EXPENSE CLAIMED
-        </td>
-        <td class="tot-num" style="border: 1.5px solid #000!important; background:#fff3cd!important; text-align:center;">${gKM > 0 ? gKM.toFixed(1) : ""}</td>
-        <td class="tot-num" style="border: 1.5px solid #000!important; background:#fff3cd!important;">${gTA > 0 ? gTA.toFixed(2) : ""}</td>
-        <td class="tot-num" style="border: 1.5px solid #000!important; background:#fff3cd!important;">${gAuto > 0 ? gAuto.toFixed(2) : ""}</td>
-        <td class="tot-num" style="border: 1.5px solid #000!important; background:#fff3cd!important;">${gDA > 0 ? gDA.toFixed(2) : ""}</td>
-        <td class="tot-num" style="border: 1.5px solid #000!important; background:#fff3cd!important;">${gLocal > 0 ? gLocal.toFixed(2) : ""}</td>
-        <td class="tot-num" style="border: 1.5px solid #000!important; background:#fff3cd!important;">${gHotel > 0 ? gHotel.toFixed(2) : ""}</td>
-        <td class="tot-lbl" style="text-align:center; font-size:6.5pt; border: 1.5px solid #000!important; background:#fff3cd!important;">Other Total</td>
-        <td class="tot-num" style="border: 1.5px solid #000!important; background:#fff3cd!important;">${gOther > 0 ? gOther.toFixed(2) : ""}</td>
-        <td class="tot-num" style="background:#fff3cd!important; font-weight:950; text-align:right; border: 1.5px solid #000!important;">${gTotal.toFixed(2)}</td>
-        <td class="tot-lbl" style="border: 1.5px solid #000!important; background:#fff3cd!important;"></td>
-        <td class="tot-lbl" style="border: 1.5px solid #000!important; font-size:6.5pt!important; text-align:center; font-weight:bold; background:#fff3cd!important;">
-          ${gAssetQty > 0 ? `Qty: ${gAssetQty} | ₹${gAssetVal.toLocaleString('en-IN', { maximumFractionDigits: 0 })}` : ""}
-        </td>
-        <td class="tot-num" style="border: 1.5px solid #000!important; text-align:center; font-weight:bold; background:#fff3cd!important;">${gPMSCalib}</td>
-        <td class="tot-num" style="border: 1.5px solid #000!important; text-align:center; font-weight:bold; background:#fff3cd!important;">${gCallsC}/${gCallsA}</td>
-      </tr>
-      <!-- ADVANCES ROW -->
-      <tr>
-        <td colspan="13" style="border: 1.5px solid #000!important; background:#fff!important; font-weight:900; text-align:center; padding:5px 6px; font-size:8pt; text-transform:uppercase;">
-          ADVANCES
-        </td>
-        <td style="border: 1.5px solid #000!important; background:#fff!important; font-weight:950; text-align:center; font-size:8.5pt!important;">
-          ${advance > 0 ? Math.round(advance) : ""}
-        </td>
-        <td colspan="4" style="border: 1.5px solid #000!important; background:#fff!important;"></td>
-      </tr>
-      <!-- NET PAYABLE ROW -->
-      <tr style="background:#dcdcdc!important;">
-        <td class="net-lbl" colspan="13" style="border: 1.5px solid #000!important; background:#dcdcdc!important;">NET PAYABLE</td>
-        <td class="net-val" style="font-weight:950; font-size:8.5pt!important; border: 1.5px solid #000!important; background:#dcdcdc!important;">${Math.round(gTotal - advance)}</td>
-        <td colspan="4" style="border: 1.5px solid #000!important; background:#dcdcdc!important;"></td>
-      </tr>
-    </tfoot>
-  </table>
-
-  <!-- ══ AMOUNT IN WORDS ══ -->
-  <div class="awords-box">
-    Amount in words (including all pages): <strong>${amountWords(gTotal - advance).toUpperCase()}</strong>
-  </div>
-
-  <!-- ══ REMARKS ══ -->
-  <div class="remarks-box">
-    REMARKS: APPROVED
-  </div>
-
-  <!-- ══ SIGNATURES GRID (Image 3 simple style) ══ -->
-  <table class="sig-tbl">
-    <colgroup>
-      <col style="width:25%;"><col style="width:25%;"><col style="width:25%;"><col style="width:25%;">
-    </colgroup>
-    <tr>
-      <td class="sig-lbl">Claimed By: <strong>${user.name}</strong></td>
-      <td class="sig-lbl">Approved By:<br><strong>${user.manager || ""}</strong></td>
-      <td class="sig-lbl">Checked By: (Verifier)<br><strong>${user.coordinator || ""}</strong></td>
-      <td class="sig-lbl" style="border-right:none;">Accounted By: (Accounts)<br><strong>Amit Rawat</strong></td>
-    </tr>
-    <tr>
-      <td class="sig-val">Date: ${new Date().toLocaleDateString("en-IN", {timeZone: "Asia/Kolkata"})}</td>
-      <td class="sig-val">Date: ${new Date().toLocaleDateString("en-IN", {timeZone: "Asia/Kolkata"})}</td>
-      <td class="sig-val">Date: ${new Date().toLocaleDateString("en-IN", {timeZone: "Asia/Kolkata"})}</td>
-      <td class="sig-val" style="border-right:none;">Date: ${new Date().toLocaleDateString("en-IN", {timeZone: "Asia/Kolkata"})}</td>
-    </tr>
-  </table>
-
-  <!-- ══ ATTACHED RECEIPTS SECTION ══ -->
-  ${attachmentsSection}
+${summaryPagesHtml}
+${attachmentsSection}
 
   ${autoPrint ? `
   <script>
