@@ -340,7 +340,15 @@ export async function handleGetAssetsStats(request, env, params, query, user) {
   }
 
   const monthlyValue = (verified_out_of_warranty_value * 6.08 / 100) / 12;
+  const monthlyGst = monthlyValue * 0.18;
+  const monthlyGstInc = monthlyValue * 1.18;
+
+  const arrearGst = arrearBilling * 0.18;
+  const arrearGstInc = arrearBilling * 1.18;
+
   const totalBilling = monthlyValue + arrearBilling;
+  const totalBillingGst = totalBilling * 0.18;
+  const totalBillingGstInc = totalBilling * 1.18;
 
   const statusList = (statusRows.results || []).map(r => ({
     name: r.equipment_status || "Unknown",
@@ -376,8 +384,14 @@ export async function handleGetAssetsStats(request, env, params, query, user) {
     verified_value: Math.round(verified_value * 100) / 100,
     verified_out_of_warranty_value: Math.round(verified_out_of_warranty_value * 100) / 100,
     monthly_value: Math.round(monthlyValue * 100) / 100,
+    monthly_billing_gst: Math.round(monthlyGst * 100) / 100,
+    monthly_billing_gst_inc: Math.round(monthlyGstInc * 100) / 100,
     arrear_billing: Math.round(arrearBilling * 100) / 100,
+    arrear_billing_gst: Math.round(arrearGst * 100) / 100,
+    arrear_billing_gst_inc: Math.round(arrearGstInc * 100) / 100,
     total_billing: Math.round(totalBilling * 100) / 100,
+    total_billing_gst: Math.round(totalBillingGst * 100) / 100,
+    total_billing_gst_inc: Math.round(totalBillingGstInc * 100) / 100,
     charts: {
       top_types: topTypes,
       status_list: statusList,

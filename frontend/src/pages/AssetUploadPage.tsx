@@ -55,8 +55,14 @@ interface AssetStats {
   verified_value: number;
   verified_out_of_warranty_value: number;
   monthly_value: number;
+  monthly_billing_gst?: number;
+  monthly_billing_gst_inc?: number;
   arrear_billing: number;
+  arrear_billing_gst?: number;
+  arrear_billing_gst_inc?: number;
   total_billing: number;
+  total_billing_gst?: number;
+  total_billing_gst_inc?: number;
   charts: {
     top_types: ChartItem[];
     status_list: ChartItem[];
@@ -68,7 +74,9 @@ const defaultStats: AssetStats = {
   total_equipment: 0, verified_equipment: 0, under_warranty: 0,
   out_of_warranty: 0, total_value: 0, verified_value: 0,
   verified_out_of_warranty_value: 0, monthly_value: 0,
-  arrear_billing: 0, total_billing: 0,
+  monthly_billing_gst: 0, monthly_billing_gst_inc: 0,
+  arrear_billing: 0, arrear_billing_gst: 0, arrear_billing_gst_inc: 0,
+  total_billing: 0, total_billing_gst: 0, total_billing_gst_inc: 0,
   charts: { top_types: [], status_list: [], warranty_list: [] }
 };
 
@@ -527,9 +535,27 @@ export default function AssetUploadPage() {
         {[
           { label: "Verified Value", value: fmtRs(stats?.verified_value ?? 0), icon: <CheckCircle className="w-5 h-5 text-white" />, bgColor: "bg-[#28a745]" },
           { label: "Verified OOW Value", value: fmtRs(stats?.verified_out_of_warranty_value ?? 0), icon: <ShieldOff className="w-5 h-5 text-white" />, bgColor: "bg-[#fd7e14]" },
-          { label: "Monthly Billing", value: fmtRs(stats?.monthly_value ?? 0), sub: "(Value × 6.08% ÷ 12)", icon: <Calendar className="w-5 h-5 text-white" />, bgColor: "bg-[#007bff]" },
-          { label: "Arrear Billing", value: fmtRs(stats?.arrear_billing ?? 0), sub: "Verified in target month", icon: <Receipt className="w-5 h-5 text-white" />, bgColor: "bg-[#dc3545]" },
-          { label: "Total Billing Value", value: fmtRs(stats?.total_billing ?? 0), icon: <IndianRupee className="w-5 h-5 text-white" />, bgColor: "bg-[#6f42c1]" },
+          { 
+            label: "Monthly Billing", 
+            value: fmtRs(stats?.monthly_value ?? 0), 
+            sub: `+ GST (18%): ${fmtRs(stats?.monthly_billing_gst ?? Math.round((stats?.monthly_value ?? 0) * 0.18))} | GST Inc: ${fmtRs(stats?.monthly_billing_gst_inc ?? Math.round((stats?.monthly_value ?? 0) * 1.18))}`, 
+            icon: <Calendar className="w-5 h-5 text-white" />, 
+            bgColor: "bg-[#007bff]" 
+          },
+          { 
+            label: "Arrear Billing", 
+            value: fmtRs(stats?.arrear_billing ?? 0), 
+            sub: `+ GST (18%): ${fmtRs(stats?.arrear_billing_gst ?? Math.round((stats?.arrear_billing ?? 0) * 0.18))} | GST Inc: ${fmtRs(stats?.arrear_billing_gst_inc ?? Math.round((stats?.arrear_billing ?? 0) * 1.18))}`, 
+            icon: <Receipt className="w-5 h-5 text-white" />, 
+            bgColor: "bg-[#dc3545]" 
+          },
+          { 
+            label: "Total Billing (GST Inc)", 
+            value: fmtRs(stats?.total_billing_gst_inc ?? Math.round((stats?.total_billing ?? 0) * 1.18)), 
+            sub: `Excl. GST: ${fmtRs(stats?.total_billing ?? 0)} | GST 18%: ${fmtRs(stats?.total_billing_gst ?? Math.round((stats?.total_billing ?? 0) * 0.18))}`, 
+            icon: <IndianRupee className="w-5 h-5 text-white" />, 
+            bgColor: "bg-[#6f42c1]" 
+          },
         ].map((s, i) => (
           <div key={i} className="info-box-lte animate-fadeIn">
             <div className={`info-box-icon ${s.bgColor}`}>
@@ -538,7 +564,7 @@ export default function AssetUploadPage() {
             <div className="info-box-content">
               <span className="text-[9px] font-bold uppercase tracking-wider text-gray-400 block">{s.label}</span>
               <span className="text-base font-extrabold text-gray-800 font-mono block mt-0.5">{s.value}</span>
-              {"sub" in s && s.sub && <span className="text-[7px] text-gray-450 font-semibold block mt-0.5 leading-none">{s.sub}</span>}
+              {"sub" in s && s.sub && <span className="text-[7px] text-gray-500 font-semibold block mt-0.5 leading-none">{s.sub}</span>}
             </div>
           </div>
         ))}
