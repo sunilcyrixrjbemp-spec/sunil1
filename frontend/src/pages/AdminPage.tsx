@@ -1396,92 +1396,110 @@ export default function AdminPage() {
           </div>
         </Card>
 
-        {/* 4 Executive KPI Metric Cards Grid */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-          {/* Card 1: Users Overview */}
-          <div className="bg-slate-900/90 border border-slate-800/90 rounded-2xl p-4 shadow-xl backdrop-blur-xl text-white relative overflow-hidden group hover:border-indigo-500/50 transition-all duration-300">
+        {/* 6 Executive Summary Metric Column Cards Grid */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-3.5">
+          {/* Column 1: Total Platform Users */}
+          <div className="bg-gradient-to-br from-slate-900/95 via-purple-950/40 to-slate-900/95 border border-purple-500/30 rounded-2xl p-3.5 shadow-xl backdrop-blur-2xl text-white relative overflow-hidden group hover:border-purple-400/60 hover:shadow-purple-500/10 transition-all duration-300">
             <div className="flex items-center justify-between">
-              <div className="space-y-1">
-                <span className="text-slate-400 text-[11px] font-extrabold uppercase tracking-wider block">Total Platform Users</span>
-                <div className="flex items-baseline gap-2">
-                  <span className="text-3xl font-black text-white">{users.length}</span>
-                  <span className="text-emerald-400 bg-emerald-500/10 border border-emerald-500/20 px-2 py-0.5 rounded-md text-[10px] font-black">
-                    {users.filter(u => u.user_status === 'active' || !u.user_status).length} Active
-                  </span>
-                </div>
-              </div>
-              <div className="h-12 w-12 rounded-2xl bg-indigo-500/10 border border-indigo-500/20 flex items-center justify-center text-indigo-400 text-xl font-black shadow-inner">
+              <span className="text-purple-300 text-[10px] font-black uppercase tracking-wider block font-['Outfit']">Total Users</span>
+              <div className="h-8 w-8 rounded-xl bg-purple-500/20 border border-purple-500/30 flex items-center justify-center text-purple-300 text-sm font-black shadow-inner">
                 <UserOutlined />
               </div>
             </div>
-            <div className="mt-3 pt-3 border-t border-slate-800/80 flex items-center justify-between text-[11px] font-bold text-slate-400">
-              <span>Engineers: {users.filter(u => u.role?.toLowerCase().includes('engineer')).length}</span>
-              <span>Managers: {users.filter(u => u.role?.toLowerCase().includes('manager')).length}</span>
-              <span>Admins: {users.filter(u => u.role?.toLowerCase().includes('admin')).length}</span>
+            <div className="mt-1">
+              <span className="text-3xl font-black text-white font-['Outfit'] tracking-tight">{users.length}</span>
+            </div>
+            <div className="mt-2 pt-2 border-t border-purple-500/20 flex items-center justify-between text-[10px] font-extrabold text-purple-200">
+              <span className="text-emerald-400">Active: {users.filter(u => u.user_status === 'active' || !u.user_status).length}</span>
+              <span className="text-rose-400">Disabled: {users.filter(u => u.user_status && u.user_status !== 'active').length}</span>
             </div>
           </div>
 
-          {/* Card 2: Approval Rules */}
-          <div className="bg-slate-900/90 border border-slate-800/90 rounded-2xl p-4 shadow-xl backdrop-blur-xl text-white relative overflow-hidden group hover:border-emerald-500/50 transition-all duration-300">
+          {/* Column 2: Field Engineers */}
+          <div className="bg-gradient-to-br from-slate-900/95 via-emerald-950/40 to-slate-900/95 border border-emerald-500/30 rounded-2xl p-3.5 shadow-xl backdrop-blur-2xl text-white relative overflow-hidden group hover:border-emerald-400/60 hover:shadow-emerald-500/10 transition-all duration-300">
             <div className="flex items-center justify-between">
-              <div className="space-y-1">
-                <span className="text-slate-400 text-[11px] font-extrabold uppercase tracking-wider block">Approval Rules</span>
-                <div className="flex items-baseline gap-2">
-                  <span className="text-3xl font-black text-white">{hierarchies.length}</span>
-                  <span className="text-cyan-400 bg-cyan-500/10 border border-cyan-500/20 px-2 py-0.5 rounded-md text-[10px] font-black">
-                    Hierarchies
-                  </span>
-                </div>
-              </div>
-              <div className="h-12 w-12 rounded-2xl bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center text-emerald-400 text-xl font-black shadow-inner">
-                <SafetyCertificateOutlined />
+              <span className="text-emerald-300 text-[10px] font-black uppercase tracking-wider block font-['Outfit']">Field Engineers</span>
+              <div className="h-8 w-8 rounded-xl bg-emerald-500/20 border border-emerald-500/30 flex items-center justify-center text-emerald-300 text-sm font-black shadow-inner">
+                <TeamOutlined />
               </div>
             </div>
-            <div className="mt-3 pt-3 border-t border-slate-800/80 flex items-center justify-between text-[11px] font-bold text-slate-400">
-              <span>Mapped Requesters: {hierarchies.reduce((acc, h) => acc + (h.requesters?.length || 0), 0)}</span>
+            <div className="mt-1">
+              <span className="text-3xl font-black text-white font-['Outfit'] tracking-tight">{users.filter(u => u.role?.toLowerCase().includes('engineer')).length}</span>
+            </div>
+            <div className="mt-2 pt-2 border-t border-emerald-500/20 flex items-center justify-between text-[10px] font-extrabold text-emerald-200">
+              <span>Field Staff</span>
+              <span className="text-emerald-400">Deployed</span>
             </div>
           </div>
 
-          {/* Card 3: Screen Security */}
-          <div className="bg-slate-900/90 border border-slate-800/90 rounded-2xl p-4 shadow-xl backdrop-blur-xl text-white relative overflow-hidden group hover:border-purple-500/50 transition-all duration-300">
+          {/* Column 3: Managers & ZMs */}
+          <div className="bg-gradient-to-br from-slate-900/95 via-cyan-950/40 to-slate-900/95 border border-cyan-500/30 rounded-2xl p-3.5 shadow-xl backdrop-blur-2xl text-white relative overflow-hidden group hover:border-cyan-400/60 hover:shadow-cyan-500/10 transition-all duration-300">
             <div className="flex items-center justify-between">
-              <div className="space-y-1">
-                <span className="text-slate-400 text-[11px] font-extrabold uppercase tracking-wider block">Screen Security</span>
-                <div className="flex items-baseline gap-2">
-                  <span className="text-3xl font-black text-white">{ALL_WINDOWS.length}</span>
-                  <span className="text-purple-400 bg-purple-500/10 border border-purple-500/20 px-2 py-0.5 rounded-md text-[10px] font-black">
-                    Windows
-                  </span>
-                </div>
+              <span className="text-cyan-300 text-[10px] font-black uppercase tracking-wider block font-['Outfit']">Managers & ZMs</span>
+              <div className="h-8 w-8 rounded-xl bg-cyan-500/20 border border-cyan-500/30 flex items-center justify-center text-cyan-300 text-sm font-black shadow-inner">
+                <ControlOutlined />
               </div>
-              <div className="h-12 w-12 rounded-2xl bg-purple-500/10 border border-purple-500/20 flex items-center justify-center text-purple-400 text-xl font-black shadow-inner">
+            </div>
+            <div className="mt-1">
+              <span className="text-3xl font-black text-white font-['Outfit'] tracking-tight">{users.filter(u => u.role?.toLowerCase().includes('manager')).length}</span>
+            </div>
+            <div className="mt-2 pt-2 border-t border-cyan-500/20 flex items-center justify-between text-[10px] font-extrabold text-cyan-200">
+              <span>Approval Leaders</span>
+              <span className="text-cyan-400">Escalation</span>
+            </div>
+          </div>
+
+          {/* Column 4: Admins & MIS */}
+          <div className="bg-gradient-to-br from-slate-900/95 via-amber-950/40 to-slate-900/95 border border-amber-500/30 rounded-2xl p-3.5 shadow-xl backdrop-blur-2xl text-white relative overflow-hidden group hover:border-amber-400/60 hover:shadow-amber-500/10 transition-all duration-300">
+            <div className="flex items-center justify-between">
+              <span className="text-amber-300 text-[10px] font-black uppercase tracking-wider block font-['Outfit']">Admins & MIS</span>
+              <div className="h-8 w-8 rounded-xl bg-amber-500/20 border border-amber-500/30 flex items-center justify-center text-amber-300 text-sm font-black shadow-inner">
                 <LockOutlined />
               </div>
             </div>
-            <div className="mt-3 pt-3 border-t border-slate-800/80 flex items-center justify-between text-[11px] font-bold text-slate-400">
-              <span>Access Control Matrix Active</span>
+            <div className="mt-1">
+              <span className="text-3xl font-black text-white font-['Outfit'] tracking-tight">{users.filter(u => u.role?.toLowerCase().includes('admin') || u.role?.toLowerCase().includes('mis')).length}</span>
+            </div>
+            <div className="mt-2 pt-2 border-t border-amber-500/20 flex items-center justify-between text-[10px] font-extrabold text-amber-200">
+              <span>Full Control</span>
+              <span className="text-amber-400">Governance</span>
             </div>
           </div>
 
-          {/* Card 4: Cloudflare D1 Database */}
-          <div className="bg-slate-900/90 border border-slate-800/90 rounded-2xl p-4 shadow-xl backdrop-blur-xl text-white relative overflow-hidden group hover:border-amber-500/50 transition-all duration-300">
+          {/* Column 5: Approval Rules */}
+          <div className="bg-gradient-to-br from-slate-900/95 via-rose-950/40 to-slate-900/95 border border-rose-500/30 rounded-2xl p-3.5 shadow-xl backdrop-blur-2xl text-white relative overflow-hidden group hover:border-rose-400/60 hover:shadow-rose-500/10 transition-all duration-300">
             <div className="flex items-center justify-between">
-              <div className="space-y-1">
-                <span className="text-slate-400 text-[11px] font-extrabold uppercase tracking-wider block">Database Health</span>
-                <div className="flex items-baseline gap-2">
-                  <span className="text-xl font-black text-emerald-400 flex items-center gap-1.5">
-                    <span className="h-2.5 w-2.5 rounded-full bg-emerald-500 animate-pulse"></span>
-                    D1 Synced
-                  </span>
-                </div>
+              <span className="text-rose-300 text-[10px] font-black uppercase tracking-wider block font-['Outfit']">Hierarchy Rules</span>
+              <div className="h-8 w-8 rounded-xl bg-rose-500/20 border border-rose-500/30 flex items-center justify-center text-rose-300 text-sm font-black shadow-inner">
+                <SafetyCertificateOutlined />
               </div>
-              <div className="h-12 w-12 rounded-2xl bg-amber-500/10 border border-amber-500/20 flex items-center justify-center text-amber-400 text-xl font-black shadow-inner">
+            </div>
+            <div className="mt-1">
+              <span className="text-3xl font-black text-white font-['Outfit'] tracking-tight">{hierarchies.length}</span>
+            </div>
+            <div className="mt-2 pt-2 border-t border-rose-500/20 flex items-center justify-between text-[10px] font-extrabold text-rose-200">
+              <span>Mapped Rules</span>
+              <span className="text-rose-400">Workflow</span>
+            </div>
+          </div>
+
+          {/* Column 6: Security & System */}
+          <div className="bg-gradient-to-br from-slate-900/95 via-blue-950/40 to-slate-900/95 border border-blue-500/30 rounded-2xl p-3.5 shadow-xl backdrop-blur-2xl text-white relative overflow-hidden group hover:border-blue-400/60 hover:shadow-blue-500/10 transition-all duration-300">
+            <div className="flex items-center justify-between">
+              <span className="text-blue-300 text-[10px] font-black uppercase tracking-wider block font-['Outfit']">Screen Windows</span>
+              <div className="h-8 w-8 rounded-xl bg-blue-500/20 border border-blue-500/30 flex items-center justify-center text-blue-300 text-sm font-black shadow-inner">
                 <DatabaseOutlined />
               </div>
             </div>
-            <div className="mt-3 pt-3 border-t border-slate-800/80 flex items-center justify-between text-[11px] font-bold text-slate-400">
-              <span>Cutoff Day: {settings.monthly_cutoff_day || '3'}rd</span>
-              <span>Auto-Expiry: {settings.pending_auto_expiry_days || '5'} Days</span>
+            <div className="mt-1">
+              <span className="text-3xl font-black text-white font-['Outfit'] tracking-tight">{ALL_WINDOWS.length}</span>
+            </div>
+            <div className="mt-2 pt-2 border-t border-blue-500/20 flex items-center justify-between text-[10px] font-extrabold text-blue-200">
+              <span className="text-emerald-400 flex items-center gap-1">
+                <span className="h-1.5 w-1.5 rounded-full bg-emerald-400 animate-pulse"></span>
+                D1 Online
+              </span>
+              <span>Matrix</span>
             </div>
           </div>
         </div>
