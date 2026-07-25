@@ -12,7 +12,7 @@ import Loader from "../components/common/Loader";
 
 const getAbsoluteUrl = (path: string) => {
   if (!path) return "";
-  if (path.startsWith("http://") || path.startsWith("https://")) return path;
+  if (path.startsWith("http://") || path.startsWith("https://") || path.startsWith("data:")) return path;
   
   const envBaseURL = import.meta.env.VITE_API_URL || "";
   let host = "";
@@ -27,6 +27,25 @@ const getAbsoluteUrl = (path: string) => {
     }
   }
   return `${host}/${path.replace(/^\//, "")}`;
+};
+
+const convertImageUrlToBase64 = async (url: string): Promise<string> => {
+  if (!url) return "";
+  if (url.startsWith("data:")) return url;
+  try {
+    const absUrl = getAbsoluteUrl(url);
+    const response = await fetch(absUrl);
+    if (!response.ok) return absUrl;
+    const blob = await response.blob();
+    return new Promise((resolve) => {
+      const reader = new FileReader();
+      reader.onloadend = () => resolve((reader.result as string) || absUrl);
+      reader.onerror = () => resolve(absUrl);
+      reader.readAsDataURL(blob);
+    });
+  } catch (e) {
+    return getAbsoluteUrl(url);
+  }
 };
 
 const MONTHS = [
@@ -773,10 +792,34 @@ export default function MonthSummaryPage() {
         const res = await expenseService.getEngineerMonthClaims(row.user_id, row.month, row.year);
         const userObj = res.user || row;
         const claims = res.claims || [];
-        const attachments = res.attachments || [];
         if (claims.length === 0) {
           toast.error("No approved claim data found");
           return;
+        }
+
+        const rawAttachments = res.attachments || [];
+        const attachments = await Promise.all(
+          rawAttachments.map(async (att: any) => {
+            const rawUrl = att.file_url || att.url || (typeof att === "string" ? att : "");
+            const base64Url = rawUrl ? await convertImageUrlToBase64(rawUrl) : "";
+            return {
+              ...att,
+              file_url: base64Url || rawUrl,
+              url: base64Url || rawUrl
+            };
+          })
+        );
+
+        for (const claim of claims) {
+          for (const leg of (claim.legs || [])) {
+            if (leg.hotel_receipt) leg.hotel_receipt = await convertImageUrlToBase64(leg.hotel_receipt);
+            if (leg.local_purchase_bill) leg.local_purchase_bill = await convertImageUrlToBase64(leg.local_purchase_bill);
+            if (leg.other_bill) leg.other_bill = await convertImageUrlToBase64(leg.other_bill);
+            if (leg.receipt_url) leg.receipt_url = await convertImageUrlToBase64(leg.receipt_url);
+            if (leg.bill_url) leg.bill_url = await convertImageUrlToBase64(leg.bill_url);
+            if (leg.attachment_url) leg.attachment_url = await convertImageUrlToBase64(leg.attachment_url);
+            if (leg.file_url) leg.file_url = await convertImageUrlToBase64(leg.file_url);
+          }
         }
 
         const html = buildExcelPrintHTML(userObj, claims, attachments, amount, false);
