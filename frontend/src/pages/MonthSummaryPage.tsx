@@ -697,13 +697,15 @@ export default function MonthSummaryPage() {
       });
     });
 
-    // Query main summary page + all attachment pages
+    // Query ALL summary pages (Page 1 of N, Page 2 of N, Page 3 of N...) + ALL attachment pages (1 page per bill)
     const pagesToRender: HTMLElement[] = [];
-    const mainWrap = iDoc.querySelector(".wrap") as HTMLElement;
-    if (mainWrap) pagesToRender.push(mainWrap);
+    const summaryPages = Array.from(iDoc.querySelectorAll(".summary-page, .wrap")) as HTMLElement[];
+    const uniqueSummaryPages = Array.from(new Set(summaryPages));
+    pagesToRender.push(...uniqueSummaryPages);
 
     const attPages = Array.from(iDoc.querySelectorAll(".attachment-page")) as HTMLElement[];
-    pagesToRender.push(...attPages);
+    const uniqueAttPages = Array.from(new Set(attPages)).filter(el => !pagesToRender.includes(el));
+    pagesToRender.push(...uniqueAttPages);
 
     const pdf = new jsPDF({
       orientation: "landscape",
