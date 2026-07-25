@@ -108,10 +108,23 @@ function buildExcelPrintHTML(user: any, claims: any[], attachments: any[] = [], 
       const legStat = String(rawLeg.status || "").toLowerCase();
       if (legStat === "rejected") continue;
 
-      // Extract strictly approved amounts
+      // Extract strictly approved amounts (including Bus / Train travel fare amounts)
+      const mode = String(rawLeg.travel_mode || "").toLowerCase();
+      const isBusOrTrain = mode.includes("bus") || mode.includes("train") || mode === "b" || mode === "t";
+
+      const getTAAmount = () => {
+        if (rawLeg.approved_ta_amount !== undefined && rawLeg.approved_ta_amount !== null && parseFloat(rawLeg.approved_ta_amount) > 0) return parseFloat(rawLeg.approved_ta_amount);
+        if (rawLeg.ta_amount !== undefined && rawLeg.ta_amount !== null && parseFloat(rawLeg.ta_amount) > 0) return parseFloat(rawLeg.ta_amount);
+        if (rawLeg.approved_travel_amount !== undefined && rawLeg.approved_travel_amount !== null && parseFloat(rawLeg.approved_travel_amount) > 0 && isBusOrTrain) return parseFloat(rawLeg.approved_travel_amount);
+        if (rawLeg.travel_amount !== undefined && rawLeg.travel_amount !== null && parseFloat(rawLeg.travel_amount) > 0 && isBusOrTrain) return parseFloat(rawLeg.travel_amount);
+        if (rawLeg.approved_sub_amount !== undefined && rawLeg.approved_sub_amount !== null && parseFloat(rawLeg.approved_sub_amount) > 0 && isBusOrTrain) return parseFloat(rawLeg.approved_sub_amount);
+        if (rawLeg.sub_amount !== undefined && rawLeg.sub_amount !== null && parseFloat(rawLeg.sub_amount) > 0 && isBusOrTrain) return parseFloat(rawLeg.sub_amount);
+        return 0;
+      };
+
       const leg = {
         ...rawLeg,
-        ta_amount: rawLeg.approved_ta_amount !== undefined ? parseFloat(rawLeg.approved_ta_amount || 0) : parseFloat(rawLeg.ta_amount || 0),
+        ta_amount: getTAAmount(),
         bike_amount: rawLeg.approved_bike_amount !== undefined ? parseFloat(rawLeg.approved_bike_amount || 0) : parseFloat(rawLeg.bike_amount || 0),
         car_amount: rawLeg.approved_car_amount !== undefined ? parseFloat(rawLeg.approved_car_amount || 0) : parseFloat(rawLeg.car_amount || 0),
         auto_amount: rawLeg.approved_auto_amount !== undefined ? parseFloat(rawLeg.approved_auto_amount || 0) : parseFloat(rawLeg.auto_amount || 0),
@@ -172,10 +185,7 @@ function buildExcelPrintHTML(user: any, claims: any[], attachments: any[] = [], 
     const finalActs = Array.isArray(acts) ? acts : [];
     finalActs.forEach((act: string) => {
       const actClean = act.trim();
-      // Filter out any activity name that matches the monetary other_desc
-      if (l.other_desc && actClean === l.other_desc.trim()) {
-        return;
-      }
+      if (l.other_desc && actClean === l.other_desc.trim()) return;
 
       if (actClean === "Calls" || actClean === "Breakdown Call") {
         parts.push("Breakdown Call");
@@ -188,29 +198,23 @@ function buildExcelPrintHTML(user: any, claims: any[], attachments: any[] = [], 
       } else if (actClean === "Calibration") {
         parts.push("Calibration");
       } else if (actClean === "Other") {
-        // Skip literal "Other"
+        // Skip
       } else if (actClean && actClean !== "Field visit") {
         parts.push(actClean);
       }
     });
 
-    if (actOtherDesc && actOtherDesc.trim()) {
-      parts.push(actOtherDesc.trim());
-    }
+    if (actOtherDesc && actOtherDesc.trim()) parts.push(actOtherDesc.trim());
 
     if (parts.length === 0) {
       const cleanPurpose = l.visit_purpose && !visitPurposeStr.startsWith("Activities:") ? visitPurposeStr : "Field visit";
-      if (l.other_desc && cleanPurpose.trim() === l.other_desc.trim()) {
-        return "Field visit";
-      }
+      if (l.other_desc && cleanPurpose.trim() === l.other_desc.trim()) return "Field visit";
       return cleanPurpose;
     }
     return parts.join(", ");
   };
 
-  const getActivityOtherDesc = (l: any) => {
-    return l.other_desc || "";
-  };
+  const getActivityOtherDesc = (l: any) => l.other_desc || "";
 
   // ── mode abbreviation ──
   const modeAbbr = (m: string) => {
@@ -222,19 +226,12 @@ function buildExcelPrintHTML(user: any, claims: any[], attachments: any[] = [], 
     return map[m] || m;
   };
 
-  // Collect ONLY financial bill attachments associated with expense amounts
-  // Strictly EXCLUDE non-monetary service reports, breakdown call photos, or PMS photos!
+  // Collect ALL financial bill attachments
   const allAttachmentsMap = new Map<string, { url: string; date: string; label: string }>();
 
+  // 1. Top-level attachments array from backend
   (attachments || []).forEach((att: any, idx: number) => {
     const rawUrl = att.file_url || att.url || (typeof att === "string" ? att : "");
-    const billType = (att.bill_type || att.billType || "").toLowerCase();
-    
-    // Exclude PMS, call, or service report photos
-    if (billType.includes("pms") || billType.includes("call") || billType.includes("service")) {
-      return;
-    }
-
     if (rawUrl && !allAttachmentsMap.has(rawUrl)) {
       allAttachmentsMap.set(rawUrl, {
         url: rawUrl,
@@ -244,29 +241,37 @@ function buildExcelPrintHTML(user: any, claims: any[], attachments: any[] = [], 
     }
   });
 
+  // 2. Scan claims and legs for any attachment URLs (hotel, local purchase, other bills, travel tickets, etc.)
   (claims || []).forEach((claim: any) => {
     const claimDate = claim.date ? fmtDate(claim.date) : "";
     (claim.legs || []).forEach((leg: any) => {
-      // Collect ONLY bill / receipt files linked to monetary amounts
-      const urls = [
-        { url: leg.hotel_receipt, label: "Hotel Bill Receipt" },
-        { url: leg.local_purchase_bill, label: "Local Purchase Bill" },
-        { url: leg.other_bill, label: "Other Expense Bill" },
-        { url: leg.receipt_url, label: "Travel / Bill Receipt" },
-        { url: leg.bill_url, label: "Travel Ticket" },
-        { url: leg.attachment_url, label: "Expense Bill Attachment" },
-        { url: leg.file_url, label: "Expense Bill Attachment" }
+      const candidateFields = [
+        { key: "hotel_receipt", label: "Hotel Bill Receipt" },
+        { key: "local_purchase_bill", label: "Local Purchase Bill" },
+        { key: "other_bill", label: "Other Expense Bill" },
+        { key: "receipt_url", label: "Travel / Bill Receipt" },
+        { key: "bill_url", label: "Travel Ticket" },
+        { key: "attachment_url", label: "Expense Bill Attachment" },
+        { key: "file_url", label: "Expense Bill Attachment" },
+        { key: "bill_copy", label: "Expense Bill Copy" },
+        { key: "receipt", label: "Bill Receipt" }
       ];
 
-      urls.forEach(item => {
-        const u = item.url;
+      candidateFields.forEach(field => {
+        const u = leg[field.key];
         if (u && typeof u === 'string' && u.trim() && !allAttachmentsMap.has(u)) {
-          const lower = u.toLowerCase();
-          if (!lower.includes("pms") && !lower.includes("call") && !lower.includes("service")) {
-            allAttachmentsMap.set(u, { url: u, date: claimDate, label: item.label });
-          }
+          allAttachmentsMap.set(u, { url: u, date: claimDate, label: field.label });
         }
       });
+
+      if (Array.isArray(leg.attachments)) {
+        leg.attachments.forEach((aItem: any, aIdx: number) => {
+          const aUrl = typeof aItem === "string" ? aItem : (aItem.file_url || aItem.url);
+          if (aUrl && !allAttachmentsMap.has(aUrl)) {
+            allAttachmentsMap.set(aUrl, { url: aUrl, date: claimDate, label: aItem.bill_type || `Bill Attachment #${aIdx + 1}` });
+          }
+        });
+      }
     });
   });
 
@@ -282,16 +287,16 @@ function buildExcelPrintHTML(user: any, claims: any[], attachments: any[] = [], 
       const attLabel = att.label || "Expense Bill Attachment";
       
       const cleanUrl = rawUrl.toLowerCase().split("?")[0];
-      const isPdf = cleanUrl.endsWith(".pdf") || cleanUrl.includes("/pdf");
+      const isPdf = cleanUrl.endsWith(".pdf") || rawUrl.startsWith("data:application/pdf");
 
       const mediaHtml = isPdf ? `
-        <object data="${absoluteUrl}#toolbar=0&navpanes=0" type="application/pdf" style="width:100%;max-width:1080px;height:640px;border:1px solid #ccc;">
-          <iframe src="${absoluteUrl}#toolbar=0&navpanes=0" style="width:100%;height:640px;border:none;">
-            <p style="text-align:center;padding:20px;font-weight:bold;">PDF Attachment: <a href="${absoluteUrl}" target="_blank">View PDF Document (${dateStr})</a></p>
-          </iframe>
-        </object>
+        <div style="text-align:center;padding:30px 20px;border:2px dashed #1565C0;border-radius:8px;background:#f0f7ff;width:100%;box-sizing:border-box;">
+          <div style="font-size:16pt;font-weight:900;color:#1565C0;margin-bottom:8px;">📄 PDF ATTACHMENT DOCUMENT</div>
+          <div style="font-size:10pt;font-weight:bold;color:#333;margin-bottom:12px;">Attached Bill: ${attLabel} (${dateStr})</div>
+          <a href="${absoluteUrl}" target="_blank" style="display:inline-block;padding:8px 16px;background:#1565C0;color:#fff;text-decoration:none;border-radius:4px;font-weight:bold;font-size:9pt;">Click to Open Original PDF File</a>
+        </div>
       ` : `
-        <img src="${absoluteUrl}" style="max-width:100%;max-height:640px;object-fit:contain;border:1px solid #ccc;" alt="Attachment ${dateStr}" />
+        <img src="${absoluteUrl}" style="max-width:100%;max-height:660px;object-fit:contain;border:1px solid #ccc;display:block;margin:0 auto;" alt="Attachment ${dateStr}" />
       `;
 
       return `
