@@ -29,11 +29,43 @@ const getAbsoluteUrl = (path: string) => {
   return `${host}/${path.replace(/^\//, "")}`;
 };
 
+const convertPdfToImageBase64 = async (pdfUrlOrBase64: string): Promise<string> => {
+  try {
+    await loadScript("https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/pdf.min.js");
+    const pdfjsLib = (window as any)["pdfjs-dist/build/pdf"] || (window as any).pdfjsLib;
+    if (!pdfjsLib) return pdfUrlOrBase64;
+    pdfjsLib.GlobalWorkerOptions.workerSrc = "https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/pdf.worker.min.js";
+
+    const loadingTask = pdfjsLib.getDocument(pdfUrlOrBase64);
+    const pdfDoc = await loadingTask.promise;
+    const page = await pdfDoc.getPage(1);
+
+    const viewport = page.getViewport({ scale: 2 });
+    const canvas = document.createElement("canvas");
+    const context = canvas.getContext("2d");
+    canvas.height = viewport.height;
+    canvas.width = viewport.width;
+
+    await page.render({ canvasContext: context, viewport }).promise;
+    return canvas.toDataURL("image/jpeg", 0.95);
+  } catch (e) {
+    console.warn("Failed to render PDF to image via pdf.js:", e);
+    return pdfUrlOrBase64;
+  }
+};
+
 const convertImageUrlToBase64 = async (url: string): Promise<string> => {
   if (!url) return "";
-  if (url.startsWith("data:")) return url;
+  if (url.startsWith("data:image/")) return url;
   try {
     const absUrl = getAbsoluteUrl(url);
+    const cleanUrl = url.toLowerCase().split("?")[0];
+    const isPdf = cleanUrl.endsWith(".pdf") || url.startsWith("data:application/pdf");
+
+    if (isPdf) {
+      return await convertPdfToImageBase64(absUrl);
+    }
+
     const response = await fetch(absUrl);
     if (!response.ok) return absUrl;
     const blob = await response.blob();
@@ -285,27 +317,14 @@ function buildExcelPrintHTML(user: any, claims: any[], attachments: any[] = [], 
       const absoluteUrl = getAbsoluteUrl(rawUrl);
       const dateStr = att.date || `Receipt #${index + 1}`;
       const attLabel = att.label || "Expense Bill Attachment";
-      
-      const cleanUrl = rawUrl.toLowerCase().split("?")[0];
-      const isPdf = cleanUrl.endsWith(".pdf") || rawUrl.startsWith("data:application/pdf");
-
-      const mediaHtml = isPdf ? `
-        <div style="text-align:center;padding:30px 20px;border:2px dashed #1565C0;border-radius:8px;background:#f0f7ff;width:100%;box-sizing:border-box;">
-          <div style="font-size:16pt;font-weight:900;color:#1565C0;margin-bottom:8px;">📄 PDF ATTACHMENT DOCUMENT</div>
-          <div style="font-size:10pt;font-weight:bold;color:#333;margin-bottom:12px;">Attached Bill: ${attLabel} (${dateStr})</div>
-          <a href="${absoluteUrl}" target="_blank" style="display:inline-block;padding:8px 16px;background:#1565C0;color:#fff;text-decoration:none;border-radius:4px;font-weight:bold;font-size:9pt;">Click to Open Original PDF File</a>
-        </div>
-      ` : `
-        <img src="${absoluteUrl}" style="max-width:100%;max-height:660px;object-fit:contain;border:1px solid #ccc;display:block;margin:0 auto;" alt="Attachment ${dateStr}" />
-      `;
 
       return `
         <div class="attachment-page" style="width:1122px;height:793px;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:10px 20px;box-sizing:border-box;background:#fff;overflow:hidden;page-break-before:always;">
-          <div style="width:100%;max-width:1080px;border:2px solid #1565C0;border-radius:6px;padding:12px 16px;background:#fff;box-sizing:border-box;display:flex;flex-direction:column;align-items:center;">
+          <div style="width:100%;max-width:1080px;max-height:750px;border:2px solid #1565C0;border-radius:6px;padding:12px 16px;background:#fff;box-sizing:border-box;display:flex;flex-direction:column;align-items:center;justify-content:center;">
             <div style="width:100%;font-size:11pt;font-weight:900;color:#1565C0;text-align:left;border-bottom:2px solid #1565C0;padding-bottom:6px;margin-bottom:12px;text-transform:uppercase;font-family:Arial,Helvetica,sans-serif;letter-spacing:0.5px;">
-              ${attLabel.toUpperCase()} &mdash; DATE: ${dateStr} ${isPdf ? '(PDF DOCUMENT)' : ''}
+              ${attLabel.toUpperCase()} &mdash; DATE: ${dateStr}
             </div>
-            ${mediaHtml}
+            <img src="${absoluteUrl}" style="max-width:100%;max-height:660px;object-fit:contain;border:1px solid #ccc;display:block;margin:0 auto;" alt="Attachment ${dateStr}" />
           </div>
         </div>
       `;
