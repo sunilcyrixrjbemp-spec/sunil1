@@ -29,6 +29,20 @@ const getAbsoluteUrl = (path: string) => {
   return `${host}/${path.replace(/^\//, "")}`;
 };
 
+const loadScript = (src: string): Promise<void> => {
+  return new Promise((resolve, reject) => {
+    if (document.querySelector(`script[src="${src}"]`)) {
+      resolve();
+      return;
+    }
+    const script = document.createElement("script");
+    script.src = src;
+    script.onload = () => resolve();
+    script.onerror = () => reject(new Error(`Failed to load script ${src}`));
+    document.head.appendChild(script);
+  });
+};
+
 const convertPdfToImageBase64 = async (pdfUrlOrBase64: string): Promise<string> => {
   try {
     await loadScript("https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/pdf.min.js");

@@ -659,6 +659,33 @@ export default function ApprovalPage() {
       }
     });
 
+    if (details.itineraries && Array.isArray(details.itineraries)) {
+      details.itineraries.forEach((leg: any, legIdx: number) => {
+        const legNum = leg.leg || (legIdx + 1);
+        const candidates = [
+          { key: "hotel_receipt", label: `Visit #${legNum} Hotel Bill` },
+          { key: "local_purchase_bill", label: `Visit #${legNum} Local Purchase Bill` },
+          { key: "other_bill", label: `Visit #${legNum} Other Expense Bill` },
+          { key: "receipt_url", label: `Visit #${legNum} Travel Receipt` },
+          { key: "bill_url", label: `Visit #${legNum} Travel Ticket` },
+          { key: "attachment_url", label: `Visit #${legNum} Bill Attachment` },
+          { key: "file_url", label: `Visit #${legNum} File Attachment` }
+        ];
+
+        candidates.forEach(c => {
+          const val = leg[c.key];
+          if (val && typeof val === "string" && val.trim()) {
+            const fullUrl = authService.getAbsoluteImageUrl(val) || (val.startsWith("http") ? val : `${API_BASE}${val.startsWith('/') ? '' : '/'}${val}`);
+            if (fullUrl && !map.has(fullUrl)) {
+              const filename = val.split("/").pop() || c.label;
+              const isPdf = filename.toLowerCase().endsWith(".pdf") || fullUrl.toLowerCase().includes(".pdf");
+              map.set(fullUrl, { url: fullUrl, billType: c.label, filename, isPdf });
+            }
+          }
+        });
+      });
+    }
+
     return Array.from(map.values());
   };
 

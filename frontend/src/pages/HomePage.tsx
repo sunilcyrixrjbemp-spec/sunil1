@@ -75,7 +75,6 @@ import {
   Loader2,
   ShieldCheck,
   AlertTriangle,
-  Download,
   ChevronUp
 } from "lucide-react";
 
@@ -2467,56 +2466,116 @@ export default function HomePage() {
             )}
 
                         {/* Attachments Section with Category Purpose Labels */}
+            {/* Attachments Section with Visual Image Cards & Previews */}
             {claimDetails.category !== "Limit Request" && (
-              <div className="space-y-1.5">
-                <Text type="secondary" className="text-[9px] uppercase font-bold tracking-wider block">Receipt Invoices &amp; Attachments</Text>
-                {getAttachmentsArray(claimDetails.attachments).length === 0 ? (
-                  <Text type="secondary" className="italic text-xs block pl-1">No file attachments uploaded for this claim.</Text>
-                ) : (
-                  <div className="flex flex-wrap gap-2">
-                    {getAttachmentsArray(claimDetails.attachments).map((url: string, index: number) => {
-                      const urlLower = (url || "").toLowerCase();
-                      let label = `Receipt Invoice #${index + 1}`;
-                      
-                      if (claimDetails.itineraries && Array.isArray(claimDetails.itineraries)) {
-                        for (const leg of claimDetails.itineraries) {
-                          const legFileStr = (leg.file_path || leg.receipt || leg.attachments || "").toString().toLowerCase();
-                          if (legFileStr && legFileStr.includes(urlLower.substring(urlLower.lastIndexOf("/") + 1))) {
-                            label = `Leg #${leg.leg} (${leg.from_district === leg.to_district ? leg.to_district : `${leg.from_district} → ${leg.to_district}`}) Receipt`;
-                            break;
+              <div className="space-y-2 pt-2 border-t border-gray-200">
+                <Text type="secondary" className="text-[10px] uppercase font-black tracking-wider text-indigo-700 block">
+                  📄 Expense Bill Invoices &amp; Attachments
+                </Text>
+
+                {(() => {
+                  const allAttsMap = new Map<string, { url: string; label: string }>();
+
+                  // Top-level attachments
+                  const topAtts = getAttachmentsArray(claimDetails.attachments);
+                  topAtts.forEach((u: string, i: number) => {
+                    if (u && typeof u === "string") {
+                      allAttsMap.set(u, { url: u, label: `Bill Attachment #${i + 1}` });
+                    }
+                  });
+
+                  // Leg-level candidate fields
+                  if (claimDetails.itineraries && Array.isArray(claimDetails.itineraries)) {
+                    claimDetails.itineraries.forEach((leg: any, legIdx: number) => {
+                      const legNum = leg.leg || (legIdx + 1);
+                      const candidates = [
+                        { key: "hotel_receipt", label: `Visit #${legNum} Hotel Bill` },
+                        { key: "local_purchase_bill", label: `Visit #${legNum} Local Purchase Bill` },
+                        { key: "other_bill", label: `Visit #${legNum} Other Expense Bill` },
+                        { key: "receipt_url", label: `Visit #${legNum} Travel Receipt` },
+                        { key: "bill_url", label: `Visit #${legNum} Travel Ticket` },
+                        { key: "attachment_url", label: `Visit #${legNum} Bill Attachment` },
+                        { key: "file_url", label: `Visit #${legNum} File Attachment` },
+                        { key: "bill_copy", label: `Visit #${legNum} Bill Copy` },
+                        { key: "receipt", label: `Visit #${legNum} Receipt` }
+                      ];
+
+                      candidates.forEach(c => {
+                        const val = leg[c.key];
+                        if (val && typeof val === "string" && val.trim() && !allAttsMap.has(val)) {
+                          allAttsMap.set(val, { url: val, label: c.label });
+                        }
+                      });
+
+                      if (Array.isArray(leg.attachments)) {
+                        leg.attachments.forEach((aItem: any, aIdx: number) => {
+                          const aUrl = typeof aItem === "string" ? aItem : (aItem.file_url || aItem.url);
+                          if (aUrl && !allAttsMap.has(aUrl)) {
+                            allAttsMap.set(aUrl, { url: aUrl, label: `Visit #${legNum} Attachment #${aIdx + 1}` });
                           }
-                        }
-                        if (label.startsWith("Receipt Invoice") && claimDetails.itineraries[index]) {
-                          const leg = claimDetails.itineraries[index];
-                          label = `Leg #${leg.leg} (${leg.from_district === leg.to_district ? leg.to_district : `${leg.from_district} → ${leg.to_district}`}) Receipt`;
-                        }
+                        });
                       }
+                    });
+                  }
 
-                      if (label.startsWith("Receipt Invoice")) {
-                        if (urlLower.includes("hotel") || urlLower.includes("stay") || urlLower.includes("lodge")) {
-                          label = `Hotel / Stay Invoice #${index + 1}`;
-                        } else if (urlLower.includes("da") || urlLower.includes("food") || urlLower.includes("meal")) {
-                          label = `Food / DA Receipt #${index + 1}`;
-                        } else if (urlLower.includes("auto") || urlLower.includes("taxi")) {
-                          label = `Auto / Taxi Receipt #${index + 1}`;
-                        } else if (urlLower.includes("fuel") || urlLower.includes("petrol") || urlLower.includes("diesel")) {
-                          label = `Fuel / Travel Bill #${index + 1}`;
-                        }
-                      }
+                  const finalAtts = Array.from(allAttsMap.values());
 
-                      return (
-                        <Tag 
-                          key={index} 
-                          color="blue" 
-                          className="cursor-pointer font-medium hover:border-indigo-400 px-2.5 py-1 flex items-center gap-1.5 shadow-2xs rounded-md"
-                          onClick={() => setLightboxImage(url.startsWith("http") ? url : `${API_BASE}${url}`)}
-                        >
-                          <Download size={12} className="inline mr-1 text-indigo-600" /> {label}
-                        </Tag>
-                      );
-                    })}
-                  </div>
-                )}
+                  if (finalAtts.length === 0) {
+                    return <Text type="secondary" className="italic text-xs block pl-1">No bill attachments uploaded for this claim.</Text>;
+                  }
+
+                  return (
+                    <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3">
+                      {finalAtts.map((item, index) => {
+                        const fullUrl = item.url.startsWith("http") || item.url.startsWith("data:") ? item.url : `${API_BASE}${item.url}`;
+                        const isPdf = item.url.toLowerCase().split("?")[0].endsWith(".pdf") || item.url.startsWith("data:application/pdf");
+
+                        return (
+                          <div key={index} className="bg-white border border-gray-300 rounded-lg p-2.5 shadow-2xs hover:border-indigo-400 transition-all flex flex-col justify-between space-y-2">
+                            <div className="flex justify-between items-center border-b border-gray-100 pb-1.5">
+                              <span className="font-extrabold text-[10px] text-gray-800 truncate max-w-[170px]" title={item.label}>
+                                🧾 {item.label}
+                              </span>
+                              <span className="text-[8px] font-black uppercase px-1.5 py-0.5 rounded bg-blue-50 text-blue-700 border border-blue-100">
+                                {isPdf ? "PDF" : "IMAGE"}
+                              </span>
+                            </div>
+
+                            {!isPdf ? (
+                              <div className="relative rounded overflow-hidden border border-gray-200 bg-gray-50 h-36 flex items-center justify-center">
+                                <img
+                                  src={fullUrl}
+                                  alt={item.label}
+                                  className="w-full h-full object-contain cursor-pointer"
+                                  onClick={() => setLightboxImage(fullUrl)}
+                                />
+                              </div>
+                            ) : (
+                              <div className="p-3 bg-blue-50/60 border border-blue-100 rounded text-center space-y-1 my-auto">
+                                <p className="font-bold text-xs text-blue-800">📄 PDF Document</p>
+                                <p className="text-[9px] text-gray-500">Uploaded Bill Attachment</p>
+                              </div>
+                            )}
+
+                            <button
+                              type="button"
+                              onClick={() => {
+                                if (!isPdf) {
+                                  setLightboxImage(fullUrl);
+                                } else {
+                                  window.open(fullUrl, "_blank");
+                                }
+                              }}
+                              className="w-full bg-indigo-50 hover:bg-indigo-100 text-indigo-700 font-extrabold text-[9px] py-1.5 px-2 rounded border border-indigo-200 cursor-pointer uppercase flex items-center justify-center gap-1 transition-colors"
+                            >
+                              🔍 View Full {isPdf ? "PDF" : "Image"}
+                            </button>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  );
+                })()}
               </div>
             )}
 
