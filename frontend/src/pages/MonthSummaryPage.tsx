@@ -211,7 +211,7 @@ function buildExcelPrintHTML(user: any, claims: any[], attachments: any[] = [], 
     const rowTotal = taCol + bikeCarAmt + (l.auto_amount || 0) + (l.da_amount || 0)
                    + (l.local_purchase || 0) + (l.hotel_amount || 0) + (l.other_amount || 0);
     const bg = i % 2 === 0 ? "#ffffff" : "#f0f7ff";
-    const c = `border:1px solid #000!important;padding:3.5px 4px;font-size:7pt;font-weight:500;color:#000;vertical-align:middle;word-wrap:break-word;`;
+    const c = `border:1px solid #000!important;padding:4px 5px;font-size:8.5pt;font-weight:600;color:#000;vertical-align:middle;word-wrap:break-word;`;
     
     const pmsCalibCount = (l.pms_count || 0) + (l.calibration_count || 0);
 
@@ -227,26 +227,76 @@ function buildExcelPrintHTML(user: any, claims: any[], attachments: any[] = [], 
       <td style="${c}text-align:right;">${l.da_amount > 0 ? l.da_amount.toFixed(2) : ""}</td>
       <td style="${c}text-align:right;">${l.local_purchase > 0 ? l.local_purchase.toFixed(2) : ""}</td>
       <td style="${c}text-align:right;">${l.hotel_amount > 0 ? l.hotel_amount.toFixed(2) : ""}</td>
-      <td style="${c}font-size:6.5pt;">${getActivityOtherDesc(l)}</td>
+      <td style="${c}font-size:8.5pt;">${getActivityOtherDesc(l)}</td>
       <td style="${c}text-align:right;">${l.other_amount > 0 ? l.other_amount.toFixed(2) : ""}</td>
       <td style="${c}text-align:right;font-weight:800;background:#e8f5e9!important;">${rowTotal > 0 ? rowTotal.toFixed(2) : ""}</td>
-      <td style="${c}font-size:6.5pt;">${getFormattedPurpose(l)}</td>
-      <td style="${c}font-size:6pt;font-family:monospace;">${l.barcode_ticket || ""}</td>
+      <td style="${c}font-size:8.5pt;">${getFormattedPurpose(l)}</td>
+      <td style="${c}font-size:8pt;font-family:monospace;">${l.barcode_ticket || ""}</td>
       <td style="${c}text-align:center;">${pmsCalibCount}</td>
       <td style="${c}text-align:center;">${l.calls_completed || 0}/${l.calls_assigned || 0}</td>
     </tr>`;
   }).join("\n");
 
+  // Collect ALL attachments uploaded during expense submission (top-level + leg receipts + activity proofs)
+  const allAttachmentsMap = new Map<string, { url: string; date: string; label: string }>();
+
+  (attachments || []).forEach((att: any, idx: number) => {
+    const rawUrl = att.file_url || att.url || (typeof att === "string" ? att : "");
+    if (rawUrl) {
+      allAttachmentsMap.set(rawUrl, {
+        url: rawUrl,
+        date: att.date ? fmtDate(att.date) : `Attachment #${idx + 1}`,
+        label: att.bill_type || att.billType || "Expense Bill Receipt"
+      });
+    }
+  });
+
+  (claims || []).forEach((claim: any) => {
+    const claimDate = claim.date ? fmtDate(claim.date) : "";
+    (claim.legs || []).forEach((leg: any) => {
+      const urls = [
+        leg.receipt_url, leg.bill_url, leg.attachment_url, leg.file_url,
+        leg.hotel_receipt, leg.local_purchase_bill, leg.other_bill
+      ];
+      urls.forEach(u => {
+        if (u && typeof u === 'string' && u.trim() && !allAttachmentsMap.has(u)) {
+          allAttachmentsMap.set(u, { url: u, date: claimDate, label: "Expense Receipt" });
+        }
+      });
+
+      if (leg.activity_details) {
+        try {
+          const act = typeof leg.activity_details === 'string' ? JSON.parse(leg.activity_details) : leg.activity_details;
+          if (act && typeof act === 'object') {
+            (act.calls_list || []).forEach((item: any) => {
+              if (item.photo_url && !allAttachmentsMap.has(item.photo_url)) {
+                allAttachmentsMap.set(item.photo_url, { url: item.photo_url, date: claimDate, label: "Breakdown Call Attachment" });
+              }
+            });
+            (act.pms_list || []).forEach((item: any) => {
+              if (item.photo_url && !allAttachmentsMap.has(item.photo_url)) {
+                allAttachmentsMap.set(item.photo_url, { url: item.photo_url, date: claimDate, label: "PMS Call Attachment" });
+              }
+            });
+          }
+        } catch (e) {}
+      }
+    });
+  });
+
+  const finalAttachments = Array.from(allAttachmentsMap.values());
+
   // Attached receipts HTML block — supports ALL file formats (JPG, PNG, WEBP, PDF, etc.)
   let attachmentsSection = "";
-  if (attachments && attachments.length > 0) {
-    attachmentsSection = attachments.map((att: any, index) => {
-      const rawUrl = att.file_url || att.url || (typeof att === "string" ? att : "");
+  if (finalAttachments.length > 0) {
+    attachmentsSection = finalAttachments.map((att: any, index) => {
+      const rawUrl = att.url;
       const absoluteUrl = getAbsoluteUrl(rawUrl);
-      const dateStr = att.date ? fmtDate(att.date) : `Receipt #${index + 1}`;
+      const dateStr = att.date || `Receipt #${index + 1}`;
+      const attLabel = att.label || "Expense Attachment";
       
       const cleanUrl = rawUrl.toLowerCase().split("?")[0];
-      const isPdf = cleanUrl.endsWith(".pdf") || cleanUrl.includes("/pdf") || att.isPdf;
+      const isPdf = cleanUrl.endsWith(".pdf") || cleanUrl.includes("/pdf");
 
       const mediaHtml = isPdf ? `
         <object data="${absoluteUrl}#toolbar=0&navpanes=0" type="application/pdf" style="width:100%;max-width:1080px;height:640px;border:1px solid #ccc;">
@@ -262,7 +312,7 @@ function buildExcelPrintHTML(user: any, claims: any[], attachments: any[] = [], 
         <div class="attachment-page" style="width:1122px;height:793px;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:10px 20px;box-sizing:border-box;background:#fff;overflow:hidden;page-break-before:always;">
           <div style="width:100%;max-width:1080px;border:2px solid #1565C0;border-radius:6px;padding:12px 16px;background:#fff;box-sizing:border-box;display:flex;flex-direction:column;align-items:center;">
             <div style="width:100%;font-size:11pt;font-weight:900;color:#1565C0;text-align:left;border-bottom:2px solid #1565C0;padding-bottom:6px;margin-bottom:12px;text-transform:uppercase;font-family:Arial,Helvetica,sans-serif;letter-spacing:0.5px;">
-              BILL ATTACHMENT &mdash; DATE: ${dateStr} ${isPdf ? '(PDF DOCUMENT)' : ''}
+              ${attLabel.toUpperCase()} &mdash; DATE: ${dateStr} ${isPdf ? '(PDF DOCUMENT)' : ''}
             </div>
             ${mediaHtml}
           </div>
@@ -1344,10 +1394,10 @@ export default function MonthSummaryPage() {
                       </td>
                       <td className="py-3 px-3 text-center">
                         <button onClick={() => handlePDF(row)} disabled={isLoading}
-                          className="inline-flex items-center gap-1 px-2 py-1 rounded bg-blue-600 hover:bg-blue-700 text-white text-[10px] font-bold shadow-sm transition-all cursor-pointer disabled:opacity-60"
-                          title={`Download Reimbursement Form Image for ${row.name}`}>
+                          className="inline-flex items-center gap-1 px-2.5 py-1 rounded bg-blue-600 hover:bg-blue-700 text-white text-[10px] font-bold shadow-sm transition-all cursor-pointer disabled:opacity-60"
+                          title={`Download Reimbursement Form PDF for ${row.name}`}>
                           {isLoading ? <Loader2 className="w-3 h-3 animate-spin" /> : <Download className="w-3 h-3" />}
-                          {isLoading ? "..." : "Download Image"}
+                          {isLoading ? "..." : "Download PDF"}
                         </button>
                       </td>
                     </tr>
@@ -1438,7 +1488,7 @@ export default function MonthSummaryPage() {
                         className="inline-flex items-center justify-center gap-1.5 px-3 py-1.5 rounded bg-blue-600 hover:bg-blue-700 text-white text-[10px] font-bold shadow-sm transition-all cursor-pointer disabled:opacity-60 border-0 active:scale-95"
                       >
                         {isLoading ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Download className="w-3.5 h-3.5" />}
-                        <span>Download Form Image</span>
+                        <span>Download Form PDF</span>
                       </button>
                     </div>
                   </div>
