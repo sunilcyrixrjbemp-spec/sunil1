@@ -533,8 +533,8 @@ export default function AssetUploadPage() {
 
       <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-4 mt-4">
         {[
-          { label: "Verified Value", value: fmtRs(stats?.verified_value ?? 0), icon: <CheckCircle className="w-5 h-5 text-white" />, bgColor: "bg-[#28a745]" },
-          { label: "Verified OOW Value", value: fmtRs(stats?.verified_out_of_warranty_value ?? 0), icon: <ShieldOff className="w-5 h-5 text-white" />, bgColor: "bg-[#fd7e14]" },
+          { label: "Verified Value", value: fmtRs(stats?.verified_value ?? 0), sub: "Total Verified Inventory Cost", icon: <CheckCircle className="w-5 h-5 text-white" />, bgColor: "bg-[#28a745]" },
+          { label: "Verified OOW Value", value: fmtRs(stats?.verified_out_of_warranty_value ?? 0), sub: "Total OOW Asset Cost (Billed @ 6.08%)", icon: <ShieldOff className="w-5 h-5 text-white" />, bgColor: "bg-[#fd7e14]" },
           { 
             label: "Monthly Billing", 
             value: fmtRs(stats?.monthly_value ?? 0), 

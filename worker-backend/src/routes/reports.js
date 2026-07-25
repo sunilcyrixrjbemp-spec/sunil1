@@ -275,13 +275,24 @@ export async function handleGetAssetsStats(request, env, params, query, user) {
     if (parts.length === 2) {
       targetYear = parseInt(parts[0], 10);
       targetMonth = parseInt(parts[1], 10);
-      // Filter for assets verified on or before the selected target month
-      monthWhereClauses.push("(moic_year IS NULL OR moic_year < ? OR (moic_year = ? AND moic_month <= ?))");
-      monthBindings.push(targetYear, targetYear, targetMonth);
+      const targetMonthStr = `${parts[0]}-${parts[1].padStart(2, '0')}`;
+      
+      // Filter for assets verified/available on or before the selected target month
+      monthWhereClauses.push(`(
+        (moic_year IS NOT NULL AND (moic_year < ? OR (moic_year = ? AND moic_month <= ?)))
+        OR
+        (moic_year IS NULL AND (
+          substr(uploaded_at, 1, 7) <= ? OR 
+          substr(inventory_entry_date, 1, 7) <= ? OR 
+          substr(moic_verified_date, 1, 7) <= ?
+        ))
+      )`);
+      monthBindings.push(targetYear, targetYear, targetMonth, targetMonthStr, targetMonthStr, targetMonthStr);
     }
   }
 
   const monthWhereSql = monthWhereClauses.join(" AND ");
+  const targetMonthStr = month ? month.trim() : `${targetYear}-${String(targetMonth).padStart(2, '0')}`;
 
   // Fetch all queries in PARALLEL
   const [aggRes, arrearRes, statusRows, typeRows, warrantyRows] = await Promise.all([
@@ -302,10 +313,17 @@ export async function handleGetAssetsStats(request, env, params, query, user) {
       FROM assets_inventory
       WHERE is_verified = 1 
         AND warranty_expired = 1
-        AND moic_year = ? 
-        AND moic_month = ?
+        AND (
+          (moic_year = ? AND moic_month = ?)
+          OR
+          (moic_year IS NULL AND (
+            substr(uploaded_at, 1, 7) = ? OR 
+            substr(inventory_entry_date, 1, 7) = ? OR 
+            substr(moic_verified_date, 1, 7) = ?
+          ))
+        )
         AND ${whereSql}
-    `).bind(targetYear, targetMonth, ...bindings).first(),
+    `).bind(targetYear, targetMonth, targetMonthStr, targetMonthStr, targetMonthStr, ...bindings).first(),
     env.DB.prepare(`
       SELECT equipment_status, COUNT(*) as cnt 
       FROM assets_inventory 
