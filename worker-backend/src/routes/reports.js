@@ -379,6 +379,7 @@ export async function handleGetAssetsStats(request, env, params, query, user) {
   const statusList = (statusRows.results || []).map(r => ({
     name: r.equipment_status || "Unknown",
     value: r.cnt
+  }));
 
   const topTypes = (typeRows.results || []).map(r => ({
     name: r.equipment_type || "Other",
