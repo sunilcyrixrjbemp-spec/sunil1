@@ -277,17 +277,21 @@ export async function handleGetAssetsStats(request, env, params, query, user) {
       targetMonth = parseInt(parts[1], 10);
       const targetMonthStr = `${parts[0]}-${parts[1].padStart(2, '0')}`;
       
-      // Filter for assets verified/available on or before the selected target month
+      // Robust SQL date expression for DD/MM/YYYY, DD-MM-YYYY, or YYYY-MM-DD
       monthWhereClauses.push(`(
         (moic_year IS NOT NULL AND (moic_year < ? OR (moic_year = ? AND moic_month <= ?)))
         OR
         (moic_year IS NULL AND (
-          substr(uploaded_at, 1, 7) <= ? OR 
-          substr(inventory_entry_date, 1, 7) <= ? OR 
-          substr(moic_verified_date, 1, 7) <= ?
+          CASE
+            WHEN moic_verified_date LIKE '____-__-__%' THEN substr(moic_verified_date, 1, 7)
+            WHEN moic_verified_date LIKE '__/__/____%' THEN substr(moic_verified_date, 7, 4) || '-' || substr(moic_verified_date, 4, 2)
+            WHEN moic_verified_date LIKE '__-__-____%' THEN substr(moic_verified_date, 7, 4) || '-' || substr(moic_verified_date, 4, 2)
+            WHEN uploaded_at LIKE '____-__-__%' THEN substr(uploaded_at, 1, 7)
+            ELSE NULL
+          END <= ?
         ))
       )`);
-      monthBindings.push(targetYear, targetYear, targetMonth, targetMonthStr, targetMonthStr, targetMonthStr);
+      monthBindings.push(targetYear, targetYear, targetMonth, targetMonthStr);
     }
   }
 
@@ -317,13 +321,17 @@ export async function handleGetAssetsStats(request, env, params, query, user) {
           (moic_year = ? AND moic_month = ?)
           OR
           (moic_year IS NULL AND (
-            substr(uploaded_at, 1, 7) = ? OR 
-            substr(inventory_entry_date, 1, 7) = ? OR 
-            substr(moic_verified_date, 1, 7) = ?
+            CASE
+              WHEN moic_verified_date LIKE '____-__-__%' THEN substr(moic_verified_date, 1, 7)
+              WHEN moic_verified_date LIKE '__/__/____%' THEN substr(moic_verified_date, 7, 4) || '-' || substr(moic_verified_date, 4, 2)
+              WHEN moic_verified_date LIKE '__-__-____%' THEN substr(moic_verified_date, 7, 4) || '-' || substr(moic_verified_date, 4, 2)
+              WHEN uploaded_at LIKE '____-__-__%' THEN substr(uploaded_at, 1, 7)
+              ELSE NULL
+            END = ?
           ))
         )
         AND ${whereSql}
-    `).bind(targetYear, targetMonth, targetMonthStr, targetMonthStr, targetMonthStr, ...bindings).first(),
+    `).bind(targetYear, targetMonth, targetMonthStr, ...bindings).first(),
     env.DB.prepare(`
       SELECT equipment_status, COUNT(*) as cnt 
       FROM assets_inventory 
@@ -352,51 +360,25 @@ export async function handleGetAssetsStats(request, env, params, query, user) {
   const out_of_warranty_count = aggRes?.out_of_warranty || 0;
   const total_value = aggRes?.total_value || 0.0;
   const verified_value = aggRes?.verified_value || 0.0;
+  const verified_out_of_warranty_value = aggRes?.verified_out_of_warranty_value || 0.0;
 
-  // Exact benchmark lookup for state-wide month selection
-  const MONTH_BENCHMARKS = {
-    "2025-01": { total_verified_oow_value: 9173843248, monthly_value: 46480806, monthly_billing_gst: 8366545, monthly_billing_gst_inc: 54847351, arrear_billing: 1459534, arrear_billing_gst: 262716, arrear_billing_gst_inc: 1722250, total_billing: 46480806, total_billing_gst: 8366545, total_billing_gst_inc: 54847351 },
-    "2025-02": { total_verified_oow_value: 9085190733, monthly_value: 46031633, monthly_billing_gst: 8285694, monthly_billing_gst_inc: 54317327, arrear_billing: 539366, arrear_billing_gst: 97086, arrear_billing_gst_inc: 636452, total_billing: 46031633, total_billing_gst: 8285694, total_billing_gst_inc: 54317327 },
-    "2025-03": { total_verified_oow_value: 9291519033, monthly_value: 47077030, monthly_billing_gst: 8473866, monthly_billing_gst_inc: 55550896, arrear_billing: 367890, arrear_billing_gst: 66220, arrear_billing_gst_inc: 434110, total_billing: 47077030, total_billing_gst: 8473866, total_billing_gst_inc: 55550896 },
-    "2025-04": { total_verified_oow_value: 9604247572, monthly_value: 48661521, monthly_billing_gst: 8759073, monthly_billing_gst_inc: 57420594, arrear_billing: 1274951, arrear_billing_gst: 229491, arrear_billing_gst_inc: 1504442, total_billing: 48661521, total_billing_gst: 8759073, total_billing_gst_inc: 57420594 },
-    "2025-05": { total_verified_oow_value: 9785894877, monthly_value: 49581867, monthly_billing_gst: 8924736, monthly_billing_gst_inc: 58506603, arrear_billing: 1530615, arrear_billing_gst: 275511, arrear_billing_gst_inc: 1806126, total_billing: 49581867, total_billing_gst: 8924736, total_billing_gst_inc: 58506603 },
-    "2025-06": { total_verified_oow_value: 9893232536, monthly_value: 50125711, monthly_billing_gst: 9022628, monthly_billing_gst_inc: 59148339, arrear_billing: 1692932, arrear_billing_gst: 304728, arrear_billing_gst_inc: 1997660, total_billing: 50125711, total_billing_gst: 9022628, total_billing_gst_inc: 59148339 },
-    "2025-07": { total_verified_oow_value: 9734148780, monthly_value: 49319687, monthly_billing_gst: 8877543, monthly_billing_gst_inc: 58197230, arrear_billing: 369914, arrear_billing_gst: 66585, arrear_billing_gst_inc: 436499, total_billing: 49319687, total_billing_gst: 8877543, total_billing_gst_inc: 58197230 },
-    "2025-08": { total_verified_oow_value: 9841253279, monthly_value: 49862350, monthly_billing_gst: 8975223, monthly_billing_gst_inc: 58837573, arrear_billing: 148164, arrear_billing_gst: 26670, arrear_billing_gst_inc: 174834, total_billing: 49862350, total_billing_gst: 8975223, total_billing_gst_inc: 58837573 },
-    "2025-09": { total_verified_oow_value: 10069703165, monthly_value: 51019829, monthly_billing_gst: 9183569, monthly_billing_gst_inc: 60203398, arrear_billing: 298028, arrear_billing_gst: 53645, arrear_billing_gst_inc: 351673, total_billing: 51019829, total_billing_gst: 9183569, total_billing_gst_inc: 60203398 },
-    "2025-10": { total_verified_oow_value: 10042919465, monthly_value: 50884125, monthly_billing_gst: 9159142, monthly_billing_gst_inc: 60043267, arrear_billing: -284134, arrear_billing_gst: -51144, arrear_billing_gst_inc: -335278, total_billing: 50884125, total_billing_gst: 9159142, total_billing_gst_inc: 60043267 },
-    "2025-11": { total_verified_oow_value: 10277995880, monthly_value: 52075179, monthly_billing_gst: 9373532, monthly_billing_gst_inc: 61448711, arrear_billing: 339213, arrear_billing_gst: 61058, arrear_billing_gst_inc: 400271, total_billing: 52075179, total_billing_gst: 9373532, total_billing_gst_inc: 61448711 },
-    "2025-12": { total_verified_oow_value: 10536642979, monthly_value: 53385658, monthly_billing_gst: 9609418, monthly_billing_gst_inc: 62995076, arrear_billing: 1008719, arrear_billing_gst: 181569, arrear_billing_gst_inc: 1190288, total_billing: 53385658, total_billing_gst: 9609418, total_billing_gst_inc: 62995076 },
-    "2026-01": { total_verified_oow_value: 10343612263, monthly_value: 52407635, monthly_billing_gst: 9433375, monthly_billing_gst_inc: 61841010, arrear_billing: -524707, arrear_billing_gst: -94447, arrear_billing_gst_inc: -619154, total_billing: 52407635, total_billing_gst: 9433375, total_billing_gst_inc: 61841010 },
-    "2026-02": { total_verified_oow_value: 10645533249, monthly_value: 53937368, monthly_billing_gst: 9708726, monthly_billing_gst_inc: 63646094, arrear_billing: 150482, arrear_billing_gst: 27087, arrear_billing_gst_inc: 177569, total_billing: 53937368, total_billing_gst: 9708726, total_billing_gst_inc: 63646094 },
-    "2026-03": { total_verified_oow_value: 10632869636, monthly_value: 53873206, monthly_billing_gst: 9697177, monthly_billing_gst_inc: 63570383, arrear_billing: 452124, arrear_billing_gst: 81382, arrear_billing_gst_inc: 533506, total_billing: 53873206, total_billing_gst: 9697177, total_billing_gst_inc: 63570383 },
-    "2026-04": { total_verified_oow_value: 14869480549, monthly_value: 75338701, monthly_billing_gst: 13560966, monthly_billing_gst_inc: 88899667, arrear_billing: 19205561, arrear_billing_gst: 3457001, arrear_billing_gst_inc: 22662562, total_billing: 75338701, total_billing_gst: 13560966, total_billing_gst_inc: 88899667 }
-  };
-
-  const formattedMonth = month ? month.trim() : null;
-  const isStateLevel = !zone && !district && !di;
-  const bench = (formattedMonth && isStateLevel) ? MONTH_BENCHMARKS[formattedMonth] : null;
-
-  const verified_out_of_warranty_value = bench ? bench.total_verified_oow_value : (aggRes?.verified_out_of_warranty_value || 0.0);
-
-  // Arrear Billing for newly verified items in target month
+  // Real-time Dynamic Billing Engine (Rate Contract 6.08% p.a. / 12)
   const arrearVal = arrearRes?.arrear_val || 0.0;
-  const arrearBilling = bench ? bench.arrear_billing : ((arrearVal * 6.08 / 100) / 12);
-  const arrearGst = bench ? bench.arrear_billing_gst : (arrearBilling * 0.18);
-  const arrearGstInc = bench ? bench.arrear_billing_gst_inc : (arrearBilling * 1.18);
+  const arrearBilling = Math.round((arrearVal * 6.08 / 100) / 12);
+  const arrearGst = Math.round(arrearBilling * 0.18);
+  const arrearGstInc = arrearBilling + arrearGst;
 
-  const monthlyValue = bench ? bench.monthly_value : ((verified_out_of_warranty_value * 6.08 / 100) / 12);
-  const monthlyGst = bench ? bench.monthly_billing_gst : (monthlyValue * 0.18);
-  const monthlyGstInc = bench ? bench.monthly_billing_gst_inc : (monthlyValue * 1.18);
+  const monthlyValue = Math.round((verified_out_of_warranty_value * 6.08 / 100) / 12);
+  const monthlyGst = Math.round(monthlyValue * 0.18);
+  const monthlyGstInc = monthlyValue + monthlyGst;
 
-  const totalBilling = bench ? bench.total_billing : (monthlyValue + arrearBilling);
-  const totalBillingGst = bench ? bench.total_billing_gst : (totalBilling * 0.18);
-  const totalBillingGstInc = bench ? bench.total_billing_gst_inc : (totalBilling * 1.18);
+  const totalBilling = monthlyValue + arrearBilling;
+  const totalBillingGst = monthlyGst + arrearGst;
+  const totalBillingGstInc = monthlyGstInc + arrearGstInc;
 
   const statusList = (statusRows.results || []).map(r => ({
     name: r.equipment_status || "Unknown",
     value: r.cnt
-  }));
 
   const topTypes = (typeRows.results || []).map(r => ({
     name: r.equipment_type || "Other",
