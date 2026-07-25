@@ -28,7 +28,15 @@ import {
   SearchOutlined, 
   LogoutOutlined, 
   ControlOutlined,
-  FileExcelOutlined
+  FileExcelOutlined,
+  UserOutlined,
+  SafetyCertificateOutlined,
+  LockOutlined,
+  DatabaseOutlined,
+  TeamOutlined,
+  SettingOutlined,
+  BarChartOutlined,
+  ReloadOutlined
 } from "@ant-design/icons";
 
 const { Title, Text } = Typography;
@@ -1344,72 +1352,200 @@ export default function AdminPage() {
     <>
       <div className="space-y-6 text-slate-800 animate-fadeIn p-2 sm:p-4 pb-32 sm:pb-24 lg:pb-8 max-w-[1600px] mx-auto min-h-screen font-sans">
         
-        {/* Ant Design Executive Control Panel Banner */}
-        <Card className="bg-gradient-to-r from-slate-900 via-indigo-950 to-slate-900 border-slate-800 text-white rounded-2xl shadow-md">
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-            <div className="flex items-center gap-3.5">
-              <div className="h-12 w-12 rounded-2xl bg-indigo-600/30 border border-indigo-500/40 flex items-center justify-center text-indigo-400 shadow-sm shrink-0">
-                <ControlOutlined className="text-2xl" />
+        {/* State-of-the-Art Executive Control Panel Banner */}
+        <Card className="bg-gradient-to-r from-slate-900 via-indigo-950 to-slate-900 border-slate-800 text-white rounded-3xl shadow-2xl relative overflow-hidden">
+          <div className="absolute top-0 right-0 w-96 h-96 bg-indigo-500/10 rounded-full blur-3xl pointer-events-none"></div>
+          <div className="absolute bottom-0 left-1/3 w-64 h-64 bg-emerald-500/10 rounded-full blur-3xl pointer-events-none"></div>
+
+          <div className="relative z-10 flex flex-col lg:flex-row lg:items-center justify-between gap-6">
+            <div className="flex items-center gap-4">
+              <div className="h-14 w-14 rounded-2xl bg-gradient-to-tr from-indigo-600 to-indigo-400 p-0.5 shadow-lg shadow-indigo-500/30 shrink-0">
+                <div className="h-full w-full bg-slate-950 rounded-[14px] flex items-center justify-center text-indigo-400">
+                  <ControlOutlined className="text-2xl" />
+                </div>
               </div>
               <div>
-                <Title level={4} className="text-white m-0 uppercase tracking-wide font-black flex items-center gap-2">
-                  Control Panel
-                </Title>
-                <Text className="text-slate-300 text-xs mt-0.5 block">
-                  Configure screen permissions, assign hierarchy approval level mappings, and manage users.
+                <div className="flex items-center gap-2">
+                  <Title level={3} className="text-white m-0 uppercase tracking-wider font-black">
+                    Admin Governance Center
+                  </Title>
+                  <Tag color="emerald" className="border-0 font-extrabold rounded-full px-2.5 py-0.5 text-[10px] uppercase tracking-widest flex items-center gap-1 shadow-sm">
+                    <span className="h-1.5 w-1.5 rounded-full bg-emerald-400 animate-pulse"></span>
+                    System Active
+                  </Tag>
+                </div>
+                <Text className="text-slate-300 text-xs mt-1 block font-medium max-w-2xl">
+                  Configure enterprise user access profiles, multi-level hierarchy approval routing, screen permission matrices, and system governance parameters.
                 </Text>
               </div>
             </div>
 
-            {/* Ant Design Styled Segmented Controls */}
-            <div className="flex bg-slate-800/80 p-1.5 rounded-xl border border-slate-700/60 shadow-inner gap-1 overflow-x-auto">
-              <button
-                type="button"
-                onClick={() => handleTabChange("users")}
-                className={`px-4 py-1.5 text-xs font-extrabold uppercase tracking-wider rounded-lg transition-all border-0 cursor-pointer ${
-                  activeTab === "users"
-                    ? "bg-indigo-600 text-white shadow-sm"
-                    : "bg-transparent text-slate-300 hover:text-white hover:bg-slate-700/50"
-                }`}
+            {/* Quick Action Refresh & Global Controls */}
+            <div className="flex items-center gap-2">
+              <Button
+                icon={<ReloadOutlined />}
+                onClick={() => {
+                  fetchInitialData();
+                  toast.success("Refreshed Admin Governance Data!");
+                }}
+                className="bg-slate-800/80 hover:bg-slate-700 text-slate-200 border-slate-700/80 rounded-xl font-bold text-xs h-10 px-3 flex items-center gap-1.5"
               >
-                Users List
-              </button>
-              <button
-                type="button"
-                onClick={() => handleTabChange("approvals")}
-                className={`px-4 py-1.5 text-xs font-extrabold uppercase tracking-wider rounded-lg transition-all border-0 cursor-pointer ${
-                  activeTab === "approvals"
-                    ? "bg-indigo-600 text-white shadow-sm"
-                    : "bg-transparent text-slate-300 hover:text-white hover:bg-slate-700/50"
-                }`}
-              >
-                Role Mappings
-              </button>
-              <button
-                type="button"
-                onClick={() => handleTabChange("analytics")}
-                className={`px-4 py-1.5 text-xs font-extrabold uppercase tracking-wider rounded-lg transition-all border-0 cursor-pointer ${
-                  activeTab === "analytics"
-                    ? "bg-indigo-600 text-white shadow-sm"
-                    : "bg-transparent text-slate-300 hover:text-white hover:bg-slate-700/50"
-                }`}
-              >
-                Dashboard Charts
-              </button>
-              <button
-                type="button"
-                onClick={() => handleTabChange("settings")}
-                className={`px-4 py-1.5 text-xs font-extrabold uppercase tracking-wider rounded-lg transition-all border-0 cursor-pointer ${
-                  activeTab === "settings"
-                    ? "bg-indigo-600 text-white shadow-sm"
-                    : "bg-transparent text-slate-300 hover:text-white hover:bg-slate-700/50"
-                }`}
-              >
-                System Settings
-              </button>
+                Sync Data
+              </Button>
             </div>
           </div>
         </Card>
+
+        {/* 4 Executive KPI Metric Cards Grid */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+          {/* Card 1: Users Overview */}
+          <div className="bg-slate-900/90 border border-slate-800/90 rounded-2xl p-4 shadow-xl backdrop-blur-xl text-white relative overflow-hidden group hover:border-indigo-500/50 transition-all duration-300">
+            <div className="flex items-center justify-between">
+              <div className="space-y-1">
+                <span className="text-slate-400 text-[11px] font-extrabold uppercase tracking-wider block">Total Platform Users</span>
+                <div className="flex items-baseline gap-2">
+                  <span className="text-3xl font-black text-white">{users.length}</span>
+                  <span className="text-emerald-400 bg-emerald-500/10 border border-emerald-500/20 px-2 py-0.5 rounded-md text-[10px] font-black">
+                    {users.filter(u => u.user_status === 'active' || !u.user_status).length} Active
+                  </span>
+                </div>
+              </div>
+              <div className="h-12 w-12 rounded-2xl bg-indigo-500/10 border border-indigo-500/20 flex items-center justify-center text-indigo-400 text-xl font-black shadow-inner">
+                <UserOutlined />
+              </div>
+            </div>
+            <div className="mt-3 pt-3 border-t border-slate-800/80 flex items-center justify-between text-[11px] font-bold text-slate-400">
+              <span>Engineers: {users.filter(u => u.role?.toLowerCase().includes('engineer')).length}</span>
+              <span>Managers: {users.filter(u => u.role?.toLowerCase().includes('manager')).length}</span>
+              <span>Admins: {users.filter(u => u.role?.toLowerCase().includes('admin')).length}</span>
+            </div>
+          </div>
+
+          {/* Card 2: Approval Rules */}
+          <div className="bg-slate-900/90 border border-slate-800/90 rounded-2xl p-4 shadow-xl backdrop-blur-xl text-white relative overflow-hidden group hover:border-emerald-500/50 transition-all duration-300">
+            <div className="flex items-center justify-between">
+              <div className="space-y-1">
+                <span className="text-slate-400 text-[11px] font-extrabold uppercase tracking-wider block">Approval Rules</span>
+                <div className="flex items-baseline gap-2">
+                  <span className="text-3xl font-black text-white">{hierarchies.length}</span>
+                  <span className="text-cyan-400 bg-cyan-500/10 border border-cyan-500/20 px-2 py-0.5 rounded-md text-[10px] font-black">
+                    Hierarchies
+                  </span>
+                </div>
+              </div>
+              <div className="h-12 w-12 rounded-2xl bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center text-emerald-400 text-xl font-black shadow-inner">
+                <SafetyCertificateOutlined />
+              </div>
+            </div>
+            <div className="mt-3 pt-3 border-t border-slate-800/80 flex items-center justify-between text-[11px] font-bold text-slate-400">
+              <span>Mapped Requesters: {hierarchies.reduce((acc, h) => acc + (h.requesters?.length || 0), 0)}</span>
+            </div>
+          </div>
+
+          {/* Card 3: Screen Security */}
+          <div className="bg-slate-900/90 border border-slate-800/90 rounded-2xl p-4 shadow-xl backdrop-blur-xl text-white relative overflow-hidden group hover:border-purple-500/50 transition-all duration-300">
+            <div className="flex items-center justify-between">
+              <div className="space-y-1">
+                <span className="text-slate-400 text-[11px] font-extrabold uppercase tracking-wider block">Screen Security</span>
+                <div className="flex items-baseline gap-2">
+                  <span className="text-3xl font-black text-white">{ALL_WINDOWS.length}</span>
+                  <span className="text-purple-400 bg-purple-500/10 border border-purple-500/20 px-2 py-0.5 rounded-md text-[10px] font-black">
+                    Windows
+                  </span>
+                </div>
+              </div>
+              <div className="h-12 w-12 rounded-2xl bg-purple-500/10 border border-purple-500/20 flex items-center justify-center text-purple-400 text-xl font-black shadow-inner">
+                <LockOutlined />
+              </div>
+            </div>
+            <div className="mt-3 pt-3 border-t border-slate-800/80 flex items-center justify-between text-[11px] font-bold text-slate-400">
+              <span>Access Control Matrix Active</span>
+            </div>
+          </div>
+
+          {/* Card 4: Cloudflare D1 Database */}
+          <div className="bg-slate-900/90 border border-slate-800/90 rounded-2xl p-4 shadow-xl backdrop-blur-xl text-white relative overflow-hidden group hover:border-amber-500/50 transition-all duration-300">
+            <div className="flex items-center justify-between">
+              <div className="space-y-1">
+                <span className="text-slate-400 text-[11px] font-extrabold uppercase tracking-wider block">Database Health</span>
+                <div className="flex items-baseline gap-2">
+                  <span className="text-xl font-black text-emerald-400 flex items-center gap-1.5">
+                    <span className="h-2.5 w-2.5 rounded-full bg-emerald-500 animate-pulse"></span>
+                    D1 Synced
+                  </span>
+                </div>
+              </div>
+              <div className="h-12 w-12 rounded-2xl bg-amber-500/10 border border-amber-500/20 flex items-center justify-center text-amber-400 text-xl font-black shadow-inner">
+                <DatabaseOutlined />
+              </div>
+            </div>
+            <div className="mt-3 pt-3 border-t border-slate-800/80 flex items-center justify-between text-[11px] font-bold text-slate-400">
+              <span>Cutoff Day: {settings.monthly_cutoff_day || '3'}rd</span>
+              <span>Auto-Expiry: {settings.pending_auto_expiry_days || '5'} Days</span>
+            </div>
+          </div>
+        </div>
+
+        {/* Executive Tab Navigation Strip */}
+        <div className="flex bg-slate-900/90 p-2 rounded-2xl border border-slate-800/90 shadow-2xl backdrop-blur-xl gap-2 overflow-x-auto">
+          <button
+            type="button"
+            onClick={() => handleTabChange("users")}
+            className={`flex items-center gap-2.5 px-6 py-2.5 text-xs font-black uppercase tracking-wider rounded-xl transition-all border-0 cursor-pointer ${
+              activeTab === "users"
+                ? "bg-gradient-to-r from-indigo-600 to-indigo-500 text-white shadow-lg shadow-indigo-500/30 scale-[1.02]"
+                : "bg-transparent text-slate-400 hover:text-white hover:bg-slate-800/60"
+            }`}
+          >
+            <TeamOutlined className="text-base" />
+            <span>Users Directory</span>
+            <span className={`px-2 py-0.5 text-[10px] font-black rounded-md ${activeTab === 'users' ? 'bg-white/20 text-white' : 'bg-slate-800 text-slate-400'}`}>
+              {users.length}
+            </span>
+          </button>
+
+          <button
+            type="button"
+            onClick={() => handleTabChange("approvals")}
+            className={`flex items-center gap-2.5 px-6 py-2.5 text-xs font-black uppercase tracking-wider rounded-xl transition-all border-0 cursor-pointer ${
+              activeTab === "approvals"
+                ? "bg-gradient-to-r from-indigo-600 to-indigo-500 text-white shadow-lg shadow-indigo-500/30 scale-[1.02]"
+                : "bg-transparent text-slate-400 hover:text-white hover:bg-slate-800/60"
+            }`}
+          >
+            <SafetyCertificateOutlined className="text-base" />
+            <span>Role Mappings</span>
+            <span className={`px-2 py-0.5 text-[10px] font-black rounded-md ${activeTab === 'approvals' ? 'bg-white/20 text-white' : 'bg-slate-800 text-slate-400'}`}>
+              {hierarchies.length}
+            </span>
+          </button>
+
+          <button
+            type="button"
+            onClick={() => handleTabChange("analytics")}
+            className={`flex items-center gap-2.5 px-6 py-2.5 text-xs font-black uppercase tracking-wider rounded-xl transition-all border-0 cursor-pointer ${
+              activeTab === "analytics"
+                ? "bg-gradient-to-r from-indigo-600 to-indigo-500 text-white shadow-lg shadow-indigo-500/30 scale-[1.02]"
+                : "bg-transparent text-slate-400 hover:text-white hover:bg-slate-800/60"
+            }`}
+          >
+            <BarChartOutlined className="text-base" />
+            <span>Dashboard Charts</span>
+          </button>
+
+          <button
+            type="button"
+            onClick={() => handleTabChange("settings")}
+            className={`flex items-center gap-2.5 px-6 py-2.5 text-xs font-black uppercase tracking-wider rounded-xl transition-all border-0 cursor-pointer ${
+              activeTab === "settings"
+                ? "bg-gradient-to-r from-indigo-600 to-indigo-500 text-white shadow-lg shadow-indigo-500/30 scale-[1.02]"
+                : "bg-transparent text-slate-400 hover:text-white hover:bg-slate-800/60"
+            }`}
+          >
+            <SettingOutlined className="text-base" />
+            <span>System Settings</span>
+          </button>
+        </div>
 
         {error && (
           <Alert message={error} type="error" showIcon className="rounded-xl font-bold" />
