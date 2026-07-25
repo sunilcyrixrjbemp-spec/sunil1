@@ -203,40 +203,6 @@ function buildExcelPrintHTML(user: any, claims: any[], attachments: any[] = [], 
     return map[m] || m;
   };
 
-  // ── Data rows — 18 columns ──
-  const dataRows = allLegs.map((r, i) => {
-    const l = r.leg || {};
-    const taCol   = l.ta_amount || 0;
-    const bikeCarAmt = (l.bike_amount || 0) + (l.car_amount || 0);
-    const rowTotal = taCol + bikeCarAmt + (l.auto_amount || 0) + (l.da_amount || 0)
-                   + (l.local_purchase || 0) + (l.hotel_amount || 0) + (l.other_amount || 0);
-    const bg = i % 2 === 0 ? "#ffffff" : "#f0f7ff";
-    const c = `border:1px solid #000!important;padding:4px 5px;font-size:8.5pt;font-weight:600;color:#000;vertical-align:middle;word-wrap:break-word;`;
-    
-    const pmsCalibCount = (l.pms_count || 0) + (l.calibration_count || 0);
-
-    return `<tr style="background:${bg}!important;">
-      <td style="${c}text-align:center;">${fmtDate(r.date)}</td>
-      <td style="${c}">${l.from_location || ""}</td>
-      <td style="${c}">${l.to_location || ""}</td>
-      <td style="${c}text-align:center;">${l.worked_district || ""}</td>
-      <td style="${c}text-align:center;font-weight:700;">${modeAbbr(l.travel_mode)}</td>
-      <td style="${c}text-align:center;">${l.distance_km > 0 ? l.distance_km.toFixed(1) : ""}</td>
-      <td style="${c}text-align:right;">${taCol > 0 ? taCol.toFixed(2) : ""}</td>
-      <td style="${c}text-align:right;">${l.auto_amount > 0 ? l.auto_amount.toFixed(2) : ""}</td>
-      <td style="${c}text-align:right;">${l.da_amount > 0 ? l.da_amount.toFixed(2) : ""}</td>
-      <td style="${c}text-align:right;">${l.local_purchase > 0 ? l.local_purchase.toFixed(2) : ""}</td>
-      <td style="${c}text-align:right;">${l.hotel_amount > 0 ? l.hotel_amount.toFixed(2) : ""}</td>
-      <td style="${c}font-size:8.5pt;">${getActivityOtherDesc(l)}</td>
-      <td style="${c}text-align:right;">${l.other_amount > 0 ? l.other_amount.toFixed(2) : ""}</td>
-      <td style="${c}text-align:right;font-weight:800;background:#e8f5e9!important;">${rowTotal > 0 ? rowTotal.toFixed(2) : ""}</td>
-      <td style="${c}font-size:8.5pt;">${getFormattedPurpose(l)}</td>
-      <td style="${c}font-size:8pt;font-family:monospace;">${l.barcode_ticket || ""}</td>
-      <td style="${c}text-align:center;">${pmsCalibCount}</td>
-      <td style="${c}text-align:center;">${l.calls_completed || 0}/${l.calls_assigned || 0}</td>
-    </tr>`;
-  }).join("\n");
-
   // Collect ONLY financial bill attachments associated with expense amounts
   // Strictly EXCLUDE non-monetary service reports, breakdown call photos, or PMS photos!
   const allAttachmentsMap = new Map<string, { url: string; date: string; label: string }>();
