@@ -2522,46 +2522,59 @@ export default function ApprovalPage() {
                                     </div>
 
                                     {/* Mobile View Card List */}
-                                    <div className="block lg:hidden space-y-2 p-2.5 bg-gray-50/20">
-                                      {pmsList.map((p: any, pIdx: number) => (
-                                        <div key={pIdx} className="bg-white border border-gray-150 rounded-lg p-2.5 space-y-2">
-                                          <div className="flex justify-between items-start">
-                                            <div>
-                                              <span className="font-extrabold text-gray-855 block">{p.asset_details?.equipment_name || "—"}</span>
-                                              <span className="text-[9px] text-gray-500">{p.asset_details?.hospital_name || "—"}</span>
-                                            </div>
-                                            <span className="px-1.5 py-0.5 rounded font-extrabold text-[8px] uppercase bg-green-50 text-green-700 border border-green-200 shrink-0">
-                                              {p.frequency || "3 month"}
-                                            </span>
-                                          </div>
-                                          <div className="grid grid-cols-2 gap-x-2 gap-y-1 text-[9px] text-gray-600 font-bold border-t border-gray-100 pt-1.5">
-                                            <div>District: <span className="text-gray-800">{p.asset_details?.district_name || "—"}</span></div>
-                                            <div>Model: <span className="text-gray-800">{p.asset_details?.model_name || "—"}</span></div>
-                                            <div>Barcode: <span className="text-gray-800 font-mono">{p.barcode}</span></div>
-                                            <div>Status: <span className="text-gray-800">{p.asset_details?.inventory_status || "Active"}</span></div>
-                                          </div>
-                                          {p.photo_url && (
-                                            <div className="pt-2">
-                                              <div className="relative rounded overflow-hidden border border-amber-100 bg-white">
-                                                <img
-                                                  src={`${API_BASE}${p.photo_url}`}
-                                                  alt="PMS verification"
-                                                  className="w-full h-auto object-cover max-h-48 cursor-pointer"
-                                                  onClick={() => setLightboxImage(`${API_BASE}${p.photo_url}`)}
-                                                />
-                                                <button
-                                                  type="button"
-                                                  onClick={() => setLightboxImage(`${API_BASE}${p.photo_url}`)}
-                                                  className="absolute bottom-1 right-1 bg-black/60 text-white font-bold text-[8px] px-2 py-0.5 rounded cursor-pointer border-0"
-                                                >
-                                                  Full View
-                                                </button>
-                                              </div>
-                                            </div>
-                                          )}
-                                        </div>
-                                      ))}
-                                    </div>
+                                     <div className="block lg:hidden space-y-3 p-3 bg-slate-50/50">
+                                       {pmsList.map((p: any, pIdx: number) => (
+                                         <div key={pIdx} className="bg-amber-50/60 rounded-xl p-3.5 space-y-2.5 text-xs text-left w-full">
+                                           <div className="flex justify-between items-start">
+                                             <div>
+                                               <span className="font-black text-slate-900 text-sm block">{p.asset_details?.equipment_name || "—"}</span>
+                                               <span className="text-xs text-slate-600 font-medium">{p.asset_details?.hospital_name || "—"}</span>
+                                             </div>
+                                             <span className="px-2.5 py-1 rounded-full font-black text-xs uppercase bg-emerald-600 text-white shadow-2xs shrink-0">
+                                               {p.frequency || "3 month"}
+                                             </span>
+                                           </div>
+                                           <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 pt-2 text-xs border-t border-amber-100/70 font-semibold text-slate-700">
+                                             <div>
+                                               <span className="text-slate-400 text-xs block uppercase">District</span>
+                                               <span className="font-bold text-slate-900">{p.asset_details?.district_name || "—"}</span>
+                                             </div>
+                                             <div>
+                                               <span className="text-slate-400 text-xs block uppercase">Model</span>
+                                               <span className="font-bold text-slate-900">{p.asset_details?.model_name || "—"}</span>
+                                             </div>
+                                             <div>
+                                               <span className="text-slate-400 text-xs block uppercase">Barcode</span>
+                                               <span className="font-mono font-bold text-amber-800">{p.barcode || "—"}</span>
+                                             </div>
+                                             <div>
+                                               <span className="text-slate-400 text-xs block uppercase">Status</span>
+                                               <span className="font-bold text-slate-900">{p.asset_details?.inventory_status || "Active"}</span>
+                                             </div>
+                                           </div>
+                                           {p.photo_url && (
+                                             <div className="pt-2">
+                                               <span className="text-slate-500 text-xs uppercase font-bold block mb-1.5">Attachment Photo</span>
+                                               <div className="relative rounded-xl overflow-hidden bg-slate-900 border border-slate-700 min-h-[220px] max-h-[360px] flex items-center justify-center p-2">
+                                                 <img
+                                                   src={`${API_BASE}${p.photo_url}`}
+                                                   alt="PMS verification"
+                                                   className="w-full h-full object-contain cursor-pointer"
+                                                   onClick={() => setLightboxImage(`${API_BASE}${p.photo_url}`)}
+                                                 />
+                                                 <button
+                                                   type="button"
+                                                   onClick={() => setLightboxImage(`${API_BASE}${p.photo_url}`)}
+                                                   className="absolute bottom-2 right-2 bg-slate-900/80 text-white font-extrabold text-xs px-3 py-1 rounded-lg cursor-pointer border border-white/20 backdrop-blur-md"
+                                                 >
+                                                   Full View
+                                                 </button>
+                                               </div>
+                                             </div>
+                                           )}
+                                         </div>
+                                       ))}
+                                     </div>
                                   </div>
                                 )}
 

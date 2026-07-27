@@ -5556,22 +5556,22 @@ export default function ExpensePage() {
                 <>
                   {/* Summary Info */}
                   <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 text-xs">
-                    <div className="p-3 bg-gray-50 border border-gray-200 rounded">
-                      <span className="text-[9px] text-gray-400 font-bold uppercase block">Submitted By</span>
-                      <span className="font-bold text-gray-800 block mt-0.5">{selectedClaim.submitter_name || user.name || "Sunil Vishnoi"}</span>
-                      <span className="text-[10px] text-gray-500 font-mono">{selectedClaim.submitter_code || user.user_id || "E1704"}</span>
+                    <div className="p-3.5 bg-slate-50/80 rounded-xl space-y-1">
+                      <span className="text-xs text-slate-500 font-bold uppercase block tracking-wider">Submitted By</span>
+                      <span className="font-extrabold text-slate-900 block text-xs">{selectedClaim.submitter_name || user.name || "Sunil Vishnoi"}</span>
+                      <span className="text-xs text-slate-500 font-mono block font-semibold">{selectedClaim.submitter_code || user.user_id || "E1704"}</span>
                     </div>
-                    <div className="p-3 bg-gray-50 border border-gray-200 rounded">
-                      <span className="text-[9px] text-gray-400 font-bold uppercase block">Travel Date</span>
-                      <span className="font-bold text-gray-800 block mt-0.5">{selectedClaim.date || selectedClaim.itinerary}</span>
-                      <span className="text-[10px] text-gray-500">{selectedClaim.month} {selectedClaim.year}</span>
+                    <div className="p-3.5 bg-slate-50/80 rounded-xl space-y-1">
+                      <span className="text-xs text-slate-500 font-bold uppercase block tracking-wider">Travel Date</span>
+                      <span className="font-extrabold text-slate-900 block text-xs">{selectedClaim.date || selectedClaim.itinerary}</span>
+                      <span className="text-xs text-slate-500 block font-semibold">{selectedClaim.month} {selectedClaim.year}</span>
                     </div>
-                    <div className="p-3 bg-gray-50 border border-gray-200 rounded">
-                      <span className="text-[9px] text-gray-400 font-bold uppercase block">Submitted At</span>
-                      <span className="font-bold text-gray-800 block mt-0.5">{formatDateTime(selectedClaim.created_at)}</span>
+                    <div className="p-3.5 bg-slate-50/80 rounded-xl space-y-1">
+                      <span className="text-xs text-slate-500 font-bold uppercase block tracking-wider">Submitted At</span>
+                      <span className="font-extrabold text-slate-900 block text-xs">{formatDateTime(selectedClaim.created_at)}</span>
                     </div>
-                    <div className="p-3 bg-slate-50 border border-slate-200 rounded-xl">
-                      <span className="text-[9px] text-slate-400 font-bold uppercase block">Status</span>
+                    <div className="p-3.5 bg-slate-50/80 rounded-xl space-y-1">
+                      <span className="text-xs text-slate-500 font-bold uppercase block tracking-wider">Status</span>
                       <div className="mt-1">
                         {renderAntdStatusTag(selectedClaim.status)}
                       </div>
@@ -6070,39 +6070,51 @@ export default function ExpensePage() {
 
                                   {/* Calls card list */}
                                   {selectedActs.includes("Calls") && callsList.length > 0 && (
-                                    <div className="space-y-2">
-                                      <div className="text-[9px] font-bold text-blue-700 uppercase text-left">Support Calls Logs</div>
+                                    <div className="space-y-2.5 w-full">
+                                      <div className="text-xs font-black text-blue-800 uppercase tracking-wider text-left">Support Calls Logs</div>
                                       {callsList.map((c: any, cIdx: number) => (
-                                        <div key={cIdx} className="bg-blue-50/30 border border-blue-100 rounded-lg p-2.5 space-y-2 text-[10px] text-left">
+                                        <div key={cIdx} className="bg-blue-50/50 rounded-xl p-3.5 space-y-2.5 text-xs text-left w-full">
                                           <div className="flex justify-between items-start">
                                             <div>
-                                              <span className="font-extrabold text-gray-805 block">{c.asset_details?.equipment_name || "—"}</span>
-                                              <span className="text-[9px] text-gray-500">{c.asset_details?.hospital_name || "—"}</span>
+                                              <span className="font-black text-slate-900 text-sm block">{c.asset_details?.equipment_name || "—"}</span>
+                                              <span className="text-xs text-slate-600 font-medium">{c.asset_details?.hospital_name || "—"}</span>
                                             </div>
-                                            <span className="px-1.5 py-0.5 rounded font-extrabold text-[8px] uppercase bg-blue-50 text-blue-700 border border-blue-100">
+                                            <span className="px-2.5 py-1 rounded-full font-black text-xs uppercase bg-blue-600 text-white shadow-2xs">
                                               {c.status || "Attend"}
                                             </span>
                                           </div>
-                                          <div className="grid grid-cols-2 gap-x-2 gap-y-1 text-[9px] text-gray-600 font-bold border-t border-blue-100/50 pt-1.5">
-                                            <div>District: <span className="text-gray-800">{c.asset_details?.district_name || "—"}</span></div>
-                                            <div>Model: <span className="text-gray-800">{c.asset_details?.model_name || "—"}</span></div>
-                                            <div>Barcode: <span className="text-gray-800 font-mono">{c.barcode}</span></div>
-                                            <div>Type: <span className="text-gray-800">{c.type || "Support Call"}</span></div>
+                                          <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 pt-2 text-xs border-t border-blue-100/70 font-semibold text-slate-700">
+                                            <div>
+                                              <span className="text-slate-400 text-xs block uppercase">District</span>
+                                              <span className="font-bold text-slate-900">{c.asset_details?.district_name || "—"}</span>
+                                            </div>
+                                            <div>
+                                              <span className="text-slate-400 text-xs block uppercase">Model</span>
+                                              <span className="font-bold text-slate-900">{c.asset_details?.model_name || "—"}</span>
+                                            </div>
+                                            <div>
+                                              <span className="text-slate-400 text-xs block uppercase">Barcode</span>
+                                              <span className="font-mono font-bold text-blue-700">{c.barcode || "—"}</span>
+                                            </div>
+                                            <div>
+                                              <span className="text-slate-400 text-xs block uppercase">Status</span>
+                                              <span className="font-bold text-slate-900">{c.asset_details?.inventory_status || "Active"}</span>
+                                            </div>
                                           </div>
                                           {c.photo_url && (
                                             <div className="pt-2">
-                                              <span className="text-gray-400 text-[8px] uppercase block mb-1">Attachment Photo</span>
-                                              <div className="relative rounded overflow-hidden border border-blue-100 bg-white">
+                                              <span className="text-slate-500 text-xs uppercase font-bold block mb-1.5">Attachment Photo</span>
+                                              <div className="relative rounded-xl overflow-hidden bg-slate-900 border border-slate-700 min-h-[220px] max-h-[360px] flex items-center justify-center p-2">
                                                 <img
                                                   src={`${API_BASE}${c.photo_url}`}
                                                   alt="Call verification"
-                                                  className="w-full h-auto object-cover max-h-48 cursor-pointer"
+                                                  className="w-full h-full object-contain cursor-pointer"
                                                   onClick={() => setLightboxImage(`${API_BASE}${c.photo_url}`)}
                                                 />
                                                 <button
                                                   type="button"
                                                   onClick={() => setLightboxImage(`${API_BASE}${c.photo_url}`)}
-                                                  className="absolute bottom-1 right-1 bg-black/60 text-white font-bold text-[8px] px-2 py-0.5 rounded cursor-pointer border-0"
+                                                  className="absolute bottom-2 right-2 bg-slate-900/80 text-white font-extrabold text-xs px-3 py-1 rounded-lg cursor-pointer border border-white/20 backdrop-blur-md"
                                                 >
                                                   Full View
                                                 </button>
@@ -6116,39 +6128,51 @@ export default function ExpensePage() {
 
                                   {/* PMS card list */}
                                   {selectedActs.includes("PMS") && pmsList.length > 0 && (
-                                    <div className="space-y-2">
-                                      <div className="text-[9px] font-bold text-amber-700 uppercase text-left">PMS Service Logs</div>
+                                    <div className="space-y-2.5 w-full">
+                                      <div className="text-xs font-black text-amber-800 uppercase tracking-wider text-left">PMS Service Logs</div>
                                       {pmsList.map((p: any, pIdx: number) => (
-                                        <div key={pIdx} className="bg-amber-50/30 border border-amber-100 rounded-lg p-2.5 space-y-2 text-[10px] text-left">
+                                        <div key={pIdx} className="bg-amber-50/50 rounded-xl p-3.5 space-y-2.5 text-xs text-left w-full">
                                           <div className="flex justify-between items-start">
                                             <div>
-                                              <span className="font-extrabold text-gray-855 block">{p.asset_details?.equipment_name || "—"}</span>
-                                              <span className="text-[9px] text-gray-500">{p.asset_details?.hospital_name || "—"}</span>
+                                              <span className="font-black text-slate-900 text-sm block">{p.asset_details?.equipment_name || "—"}</span>
+                                              <span className="text-xs text-slate-600 font-medium">{p.asset_details?.hospital_name || "—"}</span>
                                             </div>
-                                            <span className="px-1.5 py-0.5 rounded font-extrabold text-[8px] uppercase bg-green-50 text-green-700 border border-green-200">
+                                            <span className="px-2.5 py-1 rounded-full font-black text-xs uppercase bg-emerald-600 text-white shadow-2xs">
                                               {p.frequency || "3 month"}
                                             </span>
                                           </div>
-                                          <div className="grid grid-cols-2 gap-x-2 gap-y-1 text-[9px] text-gray-600 font-bold border-t border-amber-100/50 pt-1.5">
-                                            <div>District: <span className="text-gray-800">{p.asset_details?.district_name || "—"}</span></div>
-                                            <div>Model: <span className="text-gray-800">{p.asset_details?.model_name || "—"}</span></div>
-                                            <div>Barcode: <span className="text-gray-800 font-mono">{p.barcode}</span></div>
-                                            <div>Status: <span className="text-gray-800">{p.asset_details?.inventory_status || "Active"}</span></div>
+                                          <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 pt-2 text-xs border-t border-amber-100/70 font-semibold text-slate-700">
+                                            <div>
+                                              <span className="text-slate-400 text-xs block uppercase">District</span>
+                                              <span className="font-bold text-slate-900">{p.asset_details?.district_name || "—"}</span>
+                                            </div>
+                                            <div>
+                                              <span className="text-slate-400 text-xs block uppercase">Model</span>
+                                              <span className="font-bold text-slate-900">{p.asset_details?.model_name || "—"}</span>
+                                            </div>
+                                            <div>
+                                              <span className="text-slate-400 text-xs block uppercase">Barcode</span>
+                                              <span className="font-mono font-bold text-amber-800">{p.barcode || "—"}</span>
+                                            </div>
+                                            <div>
+                                              <span className="text-slate-400 text-xs block uppercase">Status</span>
+                                              <span className="font-bold text-slate-900">{p.asset_details?.inventory_status || "Active"}</span>
+                                            </div>
                                           </div>
                                           {p.photo_url && (
                                             <div className="pt-2">
-                                              <span className="text-gray-400 text-[8px] uppercase block mb-1">Attachment Photo</span>
-                                              <div className="relative rounded overflow-hidden border border-amber-100 bg-white">
+                                              <span className="text-slate-500 text-xs uppercase font-bold block mb-1.5">Attachment Verification Photo</span>
+                                              <div className="relative rounded-xl overflow-hidden bg-slate-900 border border-slate-700 min-h-[220px] max-h-[360px] flex items-center justify-center p-2">
                                                 <img
-                                                  src={`${API_BASE}${p.photo_url}`}
+                                                  src={p.photo_url ? `${API_BASE}${p.photo_url}` : undefined}
                                                   alt="PMS verification"
-                                                  className="w-full h-auto object-cover max-h-48 cursor-pointer"
+                                                  className="w-full h-full object-contain cursor-pointer"
                                                   onClick={() => setLightboxImage(`${API_BASE}${p.photo_url}`)}
                                                 />
                                                 <button
                                                   type="button"
                                                   onClick={() => setLightboxImage(`${API_BASE}${p.photo_url}`)}
-                                                  className="absolute bottom-1 right-1 bg-black/60 text-white font-bold text-[8px] px-2 py-0.5 rounded cursor-pointer border-0"
+                                                  className="absolute bottom-2 right-2 bg-slate-900/80 text-white font-extrabold text-xs px-3 py-1 rounded-lg cursor-pointer border border-white/20 backdrop-blur-md"
                                                 >
                                                   Full View
                                                 </button>
