@@ -185,7 +185,7 @@ export default function NotificationsPage() {
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
           <h2 className="text-xl font-extrabold text-gray-800 uppercase tracking-wide flex items-center gap-2">
-            <Bell className="w-5 h-5 text-blue-600 animate-swing" />
+            <Bell className="w-5 h-5 text-primary-600 animate-swing" />
             Alerts & Notifications
           </h2>
           <p className="text-gray-500 text-xs mt-1">
@@ -202,7 +202,7 @@ export default function NotificationsPage() {
           <button
             onClick={markAllAsRead}
             disabled={!Array.isArray(notifications) || notifications.every(n => n && n.read)}
-            className="px-3 py-1.5 bg-blue-600 hover:bg-blue-700 disabled:bg-gray-200 disabled:text-gray-400 disabled:border-transparent text-white text-xs font-bold uppercase tracking-wider rounded border-0 cursor-pointer transition-colors"
+            className="px-3 py-1.5 bg-primary-600 hover:bg-primary-700 disabled:bg-slate-200 disabled:text-slate-400 disabled:border-transparent text-white text-xs font-bold uppercase tracking-wider rounded-lg border-0 cursor-pointer transition-colors shadow-2xs"
           >
             Mark all read
           </button>
@@ -212,7 +212,7 @@ export default function NotificationsPage() {
       {/* Filters Box - AdminLTE card style */}
       <div className="bg-white border border-gray-200 rounded shadow-sm p-4">
         <h4 className="text-[10px] font-bold uppercase text-gray-400 tracking-wider flex items-center gap-1 border-b border-gray-150 pb-2 mb-3">
-          <Filter className="w-3.5 h-3.5 text-blue-600" />
+          <Filter className="w-3.5 h-3.5 text-primary-600" />
           Search & Filters Control
         </h4>
         <div className="grid grid-cols-1 sm:grid-cols-4 gap-4">
@@ -225,7 +225,7 @@ export default function NotificationsPage() {
                 placeholder="Search descriptions..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                className="w-full bg-white border border-gray-250 rounded px-2.5 py-1.5 text-xs text-gray-800 focus:outline-none focus:border-blue-500 pl-8"
+                className="w-full bg-white border border-slate-200 rounded-lg px-2.5 py-1.5 text-xs text-slate-800 focus:outline-none focus:border-primary-500 pl-8"
               />
               <Search className="w-3.5 h-3.5 text-gray-400 absolute left-2.5 top-2.5" />
             </div>
@@ -237,7 +237,7 @@ export default function NotificationsPage() {
             <select
               value={filterStatus}
               onChange={(e) => setFilterStatus(e.target.value)}
-              className="w-full bg-white border border-gray-250 rounded px-2.5 py-1.5 text-xs text-gray-850 focus:outline-none focus:border-blue-500"
+              className="w-full bg-white border border-slate-200 rounded-lg px-2.5 py-1.5 text-xs text-slate-800 focus:outline-none focus:border-primary-500"
             >
               <option value="all">All Notifications</option>
               <option value="approved">Approved Claims</option>
@@ -276,7 +276,7 @@ export default function NotificationsPage() {
       </div>
 
       {/* Notifications List Card */}
-      <div className="bg-white border-t-4 border-t-blue-600 border-x border-b border-gray-200 rounded shadow-sm overflow-hidden">
+      <div className="bg-white border-t-4 border-t-primary-600 border-x border-b border-slate-200 rounded-xl shadow-2xs overflow-hidden">
         <div className="px-4 py-3 bg-gray-50 border-b border-gray-200 flex items-center justify-between">
           <span className="text-[10px] font-bold uppercase text-gray-600 tracking-wider">
             Showing {filteredNotifs.length} Alerts
@@ -298,14 +298,14 @@ export default function NotificationsPage() {
               <div 
                 key={n.id}
                 className={`p-4 transition-colors flex gap-4 items-start ${
-                  n.read ? "bg-white hover:bg-slate-50/50" : "bg-[#a5d8e8]/15 hover:bg-[#a5d8e8]/25 border-l-4 border-l-blue-600"
+                  n.read ? "bg-white hover:bg-slate-50/50" : "bg-primary-50/50 hover:bg-primary-50 border-l-4 border-l-primary-600"
                 }`}
               >
                 {/* Circular Icon */}
-                <div className={`w-9 h-9 rounded-full shrink-0 flex items-center justify-center text-white shadow-xs ${
+                <div className={`w-9 h-9 rounded-full shrink-0 flex items-center justify-center text-white shadow-2xs ${
                   n.type === "warning" ? "bg-amber-600" :
                   n.type === "success" ? "bg-emerald-600" :
-                  n.type === "error" ? "bg-rose-600" : "bg-blue-600"
+                  n.type === "error" ? "bg-rose-600" : "bg-primary-600"
                 }`}>
                   {n.type === "warning" && <AlertTriangle className="w-4 h-4 text-white" />}
                   {n.type === "success" && <Check className="w-4 h-4 text-white" />}
