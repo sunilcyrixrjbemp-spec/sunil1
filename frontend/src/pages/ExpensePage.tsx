@@ -4664,18 +4664,24 @@ export default function ExpensePage() {
 
                           {/* Other Task Sub-Form */}
                           {(leg.selected_activities || []).includes("Other") && (
-                            <div className="bg-gray-50 border border-gray-150 rounded p-3 flex flex-col gap-3">
-                              <div className="flex items-center justify-between border-b border-gray-205 pb-1.5">
-                                <span className="text-[11px] font-bold text-gray-700 uppercase tracking-wide">Other Activity Description</span>
+                            <div className="bg-amber-50/90 border-2 border-amber-300 rounded-xl p-3.5 flex flex-col gap-2.5 shadow-xs ring-2 ring-amber-400/20 transition-all">
+                              <div className="flex items-center justify-between border-b border-amber-200/80 pb-2">
+                                <span className="text-[11px] font-black text-amber-900 uppercase tracking-wider flex items-center gap-1.5">
+                                  <span className="w-2 h-2 rounded-full bg-amber-600 animate-pulse"></span>
+                                  ✏️ Other Activity Description / Remark
+                                </span>
+                                <span className="text-[9px] font-black text-amber-800 bg-amber-100 px-2 py-0.5 rounded border border-amber-300 uppercase">
+                                  Required
+                                </span>
                               </div>
                               <div>
-                                <label className="label-lte">State details of work done</label>
+                                <label className="label-lte text-amber-900 font-extrabold text-xs mb-1 block">State exact details & purpose of work done:</label>
                                 <textarea
                                   value={leg.activity_other_desc || ""}
                                   onChange={(e) => handleItineraryChange(leg.leg, "activity_other_desc", e.target.value)}
-                                  placeholder="Describe the miscellaneous work performed..."
-                                  rows={2}
-                                  className="input-lte text-xs font-semibold py-1.5 px-2 bg-white w-full"
+                                  placeholder="Describe the miscellaneous work performed in detail..."
+                                  rows={2.5}
+                                  className="w-full text-xs font-extrabold text-amber-950 bg-white border-2 border-amber-350 focus:border-amber-600 focus:ring-2 focus:ring-amber-400 rounded-lg p-2.5 shadow-inner placeholder:text-amber-400/70"
                                 />
                               </div>
                             </div>
@@ -5996,9 +6002,13 @@ export default function ExpensePage() {
                                               </div>
                                             )}
                                             {selectedActs.includes("Other") && activityOtherDesc && (
-                                              <div className="flex-1">
-                                                <span className="font-bold text-gray-400 uppercase text-[8px] block">Other Activity Description</span>
-                                                <span className="italic text-gray-700">{activityOtherDesc}</span>
+                                              <div className="w-full mt-2 bg-amber-50 border-2 border-amber-300 rounded-lg p-2.5 shadow-xs">
+                                                <span className="font-black text-amber-900 uppercase text-[9px] block mb-1 tracking-wider flex items-center gap-1">
+                                                  <span>✏️</span> OTHER ACTIVITY REMARK / PURPOSE:
+                                                </span>
+                                                <span className="font-black text-amber-950 text-xs leading-relaxed block bg-white/90 p-2 rounded border border-amber-200">
+                                                  {activityOtherDesc}
+                                                </span>
                                               </div>
                                             )}
                                           </div>

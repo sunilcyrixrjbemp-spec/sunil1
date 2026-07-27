@@ -2673,9 +2673,13 @@ export default function ApprovalPage() {
                                     </div>
                                   )}
                                   {selectedActs.includes("Other") && activityOtherDesc && (
-                                    <div className="flex-1">
-                                      <span className="font-bold text-gray-400 uppercase text-[8px] block">Other Activity Description</span>
-                                      <span className="italic text-gray-700">{activityOtherDesc}</span>
+                                    <div className="w-full mt-2 bg-amber-50 border-2 border-amber-300 rounded-lg p-2.5 shadow-xs">
+                                      <span className="font-black text-amber-900 uppercase text-[9px] block mb-1 tracking-wider flex items-center gap-1">
+                                        <span>✏️</span> OTHER ACTIVITY REMARK / PURPOSE:
+                                      </span>
+                                      <span className="font-black text-amber-950 text-xs leading-relaxed block bg-white/90 p-2 rounded border border-amber-200">
+                                        {activityOtherDesc}
+                                      </span>
                                     </div>
                                   )}
                                 </div>
