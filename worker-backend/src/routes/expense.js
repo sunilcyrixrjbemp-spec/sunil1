@@ -194,6 +194,17 @@ export function computeBaseLocPolicy(baseReportingLocation, itineraries) {
   // Healthcare facility keywords matched at word boundaries to avoid matching substrings like "gandhi" (dh)
   const HEALTHCARE_FACILITY_REGEX = /\b(chc|phc|sdh|dh|hospital|hosp|college|collage|dispensary|subcenter|sub-center|sub center|ddw|warehouse|uphc|up-hc|up hc)\b/i;
 
+  // List of Rajasthan Districts for Out-Station travel validation
+  const RAJASTHAN_DISTRICTS = [
+    "ajmer", "alwar", "banswara", "baran", "barmer", "bharatpur", "bhilwara", "bikaner",
+    "bundi", "chittorgarh", "churu", "dausa", "dholpur", "dungarpur", "ganganagar", "sri ganganagar",
+    "hanumangarh", "jaipur", "jaisalmer", "jalore", "jhalawar", "jhunjhunu", "jodhpur", "karauli",
+    "kota", "nagaur", "pali", "pratapgarh", "rajsamand", "sawai madhopur", "sikar",
+    "sirohi", "tonk", "udaipur", "anupgarh", "balotra", "beawar", "deeg", "didwana", "kuchaman",
+    "dudu", "gangapur", "jaipur rural", "jodhpur rural", "kekri", "kotputli", "behror",
+    "khairthal", "tijara", "neem ka thana", "phalodi", "salumbar", "sanchore", "shahpura"
+  ];
+
   const isOfficialNonBaseFacility = (locText, leg) => {
     if (!locText) return false;
     const clean = locText.trim().toLowerCase();
@@ -207,15 +218,29 @@ export function computeBaseLocPolicy(baseReportingLocation, itineraries) {
       return true;
     }
 
-    // 2. User selected Activity = "Other" and typed a non-base district/location OR bus/train/hotel ticket travel
+    // 2. Activity = "Other": ONLY allow DA if location contains a non-base Rajasthan district name OR bus/train ticket is present
     if (leg) {
       const act = (leg.activity || leg.activity_type || "").trim().toLowerCase();
       const isOther = act.includes("other");
       const mode = (leg.mode || "").trim().toLowerCase();
-      const isBusOrTrain = mode.includes("bus") || mode.includes("train");
+      const subMode = (leg.sub_mode || "").trim().toLowerCase();
+      const isBusOrTrain = mode.includes("bus") || mode.includes("train") || subMode.includes("bus") || subMode.includes("train");
       const hasTicketOrFare = parseFloat(leg.train_bus_amount || leg.sub_amount || leg.hotel || "0") > 0;
 
-      if (isOther || isBusOrTrain || hasTicketOrFare) {
+      const fromText = (leg.from || "").trim().toLowerCase();
+      const toText = (leg.to || "").trim().toLowerCase();
+
+      const hasNonBaseRajasthanDistrict = RAJASTHAN_DISTRICTS.some(dist =>
+        (fromText.includes(dist) || toText.includes(dist)) && !matchesBase(dist, baseLocations)
+      );
+
+      // STRICT RULE: If Activity is "Other", ONLY allow DA if Rajasthan District name is written OR Bus/Train ticket is attached. Otherwise DENY DA.
+      if (isOther) {
+        return hasNonBaseRajasthanDistrict || isBusOrTrain || hasTicketOrFare;
+      }
+
+      // Non-"Other" legs with Bus/Train ticket
+      if ((isBusOrTrain || hasTicketOrFare) && hasNonBaseRajasthanDistrict) {
         return true;
       }
     }
