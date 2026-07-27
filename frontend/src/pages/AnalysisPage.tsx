@@ -850,7 +850,7 @@ export default function AnalysisPage() {
       title: "Engineer Name",
       dataIndex: "engineer",
       key: "engineer",
-      render: (val: string) => <span className="font-bold text-xs text-indigo-900">{val}</span>,
+      render: (val: string) => <span className="font-bold text-xs text-slate-900">{val}</span>,
       sorter: (a: any, b: any) => a.engineer.localeCompare(b.engineer)
     },
     {
@@ -896,7 +896,7 @@ export default function AnalysisPage() {
       dataIndex: "barcode",
       key: "barcode",
       width: 130,
-      render: (val: string) => <span className="font-mono text-xs text-indigo-700 font-bold bg-indigo-50 px-1.5 py-0.5 rounded border border-indigo-100">{val || "N/A"}</span>,
+      render: (val: string) => <span className="font-mono text-xs text-primary-700 font-bold bg-primary-50 px-1.5 py-0.5 rounded border border-primary-100">{val || "N/A"}</span>,
       sorter: (a: any, b: any) => (a.barcode || "").localeCompare(b.barcode || "")
     },
     {
@@ -1156,7 +1156,7 @@ export default function AnalysisPage() {
       dataIndex: "call_type",
       key: "call_type",
       width: 120,
-      render: (val: string) => <span className="font-bold text-xs text-indigo-600 bg-indigo-50 px-2 py-0.5 rounded border border-indigo-100">{val}</span>
+      render: (val: string) => <span className="font-bold text-xs text-primary-600 bg-primary-50 px-2 py-0.5 rounded border border-primary-100">{val}</span>
     },
     {
       title: "Call Status",
@@ -1526,10 +1526,10 @@ export default function AnalysisPage() {
       `}</style>
       
       {/* Page Header Card */}
-      <div className="bg-gradient-to-r from-indigo-50/70 to-blue-50/40 border border-indigo-100/70 rounded-xl p-3 shadow-2xs">
+      <div className="bg-gradient-to-r from-primary-50/70 to-blue-50/40 border border-primary-100/70 rounded-xl p-3 shadow-2xs">
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2.5">
           <div className="flex items-center gap-2.5">
-            <div className="w-8 h-8 rounded-full bg-indigo-600 flex items-center justify-center text-white shrink-0 shadow-xs">
+            <div className="w-8 h-8 rounded-full bg-primary-600 flex items-center justify-center text-white shrink-0 shadow-xs">
               <DashboardOutlined className="text-white text-base" />
             </div>
             <div>
@@ -2300,7 +2300,7 @@ export default function AnalysisPage() {
                 <Card 
                   size="small"
                   title={<span className="text-xs font-bold text-gray-700 uppercase tracking-wider">Operations Activity Metrics</span>}
-                  extra={<span className="text-[10px] text-gray-400 font-bold text-indigo-700 bg-indigo-50 border border-indigo-200 px-2 py-0.5 rounded uppercase">Operational KPIs</span>}
+                  extra={<span className="text-[10px] text-primary-700 font-bold bg-primary-50 border border-primary-200 px-2 py-0.5 rounded uppercase">Operational KPIs</span>}
                   className="shadow-sm border border-gray-200 rounded-xl"
                 >
                   <div style={{ height: 300 }}>

@@ -970,14 +970,14 @@ export default function HomePage() {
       <div className="space-y-3 sm:space-y-4 animate-fadeIn text-[#212529] p-0 sm:p-2 md:p-4 w-full max-w-none">
         
         {/* Welcome Banner - Clean Premium Card */}
-        <div className="relative overflow-hidden rounded-lg bg-gradient-to-br from-indigo-600 via-indigo-700 to-indigo-800 py-3 px-4 text-white shadow-sm mb-4">
+        <div className="relative overflow-hidden rounded-xl bg-gradient-to-r from-slate-900 via-slate-900 to-primary-900 py-3 px-4 text-white shadow-xs mb-4">
           <div className="absolute -right-8 -top-8 h-16 w-16 rounded-full bg-white/5 blur-lg"></div>
           <div className="absolute -left-8 -bottom-8 h-16 w-16 rounded-full bg-white/5 blur-lg"></div>
           
           <div className="relative flex items-center justify-between gap-4">
             <div>
               <h2 className="text-sm font-bold tracking-tight text-white leading-none">Hi, {user.name} 👋</h2>
-              <p className="text-indigo-200 text-[10px] font-medium mt-1">Claims summary &amp; operations center.</p>
+              <p className="text-primary-100 text-[10px] font-medium mt-1">Claims summary &amp; operations center.</p>
             </div>
           </div>
         </div>
@@ -1033,17 +1033,17 @@ export default function HomePage() {
             <Col xs={12} sm={6}>
               <Card 
                 size="small" 
-                className="border border-gray-200 border-l-4 border-l-indigo-600 shadow-xs"
+                className="border border-slate-200 border-l-4 border-l-primary-600 shadow-2xs rounded-xl"
                 bodyStyle={{ padding: "10px" }}
               >
                 <div className="flex items-center gap-2">
-                  <div className="p-1.5 bg-indigo-50 text-indigo-600 rounded">
+                  <div className="p-1.5 bg-primary-50 text-primary-600 rounded-lg">
                     <FileSpreadsheet size={16} />
                   </div>
                   <div>
                     <Text type="secondary" className="text-[9px] uppercase font-bold tracking-wider block leading-none">Total Claimed</Text>
                     <Text strong className="text-sm font-mono block mt-1">₹{(totalAmount || 0).toLocaleString()}</Text>
-                    <Text className="text-[9px] text-indigo-600 font-bold block mt-0.5">{statsTotalClaims.length} Claims</Text>
+                    <Text className="text-[9px] text-primary-600 font-bold block mt-0.5">{statsTotalClaims.length} Claims</Text>
                   </div>
                 </div>
               </Card>
@@ -1255,7 +1255,7 @@ export default function HomePage() {
                                   size="small"
                                 >
                                   <div className="flex justify-between items-center pb-2 border-b border-gray-150">
-                                    <Text strong className="font-mono text-indigo-650 text-xs">{exp.expense_code}</Text>
+                                    <Text strong className="font-mono text-primary-600 text-xs">{exp.expense_code}</Text>
                                     <span className={`inline-flex items-center px-2 py-0.5 rounded border text-[8px] font-bold uppercase tracking-wider ${getStatusBadgeClass(exp.status)}`}>
                                       {getStatusLabel(exp.status)}
                                     </span>
@@ -1282,14 +1282,14 @@ export default function HomePage() {
                                     </Col>
                                     <Col span={12} className="mt-1.5">
                                       <span className="text-gray-400 font-bold uppercase text-[9px] block">Total Amount</span>
-                                      <span className="text-indigo-655 font-black">₹{exp.amount.toLocaleString()}</span>
+                                      <span className="text-primary-600 font-black">₹{exp.amount.toLocaleString()}</span>
                                     </Col>
                                   </Row>
                                   
                                   {exp.description && (
                                     <div className="border-t border-gray-100 mt-2.5 pt-2 text-[10px]">
                                       <span className="text-gray-400 font-bold uppercase text-[8px] block">Purpose</span>
-                                      <p className="text-gray-655 font-semibold mt-0.5 truncate">{exp.description}</p>
+                                      <p className="text-gray-600 font-semibold mt-0.5 truncate">{exp.description}</p>
                                     </div>
                                   )}
                                 </Card>
@@ -1307,7 +1307,7 @@ export default function HomePage() {
                                 >
                                   Prev
                                 </Button>
-                                <span className="text-xs font-bold text-slate-655">
+                                <span className="text-xs font-bold text-slate-600">
                                   Page {personalPage} of {Math.ceil(filteredPersonalExpenses.length / 50)} (Total {filteredPersonalExpenses.length} claims)
                                 </span>
                                 <Button
@@ -1339,7 +1339,7 @@ export default function HomePage() {
                                 <select 
                                   value={selectMonth} 
                                   onChange={(e) => setSelectMonth(e.target.value)}
-                                  className="w-full bg-white border border-gray-300 rounded px-2 py-1 text-xs font-semibold text-gray-800 shadow-2xs focus:outline-none focus:border-indigo-500 cursor-pointer"
+                                  className="w-full bg-white border border-gray-300 rounded px-2 py-1 text-xs font-semibold text-gray-800 shadow-2xs focus:outline-none focus:border-primary-500 cursor-pointer"
                                   style={{ minHeight: "34px", height: "34px", borderRadius: "6px", fontSize: "11px", lineHeight: "1.2" }}
                                 >
                                   {uniqueMonths.map(m => (
@@ -1402,7 +1402,7 @@ export default function HomePage() {
                                 size="small"
                                 onRow={(record) => ({
                                   onClick: () => handleOpenClaimDetails(record.id),
-                                  className: "cursor-pointer hover:bg-indigo-50/15"
+                                  className: "cursor-pointer hover:bg-primary-50/15"
                                 })}
                                 columns={[
                                   {
@@ -1411,7 +1411,7 @@ export default function HomePage() {
                                     render: (_, record) => (
                                       <div>
                                         <Text strong className="text-gray-900 block leading-none">{record.submitter_name}</Text>
-                                        <span className="text-[8px] font-mono uppercase block mt-0.5 text-blue-600 font-bold">{record.submitter_code}</span>
+                                        <span className="text-[8px] font-mono uppercase block mt-0.5 text-primary-600 font-bold">{record.submitter_code}</span>
                                       </div>
                                     )
                                   },
@@ -1419,7 +1419,7 @@ export default function HomePage() {
                                     title: "Claim ID",
                                     dataIndex: "expense_code",
                                     key: "expense_code",
-                                    render: (text) => <Text className="font-mono font-bold text-indigo-600">{text}</Text>,
+                                    render: (text) => <Text className="font-mono font-bold text-primary-600">{text}</Text>,
                                   },
                                   {
                                     title: "Date",
@@ -1488,7 +1488,7 @@ export default function HomePage() {
                                   <div className="flex justify-between items-center pb-2 border-b border-gray-150">
                                     <div>
                                       <Text strong className="text-xs leading-none text-gray-900 block">{exp.submitter_name}</Text>
-                                      <span className="text-[8px] font-mono font-bold uppercase block mt-0.5 text-blue-600">{exp.submitter_code}</span>
+                                      <span className="text-[8px] font-mono font-bold uppercase block mt-0.5 text-primary-600">{exp.submitter_code}</span>
                                     </div>
                                     <span className={`inline-flex items-center px-2 py-0.5 rounded border text-[8px] font-bold uppercase tracking-wider ${getStatusBadgeClass(exp.status)}`}>
                                       {getStatusLabel(exp.status)}
@@ -1517,14 +1517,14 @@ export default function HomePage() {
                                     </Col>
                                     <Col span={12} className="mt-1.5">
                                       <span className="text-gray-400 font-bold uppercase text-[9px] block">Amount</span>
-                                      <span className="text-indigo-655 font-black">₹{exp.amount.toLocaleString()}</span>
+                                      <span className="text-primary-600 font-black">₹{exp.amount.toLocaleString()}</span>
                                     </Col>
                                   </Row>
                                   
                                   {exp.purpose && (
                                     <div className="border-t border-gray-100 mt-2.5 pt-2 text-[10px]">
                                       <span className="text-gray-400 font-bold uppercase text-[8px] block">Purpose</span>
-                                      <p className="text-gray-655 font-semibold mt-0.5 truncate">{exp.purpose}</p>
+                                      <p className="text-gray-600 font-semibold mt-0.5 truncate">{exp.purpose}</p>
                                     </div>
                                   )}
                                 </Card>
@@ -1542,7 +1542,7 @@ export default function HomePage() {
                                 >
                                   Prev
                                 </Button>
-                                <span className="text-xs font-bold text-slate-655">
+                                <span className="text-xs font-bold text-slate-600">
                                   Page {teamPage} of {Math.ceil(filteredTeamExpenses.length / 100)} (Total {filteredTeamExpenses.length} claims)
                                 </span>
                                 <Button
@@ -1572,12 +1572,12 @@ export default function HomePage() {
   {/* Claims Breakdown Chart Card */}
               <Card 
                 size="small" 
-                className="border border-gray-200 shadow-xs"
+                className="border border-slate-200 shadow-2xs rounded-xl"
                 title={
                   <div className="space-y-0.5">
-                    <span className="text-indigo-650 font-extrabold text-[9px] uppercase tracking-widest block">Claims Analytics</span>
-                    <Title level={5} style={{ margin: 0, fontSize: "12px", color: "#1F2937" }} className="uppercase font-bold tracking-wider flex items-center gap-1.5">
-                      <BarChart3 size={14} className="text-indigo-500" />
+                    <span className="text-primary-600 font-extrabold text-[9px] uppercase tracking-widest block">Claims Analytics</span>
+                    <Title level={5} style={{ margin: 0, fontSize: "12px", color: "#0F172A" }} className="uppercase font-bold tracking-wider flex items-center gap-1.5">
+                      <BarChart3 size={14} className="text-primary-600" />
                       {activeTab === "my-claims" ? "Personal Mode Breakdown" : getTeamChartTitle()}
                     </Title>
                   </div>
@@ -1585,7 +1585,7 @@ export default function HomePage() {
               >
                 {activeTab === "my-claims" ? (
                   safeMyExpenses.length === 0 ? (
-                    <div className="py-8 text-center text-gray-400 text-[10px] font-bold uppercase tracking-wider">
+                    <div className="py-8 text-center text-slate-400 text-[10px] font-bold uppercase tracking-wider">
                       No claims to analyze
                     </div>
                   ) : (
@@ -1602,7 +1602,7 @@ export default function HomePage() {
                           enableArcLinkLabels={false}
                           enableArcLabels={false}
                           tooltip={({ datum }) => (
-                            <div className="bg-slate-900/95 backdrop-blur-md text-white border border-slate-800 shadow-2xl rounded-xl p-3 text-xs min-w-[120px] font-sans pointer-events-none z-50">
+                            <div className="bg-slate-900/95 backdrop-blur-md text-white border border-slate-800 shadow-xl rounded-xl p-3 text-xs min-w-[120px] font-sans pointer-events-none z-50">
                               <p className="font-extrabold text-[10px] uppercase text-slate-400 tracking-wider mb-1.5">{datum.label}</p>
                               <div className="flex items-center justify-between gap-4">
                                 <span className="flex items-center gap-1.5 text-slate-300">
@@ -1615,7 +1615,7 @@ export default function HomePage() {
                           )}
                         />
                         <div className="absolute flex flex-col items-center justify-center pointer-events-none" style={{ top: '50%', left: '50%', transform: 'translate(-50%, -50%)' }}>
-                          <span className="text-[7px] text-gray-400 font-bold uppercase tracking-wider">Total Claimed</span>
+                          <span className="text-[7px] text-slate-400 font-bold uppercase tracking-wider">Total Claimed</span>
                           <span className="text-[11px] font-black text-slate-800 font-mono mt-0.5">
                             ₹{getPersonalChartData().reduce((sum, item) => sum + item.amount, 0).toLocaleString()}
                           </span>
@@ -1623,7 +1623,7 @@ export default function HomePage() {
                       </div>
                       <div className="flex flex-wrap justify-center gap-x-2.5 gap-y-1 mt-2">
                         {getPersonalChartData().map((item, i) => (
-                          <div key={i} className="flex items-center gap-1 text-[8px] font-bold text-slate-505">
+                          <div key={i} className="flex items-center gap-1 text-[8px] font-bold text-slate-500">
                             <span className="w-1.5 h-1.5 rounded-full shrink-0" style={{ backgroundColor: GALLERY_COLORS[i % GALLERY_COLORS.length] }} />
                             <span>{item.label}</span>
                           </div>
@@ -1634,25 +1634,25 @@ export default function HomePage() {
                 ) : (
                   <div className="space-y-4">
                     {/* Filter Metrics Box */}
-                    <div className="border border-indigo-50 p-3 bg-indigo-50/20 rounded-xl space-y-2 text-xs font-semibold text-gray-700">
-                      <h4 className="text-[9px] font-black text-indigo-800 uppercase tracking-widest leading-none">Filtered Team Totals</h4>
+                    <div className="border border-slate-200 p-3 bg-slate-50 rounded-xl space-y-2 text-xs font-semibold text-slate-700">
+                      <h4 className="text-[9px] font-black text-primary-700 uppercase tracking-widest leading-none">Filtered Team Totals</h4>
                       <Row gutter={8}>
                         <Col span={12}>
-                          <div className="bg-white p-2 border border-slate-100 rounded-lg text-center space-y-0.5 shadow-sm">
+                          <div className="bg-white p-2 border border-slate-200 rounded-lg text-center space-y-0.5 shadow-2xs">
                             <span className="text-slate-400 font-bold uppercase tracking-wider block text-[7px] leading-none">Distance</span>
-                            <span className="text-xs font-black text-indigo-605 font-mono leading-none">{totalFilteredKm.toFixed(1)} KM</span>
+                            <span className="text-xs font-black text-primary-600 font-mono leading-none">{totalFilteredKm.toFixed(1)} KM</span>
                           </div>
                         </Col>
                         <Col span={12}>
-                          <div className="bg-white p-2 border border-slate-100 rounded-lg text-center space-y-0.5 shadow-sm">
+                          <div className="bg-white p-2 border border-slate-200 rounded-lg text-center space-y-0.5 shadow-2xs">
                             <span className="text-slate-400 font-bold uppercase tracking-wider block text-[7px] leading-none">Auto Expense</span>
-                            <span className="text-xs font-black text-indigo-605 font-mono leading-none">₹{totalFilteredAuto.toLocaleString()}</span>
+                            <span className="text-xs font-black text-primary-600 font-mono leading-none">₹{totalFilteredAuto.toLocaleString()}</span>
                           </div>
                         </Col>
                       </Row>
-                      <div className="bg-white p-2 border border-slate-100 rounded-lg text-center shadow-sm">
+                      <div className="bg-white p-2 border border-slate-200 rounded-lg text-center shadow-2xs">
                         <span className="text-slate-400 font-bold uppercase tracking-wider block text-[7px] leading-none">Aggregate Reimbursement</span>
-                        <span className="text-xs font-black text-indigo-750 font-mono">₹{totalFilteredAmount.toLocaleString()}</span>
+                        <span className="text-xs font-black text-primary-700 font-mono">₹{totalFilteredAmount.toLocaleString()}</span>
                       </div>
                     </div>
 
@@ -1751,7 +1751,7 @@ export default function HomePage() {
         wrapClassName="my-claims-modal-wrap"
         title={
           <Title level={5} style={{ margin: 0 }} className="flex items-center gap-2 text-gray-805">
-            <Layers className="w-4 h-4 text-indigo-650" />
+            <Layers className="w-4 h-4 text-primary-600" />
             <span>Claim Details {claimDetails ? `— ${claimDetails.expense_code}` : ""}</span>
           </Title>
         }
@@ -2901,7 +2901,7 @@ export default function HomePage() {
       <Modal
         title={
           <Title level={5} style={{ margin: 0 }} className="flex items-center gap-2 text-gray-805">
-            <FileSpreadsheet className="w-4 h-4 text-indigo-650" />
+            <FileSpreadsheet className="w-4 h-4 text-primary-600" />
             <span>{statsModalType} Claims ({statsModalClaims.length})</span>
           </Title>
         }

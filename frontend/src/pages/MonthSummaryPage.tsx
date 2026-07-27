@@ -1227,7 +1227,7 @@ export default function MonthSummaryPage() {
       <div className="flex items-center justify-between border-b border-slate-100 pb-3 mb-4 px-1">
         <div>
           <h1 className="text-xl font-bold text-slate-800 flex items-center gap-2 tracking-tight">
-            <Users className="w-5.5 h-5.5 text-indigo-650" />
+            <Users className="w-5.5 h-5.5 text-primary-600" />
             Month Summary
             <span className="text-xs font-normal text-slate-400 hidden sm:inline-block ml-1">Reports &amp; Billing</span>
           </h1>

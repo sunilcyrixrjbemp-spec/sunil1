@@ -47,7 +47,7 @@ interface DetailRowProps {
 const DetailRow = ({ label, value, icon }: DetailRowProps) => (
   <Card 
     size="small" 
-    className="border border-slate-100 hover:border-indigo-150 transition-all rounded-xl shadow-xs"
+    className="border border-slate-100 hover:border-primary-300 transition-all rounded-xl shadow-xs"
     bodyStyle={{ padding: "10px 12px", display: "flex", alignItems: "center", gap: 12 }}
   >
     <div className="h-9 w-9 rounded-xl bg-slate-50 border border-slate-100/75 flex items-center justify-center text-slate-500 shrink-0">
@@ -321,7 +321,7 @@ export default function ProfilePage() {
         size="small"
         title={
           <Space>
-            <User className="w-4 h-4 text-indigo-605" />
+            <User className="w-4 h-4 text-primary-600" />
             <span className="text-xs font-bold uppercase tracking-wider text-gray-805">Contact & Personal Info</span>
           </Space>
         }
@@ -332,7 +332,7 @@ export default function ProfilePage() {
           {/* Email Address */}
           <Card 
             size="small" 
-            className="border border-slate-100 hover:border-indigo-150 transition-all rounded-xl shadow-xs"
+            className="border border-slate-100 hover:border-primary-300 transition-all rounded-xl shadow-xs"
             bodyStyle={{ padding: "10px 12px", display: "flex", alignItems: "center", gap: 12 }}
           >
             <div className="h-9 w-9 rounded-xl bg-slate-50 border border-slate-100 flex items-center justify-center text-slate-500 shrink-0">
@@ -397,7 +397,7 @@ export default function ProfilePage() {
           {/* Mobile Number */}
           <Card 
             size="small" 
-            className="border border-slate-100 hover:border-indigo-150 transition-all rounded-xl shadow-xs"
+            className="border border-slate-100 hover:border-primary-300 transition-all rounded-xl shadow-xs"
             bodyStyle={{ padding: "10px 12px", display: "flex", alignItems: "center", gap: 12 }}
           >
             <div className="h-9 w-9 rounded-xl bg-slate-50 border border-slate-100 flex items-center justify-center text-slate-500 shrink-0">
@@ -473,7 +473,7 @@ export default function ProfilePage() {
         size="small"
         title={
           <Space>
-            <Briefcase className="w-4 h-4 text-indigo-605" />
+            <Briefcase className="w-4 h-4 text-primary-600" />
             <span className="text-xs font-bold uppercase tracking-wider text-gray-805">Employment & Systems Details</span>
           </Space>
         }
@@ -509,7 +509,7 @@ export default function ProfilePage() {
         size="small"
         title={
           <Space>
-            <Users className="w-4 h-4 text-indigo-655" />
+            <Users className="w-4 h-4 text-primary-600" />
             <span className="text-xs font-bold uppercase tracking-wider text-gray-805">Reporting Hierarchy & Region</span>
           </Space>
         }
@@ -553,7 +553,7 @@ export default function ProfilePage() {
         size="small"
         title={
           <Space>
-            <Lock className="w-4 h-4 text-indigo-605" />
+            <Lock className="w-4 h-4 text-primary-600" />
             <span className="text-xs font-bold uppercase tracking-wider text-gray-805">Update Credentials</span>
           </Space>
         }
@@ -608,7 +608,7 @@ export default function ProfilePage() {
             htmlType="submit"
             loading={passLoading}
             block
-            className="bg-indigo-650 hover:bg-indigo-700 border-indigo-655 text-xs font-bold uppercase tracking-wider h-9 mt-2"
+            className="bg-primary-600 hover:bg-primary-700 text-white text-xs font-bold uppercase tracking-wider h-9 mt-2"
           >
             Update Password
           </Button>
@@ -816,7 +816,7 @@ export default function ProfilePage() {
               {/* Footer */}
               <div className="mt-auto pt-6 border-t border-slate-100 text-[9px] font-bold text-slate-400 uppercase tracking-widest flex justify-between">
                 <span>Cyrix Healthcare Pvt. Ltd.</span>
-                <span>Designed &amp; Developed by <a href="https://sunilbishnoi.co.in/" target="_blank" rel="noopener noreferrer" className="text-indigo-605 hover:underline">Sunil Bishnoi</a></span>
+                <span>Designed &amp; Developed by <a href="https://sunilbishnoi.co.in/" target="_blank" rel="noopener noreferrer" className="text-primary-600 hover:underline">Sunil Bishnoi</a></span>
               </div>
             </Card>
           </Col>

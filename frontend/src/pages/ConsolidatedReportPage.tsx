@@ -258,7 +258,7 @@ export default function ConsolidatedReportPage() {
       <div className="flex items-center justify-between border-b border-slate-100 pb-3 mb-4 px-1">
         <div>
           <h1 className="text-xl font-bold text-slate-800 flex items-center gap-2 tracking-tight">
-            <FileSpreadsheet className="w-5.5 h-5.5 text-indigo-650" />
+            <FileSpreadsheet className="w-5.5 h-5.5 text-primary-600" />
             Consolidated Monthly Report
             <span className="text-xs font-normal text-slate-400 hidden sm:inline-block ml-1">Excel Export & Reconciliation</span>
           </h1>
@@ -328,7 +328,7 @@ export default function ConsolidatedReportPage() {
           className="card-header border-b border-slate-100 px-5 py-3.5 flex items-center justify-between bg-slate-50/20 cursor-pointer hover:bg-slate-50/40 transition-colors"
         >
           <h3 className="card-title text-xs font-bold text-slate-700 uppercase tracking-wider flex items-center gap-1.5">
-            <BookOpen className="w-4 h-4 text-indigo-650" />
+            <BookOpen className="w-4 h-4 text-primary-600" />
             Company Expense Policies (Non-AI Policy Guide)
           </h3>
           <div className="flex items-center gap-2">
@@ -400,14 +400,14 @@ export default function ConsolidatedReportPage() {
 
                 {/* 5. In-State Hotel Room Rent */}
                 <div className="p-3.5 bg-slate-50/40 hover:bg-slate-50 border border-slate-100/70 rounded-2xl transition-all duration-200">
-                  <span className="text-[9px] font-black uppercase tracking-wider text-indigo-650 block mb-0.5">Hotel Rent (In-State)</span>
+                  <span className="text-[9px] font-black uppercase tracking-wider text-primary-600 block mb-0.5">Hotel Rent (In-State)</span>
                   <span className="text-sm font-extrabold text-slate-800 block mb-1 font-mono">₹{(selectedPolicy.hotel_in_state_s || 0).toFixed(2)} / Night</span>
                   <p className="text-[9.5px] text-slate-450 leading-normal font-medium">Maximum reimbursement per night for in-state hotel boarding/lodging.</p>
                 </div>
 
                 {/* 6. Out-of-State Hotel Room Rent */}
                 <div className="p-3.5 bg-slate-50/40 hover:bg-slate-50 border border-slate-100/70 rounded-2xl transition-all duration-200">
-                  <span className="text-[9px] font-black uppercase tracking-wider text-indigo-650 block mb-0.5">Hotel Rent (Out-State)</span>
+                  <span className="text-[9px] font-black uppercase tracking-wider text-primary-600 block mb-0.5">Hotel Rent (Out-State)</span>
                   <span className="text-sm font-extrabold text-slate-800 block mb-1 font-mono">₹{(selectedPolicy.hotel_out_state_s || 0).toFixed(2)} / Night</span>
                   <p className="text-[9.5px] text-slate-450 leading-normal font-medium">Maximum reimbursement per night for out-of-state hotel boarding/lodging.</p>
                 </div>

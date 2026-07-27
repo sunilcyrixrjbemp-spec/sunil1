@@ -1358,7 +1358,7 @@ export default function AdminPage() {
         <div className="bg-white border border-slate-200/90 rounded-3xl p-6 shadow-sm relative overflow-hidden">
           <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-6">
             <div className="flex items-center gap-4">
-              <div className="h-14 w-14 rounded-2xl bg-indigo-50 border border-indigo-100 flex items-center justify-center text-indigo-600 text-2xl font-black shadow-sm shrink-0">
+              <div className="h-14 w-14 rounded-2xl bg-primary-50 border border-primary-100 flex items-center justify-center text-primary-600 text-2xl font-black shadow-2xs shrink-0">
                 <ControlOutlined />
               </div>
               <div>
@@ -1511,13 +1511,13 @@ export default function AdminPage() {
             onClick={() => handleTabChange("users")}
             className={`flex items-center gap-2.5 px-6 py-2.5 text-xs font-black uppercase tracking-wider rounded-xl transition-all border-0 cursor-pointer ${
               activeTab === "users"
-                ? "bg-white text-indigo-600 shadow-md font-black scale-[1.01]"
-                : "bg-transparent text-slate-600 hover:text-slate-900 hover:bg-white/60 font-bold"
+                ? "bg-white text-primary-600 shadow-2xs font-black scale-[1.01]"
+                : "text-slate-600 hover:text-slate-900 font-bold hover:bg-slate-200/50"
             }`}
           >
             <TeamOutlined className="text-base" />
             <span>Users Directory</span>
-            <span className={`px-2 py-0.5 text-[10px] font-black rounded-md ${activeTab === 'users' ? 'bg-indigo-50 text-indigo-700' : 'bg-slate-200 text-slate-600'}`}>
+            <span className={`px-2 py-0.5 text-[10px] font-black rounded-md ${activeTab === 'users' ? 'bg-primary-50 text-primary-700' : 'bg-slate-200 text-slate-600'}`}>
               {users.length}
             </span>
           </button>
@@ -1669,7 +1669,7 @@ export default function AdminPage() {
                     setSingleUserError(null);
                     setShowSingleUserModal(true);
                   }}
-                  className="bg-indigo-600 hover:bg-indigo-700 font-extrabold rounded-xl text-xs uppercase tracking-wider h-9"
+                  className="bg-primary-600 hover:bg-primary-700 font-extrabold rounded-xl text-xs uppercase tracking-wider h-9"
                 >
                   Single User
                 </Button>
@@ -2572,7 +2572,7 @@ export default function AdminPage() {
                   htmlType="submit"
                   loading={savingSettings}
                   size="large"
-                  className="bg-indigo-600 hover:bg-indigo-700 font-extrabold text-xs uppercase tracking-wider rounded-xl h-11 px-8 shadow-sm"
+                  className="bg-primary-600 hover:bg-primary-700 font-extrabold text-xs uppercase tracking-wider rounded-xl h-11 px-8 shadow-2xs"
                 >
                   {savingSettings ? "Saving Settings..." : "Save System Settings"}
                 </Button>

@@ -458,7 +458,7 @@ export default function LoginForm({ onForgotPassword, onUnlockAccount }: LoginFo
                   setShowBiometricPrompt(false);
                   navigate("/home");
                 }}
-                className="px-3.5 py-2 bg-indigo-650 hover:bg-indigo-700 text-white rounded-xl text-[10px] font-extrabold uppercase tracking-wider border-0 cursor-pointer shadow-md shadow-indigo-600/10 transition-all flex items-center gap-1"
+                className="px-3.5 py-2 bg-primary-600 hover:bg-primary-700 text-white rounded-xl text-[10px] font-extrabold uppercase tracking-wider border-0 cursor-pointer shadow-2xs transition-all flex items-center gap-1"
               >
                 <Fingerprint size={12} /> Enable
               </button>

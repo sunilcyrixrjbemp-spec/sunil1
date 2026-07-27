@@ -2,72 +2,104 @@ import { ThemeConfig, theme } from "antd";
 
 /**
  * Cyrix Design System Theme Configuration
- * Built on Ant Design v5.
- * Uses compact algorithms and custom styling for a clean, dense dashboard UI.
+ * Built on Ant Design v5 & synced with Tailwind CSS Design Tokens.
+ * TailAdmin Aesthetic Benchmark Integration.
  */
 export const antdTheme: ThemeConfig = {
-  // Use the compact algorithm to reduce padding, margins, and element heights globally
-  algorithm: theme.compactAlgorithm,
+  algorithm: theme.defaultAlgorithm,
   token: {
-    // Primary Color - Cyrix Brand Blue
-    colorPrimary: "#4F46E5",
-    colorInfo: "#4F46E5",
-    colorLink: "#4F46E5",
+    // Primary Action Color - Royal Blue 600
+    colorPrimary: "#2563EB",
+    colorInfo: "#2563EB",
+    colorLink: "#2563EB",
 
-    // Semantic Colors for Expense/Claim Statuses
-    colorSuccess: "#16A34A", // Approved (Green-600)
-    colorWarning: "#D97706", // Pending (Amber-600)
-    colorError: "#DC2626",   // Rejected (Red-600)
+    // Immutable Claim Status Semantic Palette
+    colorSuccess: "#16A34A", // Approved (Green 600)
+    colorWarning: "#D97706", // Pending (Amber 600)
+    colorError: "#DC2626",   // Rejected (Red 600)
 
-    // Neutral Layout & Background Colors
-    colorBgLayout: "#F4F6F9",      // Page main background
-    colorBgContainer: "#FFFFFF",   // Cards & White boxes background
-    colorBorder: "#E5E7EB",        // Neutral borders (Gray-200)
-    colorTextBase: "#1F2937",      // Base text color (Gray-800)
+    // Neutral Surfaces & Layout Colors
+    colorBgLayout: "#F8FAFC",      // Slate-50 main canvas
+    colorBgContainer: "#FFFFFF",   // Card & Box background
+    colorBorder: "#E2E8F0",        // Slate-200 border
+    colorBorderSecondary: "#F1F5F9", // Slate-100 border
+    colorTextBase: "#0F172A",      // Slate-900 typography base
+    colorTextSecondary: "#64748B", // Slate-500 muted text
 
     // Global Typography & Border Radius
-    fontFamily: 'Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif',
-    borderRadius: 6,               // Clean, moderately rounded corners
-    fontSize: 13,                  // Modern font scaling base
+    fontFamily: 'Inter, "Plus Jakarta Sans", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
+    borderRadius: 8,               // Modern 8px rounded corners
+    fontSize: 13,                  // Modern dense base size
   },
   components: {
     Button: {
-      controlHeight: 32,
-      paddingContentHorizontal: 12,
+      controlHeight: 36,
+      controlHeightSM: 30,
+      controlHeightLG: 42,
+      paddingContentHorizontal: 16,
       fontWeight: 600,
+      borderRadius: 8,
     },
     Card: {
-      paddingLG: 16,               // Compress large card inner padding from 24px to 16px
-      colorBorderSecondary: "#E5E7EB",
-      borderRadiusLG: 8,
+      paddingLG: 20,
+      colorBorderSecondary: "#E2E8F0",
+      borderRadiusLG: 12,
     },
     Table: {
       fontSize: 12,
-      padding: 10,                 // Compact table cells padding
-      headerBg: "#F9FAFB",         // Subtle gray for headers
-      headerColor: "#4B5563",
-      headerSplitColor: "transparent", // Clean borderless header dividers
+      padding: 12,
+      headerBg: "#F8FAFC",
+      headerColor: "#475569",
+      headerSplitColor: "transparent",
+      rowHoverBg: "#F1F5F9",
+      borderRadius: 12,
     },
     Form: {
-      itemMarginBottom: 14,        // Reduce gap between form fields
+      itemMarginBottom: 16,
+      labelFontSize: 13,
+      labelColor: "#334155",
     },
     Tag: {
-      borderRadiusSM: 4,
+      borderRadiusSM: 6,
       fontSizeSM: 11,
+      fontWeightStrong: 700,
     },
     Input: {
-      controlHeight: 32,
+      controlHeight: 36,
+      controlHeightSM: 30,
+      controlHeightLG: 42,
+      borderRadius: 8,
     },
     Select: {
-      controlHeight: 32,
+      controlHeight: 36,
+      controlHeightSM: 30,
+      controlHeightLG: 42,
+      borderRadius: 8,
     },
     DatePicker: {
-      controlHeight: 32,
+      controlHeight: 36,
+      controlHeightSM: 30,
+      controlHeightLG: 42,
+      borderRadius: 8,
     },
     Tabs: {
       margin: 0,
       titleFontSize: 13,
       horizontalMargin: "0 0 16px 0",
+      itemColor: "#64748B",
+      itemSelectedColor: "#2563EB",
+      itemHoverColor: "#1D4ED8",
     },
+    Modal: {
+      borderRadiusLG: 16,
+      headerBg: "#FFFFFF",
+      titleFontSize: 16,
+    },
+    Drawer: {
+      borderRadiusLG: 16,
+    },
+    Badge: {
+      fontSize: 11,
+    }
   },
 };

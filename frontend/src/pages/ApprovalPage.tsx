@@ -1308,7 +1308,7 @@ export default function ApprovalPage() {
       <Card size="small" className="border border-gray-200 shadow-xs mb-4">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
           <div>
-            <span className="text-indigo-650 font-extrabold text-[9px] uppercase tracking-widest block">Operational Review</span>
+            <span className="text-primary-600 font-extrabold text-[9px] uppercase tracking-widest block">Operational Review</span>
             <Title level={4} style={{ margin: 0, fontSize: "18px", color: "#1F2937" }} className="uppercase font-bold tracking-wider flex items-center gap-2">
               <FileText size={20} className="text-indigo-600" />
               Approval Center

@@ -220,7 +220,7 @@ export default function ForgotPassword({ onBackToLogin }: ForgotPasswordProps) {
       <div className="text-center pb-3.5 border-b border-slate-100 flex justify-between items-center">
         <button
           onClick={onBackToLogin}
-          className="text-slate-500 hover:text-indigo-650 flex items-center gap-1.5 text-[10px] cursor-pointer font-black uppercase tracking-wider border-0 bg-transparent"
+          className="text-slate-500 hover:text-primary-600 flex items-center gap-1.5 text-[10px] cursor-pointer font-black uppercase tracking-wider border-0 bg-transparent"
         >
           <ArrowLeft size={12} /> Back
         </button>
@@ -354,7 +354,7 @@ export default function ForgotPassword({ onBackToLogin }: ForgotPasswordProps) {
                   <button
                     type="button"
                     onClick={handleResendOtp}
-                    className="text-indigo-600 hover:text-indigo-750 font-extrabold uppercase tracking-wider border-0 bg-transparent cursor-pointer"
+                    className="text-primary-600 hover:text-primary-700 font-extrabold uppercase tracking-wider border-0 bg-transparent cursor-pointer"
                     disabled={loading}
                   >
                     Resend Code

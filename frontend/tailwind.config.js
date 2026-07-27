@@ -7,50 +7,67 @@ export default {
   theme: {
     extend: {
       colors: {
+        // Cyrix Action Primary Scale (Royal Blue)
         primary: {
-          50: '#f0f9ff',
-          500: '#0ea5e9',
-          600: '#0284c7',
-          700: '#0369a1',
-          900: '#002b5e', // Your navy color from Cyrix app
+          50: '#eff6ff',
+          100: '#dbeafe',
+          200: '#bfdbfe',
+          300: '#93c5fd',
+          400: '#60a5fa',
+          500: '#3b82f6',
+          600: '#2563eb', // Main Primary Action Token
+          700: '#1d4ed8',
+          800: '#1e40af',
+          900: '#002b5e', // Brand Navy Accent
         },
-        secondary: {
-          500: '#8b5cf6',
-          600: '#7c3aed',
+        // Brand Navy Surface & Accent Scale
+        navy: {
+          50: '#f0f4f9',
+          100: '#e1e8f2',
+          500: '#1e3a8a',
+          800: '#0f172a',
+          900: '#002b5e',
         },
-        success: '#10b981',
-        warning: '#f59e0b',
-        error: '#ef4444',
+        // Immutable Claim Status Semantic Palette
+        success: {
+          DEFAULT: '#16a34a',
+          50: '#f0fdf4',
+          100: '#dcfce7',
+          600: '#16a34a',
+          700: '#15803d',
+        },
+        warning: {
+          DEFAULT: '#d97706',
+          50: '#fffbeb',
+          100: '#fef3c7',
+          600: '#d97706',
+          700: '#b45309',
+        },
+        error: {
+          DEFAULT: '#dc2626',
+          50: '#fef2f2',
+          100: '#fee2e2',
+          600: '#dc2626',
+          700: '#b91c1c',
+        },
       },
       fontFamily: {
-        sans: ['Plus Jakarta Sans', 'Aptos', 'Inter', 'system-ui', 'sans-serif'],
-      },
-      fontSize: {
-        xs: '0.75rem',
-        sm: '0.875rem',
-        base: '1rem',
-        lg: '1.125rem',
-        xl: '1.25rem',
-        '2xl': '1.5rem',
-        '3xl': '1.875rem',
-      },
-      spacing: {
-        xs: '0.25rem',
-        sm: '0.5rem',
-        md: '1rem',
-        lg: '1.5rem',
-        xl: '2rem',
-        '2xl': '2.5rem',
-      },
-      borderRadius: {
-        sm: '0.375rem',
-        md: '0.5rem',
-        lg: '0.75rem',
+        sans: ['Inter', 'Plus Jakarta Sans', 'system-ui', '-apple-system', 'BlinkMacSystemFont', 'Segoe UI', 'Roboto', 'sans-serif'],
       },
       boxShadow: {
-        sm: '0 1px 2px 0 rgb(0 0 0 / 0.05)',
-        md: '0 4px 6px -1px rgb(0 0 0 / 0.1)',
-        lg: '0 10px 15px -3px rgb(0 0 0 / 0.1)',
+        '2xs': '0 1px 2px 0 rgba(0, 0, 0, 0.03)',
+        xs: '0 1px 2px 0 rgba(0, 0, 0, 0.05)',
+        sm: '0 1px 3px 0 rgba(0, 0, 0, 0.08), 0 1px 2px -1px rgba(0, 0, 0, 0.08)',
+        md: '0 4px 6px -1px rgba(0, 0, 0, 0.06), 0 2px 4px -2px rgba(0, 0, 0, 0.06)',
+        lg: '0 10px 15px -3px rgba(0, 0, 0, 0.07), 0 4px 6px -4px rgba(0, 0, 0, 0.07)',
+        xl: '0 20px 25px -5px rgba(0, 0, 0, 0.08), 0 8px 10px -6px rgba(0, 0, 0, 0.08)',
+      },
+      borderRadius: {
+        sm: '0.375rem',  // 6px
+        md: '0.5rem',    // 8px
+        lg: '0.75rem',   // 12px
+        xl: '1rem',      // 16px
+        '2xl': '1.5rem', // 24px
       },
       keyframes: {
         'fade-in-up': {
@@ -70,9 +87,9 @@ export default {
         }
       },
       animation: {
-        'fade-in-up': 'fade-in-up 0.45s cubic-bezier(0.16, 1, 0.3, 1) forwards',
-        'scale-up': 'scale-up 0.38s cubic-bezier(0.34, 1.56, 0.64, 1) forwards',
-        'slide-in-right': 'slide-in-right 0.4s cubic-bezier(0.16, 1, 0.3, 1) forwards',
+        'fade-in-up': 'fade-in-up 0.4s cubic-bezier(0.16, 1, 0.3, 1) forwards',
+        'scale-up': 'scale-up 0.35s cubic-bezier(0.34, 1.56, 0.64, 1) forwards',
+        'slide-in-right': 'slide-in-right 0.35s cubic-bezier(0.16, 1, 0.3, 1) forwards',
         shimmer: 'shimmer 1.8s infinite',
       }
     },

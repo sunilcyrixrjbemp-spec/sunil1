@@ -26,6 +26,7 @@ import {
   Activity,
   TrendingUp
 } from "lucide-react";
+import ProgressLoader from "../common/ProgressLoader";
 
 interface MenuItem {
   id: string;
@@ -57,109 +58,83 @@ const MENU_ITEMS: MenuItem[] = [
 const HomeSvgIcon = ({ active }: { active?: boolean }) => (
   <svg className={`w-5 h-5 transition-transform duration-200 ${active ? "scale-110" : ""}`} viewBox="0 0 24 24" fill="none">
     <path d="M3 10.5L12 3l9 7.5V20a1 1 0 01-1 1h-5v-6h-6v6H4a1 1 0 01-1-1v-9.5z" 
-      fill={active ? "url(#homeGradFill)" : "#94a3b8"} 
-      stroke={active ? "#4f46e5" : "#64748b"} 
+      fill={active ? "#2563eb" : "#94a3b8"} 
+      stroke={active ? "#1d4ed8" : "#64748b"} 
       strokeWidth="1.8" 
       strokeLinejoin="round" 
     />
-    <defs>
-      <linearGradient id="homeGradFill" x1="0%" y1="0%" x2="100%" y2="100%">
-        <stop offset="0%" stopColor="#6366f1" />
-        <stop offset="100%" stopColor="#4338ca" />
-      </linearGradient>
-    </defs>
   </svg>
 );
 
 const ClaimSvgIcon = ({ active }: { active?: boolean }) => (
   <svg className={`w-5 h-5 transition-transform duration-200 ${active ? "scale-110" : ""}`} viewBox="0 0 24 24" fill="none">
     <rect x="3" y="3" width="18" height="18" rx="4" 
-      fill={active ? "url(#claimGradFill)" : "#94a3b8"} 
-      stroke={active ? "#059669" : "#64748b"} 
+      fill={active ? "#16a34a" : "#94a3b8"} 
+      stroke={active ? "#15803d" : "#64748b"} 
       strokeWidth="1.8" 
     />
     <path d="M12 8v8M8 12h8" stroke="#ffffff" strokeWidth="2.5" strokeLinecap="round" />
-    <defs>
-      <linearGradient id="claimGradFill" x1="0%" y1="0%" x2="100%" y2="100%">
-        <stop offset="0%" stopColor="#10b981" />
-        <stop offset="100%" stopColor="#059669" />
-      </linearGradient>
-    </defs>
   </svg>
 );
 
 const ApprovalSvgIcon = ({ active }: { active?: boolean }) => (
   <svg className={`w-5 h-5 transition-transform duration-200 ${active ? "scale-110" : ""}`} viewBox="0 0 24 24" fill="none">
     <rect x="3" y="3" width="18" height="18" rx="4" 
-      fill={active ? "url(#appGradFill)" : "#94a3b8"} 
-      stroke={active ? "#7c3aed" : "#64748b"} 
+      fill={active ? "#7c3aed" : "#94a3b8"} 
+      stroke={active ? "#6d28d9" : "#64748b"} 
       strokeWidth="1.8" 
     />
     <path d="M8.5 12.5l2.5 2.5 5-5" stroke="#ffffff" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" />
-    <defs>
-      <linearGradient id="appGradFill" x1="0%" y1="0%" x2="100%" y2="100%">
-        <stop offset="0%" stopColor="#8b5cf6" />
-        <stop offset="100%" stopColor="#6d28d9" />
-      </linearGradient>
-    </defs>
   </svg>
 );
 
 const ProfileSvgIcon = ({ active }: { active?: boolean }) => (
   <svg className={`w-5 h-5 transition-transform duration-200 ${active ? "scale-110" : ""}`} viewBox="0 0 24 24" fill="none">
     <circle cx="12" cy="8" r="4" 
-      fill={active ? "url(#profGradFill)" : "#94a3b8"} 
-      stroke={active ? "#d97706" : "#64748b"} 
+      fill={active ? "#d97706" : "#94a3b8"} 
+      stroke={active ? "#b45309" : "#64748b"} 
       strokeWidth="1.8" 
     />
     <path d="M20 21a8 8 0 10-16 0" 
-      stroke={active ? "#f59e0b" : "#64748b"} 
+      stroke={active ? "#d97706" : "#64748b"} 
       strokeWidth="2.2" 
       strokeLinecap="round" 
     />
-    <defs>
-      <linearGradient id="profGradFill" x1="0%" y1="0%" x2="100%" y2="100%">
-        <stop offset="0%" stopColor="#fbbf24" />
-        <stop offset="100%" stopColor="#d97706" />
-      </linearGradient>
-    </defs>
   </svg>
 );
 
 const MoreSvgIcon = ({ active }: { active?: boolean }) => (
   <svg className={`w-5 h-5 transition-transform duration-200 ${active ? "scale-110" : ""}`} viewBox="0 0 24 24" fill="none">
-    <rect x="3" y="3" width="5" height="5" rx="1.5" fill={active ? "#06b6d4" : "#64748b"} />
-    <rect x="10.5" y="3" width="5" height="5" rx="1.5" fill={active ? "#3b82f6" : "#64748b"} />
-    <rect x="18" y="3" width="3" height="5" rx="1" fill={active ? "#8b5cf6" : "#94a3b8"} />
-    <rect x="3" y="10.5" width="5" height="5" rx="1.5" fill={active ? "#10b981" : "#64748b"} />
-    <rect x="10.5" y="10.5" width="5" height="5" rx="1.5" fill={active ? "#f59e0b" : "#64748b"} />
-    <rect x="18" y="10.5" width="3" height="5" rx="1" fill={active ? "#f43f5e" : "#94a3b8"} />
-    <rect x="3" y="18" width="5" height="3" rx="1" fill={active ? "#ec4899" : "#94a3b8"} />
-    <rect x="10.5" y="18" width="5" height="3" rx="1" fill={active ? "#6366f1" : "#94a3b8"} />
-    <rect x="18" y="18" width="3" height="3" rx="1" fill={active ? "#14b8a6" : "#94a3b8"} />
+    <rect x="3" y="3" width="5" height="5" rx="1.5" fill={active ? "#0284c7" : "#64748b"} />
+    <rect x="10.5" y="3" width="5" height="5" rx="1.5" fill={active ? "#2563eb" : "#64748b"} />
+    <rect x="18" y="3" width="3" height="5" rx="1" fill={active ? "#7c3aed" : "#94a3b8"} />
+    <rect x="3" y="10.5" width="5" height="5" rx="1.5" fill={active ? "#16a34a" : "#64748b"} />
+    <rect x="10.5" y="10.5" width="5" height="5" rx="1.5" fill={active ? "#d97706" : "#64748b"} />
+    <rect x="18" y="10.5" width="3" height="5" rx="1" fill={active ? "#dc2626" : "#94a3b8"} />
+    <rect x="3" y="18" width="5" height="3" rx="1" fill={active ? "#db2777" : "#94a3b8"} />
+    <rect x="10.5" y="18" width="5" height="3" rx="1" fill={active ? "#4f46e5" : "#94a3b8"} />
+    <rect x="18" y="18" width="3" height="3" rx="1" fill={active ? "#0d9488" : "#94a3b8"} />
   </svg>
 );
 
 const ITEM_GRADIENTS: Record<string, string> = {
-  home: "bg-gradient-to-br from-indigo-500 to-blue-600 text-white shadow-indigo-200",
-  new_dashboard: "bg-gradient-to-br from-blue-500 to-cyan-600 text-white shadow-blue-200",
-  admin: "bg-gradient-to-br from-slate-700 to-slate-900 text-white shadow-slate-200",
-  db_monitor: "bg-gradient-to-br from-amber-500 to-orange-600 text-white shadow-amber-200",
-  approval: "bg-gradient-to-br from-purple-500 to-violet-600 text-white shadow-purple-200",
-  expense: "bg-gradient-to-br from-emerald-500 to-teal-600 text-white shadow-emerald-200",
-  mis_report: "bg-gradient-to-br from-teal-500 to-emerald-600 text-white shadow-teal-200",
-  kpi: "bg-gradient-to-br from-pink-500 to-rose-600 text-white shadow-pink-200",
-  upload_data: "bg-gradient-to-br from-sky-500 to-blue-600 text-white shadow-sky-200",
-  asset_upload: "bg-gradient-to-br from-amber-400 to-yellow-600 text-white shadow-yellow-200",
-  penalty_report: "bg-gradient-to-br from-rose-500 to-red-600 text-white shadow-rose-200",
-  analysis: "bg-gradient-to-br from-indigo-500 to-purple-600 text-white shadow-indigo-200",
-  report: "bg-gradient-to-br from-violet-500 to-indigo-600 text-white shadow-violet-200",
-  consolidated_report: "bg-gradient-to-br from-emerald-500 to-cyan-600 text-white shadow-emerald-200",
-  help: "bg-gradient-to-br from-green-500 to-teal-600 text-white shadow-green-200",
-  profile: "bg-gradient-to-br from-orange-400 to-amber-500 text-white shadow-orange-200"
+  home: "bg-primary-600 text-white shadow-xs",
+  new_dashboard: "bg-blue-600 text-white shadow-xs",
+  admin: "bg-slate-800 text-white shadow-xs",
+  db_monitor: "bg-amber-600 text-white shadow-xs",
+  approval: "bg-purple-600 text-white shadow-xs",
+  expense: "bg-emerald-600 text-white shadow-xs",
+  mis_report: "bg-teal-600 text-white shadow-xs",
+  kpi: "bg-rose-600 text-white shadow-xs",
+  upload_data: "bg-sky-600 text-white shadow-xs",
+  asset_upload: "bg-amber-500 text-white shadow-xs",
+  penalty_report: "bg-red-600 text-white shadow-xs",
+  analysis: "bg-indigo-600 text-white shadow-xs",
+  report: "bg-violet-600 text-white shadow-xs",
+  consolidated_report: "bg-teal-600 text-white shadow-xs",
+  help: "bg-green-600 text-white shadow-xs",
+  profile: "bg-amber-600 text-white shadow-xs"
 };
-
-import ProgressLoader from "../common/ProgressLoader";
 
 export default function DashboardLayout() {
   const navigate = useNavigate();
@@ -193,18 +168,14 @@ export default function DashboardLayout() {
     } else {
       setUser(currentUser);
       
-      // Prefetch critical data in the background instantly
       prefetchManager.triggerGlobalPrefetch(currentUser);
 
-      // Auto-sync profile to get fresh permissions and details
       authService.getProfile()
         .then(freshProfile => {
           if (freshProfile) {
             localStorage.setItem("user", JSON.stringify(freshProfile));
             setUser(freshProfile);
-            // Dispatch custom event to notify child components (like HomePage)
             window.dispatchEvent(new Event("user-profile-synced"));
-            // Re-trigger prefetch with fresh profile details
             prefetchManager.triggerGlobalPrefetch(freshProfile);
           }
         })
@@ -255,7 +226,6 @@ export default function DashboardLayout() {
         };
         reader.readAsDataURL(blob);
       } catch (err) {
-        // Ignore background caching errors
       }
     };
     preloadImage();
@@ -285,16 +255,12 @@ export default function DashboardLayout() {
     allowedWindows = ["home", "profile", "help", "expense"];
   }
 
-  // Ensure default core windows (home, profile, help, expense) are ALWAYS enabled for ALL users
   ["home", "profile", "help", "expense"].forEach(w => {
     if (!allowedWindows.includes(w)) {
       allowedWindows.push(w);
     }
   });
 
-
-
-  // Check if user has permission for menu items based on allowed_windows
   const allowedMenuItems = MENU_ITEMS.filter((item) => {
     if (isMobileScreen && ["report", "consolidated_report", "mis_report"].includes(item.id.toLowerCase())) {
       return false;
@@ -302,12 +268,8 @@ export default function DashboardLayout() {
     return allowedWindows.includes(item.id.toLowerCase());
   });
 
-
-
   const handleLogout = async () => {
-    // Force clear all cached data and user personal/financial records
     prefetchManager.clearAllUserData();
-    
     try {
       await authService.logout();
     } catch (e) {
@@ -316,7 +278,6 @@ export default function DashboardLayout() {
     navigate("/login", { replace: true });
   };
 
-  // Active route validation
   const currentActiveItem = MENU_ITEMS.find((item) => {
     if (item.path === "/home" && location.pathname === "/home") return true;
     return item.path !== "/home" && location.pathname.startsWith(item.path);
@@ -327,21 +288,18 @@ export default function DashboardLayout() {
     allowedWindows.includes(currentActiveItem.id.toLowerCase());
 
   return (
-    <div className="min-h-screen bg-[#f4f6f9] text-[#212529] flex flex-col lg:flex-row antialiased">
-      
-
-      
+    <div className="min-h-screen bg-slate-50 text-slate-900 flex flex-col lg:flex-row antialiased">
       {/* SIDEBAR - DESKTOP ONLY */}
-      <aside className={`hidden lg:flex flex-col bg-[#343a40] text-[#c2c7d0] transition-all duration-200 ${
+      <aside className={`hidden lg:flex flex-col bg-slate-900 text-slate-300 transition-all duration-200 ${
         isSidebarCollapsed ? "w-16" : "w-60"
-      } sticky top-0 h-screen shrink-0 z-30 shadow-lg`}>
+      } sticky top-0 h-screen shrink-0 z-30 shadow-md border-r border-slate-800`}>
         
         {/* Brand Header */}
-        <div className="h-14 flex items-center justify-center border-b border-gray-700 px-4 bg-[#2f353f]/50 shrink-0 overflow-hidden">
-          <Link to="/home" className="flex items-center gap-2.5 font-bold text-white truncate">
+        <div className="h-14 flex items-center justify-center border-b border-slate-800/80 px-4 bg-slate-950/60 shrink-0 overflow-hidden">
+          <Link to="/home" className="flex items-center gap-2.5 font-bold text-white truncate no-underline">
             <img src={brandLogo} alt="Cyrix Logo" className="h-8 w-8 object-contain shrink-0 rounded bg-white p-1" />
             {!isSidebarCollapsed && (
-              <span className="text-xs font-semibold uppercase tracking-wider text-gray-100">
+              <span className="text-xs font-bold uppercase tracking-wider text-slate-100">
                 Cyrix Healthcare
               </span>
             )}
@@ -349,9 +307,9 @@ export default function DashboardLayout() {
         </div>
 
         {/* User Profile Info */}
-        <div className="p-3.5 border-b border-gray-700 shrink-0">
+        <div className="p-3.5 border-b border-slate-800/80 shrink-0">
           <div className={`flex items-center gap-3 ${isSidebarCollapsed ? "justify-center" : ""}`}>
-            <div className="h-8 w-8 rounded-full bg-blue-600/20 border border-blue-500/30 flex items-center justify-center text-blue-400 font-bold text-xs shrink-0 overflow-hidden">
+            <div className="h-8 w-8 rounded-full bg-primary-600/20 border border-primary-500/30 flex items-center justify-center text-primary-400 font-bold text-xs shrink-0 overflow-hidden">
               {avatarUrl && !avatarError ? (
                 <img 
                   src={avatarUrl} 
@@ -365,10 +323,10 @@ export default function DashboardLayout() {
             </div>
             {!isSidebarCollapsed && (
               <div className="min-w-0 flex-1">
-                <p className="text-xs font-semibold text-white truncate">{user?.name || "Employee"}</p>
+                <p className="text-xs font-bold text-white truncate m-0">{user?.name || "Employee"}</p>
                 <div className="flex items-center gap-1.5 mt-0.5">
-                  <span className="h-1.5 w-1.5 rounded-full bg-green-500"></span>
-                  <span className="text-[10px] text-gray-400 font-semibold uppercase tracking-wide">{userRole}</span>
+                  <span className="h-1.5 w-1.5 rounded-full bg-emerald-500"></span>
+                  <span className="text-[10px] text-slate-400 font-semibold uppercase tracking-wide">{userRole}</span>
                 </div>
               </div>
             )}
@@ -378,7 +336,7 @@ export default function DashboardLayout() {
         {/* Sidebar Nav Links */}
         <nav className="flex-1 px-2 py-4 space-y-1 overflow-y-auto no-scrollbar">
           {!isSidebarCollapsed && (
-            <span className="px-3 py-2 text-[10px] font-bold text-gray-500 uppercase tracking-widest block">
+            <span className="px-3 py-2 text-[10px] font-bold text-slate-400 uppercase tracking-widest block">
               Menu Navigation
             </span>
           )}
@@ -391,13 +349,13 @@ export default function DashboardLayout() {
                 to={item.path}
                 onMouseEnter={() => preloadRoute(item.path)}
                 title={isSidebarCollapsed ? item.name : undefined}
-                className={`flex items-center gap-3 px-3 py-2.5 text-xs font-semibold uppercase tracking-wider transition-all duration-150 border-l-4 group ${
+                className={`flex items-center gap-3 px-3 py-2.5 text-xs font-bold uppercase tracking-wider transition-all duration-150 rounded-lg no-underline group ${
                   isActive
-                    ? "bg-indigo-600 text-white font-bold border-l-indigo-400 shadow-sm"
-                    : "border-l-transparent text-[#c2c7d0] hover:bg-indigo-950/40 hover:text-indigo-300"
+                    ? "bg-primary-600 text-white font-bold shadow-xs"
+                    : "text-slate-300 hover:bg-slate-800 hover:text-white"
                 }`}
               >
-                <div className={`${isActive ? "text-white" : "text-[#c2c7d0] group-hover:text-indigo-300"} shrink-0`}>
+                <div className={`${isActive ? "text-white" : "text-slate-400 group-hover:text-white"} shrink-0`}>
                   <Icon className="w-4 h-4" />
                 </div>
                 {!isSidebarCollapsed && <span>{item.name}</span>}
@@ -406,17 +364,15 @@ export default function DashboardLayout() {
           })}
         </nav>
 
-
-
         {/* Sidebar Footer Logout */}
-        <div className="p-2 border-t border-gray-700 shrink-0">
+        <div className="p-2 border-t border-slate-800/80 shrink-0">
           <button
             onClick={handleLogout}
             title={isSidebarCollapsed ? "Log Out" : undefined}
-            className="w-full flex items-center gap-3 px-3 py-2 rounded text-xs text-gray-400 hover:text-white hover:bg-red-600/10 transition-colors"
+            className="w-full flex items-center gap-3 px-3 py-2 rounded-lg text-xs text-slate-400 hover:text-white hover:bg-rose-600/20 transition-colors border-0 bg-transparent cursor-pointer"
           >
             <LogOut className="w-4 h-4" />
-            {!isSidebarCollapsed && <span className="uppercase tracking-wider">Log Out</span>}
+            {!isSidebarCollapsed && <span className="uppercase tracking-wider font-bold">Log Out</span>}
           </button>
         </div>
       </aside>
@@ -424,25 +380,25 @@ export default function DashboardLayout() {
       {/* MAIN CONTAINER WORKSPACE */}
       <div className="flex-1 flex flex-col min-w-0 min-h-0">
         
-        {/* TOP NAVBAR - ANT DESIGN ENTERPRISE HEADER */}
-        <header className="h-14 bg-gradient-to-r from-slate-900 via-slate-900 to-slate-950 border-b border-slate-800/90 flex items-center justify-between px-3 md:px-5 sticky top-0 z-40 shrink-0 shadow-md">
+        {/* TOP NAVBAR - ENTERPRISE HEADER */}
+        <header className="h-14 bg-slate-900 border-b border-slate-800 flex items-center justify-between px-3 md:px-5 sticky top-0 z-40 shrink-0 shadow-xs">
           
           {/* Left Actions */}
           <div className="flex items-center gap-2">
             <button
               onClick={() => setIsSidebarCollapsed(!isSidebarCollapsed)}
-              className="hidden lg:flex h-9 w-9 items-center justify-center text-slate-300 hover:text-white hover:bg-slate-800/80 rounded-lg transition-all border-0 bg-transparent cursor-pointer"
+              className="hidden lg:flex h-9 w-9 items-center justify-center text-slate-300 hover:text-white hover:bg-slate-800 rounded-lg transition-all border-0 bg-transparent cursor-pointer"
               title="Toggle Sidebar"
             >
               <Menu className="w-5 h-5" />
             </button>
 
             {/* Ant Design Section Pill Header */}
-            <div className="flex items-center gap-2 bg-slate-800/80 border border-slate-700/60 rounded-xl px-3 py-1 text-white shadow-inner">
+            <div className="flex items-center gap-2 bg-slate-800/90 border border-slate-700/80 rounded-xl px-3 py-1 text-white shadow-2xs">
               {currentActiveItem && currentActiveItem.icon && (
-                <currentActiveItem.icon className="w-4 h-4 text-indigo-400 shrink-0 stroke-[2.5]" />
+                <currentActiveItem.icon className="w-4 h-4 text-primary-400 shrink-0 stroke-[2.5]" />
               )}
-              <h1 className="text-xs sm:text-sm md:text-base font-black text-white uppercase tracking-wider truncate max-w-[150px] sm:max-w-[240px] md:max-w-none m-0 leading-none">
+              <h1 className="text-xs sm:text-sm md:text-base font-extrabold text-white uppercase tracking-wider truncate max-w-[150px] sm:max-w-[240px] md:max-w-none m-0 leading-none">
                 {currentActiveItem ? currentActiveItem.name : "Dashboard"}
               </h1>
             </div>
@@ -450,12 +406,11 @@ export default function DashboardLayout() {
 
           {/* Right Actions — User Avatar & Framed Logo */}
           <div className="flex items-center gap-2 sm:gap-3">
-            {/* User Profile Quick Link */}
             <Link
               to="/profile"
-              className="hidden sm:flex items-center gap-2 p-1 rounded-xl bg-slate-800/60 hover:bg-slate-800 border border-slate-700/60 text-white transition-all no-underline shadow-2xs"
+              className="hidden sm:flex items-center gap-2 p-1 rounded-xl bg-slate-800/70 hover:bg-slate-800 border border-slate-700/80 text-white transition-all no-underline shadow-2xs"
             >
-              <div className="h-7 w-7 rounded-full bg-indigo-600 flex items-center justify-center text-white font-extrabold text-xs shadow-xs overflow-hidden">
+              <div className="h-7 w-7 rounded-full bg-primary-600 flex items-center justify-center text-white font-extrabold text-xs shadow-xs overflow-hidden">
                 {avatarUrl && !avatarError ? (
                   <img src={avatarUrl} alt="Avatar" className="h-full w-full object-cover" onError={() => setAvatarError(true)} />
                 ) : (
@@ -465,8 +420,7 @@ export default function DashboardLayout() {
               <span className="text-xs font-bold text-slate-200 hidden lg:inline max-w-[100px] truncate pr-1">{user?.name?.split(" ")[0]}</span>
             </Link>
 
-            {/* Cyrix Brand Logo Container */}
-            <div className="bg-white rounded-lg px-2 py-1 shadow-xs border border-slate-200/50 flex items-center justify-center">
+            <div className="bg-white rounded-lg px-2 py-1 shadow-2xs border border-slate-200/80 flex items-center justify-center">
               <img 
                 src={brandLogo} 
                 alt="Cyrix" 
@@ -481,24 +435,23 @@ export default function DashboardLayout() {
           {hasAccess ? (
             <Outlet />
           ) : (
-            /* ACCESS DENIED WORKSPACE */
             <div className="h-full flex items-center justify-center p-4">
-              <div className="max-w-md w-full bg-white border border-gray-200 rounded shadow-md p-6 text-center space-y-4 animate-fade-in border-t-3 border-t-red-500">
-                <div className="w-12 h-12 bg-red-100 border border-red-200 rounded-full flex items-center justify-center mx-auto text-red-600">
+              <div className="max-w-md w-full bg-white border border-slate-200 rounded-xl shadow-xs p-6 text-center space-y-4 animate-fade-in border-t-4 border-t-rose-600">
+                <div className="w-12 h-12 bg-rose-50 border border-rose-200 rounded-full flex items-center justify-center mx-auto text-rose-600">
                   <Lock className="w-6 h-6" />
                 </div>
                 
                 <div className="space-y-1">
-                  <h3 className="text-base font-bold text-gray-800 uppercase tracking-wide">Access Denied</h3>
-                  <p className="text-gray-500 text-xs leading-relaxed">
-                    You do not have permission to view the <span className="text-blue-600 font-semibold">"{currentActiveItem?.name}"</span> screen. Please contact your system administrator to adjust your permitted windows.
+                  <h3 className="text-base font-bold text-slate-800 uppercase tracking-wide">Access Denied</h3>
+                  <p className="text-slate-500 text-xs leading-relaxed">
+                    You do not have permission to view the <span className="text-primary-600 font-semibold">"{currentActiveItem?.name}"</span> screen. Please contact your system administrator to adjust your permitted windows.
                   </p>
                 </div>
 
                 <div className="pt-2">
                   <button
                     onClick={() => navigate("/home")}
-                    className="btn-lte-primary px-6"
+                    className="px-6 py-2 bg-primary-600 hover:bg-primary-700 text-white rounded-lg text-xs font-bold transition-all border-0 cursor-pointer shadow-2xs"
                   >
                     Go back to home
                   </button>
@@ -509,24 +462,24 @@ export default function DashboardLayout() {
         </main>
       </div>
 
-      {/* MOBILE BOTTOM NAVIGATION BAR - ANT DESIGN ENTERPRISE DOCK */}
-      <nav className="lg:hidden fixed bottom-0 left-0 right-0 h-15 bg-white/95 backdrop-blur-md border-t border-slate-200/80 shadow-[0_-4px_20px_rgba(0,0,0,0.06)] flex items-center justify-around px-2 z-[999] pb-safe">
+      {/* MOBILE BOTTOM NAVIGATION BAR */}
+      <nav className="lg:hidden fixed bottom-0 left-0 right-0 h-15 bg-white/95 backdrop-blur-md border-t border-slate-200 shadow-[0_-4px_20px_rgba(0,0,0,0.06)] flex items-center justify-around px-2 z-[999] pb-safe">
         {/* Home Tab */}
         <Link
           to="/home"
           onMouseEnter={() => preloadRoute("/home")}
           className={`flex flex-col items-center justify-center py-1 px-3 rounded-xl transition-all relative no-underline ${
             currentActiveItem?.id === "home" 
-              ? "bg-indigo-50/80 border border-indigo-100/90 text-indigo-600 scale-105 shadow-2xs" 
+              ? "bg-primary-50 border border-primary-100 text-primary-600 scale-105 shadow-2xs" 
               : "text-slate-500 hover:text-slate-800"
           }`}
         >
           <HomeSvgIcon active={currentActiveItem?.id === "home"} />
-          <span className={`text-[9px] font-bold uppercase tracking-tight mt-0.5 ${currentActiveItem?.id === "home" ? "text-indigo-600 font-black" : "text-slate-500"}`}>
+          <span className={`text-[9px] font-bold uppercase tracking-tight mt-0.5 ${currentActiveItem?.id === "home" ? "text-primary-600 font-black" : "text-slate-500"}`}>
             Home
           </span>
           {currentActiveItem?.id === "home" && (
-            <span className="absolute -bottom-1 left-1/2 -translate-x-1/2 w-1.5 h-1.5 rounded-full bg-indigo-600 shadow-xs"></span>
+            <span className="absolute -bottom-1 left-1/2 -translate-x-1/2 w-1.5 h-1.5 rounded-full bg-primary-600 shadow-2xs"></span>
           )}
         </Link>
 
@@ -537,7 +490,7 @@ export default function DashboardLayout() {
             onMouseEnter={() => preloadRoute("/submit-expense")}
             className={`flex flex-col items-center justify-center py-1 px-3 rounded-xl transition-all relative no-underline ${
               currentActiveItem?.id === "expense" 
-                ? "bg-emerald-50/80 border border-emerald-100/90 text-emerald-600 scale-105 shadow-2xs" 
+                ? "bg-emerald-50 border border-emerald-100 text-emerald-600 scale-105 shadow-2xs" 
                 : "text-slate-500 hover:text-slate-800"
             }`}
           >
@@ -546,7 +499,7 @@ export default function DashboardLayout() {
               Claim
             </span>
             {currentActiveItem?.id === "expense" && (
-              <span className="absolute -bottom-1 left-1/2 -translate-x-1/2 w-1.5 h-1.5 rounded-full bg-emerald-600 shadow-xs"></span>
+              <span className="absolute -bottom-1 left-1/2 -translate-x-1/2 w-1.5 h-1.5 rounded-full bg-emerald-600 shadow-2xs"></span>
             )}
           </Link>
         )}
@@ -558,7 +511,7 @@ export default function DashboardLayout() {
             onMouseEnter={() => preloadRoute("/approval-center")}
             className={`flex flex-col items-center justify-center py-1 px-3 rounded-xl transition-all relative no-underline ${
               currentActiveItem?.id === "approval" 
-                ? "bg-purple-50/80 border border-purple-100/90 text-purple-600 scale-105 shadow-2xs" 
+                ? "bg-purple-50 border border-purple-100 text-purple-600 scale-105 shadow-2xs" 
                 : "text-slate-500 hover:text-slate-800"
             }`}
           >
@@ -567,7 +520,7 @@ export default function DashboardLayout() {
               Approval
             </span>
             {currentActiveItem?.id === "approval" && (
-              <span className="absolute -bottom-1 left-1/2 -translate-x-1/2 w-1.5 h-1.5 rounded-full bg-purple-600 shadow-xs"></span>
+              <span className="absolute -bottom-1 left-1/2 -translate-x-1/2 w-1.5 h-1.5 rounded-full bg-purple-600 shadow-2xs"></span>
             )}
           </Link>
         )}
@@ -578,7 +531,7 @@ export default function DashboardLayout() {
           onMouseEnter={() => preloadRoute("/profile")}
           className={`flex flex-col items-center justify-center py-1 px-3 rounded-xl transition-all relative no-underline ${
             currentActiveItem?.id === "profile" 
-              ? "bg-amber-50/80 border border-amber-100/90 text-amber-600 scale-105 shadow-2xs" 
+              ? "bg-amber-50 border border-amber-100 text-amber-600 scale-105 shadow-2xs" 
               : "text-slate-500 hover:text-slate-800"
           }`}
         >
@@ -587,7 +540,7 @@ export default function DashboardLayout() {
             Profile
           </span>
           {currentActiveItem?.id === "profile" && (
-            <span className="absolute -bottom-1 left-1/2 -translate-x-1/2 w-1.5 h-1.5 rounded-full bg-amber-600 shadow-xs"></span>
+            <span className="absolute -bottom-1 left-1/2 -translate-x-1/2 w-1.5 h-1.5 rounded-full bg-amber-600 shadow-2xs"></span>
           )}
         </Link>
 
@@ -596,45 +549,39 @@ export default function DashboardLayout() {
           onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
           className={`flex flex-col items-center justify-center py-1 px-3 rounded-xl transition-all border-0 bg-transparent cursor-pointer relative ${
             isMobileMenuOpen 
-              ? "bg-cyan-50/80 border border-cyan-100/90 text-cyan-600 scale-105 shadow-2xs" 
+              ? "bg-sky-50 border border-sky-100 text-sky-600 scale-105 shadow-2xs" 
               : "text-slate-500 hover:text-slate-800"
           }`}
         >
           <MoreSvgIcon active={isMobileMenuOpen} />
-          <span className={`text-[9px] font-bold uppercase tracking-tight mt-0.5 ${isMobileMenuOpen ? "text-cyan-600 font-black" : "text-slate-500"}`}>
+          <span className={`text-[9px] font-bold uppercase tracking-tight mt-0.5 ${isMobileMenuOpen ? "text-sky-600 font-black" : "text-slate-500"}`}>
             More
           </span>
           {isMobileMenuOpen && (
-            <span className="absolute -bottom-1 left-1/2 -translate-x-1/2 w-1.5 h-1.5 rounded-full bg-cyan-600 shadow-xs"></span>
+            <span className="absolute -bottom-1 left-1/2 -translate-x-1/2 w-1.5 h-1.5 rounded-full bg-sky-600 shadow-2xs"></span>
           )}
         </button>
       </nav>
 
-      {/* Full-screen nav loader when switching modules from mobile menu */}
       {navLoading && <ProgressLoader message="Opening Module..." fullPage />}
 
       {/* MOBILE FULL NAVIGATION OVERLAY MODAL */}
       {isMobileMenuOpen && (
-        <div className="fixed inset-0 bg-[#f8fafc] z-[999] flex flex-col lg:hidden animate-fadeIn">
+        <div className="fixed inset-0 bg-slate-50 z-[999] flex flex-col lg:hidden animate-fadeIn">
           {/* Header */}
           <div className="h-14 px-4 bg-slate-900 border-b border-slate-800 flex items-center justify-between shrink-0 shadow-md relative">
-            <span className="text-xs font-black uppercase tracking-wider text-white flex items-center gap-2">
+            <span className="text-xs font-bold uppercase tracking-wider text-white flex items-center gap-2">
               <MoreSvgIcon active={true} /> Navigation Menu
             </span>
             <button 
               onClick={() => setIsMobileMenuOpen(false)}
-              className="w-7 h-7 rounded-full border border-slate-700 bg-slate-800 text-white hover:bg-red-600 transition-all cursor-pointer flex items-center justify-center shadow-xs"
+              className="w-7 h-7 rounded-full border border-slate-700 bg-slate-800 text-white hover:bg-rose-600 transition-all cursor-pointer flex items-center justify-center shadow-2xs"
             >
               <X className="w-4 h-4 text-white" />
             </button>
-
-            {/* Top Animated Progress Strip inside Mobile Menu */}
-            <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-slate-800 overflow-hidden">
-              <div className="h-full bg-gradient-to-r from-indigo-500 via-cyan-400 to-emerald-400 animate-pulse w-full"></div>
-            </div>
           </div>
 
-          {/* User Info Bar (AntD Card style) */}
+          {/* User Info Bar */}
           <Link 
             to="/profile" 
             onClick={() => {
@@ -642,9 +589,9 @@ export default function DashboardLayout() {
               setNavLoading(true);
               setTimeout(() => setNavLoading(false), 500);
             }}
-            className="m-3 p-3.5 bg-gradient-to-r from-slate-900 via-slate-900 to-indigo-950 border border-slate-800 rounded-xl shrink-0 flex items-center gap-3 text-white hover:border-indigo-500 transition-all no-underline shadow-md"
+            className="m-3 p-3.5 bg-slate-900 border border-slate-800 rounded-xl shrink-0 flex items-center gap-3 text-white hover:border-primary-500 transition-all no-underline shadow-xs"
           >
-            <div className="h-11 w-11 rounded-full bg-indigo-600 border-2 border-indigo-400 flex items-center justify-center text-white font-black text-base shadow-sm shrink-0 overflow-hidden">
+            <div className="h-11 w-11 rounded-full bg-primary-600 border-2 border-primary-400 flex items-center justify-center text-white font-black text-base shadow-2xs shrink-0 overflow-hidden">
               {avatarUrl && !avatarError ? (
                 <img 
                   src={avatarUrl} 
@@ -657,25 +604,25 @@ export default function DashboardLayout() {
               )}
             </div>
             <div className="min-w-0 flex-1">
-              <p className="text-xs font-extrabold text-white leading-tight truncate">{user?.name || "Employee"}</p>
-              <p className="text-[10px] text-slate-300 font-mono mt-0.5 truncate">{user?.user_id}</p>
+              <p className="text-xs font-bold text-white leading-tight truncate m-0">{user?.name || "Employee"}</p>
+              <p className="text-[10px] text-slate-400 font-mono mt-0.5 truncate m-0">{user?.user_id}</p>
             </div>
             <div className="bg-emerald-500/20 border border-emerald-400/40 rounded-lg px-2 py-0.5 shrink-0">
-              <span className="text-[9px] text-emerald-300 font-black uppercase tracking-wider">{userRole}</span>
+              <span className="text-[9px] text-emerald-300 font-bold uppercase tracking-wider">{userRole}</span>
             </div>
           </Link>
 
           {/* Menu Items Grid */}
           <div className="flex-1 overflow-y-auto py-2 px-3">
-            <p className="text-[10px] font-extrabold text-gray-400 uppercase tracking-wider mb-2 px-1 flex items-center justify-between">
+            <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-2 px-1 flex items-center justify-between">
               <span>All Applications</span>
-              <span className="text-emerald-500 font-mono text-[9px] font-bold">Live Sync</span>
+              <span className="text-emerald-600 font-mono text-[9px] font-bold">Live Sync</span>
             </p>
             <div className="grid grid-cols-3 gap-2.5">
               {allowedMenuItems.map((item) => {
                 const Icon = item.icon;
                 const isActive = currentActiveItem?.id === item.id;
-                const gradientClass = ITEM_GRADIENTS[item.id] || "bg-gradient-to-br from-indigo-500 to-blue-600 text-white shadow-indigo-200";
+                const gradientClass = ITEM_GRADIENTS[item.id] || "bg-primary-600 text-white shadow-2xs";
                 return (
                   <Link
                     key={item.id}
@@ -688,15 +635,15 @@ export default function DashboardLayout() {
                     }}
                     className={`flex flex-col items-center justify-center p-3 rounded-xl border transition-all no-underline ${
                       isActive 
-                        ? "bg-white border-indigo-500 text-indigo-900 font-extrabold shadow-md scale-[1.03] ring-2 ring-indigo-500/30" 
-                        : "bg-white border-gray-200/80 hover:border-indigo-300 text-gray-800 shadow-2xs hover:shadow-xs"
+                        ? "bg-white border-primary-600 text-primary-900 font-bold shadow-xs scale-[1.03] ring-2 ring-primary-500/30" 
+                        : "bg-white border-slate-200 hover:border-primary-300 text-slate-800 shadow-2xs"
                     }`}
                   >
-                    <div className={`p-2.5 rounded-xl mb-1.5 shadow-sm transition-transform ${gradientClass}`}>
+                    <div className={`p-2.5 rounded-xl mb-1.5 shadow-2xs transition-transform ${gradientClass}`}>
                       <Icon className="w-5 h-5 text-white stroke-[2.2]" />
                     </div>
                     <span className={`text-[10px] font-bold text-center leading-tight tracking-tight uppercase ${
-                      isActive ? "text-indigo-600 font-black" : "text-gray-700"
+                      isActive ? "text-primary-600 font-extrabold" : "text-slate-700"
                     }`}>
                       {item.name}
                     </span>
@@ -707,7 +654,7 @@ export default function DashboardLayout() {
           </div>
 
           {/* Footer with Home and Logout Buttons */}
-          <div className="p-4 bg-white border-t border-gray-200 shrink-0 flex gap-3">
+          <div className="p-4 bg-white border-t border-slate-200 shrink-0 flex gap-3">
             <button
               type="button"
               onClick={() => {
@@ -716,7 +663,7 @@ export default function DashboardLayout() {
                 setTimeout(() => setNavLoading(false), 500);
                 navigate("/home");
               }}
-              className="flex-1 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold transition-all cursor-pointer border-0 flex items-center justify-center gap-1.5 shadow-sm"
+              className="flex-1 py-2.5 bg-primary-600 hover:bg-primary-700 text-white text-xs font-bold transition-all cursor-pointer border-0 flex items-center justify-center gap-1.5 shadow-2xs rounded-lg"
             >
               <Home className="w-4 h-4" /> HOME
             </button>
@@ -726,7 +673,7 @@ export default function DashboardLayout() {
                 setIsMobileMenuOpen(false);
                 handleLogout();
               }}
-              className="flex-1 py-2.5 bg-rose-600 hover:bg-rose-700 text-white text-xs font-bold transition-all cursor-pointer border-0 flex items-center justify-center gap-1.5 shadow-sm"
+              className="flex-1 py-2.5 bg-rose-600 hover:bg-rose-700 text-white text-xs font-bold transition-all cursor-pointer border-0 flex items-center justify-center gap-1.5 shadow-2xs rounded-lg"
             >
               <LogOut className="w-4 h-4" /> LOGOUT
             </button>

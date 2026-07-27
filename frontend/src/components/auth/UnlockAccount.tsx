@@ -169,7 +169,7 @@ export default function UnlockAccount({ onBackToLogin }: UnlockAccountProps) {
       <div className="text-center pb-3.5 border-b border-slate-100 flex justify-between items-center">
         <button
           onClick={onBackToLogin}
-          className="text-slate-500 hover:text-indigo-650 flex items-center gap-1.5 text-[10px] cursor-pointer font-black uppercase tracking-wider bg-transparent border-0 outline-none"
+          className="text-slate-500 hover:text-primary-600 flex items-center gap-1.5 text-[10px] cursor-pointer font-black uppercase tracking-wider bg-transparent border-0 outline-none"
         >
           <ArrowLeft size={12} /> Back
         </button>
@@ -325,7 +325,7 @@ export default function UnlockAccount({ onBackToLogin }: UnlockAccountProps) {
                   <button
                     type="button"
                     onClick={handleResendOtp}
-                    className="text-indigo-600 hover:text-indigo-750 font-extrabold uppercase tracking-wider border-0 bg-transparent cursor-pointer outline-none"
+                    className="text-primary-600 hover:text-primary-700 font-extrabold uppercase tracking-wider border-0 bg-transparent cursor-pointer outline-none"
                     disabled={loading}
                   >
                     Resend Code
@@ -363,7 +363,7 @@ export default function UnlockAccount({ onBackToLogin }: UnlockAccountProps) {
         <div className="space-y-5 text-center py-4">
           <div className={`h-12 w-12 rounded-xl border flex items-center justify-center mx-auto ${
             isAlreadyActive 
-              ? "bg-indigo-50 border border-indigo-100 text-indigo-650"
+              ? "bg-primary-50 border border-primary-100 text-primary-600"
               : "bg-emerald-50 border border-emerald-100 text-emerald-650"
           }`}>
             {isAlreadyActive ? (
