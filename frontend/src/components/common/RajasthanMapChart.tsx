@@ -282,43 +282,43 @@ export const RajasthanMapChart: React.FC<RajasthanMapChartProps> = ({
     };
   }, [districtStats]);
 
-  // Color generator for Choropleth
+  // Light Mode Color generator for Choropleth
   const getDistrictColor = (districtName: string, isSelected: boolean, isHovered: boolean) => {
     const norm = normalizeDistrict(districtName);
     const stat = districtStats[norm];
 
-    if (isSelected) return "#3b82f6"; // Bright Primary Blue highlight
+    if (isSelected) return "#3b82f6"; // Primary Blue highlight
     if (isHovered) return "#6366f1"; // Indigo highlight on hover
 
     if (!stat || stat.totalAmount === 0) {
-      return "#1e293b"; // Dark slate for empty districts
+      return "#e2e8f0"; // Soft light slate for empty districts
     }
 
     let ratio = 0;
     if (activeMetric === "amount") {
       ratio = Math.min(1, stat.totalAmount / maxMetrics.amount);
-      if (ratio < 0.25) return "#064e3b";
-      if (ratio < 0.5) return "#059669";
-      if (ratio < 0.75) return "#10b981";
-      return "#f59e0b";
+      if (ratio < 0.25) return "#a7f3d0";
+      if (ratio < 0.5) return "#34d399";
+      if (ratio < 0.75) return "#059669";
+      return "#d97706";
     } else if (activeMetric === "facilities") {
       ratio = Math.min(1, stat.facilities.size / maxMetrics.facilities);
-      if (ratio < 0.25) return "#065f46";
-      if (ratio < 0.5) return "#0d9488";
-      if (ratio < 0.75) return "#14b8a6";
-      return "#2dd4bf";
+      if (ratio < 0.25) return "#99f6e4";
+      if (ratio < 0.5) return "#2dd4bf";
+      if (ratio < 0.75) return "#0d9488";
+      return "#0f766e";
     } else if (activeMetric === "engineers") {
       ratio = Math.min(1, stat.engineers.size / maxMetrics.engineers);
-      if (ratio < 0.25) return "#1e3a8a";
-      if (ratio < 0.5) return "#2563eb";
-      if (ratio < 0.75) return "#3b82f6";
-      return "#38bdf8";
+      if (ratio < 0.25) return "#bfdbfe";
+      if (ratio < 0.5) return "#60a5fa";
+      if (ratio < 0.75) return "#2563eb";
+      return "#1d4ed8";
     } else if (activeMetric === "count") {
       ratio = Math.min(1, stat.claimCount / maxMetrics.count);
-      if (ratio < 0.25) return "#312e81";
-      if (ratio < 0.5) return "#4338ca";
-      if (ratio < 0.75) return "#6366f1";
-      return "#8b5cf6";
+      if (ratio < 0.25) return "#c7d2fe";
+      if (ratio < 0.5) return "#818cf8";
+      if (ratio < 0.75) return "#4f46e5";
+      return "#3730a3";
     } else {
       const rate = stat.claimCount > 0 ? (stat.approvedCount / stat.claimCount) * 100 : 0;
       if (rate >= 80) return "#10b981";
@@ -476,77 +476,77 @@ export const RajasthanMapChart: React.FC<RajasthanMapChartProps> = ({
 
   const tableColumns = [
     {
-      title: "District (जिला)",
+      title: <span className="text-gray-700 font-bold text-xs">District (जिला)</span>,
       dataIndex: "district",
       key: "district",
       render: (text: string) => (
         <span
           onClick={() => handleDistrictClick(text)}
-          className="font-bold text-white cursor-pointer hover:text-blue-400 flex items-center gap-1.5"
+          className="font-bold text-gray-800 hover:text-blue-600 cursor-pointer flex items-center gap-1.5 transition"
         >
-          <MapPin className="w-3.5 h-3.5 text-blue-400" />
+          <MapPin className="w-3.5 h-3.5 text-blue-500" />
           {text}
         </span>
       )
     },
     {
-      title: "Facilities (सुविधाएं)",
+      title: <span className="text-gray-700 font-bold text-xs">Facilities (सुविधाएं)</span>,
       dataIndex: "facilitiesCount",
       key: "facilitiesCount",
       align: "center" as const,
       render: (val: number) => (
-        <span className="font-mono font-bold text-emerald-400 bg-emerald-950/60 px-2 py-0.5 rounded border border-emerald-800/60">
+        <span className="font-mono font-bold text-teal-700 bg-teal-50 px-2 py-0.5 rounded border border-teal-200">
           🏢 {val}
         </span>
       )
     },
     {
-      title: "Engineers (इंजीनियर)",
+      title: <span className="text-gray-700 font-bold text-xs">Engineers (इंजीनियर)</span>,
       dataIndex: "engineersCount",
       key: "engineersCount",
       align: "center" as const,
       render: (val: number) => (
-        <span className="font-mono font-bold text-sky-400 bg-sky-950/60 px-2 py-0.5 rounded border border-sky-800/60">
+        <span className="font-mono font-bold text-blue-700 bg-blue-50 px-2 py-0.5 rounded border border-blue-200">
           👥 {val}
         </span>
       )
     },
     {
-      title: "Total Expense (कुल खर्च)",
+      title: <span className="text-gray-700 font-bold text-xs">Total Expense (कुल खर्च)</span>,
       dataIndex: "totalAmount",
       key: "totalAmount",
       align: "right" as const,
       render: (val: number) => (
-        <span className="font-mono font-black text-amber-400">
+        <span className="font-mono font-black text-emerald-600">
           ₹{val.toLocaleString()}
         </span>
       )
     },
     {
-      title: "Total Claims",
+      title: <span className="text-gray-700 font-bold text-xs">Total Claims</span>,
       dataIndex: "claimCount",
       key: "claimCount",
       align: "center" as const,
-      render: (val: number) => <span className="font-mono text-slate-300 font-bold">{val}</span>
+      render: (val: number) => <span className="font-mono text-gray-700 font-bold">{val}</span>
     },
     {
-      title: "Approved (₹)",
+      title: <span className="text-gray-700 font-bold text-xs">Approved (₹)</span>,
       dataIndex: "approvedAmount",
       key: "approvedAmount",
       align: "right" as const,
       render: (val: number) => (
-        <span className="font-mono text-emerald-300 font-bold">₹{val.toLocaleString()}</span>
+        <span className="font-mono text-slate-700 font-bold">₹{val.toLocaleString()}</span>
       )
     },
     {
-      title: "Approval %",
+      title: <span className="text-gray-700 font-bold text-xs">Approval %</span>,
       dataIndex: "approvalRate",
       key: "approvalRate",
       align: "center" as const,
       render: (val: number) => (
         <span
-          className={`font-mono text-xs font-black px-2 py-0.5 rounded ${
-            val >= 80 ? "bg-emerald-950 text-emerald-400" : val >= 50 ? "bg-amber-950 text-amber-400" : "bg-rose-950 text-rose-400"
+          className={`font-mono text-xs font-black px-2 py-0.5 rounded border ${
+            val >= 80 ? "bg-emerald-50 text-emerald-700 border-emerald-200" : val >= 50 ? "bg-amber-50 text-amber-700 border-amber-200" : "bg-rose-50 text-rose-700 border-rose-200"
           }`}
         >
           {val}%
@@ -557,33 +557,33 @@ export const RajasthanMapChart: React.FC<RajasthanMapChartProps> = ({
 
   return (
     <Card
-      className="border border-slate-800 bg-slate-950 text-slate-100 shadow-2xl rounded-2xl overflow-hidden mt-6"
+      className="border border-gray-200 bg-white text-gray-800 shadow-sm rounded-xl overflow-hidden mt-6"
       bodyStyle={{ padding: 0 }}
     >
-      {/* Header Bar */}
-      <div className="p-4 md:p-6 bg-slate-900/90 border-b border-slate-800 flex flex-col lg:flex-row justify-between items-start lg:items-center gap-4">
+      {/* Header Bar (Light Theme) */}
+      <div className="p-4 md:p-6 bg-slate-50 border-b border-gray-200 flex flex-col lg:flex-row justify-between items-start lg:items-center gap-4">
         <div>
           <div className="flex items-center gap-2">
-            <Globe className="w-6 h-6 text-emerald-400 animate-pulse" />
-            <h2 className="text-lg md:text-xl font-black tracking-tight text-white m-0">
-              Rajasthan District GeoJSON Analytics & Filter Map
+            <Globe className="w-5 h-5 text-emerald-600 animate-pulse" />
+            <h2 className="text-base md:text-lg font-bold tracking-tight text-gray-800 uppercase m-0">
+              Rajasthan District GeoJSON Analytics Map
             </h2>
             <Badge count="LIVE DATA" style={{ backgroundColor: "#10b981", fontWeight: "bold" }} />
           </div>
-          <p className="text-xs text-slate-400 mt-1 m-0">
-            Total Facilities, Engineers & Expense at a glance for 33 Rajasthan Districts • Strictly synchronized with active filters
+          <p className="text-xs text-gray-500 mt-1 m-0">
+            Total Facilities, Engineers & Expense for 33 Rajasthan Districts • Synchronized with active page filters
           </p>
         </div>
 
         {/* Metric Switcher Controls */}
         <div className="flex flex-wrap items-center gap-2">
-          <div className="bg-slate-950/80 p-1 rounded-xl border border-slate-800 flex items-center gap-1">
+          <div className="bg-white p-1 rounded-xl border border-gray-200 shadow-2xs flex items-center gap-1">
             <button
               onClick={() => setActiveMetric("amount")}
               className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all flex items-center gap-1.5 ${
                 activeMetric === "amount"
-                  ? "bg-emerald-500 text-slate-950 shadow-lg shadow-emerald-500/20"
-                  : "text-slate-400 hover:text-white"
+                  ? "bg-emerald-600 text-white shadow-xs"
+                  : "text-gray-600 hover:text-gray-900"
               }`}
             >
               <DollarSign className="w-3.5 h-3.5" />
@@ -593,8 +593,8 @@ export const RajasthanMapChart: React.FC<RajasthanMapChartProps> = ({
               onClick={() => setActiveMetric("facilities")}
               className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all flex items-center gap-1.5 ${
                 activeMetric === "facilities"
-                  ? "bg-teal-500 text-slate-950 shadow-lg shadow-teal-500/20"
-                  : "text-slate-400 hover:text-white"
+                  ? "bg-teal-600 text-white shadow-xs"
+                  : "text-gray-600 hover:text-gray-900"
               }`}
             >
               <Building2 className="w-3.5 h-3.5" />
@@ -604,8 +604,8 @@ export const RajasthanMapChart: React.FC<RajasthanMapChartProps> = ({
               onClick={() => setActiveMetric("engineers")}
               className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all flex items-center gap-1.5 ${
                 activeMetric === "engineers"
-                  ? "bg-sky-500 text-slate-950 shadow-lg shadow-sky-500/20"
-                  : "text-slate-400 hover:text-white"
+                  ? "bg-blue-600 text-white shadow-xs"
+                  : "text-gray-600 hover:text-gray-900"
               }`}
             >
               <Users className="w-3.5 h-3.5" />
@@ -615,8 +615,8 @@ export const RajasthanMapChart: React.FC<RajasthanMapChartProps> = ({
               onClick={() => setActiveMetric("count")}
               className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all flex items-center gap-1.5 ${
                 activeMetric === "count"
-                  ? "bg-indigo-500 text-white shadow-lg shadow-indigo-500/20"
-                  : "text-slate-400 hover:text-white"
+                  ? "bg-indigo-600 text-white shadow-xs"
+                  : "text-gray-600 hover:text-gray-900"
               }`}
             >
               <BarChart3 className="w-3.5 h-3.5" />
@@ -626,8 +626,8 @@ export const RajasthanMapChart: React.FC<RajasthanMapChartProps> = ({
               onClick={() => setActiveMetric("approvalRate")}
               className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all flex items-center gap-1.5 ${
                 activeMetric === "approvalRate"
-                  ? "bg-amber-500 text-slate-950 shadow-lg shadow-amber-500/20"
-                  : "text-slate-400 hover:text-white"
+                  ? "bg-amber-600 text-white shadow-xs"
+                  : "text-gray-600 hover:text-gray-900"
               }`}
             >
               <ShieldCheck className="w-3.5 h-3.5" />
@@ -640,22 +640,22 @@ export const RajasthanMapChart: React.FC<RajasthanMapChartProps> = ({
       {/* Map Content Body */}
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-0 relative">
         {/* Main Map Viewer Canvas */}
-        <div className="lg:col-span-8 p-4 md:p-6 bg-slate-950 min-h-[550px] flex flex-col justify-between relative overflow-hidden">
+        <div className="lg:col-span-8 p-4 md:p-6 bg-white min-h-[550px] flex flex-col justify-between relative overflow-hidden">
           {/* Top Floating Tools: Search + Zoom */}
           <div className="flex justify-between items-center z-10 mb-2 gap-2">
             <div className="relative w-48 md:w-64">
-              <Search className="w-4 h-4 absolute left-3 top-2.5 text-slate-400" />
+              <Search className="w-4 h-4 absolute left-3 top-2.5 text-gray-400" />
               <input
                 type="text"
                 placeholder="Search district on map..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                className="w-full pl-9 pr-3 py-1.5 text-xs bg-slate-900/90 border border-slate-800 rounded-xl text-white placeholder-slate-500 focus:outline-none focus:border-emerald-500 transition"
+                className="w-full pl-9 pr-3 py-1.5 text-xs bg-slate-50 border border-gray-300 rounded-xl text-gray-800 placeholder-gray-400 focus:outline-none focus:border-blue-500 transition shadow-2xs"
               />
               {searchQuery && (
                 <button
                   onClick={() => setSearchQuery("")}
-                  className="absolute right-2 top-2 text-slate-400 hover:text-white"
+                  className="absolute right-2 top-2 text-gray-400 hover:text-gray-600"
                 >
                   <X className="w-3.5 h-3.5" />
                 </button>
@@ -663,17 +663,17 @@ export const RajasthanMapChart: React.FC<RajasthanMapChartProps> = ({
             </div>
 
             {/* Map Controls */}
-            <div className="flex items-center gap-1 bg-slate-900/90 border border-slate-800 p-1 rounded-xl">
+            <div className="flex items-center gap-1 bg-white border border-gray-200 p-1 rounded-xl shadow-2xs">
               <button
                 onClick={() => setZoomLevel((z) => Math.min(2.5, z + 0.25))}
-                className="p-1.5 text-slate-300 hover:text-white hover:bg-slate-800 rounded-lg transition"
+                className="p-1.5 text-gray-600 hover:text-gray-900 hover:bg-slate-100 rounded-lg transition"
                 title="Zoom In"
               >
                 <ZoomIn className="w-4 h-4" />
               </button>
               <button
                 onClick={() => setZoomLevel((z) => Math.max(0.8, z - 0.25))}
-                className="p-1.5 text-slate-300 hover:text-white hover:bg-slate-800 rounded-lg transition"
+                className="p-1.5 text-gray-600 hover:text-gray-900 hover:bg-slate-100 rounded-lg transition"
                 title="Zoom Out"
               >
                 <ZoomOut className="w-4 h-4" />
@@ -685,7 +685,7 @@ export const RajasthanMapChart: React.FC<RajasthanMapChartProps> = ({
                   setSelectedDistrict(null);
                   if (onSelectDistrict) onSelectDistrict(null);
                 }}
-                className="p-1.5 text-slate-300 hover:text-white hover:bg-slate-800 rounded-lg transition"
+                className="p-1.5 text-gray-600 hover:text-gray-900 hover:bg-slate-100 rounded-lg transition"
                 title="Reset View"
               >
                 <RotateCcw className="w-4 h-4" />
@@ -695,17 +695,17 @@ export const RajasthanMapChart: React.FC<RajasthanMapChartProps> = ({
 
           {/* SVG Map Render */}
           {loadingMap ? (
-            <div className="flex flex-col items-center justify-center h-[460px] text-slate-400 space-y-3">
-              <div className="w-10 h-10 border-4 border-emerald-500/30 border-t-emerald-500 rounded-full animate-spin" />
+            <div className="flex flex-col items-center justify-center h-[460px] text-gray-400 space-y-3">
+              <div className="w-10 h-10 border-4 border-emerald-500/30 border-t-emerald-600 rounded-full animate-spin" />
               <p className="text-xs font-semibold">Loading Rajasthan GeoJSON Map Data...</p>
             </div>
           ) : errorMap ? (
-            <div className="flex flex-col items-center justify-center h-[460px] text-rose-400 space-y-2">
+            <div className="flex flex-col items-center justify-center h-[460px] text-rose-500 space-y-2">
               <AlertTriangle className="w-8 h-8" />
               <p className="text-xs font-bold">{errorMap}</p>
             </div>
           ) : (
-            <div className="relative w-full h-[480px] flex items-center justify-center overflow-hidden rounded-xl border border-slate-900 bg-slate-950/60">
+            <div className="relative w-full h-[480px] flex items-center justify-center overflow-hidden rounded-xl border border-gray-200 bg-slate-50/60">
               <svg
                 ref={svgRef}
                 viewBox="0 0 760 660"
@@ -723,13 +723,6 @@ export const RajasthanMapChart: React.FC<RajasthanMapChartProps> = ({
                   }
                 }}
               >
-                <defs>
-                  <filter id="glow" x="-20%" y="-20%" width="140%" height="140%">
-                    <feGaussianBlur stdDeviation="6" result="blur" />
-                    <feComposite in="SourceGraphic" in2="blur" operator="over" />
-                  </filter>
-                </defs>
-
                 {/* Map Paths */}
                 <g>
                   {geoData?.features.map((feature, idx) => {
@@ -752,23 +745,23 @@ export const RajasthanMapChart: React.FC<RajasthanMapChartProps> = ({
                           fill={fillColor}
                           stroke={
                             isSelected
-                              ? "#60a5fa"
+                              ? "#1d4ed8"
                               : isHovered
-                              ? "#ffffff"
+                              ? "#312e81"
                               : isMatchingSearch
-                              ? "#f59e0b"
-                              : "#0f172a"
+                              ? "#d97706"
+                              : "#94a3b8"
                           }
                           strokeWidth={isSelected ? 3 : isHovered ? 2.5 : isMatchingSearch ? 2.5 : 1}
                           strokeLinejoin="round"
                           className="transition-all duration-200 cursor-pointer"
                           style={{
                             filter: isSelected
-                              ? "drop-shadow(0 0 12px rgba(59, 130, 246, 0.8))"
+                              ? "drop-shadow(0 2px 8px rgba(37, 99, 235, 0.4))"
                               : isHovered
-                              ? "drop-shadow(0 0 8px rgba(99, 102, 241, 0.6))"
+                              ? "drop-shadow(0 2px 6px rgba(99, 102, 241, 0.3))"
                               : isMatchingSearch
-                              ? "drop-shadow(0 0 8px rgba(245, 158, 11, 0.8))"
+                              ? "drop-shadow(0 2px 6px rgba(217, 119, 6, 0.4))"
                               : "none"
                           }}
                           onMouseEnter={() => setHoveredDistrict(norm)}
@@ -783,10 +776,10 @@ export const RajasthanMapChart: React.FC<RajasthanMapChartProps> = ({
                             y={center.y}
                             textAnchor="middle"
                             dominantBaseline="central"
-                            className="pointer-events-none text-[9px] font-extrabold fill-slate-200 uppercase tracking-tighter select-none"
+                            className="pointer-events-none text-[9px] font-extrabold fill-slate-800 uppercase tracking-tighter select-none"
                             style={{
-                              textShadow: "0 1px 3px rgba(0,0,0,0.9)",
-                              fill: isSelected ? "#ffffff" : isHovered ? "#60a5fa" : "#cbd5e1"
+                              textShadow: "0 1px 2px rgba(255,255,255,0.9)",
+                              fill: isSelected ? "#ffffff" : isHovered ? "#1e1b4b" : "#334155"
                             }}
                           >
                             {distName}
@@ -798,62 +791,62 @@ export const RajasthanMapChart: React.FC<RajasthanMapChartProps> = ({
                 </g>
               </svg>
 
-              {/* Floating Glassmorphic Tooltip showing ALL Metrics at once */}
+              {/* Floating Glassmorphic Light Tooltip */}
               {hoveredDistrict && (
                 <div
-                  className="absolute pointer-events-none z-50 bg-slate-900/95 backdrop-blur-md border border-slate-700 p-3.5 rounded-xl shadow-2xl text-xs text-white max-w-xs transition-all duration-150"
+                  className="absolute pointer-events-none z-50 bg-white/95 backdrop-blur-md border border-gray-300 p-3.5 rounded-xl shadow-xl text-xs text-gray-800 max-w-xs transition-all duration-150"
                   style={{
                     left: Math.min(520, Math.max(10, tooltipPos.x + 15)),
                     top: Math.min(400, Math.max(10, tooltipPos.y - 15))
                   }}
                 >
-                  <div className="flex items-center justify-between gap-3 border-b border-slate-800 pb-2 mb-2">
-                    <span className="font-black text-sm text-emerald-400 flex items-center gap-1">
-                      <MapPin className="w-3.5 h-3.5" />
+                  <div className="flex items-center justify-between gap-3 border-b border-gray-200 pb-2 mb-2">
+                    <span className="font-bold text-sm text-gray-900 flex items-center gap-1">
+                      <MapPin className="w-3.5 h-3.5 text-blue-600" />
                       {hoveredDistrict}
                     </span>
-                    <span className="text-[10px] bg-slate-800 px-2 py-0.5 rounded text-slate-300 font-mono">
-                      Filtered District Data
+                    <span className="text-[10px] bg-slate-100 px-2 py-0.5 rounded text-slate-700 font-mono border border-slate-200">
+                      District Data
                     </span>
                   </div>
 
                   {districtStats[hoveredDistrict] ? (
-                    <div className="space-y-2 font-sans">
-                      <div className="flex justify-between items-center bg-slate-950 p-1.5 rounded border border-slate-800">
-                        <span className="text-slate-400 text-[11px] flex items-center gap-1">
-                          <Building2 className="w-3 h-3 text-teal-400" />
+                    <div className="space-y-1.5 font-sans">
+                      <div className="flex justify-between items-center bg-slate-50 p-1.5 rounded border border-slate-200">
+                        <span className="text-gray-600 text-[11px] flex items-center gap-1">
+                          <Building2 className="w-3 h-3 text-teal-600" />
                           Facilities (सुविधाएं):
                         </span>
-                        <span className="font-mono font-bold text-teal-300">
+                        <span className="font-mono font-bold text-teal-700">
                           {districtStats[hoveredDistrict].facilities.size}
                         </span>
                       </div>
 
-                      <div className="flex justify-between items-center bg-slate-950 p-1.5 rounded border border-slate-800">
-                        <span className="text-slate-400 text-[11px] flex items-center gap-1">
-                          <Users className="w-3 h-3 text-sky-400" />
+                      <div className="flex justify-between items-center bg-slate-50 p-1.5 rounded border border-slate-200">
+                        <span className="text-gray-600 text-[11px] flex items-center gap-1">
+                          <Users className="w-3 h-3 text-blue-600" />
                           Engineers (इंजीनियर):
                         </span>
-                        <span className="font-mono font-bold text-sky-300">
+                        <span className="font-mono font-bold text-blue-700">
                           {districtStats[hoveredDistrict].engineers.size}
                         </span>
                       </div>
 
-                      <div className="flex justify-between items-center bg-slate-950 p-1.5 rounded border border-slate-800">
-                        <span className="text-slate-400 text-[11px] flex items-center gap-1">
-                          <DollarSign className="w-3 h-3 text-emerald-400" />
+                      <div className="flex justify-between items-center bg-slate-50 p-1.5 rounded border border-slate-200">
+                        <span className="text-gray-600 text-[11px] flex items-center gap-1">
+                          <DollarSign className="w-3 h-3 text-emerald-600" />
                           Total Expense (खर्च):
                         </span>
-                        <span className="font-mono font-bold text-emerald-400">
+                        <span className="font-mono font-bold text-emerald-600">
                           ₹{districtStats[hoveredDistrict].totalAmount.toLocaleString()}
                         </span>
                       </div>
 
-                      <div className="flex justify-between items-center text-[10px] text-slate-400 pt-1">
+                      <div className="flex justify-between items-center text-[10px] text-gray-500 pt-1">
                         <span>Claims: {districtStats[hoveredDistrict].claimCount}</span>
                         <span>
                           Approval:{" "}
-                          <strong className="text-amber-400">
+                          <strong className="text-amber-600">
                             {districtStats[hoveredDistrict].claimCount > 0
                               ? Math.round(
                                   (districtStats[hoveredDistrict].approvedCount /
@@ -867,7 +860,7 @@ export const RajasthanMapChart: React.FC<RajasthanMapChartProps> = ({
                       </div>
                     </div>
                   ) : (
-                    <p className="text-slate-400 text-[11px] m-0">No records found for active filters.</p>
+                    <p className="text-gray-500 text-[11px] m-0">No records found for active filters.</p>
                   )}
                 </div>
               )}
@@ -875,46 +868,46 @@ export const RajasthanMapChart: React.FC<RajasthanMapChartProps> = ({
           )}
 
           {/* Bottom Choropleth Color Legend */}
-          <div className="mt-3 flex flex-wrap items-center justify-between gap-2 bg-slate-900/80 p-3 rounded-xl border border-slate-800 text-xs">
+          <div className="mt-3 flex flex-wrap items-center justify-between gap-2 bg-slate-50 p-3 rounded-xl border border-gray-200 text-xs">
             <div className="flex items-center gap-2">
-              <span className="font-bold text-slate-300 flex items-center gap-1 text-[11px]">
-                <Layers className="w-3.5 h-3.5 text-emerald-400" />
-                Heatmap Legend ({activeMetric.toUpperCase()}):
+              <span className="font-bold text-gray-700 flex items-center gap-1 text-[11px]">
+                <Layers className="w-3.5 h-3.5 text-emerald-600" />
+                Heatmap Scale ({activeMetric.toUpperCase()}):
               </span>
             </div>
 
-            {/* Gradient Bar */}
+            {/* Light Gradient Bar */}
             <div className="flex items-center gap-2">
-              <span className="text-[10px] text-slate-400 font-mono">Min</span>
-              <div className="w-32 h-2.5 rounded-full overflow-hidden flex">
-                <div className="w-1/4 h-full bg-[#064e3b]" />
+              <span className="text-[10px] text-gray-500 font-mono">Min</span>
+              <div className="w-32 h-2.5 rounded-full overflow-hidden flex border border-gray-300">
+                <div className="w-1/4 h-full bg-[#a7f3d0]" />
+                <div className="w-1/4 h-full bg-[#34d399]" />
                 <div className="w-1/4 h-full bg-[#059669]" />
-                <div className="w-1/4 h-full bg-[#10b981]" />
-                <div className="w-1/4 h-full bg-[#f59e0b]" />
+                <div className="w-1/4 h-full bg-[#d97706]" />
               </div>
-              <span className="text-[10px] text-slate-400 font-mono">Max</span>
+              <span className="text-[10px] text-gray-500 font-mono">Max</span>
             </div>
           </div>
         </div>
 
         {/* Right Side District Deep-Dive & Overview Panel */}
-        <div className="lg:col-span-4 p-4 md:p-6 bg-slate-900/60 border-t lg:border-t-0 lg:border-l border-slate-800 flex flex-col justify-between">
+        <div className="lg:col-span-4 p-4 md:p-6 bg-slate-50/50 border-t lg:border-t-0 lg:border-l border-gray-200 flex flex-col justify-between">
           <div>
             {selectedDistrict ? (
               <div className="space-y-4">
-                <div className="flex items-center justify-between border-b border-slate-800 pb-3">
+                <div className="flex items-center justify-between border-b border-gray-200 pb-3">
                   <div>
-                    <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">
+                    <span className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">
                       Selected District Overview
                     </span>
-                    <h3 className="text-xl font-black text-white m-0 flex items-center gap-2">
-                      <MapPin className="w-5 h-5 text-blue-400" />
+                    <h3 className="text-lg font-bold text-gray-800 m-0 flex items-center gap-2">
+                      <MapPin className="w-4 h-4 text-blue-600" />
                       {selectedDistrict}
                     </h3>
                   </div>
                   <button
                     onClick={() => handleDistrictClick(selectedDistrict)}
-                    className="p-1.5 text-slate-400 hover:text-white bg-slate-800 rounded-lg text-xs"
+                    className="p-1.5 text-gray-400 hover:text-gray-700 bg-white border border-gray-200 rounded-lg text-xs"
                     title="Close selection"
                   >
                     <X className="w-4 h-4" />
@@ -925,65 +918,65 @@ export const RajasthanMapChart: React.FC<RajasthanMapChartProps> = ({
                   <div className="space-y-4">
                     {/* Stat Grid with Facilities, Engineers, Expense at once */}
                     <div className="grid grid-cols-2 gap-2.5">
-                      <div className="bg-slate-950 p-3 rounded-xl border border-slate-800">
-                        <span className="text-[10px] font-bold text-slate-400 block uppercase flex items-center gap-1">
-                          <Building2 className="w-3 h-3 text-teal-400" />
+                      <div className="bg-white p-3 rounded-xl border border-gray-200 shadow-2xs">
+                        <span className="text-[10px] font-bold text-gray-500 block uppercase flex items-center gap-1">
+                          <Building2 className="w-3 h-3 text-teal-600" />
                           Facilities
                         </span>
-                        <span className="text-base font-black text-teal-300 font-mono">
+                        <span className="text-base font-bold text-teal-700 font-mono">
                           {activeDistrictDetails.facilitiesCount}
                         </span>
                       </div>
-                      <div className="bg-slate-950 p-3 rounded-xl border border-slate-800">
-                        <span className="text-[10px] font-bold text-slate-400 block uppercase flex items-center gap-1">
-                          <Users className="w-3 h-3 text-sky-400" />
+                      <div className="bg-white p-3 rounded-xl border border-gray-200 shadow-2xs">
+                        <span className="text-[10px] font-bold text-gray-500 block uppercase flex items-center gap-1">
+                          <Users className="w-3 h-3 text-blue-600" />
                           Engineers
                         </span>
-                        <span className="text-base font-black text-sky-300 font-mono">
+                        <span className="text-base font-bold text-blue-700 font-mono">
                           {activeDistrictDetails.engineersCount}
                         </span>
                       </div>
-                      <div className="bg-slate-950 p-3 rounded-xl border border-slate-800">
-                        <span className="text-[10px] font-bold text-slate-400 block uppercase flex items-center gap-1">
-                          <DollarSign className="w-3 h-3 text-emerald-400" />
+                      <div className="bg-white p-3 rounded-xl border border-gray-200 shadow-2xs">
+                        <span className="text-[10px] font-bold text-gray-500 block uppercase flex items-center gap-1">
+                          <DollarSign className="w-3 h-3 text-emerald-600" />
                           Total Expense
                         </span>
-                        <span className="text-base font-black text-emerald-400 font-mono">
+                        <span className="text-base font-bold text-emerald-600 font-mono">
                           ₹{activeDistrictDetails.totalAmount.toLocaleString()}
                         </span>
                       </div>
-                      <div className="bg-slate-950 p-3 rounded-xl border border-slate-800">
-                        <span className="text-[10px] font-bold text-slate-400 block uppercase flex items-center gap-1">
-                          <ShieldCheck className="w-3 h-3 text-amber-400" />
+                      <div className="bg-white p-3 rounded-xl border border-gray-200 shadow-2xs">
+                        <span className="text-[10px] font-bold text-gray-500 block uppercase flex items-center gap-1">
+                          <ShieldCheck className="w-3 h-3 text-amber-600" />
                           Approval %
                         </span>
-                        <span className="text-base font-black text-amber-400 font-mono">
+                        <span className="text-base font-bold text-amber-600 font-mono">
                           {activeDistrictDetails.approvalRate}%
                         </span>
                       </div>
                     </div>
 
                     {/* Top Engineers in District */}
-                    <div className="bg-slate-950 p-3 rounded-xl border border-slate-800 space-y-2">
-                      <span className="text-[11px] font-bold text-slate-300 flex items-center justify-between">
+                    <div className="bg-white p-3 rounded-xl border border-gray-200 shadow-2xs space-y-2">
+                      <span className="text-[11px] font-bold text-gray-700 flex items-center justify-between">
                         <span>Top Engineers in {selectedDistrict}</span>
-                        <Users className="w-3.5 h-3.5 text-sky-400" />
+                        <Users className="w-3.5 h-3.5 text-blue-600" />
                       </span>
                       {activeDistrictDetails.topEngineers.length > 0 ? (
                         <div className="space-y-2 max-h-36 overflow-y-auto pr-1">
                           {activeDistrictDetails.topEngineers.slice(0, 4).map((eng, idx) => (
                             <div key={idx} className="flex justify-between items-center text-xs">
-                              <span className="text-slate-300 font-medium truncate max-w-[140px]">
+                              <span className="text-gray-700 font-medium truncate max-w-[140px]">
                                 {eng.name}
                               </span>
-                              <span className="font-mono font-bold text-emerald-400">
+                              <span className="font-mono font-bold text-emerald-600">
                                 ₹{eng.amount.toLocaleString()}
                               </span>
                             </div>
                           ))}
                         </div>
                       ) : (
-                        <p className="text-xs text-slate-500 m-0">No active engineers for current filters</p>
+                        <p className="text-xs text-gray-400 m-0">No active engineers for current filters</p>
                       )}
                     </div>
                   </div>
@@ -992,12 +985,12 @@ export const RajasthanMapChart: React.FC<RajasthanMapChartProps> = ({
             ) : (
               /* Overview Leaderboard showing all 3 metrics simultaneously */
               <div className="space-y-4">
-                <div className="border-b border-slate-800 pb-3">
-                  <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">
+                <div className="border-b border-gray-200 pb-3">
+                  <span className="text-[10px] font-bold text-gray-400 uppercase tracking-wider block">
                     District Highlights
                   </span>
-                  <h3 className="text-lg font-black text-white m-0 flex items-center gap-2">
-                    <Sparkles className="w-4 h-4 text-emerald-400" />
+                  <h3 className="text-base font-bold text-gray-800 m-0 flex items-center gap-2">
+                    <Sparkles className="w-4 h-4 text-emerald-600" />
                     Top Districts Breakdown
                   </h3>
                 </div>
@@ -1017,28 +1010,28 @@ export const RajasthanMapChart: React.FC<RajasthanMapChartProps> = ({
                       <div
                         key={idx}
                         onClick={() => handleDistrictClick(item.name)}
-                        className="bg-slate-950 hover:bg-slate-900 p-2.5 rounded-xl border border-slate-800 cursor-pointer transition flex items-center justify-between group"
+                        className="bg-white hover:bg-slate-50 p-2.5 rounded-xl border border-gray-200 shadow-2xs cursor-pointer transition flex items-center justify-between group"
                       >
                         <div className="flex items-center gap-2.5">
-                          <span className="w-5 h-5 rounded-full bg-slate-900 border border-slate-800 text-[10px] font-extrabold text-emerald-400 flex items-center justify-center font-mono">
+                          <span className="w-5 h-5 rounded-full bg-slate-100 border border-slate-200 text-[10px] font-extrabold text-emerald-600 flex items-center justify-center font-mono">
                             #{idx + 1}
                           </span>
                           <div>
-                            <span className="text-xs font-bold text-slate-200 group-hover:text-emerald-400 transition block">
+                            <span className="text-xs font-bold text-gray-800 group-hover:text-blue-600 transition block">
                               {item.name}
                             </span>
-                            <div className="flex items-center gap-2 text-[10px] text-slate-400 font-mono mt-0.5">
-                              <span className="text-teal-400">🏢 {item.facilitiesCount} Fac</span>
+                            <div className="flex items-center gap-2 text-[10px] text-gray-500 font-mono mt-0.5">
+                              <span className="text-teal-600">🏢 {item.facilitiesCount} Fac</span>
                               <span>•</span>
-                              <span className="text-sky-400">👥 {item.engineersCount} Eng</span>
+                              <span className="text-blue-600">👥 {item.engineersCount} Eng</span>
                             </div>
                           </div>
                         </div>
                         <div className="flex items-center gap-1">
-                          <span className="text-xs font-mono font-bold text-emerald-400">
+                          <span className="text-xs font-mono font-bold text-emerald-600">
                             ₹{item.amount.toLocaleString()}
                           </span>
-                          <ChevronRight className="w-3.5 h-3.5 text-slate-600 group-hover:text-slate-300 transition" />
+                          <ChevronRight className="w-3.5 h-3.5 text-gray-400 group-hover:text-gray-600 transition" />
                         </div>
                       </div>
                     ))}
@@ -1048,32 +1041,32 @@ export const RajasthanMapChart: React.FC<RajasthanMapChartProps> = ({
           </div>
 
           {/* Quick Help Footer */}
-          <div className="mt-4 pt-3 border-t border-slate-800 text-[11px] text-slate-400 flex items-center justify-between">
+          <div className="mt-4 pt-3 border-t border-gray-200 text-[11px] text-gray-500 flex items-center justify-between">
             <span className="flex items-center gap-1">
-              <Info className="w-3.5 h-3.5 text-slate-500" />
+              <Info className="w-3.5 h-3.5 text-gray-400" />
               Synced with Active Page Filters
             </span>
-            <span className="font-mono text-emerald-400 font-bold">33 Districts</span>
+            <span className="font-mono text-emerald-600 font-bold">33 Districts</span>
           </div>
         </div>
       </div>
 
-      {/* District Analytics Master Table (SABSE NICHE) */}
-      <div className="p-4 md:p-6 bg-slate-900/90 border-t border-slate-800 space-y-4">
+      {/* District Analytics Master Table (Light Theme) */}
+      <div className="p-4 md:p-6 bg-slate-50 border-t border-gray-200 space-y-4">
         <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
           <div className="flex items-center gap-2">
-            <TableIcon className="w-5 h-5 text-emerald-400" />
-            <h3 className="text-base font-black text-white m-0">
-              Complete District Data Table (सभी जिलों का संपूर्ण डेटा)
+            <TableIcon className="w-4 h-4 text-gray-700" />
+            <h3 className="text-xs font-bold text-gray-700 uppercase tracking-wider m-0">
+              District Analytics Table (सभी जिलों का संपूर्ण डेटा)
             </h3>
           </div>
           <div className="w-full sm:w-64">
             <Input
               placeholder="Search table district..."
-              prefix={<Search className="w-3.5 h-3.5 text-slate-400 mr-1" />}
+              prefix={<Search className="w-3.5 h-3.5 text-gray-400 mr-1" />}
               value={tableSearch}
               onChange={(e) => setTableSearch(e.target.value)}
-              className="bg-slate-950 border-slate-800 text-xs text-white placeholder-slate-500 rounded-xl"
+              className="bg-white border-gray-300 text-xs text-gray-800 placeholder-gray-400 rounded-xl"
             />
           </div>
         </div>
@@ -1083,8 +1076,8 @@ export const RajasthanMapChart: React.FC<RajasthanMapChartProps> = ({
           columns={tableColumns}
           pagination={{ pageSize: 8, showSizeChanger: false }}
           size="small"
-          className="ant-table-dark border border-slate-800 rounded-xl overflow-hidden"
-          rowClassName="bg-slate-950 text-slate-200 hover:bg-slate-900 transition"
+          className="border border-gray-200 rounded-xl overflow-hidden shadow-2xs"
+          rowClassName="bg-white hover:bg-slate-50 transition"
         />
       </div>
     </Card>
