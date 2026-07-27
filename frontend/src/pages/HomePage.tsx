@@ -2314,44 +2314,44 @@ export default function HomePage() {
 
                             {/* Calls card list */}
                             {selectedActs.includes("Calls") && callsList.length > 0 && (
-                              <div className="space-y-3 w-full">
-                                <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-indigo-100 text-indigo-800 text-xs font-black uppercase tracking-wider">
-                                  <span className="w-2 h-2 rounded-full bg-indigo-600 animate-pulse"></span>
+                              <div className="space-y-3.5 w-full">
+                                <div className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-full bg-indigo-100 text-indigo-900 text-xs font-black uppercase tracking-wider border border-indigo-300">
+                                  <span className="w-2.5 h-2.5 rounded-full bg-indigo-600 animate-pulse"></span>
                                   Support Calls Logs ({callsList.length})
                                 </div>
                                 {callsList.map((c: any, cIdx: number) => (
-                                  <div key={cIdx} className="bg-indigo-50/70 border-l-4 border-l-indigo-600 rounded-2xl p-4 space-y-3 text-xs text-left w-full shadow-2xs">
-                                    <div className="flex justify-between items-start">
+                                  <div key={cIdx} className="bg-indigo-50/80 border-2 border-indigo-200 rounded-2xl p-4 space-y-3.5 text-xs text-left w-full shadow-xs">
+                                    <div className="flex justify-between items-start pb-2 border-b border-indigo-200/80">
                                       <div>
-                                        <span className="font-black text-slate-900 text-sm sm:text-base block">{c.asset_details?.equipment_name || "—"}</span>
-                                        <span className="text-xs text-slate-600 font-semibold">{c.asset_details?.hospital_name || "—"}</span>
+                                        <span className="font-black text-slate-900 text-base block mb-0.5">{c.asset_details?.equipment_name || "—"}</span>
+                                        <span className="text-xs text-slate-600 font-bold">{c.asset_details?.hospital_name || "—"}</span>
                                       </div>
                                       <span className="px-3 py-1 rounded-full font-black text-xs uppercase bg-indigo-600 text-white shadow-2xs">
                                         {c.status || "Attend"}
                                       </span>
                                     </div>
-                                    <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5 p-3 rounded-xl bg-white/90 text-xs font-semibold text-slate-700">
-                                      <div>
-                                        <span className="text-slate-400 text-xs block uppercase font-bold">District</span>
-                                        <span className="font-extrabold text-slate-900">{c.asset_details?.district_name || "—"}</span>
+                                    <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5">
+                                      <div className="bg-white border border-indigo-200/80 rounded-xl p-3 shadow-2xs">
+                                        <span className="text-xs text-slate-500 font-extrabold uppercase block mb-1">District</span>
+                                        <span className="text-sm font-black text-slate-900 block">{c.asset_details?.district_name || "—"}</span>
                                       </div>
-                                      <div>
-                                        <span className="text-slate-400 text-xs block uppercase font-bold">Model</span>
-                                        <span className="font-extrabold text-slate-900">{c.asset_details?.model_name || "—"}</span>
+                                      <div className="bg-white border border-indigo-200/80 rounded-xl p-3 shadow-2xs">
+                                        <span className="text-xs text-slate-500 font-extrabold uppercase block mb-1">Model</span>
+                                        <span className="text-sm font-black text-slate-900 block">{c.asset_details?.model_name || "—"}</span>
                                       </div>
-                                      <div>
-                                        <span className="text-slate-400 text-xs block uppercase font-bold">Barcode</span>
-                                        <span className="font-mono font-extrabold text-indigo-700">{c.barcode || "—"}</span>
+                                      <div className="bg-white border border-indigo-200/80 rounded-xl p-3 shadow-2xs">
+                                        <span className="text-xs text-slate-500 font-extrabold uppercase block mb-1">Barcode</span>
+                                        <span className="text-sm font-black text-indigo-700 font-mono block">{c.barcode || "—"}</span>
                                       </div>
-                                      <div>
-                                        <span className="text-slate-400 text-xs block uppercase font-bold">Status</span>
-                                        <span className="font-extrabold text-slate-900">{c.asset_details?.inventory_status || "Active"}</span>
+                                      <div className="bg-white border border-indigo-200/80 rounded-xl p-3 shadow-2xs">
+                                        <span className="text-xs text-slate-500 font-extrabold uppercase block mb-1">Status</span>
+                                        <span className="text-sm font-black text-slate-900 block">{c.asset_details?.inventory_status || "Active"}</span>
                                       </div>
                                     </div>
                                     {c.photo_url && (
                                       <div className="pt-1">
-                                        <span className="text-slate-500 text-xs uppercase font-extrabold block mb-1.5">Attachment Photo</span>
-                                        <div className="relative rounded-xl overflow-hidden bg-slate-900 border border-slate-700 min-h-[220px] max-h-[360px] flex items-center justify-center p-2">
+                                        <span className="text-slate-600 text-xs uppercase font-extrabold block mb-1.5">Attachment Verification Photo</span>
+                                        <div className="relative rounded-xl overflow-hidden bg-slate-900 border-2 border-slate-700 min-h-[220px] max-h-[360px] flex items-center justify-center p-2">
                                           <img
                                             src={`${API_BASE}${c.photo_url}`}
                                             alt="Call verification"
@@ -2375,44 +2375,44 @@ export default function HomePage() {
 
                             {/* PMS card list */}
                             {selectedActs.includes("PMS") && pmsList.length > 0 && (
-                              <div className="space-y-3 w-full">
-                                <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-amber-100 text-amber-900 text-xs font-black uppercase tracking-wider">
-                                  <span className="w-2 h-2 rounded-full bg-amber-600 animate-pulse"></span>
+                              <div className="space-y-3.5 w-full">
+                                <div className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-full bg-amber-100 text-amber-950 text-xs font-black uppercase tracking-wider border border-amber-300">
+                                  <span className="w-2.5 h-2.5 rounded-full bg-amber-600 animate-pulse"></span>
                                   PMS Service Logs ({pmsList.length})
                                 </div>
                                 {pmsList.map((p: any, pIdx: number) => (
-                                  <div key={pIdx} className="bg-amber-50/70 border-l-4 border-l-amber-500 rounded-2xl p-4 space-y-3 text-xs text-left w-full shadow-2xs">
-                                    <div className="flex justify-between items-start">
+                                  <div key={pIdx} className="bg-amber-50/80 border-2 border-amber-300/80 rounded-2xl p-4 space-y-3.5 text-xs text-left w-full shadow-xs">
+                                    <div className="flex justify-between items-start pb-2 border-b border-amber-200/80">
                                       <div>
-                                        <span className="font-black text-slate-900 text-sm sm:text-base block">{p.asset_details?.equipment_name || "—"}</span>
-                                        <span className="text-xs text-slate-600 font-semibold">{p.asset_details?.hospital_name || "—"}</span>
+                                        <span className="font-black text-slate-900 text-base block mb-0.5">{p.asset_details?.equipment_name || "—"}</span>
+                                        <span className="text-xs text-slate-600 font-bold">{p.asset_details?.hospital_name || "—"}</span>
                                       </div>
                                       <span className="px-3 py-1 rounded-full font-black text-xs uppercase bg-emerald-600 text-white shadow-2xs">
                                         {p.frequency || "3 month"}
                                       </span>
                                     </div>
-                                    <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5 p-3 rounded-xl bg-white/90 text-xs font-semibold text-slate-700">
-                                      <div>
-                                        <span className="text-slate-400 text-xs block uppercase font-bold">District</span>
-                                        <span className="font-extrabold text-slate-900">{p.asset_details?.district_name || "—"}</span>
+                                    <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5">
+                                      <div className="bg-white border border-amber-200/80 rounded-xl p-3 shadow-2xs">
+                                        <span className="text-xs text-slate-500 font-extrabold uppercase block mb-1">District</span>
+                                        <span className="text-sm font-black text-slate-900 block">{p.asset_details?.district_name || "—"}</span>
                                       </div>
-                                      <div>
-                                        <span className="text-slate-400 text-xs block uppercase font-bold">Model</span>
-                                        <span className="font-extrabold text-slate-900">{p.asset_details?.model_name || "—"}</span>
+                                      <div className="bg-white border border-amber-200/80 rounded-xl p-3 shadow-2xs">
+                                        <span className="text-xs text-slate-500 font-extrabold uppercase block mb-1">Model</span>
+                                        <span className="text-sm font-black text-slate-900 block">{p.asset_details?.model_name || "—"}</span>
                                       </div>
-                                      <div>
-                                        <span className="text-slate-400 text-xs block uppercase font-bold">Barcode</span>
-                                        <span className="font-mono font-extrabold text-amber-800">{p.barcode || "—"}</span>
+                                      <div className="bg-white border border-amber-200/80 rounded-xl p-3 shadow-2xs">
+                                        <span className="text-xs text-slate-500 font-extrabold uppercase block mb-1">Barcode</span>
+                                        <span className="text-sm font-black text-amber-800 font-mono block">{p.barcode || "—"}</span>
                                       </div>
-                                      <div>
-                                        <span className="text-slate-400 text-xs block uppercase font-bold">Status</span>
-                                        <span className="font-extrabold text-slate-900">{p.asset_details?.inventory_status || "Active"}</span>
+                                      <div className="bg-white border border-amber-200/80 rounded-xl p-3 shadow-2xs">
+                                        <span className="text-xs text-slate-500 font-extrabold uppercase block mb-1">Status</span>
+                                        <span className="text-sm font-black text-slate-900 block">{p.asset_details?.inventory_status || "Active"}</span>
                                       </div>
                                     </div>
                                     {p.photo_url && (
                                       <div className="pt-1">
-                                        <span className="text-slate-500 text-xs uppercase font-extrabold block mb-1.5">Attachment Photo</span>
-                                        <div className="relative rounded-xl overflow-hidden bg-slate-900 border border-slate-700 min-h-[220px] max-h-[360px] flex items-center justify-center p-2">
+                                        <span className="text-slate-600 text-xs uppercase font-extrabold block mb-1.5">Attachment Verification Photo</span>
+                                        <div className="relative rounded-xl overflow-hidden bg-slate-900 border-2 border-slate-700 min-h-[220px] max-h-[360px] flex items-center justify-center p-2">
                                           <img
                                             src={p.photo_url ? `${API_BASE}${p.photo_url}` : undefined}
                                             alt="PMS verification"
