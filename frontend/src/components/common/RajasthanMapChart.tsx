@@ -17,9 +17,9 @@ import {
   BarChart3,
   Globe,
   Building2,
-  Table as TableIcon
+  PieChart
 } from "lucide-react";
-import { Card, Badge, Table, Input } from "antd";
+import { Card, Badge } from "antd";
 
 interface ExpenseRecord {
   id?: string | number;
@@ -128,7 +128,6 @@ export const RajasthanMapChart: React.FC<RajasthanMapChartProps> = ({
   const [zoomLevel, setZoomLevel] = useState<number>(1);
   const [panOffset, setPanOffset] = useState<{ x: number; y: number }>({ x: 0, y: 0 });
   const [tooltipPos, setTooltipPos] = useState<{ x: number; y: number }>({ x: 0, y: 0 });
-  const [tableSearch, setTableSearch] = useState<string>("");
 
   const svgRef = useRef<SVGSVGElement | null>(null);
 
@@ -237,7 +236,7 @@ export const RajasthanMapChart: React.FC<RajasthanMapChartProps> = ({
       const status = (e.status || "pending").toLowerCase();
       const engName = e.submitter_name || e.user_name || "Unassigned";
       const cat = e.category || e.nature || "General";
-      const facName = e.facility || e.facility_name || e.hospital || e.site || e.work_location || e.location || e.destination || e.itinerary || `Site #${idx + 1}`;
+      const facName = e.facility || e.facility_name || e.hospital || e.site || e.work_location || e.location || e.destination || e.itinerary || `Facility #${idx + 1}`;
 
       stats[dist].totalAmount += amt;
       stats[dist].claimCount += 1;
@@ -258,6 +257,37 @@ export const RajasthanMapChart: React.FC<RajasthanMapChartProps> = ({
 
     return stats;
   }, [expenses]);
+
+  // Overall Statewide Aggregates
+  const stateSummary = useMemo(() => {
+    let totalExpense = 0;
+    let approvedExpense = 0;
+    let totalClaims = 0;
+    let approvedClaims = 0;
+    const allFacilities = new Set<string>();
+    const allEngineers = new Set<string>();
+
+    Object.values(districtStats).forEach((s) => {
+      totalExpense += s.totalAmount;
+      approvedExpense += s.approvedAmount;
+      totalClaims += s.claimCount;
+      approvedClaims += s.approvedCount;
+      s.facilities.forEach((f) => allFacilities.add(f));
+      s.engineers.forEach((eng) => allEngineers.add(eng));
+    });
+
+    const approvalRate = totalClaims > 0 ? Math.round((approvedClaims / totalClaims) * 100) : 0;
+
+    return {
+      totalExpense,
+      approvedExpense,
+      totalClaims,
+      approvalRate,
+      facilitiesCount: allFacilities.size,
+      engineersCount: allEngineers.size,
+      activeDistrictsCount: Object.keys(districtStats).length
+    };
+  }, [districtStats]);
 
   // Compute max values for choropleth scale calculation
   const maxMetrics = useMemo(() => {
@@ -282,7 +312,7 @@ export const RajasthanMapChart: React.FC<RajasthanMapChartProps> = ({
     };
   }, [districtStats]);
 
-  // Light Mode Color generator for Choropleth
+  // Color generator for Choropleth
   const getDistrictColor = (districtName: string, isSelected: boolean, isHovered: boolean) => {
     const norm = normalizeDistrict(districtName);
     const stat = districtStats[norm];
@@ -394,13 +424,14 @@ export const RajasthanMapChart: React.FC<RajasthanMapChartProps> = ({
     }
   };
 
-  // Active district metrics for detailed side panel
+  // Active district metrics for detailed panel
   const activeDistrictDetails = useMemo(() => {
-    if (!selectedDistrict) return null;
-    const stat = districtStats[selectedDistrict];
+    const targetDist = selectedDistrict || hoveredDistrict;
+    if (!targetDist) return null;
+    const stat = districtStats[targetDist];
     if (!stat) {
       return {
-        name: selectedDistrict,
+        name: targetDist,
         totalAmount: 0,
         claimCount: 0,
         facilitiesCount: 0,
@@ -424,7 +455,7 @@ export const RajasthanMapChart: React.FC<RajasthanMapChartProps> = ({
       .sort((a, b) => b.amount - a.amount);
 
     return {
-      name: selectedDistrict,
+      name: targetDist,
       totalAmount: stat.totalAmount,
       claimCount: stat.claimCount,
       facilitiesCount: stat.facilities.size,
@@ -436,124 +467,7 @@ export const RajasthanMapChart: React.FC<RajasthanMapChartProps> = ({
       topEngineers: topEngs,
       topCategories: topCats
     };
-  }, [selectedDistrict, districtStats]);
-
-  // Unified District Table Data for all 33 districts
-  const districtTableData = useMemo(() => {
-    if (!geoData || !geoData.features) return [];
-    
-    return geoData.features
-      .map((f, idx) => {
-        const rawName = f.properties.district || f.properties.dt_nm || `District-${idx}`;
-        const norm = normalizeDistrict(rawName);
-        const stat = districtStats[norm];
-
-        const totalAmount = stat ? stat.totalAmount : 0;
-        const claimCount = stat ? stat.claimCount : 0;
-        const facilitiesCount = stat ? stat.facilities.size : 0;
-        const engineersCount = stat ? stat.engineers.size : 0;
-        const approvedAmount = stat ? stat.approvedAmount : 0;
-        const approvalRate = stat && stat.claimCount > 0 ? Math.round((stat.approvedCount / stat.claimCount) * 100) : 0;
-
-        return {
-          key: norm,
-          district: norm,
-          rawName,
-          facilitiesCount,
-          engineersCount,
-          totalAmount,
-          claimCount,
-          approvedAmount,
-          approvalRate
-        };
-      })
-      .filter((row) => {
-        if (!tableSearch.trim()) return true;
-        return row.district.toLowerCase().includes(tableSearch.toLowerCase());
-      })
-      .sort((a, b) => b.totalAmount - a.totalAmount);
-  }, [geoData, districtStats, tableSearch]);
-
-  const tableColumns = [
-    {
-      title: <span className="text-gray-700 font-bold text-xs">District (जिला)</span>,
-      dataIndex: "district",
-      key: "district",
-      render: (text: string) => (
-        <span
-          onClick={() => handleDistrictClick(text)}
-          className="font-bold text-gray-800 hover:text-blue-600 cursor-pointer flex items-center gap-1.5 transition"
-        >
-          <MapPin className="w-3.5 h-3.5 text-blue-500" />
-          {text}
-        </span>
-      )
-    },
-    {
-      title: <span className="text-gray-700 font-bold text-xs">Facilities (सुविधाएं)</span>,
-      dataIndex: "facilitiesCount",
-      key: "facilitiesCount",
-      align: "center" as const,
-      render: (val: number) => (
-        <span className="font-mono font-bold text-teal-700 bg-teal-50 px-2 py-0.5 rounded border border-teal-200">
-          🏢 {val}
-        </span>
-      )
-    },
-    {
-      title: <span className="text-gray-700 font-bold text-xs">Engineers (इंजीनियर)</span>,
-      dataIndex: "engineersCount",
-      key: "engineersCount",
-      align: "center" as const,
-      render: (val: number) => (
-        <span className="font-mono font-bold text-blue-700 bg-blue-50 px-2 py-0.5 rounded border border-blue-200">
-          👥 {val}
-        </span>
-      )
-    },
-    {
-      title: <span className="text-gray-700 font-bold text-xs">Total Expense (कुल खर्च)</span>,
-      dataIndex: "totalAmount",
-      key: "totalAmount",
-      align: "right" as const,
-      render: (val: number) => (
-        <span className="font-mono font-black text-emerald-600">
-          ₹{val.toLocaleString()}
-        </span>
-      )
-    },
-    {
-      title: <span className="text-gray-700 font-bold text-xs">Total Claims</span>,
-      dataIndex: "claimCount",
-      key: "claimCount",
-      align: "center" as const,
-      render: (val: number) => <span className="font-mono text-gray-700 font-bold">{val}</span>
-    },
-    {
-      title: <span className="text-gray-700 font-bold text-xs">Approved (₹)</span>,
-      dataIndex: "approvedAmount",
-      key: "approvedAmount",
-      align: "right" as const,
-      render: (val: number) => (
-        <span className="font-mono text-slate-700 font-bold">₹{val.toLocaleString()}</span>
-      )
-    },
-    {
-      title: <span className="text-gray-700 font-bold text-xs">Approval %</span>,
-      dataIndex: "approvalRate",
-      key: "approvalRate",
-      align: "center" as const,
-      render: (val: number) => (
-        <span
-          className={`font-mono text-xs font-black px-2 py-0.5 rounded border ${
-            val >= 80 ? "bg-emerald-50 text-emerald-700 border-emerald-200" : val >= 50 ? "bg-amber-50 text-amber-700 border-amber-200" : "bg-rose-50 text-rose-700 border-rose-200"
-          }`}
-        >
-          {val}%
-        </span>
-      )
-    }
-  ];
+  }, [selectedDistrict, hoveredDistrict, districtStats]);
 
   return (
     <Card
@@ -633,6 +547,70 @@ export const RajasthanMapChart: React.FC<RajasthanMapChartProps> = ({
               <ShieldCheck className="w-3.5 h-3.5" />
               Approval %
             </button>
+          </div>
+        </div>
+      </div>
+
+      {/* Embedded Statewide Executive KPI Bar */}
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-3 p-4 bg-slate-100/60 border-b border-gray-200">
+        <div className="bg-white p-3 rounded-xl border border-gray-200 shadow-2xs flex items-center gap-3">
+          <div className="w-9 h-9 rounded-lg bg-teal-50 border border-teal-200 flex items-center justify-center text-teal-600 shrink-0">
+            <Building2 className="w-5 h-5" />
+          </div>
+          <div>
+            <span className="text-[10px] font-bold text-gray-500 uppercase tracking-wide block">
+              Total Facilities
+            </span>
+            <span className="text-base font-black text-teal-700 font-mono">
+              {stateSummary.facilitiesCount}
+            </span>
+          </div>
+        </div>
+
+        <div className="bg-white p-3 rounded-xl border border-gray-200 shadow-2xs flex items-center gap-3">
+          <div className="w-9 h-9 rounded-lg bg-blue-50 border border-blue-200 flex items-center justify-center text-blue-600 shrink-0">
+            <Users className="w-5 h-5" />
+          </div>
+          <div>
+            <span className="text-[10px] font-bold text-gray-500 uppercase tracking-wide block">
+              Total Engineers
+            </span>
+            <span className="text-base font-black text-blue-700 font-mono">
+              {stateSummary.engineersCount}
+            </span>
+          </div>
+        </div>
+
+        <div className="bg-white p-3 rounded-xl border border-gray-200 shadow-2xs flex items-center gap-3">
+          <div className="w-9 h-9 rounded-lg bg-emerald-50 border border-emerald-200 flex items-center justify-center text-emerald-600 shrink-0">
+            <DollarSign className="w-5 h-5" />
+          </div>
+          <div>
+            <span className="text-[10px] font-bold text-gray-500 uppercase tracking-wide block">
+              Total State Expense
+            </span>
+            <span className="text-base font-black text-emerald-600 font-mono">
+              ₹{stateSummary.totalExpense.toLocaleString()}
+            </span>
+          </div>
+        </div>
+
+        <div className="bg-white p-3 rounded-xl border border-gray-200 shadow-2xs flex items-center gap-3">
+          <div className="w-9 h-9 rounded-lg bg-indigo-50 border border-indigo-200 flex items-center justify-center text-indigo-600 shrink-0">
+            <BarChart3 className="w-5 h-5" />
+          </div>
+          <div>
+            <span className="text-[10px] font-bold text-gray-500 uppercase tracking-wide block">
+              Total Claims (Rate)
+            </span>
+            <div className="flex items-center gap-1.5 font-mono">
+              <span className="text-base font-black text-indigo-700">
+                {stateSummary.totalClaims}
+              </span>
+              <span className="text-[10px] font-bold px-1.5 py-0.5 rounded bg-emerald-50 text-emerald-700 border border-emerald-200">
+                {stateSummary.approvalRate}% Appr
+              </span>
+            </div>
           </div>
         </div>
       </div>
@@ -791,7 +769,7 @@ export const RajasthanMapChart: React.FC<RajasthanMapChartProps> = ({
                 </g>
               </svg>
 
-              {/* Floating Glassmorphic Light Tooltip */}
+              {/* Floating Glassmorphic Light Tooltip (100% English) */}
               {hoveredDistrict && (
                 <div
                   className="absolute pointer-events-none z-50 bg-white/95 backdrop-blur-md border border-gray-300 p-3.5 rounded-xl shadow-xl text-xs text-gray-800 max-w-xs transition-all duration-150"
@@ -806,7 +784,7 @@ export const RajasthanMapChart: React.FC<RajasthanMapChartProps> = ({
                       {hoveredDistrict}
                     </span>
                     <span className="text-[10px] bg-slate-100 px-2 py-0.5 rounded text-slate-700 font-mono border border-slate-200">
-                      District Data
+                      District Info
                     </span>
                   </div>
 
@@ -815,7 +793,7 @@ export const RajasthanMapChart: React.FC<RajasthanMapChartProps> = ({
                       <div className="flex justify-between items-center bg-slate-50 p-1.5 rounded border border-slate-200">
                         <span className="text-gray-600 text-[11px] flex items-center gap-1">
                           <Building2 className="w-3 h-3 text-teal-600" />
-                          Facilities (सुविधाएं):
+                          Facilities:
                         </span>
                         <span className="font-mono font-bold text-teal-700">
                           {districtStats[hoveredDistrict].facilities.size}
@@ -825,7 +803,7 @@ export const RajasthanMapChart: React.FC<RajasthanMapChartProps> = ({
                       <div className="flex justify-between items-center bg-slate-50 p-1.5 rounded border border-slate-200">
                         <span className="text-gray-600 text-[11px] flex items-center gap-1">
                           <Users className="w-3 h-3 text-blue-600" />
-                          Engineers (इंजीनियर):
+                          Engineers:
                         </span>
                         <span className="font-mono font-bold text-blue-700">
                           {districtStats[hoveredDistrict].engineers.size}
@@ -835,7 +813,7 @@ export const RajasthanMapChart: React.FC<RajasthanMapChartProps> = ({
                       <div className="flex justify-between items-center bg-slate-50 p-1.5 rounded border border-slate-200">
                         <span className="text-gray-600 text-[11px] flex items-center gap-1">
                           <DollarSign className="w-3 h-3 text-emerald-600" />
-                          Total Expense (खर्च):
+                          Total Expense:
                         </span>
                         <span className="font-mono font-bold text-emerald-600">
                           ₹{districtStats[hoveredDistrict].totalAmount.toLocaleString()}
@@ -845,7 +823,7 @@ export const RajasthanMapChart: React.FC<RajasthanMapChartProps> = ({
                       <div className="flex justify-between items-center text-[10px] text-gray-500 pt-1">
                         <span>Claims: {districtStats[hoveredDistrict].claimCount}</span>
                         <span>
-                          Approval:{" "}
+                          Approval Rate:{" "}
                           <strong className="text-amber-600">
                             {districtStats[hoveredDistrict].claimCount > 0
                               ? Math.round(
@@ -890,100 +868,120 @@ export const RajasthanMapChart: React.FC<RajasthanMapChartProps> = ({
           </div>
         </div>
 
-        {/* Right Side District Deep-Dive & Overview Panel */}
+        {/* Right Side District Deep-Dive & Leaderboard Panel */}
         <div className="lg:col-span-4 p-4 md:p-6 bg-slate-50/50 border-t lg:border-t-0 lg:border-l border-gray-200 flex flex-col justify-between">
           <div>
-            {selectedDistrict ? (
+            {activeDistrictDetails ? (
               <div className="space-y-4">
                 <div className="flex items-center justify-between border-b border-gray-200 pb-3">
                   <div>
                     <span className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">
-                      Selected District Overview
+                      {selectedDistrict ? "Selected District Metrics" : "Hovered District Insights"}
                     </span>
                     <h3 className="text-lg font-bold text-gray-800 m-0 flex items-center gap-2">
                       <MapPin className="w-4 h-4 text-blue-600" />
-                      {selectedDistrict}
+                      {activeDistrictDetails.name}
                     </h3>
                   </div>
-                  <button
-                    onClick={() => handleDistrictClick(selectedDistrict)}
-                    className="p-1.5 text-gray-400 hover:text-gray-700 bg-white border border-gray-200 rounded-lg text-xs"
-                    title="Close selection"
-                  >
-                    <X className="w-4 h-4" />
-                  </button>
+                  {selectedDistrict && (
+                    <button
+                      onClick={() => handleDistrictClick(selectedDistrict)}
+                      className="p-1.5 text-gray-400 hover:text-gray-700 bg-white border border-gray-200 rounded-lg text-xs"
+                      title="Clear selection"
+                    >
+                      <X className="w-4 h-4" />
+                    </button>
+                  )}
                 </div>
 
-                {activeDistrictDetails ? (
-                  <div className="space-y-4">
-                    {/* Stat Grid with Facilities, Engineers, Expense at once */}
-                    <div className="grid grid-cols-2 gap-2.5">
-                      <div className="bg-white p-3 rounded-xl border border-gray-200 shadow-2xs">
-                        <span className="text-[10px] font-bold text-gray-500 block uppercase flex items-center gap-1">
-                          <Building2 className="w-3 h-3 text-teal-600" />
-                          Facilities
-                        </span>
-                        <span className="text-base font-bold text-teal-700 font-mono">
-                          {activeDistrictDetails.facilitiesCount}
-                        </span>
-                      </div>
-                      <div className="bg-white p-3 rounded-xl border border-gray-200 shadow-2xs">
-                        <span className="text-[10px] font-bold text-gray-500 block uppercase flex items-center gap-1">
-                          <Users className="w-3 h-3 text-blue-600" />
-                          Engineers
-                        </span>
-                        <span className="text-base font-bold text-blue-700 font-mono">
-                          {activeDistrictDetails.engineersCount}
-                        </span>
-                      </div>
-                      <div className="bg-white p-3 rounded-xl border border-gray-200 shadow-2xs">
-                        <span className="text-[10px] font-bold text-gray-500 block uppercase flex items-center gap-1">
-                          <DollarSign className="w-3 h-3 text-emerald-600" />
-                          Total Expense
-                        </span>
-                        <span className="text-base font-bold text-emerald-600 font-mono">
-                          ₹{activeDistrictDetails.totalAmount.toLocaleString()}
-                        </span>
-                      </div>
-                      <div className="bg-white p-3 rounded-xl border border-gray-200 shadow-2xs">
-                        <span className="text-[10px] font-bold text-gray-500 block uppercase flex items-center gap-1">
-                          <ShieldCheck className="w-3 h-3 text-amber-600" />
-                          Approval %
-                        </span>
-                        <span className="text-base font-bold text-amber-600 font-mono">
-                          {activeDistrictDetails.approvalRate}%
-                        </span>
-                      </div>
+                <div className="space-y-4">
+                  {/* Enterprise Stat Cards (Facilities, Engineers, Expense at once) */}
+                  <div className="grid grid-cols-2 gap-2.5">
+                    <div className="bg-white p-3 rounded-xl border border-gray-200 shadow-2xs">
+                      <span className="text-[10px] font-bold text-gray-500 block uppercase flex items-center gap-1">
+                        <Building2 className="w-3 h-3 text-teal-600" />
+                        Facilities
+                      </span>
+                      <span className="text-base font-bold text-teal-700 font-mono">
+                        {activeDistrictDetails.facilitiesCount}
+                      </span>
                     </div>
 
-                    {/* Top Engineers in District */}
-                    <div className="bg-white p-3 rounded-xl border border-gray-200 shadow-2xs space-y-2">
-                      <span className="text-[11px] font-bold text-gray-700 flex items-center justify-between">
-                        <span>Top Engineers in {selectedDistrict}</span>
-                        <Users className="w-3.5 h-3.5 text-blue-600" />
+                    <div className="bg-white p-3 rounded-xl border border-gray-200 shadow-2xs">
+                      <span className="text-[10px] font-bold text-gray-500 block uppercase flex items-center gap-1">
+                        <Users className="w-3 h-3 text-blue-600" />
+                        Engineers
                       </span>
-                      {activeDistrictDetails.topEngineers.length > 0 ? (
-                        <div className="space-y-2 max-h-36 overflow-y-auto pr-1">
-                          {activeDistrictDetails.topEngineers.slice(0, 4).map((eng, idx) => (
-                            <div key={idx} className="flex justify-between items-center text-xs">
-                              <span className="text-gray-700 font-medium truncate max-w-[140px]">
-                                {eng.name}
-                              </span>
-                              <span className="font-mono font-bold text-emerald-600">
-                                ₹{eng.amount.toLocaleString()}
-                              </span>
-                            </div>
-                          ))}
-                        </div>
-                      ) : (
-                        <p className="text-xs text-gray-400 m-0">No active engineers for current filters</p>
-                      )}
+                      <span className="text-base font-bold text-blue-700 font-mono">
+                        {activeDistrictDetails.engineersCount}
+                      </span>
+                    </div>
+
+                    <div className="bg-white p-3 rounded-xl border border-gray-200 shadow-2xs col-span-2">
+                      <span className="text-[10px] font-bold text-gray-500 block uppercase flex items-center justify-between">
+                        <span className="flex items-center gap-1">
+                          <DollarSign className="w-3 h-3 text-emerald-600" />
+                          Total District Expense
+                        </span>
+                        <span className="font-mono text-amber-600 text-[10px]">
+                          {activeDistrictDetails.approvalRate}% Approved
+                        </span>
+                      </span>
+                      <span className="text-lg font-black text-emerald-600 font-mono block mt-0.5">
+                        ₹{activeDistrictDetails.totalAmount.toLocaleString()}
+                      </span>
                     </div>
                   </div>
-                ) : null}
+
+                  {/* Financial Status Breakdown */}
+                  <div className="bg-white p-3 rounded-xl border border-gray-200 shadow-2xs space-y-2">
+                    <span className="text-[11px] font-bold text-gray-700 flex items-center justify-between">
+                      <span>Expense Status Split</span>
+                      <PieChart className="w-3.5 h-3.5 text-gray-400" />
+                    </span>
+                    <div className="grid grid-cols-3 gap-2 text-center text-xs font-mono pt-1">
+                      <div className="bg-emerald-50/80 p-2 rounded-lg border border-emerald-100">
+                        <span className="text-[9px] text-emerald-700 block font-sans font-semibold">Approved</span>
+                        <span className="font-bold text-emerald-700 text-[11px]">₹{activeDistrictDetails.approvedAmount.toLocaleString()}</span>
+                      </div>
+                      <div className="bg-amber-50/80 p-2 rounded-lg border border-amber-100">
+                        <span className="text-[9px] text-amber-700 block font-sans font-semibold">Pending</span>
+                        <span className="font-bold text-amber-700 text-[11px]">₹{activeDistrictDetails.pendingAmount.toLocaleString()}</span>
+                      </div>
+                      <div className="bg-rose-50/80 p-2 rounded-lg border border-rose-100">
+                        <span className="text-[9px] text-rose-700 block font-sans font-semibold">Rejected</span>
+                        <span className="font-bold text-rose-700 text-[11px]">₹{activeDistrictDetails.rejectedAmount.toLocaleString()}</span>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Top Engineers in District */}
+                  <div className="bg-white p-3 rounded-xl border border-gray-200 shadow-2xs space-y-2">
+                    <span className="text-[11px] font-bold text-gray-700 flex items-center justify-between">
+                      <span>Top Engineers ({activeDistrictDetails.name})</span>
+                      <Users className="w-3.5 h-3.5 text-blue-600" />
+                    </span>
+                    {activeDistrictDetails.topEngineers.length > 0 ? (
+                      <div className="space-y-2 max-h-36 overflow-y-auto pr-1">
+                        {activeDistrictDetails.topEngineers.slice(0, 4).map((eng, idx) => (
+                          <div key={idx} className="flex justify-between items-center text-xs">
+                            <span className="text-gray-700 font-medium truncate max-w-[140px]">
+                              {eng.name}
+                            </span>
+                            <span className="font-mono font-bold text-emerald-600">
+                              ₹{eng.amount.toLocaleString()}
+                            </span>
+                          </div>
+                        ))}
+                      </div>
+                    ) : (
+                      <p className="text-xs text-gray-400 m-0">No active engineers for current filters</p>
+                    )}
+                  </div>
+                </div>
               </div>
             ) : (
-              /* Overview Leaderboard showing all 3 metrics simultaneously */
+              /* Overview Leaderboard showing all metrics simultaneously */
               <div className="space-y-4">
                 <div className="border-b border-gray-200 pb-3">
                   <span className="text-[10px] font-bold text-gray-400 uppercase tracking-wider block">
@@ -995,17 +993,17 @@ export const RajasthanMapChart: React.FC<RajasthanMapChartProps> = ({
                   </h3>
                 </div>
 
-                <div className="space-y-2">
+                <div className="space-y-2 max-h-[460px] overflow-y-auto pr-1">
                   {Object.entries(districtStats)
                     .map(([name, s]) => ({ 
                       name, 
                       amount: s.totalAmount, 
                       count: s.claimCount,
                       facilitiesCount: s.facilities.size,
-                      engineersCount: s.engineers.size
+                      engineersCount: s.engineers.size,
+                      approvalRate: s.claimCount > 0 ? Math.round((s.approvedCount / s.claimCount) * 100) : 0
                     }))
                     .sort((a, b) => b.amount - a.amount)
-                    .slice(0, 5)
                     .map((item, idx) => (
                       <div
                         key={idx}
@@ -1013,7 +1011,7 @@ export const RajasthanMapChart: React.FC<RajasthanMapChartProps> = ({
                         className="bg-white hover:bg-slate-50 p-2.5 rounded-xl border border-gray-200 shadow-2xs cursor-pointer transition flex items-center justify-between group"
                       >
                         <div className="flex items-center gap-2.5">
-                          <span className="w-5 h-5 rounded-full bg-slate-100 border border-slate-200 text-[10px] font-extrabold text-emerald-600 flex items-center justify-center font-mono">
+                          <span className="w-5 h-5 rounded-full bg-slate-100 border border-slate-200 text-[10px] font-extrabold text-emerald-600 flex items-center justify-center font-mono shrink-0">
                             #{idx + 1}
                           </span>
                           <div>
@@ -1027,11 +1025,16 @@ export const RajasthanMapChart: React.FC<RajasthanMapChartProps> = ({
                             </div>
                           </div>
                         </div>
-                        <div className="flex items-center gap-1">
-                          <span className="text-xs font-mono font-bold text-emerald-600">
-                            ₹{item.amount.toLocaleString()}
-                          </span>
-                          <ChevronRight className="w-3.5 h-3.5 text-gray-400 group-hover:text-gray-600 transition" />
+                        <div className="flex items-center gap-1 text-right">
+                          <div>
+                            <span className="text-xs font-mono font-bold text-emerald-600 block">
+                              ₹{item.amount.toLocaleString()}
+                            </span>
+                            <span className="text-[9px] font-mono text-gray-400 block">
+                              {item.count} claims
+                            </span>
+                          </div>
+                          <ChevronRight className="w-3.5 h-3.5 text-gray-400 group-hover:text-gray-600 transition ml-1" />
                         </div>
                       </div>
                     ))}
@@ -1049,36 +1052,6 @@ export const RajasthanMapChart: React.FC<RajasthanMapChartProps> = ({
             <span className="font-mono text-emerald-600 font-bold">33 Districts</span>
           </div>
         </div>
-      </div>
-
-      {/* District Analytics Master Table (Light Theme) */}
-      <div className="p-4 md:p-6 bg-slate-50 border-t border-gray-200 space-y-4">
-        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
-          <div className="flex items-center gap-2">
-            <TableIcon className="w-4 h-4 text-gray-700" />
-            <h3 className="text-xs font-bold text-gray-700 uppercase tracking-wider m-0">
-              District Analytics Table (सभी जिलों का संपूर्ण डेटा)
-            </h3>
-          </div>
-          <div className="w-full sm:w-64">
-            <Input
-              placeholder="Search table district..."
-              prefix={<Search className="w-3.5 h-3.5 text-gray-400 mr-1" />}
-              value={tableSearch}
-              onChange={(e) => setTableSearch(e.target.value)}
-              className="bg-white border-gray-300 text-xs text-gray-800 placeholder-gray-400 rounded-xl"
-            />
-          </div>
-        </div>
-
-        <Table
-          dataSource={districtTableData}
-          columns={tableColumns}
-          pagination={{ pageSize: 8, showSizeChanger: false }}
-          size="small"
-          className="border border-gray-200 rounded-xl overflow-hidden shadow-2xs"
-          rowClassName="bg-white hover:bg-slate-50 transition"
-        />
       </div>
     </Card>
   );
