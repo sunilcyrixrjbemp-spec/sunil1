@@ -223,7 +223,8 @@ export default function ApprovalPage() {
   const [isLoadingPdf, setIsLoadingPdf] = useState(false);
 
   useEffect(() => {
-    if (lightboxImage) {
+    const hasAnyModalOpen = !!successModal?.visible || (showDetailModal && !!selectedApproval) || (showBulkModal && !!bulkActionType) || showReturnModal || !!lightboxImage;
+    if (hasAnyModalOpen) {
       document.body.style.overflow = 'hidden';
     } else {
       document.body.style.overflow = '';
@@ -233,7 +234,7 @@ export default function ApprovalPage() {
       document.documentElement.style.pointerEvents = '';
       document.documentElement.style.touchAction = '';
     }
-  }, [lightboxImage]);
+  }, [successModal, showDetailModal, selectedApproval, showBulkModal, bulkActionType, showReturnModal, lightboxImage]);
 
   const [showModalScrollTop, setShowModalScrollTop] = useState(false);
 
@@ -1086,6 +1087,7 @@ export default function ApprovalPage() {
 
       <Modal
         open={!!successModal?.visible}
+        destroyOnClose={true}
         centered
         footer={null}
         closable={false}
@@ -2939,6 +2941,7 @@ export default function ApprovalPage() {
       {/* ================= BATCH ACTION CONFIRMATION MODAL ================= */}
       <Modal
         open={showBulkModal && !!bulkActionType}
+        destroyOnClose={true}
         onCancel={() => {
           setShowBulkModal(false);
           setBulkActionType(null);
@@ -3079,6 +3082,7 @@ export default function ApprovalPage() {
       {/* Return to Draft Modal */}
       <Modal
         open={showReturnModal}
+        destroyOnClose={true}
         onCancel={() => setShowReturnModal(false)}
         width={450}
         zIndex={2000}

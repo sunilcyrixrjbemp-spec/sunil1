@@ -713,6 +713,20 @@ export default function ExpensePage() {
     return months[new Date().getMonth()];
   });
   const [activeClaimsTab, setActiveClaimsTab] = useState<"sheets" | "legs">("sheets");
+
+  useEffect(() => {
+    const hasAnyModalOpen = showDetailsModal || showConfirmModal || !!submitStatus || showApprovalModal || validationModal.show || !!activeCameraTarget || !!activeActivityCameraTarget || !!lightboxImage;
+    if (hasAnyModalOpen) {
+      document.body.style.overflow = 'hidden';
+    } else {
+      document.body.style.overflow = '';
+      document.body.style.pointerEvents = '';
+      document.body.style.touchAction = '';
+      document.documentElement.style.overflow = '';
+      document.documentElement.style.pointerEvents = '';
+      document.documentElement.style.touchAction = '';
+    }
+  }, [showDetailsModal, showConfirmModal, submitStatus, showApprovalModal, validationModal.show, activeCameraTarget, activeActivityCameraTarget, lightboxImage]);
   const [claimsSortOrder, setClaimsSortOrder] = useState<"date_desc" | "date_asc" | "amount_desc" | "amount_asc">("date_desc");
 
   const hasExistingFile = (legNum: number, billType: string) => {
