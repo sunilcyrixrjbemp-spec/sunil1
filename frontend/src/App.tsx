@@ -116,16 +116,23 @@ function App() {
       let hasVisibleModal = false;
       for (let i = 0; i < candidates.length; i++) {
         const el = candidates[i];
-        if (el.querySelector('.ant-modal-wrap:not(.ant-modal-wrap-hidden)') && isVisible(el)) {
-          hasVisibleModal = true;
-          break;
-        }
         if (el.classList.contains('modal-lte-overlay') && isVisible(el)) {
           hasVisibleModal = true;
           break;
         }
+        const modalWrap = el.querySelector('.ant-modal-wrap');
+        if (modalWrap && !modalWrap.classList.contains('ant-modal-wrap-hidden') && isVisible(modalWrap)) {
+          hasVisibleModal = true;
+          break;
+        }
       }
-      document.body.style.overflow = hasVisibleModal ? 'hidden' : '';
+      if (hasVisibleModal) {
+        document.body.style.overflow = 'hidden';
+      } else {
+        document.body.style.overflow = '';
+        document.body.style.pointerEvents = '';
+        document.body.style.touchAction = '';
+      }
     };
 
     // Synchronous immediate check on mount

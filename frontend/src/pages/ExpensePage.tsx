@@ -5499,7 +5499,7 @@ export default function ExpensePage() {
       {/* ================= DETAILS MODAL ================= */}
       <Modal
         open={showDetailsModal}
-        onCancel={() => { setShowDetailsModal(false); setSelectedClaim(null); }}
+        onCancel={() => { setShowDetailsModal(false); setSelectedClaim(null); document.body.style.overflow = ''; }}
         className="app-redesigned-modal"
         wrapClassName="my-claims-modal-wrap"
         footer={
@@ -5531,7 +5531,7 @@ export default function ExpensePage() {
               )}
             </Space>
             <Button
-              onClick={() => { setShowDetailsModal(false); setSelectedClaim(null); }}
+              onClick={() => { setShowDetailsModal(false); setSelectedClaim(null); document.body.style.overflow = ''; }}
               className="font-bold text-xs"
             >
               Close
