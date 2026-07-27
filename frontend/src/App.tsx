@@ -91,35 +91,46 @@ function App() {
   // Prevent background body scrolling when any modal is open
   // AND auto-scroll all modal scrollable containers back to top when modal opens
   useEffect(() => {
-    // Track which modals we have already reset scroll for (to avoid re-triggering)
+    const isVisible = (el: Element): boolean => {
+      if (!(el instanceof HTMLElement)) return false;
+      const style = window.getComputedStyle(el);
+      if (style.display === 'none' || style.visibility === 'hidden' || style.opacity === '0') {
+        return false;
+      }
+      const rect = el.getBoundingClientRect();
+      return rect.width > 0 && rect.height > 0;
+    };
+
     const resetScrollForModal = (modal: Element) => {
-      // Reset the overlay itself (if it is the scroll container)
       modal.scrollTop = 0;
-      // Reset every inner scrollable area: flex-1 overflow-y-auto, overflow-y-auto, etc.
       const scrollables = modal.querySelectorAll('[class*="overflow-y-auto"], [class*="overflow-y-scroll"]');
       scrollables.forEach((el) => {
         (el as HTMLElement).scrollTop = 0;
       });
     };
 
-    let lockTimer: any = null;
-    const debouncedHandleScrollLock = () => {
-      if (lockTimer) clearTimeout(lockTimer);
-      lockTimer = setTimeout(() => {
-        const modals = document.querySelectorAll('.modal-lte-overlay, .ant-modal-wrap, [class*="fixed"][class*="inset-0"][class*="bg-black/"]');
-        if (modals.length > 0) {
-          document.body.style.overflow = 'hidden';
-        } else {
-          document.body.style.overflow = '';
+    const updateScrollLock = () => {
+      const candidates = document.querySelectorAll(
+        '.modal-lte-overlay, .ant-modal-wrap, .approval-review-modal-wrap, .my-claims-modal-wrap, [class*="fixed"][class*="inset-0"]'
+      );
+      let hasVisibleModal = false;
+      for (let i = 0; i < candidates.length; i++) {
+        if (isVisible(candidates[i])) {
+          hasVisibleModal = true;
+          break;
         }
-      }, 150);
+      }
+      document.body.style.overflow = hasVisibleModal ? 'hidden' : '';
     };
 
-    debouncedHandleScrollLock();
+    // Synchronous immediate check on mount
+    updateScrollLock();
 
     const observer = new MutationObserver((mutations) => {
-      debouncedHandleScrollLock();
-      // For every newly ADDED node, check if it is a modal root overlay
+      // Synchronous immediate check on any DOM / style change
+      updateScrollLock();
+
+      // Reset scroll position for newly added visible modal elements
       for (const mutation of mutations) {
         for (const node of Array.from(mutation.addedNodes)) {
           if (!(node instanceof Element)) continue;
@@ -132,8 +143,7 @@ function App() {
             node.classList.contains('my-claims-modal-wrap') ||
             (classNameStr.includes('fixed') && classNameStr.includes('inset-0'));
 
-          // FIX B: Only reset scroll when an actual modal root is initially mounted
-          if (isModalRoot) {
+          if (isModalRoot && isVisible(node)) {
             resetScrollForModal(node);
           }
         }
@@ -148,7 +158,6 @@ function App() {
     });
 
     return () => {
-      if (lockTimer) clearTimeout(lockTimer);
       observer.disconnect();
       document.body.style.overflow = '';
     };
