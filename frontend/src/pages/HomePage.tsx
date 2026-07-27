@@ -138,33 +138,33 @@ export default function HomePage() {
   const [myExpenses, setMyExpenses] = useState<any[]>(() => {
     const currentUser = JSON.parse(localStorage.getItem("user") || "null");
     if (!currentUser) return [];
-    const curMonth = new Date().toISOString().substring(0, 7);
+    const curMonth = getISTMonth();
     const cached = localStorage.getItem(`cache_my_expenses_${currentUser.user_id}_${curMonth}`) || localStorage.getItem(`cache_my_expenses_${currentUser.user_id}`);
     return cached ? JSON.parse(cached) : [];
   });
   const [teamExpenses, setTeamExpenses] = useState<any[]>(() => {
     const currentUser = JSON.parse(localStorage.getItem("user") || "null");
     if (!currentUser) return [];
-    const curMonth = new Date().toISOString().substring(0, 7);
+    const curMonth = getISTMonth();
     const cached = localStorage.getItem(`cache_team_expenses_${currentUser.user_id}_${curMonth}`) || localStorage.getItem(`cache_team_expenses_${currentUser.user_id}`);
     return cached ? JSON.parse(cached) : [];
   });
   const [loadingMyExpenses, setLoadingMyExpenses] = useState(() => {
     const currentUser = JSON.parse(localStorage.getItem("user") || "null");
     if (!currentUser) return false;
-    const curMonth = new Date().toISOString().substring(0, 7);
+    const curMonth = getISTMonth();
     return !localStorage.getItem(`cache_my_expenses_${currentUser.user_id}_${curMonth}`) && !localStorage.getItem(`cache_my_expenses_${currentUser.user_id}`);
   });
   const [loadingTeamExpenses, setLoadingTeamExpenses] = useState(() => {
     const currentUser = JSON.parse(localStorage.getItem("user") || "null");
     if (!currentUser) return false;
-    const curMonth = new Date().toISOString().substring(0, 7);
+    const curMonth = getISTMonth();
     return !localStorage.getItem(`cache_team_expenses_${currentUser.user_id}_${curMonth}`) && !localStorage.getItem(`cache_team_expenses_${currentUser.user_id}`);
   });
   const [allowanceStats, setAllowanceStats] = useState<any>(() => {
     const currentUser = JSON.parse(localStorage.getItem("user") || "null");
     if (!currentUser) return null;
-    const curMonth = new Date().toISOString().substring(0, 7);
+    const curMonth = getISTMonth();
     const cached = localStorage.getItem(`cache_allowance_stats_${currentUser.user_id}_${curMonth}`) || localStorage.getItem(`cache_allowance_stats_${currentUser.user_id}`);
     return cached ? JSON.parse(cached) : null;
   });

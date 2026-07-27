@@ -437,7 +437,7 @@ export default function ExpensePage() {
 
   // Init Data States
   const [user, setUser] = useState<any>(() => {
-    const monthStr = new Date().toISOString().slice(0, 7);
+    const monthStr = getISTMonth();
     const cached = localStorage.getItem(`cache_month_limits_${currentUserId}_${monthStr}`);
     if (cached) {
       const parsed = JSON.parse(cached).user || {};
@@ -457,7 +457,7 @@ export default function ExpensePage() {
     return {};
   });
   const [allowance, setAllowance] = useState<any>(() => {
-    const monthStr = new Date().toISOString().slice(0, 7);
+    const monthStr = getISTMonth();
     const cached = localStorage.getItem(`cache_month_limits_${currentUserId}_${monthStr}`);
     if (cached) {
       try {
@@ -468,7 +468,7 @@ export default function ExpensePage() {
     return {};
   });
   const [facilities, setFacilities] = useState<Record<string, string[]>>(() => {
-    const monthStr = new Date().toISOString().slice(0, 7);
+    const monthStr = getISTMonth();
     const cached = localStorage.getItem(`cache_month_limits_${currentUserId}_${monthStr}`);
     if (cached) {
       try {
@@ -479,7 +479,7 @@ export default function ExpensePage() {
     return {};
   });
   const [submittedDates, setSubmittedDates] = useState<string[]>(() => {
-    const monthStr = new Date().toISOString().slice(0, 7);
+    const monthStr = getISTMonth();
     const cached = localStorage.getItem(`cache_month_limits_${currentUserId}_${monthStr}`);
     if (cached) {
       try {
@@ -490,7 +490,7 @@ export default function ExpensePage() {
     return [];
   });
   const [nextExpId, setNextExpId] = useState(() => {
-    const monthStr = new Date().toISOString().slice(0, 7);
+    const monthStr = getISTMonth();
     const cached = localStorage.getItem(`cache_month_limits_${currentUserId}_${monthStr}`);
     if (cached) {
       try {
@@ -498,14 +498,15 @@ export default function ExpensePage() {
         if (parsed.next_exp_id) return parsed.next_exp_id;
       } catch (e) {}
     }
-    const mm = new Date().toISOString().slice(5, 7);
-    const yy = new Date().toISOString().slice(2, 4);
+    const istNow = getISTDate();
+    const mm = istNow.slice(5, 7);
+    const yy = istNow.slice(2, 4);
     return `RJ-${mm}/${yy}-PENDING`;
   });
 
   // Limits tracking
   const [approvedKm, setApprovedKm] = useState(() => {
-    const monthStr = new Date().toISOString().slice(0, 7);
+    const monthStr = getISTMonth();
     const cached = localStorage.getItem(`cache_month_limits_${currentUserId}_${monthStr}`);
     if (cached) {
       try {
@@ -516,7 +517,7 @@ export default function ExpensePage() {
     return 0;
   });
   const [approvedAuto, setApprovedAuto] = useState(() => {
-    const monthStr = new Date().toISOString().slice(0, 7);
+    const monthStr = getISTMonth();
     const cached = localStorage.getItem(`cache_month_limits_${currentUserId}_${monthStr}`);
     if (cached) {
       try {
@@ -527,7 +528,7 @@ export default function ExpensePage() {
     return 0;
   });
   const [existingKmReq, setExistingKmReq] = useState<any>(() => {
-    const monthStr = new Date().toISOString().slice(0, 7);
+    const monthStr = getISTMonth();
     const cached = localStorage.getItem(`cache_month_limits_${currentUserId}_${monthStr}`);
     if (cached) {
       try {
@@ -538,7 +539,7 @@ export default function ExpensePage() {
     return null;
   });
   const [existingAutoReq, setExistingAutoReq] = useState<any>(() => {
-    const monthStr = new Date().toISOString().slice(0, 7);
+    const monthStr = getISTMonth();
     const cached = localStorage.getItem(`cache_month_limits_${currentUserId}_${monthStr}`);
     if (cached) {
       try {
@@ -2664,7 +2665,7 @@ export default function ExpensePage() {
         setShowConfirmModal(false);
         
         // Reset form
-        const targetMonth = date ? date.slice(0, 7) : new Date().toISOString().slice(0, 7);
+        const targetMonth = date ? date.slice(0, 7) : getISTMonth();
         resetForm();
         
         // Clear limits cache to force refetch
@@ -2740,7 +2741,7 @@ export default function ExpensePage() {
 
   const getUniqueMonths = () => {
     const uniqueMap = new Map<string, string>();
-    const curMonth = date ? date.slice(0, 7) : new Date().toISOString().slice(0, 7);
+    const curMonth = date ? date.slice(0, 7) : getISTMonth();
     if (curMonth) uniqueMap.set(curMonth, curMonth);
 
     claims.forEach(c => {
@@ -2938,7 +2939,7 @@ export default function ExpensePage() {
     try {
       // Find the claim's month before deleting to refresh the correct month's limits!
       const targetClaim = claims.find((c: any) => c.id === claimId);
-      const targetMonth = targetClaim?.itinerary ? targetClaim.itinerary.slice(0, 7) : new Date().toISOString().slice(0, 7);
+      const targetMonth = targetClaim?.itinerary ? targetClaim.itinerary.slice(0, 7) : getISTMonth();
       
       await expenseService.deleteExpense(claimId);
       toast.success("Claim deleted successfully.");

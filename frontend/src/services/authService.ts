@@ -7,6 +7,7 @@ import {
   ProfileUpdateRequest,
   ChangePasswordRequest
 } from "../types/auth";
+import { getISTMonth } from "../utils/dateUtils";
 
 import { tokenPersistence } from "../utils/persistence";
 
@@ -20,7 +21,7 @@ export const authService = {
     if (bootstrap_data) {
       try {
         const user_id = user?.user_id || user?.userId || "";
-        const monthStr = new Date().toISOString().slice(0, 7);
+        const monthStr = getISTMonth();
         localStorage.setItem("cache_dropdowns", JSON.stringify(bootstrap_data.dropdowns || {}));
         localStorage.setItem(`cache_month_limits_${user_id}_${monthStr}`, JSON.stringify(bootstrap_data.expense_init || {}));
         localStorage.setItem(`cache_my_expenses_${user_id}`, JSON.stringify(bootstrap_data.my_expenses || []));
