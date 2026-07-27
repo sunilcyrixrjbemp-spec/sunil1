@@ -1604,7 +1604,7 @@ span.submitter-code-text {
     overflow-x: hidden !important;
   }
 
-  .ant-modal-wrap {
+  .ant-modal-wrap:not(.ant-modal-wrap-hidden) {
     display: flex !important;
     align-items: flex-end !important;
     justify-content: center !important;
