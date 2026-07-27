@@ -140,7 +140,6 @@ function App() {
         for (const node of Array.from(mutation.addedNodes)) {
           if (!(node instanceof Element)) continue;
           
-          const classNameStr = typeof node.className === 'string' ? node.className : '';
           const isModalRoot = 
             node.classList.contains('modal-lte-overlay') ||
             node.classList.contains('ant-modal-wrap') ||
