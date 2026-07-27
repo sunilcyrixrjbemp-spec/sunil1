@@ -214,13 +214,15 @@ export default function HomePage() {
       return;
     }
 
+    let frameId: number | null = null;
     const handleScroll = (e: Event) => {
-      const target = e.target as HTMLElement;
-      if (target.scrollTop > 150) {
-        setShowModalScrollTop(true);
-      } else {
-        setShowModalScrollTop(false);
-      }
+      if (frameId) return;
+      frameId = requestAnimationFrame(() => {
+        frameId = null;
+        const target = e.target as HTMLElement;
+        const shouldShow = target.scrollTop > 150;
+        setShowModalScrollTop(prev => prev === shouldShow ? prev : shouldShow);
+      });
     };
 
     const timer = setTimeout(() => {
@@ -232,6 +234,7 @@ export default function HomePage() {
 
     return () => {
       clearTimeout(timer);
+      if (frameId) cancelAnimationFrame(frameId);
       const body = document.querySelector(".my-claims-modal-wrap .ant-modal-body");
       if (body) {
         body.removeEventListener("scroll", handleScroll);
@@ -242,15 +245,20 @@ export default function HomePage() {
   const [showPageScrollTop, setShowPageScrollTop] = useState(false);
 
   useEffect(() => {
+    let frameId: number | null = null;
     const handlePageScroll = () => {
-      if (window.scrollY > 300) {
-        setShowPageScrollTop(true);
-      } else {
-        setShowPageScrollTop(false);
-      }
+      if (frameId) return;
+      frameId = requestAnimationFrame(() => {
+        frameId = null;
+        const shouldShow = window.scrollY > 300;
+        setShowPageScrollTop(prev => prev === shouldShow ? prev : shouldShow);
+      });
     };
     window.addEventListener("scroll", handlePageScroll, { passive: true });
-    return () => window.removeEventListener("scroll", handlePageScroll);
+    return () => {
+      if (frameId) cancelAnimationFrame(frameId);
+      window.removeEventListener("scroll", handlePageScroll);
+    };
   }, []);
 
   useEffect(() => {
@@ -1801,31 +1809,31 @@ export default function HomePage() {
         ) : (
           <div className="space-y-4 text-xs">
             {/* Summary Info Cards */}
-            <Row gutter={[8, 8]}>
+            <Row gutter={[10, 10]}>
               <Col xs={12} sm={6}>
-                <div className="p-2.5 bg-gray-50 border border-gray-200 rounded">
-                  <span className="text-[8px] text-gray-400 font-bold uppercase block">Submitted By</span>
-                  <span className="font-bold text-gray-850 block mt-0.5 text-xs">{claimDetails.submitter_name || user?.name}</span>
-                  <span className="text-[9px] text-gray-550 font-mono block">{claimDetails.submitter_code || user?.user_id}</span>
+                <div className="p-3 bg-slate-50/80 rounded-xl space-y-0.5">
+                  <span className="text-xs text-slate-500 font-bold uppercase block tracking-wider">Submitted By</span>
+                  <span className="font-extrabold text-slate-900 block text-xs">{claimDetails.submitter_name || user?.name}</span>
+                  <span className="text-xs text-slate-500 font-mono block font-semibold">{claimDetails.submitter_code || user?.user_id}</span>
                 </div>
               </Col>
               <Col xs={12} sm={6}>
-                <div className="p-2.5 bg-gray-50 border border-gray-200 rounded">
-                  <span className="text-[8px] text-gray-400 font-bold uppercase block">Travel Date</span>
-                  <span className="font-bold text-gray-850 block mt-0.5 text-xs">{claimDetails.date}</span>
-                  <span className="text-[9px] text-gray-550 block">{claimDetails.month} {claimDetails.year}</span>
+                <div className="p-3 bg-slate-50/80 rounded-xl space-y-0.5">
+                  <span className="text-xs text-slate-500 font-bold uppercase block tracking-wider">Travel Date</span>
+                  <span className="font-extrabold text-slate-900 block text-xs">{claimDetails.date}</span>
+                  <span className="text-xs text-slate-500 block font-semibold">{claimDetails.month} {claimDetails.year}</span>
                 </div>
               </Col>
               <Col xs={12} sm={6}>
-                <div className="p-2.5 bg-gray-50 border border-gray-200 rounded">
-                  <span className="text-[8px] text-gray-400 font-bold uppercase block">Submitted At</span>
-                  <span className="font-bold text-gray-850 block mt-0.5 text-xs">{formatDateTime(claimDetails.created_at)}</span>
+                <div className="p-3 bg-slate-50/80 rounded-xl space-y-0.5">
+                  <span className="text-xs text-slate-500 font-bold uppercase block tracking-wider">Submitted At</span>
+                  <span className="font-extrabold text-slate-900 block text-xs">{formatDateTime(claimDetails.created_at)}</span>
                 </div>
               </Col>
               <Col xs={12} sm={6}>
-                <div className="p-2.5 bg-gray-50 border border-gray-200 rounded">
-                  <span className="text-[8px] text-gray-400 font-bold uppercase block">Status</span>
-                  <span className={`inline-flex items-center px-2 py-0.5 rounded border text-[8px] font-bold uppercase tracking-wider mt-1 ${getStatusBadgeClass(claimDetails.status)}`}>
+                <div className="p-3 bg-slate-50/80 rounded-xl space-y-0.5">
+                  <span className="text-xs text-slate-500 font-bold uppercase block tracking-wider">Status</span>
+                  <span className={`inline-flex items-center px-2.5 py-1 rounded-full text-xs font-black uppercase tracking-wider mt-1 ${getStatusBadgeClass(claimDetails.status)}`}>
                     {getStatusLabel(claimDetails.status)}
                   </span>
                 </div>
