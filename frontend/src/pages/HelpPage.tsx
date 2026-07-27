@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from "react";
-import { formatToIST, formatCustomIST, getCurrentTimeUTC } from "../utils/timezone";
+import { formatToIST, getCurrentTimeUTC } from "../utils/timezone";
 import toast from "react-hot-toast";
 import { 
   Card, 
