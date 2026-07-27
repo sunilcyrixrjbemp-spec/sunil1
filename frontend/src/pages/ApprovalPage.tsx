@@ -222,6 +222,19 @@ export default function ApprovalPage() {
   const [imageLoadError, setImageLoadError] = useState(false);
   const [isLoadingPdf, setIsLoadingPdf] = useState(false);
 
+  useEffect(() => {
+    if (lightboxImage) {
+      document.body.style.overflow = 'hidden';
+    } else {
+      document.body.style.overflow = '';
+      document.body.style.pointerEvents = '';
+      document.body.style.touchAction = '';
+      document.documentElement.style.overflow = '';
+      document.documentElement.style.pointerEvents = '';
+      document.documentElement.style.touchAction = '';
+    }
+  }, [lightboxImage]);
+
   const [showModalScrollTop, setShowModalScrollTop] = useState(false);
 
   useEffect(() => {

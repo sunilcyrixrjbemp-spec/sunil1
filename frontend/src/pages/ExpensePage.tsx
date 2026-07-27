@@ -615,8 +615,16 @@ export default function ExpensePage() {
     if (!lightboxImage) {
       setDisplayImageUrl(null);
       setIsConvertingHeic(false);
+      document.body.style.overflow = '';
+      document.body.style.pointerEvents = '';
+      document.body.style.touchAction = '';
+      document.documentElement.style.overflow = '';
+      document.documentElement.style.pointerEvents = '';
+      document.documentElement.style.touchAction = '';
       return;
     }
+
+    document.body.style.overflow = 'hidden';
 
     const isPdfUrl = lightboxImage.toLowerCase().includes(".pdf") || 
                      lightboxImage.toLowerCase().includes("pdf") || 

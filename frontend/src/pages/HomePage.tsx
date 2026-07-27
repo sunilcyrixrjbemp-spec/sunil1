@@ -206,6 +206,19 @@ export default function HomePage() {
   const [displayImageUrl, setDisplayImageUrl] = useState<string | null>(null);
   const [isConvertingHeic, setIsConvertingHeic] = useState(false);
 
+  useEffect(() => {
+    if (lightboxImage) {
+      document.body.style.overflow = 'hidden';
+    } else {
+      document.body.style.overflow = '';
+      document.body.style.pointerEvents = '';
+      document.body.style.touchAction = '';
+      document.documentElement.style.overflow = '';
+      document.documentElement.style.pointerEvents = '';
+      document.documentElement.style.touchAction = '';
+    }
+  }, [lightboxImage]);
+
   const [showModalScrollTop, setShowModalScrollTop] = useState(false);
 
   useEffect(() => {
@@ -3044,9 +3057,18 @@ export default function HomePage() {
       {/* ================= RECEIPT IMAGE LIGHTBOX POPUP ================= */}
       <Modal
         open={!!lightboxImage}
+        destroyOnClose={true}
         zIndex={99999999}
         footer={null}
-        onCancel={() => setLightboxImage(null)}
+        onCancel={() => {
+          setLightboxImage(null);
+          document.body.style.overflow = '';
+          document.body.style.pointerEvents = '';
+          document.body.style.touchAction = '';
+          document.documentElement.style.overflow = '';
+          document.documentElement.style.pointerEvents = '';
+          document.documentElement.style.touchAction = '';
+        }}
         width={750}
         bodyStyle={{ padding: 16, textAlign: "center", background: "#111827" }}
         className="lightbox-modal"
