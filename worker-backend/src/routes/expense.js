@@ -194,7 +194,7 @@ export function computeBaseLocPolicy(baseReportingLocation, itineraries) {
   // Healthcare facility keywords matched at word boundaries to avoid matching substrings like "gandhi" (dh)
   const HEALTHCARE_FACILITY_REGEX = /\b(chc|phc|sdh|dh|hospital|hosp|college|collage|dispensary|subcenter|sub-center|sub center|ddw|warehouse|uphc|up-hc|up hc)\b/i;
 
-  const isOfficialNonBaseFacility = (locText) => {
+  const isOfficialNonBaseFacility = (locText, leg) => {
     if (!locText) return false;
     const clean = locText.trim().toLowerCase();
     const normalized = clean.replace(/[-_]/g, " ");
@@ -202,14 +202,31 @@ export function computeBaseLocPolicy(baseReportingLocation, itineraries) {
     // If it matches base location → it is base, NOT a non-base facility
     if (matchesBase(clean, baseLocations)) return false;
 
-    // Must match an official healthcare facility keyword at word boundaries
-    return HEALTHCARE_FACILITY_REGEX.test(clean) || HEALTHCARE_FACILITY_REGEX.test(normalized);
+    // 1. Must match an official healthcare facility keyword at word boundaries
+    if (HEALTHCARE_FACILITY_REGEX.test(clean) || HEALTHCARE_FACILITY_REGEX.test(normalized)) {
+      return true;
+    }
+
+    // 2. User selected Activity = "Other" and typed a non-base district/location OR bus/train/hotel ticket travel
+    if (leg) {
+      const act = (leg.activity || leg.activity_type || "").trim().toLowerCase();
+      const isOther = act.includes("other");
+      const mode = (leg.mode || "").trim().toLowerCase();
+      const isBusOrTrain = mode.includes("bus") || mode.includes("train");
+      const hasTicketOrFare = parseFloat(leg.train_bus_amount || leg.sub_amount || leg.hotel || "0") > 0;
+
+      if (isOther || isBusOrTrain || hasTicketOrFare) {
+        return true;
+      }
+    }
+
+    return false;
   };
 
   const visitedNonBase = itineraries.some(leg => {
     const f = leg.from || "";
     const t = leg.to || "";
-    return isOfficialNonBaseFacility(f) || isOfficialNonBaseFacility(t);
+    return isOfficialNonBaseFacility(f, leg) || isOfficialNonBaseFacility(t, leg);
   });
 
   if (visitedNonBase) return { isBaseLocOnly: false, isDaAllowed: true, baseLocations };

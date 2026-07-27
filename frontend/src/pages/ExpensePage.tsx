@@ -1768,7 +1768,7 @@ export default function ExpensePage() {
     // Healthcare facility keywords matched at word boundaries to avoid matching substrings like "gandhi" (dh)
     const HEALTHCARE_FACILITY_REGEX = /\b(chc|phc|sdh|dh|hospital|hosp|college|collage|dispensary|subcenter|sub-center|sub center|ddw|warehouse|uphc|up-hc|up hc)\b/i;
 
-    const isOfficialNonBaseFacility = (locText: string) => {
+    const isOfficialNonBaseFacility = (locText: string, leg?: ItineraryLeg) => {
       if (!locText) return false;
       const clean = locText.trim().toLowerCase();
       const normalized = clean.replace(/[-_]/g, " ");
@@ -1776,14 +1776,31 @@ export default function ExpensePage() {
       // If it matches base location → it is base, NOT a non-base facility
       if (matchesBase(clean, baseLocations)) return false;
 
-      // Must match an official healthcare facility keyword at word boundaries
-      return HEALTHCARE_FACILITY_REGEX.test(clean) || HEALTHCARE_FACILITY_REGEX.test(normalized);
+      // 1. Must match an official healthcare facility keyword at word boundaries
+      if (HEALTHCARE_FACILITY_REGEX.test(clean) || HEALTHCARE_FACILITY_REGEX.test(normalized)) {
+        return true;
+      }
+
+      // 2. User selected Activity = "Other" and typed a non-base district/location OR bus/train/hotel ticket travel
+      if (leg) {
+        const act = ((leg as any).activity || (leg as any).activity_type || "").trim().toLowerCase();
+        const isOther = act.includes("other");
+        const mode = ((leg as any).mode || "").trim().toLowerCase();
+        const isBusOrTrain = mode.includes("bus") || mode.includes("train");
+        const hasTicketOrFare = parseFloat((leg as any).train_bus_amount || leg.sub_amount || (leg as any).hotel || "0") > 0;
+
+        if (isOther || isBusOrTrain || hasTicketOrFare) {
+          return true;
+        }
+      }
+
+      return false;
     };
 
     const visitedNonBaseOfficialFacility = legs.some(leg => {
       const fromLoc = leg.from || "";
       const toLoc   = leg.to   || "";
-      return isOfficialNonBaseFacility(fromLoc) || isOfficialNonBaseFacility(toLoc);
+      return isOfficialNonBaseFacility(fromLoc, leg) || isOfficialNonBaseFacility(toLoc, leg);
     });
 
     return !visitedNonBaseOfficialFacility;
