@@ -88,90 +88,15 @@ function App() {
     fetch("https://fieldops-secondary-api.sunilbishnoi.workers.dev/api/health").catch(() => {});
   }, []);
 
-  // Prevent background body scrolling when any modal is open
-  // AND auto-scroll all modal scrollable containers back to top when modal opens
+  // Global cleanup handler to ensure body styles are clean on unmount
   useEffect(() => {
-    const isVisible = (el: Element): boolean => {
-      if (!(el instanceof HTMLElement)) return false;
-      const style = window.getComputedStyle(el);
-      if (style.display === 'none' || style.visibility === 'hidden' || style.opacity === '0') {
-        return false;
-      }
-      const rect = el.getBoundingClientRect();
-      return rect.width > 0 && rect.height > 0;
-    };
-
-    const resetScrollForModal = (modal: Element) => {
-      modal.scrollTop = 0;
-      const scrollables = modal.querySelectorAll('[class*="overflow-y-auto"], [class*="overflow-y-scroll"]');
-      scrollables.forEach((el) => {
-        (el as HTMLElement).scrollTop = 0;
-      });
-    };
-
-    const updateScrollLock = () => {
-      const candidates = document.querySelectorAll(
-        '.ant-modal-root, .modal-lte-overlay'
-      );
-      let hasVisibleModal = false;
-      for (let i = 0; i < candidates.length; i++) {
-        const el = candidates[i];
-        if (el.classList.contains('modal-lte-overlay') && isVisible(el)) {
-          hasVisibleModal = true;
-          break;
-        }
-        const modalWrap = el.querySelector('.ant-modal-wrap');
-        if (modalWrap && !modalWrap.classList.contains('ant-modal-wrap-hidden') && isVisible(modalWrap)) {
-          hasVisibleModal = true;
-          break;
-        }
-      }
-      if (hasVisibleModal) {
-        document.body.style.overflow = 'hidden';
-      } else {
-        document.body.style.overflow = '';
-        document.body.style.pointerEvents = '';
-        document.body.style.touchAction = '';
-        document.documentElement.style.overflow = '';
-        document.documentElement.style.pointerEvents = '';
-        document.documentElement.style.touchAction = '';
-      }
-    };
-
-    // Synchronous immediate check on mount
-    updateScrollLock();
-
-    const observer = new MutationObserver((mutations) => {
-      // Synchronous immediate check on any DOM / style change
-      updateScrollLock();
-
-      // Reset scroll position for newly added visible modal elements
-      for (const mutation of mutations) {
-        for (const node of Array.from(mutation.addedNodes)) {
-          if (!(node instanceof Element)) continue;
-          
-          const isModalRoot = 
-            node.classList.contains('modal-lte-overlay') ||
-            node.classList.contains('ant-modal-wrap') ||
-            node.classList.contains('ant-modal-root');
-
-          if (isModalRoot && isVisible(node)) {
-            resetScrollForModal(node);
-          }
-        }
-      }
-    });
-
-    observer.observe(document.body, {
-      childList: true,
-      subtree: true,
-      attributes: true,
-      attributeFilter: ['class', 'style']
-    });
-
     return () => {
-      observer.disconnect();
       document.body.style.overflow = '';
+      document.body.style.pointerEvents = '';
+      document.body.style.touchAction = '';
+      document.documentElement.style.overflow = '';
+      document.documentElement.style.pointerEvents = '';
+      document.documentElement.style.touchAction = '';
     };
   }, []);
 
