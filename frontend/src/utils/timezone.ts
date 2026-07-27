@@ -23,12 +23,33 @@ function parseDate(input: string | number | Date | null | undefined): Date | nul
   }
 
   let str = String(input).trim();
-  
-  // If format is YYYY-MM-DD HH:mm:ss without T or Z, replace space with T and append Z if needed
+  if (!str) return null;
+
+  // Handle pre-formatted DD/MM/YYYY or DD-MM-YYYY strings (e.g. "28/07/2026 21:00:22")
+  const ddmmyyyyMatch = str.match(/^(\d{1,2})[\/\-](\d{1,2})[\/\-](\d{4})(?:\s+(\d{1,2}):(\d{1,2})(?::(\d{1,2}))?)?/);
+  if (ddmmyyyyMatch) {
+    const day = parseInt(ddmmyyyyMatch[1], 10);
+    const month = parseInt(ddmmyyyyMatch[2], 10) - 1;
+    const year = parseInt(ddmmyyyyMatch[3], 10);
+    const hour = parseInt(ddmmyyyyMatch[4] || '0', 10);
+    const minute = parseInt(ddmmyyyyMatch[5] || '0', 10);
+    const second = parseInt(ddmmyyyyMatch[6] || '0', 10);
+
+    const utcMs = Date.UTC(year, month, day, hour, minute, second) - (5.5 * 60 * 60 * 1000);
+    const d = new Date(utcMs);
+    if (!isNaN(d.getTime())) return d;
+  }
+
+  // Handle YYYY-MM-DD HH:mm:ss without offset (DB UTC format)
   if (/^\d{4}-\d{2}-\d{2}\s+\d{2}:\d{2}:\d{2}/.test(str)) {
-    str = str.replace(' ', 'T') + 'Z';
-  } else if (/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}$/.test(str)) {
-    str = str + 'Z';
+    str = str.replace(' ', 'T');
+    if (!str.endsWith('Z') && !str.includes('+') && !str.includes('-')) {
+      str = str + 'Z';
+    }
+  } else if (/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}/.test(str)) {
+    if (!str.endsWith('Z') && !str.includes('+') && !str.includes('-')) {
+      str = str + 'Z';
+    }
   }
 
   const parsed = new Date(str);

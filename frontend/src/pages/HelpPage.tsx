@@ -1358,7 +1358,7 @@ export default function HelpPage() {
                           </div>
 
                           <span className="text-[10px] text-slate-400 font-bold font-mono shrink-0">
-                            📅 {new Date(tkt.created_at || tkt.createdAt || Date.now()).toLocaleDateString("en-GB", { day: '2-digit', month: 'short', year: 'numeric' })}
+                            📅 {formatToIST(tkt.created_at || tkt.createdAt)}
                           </span>
                         </div>
                       </div>
