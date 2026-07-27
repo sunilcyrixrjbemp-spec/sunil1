@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from "react";
+import { formatToIST } from "../utils/timezone";
 import { createPortal } from "react-dom";
 import { useNavigate, useLocation } from "react-router-dom";
 import toast from "react-hot-toast";
@@ -2915,23 +2916,7 @@ export default function ExpensePage() {
 
   const formatDateTime = (dateVal: any) => {
     if (!dateVal) return "—";
-    try {
-      const rawStr = String(dateVal).trim();
-      const parsedDate = rawStr.includes("Z") || rawStr.includes("+") ? new Date(rawStr) : new Date(rawStr.replace(" ", "T") + "+05:30");
-      const d = isNaN(parsedDate.getTime()) ? new Date(dateVal) : parsedDate;
-      if (isNaN(d.getTime())) return String(dateVal);
-      return new Intl.DateTimeFormat('en-IN', {
-        timeZone: 'Asia/Kolkata',
-        day: '2-digit',
-        month: 'short',
-        year: 'numeric',
-        hour: '2-digit',
-        minute: '2-digit',
-        hour12: true
-      }).format(d);
-    } catch (e) {
-      return String(dateVal);
-    }
+    return formatToIST(dateVal);
   };
 
   const handleDeleteClaim = async (claimId: number) => {

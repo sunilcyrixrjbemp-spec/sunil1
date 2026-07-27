@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { formatToIST } from "../utils/timezone";
 import { createPortal } from "react-dom";
 import toast from "react-hot-toast";
 import { 
@@ -81,19 +82,7 @@ const getAttachmentsArray = (attachments: any): string[] => {
 
 const formatDateTime = (dateVal: any) => {
   if (!dateVal) return "—";
-  try {
-    const d = new Date(dateVal);
-    if (isNaN(d.getTime())) return "Just now";
-    const day = String(d.getDate()).padStart(2, "0");
-    const months = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
-    const month = months[d.getMonth()];
-    const hours = String(d.getHours()).padStart(2, "0");
-    const minutes = String(d.getMinutes()).padStart(2, "0");
-    const seconds = String(d.getSeconds()).padStart(2, "0");
-    return `${day}-${month}-${d.getFullYear()} ${hours}:${minutes}:${seconds}`;
-  } catch (_) {
-    return "—";
-  }
+  return formatToIST(dateVal);
 };
 
 const safeSetLocalStorage = (key: string, value: string) => {

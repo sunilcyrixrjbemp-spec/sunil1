@@ -23,6 +23,9 @@ export const expenseService = {
   },
 
   submitItineraryExpense: async (formData: FormData): Promise<any> => {
+    if (!formData.has("client_timestamp")) {
+      formData.append("client_timestamp", new Date().toISOString());
+    }
     const response = await api.post("/expense/", formData, {
       headers: {
         "Content-Type": "multipart/form-data"
