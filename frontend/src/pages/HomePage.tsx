@@ -7,6 +7,7 @@ import toast from "react-hot-toast";
 import { prefetchManager } from "../utils/prefetchManager";
 import Loader from "../components/common/Loader";
 import { checkIsHeic, convertHeicToJpegUrl } from "../utils/heic";
+import { getISTMonth } from "../utils/dateUtils";
 import { hasFullAccess } from "../utils/constants";
 import { ResponsivePie } from "@nivo/pie";
 import ExpenseCalendar from "../components/common/ExpenseCalendar";
@@ -325,7 +326,7 @@ export default function HomePage() {
   const [personalPage, setPersonalPage] = useState<number>(1);
 
   const [selectMonth, setSelectMonth] = useState<string>(() => {
-    return new Date().toISOString().substring(0, 7); // Default current month YYYY-MM
+    return getISTMonth(); // Default current month YYYY-MM in IST
   });
   const [homeStatusFilter, setHomeStatusFilter] = useState<"all" | "pending" | "approved" | "rejected">("all");
 

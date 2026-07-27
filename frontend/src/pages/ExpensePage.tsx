@@ -8,6 +8,7 @@ import { uploadService } from "../services/uploadService";
 import { checkIsHeic, convertHeicToJpegUrl } from "../utils/heic";
 import { prefetchManager } from "../utils/prefetchManager";
 import { checkIsPdf } from "../utils/pdf";
+import { getISTDate, getISTMonth } from "../utils/dateUtils";
 import { 
   Trash2, Plus, Calendar, 
   AlertTriangle, Check, Loader2,
@@ -199,8 +200,8 @@ export default function ExpensePage() {
     }
   }, []);
 
-  // Date State
-  const [date, setDate] = useState(() => new Date().toLocaleDateString('sv'));
+  // Date State (Strictly IST Asia/Kolkata timezone)
+  const [date, setDate] = useState(() => getISTDate());
   const [showPolicyPanel, setShowPolicyPanel] = useState<boolean>(false);
 
   // Init default helpers
@@ -280,7 +281,7 @@ export default function ExpensePage() {
   };
 
   const [itineraries, setItineraries] = useState<ItineraryLeg[]>(() => {
-    const monthStr = new Date().toISOString().slice(0, 7);
+    const monthStr = getISTMonth();
     const cached = localStorage.getItem(`cache_month_limits_${currentUserId}_${monthStr}`);
     let homeDistrict = "Jodhpur";
     if (parsedUser && Object.keys(parsedUser).length > 0) {
