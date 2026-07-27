@@ -111,11 +111,16 @@ function App() {
 
     const updateScrollLock = () => {
       const candidates = document.querySelectorAll(
-        '.modal-lte-overlay, .ant-modal-wrap, .approval-review-modal-wrap, .my-claims-modal-wrap, [class*="fixed"][class*="inset-0"]'
+        '.ant-modal-root, .modal-lte-overlay'
       );
       let hasVisibleModal = false;
       for (let i = 0; i < candidates.length; i++) {
-        if (isVisible(candidates[i])) {
+        const el = candidates[i];
+        if (el.querySelector('.ant-modal-wrap:not(.ant-modal-wrap-hidden)') && isVisible(el)) {
+          hasVisibleModal = true;
+          break;
+        }
+        if (el.classList.contains('modal-lte-overlay') && isVisible(el)) {
           hasVisibleModal = true;
           break;
         }
@@ -139,9 +144,7 @@ function App() {
           const isModalRoot = 
             node.classList.contains('modal-lte-overlay') ||
             node.classList.contains('ant-modal-wrap') ||
-            node.classList.contains('approval-review-modal-wrap') ||
-            node.classList.contains('my-claims-modal-wrap') ||
-            (classNameStr.includes('fixed') && classNameStr.includes('inset-0'));
+            node.classList.contains('ant-modal-root');
 
           if (isModalRoot && isVisible(node)) {
             resetScrollForModal(node);
