@@ -2327,44 +2327,43 @@ export default function HomePage() {
 
                             {/* Calls card list */}
                             {selectedActs.includes("Calls") && callsList.length > 0 && (
-                              <div className="space-y-3.5 w-full">
-                                <div className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-full bg-indigo-100 text-indigo-900 text-xs font-black uppercase tracking-wider border border-indigo-300">
-                                  <span className="w-2.5 h-2.5 rounded-full bg-indigo-600 animate-pulse"></span>
+                              <div className="space-y-2 w-full">
+                                <div className="text-[11px] font-black text-slate-700 uppercase tracking-wider text-left flex items-center gap-1.5">
+                                  <span className="w-2 h-2 rounded-full bg-indigo-600 animate-pulse"></span>
                                   Support Calls Logs ({callsList.length})
                                 </div>
                                 {callsList.map((c: any, cIdx: number) => (
-                                  <div key={cIdx} className="bg-indigo-50/80 border-2 border-indigo-200 rounded-2xl p-4 space-y-3.5 text-xs text-left w-full shadow-xs">
-                                    <div className="flex justify-between items-start pb-2 border-b border-indigo-200/80">
+                                  <div key={cIdx} className="bg-slate-50 border border-slate-200 rounded-lg p-2.5 space-y-2 text-xs text-left w-full">
+                                    <div className="flex justify-between items-start pb-1 border-b border-slate-200">
                                       <div>
-                                        <span className="font-black text-slate-900 text-base block mb-0.5">{c.asset_details?.equipment_name || "—"}</span>
-                                        <span className="text-xs text-slate-600 font-bold">{c.asset_details?.hospital_name || "—"}</span>
+                                        <span className="font-bold text-slate-900 text-xs block leading-tight">{c.asset_details?.equipment_name || "—"}</span>
+                                        <span className="text-[10px] text-slate-500 font-medium block">{c.asset_details?.hospital_name || "—"}</span>
                                       </div>
-                                      <span className="px-3 py-1 rounded-full font-black text-xs uppercase bg-indigo-600 text-white shadow-2xs">
+                                      <span className="px-2 py-0.5 rounded font-bold text-[10px] uppercase bg-indigo-600 text-white shrink-0 ml-2">
                                         {c.status || "Attend"}
                                       </span>
                                     </div>
-                                    <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5">
-                                      <div className="bg-white border border-indigo-200/80 rounded-xl p-3 shadow-2xs">
-                                        <span className="text-xs text-slate-500 font-extrabold uppercase block mb-1">District</span>
-                                        <span className="text-sm font-black text-slate-900 block">{c.asset_details?.district_name || "—"}</span>
+                                    <div className="grid grid-cols-2 sm:grid-cols-4 gap-1.5">
+                                      <div className="bg-white border border-slate-200 rounded p-1.5">
+                                        <span className="text-[9px] text-slate-400 font-bold uppercase block">District</span>
+                                        <span className="text-[11px] font-bold text-slate-900 block truncate">{c.asset_details?.district_name || "—"}</span>
                                       </div>
-                                      <div className="bg-white border border-indigo-200/80 rounded-xl p-3 shadow-2xs">
-                                        <span className="text-xs text-slate-500 font-extrabold uppercase block mb-1">Model</span>
-                                        <span className="text-sm font-black text-slate-900 block">{c.asset_details?.model_name || "—"}</span>
+                                      <div className="bg-white border border-slate-200 rounded p-1.5">
+                                        <span className="text-[9px] text-slate-400 font-bold uppercase block">Model</span>
+                                        <span className="text-[11px] font-bold text-slate-900 block truncate">{c.asset_details?.model_name || "—"}</span>
                                       </div>
-                                      <div className="bg-white border border-indigo-200/80 rounded-xl p-3 shadow-2xs">
-                                        <span className="text-xs text-slate-500 font-extrabold uppercase block mb-1">Barcode</span>
-                                        <span className="text-sm font-black text-indigo-700 font-mono block">{c.barcode || "—"}</span>
+                                      <div className="bg-white border border-slate-200 rounded p-1.5">
+                                        <span className="text-[9px] text-slate-400 font-bold uppercase block">Barcode</span>
+                                        <span className="text-[11px] font-bold text-indigo-700 font-mono block truncate">{c.barcode || "—"}</span>
                                       </div>
-                                      <div className="bg-white border border-indigo-200/80 rounded-xl p-3 shadow-2xs">
-                                        <span className="text-xs text-slate-500 font-extrabold uppercase block mb-1">Status</span>
-                                        <span className="text-sm font-black text-slate-900 block">{c.asset_details?.inventory_status || "Active"}</span>
+                                      <div className="bg-white border border-slate-200 rounded p-1.5">
+                                        <span className="text-[9px] text-slate-400 font-bold uppercase block">Status</span>
+                                        <span className="text-[11px] font-bold text-slate-900 block truncate">{c.asset_details?.inventory_status || "Active"}</span>
                                       </div>
                                     </div>
                                     {c.photo_url && (
-                                      <div className="pt-1">
-                                        <span className="text-slate-600 text-xs uppercase font-extrabold block mb-1.5">Attachment Verification Photo</span>
-                                        <div className="relative rounded-xl overflow-hidden bg-slate-900 border-2 border-slate-700 min-h-[220px] max-h-[360px] flex items-center justify-center p-2">
+                                      <div className="pt-0.5">
+                                        <div className="relative rounded-lg overflow-hidden bg-slate-900 border border-slate-700 h-28 flex items-center justify-center p-1">
                                           <img
                                             src={`${API_BASE}${c.photo_url}`}
                                             alt="Call verification"
@@ -2374,7 +2373,7 @@ export default function HomePage() {
                                           <button
                                             type="button"
                                             onClick={() => setLightboxImage(`${API_BASE}${c.photo_url}`)}
-                                            className="absolute bottom-2 right-2 bg-slate-900/80 text-white font-extrabold text-xs px-3 py-1 rounded-lg cursor-pointer border border-white/20 backdrop-blur-md"
+                                            className="absolute bottom-1 right-1 bg-slate-900/80 text-white font-bold text-[9px] px-2 py-0.5 rounded cursor-pointer border border-white/20"
                                           >
                                             Full View
                                           </button>
@@ -2389,40 +2388,42 @@ export default function HomePage() {
                             {/* PMS card list */}
                             {selectedActs.includes("PMS") && pmsList.length > 0 && (
                               <div className="space-y-2 w-full">
-                                <div className="text-xs font-extrabold text-slate-700 uppercase tracking-wider text-left">PMS Service Logs ({pmsList.length})</div>
+                                <div className="text-[11px] font-black text-slate-700 uppercase tracking-wider text-left flex items-center gap-1.5">
+                                  <span className="w-2 h-2 rounded-full bg-emerald-600 animate-pulse"></span>
+                                  PMS Service Logs ({pmsList.length})
+                                </div>
                                 {pmsList.map((p: any, pIdx: number) => (
-                                  <div key={pIdx} className="bg-slate-50 border border-slate-200 rounded-xl p-3 space-y-2 text-xs text-left w-full">
-                                    <div className="flex justify-between items-start pb-1.5 border-b border-slate-200/80">
+                                  <div key={pIdx} className="bg-slate-50 border border-slate-200 rounded-lg p-2.5 space-y-2 text-xs text-left w-full">
+                                    <div className="flex justify-between items-start pb-1 border-b border-slate-200">
                                       <div>
-                                        <span className="font-extrabold text-slate-900 text-sm block">{p.asset_details?.equipment_name || "—"}</span>
-                                        <span className="text-xs text-slate-500 font-medium">{p.asset_details?.hospital_name || "—"}</span>
+                                        <span className="font-bold text-slate-900 text-xs block leading-tight">{p.asset_details?.equipment_name || "—"}</span>
+                                        <span className="text-[10px] text-slate-500 font-medium block">{p.asset_details?.hospital_name || "—"}</span>
                                       </div>
-                                      <span className="px-2.5 py-0.5 rounded-full font-bold text-xs uppercase bg-emerald-600 text-white">
+                                      <span className="px-2 py-0.5 rounded font-bold text-[10px] uppercase bg-emerald-600 text-white shrink-0 ml-2">
                                         {p.frequency || "3 month"}
                                       </span>
                                     </div>
-                                    <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
-                                      <div className="bg-white border border-slate-200 rounded-lg p-2">
-                                        <span className="text-[11px] text-slate-400 font-bold uppercase block">District</span>
-                                        <span className="text-xs sm:text-sm font-bold text-slate-900 block">{p.asset_details?.district_name || "—"}</span>
+                                    <div className="grid grid-cols-2 sm:grid-cols-4 gap-1.5">
+                                      <div className="bg-white border border-slate-200 rounded p-1.5">
+                                        <span className="text-[9px] text-slate-400 font-bold uppercase block">District</span>
+                                        <span className="text-[11px] font-bold text-slate-900 block truncate">{p.asset_details?.district_name || "—"}</span>
                                       </div>
-                                      <div className="bg-white border border-slate-200 rounded-lg p-2">
-                                        <span className="text-[11px] text-slate-400 font-bold uppercase block">Model</span>
-                                        <span className="text-xs sm:text-sm font-bold text-slate-900 block">{p.asset_details?.model_name || "—"}</span>
+                                      <div className="bg-white border border-slate-200 rounded p-1.5">
+                                        <span className="text-[9px] text-slate-400 font-bold uppercase block">Model</span>
+                                        <span className="text-[11px] font-bold text-slate-900 block truncate">{p.asset_details?.model_name || "—"}</span>
                                       </div>
-                                      <div className="bg-white border border-slate-200 rounded-lg p-2">
-                                        <span className="text-[11px] text-slate-400 font-bold uppercase block">Barcode</span>
-                                        <span className="text-xs sm:text-sm font-bold text-slate-900 font-mono block">{p.barcode || "—"}</span>
+                                      <div className="bg-white border border-slate-200 rounded p-1.5">
+                                        <span className="text-[9px] text-slate-400 font-bold uppercase block">Barcode</span>
+                                        <span className="text-[11px] font-bold text-slate-900 font-mono block truncate">{p.barcode || "—"}</span>
                                       </div>
-                                      <div className="bg-white border border-slate-200 rounded-lg p-2">
-                                        <span className="text-[11px] text-slate-400 font-bold uppercase block">Status</span>
-                                        <span className="text-xs sm:text-sm font-bold text-slate-900 block">{p.asset_details?.inventory_status || "Active"}</span>
+                                      <div className="bg-white border border-slate-200 rounded p-1.5">
+                                        <span className="text-[9px] text-slate-400 font-bold uppercase block">Status</span>
+                                        <span className="text-[11px] font-bold text-slate-900 block truncate">{p.asset_details?.inventory_status || "Active"}</span>
                                       </div>
                                     </div>
                                     {p.photo_url && (
-                                      <div className="pt-1">
-                                        <span className="text-slate-600 text-xs uppercase font-extrabold block mb-1.5">Attachment Verification Photo</span>
-                                        <div className="relative rounded-xl overflow-hidden bg-slate-900 border-2 border-slate-700 min-h-[220px] max-h-[360px] flex items-center justify-center p-2">
+                                      <div className="pt-0.5">
+                                        <div className="relative rounded-lg overflow-hidden bg-slate-900 border border-slate-700 h-28 flex items-center justify-center p-1">
                                           <img
                                             src={p.photo_url ? `${API_BASE}${p.photo_url}` : undefined}
                                             alt="PMS verification"
@@ -2432,7 +2433,7 @@ export default function HomePage() {
                                           <button
                                             type="button"
                                             onClick={() => setLightboxImage(`${API_BASE}${p.photo_url}`)}
-                                            className="absolute bottom-2 right-2 bg-slate-900/80 text-white font-extrabold text-xs px-3 py-1 rounded-lg cursor-pointer border border-white/20 backdrop-blur-md"
+                                            className="absolute bottom-1 right-1 bg-slate-900/80 text-white font-bold text-[9px] px-2 py-0.5 rounded cursor-pointer border border-white/20"
                                           >
                                             Full View
                                           </button>
