@@ -2358,8 +2358,12 @@ export default function HomePage() {
                                         <span className="text-[11px] font-bold text-indigo-700 font-mono block truncate">{c.barcode || "—"}</span>
                                       </div>
                                       <div className="bg-white border border-slate-200 rounded p-1.5">
-                                        <span className="text-[9px] text-slate-400 font-bold uppercase block">Status</span>
-                                        <span className="text-[11px] font-bold text-slate-900 block truncate">{c.asset_details?.inventory_status || "Active"}</span>
+                                        <span className="text-[9px] text-slate-400 font-bold uppercase block">Call Type</span>
+                                        <span className={`text-[11px] font-black block truncate ${
+                                          (c.type || c.call_type || "").toLowerCase().includes("online") ? "text-purple-700" : "text-blue-700"
+                                        }`}>
+                                          {c.type || c.call_type || (c.is_online ? "Online Call" : "Support Call")}
+                                        </span>
                                       </div>
                                     </div>
                                     {c.photo_url && (

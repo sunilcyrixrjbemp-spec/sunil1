@@ -2402,11 +2402,17 @@ export default function ApprovalPage() {
                                                 <td className="py-1 px-2 text-gray-700">{c.asset_details?.model_name || "—"}</td>
                                                 <td className="py-1 px-2 font-mono font-bold text-gray-700">{c.barcode}</td>
                                                 <td className="py-1 px-2">
-                                                  <span className="px-1 py-0.2 rounded font-extrabold text-[7px] uppercase bg-green-50 text-green-700 border border-green-200">
+                                                  <span className={`px-1.5 py-0.5 rounded font-black text-[8px] uppercase border ${
+                                                    (c.type || c.call_type || "").toLowerCase().includes("online") ? "bg-purple-50 text-purple-700 border-purple-200" : "bg-blue-50 text-blue-700 border-blue-200"
+                                                  }`}>
+                                                    {c.type || c.call_type || (c.is_online ? "Online Call" : "Support Call")}
+                                                  </span>
+                                                </td>
+                                                <td className="py-1 px-2">
+                                                  <span className="px-1 py-0.2 rounded font-extrabold text-[7px] uppercase bg-emerald-50 text-emerald-700 border border-emerald-200">
                                                     {c.asset_details?.inventory_status || "Active"}
                                                   </span>
                                                 </td>
-                                                <td className="py-1 px-2 text-gray-650">{c.type || "Support Call"}</td>
                                                 <td className="py-1 px-2">
                                                   <span className="px-1 py-0.2 rounded font-extrabold text-[7px] uppercase bg-blue-50 text-blue-700 border border-blue-100">
                                                     {c.status || "Attend"}

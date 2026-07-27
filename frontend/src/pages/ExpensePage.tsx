@@ -6158,8 +6158,12 @@ export default function ExpensePage() {
                                               <span className="font-mono font-bold text-blue-700">{c.barcode || "—"}</span>
                                             </div>
                                             <div>
-                                              <span className="text-slate-400 text-xs block uppercase">Status</span>
-                                              <span className="font-bold text-slate-900">{c.asset_details?.inventory_status || "Active"}</span>
+                                              <span className="text-slate-400 text-xs block uppercase">Call Type</span>
+                                              <span className={`font-black uppercase ${
+                                                (c.type || c.call_type || "").toLowerCase().includes("online") ? "text-purple-700" : "text-blue-700"
+                                              }`}>
+                                                {c.type || c.call_type || (c.is_online ? "Online Call" : "Support Call")}
+                                              </span>
                                             </div>
                                           </div>
                                           {c.photo_url && (
