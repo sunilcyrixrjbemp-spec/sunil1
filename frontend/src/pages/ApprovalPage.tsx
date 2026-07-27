@@ -244,13 +244,15 @@ export default function ApprovalPage() {
       return;
     }
 
+    let frameId: number | null = null;
     const handleScroll = (e: Event) => {
-      const target = e.target as HTMLElement;
-      if (target.scrollTop > 150) {
-        setShowModalScrollTop(true);
-      } else {
-        setShowModalScrollTop(false);
-      }
+      if (frameId) return;
+      frameId = requestAnimationFrame(() => {
+        frameId = null;
+        const target = e.target as HTMLElement;
+        const shouldShow = target ? target.scrollTop > 150 : false;
+        setShowModalScrollTop(prev => (prev === shouldShow ? prev : shouldShow));
+      });
     };
 
     const timer = setTimeout(() => {
@@ -262,6 +264,7 @@ export default function ApprovalPage() {
 
     return () => {
       clearTimeout(timer);
+      if (frameId) cancelAnimationFrame(frameId);
       const body = document.querySelector(".approval-review-modal-wrap .ant-modal-body");
       if (body) {
         body.removeEventListener("scroll", handleScroll);
@@ -272,15 +275,20 @@ export default function ApprovalPage() {
   const [showPageScrollTop, setShowPageScrollTop] = useState(false);
 
   useEffect(() => {
+    let frameId: number | null = null;
     const handlePageScroll = () => {
-      if (window.scrollY > 300) {
-        setShowPageScrollTop(true);
-      } else {
-        setShowPageScrollTop(false);
-      }
+      if (frameId) return;
+      frameId = requestAnimationFrame(() => {
+        frameId = null;
+        const shouldShow = window.scrollY > 300;
+        setShowPageScrollTop(prev => (prev === shouldShow ? prev : shouldShow));
+      });
     };
     window.addEventListener("scroll", handlePageScroll, { passive: true });
-    return () => window.removeEventListener("scroll", handlePageScroll);
+    return () => {
+      if (frameId) cancelAnimationFrame(frameId);
+      window.removeEventListener("scroll", handlePageScroll);
+    };
   }, []);
 
   useEffect(() => {
