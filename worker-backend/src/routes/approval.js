@@ -12,9 +12,18 @@ function jsonResponse(data, status = 200) {
 function parseClientTimestamp(raw) {
   if (!raw) return new Date().toISOString();
   let str = String(raw).trim();
-  if (str.includes(" ") && !str.includes("T")) {
-    str = str.replace(" ", "T");
+  
+  if (str.endsWith("Z") || str.includes("+") || /T\d{2}:\d{2}:\d{2}.*-/.test(str)) {
+    const d = new Date(str);
+    if (!isNaN(d.getTime())) return d.toISOString();
   }
+
+  if (str.includes(" ") && !str.includes("T")) {
+    str = str.replace(" ", "T") + "+05:30";
+    const d = new Date(str);
+    if (!isNaN(d.getTime())) return d.toISOString();
+  }
+
   const d = new Date(str);
   if (!isNaN(d.getTime())) {
     return d.toISOString();
