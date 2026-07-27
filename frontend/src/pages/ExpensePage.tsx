@@ -5551,7 +5551,7 @@ export default function ExpensePage() {
       >
         <div className="space-y-4 py-2 max-h-[75vh] overflow-y-auto pr-1">
               {detailsLoading || !selectedClaim ? (
-                <div className="flex justify-center p-12 text-gray-400 font-bold">Loading...</div>
+                <Loader message="Loading claim details..." />
               ) : (
                 <>
                   {/* Summary Info */}
