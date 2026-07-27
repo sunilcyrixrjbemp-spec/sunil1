@@ -399,6 +399,60 @@ export default function AnalysisPage() {
     return list;
   }, [viewMode, myExpenses, teamExpenses, selectedMonth, selectedYear, selectedDistrict, selectedEngineer, selectedCoordinator, selectedStatus, startDate, endDate, selectedZone]);
 
+  // Expenses filtered by all criteria EXCEPT single district filter (so map can calculate all districts)
+  const mapExpenses = useMemo(() => {
+    const rawSource = viewMode === "team" && isReviewer ? teamExpenses : myExpenses;
+    const source = rawSource.filter(e => e && e.category !== "Limit Request" && e.request_type !== "limit");
+    
+    let list = [];
+    if (startDate || endDate) {
+      list = source.filter(e => {
+        const rawDate = e.date || e.itinerary || "";
+        const cleanDateStr = String(rawDate).trim();
+        if (!cleanDateStr) return false;
+        
+        if (startDate && cleanDateStr < startDate) return false;
+        if (endDate && cleanDateStr > endDate) return false;
+        return true;
+      });
+    } else {
+      list = filterByMonth(source);
+    }
+
+    if (selectedStatus !== "all") {
+      list = list.filter(e => {
+        const s = (e.status || "Pending").toLowerCase();
+        if (selectedStatus === "approved") return s === "approved";
+        if (selectedStatus === "rejected") return s === "rejected";
+        if (selectedStatus === "pending") return s.startsWith("submitted") || s === "pending" || s === "waiting";
+        return s === selectedStatus;
+      });
+    }
+
+    if (viewMode === "team") {
+      if (selectedZone !== "all") {
+        list = list.filter(e => {
+          const zone = e.zone || "";
+          return cleanZone(zone) === cleanZone(selectedZone);
+        });
+      }
+      if (selectedEngineer !== "all") {
+        list = list.filter(e => {
+          const name = e.submitter_name || "Self";
+          return name.toLowerCase() === selectedEngineer.toLowerCase();
+        });
+      }
+      if (selectedCoordinator !== "all") {
+        list = list.filter(e => {
+          const coord = e.coordinator_name || e.coordinator || e.submitter_coordinator || e.facility_coordinator || "";
+          return coord.toLowerCase() === selectedCoordinator.toLowerCase();
+        });
+      }
+    }
+
+    return list;
+  }, [viewMode, myExpenses, teamExpenses, selectedMonth, selectedYear, selectedEngineer, selectedCoordinator, selectedStatus, startDate, endDate, selectedZone, isReviewer]);
+
   // Date range limits based on selected month/year
   const monthStr = String(selectedMonth + 1).padStart(2, "0");
   const lastDay = new Date(selectedYear, selectedMonth + 1, 0).getDate();
@@ -1801,23 +1855,9 @@ export default function AnalysisPage() {
         <Card className="text-center p-8 border border-gray-200 rounded-xl shadow-xs">
           <InfoCircleOutlined style={{ fontSize: 32, color: "#bfbfbf", marginBottom: 12 }} />
           <p style={{ margin: 0, fontWeight: "bold", fontSize: 13, color: "#595959" }}>No expense data found for {months[selectedMonth]} {selectedYear}</p>
+          <p style={{ margin: "4px 0 0 0", fontSize: 11, color: "#8c8c8c" }}>Try selecting a different month or year from the filters panel above</p>
         </Card>
       )}
-
-      {/* Rajasthan GeoJSON District Analytics Interactive Map Chart */}
-      <div className="my-6">
-        <RajasthanMapChart
-          expenses={activeExpenses}
-          selectedDistrictFilter={selectedDistrict === "all" ? null : selectedDistrict}
-          onSelectDistrict={(dist) => {
-            if (!dist) {
-              setSelectedDistrict("all");
-            } else {
-              setSelectedDistrict(dist);
-            }
-          }}
-        />
-      </div>
 
       {count > 0 && (
         <Row gutter={[16, 16]}>
@@ -2994,6 +3034,22 @@ export default function AnalysisPage() {
           </div>
         </div>
       </Modal>
+
+      {/* Rajasthan GeoJSON District Analytics Interactive Map Chart (Placed at the very bottom) */}
+      <div className="mt-8 mb-6">
+        <RajasthanMapChart
+          expenses={mapExpenses}
+          selectedDistrictFilter={selectedDistrict === "all" ? null : selectedDistrict}
+          onSelectDistrict={(dist) => {
+            if (!dist) {
+              setSelectedDistrict("all");
+            } else {
+              setSelectedDistrict(dist);
+            }
+          }}
+        />
+      </div>
+
       {/* Extra spacer at the bottom to prevent layout elements from being cut off by the navigation bar */}
       <div className="h-32 md:h-8" />
       <style>{`
