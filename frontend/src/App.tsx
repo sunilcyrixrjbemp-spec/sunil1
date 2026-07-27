@@ -132,6 +132,9 @@ function App() {
         document.body.style.overflow = '';
         document.body.style.pointerEvents = '';
         document.body.style.touchAction = '';
+        document.documentElement.style.overflow = '';
+        document.documentElement.style.pointerEvents = '';
+        document.documentElement.style.touchAction = '';
       }
     };
 

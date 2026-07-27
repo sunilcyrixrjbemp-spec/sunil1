@@ -5541,7 +5541,17 @@ export default function ExpensePage() {
       {/* ================= DETAILS MODAL ================= */}
       <Modal
         open={showDetailsModal}
-        onCancel={() => { setShowDetailsModal(false); setSelectedClaim(null); document.body.style.overflow = ''; }}
+        destroyOnClose={true}
+        onCancel={() => {
+          setShowDetailsModal(false);
+          setSelectedClaim(null);
+          document.body.style.overflow = '';
+          document.body.style.pointerEvents = '';
+          document.body.style.touchAction = '';
+          document.documentElement.style.overflow = '';
+          document.documentElement.style.pointerEvents = '';
+          document.documentElement.style.touchAction = '';
+        }}
         className="app-redesigned-modal"
         wrapClassName="my-claims-modal-wrap"
         footer={

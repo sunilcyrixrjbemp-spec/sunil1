@@ -1598,10 +1598,27 @@ span.submitter-code-text {
 }
 
 /* ================= MOBILE BOTTOM-SHEET MODAL SYSTEM (VAUL / SHADCN DIALOG AESTHETIC) ================= */
+.ant-modal-root-hidden,
+.ant-modal-wrap-hidden,
+.ant-modal-mask-hidden {
+  display: none !important;
+  pointer-events: none !important;
+  visibility: hidden !important;
+  z-index: -9999 !important;
+  opacity: 0 !important;
+  touch-action: auto !important;
+}
+
 @media (max-width: 767px) {
   .ant-modal-root {
     width: 100vw !important;
     overflow-x: hidden !important;
+  }
+
+  .ant-modal-root:has(.ant-modal-wrap-hidden) {
+    display: none !important;
+    pointer-events: none !important;
+    z-index: -9999 !important;
   }
 
   .ant-modal-wrap:not(.ant-modal-wrap-hidden) {
