@@ -366,7 +366,7 @@ export async function handleSaveUser(request, env, params, query, adminUser) {
     manager, zonal_manager, coordinator, mobile_number, mail_id, role, user_status
   } = body;
 
-  const timestamp = new Date().toISOString();
+  const timestamp = body.created_at || body.timestamp || new Date().toISOString();
 
   if (id) {
     // UPDATE existing user

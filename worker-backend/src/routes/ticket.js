@@ -165,7 +165,7 @@ export async function handleCreateTicket(request, env, params, query, user) {
   const count = countResult?.cnt || 0;
   const nextNum = Math.max(maxId, count) + 1;
   const ticketCode = `CYR-RJ-${String(nextNum).padStart(7, "0")}`;
-  const timestamp = new Date().toISOString();
+  const timestamp = body.created_at || body.timestamp || new Date().toISOString();
 
   await db.insert(supportTickets).values({
     ticketCode,

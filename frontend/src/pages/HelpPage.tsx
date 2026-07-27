@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef } from "react";
+import { formatToIST, formatCustomIST, getCurrentTimeUTC } from "../utils/timezone";
 import toast from "react-hot-toast";
 import { 
   Card, 
@@ -363,7 +364,8 @@ export default function HelpPage() {
         description: description.trim(),
         assigned_to_name: concernType === "Profile" ? "Admin System" : assignedToName,
         expense_id: concernType === "Expense" && selectedExpenseId ? Number(selectedExpenseId) : null,
-        expense_code: concernType === "Expense" && selectedExp ? selectedExp.expense_code : null
+        expense_code: concernType === "Expense" && selectedExp ? selectedExp.expense_code : null,
+        created_at: getCurrentTimeUTC()
       };
 
       const newTkt = await ticketService.createTicket(payload);
@@ -740,10 +742,7 @@ export default function HelpPage() {
           <div className="bg-slate-50 border border-slate-200 p-2.5 sharp-card">
             <span className="text-[9px] font-black uppercase text-slate-400 block tracking-wider">Date Raised</span>
             <span className="text-xs font-bold text-slate-800 block mt-0.5">
-              {new Date(selectedTicket.created_at || selectedTicket.createdAt || Date.now()).toLocaleDateString("en-GB", { day: '2-digit', month: 'short', year: 'numeric' })}
-            </span>
-            <span className="text-[10px] text-slate-400 font-mono block">
-              {new Date(selectedTicket.created_at || selectedTicket.createdAt || Date.now()).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+              {formatToIST(selectedTicket.created_at || selectedTicket.createdAt)}
             </span>
           </div>
 

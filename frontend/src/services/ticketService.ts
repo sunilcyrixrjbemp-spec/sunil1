@@ -7,6 +7,7 @@ export interface TicketCreatePayload {
   priority: string;  // Low, Medium, High, Critical
   description: string;
   assigned_to_name: string;  // Select reporting manager or coordinator name
+  created_at?: string;
 }
 
 export const ticketService = {

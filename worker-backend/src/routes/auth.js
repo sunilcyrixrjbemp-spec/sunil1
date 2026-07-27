@@ -10,8 +10,8 @@ import { eq, and, or, sql, desc, inArray } from "drizzle-orm";
 /**
  * Audit log login attempts to database
  */
-async function logLogin(env, userCode, ipAddress, userAgent, status) {
-  const timestamp = new Date().toISOString();
+async function logLogin(env, userCode, ipAddress, userAgent, status, clientTimestamp = null) {
+  const timestamp = clientTimestamp || new Date().toISOString();
   try {
     const db = getDrizzleDb(env);
     await db.insert(loginLogs).values({
