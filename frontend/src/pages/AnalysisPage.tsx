@@ -7,6 +7,7 @@ import { expenseService } from "../services/expenseService";
 import { authService } from "../services/authService";
 import { adminService } from "../services/adminService";
 import Loader from "../components/common/Loader";
+import RajasthanMapChart from "../components/common/RajasthanMapChart";
 import {
   Card,
   Row,
@@ -1800,9 +1801,23 @@ export default function AnalysisPage() {
         <Card className="text-center p-8 border border-gray-200 rounded-xl shadow-xs">
           <InfoCircleOutlined style={{ fontSize: 32, color: "#bfbfbf", marginBottom: 12 }} />
           <p style={{ margin: 0, fontWeight: "bold", fontSize: 13, color: "#595959" }}>No expense data found for {months[selectedMonth]} {selectedYear}</p>
-          <p style={{ margin: "4px 0 0 0", fontSize: 11, color: "#8c8c8c" }}>Try selecting a different month or year from the filters panel above</p>
         </Card>
       )}
+
+      {/* Rajasthan GeoJSON District Analytics Interactive Map Chart */}
+      <div className="my-6">
+        <RajasthanMapChart
+          expenses={activeExpenses}
+          selectedDistrictFilter={selectedDistrict === "all" ? null : selectedDistrict}
+          onSelectDistrict={(dist) => {
+            if (!dist) {
+              setSelectedDistrict("all");
+            } else {
+              setSelectedDistrict(dist);
+            }
+          }}
+        />
+      </div>
 
       {count > 0 && (
         <Row gutter={[16, 16]}>
