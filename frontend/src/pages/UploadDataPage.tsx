@@ -138,11 +138,11 @@ export default function UploadDataPage() {
       
       {/* Header section */}
       <div>
-        <h2 className="text-xl font-black text-gray-800 uppercase tracking-wide flex items-center gap-2">
-          <Database className="w-5 h-5 text-blue-600" />
+        <h2 className="text-xl font-black text-slate-800 uppercase tracking-wide flex items-center gap-2">
+          <Database className="w-5 h-5 text-primary-600" />
           Bulk Data Upload Center
         </h2>
-        <p className="text-gray-500 text-xs mt-0.5">
+        <p className="text-slate-500 text-xs mt-0.5">
           Upload monthly targets, update hospital facilities master records, or import penalty rule grids.
         </p>
       </div>
@@ -150,16 +150,16 @@ export default function UploadDataPage() {
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         
         {/* Left Form column */}
-        <div className="lg:col-span-1 bg-white border border-gray-200 rounded shadow-sm p-5 space-y-4">
-          <h3 className="text-xs font-bold uppercase tracking-wider text-gray-400">Configure Import</h3>
+        <div className="lg:col-span-1 bg-white border border-slate-200 rounded-xl shadow-2xs p-5 space-y-4">
+          <h3 className="text-xs font-bold uppercase tracking-wider text-slate-400">Configure Import</h3>
           
           <form onSubmit={handleUploadSubmit} className="space-y-4 text-xs font-semibold">
             <div className="space-y-1">
-              <label className="block text-[9px] uppercase tracking-wider text-gray-500 font-bold mb-1">Target Data Category *</label>
+              <label className="block text-[9px] uppercase tracking-wider text-slate-500 font-bold mb-1">Target Data Category *</label>
               <select
                 value={dataType}
                 onChange={(e) => setDataType(e.target.value)}
-                className="w-full bg-white border border-gray-300 rounded px-3 py-2 text-xs text-gray-800 focus:outline-none focus:border-blue-500 outline-none font-bold"
+                className="w-full bg-white border border-slate-200 rounded-lg px-3 py-2 text-xs text-slate-800 focus:outline-none focus:border-primary-500 outline-none font-bold"
               >
                 <option value="facilities">Hospital Facilities Database</option>
                 <option value="assets">Asset Inventory Database</option>
@@ -175,12 +175,12 @@ export default function UploadDataPage() {
               onDragLeave={handleDrag}
               onDrop={handleDrop}
               onClick={triggerFileInput}
-              className={`border-2 border-dashed rounded-lg p-6 text-center cursor-pointer transition-all flex flex-col items-center justify-center gap-2 ${
+              className={`border-2 border-dashed rounded-xl p-6 text-center cursor-pointer transition-all flex flex-col items-center justify-center gap-2 ${
                 isDragActive 
-                  ? "border-blue-500 bg-blue-50/50" 
+                  ? "border-primary-500 bg-primary-50/50" 
                   : selectedFile 
-                  ? "border-green-500 bg-green-50/20" 
-                  : "border-gray-300 hover:bg-gray-50"
+                  ? "border-emerald-500 bg-emerald-50/20" 
+                  : "border-slate-200 hover:bg-slate-50"
               }`}
             >
               <input 
@@ -193,17 +193,17 @@ export default function UploadDataPage() {
               
               {selectedFile ? (
                 <>
-                  <FileSpreadsheet className="w-10 h-10 text-green-600 animate-bounce-slow" />
-                  <p className="text-xs font-bold text-gray-800 break-all">{selectedFile.name}</p>
-                  <p className="text-[10px] text-gray-550">File size: {(selectedFile.size / 1024).toFixed(1)} KB</p>
-                  <span className="text-[8px] bg-green-100 text-green-700 px-2 py-0.5 rounded uppercase font-black tracking-wider">Ready for import</span>
+                  <FileSpreadsheet className="w-10 h-10 text-emerald-600 animate-bounce-slow" />
+                  <p className="text-xs font-bold text-slate-800 break-all">{selectedFile.name}</p>
+                  <p className="text-[10px] text-slate-500">File size: {(selectedFile.size / 1024).toFixed(1)} KB</p>
+                  <span className="text-[8px] bg-emerald-100 text-emerald-700 px-2 py-0.5 rounded uppercase font-black tracking-wider">Ready for import</span>
                 </>
               ) : (
                 <>
-                  <UploadCloud className="w-10 h-10 text-gray-400" />
-                  <p className="text-xs font-bold text-gray-700">Drag & drop spreadsheet here</p>
-                  <p className="text-[10px] text-gray-450">or click to browse local files</p>
-                  <span className="text-[8px] bg-gray-150 text-gray-600 px-2 py-0.5 rounded uppercase font-bold tracking-wider">Supports CSV, XLSX, XLS</span>
+                  <UploadCloud className="w-10 h-10 text-slate-400" />
+                  <p className="text-xs font-bold text-slate-700">Drag & drop spreadsheet here</p>
+                  <p className="text-[10px] text-slate-400">or click to browse local files</p>
+                  <span className="text-[8px] bg-slate-100 text-slate-600 px-2 py-0.5 rounded uppercase font-bold tracking-wider">Supports CSV, XLSX, XLS</span>
                 </>
               )}
             </div>
@@ -211,7 +211,7 @@ export default function UploadDataPage() {
             <button
               type="submit"
               disabled={uploading || !selectedFile}
-              className="w-full h-9 bg-blue-600 hover:bg-blue-700 disabled:bg-gray-200 disabled:text-gray-400 text-white rounded font-extrabold text-xs flex items-center justify-center shadow-sm border-0 transition-colors cursor-pointer uppercase tracking-wider gap-1.5"
+              className="w-full h-9 bg-primary-600 hover:bg-primary-700 disabled:bg-slate-200 disabled:text-slate-400 text-white rounded-lg font-extrabold text-xs flex items-center justify-center shadow-2xs border-0 transition-colors cursor-pointer uppercase tracking-wider gap-1.5"
             >
               <Database className="w-3.5 h-3.5" />
               {uploading ? "Analyzing Spreadsheet..." : "Commit Upload"}
@@ -220,10 +220,10 @@ export default function UploadDataPage() {
         </div>
 
         {/* Right Logs History table */}
-        <div className="lg:col-span-2 bg-white border border-gray-200 rounded shadow-sm p-5 space-y-4">
-          <div className="flex justify-between items-center border-b border-gray-150 pb-2">
-            <h3 className="text-xs font-bold uppercase tracking-wider text-gray-400">Import Log History</h3>
-            <span className="text-[9px] font-bold text-blue-600 uppercase">📊 Real-Time audits</span>
+        <div className="lg:col-span-2 bg-white border border-slate-200 rounded-xl shadow-2xs p-5 space-y-4">
+          <div className="flex justify-between items-center border-b border-slate-150 pb-2">
+            <h3 className="text-xs font-bold uppercase tracking-wider text-slate-400">Import Log History</h3>
+            <span className="text-[9px] font-bold text-primary-600 uppercase">📊 Real-Time audits</span>
           </div>
 
           <div className="overflow-x-auto">

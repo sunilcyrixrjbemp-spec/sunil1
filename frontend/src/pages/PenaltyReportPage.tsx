@@ -121,41 +121,41 @@ export default function PenaltyReportPage() {
 
       {/* KPI statistics summary cards */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-        <div className="bg-white border border-gray-200 border-t-4 border-t-red-600 rounded shadow-sm p-4 flex items-center justify-between">
+        <div className="bg-white border border-slate-200 border-t-4 border-t-rose-600 rounded-xl shadow-2xs p-4 flex items-center justify-between">
           <div className="space-y-1">
-            <span className="text-[10px] font-bold text-gray-400 uppercase tracking-wider block">Net Penalty Assessed</span>
-            <span className="text-xl font-extrabold text-red-600 block">₹{totalAssessedAmt.toLocaleString()}</span>
+            <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">Net Penalty Assessed</span>
+            <span className="text-xl font-extrabold text-rose-600 block">₹{totalAssessedAmt.toLocaleString()}</span>
           </div>
-          <div className="p-3 bg-red-50 rounded text-red-600">
+          <div className="p-3 bg-rose-50 rounded-lg text-rose-600">
             <AlertTriangle className="w-5 h-5" />
           </div>
         </div>
 
-        <div className="bg-white border border-gray-200 border-t-4 border-t-green-600 rounded shadow-sm p-4 flex items-center justify-between">
+        <div className="bg-white border border-slate-200 border-t-4 border-t-emerald-600 rounded-xl shadow-2xs p-4 flex items-center justify-between">
           <div className="space-y-1">
-            <span className="text-[10px] font-bold text-gray-400 uppercase tracking-wider block">Waived amount</span>
-            <span className="text-xl font-extrabold text-green-700 block">₹{waivedAmt.toLocaleString()}</span>
+            <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">Waived amount</span>
+            <span className="text-xl font-extrabold text-emerald-700 block">₹{waivedAmt.toLocaleString()}</span>
           </div>
-          <div className="p-3 bg-green-50 rounded text-green-600">
+          <div className="p-3 bg-emerald-50 rounded-lg text-emerald-600">
             <CheckCircle className="w-5 h-5" />
           </div>
         </div>
 
-        <div className="bg-white border border-gray-200 border-t-4 border-t-blue-500 rounded shadow-sm p-4 flex items-center justify-between">
+        <div className="bg-white border border-slate-200 border-t-4 border-t-primary-600 rounded-xl shadow-2xs p-4 flex items-center justify-between">
           <div className="space-y-1">
-            <span className="text-[10px] font-bold text-gray-400 uppercase tracking-wider block">Settled / Deducted</span>
-            <span className="text-xl font-extrabold text-gray-800 block">{deductedCount} / {filteredRecords.length} Charges</span>
+            <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">Settled / Deducted</span>
+            <span className="text-xl font-extrabold text-slate-800 block">{deductedCount} / {filteredRecords.length} Charges</span>
           </div>
-          <div className="p-3 bg-blue-50 rounded text-blue-600">
+          <div className="p-3 bg-primary-50 rounded-lg text-primary-600">
             <Clock className="w-5 h-5" />
           </div>
         </div>
       </div>
 
       {/* Filters Area */}
-      <div className="bg-white border border-gray-200 rounded shadow-sm p-4 flex flex-col md:flex-row md:items-center justify-between gap-4">
+      <div className="bg-white border border-slate-200 rounded-xl shadow-2xs p-4 flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div className="relative flex-1 max-w-md">
-          <span className="absolute inset-y-0 left-0 pl-3 flex items-center text-gray-450 pointer-events-none">
+          <span className="absolute inset-y-0 left-0 pl-3 flex items-center text-slate-450 pointer-events-none">
             <Search className="w-4 h-4" />
           </span>
           <input
@@ -163,28 +163,28 @@ export default function PenaltyReportPage() {
             placeholder="Search FSE Name, employee code, or ticket..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            className="w-full bg-white border border-gray-300 rounded pl-9 pr-3 py-2 text-xs text-gray-800 placeholder-gray-400 focus:outline-none focus:border-blue-500 outline-none"
+            className="w-full bg-white border border-slate-200 rounded-lg pl-9 pr-3 py-2 text-xs text-slate-800 placeholder-slate-400 focus:outline-none focus:border-primary-500 outline-none"
           />
         </div>
 
-        <div className="flex flex-wrap items-center gap-3 text-xs font-bold text-gray-500 uppercase">
+        <div className="flex flex-wrap items-center gap-3 text-xs font-bold text-slate-500 uppercase">
           <div className="flex items-center gap-1.5">
-            <Calendar className="w-3.5 h-3.5 text-gray-400" />
+            <Calendar className="w-3.5 h-3.5 text-slate-400" />
             <span>Month:</span>
             <input 
               type="month" 
               value={selectedMonth}
               onChange={(e) => setSelectedMonth(e.target.value)}
-              className="bg-white border border-gray-300 rounded px-2 py-1 text-xs text-gray-700 font-bold outline-none"
+              className="bg-white border border-slate-200 rounded-lg px-2 py-1 text-xs text-slate-700 font-bold outline-none"
             />
           </div>
 
-          <div className="flex items-center gap-1.5 border-l border-gray-200 pl-3">
+          <div className="flex items-center gap-1.5 border-l border-slate-200 pl-3">
             <span>Category:</span>
             <select
               value={categoryFilter}
               onChange={(e) => setCategoryFilter(e.target.value)}
-              className="bg-white border border-gray-300 rounded px-2 py-1 text-xs text-gray-700 font-bold focus:outline-none"
+              className="bg-white border border-slate-200 rounded-lg px-2 py-1 text-xs text-slate-700 font-bold focus:outline-none"
             >
               <option value="all">All Violations</option>
               <option value="Delayed Call Resolution">Delayed Call Resolution</option>

@@ -273,7 +273,7 @@ export default function DBMonitoringPage() {
             Track real-time database reads/writes and storage utilization.
           </p>
           {lastUpdated && (
-            <span className="inline-block mt-1 text-[10px] font-bold text-blue-600 bg-blue-50 px-2 py-0.5 rounded border border-blue-100">
+            <span className="inline-block mt-1 text-[10px] font-bold text-primary-600 bg-primary-50 px-2 py-0.5 rounded border border-primary-100">
               Last synced: {lastUpdated}
             </span>
           )}
@@ -388,7 +388,7 @@ export default function DBMonitoringPage() {
 
           <div className="flex gap-2">
             <button onClick={fetchAll} disabled={loading}
-              className="px-5 py-1.5 bg-blue-600 hover:bg-blue-700 disabled:opacity-40 text-white text-xs font-extrabold uppercase tracking-wide rounded-xl transition-all shadow-sm">
+              className="px-5 py-1.5 bg-primary-600 hover:bg-primary-700 disabled:opacity-40 text-white text-xs font-extrabold uppercase tracking-wide rounded-xl transition-all shadow-2xs">
               {loading ? "Loading…" : "Apply"}
             </button>
           </div>
@@ -469,7 +469,7 @@ export default function DBMonitoringPage() {
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-slate-100 pb-3">
           <div>
             <h3 className="text-xs font-black uppercase tracking-wider text-slate-700 flex items-center gap-2">
-              <span className="w-5 h-5 rounded-md bg-blue-50 text-blue-600 flex items-center justify-center text-xs">☁️</span>
+              <span className="w-5 h-5 rounded-md bg-primary-50 text-primary-600 flex items-center justify-center text-xs">☁️</span>
               Official Cloudflare Edge Meter (Server-Side Billing Stats)
             </h3>
             <p className="text-[10px] text-slate-400 mt-1 font-semibold">
@@ -842,7 +842,7 @@ export default function DBMonitoringPage() {
                 ) : sortedUsers.map((u,i)=>(
                   <tr key={i} className="border-b border-gray-100 hover:bg-slate-50 transition-colors text-slate-700">
                     <td className="py-2.5 px-1.5 font-semibold text-slate-800">{u.user_name || "—"}</td>
-                    <td className="py-2.5 px-1.5 font-mono text-blue-600 font-bold">{u.user_id}</td>
+                    <td className="py-2.5 px-1.5 font-mono text-primary-600 font-bold">{u.user_id}</td>
                     <td className="py-2.5 px-1.5">
                       <span className={`px-2 py-0.5 rounded text-[10px] font-extrabold uppercase tracking-wide
                         ${u.role?.includes("Admin") ? "bg-purple-100 text-purple-700" : "bg-slate-100 text-slate-600"}`}>
@@ -892,7 +892,7 @@ export default function DBMonitoringPage() {
                 ) : logs.map((l,i)=>(
                   <tr key={i} className="border-b border-gray-100 hover:bg-slate-50 transition-colors text-slate-700">
                     <td className="py-2 px-1.5 text-slate-400 font-mono text-[10px]">{l.created_at?.slice(11,19)||l.log_date}</td>
-                    <td className="py-2 px-1.5 text-blue-600 font-semibold" title={l.user_id}>{l.user_name || l.user_id}</td>
+                    <td className="py-2 px-1.5 text-primary-600 font-semibold" title={l.user_id}>{l.user_name || l.user_id}</td>
                     <td className="py-2 px-1.5 text-slate-700 font-semibold max-w-[110px] truncate" title={l.page_name}>{l.page_name||"—"}</td>
                     <td className="py-2 px-1.5">
                       <span className={`px-1.5 py-0.5 rounded font-black text-[9px] uppercase tracking-wide
