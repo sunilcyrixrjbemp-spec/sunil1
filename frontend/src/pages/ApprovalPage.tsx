@@ -1810,9 +1810,7 @@ export default function ApprovalPage() {
           overflowX: "hidden",
           padding: "16px",
           background: "#ffffff",
-          WebkitOverflowScrolling: "touch",
-          overscrollBehaviorY: "contain",
-          touchAction: "pan-y"
+          WebkitOverflowScrolling: "touch"
         }}
         title={
           <Space>

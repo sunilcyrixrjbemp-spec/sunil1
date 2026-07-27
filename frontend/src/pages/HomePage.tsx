@@ -8,6 +8,7 @@ import { prefetchManager } from "../utils/prefetchManager";
 import Loader from "../components/common/Loader";
 import { checkIsHeic, convertHeicToJpegUrl } from "../utils/heic";
 import { getISTMonth } from "../utils/dateUtils";
+import { formatToIST } from "../utils/timezone";
 import { hasFullAccess } from "../utils/constants";
 import { ResponsivePie } from "@nivo/pie";
 import ExpenseCalendar from "../components/common/ExpenseCalendar";
@@ -426,20 +427,7 @@ export default function HomePage() {
 
   const formatDateTime = (dateVal: any) => {
     if (!dateVal) return "—";
-    try {
-      const d = new Date(dateVal);
-      if (isNaN(d.getTime())) return String(dateVal);
-      const day = String(d.getDate()).padStart(2, "0");
-      const months = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
-      const month = months[d.getMonth()];
-      const year = d.getFullYear();
-      const hours = String(d.getHours()).padStart(2, "0");
-      const minutes = String(d.getMinutes()).padStart(2, "0");
-      const seconds = String(d.getSeconds()).padStart(2, "0");
-      return `${day}-${month}-${year} ${hours}:${minutes}:${seconds}`;
-    } catch (e) {
-      return String(dateVal);
-    }
+    return formatToIST(dateVal);
   };
 
   const handleApprove = async () => {
@@ -1813,9 +1801,7 @@ export default function HomePage() {
           overflowX: "hidden",
           padding: "16px",
           background: "#ffffff",
-          WebkitOverflowScrolling: "touch",
-          overscrollBehaviorY: "contain",
-          touchAction: "pan-y"
+          WebkitOverflowScrolling: "touch"
         }}
       >
         {!claimDetails ? (

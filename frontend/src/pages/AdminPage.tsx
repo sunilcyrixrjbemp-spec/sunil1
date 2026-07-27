@@ -3,6 +3,8 @@ import toast from "react-hot-toast";
 import * as XLSX from "xlsx";
 import { adminService, UserCreatePayload, UserEditPayload, ApprovalHierarchyResponse } from "../services/adminService";
 import { authService } from "../services/authService";
+import { formatToIST } from "../utils/timezone";
+
 import { UploadCloud, Pencil, Trash2, Plus, Download } from "lucide-react";
 import { ResponsivePie } from "@nivo/pie";
 import { ResponsiveBar } from "@nivo/bar";
@@ -1241,7 +1243,7 @@ export default function AdminPage() {
       "Mobile": u.mobile_number || "—",
       "Role": u.role || "Engineer",
       "Status": (u.user_status || "active").toUpperCase(),
-      "Created Date": u.created_at ? new Date(u.created_at).toLocaleDateString() : "—"
+      "Created Date": formatToIST(u.created_at)
     }));
 
     const worksheet = XLSX.utils.json_to_sheet(exportData);

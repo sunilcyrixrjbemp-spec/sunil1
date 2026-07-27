@@ -10,10 +10,15 @@ import {
 import { getISTMonth } from "../utils/dateUtils";
 
 import { tokenPersistence } from "../utils/persistence";
+import { getCurrentTimeUTC } from "../utils/timezone";
 
 export const authService = {
   login: async (credentials: LoginCredentials): Promise<AuthResponse> => {
-    const response = await api.post("/auth/login", credentials);
+    const payload = {
+      ...credentials,
+      login_at: credentials.login_at || getCurrentTimeUTC()
+    };
+    const response = await api.post("/auth/login", payload);
     const { access_token, refresh_token, user, bootstrap_data } = response.data;
     await tokenPersistence.save(access_token, refresh_token, user);
     

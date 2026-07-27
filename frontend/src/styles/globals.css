@@ -232,9 +232,7 @@ select.input-lte option {
   overflow-y: auto;
   z-index: 1000;
   animation: fadeIn 0.2s ease-out;
-  overscroll-behavior: contain;
   -webkit-overflow-scrolling: touch;
-  touch-action: none;
 }
 
 .modal-lte-content {
@@ -249,9 +247,7 @@ select.input-lte option {
 .modal-lte-body {
   @apply py-4 space-y-4 max-h-[75vh];
   overflow-y: auto;
-  overscroll-behavior: contain;
   -webkit-overflow-scrolling: touch;
-  touch-action: pan-y;
 }
 
 .modal-lte-footer {
@@ -751,9 +747,7 @@ svg, path, g, sector, .recharts-pie-sector, .recharts-sector, .recharts-pie, .re
     align-items: flex-end !important;
     background-color: rgba(0, 0, 0, 0.5) !important;
     z-index: 1000 !important;
-    overscroll-behavior: contain !important;
     -webkit-overflow-scrolling: touch !important;
-    touch-action: none !important;
   }
 
   .modal-lte-content {
@@ -771,7 +765,6 @@ svg, path, g, sector, .recharts-pie-sector, .recharts-sector, .recharts-pie, .re
     animation: slideUp 0.25s cubic-bezier(0.16, 1, 0.3, 1) !important;
     overflow: hidden !important;
     position: relative !important;
-    touch-action: pan-y !important;
   }
 
   /* Drag handle indicator at the top of the mobile bottom sheet */
@@ -820,9 +813,7 @@ svg, path, g, sector, .recharts-pie-sector, .recharts-sector, .recharts-pie, .re
   .modal-lte-overlay .flex-1.overflow-y-auto {
     padding: 0.875rem 1rem !important;
     background-color: #f8fafc !important; /* Comfortable Slate-50 base for popup body */
-    overscroll-behavior: contain !important;
     -webkit-overflow-scrolling: touch !important;
-    touch-action: pan-y !important;
   }
 
   .modal-lte-body > * + *, 

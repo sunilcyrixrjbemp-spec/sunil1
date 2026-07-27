@@ -2,6 +2,7 @@ export interface LoginCredentials {
   user_id: string;
   password: string;
   force?: boolean;
+  login_at?: string;
 }
 
 export interface User {

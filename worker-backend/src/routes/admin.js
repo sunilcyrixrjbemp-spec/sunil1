@@ -1794,3 +1794,20 @@ export async function handleSaveAllowanceRates(request, env, params, query, admi
   return jsonResponse({ status: "success", message: "Allowance rates updated successfully." });
 }
 
+/**
+ * GET /api/test/time or /api/admin/test/time
+ * Returns current server UTC timestamp and IST converted string for verification
+ */
+export async function handleTestTime(request, env) {
+  const utcNow = new Date().toISOString();
+  const istNow = new Date().toLocaleString('en-IN', { timeZone: 'Asia/Kolkata' });
+  return jsonResponse({
+    status: "ok",
+    utc_timestamp: utcNow,
+    ist_timestamp: istNow,
+    timezone: "Asia/Kolkata",
+    offset: "+05:30"
+  });
+}
+
+

@@ -1,4 +1,6 @@
 import { useState, useEffect, useMemo } from "react";
+import { CurrentTimeWidget } from "../components/common/CurrentTimeWidget";
+
 import {
   RefreshCw,
   AlertTriangle,
@@ -21,7 +23,6 @@ import {
   Zap,
   Target,
   TrendingDown,
-  Calendar,
   Lightbulb,
   Wrench,
   Timer,
@@ -848,10 +849,7 @@ export default function NewDashboardPage() {
           </div>
 
           <div className="flex items-center gap-2">
-            <div className="hidden md:flex items-center gap-3 text-xs font-bold text-indigo-200 bg-white/5 border border-white/10 px-4 py-2.5 rounded-xl">
-              <Calendar className="w-4 h-4" />
-              {new Date().toLocaleDateString("en-IN", { day: "2-digit", month: "short", year: "numeric" })}
-            </div>
+            <CurrentTimeWidget variant="badge" format="12h" className="hidden md:flex" />
             <button
               onClick={() => loadAllDashboardData(true)}
               disabled={backgroundSyncing}

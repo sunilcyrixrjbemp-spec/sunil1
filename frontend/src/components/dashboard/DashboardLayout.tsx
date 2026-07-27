@@ -27,6 +27,8 @@ import {
   TrendingUp
 } from "lucide-react";
 import ProgressLoader from "../common/ProgressLoader";
+import { CurrentTimeWidget } from "../common/CurrentTimeWidget";
+
 
 interface MenuItem {
   id: string;
@@ -404,8 +406,9 @@ export default function DashboardLayout() {
             </div>
           </div>
 
-          {/* Right Actions — User Avatar & Framed Logo */}
+          {/* Right Actions — Live IST Clock, User Avatar & Framed Logo */}
           <div className="flex items-center gap-2 sm:gap-3">
+            <CurrentTimeWidget variant="navbar" className="hidden sm:flex" />
             <Link
               to="/profile"
               className="hidden sm:flex items-center gap-2 p-1 rounded-xl bg-slate-800/70 hover:bg-slate-800 border border-slate-700/80 text-white transition-all no-underline shadow-2xs"
