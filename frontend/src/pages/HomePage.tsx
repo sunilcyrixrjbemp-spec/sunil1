@@ -1755,7 +1755,7 @@ export default function HomePage() {
 
       {/* ================= CLAIM DETAILS POPUP MODAL ================= */}
       <Modal
-        className="rounded-none-modal"
+        className="app-redesigned-modal"
         wrapClassName="my-claims-modal-wrap"
         title={
           <Title level={5} style={{ margin: 0 }} className="flex items-center gap-2 text-gray-805">

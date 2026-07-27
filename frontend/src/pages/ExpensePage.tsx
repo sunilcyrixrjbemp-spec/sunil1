@@ -5500,7 +5500,7 @@ export default function ExpensePage() {
       <Modal
         open={showDetailsModal}
         onCancel={() => { setShowDetailsModal(false); setSelectedClaim(null); }}
-        className="rounded-none-modal sharp-card"
+        className="app-redesigned-modal"
         wrapClassName="my-claims-modal-wrap"
         footer={
           <div className="flex items-center justify-between pt-2 border-t border-slate-200">
