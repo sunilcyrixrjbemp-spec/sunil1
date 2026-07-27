@@ -2915,16 +2915,19 @@ export default function ExpensePage() {
   const formatDateTime = (dateVal: any) => {
     if (!dateVal) return "—";
     try {
-      const d = new Date(dateVal);
+      const rawStr = String(dateVal).trim();
+      const parsedDate = rawStr.includes("Z") || rawStr.includes("+") ? new Date(rawStr) : new Date(rawStr.replace(" ", "T") + "+05:30");
+      const d = isNaN(parsedDate.getTime()) ? new Date(dateVal) : parsedDate;
       if (isNaN(d.getTime())) return String(dateVal);
-      const day = String(d.getDate()).padStart(2, "0");
-      const months = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
-      const month = months[d.getMonth()];
-      const year = d.getFullYear();
-      const hours = String(d.getHours()).padStart(2, "0");
-      const minutes = String(d.getMinutes()).padStart(2, "0");
-      const seconds = String(d.getSeconds()).padStart(2, "0");
-      return `${day}-${month}-${year} ${hours}:${minutes}:${seconds}`;
+      return new Intl.DateTimeFormat('en-IN', {
+        timeZone: 'Asia/Kolkata',
+        day: '2-digit',
+        month: 'short',
+        year: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit',
+        hour12: true
+      }).format(d);
     } catch (e) {
       return String(dateVal);
     }
