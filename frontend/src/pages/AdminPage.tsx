@@ -45,7 +45,37 @@ const { Title, Text } = Typography;
 
 const LteSpinner = () => (
   <span className="animate-spin rounded-full h-3.5 w-3.5 border-2 border-slate-200 border-t-blue-600 inline-block mr-1.5 shrink-0"></span>
-);const MultiSelectDropdown = ({ 
+);
+
+const parseSelectedLocations = (raw: string, availableOptions: string[] = []): string[] => {
+  if (!raw || !raw.trim()) return [];
+  const trimmedRaw = raw.trim();
+  const selected: string[] = [];
+
+  const sortedOptions = Array.from(new Set(availableOptions.filter(Boolean))).sort((a, b) => b.length - a.length);
+  let remaining = trimmedRaw;
+
+  for (const opt of sortedOptions) {
+    if (!opt) continue;
+    if (remaining.includes(opt)) {
+      selected.push(opt);
+      remaining = remaining.replaceAll(opt, "").trim();
+    }
+  }
+
+  if (remaining.replace(/,/g, "").trim().length > 0) {
+    const customParts = remaining.split(",").map(s => s.trim()).filter(s => s.length > 0);
+    for (const part of customParts) {
+      if (!selected.includes(part)) {
+        selected.push(part);
+      }
+    }
+  }
+
+  return Array.from(new Set(selected));
+};
+
+const MultiSelectDropdown = ({ 
   options, 
   selectedValues, 
   onChange, 
@@ -59,6 +89,9 @@ const LteSpinner = () => (
   const [isOpen, setIsOpen] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
 
+  const cleanOptions = useMemo(() => Array.from(new Set(options.filter(Boolean))), [options]);
+  const cleanSelected = useMemo(() => Array.from(new Set(selectedValues.filter(Boolean))), [selectedValues]);
+
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
       if (containerRef.current && !containerRef.current.contains(event.target as Node)) {
@@ -70,10 +103,10 @@ const LteSpinner = () => (
   }, []);
 
   const handleToggle = (val: string) => {
-    if (selectedValues.includes(val)) {
-      onChange(selectedValues.filter(v => v !== val));
+    if (cleanSelected.includes(val)) {
+      onChange(cleanSelected.filter(v => v !== val));
     } else {
-      onChange([...selectedValues, val]);
+      onChange([...cleanSelected, val]);
     }
   };
 
@@ -85,7 +118,7 @@ const LteSpinner = () => (
         className="w-full flex items-center justify-between input-lte text-left cursor-pointer bg-white min-h-[38px] px-3 py-1.5 border border-gray-300 rounded shadow-sm focus:outline-none"
       >
         <span className="block truncate text-xs font-semibold text-gray-700">
-          {selectedValues.length > 0 ? selectedValues.join(", ") : placeholder}
+          {cleanSelected.length > 0 ? cleanSelected.join(", ") : placeholder}
         </span>
         <span className="ml-2 flex items-center pointer-events-none text-gray-500">
           <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -96,14 +129,14 @@ const LteSpinner = () => (
 
       {isOpen && (
         <div className="absolute z-50 mt-1 w-full rounded-md bg-white shadow-lg border border-gray-200 max-h-60 overflow-y-auto py-1 text-xs">
-          {options.map((opt) => (
+          {cleanOptions.map((opt) => (
             <label
               key={opt}
               className="flex items-center px-3 py-2 hover:bg-gray-100 cursor-pointer select-none text-gray-700 font-medium"
             >
               <input
                 type="checkbox"
-                checked={selectedValues.includes(opt)}
+                checked={cleanSelected.includes(opt)}
                 onChange={() => handleToggle(opt)}
                 className="rounded border-gray-300 text-blue-600 focus:ring-blue-500 h-4 w-4 mr-2"
               />
@@ -2893,7 +2926,7 @@ export default function AdminPage() {
                 {dropdowns?.facilities?.[district] && dropdowns.facilities[district].length > 0 ? (
                   <MultiSelectDropdown
                     options={dropdowns.facilities[district]}
-                    selectedValues={baseReportingLocation ? baseReportingLocation.split(",").map(x => x.trim()).filter(Boolean) : []}
+                    selectedValues={parseSelectedLocations(baseReportingLocation, dropdowns.facilities[district] || [])}
                     onChange={(vals) => setBaseReportingLocation(vals.join(", "))}
                     placeholder="-- Select Base Reporting Location(s) --"
                   />
@@ -3261,11 +3294,10 @@ export default function AdminPage() {
                 {dropdowns?.facilities?.[editDistrict] && dropdowns.facilities[editDistrict].length > 0 ? (
                   <MultiSelectDropdown
                     options={[
-                      ...dropdowns.facilities[editDistrict],
-                      ...(editBaseReportingLocation ? editBaseReportingLocation.split(",").map(x => x.trim()).filter(Boolean) : [])
-                        .filter(item => !dropdowns.facilities[editDistrict].includes(item))
+                      ...(dropdowns.facilities[editDistrict] || []),
+                      ...parseSelectedLocations(editBaseReportingLocation, dropdowns.facilities[editDistrict] || [])
                     ]}
-                    selectedValues={editBaseReportingLocation ? editBaseReportingLocation.split(",").map(x => x.trim()).filter(Boolean) : []}
+                    selectedValues={parseSelectedLocations(editBaseReportingLocation, dropdowns.facilities[editDistrict] || [])}
                     onChange={(vals) => setEditBaseReportingLocation(vals.join(", "))}
                     placeholder="-- Select Base Reporting Location(s) --"
                   />
