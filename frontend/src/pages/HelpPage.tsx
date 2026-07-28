@@ -98,7 +98,68 @@ function formatDuration(totalHours: number) {
   return parts.join(" ");
 }
 
+// 🏛️ Banking 4-Tier Escalation Stepper Component
+function BankEscalationStepper({ ticket }: { ticket: any }) {
+  if (!ticket) return null;
+  const status = ticket.status;
+  const isClosed = status === "Closed" || status === "Final Closed";
+
+  // Calculate level (1, 2, 3, 4) based on status / priority / explicit level
+  let currentLevelNum = ticket.current_level || ticket.level_number || 1;
+  if (ticket.priority === "Critical" || ticket.priority === "Urgent") currentLevelNum = 4;
+  else if (status === "In Progress" || status === "Updated") currentLevelNum = Math.max(currentLevelNum, 2);
+
+  const levels = [
+    { level: 1, title: "Branch Support Desk", sla: "24h SLA", role: "Branch Staff" },
+    { level: 2, title: "Branch Operations Mgr", sla: "48h SLA", role: "Branch Manager" },
+    { level: 3, title: "Regional Nodal Office", sla: "72h SLA", role: "Regional Head" },
+    { level: 4, title: "Head Office Ombudsman", sla: "96h SLA", role: "Nodal Officer" }
+  ];
+
+  return (
+    <div className="bg-slate-900 text-white p-3.5 sharp-card border border-slate-800 my-2">
+      <div className="flex items-center justify-between border-b border-slate-800 pb-2 mb-2.5">
+        <span className="text-[11px] font-black uppercase tracking-wider text-amber-400 flex items-center gap-1.5">
+          🏛️ Bank 4-Tier Grievance Escalation Stepper
+        </span>
+        <span className="text-[10px] font-mono text-slate-400">
+          Current Level: <strong className="text-white">Level {currentLevelNum} ({levels[currentLevelNum - 1]?.title})</strong>
+        </span>
+      </div>
+
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+        {levels.map(lvl => {
+          const isActive = currentLevelNum === lvl.level;
+          const isDone = currentLevelNum > lvl.level || isClosed;
+          return (
+            <div 
+              key={lvl.level}
+              className={`p-2 border transition-all ${
+                isActive 
+                  ? "bg-indigo-950 border-amber-400 text-white shadow-md ring-1 ring-amber-400" 
+                  : isDone 
+                  ? "bg-slate-800/80 border-emerald-500/40 text-slate-300" 
+                  : "bg-slate-950/60 border-slate-800 text-slate-500"
+              }`}
+            >
+              <div className="flex items-center justify-between text-[10px] font-mono font-bold mb-0.5">
+                <span>L{lvl.level}</span>
+                <span className={isActive ? "text-amber-400 font-black" : (isDone ? "text-emerald-400" : "text-slate-500")}>
+                  {isDone ? "✓ Resolved" : (isActive ? "⚡ Active Desk" : "Pending")}
+                </span>
+              </div>
+              <p className="text-[11px] font-extrabold truncate m-0">{lvl.title}</p>
+              <span className="text-[9px] block text-slate-400 mt-0.5">{lvl.sla} • {lvl.role}</span>
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
 export default function HelpPage() {
+
   // Auth User
   const [currentUser] = useState<any>(() => {
     return JSON.parse(localStorage.getItem("user") || "null");
@@ -717,8 +778,12 @@ export default function HelpPage() {
           </div>
         </div>
 
+        {/* 🏛️ Banking 4-Tier Escalation Stepper */}
+        <BankEscalationStepper ticket={selectedTicket} />
+
         {/* 4 Crystal Clear Detail Cards Grid */}
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-2.5">
+
           <div className="bg-slate-50 border border-slate-200 p-2.5 sharp-card">
             <span className="text-[9px] font-black uppercase text-slate-400 block tracking-wider">Submitted By</span>
             <span className="text-xs font-extrabold text-slate-900 block truncate mt-0.5">
