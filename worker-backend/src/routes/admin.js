@@ -462,9 +462,16 @@ export async function handleSaveUser(request, env, params, query, adminUser) {
         return jsonResponse({ error: "user_id/e_code, password, and name are required" }, 400);
       }
 
-      const existing = await env.DB.prepare("SELECT 1 FROM users WHERE user_id = ?").bind(cleanUserId).first();
+      if (password && typeof password === "string" && password.trim().length < 8) {
+        return jsonResponse({ error: "Password must be at least 8 characters long" }, 400);
+      }
+
+      const existing = await env.DB.prepare(
+        "SELECT user_id, e_code FROM users WHERE LOWER(TRIM(user_id)) = LOWER(TRIM(?)) OR LOWER(TRIM(e_code)) = LOWER(TRIM(?))"
+      ).bind(cleanUserId, cleanUserId).first();
+
       if (existing) {
-        return jsonResponse({ error: "User ID already exists" }, 400);
+        return jsonResponse({ error: `User ID / Employee Code '${cleanUserId}' already exists.` }, 400);
       }
 
       const hashed = await getPasswordHash(password);

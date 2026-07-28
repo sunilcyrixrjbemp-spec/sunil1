@@ -150,16 +150,18 @@ const MultiSelectDropdown = ({
 };
 
 const getErrorMessage = (err: any, fallback: string): string => {
-  const detail = err.response?.data?.detail;
-  if (!detail) return fallback;
-  if (typeof detail === "string") return detail;
-  if (Array.isArray(detail)) {
-    return detail.map(d => {
-      if (typeof d === "string") return d;
-      return `${d.loc?.join(".") || "error"}: ${d.msg || JSON.stringify(d)}`;
-    }).join(", ");
+  const serverMsg = err.response?.data?.error || err.response?.data?.message || err.response?.data?.detail;
+  if (serverMsg) {
+    if (typeof serverMsg === "string") return serverMsg;
+    if (Array.isArray(serverMsg)) {
+      return serverMsg.map(d => {
+        if (typeof d === "string") return d;
+        return `${d.loc?.join(".") || "error"}: ${d.msg || JSON.stringify(d)}`;
+      }).join(", ");
+    }
+    return typeof serverMsg === "object" ? JSON.stringify(serverMsg) : String(serverMsg);
   }
-  return typeof detail === "object" ? JSON.stringify(detail) : String(detail);
+  return err.message || fallback;
 };
 
 const normalizeDateToYYYYMMDD = (dateStr: any): string => {
