@@ -26,9 +26,13 @@ import {
   StarFilled,
   LockOutlined, 
   UndoOutlined, 
-  CustomerServiceOutlined,
   TagOutlined,
-  FilterOutlined
+  FilterOutlined,
+  SettingOutlined,
+  EditOutlined,
+  CheckCircleFilled,
+  RightOutlined,
+  UserOutlined
 } from "@ant-design/icons";
 import { ticketService, TicketCreatePayload } from "../services/ticketService";
 import { expenseService } from "../services/expenseService";
@@ -98,62 +102,215 @@ function formatDuration(totalHours: number) {
   return parts.join(" ");
 }
 
-// 🏛️ Banking 4-Tier Escalation Stepper Component
-function BankEscalationStepper({ ticket }: { ticket: any }) {
+// 🏛️ Banking 4-Tier Escalation Stepper Component & Admin Configurator
+function BankEscalationStepper({ ticket, isAdmin }: { ticket: any; isAdmin?: boolean }) {
   if (!ticket) return null;
+
+  const DEFAULT_MATRIX = [
+    { level: 1, title: "Branch Support Desk", role: "Branch Staff", officer: "Rahul Verma", slaHours: 24 },
+    { level: 2, title: "Branch Operations Manager", role: "Branch Manager", officer: "Priya Sharma", slaHours: 48 },
+    { level: 3, title: "Regional Nodal Desk", role: "Regional Head", officer: "Vikram Singh", slaHours: 72 },
+    { level: 4, title: "Head Office Banking Ombudsman", role: "Nodal Officer", officer: "Principal Ombudsman", slaHours: 96 }
+  ];
+
+  const [matrix, setMatrix] = useState<any[]>(() => {
+    const saved = localStorage.getItem("admin_escalation_matrix");
+    if (saved) {
+      try { return JSON.parse(saved); } catch (e) {}
+    }
+    return DEFAULT_MATRIX;
+  });
+
+  const [showConfigModal, setShowConfigModal] = useState(false);
+  const [configForm, setConfigForm] = useState<any[]>(matrix);
+
+  const handleSaveMatrix = (e: React.FormEvent) => {
+    e.preventDefault();
+    setMatrix(configForm);
+    localStorage.setItem("admin_escalation_matrix", JSON.stringify(configForm));
+    setShowConfigModal(false);
+    toast.success("Escalation Matrix & Assigned Officers updated successfully!");
+  };
+
   const status = ticket.status;
   const isClosed = status === "Closed" || status === "Final Closed";
 
-  // Calculate level (1, 2, 3, 4) based on status / priority / explicit level
   let currentLevelNum = ticket.current_level || ticket.level_number || 1;
   if (ticket.priority === "Critical" || ticket.priority === "Urgent") currentLevelNum = 4;
   else if (status === "In Progress" || status === "Updated") currentLevelNum = Math.max(currentLevelNum, 2);
 
-  const levels = [
-    { level: 1, title: "Branch Support Desk", sla: "24h SLA", role: "Branch Staff" },
-    { level: 2, title: "Branch Operations Mgr", sla: "48h SLA", role: "Branch Manager" },
-    { level: 3, title: "Regional Nodal Office", sla: "72h SLA", role: "Regional Head" },
-    { level: 4, title: "Head Office Ombudsman", sla: "96h SLA", role: "Nodal Officer" }
-  ];
+  const activeLevel = matrix.find(m => m.level === currentLevelNum) || matrix[0];
 
   return (
-    <div className="bg-slate-900 text-white p-3.5 sharp-card border border-slate-800 my-2">
-      <div className="flex items-center justify-between border-b border-slate-800 pb-2 mb-2.5">
-        <span className="text-[11px] font-black uppercase tracking-wider text-amber-400 flex items-center gap-1.5">
-          🏛️ Bank 4-Tier Grievance Escalation Stepper
-        </span>
-        <span className="text-[10px] font-mono text-slate-400">
-          Current Level: <strong className="text-white">Level {currentLevelNum} ({levels[currentLevelNum - 1]?.title})</strong>
-        </span>
+    <div className="bg-gradient-to-r from-slate-950 via-slate-900 to-indigo-950 text-white p-4 sharp-card border border-indigo-900/60 shadow-xl my-3 relative overflow-hidden">
+      {/* Background Decorative Glow */}
+      <div className="absolute top-0 right-0 w-64 h-64 bg-indigo-500/10 rounded-full blur-3xl pointer-events-none" />
+
+      {/* Header */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between border-b border-slate-800/80 pb-3 mb-3.5 gap-2">
+        <div className="flex items-center gap-2">
+          <span className="bg-amber-400/20 text-amber-300 p-1.5 rounded-md text-xs font-mono font-bold">🏛️ BANK MATRIX</span>
+          <div>
+            <h4 className="text-sm font-extrabold tracking-wide text-white m-0">4-Tier Grievance Escalation Stepper</h4>
+            <span className="text-[10px] text-slate-400 font-bold block mt-0.5">
+              Current Active Level: <strong className="text-amber-400">Level {currentLevelNum} — {activeLevel?.title}</strong>
+            </span>
+          </div>
+        </div>
+
+        <div className="flex items-center gap-2 self-start sm:self-center">
+          {isAdmin && (
+            <Button
+              type="primary"
+              size="small"
+              icon={<SettingOutlined />}
+              onClick={() => { setConfigForm(matrix); setShowConfigModal(true); }}
+              className="bg-amber-500 hover:bg-amber-600 text-slate-950 font-black text-[11px] border-0 rounded-md shadow-sm"
+            >
+              Configure Matrix & Officers
+            </Button>
+          )}
+          <span className="text-[10px] font-mono px-2 py-0.5 bg-slate-800 text-slate-300 rounded border border-slate-700 font-bold">
+            Officer: {activeLevel?.officer || (ticket?.assigned_to_name || ticket?.assignedToName || "Support Desk")}
+          </span>
+        </div>
       </div>
 
-      <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
-        {levels.map(lvl => {
+      {/* Stepper Timeline Grid */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 relative z-10">
+        {matrix.map((lvl) => {
           const isActive = currentLevelNum === lvl.level;
           const isDone = currentLevelNum > lvl.level || isClosed;
+
           return (
-            <div 
+            <div
               key={lvl.level}
-              className={`p-2 border transition-all ${
-                isActive 
-                  ? "bg-indigo-950 border-amber-400 text-white shadow-md ring-1 ring-amber-400" 
-                  : isDone 
-                  ? "bg-slate-800/80 border-emerald-500/40 text-slate-300" 
-                  : "bg-slate-950/60 border-slate-800 text-slate-500"
+              className={`p-3 rounded-lg border transition-all duration-200 relative ${
+                isActive
+                  ? "bg-gradient-to-b from-indigo-900/90 to-slate-900 border-amber-400 shadow-lg shadow-amber-400/10 ring-2 ring-amber-400/50"
+                  : isDone
+                  ? "bg-slate-900/90 border-emerald-500/50 text-slate-200"
+                  : "bg-slate-950/70 border-slate-800/80 text-slate-500"
               }`}
             >
-              <div className="flex items-center justify-between text-[10px] font-mono font-bold mb-0.5">
-                <span>L{lvl.level}</span>
-                <span className={isActive ? "text-amber-400 font-black" : (isDone ? "text-emerald-400" : "text-slate-500")}>
-                  {isDone ? "✓ Resolved" : (isActive ? "⚡ Active Desk" : "Pending")}
+              {/* Active Pulse Badge */}
+              <div className="flex items-center justify-between text-[11px] font-mono font-bold mb-1.5">
+                <span className={`px-1.5 py-0.5 rounded text-[10px] ${isActive ? "bg-amber-400 text-slate-950 font-extrabold" : (isDone ? "bg-emerald-950 text-emerald-300" : "bg-slate-800 text-slate-400")}`}>
+                  LEVEL {lvl.level}
                 </span>
+                {isActive && (
+                  <span className="flex items-center gap-1 text-[10px] font-black text-amber-300 animate-pulse">
+                    <span className="w-2 h-2 rounded-full bg-amber-400 animate-ping inline-block" /> ⚡ ACTIVE DESK
+                  </span>
+                )}
+                {isDone && <span className="text-emerald-400 text-[10px] font-extrabold">✓ PASSED</span>}
+                {!isActive && !isDone && <span className="text-slate-500 text-[10px]">UPCOMING</span>}
               </div>
-              <p className="text-[11px] font-extrabold truncate m-0">{lvl.title}</p>
-              <span className="text-[9px] block text-slate-400 mt-0.5">{lvl.sla} • {lvl.role}</span>
+
+              <h5 className="text-xs font-black text-white m-0 truncate leading-snug">{lvl.title}</h5>
+              
+              <div className="mt-2 pt-2 border-t border-white/10 flex flex-col gap-1 text-[10px]">
+                <div className="flex justify-between items-center text-slate-300">
+                  <span className="font-semibold text-slate-400">Assigned Officer:</span>
+                  <strong className="text-indigo-200 font-bold truncate max-w-[110px]">{lvl.officer}</strong>
+                </div>
+                <div className="flex justify-between items-center text-slate-300">
+                  <span className="font-semibold text-slate-400">Role & SLA:</span>
+                  <span className="font-mono text-amber-300 font-bold">{lvl.role} ({lvl.slaHours}h)</span>
+                </div>
+              </div>
             </div>
           );
         })}
       </div>
+
+      {/* Admin Configurator Drawer Modal */}
+      {showConfigModal && (
+        <Drawer
+          title="⚙️ Admin Grievance Escalation Matrix Configurator"
+          placement="right"
+          width={520}
+          onClose={() => setShowConfigModal(false)}
+          open={showConfigModal}
+          className="font-sans"
+        >
+          <form onSubmit={handleSaveMatrix} className="space-y-4">
+            <p className="text-xs text-slate-600 font-semibold mb-4 bg-amber-50 p-2.5 border border-amber-200 rounded">
+              Configure titles, assigned officer names, roles, and SLA hours for each escalation level.
+            </p>
+
+            {configForm.map((item, idx) => (
+              <div key={item.level} className="p-3 bg-slate-50 border border-slate-200 rounded-md space-y-2">
+                <div className="flex justify-between items-center">
+                  <span className="text-xs font-black text-indigo-900 uppercase">Level {item.level} Matrix Setting</span>
+                  <span className="text-[10px] font-mono bg-indigo-100 text-indigo-800 px-2 py-0.5 rounded font-bold">L{item.level}</span>
+                </div>
+
+                <div>
+                  <label className="text-[11px] font-bold text-slate-700 block">Level Title</label>
+                  <Input
+                    size="small"
+                    value={item.title}
+                    onChange={(e) => {
+                      const updated = [...configForm];
+                      updated[idx].title = e.target.value;
+                      setConfigForm(updated);
+                    }}
+                  />
+                </div>
+
+                <div className="grid grid-cols-2 gap-2">
+                  <div>
+                    <label className="text-[11px] font-bold text-slate-700 block">Assigned Officer Name</label>
+                    <Input
+                      size="small"
+                      value={item.officer}
+                      onChange={(e) => {
+                        const updated = [...configForm];
+                        updated[idx].officer = e.target.value;
+                        setConfigForm(updated);
+                      }}
+                    />
+                  </div>
+                  <div>
+                    <label className="text-[11px] font-bold text-slate-700 block">Role Title</label>
+                    <Input
+                      size="small"
+                      value={item.role}
+                      onChange={(e) => {
+                        const updated = [...configForm];
+                        updated[idx].role = e.target.value;
+                        setConfigForm(updated);
+                      }}
+                    />
+                  </div>
+                </div>
+
+                <div>
+                  <label className="text-[11px] font-bold text-slate-700 block">SLA Limit (Hours)</label>
+                  <Input
+                    type="number"
+                    size="small"
+                    value={item.slaHours}
+                    onChange={(e) => {
+                      const updated = [...configForm];
+                      updated[idx].slaHours = parseInt(e.target.value) || 24;
+                      setConfigForm(updated);
+                    }}
+                  />
+                </div>
+              </div>
+            ))}
+
+            <div className="flex justify-end gap-2 pt-4">
+              <Button onClick={() => setShowConfigModal(false)}>Cancel</Button>
+              <Button type="primary" htmlType="submit" className="bg-indigo-600">
+                Save Matrix & Reassign Levels
+              </Button>
+            </div>
+          </form>
+        </Drawer>
+      )}
     </div>
   );
 }
@@ -779,7 +936,7 @@ export default function HelpPage() {
         </div>
 
         {/* 🏛️ Banking 4-Tier Escalation Stepper */}
-        <BankEscalationStepper ticket={selectedTicket} />
+        <BankEscalationStepper ticket={selectedTicket} isAdmin={currentUser?.role === "Admin"} />
 
         {/* 4 Crystal Clear Detail Cards Grid */}
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-2.5">
