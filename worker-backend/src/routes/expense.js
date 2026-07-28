@@ -3074,6 +3074,7 @@ export async function handleSubmitExpense(request, env, params, query, user) {
         : "",
       items: deductionItems
     } : null
+  });
 }
 
 /**
