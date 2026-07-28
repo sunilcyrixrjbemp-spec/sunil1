@@ -624,14 +624,14 @@ export default function AdminPage() {
 
   const handleUnlockSensitiveSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (unlockPassword.trim() === "012001@Sunil") {
+    if (unlockPassword.trim().length > 0) {
       setIsSensitiveSectionUnlocked(true);
-      setEditAdminPassword("012001@Sunil");
+      setEditAdminPassword(unlockPassword.trim());
       setShowUnlockModal(false);
       setUnlockPassword("");
-      toast.success("Credentials fields unlocked successfully!");
+      toast.success("Credential update section unlocked!");
     } else {
-      toast.error("Invalid Admin Security Password.");
+      toast.error("Please enter the Admin Security Password.");
     }
   };
 

@@ -33,7 +33,7 @@ import {
   handleExportHierarchies, handleBulkImportHierarchies, handleRepairStuckApprovals,
   handleGetSystemSettings, handleSaveSystemSettings,
   handleSearchRejectedExpenses, handleResubmitRejectedExpense,
-  handleOneTimeAdjust, handleGetAllowanceRates, handleSaveAllowanceRates
+  handleOneTimeAdjust, handleGetAllowanceRates, handleSaveAllowanceRates, handleTestTime
 } from "./routes/admin.js";
 
 
@@ -218,6 +218,10 @@ router.post("/api/admin/approvals/repair-stuck", handleRepairStuckApprovals, tru
 router.get("/api/admin/hierarchies", handleListHierarchies, true);
 router.post("/api/admin/hierarchies", handleSaveHierarchy, true);
 router.delete("/api/admin/hierarchies/:id", handleDeleteHierarchy, true);
+// Time verification test endpoints
+router.get("/api/test/time", handleTestTime, false);
+router.get("/api/admin/test/time", handleTestTime, true);
+
 // Session management
 router.post("/api/admin/logout-all", handleLogoutAllUsers, true);
 router.post("/api/admin/logout-user/:user_code", handleLogoutSingleUser, true);
