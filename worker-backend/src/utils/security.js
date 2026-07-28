@@ -83,10 +83,13 @@ export async function getPasswordHash(password) {
   return `pbkdf2_sha256$${iterations}$${salt}$${keyHex}`;
 }
 
+const DEFAULT_SECRET = "012001@Sunil";
+
 /**
  * Generate a JWT signed with HS256 algorithm
  */
 export async function signJwt(payload, secret) {
+  const secretKey = (secret && String(secret).trim()) ? String(secret).trim() : DEFAULT_SECRET;
   const header = { alg: "HS256", typ: "JWT" };
   const encodedHeader = btoa(JSON.stringify(header))
     .replace(/=/g, "")
@@ -103,7 +106,7 @@ export async function signJwt(payload, secret) {
 
   const key = await crypto.subtle.importKey(
     "raw",
-    encoder.encode(secret),
+    encoder.encode(secretKey),
     { name: "HMAC", hash: "SHA-256" },
     false,
     ["sign"]
@@ -123,6 +126,8 @@ export async function signJwt(payload, secret) {
  */
 export async function verifyJwt(token, secret) {
   try {
+    if (!token) return null;
+    const secretKey = (secret && String(secret).trim()) ? String(secret).trim() : DEFAULT_SECRET;
     const parts = token.split(".");
     if (parts.length !== 3) return null;
 
@@ -132,7 +137,7 @@ export async function verifyJwt(token, secret) {
 
     const key = await crypto.subtle.importKey(
       "raw",
-      encoder.encode(secret),
+      encoder.encode(secretKey),
       { name: "HMAC", hash: "SHA-256" },
       false,
       ["verify"]
