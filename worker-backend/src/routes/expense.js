@@ -201,7 +201,7 @@ export function computeBaseLocPolicy(baseReportingLocation, itineraries) {
   );
 
   // Healthcare facility keywords matched at word boundaries to avoid matching substrings like "gandhi" (dh)
-  const HEALTHCARE_FACILITY_REGEX = /\b(chc|phc|sdh|dh|hospital|hosp|college|collage|dispensary|subcenter|sub-center|sub center|ddw|warehouse|uphc|up-hc|up hc)\b/i;
+  const HEALTHCARE_FACILITY_REGEX = /\b(chc|uchc|phc|sdh|dh|hospital|hosp|college|collage|dispensary|subcenter|sub-center|sub center|ddw|warehouse|uphc|up-hc|up hc)\b/i;
 
   // List of Rajasthan Districts for Out-Station travel validation
   const RAJASTHAN_DISTRICTS = [

@@ -1791,7 +1791,7 @@ export default function ExpensePage() {
     if (!hasVisitedBaseLocation) return false;
 
     // Healthcare facility keywords matched at word boundaries to avoid matching substrings like "gandhi" (dh)
-    const HEALTHCARE_FACILITY_REGEX = /\b(chc|phc|sdh|dh|hospital|hosp|college|collage|dispensary|subcenter|sub-center|sub center|ddw|warehouse|uphc|up-hc|up hc)\b/i;
+    const HEALTHCARE_FACILITY_REGEX = /\b(chc|uchc|phc|sdh|dh|hospital|hosp|college|collage|dispensary|subcenter|sub-center|sub center|ddw|warehouse|uphc|up-hc|up hc)\b/i;
 
     // List of Rajasthan Districts for Out-Station travel validation
     const RAJASTHAN_DISTRICTS = [
@@ -5238,35 +5238,73 @@ export default function ExpensePage() {
                 <p className="border-t border-gray-200 pt-1.5 mt-1.5">Total Claim Amount: <span className="font-black text-blue-700">₹{totalAmt.toLocaleString()}</span></p>
               </div>
 
-              {/* ── Base Location Deduction Breakdown ── */}
-              {baseLocDeductions && baseLocDeductions.hasDeductions && (
-                <div className="p-3 bg-amber-50 border border-amber-300 rounded space-y-2">
-                  <p className="font-bold text-amber-800 flex items-center gap-1.5">
-                    <AlertTriangle className="w-3.5 h-3.5 shrink-0" />
-                    TA/DA Deduction — Base Location Policy
-                  </p>
-                  {baseLocDeductions.items.length > 0 && (
-                    <div className="space-y-1">
+              {/* ── Base Location Deduction Breakdown (PRE-SUBMISSION PREVIEW) ── */}
+              {baseLocDeductions && baseLocDeductions.hasDeductions && (() => {
+                const totalTA = baseLocDeductions.items.reduce((s, i) => s + i.taDeducted, 0);
+                const totalDA = baseLocDeductions.items.reduce((s, i) => s + i.daDeducted, 0);
+                const totalDeducted = totalTA + totalDA;
+                return (
+                  <div className="rounded-xl border border-amber-300 overflow-hidden shadow-sm">
+                    {/* Card Header */}
+                    <div className="bg-gradient-to-r from-amber-600 to-amber-500 px-3.5 py-2.5 flex items-center justify-between">
+                      <div className="flex items-center gap-2">
+                        <AlertTriangle className="w-4 h-4 text-white shrink-0" />
+                        <span className="text-white text-xs font-black uppercase tracking-wider">
+                          Policy Deductions Summary (Before Submit)
+                        </span>
+                      </div>
+                      <span className="bg-white/20 text-white text-[11px] font-bold px-2 py-0.5 rounded">
+                        -₹{totalDeducted.toFixed(0)}
+                      </span>
+                    </div>
+
+                    {/* Leg Breakdown Rows */}
+                    <div className="divide-y divide-amber-100 bg-amber-50/80">
                       {baseLocDeductions.items.map(item => (
-                        <div key={item.leg} className="bg-white border border-amber-200 rounded px-2.5 py-1.5 text-[11px]">
-                          <p className="font-semibold text-gray-700">Visit {item.leg}: {item.from} → {item.to}</p>
-                          {item.taDeducted > 0 && (
-                            <p className="text-rose-600">TA deducted: <span className="font-bold">-₹{item.taDeducted.toFixed(0)}</span></p>
-                          )}
-                          {item.daDeducted > 0 && (
-                            <p className="text-rose-600">DA deducted: <span className="font-bold">-₹{item.daDeducted.toFixed(0)}</span></p>
-                          )}
+                        <div key={item.leg} className="px-3.5 py-2.5">
+                          <p className="text-[10px] font-bold text-gray-600 uppercase tracking-wider mb-0.5">
+                            Visit {item.leg}
+                          </p>
+                          <p className="text-[11px] font-semibold text-gray-800 truncate mb-1.5">
+                            {item.from} <span className="text-gray-400 mx-1">→</span> {item.to}
+                          </p>
+                          <div className="flex gap-2 flex-wrap">
+                            {item.taDeducted > 0 && (
+                              <span className="inline-flex items-center gap-1 bg-rose-100 text-rose-800 text-[10px] font-bold px-2 py-0.5 rounded-full border border-rose-200">
+                                Commute TA: -₹{item.taDeducted.toFixed(0)}
+                              </span>
+                            )}
+                            {item.daDeducted > 0 && (
+                              <span className="inline-flex items-center gap-1 bg-rose-100 text-rose-800 text-[10px] font-bold px-2 py-0.5 rounded-full border border-rose-200">
+                                Base Location DA: -₹{item.daDeducted.toFixed(0)}
+                              </span>
+                            )}
+                          </div>
                         </div>
                       ))}
                     </div>
-                  )}
-                  {baseLocDeductions.policyMessage && (
-                    <p className="text-amber-700 text-[11px] leading-relaxed font-medium italic">
-                      {baseLocDeductions.policyMessage}
-                    </p>
-                  )}
-                </div>
-              )}
+
+                    {/* Total Deduction Footer */}
+                    <div className="bg-amber-100 px-3.5 py-2 flex items-center justify-between border-t border-amber-200">
+                      <span className="text-[11px] font-black text-amber-900 uppercase tracking-wider">
+                        Total Amount Deducted:
+                      </span>
+                      <span className="text-xs font-black text-rose-700">
+                        -₹{totalDeducted.toFixed(0)}
+                      </span>
+                    </div>
+
+                    {/* Policy Reason */}
+                    {baseLocDeductions.policyMessage && (
+                      <div className="bg-white px-3.5 py-2 border-t border-amber-100">
+                        <p className="text-[10px] text-amber-800 leading-relaxed font-medium italic">
+                          {baseLocDeductions.policyMessage}
+                        </p>
+                      </div>
+                    )}
+                  </div>
+                );
+              })()}
 
               <div className="p-3 bg-blue-50 border border-blue-200 text-blue-800 rounded flex items-start gap-1.5">
                 <Info className="w-4 h-4 text-blue-600 shrink-0 mt-0.5" />
