@@ -57,6 +57,19 @@ const renderAntdStatusTag = (status: string) => {
   }
 };
 
+const formatToDDMMYYYY = (dateStr: any): string => {
+  if (!dateStr || typeof dateStr !== "string") return "";
+  const clean = dateStr.trim();
+  const ymdMatch = clean.match(/^(\d{4})[-/](\d{1,2})[-/](\d{1,2})/);
+  if (ymdMatch) {
+    const yyyy = ymdMatch[1];
+    const mm = ymdMatch[2].padStart(2, "0");
+    const dd = ymdMatch[3].padStart(2, "0");
+    return `${dd}-${mm}-${yyyy}`;
+  }
+  return clean;
+};
+
 const getCardStatusClass = (status: string) => {
   const s = (status || "").toLowerCase().trim();
   if (s.includes("approve") || s.includes("approved")) {
@@ -1783,12 +1796,7 @@ export default function ExpensePage() {
     const hasOutdoorLeg = legs.some(leg => (leg.travel_type || "").trim().toLowerCase() === "outdoor");
     if (hasOutdoorLeg) return false;
 
-    // Must have visited at least one base location (dropdown or manual typing)
-    const hasVisitedBaseLocation = legs.some(leg =>
-      matchesBase(leg.from || "", baseLocations) ||
-      matchesBase(leg.to || "", baseLocations)
-    );
-    if (!hasVisitedBaseLocation) return false;
+
 
     // Healthcare facility keywords matched at word boundaries to avoid matching substrings like "gandhi" (dh)
     const HEALTHCARE_FACILITY_REGEX = /\b(chc|uchc|phc|sdh|dh|hospital|hosp|college|collage|dispensary|subcenter|sub-center|sub center|ddw|warehouse|uphc|up-hc|up hc)\b/i;
@@ -5219,7 +5227,7 @@ export default function ExpensePage() {
 
             <div className="space-y-4 mt-4 text-left text-xs font-semibold">
               <div className="p-3 bg-gray-50 border border-gray-200 rounded space-y-1.5">
-                <p>Date of Travel: <span className="font-bold text-gray-900">{date}</span></p>
+                <p>Date of Travel: <span className="font-bold text-gray-900">{formatToDDMMYYYY(date)}</span></p>
                 {totalKm > 0 && (
                   <p>Total Distance: <span className="font-bold text-gray-900">{totalKm.toFixed(1)} KM</span></p>
                 )}
