@@ -2422,7 +2422,7 @@ export default function ExpensePage() {
     return true;
   };
 
-  const handleFormSubmit = (e: React.FormEvent) => {
+  const handleFormSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
     // Auto-add any unadded asset tagging equipment selection to the list
@@ -2448,51 +2448,55 @@ export default function ExpensePage() {
 
     if (!validateClaim(processedItineraries)) return;
 
-    // ── Compute base-location deduction breakdown for confirm modal ──
-    const hasOutdoorLeg = processedItineraries.some(leg => (leg.travel_type || "").trim().toLowerCase() === "outdoor");
-    const isBaseLocOnly = isBaseLocationOnlyTravel(processedItineraries);
-    const isDAAllowed = isDailyAllowanceAllowed(processedItineraries);
-    const deductionItems: { leg: number; from: string; to: string; taDeducted: number; daDeducted: number }[] = [];
-    let policyMsg = "";
+    // ── Call server-side Policy Evaluation API BEFORE opening confirmation modal ──
+    try {
+      const evalRes = await expenseService.evaluatePolicy({
+        user_id: currentUserId,
+        itinerary_legs: processedItineraries
+      });
 
-    const baseLocs = user.base_reporting_location
-      ? user.base_reporting_location.split(",").map((x: string) => x.trim().toLowerCase()).filter(Boolean)
-      : [];
-    const isSpecialBase = isSpecialBaseLocation(baseLocs);
-
-    if (!hasOutdoorLeg) {
-      if (isBaseLocOnly && !isDAAllowed) {
-        policyMsg = "Base Location Policy (Standard): Both Travel Allowance (TA) and Daily Allowance (DA) are not eligible for commute legs to/from your base hospital.";
-      } else if (isSpecialBase) {
-        // Rule E: PBM Bikaner / MDM Jodhpur — DA is allowed, only commute-leg TA is deducted
-        policyMsg = "Base Location Policy (Rule E — PBM/MDM): TA is not eligible for commute legs. However, Daily Allowance (DA) is still granted as per policy for your base hospital.";
+      if (evalRes && evalRes.hasDeductions && evalRes.items && evalRes.items.length > 0) {
+        setBaseLocDeductions({
+          hasDeductions: true,
+          policyMessage: evalRes.policyMessage || "Base Location Policy: Deductions applied as per policy.",
+          items: evalRes.items
+        });
       } else {
-        policyMsg = "Base Location Policy: Travel Allowance (TA) is not eligible for direct commute legs between your residence and base hospital.";
+        setBaseLocDeductions(null);
+      }
+    } catch (err) {
+      console.warn("Failed to pre-evaluate policy via API, using local fallback:", err);
+      // Fallback calculation in case of network issue
+      const deductionItems: { leg: number; from: string; to: string; taDeducted: number; daDeducted: number }[] = [];
+      const baseLocs = user.base_reporting_location
+        ? user.base_reporting_location.split(",").map((x: string) => x.trim().toLowerCase()).filter(Boolean)
+        : [];
+      const isBaseLocOnly = isBaseLocationOnlyTravel(processedItineraries);
+      const isDAAllowed = isDailyAllowanceAllowed(processedItineraries);
+
+      if (isBaseLocOnly) {
+        processedItineraries.forEach((leg, idx) => {
+          const legNum = idx + 1;
+          const origTA = parseFloat(leg.amount || "0") + parseFloat(leg.sub_amount || "0");
+          const origDA = legNum === 1 ? parseFloat(leg.da || "0") : 0;
+          const isCommute = isCommuteLeg(leg, baseLocs, idx, processedItineraries.length);
+          const taDeducted = isCommute ? origTA : 0;
+          const daDeducted = isDAAllowed ? 0 : origDA;
+          if (taDeducted > 0 || daDeducted > 0) {
+            deductionItems.push({ leg: legNum, from: leg.from, to: leg.to, taDeducted, daDeducted });
+          }
+        });
       }
 
-      processedItineraries.forEach((leg, idx) => {
-        const legNum = idx + 1;
-        const origTA = parseFloat(leg.amount || "0");
-        const origSub = parseFloat(leg.sub_amount || "0");
-        const origDA = legNum === 1 ? parseFloat(leg.da || "0") : 0;
-        // Only deduct TA for actual commute legs (Home ↔ Base Hospital)
-        const isCommute = isCommuteLeg(leg, baseLocs, idx, processedItineraries.length);
-        const taDeducted = isCommute ? origTA + origSub : 0;
-        const daDeducted = isDAAllowed ? 0 : origDA;
-        if (taDeducted > 0 || daDeducted > 0) {
-          deductionItems.push({ leg: legNum, from: leg.from, to: leg.to, taDeducted, daDeducted });
-        }
-      });
-    }
-
-    if (deductionItems.length > 0) {
-      setBaseLocDeductions({
-        hasDeductions: true,
-        policyMessage: policyMsg,
-        items: deductionItems
-      });
-    } else {
-      setBaseLocDeductions(null);
+      if (deductionItems.length > 0) {
+        setBaseLocDeductions({
+          hasDeductions: true,
+          policyMessage: "Base Location Policy: Deductions applied as per policy.",
+          items: deductionItems
+        });
+      } else {
+        setBaseLocDeductions(null);
+      }
     }
 
     setShowConfirmModal(true);

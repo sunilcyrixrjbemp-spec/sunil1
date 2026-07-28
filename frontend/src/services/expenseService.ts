@@ -22,6 +22,11 @@ export const expenseService = {
     return response.data;
   },
 
+  evaluatePolicy: async (payload: { user_id: string; itinerary_legs: any[] }): Promise<any> => {
+    const response = await api.post("/expense/evaluate-policy", payload);
+    return response.data;
+  },
+
   submitItineraryExpense: async (formData: FormData): Promise<any> => {
     if (!formData.has("client_timestamp")) {
       formData.append("client_timestamp", new Date().toISOString());

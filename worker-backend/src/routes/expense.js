@@ -3074,6 +3074,79 @@ export async function handleSubmitExpense(request, env, params, query, user) {
         : "",
       items: deductionItems
     } : null
+}
+
+/**
+ * POST /api/expense/evaluate-policy
+ * Evaluates base location policy deductions for a claim before submission.
+ */
+export async function handleEvaluatePolicy(request, env, params, query, user) {
+  let body;
+  try {
+    body = await request.json();
+  } catch (e) {
+    return jsonResponse({ error: "Invalid JSON body" }, 400);
+  }
+
+  const targetUserId = body.user_id || user.user_id;
+  const itineraries = body.itinerary_legs || body.itineraries || [];
+
+  const targetUser = await env.DB.prepare("SELECT * FROM users WHERE user_id = ? OR id = ?")
+    .bind(targetUserId, targetUserId).first();
+
+  if (!targetUser) {
+    return jsonResponse({ error: "User not found" }, 404);
+  }
+
+  const baseReportingLocation = targetUser.base_reporting_location || "";
+  const { isBaseLocOnly, isDaAllowed, baseLocations } = computeBaseLocPolicy(baseReportingLocation, itineraries);
+
+  let policyApplied = false;
+  const deductionItems = [];
+  let totalTA = 0;
+  let totalDA = 0;
+
+  if (isBaseLocOnly) {
+    for (let idx = 0; idx < itineraries.length; idx++) {
+      const iti = itineraries[idx];
+      const legNum = idx + 1;
+      const isCommute = checkIsCommuteLeg(iti, baseLocations, idx, itineraries.length);
+      const origTA = parseFloat(iti.original_travel_amount || iti.amount || "0.0");
+      const origSub = parseFloat(iti.original_sub_amount || iti.sub_amount || "0.0");
+      const origDA = legNum === 1 ? parseFloat(iti.original_da_amount || iti.da || "0.0") : 0.0;
+
+      const taDeducted = isCommute ? (origTA + origSub) : 0.0;
+      const daDeducted = isDaAllowed ? 0.0 : origDA;
+
+      if (taDeducted > 0.0 || daDeducted > 0.0) {
+        policyApplied = true;
+        totalTA += taDeducted;
+        totalDA += daDeducted;
+        deductionItems.push({
+          leg: legNum,
+          from: iti.from || "",
+          to: iti.to || "",
+          taDeducted,
+          daDeducted
+        });
+      }
+    }
+  }
+
+  const policyMsg = isBaseLocOnly
+    ? (!isDaAllowed
+        ? "Under base location policy, both Travel Allowance (TA) and Daily Allowance (DA) are not eligible."
+        : "Under base location policy, Travel Allowance (TA) is not eligible.")
+    : "";
+
+  return jsonResponse({
+    success: true,
+    hasDeductions: policyApplied,
+    policyMessage: policyMsg,
+    items: deductionItems,
+    totalTA,
+    totalDA,
+    totalDeducted: totalTA + totalDA
   });
 }
 
