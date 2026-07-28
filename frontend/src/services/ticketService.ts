@@ -39,5 +39,21 @@ export const ticketService = {
   toggleFollowup: async (ticketId: number): Promise<any> => {
     const response = await api.post(`/ticket/${ticketId}/followup`);
     return response.data;
+  },
+
+  getTicketStats: async (): Promise<any> => {
+    const response = await api.get("/ticket/stats");
+    return response.data;
+  },
+
+  assignTicket: async (ticketId: number, assignedToName: string): Promise<any> => {
+    const response = await api.post(`/ticket/${ticketId}/assign`, { assigned_to_name: assignedToName });
+    return response.data;
+  },
+
+  updateTicketStatus: async (ticketId: number, status: string, comment?: string): Promise<any> => {
+    const response = await api.post(`/ticket/${ticketId}/status`, { status, comment });
+    return response.data;
   }
 };
+

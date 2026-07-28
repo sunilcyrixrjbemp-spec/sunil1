@@ -33,7 +33,7 @@ import {
   handleExportHierarchies, handleBulkImportHierarchies, handleRepairStuckApprovals,
   handleGetSystemSettings, handleSaveSystemSettings,
   handleSearchRejectedExpenses, handleResubmitRejectedExpense,
-  handleOneTimeAdjust, handleGetAllowanceRates, handleSaveAllowanceRates, handleTestTime
+  handleOneTimeAdjust, handleGetAllowanceRates, handleSaveAllowanceRates, handleTestTime, handleRevertClaimDeductions
 } from "./routes/admin.js";
 
 
@@ -41,7 +41,8 @@ import {
 // Import Tickets handlers
 import {
   handleGetTickets, handleCreateTicket, handleAddComment,
-  handleCloseTicket, handleReopenTicket, handleToggleFollowup
+  handleCloseTicket, handleReopenTicket, handleToggleFollowup,
+  handleGetTicketStats, handleAssignTicket, handleUpdateTicketStatus
 } from "./routes/ticket.js";
 
 // Import Uploads handlers
@@ -228,15 +229,21 @@ router.post("/api/admin/logout-user/:user_code", handleLogoutSingleUser, true);
 
 // ─── Tickets Endpoints — Two path aliases for compatibility ────────────────────
 // Frontend calls /api/ticket/ (Python backend prefix)
+router.get("/api/ticket/stats", handleGetTicketStats, true);
 router.get("/api/ticket", handleGetTickets, true);
 router.post("/api/ticket", handleCreateTicket, true);
+router.post("/api/ticket/:ticket_id/assign", handleAssignTicket, true);
+router.post("/api/ticket/:ticket_id/status", handleUpdateTicketStatus, true);
 router.post("/api/ticket/:ticket_id/comment", handleAddComment, true);
 router.post("/api/ticket/:ticket_id/close", handleCloseTicket, true);
 router.post("/api/ticket/:ticket_id/reopen", handleReopenTicket, true);
 router.post("/api/ticket/:ticket_id/followup", handleToggleFollowup, true);
 // Also handle /api/tickets (worker-style)
+router.get("/api/tickets/stats", handleGetTicketStats, true);
 router.get("/api/tickets", handleGetTickets, true);
 router.post("/api/tickets", handleCreateTicket, true);
+router.post("/api/tickets/:ticket_id/assign", handleAssignTicket, true);
+router.post("/api/tickets/:ticket_id/status", handleUpdateTicketStatus, true);
 router.post("/api/tickets/:ticket_id/comment", handleAddComment, true);
 router.post("/api/tickets/:ticket_id/close", handleCloseTicket, true);
 router.post("/api/tickets/:ticket_id/reopen", handleReopenTicket, true);

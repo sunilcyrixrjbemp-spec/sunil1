@@ -1779,3 +1779,91 @@ export async function handleTestTime(request, env) {
     offset: "+05:30"
   });
 }
+
+/**
+ * POST /api/admin/revert-claim-deductions
+ * Reverts policy deductions for a specific claim code (e.g. "000640" or "RJ-07/26-000640")
+ * restoring original travel_amount, sub_amount, da_amount, and total amount.
+ */
+export async function handleRevertClaimDeductions(request, env, params, query, adminUser) {
+  if (!adminUser || adminUser.role !== "Admin") {
+    return jsonResponse({ error: "Access denied" }, 403);
+  }
+
+  let body = {};
+  try {
+    body = await request.json();
+  } catch (e) {}
+
+  const claimSearch = (body.expense_code || body.claim_code || body.id || "000640").toString().trim();
+
+  try {
+    const expense = await env.DB.prepare(`
+      SELECT * FROM expenses 
+      WHERE LOWER(expense_code) = LOWER(?) 
+         OR LOWER(expense_code) LIKE LOWER(?) 
+         OR id = ?
+    `).bind(claimSearch, `%${claimSearch}%`, parseInt(claimSearch, 10) || -1).first();
+
+    if (!expense) {
+      return jsonResponse({ error: `Expense claim matching '${claimSearch}' not found.` }, 404);
+    }
+
+    const expCode = expense.expense_code;
+
+    // 1. Revert legs in expense_itineraries
+    await env.DB.prepare(`
+      UPDATE expense_itineraries
+      SET travel_amount = CASE WHEN original_travel_amount IS NOT NULL AND original_travel_amount > 0 THEN original_travel_amount ELSE travel_amount END,
+          sub_amount = CASE WHEN original_sub_amount IS NOT NULL AND original_sub_amount > 0 THEN original_sub_amount ELSE sub_amount END,
+          da_amount = CASE WHEN original_da_amount IS NOT NULL AND original_da_amount > 0 THEN original_da_amount ELSE da_amount END
+      WHERE exp_id = ?
+    `).bind(expCode).run();
+
+    // 2. Re-calculate total restored amounts from legs
+    const legsRes = await env.DB.prepare(`
+      SELECT SUM(travel_amount + sub_amount + da_amount + hotel_amount + other_amount + local_purchase) as total_sum,
+             SUM(da_amount) as total_da
+      FROM expense_itineraries
+      WHERE exp_id = ?
+    `).bind(expCode).first();
+
+    const restoredTotal = legsRes?.total_sum || expense.original_amount || expense.amount;
+    const restoredDa = legsRes?.total_da || expense.original_da_amount || expense.da_amount;
+
+    // 3. Update expenses table
+    await env.DB.prepare(`
+      UPDATE expenses
+      SET amount = ?,
+          da_amount = ?,
+          status = CASE WHEN status = 'approved' AND ? > 0 THEN 'pending' ELSE status END,
+          deduction_reason = NULL,
+          updated_at = ?
+      WHERE id = ?
+    `).bind(restoredTotal, restoredDa, restoredTotal, new Date().toISOString(), expense.id).run();
+
+    // 4. Log to expense_edit_logs
+    await env.DB.prepare(`
+      INSERT INTO expense_edit_logs (exp_id, field_name, old_value, new_value, comment, edited_by, timestamp)
+      VALUES (?, 'amount', ?, ?, ?, ?, ?)
+    `).bind(
+      expense.id,
+      String(expense.amount),
+      String(restoredTotal),
+      `[Admin Action] Policy deductions reverted on user request for claim ${expCode}`,
+      adminUser?.name || "Admin",
+      new Date().toISOString()
+    ).run().catch(() => null);
+
+    return jsonResponse({
+      success: true,
+      message: `Successfully reverted policy deductions for claim ${expCode}. Restored total: ₹${restoredTotal}.`,
+      claim_code: expCode,
+      restored_amount: restoredTotal,
+      restored_da: restoredDa
+    });
+  } catch (err) {
+    console.error("Failed to revert claim deductions:", err);
+    return jsonResponse({ status: "error", error: "Failed to revert claim deductions: " + err.message }, 500);
+  }
+}

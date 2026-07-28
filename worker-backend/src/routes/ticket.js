@@ -397,3 +397,177 @@ export async function handleToggleFollowup(request, env, params, query, user) {
 
   return jsonResponse(formatTicketResponse(updated));
 }
+
+/**
+ * GET /api/tickets/stats
+ * Dashboard stats: total, open, inProgress, closed, finalClosed, needsFollowup
+ */
+export async function handleGetTicketStats(request, env, params, query, user) {
+  await checkAndAutoCloseTickets(env);
+  const db = getDrizzleDb(env, request);
+
+  const uCode = String(user.user_id || "").trim();
+  const uName = String(user.name || "").trim();
+
+  let allTickets;
+  if (user.role === "Admin") {
+    allTickets = await db.select().from(supportTickets);
+  } else {
+    allTickets = await db.select()
+      .from(supportTickets)
+      .where(or(
+        eq(supportTickets.createdByCode, uCode),
+        eq(supportTickets.createdByName, uName),
+        eq(supportTickets.assignedToName, uName)
+      ));
+  }
+
+  const list = allTickets || [];
+  const stats = {
+    total: list.length,
+    open: list.filter(t => t.status === "Open" || t.status === "Re-opened" || t.status === "Updated").length,
+    inProgress: list.filter(t => t.status === "In Progress" || t.status === "In-Progress").length,
+    closed: list.filter(t => t.status === "Closed" || t.status === "Resolved").length,
+    finalClosed: list.filter(t => t.status === "Final Closed").length,
+    needsFollowup: list.filter(t => Boolean(t.needsFollowup)).length
+  };
+
+  return jsonResponse(stats);
+}
+
+/**
+ * POST /api/tickets/:ticket_id/assign
+ * Admin / Assignee reassigns ticket to staff/engineer
+ */
+export async function handleAssignTicket(request, env, params, query, user) {
+  const db = getDrizzleDb(env, request);
+  const ticketId = parseInt(params.ticket_id, 10);
+
+  let body;
+  try {
+    body = await request.json();
+  } catch (e) {
+    return jsonResponse({ error: "Invalid JSON body" }, 400);
+  }
+
+  const { assigned_to_name } = body;
+  const targetName = (assigned_to_name || "").trim();
+  if (!targetName) {
+    return jsonResponse({ error: "Assignee name is required" }, 400);
+  }
+
+  const [ticket] = await db.select()
+    .from(supportTickets)
+    .where(eq(supportTickets.id, ticketId))
+    .limit(1);
+
+  if (!ticket) return jsonResponse({ error: "Ticket not found" }, 404);
+
+  const isCreator = ticket.createdByCode === user.user_id;
+  const isAssignee = ticket.assignedToName === user.name;
+  const isAdmin = user.role === "Admin";
+
+  if (!(isCreator || isAssignee || isAdmin)) {
+    return jsonResponse({ error: "Not authorized to assign this ticket" }, 403);
+  }
+
+  let assignedRole = "Staff";
+  const [assignedUser] = await db.select()
+    .from(users)
+    .where(eq(users.name, targetName))
+    .limit(1);
+
+  if (assignedUser) {
+    assignedRole = assignedUser.role || "Staff";
+  }
+
+  const dateOptions = { day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false };
+  const nowStr = new Date().toLocaleString('en-GB', dateOptions).replace(/,/g, '');
+  const logEntry = `${user.name} (${nowStr}): Reassigned ticket to ${targetName} (${assignedRole})`;
+  const newComments = ticket.comments ? `${ticket.comments}\n${logEntry}` : logEntry;
+
+  const timestamp = new Date().toISOString();
+  await db.update(supportTickets)
+    .set({
+      assignedToName: targetName,
+      assignedToRole: assignedRole,
+      comments: newComments,
+      updatedAt: timestamp
+    })
+    .where(eq(supportTickets.id, ticketId));
+
+  const [updated] = await db.select()
+    .from(supportTickets)
+    .where(eq(supportTickets.id, ticketId))
+    .limit(1);
+
+  return jsonResponse(formatTicketResponse(updated));
+}
+
+/**
+ * POST /api/tickets/:ticket_id/status
+ * Updates ticket status (e.g., Pending, In Progress, Resolved, Rejected)
+ */
+export async function handleUpdateTicketStatus(request, env, params, query, user) {
+  const db = getDrizzleDb(env, request);
+  const ticketId = parseInt(params.ticket_id, 10);
+
+  let body;
+  try {
+    body = await request.json();
+  } catch (e) {
+    return jsonResponse({ error: "Invalid JSON body" }, 400);
+  }
+
+  const { status, comment } = body;
+  const newStatus = (status || "").trim();
+  if (!newStatus) {
+    return jsonResponse({ error: "Status is required" }, 400);
+  }
+
+  const [ticket] = await db.select()
+    .from(supportTickets)
+    .where(eq(supportTickets.id, ticketId))
+    .limit(1);
+
+  if (!ticket) return jsonResponse({ error: "Ticket not found" }, 404);
+
+  const isCreator = ticket.createdByCode === user.user_id;
+  const isAssignee = ticket.assignedToName === user.name;
+  const isAdmin = user.role === "Admin";
+
+  if (!(isCreator || isAssignee || isAdmin)) {
+    return jsonResponse({ error: "Not authorized to update status of this ticket" }, 403);
+  }
+
+  const dateOptions = { day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false };
+  const nowStr = new Date().toLocaleString('en-GB', dateOptions).replace(/,/g, '');
+  const commentText = comment ? `: ${comment.trim()}` : '';
+  const logEntry = `${user.name} (${nowStr}): Updated status to '${newStatus}'${commentText}`;
+  const newComments = ticket.comments ? `${ticket.comments}\n${logEntry}` : logEntry;
+
+  const timestamp = new Date().toISOString();
+  const updatePayload = {
+    status: newStatus,
+    comments: newComments,
+    updatedAt: timestamp
+  };
+
+  if (newStatus === "Closed" || newStatus === "Resolved" || newStatus === "Rejected") {
+    updatePayload.closedAt = timestamp;
+  } else if (newStatus === "Open" || newStatus === "Re-opened" || newStatus === "In Progress") {
+    updatePayload.closedAt = null;
+  }
+
+  await db.update(supportTickets)
+    .set(updatePayload)
+    .where(eq(supportTickets.id, ticketId));
+
+  const [updated] = await db.select()
+    .from(supportTickets)
+    .where(eq(supportTickets.id, ticketId))
+    .limit(1);
+
+  return jsonResponse(formatTicketResponse(updated));
+}
+
