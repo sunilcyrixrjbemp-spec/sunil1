@@ -59,7 +59,7 @@ const parseSelectedLocations = (raw: string, availableOptions: string[] = []): s
     if (!opt) continue;
     if (remaining.includes(opt)) {
       selected.push(opt);
-      remaining = remaining.replaceAll(opt, "").trim();
+      remaining = remaining.split(opt).join("").trim();
     }
   }
 
