@@ -190,6 +190,27 @@ export async function handleCreateTicket(request, env, params, query, user) {
     .where(eq(supportTickets.ticketCode, ticketCode))
     .limit(1);
 
+  // Dispatch Email Notification to Ticket Creator (User)
+  try {
+    let targetEmail = user.email;
+    if (!targetEmail) {
+      const [uRecord] = await db.select().from(users).where(eq(users.id, user.id)).limit(1);
+      targetEmail = uRecord?.email;
+    }
+    if (targetEmail) {
+      sendTicketNotificationEmail(
+        targetEmail,
+        user.name,
+        ticketCode,
+        `[Grievance Registered] Ticket ${ticketCode} - ${concernType}`,
+        `Your grievance (<strong>${ticketCode}</strong>) for <em>${concernType}</em> has been registered successfully.<br/><br/><strong>Description:</strong> ${finalDesc}<br/><strong>Assigned Desk:</strong> ${assignedName} (${assignedRole})`,
+        env
+      ).catch(() => null);
+    }
+  } catch (e) {
+    console.error("Email notification dispatch error:", e);
+  }
+
   return jsonResponse(formatTicketResponse(created || {
     ticketCode,
     created_by_code: user.user_id,
@@ -198,6 +219,67 @@ export async function handleCreateTicket(request, env, params, query, user) {
     status: 'Open'
   }), 201);
 }
+
+/**
+ * Helper to dispatch ticket email notifications via GAS Web Apps
+ */
+async function sendTicketNotificationEmail(toEmail, recipientName, ticketCode, subject, bodyText, env) {
+  if (!toEmail || !toEmail.includes("@")) return;
+
+  const DEFAULT_GAS_URLS = [
+    "https://script.google.com/macros/s/AKfycbwxh5LQLCGtwGflfF7V5HKyL7viFNlAkAbsgz5xEDQo8Eg_f1kw47EjxrzSAC891sm1/exec",
+    "https://script.google.com/macros/s/AKfycbwrK97nxv0aXpL5whXzn6CBiXschDpVju6smu4_Wx7-qrF7ljbU6Qom9lVKHr5veNCh/exec",
+    "https://script.google.com/macros/s/AKfycbyFRbkKZfvXBEAzB1BVyKSER_n99ONSyLSpygFVkrpyhjQnYzJAM0HdbIgH02_BAY9DSQ/exec"
+  ];
+
+  let urls = DEFAULT_GAS_URLS;
+  if (env && env.GAS_WEB_APP_URLS) {
+    urls = env.GAS_WEB_APP_URLS.split(",").map(u => u.trim()).filter(Boolean);
+  } else if (env && env.GAS_WEB_APP_URL) {
+    urls = [env.GAS_WEB_APP_URL.trim()];
+  }
+
+  const htmlBody = `
+    <div style="font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; padding: 24px; color: #1e293b; max-width: 620px; margin: 0 auto; border: 1px solid #cbd5e1; border-radius: 12px; background-color: #ffffff;">
+      <div style="background: linear-gradient(135deg, #1e3a8a 0%, #2563eb 100%); color: white; padding: 20px; border-radius: 10px; text-align: center;">
+        <h2 style="margin: 0; font-size: 22px;">🏛️ Support & Grievance Portal</h2>
+        <p style="margin: 6px 0 0 0; font-size: 14px; opacity: 0.9;">Ticket Reference: <strong>${ticketCode}</strong></p>
+      </div>
+      <div style="padding: 24px 8px 12px 8px;">
+        <p style="font-size: 16px;">Dear <strong>${recipientName || "Valued User"}</strong>,</p>
+        <p style="font-size: 15px; line-height: 1.6; color: #334155;">${bodyText}</p>
+        <div style="background-color: #f8fafc; padding: 16px; border-left: 4px solid #2563eb; border-radius: 6px; margin: 20px 0;">
+          <p style="margin: 0 0 6px 0; font-size: 14px;"><strong>Ticket Code:</strong> <span style="color: #1e3a8a;">${ticketCode}</span></p>
+          <p style="margin: 0; font-size: 14px;"><strong>Date:</strong> ${new Date().toLocaleString('en-GB')}</p>
+        </div>
+        <p style="font-size: 13px; color: #64748b; margin-top: 24px; border-top: 1px solid #e2e8f0; padding-top: 12px;">
+          This is an automated notification from the FieldOps Grievance & Support System.
+        </p>
+      </div>
+    </div>
+  `;
+
+  for (const url of urls) {
+    try {
+      await fetch(url, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          to: toEmail,
+          subject: subject,
+          htmlBody: htmlBody,
+          body: bodyText.replace(/<[^>]*>/g, ""),
+          correlationId: `ticket_mail_${Date.now()}`
+        })
+      });
+      console.log(`[Ticket Email Sent] to ${toEmail} for ${ticketCode}`);
+      break;
+    } catch (e) {
+      console.error("[Ticket Email Error]", e);
+    }
+  }
+}
+
 
 /**
  * POST /api/tickets/:ticket_id/comment
@@ -568,6 +650,26 @@ export async function handleUpdateTicketStatus(request, env, params, query, user
     .where(eq(supportTickets.id, ticketId))
     .limit(1);
 
+  // Send Email notification to ticket creator on status update
+  try {
+    const creatorCode = ticket.createdByCode || ticket.created_by_code;
+    const [creatorUser] = await db.select().from(users).where(or(eq(users.user_id, creatorCode), eq(users.id, ticket.createdById))).limit(1);
+    if (creatorUser && creatorUser.email) {
+      const tCode = ticket.ticketCode || ticket.ticket_code;
+      sendTicketNotificationEmail(
+        creatorUser.email,
+        creatorUser.name,
+        tCode,
+        `[Ticket ${tCode}] Status Updated to '${newStatus}'`,
+        `The status of your grievance ticket (<strong>${tCode}</strong>) has been updated to <strong>${newStatus}</strong> by ${user.name}.<br/><br/>${comment ? `<strong>Remark:</strong> ${comment}` : ''}`,
+        env
+      ).catch(() => null);
+    }
+  } catch (e) {
+    console.error("Email notification dispatch error on status update:", e);
+  }
+
   return jsonResponse(formatTicketResponse(updated));
 }
+
 
