@@ -29,10 +29,7 @@ import {
   TagOutlined,
   FilterOutlined,
   SettingOutlined,
-  EditOutlined,
-  CheckCircleFilled,
-  RightOutlined,
-  UserOutlined
+  CustomerServiceOutlined
 } from "@ant-design/icons";
 import { ticketService, TicketCreatePayload } from "../services/ticketService";
 import { expenseService } from "../services/expenseService";
