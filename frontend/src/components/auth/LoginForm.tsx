@@ -7,7 +7,6 @@ import { isNativeApp, biometricAuth } from "../../utils/capacitor";
 import { nativeConfig } from "../../utils/persistence";
 import { Filesystem, Directory, Encoding } from '@capacitor/filesystem';
 import { Preferences } from '@capacitor/preferences';
-import { CurrentTimeWidget } from "../common/CurrentTimeWidget";
 
 
 interface LoginFormProps {
@@ -258,9 +257,6 @@ export default function LoginForm({ onForgotPassword, onUnlockAccount }: LoginFo
           }}
         />
         <p className="text-slate-500 text-[10px] mt-2 font-black uppercase tracking-widest">Account Sign In</p>
-        <div className="mt-2.5 flex justify-center">
-          <CurrentTimeWidget variant="badge" format="12h" />
-        </div>
       </div>
 
       {statusMessage && (
