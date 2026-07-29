@@ -485,8 +485,19 @@ export default function AnalysisPage() {
       callsCompleted += Number(e.calls_completed || 0);
       pmsCount += Number(e.pms_count || 0);
       calibrationCount += Number(e.calibration_count || 0);
-      assetTaggingCount += Number(e.asset_tagging || 0);
-      assetTaggingValue += Number(e.asset_tagging_value || e.asset_tagging_val || 0);
+
+      const rawTag = Number(e.asset_tagging || 0);
+      const rawVal = Number(e.asset_tagging_value || e.asset_tagging_val || 0);
+
+      if (rawTag > 1000) {
+        // rawTag is a Rupee amount (e.g. ₹60,00,00,000) stored in asset_tagging column
+        assetTaggingValue += rawTag;
+        assetTaggingCount += 1;
+      } else {
+        assetTaggingCount += rawTag;
+        assetTaggingValue += (rawVal || (rawTag > 0 ? rawTag : 0));
+      }
+
       mobiliseCount += Number(e.mobilise_asset_count || e.mobilise_count || 0);
     });
 
