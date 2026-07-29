@@ -492,13 +492,13 @@ export default function AnalysisPage() {
 
     if (explicitQty > 0) {
       qty = explicitQty;
-      val = explicitVal || (rawTag > 1000 ? rawTag : 0);
-    } else if (rawTag > 1000) {
+      val = explicitVal || (rawTag > 100 ? rawTag : 0);
+    } else if (rawTag > 100) {
       val = rawTag;
       qty = 1;
     } else if (rawTag > 0) {
       qty = rawTag;
-      val = explicitVal || 0;
+      val = explicitVal;
     } else if (explicitVal > 0) {
       val = explicitVal;
       qty = 1;
@@ -833,23 +833,24 @@ export default function AnalysisPage() {
             total_val: Number(d.total_val || (d.quantity * d.unit_cost) || 0)
           });
         });
-      } else if (Number(e.asset_tagging || 0) > 0) {
-        const qty = Number(e.asset_tagging);
-        const totalVal = Number(e.asset_tagging_value || e.asset_tagging_val || 0);
-        const unitCost = qty > 0 ? Math.round(totalVal / qty) : totalVal;
-        list.push({
-          key: `tag_${counter++}`,
-          date: mainDate,
-          engineer: engineerName,
-          district: districtName,
-          zone: zoneName,
-          hospital_name: fallbackHospital,
-          equipment_name: "Asset Tagging",
-          barcode: fallbackBarcode,
-          quantity: qty,
-          unit_cost: unitCost,
-          total_val: totalVal
-        });
+      } else if (Number(e.asset_tagging || 0) > 0 || Number(e.asset_tagging_value || e.asset_tagging_val || 0) > 0) {
+        const { qty, val } = getAssetTaggingMetrics(e);
+        if (qty > 0 || val > 0) {
+          const unitCost = qty > 0 ? Math.round(val / qty) : val;
+          list.push({
+            key: `tag_${counter++}`,
+            date: mainDate,
+            engineer: engineerName,
+            district: districtName,
+            zone: zoneName,
+            hospital_name: fallbackHospital,
+            equipment_name: "Asset Tagging",
+            barcode: fallbackBarcode,
+            quantity: qty,
+            unit_cost: unitCost,
+            total_val: val
+          });
+        }
       }
     });
 
