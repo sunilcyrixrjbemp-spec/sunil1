@@ -490,15 +490,19 @@ export default function AnalysisPage() {
     const explicitVal = Number(e?.asset_tagging_value || e?.asset_tagging_val || 0);
     const rawTag = Number(e?.asset_tagging || 0);
 
+    // Filter out corrupted/invalid large numbers (> 100,000) stored in asset_tagging column
+    if (rawTag > 100000) {
+      qty = explicitQty > 0 ? explicitQty : 0;
+      val = explicitVal > 0 ? explicitVal : 0;
+      return { qty, val };
+    }
+
     if (explicitQty > 0) {
       qty = explicitQty;
-      val = explicitVal || (rawTag > 100 ? rawTag : 0);
-    } else if (rawTag > 100) {
-      val = rawTag;
-      qty = 1;
+      val = explicitVal || (rawTag > 0 ? rawTag : 0);
     } else if (rawTag > 0) {
       qty = rawTag;
-      val = explicitVal;
+      val = explicitVal || 0;
     } else if (explicitVal > 0) {
       val = explicitVal;
       qty = 1;
