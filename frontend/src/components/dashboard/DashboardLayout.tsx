@@ -28,6 +28,7 @@ import {
 } from "lucide-react";
 import ProgressLoader from "../common/ProgressLoader";
 import { CurrentTimeWidget } from "../common/CurrentTimeWidget";
+import Footer from "../common/Footer";
 
 
 interface MenuItem {
@@ -436,7 +437,10 @@ export default function DashboardLayout() {
         {/* MAIN AREA WORKSPACE */}
         <main className="flex-1 p-2 sm:p-4 pb-16 lg:pb-4 overflow-y-auto min-w-0 overflow-x-hidden w-full">
           {hasAccess ? (
-            <Outlet />
+            <>
+              <Outlet />
+              <Footer />
+            </>
           ) : (
             <div className="h-full flex items-center justify-center p-4">
               <div className="max-w-md w-full bg-white border border-slate-200 rounded-xl shadow-xs p-6 text-center space-y-4 animate-fade-in border-t-4 border-t-rose-600">
