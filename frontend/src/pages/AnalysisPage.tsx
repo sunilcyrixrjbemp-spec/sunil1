@@ -3039,6 +3039,7 @@ export default function AnalysisPage() {
       <div className="mt-8 mb-6">
         <RajasthanMapChart
           expenses={mapExpenses}
+          selectedZoneFilter={selectedZone}
           selectedDistrictFilter={selectedDistrict === "all" ? null : selectedDistrict}
           onSelectDistrict={(dist) => {
             if (!dist) {
