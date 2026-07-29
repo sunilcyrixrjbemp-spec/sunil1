@@ -90,21 +90,42 @@ export const prefetchManager = {
     
     console.log(`[PrefetchManager] Starting parallel global prefetch for user: ${uId} (month: ${month})`);
 
-    // Prefetch My Expenses
-    prefetchManager.prefetch(`my_expenses_${uId}_${month}`, () => expenseService.getExpenses(month));
-    
-    // Prefetch Allowance Stats
-    prefetchManager.prefetch(`allowance_stats_${uId}_${month}`, () => expenseService.getExpenseInit(uId, month));
-
-    // Prefetch Pending Approvals (both for badge count and approvals page)
     const allowedWindows = user.allowed_windows ? user.allowed_windows.split(",").map((w: string) => w.trim().toLowerCase()) : [];
     const userRoleLower = (user.role || "").trim().toLowerCase();
     const isSpecialViewRole = ["admin", "project head", "mis", "travel desk", "travel tesk", "vp", "accountant", "hr"].includes(userRoleLower);
     const isReviewer = allowedWindows.includes("approval") || isSpecialViewRole;
 
+    // Prefetch & Cache Analysis Expenses in localStorage for instant 0ms page load
+    const prefetchExpenses = async () => {
+      try {
+        const cacheKeyMy = `cache_v4_my_expenses_${uId}_${month}`;
+        const cacheKeyTeam = `cache_v4_team_expenses_${uId}_${month}`;
+
+        if (isReviewer) {
+          const [own, team] = await Promise.all([
+            expenseService.getExpenses(month),
+            expenseService.getTeamExpenses(month)
+          ]);
+          if (own && uId) localStorage.setItem(cacheKeyMy, JSON.stringify(own));
+          if (team && uId) localStorage.setItem(cacheKeyTeam, JSON.stringify(team));
+        } else {
+          const own = await expenseService.getExpenses(month);
+          if (own && uId) localStorage.setItem(cacheKeyMy, JSON.stringify(own));
+        }
+        console.log(`[PrefetchManager] Successfully preloaded Analysis data into cache for ${month}`);
+      } catch (err) {
+        console.warn("[PrefetchManager] Failed to pre-fetch Analysis data:", err);
+      }
+    };
+
+    prefetchExpenses();
+
+    // Prefetch Allowance Stats
+    prefetchManager.prefetch(`allowance_stats_${uId}_${month}`, () => expenseService.getExpenseInit(uId, month));
+
+    // Prefetch Pending Approvals
     if (isReviewer) {
       prefetchManager.prefetch("pending_approvals", () => approvalService.getPendingApprovals());
-      prefetchManager.prefetch(`team_expenses_${uId}_${month}`, () => expenseService.getTeamExpenses(month));
     }
   },
 
