@@ -470,6 +470,38 @@ export default function AnalysisPage() {
   const minDateStr = `${selectedYear}-${monthStr}-01`;
   const maxDateStr = `${selectedYear}-${monthStr}-${String(lastDay).padStart(2, "0")}`;
 
+  // Helper to extract exact Tagged Quantity and Tagged Rupee Value from any expense record
+  const getAssetTaggingMetrics = (e: any) => {
+    let qty = 0;
+    let val = 0;
+
+    const details = Array.isArray(e?.tagging_details) ? e.tagging_details : [];
+    if (details.length > 0) {
+      details.forEach((d: any) => {
+        const dQty = Number(d.quantity || 1);
+        const dVal = Number(d.total_val || (d.quantity * d.unit_cost) || 0);
+        qty += dQty;
+        val += dVal;
+      });
+    } else if (e) {
+      const rawTag = Number(e.asset_tagging || 0);
+      const rawVal = Number(e.asset_tagging_value || e.asset_tagging_val || 0);
+
+      if (rawTag > 1000) {
+        val = rawTag;
+        qty = 1;
+      } else if (rawTag > 0) {
+        qty = rawTag;
+        val = rawVal || rawTag;
+      } else if (rawVal > 0) {
+        val = rawVal;
+        qty = 1;
+      }
+    }
+
+    return { qty, val };
+  };
+
   // Activity aggregates
   const activityStats = useMemo(() => {
     let callsAssigned = 0;
@@ -485,8 +517,11 @@ export default function AnalysisPage() {
       callsCompleted += Number(e.calls_completed || 0);
       pmsCount += Number(e.pms_count || 0);
       calibrationCount += Number(e.calibration_count || 0);
-      assetTaggingCount += Number(e.asset_tagging || 0);
-      assetTaggingValue += Number(e.asset_tagging_value || e.asset_tagging_val || 0);
+
+      const { qty, val } = getAssetTaggingMetrics(e);
+      assetTaggingCount += qty;
+      assetTaggingValue += val;
+
       mobiliseCount += Number(e.mobilise_asset_count || e.mobilise_count || 0);
     });
 
@@ -640,10 +675,9 @@ export default function AnalysisPage() {
         if (!dailyValueMap[dateKey]) {
           dailyValueMap[dateKey] = { value: 0, count: 0 };
         }
-        const val = Number(e.asset_tagging_value || e.asset_tagging_val || 0);
-        const cnt = Number(e.asset_tagging || 0);
+        const { qty, val } = getAssetTaggingMetrics(e);
         dailyValueMap[dateKey].value += val;
-        dailyValueMap[dateKey].count += cnt;
+        dailyValueMap[dateKey].count += qty;
       }
     });
 
