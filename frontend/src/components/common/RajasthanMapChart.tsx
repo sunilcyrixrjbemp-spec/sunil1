@@ -159,9 +159,19 @@ export const RajasthanMapChart: React.FC<RajasthanMapChartProps> = ({
   const [searchQuery, setSearchQuery] = useState<string>("");
   const [zoomLevel, setZoomLevel] = useState<number>(1);
   const [panOffset, setPanOffset] = useState<{ x: number; y: number }>({ x: 0, y: 0 });
-  const [tooltipPos, setTooltipPos] = useState<{ x: number; y: number }>({ x: 0, y: 0 });
 
   const svgRef = useRef<SVGSVGElement | null>(null);
+  const tooltipRef = useRef<HTMLDivElement | null>(null);
+
+  const handleMouseMove = (e: React.MouseEvent<SVGSVGElement>) => {
+    if (svgRef.current && tooltipRef.current) {
+      const rect = svgRef.current.getBoundingClientRect();
+      const x = Math.min(500, Math.max(10, e.clientX - rect.left + 15));
+      const y = Math.min(380, Math.max(10, e.clientY - rect.top - 15));
+      tooltipRef.current.style.left = `${x}px`;
+      tooltipRef.current.style.top = `${y}px`;
+    }
+  };
 
   // Sync prop filter with internal state
   useEffect(() => {
@@ -776,15 +786,7 @@ export const RajasthanMapChart: React.FC<RajasthanMapChartProps> = ({
                 style={{
                   transform: `scale(${zoomLevel}) translate(${panOffset.x}px, ${panOffset.y}px)`
                 }}
-                onMouseMove={(e) => {
-                  if (svgRef.current) {
-                    const rect = svgRef.current.getBoundingClientRect();
-                    setTooltipPos({
-                      x: e.clientX - rect.left,
-                      y: e.clientY - rect.top
-                    });
-                  }
-                }}
+                onMouseMove={handleMouseMove}
               >
                 {/* Map Paths */}
                 <g>
@@ -866,10 +868,12 @@ export const RajasthanMapChart: React.FC<RajasthanMapChartProps> = ({
               {/* Floating Tooltip */}
               {hoveredDistrict && (
                 <div
-                  className="absolute pointer-events-none z-50 bg-white/95 backdrop-blur-md border border-gray-300 p-3 rounded-xl shadow-xl text-xs text-gray-800 max-w-xs transition-all duration-150"
+                  ref={tooltipRef}
+                  className="absolute pointer-events-none select-none z-50 bg-white/95 backdrop-blur-md border border-gray-300 p-3 rounded-xl shadow-xl text-xs text-gray-800 max-w-xs transition-all duration-75"
                   style={{
-                    left: Math.min(520, Math.max(10, tooltipPos.x + 15)),
-                    top: Math.min(400, Math.max(10, tooltipPos.y - 15))
+                    pointerEvents: "none",
+                    left: "15px",
+                    top: "15px"
                   }}
                 >
                   <div className="flex items-center justify-between gap-3 border-b border-gray-200 pb-1.5 mb-1.5">
