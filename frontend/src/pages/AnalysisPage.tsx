@@ -1910,7 +1910,7 @@ export default function AnalysisPage() {
                       return (
                         <div key={i} className="space-y-1">
                           <div className="flex justify-between items-center text-[10px] font-bold">
-                            <span className="text-gray-700 truncate max-w-[120px]">{usr.name}</span>
+                            <span className="text-gray-700 truncate max-w-[200px]">{usr.name}</span>
                             <span className="font-mono text-gray-955">₹{usr.amount.toLocaleString()} ({pct}%)</span>
                           </div>
                           <Progress percent={pct} strokeColor="#8b5cf6" size="small" showInfo={false} />
@@ -1996,7 +1996,7 @@ export default function AnalysisPage() {
                           keys={["amount"]}
                           indexBy="name"
                           layout="horizontal"
-                          margin={{ top: 15, right: 15, bottom: 35, left: 90 }}
+                          margin={{ top: 15, right: 25, bottom: 35, left: 170 }}
                           padding={0.35}
                           colors={GALLERY_COLORS}
                           colorBy="indexValue"
