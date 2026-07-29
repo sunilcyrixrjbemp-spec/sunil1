@@ -493,8 +493,14 @@ export const RajasthanMapChart: React.FC<RajasthanMapChartProps> = ({
     return { x: sumX / count, y: sumY / count };
   };
 
+  const lastClickTimeRef = useRef<number>(0);
+
   // Handle District Selection
   const handleDistrictClick = (districtName: string) => {
+    const now = Date.now();
+    if (now - lastClickTimeRef.current < 250) return;
+    lastClickTimeRef.current = now;
+
     const norm = normalizeDistrict(districtName);
     const newSel = selectedDistrict === norm ? null : norm;
     setSelectedDistrict(newSel);
@@ -828,6 +834,7 @@ export const RajasthanMapChart: React.FC<RajasthanMapChartProps> = ({
                           strokeLinejoin="round"
                           className="transition-all duration-200 cursor-pointer"
                           style={{
+                            pointerEvents: "visiblePainted",
                             filter: isSelected
                               ? "drop-shadow(0 2px 8px rgba(37, 99, 235, 0.4))"
                               : isHovered
@@ -840,7 +847,11 @@ export const RajasthanMapChart: React.FC<RajasthanMapChartProps> = ({
                           onMouseLeave={() => {
                             setHoveredDistrict((current) => (current === norm ? null : current));
                           }}
-                          onClick={() => handleDistrictClick(distName)}
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            e.preventDefault();
+                            handleDistrictClick(distName);
+                          }}
                         />
 
                         {/* District Labels */}
