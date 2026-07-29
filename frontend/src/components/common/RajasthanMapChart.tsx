@@ -195,21 +195,14 @@ export const RajasthanMapChart: React.FC<RajasthanMapChartProps> = ({
   }, []);
 
   // Filter features to focus on based on active Zone or District filter
+  // Compute target features for SVG Bounding Box based on Zone or Full Rajasthan State
+  // (Stable bounds so clicking a district never causes SVG projection to shrink/jump under cursor)
   const targetFeatures = useMemo(() => {
-    if (!geoData || !geoData.features) return [];
+    if (!geoData?.features) return [];
     
-    const normSelDist = selectedDistrict ? normalizeDistrict(selectedDistrict).toLowerCase() : null;
     const cleanZone = selectedZoneFilter && selectedZoneFilter !== "all" 
       ? selectedZoneFilter.trim().toLowerCase().replace(/\s*[zZ]one\s*$/, "") 
       : null;
-
-    if (normSelDist) {
-      const match = geoData.features.filter(f => {
-        const d = f.properties.district || f.properties.dt_nm || "";
-        return normalizeDistrict(d).toLowerCase() === normSelDist;
-      });
-      if (match.length > 0) return match;
-    }
 
     if (cleanZone) {
       const match = geoData.features.filter(f => {
@@ -220,7 +213,7 @@ export const RajasthanMapChart: React.FC<RajasthanMapChartProps> = ({
     }
 
     return geoData.features;
-  }, [geoData, selectedDistrict, selectedZoneFilter]);
+  }, [geoData, selectedZoneFilter]);
 
   // Compute bounding box dynamically from target features to zoom into Zone/District
   const bounds = useMemo(() => {
@@ -842,7 +835,9 @@ export const RajasthanMapChart: React.FC<RajasthanMapChartProps> = ({
                               : "none"
                           }}
                           onMouseEnter={() => setHoveredDistrict(norm)}
-                          onMouseLeave={() => setHoveredDistrict(null)}
+                          onMouseLeave={() => {
+                            setHoveredDistrict((current) => (current === norm ? null : current));
+                          }}
                           onClick={() => handleDistrictClick(distName)}
                         />
 
