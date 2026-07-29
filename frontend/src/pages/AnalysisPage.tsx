@@ -77,8 +77,9 @@ export default function AnalysisPage() {
     const m = savedM !== null ? Number(savedM) : new Date().getMonth();
     const y = savedY !== null ? Number(savedY) : new Date().getFullYear();
     const monthStr = String(m + 1).padStart(2, "0");
-    const key = `cache_my_expenses_${currentUser.user_id}_${y}-${monthStr}`;
-    const cached = localStorage.getItem(key);
+    const keyV4 = `cache_v4_my_expenses_${currentUser.user_id}_${y}-${monthStr}`;
+    const keyOld = `cache_my_expenses_${currentUser.user_id}_${y}-${monthStr}`;
+    const cached = localStorage.getItem(keyV4) || localStorage.getItem(keyOld);
     return cached ? JSON.parse(cached) : [];
   });
   const [teamExpenses, setTeamExpenses] = useState<any[]>(() => {
@@ -89,21 +90,23 @@ export default function AnalysisPage() {
     const m = savedM !== null ? Number(savedM) : new Date().getMonth();
     const y = savedY !== null ? Number(savedY) : new Date().getFullYear();
     const monthStr = String(m + 1).padStart(2, "0");
-    const key = `cache_team_expenses_${currentUser.user_id}_${y}-${monthStr}`;
-    const cached = localStorage.getItem(key);
+    const keyV4 = `cache_v4_team_expenses_${currentUser.user_id}_${y}-${monthStr}`;
+    const keyOld = `cache_team_expenses_${currentUser.user_id}_${y}-${monthStr}`;
+    const cached = localStorage.getItem(keyV4) || localStorage.getItem(keyOld);
     return cached ? JSON.parse(cached) : [];
   });
   const [loading, setLoading] = useState(() => {
     const currentUser = authService.getCurrentUser();
-    if (!currentUser) return true;
+    if (!currentUser) return false;
     const savedM = localStorage.getItem("analysis_selectedMonth");
     const savedY = localStorage.getItem("analysis_selectedYear");
     const m = savedM !== null ? Number(savedM) : new Date().getMonth();
     const y = savedY !== null ? Number(savedY) : new Date().getFullYear();
     const monthStr = String(m + 1).padStart(2, "0");
-    const key = `cache_my_expenses_${currentUser.user_id}_${y}-${monthStr}`;
-    const hasMyCache = !!localStorage.getItem(key);
-    return !hasMyCache;
+    const keyV4 = `cache_v4_my_expenses_${currentUser.user_id}_${y}-${monthStr}`;
+    const keyTeamV4 = `cache_v4_team_expenses_${currentUser.user_id}_${y}-${monthStr}`;
+    const hasCache = !!(localStorage.getItem(keyV4) || localStorage.getItem(keyTeamV4));
+    return !hasCache;
   });  const [viewMode, setViewMode] = useState<"my" | "team">(() => {
     const saved = localStorage.getItem("analysis_viewMode");
     if (saved === "my" || saved === "team") return saved;
@@ -197,7 +200,14 @@ export default function AnalysisPage() {
   const allowedWindows = (user?.allowed_windows || "").split(",").map((w: string) => w.trim().toLowerCase());
   const isReviewer = allowedWindows.includes("approval") || hasFullAccess(user?.role);
 
-  const [usersMap, setUsersMap] = useState<Record<string, any>>({});
+  const [usersMap, setUsersMap] = useState<Record<string, any>>(() => {
+    try {
+      const cached = localStorage.getItem("cache_users_map");
+      return cached ? JSON.parse(cached) : {};
+    } catch {
+      return {};
+    }
+  });
 
   useEffect(() => {
     const fetchUsers = async () => {
@@ -212,6 +222,7 @@ export default function AnalysisPage() {
             if (u.id) map[String(u.id)] = u;
           });
           setUsersMap(map);
+          localStorage.setItem("cache_users_map", JSON.stringify(map));
         }
       } catch (e) {
         // Handled gracefully if not privileged

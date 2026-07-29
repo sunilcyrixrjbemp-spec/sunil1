@@ -197,6 +197,7 @@ export const expenses = sqliteTable("expenses", {
   updatedAt: text("updated_at"),
 }, (table) => ({
   userMonthYearIdx: index("idx_expenses_user_month_year").on(table.userId, table.month, table.year),
+  monthYearIdx: index("idx_expenses_month_year").on(table.month, table.year),
   statusIdx: index("idx_expenses_status").on(table.status),
   createdAtIdx: index("idx_expenses_created_at").on(table.createdAt),
 }));
