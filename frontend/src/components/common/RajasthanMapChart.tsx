@@ -2,6 +2,7 @@ import React, { useState, useEffect, useMemo, useRef } from "react";
 import { 
   MapPin, 
   Users, 
+  UserCheck,
   Search, 
   ZoomIn, 
   ZoomOut, 
@@ -31,6 +32,15 @@ interface ExpenseRecord {
   home_district?: string;
   submitter_name?: string;
   user_name?: string;
+  submitter_role?: string;
+  role?: string;
+  designation?: string;
+  submitter_designation?: string;
+  manager_name?: string;
+  manager?: string;
+  coordinator_name?: string;
+  coordinator?: string;
+  submitter_coordinator?: string;
   facility?: string;
   facility_name?: string;
   hospital?: string;
@@ -272,7 +282,9 @@ export const RajasthanMapChart: React.FC<RajasthanMapChartProps> = ({
         calibrationCount: number;
         facilities: Set<string>;
         engineers: Set<string>;
+        managers: Set<string>;
         engineerAmounts: Record<string, number>;
+        managerAmounts: Record<string, number>;
       }
     > = {};
 
@@ -295,13 +307,18 @@ export const RajasthanMapChart: React.FC<RajasthanMapChartProps> = ({
           calibrationCount: 0,
           facilities: new Set(),
           engineers: new Set(),
-          engineerAmounts: {}
+          managers: new Set(),
+          engineerAmounts: {},
+          managerAmounts: {}
         };
       }
 
       const amt = Number(e.amount || 0);
       const status = (e.status || "pending").toLowerCase();
-      const engName = e.submitter_name || e.user_name || "Unassigned";
+      const userName = e.submitter_name || e.user_name || "Unassigned";
+      const userRole = String(e.submitter_role || e.role || e.designation || e.submitter_designation || "").toLowerCase();
+      const mgrName = e.manager_name || e.manager || e.coordinator_name || e.coordinator || e.submitter_coordinator;
+
       const facName = e.facility || e.facility_name || e.hospital || e.site || e.work_location || e.location || e.destination || e.itinerary || `Facility #${idx + 1}`;
 
       stats[dist].totalAmount += amt;
@@ -312,9 +329,23 @@ export const RajasthanMapChart: React.FC<RajasthanMapChartProps> = ({
       stats[dist].calibrationCount += Number(e.calibration_count || 0);
 
       if (facName && facName !== "—") stats[dist].facilities.add(facName);
-      if (engName && engName !== "Unassigned") stats[dist].engineers.add(engName);
 
-      stats[dist].engineerAmounts[engName] = (stats[dist].engineerAmounts[engName] || 0) + amt;
+      // Classify user as Manager vs Engineer
+      const isManager = userRole.includes("manager") || userRole.includes("lead") || userRole.includes("head") || userRole.includes("vp") || userRole.includes("director") || userRole.includes("coordinator");
+
+      if (userName && userName !== "Unassigned") {
+        if (isManager) {
+          stats[dist].managers.add(userName);
+          stats[dist].managerAmounts[userName] = (stats[dist].managerAmounts[userName] || 0) + amt;
+        } else {
+          stats[dist].engineers.add(userName);
+          stats[dist].engineerAmounts[userName] = (stats[dist].engineerAmounts[userName] || 0) + amt;
+        }
+      }
+
+      if (mgrName && typeof mgrName === "string" && mgrName.trim() && mgrName !== "—" && mgrName !== "Unassigned") {
+        stats[dist].managers.add(mgrName.trim());
+      }
 
       if (status === "approved") {
         stats[dist].approvedAmount += amt;
@@ -338,6 +369,7 @@ export const RajasthanMapChart: React.FC<RajasthanMapChartProps> = ({
     let totalCalibration = 0;
     const allFacilities = new Set<string>();
     const allEngineers = new Set<string>();
+    const allManagers = new Set<string>();
 
     Object.entries(districtStats).forEach(([distName, s]) => {
       if (selectedZoneFilter && selectedZoneFilter !== "all") {
@@ -350,10 +382,13 @@ export const RajasthanMapChart: React.FC<RajasthanMapChartProps> = ({
       totalCalibration += s.calibrationCount;
       s.facilities.forEach((f) => allFacilities.add(f));
       s.engineers.forEach((eng) => allEngineers.add(eng));
+      s.managers.forEach((mgr) => allManagers.add(mgr));
     });
 
     const totalEngineers = allEngineers.size;
-    const avgExpensePerEngineer = totalEngineers > 0 ? Math.round(totalExpense / totalEngineers) : 0;
+    const totalManagers = allManagers.size;
+    const totalStaff = totalEngineers + totalManagers;
+    const avgExpensePerEngineer = totalStaff > 0 ? Math.round(totalExpense / totalStaff) : 0;
 
     return {
       totalFacilities: allFacilities.size,
@@ -362,6 +397,7 @@ export const RajasthanMapChart: React.FC<RajasthanMapChartProps> = ({
       totalPms,
       totalCalibration,
       totalEngineers,
+      totalManagers,
       totalExpense,
       avgExpensePerEngineer
     };
@@ -484,18 +520,27 @@ export const RajasthanMapChart: React.FC<RajasthanMapChartProps> = ({
         rejectedAmount: 0,
         approvalRate: 0,
         engineersCount: 0,
-        avgExpensePerEngineer: 0,
-        topEngineers: []
+        managersCount: 0,
+        avgExpensePerStaff: 0,
+        topEngineers: [],
+        topManagers: []
       };
     }
 
     const appRate = stat.claimCount > 0 ? Math.round((stat.approvedCount / stat.claimCount) * 100) : 0;
     const engCount = stat.engineers.size;
-    const avgExpense = engCount > 0 ? Math.round(stat.totalAmount / engCount) : 0;
+    const mgrCount = stat.managers.size;
+    const totalStaffCount = engCount + mgrCount;
+    const avgExpense = totalStaffCount > 0 ? Math.round(stat.totalAmount / totalStaffCount) : 0;
 
     const topEngs = Object.entries(stat.engineerAmounts)
       .map(([name, amount]) => ({ name, amount }))
       .sort((a, b) => b.amount - a.amount);
+
+    const topMgrs = Array.from(stat.managers).map(name => ({
+      name,
+      amount: stat.managerAmounts[name] || 0
+    })).sort((a, b) => b.amount - a.amount);
 
     return {
       name: targetDist,
@@ -511,8 +556,10 @@ export const RajasthanMapChart: React.FC<RajasthanMapChartProps> = ({
       rejectedAmount: stat.rejectedAmount,
       approvalRate: appRate,
       engineersCount: engCount,
-      avgExpensePerEngineer: avgExpense,
-      topEngineers: topEngs
+      managersCount: mgrCount,
+      avgExpensePerStaff: avgExpense,
+      topEngineers: topEngs,
+      topManagers: topMgrs
     };
   }, [selectedDistrict, hoveredDistrict, districtStats]);
 
@@ -537,8 +584,8 @@ export const RajasthanMapChart: React.FC<RajasthanMapChartProps> = ({
         </div>
       </div>
 
-      {/* Statewide / Zone KPI Summary Bar (7 Live Metrics) */}
-      <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-7 gap-2.5 p-3 bg-slate-100/60 border-b border-gray-200">
+      {/* Statewide / Zone KPI Summary Bar (8 Live Metrics) */}
+      <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-8 gap-2.5 p-3 bg-slate-100/60 border-b border-gray-200">
         {/* 1. Total Facilities */}
         <div className="bg-white p-2.5 rounded-xl border border-gray-200 shadow-2xs flex items-center gap-2.5">
           <div className="w-8 h-8 rounded-lg bg-teal-50 border border-teal-200 flex items-center justify-center text-teal-600 shrink-0">
@@ -629,14 +676,29 @@ export const RajasthanMapChart: React.FC<RajasthanMapChartProps> = ({
           </div>
         </div>
 
-        {/* 7. Per Engineer Avg Expense */}
+        {/* 7. Total Managers */}
+        <div className="bg-white p-2.5 rounded-xl border border-gray-200 shadow-2xs flex items-center gap-2.5">
+          <div className="w-8 h-8 rounded-lg bg-violet-50 border border-violet-200 flex items-center justify-center text-violet-600 shrink-0">
+            <UserCheck className="w-4 h-4" />
+          </div>
+          <div>
+            <span className="text-[9px] font-bold text-gray-500 uppercase tracking-wide block">
+              Managers
+            </span>
+            <span className="text-sm font-black text-violet-700 font-mono">
+              {summaryStats.totalManagers}
+            </span>
+          </div>
+        </div>
+
+        {/* 8. Per Staff Avg Expense */}
         <div className="bg-white p-2.5 rounded-xl border border-gray-200 shadow-2xs flex items-center gap-2.5">
           <div className="w-8 h-8 rounded-lg bg-amber-50 border border-amber-200 flex items-center justify-center text-amber-600 shrink-0">
             <Calculator className="w-4 h-4" />
           </div>
           <div>
             <span className="text-[9px] font-bold text-gray-500 uppercase tracking-wide block">
-              Avg / Engineer
+              Avg / Staff
             </span>
             <span className="text-xs font-black text-amber-700 font-mono">
               ₹{summaryStats.avgExpensePerEngineer.toLocaleString()}
@@ -844,6 +906,10 @@ export const RajasthanMapChart: React.FC<RajasthanMapChartProps> = ({
                         <span className="text-gray-600">Engineers:</span>
                         <span className="font-mono font-bold text-cyan-700">{districtStats[hoveredDistrict].engineers.size}</span>
                       </div>
+                      <div className="flex justify-between items-center">
+                        <span className="text-gray-600">Managers:</span>
+                        <span className="font-mono font-bold text-violet-700">{districtStats[hoveredDistrict].managers.size}</span>
+                      </div>
                       <div className="flex justify-between items-center pt-1 border-t border-slate-100">
                         <span className="text-gray-600">Total Expense:</span>
                         <span className="font-mono font-bold text-amber-700">₹{districtStats[hoveredDistrict].totalAmount.toLocaleString()}</span>
@@ -920,16 +986,6 @@ export const RajasthanMapChart: React.FC<RajasthanMapChartProps> = ({
 
                     <div className="bg-white p-2.5 rounded-xl border border-gray-200 shadow-2xs">
                       <span className="text-[9px] font-bold text-gray-500 block uppercase flex items-center gap-1">
-                        <Users className="w-3 h-3 text-cyan-600" />
-                        Engineers
-                      </span>
-                      <span className="text-sm font-bold text-cyan-700 font-mono">
-                        {activeDistrictDetails.engineersCount}
-                      </span>
-                    </div>
-
-                    <div className="bg-white p-2.5 rounded-xl border border-gray-200 shadow-2xs">
-                      <span className="text-[9px] font-bold text-gray-500 block uppercase flex items-center gap-1">
                         <PhoneCall className="w-3 h-3 text-blue-600" />
                         Total Calls
                       </span>
@@ -951,20 +1007,30 @@ export const RajasthanMapChart: React.FC<RajasthanMapChartProps> = ({
                     <div className="bg-white p-2.5 rounded-xl border border-gray-200 shadow-2xs">
                       <span className="text-[9px] font-bold text-gray-500 block uppercase flex items-center gap-1">
                         <Wrench className="w-3 h-3 text-indigo-600" />
-                        PMS Done
+                        PMS / Calibration
                       </span>
-                      <span className="text-sm font-bold text-indigo-700 font-mono">
-                        {activeDistrictDetails.pmsCount}
+                      <span className="text-xs font-bold text-indigo-700 font-mono">
+                        {activeDistrictDetails.pmsCount} / {activeDistrictDetails.calibrationCount}
                       </span>
                     </div>
 
                     <div className="bg-white p-2.5 rounded-xl border border-gray-200 shadow-2xs">
                       <span className="text-[9px] font-bold text-gray-500 block uppercase flex items-center gap-1">
-                        <Gauge className="w-3 h-3 text-purple-600" />
-                        Calibration
+                        <Users className="w-3 h-3 text-cyan-600" />
+                        Engineers
                       </span>
-                      <span className="text-sm font-bold text-purple-700 font-mono">
-                        {activeDistrictDetails.calibrationCount}
+                      <span className="text-sm font-bold text-cyan-700 font-mono">
+                        {activeDistrictDetails.engineersCount}
+                      </span>
+                    </div>
+
+                    <div className="bg-white p-2.5 rounded-xl border border-gray-200 shadow-2xs">
+                      <span className="text-[9px] font-bold text-gray-500 block uppercase flex items-center gap-1">
+                        <UserCheck className="w-3 h-3 text-violet-600" />
+                        Managers
+                      </span>
+                      <span className="text-sm font-bold text-violet-700 font-mono">
+                        {activeDistrictDetails.managersCount}
                       </span>
                     </div>
 
@@ -981,23 +1047,25 @@ export const RajasthanMapChart: React.FC<RajasthanMapChartProps> = ({
                     <div className="bg-white p-2.5 rounded-xl border border-gray-200 shadow-2xs">
                       <span className="text-[9px] font-bold text-gray-500 block uppercase flex items-center gap-1">
                         <Calculator className="w-3 h-3 text-amber-600" />
-                        Avg / Engineer
+                        Avg / Staff
                       </span>
                       <span className="text-xs font-bold text-amber-700 font-mono">
-                        ₹{activeDistrictDetails.avgExpensePerEngineer.toLocaleString()}
+                        ₹{activeDistrictDetails.avgExpensePerStaff.toLocaleString()}
                       </span>
                     </div>
                   </div>
 
-                  {/* Top Engineers in District */}
+                  {/* Engineers in District */}
                   <div className="bg-white p-3 rounded-xl border border-gray-200 shadow-2xs space-y-2">
                     <span className="text-[11px] font-bold text-gray-700 flex items-center justify-between">
-                      <span>Top Engineers ({activeDistrictDetails.name})</span>
-                      <Users className="w-3.5 h-3.5 text-blue-600" />
+                      <span className="flex items-center gap-1 text-cyan-700">
+                        <Users className="w-3.5 h-3.5" />
+                        Engineers ({activeDistrictDetails.engineersCount})
+                      </span>
                     </span>
                     {activeDistrictDetails.topEngineers.length > 0 ? (
-                      <div className="space-y-2 max-h-36 overflow-y-auto pr-1">
-                        {activeDistrictDetails.topEngineers.slice(0, 4).map((eng, idx) => (
+                      <div className="space-y-1.5 max-h-28 overflow-y-auto pr-1">
+                        {activeDistrictDetails.topEngineers.map((eng, idx) => (
                           <div key={idx} className="flex justify-between items-center text-xs">
                             <span className="text-gray-700 font-medium truncate max-w-[140px]">
                               {eng.name}
@@ -1009,7 +1077,33 @@ export const RajasthanMapChart: React.FC<RajasthanMapChartProps> = ({
                         ))}
                       </div>
                     ) : (
-                      <p className="text-xs text-gray-400 m-0">No active engineers for current filters</p>
+                      <p className="text-xs text-gray-400 m-0">No engineers assigned for active filters</p>
+                    )}
+                  </div>
+
+                  {/* Managers in District */}
+                  <div className="bg-white p-3 rounded-xl border border-gray-200 shadow-2xs space-y-2">
+                    <span className="text-[11px] font-bold text-gray-700 flex items-center justify-between">
+                      <span className="flex items-center gap-1 text-violet-700">
+                        <UserCheck className="w-3.5 h-3.5" />
+                        Managers / Coordinators ({activeDistrictDetails.managersCount})
+                      </span>
+                    </span>
+                    {activeDistrictDetails.topManagers.length > 0 ? (
+                      <div className="space-y-1.5 max-h-28 overflow-y-auto pr-1">
+                        {activeDistrictDetails.topManagers.map((mgr, idx) => (
+                          <div key={idx} className="flex justify-between items-center text-xs">
+                            <span className="text-gray-700 font-medium truncate max-w-[140px]">
+                              {mgr.name}
+                            </span>
+                            <span className="font-mono font-bold text-violet-600">
+                              {mgr.amount > 0 ? `₹${mgr.amount.toLocaleString()}` : "Assigned"}
+                            </span>
+                          </div>
+                        ))}
+                      </div>
+                    ) : (
+                      <p className="text-xs text-gray-400 m-0">No managers listed for active filters</p>
                     )}
                   </div>
                 </div>
@@ -1037,18 +1131,21 @@ export const RajasthanMapChart: React.FC<RajasthanMapChartProps> = ({
                     })
                     .map(([name, s]) => {
                       const engCount = s.engineers.size;
-                      const avgExp = engCount > 0 ? Math.round(s.totalAmount / engCount) : 0;
+                      const mgrCount = s.managers.size;
+                      const totalStaff = engCount + mgrCount;
+                      const avgExp = totalStaff > 0 ? Math.round(s.totalAmount / totalStaff) : 0;
                       return {
                         name,
                         amount: s.totalAmount,
                         claimCount: s.claimCount,
                         facilitiesCount: s.facilities.size,
                         engineersCount: engCount,
+                        managersCount: mgrCount,
                         callsAssigned: s.callsAssigned,
                         callsCompleted: s.callsCompleted,
                         pmsCount: s.pmsCount,
                         calibrationCount: s.calibrationCount,
-                        avgExpensePerEngineer: avgExp
+                        avgExpensePerStaff: avgExp
                       };
                     })
                     .sort((a, b) => b.amount - a.amount)
@@ -1071,7 +1168,7 @@ export const RajasthanMapChart: React.FC<RajasthanMapChartProps> = ({
                               <span>•</span>
                               <span className="text-cyan-600">👥 {item.engineersCount} Eng</span>
                               <span>•</span>
-                              <span className="text-blue-600">📞 {item.callsCompleted}/{item.callsAssigned}</span>
+                              <span className="text-violet-600">👔 {item.managersCount} Mgr</span>
                             </div>
                           </div>
                         </div>
@@ -1081,7 +1178,7 @@ export const RajasthanMapChart: React.FC<RajasthanMapChartProps> = ({
                               ₹{item.amount.toLocaleString()}
                             </span>
                             <span className="text-[9px] font-mono text-amber-600 block">
-                              Avg ₹{item.avgExpensePerEngineer.toLocaleString()}/eng
+                              Avg ₹{item.avgExpensePerStaff.toLocaleString()}/staff
                             </span>
                           </div>
                           <ChevronRight className="w-3.5 h-3.5 text-gray-400 group-hover:text-gray-600 transition ml-1" />
