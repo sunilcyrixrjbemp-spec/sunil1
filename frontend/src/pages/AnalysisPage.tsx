@@ -483,20 +483,25 @@ export default function AnalysisPage() {
         qty += dQty;
         val += dVal;
       });
-    } else if (e) {
-      const rawTag = Number(e.asset_tagging || 0);
-      const rawVal = Number(e.asset_tagging_value || e.asset_tagging_val || 0);
+      return { qty, val };
+    }
 
-      if (rawTag > 1000) {
-        val = rawTag;
-        qty = 1;
-      } else if (rawTag > 0) {
-        qty = rawTag;
-        val = rawVal || rawTag;
-      } else if (rawVal > 0) {
-        val = rawVal;
-        qty = 1;
-      }
+    const explicitQty = Number(e?.asset_tagging_qty || 0);
+    const explicitVal = Number(e?.asset_tagging_value || e?.asset_tagging_val || 0);
+    const rawTag = Number(e?.asset_tagging || 0);
+
+    if (explicitQty > 0) {
+      qty = explicitQty;
+      val = explicitVal || (rawTag > 1000 ? rawTag : 0);
+    } else if (rawTag > 1000) {
+      val = rawTag;
+      qty = 1;
+    } else if (rawTag > 0) {
+      qty = rawTag;
+      val = explicitVal || 0;
+    } else if (explicitVal > 0) {
+      val = explicitVal;
+      qty = 1;
     }
 
     return { qty, val };
