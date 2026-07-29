@@ -470,38 +470,6 @@ export default function AnalysisPage() {
   const minDateStr = `${selectedYear}-${monthStr}-01`;
   const maxDateStr = `${selectedYear}-${monthStr}-${String(lastDay).padStart(2, "0")}`;
 
-  // Helper to extract exact Tagged Quantity and Tagged Rupee Value from any expense record
-  const getAssetTaggingMetrics = (e: any) => {
-    let qty = 0;
-    let val = 0;
-
-    const details = Array.isArray(e?.tagging_details) ? e.tagging_details : [];
-    if (details.length > 0) {
-      details.forEach((d: any) => {
-        const dQty = Number(d.quantity || 1);
-        const dVal = Number(d.total_val || (d.quantity * d.unit_cost) || 0);
-        qty += dQty;
-        val += dVal;
-      });
-    } else if (e) {
-      const rawTag = Number(e.asset_tagging || 0);
-      const rawVal = Number(e.asset_tagging_value || e.asset_tagging_val || 0);
-
-      if (rawTag > 1000) {
-        val = rawTag;
-        qty = 1;
-      } else if (rawTag > 0) {
-        qty = rawTag;
-        val = rawVal || rawTag;
-      } else if (rawVal > 0) {
-        val = rawVal;
-        qty = 1;
-      }
-    }
-
-    return { qty, val };
-  };
-
   // Activity aggregates
   const activityStats = useMemo(() => {
     let callsAssigned = 0;
@@ -517,11 +485,8 @@ export default function AnalysisPage() {
       callsCompleted += Number(e.calls_completed || 0);
       pmsCount += Number(e.pms_count || 0);
       calibrationCount += Number(e.calibration_count || 0);
-
-      const { qty, val } = getAssetTaggingMetrics(e);
-      assetTaggingCount += qty;
-      assetTaggingValue += val;
-
+      assetTaggingCount += Number(e.asset_tagging || 0);
+      assetTaggingValue += Number(e.asset_tagging_value || e.asset_tagging_val || 0);
       mobiliseCount += Number(e.mobilise_asset_count || e.mobilise_count || 0);
     });
 
@@ -675,9 +640,10 @@ export default function AnalysisPage() {
         if (!dailyValueMap[dateKey]) {
           dailyValueMap[dateKey] = { value: 0, count: 0 };
         }
-        const { qty, val } = getAssetTaggingMetrics(e);
+        const val = Number(e.asset_tagging_value || e.asset_tagging_val || 0);
+        const cnt = Number(e.asset_tagging || 0);
         dailyValueMap[dateKey].value += val;
-        dailyValueMap[dateKey].count += qty;
+        dailyValueMap[dateKey].count += cnt;
       }
     });
 
@@ -1944,7 +1910,7 @@ export default function AnalysisPage() {
                       return (
                         <div key={i} className="space-y-1">
                           <div className="flex justify-between items-center text-[10px] font-bold">
-                            <span className="text-gray-700 truncate max-w-[200px]">{usr.name}</span>
+                            <span className="text-gray-700 truncate max-w-[120px]">{usr.name}</span>
                             <span className="font-mono text-gray-955">₹{usr.amount.toLocaleString()} ({pct}%)</span>
                           </div>
                           <Progress percent={pct} strokeColor="#8b5cf6" size="small" showInfo={false} />
@@ -2030,7 +1996,7 @@ export default function AnalysisPage() {
                           keys={["amount"]}
                           indexBy="name"
                           layout="horizontal"
-                          margin={{ top: 15, right: 25, bottom: 35, left: 170 }}
+                          margin={{ top: 15, right: 15, bottom: 35, left: 90 }}
                           padding={0.35}
                           colors={GALLERY_COLORS}
                           colorBy="indexValue"
