@@ -4,7 +4,7 @@ import { createPortal } from "react-dom";
 import { useNavigate, useLocation } from "react-router-dom";
 import toast from "react-hot-toast";
 import Loader from "../components/common/Loader";
-import DistrictBadge, { computeDistrictType, normalizeDistrictName } from "../components/common/DistrictBadge";
+import DistrictBadge, { computeDistrictType } from "../components/common/DistrictBadge";
 import { expenseService } from "../services/expenseService";
 import { uploadService } from "../services/uploadService";
 import { checkIsHeic, convertHeicToJpegUrl } from "../utils/heic";
