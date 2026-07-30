@@ -31,7 +31,7 @@ import {
 } from "lucide-react";
 import api from "../services/api";
 import { 
-  DatePicker, ConfigProvider, Modal, Button, Tag, Space, Card, Segmented, Input, Pagination, Tooltip 
+  DatePicker, ConfigProvider, Modal, Button, Tag, Space, Card, Segmented, Input, Pagination 
 } from "antd";
 import { 
   EditOutlined, DeleteOutlined, FileTextOutlined 
