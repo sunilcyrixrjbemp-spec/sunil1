@@ -12,39 +12,53 @@ export function normalizeDistrictName(dist) {
 }
 
 /**
- * Helper to compute derived districtType for an expense/claim.
- * Returns "IN_DISTRICT" or "OUT_DISTRICT".
+ * Helper to compute derived districtType and mismatch flag for an expense/claim.
+ * Primary source of truth is the employee's submitted travel category (Outdoor vs In-District).
  *
  * Rules:
- * 1. Compare submitter's assigned base district (from user profile) against
- *    itinerary legs' from_district & to_district, or overall expense district.
- * 2. If any leg has a district different from employee's assigned base district,
- *    or if from_district !== to_district (inter-district travel), return "OUT_DISTRICT".
- * 3. Otherwise return "IN_DISTRICT".
+ * 1. If any leg was submitted with travel_type === "Outdoor", or expCategory is Outdoor/Out-District,
+ *    or any leg district differs from base location -> districtType = "OUT_DISTRICT".
+ * 2. If employee submitted Outdoor/Out-District, BUT all leg districts entered match base location -> hasMismatch = true (Needs Review).
  */
-export function computeDistrictType(submitterBaseDistrict, legs = [], expDistrict = null) {
+export function computeDistrictInfo(submitterBaseDistrict, legs = [], expDistrict = null, expCategory = null) {
   const base = normalizeDistrictName(submitterBaseDistrict);
+
+  const catStr = (expCategory || "").toString().toLowerCase();
+  const hasOutdoorCategory = catStr.includes("outdoor") || catStr.includes("out-district") || catStr.includes("out_district");
+  
+  let hasOutdoorLeg = false;
+  let allLegsBaseDistrict = true;
 
   if (legs && Array.isArray(legs) && legs.length > 0) {
     for (const leg of legs) {
-      const fromDist = normalizeDistrictName(leg.from_district || leg.fromDistrict || leg.district_from);
-      const toDist = normalizeDistrictName(leg.to_district || leg.toDistrict || leg.district);
+      const legType = (leg.travel_type || "").trim().toLowerCase();
+      if (legType === "outdoor") {
+        hasOutdoorLeg = true;
+      }
+      const fromDist = normalizeDistrictName(leg.district_from || leg.from_district || leg.fromDistrict);
+      const toDist = normalizeDistrictName(leg.district || leg.to_district || leg.toDistrict);
 
-      // If either leg district is set and does NOT match base district
-      if (fromDist && base && fromDist !== base) return "OUT_DISTRICT";
-      if (toDist && base && toDist !== base) return "OUT_DISTRICT";
-
-      // If inter-district travel (from != to and both non-empty and non-base)
-      if (fromDist && toDist && fromDist !== base && toDist !== base && fromDist !== toDist) return "OUT_DISTRICT";
+      if ((fromDist && base && fromDist !== base) || (toDist && base && toDist !== base) || (fromDist && toDist && fromDist !== toDist)) {
+        allLegsBaseDistrict = false;
+      }
     }
-    return "IN_DISTRICT";
+  } else {
+    const expDist = normalizeDistrictName(expDistrict);
+    if (expDist && base && expDist !== base) {
+      allLegsBaseDistrict = false;
+    }
   }
 
-  // Fallback if no legs: check expense-level district
-  const expDist = normalizeDistrictName(expDistrict);
-  if (expDist && base && expDist !== base) {
-    return "OUT_DISTRICT";
-  }
+  const isOutDistrict = hasOutdoorCategory || hasOutdoorLeg || !allLegsBaseDistrict;
+  const districtType = isOutDistrict ? "OUT_DISTRICT" : "IN_DISTRICT";
+  const hasMismatch = (hasOutdoorCategory || hasOutdoorLeg) && allLegsBaseDistrict;
 
-  return "IN_DISTRICT";
+  return {
+    districtType,
+    hasMismatch
+  };
+}
+
+export function computeDistrictType(submitterBaseDistrict, legs = [], expDistrict = null, expCategory = null) {
+  return computeDistrictInfo(submitterBaseDistrict, legs, expDistrict, expCategory).districtType;
 }

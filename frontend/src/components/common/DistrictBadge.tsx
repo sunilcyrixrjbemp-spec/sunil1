@@ -1,5 +1,5 @@
 import React from "react";
-import { Tag } from "antd";
+import { Tag, Tooltip } from "antd";
 
 /**
  * Normalizes a district string for case-insensitive, whitespace-trimmed,
@@ -15,56 +15,88 @@ export function normalizeDistrictName(dist?: string | null): string {
 }
 
 /**
- * Computes derived districtType ("IN_DISTRICT" | "OUT_DISTRICT") from submitter's
- * base district and legs / expense district.
+ * Computes derived districtType and mismatch flag for an expense/claim.
+ * Primary source of truth is the employee's submitted travel category (Outdoor vs In-District).
  */
-export function computeDistrictType(
+export function computeDistrictInfo(
   submitterBaseDistrict?: string | null,
   legs: any[] = [],
-  expDistrict?: string | null
-): "IN_DISTRICT" | "OUT_DISTRICT" {
+  expDistrict?: string | null,
+  expCategory?: string | null
+): { districtType: "IN_DISTRICT" | "OUT_DISTRICT"; hasMismatch: boolean } {
   const base = normalizeDistrictName(submitterBaseDistrict);
+  const catStr = (expCategory || "").toString().toLowerCase();
+  const hasOutdoorCategory = catStr.includes("outdoor") || catStr.includes("out-district") || catStr.includes("out_district");
+
+  let hasOutdoorLeg = false;
+  let allLegsBaseDistrict = true;
 
   if (legs && Array.isArray(legs) && legs.length > 0) {
     for (const leg of legs) {
+      const legType = (leg.travel_type || "").trim().toLowerCase();
+      if (legType === "outdoor") {
+        hasOutdoorLeg = true;
+      }
       const fromDist = normalizeDistrictName(leg.district_from || leg.from_district || leg.fromDistrict);
       const toDist = normalizeDistrictName(leg.district || leg.to_district || leg.toDistrict);
 
-      if (fromDist && base && fromDist !== base) return "OUT_DISTRICT";
-      if (toDist && base && toDist !== base) return "OUT_DISTRICT";
-      if (fromDist && toDist && fromDist !== base && toDist !== base && fromDist !== toDist) return "OUT_DISTRICT";
+      if ((fromDist && base && fromDist !== base) || (toDist && base && toDist !== base) || (fromDist && toDist && fromDist !== toDist)) {
+        allLegsBaseDistrict = false;
+      }
     }
-    return "IN_DISTRICT";
+  } else {
+    const expDist = normalizeDistrictName(expDistrict);
+    if (expDist && base && expDist !== base) {
+      allLegsBaseDistrict = false;
+    }
   }
 
-  const expDist = normalizeDistrictName(expDistrict);
-  if (expDist && base && expDist !== base) {
-    return "OUT_DISTRICT";
-  }
+  const isOutDistrict = hasOutdoorCategory || hasOutdoorLeg || !allLegsBaseDistrict;
+  const districtType = isOutDistrict ? "OUT_DISTRICT" : "IN_DISTRICT";
+  const hasMismatch = (hasOutdoorCategory || hasOutdoorLeg) && allLegsBaseDistrict;
 
-  return "IN_DISTRICT";
+  return { districtType, hasMismatch };
+}
+
+export function computeDistrictType(
+  submitterBaseDistrict?: string | null,
+  legs: any[] = [],
+  expDistrict?: string | null,
+  expCategory?: string | null
+): "IN_DISTRICT" | "OUT_DISTRICT" {
+  return computeDistrictInfo(submitterBaseDistrict, legs, expDistrict, expCategory).districtType;
 }
 
 export interface DistrictBadgeProps {
   districtType?: "IN_DISTRICT" | "OUT_DISTRICT" | string | null;
+  hasMismatch?: boolean;
   baseDistrict?: string | null;
   legs?: any[];
   expDistrict?: string | null;
+  expCategory?: string | null;
   className?: string;
   style?: React.CSSProperties;
 }
 
 export const DistrictBadge: React.FC<DistrictBadgeProps> = ({
   districtType,
+  hasMismatch,
   baseDistrict,
   legs,
   expDistrict,
+  expCategory,
   className = "",
   style = {}
 }) => {
   let resolvedType = districtType;
-  if (!resolvedType && (baseDistrict || (legs && legs.length > 0) || expDistrict)) {
-    resolvedType = computeDistrictType(baseDistrict, legs, expDistrict);
+  let resolvedMismatch = hasMismatch;
+
+  if (!resolvedType && (baseDistrict || (legs && legs.length > 0) || expDistrict || expCategory)) {
+    const info = computeDistrictInfo(baseDistrict, legs, expDistrict, expCategory);
+    resolvedType = info.districtType;
+    if (resolvedMismatch === undefined) {
+      resolvedMismatch = info.hasMismatch;
+    }
   }
 
   const normalized = (resolvedType || "").trim().toUpperCase();
@@ -104,9 +136,18 @@ export const DistrictBadge: React.FC<DistrictBadgeProps> = ({
       };
 
   return (
-    <Tag className={`district-badge ${className}`} style={badgeStyle}>
-      {label}
-    </Tag>
+    <div className={`inline-flex items-center gap-1.5 whitespace-nowrap ${className}`}>
+      <Tag className="district-badge" style={badgeStyle}>
+        {label}
+      </Tag>
+      {resolvedMismatch && (
+        <Tooltip title="Submitted as Out-District, but travel district matches base location. Admin review recommended.">
+          <Tag color="warning" style={{ fontSize: "11px", fontWeight: 700, margin: 0, borderRadius: "6px" }}>
+            ⚠️ Needs Review
+          </Tag>
+        </Tooltip>
+      )}
+    </div>
   );
 };
 

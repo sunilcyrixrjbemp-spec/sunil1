@@ -1201,10 +1201,9 @@ export default function HomePage() {
                                     dataIndex: "expense_code",
                                     key: "expense_code",
                                     render: (text, exp) => (
-                                      <div className="inline-flex items-center gap-1.5 whitespace-nowrap">
-                                        <Text className="font-mono font-bold text-indigo-600 whitespace-nowrap">{text}</Text>
-                                        <DistrictBadge districtType={exp.districtType} />
-                                      </div>
+                                      <Tooltip title={<div className="p-1"><DistrictBadge districtType={exp.districtType} hasMismatch={exp.hasMismatch} /></div>} placement="top">
+                                        <Text className="font-mono font-bold text-indigo-600 cursor-pointer hover:underline whitespace-nowrap">{text}</Text>
+                                      </Tooltip>
                                     ),
                                   },
                                   {
@@ -1273,7 +1272,7 @@ export default function HomePage() {
                                   <div className="flex justify-between items-center pb-2 border-b border-gray-150">
                                     <div className="inline-flex items-center gap-1.5 whitespace-nowrap">
                                       <Text strong className="font-mono text-primary-600 text-xs whitespace-nowrap">{exp.expense_code}</Text>
-                                      <DistrictBadge districtType={exp.districtType} />
+                                      <DistrictBadge districtType={exp.districtType} hasMismatch={exp.hasMismatch} />
                                     </div>
                                     <span className={`inline-flex items-center px-2 py-0.5 rounded border text-[8px] font-bold uppercase tracking-wider ${getStatusBadgeClass(exp.status)}`}>
                                       {getStatusLabel(exp.status)}
@@ -1781,7 +1780,7 @@ export default function HomePage() {
             <Layers className="w-4 h-4 text-primary-600" />
             <span className="flex items-center gap-2">
               Claim Details {claimDetails ? `— ${claimDetails.expense_code}` : ""}
-              {claimDetails && <DistrictBadge districtType={claimDetails.districtType} />}
+              {claimDetails && <DistrictBadge districtType={claimDetails.districtType} hasMismatch={claimDetails.hasMismatch} />}
             </span>
           </Title>
         }
@@ -3005,10 +3004,9 @@ export default function HomePage() {
                   key: "expense_code",
                   width: 140,
                   render: (text, record) => (
-                    <div className="inline-flex items-center gap-1.5 whitespace-nowrap">
-                      <Text className="font-mono font-bold text-indigo-600 whitespace-nowrap">{text}</Text>
-                      <DistrictBadge districtType={record.districtType} />
-                    </div>
+                    <Tooltip title={<div className="p-1"><DistrictBadge districtType={record.districtType} hasMismatch={record.hasMismatch} /></div>} placement="top">
+                      <Text className="font-mono font-bold text-indigo-600 cursor-pointer hover:underline">{text}</Text>
+                    </Tooltip>
                   ),
                 },
                 {

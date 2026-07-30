@@ -1,7 +1,7 @@
 import { runWrite, runBatchWrite } from "../utils/db.js";
 import { deleteFromGoogleDrive } from "./upload.js";
 import { resolveLegacyExpenseId } from "../utils/legacy-resolver.js";
-import { computeDistrictType } from "../utils/districtHelper.js";
+import { computeDistrictType, computeDistrictInfo } from "../utils/districtHelper.js";
 
 function jsonResponse(data, status = 200) {
   return new Response(JSON.stringify(data), {
@@ -266,7 +266,9 @@ export async function fetchPendingApprovals(env, user) {
 
   for (const app of approvalsList) {
     const legs = normalLegsMap[app.expense_code] || [];
-    const districtType = computeDistrictType(app.submitter_district, legs, null);
+    const distInfo = computeDistrictInfo(app.submitter_district, legs, null, app.travel_mode);
+    const districtType = distInfo.districtType;
+    const hasMismatch = distInfo.hasMismatch;
 
     result.push({
       id: app.id,
@@ -287,7 +289,8 @@ export async function fetchPendingApprovals(env, user) {
       itinerariesCount: app.itineraries_count || 0,
       calls_assigned: app.calls_assigned || 0,
       calls_completed: app.calls_completed || 0,
-      districtType: districtType
+      districtType: districtType,
+      hasMismatch: hasMismatch
     });
   }
 

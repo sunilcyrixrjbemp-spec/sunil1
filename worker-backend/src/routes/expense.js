@@ -3,7 +3,7 @@ import { getLegacyExpenseHashId } from "./approval.js";
 import { resolveLegacyExpenseId } from "../utils/legacy-resolver.js";
 import { uploadFileWithFallback } from "./upload.js";
 import { MONTH_NAMES } from "../utils/constants.js";
-import { computeDistrictType } from "../utils/districtHelper.js";
+import { computeDistrictType, computeDistrictInfo } from "../utils/districtHelper.js";
 
 // ─── FULL ACCESS ROLES ────────────────────────────────────────────────────────
 // Roles that see ALL data (all users, all zones, all records) across every report.
@@ -557,13 +557,16 @@ export async function serializeExpenses(env, expenses, submittersMap) {
       .filter(l => (l.travel_mode || "").trim().toLowerCase() === "car")
       .reduce((sum, l) => sum + (parseFloat(l.travel_amount) || 0.0), 0.0);
 
-    const districtType = computeDistrictType(submitter?.district, legs, exp.district);
+    const distInfo = computeDistrictInfo(submitter?.district, legs, exp.district, exp.category || exp.travel_mode);
+    const districtType = distInfo.districtType;
+    const hasMismatch = distInfo.hasMismatch;
 
     result.push({
       id: exp.id,
       expense_code: exp.expense_code,
       user_id: exp.user_id,
       districtType,
+      hasMismatch,
       month: exp.month,
       year: exp.year,
       amount: parseFloat(exp.amount || 0),

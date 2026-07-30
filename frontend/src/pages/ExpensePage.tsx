@@ -1431,9 +1431,14 @@ export default function ExpensePage() {
 
         const hDist = (user.district || user.home_district || "Jodhpur").trim();
 
-        if (field === "district" || field === "district_from" || field === "travel_type") {
-          const legType = computeDistrictType(hDist, [updatedLeg], updatedLeg.district);
-          updatedLeg.travel_type = legType === "OUT_DISTRICT" ? "Outdoor" : "In-District";
+        if (field === "travel_type") {
+          updatedLeg.travel_type = value;
+          if (value === "In-District") {
+            updatedLeg.district_from = hDist === "All" ? "Jodhpur" : hDist;
+            updatedLeg.district = hDist === "All" ? "Jodhpur" : hDist;
+          } else {
+            updatedLeg.district_from = hDist === "All" ? "Jodhpur" : hDist;
+          }
         }
 
         if (field === "district_from" && updatedLeg.travel_type === "In-District") {
@@ -1488,7 +1493,7 @@ export default function ExpensePage() {
 
       // 2. Recalculate DA for Leg 1 based on the updated list of legs
       const hDist = (user.district || user.home_district || "Jodhpur").trim();
-      const hasOutDistrictLeg = computeDistrictType(hDist, updatedLegs, null) === "OUT_DISTRICT";
+      const hasOutDistrictLeg = updatedLegs.some(l => (l.travel_type || "").toLowerCase() === "outdoor");
 
       const leg1 = updatedLegs.find(l => l.leg === 1);
       if (leg1) {
@@ -4960,10 +4965,9 @@ export default function ExpensePage() {
                             className="hover:bg-slate-50 cursor-pointer transition-colors"
                           >
                             <td className="py-3 px-3 font-semibold font-mono text-indigo-600 uppercase whitespace-nowrap">
-                              <div className="inline-flex items-center gap-2 whitespace-nowrap">
-                                <span className="whitespace-nowrap font-mono text-indigo-600">{exp.expense_code}</span>
-                                <DistrictBadge districtType={exp.districtType} />
-                              </div>
+                              <Tooltip title={<div className="p-1"><DistrictBadge districtType={exp.districtType} hasMismatch={exp.hasMismatch} /></div>} placement="top">
+                                <span className="whitespace-nowrap font-mono text-indigo-600 hover:underline cursor-pointer">{exp.expense_code}</span>
+                              </Tooltip>
                             </td>
                             <td className="py-3 px-3 text-slate-600 font-medium whitespace-nowrap">{exp.itinerary}</td>
                             <td className="py-3 px-3 font-semibold text-slate-800 truncate max-w-[200px] whitespace-nowrap" title={exp.description}>{exp.description}</td>
@@ -5012,7 +5016,7 @@ export default function ExpensePage() {
                           <div className="flex justify-between items-center border-b border-slate-100 pb-2 flex-wrap gap-1">
                             <div className="inline-flex items-center gap-2 whitespace-nowrap">
                               <span className="font-extrabold font-mono text-indigo-600 text-xs uppercase whitespace-nowrap">{exp.expense_code}</span>
-                              <DistrictBadge districtType={exp.districtType} />
+                              <DistrictBadge districtType={exp.districtType} hasMismatch={exp.hasMismatch} />
                             </div>
                             {renderAntdStatusTag(exp.status)}
                           </div>
