@@ -1872,10 +1872,10 @@ export default function ApprovalPage() {
               style={{ borderColor: "#e5e7eb", borderRadius: 8, background: "#fafafa" }}
               bodyStyle={{ padding: "12px 14px" }}
             >
-              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 10 }}>
-                <Space>
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 10, gap: 8, flexWrap: "nowrap" }}>
+                <Space style={{ flexShrink: 0, minWidth: 0 }}>
                   <UserOutlined style={{ color: "#4f46e5" }} />
-                  <Typography.Text strong style={{ fontSize: 11, textTransform: "uppercase", letterSpacing: "0.05em", color: "#374151" }}>
+                  <Typography.Text strong style={{ fontSize: 11, textTransform: "uppercase", letterSpacing: "0.05em", color: "#374151", whiteSpace: "nowrap" }}>
                     Submitter Details & Information
                   </Typography.Text>
                 </Space>
