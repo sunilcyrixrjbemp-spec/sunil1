@@ -415,25 +415,25 @@ export const RajasthanMapChart: React.FC<RajasthanMapChartProps> = ({
     return maxAmt || 1;
   }, [districtStats]);
 
-  // Color generator for Choropleth Map
+  // Color generator for Choropleth Map (Lighter/Softer Cyrix Blue Heatmap Scale)
   const getDistrictColor = (districtName: string, isSelected: boolean, isHovered: boolean, isTargetZone: boolean) => {
     const norm = normalizeDistrict(districtName);
     const stat = districtStats[norm];
 
-    if (isSelected) return "#3b82f6"; // Primary Blue highlight
-    if (isHovered) return "#6366f1"; // Indigo highlight on hover
+    if (isSelected) return "#2563eb"; // Rich Cyrix Primary Blue highlight
+    if (isHovered) return "#4f46e5"; // Deep Indigo highlight on hover
 
     if (!isTargetZone) return "#f1f5f9"; // Dimmed out for non-zone districts
 
     if (!stat || stat.totalAmount === 0) {
-      return "#e2e8f0"; // Soft light slate for empty districts
+      return "#f8fafc"; // Soft light slate for empty districts
     }
 
     const ratio = Math.min(1, stat.totalAmount / maxExpense);
-    if (ratio < 0.25) return "#a7f3d0";
-    if (ratio < 0.5) return "#34d399";
-    if (ratio < 0.75) return "#059669";
-    return "#d97706";
+    if (ratio < 0.25) return "#e0f2fe"; // Soft sky blue (Lightest Cyrix Blue)
+    if (ratio < 0.5) return "#bae6fd";  // Soft cyan/sky blue
+    if (ratio < 0.75) return "#7dd3fc"; // Light Cyrix blue
+    return "#38bdf8";                   // Vibrant light Cyrix blue
   };
 
   // Projection helper: Lng/Lat -> SVG (x, y)
@@ -468,29 +468,87 @@ export const RajasthanMapChart: React.FC<RajasthanMapChartProps> = ({
     return "";
   };
 
-  // Calculate visual center of feature for label placement
+  // Calculate geometric centroid / visual center of feature for accurate label placement
   const getFeatureCenter = (feature: GeoFeature, width = 760, height = 660, padding = 30) => {
-    let sumX = 0;
-    let sumY = 0;
-    let count = 0;
+    const distName = normalizeDistrict(feature.properties.district || feature.properties.dt_nm || "");
 
-    const addRing = (ring: number[][]) => {
+    // Precise manual visual centers in Lng/Lat for irregular/elongated district polygons
+    const MANUAL_CENTERS: Record<string, [number, number]> = {
+      "Ganganagar": [73.55, 29.55],
+      "Hanumangarh": [74.45, 29.50],
+      "Chittorgarh": [74.63, 24.88],
+      "Jaisalmer": [70.90, 26.90],
+      "Barmer": [71.40, 25.75],
+      "Bikaner": [72.85, 28.00],
+      "Jodhpur": [73.00, 26.30],
+      "Nagaur": [73.90, 27.00],
+      "Ajmer": [74.65, 26.45],
+      "Pali": [73.30, 25.78],
+      "Udaipur": [73.70, 24.58],
+      "Jaipur": [75.80, 26.90],
+      "Alwar": [76.60, 27.56],
+      "Bhilwara": [74.64, 25.35],
+      "Churu": [74.60, 28.30],
+      "Sikar": [75.15, 27.60],
+      "Jhunjhunu": [75.40, 28.12],
+      "Dungarpur": [73.72, 23.84],
+      "Banswara": [74.43, 23.54],
+      "Pratapgarh": [74.78, 24.03],
+      "Rajsamand": [73.88, 25.07],
+      "Kota": [75.85, 25.18],
+      "Bundi": [75.64, 25.44],
+      "Baran": [76.51, 25.10],
+      "Jhalawar": [76.15, 24.60],
+      "Tonk": [75.78, 26.16],
+      "Dausa": [76.33, 26.88],
+      "Sawai Madhopur": [76.40, 26.00],
+      "Karauli": [77.02, 26.50],
+      "Dholpur": [77.88, 26.70],
+      "Bharatpur": [77.49, 27.22],
+      "Jalore": [72.60, 25.35],
+      "Sirohi": [72.86, 24.88]
+    };
+
+    if (MANUAL_CENTERS[distName]) {
+      const [lng, lat] = MANUAL_CENTERS[distName];
+      const [xStr, yStr] = project(lng, lat, width, height, padding).split(",");
+      return { x: parseFloat(xStr), y: parseFloat(yStr) };
+    }
+
+    // Fallback: Largest polygon ring bounding center
+    let maxArea = -1;
+    let bestCenterLng = 0;
+    let bestCenterLat = 0;
+
+    const processRing = (ring: number[][]) => {
+      if (!ring || ring.length === 0) return;
+      let minLng = Infinity, maxLng = -Infinity, minLat = Infinity, maxLat = -Infinity;
       ring.forEach(([lng, lat]) => {
-        const [xStr, yStr] = project(lng, lat, width, height, padding).split(",");
-        sumX += parseFloat(xStr);
-        sumY += parseFloat(yStr);
-        count++;
+        if (lng < minLng) minLng = lng;
+        if (lng > maxLng) maxLng = lng;
+        if (lat < minLat) minLat = lat;
+        if (lat > maxLat) maxLat = lat;
       });
+      const area = (maxLng - minLng) * (maxLat - minLat);
+      if (area > maxArea) {
+        maxArea = area;
+        bestCenterLng = (minLng + maxLng) / 2;
+        bestCenterLat = (minLat + maxLat) / 2;
+      }
     };
 
     if (feature.geometry.type === "Polygon") {
-      feature.geometry.coordinates.forEach(addRing);
+      feature.geometry.coordinates.forEach(processRing);
     } else if (feature.geometry.type === "MultiPolygon") {
-      feature.geometry.coordinates.forEach((poly: any) => poly.forEach(addRing));
+      feature.geometry.coordinates.forEach((poly: any) => poly.forEach(processRing));
     }
 
-    if (count === 0) return { x: width / 2, y: height / 2 };
-    return { x: sumX / count, y: sumY / count };
+    if (maxArea > 0) {
+      const [xStr, yStr] = project(bestCenterLng, bestCenterLat, width, height, padding).split(",");
+      return { x: parseFloat(xStr), y: parseFloat(yStr) };
+    }
+
+    return { x: width / 2, y: height / 2 };
   };
 
   const lastClickTimeRef = useRef<number>(0);
@@ -867,10 +925,12 @@ export const RajasthanMapChart: React.FC<RajasthanMapChartProps> = ({
                             y={center.y}
                             textAnchor="middle"
                             dominantBaseline="central"
-                            className="pointer-events-none text-[9px] font-extrabold fill-slate-800 uppercase tracking-tighter select-none"
+                            className="pointer-events-none text-[9px] font-black uppercase tracking-tighter select-none"
                             style={{
-                              textShadow: "0 1px 2px rgba(255,255,255,0.9)",
-                              fill: isSelected ? "#ffffff" : isHovered ? "#1e1b4b" : "#334155"
+                              fill: isSelected || isHovered ? "#ffffff" : "#0f172a",
+                              textShadow: isSelected || isHovered
+                                ? "0 1px 4px rgba(0, 0, 0, 0.85)"
+                                : "0 1px 3px rgba(255, 255, 255, 0.95)"
                             }}
                           >
                             {distName}
@@ -951,10 +1011,10 @@ export const RajasthanMapChart: React.FC<RajasthanMapChartProps> = ({
             <div className="flex items-center gap-2">
               <span className="text-[10px] text-gray-500 font-mono">Min</span>
               <div className="w-32 h-2.5 rounded-full overflow-hidden flex border border-gray-300">
-                <div className="w-1/4 h-full bg-[#a7f3d0]" />
-                <div className="w-1/4 h-full bg-[#34d399]" />
-                <div className="w-1/4 h-full bg-[#059669]" />
-                <div className="w-1/4 h-full bg-[#d97706]" />
+                <div className="w-1/4 h-full bg-[#e0f2fe]" />
+                <div className="w-1/4 h-full bg-[#bae6fd]" />
+                <div className="w-1/4 h-full bg-[#7dd3fc]" />
+                <div className="w-1/4 h-full bg-[#38bdf8]" />
               </div>
               <span className="text-[10px] text-gray-500 font-mono">Max</span>
             </div>
