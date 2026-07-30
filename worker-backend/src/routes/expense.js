@@ -558,8 +558,8 @@ export async function serializeExpenses(env, expenses, submittersMap) {
       .reduce((sum, l) => sum + (parseFloat(l.travel_amount) || 0.0), 0.0);
 
     const distInfo = computeDistrictInfo(submitter?.district, legs, exp.district, exp.category || exp.travel_mode);
-    const districtType = distInfo.districtType;
-    const hasMismatch = distInfo.hasMismatch;
+    const districtType = exp.district_type || distInfo.districtType;
+    const hasMismatch = (districtType === "OUT_DISTRICT") && distInfo.allLegsBaseDistrict;
 
     result.push({
       id: exp.id,
@@ -1792,12 +1792,14 @@ export async function handleGetExpenseDetails(request, env, params, query, user)
         const monthlyStats = await getUserMonthlyStatsHelper(env, submitter?.id || 0, monthName, yearVal, dateStr);
 
         const distInfoLegacy = computeDistrictInfo(submitter?.district, itinerariesList, masterRow.district, masterRow.category || masterRow.travel_mode);
+        const districtTypeLegacy = masterRow.district_type || distInfoLegacy.districtType;
+        const hasMismatchLegacy = (districtTypeLegacy === "OUT_DISTRICT") && distInfoLegacy.allLegsBaseDistrict;
 
         return jsonResponse({
           id: val,
           expense_code: matchingExpId,
-          districtType: distInfoLegacy.districtType,
-          hasMismatch: distInfoLegacy.hasMismatch,
+          districtType: districtTypeLegacy,
+          hasMismatch: hasMismatchLegacy,
           user_id: submitter?.id || 0,
           submitter_name: submitter?.name || masterRow.user_id,
           submitter_code: masterRow.user_id,
@@ -2024,12 +2026,14 @@ export async function handleGetExpenseDetails(request, env, params, query, user)
   const monthlyStats = await getUserMonthlyStatsHelper(env, expense.user_id, expense.month, expense.year, expense.itinerary);
 
   const distInfoStandard = computeDistrictInfo(submitter?.district, itineraries.results || [], expense.district, expense.category || expense.travel_mode);
+  const districtTypeStandard = expense.district_type || distInfoStandard.districtType;
+  const hasMismatchStandard = (districtTypeStandard === "OUT_DISTRICT") && distInfoStandard.allLegsBaseDistrict;
 
   return jsonResponse({
     id: expense.id,
     expense_code: expense.expense_code,
-    districtType: distInfoStandard.districtType,
-    hasMismatch: distInfoStandard.hasMismatch,
+    districtType: districtTypeStandard,
+    hasMismatch: hasMismatchStandard,
     user_id: expense.user_id,
     submitter_name: submitter?.name || "",
     submitter_code: submitter?.user_id || "",
@@ -2446,11 +2450,21 @@ export async function handleSubmitExpense(request, env, params, query, user) {
   let calculatedTotal = 0.0;
 
   const hasOutdoorLeg = itineraries.some(leg => (leg.travel_type || "").trim().toLowerCase() === "outdoor");
+  const submittedDistrictType = (formData ? (formData.get("district_type") || formData.get("districtCategory") || formData.get("category")) : null) || (hasOutdoorLeg ? "OUT_DISTRICT" : "IN_DISTRICT");
+
+  const hasActualOutDistrictTravel = itineraries.some(leg => {
+    const fromD = (leg.district_from || leg.from_district || "").trim().toLowerCase();
+    const toD = (leg.district || leg.to_district || "").trim().toLowerCase();
+    const userD = (user.district || user.home_district || "").trim().toLowerCase();
+    if (fromD && userD && fromD !== userD) return true;
+    if (toD && userD && toD !== userD) return true;
+    return false;
+  });
 
   for (let idx = 0; idx < itineraries.length; idx++) {
     const iti = itineraries[idx];
     const legNum = idx + 1;
-    const isCommute = !hasOutdoorLeg && checkIsCommuteLeg(iti, baseLocations, idx, itineraries.length);
+    const isCommute = !hasActualOutDistrictTravel && checkIsCommuteLeg(iti, baseLocations, idx, itineraries.length);
     const travelAmt = isCommute ? 0.0 : parseFloat(iti.amount || "0.0");
     const subAmt    = isCommute ? 0.0 : parseFloat(iti.sub_amount || "0.0");
     const daAmt     = isDaAllowed ? parseFloat(iti.da || "0.0") : 0.0;
@@ -2819,7 +2833,7 @@ export async function handleSubmitExpense(request, env, params, query, user) {
             da_amount = ?, hotel_amount = ?, other_expense_amount = ?, calls_assigned = ?, calls_completed = ?, 
             pms_count = ?, asset_tagging = ?, local_purchase_amount = ?, original_amount = ?, original_da_amount = ?, 
             original_hotel_amount = ?, original_other_expense_amount = ?, original_local_purchase_amount = ?, 
-            calibration_count = ?, mobilise_count = ?, updated_at = ?
+            calibration_count = ?, mobilise_count = ?, updated_at = ?, district_type = ?
         WHERE id = ?
       `,
       params: [
@@ -2827,7 +2841,7 @@ export async function handleSubmitExpense(request, env, params, query, user) {
         totalDa, totalHotel, totalOther, totalAssigned, totalCompleted, totalPms,
         totalAsset, totalLocalPurchase, amount, totalDa, totalHotel, 
         totalOther, totalLocalPurchase, totalCalibration, totalMobilise,
-        timestamp, newExpId
+        timestamp, submittedDistrictType, newExpId
       ]
     });
   } else {
@@ -2838,16 +2852,16 @@ export async function handleSubmitExpense(request, env, params, query, user) {
           da_amount, hotel_amount, other_expense_amount, calls_assigned, calls_completed, pms_count, 
           asset_tagging, local_purchase_amount, original_amount, original_da_amount, original_hotel_amount, 
           original_other_expense_amount, original_local_purchase_amount, calibration_count, mobilise_count, 
-          created_at, updated_at
+          created_at, updated_at, district_type
         )
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
       `,
       params: [
         user.id, claim_month, claim_year, amount, status, majorMode, date, firstPurpose, expenseCode,
         totalDa, totalHotel, totalOther, totalAssigned, totalCompleted, totalPms,
         totalAsset, totalLocalPurchase, amount, totalDa, totalHotel, 
         totalOther, totalLocalPurchase, totalCalibration, totalMobilise,
-        timestamp, timestamp
+        timestamp, timestamp, submittedDistrictType
       ]
     });
   }

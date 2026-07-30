@@ -98,7 +98,9 @@ export async function runMigrations(db) {
       UNIQUE(hospital_name, district_name)
     )`,
     // Add base_reporting_location column to users if not present
-    `ALTER TABLE users ADD COLUMN base_reporting_location TEXT`
+    `ALTER TABLE users ADD COLUMN base_reporting_location TEXT`,
+    // Add district_type column to expenses if not present
+    `ALTER TABLE expenses ADD COLUMN district_type TEXT`
   ];
 
   for (const sql of migrations) {

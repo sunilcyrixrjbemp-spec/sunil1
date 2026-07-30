@@ -2520,6 +2520,9 @@ export default function ExpensePage() {
       formData.append("client_timestamp", getLocalTimestamp());
 
       const hasOutdoorLeg = itineraries.some(l => (l.travel_type || "").trim().toLowerCase() === "outdoor");
+      const overallDistrictCategory = hasOutdoorLeg ? "OUT_DISTRICT" : "IN_DISTRICT";
+      formData.append("district_type", overallDistrictCategory);
+      formData.append("districtCategory", overallDistrictCategory);
       const isBaseLocOnly = isBaseLocationOnlyTravel();
       const isDAAllowed = isDailyAllowanceAllowed();
 
@@ -4965,11 +4968,7 @@ export default function ExpensePage() {
                             onClick={() => handleViewDetails(exp.id)}
                             className="hover:bg-slate-50 cursor-pointer transition-colors"
                           >
-                            <td className="py-3 px-3 font-semibold font-mono text-indigo-600 uppercase whitespace-nowrap">
-                              <Tooltip title={<div className="p-1"><DistrictBadge districtType={exp.districtType} hasMismatch={exp.hasMismatch} /></div>} placement="top">
-                                <span className="whitespace-nowrap font-mono text-indigo-600 hover:underline cursor-pointer">{exp.expense_code}</span>
-                              </Tooltip>
-                            </td>
+                            <td className="py-3 px-3 font-semibold font-mono text-indigo-600 uppercase whitespace-nowrap">{exp.expense_code}</td>
                             <td className="py-3 px-3 text-slate-600 font-medium whitespace-nowrap">{exp.itinerary}</td>
                             <td className="py-3 px-3 font-semibold text-slate-800 truncate max-w-[200px] whitespace-nowrap" title={exp.description}>{exp.description}</td>
                             <td className="py-3 px-3 text-slate-600 whitespace-nowrap">{exp.travel_mode}</td>
@@ -5015,10 +5014,7 @@ export default function ExpensePage() {
                           className={`sharp-card bg-white border border-slate-200 rounded-xl p-3.5 space-y-3 active:bg-slate-50 transition-all cursor-pointer text-xs ${getCardStatusClass(exp.status)}`}
                         >
                           <div className="flex justify-between items-center border-b border-slate-100 pb-2 flex-wrap gap-1">
-                            <div className="inline-flex items-center gap-2 whitespace-nowrap">
-                              <span className="font-extrabold font-mono text-indigo-600 text-xs uppercase whitespace-nowrap">{exp.expense_code}</span>
-                              <DistrictBadge districtType={exp.districtType} hasMismatch={exp.hasMismatch} />
-                            </div>
+                            <span className="font-extrabold font-mono text-indigo-600 text-xs uppercase">{exp.expense_code}</span>
                             {renderAntdStatusTag(exp.status)}
                           </div>
                           

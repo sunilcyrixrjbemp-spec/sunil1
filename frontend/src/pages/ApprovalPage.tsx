@@ -1579,11 +1579,7 @@ export default function ApprovalPage() {
                     title: "Claim ID",
                     dataIndex: "expense_code",
                     key: "expense_code",
-                    render: (code, req) => (
-                      <Tooltip title={<div className="p-1"><DistrictBadge districtType={req.districtType} hasMismatch={req.hasMismatch} /></div>} placement="top">
-                        <Text className="font-mono font-bold text-indigo-600 text-xs cursor-pointer hover:underline">{code}</Text>
-                      </Tooltip>
-                    ),
+                    render: (code) => <Text className="font-mono font-bold text-indigo-600 text-xs">{code}</Text>,
                   },
                   {
                     title: "Category",
@@ -1742,9 +1738,8 @@ export default function ApprovalPage() {
                       <div className="flex items-center gap-3 flex-wrap">
                         <div>
                           <div style={{ fontSize: 9, color: "#9ca3af", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.04em" }}>Claim ID</div>
-                          <div style={{ fontSize: 11, fontWeight: 700, color: "#4f46e5", fontFamily: "monospace" }} className="inline-flex items-center gap-1.5 whitespace-nowrap">
-                            <span className="whitespace-nowrap">{req.expense_code}</span>
-                            <DistrictBadge districtType={req.districtType} hasMismatch={req.hasMismatch} />
+                          <div style={{ fontSize: 11, fontWeight: 700, color: "#4f46e5", fontFamily: "monospace" }}>
+                            <span>{req.expense_code}</span>
                           </div>
                         </div>
                         <div>
