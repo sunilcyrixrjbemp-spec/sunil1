@@ -1872,15 +1872,15 @@ export default function ApprovalPage() {
               style={{ borderColor: "#e5e7eb", borderRadius: 8, background: "#fafafa" }}
               bodyStyle={{ padding: "12px 14px" }}
             >
-              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 10, gap: 8, flexWrap: "nowrap" }}>
-                <Space style={{ flexShrink: 0, minWidth: 0 }}>
+              <div style={{ display: "flex", flexDirection: "column", gap: "6px", marginBottom: 10 }}>
+                <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
                   <UserOutlined style={{ color: "#4f46e5" }} />
-                  <Typography.Text strong style={{ fontSize: 11, textTransform: "uppercase", letterSpacing: "0.05em", color: "#374151", whiteSpace: "nowrap" }}>
+                  <Typography.Text strong style={{ fontSize: 11, textTransform: "uppercase", letterSpacing: "0.05em", color: "#374151" }}>
                     Submitter Details & Information
                   </Typography.Text>
-                </Space>
-                <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
-                  <Tag color="processing" style={{ fontWeight: 700, fontSize: 10, fontFamily: "monospace", margin: 0 }}>
+                </div>
+                <div style={{ display: "flex", alignItems: "center", gap: "8px", flexWrap: "wrap" }}>
+                  <Tag color="processing" style={{ fontWeight: 700, fontSize: 11, fontFamily: "monospace", margin: 0 }}>
                     {selectedApproval?.expense_code}
                   </Tag>
                   <DistrictBadge districtType={expenseDetails?.districtType || selectedApproval?.districtType} />
