@@ -3231,7 +3231,8 @@ export async function handleRetroactiveBasePolicyCheck(request, env, params, que
       const fromDist = (leg.from_district || "").trim().toLowerCase();
       const toDist = (leg.to_district || "").trim().toLowerCase();
       
-      const isOutdoor = fromDist && toDist && fromDist !== toDist;
+      const legDistType = computeDistrictType(targetUser?.district || exp.district, [leg], exp.district);
+      const isOutdoor = legDistType === "OUT_DISTRICT";
       const travelType = isOutdoor ? "Outdoor" : "In-District";
       
       const fromCustom = fromLoc && !officialHospitals.has(fromLoc);
@@ -3445,7 +3446,8 @@ export async function handleBulkRetroactivePolicyCheck(request, env, params, que
         const fromDist = (leg.from_district || "").trim().toLowerCase();
         const toDist = (leg.to_district || "").trim().toLowerCase();
 
-        const isOutdoor = fromDist && toDist && fromDist !== toDist;
+        const legDistType = computeDistrictType(targetUser?.district || exp.district, [leg], exp.district);
+        const isOutdoor = legDistType === "OUT_DISTRICT";
         const travelType = isOutdoor ? "Outdoor" : "In-District";
 
         const fromCustom = fromLoc && !officialHospitals.has(fromLoc);

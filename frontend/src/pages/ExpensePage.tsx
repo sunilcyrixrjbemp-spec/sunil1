@@ -4,7 +4,7 @@ import { createPortal } from "react-dom";
 import { useNavigate, useLocation } from "react-router-dom";
 import toast from "react-hot-toast";
 import Loader from "../components/common/Loader";
-import DistrictBadge from "../components/common/DistrictBadge";
+import DistrictBadge, { computeDistrictType, normalizeDistrictName } from "../components/common/DistrictBadge";
 import { expenseService } from "../services/expenseService";
 import { uploadService } from "../services/uploadService";
 import { checkIsHeic, convertHeicToJpegUrl } from "../utils/heic";
@@ -854,9 +854,10 @@ export default function ExpensePage() {
           const fromCustom = leg.from ? !getFacilitiesForDistrict(leg.from_district || "").includes(leg.from) : false;
           const toCustom = leg.to ? !getFacilitiesForDistrict(leg.to_district || "").includes(leg.to) : false;
 
+          const legDistType = computeDistrictType(user?.district, [leg], leg.to_district || leg.to);
           return {
             leg: leg.leg,
-            travel_type: leg.from_district === leg.to_district ? "In-District" : "Outdoor",
+            travel_type: legDistType === "OUT_DISTRICT" ? "Outdoor" : "In-District",
             district_from: leg.from_district,
             district: leg.to_district,
             from: leg.from || "",
@@ -1014,11 +1015,7 @@ export default function ExpensePage() {
         const leg1 = updated.find(l => l.leg === 1);
         if (leg1) {
           const hotelAmt = parseFloat(leg1.hotel) || 0;
-          const hasOutDistrictLeg = updated.some(l => {
-            if (l.travel_type === "Outdoor") return true;
-            if (l.district && l.district.trim() !== hDist) return true;
-            return false;
-          });
+          const hasOutDistrictLeg = computeDistrictType(hDist, updated, null) === "OUT_DISTRICT";
 
           const allowanceObj = data.allowance || {};
           if (leg1.company_provided) {
@@ -1432,15 +1429,11 @@ export default function ExpensePage() {
           updatedLeg.show_sub_leg = false;
         }
 
-        if (field === "travel_type") {
-          const hDist = user.district || user.home_district || "Jodhpur";
-          if (value === "In-District") {
-            updatedLeg.district_from = hDist === "All" ? "Jodhpur" : hDist;
-            updatedLeg.district = hDist === "All" ? "Jodhpur" : hDist;
-          } else {
-            updatedLeg.district_from = hDist === "All" ? "Jodhpur" : hDist;
-            updatedLeg.district = "";
-          }
+        const hDist = (user.district || user.home_district || "Jodhpur").trim();
+
+        if (field === "district" || field === "district_from" || field === "travel_type") {
+          const legType = computeDistrictType(hDist, [updatedLeg], updatedLeg.district);
+          updatedLeg.travel_type = legType === "OUT_DISTRICT" ? "Outdoor" : "In-District";
         }
 
         if (field === "district_from" && updatedLeg.travel_type === "In-District") {
@@ -1495,11 +1488,7 @@ export default function ExpensePage() {
 
       // 2. Recalculate DA for Leg 1 based on the updated list of legs
       const hDist = (user.district || user.home_district || "Jodhpur").trim();
-      const hasOutDistrictLeg = updatedLegs.some(l => {
-        if (l.travel_type === "Outdoor") return true;
-        if (l.district && l.district.trim() !== hDist) return true;
-        return false;
-      });
+      const hasOutDistrictLeg = computeDistrictType(hDist, updatedLegs, null) === "OUT_DISTRICT";
 
       const leg1 = updatedLegs.find(l => l.leg === 1);
       if (leg1) {
@@ -4971,8 +4960,8 @@ export default function ExpensePage() {
                             className="hover:bg-slate-50 cursor-pointer transition-colors"
                           >
                             <td className="py-3 px-3 font-semibold font-mono text-indigo-600 uppercase whitespace-nowrap">
-                              <div className="flex items-center gap-2">
-                                <span>{exp.expense_code}</span>
+                              <div className="inline-flex items-center gap-2 whitespace-nowrap">
+                                <span className="whitespace-nowrap font-mono text-indigo-600">{exp.expense_code}</span>
                                 <DistrictBadge districtType={exp.districtType} />
                               </div>
                             </td>
@@ -5021,8 +5010,8 @@ export default function ExpensePage() {
                           className={`sharp-card bg-white border border-slate-200 rounded-xl p-3.5 space-y-3 active:bg-slate-50 transition-all cursor-pointer text-xs ${getCardStatusClass(exp.status)}`}
                         >
                           <div className="flex justify-between items-center border-b border-slate-100 pb-2 flex-wrap gap-1">
-                            <div className="flex items-center gap-2">
-                              <span className="font-extrabold font-mono text-indigo-600 text-xs uppercase">{exp.expense_code}</span>
+                            <div className="inline-flex items-center gap-2 whitespace-nowrap">
+                              <span className="font-extrabold font-mono text-indigo-600 text-xs uppercase whitespace-nowrap">{exp.expense_code}</span>
                               <DistrictBadge districtType={exp.districtType} />
                             </div>
                             {renderAntdStatusTag(exp.status)}

@@ -1201,8 +1201,8 @@ export default function HomePage() {
                                     dataIndex: "expense_code",
                                     key: "expense_code",
                                     render: (text, exp) => (
-                                      <div className="flex items-center gap-1.5">
-                                        <Text className="font-mono font-bold text-indigo-600">{text}</Text>
+                                      <div className="inline-flex items-center gap-1.5 whitespace-nowrap">
+                                        <Text className="font-mono font-bold text-indigo-600 whitespace-nowrap">{text}</Text>
                                         <DistrictBadge districtType={exp.districtType} />
                                       </div>
                                     ),
@@ -1271,8 +1271,8 @@ export default function HomePage() {
                                   size="small"
                                 >
                                   <div className="flex justify-between items-center pb-2 border-b border-gray-150">
-                                    <div className="flex items-center gap-1.5">
-                                      <Text strong className="font-mono text-primary-600 text-xs">{exp.expense_code}</Text>
+                                    <div className="inline-flex items-center gap-1.5 whitespace-nowrap">
+                                      <Text strong className="font-mono text-primary-600 text-xs whitespace-nowrap">{exp.expense_code}</Text>
                                       <DistrictBadge districtType={exp.districtType} />
                                     </div>
                                     <span className={`inline-flex items-center px-2 py-0.5 rounded border text-[8px] font-bold uppercase tracking-wider ${getStatusBadgeClass(exp.status)}`}>
@@ -1439,8 +1439,8 @@ export default function HomePage() {
                                     dataIndex: "expense_code",
                                     key: "expense_code",
                                     render: (text, exp) => (
-                                      <div className="flex items-center gap-1.5">
-                                        <Text className="font-mono font-bold text-primary-600">{text}</Text>
+                                      <div className="inline-flex items-center gap-1.5 whitespace-nowrap">
+                                        <Text className="font-mono font-bold text-primary-600 whitespace-nowrap">{text}</Text>
                                         <DistrictBadge districtType={exp.districtType} />
                                       </div>
                                     ),
@@ -3005,8 +3005,8 @@ export default function HomePage() {
                   key: "expense_code",
                   width: 140,
                   render: (text, record) => (
-                    <div className="flex items-center gap-1.5">
-                      <Text className="font-mono font-bold text-indigo-600">{text}</Text>
+                    <div className="inline-flex items-center gap-1.5 whitespace-nowrap">
+                      <Text className="font-mono font-bold text-indigo-600 whitespace-nowrap">{text}</Text>
                       <DistrictBadge districtType={record.districtType} />
                     </div>
                   ),
