@@ -851,6 +851,7 @@ export const RajasthanMapChart: React.FC<RajasthanMapChartProps> = ({
                   transform: `scale(${zoomLevel}) translate(${panOffset.x}px, ${panOffset.y}px)`
                 }}
                 onMouseMove={handleMouseMove}
+                onMouseLeave={() => setHoveredDistrict(null)}
               >
                 {/* Map Paths */}
                 <g>
@@ -891,9 +892,6 @@ export const RajasthanMapChart: React.FC<RajasthanMapChartProps> = ({
                             pointerEvents: "visiblePainted"
                           }}
                           onMouseEnter={() => setHoveredDistrict(norm)}
-                          onMouseLeave={() => {
-                            setHoveredDistrict((current) => (current === norm ? null : current));
-                          }}
                           onClick={(e) => {
                             e.stopPropagation();
                             e.preventDefault();
