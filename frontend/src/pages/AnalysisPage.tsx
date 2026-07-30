@@ -478,8 +478,18 @@ export default function AnalysisPage() {
     const details = Array.isArray(e?.tagging_details) ? e.tagging_details : [];
     if (details.length > 0) {
       details.forEach((d: any) => {
-        const dQty = Number(d.quantity || 1);
-        const dVal = Number(d.total_val || (d.quantity * d.unit_cost) || 0);
+        let dQty = Number(d.quantity || 1);
+        let unitCost = Number(d.unit_cost || 0);
+        let dVal = Number(d.total_val || (dQty * unitCost) || 0);
+
+        // Filter out corrupted/invalid large numbers (> 100,000) stored in quantity (e.g. barcodes)
+        if (dQty > 100000 || isNaN(dQty)) {
+          dQty = 1;
+          dVal = unitCost > 0 && unitCost < 100000000 ? unitCost : 0;
+        } else if (dVal > 100000000 || isNaN(dVal)) {
+          dVal = unitCost > 0 ? dQty * unitCost : 0;
+        }
+
         qty += dQty;
         val += dVal;
       });
@@ -492,18 +502,18 @@ export default function AnalysisPage() {
 
     // Filter out corrupted/invalid large numbers (> 100,000) stored in asset_tagging column
     if (rawTag > 100000) {
-      qty = explicitQty > 0 ? explicitQty : 0;
-      val = explicitVal > 0 ? explicitVal : 0;
+      qty = explicitQty > 0 && explicitQty < 100000 ? explicitQty : 0;
+      val = explicitVal > 0 && explicitVal < 100000000 ? explicitVal : 0;
       return { qty, val };
     }
 
-    if (explicitQty > 0) {
+    if (explicitQty > 0 && explicitQty < 100000) {
       qty = explicitQty;
-      val = explicitVal || (rawTag > 0 ? rawTag : 0);
-    } else if (rawTag > 0) {
+      val = explicitVal || (rawTag > 0 && rawTag < 100000 ? rawTag : 0);
+    } else if (rawTag > 0 && rawTag < 100000) {
       qty = rawTag;
       val = explicitVal || 0;
-    } else if (explicitVal > 0) {
+    } else if (explicitVal > 0 && explicitVal < 100000000) {
       val = explicitVal;
       qty = 1;
     }
@@ -823,6 +833,17 @@ export default function AnalysisPage() {
       if (details.length > 0) {
         details.forEach((d: any) => {
           const itemDate = d.itinerary_date || mainDate;
+          let dQty = Number(d.quantity || 1);
+          let unitCost = Number(d.unit_cost || 0);
+          let totalVal = Number(d.total_val || (dQty * unitCost) || 0);
+
+          if (dQty > 100000 || isNaN(dQty)) {
+            dQty = 1;
+            totalVal = unitCost > 0 && unitCost < 100000000 ? unitCost : 0;
+          } else if (totalVal > 100000000 || isNaN(totalVal)) {
+            totalVal = unitCost > 0 ? dQty * unitCost : 0;
+          }
+
           list.push({
             key: `tag_${counter++}`,
             date: itemDate,
@@ -832,9 +853,9 @@ export default function AnalysisPage() {
             hospital_name: d.hospital_name || fallbackHospital,
             equipment_name: d.equipment_name || "Tagged Asset",
             barcode: d.barcode || d.asset_code || fallbackBarcode,
-            quantity: Number(d.quantity || 1),
-            unit_cost: Number(d.unit_cost || 0),
-            total_val: Number(d.total_val || (d.quantity * d.unit_cost) || 0)
+            quantity: dQty,
+            unit_cost: unitCost,
+            total_val: totalVal
           });
         });
       } else if (Number(e.asset_tagging || 0) > 0 || Number(e.asset_tagging_value || e.asset_tagging_val || 0) > 0) {

@@ -820,28 +820,17 @@ export const RajasthanMapChart: React.FC<RajasthanMapChartProps> = ({
                           d={pathD}
                           fill={fillColor}
                           stroke={
-                            isSelected
-                              ? "#1d4ed8"
-                              : isHovered
-                              ? "#312e81"
-                              : isMatchingSearch
+                            isMatchingSearch
                               ? "#d97706"
                               : isTargetZone
                               ? "#94a3b8"
                               : "#cbd5e1"
                           }
-                          strokeWidth={isSelected ? 3 : isHovered ? 2.5 : isMatchingSearch ? 2.5 : 1}
+                          strokeWidth={1}
                           strokeLinejoin="round"
-                          className="transition-all duration-200 cursor-pointer"
+                          className="cursor-pointer"
                           style={{
-                            pointerEvents: "visiblePainted",
-                            filter: isSelected
-                              ? "drop-shadow(0 2px 8px rgba(37, 99, 235, 0.4))"
-                              : isHovered
-                              ? "drop-shadow(0 2px 6px rgba(99, 102, 241, 0.3))"
-                              : isMatchingSearch
-                              ? "drop-shadow(0 2px 6px rgba(217, 119, 6, 0.4))"
-                              : "none"
+                            pointerEvents: "visiblePainted"
                           }}
                           onMouseEnter={() => setHoveredDistrict(norm)}
                           onMouseLeave={() => {
@@ -853,6 +842,23 @@ export const RajasthanMapChart: React.FC<RajasthanMapChartProps> = ({
                             handleDistrictClick(distName);
                           }}
                         />
+
+                        {/* Non-interactive Overlay for Hover / Selection Highlight (Prevents Border Stroke Oscillation Flicker) */}
+                        {(isSelected || isHovered) && (
+                          <path
+                            d={pathD}
+                            fill="none"
+                            stroke={isSelected ? "#1d4ed8" : "#312e81"}
+                            strokeWidth={isSelected ? 3 : 2.5}
+                            strokeLinejoin="round"
+                            style={{
+                              pointerEvents: "none",
+                              filter: isSelected
+                                ? "drop-shadow(0 2px 8px rgba(37, 99, 235, 0.4))"
+                                : "drop-shadow(0 2px 6px rgba(99, 102, 241, 0.3))"
+                            }}
+                          />
+                        )}
 
                         {/* District Labels */}
                         {zoomLevel >= 0.8 && isTargetZone && center.x > 0 && (
