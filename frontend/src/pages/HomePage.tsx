@@ -1439,10 +1439,9 @@ export default function HomePage() {
                                     dataIndex: "expense_code",
                                     key: "expense_code",
                                     render: (text, exp) => (
-                                      <div className="inline-flex items-center gap-1.5 whitespace-nowrap">
-                                        <Text className="font-mono font-bold text-primary-600 whitespace-nowrap">{text}</Text>
-                                        <DistrictBadge districtType={exp.districtType} />
-                                      </div>
+                                      <Tooltip title={<div className="p-1"><DistrictBadge districtType={exp.districtType} hasMismatch={exp.hasMismatch} /></div>} placement="top">
+                                        <Text className="font-mono font-bold text-primary-600 cursor-pointer hover:underline">{text}</Text>
+                                      </Tooltip>
                                     ),
                                   },
                                   {

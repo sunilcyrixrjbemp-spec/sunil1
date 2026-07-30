@@ -1406,19 +1406,21 @@ export default function ExpensePage() {
         const updatedLeg = { ...leg, [field]: value };
 
         // Immediate validation: starting and destination locations cannot be the same
-        const checkFrom = field === "from" ? value : (updatedLeg.from || "");
-        const checkTo = field === "to" ? value : (updatedLeg.to || "");
-        const checkFromDist = field === "district_from" ? value : (updatedLeg.district_from || "");
-        const checkToDist = field === "district" ? value : (updatedLeg.district || "");
+        if (field === "from" || field === "to" || field === "district_from" || field === "district") {
+          const checkFrom = field === "from" ? value : (updatedLeg.from || "");
+          const checkTo = field === "to" ? value : (updatedLeg.to || "");
+          const checkFromDist = field === "district_from" ? value : (updatedLeg.district_from || "");
+          const checkToDist = field === "district" ? value : (updatedLeg.district || "");
 
-        if (
-          checkFrom.trim() && 
-          checkTo.trim() && 
-          checkFrom.trim().toLowerCase() === checkTo.trim().toLowerCase() &&
-          checkFromDist.trim().toLowerCase() === checkToDist.trim().toLowerCase()
-        ) {
-          toast.error("Source (From) and Destination (To) locations cannot be the same.");
-          (updatedLeg as any)[field] = "";
+          if (
+            checkFrom.trim() && 
+            checkTo.trim() && 
+            checkFrom.trim().toLowerCase() === checkTo.trim().toLowerCase() &&
+            checkFromDist.trim().toLowerCase() === checkToDist.trim().toLowerCase()
+          ) {
+            toast.error("Source (From) and Destination (To) locations cannot be the same.");
+            (updatedLeg as any)[field] = "";
+          }
         }
 
         if (field === "mode") {

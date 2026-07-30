@@ -1791,12 +1791,13 @@ export async function handleGetExpenseDetails(request, env, params, query, user)
 
         const monthlyStats = await getUserMonthlyStatsHelper(env, submitter?.id || 0, monthName, yearVal, dateStr);
 
-        const distTypeLegacy = computeDistrictType(submitter?.district, itinerariesList, masterRow.district);
+        const distInfoLegacy = computeDistrictInfo(submitter?.district, itinerariesList, masterRow.district, masterRow.category || masterRow.travel_mode);
 
         return jsonResponse({
           id: val,
           expense_code: matchingExpId,
-          districtType: distTypeLegacy,
+          districtType: distInfoLegacy.districtType,
+          hasMismatch: distInfoLegacy.hasMismatch,
           user_id: submitter?.id || 0,
           submitter_name: submitter?.name || masterRow.user_id,
           submitter_code: masterRow.user_id,
@@ -2022,12 +2023,13 @@ export async function handleGetExpenseDetails(request, env, params, query, user)
 
   const monthlyStats = await getUserMonthlyStatsHelper(env, expense.user_id, expense.month, expense.year, expense.itinerary);
 
-  const distTypeStandard = computeDistrictType(submitter?.district, itineraries.results || [], expense.district);
+  const distInfoStandard = computeDistrictInfo(submitter?.district, itineraries.results || [], expense.district, expense.category || expense.travel_mode);
 
   return jsonResponse({
     id: expense.id,
     expense_code: expense.expense_code,
-    districtType: distTypeStandard,
+    districtType: distInfoStandard.districtType,
+    hasMismatch: distInfoStandard.hasMismatch,
     user_id: expense.user_id,
     submitter_name: submitter?.name || "",
     submitter_code: submitter?.user_id || "",
