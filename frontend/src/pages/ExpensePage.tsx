@@ -31,7 +31,7 @@ import {
 } from "lucide-react";
 import api from "../services/api";
 import { 
-  DatePicker, ConfigProvider, Modal, Button, Tag, Space, Card, Segmented, Input, Pagination 
+  DatePicker, ConfigProvider, Modal, Button, Tag, Space, Card, Segmented, Input, Pagination, Tooltip 
 } from "antd";
 import { 
   EditOutlined, DeleteOutlined, FileTextOutlined 
@@ -1492,7 +1492,6 @@ export default function ExpensePage() {
       });
 
       // 2. Recalculate DA for Leg 1 based on the updated list of legs
-      const hDist = (user.district || user.home_district || "Jodhpur").trim();
       const hasOutDistrictLeg = updatedLegs.some(l => (l.travel_type || "").toLowerCase() === "outdoor");
 
       const leg1 = updatedLegs.find(l => l.leg === 1);
