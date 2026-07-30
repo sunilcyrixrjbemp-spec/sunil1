@@ -164,12 +164,42 @@ export const RajasthanMapChart: React.FC<RajasthanMapChartProps> = ({
   const tooltipRef = useRef<HTMLDivElement | null>(null);
 
   const handleMouseMove = (e: React.MouseEvent<SVGSVGElement>) => {
-    if (svgRef.current && tooltipRef.current) {
-      const rect = svgRef.current.getBoundingClientRect();
-      const x = Math.min(500, Math.max(10, e.clientX - rect.left + 15));
-      const y = Math.min(380, Math.max(10, e.clientY - rect.top - 15));
+    if (!svgRef.current) return;
+
+    const rect = svgRef.current.getBoundingClientRect();
+    const mouseX = e.clientX - rect.left;
+    const mouseY = e.clientY - rect.top;
+
+    if (tooltipRef.current) {
+      const x = Math.min(500, Math.max(10, mouseX + 15));
+      const y = Math.min(380, Math.max(10, mouseY - 15));
       tooltipRef.current.style.left = `${x}px`;
       tooltipRef.current.style.top = `${y}px`;
+    }
+
+    // Convert mouse pixel coordinates to SVG viewBox coordinates (760 x 660)
+    const svgX = (mouseX / (rect.width || 1)) * 760;
+    const svgY = (mouseY / (rect.height || 1)) * 660;
+
+    // Unproject SVG viewBox coordinates back to GeoJSON Lng/Lat
+    const [lng, lat] = unproject(svgX, svgY);
+
+    // Test point against all district feature geometries
+    let foundDistrict: string | null = null;
+    if (geoData?.features) {
+      for (const feature of geoData.features) {
+        if (isPointInFeatureGeometry([lng, lat], feature.geometry)) {
+          const rawDistName = feature.properties.district || feature.properties.dt_nm || "";
+          foundDistrict = normalizeDistrict(rawDistName);
+          break;
+        }
+      }
+    }
+
+    // Requirement 2d: If point falls in thin gap between polygons (no feature contains it),
+    // do NOT clear hoveredDistrict immediately — keep previously hovered district until cursor enters another feature.
+    if (foundDistrict) {
+      setHoveredDistrict(foundDistrict);
     }
   };
 
@@ -445,6 +475,61 @@ export const RajasthanMapChart: React.FC<RajasthanMapChartProps> = ({
     const x = padding + ((lng - minLng) / (maxLng - minLng || 1)) * innerW;
     const y = height - (padding + ((lat - minLat) / (maxLat - minLat || 1)) * innerH);
     return `${x.toFixed(1)},${y.toFixed(1)}`;
+  };
+
+  // Inverse Projection helper: SVG (x, y) -> Lng/Lat
+  const unproject = (svgX: number, svgY: number, width = 760, height = 660, padding = 30) => {
+    const { minLng, maxLng, minLat, maxLat } = bounds;
+    const innerW = width - padding * 2;
+    const innerH = height - padding * 2;
+
+    const lng = minLng + ((svgX - padding) / (innerW || 1)) * (maxLng - minLng);
+    const lat = minLat + ((height - svgY - padding) / (innerH || 1)) * (maxLat - minLat);
+    return [lng, lat];
+  };
+
+  // Ray-Casting Point-in-Polygon helper for GeoJSON geometries
+  const isPointInRing = (pt: [number, number], ring: number[][]): boolean => {
+    const [x, y] = pt;
+    let inside = false;
+    for (let i = 0, j = ring.length - 1; i < ring.length; j = i++) {
+      const xi = ring[i][0], yi = ring[i][1];
+      const xj = ring[j][0], yj = ring[j][1];
+
+      const intersect = ((yi > y) !== (yj > y)) && (x < ((xj - xi) * (y - yi)) / (yj - yi || 1e-10) + xi);
+      if (intersect) inside = !inside;
+    }
+    return inside;
+  };
+
+  const isPointInFeatureGeometry = (pt: [number, number], geometry: any): boolean => {
+    const { type, coordinates } = geometry;
+    if (!coordinates || coordinates.length === 0) return false;
+
+    if (type === "Polygon") {
+      const outerRing = coordinates[0];
+      if (!isPointInRing(pt, outerRing)) return false;
+      for (let h = 1; h < coordinates.length; h++) {
+        if (isPointInRing(pt, coordinates[h])) return false;
+      }
+      return true;
+    } else if (type === "MultiPolygon") {
+      for (let p = 0; p < coordinates.length; p++) {
+        const poly = coordinates[p];
+        const outerRing = poly[0];
+        if (isPointInRing(pt, outerRing)) {
+          let inHole = false;
+          for (let h = 1; h < poly.length; h++) {
+            if (isPointInRing(pt, poly[h])) {
+              inHole = true;
+              break;
+            }
+          }
+          if (!inHole) return true;
+        }
+      }
+    }
+    return false;
   };
 
   // Convert GeoJSON polygon to SVG Path string
