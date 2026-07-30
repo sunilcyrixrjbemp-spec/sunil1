@@ -4,6 +4,7 @@ import { createPortal } from "react-dom";
 import { useNavigate, useLocation } from "react-router-dom";
 import toast from "react-hot-toast";
 import Loader from "../components/common/Loader";
+import DistrictBadge from "../components/common/DistrictBadge";
 import { expenseService } from "../services/expenseService";
 import { uploadService } from "../services/uploadService";
 import { checkIsHeic, convertHeicToJpegUrl } from "../utils/heic";
@@ -4969,7 +4970,12 @@ export default function ExpensePage() {
                             onClick={() => handleViewDetails(exp.id)}
                             className="hover:bg-slate-50 cursor-pointer transition-colors"
                           >
-                            <td className="py-3 px-3 font-semibold font-mono text-indigo-600 uppercase whitespace-nowrap">{exp.expense_code}</td>
+                            <td className="py-3 px-3 font-semibold font-mono text-indigo-600 uppercase whitespace-nowrap">
+                              <div className="flex items-center gap-2">
+                                <span>{exp.expense_code}</span>
+                                <DistrictBadge districtType={exp.districtType} />
+                              </div>
+                            </td>
                             <td className="py-3 px-3 text-slate-600 font-medium whitespace-nowrap">{exp.itinerary}</td>
                             <td className="py-3 px-3 font-semibold text-slate-800 truncate max-w-[200px] whitespace-nowrap" title={exp.description}>{exp.description}</td>
                             <td className="py-3 px-3 text-slate-600 whitespace-nowrap">{exp.travel_mode}</td>
@@ -5014,8 +5020,11 @@ export default function ExpensePage() {
                           onClick={() => handleViewDetails(exp.id)}
                           className={`sharp-card bg-white border border-slate-200 rounded-xl p-3.5 space-y-3 active:bg-slate-50 transition-all cursor-pointer text-xs ${getCardStatusClass(exp.status)}`}
                         >
-                          <div className="flex justify-between items-center border-b border-slate-100 pb-2">
-                            <span className="font-extrabold font-mono text-indigo-600 text-xs uppercase">{exp.expense_code}</span>
+                          <div className="flex justify-between items-center border-b border-slate-100 pb-2 flex-wrap gap-1">
+                            <div className="flex items-center gap-2">
+                              <span className="font-extrabold font-mono text-indigo-600 text-xs uppercase">{exp.expense_code}</span>
+                              <DistrictBadge districtType={exp.districtType} />
+                            </div>
                             {renderAntdStatusTag(exp.status)}
                           </div>
                           
@@ -5663,8 +5672,9 @@ export default function ExpensePage() {
         title={
           <div className="flex items-center gap-2 pb-2 border-b border-slate-100">
             <FileTextOutlined className="text-blue-600 text-lg" />
-            <span className="font-extrabold uppercase tracking-wide text-xs text-slate-800 m-0">
+            <span className="font-extrabold uppercase tracking-wide text-xs text-slate-800 m-0 flex items-center gap-2">
               Claim Details {selectedClaim ? `— ${selectedClaim.expense_code}` : ""}
+              {selectedClaim && <DistrictBadge districtType={selectedClaim.districtType} />}
             </span>
           </div>
         }

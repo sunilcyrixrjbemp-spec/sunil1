@@ -1,6 +1,7 @@
 import { runWrite, runBatchWrite } from "../utils/db.js";
 import { deleteFromGoogleDrive } from "./upload.js";
 import { resolveLegacyExpenseId } from "../utils/legacy-resolver.js";
+import { computeDistrictType } from "../utils/districtHelper.js";
 
 function jsonResponse(data, status = 200) {
   return new Response(JSON.stringify(data), {
@@ -188,7 +189,7 @@ export async function fetchPendingApprovals(env, user) {
       SELECT a.id, a.expense_id, a.approver_id, a.level_number, a.status, a.comments, a.created_at, a.updated_at,
              e.expense_code, e.amount, e.description, e.travel_mode, e.itinerary, e.user_id as submitter_user_id,
              e.calls_assigned, e.calls_completed,
-             u.name AS submitter_name, u.user_id AS submitter_code,
+             u.name AS submitter_name, u.user_id AS submitter_code, u.district AS submitter_district,
              (SELECT COUNT(*) FROM expense_itineraries WHERE exp_id = e.expense_code) as itineraries_count
       FROM approvals a
       JOIN expenses e ON a.expense_id = e.id
@@ -207,7 +208,7 @@ export async function fetchPendingApprovals(env, user) {
   if (hasExpenseMaster) {
     dbPromises.push(
       env.DB.prepare(`
-        SELECT m.exp_id, m.user_id, m.expense_date, m.total_amount, m.status, m.visit_purpose, m.calls_assigned, m.calls_completed, u.name as full_name, u.e_code
+        SELECT m.exp_id, m.user_id, m.expense_date, m.total_amount, m.status, m.visit_purpose, m.calls_assigned, m.calls_completed, u.name as full_name, u.e_code, u.district as submitter_district
         FROM expense_master m
         JOIN users u ON m.user_id = u.user_id
         WHERE 
@@ -240,13 +241,33 @@ export async function fetchPendingApprovals(env, user) {
       category: "Limit Request",
       amount: parseFloat(pl.requested_value || 0),
       date: pl.for_month,
-      itinerariesCount: 0
+      itinerariesCount: 0,
+      districtType: "IN_DISTRICT"
     });
   }
 
   // 2. Process normal approvals
   const approvalsList = approvalsRes.results || [];
+  const normalExpCodes = approvalsList.map(a => a.expense_code).filter(Boolean);
+  let normalLegsMap = {};
+  if (normalExpCodes.length > 0) {
+    try {
+      const legsRes = await queryInChunks(
+        env.DB,
+        "SELECT exp_id, from_district, to_district FROM expense_itineraries WHERE exp_id IN (?)",
+        normalExpCodes
+      );
+      for (const l of legsRes) {
+        if (!normalLegsMap[l.exp_id]) normalLegsMap[l.exp_id] = [];
+        normalLegsMap[l.exp_id].push(l);
+      }
+    } catch (e) {}
+  }
+
   for (const app of approvalsList) {
+    const legs = normalLegsMap[app.expense_code] || [];
+    const districtType = computeDistrictType(app.submitter_district, legs, null);
+
     result.push({
       id: app.id,
       expense_id: app.expense_id,
@@ -265,7 +286,8 @@ export async function fetchPendingApprovals(env, user) {
       date: app.itinerary,
       itinerariesCount: app.itineraries_count || 0,
       calls_assigned: app.calls_assigned || 0,
-      calls_completed: app.calls_completed || 0
+      calls_completed: app.calls_completed || 0,
+      districtType: districtType
     });
   }
 
@@ -274,7 +296,7 @@ export async function fetchPendingApprovals(env, user) {
   if (legacyList.length > 0) {
     const legacyCodes = legacyList.map(r => r.exp_id);
 
-    const [countResults, firstLegs] = await Promise.all([
+    const [countResults, firstLegs, legacyLegsRes] = await Promise.all([
       queryInChunks(
         env.DB,
         "SELECT exp_id, COUNT(*) as cnt FROM expense_itineraries WHERE exp_id IN (?) GROUP BY exp_id",
@@ -287,7 +309,12 @@ export async function fetchPendingApprovals(env, user) {
          WHERE exp_id IN (?) 
          AND leg = 1`,
         legacyCodes
-      )
+      ),
+      queryInChunks(
+        env.DB,
+        "SELECT exp_id, from_district, to_district FROM expense_itineraries WHERE exp_id IN (?)",
+        legacyCodes
+      ).catch(() => [])
     ]);
 
     const countMap = {};
@@ -296,6 +323,11 @@ export async function fetchPendingApprovals(env, user) {
     for (const r of firstLegs) {
       if (!modeMap[r.exp_id]) modeMap[r.exp_id] = r.travel_mode;
     }
+    const legacyLegsMap = {};
+    for (const l of legacyLegsRes) {
+      if (!legacyLegsMap[l.exp_id]) legacyLegsMap[l.exp_id] = [];
+      legacyLegsMap[l.exp_id].push(l);
+    }
 
     const legacyItems = await Promise.all(
       legacyList.map(async (row) => {
@@ -303,6 +335,7 @@ export async function fetchPendingApprovals(env, user) {
         const levelNumber = row.status === "Pending L2" ? 2 : 1;
         const itiCount = countMap[row.exp_id] || 0;
         const category = modeMap[row.exp_id] || "Travel";
+        const districtType = computeDistrictType(row.submitter_district, legacyLegsMap[row.exp_id] || []);
 
         return {
           id: mockId,
@@ -322,7 +355,8 @@ export async function fetchPendingApprovals(env, user) {
           date: row.expense_date,
           itinerariesCount: itiCount,
           calls_assigned: row.calls_assigned || 0,
-          calls_completed: row.calls_completed || 0
+          calls_completed: row.calls_completed || 0,
+          districtType: districtType
         };
       })
     );

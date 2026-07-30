@@ -13,6 +13,7 @@ import { hasFullAccess } from "../utils/constants";
 import { ResponsivePie } from "@nivo/pie";
 import ExpenseCalendar from "../components/common/ExpenseCalendar";
 import LocationFilters from "../components/common/LocationFilters";
+import DistrictBadge from "../components/common/DistrictBadge";
 import { 
   Card, 
   Button, 
@@ -1199,7 +1200,12 @@ export default function HomePage() {
                                     title: "Claim ID",
                                     dataIndex: "expense_code",
                                     key: "expense_code",
-                                    render: (text) => <Text className="font-mono font-bold text-indigo-600">{text}</Text>,
+                                    render: (text, exp) => (
+                                      <div className="flex items-center gap-1.5">
+                                        <Text className="font-mono font-bold text-indigo-600">{text}</Text>
+                                        <DistrictBadge districtType={exp.districtType} />
+                                      </div>
+                                    ),
                                   },
                                   {
                                     title: "Date",
@@ -1265,7 +1271,10 @@ export default function HomePage() {
                                   size="small"
                                 >
                                   <div className="flex justify-between items-center pb-2 border-b border-gray-150">
-                                    <Text strong className="font-mono text-primary-600 text-xs">{exp.expense_code}</Text>
+                                    <div className="flex items-center gap-1.5">
+                                      <Text strong className="font-mono text-primary-600 text-xs">{exp.expense_code}</Text>
+                                      <DistrictBadge districtType={exp.districtType} />
+                                    </div>
                                     <span className={`inline-flex items-center px-2 py-0.5 rounded border text-[8px] font-bold uppercase tracking-wider ${getStatusBadgeClass(exp.status)}`}>
                                       {getStatusLabel(exp.status)}
                                     </span>
@@ -1429,7 +1438,12 @@ export default function HomePage() {
                                     title: "Claim ID",
                                     dataIndex: "expense_code",
                                     key: "expense_code",
-                                    render: (text) => <Text className="font-mono font-bold text-primary-600">{text}</Text>,
+                                    render: (text, exp) => (
+                                      <div className="flex items-center gap-1.5">
+                                        <Text className="font-mono font-bold text-primary-600">{text}</Text>
+                                        <DistrictBadge districtType={exp.districtType} />
+                                      </div>
+                                    ),
                                   },
                                   {
                                     title: "Date",
@@ -1508,7 +1522,10 @@ export default function HomePage() {
                                   <Row gutter={[4, 4]} className="text-[11px] pt-2">
                                     <Col span={12}>
                                       <span className="text-gray-400 font-bold uppercase text-[9px] block">Claim ID / Date</span>
-                                      <span className="text-gray-700 font-semibold">{exp.expense_code} ({exp.date || exp.itinerary})</span>
+                                      <div className="flex items-center gap-1.5 flex-wrap">
+                                        <span className="text-gray-700 font-semibold">{exp.expense_code} ({exp.date || exp.itinerary})</span>
+                                        <DistrictBadge districtType={exp.districtType} />
+                                      </div>
                                     </Col>
                                     <Col span={12}>
                                       <span className="text-gray-400 font-bold uppercase text-[9px] block">Mode / Calls</span>
@@ -1762,7 +1779,10 @@ export default function HomePage() {
         title={
           <Title level={5} style={{ margin: 0 }} className="flex items-center gap-2 text-gray-805">
             <Layers className="w-4 h-4 text-primary-600" />
-            <span>Claim Details {claimDetails ? `— ${claimDetails.expense_code}` : ""}</span>
+            <span className="flex items-center gap-2">
+              Claim Details {claimDetails ? `— ${claimDetails.expense_code}` : ""}
+              {claimDetails && <DistrictBadge districtType={claimDetails.districtType} />}
+            </span>
           </Title>
         }
         open={showDetailsModal}
@@ -2983,8 +3003,13 @@ export default function HomePage() {
                   title: "Claim ID",
                   dataIndex: "expense_code",
                   key: "expense_code",
-                  width: 100,
-                  render: (text) => <Text className="font-mono font-bold text-indigo-600">{text}</Text>,
+                  width: 140,
+                  render: (text, record) => (
+                    <div className="flex items-center gap-1.5">
+                      <Text className="font-mono font-bold text-indigo-600">{text}</Text>
+                      <DistrictBadge districtType={record.districtType} />
+                    </div>
+                  ),
                 },
                 {
                   title: "Date",

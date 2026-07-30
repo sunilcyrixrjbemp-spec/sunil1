@@ -1,0 +1,71 @@
+name: Deploy Android OTA Update (Capgo)
+
+on:
+  push:
+    branches: [ main, master ]
+    paths:
+      - 'frontend/**'
+  workflow_dispatch:
+
+jobs:
+  deploy-ota:
+    name: Build & Upload OTA Bundle to Capgo
+    runs-on: ubuntu-latest
+
+    steps:
+      # 1. Checkout codebase
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      # 2. Setup Node.js environment
+      - name: Setup Node.js 22
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: 'npm'
+          cache-dependency-path: frontend/package-lock.json
+
+      # 3. Install dependencies
+      - name: Install frontend dependencies
+        working-directory: frontend
+        run: npm install --legacy-peer-deps
+
+      # 4. Build Vite web app bundle
+      - name: Build web bundle (dist)
+        working-directory: frontend
+        run: npm run build
+        env:
+          VITE_APP_NAME: "Cyrix Field"
+          VITE_APP_ENVIRONMENT: production
+          VITE_FIREBASE_VAPID_KEY: ${{ secrets.VITE_FIREBASE_VAPID_KEY }}
+
+      # 5. Package web bundle into zip archive
+      - name: Package web bundle into zip
+        working-directory: frontend
+        run: |
+          cd dist
+          zip -r ../dist.zip .
+
+      # 6. Upload bundle to Capgo Cloud OTA Service
+      - name: Upload OTA bundle via Capgo CLI
+        working-directory: frontend
+        run: |
+          if [ -z "${{ secrets.CAPGO_API_KEY }}" ]; then
+            echo "⚠️ CAPGO_API_KEY secret is missing. Skipping OTA upload to Capgo."
+            echo "Please set CAPGO_API_KEY in your GitHub repository secrets to enable automatic OTA pushes."
+            exit 1
+          fi
+          npx @capgo/cli@latest upload \
+            --apikey "${{ secrets.CAPGO_API_KEY }}" \
+            --path ./dist.zip \
+            --channel production \
+            --platform android
+        env:
+          CAPGO_API_KEY: ${{ secrets.CAPGO_API_KEY }}
+
+      # 7. Report success status
+      - name: Report OTA status
+        if: success()
+        run: |
+          echo "✅ Over-The-Air (OTA) update web bundle successfully pushed to Capgo!"
+          echo "Android users will receive this web-layer update automatically on next app launch/resume."

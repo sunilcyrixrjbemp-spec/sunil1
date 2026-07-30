@@ -33,6 +33,7 @@ import { approvalService } from "../services/approvalService";
 import { expenseService } from "../services/expenseService";
 import { authService } from "../services/authService";
 import Loader from "../components/common/Loader";
+import DistrictBadge from "../components/common/DistrictBadge";
 import { prefetchManager } from "../utils/prefetchManager";
 import { checkIsHeic, convertHeicToJpegUrl } from "../utils/heic";
 import { 
@@ -1578,7 +1579,12 @@ export default function ApprovalPage() {
                     title: "Claim ID",
                     dataIndex: "expense_code",
                     key: "expense_code",
-                    render: (code) => <Text className="font-mono font-bold text-indigo-600 text-xs">{code}</Text>,
+                    render: (code, req) => (
+                      <div className="flex items-center gap-1.5">
+                        <Text className="font-mono font-bold text-indigo-600 text-xs">{code}</Text>
+                        <DistrictBadge districtType={req.districtType} />
+                      </div>
+                    ),
                   },
                   {
                     title: "Category",
@@ -1737,7 +1743,10 @@ export default function ApprovalPage() {
                       <div className="flex items-center gap-3 flex-wrap">
                         <div>
                           <div style={{ fontSize: 9, color: "#9ca3af", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.04em" }}>Claim ID</div>
-                          <div style={{ fontSize: 11, fontWeight: 700, color: "#4f46e5", fontFamily: "monospace" }}>{req.expense_code}</div>
+                          <div style={{ fontSize: 11, fontWeight: 700, color: "#4f46e5", fontFamily: "monospace" }} className="flex items-center gap-1.5">
+                            <span>{req.expense_code}</span>
+                            <DistrictBadge districtType={req.districtType} />
+                          </div>
                         </div>
                         <div>
                           <div style={{ fontSize: 9, color: "#9ca3af", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.04em" }}>Date</div>
@@ -1876,9 +1885,12 @@ export default function ApprovalPage() {
                     Submitter Details & Information
                   </Typography.Text>
                 </Space>
-                <Tag color="processing" style={{ fontWeight: 700, fontSize: 10, fontFamily: "monospace" }}>
-                  {selectedApproval?.expense_code}
-                </Tag>
+                <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
+                  <Tag color="processing" style={{ fontWeight: 700, fontSize: 10, fontFamily: "monospace", margin: 0 }}>
+                    {selectedApproval?.expense_code}
+                  </Tag>
+                  <DistrictBadge districtType={expenseDetails?.districtType || selectedApproval?.districtType} />
+                </div>
               </div>
               <Descriptions
                 column={1}

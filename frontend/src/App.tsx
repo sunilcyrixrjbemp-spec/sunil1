@@ -37,6 +37,7 @@ function PageLoader() {
   return <ProgressLoader message="Loading System..." fullPage />;
 }
 import { useFCMNotifications } from "./hooks/useFCMNotifications";
+import { initOtaUpdates } from "./utils/otaUpdater";
 
 function AppInner() {
   // Initialize FCM push notifications (requests permission + listens for foreground messages)
@@ -86,6 +87,7 @@ function App() {
   // Non-blocking ping to wake up free-tier backend server instantly on app startup
   useEffect(() => {
     fetch("https://fieldops-secondary-api.sunilbishnoi.workers.dev/api/health").catch(() => {});
+    initOtaUpdates();
   }, []);
 
   // Global cleanup handler to ensure body styles are clean on unmount

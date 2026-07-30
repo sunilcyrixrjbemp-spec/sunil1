@@ -31,6 +31,10 @@ const config: CapacitorConfig = {
       style: 'dark',
       backgroundColor: '#0f172a',
     },
+    CapacitorUpdater: {
+      autoUpdate: false,
+      statsUrl: '',
+    },
   },
 };
 

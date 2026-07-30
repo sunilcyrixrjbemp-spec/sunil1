@@ -3,6 +3,7 @@ import { getLegacyExpenseHashId } from "./approval.js";
 import { resolveLegacyExpenseId } from "../utils/legacy-resolver.js";
 import { uploadFileWithFallback } from "./upload.js";
 import { MONTH_NAMES } from "../utils/constants.js";
+import { computeDistrictType } from "../utils/districtHelper.js";
 
 // ─── FULL ACCESS ROLES ────────────────────────────────────────────────────────
 // Roles that see ALL data (all users, all zones, all records) across every report.
@@ -556,10 +557,13 @@ export async function serializeExpenses(env, expenses, submittersMap) {
       .filter(l => (l.travel_mode || "").trim().toLowerCase() === "car")
       .reduce((sum, l) => sum + (parseFloat(l.travel_amount) || 0.0), 0.0);
 
+    const districtType = computeDistrictType(submitter?.district, legs, exp.district);
+
     result.push({
       id: exp.id,
       expense_code: exp.expense_code,
       user_id: exp.user_id,
+      districtType,
       month: exp.month,
       year: exp.year,
       amount: parseFloat(exp.amount || 0),
@@ -1784,9 +1788,12 @@ export async function handleGetExpenseDetails(request, env, params, query, user)
 
         const monthlyStats = await getUserMonthlyStatsHelper(env, submitter?.id || 0, monthName, yearVal, dateStr);
 
+        const distTypeLegacy = computeDistrictType(submitter?.district, itinerariesList, masterRow.district);
+
         return jsonResponse({
           id: val,
           expense_code: matchingExpId,
+          districtType: distTypeLegacy,
           user_id: submitter?.id || 0,
           submitter_name: submitter?.name || masterRow.user_id,
           submitter_code: masterRow.user_id,
@@ -1855,6 +1862,7 @@ export async function handleGetExpenseDetails(request, env, params, query, user)
     return jsonResponse({
       id: -pl.id,
       expense_code: `LIMIT-${pl.request_type}-${pl.id}`,
+      districtType: "IN_DISTRICT",
       user_id: submitter?.id || 0,
       submitter_name: submitter?.name || `Employee ${pl.user_id}`,
       submitter_code: pl.user_id,
@@ -2011,9 +2019,12 @@ export async function handleGetExpenseDetails(request, env, params, query, user)
 
   const monthlyStats = await getUserMonthlyStatsHelper(env, expense.user_id, expense.month, expense.year, expense.itinerary);
 
+  const distTypeStandard = computeDistrictType(submitter?.district, itineraries.results || [], expense.district);
+
   return jsonResponse({
     id: expense.id,
     expense_code: expense.expense_code,
+    districtType: distTypeStandard,
     user_id: expense.user_id,
     submitter_name: submitter?.name || "",
     submitter_code: submitter?.user_id || "",
