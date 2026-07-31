@@ -581,7 +581,8 @@ export default function HomePage() {
       purpose: raw.purpose || raw.description || "",
       itineraries: (raw.itineraries && raw.itineraries.length > 0)
         ? raw.itineraries
-        : (raw.legs || [])
+        : (raw.legs || []),
+      edit_history: raw.edit_history || raw.editHistory || raw.edit_logs || raw.logs || []
     };
   };
 
@@ -2714,6 +2715,14 @@ export default function HomePage() {
               // Check leg deductions
               let totalLegDeductions = 0;
               const legDeductionsList: any[] = [];
+              const editHistoryList: any[] = Array.isArray(claimDetails.edit_history)
+                ? claimDetails.edit_history
+                : Array.isArray(claimDetails.editLogs)
+                ? claimDetails.editLogs
+                : Array.isArray(claimDetails.logs)
+                ? claimDetails.logs
+                : [];
+
               if (claimDetails.itineraries && Array.isArray(claimDetails.itineraries)) {
                 claimDetails.itineraries.forEach((leg: any) => {
                   const travelCost = parseFloat(leg.amount || 0);
@@ -2727,7 +2736,56 @@ export default function HomePage() {
                   const daDeduction = (origDA - daCost);
                   const legTotalDeduction = Math.max(0, taDeduction) + Math.max(0, daDeduction);
 
-                  if (legTotalDeduction > 0 || leg.deduction_reason || leg.remark) {
+                  // Extract specific reason for field from edit history
+                  const findFieldRemark = (fieldNames: string[]) => {
+                    const found = editHistoryList.find(
+                      (log: any) =>
+                        (Number(log.leg_number) === Number(leg.leg) || Number(log.leg) === Number(leg.leg)) &&
+                        fieldNames.includes(log.field_name) &&
+                        log.comment &&
+                        log.comment.trim() !== ""
+                    );
+                    return found ? found.comment.trim() : null;
+                  };
+
+                  const legAnyRemark = (() => {
+                    const found = editHistoryList.find(
+                      (log: any) =>
+                        (Number(log.leg_number) === Number(leg.leg) || Number(log.leg) === Number(leg.leg)) &&
+                        log.comment &&
+                        log.comment.trim() !== ""
+                    );
+                    return found ? found.comment.trim() : null;
+                  })();
+
+                  const taReason =
+                    findFieldRemark(["travel_amount", "distance_km", "sub_amount", "travel_mode"]) ||
+                    leg.ta_reason ||
+                    leg.travel_reason ||
+                    leg.remarks?.travel_amount ||
+                    leg.remarks?.distance_km ||
+                    leg.deduction_reason ||
+                    leg.remark ||
+                    leg.comment ||
+                    legAnyRemark;
+
+                  const daReason =
+                    findFieldRemark(["da_amount", "da"]) ||
+                    leg.da_reason ||
+                    leg.remarks?.da_amount ||
+                    leg.remarks?.da ||
+                    leg.deduction_reason ||
+                    leg.remark ||
+                    leg.comment ||
+                    legAnyRemark;
+
+                  const generalReason =
+                    legAnyRemark ||
+                    leg.deduction_reason ||
+                    leg.remark ||
+                    leg.comment;
+
+                  if (legTotalDeduction > 0 || leg.deduction_reason || leg.remark || taReason || daReason) {
                     totalLegDeductions += legTotalDeduction;
                     legDeductionsList.push({
                       leg: leg.leg,
@@ -2740,7 +2798,9 @@ export default function HomePage() {
                       origDA: origDA,
                       allowedDA: daCost,
                       totalLegDeducted: legTotalDeduction,
-                      reason: leg.deduction_reason || leg.remark || leg.comment
+                      reason: generalReason,
+                      taReason: taReason,
+                      daReason: daReason
                     });
                   }
                 });
@@ -2795,18 +2855,18 @@ export default function HomePage() {
                               {item.taDeducted > 0 && (
                                 <p className="bg-white p-2 rounded border border-gray-200">
                                   <strong className="text-rose-700 font-bold">Travel Fare:</strong> Deducted ₹{item.taDeducted.toLocaleString()} (Claimed: ₹{item.origTA.toLocaleString()} | Allowed: ₹{item.allowedTA.toLocaleString()}).
-                                  <span className="italic text-gray-600 block mt-0.5">Reason: {item.reason || "Claimed travel fare exceeded grade policy limits."}</span>
+                                  <span className="italic text-gray-600 block mt-0.5">Reason: {item.taReason || "Claimed travel fare exceeded grade policy limits."}</span>
                                 </p>
                               )}
                               {item.daDeducted > 0 && (
                                 <p className="bg-white p-2 rounded border border-gray-200">
                                   <strong className="text-rose-700 font-bold">Daily Allowance (DA):</strong> Deducted ₹{item.daDeducted.toLocaleString()} (Claimed: ₹{item.origDA.toLocaleString()} | Allowed: ₹{item.allowedDA.toLocaleString()}).
-                                  <span className="italic text-gray-600 block mt-0.5">Reason: {item.reason || "DA claimed value exceeded daily policy ceiling limits."}</span>
+                                  <span className="italic text-gray-600 block mt-0.5">Reason: {item.daReason || "DA claimed value exceeded daily policy ceiling limits."}</span>
                                 </p>
                               )}
-                              {item.taDeducted === 0 && item.daDeducted === 0 && item.reason && (
+                              {item.taDeducted === 0 && item.daDeducted === 0 && (item.reason || item.taReason || item.daReason) && (
                                 <p className="bg-white p-2 rounded border border-gray-200 italic text-gray-700">
-                                  <strong>Audit Note:</strong> "{item.reason}"
+                                  <strong>Audit Note:</strong> "{item.taReason || item.daReason || item.reason}"
                                 </p>
                               )}
                             </div>
