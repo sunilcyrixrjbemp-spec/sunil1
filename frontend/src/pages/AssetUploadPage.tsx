@@ -126,7 +126,7 @@ export default function AssetUploadPage() {
   const [uploadProgressDetail, setUploadProgressDetail] = useState("");
   const [parsedRows, setParsedRows] = useState<AssetRow[]>([]);
   const [skippedCount, setSkippedCount] = useState(0);
-  const [uploadResult, setUploadResult] = useState<{inserted: number; skipped: number; elapsed_ms: number} | null>(null);
+  const [uploadResult, setUploadResult] = useState<{inserted: number; updated: number; skipped: number; elapsed_ms: number} | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   // Search & pagination for existing assets
@@ -369,6 +369,7 @@ export default function AssetUploadPage() {
     const CHUNK_SIZE = 5000;
     const totalRows = parsedRows.length;
     let uploadedCount = 0;
+    let updatedCount = 0;
     let skippedCountServer = 0;
     const startTime = performance.now();
 
@@ -385,8 +386,9 @@ export default function AssetUploadPage() {
         });
 
         if (res.data.success) {
-          uploadedCount += res.data.inserted;
-          skippedCountServer += res.data.skipped;
+          uploadedCount += res.data.inserted || 0;
+          updatedCount += res.data.updated || 0;
+          skippedCountServer += (res.data.skipped !== undefined ? res.data.skipped : ((res.data.skipped_verified || 0) + (res.data.invalid_barcode || 0)));
           const pct = Math.round(((i + chunk.length) / totalRows) * 100);
           setUploadProgress(pct);
         } else {
@@ -395,12 +397,14 @@ export default function AssetUploadPage() {
       }
 
       const elapsed_ms = performance.now() - startTime;
+      const totalSkipped = skippedCountServer + skippedCount;
       setUploadResult({
         inserted: uploadedCount,
-        skipped: skippedCountServer + skippedCount,
+        updated: updatedCount,
+        skipped: totalSkipped,
         elapsed_ms: Math.round(elapsed_ms)
       });
-      toast.success(`${uploadedCount} assets imported successfully in ${(elapsed_ms / 1000).toFixed(1)}s!`);
+      toast.success(`${uploadedCount} inserted, ${updatedCount} updated, ${totalSkipped} skipped in ${(elapsed_ms / 1000).toFixed(1)}s!`);
       setSelectedFile(null);
       setParsedRows([]);
       setSkippedCount(0);
@@ -669,7 +673,7 @@ export default function AssetUploadPage() {
                 <div>
                   <p className="font-bold">Upload Successful</p>
                   <p className="text-[9px] mt-0.5">
-                    {uploadResult.inserted} assets imported • {uploadResult.skipped} skipped • {uploadResult.elapsed_ms}ms
+                    {uploadResult.inserted} inserted • {uploadResult.updated} updated • {uploadResult.skipped} skipped • {uploadResult.elapsed_ms}ms
                   </p>
                 </div>
               </div>
