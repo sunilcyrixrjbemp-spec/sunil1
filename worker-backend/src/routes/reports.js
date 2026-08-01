@@ -882,13 +882,7 @@ async function processAssetRecordsBatch(env, records, totalInputCount) {
 
     const existing = existingMap.get(b8) || existingMap.get(rawQr);
 
-    if (existing) {
-      const isVerified = (existing.inventory_status || "").toLowerCase().includes("verified") || existing.is_verified === 1;
-      if (isVerified) {
-        skippedVerifiedCount++;
-        continue;
-      }
-    }
+
 
     let assetVal = 0.0;
     try {
