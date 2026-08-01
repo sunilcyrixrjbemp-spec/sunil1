@@ -935,18 +935,16 @@ export default function ExpensePage() {
     // Max date: today (prevent future date submissions)
     const maxStr = `${today.getFullYear()}-${pad(today.getMonth() + 1)}-${pad(today.getDate())}`;
 
-    // Min date based on System Setting max_past_days_limit
-    const pastDaysAgo = new Date();
-    pastDaysAgo.setDate(today.getDate() - maxPastDays);
-    const pastDaysAgoStr = `${pastDaysAgo.getFullYear()}-${pad(pastDaysAgo.getMonth() + 1)}-${pad(pastDaysAgo.getDate())}`;
-
     // Min date based on monthly cutoff day from System Settings
-    let minStr = pastDaysAgoStr;
-    if (today.getDate() > monthlyCutoffDay) {
-      const currentMonthStartStr = `${today.getFullYear()}-${pad(today.getMonth() + 1)}-01`;
-      if (pastDaysAgoStr < currentMonthStartStr) {
-        minStr = currentMonthStartStr;
-      }
+    // If today's date <= monthlyCutoffDay: both current month and previous month dates are selectable
+    // If today's date > monthlyCutoffDay: only current month dates are selectable
+    const prevMonthDate = new Date(today.getFullYear(), today.getMonth() - 1, 1);
+    const prevMonthStartStr = `${prevMonthDate.getFullYear()}-${pad(prevMonthDate.getMonth() + 1)}-01`;
+    const currentMonthStartStr = `${today.getFullYear()}-${pad(today.getMonth() + 1)}-01`;
+
+    let minStr = currentMonthStartStr;
+    if (today.getDate() <= monthlyCutoffDay) {
+      minStr = prevMonthStartStr;
     }
 
     // If editing, allow the original date if it's older than our current min limit
