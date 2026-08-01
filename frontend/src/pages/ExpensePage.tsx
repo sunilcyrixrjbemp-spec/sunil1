@@ -954,7 +954,7 @@ export default function ExpensePage() {
     setMinDate(minStr);
     setMaxDate(maxStr);
 
-    if (!referenceDate) {
+    if (!referenceDate && !date) {
       setDate(maxStr);
     }
   };
