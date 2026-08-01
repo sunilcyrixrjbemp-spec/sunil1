@@ -647,23 +647,39 @@ async function processAssetRecordsBatch(env, records, totalInputCount) {
     return jsonResponse({ success: true, inserted: 0, updated: 0, skipped_verified: 0, invalid_barcode: 0, message: "No records to process" });
   }
 
-  // Pre-fetch all existing asset QR codes and status from assets_inventory into Map
+  // Extract 8-digit barcodes for records in THIS chunk only to optimize query
+  const chunkBarcodes = [];
+  for (const record of records) {
+    const b8 = extract8DigitBarcode(record.qr_code || "");
+    if (b8 && !chunkBarcodes.includes(b8)) chunkBarcodes.push(b8);
+  }
+
   const existingMap = new Map();
-  try {
-    const existingRows = await env.DB.prepare("SELECT id, qr_code, inventory_status, is_verified FROM assets_inventory").all();
-    for (const row of (existingRows.results || [])) {
-      const b8 = extract8DigitBarcode(row.qr_code) || row.qr_code;
-      if (b8) {
-        existingMap.set(b8, {
-          id: row.id,
-          qr_code: row.qr_code,
-          inventory_status: (row.inventory_status || "").trim(),
-          is_verified: row.is_verified || 0
-        });
+  if (chunkBarcodes.length > 0) {
+    try {
+      const batchSize = 100;
+      for (let i = 0; i < chunkBarcodes.length; i += batchSize) {
+        const slice = chunkBarcodes.slice(i, i + batchSize);
+        const placeholders = slice.map(() => "?").join(",");
+        const existingRows = await env.DB.prepare(
+          `SELECT id, qr_code, inventory_status, is_verified FROM assets_inventory WHERE qr_code IN (${placeholders})`
+        ).bind(...slice).all();
+
+        for (const row of (existingRows.results || [])) {
+          const b8 = extract8DigitBarcode(row.qr_code) || row.qr_code;
+          if (b8) {
+            existingMap.set(b8, {
+              id: row.id,
+              qr_code: row.qr_code,
+              inventory_status: (row.inventory_status || "").trim(),
+              is_verified: row.is_verified || 0
+            });
+          }
+        }
       }
+    } catch (e) {
+      console.error("Error pre-fetching existing assets in chunk:", e.message);
     }
-  } catch (e) {
-    console.error("Error pre-fetching existing assets:", e.message);
   }
 
   const seenInBatch = new Set();
@@ -691,15 +707,6 @@ async function processAssetRecordsBatch(env, records, totalInputCount) {
     seenInBatch.add(b8);
 
     const existing = existingMap.get(b8) || existingMap.get(rawQr);
-
-    // Rule 2: If asset already exists and is Verified Inventory -> SKIP IT!
-    if (existing) {
-      const isVerified = (existing.inventory_status || "").toLowerCase().includes("verified") || existing.is_verified === 1;
-      if (isVerified) {
-        skippedVerifiedCount++;
-        continue;
-      }
-    }
 
     let assetVal = 0.0;
     try {

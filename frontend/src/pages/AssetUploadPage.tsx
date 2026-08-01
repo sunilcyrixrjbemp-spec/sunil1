@@ -366,7 +366,7 @@ export default function AssetUploadPage() {
     setUploadProgressDetail("Initializing...");
     setUploadResult(null);
 
-    const CHUNK_SIZE = 5000;
+    const CHUNK_SIZE = 500;
     const totalRows = parsedRows.length;
     let uploadedCount = 0;
     let updatedCount = 0;
