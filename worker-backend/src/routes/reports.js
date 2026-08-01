@@ -647,10 +647,12 @@ async function processAssetRecordsBatch(env, records, totalInputCount) {
     return jsonResponse({ success: true, inserted: 0, updated: 0, skipped_verified: 0, invalid_barcode: 0, message: "No records to process" });
   }
 
-  // Extract 8-digit barcodes for records in THIS chunk only to optimize query
+  // Extract both 8-digit barcodes & raw QR codes for records in THIS chunk
   const chunkBarcodes = [];
   for (const record of records) {
-    const b8 = extract8DigitBarcode(record.qr_code || "");
+    const raw = (record.qr_code || "").trim();
+    if (raw && !chunkBarcodes.includes(raw)) chunkBarcodes.push(raw);
+    const b8 = extract8DigitBarcode(raw);
     if (b8 && !chunkBarcodes.includes(b8)) chunkBarcodes.push(b8);
   }
 
@@ -666,15 +668,10 @@ async function processAssetRecordsBatch(env, records, totalInputCount) {
         ).bind(...slice).all();
 
         for (const row of (existingRows.results || [])) {
-          const b8 = extract8DigitBarcode(row.qr_code) || row.qr_code;
-          if (b8) {
-            existingMap.set(b8, {
-              id: row.id,
-              qr_code: row.qr_code,
-              inventory_status: (row.inventory_status || "").trim(),
-              is_verified: row.is_verified || 0
-            });
-          }
+          const raw = (row.qr_code || "").trim();
+          if (raw) existingMap.set(raw, row);
+          const b8 = extract8DigitBarcode(raw);
+          if (b8) existingMap.set(b8, row);
         }
       }
     } catch (e) {
@@ -691,22 +688,24 @@ async function processAssetRecordsBatch(env, records, totalInputCount) {
   let invalidBarcodeCount = 0;
 
   for (const record of records) {
-    const rawQr = record.qr_code || "";
+    const rawQr = (record.qr_code || "").trim();
     const b8 = extract8DigitBarcode(rawQr);
 
     // Rule 1: Must contain an 8-digit Barcode / QR Code
-    if (!b8) {
+    if (!b8 && !rawQr) {
       invalidBarcodeCount++;
       continue;
     }
 
+    const key = b8 || rawQr;
+
     // De-duplicate in current batch
-    if (seenInBatch.has(b8)) {
+    if (seenInBatch.has(key)) {
       continue;
     }
-    seenInBatch.add(b8);
+    seenInBatch.add(key);
 
-    const existing = existingMap.get(b8) || existingMap.get(rawQr);
+    const existing = existingMap.get(rawQr) || existingMap.get(b8);
 
     let assetVal = 0.0;
     try {
@@ -724,8 +723,10 @@ async function processAssetRecordsBatch(env, records, totalInputCount) {
 
     const expired = isWarrantyExpired(record.warranty_details) ? 1 : 0;
 
+    const qrCodeValue = record.qr_code || rawQr || b8;
+
     if (existing) {
-      // Rule 3: Existing unverified asset -> UPDATE record
+      // Existing asset -> UPDATE record
       statements.push({
         sql: `
           UPDATE assets_inventory SET
@@ -743,7 +744,7 @@ async function processAssetRecordsBatch(env, records, totalInputCount) {
         params: [
           record.district_name || "", record.hospital_name || "", record.department_name || "", record.group_name || "",
           record.equipment_name || "", record.model_name || "", record.serial_no || "", record.equipment_category || "",
-          record.qr_code || rawQr, record.stock_register_page_no || "", record.received_date || "", record.installation_date || "",
+          qrCodeValue, record.stock_register_page_no || "", record.received_date || "", record.installation_date || "",
           record.inventory_entry_date || "", record.moic_verified_date || "", record.po_date || "", record.po_cost || "",
           record.inventory_status || "", record.equipment_status || "", record.supplier || "", record.warranty_details || "",
           record.asset_value || "", record.di_name || "", record.dm_name || "", record.coordinator_name || "", record.zone_name || "",
@@ -755,6 +756,7 @@ async function processAssetRecordsBatch(env, records, totalInputCount) {
       });
       updatedCount++;
     } else {
+      // New asset -> Atomic UPSERT with ON CONFLICT(qr_code) DO UPDATE SET
       statements.push({
         sql: `
           INSERT INTO assets_inventory (
@@ -768,11 +770,46 @@ async function processAssetRecordsBatch(env, records, totalInputCount) {
             is_verified, warranty_expired, parsed_asset_value,
             moic_year, moic_month, install_year, install_month
           ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+          ON CONFLICT(qr_code) DO UPDATE SET
+            district_name=excluded.district_name,
+            hospital_name=excluded.hospital_name,
+            department_name=excluded.department_name,
+            group_name=excluded.group_name,
+            equipment_name=excluded.equipment_name,
+            model_name=excluded.model_name,
+            serial_no=excluded.serial_no,
+            equipment_category=excluded.equipment_category,
+            stock_register_page_no=excluded.stock_register_page_no,
+            received_date=excluded.received_date,
+            installation_date=excluded.installation_date,
+            inventory_entry_date=excluded.inventory_entry_date,
+            moic_verified_date=excluded.moic_verified_date,
+            po_date=excluded.po_date,
+            po_cost=excluded.po_cost,
+            inventory_status=excluded.inventory_status,
+            equipment_status=excluded.equipment_status,
+            supplier=excluded.supplier,
+            warranty_details=excluded.warranty_details,
+            asset_value=excluded.asset_value,
+            di_name=excluded.di_name,
+            dm_name=excluded.dm_name,
+            coordinator_name=excluded.coordinator_name,
+            zone_name=excluded.zone_name,
+            hospital_type=excluded.hospital_type,
+            facility_type=excluded.facility_type,
+            equipment_type=excluded.equipment_type,
+            is_verified=excluded.is_verified,
+            warranty_expired=excluded.warranty_expired,
+            parsed_asset_value=excluded.parsed_asset_value,
+            moic_year=excluded.moic_year,
+            moic_month=excluded.moic_month,
+            install_year=excluded.install_year,
+            install_month=excluded.install_month
         `,
         params: [
           record.district_name || "", record.hospital_name || "", record.department_name || "", record.group_name || "",
           record.equipment_name || "", record.model_name || "", record.serial_no || "", record.equipment_category || "",
-          record.qr_code || rawQr, record.stock_register_page_no || "", record.received_date || "", record.installation_date || "",
+          qrCodeValue, record.stock_register_page_no || "", record.received_date || "", record.installation_date || "",
           record.inventory_entry_date || "", record.moic_verified_date || "", record.po_date || "", record.po_cost || "",
           record.inventory_status || "", record.equipment_status || "", record.supplier || "", record.warranty_details || "",
           record.asset_value || "", record.di_name || "", record.dm_name || "", record.coordinator_name || "", record.zone_name || "",
