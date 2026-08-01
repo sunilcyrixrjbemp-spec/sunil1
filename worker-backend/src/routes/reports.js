@@ -583,6 +583,163 @@ export async function handleGetAssetsCsvTemplate(request, env, params, query, us
   });
 }
 
+// ── Bulk CSV Import Optimizations & Helpers ─────────────────────────────
+
+const CSV_HEADER_MAP = {
+  "district name": "district_name",
+  "hospital name": "hospital_name",
+  "department name": "department_name",
+  "group name": "group_name",
+  "equipment name": "equipment_name",
+  "model name": "model_name",
+  "serial no": "serial_no",
+  "serial no.": "serial_no",
+  "equipment category": "equipment_category",
+  "qr code": "qr_code",
+  "stock register page no": "stock_register_page_no",
+  "stock register page no.": "stock_register_page_no",
+  "recieved date": "received_date",
+  "received date": "received_date",
+  "installation date": "installation_date",
+  "inventory entry date": "inventory_entry_date",
+  "moic verified date": "moic_verified_date",
+  "po date": "po_date",
+  "po cost": "po_cost",
+  "inventory status": "inventory_status",
+  "equipment status": "equipment_status",
+  "supplier": "supplier",
+  "warranty details": "warranty_details",
+  "asset value": "asset_value",
+  "di name": "di_name",
+  "dm name": "dm_name",
+  "coordinator name": "coordinator_name",
+  "zone name": "zone_name",
+  "hospital type": "hospital_type",
+  "facility type": "facility_type",
+  "equipment type": "equipment_type",
+};
+
+function parseCSV(text) {
+  const lines = [];
+  let row = [""];
+  let inQuotes = false;
+
+  for (let i = 0; i < text.length; i++) {
+    const char = text[i];
+    const nextChar = text[i + 1];
+
+    if (char === '"') {
+      if (inQuotes && nextChar === '"') {
+        row[row.length - 1] += '"';
+        i++;
+      } else {
+        inQuotes = !inQuotes;
+      }
+    } else if (char === ',' && !inQuotes) {
+      row.push("");
+    } else if ((char === '\r' || char === '\n') && !inQuotes) {
+      if (char === '\r' && nextChar === '\n') {
+        i++;
+      }
+      lines.push(row);
+      row = [""];
+    } else {
+      row[row.length - 1] += char;
+    }
+  }
+  if (row.length > 1 || row[0] !== "") {
+    lines.push(row);
+  }
+  return lines;
+}
+
+function parseDateFlexible(dateStr) {
+  if (!dateStr || ["--", "", "NA", "N/A"].includes(dateStr.trim())) return null;
+  dateStr = dateStr.trim();
+
+  let timestamp = Date.parse(dateStr);
+  if (!isNaN(timestamp)) {
+    return new Date(timestamp);
+  }
+
+  const dmYRegex = /^(\d{1,2})[\/\-](\d{1,2})[\/\-](\d{4})$/;
+  const match = dateStr.match(dmYRegex);
+  if (match) {
+    const day = parseInt(match[1], 10);
+    const month = parseInt(match[2], 10) - 1;
+    const year = parseInt(match[3], 10);
+    const d = new Date(year, month, day);
+    if (!isNaN(d.getTime())) return d;
+  }
+
+  return null;
+}
+
+function isWarrantyExpired(warrantyDetails) {
+  if (!warrantyDetails || ["--", "", "NA", "N/A"].includes(warrantyDetails.trim())) {
+    return true;
+  }
+  const parts = warrantyDetails.split(" to ");
+  if (parts.length < 2) return true;
+  const endDate = parseDateFlexible(parts[parts.length - 1].trim());
+  if (!endDate) return true;
+  return new Date() > endDate;
+}
+
+/**
+ * POST /api/reports/upload-assets-csv
+ * Optimized bulk asset importing with O(1) in-memory checks per chunk (chunk size = 500)
+ * to avoid N database read operations.
+ */
+export function extract8DigitBarcode(str) {
+  if (!str) return null;
+  const cleaned = String(str).trim();
+  const match = cleaned.match(/\b\d{8}\b/);
+  if (match) return match[0];
+  const digits = cleaned.replace(/\D/g, "");
+  if (digits.length === 8) return digits;
+  if (digits.length > 8) return digits.slice(-8);
+  return null;
+}
+
+/**
+ * GET /api/reports/assets-csv-template
+ */
+export async function handleGetAssetsCsvTemplate(request, env, params, query, user) {
+  const headers = [
+    "qr_code", "district_name", "hospital_name", "department_name", "group_name",
+    "equipment_name", "model_name", "serial_no", "equipment_category",
+    "stock_register_page_no", "received_date", "installation_date",
+    "inventory_entry_date", "moic_verified_date", "po_date", "po_cost",
+    "inventory_status", "equipment_status", "supplier", "warranty_details",
+    "asset_value", "di_name", "dm_name", "coordinator_name", "zone_name",
+    "hospital_type", "facility_type", "equipment_type"
+  ];
+  const sampleRow1 = [
+    "(8004890615671) 50049773", "Ajmer", "Ajmer_DDW", "Store", "ICU Equipment",
+    "Oxygen Concentrator", "8F-5A (5LPM)", "210512770", "Medical Equipment",
+    "Pg 42", "2024-01-15", "2024-01-20", "2024-01-22", "", "2024-01-10", "50000",
+    "Pending Inventory", "Working", "Supplier XYZ", "1 Year", "50000",
+    "DI Name", "DM Name", "Coord Name", "Ajmer Zone", "DH", "SDH", "Medical"
+  ];
+  const sampleRow2 = [
+    "40110915", "Churu", "Gov. Hospital, Sujangarh SDH", "OT", "Sterilizer",
+    "Autoclave Verticle", "SS-703035", "SN-40110915", "Surgical Equipment",
+    "Pg 18", "2024-02-10", "2024-02-15", "2024-02-18", "", "2024-02-05", "75000",
+    "Pending Inventory", "Working", "Supplier ABC", "2 Years", "75000",
+    "DI Churu", "DM Churu", "Coord Churu", "Bikaner Zone", "SDH", "SDH", "Medical"
+  ];
+
+  const csvString = [headers.join(","), sampleRow1.map(v => `"${v}"`).join(","), sampleRow2.map(v => `"${v}"`).join(",")].join("\n");
+
+  return new Response(csvString, {
+    headers: {
+      "Content-Type": "text/csv",
+      "Content-Disposition": 'attachment; filename="asset_upload_template.csv"'
+    }
+  });
+}
+
 /**
  * POST /api/reports/upload-assets-csv
  */
@@ -719,188 +876,6 @@ async function processAssetRecordsBatch(env, records, totalInputCount) {
 
     if (existing) {
       // Rule 3: Existing unverified asset -> UPDATE record
-      statements.push({
-        sql: `
-          UPDATE assets_inventory SET
-            district_name=?, hospital_name=?, department_name=?, group_name=?,
-            equipment_name=?, model_name=?, serial_no=?, equipment_category=?,
-            qr_code=?, stock_register_page_no=?, received_date=?, installation_date=?,
-            inventory_entry_date=?, moic_verified_date=?, po_date=?, po_cost=?,
-            inventory_status=?, equipment_status=?, supplier=?, warranty_details=?,
-            asset_value=?, di_name=?, dm_name=?, coordinator_name=?, zone_name=?,
-            hospital_type=?, facility_type=?, equipment_type=?,
-            is_verified=?, warranty_expired=?, parsed_asset_value=?,
-            moic_year=?, moic_month=?, install_year=?, install_month=?
-          WHERE id=?
-        `,
-        params: [
-          record.district_name || "", record.hospital_name || "", record.department_name || "", record.group_name || "",
-          record.equipment_name || "", record.model_name || "", record.serial_no || "", record.equipment_category || "",
-          record.qr_code || rawQr, record.stock_register_page_no || "", record.received_date || "", record.installation_date || "",
-          record.inventory_entry_date || "", record.moic_verified_date || "", record.po_date || "", record.po_cost || "",
-}
-
-/**
- * GET /api/reports/assets-csv-template
- */
-export async function handleGetAssetsCsvTemplate(request, env, params, query, user) {
-  const headers = [
-    "qr_code", "district_name", "hospital_name", "department_name", "group_name",
-    "equipment_name", "model_name", "serial_no", "equipment_category",
-    "stock_register_page_no", "received_date", "installation_date",
-    "inventory_entry_date", "moic_verified_date", "po_date", "po_cost",
-    "inventory_status", "equipment_status", "supplier", "warranty_details",
-    "asset_value", "di_name", "dm_name", "coordinator_name", "zone_name",
-    "hospital_type", "facility_type", "equipment_type"
-  ];
-  const sampleRow1 = [
-    "(8004890615671) 50049773", "Ajmer", "Ajmer_DDW", "Store", "ICU Equipment",
-    "Oxygen Concentrator", "8F-5A (5LPM)", "210512770", "Medical Equipment",
-    "Pg 42", "2024-01-15", "2024-01-20", "2024-01-22", "", "2024-01-10", "50000",
-    "Pending Inventory", "Working", "Supplier XYZ", "1 Year", "50000",
-    "DI Name", "DM Name", "Coord Name", "Ajmer Zone", "DH", "SDH", "Medical"
-  ];
-  const sampleRow2 = [
-    "40110915", "Churu", "Gov. Hospital, Sujangarh SDH", "OT", "Sterilizer",
-    "Autoclave Verticle", "SS-703035", "SN-40110915", "Surgical Equipment",
-    "Pg 18", "2024-02-10", "2024-02-15", "2024-02-18", "", "2024-02-05", "75000",
-    "Pending Inventory", "Working", "Supplier ABC", "2 Years", "75000",
-    "DI Churu", "DM Churu", "Coord Churu", "Bikaner Zone", "SDH", "SDH", "Medical"
-  ];
-
-  const csvString = [headers.join(","), sampleRow1.map(v => `"${v}"`).join(","), sampleRow2.map(v => `"${v}"`).join(",")].join("\n");
-
-  return new Response(csvString, {
-    headers: {
-      "Content-Type": "text/csv",
-      "Content-Disposition": 'attachment; filename="asset_upload_template.csv"'
-    }
-  });
-}
-
-/**
- * POST /api/reports/upload-assets-csv
- */
-export async function handleUploadAssetsCSV(request, env, params, query, user) {
-  if (user.role !== "Admin") {
-    return jsonResponse({ error: "Access denied" }, 403);
-  }
-
-  let formData;
-  try {
-    formData = await request.formData();
-  } catch (e) {
-    return jsonResponse({ error: "Invalid form data" }, 400);
-  }
-
-  const file = formData.get("file");
-  if (!file || typeof file === "string") {
-    return jsonResponse({ error: "No file uploaded" }, 400);
-  }
-
-  const csvText = await file.text();
-  const parsedRows = parseCSV(csvText);
-  if (parsedRows.length < 2) {
-    return jsonResponse({ error: "CSV file is empty or missing header row" }, 400);
-  }
-
-  const rawHeader = parsedRows[0];
-  const headerMap = {};
-  for (let i = 0; i < rawHeader.length; i++) {
-    const colName = rawHeader[i].trim().toLowerCase();
-    const standardName = CSV_HEADER_MAP[colName];
-    if (standardName) {
-      headerMap[standardName] = i;
-    }
-  }
-
-  if (headerMap["qr_code"] === undefined) {
-    return jsonResponse({ error: "CSV missing mandatory 'qr_code' (8-digit Barcode) column header" }, 400);
-  }
-
-  const parsedRecords = [];
-  for (let i = 1; i < parsedRows.length; i++) {
-    const row = parsedRows[i];
-    if (row.length === 1 && row[0] === "") continue;
-
-    const record = {};
-    for (const [colName, idx] of Object.entries(headerMap)) {
-      record[colName] = (row[idx] || "").trim();
-    }
-    parsedRecords.push(record);
-  }
-
-  return processAssetRecordsBatch(env, parsedRecords, parsedRows.length - 1);
-}
-
-/**
- * Helper function to process asset batch with strict 8-digit barcode validation,
- * Verified Inventory protection, and update vs insert logic.
- */
-async function processAssetRecordsBatch(env, records, totalInputCount) {
-  if (!records || records.length === 0) {
-    return jsonResponse({ success: true, inserted: 0, updated: 0, skipped_verified: 0, invalid_barcode: 0, message: "No records to process" });
-  }
-
-  const existingMap = new Map();
-  try {
-    const existingRows = await env.DB.prepare("SELECT id, qr_code, inventory_status, is_verified FROM assets_inventory").all();
-    for (const row of (existingRows.results || [])) {
-      const b8 = extract8DigitBarcode(row.qr_code) || row.qr_code;
-      if (b8) {
-        existingMap.set(b8, {
-          id: row.id,
-          qr_code: row.qr_code,
-          inventory_status: (row.inventory_status || "").trim(),
-          is_verified: row.is_verified || 0
-        });
-      }
-    }
-  } catch (e) {
-    console.error("Error pre-fetching existing assets:", e.message);
-  }
-
-  const seenInBatch = new Set();
-  const statements = [];
-
-  let insertedCount = 0;
-  let updatedCount = 0;
-  let skippedVerifiedCount = 0;
-  let invalidBarcodeCount = 0;
-
-  for (const record of records) {
-    const rawQr = record.qr_code || "";
-    const b8 = extract8DigitBarcode(rawQr);
-
-    if (!b8) {
-      invalidBarcodeCount++;
-      continue;
-    }
-
-    if (seenInBatch.has(b8)) continue;
-    seenInBatch.add(b8);
-
-    const existing = existingMap.get(b8) || existingMap.get(rawQr);
-
-
-
-    let assetVal = 0.0;
-    try {
-      assetVal = parseFloat(String(record.asset_value || "0").replace(/,/g, "").trim()) || 0.0;
-    } catch (err) {}
-
-    const moicDate = parseDateFlexible(record.moic_verified_date);
-    const isVerifiedVal = moicDate ? 1 : 0;
-    const moicYear = moicDate ? moicDate.getFullYear() : null;
-    const moicMonth = moicDate ? moicDate.getMonth() + 1 : null;
-
-    const installDate = parseDateFlexible(record.installation_date);
-    const installYear = installDate ? installDate.getFullYear() : null;
-    const installMonth = installDate ? installDate.getMonth() + 1 : null;
-
-    const expired = isWarrantyExpired(record.warranty_details) ? 1 : 0;
-
-    if (existing) {
       statements.push({
         sql: `
           UPDATE assets_inventory SET
