@@ -926,7 +926,6 @@ export default function ExpensePage() {
 
   const setupDateRules = (referenceDate?: string, sysSettings?: any) => {
     const activeSettings = sysSettings || systemSettings;
-    const maxPastDays = activeSettings?.max_past_days_limit ? parseInt(activeSettings.max_past_days_limit, 10) : 15;
     const monthlyCutoffDay = activeSettings?.monthly_cutoff_day ? parseInt(activeSettings.monthly_cutoff_day, 10) : 3;
 
     const today = new Date();
