@@ -79,9 +79,9 @@ async function applyItineraryEditsAndLog(env, expense, itineraryEdits, currentUs
       ["travel_amount", edit.travel_amount],
       ["sub_amount", edit.sub_amount],
       ["hotel_amount", edit.hotel_amount],
-      ["other_amount", edit.other_amount || edit.oth_amount],
-      ["distance_km", edit.distance_km || edit.km],
-      ["da_amount", edit.da_amount || edit.da],
+      ["other_amount", edit.other_amount !== undefined ? edit.other_amount : edit.oth_amount],
+      ["distance_km", edit.distance_km !== undefined ? edit.distance_km : edit.km],
+      ["da_amount", edit.da_amount !== undefined ? edit.da_amount : edit.da],
       ["local_purchase", edit.local_purchase]
     ];
 
