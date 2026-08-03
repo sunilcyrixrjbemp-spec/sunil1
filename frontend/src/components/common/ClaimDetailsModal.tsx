@@ -1578,17 +1578,17 @@ const ClaimDetailsModal: React.FC<ClaimDetailsModalProps> = ({
             </div>
           </div>
 
-          {/* 1-Line Comprehensive AI Executive Narrative Summary */}
-          <div className="text-[10.5px] text-slate-800 font-medium leading-relaxed bg-white p-2 rounded border border-[#4A6A8A]/20 flex flex-wrap items-center gap-x-1.5 gap-y-1">
-            <span className="font-extrabold text-slate-900">{c.submitter_name || c.name || "Engineer"}</span>
-            {c.submitter_code && <span className="font-mono text-slate-500 font-bold">[{c.submitter_code}]</span>}
-            <span>conducted a field visit on <b className="text-slate-900">{formatDateDDMMMYY(c.date || c.itinerary)}</b></span>
-            {calculatedTotalKm > 0 ? <span>traveling <b className="text-slate-900">{calculatedTotalKm} km</b></span> : <span>performing local movement</span>}
-            {modesList.length > 0 ? <span>via <b className="text-slate-900">{modesList.join(", ")}</b></span> : ""}
+          {/* Strict 1-Line AI Executive Summary Strip (Single Horizontal Row) */}
+          <div className="text-[10px] text-slate-800 font-medium bg-white p-1.5 rounded border border-[#4A6A8A]/20 flex items-center gap-1.5 whitespace-nowrap overflow-x-auto">
+            <span className="font-extrabold text-slate-900 shrink-0">{c.submitter_name || c.name || "Engineer"}</span>
+            {c.submitter_code && <span className="font-mono text-slate-500 font-bold shrink-0">[{c.submitter_code}]</span>}
+            <span className="shrink-0">on <b className="text-slate-900">{formatDateDDMMMYY(c.date || c.itinerary)}</b>:</span>
+            {calculatedTotalKm > 0 ? <span className="shrink-0">traveled <b className="text-slate-900">{calculatedTotalKm} km</b></span> : <span className="shrink-0">local movement</span>}
+            {modesList.length > 0 ? <span className="shrink-0">via <b className="text-slate-900">{modesList.join(", ")}</b></span> : ""}
             
             {itineraries.length > 0 && (
-              <span className="inline-flex flex-wrap items-center gap-1">
-                across route:
+              <span className="inline-flex items-center gap-1 shrink-0">
+                (
                 {itineraries.map((l: any, idx: number) => {
                   const fD = l.from_district || l.from_dist || "—";
                   const tD = l.to_district || l.to_dist || "—";
@@ -1613,36 +1613,37 @@ const ClaimDetailsModal: React.FC<ClaimDetailsModalProps> = ({
                     </React.Fragment>
                   );
                 })}
+                )
               </span>
             )}.
 
-            <span className="font-bold text-slate-700">Financial Breakdown:</span>
-            <span className="font-extrabold text-[#4A6A8A] bg-blue-50 px-1.5 py-0.2 rounded border border-blue-200/80">
+            <span className="font-bold text-slate-700 shrink-0">Expenses:</span>
+            <span className="font-extrabold text-[#4A6A8A] bg-blue-50 px-1.5 py-0.2 rounded border border-blue-200/80 shrink-0">
               TA {rupee(totalTa)}
             </span>
             {totalDa > 0 && (
-              <span className="font-extrabold text-emerald-800 bg-emerald-50 px-1.5 py-0.2 rounded border border-emerald-200/80">
+              <span className="font-extrabold text-emerald-800 bg-emerald-50 px-1.5 py-0.2 rounded border border-emerald-200/80 shrink-0">
                 Daily DA {rupee(totalDa)}
               </span>
             )}
             {totalHotel > 0 && (
-              <span className="font-extrabold text-purple-800 bg-purple-50 px-1.5 py-0.2 rounded border border-purple-200/80">
+              <span className="font-extrabold text-purple-800 bg-purple-50 px-1.5 py-0.2 rounded border border-purple-200/80 shrink-0">
                 Hotel {rupee(totalHotel)}
               </span>
             )}
             {localPurchase > 0 && (
-              <span className="font-extrabold text-amber-800 bg-amber-50 px-1.5 py-0.2 rounded border border-amber-200/80">
+              <span className="font-extrabold text-amber-800 bg-amber-50 px-1.5 py-0.2 rounded border border-amber-200/80 shrink-0">
                 Local Pur. {rupee(localPurchase)}
               </span>
             )}
             {otherAmount > 0 && (
-              <span className="font-extrabold text-amber-900 bg-amber-100 px-1.5 py-0.2 rounded border border-amber-300">
+              <span className="font-extrabold text-amber-900 bg-amber-100 px-1.5 py-0.2 rounded border border-amber-300 shrink-0">
                 Other Exp {rupee(otherAmount)}{allOtherRemarks ? ` (${allOtherRemarks})` : ""}
               </span>
             )}
-            <span>(Total Claimed: <b className="text-slate-900">{rupee(originalClaimedTotal)}</b>).</span>
+            <span className="shrink-0">(Total Claimed: <b className="text-slate-900">{rupee(originalClaimedTotal)}</b>).</span>
 
-            <span className="inline-flex flex-wrap items-center gap-1">
+            <span className="inline-flex items-center gap-1 shrink-0">
               <span className="font-bold text-slate-700">Deliverables:</span>
               <span className="font-extrabold text-blue-900 bg-blue-50 px-1.5 py-0.2 rounded border border-blue-200/80">
                 Calls: {totalCallsCompleted}{totalCallsAssigned > 0 ? `/${totalCallsAssigned}` : ""} Closed
@@ -1665,14 +1666,14 @@ const ClaimDetailsModal: React.FC<ClaimDetailsModalProps> = ({
               </span>.
             </span>
 
-            <span className="font-bold text-slate-700">Audit Status:</span>
-            <span className={`font-extrabold px-1.5 py-0.2 rounded border ${
+            <span className="font-bold text-slate-700 shrink-0">Audit Status:</span>
+            <span className={`font-extrabold px-1.5 py-0.2 rounded border shrink-0 ${
               isApproved ? "bg-emerald-100 text-emerald-900 border-emerald-300" : (isClaimRejected ? "bg-rose-100 text-rose-900 border-rose-300" : "bg-blue-100 text-blue-900 border-blue-300")
             }`}>
               {isApproved ? `Approved Net: ${rupee(approvedAmt)}` : (isClaimRejected ? "Approved Net: ₹0 (Rejected)" : `Estimated Net: ${rupee(approvedAmt)}`)}
             </span>
             {isClaimRejected && rejectionRemark && (
-              <span className="font-bold text-rose-700">
+              <span className="font-bold text-rose-700 shrink-0">
                 (Reason: "{rejectionRemark}")
               </span>
             )}.
