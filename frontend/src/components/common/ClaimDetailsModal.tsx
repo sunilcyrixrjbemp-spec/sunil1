@@ -1541,7 +1541,7 @@ const ClaimDetailsModal: React.FC<ClaimDetailsModalProps> = ({
                 ✨
               </span>
               <span className="text-[10px] font-extrabold uppercase tracking-wider text-[#4A6A8A]">
-                Daily Summary
+                Daily Summary by Sunny AI
               </span>
               <span className="text-[9.5px] text-slate-500 font-semibold">
                 ({formatDateDDMMMYY(c.date || c.itinerary)})
@@ -1563,39 +1563,81 @@ const ClaimDetailsModal: React.FC<ClaimDetailsModalProps> = ({
             </div>
           </div>
 
-          {/* 1-Line Clean Narrative with Location Names & Districts */}
-          <div className="text-[10px] text-slate-800 font-medium leading-snug bg-white p-1.5 rounded border border-[#4A6A8A]/20">
-            <span>
-              <b>{c.submitter_name || c.name || "Engineer"}</b>
-              {calculatedTotalKm > 0 ? <span> traveled <b>{calculatedTotalKm} km</b></span> : " local movement"}
-              {modesList.length > 0 ? <span> via <b>{modesList.join(", ")}</b></span> : ""}
+          {/* 1-Line Clean Narrative with Highlighted Facility/Location Names & Amounts */}
+          <div className="text-[10px] text-slate-800 font-medium leading-snug bg-white p-1.5 rounded border border-[#4A6A8A]/20 space-y-1">
+            <div className="flex flex-wrap items-center gap-x-1 gap-y-1">
+              <b className="text-slate-900">{c.submitter_name || c.name || "Engineer"}</b>
+              {calculatedTotalKm > 0 ? <span>traveled <b className="text-slate-900">{calculatedTotalKm} km</b></span> : <span>local movement</span>}
+              {modesList.length > 0 ? <span>via <b className="text-slate-900">{modesList.join(", ")}</b></span> : ""}
               {itineraries.length > 0 && (
-                <span> ({itineraries.map((l: any) => {
-                  const fD = l.from_district || l.from_dist || "—";
-                  const tD = l.to_district || l.to_dist || "—";
-                  const fL = l.from || l.from_location || "";
-                  const tL = l.to || l.to_location || "";
-                  const fStr = fL && fL !== "—" && fL !== fD ? `${fD} (${fL})` : fD;
-                  const tStr = tL && tL !== "—" && tL !== tD ? `${tD} (${tL})` : tD;
-                  return `${fStr} ➔ ${tStr}`;
-                }).join(", ")})</span>
+                <span className="inline-flex flex-wrap items-center gap-1">
+                  (
+                  {itineraries.map((l: any, idx: number) => {
+                    const fD = l.from_district || l.from_dist || "—";
+                    const tD = l.to_district || l.to_dist || "—";
+                    const fL = l.from || l.from_location || "";
+                    const tL = l.to || l.to_location || "";
+                    
+                    return (
+                      <React.Fragment key={idx}>
+                        {idx > 0 && <span className="text-slate-400 font-bold">,</span>}
+                        <span>{fD}</span>
+                        {fL && fL !== "—" && fL !== fD && (
+                          <span className="font-extrabold text-indigo-900 bg-indigo-50 px-1 py-0.2 rounded border border-indigo-200/80">
+                            ({fL})
+                          </span>
+                        )}
+                        <span className="text-slate-500 font-bold">➔</span>
+                        <span>{tD}</span>
+                        {tL && tL !== "—" && tL !== tD && (
+                          <span className="font-extrabold text-indigo-900 bg-indigo-50 px-1 py-0.2 rounded border border-indigo-200/80">
+                            ({tL})
+                          </span>
+                        )}
+                      </React.Fragment>
+                    );
+                  })}
+                  )
+                </span>
               )}.
-            </span>{" "}
-            <span>
-              Expenses: <b>TA {rupee(totalTa)}</b>
-              {totalDa > 0 ? `, Daily DA ${rupee(totalDa)}` : ""}
-              {totalHotel > 0 ? `, Hotel ${rupee(totalHotel)}` : ""}
-              {localPurchase > 0 ? `, Local Pur. ${rupee(localPurchase)}` : ""}
-              {otherAmount > 0 ? `, Other Exp ${rupee(otherAmount)}${allOtherRemarks ? ` (${allOtherRemarks})` : ""}` : ""}.
-            </span>{" "}
-            {(totalCallsCompleted > 0 || totalPms > 0 || totalCalibration > 0 || totalMobilise > 0 || totalAssetTagging > 0) && (
-              <span>
-                Work: {totalCallsCompleted > 0 ? <b>{totalCallsCompleted} Call(s) Closed</b> : ""}
-                {totalPms > 0 ? <span>{totalCallsCompleted > 0 ? ", " : ""}<b>{totalPms} PMS Done</b></span> : ""}
-                {totalCalibration > 0 ? <span>, <b>{totalCalibration} Calib</b></span> : ""}
-                {totalMobilise > 0 ? <span>, <b>{totalMobilise} Mobi</b></span> : ""}
-                {totalAssetTagging > 0 ? <span>, <b>{totalAssetTagging} Tagged</b></span> : ""}.
+            </div>
+
+            <div className="flex flex-wrap items-center gap-1">
+              <span className="font-bold text-slate-700">Expenses:</span>
+              <span className="font-extrabold text-[#4A6A8A] bg-blue-50 px-1.5 py-0.2 rounded border border-blue-200/80">
+                TA {rupee(totalTa)}
               </span>
+              {totalDa > 0 && (
+                <span className="font-extrabold text-emerald-800 bg-emerald-50 px-1.5 py-0.2 rounded border border-emerald-200/80">
+                  Daily DA {rupee(totalDa)}
+                </span>
+              )}
+              {totalHotel > 0 && (
+                <span className="font-extrabold text-purple-800 bg-purple-50 px-1.5 py-0.2 rounded border border-purple-200/80">
+                  Hotel {rupee(totalHotel)}
+                </span>
+              )}
+              {localPurchase > 0 && (
+                <span className="font-extrabold text-amber-800 bg-amber-50 px-1.5 py-0.2 rounded border border-amber-200/80">
+                  Local Pur. {rupee(localPurchase)}
+                </span>
+              )}
+              {otherAmount > 0 && (
+                <span className="font-extrabold text-amber-900 bg-amber-100 px-1.5 py-0.2 rounded border border-amber-300">
+                  Other Exp {rupee(otherAmount)}{allOtherRemarks ? ` (${allOtherRemarks})` : ""}
+                </span>
+              )}.
+            </div>
+
+            {(totalCallsCompleted > 0 || totalPms > 0 || totalCalibration > 0 || totalMobilise > 0 || totalAssetTagging > 0) && (
+              <div className="flex flex-wrap items-center gap-1 text-slate-800">
+                <span className="font-bold text-slate-700">Work:</span>
+                {totalCallsCompleted > 0 && <span className="font-extrabold text-blue-900 bg-blue-50 px-1.5 py-0.2 rounded border border-blue-200/80">{totalCallsCompleted} Call(s) Closed</span>}
+                {totalPms > 0 && <span className="font-extrabold text-emerald-900 bg-emerald-50 px-1.5 py-0.2 rounded border border-emerald-200/80">{totalPms} PMS Done</span>}
+                {totalCalibration > 0 && <span className="font-extrabold text-purple-900 bg-purple-50 px-1.5 py-0.2 rounded border border-purple-200/80">{totalCalibration} Calib</span>}
+                {totalMobilise > 0 && <span className="font-extrabold text-amber-900 bg-amber-50 px-1.5 py-0.2 rounded border border-amber-200/80">{totalMobilise} Mobi</span>}
+                {totalAssetTagging > 0 && <span className="font-extrabold text-indigo-900 bg-indigo-50 px-1.5 py-0.2 rounded border border-indigo-200/80">{totalAssetTagging} Tagged</span>}.
+              </div>
             )}
           </div>
         </div>
