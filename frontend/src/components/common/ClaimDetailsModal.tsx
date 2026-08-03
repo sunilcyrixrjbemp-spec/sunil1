@@ -1625,16 +1625,28 @@ const ClaimDetailsModal: React.FC<ClaimDetailsModalProps> = ({
             )}
             <span>(Total Claimed: <b className="text-slate-900">{rupee(originalClaimedTotal)}</b>).</span>
 
-            {(totalCallsCompleted > 0 || totalPms > 0 || totalCalibration > 0 || totalMobilise > 0 || totalAssetTagging > 0) && (
-              <span className="inline-flex flex-wrap items-center gap-1">
-                <span className="font-bold text-slate-700">Deliverables:</span>
-                {totalCallsCompleted > 0 && <span className="font-extrabold text-blue-900 bg-blue-50 px-1.5 py-0.2 rounded border border-blue-200/80">{totalCallsCompleted} Call(s) Closed</span>}
-                {totalPms > 0 && <span className="font-extrabold text-emerald-900 bg-emerald-50 px-1.5 py-0.2 rounded border border-emerald-200/80">{totalPms} PMS Done</span>}
-                {totalCalibration > 0 && <span className="font-extrabold text-purple-900 bg-purple-50 px-1.5 py-0.2 rounded border border-purple-200/80">{totalCalibration} Calib</span>}
-                {totalMobilise > 0 && <span className="font-extrabold text-amber-900 bg-amber-50 px-1.5 py-0.2 rounded border border-amber-200/80">{totalMobilise} Mobi</span>}
-                {totalAssetTagging > 0 && <span className="font-extrabold text-indigo-900 bg-indigo-50 px-1.5 py-0.2 rounded border border-indigo-200/80">{totalAssetTagging} Tagged</span>}.
+            <span className="inline-flex flex-wrap items-center gap-1">
+              <span className="font-bold text-slate-700">Deliverables:</span>
+              <span className="font-extrabold text-blue-900 bg-blue-50 px-1.5 py-0.2 rounded border border-blue-200/80">
+                Calls: {totalCallsCompleted}{totalCallsAssigned > 0 ? `/${totalCallsAssigned}` : ""} Closed
               </span>
-            )}
+              <span className="font-extrabold text-emerald-900 bg-emerald-50 px-1.5 py-0.2 rounded border border-emerald-200/80">
+                PMS: {totalPms} Done
+              </span>
+              {totalCalibration > 0 && (
+                <span className="font-extrabold text-purple-900 bg-purple-50 px-1.5 py-0.2 rounded border border-purple-200/80">
+                  Calibration: {totalCalibration}
+                </span>
+              )}
+              {totalMobilise > 0 && (
+                <span className="font-extrabold text-amber-900 bg-amber-50 px-1.5 py-0.2 rounded border border-amber-200/80">
+                  Mobilisation: {totalMobilise}
+                </span>
+              )}
+              <span className="font-extrabold text-indigo-900 bg-indigo-50 px-1.5 py-0.2 rounded border border-indigo-200/80">
+                Asset Tagging: {totalAssetTagging} Tagged
+              </span>.
+            </span>
 
             <span className="font-bold text-slate-700">Audit Status:</span>
             <span className={`font-extrabold px-1.5 py-0.2 rounded border ${
