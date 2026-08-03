@@ -1602,112 +1602,75 @@ const ClaimDetailsModal: React.FC<ClaimDetailsModalProps> = ({
 
           {/* Strict 1-Line Clean & Simple English AI Narrative Summary */}
           <div className="text-[10px] text-slate-800 font-medium bg-white p-2 rounded border border-[#4A6A8A]/20 flex items-center gap-1.5 whitespace-nowrap overflow-x-auto">
+
+            {/* Name + Code */}
             <span className="font-extrabold text-slate-900 shrink-0">{c.submitter_name || c.name || "Engineer"}</span>
             {c.submitter_code && <span className="font-mono text-slate-500 font-bold shrink-0">[{c.submitter_code}]</span>}
-            {calculatedTotalKm > 0 ? <span className="shrink-0">traveled <b className="text-slate-900">{calculatedTotalKm} km</b></span> : <span className="shrink-0">local movement</span>}
-            {modesList.length > 0 ? <span className="shrink-0">by <b className="text-slate-900">{modesList.join(", ")}</b></span> : ""}
-            <span className="shrink-0">on <b className="text-slate-900">{formatDateDDMMMYY(c.date || c.itinerary)}</b>.</span>
-            
+
+            {/* Travel KM + Mode */}
+            {calculatedTotalKm > 0 && (
+              <><span className="shrink-0 text-slate-400">·</span>
+              <span className="shrink-0 bg-blue-100 text-blue-800 font-extrabold px-1.5 py-0.2 rounded border border-blue-200">🚗 {calculatedTotalKm} km</span></>
+            )}
+            {modesList.length > 0 && (
+              <span className="shrink-0 bg-slate-100 text-slate-700 font-bold px-1.5 py-0.2 rounded border border-slate-200">
+                {modesList.join(" + ")}
+              </span>
+            )}
+
+            {/* Date */}
+            <span className="shrink-0 text-slate-400">·</span>
+            <span className="shrink-0 text-slate-600 font-semibold">{formatDateDDMMMYY(c.date || c.itinerary)}</span>
+
+            {/* Route: each leg from→to with location names */}
             {itineraries.length > 0 && (
-              <span className="inline-flex items-center gap-1 shrink-0">
-                <span className="font-bold text-slate-700">Route:</span>
+              <>
+                <span className="shrink-0 text-slate-400">·</span>
+                <span className="shrink-0 font-bold text-slate-700">Route:</span>
                 {itineraries.map((l: any, idx: number) => {
-                  const fD = l.from_district || l.from_dist || "—";
-                  const tD = l.to_district || l.to_dist || "—";
-                  const fL = l.from || l.from_location || "";
-                  const tL = l.to || l.to_location || "";
+                  const fL = l.from || l.from_location || l.from_district || "—";
+                  const tL = l.to || l.to_location || l.to_district || "—";
+                  const hosp = l.hospital_name || l.hospital || "";
+                  const visitLabel = hosp && hosp !== tL ? `${tL} (${hosp})` : tL;
                   return (
                     <React.Fragment key={idx}>
-                      {idx > 0 && <span className="text-slate-400 font-bold">,</span>}
-                      <span>{fD}</span>
-                      {fL && fL !== "—" && fL !== fD && (
-                        <span className="font-extrabold text-indigo-900 bg-indigo-50 px-1 py-0.2 rounded border border-indigo-200/80">
-                          ({fL})
-                        </span>
-                      )}
-                      <span className="text-slate-500 font-bold">➔</span>
-                      <span>{tD}</span>
-                      {tL && tL !== "—" && tL !== tD && (
-                        <span className="font-extrabold text-indigo-900 bg-indigo-50 px-1 py-0.2 rounded border border-indigo-200/80">
-                          ({tL})
-                        </span>
-                      )}
+                      {idx > 0 && <span className="shrink-0 text-slate-300 font-bold">›</span>}
+                      <span className="shrink-0 text-slate-600">{fL}</span>
+                      <span className="shrink-0 text-slate-400 font-bold">→</span>
+                      <span className="shrink-0 font-extrabold text-indigo-900 bg-indigo-50 px-1 py-0.2 rounded border border-indigo-200/80">
+                        {visitLabel}
+                      </span>
                     </React.Fragment>
                   );
                 })}
-                .
-              </span>
+              </>
             )}
 
-            <span className="font-bold text-slate-700 shrink-0">Expenses:</span>
-            <span className="font-extrabold text-[#4A6A8A] bg-blue-50 px-1.5 py-0.2 rounded border border-blue-200/80 shrink-0">
-              TA {rupee(totalTa)}
-            </span>
-            {totalDa > 0 && (
-              <span className="font-extrabold text-emerald-800 bg-emerald-50 px-1.5 py-0.2 rounded border border-emerald-200/80 shrink-0">
-                Daily DA {rupee(totalDa)}
-              </span>
-            )}
-            {totalHotel > 0 && (
-              <span className="font-extrabold text-purple-800 bg-purple-50 px-1.5 py-0.2 rounded border border-purple-200/80 shrink-0">
-                Hotel {rupee(totalHotel)}
-              </span>
-            )}
-            {localPurchase > 0 && (
-              <span className="font-extrabold text-amber-800 bg-amber-50 px-1.5 py-0.2 rounded border border-amber-200/80 shrink-0">
-                Local Pur. {rupee(localPurchase)}
-              </span>
-            )}
-            {otherAmount > 0 && (
-              <span className="font-extrabold text-amber-900 bg-amber-100 px-1.5 py-0.2 rounded border border-amber-300 shrink-0">
-                Other Exp {rupee(otherAmount)}{allOtherRemarks ? ` (${allOtherRemarks})` : ""}
-              </span>
-            )}
-            <span className="shrink-0">(Claimed: <b className="text-slate-900">{rupee(originalClaimedTotal)}</b>).</span>
-
+            {/* Work done */}
             {(totalCallsCompleted > 0 || totalPms > 0 || totalCalibration > 0 || totalMobilise > 0 || totalAssetTagging > 0) && (
-              <span className="inline-flex items-center gap-1 shrink-0">
-                <span className="font-bold text-slate-700">Work:</span>
-                {totalCallsCompleted > 0 && (
-                  <span className="font-extrabold text-blue-900 bg-blue-50 px-1.5 py-0.2 rounded border border-blue-200/80">
-                    {totalCallsCompleted} Calls
-                  </span>
-                )}
-                {totalPms > 0 && (
-                  <span className="font-extrabold text-emerald-900 bg-emerald-50 px-1.5 py-0.2 rounded border border-emerald-200/80">
-                    {totalPms} PMS
-                  </span>
-                )}
-                {totalCalibration > 0 && (
-                  <span className="font-extrabold text-purple-900 bg-purple-50 px-1.5 py-0.2 rounded border border-purple-200/80">
-                    {totalCalibration} Calib
-                  </span>
-                )}
-                {totalMobilise > 0 && (
-                  <span className="font-extrabold text-amber-900 bg-amber-50 px-1.5 py-0.2 rounded border border-amber-200/80">
-                    {totalMobilise} Mobi
-                  </span>
-                )}
-                {totalAssetTagging > 0 && (
-                  <span className="font-extrabold text-indigo-900 bg-indigo-50 px-1.5 py-0.2 rounded border border-indigo-200/80">
-                    {totalAssetTagging} Tagged
-                  </span>
-                )}.
-              </span>
+              <>
+                <span className="shrink-0 text-slate-400">·</span>
+                <span className="shrink-0 font-bold text-slate-700">Work:</span>
+                {totalCallsCompleted > 0 && <span className="shrink-0 font-extrabold text-blue-900 bg-blue-50 px-1.5 py-0.2 rounded border border-blue-200/80">{totalCallsCompleted} Calls</span>}
+                {totalPms > 0 && <span className="shrink-0 font-extrabold text-emerald-900 bg-emerald-50 px-1.5 py-0.2 rounded border border-emerald-200/80">{totalPms} PMS</span>}
+                {totalCalibration > 0 && <span className="shrink-0 font-extrabold text-purple-900 bg-purple-50 px-1.5 py-0.2 rounded border border-purple-200/80">{totalCalibration} Calib</span>}
+                {totalMobilise > 0 && <span className="shrink-0 font-extrabold text-amber-900 bg-amber-50 px-1.5 py-0.2 rounded border border-amber-200/80">{totalMobilise} Mobi</span>}
+                {totalAssetTagging > 0 && <span className="shrink-0 font-extrabold text-indigo-900 bg-indigo-50 px-1.5 py-0.2 rounded border border-indigo-200/80">{totalAssetTagging} Tagged</span>}
+              </>
             )}
 
-            <span className="font-bold text-slate-700 shrink-0">Status:</span>
-            <span className={`font-extrabold px-1.5 py-0.2 rounded border shrink-0 ${
+            {/* Status */}
+            <span className="shrink-0 text-slate-400">·</span>
+            <span className={`shrink-0 font-extrabold px-1.5 py-0.2 rounded border ${
               isApproved ? "bg-emerald-100 text-emerald-900 border-emerald-300" : (isClaimRejected ? "bg-rose-100 text-rose-900 border-rose-300" : "bg-blue-100 text-blue-900 border-blue-300")
             }`}>
-              {isApproved ? `Approved Net: ${rupee(approvedAmt)}` : (isClaimRejected ? "Approved Net: ₹0 (Rejected)" : `Estimated Net: ${rupee(approvedAmt)}`)}
+              {isApproved ? `✅ Approved: ${rupee(approvedAmt)}` : (isClaimRejected ? `❌ Rejected` : `⏳ Est. Net: ${rupee(approvedAmt)}`)}
             </span>
             {isClaimRejected && rejectionRemark && (
-              <span className="font-bold text-rose-700 shrink-0">
-                (Reason: "{rejectionRemark}")
-              </span>
-            )}.
+              <span className="shrink-0 text-rose-700 font-bold">"{rejectionRemark}"</span>
+            )}
           </div>
+
         </div>
 
         {/* ─── DEEP LEG-BY-LEG CARDS ────────────────────────────────────────── */}
