@@ -871,3 +871,25 @@ export async function handleUploadAssetsChunk(request, env, params, query, user)
 
   return processAssetRecordsBatch(env, rows, rows.length);
 }
+
+/**
+ * GET /api/reports/district-facilities-summary
+ */
+export async function handleGetDistrictFacilitiesSummary(request, env, params, query, user) {
+  try {
+    const res = await env.DB.prepare(`
+      SELECT district_name, COUNT(DISTINCT hospital_name) as facility_count, COUNT(*) as asset_count
+      FROM assets_inventory
+      WHERE district_name IS NOT NULL AND district_name != ''
+      GROUP BY district_name
+      ORDER BY district_name ASC
+    `).all();
+
+    return jsonResponse({
+      success: true,
+      data: res.results || []
+    });
+  } catch (e) {
+    return jsonResponse({ success: false, data: [], error: e.message });
+  }
+}
