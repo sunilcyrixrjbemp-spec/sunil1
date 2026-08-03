@@ -1342,6 +1342,21 @@ const ClaimDetailsModal: React.FC<ClaimDetailsModalProps> = ({
   const cleanPurpose = isValidText(parsedOverallActivity.text) ? parsedOverallActivity.text : (isValidText(c.purpose) ? c.purpose : (isValidText(c.description) ? c.description : ""));
   const overallOtherReason = isValidText(c.other_reason) ? c.other_reason : (isValidText(c.other_desc) ? c.other_desc : (isValidText(c.category_remark) ? c.category_remark : (isValidText(parsedOverallActivity.otherDesc) ? parsedOverallActivity.otherDesc : "")));
 
+  // Collect all unique facility/location names visited across legs
+  const collectedFacilities: string[] = [];
+  itineraries.forEach((l: any) => {
+    const act = parseActivityDetails(l.activity_details || l.activity || l.meta);
+    const fL = l.from || l.from_location || "";
+    const tL = l.to || l.to_location || "";
+    const hosp = l.hospital_name || l.hospital || act.hospitalName || "";
+    [fL, tL, hosp].forEach((val: string) => {
+      if (isValidText(val) && val !== "—") {
+        const clean = String(val).trim();
+        if (!collectedFacilities.includes(clean)) collectedFacilities.push(clean);
+      }
+    });
+  });
+
   return (
     <Modal
       open={open}
@@ -1564,43 +1579,41 @@ const ClaimDetailsModal: React.FC<ClaimDetailsModalProps> = ({
           </div>
 
           {/* 1-Line Seamless AI Executive Narrative Summary */}
-          <div className="text-[10px] text-slate-800 font-medium leading-relaxed bg-white p-2 rounded border border-[#4A6A8A]/20 flex flex-wrap items-center gap-x-1.5 gap-y-1">
+          <div className="text-[10.5px] text-slate-800 font-medium leading-relaxed bg-white p-2 rounded border border-[#4A6A8A]/20 flex flex-wrap items-center gap-x-1.5 gap-y-1">
             <span className="font-extrabold text-slate-900">{c.submitter_name || c.name || "Engineer"}</span>
-            {calculatedTotalKm > 0 ? <span>traveled <b className="text-slate-900">{calculatedTotalKm} km</b></span> : <span>local movement</span>}
-            {modesList.length > 0 ? <span>via <b className="text-slate-900">{modesList.join(", ")}</b></span> : ""}
-            {itineraries.length > 0 && (
+            {modesList.length > 0 && <span className="font-extrabold text-slate-900">{modesList.join(", ")}</span>}
+            <span>se</span>
+            {calculatedTotalKm > 0 ? <span className="font-extrabold text-slate-900">{calculatedTotalKm} km</span> : <span>local movement</span>}
+            <span>travel karke</span>
+            
+            {collectedFacilities.length > 0 && (
               <span className="inline-flex flex-wrap items-center gap-1">
-                (
-                {itineraries.map((l: any, idx: number) => {
-                  const fD = l.from_district || l.from_dist || "—";
-                  const tD = l.to_district || l.to_dist || "—";
-                  const fL = l.from || l.from_location || "";
-                  const tL = l.to || l.to_location || "";
-                  
-                  return (
-                    <React.Fragment key={idx}>
-                      {idx > 0 && <span className="text-slate-400 font-bold">,</span>}
-                      <span>{fD}</span>
-                      {fL && fL !== "—" && fL !== fD && (
-                        <span className="font-extrabold text-indigo-900 bg-indigo-50 px-1 py-0.2 rounded border border-indigo-200/80">
-                          ({fL})
-                        </span>
-                      )}
-                      <span className="text-slate-500 font-bold">➔</span>
-                      <span>{tD}</span>
-                      {tL && tL !== "—" && tL !== tD && (
-                        <span className="font-extrabold text-indigo-900 bg-indigo-50 px-1 py-0.2 rounded border border-indigo-200/80">
-                          ({tL})
-                        </span>
-                      )}
-                    </React.Fragment>
-                  );
-                })}
-                )
+                {collectedFacilities.map((fac: string, idx: number) => (
+                  <React.Fragment key={idx}>
+                    {idx > 0 && <span className="text-slate-400 font-bold">,</span>}
+                    <span className="font-extrabold text-indigo-900 bg-indigo-50 px-1.5 py-0.2 rounded border border-indigo-200/80">
+                      {fac}
+                    </span>
+                  </React.Fragment>
+                ))}
+                me
               </span>
-            )}.
+            )}
 
-            <span className="font-bold text-slate-500">Expenses:</span>
+            {(totalCallsCompleted > 0 || totalPms > 0 || totalCalibration > 0 || totalMobilise > 0 || totalAssetTagging > 0) ? (
+              <span className="inline-flex flex-wrap items-center gap-1">
+                {totalCallsCompleted > 0 && <span className="font-extrabold text-blue-900 bg-blue-50 px-1.5 py-0.2 rounded border border-blue-200/80">{totalCallsCompleted} Calls</span>}
+                {totalPms > 0 && <span className="font-extrabold text-emerald-900 bg-emerald-50 px-1.5 py-0.2 rounded border border-emerald-200/80">{totalPms} PMS</span>}
+                {totalCalibration > 0 && <span className="font-extrabold text-purple-900 bg-purple-50 px-1.5 py-0.2 rounded border border-purple-200/80">{totalCalibration} Calib</span>}
+                {totalMobilise > 0 && <span className="font-extrabold text-amber-900 bg-amber-50 px-1.5 py-0.2 rounded border border-amber-200/80">{totalMobilise} Mobi</span>}
+                {totalAssetTagging > 0 && <span className="font-extrabold text-indigo-900 bg-indigo-50 px-1.5 py-0.2 rounded border border-indigo-200/80">{totalAssetTagging} Tagged</span>}
+                complete kiya.
+              </span>
+            ) : (
+              <span>visit complete kiya.</span>
+            )}
+
+            <span className="font-bold text-slate-700">Total Expenses:</span>
             <span className="font-extrabold text-[#4A6A8A] bg-blue-50 px-1.5 py-0.2 rounded border border-blue-200/80">
               TA {rupee(totalTa)}
             </span>
@@ -1623,18 +1636,13 @@ const ClaimDetailsModal: React.FC<ClaimDetailsModalProps> = ({
               <span className="font-extrabold text-amber-900 bg-amber-100 px-1.5 py-0.2 rounded border border-amber-300">
                 Other Exp {rupee(otherAmount)}{allOtherRemarks ? ` (${allOtherRemarks})` : ""}
               </span>
-            )}.
-
-            {(totalCallsCompleted > 0 || totalPms > 0 || totalCalibration > 0 || totalMobilise > 0 || totalAssetTagging > 0) && (
-              <>
-                <span className="font-bold text-slate-500">Work:</span>
-                {totalCallsCompleted > 0 && <span className="font-extrabold text-blue-900 bg-blue-50 px-1.5 py-0.2 rounded border border-blue-200/80">{totalCallsCompleted} Call(s) Closed</span>}
-                {totalPms > 0 && <span className="font-extrabold text-emerald-900 bg-emerald-50 px-1.5 py-0.2 rounded border border-emerald-200/80">{totalPms} PMS Done</span>}
-                {totalCalibration > 0 && <span className="font-extrabold text-purple-900 bg-purple-50 px-1.5 py-0.2 rounded border border-purple-200/80">{totalCalibration} Calib</span>}
-                {totalMobilise > 0 && <span className="font-extrabold text-amber-900 bg-amber-50 px-1.5 py-0.2 rounded border border-amber-200/80">{totalMobilise} Mobi</span>}
-                {totalAssetTagging > 0 && <span className="font-extrabold text-indigo-900 bg-indigo-50 px-1.5 py-0.2 rounded border border-indigo-200/80">{totalAssetTagging} Tagged</span>}.
-              </>
             )}
+            
+            <span className={`font-extrabold px-1.5 py-0.2 rounded border ${
+              isApproved ? "bg-emerald-100 text-emerald-900 border-emerald-300" : (isClaimRejected ? "bg-rose-100 text-rose-900 border-rose-300" : "bg-blue-100 text-blue-900 border-blue-300")
+            }`}>
+              ({isApproved ? `Approved Net: ${rupee(approvedAmt)}` : (isClaimRejected ? "Approved Net: ₹0 / Rejected" : `Estimated Net: ${rupee(approvedAmt)}`)})
+            </span>.
           </div>
         </div>
 
