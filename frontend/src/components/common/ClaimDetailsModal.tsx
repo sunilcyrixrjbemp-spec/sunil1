@@ -1578,17 +1578,17 @@ const ClaimDetailsModal: React.FC<ClaimDetailsModalProps> = ({
             </div>
           </div>
 
-          {/* Strict 1-Line Seamless English AI Narrative Summary */}
+          {/* Strict 1-Line Clean & Simple English AI Narrative Summary */}
           <div className="text-[10px] text-slate-800 font-medium bg-white p-2 rounded border border-[#4A6A8A]/20 flex items-center gap-1.5 whitespace-nowrap overflow-x-auto">
             <span className="font-extrabold text-slate-900 shrink-0">{c.submitter_name || c.name || "Engineer"}</span>
             {c.submitter_code && <span className="font-mono text-slate-500 font-bold shrink-0">[{c.submitter_code}]</span>}
-            {calculatedTotalKm > 0 ? <span className="shrink-0">traveled <b className="text-slate-900">{calculatedTotalKm} km</b></span> : <span className="shrink-0">performed local movement</span>}
-            {modesList.length > 0 ? <span className="shrink-0">via <b className="text-slate-900">{modesList.join(", ")}</b></span> : ""}
-            <span className="shrink-0">on <b className="text-slate-900">{formatDateDDMMMYY(c.date || c.itinerary)}</b></span>
+            {calculatedTotalKm > 0 ? <span className="shrink-0">traveled <b className="text-slate-900">{calculatedTotalKm} km</b></span> : <span className="shrink-0">local movement</span>}
+            {modesList.length > 0 ? <span className="shrink-0">by <b className="text-slate-900">{modesList.join(", ")}</b></span> : ""}
+            <span className="shrink-0">on <b className="text-slate-900">{formatDateDDMMMYY(c.date || c.itinerary)}</b>.</span>
             
             {itineraries.length > 0 && (
               <span className="inline-flex items-center gap-1 shrink-0">
-                visiting
+                <span className="font-bold text-slate-700">Route:</span>
                 {itineraries.map((l: any, idx: number) => {
                   const fD = l.from_district || l.from_dist || "—";
                   const tD = l.to_district || l.to_dist || "—";
@@ -1613,12 +1613,13 @@ const ClaimDetailsModal: React.FC<ClaimDetailsModalProps> = ({
                     </React.Fragment>
                   );
                 })}
+                .
               </span>
             )}
 
-            <span className="font-bold text-slate-700 shrink-0">claiming</span>
+            <span className="font-bold text-slate-700 shrink-0">Expenses:</span>
             <span className="font-extrabold text-[#4A6A8A] bg-blue-50 px-1.5 py-0.2 rounded border border-blue-200/80 shrink-0">
-              Travel TA {rupee(totalTa)}
+              TA {rupee(totalTa)}
             </span>
             {totalDa > 0 && (
               <span className="font-extrabold text-emerald-800 bg-emerald-50 px-1.5 py-0.2 rounded border border-emerald-200/80 shrink-0">
@@ -1640,10 +1641,10 @@ const ClaimDetailsModal: React.FC<ClaimDetailsModalProps> = ({
                 Other Exp {rupee(otherAmount)}{allOtherRemarks ? ` (${allOtherRemarks})` : ""}
               </span>
             )}
-            <span className="shrink-0">(Total Claimed: <b className="text-slate-900">{rupee(originalClaimedTotal)}</b>)</span>
+            <span className="shrink-0">(Claimed: <b className="text-slate-900">{rupee(originalClaimedTotal)}</b>).</span>
 
             <span className="inline-flex items-center gap-1 shrink-0">
-              <span className="font-bold text-slate-700">completing field deliverables of</span>
+              <span className="font-bold text-slate-700">Work:</span>
               <span className="font-extrabold text-blue-900 bg-blue-50 px-1.5 py-0.2 rounded border border-blue-200/80">
                 Calls: {totalCallsCompleted}{totalCallsAssigned > 0 ? `/${totalCallsAssigned}` : ""} Closed
               </span>
@@ -1662,10 +1663,10 @@ const ClaimDetailsModal: React.FC<ClaimDetailsModalProps> = ({
               )}
               <span className="font-extrabold text-indigo-900 bg-indigo-50 px-1.5 py-0.2 rounded border border-indigo-200/80">
                 Asset Tagging: {totalAssetTagging} Tagged
-              </span>
+              </span>.
             </span>
 
-            <span className="font-bold text-slate-700 shrink-0">with Audit Status:</span>
+            <span className="font-bold text-slate-700 shrink-0">Status:</span>
             <span className={`font-extrabold px-1.5 py-0.2 rounded border shrink-0 ${
               isApproved ? "bg-emerald-100 text-emerald-900 border-emerald-300" : (isClaimRejected ? "bg-rose-100 text-rose-900 border-rose-300" : "bg-blue-100 text-blue-900 border-blue-300")
             }`}>
