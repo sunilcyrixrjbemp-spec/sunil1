@@ -19,7 +19,7 @@ import {
   Sparkles,
 } from "lucide-react";
 import React from "react";
-import { useLocation } from "react-router-dom";
+import { useLocation, Link } from "react-router-dom";
 import brandLogo from "../../assets/images/brand.png";
 import { authService } from "../../services/authService";
 

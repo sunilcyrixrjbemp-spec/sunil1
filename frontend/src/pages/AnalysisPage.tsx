@@ -39,26 +39,6 @@ const formatFullNumber = (num: number): string => {
   return num.toLocaleString('en-IN');
 };
 
-const _formatFullCurrency = (num: number): string => {
-  if (!num || isNaN(num)) return "₹0";
-  return `₹${formatFullNumber(num)}`;
-};
-
-const _getSegmentedClass = (status: string) => {
-  switch (status) {
-    case "approved":
-      return "status-segmented-approved";
-    case "rejected":
-      return "status-segmented-rejected";
-    case "pending":
-      return "status-segmented-pending";
-    default:
-      return "status-segmented-all";
-  }
-};
-
-const _GALLERY_COLORS = ["#4f46e5", "#8b5cf6", "#10b981", "#06b6d4", "#f59e0b", "#f43f5e", "#0ea5e9", "#14b8a6"];
-
 const months = [
   "January", "February", "March", "April", "May", "June",
   "July", "August", "September", "October", "November", "December"
@@ -133,8 +113,8 @@ export default function AnalysisPage() {
   const [selectedEngineer, setSelectedEngineer] = useState<string>(() => {
     return localStorage.getItem("analysis_selectedEngineer") || "all";
   });
-  const [_districtChartType, setDistrictChartType] = useState<"bar3d" | "horizontal" | "pie">("bar3d");
-  const [_employeeChartType, setEmployeeChartType] = useState<"bar3d" | "horizontal" | "pie">("bar3d");
+  const [_districtChartType, _setDistrictChartType] = useState<"bar3d" | "horizontal" | "pie">("bar3d");
+  const [_employeeChartType, _setEmployeeChartType] = useState<"bar3d" | "horizontal" | "pie">("bar3d");
   const [engineerSearchQuery, _setEngineerSearchQuery] = useState<string>("");
   const [selectedZone, setSelectedZone] = useState<string>(() => {
     return localStorage.getItem("analysis_selectedZone") || "all";
@@ -704,29 +684,6 @@ export default function AnalysisPage() {
 
     return result;
   }, [activeExpenses, selectedMonth, selectedYear, startDate, endDate]);
-
-  const _spendBurnMetrics = useMemo(() => {
-    if (!fullMonthTrendData || fullMonthTrendData.length === 0) {
-      return { peakDay: null, avgDaily: 0, lowestDay: null };
-    }
-    let peak = fullMonthTrendData[0];
-    let lowest = fullMonthTrendData[0];
-    let total = 0;
-
-    fullMonthTrendData.forEach(d => {
-      total += d.amount;
-      if (d.amount > peak.amount) peak = d;
-      if (d.amount > 0 && d.amount < lowest.amount) lowest = d;
-    });
-
-    const avgDaily = total / fullMonthTrendData.length;
-    return { peakDay: peak, avgDaily, lowestDay: lowest };
-  }, [fullMonthTrendData]);
-
-  const _totalMonthBurn = useMemo(() => {
-    if (!fullMonthTrendData) return 0;
-    return fullMonthTrendData.reduce((acc, curr) => acc + (curr.amount || 0), 0);
-  }, [fullMonthTrendData]);
 
   // E. Date-wise Tagged Asset Value Trend (₹)
   const dayWiseAssetTaggingValueData = useMemo(() => {

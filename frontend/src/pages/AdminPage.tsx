@@ -33,8 +33,6 @@ import {
   ReloadOutlined
 } from "@ant-design/icons";
 
-const { Text } = Typography;
-
 const LteSpinner = () => (
   <span className="animate-spin rounded-full h-3.5 w-3.5 border-2 border-slate-200 border-t-blue-600 inline-block mr-1.5 shrink-0"></span>
 );

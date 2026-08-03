@@ -24,7 +24,6 @@ import {
   ArrowRight, Info, Navigation, RotateCcw
 } from "lucide-react";
 import api from "../../services/api";
-import { formatToIST } from "../../utils/timezone";
 
 const API_BASE = (api.defaults.baseURL || "").replace(/\/api$/, "");
 
@@ -313,7 +312,8 @@ const AttachmentCard = ({ att, index, setLightboxImage }: { att: any; index: num
 // ─── LEG DETAILS CARD ─────────────────────────────────────────────────────────
 
 const LegDetailCard = ({
-  leg, index, totalLegsCount, setLightboxImage, barcodeMap, claimDistrictType, userAllowance, claimMaster, allAttachments
+  leg, index, totalLegsCount, setLightboxImage, barcodeMap, claimDistrictType, userAllowance, claimMaster, allAttachments,
+  canEditAmounts, editedLeg, onLegAmountChange, onLegRemarkChange
 }: {
   leg: any; index: number; totalLegsCount: number; setLightboxImage: (u: string) => void;
   barcodeMap: Record<string, { equipment: string; hospital: string }>;
@@ -321,6 +321,10 @@ const LegDetailCard = ({
   userAllowance?: any;
   claimMaster?: any;
   allAttachments?: any[];
+  canEditAmounts?: boolean;
+  editedLeg?: any;
+  onLegAmountChange?: (index: number, field: string, value: string | number) => void;
+  onLegRemarkChange?: (index: number, field: string, remark: string) => void;
 }) => {
   const legNum = leg.leg || leg.leg_number || index + 1;
   const isFirstLeg = index === 0; // STRICT: DA is attached ONLY to the 1st Leg of the day!
@@ -1011,6 +1015,212 @@ const LegDetailCard = ({
           )}
         </>
       )}
+
+      {/* MANAGER & COORDINATOR EXPENSE AMOUNT EDIT PANEL */}
+      {canEditAmounts && onLegAmountChange && (
+        <div className="bg-[#4A6A8A]/10 p-2.5 rounded-lg border-2 border-[#4A6A8A]/30 mt-2 space-y-2 select-none">
+          <div className="flex items-center justify-between font-extrabold text-[#4A6A8A] border-b border-[#4A6A8A]/20 pb-1 text-[10.5px] flex-wrap gap-1">
+            <span className="flex items-center gap-1.5 uppercase tracking-wider">
+              <Pencil size={12} className="text-[#4A6A8A]" />
+              Manager / Coordinator Amount Override (Leg #{legNum})
+            </span>
+            <div className="flex items-center gap-1.5 flex-wrap">
+              <span className="text-[9px] text-[#4A6A8A] font-extrabold bg-white px-2 py-0.5 border border-[#4A6A8A]/40 font-mono">
+                Leg Net: ₹{(
+                  parseFloat(String(editedLeg?.travel_amount ?? taAmt)) +
+                  (isFirstLeg ? parseFloat(String(editedLeg?.da ?? daAmt)) : 0) +
+                  parseFloat(String(editedLeg?.sub_amount ?? 0)) +
+                  parseFloat(String(editedLeg?.hotel_amount ?? hotelAmt)) +
+                  parseFloat(String(editedLeg?.local_purchase ?? localPur)) +
+                  parseFloat(String(editedLeg?.other_amount ?? othAmt))
+                ).toLocaleString("en-IN")}
+              </span>
+              {submittedLegAmt > netLegAmt && (
+                <span className="text-[9px] text-amber-900 font-extrabold bg-amber-100 px-2 py-0.5 border border-amber-300 font-mono" title="System / Policy Deduction">
+                  ⚙️ System: -₹{Math.round(submittedLegAmt - netLegAmt).toLocaleString("en-IN")}
+                </span>
+              )}
+              {netLegAmt > (
+                parseFloat(String(editedLeg?.travel_amount ?? taAmt)) +
+                (isFirstLeg ? parseFloat(String(editedLeg?.da ?? daAmt)) : 0) +
+                parseFloat(String(editedLeg?.sub_amount ?? 0)) +
+                parseFloat(String(editedLeg?.hotel_amount ?? hotelAmt)) +
+                parseFloat(String(editedLeg?.local_purchase ?? localPur)) +
+                parseFloat(String(editedLeg?.other_amount ?? othAmt))
+              ) && (
+                <span className="text-[9px] text-rose-800 font-extrabold bg-rose-100 px-2 py-0.5 border border-rose-300 font-mono" title="Manager / Coordinator Manual Deduction">
+                  ✏️ Manager: -₹{Math.round(netLegAmt - (
+                    parseFloat(String(editedLeg?.travel_amount ?? taAmt)) +
+                    (isFirstLeg ? parseFloat(String(editedLeg?.da ?? daAmt)) : 0) +
+                    parseFloat(String(editedLeg?.sub_amount ?? 0)) +
+                    parseFloat(String(editedLeg?.hotel_amount ?? hotelAmt)) +
+                    parseFloat(String(editedLeg?.local_purchase ?? localPur)) +
+                    parseFloat(String(editedLeg?.other_amount ?? othAmt))
+                  )).toLocaleString("en-IN")}
+                </span>
+              )}
+            </div>
+          </div>
+
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 text-[10px]">
+            {/* 1. Distance KM */}
+            <div>
+              <label className="block text-[9px] font-bold text-slate-600 mb-0.5">Distance (KM)</label>
+              <input
+                type="number"
+                min="0"
+                step="0.1"
+                value={editedLeg?.km ?? km}
+                onChange={(e) => onLegAmountChange(index, "km", e.target.value)}
+                className="w-full text-xs font-mono font-bold p-1 border border-slate-300 rounded bg-white focus:border-[#4A6A8A] focus:outline-none"
+              />
+              {editedLeg && parseFloat(String(editedLeg.km)) !== parseFloat(String(leg.km ?? 0)) && (
+                <input
+                  type="text"
+                  placeholder="Reason for KM edit *"
+                  value={editedLeg?.remarks?.distance_km || editedLeg?.remarks?.km || ""}
+                  onChange={(e) => onLegRemarkChange && onLegRemarkChange(index, "distance_km", e.target.value)}
+                  className="w-full text-[9px] p-0.5 border border-rose-300 rounded bg-rose-50 text-rose-900 mt-1 focus:outline-none"
+                />
+              )}
+            </div>
+
+            {/* 2. Travel TA */}
+            <div>
+              <label className="block text-[9px] font-bold text-slate-600 mb-0.5">Travel TA (₹)</label>
+              <input
+                type="number"
+                min="0"
+                step="1"
+                value={editedLeg?.travel_amount ?? taAmt}
+                onChange={(e) => onLegAmountChange(index, "travel_amount", e.target.value)}
+                className="w-full text-xs font-mono font-bold p-1 border border-slate-300 rounded bg-white focus:border-[#4A6A8A] focus:outline-none"
+              />
+              {editedLeg && Math.abs(parseFloat(String(editedLeg.travel_amount ?? 0)) - parseFloat(String(taAmt ?? 0))) > 0.01 && (
+                <input
+                  type="text"
+                  placeholder="Reason for TA edit *"
+                  value={editedLeg?.remarks?.travel_amount || ""}
+                  onChange={(e) => onLegRemarkChange && onLegRemarkChange(index, "travel_amount", e.target.value)}
+                  className="w-full text-[9px] p-0.5 border border-rose-300 rounded bg-rose-50 text-rose-900 mt-1 focus:outline-none"
+                />
+              )}
+            </div>
+
+            {/* 3. Daily DA (Leg 1 only) */}
+            {isFirstLeg && (
+              <div>
+                <label className="block text-[9px] font-bold text-slate-600 mb-0.5">Daily DA (₹)</label>
+                <input
+                  type="number"
+                  min="0"
+                  step="1"
+                  value={editedLeg?.da ?? daAmt}
+                  onChange={(e) => onLegAmountChange(index, "da", e.target.value)}
+                  className="w-full text-xs font-mono font-bold p-1 border border-slate-300 rounded bg-white focus:border-[#4A6A8A] focus:outline-none text-emerald-800"
+                />
+                {editedLeg && parseFloat(String(editedLeg.da)) !== parseFloat(String(daAmt)) && (
+                  <input
+                    type="text"
+                    placeholder="Reason for DA edit *"
+                    value={editedLeg?.remarks?.da_amount || editedLeg?.remarks?.da || ""}
+                    onChange={(e) => onLegRemarkChange && onLegRemarkChange(index, "da_amount", e.target.value)}
+                    className="w-full text-[9px] p-0.5 border border-rose-300 rounded bg-rose-50 text-rose-900 mt-1 focus:outline-none"
+                  />
+                )}
+              </div>
+            )}
+
+            {/* 4. Local Conveyance / Sub Amount */}
+            <div>
+              <label className="block text-[9px] font-bold text-slate-600 mb-0.5">Local Conveyance (₹)</label>
+              <input
+                type="number"
+                min="0"
+                step="1"
+                value={editedLeg?.sub_amount ?? 0}
+                onChange={(e) => onLegAmountChange(index, "sub_amount", e.target.value)}
+                className="w-full text-xs font-mono font-bold p-1 border border-slate-300 rounded bg-white focus:border-[#4A6A8A] focus:outline-none text-indigo-800"
+              />
+              {editedLeg && parseFloat(String(editedLeg.sub_amount)) !== parseFloat(String(leg.sub_amount || 0)) && (
+                <input
+                  type="text"
+                  placeholder="Reason for Conveyance edit *"
+                  value={editedLeg?.remarks?.sub_amount || ""}
+                  onChange={(e) => onLegRemarkChange && onLegRemarkChange(index, "sub_amount", e.target.value)}
+                  className="w-full text-[9px] p-0.5 border border-rose-300 rounded bg-rose-50 text-rose-900 mt-1 focus:outline-none"
+                />
+              )}
+            </div>
+
+            {/* 5. Hotel / Stay */}
+            <div>
+              <label className="block text-[9px] font-bold text-slate-600 mb-0.5">Hotel / Stay (₹)</label>
+              <input
+                type="number"
+                min="0"
+                step="1"
+                value={editedLeg?.hotel_amount ?? hotelAmt}
+                onChange={(e) => onLegAmountChange(index, "hotel_amount", e.target.value)}
+                className="w-full text-xs font-mono font-bold p-1 border border-slate-300 rounded bg-white focus:border-[#4A6A8A] focus:outline-none text-purple-800"
+              />
+              {editedLeg && parseFloat(String(editedLeg.hotel_amount)) !== parseFloat(String(hotelAmt)) && (
+                <input
+                  type="text"
+                  placeholder="Reason for Hotel edit *"
+                  value={editedLeg?.remarks?.hotel_amount || ""}
+                  onChange={(e) => onLegRemarkChange && onLegRemarkChange(index, "hotel_amount", e.target.value)}
+                  className="w-full text-[9px] p-0.5 border border-rose-300 rounded bg-rose-50 text-rose-900 mt-1 focus:outline-none"
+                />
+              )}
+            </div>
+
+            {/* 6. Local Purchase */}
+            <div>
+              <label className="block text-[9px] font-bold text-slate-600 mb-0.5">Local Purchase (₹)</label>
+              <input
+                type="number"
+                min="0"
+                step="1"
+                value={editedLeg?.local_purchase ?? localPur}
+                onChange={(e) => onLegAmountChange(index, "local_purchase", e.target.value)}
+                className="w-full text-xs font-mono font-bold p-1 border border-slate-300 rounded bg-white focus:border-[#4A6A8A] focus:outline-none text-amber-800"
+              />
+              {editedLeg && parseFloat(String(editedLeg.local_purchase)) !== parseFloat(String(localPur)) && (
+                <input
+                  type="text"
+                  placeholder="Reason for Purchase edit *"
+                  value={editedLeg?.remarks?.local_purchase || ""}
+                  onChange={(e) => onLegRemarkChange && onLegRemarkChange(index, "local_purchase", e.target.value)}
+                  className="w-full text-[9px] p-0.5 border border-rose-300 rounded bg-rose-50 text-rose-900 mt-1 focus:outline-none"
+                />
+              )}
+            </div>
+
+            {/* 7. Other Expense */}
+            <div>
+              <label className="block text-[9px] font-bold text-slate-600 mb-0.5">Other Exp. (₹)</label>
+              <input
+                type="number"
+                min="0"
+                step="1"
+                value={editedLeg?.other_amount ?? othAmt}
+                onChange={(e) => onLegAmountChange(index, "other_amount", e.target.value)}
+                className="w-full text-xs font-mono font-bold p-1 border border-slate-300 rounded bg-white focus:border-[#4A6A8A] focus:outline-none text-amber-700"
+              />
+              {editedLeg && parseFloat(String(editedLeg.other_amount)) !== parseFloat(String(othAmt)) && (
+                <input
+                  type="text"
+                  placeholder="Reason for Other Exp edit *"
+                  value={editedLeg?.remarks?.other_amount || ""}
+                  onChange={(e) => onLegRemarkChange && onLegRemarkChange(index, "other_amount", e.target.value)}
+                  className="w-full text-[9px] p-0.5 border border-rose-300 rounded bg-rose-50 text-rose-900 mt-1 focus:outline-none"
+                />
+              )}
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
@@ -1069,13 +1279,17 @@ interface ClaimDetailsModalProps {
   getStatusBadgeClass: (status: string, record?: any) => string;
   getStatusLabel: (status: string, record?: any) => string;
   sourceMode?: "approval" | "expense" | "home";
+  editedLegs?: any[];
+  onLegAmountChange?: (index: number, field: string, value: string | number) => void;
+  onLegRemarkChange?: (index: number, field: string, remark: string) => void;
 }
 
 const ClaimDetailsModal: React.FC<ClaimDetailsModalProps> = ({
   open, claimDetails, user,
   comments, setComments, actionLoading, handleApprove, handleReject, handleReturn,
   handleDeleteClaim, onClose, navigate, setLightboxImage,
-  getStatusBadgeClass, getStatusLabel, sourceMode
+  getStatusBadgeClass, getStatusLabel, sourceMode,
+  editedLegs, onLegAmountChange, onLegRemarkChange
 }) => {
   const [showRejectBox, setShowRejectBox] = useState(false);
   const [showReturnBox, setShowReturnBox] = useState(false);
@@ -1229,7 +1443,6 @@ const ClaimDetailsModal: React.FC<ClaimDetailsModalProps> = ({
   const pathname = (window?.location?.pathname || "").toLowerCase();
   const isApprovalPage = sourceMode === "approval" || pathname.includes("/approval");
   const isExpensePage = sourceMode === "expense" || pathname.includes("/expense") || pathname.includes("/my-claims") || pathname.includes("/submit-expense");
-  const _isHomePage = !isApprovalPage && !isExpensePage;
 
   // Check if current viewing user is the engineer who submitted this claim
   const isSubmittingEngineer = !!(
@@ -1249,6 +1462,7 @@ const ClaimDetailsModal: React.FC<ClaimDetailsModalProps> = ({
   const roleLower = (user?.role || user?.designation || "").toLowerCase();
   const isCoordinator = roleLower.includes("coordinator") || roleLower === "admin";
   const canApprove = isApprovalPage && !isSubmittingEngineer && (!!pendingStep || isCoordinator || ["submitted", "pending"].includes((c.status || "").toLowerCase()));
+  const canEditAmounts = isApprovalPage && !isSubmittingEngineer && (canApprove || isCoordinator || roleLower.includes("manager") || roleLower.includes("head") || roleLower.includes("lead") || roleLower.includes("zonal") || roleLower.includes("supervisor"));
 
   const isOutDistrict = c.districtType === "outstation" || c.is_outstation || c.districtType === "OUT_DISTRICT" ||
     (c.from_district && c.to_district && c.from_district !== c.to_district);
@@ -1354,11 +1568,32 @@ const ClaimDetailsModal: React.FC<ClaimDetailsModalProps> = ({
       : (isValidText(act.otherDesc) ? act.otherDesc : "")))))));
   }).filter(Boolean).join(", ");
 
-  const deductionAmt = isClaimRejected
+  const liveEditedTotalSum = (Array.isArray(editedLegs) && editedLegs.length > 0)
+    ? editedLegs.reduce((sum: number, leg: any, idx: number) => {
+        const isFirstLeg = idx === 0;
+        const ta = parseFloat(String(leg.travel_amount || 0));
+        const da = isFirstLeg ? parseFloat(String(leg.da || 0)) : 0;
+        const sub = parseFloat(String(leg.sub_amount || 0));
+        const hotel = parseFloat(String(leg.hotel_amount || 0));
+        const lp = parseFloat(String(leg.local_purchase || 0));
+        const oth = parseFloat(String(leg.other_amount || 0));
+        return sum + ta + da + sub + hotel + lp + oth;
+      }, 0)
+    : null;
+
+  const systemDeductionAmt = isClaimRejected
     ? originalClaimedTotal
     : ((c.deduction_amount ?? c.deduction_amt ?? 0) > 0
         ? (c.deduction_amount ?? c.deduction_amt ?? 0)
-        : (originalClaimedTotal > approvedAmt ? (originalClaimedTotal - approvedAmt) : 0));
+        : (originalClaimedTotal > rawApprovedAmt ? (originalClaimedTotal - rawApprovedAmt) : 0));
+
+  const managerDeductionAmt = liveEditedTotalSum !== null
+    ? (rawApprovedAmt > liveEditedTotalSum ? (rawApprovedAmt - liveEditedTotalSum) : 0)
+    : 0;
+
+  const currentApprovedNet = liveEditedTotalSum !== null ? liveEditedTotalSum : (isClaimRejected ? 0 : rawApprovedAmt);
+  const totalCombinedDeduction = systemDeductionAmt + managerDeductionAmt;
+  const deductionAmt = totalCombinedDeduction;
 
   const overallBaseLocationReason = c.base_location_deduction_reason || c.base_location_reason || c.base_location_policy || c.location_policy_reason || "";
   const overallSystemReason = c.system_deduction_reason || c.policy_deduction_reason || c.policy_reason || "";
@@ -1619,21 +1854,49 @@ const ClaimDetailsModal: React.FC<ClaimDetailsModalProps> = ({
           </div>
         </div>
 
-        {/* ─── FINANCIAL SUMMARY CARDS (APPROVED NET ONLY WHEN APPROVED) ─── */}
+        {/* ─── FINANCIAL SUMMARY CARDS (SEPARATE SYSTEM & MANAGER DEDUCTIONS) ─── */}
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-1.5">
           <MiniAmountBox label="Total Claimed" value={rupee(originalClaimedTotal)} color="#4A6A8A" />
           <MiniAmountBox
-            label={isApproved ? "Approved Net" : (isClaimRejected ? "Approved Net" : "Estimated Net")}
-            value={isClaimRejected ? "₹0" : rupee(approvedAmt)}
-            color={isApproved ? "#10b981" : (isClaimRejected ? "#dc2626" : "#4A6A8A")}
+            label={isApproved ? "Approved Net" : (isClaimRejected ? "Approved Net" : (liveEditedTotalSum !== null ? "Live Net After Edit" : "Estimated Net"))}
+            value={isClaimRejected ? "₹0" : rupee(currentApprovedNet)}
+            color={isApproved ? "#10b981" : (isClaimRejected ? "#dc2626" : "#059669")}
           />
           <MiniAmountBox label="Travel TA" value={rupee(totalTa)} subtext={c.total_km ? `${c.total_km} km` : undefined} color="#0284c7" />
           <MiniAmountBox label="Daily DA" value={rupee(totalDa)} color="#059669" />
           {otherAmount > 0 && <MiniAmountBox label="Other Exp." value={rupee(otherAmount)} color="#d97706" />}
           {localPurchase > 0 && <MiniAmountBox label="Local Purchase" value={rupee(localPurchase)} color="#b45309" />}
           {totalHotel > 0 && <MiniAmountBox label="Hotel / Stay" value={rupee(totalHotel)} color="#7c3aed" />}
-          {deductionAmt > 0 && <MiniAmountBox label="Deduction" value={`-${rupee(deductionAmt)}`} color="#dc2626" />}
+          {systemDeductionAmt > 0 && <MiniAmountBox label="⚙️ System Deduction" value={`-${rupee(systemDeductionAmt)}`} color="#d97706" />}
+          {managerDeductionAmt > 0 && <MiniAmountBox label="✏️ Manager Deduction" value={`-${rupee(managerDeductionAmt)}`} color="#dc2626" />}
         </div>
+
+        {/* ─── LIVE DEDUCTION SUMMARY BANNER (SYSTEM VS MANAGER SEPARATED) ─── */}
+        {canEditAmounts && (systemDeductionAmt > 0 || managerDeductionAmt > 0) && (
+          <div className="bg-slate-50 border-2 border-slate-300 rounded-lg p-2 flex items-center justify-between flex-wrap gap-2 text-[10.5px]">
+            <div className="flex items-center gap-1.5 font-extrabold text-slate-800 flex-wrap">
+              <ShieldCheck size={14} className="text-[#4A6A8A] shrink-0" />
+              <span>Deductions Breakdown:</span>
+              <span className="font-semibold text-slate-600">Claimed: <b>{rupee(originalClaimedTotal)}</b></span>
+              <span className="text-slate-400">➔</span>
+              <span className="font-extrabold text-emerald-800 bg-emerald-50 px-1.5 py-0.5 rounded border border-emerald-200">
+                Current Net: {rupee(currentApprovedNet)}
+              </span>
+            </div>
+            <div className="flex items-center gap-1.5 flex-wrap font-mono">
+              {systemDeductionAmt > 0 && (
+                <span className="text-[9.5px] font-extrabold text-amber-900 bg-amber-100 px-2 py-0.5 rounded border border-amber-300 shadow-2xs">
+                  ⚙️ System Policy: -{rupee(systemDeductionAmt)}
+                </span>
+              )}
+              {managerDeductionAmt > 0 && (
+                <span className="text-[9.5px] font-extrabold text-white bg-rose-600 px-2 py-0.5 rounded border border-rose-700 shadow-2xs">
+                  ✏️ Manager Manual: -{rupee(managerDeductionAmt)}
+                </span>
+              )}
+            </div>
+          </div>
+        )}
 
         {/* ─── ULTRA-COMPACT 1-LINE DAILY SUMMARY STRIP WITH EXACT FROM/TO LOCATION & DISTRICT ─── */}
         <div className="bg-[#4A6A8A]/5 border-2 border-[#4A6A8A] rounded-lg p-2 shadow-2xs space-y-1">
@@ -1761,6 +2024,10 @@ const ClaimDetailsModal: React.FC<ClaimDetailsModalProps> = ({
                   userAllowance={userAllowance}
                   claimMaster={c}
                   allAttachments={attachments}
+                  canEditAmounts={canEditAmounts}
+                  editedLeg={editedLegs?.[idx]}
+                  onLegAmountChange={onLegAmountChange}
+                  onLegRemarkChange={onLegRemarkChange}
                 />
               ))}
             </div>

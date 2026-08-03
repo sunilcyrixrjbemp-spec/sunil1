@@ -12,19 +12,6 @@ import {
   Avatar, 
   Checkbox
 } from "antd";
-import {
-  FileTextOutlined,
-  UserOutlined,
-  EnvironmentOutlined,
-  InfoCircleOutlined,
-  CloseOutlined,
-  CheckOutlined,
-  CloseCircleOutlined,
-  RedoOutlined,
-  PaperClipOutlined,
-  HistoryOutlined
-} from "@ant-design/icons";
-import DistrictBadge from "../components/common/DistrictBadge";
 import { approvalService } from "../services/approvalService";
 import { expenseService } from "../services/expenseService";
 import { authService } from "../services/authService";
@@ -76,11 +63,6 @@ const getAttachmentsArray = (attachments: any): string[] => {
     return [trimmed];
   }
   return [];
-};
-
-const _formatDateTime = (dateVal: any) => {
-  if (!dateVal) return "—";
-  return formatToIST(dateVal);
 };
 
 const safeSetLocalStorage = (key: string, value: string) => {
@@ -149,50 +131,9 @@ export default function ApprovalPage() {
 
   const currentUser = JSON.parse(localStorage.getItem("user") || "{}");
   const userRoleLower = (currentUser.role || "").trim().toLowerCase();
-  const isBulkAuthorized = ["coordinator", "project head"].includes(userRoleLower);
-  const _isCoordinator = ["coordinator", "admin", "project head"].includes(userRoleLower);
-
   // Edit single itineraries state
   const [editedLegs, setEditedLegs] = useState<any[]>([]);
-  const [removedAttachments, setRemovedAttachments] = useState<string[]>([]);
-
-  const _renderAttachmentControls = (receiptUrl: string | null | undefined, previewLabel: string = "👁 Preview Receipt") => {
-    if (!receiptUrl) return null;
-    const isRemoved = removedAttachments.includes(receiptUrl);
-    if (isRemoved) {
-      return (
-        <div className="flex items-center gap-1.5 mt-1 bg-red-50 border border-red-250 rounded px-1.5 py-0.5 w-max">
-          <span className="text-[9px] text-red-600 font-extrabold uppercase tracking-wide">🗑 Removed</span>
-          <button
-            type="button"
-            onClick={() => setRemovedAttachments(prev => prev.filter(url => url !== receiptUrl))}
-            className="text-[9px] text-green-700 hover:text-green-800 hover:underline font-extrabold bg-transparent border-0 cursor-pointer p-0"
-          >
-            Undo
-          </button>
-        </div>
-      );
-    }
-    return (
-      <div className="flex items-center gap-2 mt-1">
-        <button 
-          type="button" 
-          onClick={() => setLightboxImage(receiptUrl)} 
-          className="text-[9px] text-blue-600 hover:text-blue-800 hover:underline font-bold bg-transparent border-0 cursor-pointer p-0 text-left"
-        >
-          {previewLabel}
-        </button>
-        <button
-          type="button"
-          onClick={() => setRemovedAttachments(prev => [...prev, receiptUrl])}
-          className="text-[9px] text-red-600 hover:text-red-750 hover:underline font-bold bg-transparent border-0 cursor-pointer p-0"
-          title="Remove this attachment"
-        >
-          🗑 Remove
-        </button>
-      </div>
-    );
-  };
+  const [removedAttachments, _setRemovedAttachments] = useState<string[]>([]);
 
   // Bulk actions selection state
   const [selectedIds, setSelectedIds] = useState<number[]>([]); // holds selected expense_ids
@@ -469,29 +410,32 @@ export default function ApprovalPage() {
     setRemovedAttachments([]);
 
     const initLegs = (details: any) => {
-      if (details.itineraries) {
+      const rawLegs = Array.isArray(details.itineraries) && details.itineraries.length > 0
+        ? details.itineraries
+        : (Array.isArray(details.legs) ? details.legs : []);
+      if (rawLegs.length > 0) {
         setEditedLegs(
-          details.itineraries.map((leg: any) => ({
-            leg: leg.leg,
-            from_district: leg.from_district,
-            to_district: leg.to_district,
-            from: leg.from,
-            to: leg.to,
-            mode: leg.mode,
-            km: leg.km,
-            travel_amount: leg.amount || 0,
-            sub_mode: leg.sub_mode,
-            sub_amount: leg.sub_amount || 0,
-            da: leg.da || 0,
-            hotel_amount: leg.hotel || 0,
-            local_purchase: leg.local_purchase || 0,
-            oth_desc: leg.oth_desc,
-            other_amount: leg.oth_amount || 0,
-            visit_purpose: leg.visit_purpose,
-            ws_assigned: leg.ws_assigned,
-            ws_closed: leg.ws_closed,
-            ws_pms: leg.ws_pms,
-            ws_asset: leg.ws_asset,
+          rawLegs.map((leg: any, idx: number) => ({
+            leg: leg.leg || leg.leg_number || (idx + 1),
+            from_district: leg.from_district || leg.from_dist || "",
+            to_district: leg.to_district || leg.to_dist || "",
+            from: leg.from || leg.from_location || "",
+            to: leg.to || leg.to_location || "",
+            mode: leg.mode || leg.travel_mode || "Bike",
+            km: leg.km ?? leg.distance_km ?? 0,
+            travel_amount: parseFloat(leg.amount ?? leg.travel_amount ?? 0),
+            sub_mode: leg.sub_mode || "",
+            sub_amount: parseFloat(leg.sub_amount ?? 0),
+            da: parseFloat(leg.da ?? leg.da_amount ?? 0),
+            hotel_amount: parseFloat(leg.hotel ?? leg.hotel_amount ?? 0),
+            local_purchase: parseFloat(leg.local_purchase ?? leg.local_purchase_amount ?? 0),
+            oth_desc: leg.oth_desc || leg.other_desc || "",
+            other_amount: parseFloat(leg.oth_amount ?? leg.other_amount ?? 0),
+            visit_purpose: leg.visit_purpose || leg.purpose || "",
+            ws_assigned: leg.ws_assigned ?? leg.calls_assigned ?? 0,
+            ws_closed: leg.ws_closed ?? leg.calls_completed ?? 0,
+            ws_pms: leg.ws_pms ?? leg.pms_count ?? 0,
+            ws_asset: leg.ws_asset ?? leg.asset_tagging ?? 0,
             remarks: {}
           }))
         );
@@ -532,189 +476,17 @@ export default function ApprovalPage() {
     }
   };
 
-  const _getLegAttachmentUrl = (legNum: number, billType: string) => {
-    if (!expenseDetails) return null;
-
-    const targetTypeLower = (billType || "").trim().toLowerCase();
-
-    // 1. Check attachments_detailed array if available
-    if (Array.isArray(expenseDetails.attachments_detailed) && expenseDetails.attachments_detailed.length > 0) {
-      const found = expenseDetails.attachments_detailed.find((a: any) => {
-        if (!a || !a.file_url) return false;
-        
-        let aLegNum: number | null = null;
-        if (a.leg) {
-          aLegNum = parseInt(String(a.leg), 10);
-        } else if (a.itinerary_id) {
-          const match = String(a.itinerary_id).match(/leg[_-]?(\d+)|-(\d+)$/i);
-          if (match) {
-            aLegNum = parseInt(match[1] || match[2], 10);
-          } else {
-            const parts = String(a.itinerary_id).split("-");
-            const parsed = parseInt(parts[parts.length - 1], 10);
-            if (!isNaN(parsed)) aLegNum = parsed;
-          }
-        }
-        if (aLegNum === null || isNaN(aLegNum)) {
-          const urlMatch = String(a.file_url).match(/_leg(\d+)_/i);
-          if (urlMatch) aLegNum = parseInt(urlMatch[1], 10);
-        }
-
-        const aBillTypeLower = (a.bill_type || "").trim().toLowerCase();
-
-        // Enforce strict leg matching if leg number is present
-        if (aLegNum !== null && !isNaN(aLegNum) && aLegNum !== legNum) {
-          return false;
-        }
-
-        // Categorized bill type matching to ensure receipts don't leak between categories
-        if (targetTypeLower === "hotel") {
-          return aBillTypeLower.includes("hotel");
-        }
-        if (targetTypeLower === "local_purchase") {
-          return aBillTypeLower.includes("local_purchase") || aBillTypeLower === "lp";
-        }
-        if (targetTypeLower === "communication_mail") {
-          return aBillTypeLower.includes("comm") || aBillTypeLower.includes("mail");
-        }
-        if (targetTypeLower === "other") {
-          return aBillTypeLower.includes("other") || aBillTypeLower.includes("oth");
-        }
-
-        // Main or Sub Travel mode bill matching (e.g. Bus, Train, Bike, Car, Auto, Taxi, Flight, Bill)
-        const isExcludedFromTravel = aBillTypeLower.includes("hotel") || 
-                                     aBillTypeLower.includes("local_purchase") || 
-                                     aBillTypeLower.includes("comm") || 
-                                     aBillTypeLower.includes("mail") || 
-                                     aBillTypeLower.includes("other") || 
-                                     aBillTypeLower.includes("oth");
-
-        if (!isExcludedFromTravel) {
-          return aBillTypeLower === targetTypeLower || 
-                 aBillTypeLower === "bill" || 
-                 aBillTypeLower === "main_bill" || 
-                 aBillTypeLower === "ticket" ||
-                 aBillTypeLower.includes(targetTypeLower);
-        }
-
-        return false;
-      });
-
-      if (found && found.file_url) {
-        return authService.getAbsoluteImageUrl(found.file_url);
-      }
-    }
-
-    // 2. Fallback check: match in expenseDetails.attachments array or string by URL path tokens
-    const allAtts = getAttachmentsArray(expenseDetails.attachments);
-    for (const rawUrl of allAtts) {
-      if (!rawUrl) continue;
-      const lowerUrl = rawUrl.toLowerCase();
-
-      const urlLegMatch = lowerUrl.match(/_leg(\d+)_/);
-      if (urlLegMatch && parseInt(urlLegMatch[1], 10) !== legNum) {
-        continue;
-      }
-
-      if (targetTypeLower === "hotel" && lowerUrl.includes("_hotel_")) {
-        return authService.getAbsoluteImageUrl(rawUrl);
-      }
-      if (targetTypeLower === "local_purchase" && (lowerUrl.includes("_local_purchase_") || lowerUrl.includes("_lp_"))) {
-        return authService.getAbsoluteImageUrl(rawUrl);
-      }
-      if (targetTypeLower === "communication_mail" && (lowerUrl.includes("_communication_mail_") || lowerUrl.includes("_comm_"))) {
-        return authService.getAbsoluteImageUrl(rawUrl);
-      }
-      if (targetTypeLower === "other" && (lowerUrl.includes("_other_") || lowerUrl.includes("_oth_"))) {
-        return authService.getAbsoluteImageUrl(rawUrl);
-      }
-      
-      const isExcludedUrlFromTravel = lowerUrl.includes("_hotel_") || 
-                                      lowerUrl.includes("_local_purchase_") || 
-                                      lowerUrl.includes("_lp_") || 
-                                      lowerUrl.includes("_communication_mail_") || 
-                                      lowerUrl.includes("_comm_") || 
-                                      lowerUrl.includes("_other_") || 
-                                      lowerUrl.includes("_oth_");
-
-      if (!isExcludedUrlFromTravel && targetTypeLower !== "hotel" && targetTypeLower !== "local_purchase" && targetTypeLower !== "communication_mail" && targetTypeLower !== "other") {
-        if (lowerUrl.includes(`_${targetTypeLower}_`) || lowerUrl.includes("_bill_") || lowerUrl.includes("_main_bill_")) {
-          return authService.getAbsoluteImageUrl(rawUrl);
-        }
-      }
-    }
-
-    return null;
-  };
-
-  const _getAllExpenseAttachments = (details: any): { url: string; billType: string; filename: string; isPdf: boolean }[] => {
-    if (!details) return [];
-    const map = new Map<string, { url: string; billType: string; filename: string; isPdf: boolean }>();
-
-    if (Array.isArray(details.attachments_detailed)) {
-      details.attachments_detailed.forEach((a: any) => {
-        if (!a || !a.file_url) return;
-        const fullUrl = authService.getAbsoluteImageUrl(a.file_url) || (a.file_url.startsWith("http") ? a.file_url : `${API_BASE}${a.file_url.startsWith('/') ? '' : '/'}${a.file_url}`);
-        if (!fullUrl) return;
-        const filename = a.file_url.split("/").pop() || "Attachment";
-        const isPdf = filename.toLowerCase().endsWith(".pdf") || fullUrl.toLowerCase().includes(".pdf");
-        map.set(fullUrl, { url: fullUrl, billType: a.bill_type || "Receipt", filename, isPdf });
-      });
-    }
-
-    const arrayAtts = getAttachmentsArray(details.attachments);
-    arrayAtts.forEach((rawUrl: string) => {
-      if (!rawUrl) return;
-      const fullUrl = authService.getAbsoluteImageUrl(rawUrl) || (rawUrl.startsWith("http") ? rawUrl : `${API_BASE}${rawUrl.startsWith('/') ? '' : '/'}${rawUrl}`);
-      if (!fullUrl) return;
-      if (!map.has(fullUrl)) {
-        const filename = rawUrl.split("/").pop() || "Attachment";
-        const isPdf = filename.toLowerCase().endsWith(".pdf") || fullUrl.toLowerCase().includes(".pdf");
-        map.set(fullUrl, { url: fullUrl, billType: "Receipt", filename, isPdf });
-      }
-    });
-
-    if (details.itineraries && Array.isArray(details.itineraries)) {
-      details.itineraries.forEach((leg: any, legIdx: number) => {
-        const legNum = leg.leg || (legIdx + 1);
-        const candidates = [
-          { key: "hotel_receipt", label: `Visit #${legNum} Hotel Bill` },
-          { key: "local_purchase_bill", label: `Visit #${legNum} Local Purchase Bill` },
-          { key: "other_bill", label: `Visit #${legNum} Other Expense Bill` },
-          { key: "receipt_url", label: `Visit #${legNum} Travel Receipt` },
-          { key: "bill_url", label: `Visit #${legNum} Travel Ticket` },
-          { key: "attachment_url", label: `Visit #${legNum} Bill Attachment` },
-          { key: "file_url", label: `Visit #${legNum} File Attachment` }
-        ];
-
-        candidates.forEach(c => {
-          const val = leg[c.key];
-          if (val && typeof val === "string" && val.trim()) {
-            const fullUrl = authService.getAbsoluteImageUrl(val) || (val.startsWith("http") ? val : `${API_BASE}${val.startsWith('/') ? '' : '/'}${val}`);
-            if (fullUrl && !map.has(fullUrl)) {
-              const filename = val.split("/").pop() || c.label;
-              const isPdf = filename.toLowerCase().endsWith(".pdf") || fullUrl.toLowerCase().includes(".pdf");
-              map.set(fullUrl, { url: fullUrl, billType: c.label, filename, isPdf });
-            }
-          }
-        });
-      });
-    }
-
-    return Array.from(map.values());
-  };
-
-  const _handleLegAmountChange = (index: number, field: string, value: string) => {
-    const numericValue = parseFloat(value) || 0;
+  const handleLegAmountChange = (index: number, field: string, value: string | number) => {
+    const numericValue = parseFloat(String(value)) || 0;
     setEditedLegs(prev => {
       const updated = [...prev];
-      const leg = updated[index];
+      const leg = updated[index] || {};
       if (field === "km") {
-        const originalLeg = expenseDetails?.itineraries?.[index] || {};
+        const originalLeg = expenseDetails?.itineraries?.[index] || expenseDetails?.legs?.[index] || {};
         const dbBikeRate = expenseDetails?.rate_bike || 4.5;
         const dbCarRate = expenseDetails?.rate_car || 9.0;
         const fallbackRate = leg.mode === "Car" ? dbCarRate : dbBikeRate;
-        const rate = (originalLeg.km && originalLeg.km > 0) ? ((originalLeg.amount || 0) / originalLeg.km) : fallbackRate;
+        const rate = (originalLeg.km && originalLeg.km > 0) ? ((originalLeg.amount || originalLeg.travel_amount || 0) / originalLeg.km) : fallbackRate;
         updated[index] = {
           ...leg,
           km: numericValue,
@@ -726,6 +498,21 @@ export default function ApprovalPage() {
           [field]: numericValue
         };
       }
+      return updated;
+    });
+  };
+
+  const handleLegRemarkChange = (index: number, field: string, remark: string) => {
+    setEditedLegs(prev => {
+      const updated = [...prev];
+      const leg = updated[index] || {};
+      updated[index] = {
+        ...leg,
+        remarks: {
+          ...(leg.remarks || {}),
+          [field]: remark
+        }
+      };
       return updated;
     });
   };
@@ -747,31 +534,39 @@ export default function ApprovalPage() {
     setActionType(type);
     setActionLoading(true);
     try {
-      // Validate that every modified field has a corresponding remark
+      // Validate that every modified field has a corresponding mandatory remark
       if (selectedApproval.category !== "Limit Request") {
         for (let i = 0; i < editedLegs.length; i++) {
           const leg = editedLegs[i];
-          const originalLeg = expenseDetails?.itineraries?.[i] || {};
+          const rawLegs = Array.isArray(expenseDetails?.itineraries) && expenseDetails.itineraries.length > 0
+            ? expenseDetails.itineraries
+            : (Array.isArray(expenseDetails?.legs) ? expenseDetails.legs : []);
+          const originalLeg = rawLegs[i] || {};
           
           const checks = [
-            { field: "distance_km", name: "Distance KM", current: leg.km, original: originalLeg.km || 0 },
-            { field: "travel_amount", name: "Travel Amount", current: leg.travel_amount, original: originalLeg.amount || 0 },
-            { field: "sub_amount", name: "Local Conveyance", current: leg.sub_amount, original: originalLeg.sub_amount || 0 },
-            { field: "hotel_amount", name: "Hotel stay", current: leg.hotel_amount, original: originalLeg.hotel || 0 },
-            { field: "local_purchase", name: "Local Purchase", current: leg.local_purchase, original: originalLeg.local_purchase || 0 },
-            { field: "other_amount", name: "Other / Misc", current: leg.other_amount, original: originalLeg.oth_amount || 0 },
-            { field: "da_amount", name: "DA Amount", current: leg.da, original: originalLeg.da || 0 }
+            { field: "distance_km", keyInRemarks: ["distance_km", "km"], name: "Distance (KM)", current: leg.km, original: originalLeg.km ?? originalLeg.distance_km ?? 0 },
+            { field: "travel_amount", keyInRemarks: ["travel_amount"], name: "Travel TA", current: leg.travel_amount, original: originalLeg.amount ?? originalLeg.travel_amount ?? 0 },
+            { field: "sub_amount", keyInRemarks: ["sub_amount"], name: "Local Conveyance", current: leg.sub_amount, original: originalLeg.sub_amount ?? 0 },
+            { field: "hotel_amount", keyInRemarks: ["hotel_amount"], name: "Hotel stay", current: leg.hotel_amount, original: originalLeg.hotel ?? originalLeg.hotel_amount ?? 0 },
+            { field: "local_purchase", keyInRemarks: ["local_purchase"], name: "Local Purchase", current: leg.local_purchase, original: originalLeg.local_purchase ?? 0 },
+            { field: "other_amount", keyInRemarks: ["other_amount"], name: "Other Exp.", current: leg.other_amount, original: originalLeg.oth_amount ?? originalLeg.other_amount ?? 0 },
+            { field: "da_amount", keyInRemarks: ["da_amount", "da"], name: "Daily DA", current: leg.da, original: originalLeg.da ?? originalLeg.da_amount ?? 0 }
           ];
 
           for (const check of checks) {
-            // If Bike/Car is active, only require distance_km remark, skip travel_amount remark
-            if (check.field === "travel_amount" && ["Bike", "Car"].includes(leg.mode)) {
-              continue;
-            }
-            if (check.current !== check.original) {
-              const rMark = leg.remarks?.[check.field] || "";
-              if (!rMark.trim()) {
-                toast.error(`Visit ${leg.leg}: Please enter a reason/remark for modifying ${check.name}.`);
+            const isChanged = Math.abs(parseFloat(String(check.current || 0)) - parseFloat(String(check.original || 0))) > 0.01;
+            if (isChanged) {
+              let rMark = "";
+              if (leg.remarks) {
+                for (const k of check.keyInRemarks) {
+                  if (leg.remarks[k] && String(leg.remarks[k]).trim()) {
+                    rMark = String(leg.remarks[k]).trim();
+                    break;
+                  }
+                }
+              }
+              if (!rMark) {
+                toast.error(`Leg #${leg.leg}: Please enter a mandatory remark/reason for editing ${check.name}.`);
                 setActionLoading(false);
                 return;
               }
@@ -1006,20 +801,7 @@ export default function ApprovalPage() {
     await fetchPendingApprovals(true);
   };
 
-  const _isEdited = () => {
-    if (!expenseDetails || !expenseDetails.itineraries) return false;
-    return editedLegs.some((leg, index) => {
-      const original = expenseDetails.itineraries[index];
-      if (!original) return false;
-      return (
-        leg.travel_amount !== (original.amount || 0) ||
-        leg.sub_amount !== (original.sub_amount || 0) ||
-        leg.hotel_amount !== (original.hotel || 0) ||
-        leg.other_amount !== (original.oth_amount || 0) ||
-        leg.local_purchase !== (original.local_purchase || 0)
-      );
-    });
-  };
+
 
   // Sum of selected amounts
   const getSelectedTotalAmount = () => {
@@ -1670,6 +1452,9 @@ export default function ApprovalPage() {
         handleReject={() => handleProcessAction("reject")}
         handleReturn={() => handleProcessAction("reject")}
         handleDeleteClaim={() => {}}
+        editedLegs={editedLegs}
+        onLegAmountChange={handleLegAmountChange}
+        onLegRemarkChange={handleLegRemarkChange}
         onClose={() => {
           setShowDetailModal(false);
           setSelectedApproval(null);
