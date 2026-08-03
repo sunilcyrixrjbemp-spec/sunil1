@@ -758,31 +758,36 @@ const LegDetailCard = ({
             )}
           </div>
 
-          {/* Base Working Location Policy Reason (ONLY SHOWN ON LEG #1 FOR DA DEDUCTION) */}
-          {isFirstLeg && (baseLocationDeductionReason || (daAmt === 0 && isInDistrictLeg)) && (
+          {/* Base Working Location Policy Reason — shows on ALL legs with in-district / base deduction */}
+          {(baseLocationDeductionReason || (isInDistrictLeg && (isTaEdited || isDaEdited || daAmt === 0))) && (
             <div className="bg-white p-1.5 rounded border border-indigo-200/80 text-slate-900 font-medium">
               <span className="text-indigo-800 font-extrabold text-[8.5px] uppercase block mb-0.5">📍 Base Working Location Policy:</span>
               <span>
-                {baseLocationDeductionReason || "As per Company Expense Policy, Daily Allowance (DA) and Travel Allowance (TA) are not applicable when working at assigned Base Working Location."}
+                {baseLocationDeductionReason ||
+                  `As per Company Expense Policy, working at the assigned base location (${km} km travel within district) results in reduced Travel Allowance (TA)${isDaEdited || daAmt === 0 ? " and no Daily Allowance (DA)" : ""}. Claimed TA of ${rupee(estimatedSubmittedTa)} has been adjusted to ${rupee(taAmt)}.`
+                }
               </span>
             </div>
           )}
 
-          {/* System Policy (KM/TA Capped) */}
+          {/* System Policy (KM/TA Capped) — shows on ALL legs where KM or TA is capped by system */}
           {(isKmEdited || kmDeductionReason || (isTaEdited && !isInDistrictLeg)) && (
             <div className="bg-white p-1.5 rounded border border-amber-200/80 text-slate-900 font-medium">
               <span className="text-amber-800 font-extrabold text-[8.5px] uppercase block mb-0.5">⚙️ System Policy (KM / Fare Limit):</span>
               <span>
-                {kmDeductionReason || (isKmEdited ? `Travel distance adjusted to ${km} km (Original claimed: ${origKm} km)` : `Travel Allowance adjusted for ${km} km @ ₹${ratePerKm}/km limit.`)}
+                {kmDeductionReason || (isKmEdited
+                  ? `As per policy, travel distance for this leg has been adjusted from ${origKm} km to ${km} km. Travel Allowance recalculated at ₹${ratePerKm}/km, resulting in an approved TA of ${rupee(taAmt)}.`
+                  : `Travel Allowance for this leg is capped at the approved rate of ₹${ratePerKm}/km for ${km} km. Claimed amount of ${rupee(estimatedSubmittedTa)} adjusted to ${rupee(taAmt)}.`
+                )}
               </span>
             </div>
           )}
 
-          {/* System Policy (DA Capped) - LEG #1 ONLY */}
-          {isFirstLeg && (daDeductionReason || (isDaEdited && !isInDistrictLeg && !baseLocationDeductionReason)) && (
+          {/* System Policy (DA Capped) — shows on ALL legs */}
+          {(daDeductionReason || (isDaEdited && !isInDistrictLeg && !baseLocationDeductionReason)) && (
             <div className="bg-white p-1.5 rounded border border-amber-200/80 text-slate-900 font-medium">
               <span className="text-amber-800 font-extrabold text-[8.5px] uppercase block mb-0.5">⚙️ System Policy (DA Grade Cap):</span>
-              <span>{daDeductionReason || `Daily Allowance (DA) capped according to Grade Allowance limits (Original claimed: ${rupee(estimatedSubmittedDa)}).`}</span>
+              <span>{daDeductionReason || `As per Grade Allowance policy, Daily Allowance (DA) claimed of ${rupee(estimatedSubmittedDa)} has been adjusted to ${rupee(daAmt)} based on the applicable grade entitlement.`}</span>
             </div>
           )}
         </div>
