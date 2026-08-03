@@ -1118,6 +1118,7 @@ export default function HomePage() {
     if (fromDate && rawDate && rawDate < fromDate) return false;
     if (toDate && rawDate && rawDate > toDate) return false;
     if (!fromDate && !toDate && selectMonth && rawDate && !rawDate.startsWith(selectMonth)) return false;
+    if (!matchClaimSearch(exp, searchClaimId)) return false;
     return true;
   });
 
@@ -1133,6 +1134,7 @@ export default function HomePage() {
       if (expDist.toLowerCase() !== filterDistrict.trim().toLowerCase()) return false;
     }
     if (filterEmployee !== "all" && String(exp.submitter_code || "").trim().toLowerCase() !== filterEmployee.trim().toLowerCase()) return false;
+    if (!matchClaimSearch(exp, searchClaimId)) return false;
     return true;
   });
 
@@ -1152,6 +1154,11 @@ export default function HomePage() {
   const approvedAmount = getStatsSums(statsApprovedClaims);
   const pendingAmount = getStatsSums(statsPendingClaims);
   const rejectedAmount = getStatsSums(statsRejectedClaims);
+
+  // KM and Auto totals respect active tab and all filters
+  const statsNonLimitList = statsClaimsList.filter(e => e.category !== "Limit Request");
+  const totalFilteredKmStats = statsNonLimitList.reduce((sum, e) => sum + (e.total_km || 0), 0);
+  const totalFilteredAutoStats = statsNonLimitList.reduce((sum, e) => sum + (e.total_auto || 0), 0);
 
   // const handleOpenStatsModal = (type: "Total Claimed" | "Approved" | "Pending" | "Rejected", list: any[]) => {
   //   setStatsModalType(type);
@@ -1349,7 +1356,7 @@ export default function HomePage() {
                 <IconTile icon={Route} gradientFrom="from-amber-500" gradientTo="to-amber-600" shadowColor="rgba(245, 158, 11, 0.25)" />
                 <div className="flex flex-col justify-center min-w-0 flex-1">
                   <span className="text-[8.5px] font-medium uppercase tracking-normal text-slate-400 leading-none">TOTAL KM</span>
-                  <span className="text-[13px] font-mono font-bold text-amber-900 leading-none mt-1 whitespace-nowrap">{(totalFilteredKm || 0).toFixed(1)} KM</span>
+                  <span className="text-[13px] font-mono font-bold text-amber-900 leading-none mt-1 whitespace-nowrap">{(totalFilteredKmStats || 0).toFixed(1)} KM</span>
                 </div>
               </div>
             </div>
@@ -1360,7 +1367,7 @@ export default function HomePage() {
                 <IconTile icon={Car} gradientFrom="from-purple-500" gradientTo="to-indigo-600" shadowColor="rgba(147, 51, 234, 0.25)" />
                 <div className="flex flex-col justify-center min-w-0 flex-1">
                   <span className="text-[8.5px] font-medium uppercase tracking-normal text-slate-400 leading-none">TOTAL AUTO</span>
-                  <span className="text-[13px] font-mono font-bold text-purple-950 leading-none mt-1 whitespace-nowrap">₹{(totalFilteredAuto || 0).toLocaleString("en-IN")}</span>
+                  <span className="text-[13px] font-mono font-bold text-purple-950 leading-none mt-1 whitespace-nowrap">₹{(totalFilteredAutoStats || 0).toLocaleString("en-IN")}</span>
                 </div>
               </div>
             </div>
