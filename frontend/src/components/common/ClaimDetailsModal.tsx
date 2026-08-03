@@ -594,9 +594,9 @@ const LegDetailCard = ({
             #{legNum}
           </span>
           <div className="flex items-center gap-1 text-[11px] font-extrabold text-slate-800">
-            <span>{fromDist} {fromLoc !== "—" && fromLoc !== fromDist ? `(${fromLoc})` : ""}</span>
+            <span>{fromDist}</span>
             <ArrowRight size={10} className="text-slate-400" />
-            <span>{toDist} {toLoc !== "—" && toLoc !== toDist ? `(${toLoc})` : ""}</span>
+            <span>{toDist}</span>
           </div>
         </div>
 
@@ -619,17 +619,17 @@ const LegDetailCard = ({
         </div>
       </div>
 
-      {/* Locations */}
+      {/* Locations - Lower Boxes show strictly From/To location entered by user */}
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-1.5 text-[10px]">
         <div className="flex items-center gap-1 bg-slate-50 px-2 py-1 rounded border border-slate-100">
           <Navigation size={10} className="text-slate-400 shrink-0" />
           <span className="text-slate-400 font-bold uppercase text-[8.5px]">From:</span>
-          <span className="font-semibold text-slate-800 truncate">{fromDist} {fromLoc !== "—" ? `(${fromLoc})` : ""}</span>
+          <span className="font-semibold text-slate-800 truncate">{fromLoc !== "—" ? fromLoc : fromDist}</span>
         </div>
         <div className="flex items-center gap-1 bg-slate-50 px-2 py-1 rounded border border-slate-100">
           <MapPin size={10} className="text-[#4A6A8A] shrink-0" />
           <span className="text-slate-400 font-bold uppercase text-[8.5px]">To:</span>
-          <span className="font-semibold text-slate-800 truncate">{toDist} {toLoc !== "—" ? `(${toLoc})` : ""}</span>
+          <span className="font-semibold text-slate-800 truncate">{toLoc !== "—" ? toLoc : toDist}</span>
         </div>
       </div>
 
