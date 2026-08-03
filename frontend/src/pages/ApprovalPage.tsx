@@ -30,9 +30,7 @@ import {
   Zap
 } from "lucide-react";
 
-import { useNavigate } from "react-router-dom";
 import ClaimDetailsModal from "../components/common/ClaimDetailsModal";
-import api from "../services/api";
 
 const { Text } = Typography;
 
@@ -693,12 +691,6 @@ export default function ApprovalPage() {
     } finally {
       setActionLoading(false);
     }
-  };
-
-  const _handleOpenReturnModal = (expenseId: number) => {
-    setReturnExpenseId(expenseId);
-    setReturnComments("");
-    setShowReturnModal(true);
   };
 
   const handleReturnToDraft = async () => {
