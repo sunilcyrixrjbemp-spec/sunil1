@@ -1578,16 +1578,16 @@ const ClaimDetailsModal: React.FC<ClaimDetailsModalProps> = ({
             </div>
           </div>
 
-          {/* 1-Line Seamless AI Executive Narrative Summary */}
+          {/* 1-Line Pure English AI Executive Analysis Narrative */}
           <div className="text-[10.5px] text-slate-800 font-medium leading-relaxed bg-white p-2 rounded border border-[#4A6A8A]/20 flex flex-wrap items-center gap-x-1.5 gap-y-1">
             <span className="font-extrabold text-slate-900">{c.submitter_name || c.name || "Engineer"}</span>
-            {modesList.length > 0 && <span className="font-extrabold text-slate-900">{modesList.join(", ")}</span>}
-            <span>se</span>
-            {calculatedTotalKm > 0 ? <span className="font-extrabold text-slate-900">{calculatedTotalKm} km</span> : <span>local movement</span>}
-            <span>travel karke</span>
+            <span>conducted a field visit on <b className="text-slate-900">{formatDateDDMMMYY(c.date || c.itinerary)}</b></span>
+            {calculatedTotalKm > 0 ? <span>traveling <b className="text-slate-900">{calculatedTotalKm} km</b></span> : <span>performing local movement</span>}
+            {modesList.length > 0 ? <span>via <b className="text-slate-900">{modesList.join(", ")}</b></span> : ""}
             
             {collectedFacilities.length > 0 && (
               <span className="inline-flex flex-wrap items-center gap-1">
+                across
                 {collectedFacilities.map((fac: string, idx: number) => (
                   <React.Fragment key={idx}>
                     {idx > 0 && <span className="text-slate-400 font-bold">,</span>}
@@ -1596,24 +1596,10 @@ const ClaimDetailsModal: React.FC<ClaimDetailsModalProps> = ({
                     </span>
                   </React.Fragment>
                 ))}
-                me
               </span>
-            )}
+            )}.
 
-            {(totalCallsCompleted > 0 || totalPms > 0 || totalCalibration > 0 || totalMobilise > 0 || totalAssetTagging > 0) ? (
-              <span className="inline-flex flex-wrap items-center gap-1">
-                {totalCallsCompleted > 0 && <span className="font-extrabold text-blue-900 bg-blue-50 px-1.5 py-0.2 rounded border border-blue-200/80">{totalCallsCompleted} Calls</span>}
-                {totalPms > 0 && <span className="font-extrabold text-emerald-900 bg-emerald-50 px-1.5 py-0.2 rounded border border-emerald-200/80">{totalPms} PMS</span>}
-                {totalCalibration > 0 && <span className="font-extrabold text-purple-900 bg-purple-50 px-1.5 py-0.2 rounded border border-purple-200/80">{totalCalibration} Calib</span>}
-                {totalMobilise > 0 && <span className="font-extrabold text-amber-900 bg-amber-50 px-1.5 py-0.2 rounded border border-amber-200/80">{totalMobilise} Mobi</span>}
-                {totalAssetTagging > 0 && <span className="font-extrabold text-indigo-900 bg-indigo-50 px-1.5 py-0.2 rounded border border-indigo-200/80">{totalAssetTagging} Tagged</span>}
-                complete kiya.
-              </span>
-            ) : (
-              <span>visit complete kiya.</span>
-            )}
-
-            <span className="font-bold text-slate-700">Total Expenses:</span>
+            <span className="font-bold text-slate-700">Financial Breakdown:</span>
             <span className="font-extrabold text-[#4A6A8A] bg-blue-50 px-1.5 py-0.2 rounded border border-blue-200/80">
               TA {rupee(totalTa)}
             </span>
@@ -1637,11 +1623,24 @@ const ClaimDetailsModal: React.FC<ClaimDetailsModalProps> = ({
                 Other Exp {rupee(otherAmount)}{allOtherRemarks ? ` (${allOtherRemarks})` : ""}
               </span>
             )}
-            
+            <span>(Total Claimed: <b className="text-slate-900">{rupee(originalClaimedTotal)}</b>).</span>
+
+            {(totalCallsCompleted > 0 || totalPms > 0 || totalCalibration > 0 || totalMobilise > 0 || totalAssetTagging > 0) && (
+              <span className="inline-flex flex-wrap items-center gap-1">
+                <span className="font-bold text-slate-700">Deliverables:</span>
+                {totalCallsCompleted > 0 && <span className="font-extrabold text-blue-900 bg-blue-50 px-1.5 py-0.2 rounded border border-blue-200/80">{totalCallsCompleted} Call(s) Closed</span>}
+                {totalPms > 0 && <span className="font-extrabold text-emerald-900 bg-emerald-50 px-1.5 py-0.2 rounded border border-emerald-200/80">{totalPms} PMS Done</span>}
+                {totalCalibration > 0 && <span className="font-extrabold text-purple-900 bg-purple-50 px-1.5 py-0.2 rounded border border-purple-200/80">{totalCalibration} Calib</span>}
+                {totalMobilise > 0 && <span className="font-extrabold text-amber-900 bg-amber-50 px-1.5 py-0.2 rounded border border-amber-200/80">{totalMobilise} Mobi</span>}
+                {totalAssetTagging > 0 && <span className="font-extrabold text-indigo-900 bg-indigo-50 px-1.5 py-0.2 rounded border border-indigo-200/80">{totalAssetTagging} Tagged</span>}.
+              </span>
+            )}
+
+            <span className="font-bold text-slate-700">Audit Status:</span>
             <span className={`font-extrabold px-1.5 py-0.2 rounded border ${
               isApproved ? "bg-emerald-100 text-emerald-900 border-emerald-300" : (isClaimRejected ? "bg-rose-100 text-rose-900 border-rose-300" : "bg-blue-100 text-blue-900 border-blue-300")
             }`}>
-              ({isApproved ? `Approved Net: ${rupee(approvedAmt)}` : (isClaimRejected ? "Approved Net: ₹0 / Rejected" : `Estimated Net: ${rupee(approvedAmt)}`)})
+              {isApproved ? `Approved Net: ${rupee(approvedAmt)}` : (isClaimRejected ? "Approved Net: ₹0 (Rejected)" : `Estimated Net: ${rupee(approvedAmt)}`)}
             </span>.
           </div>
         </div>
