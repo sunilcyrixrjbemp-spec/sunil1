@@ -1604,6 +1604,63 @@ const ClaimDetailsModal: React.FC<ClaimDetailsModalProps> = ({
   const overallBaseLocationReason = c.base_location_deduction_reason || c.base_location_reason || c.base_location_policy || c.location_policy_reason || "";
   const overallSystemReason = c.system_deduction_reason || c.policy_deduction_reason || c.policy_reason || "";
 
+  // Deduction Auditor Details (WHO deducted & WHY)
+  const editHistory = Array.isArray(c.edit_history) ? c.edit_history : (Array.isArray(c.history) ? c.history : []);
+  const latestEditor = editHistory.length > 0 ? editHistory[0] : null;
+  const approverStep = approvals.find((a: any) => a.approver_name || a.approver_code);
+
+  const managerDeductorName = latestEditor?.editor_name
+    || c.approved_by_name
+    || c.edited_by_name
+    || approverStep?.approver_name
+    || (canEditAmounts && user?.name ? user.name : "Manager / Approver");
+
+  const managerDeductorCode = latestEditor?.editor_code
+    || c.approved_by_code
+    || c.edited_by_code
+    || approverStep?.approver_code
+    || (canEditAmounts && (user?.user_id || user?.e_code) ? (user.user_id || user.e_code) : "");
+
+  const managerDeductorRole = latestEditor?.editor_role
+    || c.approved_by_role
+    || c.edited_by_role
+    || approverStep?.approver_role
+    || (canEditAmounts && user?.role ? user.role : "Manager");
+
+  // Collect all manager deduction remarks across legs, comments, and edit history
+  const legRemarksList: string[] = [];
+  itineraries.forEach((leg: any, idx: number) => {
+    const edited = editedLegs?.[idx];
+    const r = edited?.remarks || leg.remarks;
+    if (r && typeof r === "object") {
+      Object.entries(r).forEach(([f, val]) => {
+        if (typeof val === "string" && val.trim()) {
+          legRemarksList.push(`${f.toUpperCase()}: "${val.trim()}"`);
+        }
+      });
+    }
+  });
+
+  const historyComments = editHistory
+    .map((el: any) => el.comment || el.reason || (el.field_name ? `${el.field_name}: ${el.old_value} ➔ ${el.new_value}` : ""))
+    .filter(Boolean);
+
+  const directRemarks = [
+    comments,
+    c.deduction_remark,
+    c.manager_remark,
+    c.approver_remark,
+    c.rejection_reason,
+    c.comments,
+    rejectionRemark
+  ].filter(Boolean);
+
+  const allManagerDeductionReasons = Array.from(
+    new Set([...legRemarksList, ...historyComments, ...directRemarks])
+  ).join(" • ");
+
+  const finalManagerReason = allManagerDeductionReasons || "Manager amount override / manual deduction.";
+
   const hasOverallDeduction = deductionAmt > 0 ||
     isValidText(c.km_deduction_reason) ||
     isValidText(c.da_deduction_reason) ||
@@ -1877,28 +1934,57 @@ const ClaimDetailsModal: React.FC<ClaimDetailsModalProps> = ({
           {managerDeductionAmt > 0 && <MiniAmountBox label="✏️ Manager Deduction" value={`-${rupee(managerDeductionAmt)}`} color="#dc2626" />}
         </div>
 
-        {/* ─── LIVE DEDUCTION SUMMARY BANNER (SYSTEM VS MANAGER SEPARATED) ─── */}
-        {canEditAmounts && (systemDeductionAmt > 0 || managerDeductionAmt > 0) && (
-          <div className="bg-slate-50 border-2 border-slate-300 rounded-lg p-2 flex items-center justify-between flex-wrap gap-2 text-[10.5px]">
-            <div className="flex items-center gap-1.5 font-extrabold text-slate-800 flex-wrap">
-              <ShieldCheck size={14} className="text-[#4A6A8A] shrink-0" />
-              <span>Deductions Breakdown:</span>
-              <span className="font-semibold text-slate-600">Claimed: <b>{rupee(originalClaimedTotal)}</b></span>
-              <span className="text-slate-400">➔</span>
-              <span className="font-extrabold text-emerald-800 bg-emerald-50 px-1.5 py-0.5 rounded border border-emerald-200">
-                Current Net: {rupee(currentApprovedNet)}
-              </span>
+        {/* ─── DEDUCTIONS AUDIT BANNER (WHO DEDUCTED & WHY) ─── */}
+        {(systemDeductionAmt > 0 || managerDeductionAmt > 0) && (
+          <div className="bg-slate-50 border-2 border-slate-300 rounded-lg p-2.5 space-y-2 text-[10.5px] shadow-2xs">
+            {/* Header */}
+            <div className="flex items-center justify-between border-b border-slate-200 pb-1.5 flex-wrap gap-2">
+              <div className="flex items-center gap-1.5 font-extrabold text-slate-800 flex-wrap">
+                <ShieldCheck size={15} className="text-[#4A6A8A] shrink-0" />
+                <span>Deduction Audit Details:</span>
+                <span className="font-semibold text-slate-600">Claimed: <b>{rupee(originalClaimedTotal)}</b></span>
+                <span className="text-slate-400">➔</span>
+                <span className="font-extrabold text-emerald-800 bg-emerald-50 px-2 py-0.5 rounded border border-emerald-200">
+                  Approved Net: {rupee(currentApprovedNet)}
+                </span>
+              </div>
+              <div className="font-mono text-[10px] font-extrabold text-rose-700 bg-rose-50 px-2 py-0.5 rounded border border-rose-200">
+                Total Deduction: -{rupee(totalCombinedDeduction)}
+              </div>
             </div>
-            <div className="flex items-center gap-1.5 flex-wrap font-mono">
+
+            {/* Individual Breakdown Cards */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
+              {/* System Policy Deduction Card */}
               {systemDeductionAmt > 0 && (
-                <span className="text-[9.5px] font-extrabold text-amber-900 bg-amber-100 px-2 py-0.5 rounded border border-amber-300 shadow-2xs">
-                  ⚙️ System Policy: -{rupee(systemDeductionAmt)}
-                </span>
+                <div className="bg-amber-50/90 border border-amber-300 rounded-lg p-2 space-y-1">
+                  <div className="flex items-center justify-between font-extrabold text-amber-950 text-[10px]">
+                    <span className="flex items-center gap-1">⚙️ System Policy Deduction</span>
+                    <span className="font-mono text-amber-900 font-black">-{rupee(systemDeductionAmt)}</span>
+                  </div>
+                  <div className="text-[9.5px] text-amber-900 leading-tight">
+                    <b className="text-amber-950">Deducted By:</b> System Rule Engine (Policy Caps)
+                  </div>
+                  <div className="text-[9.5px] text-amber-900 leading-tight">
+                    <b className="text-amber-950">Reason / Rule:</b> {overallSystemReason || overallBaseLocationReason || "Grade allowance caps & distance limits."}
+                  </div>
+                </div>
               )}
+
+              {/* Manager Manual Deduction Card */}
               {managerDeductionAmt > 0 && (
-                <span className="text-[9.5px] font-extrabold text-white bg-rose-600 px-2 py-0.5 rounded border border-rose-700 shadow-2xs">
-                  ✏️ Manager Manual: -{rupee(managerDeductionAmt)}
-                </span>
+                <div className="bg-rose-50/90 border border-rose-300 rounded-lg p-2 space-y-1">
+                  <div className="flex items-center justify-between font-extrabold text-rose-950 text-[10px]">
+                    <span className="flex items-center gap-1">✏️ Manager Manual Deduction</span>
+                    <span className="font-mono text-rose-900 font-black">-{rupee(managerDeductionAmt)}</span>
+                  </div>
+                  <div className="text-[9.5px] text-rose-900 leading-tight">
+                    <b className="text-rose-950">Deducted By:</b> <span className="font-bold text-slate-900">{managerDeductorName}</span> {managerDeductorRole ? `(${managerDeductorRole})` : ''} {managerDeductorCode ? `[${managerDeductorCode}]` : ''}
+                  </div>
+                  <div className="text-[9.5px] text-rose-900 leading-tight">
+                    <b className="text-rose-950">Reason / Remarks:</b> <span className="font-bold text-slate-900">{finalManagerReason}</span>
+                  </div>
+                </div>
               )}
             </div>
           </div>
