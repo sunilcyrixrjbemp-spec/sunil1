@@ -1467,34 +1467,14 @@ const ClaimDetailsModal: React.FC<ClaimDetailsModalProps> = ({
   const isOutDistrict = c.districtType === "outstation" || c.is_outstation || c.districtType === "OUT_DISTRICT" ||
     (c.from_district && c.to_district && c.from_district !== c.to_district);
 
-  // Parse lists with fallback to editedLegs and synthesized single leg
-  const rawItineraries = (Array.isArray(c.itineraries) && c.itineraries.length > 0)
+  // Parse lists
+  const itineraries = (Array.isArray(c.itineraries) && c.itineraries.length > 0)
     ? c.itineraries
     : ((Array.isArray(c.legs) && c.legs.length > 0)
         ? c.legs
         : ((Array.isArray(c.itinerary_list) && c.itinerary_list.length > 0)
             ? c.itinerary_list
-            : ((Array.isArray(c.itinerary) && c.itinerary.length > 0)
-                ? c.itinerary
-                : ((Array.isArray(editedLegs) && editedLegs.length > 0) ? editedLegs : []))));
-
-  const itineraries = rawItineraries.length > 0 ? rawItineraries : [{
-    leg: 1,
-    from_district: c.from_district || c.district || c.submitter_district || "Base District",
-    to_district: c.to_district || c.district || c.submitter_district || "Field Visit",
-    from: c.from_location || c.from || "Start Location",
-    to: c.to_location || c.to || "Destination",
-    mode: c.category || c.travel_mode || "Bike",
-    km: c.total_km || c.km || 0,
-    amount: c.amount || c.travel_amount || 0,
-    da: c.da_amount || c.da || 0,
-    hotel: c.hotel_amount || c.hotel || 0,
-    local_purchase: c.local_purchase_amount || c.local_purchase || 0,
-    oth_amount: c.other_expense_amount || c.other_amount || 0,
-    calls_completed: c.calls_completed || c.ws_closed || 0,
-    calls_assigned: c.calls_assigned || c.ws_assigned || 0,
-    visit_purpose: c.purpose || c.description || c.visit_purpose || "Field visit"
-  }];
+            : (Array.isArray(c.itinerary) ? c.itinerary : [])));
 
   const attachments = getAttachmentsArray(c.attachments_detailed || c.attachments || c.bills || c.photos);
   const approvals = Array.isArray(c.approvals) ? c.approvals : [];
