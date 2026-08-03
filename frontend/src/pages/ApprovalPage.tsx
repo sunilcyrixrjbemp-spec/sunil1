@@ -1,5 +1,4 @@
 import { useEffect, useState } from "react";
-import { formatToIST } from "../utils/timezone";
 import { createPortal } from "react-dom";
 import toast from "react-hot-toast";
 import { 
@@ -36,7 +35,6 @@ import ClaimDetailsModal from "../components/common/ClaimDetailsModal";
 import api from "../services/api";
 
 const { Text } = Typography;
-const API_BASE = (api.defaults.baseURL || "").replace(/\/api$/, "");
 
 const getAttachmentsArray = (attachments: any): string[] => {
   if (!attachments) return [];
@@ -134,7 +132,7 @@ export default function ApprovalPage() {
   const isBulkAuthorized = ["coordinator", "project head"].includes(userRoleLower);
   // Edit single itineraries state
   const [editedLegs, setEditedLegs] = useState<any[]>([]);
-  const [removedAttachments, _setRemovedAttachments] = useState<string[]>([]);
+  const [removedAttachments, setRemovedAttachments] = useState<string[]>([]);
 
   // Bulk actions selection state
   const [selectedIds, setSelectedIds] = useState<number[]>([]); // holds selected expense_ids
@@ -417,34 +415,57 @@ export default function ApprovalPage() {
             ? details.legs
             : ((Array.isArray(details.itinerary_list) && details.itinerary_list.length > 0)
                 ? details.itinerary_list
-                : (Array.isArray(details.itinerary) ? details.itinerary : [])));
-      if (rawLegs.length > 0) {
-        setEditedLegs(
-          rawLegs.map((leg: any, idx: number) => ({
-            leg: leg.leg || leg.leg_number || (idx + 1),
-            from_district: leg.from_district || leg.from_dist || "",
-            to_district: leg.to_district || leg.to_dist || "",
-            from: leg.from || leg.from_location || "",
-            to: leg.to || leg.to_location || "",
-            mode: leg.mode || leg.travel_mode || "Bike",
-            km: leg.km ?? leg.distance_km ?? 0,
-            travel_amount: parseFloat(leg.amount ?? leg.travel_amount ?? 0),
-            sub_mode: leg.sub_mode || "",
-            sub_amount: parseFloat(leg.sub_amount ?? 0),
-            da: parseFloat(leg.da ?? leg.da_amount ?? 0),
-            hotel_amount: parseFloat(leg.hotel ?? leg.hotel_amount ?? 0),
-            local_purchase: parseFloat(leg.local_purchase ?? leg.local_purchase_amount ?? 0),
-            oth_desc: leg.oth_desc || leg.other_desc || "",
-            other_amount: parseFloat(leg.oth_amount ?? leg.other_amount ?? 0),
-            visit_purpose: leg.visit_purpose || leg.purpose || "",
-            ws_assigned: leg.ws_assigned ?? leg.calls_assigned ?? 0,
-            ws_closed: leg.ws_closed ?? leg.calls_completed ?? 0,
-            ws_pms: leg.ws_pms ?? leg.pms_count ?? 0,
-            ws_asset: leg.ws_asset ?? leg.asset_tagging ?? 0,
-            remarks: {}
-          }))
-        );
-      }
+                : ((Array.isArray(details.itinerary) && Array.isArray(details.itinerary)) ? details.itinerary : [])));
+      
+      const legsToUse = rawLegs.length > 0 ? rawLegs : [{
+        leg: 1,
+        from_district: details.district || details.submitter_district || details.from_district || "Base District",
+        to_district: details.district || details.submitter_district || details.to_district || "Field Visit",
+        from: details.from_location || details.from || "",
+        to: details.to_location || details.to || "",
+        mode: details.category || details.travel_mode || "Bike",
+        km: details.total_km || details.km || 0,
+        amount: details.amount || details.travel_amount || 0,
+        sub_mode: "",
+        sub_amount: 0,
+        da: details.da_amount || details.da || 0,
+        hotel_amount: details.hotel_amount || details.hotel || 0,
+        local_purchase: details.local_purchase_amount || details.local_purchase || 0,
+        oth_desc: details.other_expense_reason || "",
+        other_amount: details.other_expense_amount || details.other_amount || 0,
+        visit_purpose: details.purpose || details.description || "",
+        ws_assigned: details.calls_assigned || 0,
+        ws_closed: details.calls_completed || 0,
+        ws_pms: details.pms_count || 0,
+        ws_asset: details.asset_tagging || 0,
+        remarks: {}
+      }];
+
+      setEditedLegs(
+        legsToUse.map((leg: any, idx: number) => ({
+          leg: leg.leg || leg.leg_number || (idx + 1),
+          from_district: leg.from_district || leg.from_dist || "",
+          to_district: leg.to_district || leg.to_dist || "",
+          from: leg.from || leg.from_location || "",
+          to: leg.to || leg.to_location || "",
+          mode: leg.mode || leg.travel_mode || "Bike",
+          km: leg.km ?? leg.distance_km ?? 0,
+          travel_amount: parseFloat(leg.amount ?? leg.travel_amount ?? 0),
+          sub_mode: leg.sub_mode || "",
+          sub_amount: parseFloat(leg.sub_amount ?? 0),
+          da: parseFloat(leg.da ?? leg.da_amount ?? 0),
+          hotel_amount: parseFloat(leg.hotel ?? leg.hotel_amount ?? 0),
+          local_purchase: parseFloat(leg.local_purchase ?? leg.local_purchase_amount ?? 0),
+          oth_desc: leg.oth_desc || leg.other_desc || "",
+          other_amount: parseFloat(leg.oth_amount ?? leg.other_amount ?? 0),
+          visit_purpose: leg.visit_purpose || leg.purpose || "",
+          ws_assigned: leg.ws_assigned ?? leg.calls_assigned ?? 0,
+          ws_closed: leg.ws_closed ?? leg.calls_completed ?? 0,
+          ws_pms: leg.ws_pms ?? leg.pms_count ?? 0,
+          ws_asset: leg.ws_asset ?? leg.asset_tagging ?? 0,
+          remarks: {}
+        }))
+      );
     };
 
     // Clear previous expense details to prevent showing stale or incomplete claim data

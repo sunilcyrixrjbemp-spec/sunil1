@@ -1474,7 +1474,9 @@ const ClaimDetailsModal: React.FC<ClaimDetailsModalProps> = ({
         ? c.legs
         : ((Array.isArray(c.itinerary_list) && c.itinerary_list.length > 0)
             ? c.itinerary_list
-            : (Array.isArray(c.itinerary) ? c.itinerary : [])));
+            : ((Array.isArray(editedLegs) && editedLegs.length > 0)
+                ? editedLegs
+                : (Array.isArray(c.itinerary) ? c.itinerary : []))));
 
   const attachments = getAttachmentsArray(c.attachments_detailed || c.attachments || c.bills || c.photos);
   const approvals = Array.isArray(c.approvals) ? c.approvals : [];

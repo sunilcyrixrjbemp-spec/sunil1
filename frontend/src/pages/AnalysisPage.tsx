@@ -33,12 +33,6 @@ import {
   TeamOutlined
 } from "@ant-design/icons";
 import { hasFullAccess } from "../utils/constants";
-
-const formatFullNumber = (num: number): string => {
-  if (!num || isNaN(num)) return "0";
-  return num.toLocaleString('en-IN');
-};
-
 const months = [
   "January", "February", "March", "April", "May", "June",
   "July", "August", "September", "October", "November", "December"
