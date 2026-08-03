@@ -760,24 +760,34 @@ const LegDetailCard = ({
 
           {/* Base Working Location Policy Reason — shows on ALL legs with in-district / base deduction */}
           {(baseLocationDeductionReason || (isInDistrictLeg && (isTaEdited || isDaEdited || daAmt === 0))) && (
-            <div className="bg-white p-1.5 rounded border border-indigo-200/80 text-slate-900 font-medium">
-              <span className="text-indigo-800 font-extrabold text-[8.5px] uppercase block mb-0.5">📍 Base Working Location Policy:</span>
-              <span>
-                {baseLocationDeductionReason ||
-                  `As per Company Expense Policy, working at the assigned base location (${km} km travel within district) results in reduced Travel Allowance (TA)${isDaEdited || daAmt === 0 ? " and no Daily Allowance (DA)" : ""}. Claimed TA of ${rupee(estimatedSubmittedTa)} has been adjusted to ${rupee(taAmt)}.`
-                }
+            <div className="bg-indigo-50 p-2 rounded border border-indigo-200 text-[9.5px]">
+              <span className="text-indigo-800 font-extrabold text-[8.5px] uppercase block mb-1">📍 Base Working Location — Policy Deduction</span>
+              <span className="text-slate-800 font-medium leading-relaxed">
+                {baseLocationDeductionReason || (
+                  <>
+                    As per Company Policy, working within the base district ({km} km) attracts reduced allowances.{" "}
+                    {isTaEdited && <><b className="text-rose-700">TA deducted: {rupee(estimatedSubmittedTa - taAmt)}</b> (Claimed {rupee(estimatedSubmittedTa)} → Approved {rupee(taAmt)}).{" "}</>}
+                    {(isDaEdited || daAmt === 0) && estimatedSubmittedDa > 0 && <><b className="text-rose-700">DA deducted: {rupee(estimatedSubmittedDa - daAmt)}</b> (Claimed {rupee(estimatedSubmittedDa)} → Approved {rupee(daAmt)}).{" "}</>}
+                    {calculatedDeduction > 0 && <b className="text-rose-700">Total Deduction: {rupee(calculatedDeduction)}.</b>}
+                  </>
+                )}
               </span>
             </div>
           )}
 
           {/* System Policy (KM/TA Capped) — shows on ALL legs where KM or TA is capped by system */}
           {(isKmEdited || kmDeductionReason || (isTaEdited && !isInDistrictLeg)) && (
-            <div className="bg-white p-1.5 rounded border border-amber-200/80 text-slate-900 font-medium">
-              <span className="text-amber-800 font-extrabold text-[8.5px] uppercase block mb-0.5">⚙️ System Policy (KM / Fare Limit):</span>
-              <span>
-                {kmDeductionReason || (isKmEdited
-                  ? `As per policy, travel distance for this leg has been adjusted from ${origKm} km to ${km} km. Travel Allowance recalculated at ₹${ratePerKm}/km, resulting in an approved TA of ${rupee(taAmt)}.`
-                  : `Travel Allowance for this leg is capped at the approved rate of ₹${ratePerKm}/km for ${km} km. Claimed amount of ${rupee(estimatedSubmittedTa)} adjusted to ${rupee(taAmt)}.`
+            <div className="bg-amber-50 p-2 rounded border border-amber-200 text-[9.5px]">
+              <span className="text-amber-800 font-extrabold text-[8.5px] uppercase block mb-1">⚙️ KM / Fare Limit — Policy Deduction</span>
+              <span className="text-slate-800 font-medium leading-relaxed">
+                {kmDeductionReason || (
+                  <>
+                    {isKmEdited
+                      ? <>Travel distance adjusted from <b>{origKm} km</b> to <b>{km} km</b> as per policy.{" "}</>
+                      : <>Travel rate capped at <b>₹{ratePerKm}/km</b> for <b>{km} km</b>.{" "}</>
+                    }
+                    <b className="text-rose-700">TA deducted: {rupee(estimatedSubmittedTa - taAmt)}</b> (Claimed {rupee(estimatedSubmittedTa)} → Approved {rupee(taAmt)}).
+                  </>
                 )}
               </span>
             </div>
@@ -785,9 +795,16 @@ const LegDetailCard = ({
 
           {/* System Policy (DA Capped) — shows on ALL legs */}
           {(daDeductionReason || (isDaEdited && !isInDistrictLeg && !baseLocationDeductionReason)) && (
-            <div className="bg-white p-1.5 rounded border border-amber-200/80 text-slate-900 font-medium">
-              <span className="text-amber-800 font-extrabold text-[8.5px] uppercase block mb-0.5">⚙️ System Policy (DA Grade Cap):</span>
-              <span>{daDeductionReason || `As per Grade Allowance policy, Daily Allowance (DA) claimed of ${rupee(estimatedSubmittedDa)} has been adjusted to ${rupee(daAmt)} based on the applicable grade entitlement.`}</span>
+            <div className="bg-amber-50 p-2 rounded border border-amber-200 text-[9.5px]">
+              <span className="text-amber-800 font-extrabold text-[8.5px] uppercase block mb-1">⚙️ DA Grade Cap — Policy Deduction</span>
+              <span className="text-slate-800 font-medium leading-relaxed">
+                {daDeductionReason || (
+                  <>
+                    Daily Allowance capped as per grade entitlement.{" "}
+                    <b className="text-rose-700">DA deducted: {rupee(estimatedSubmittedDa - daAmt)}</b> (Claimed {rupee(estimatedSubmittedDa)} → Approved {rupee(daAmt)}).
+                  </>
+                )}
+              </span>
             </div>
           )}
         </div>
