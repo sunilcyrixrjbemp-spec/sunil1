@@ -411,9 +411,13 @@ export default function ApprovalPage() {
     setRemovedAttachments([]);
 
     const initLegs = (details: any) => {
-      const rawLegs = Array.isArray(details.itineraries) && details.itineraries.length > 0
+      const rawLegs = (Array.isArray(details.itineraries) && details.itineraries.length > 0)
         ? details.itineraries
-        : (Array.isArray(details.legs) ? details.legs : []);
+        : ((Array.isArray(details.legs) && details.legs.length > 0)
+            ? details.legs
+            : ((Array.isArray(details.itinerary_list) && details.itinerary_list.length > 0)
+                ? details.itinerary_list
+                : (Array.isArray(details.itinerary) ? details.itinerary : [])));
       if (rawLegs.length > 0) {
         setEditedLegs(
           rawLegs.map((leg: any, idx: number) => ({
@@ -447,7 +451,7 @@ export default function ApprovalPage() {
     setExpenseDetails(null);
     setLoadingDetails(true);
 
-    const targetId = app.expense_code || app.expense_id || app.id;
+    const targetId = app.expense_id ?? app.id ?? app.expense_code;
     const cacheKey = `cache_claim_detail_${targetId}`;
     const cached = localStorage.getItem(cacheKey);
     if (cached) {

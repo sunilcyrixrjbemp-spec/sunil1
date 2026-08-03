@@ -61,7 +61,8 @@ export const expenseService = {
   },
 
   getExpenseDetails: async (expenseId: number | string): Promise<any> => {
-    const response = await api.get(`/expense/${expenseId}`);
+    const safeId = typeof expenseId === "string" ? encodeURIComponent(expenseId) : expenseId;
+    const response = await api.get(`/expense/${safeId}`);
     return response.data;
   },
 
