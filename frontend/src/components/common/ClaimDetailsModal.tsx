@@ -1578,24 +1578,41 @@ const ClaimDetailsModal: React.FC<ClaimDetailsModalProps> = ({
             </div>
           </div>
 
-          {/* 1-Line Pure English AI Executive Analysis Narrative */}
+          {/* 1-Line Comprehensive AI Executive Narrative Summary */}
           <div className="text-[10.5px] text-slate-800 font-medium leading-relaxed bg-white p-2 rounded border border-[#4A6A8A]/20 flex flex-wrap items-center gap-x-1.5 gap-y-1">
             <span className="font-extrabold text-slate-900">{c.submitter_name || c.name || "Engineer"}</span>
+            {c.submitter_code && <span className="font-mono text-slate-500 font-bold">[{c.submitter_code}]</span>}
             <span>conducted a field visit on <b className="text-slate-900">{formatDateDDMMMYY(c.date || c.itinerary)}</b></span>
             {calculatedTotalKm > 0 ? <span>traveling <b className="text-slate-900">{calculatedTotalKm} km</b></span> : <span>performing local movement</span>}
             {modesList.length > 0 ? <span>via <b className="text-slate-900">{modesList.join(", ")}</b></span> : ""}
             
-            {collectedFacilities.length > 0 && (
+            {itineraries.length > 0 && (
               <span className="inline-flex flex-wrap items-center gap-1">
-                across
-                {collectedFacilities.map((fac: string, idx: number) => (
-                  <React.Fragment key={idx}>
-                    {idx > 0 && <span className="text-slate-400 font-bold">,</span>}
-                    <span className="font-extrabold text-indigo-900 bg-indigo-50 px-1.5 py-0.2 rounded border border-indigo-200/80">
-                      {fac}
-                    </span>
-                  </React.Fragment>
-                ))}
+                across route:
+                {itineraries.map((l: any, idx: number) => {
+                  const fD = l.from_district || l.from_dist || "—";
+                  const tD = l.to_district || l.to_dist || "—";
+                  const fL = l.from || l.from_location || "";
+                  const tL = l.to || l.to_location || "";
+                  return (
+                    <React.Fragment key={idx}>
+                      {idx > 0 && <span className="text-slate-400 font-bold">,</span>}
+                      <span>{fD}</span>
+                      {fL && fL !== "—" && fL !== fD && (
+                        <span className="font-extrabold text-indigo-900 bg-indigo-50 px-1 py-0.2 rounded border border-indigo-200/80">
+                          ({fL})
+                        </span>
+                      )}
+                      <span className="text-slate-500 font-bold">➔</span>
+                      <span>{tD}</span>
+                      {tL && tL !== "—" && tL !== tD && (
+                        <span className="font-extrabold text-indigo-900 bg-indigo-50 px-1 py-0.2 rounded border border-indigo-200/80">
+                          ({tL})
+                        </span>
+                      )}
+                    </React.Fragment>
+                  );
+                })}
               </span>
             )}.
 
@@ -1653,7 +1670,12 @@ const ClaimDetailsModal: React.FC<ClaimDetailsModalProps> = ({
               isApproved ? "bg-emerald-100 text-emerald-900 border-emerald-300" : (isClaimRejected ? "bg-rose-100 text-rose-900 border-rose-300" : "bg-blue-100 text-blue-900 border-blue-300")
             }`}>
               {isApproved ? `Approved Net: ${rupee(approvedAmt)}` : (isClaimRejected ? "Approved Net: ₹0 (Rejected)" : `Estimated Net: ${rupee(approvedAmt)}`)}
-            </span>.
+            </span>
+            {isClaimRejected && rejectionRemark && (
+              <span className="font-bold text-rose-700">
+                (Reason: "{rejectionRemark}")
+              </span>
+            )}.
           </div>
         </div>
 
