@@ -131,6 +131,7 @@ export default function ApprovalPage() {
 
   const currentUser = JSON.parse(localStorage.getItem("user") || "{}");
   const userRoleLower = (currentUser.role || "").trim().toLowerCase();
+  const isBulkAuthorized = ["coordinator", "project head"].includes(userRoleLower);
   // Edit single itineraries state
   const [editedLegs, setEditedLegs] = useState<any[]>([]);
   const [removedAttachments, _setRemovedAttachments] = useState<string[]>([]);
