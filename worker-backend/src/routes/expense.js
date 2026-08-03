@@ -2007,9 +2007,47 @@ export async function handleGetExpenseDetails(request, env, params, query, user)
     }
   }
 
-  const itineraries = await env.DB.prepare("SELECT * FROM expense_itineraries WHERE exp_id = ? ORDER BY leg_number ASC").bind(expense.expense_code).all();
-  const attachments = await env.DB.prepare("SELECT * FROM expense_attachments WHERE exp_id = ?").bind(expense.expense_code).all();
-  const editLogs = await env.DB.prepare("SELECT * FROM expense_edit_logs WHERE expense_id = ? ORDER BY created_at DESC").bind(expense.id).all();
+  const expCodeStr = String(expense.expense_code || "");
+  const expIdStr = String(expense.id || "");
+  
+  const itineraries = await env.DB.prepare(
+    "SELECT * FROM expense_itineraries WHERE exp_id = ? OR exp_id = ? ORDER BY leg_number ASC"
+  ).bind(expCodeStr, expIdStr).all();
+
+  const attachments = await env.DB.prepare(
+    "SELECT * FROM expense_attachments WHERE exp_id = ? OR exp_id = ?"
+  ).bind(expCodeStr, expIdStr).all();
+
+  const editLogs = await env.DB.prepare(
+    "SELECT * FROM expense_edit_logs WHERE expense_id = ? ORDER BY created_at DESC"
+  ).bind(expense.id).all();
+
+  let itineraryRows = itineraries.results || [];
+  if (itineraryRows.length === 0) {
+    itineraryRows = [{
+      leg_number: 1,
+      from_district: expense.district || "N/A",
+      to_district: expense.district || "N/A",
+      from_location: "",
+      to_location: "",
+      travel_mode: expense.travel_mode || "Bike",
+      distance_km: parseFloat(expense.total_km || 0),
+      travel_amount: parseFloat(expense.amount || 0),
+      sub_mode: "",
+      sub_amount: 0,
+      da_amount: parseFloat(expense.da_amount || 0),
+      hotel_amount: parseFloat(expense.hotel_amount || 0),
+      local_purchase: parseFloat(expense.local_purchase_amount || 0),
+      local_purchase_remark: "",
+      other_desc: expense.other_expense_reason || "",
+      other_amount: parseFloat(expense.other_expense_amount || 0),
+      calls_assigned: expense.calls_assigned || 0,
+      calls_completed: expense.calls_completed || 0,
+      pms_count: expense.pms_count || 0,
+      asset_tagging: expense.asset_tagging || 0,
+      visit_purpose: expense.description || expense.purpose || ""
+    }];
+  }
 
   const editHistoryList = (editLogs.results || []).map(el => ({
     id: el.id,
@@ -2057,7 +2095,7 @@ export async function handleGetExpenseDetails(request, env, params, query, user)
       itinerary_id: a.itinerary_id,
       bill_type: a.bill_type
     })),
-    itineraries: (itineraries.results || []).map(i => ({
+    itineraries: itineraryRows.map(i => ({
       leg: i.leg_number,
       from_district: i.from_district,
       to_district: i.to_district,

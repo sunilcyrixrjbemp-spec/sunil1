@@ -443,37 +443,36 @@ export default function ApprovalPage() {
       }
     };
 
-    // SWR: load from cache instantly, then refresh in background
+    // Clear previous expense details to prevent showing stale or incomplete claim data
+    setExpenseDetails(null);
+    setLoadingDetails(true);
+
     const cacheKey = `cache_claim_detail_${app.expense_id}`;
     const cached = localStorage.getItem(cacheKey);
     if (cached) {
-      const cachedData = JSON.parse(cached);
-      setExpenseDetails(cachedData);
-      initLegs(cachedData);
-      setLoadingDetails(false);
-      // Background refresh (silent)
-      expenseService.getExpenseDetails(app.expense_id)
-        .then(data => {
-          setExpenseDetails(data);
-          initLegs(data);
-          safeSetLocalStorage(cacheKey, JSON.stringify(data));
-        })
-        .catch(() => {});
-    } else {
-      setLoadingDetails(true);
       try {
-        const details = await expenseService.getExpenseDetails(app.expense_id);
+        const cachedData = JSON.parse(cached);
+        if (cachedData && Array.isArray(cachedData.itineraries) && cachedData.itineraries.length > 0) {
+          setExpenseDetails(cachedData);
+          initLegs(cachedData);
+          setLoadingDetails(false);
+        }
+      } catch (e) {}
+    }
+
+    try {
+      const details = await expenseService.getExpenseDetails(app.expense_id);
+      if (details) {
         setExpenseDetails(details);
         initLegs(details);
         safeSetLocalStorage(cacheKey, JSON.stringify(details));
-      } catch (err: any) {
-        console.error("Error loading expense details:", err);
-        const errMsg = err?.response?.data?.error || err?.message || String(err);
-        toast.error(`Failed to load expense itinerary details: ${errMsg}`);
-        setShowDetailModal(false);
-      } finally {
-        setLoadingDetails(false);
       }
+    } catch (err: any) {
+      console.error("Error loading expense details:", err);
+      const errMsg = err?.response?.data?.error || err?.message || String(err);
+      toast.error(`Failed to load expense itinerary details: ${errMsg}`);
+    } finally {
+      setLoadingDetails(false);
     }
   };
 

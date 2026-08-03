@@ -1468,9 +1468,13 @@ const ClaimDetailsModal: React.FC<ClaimDetailsModalProps> = ({
     (c.from_district && c.to_district && c.from_district !== c.to_district);
 
   // Parse lists
-  const itineraries = Array.isArray(c.itineraries) && c.itineraries.length > 0
+  const itineraries = (Array.isArray(c.itineraries) && c.itineraries.length > 0)
     ? c.itineraries
-    : (Array.isArray(c.legs) ? c.legs : []);
+    : ((Array.isArray(c.legs) && c.legs.length > 0)
+        ? c.legs
+        : ((Array.isArray(c.itinerary_list) && c.itinerary_list.length > 0)
+            ? c.itinerary_list
+            : (Array.isArray(c.itinerary) ? c.itinerary : [])));
 
   const attachments = getAttachmentsArray(c.attachments_detailed || c.attachments || c.bills || c.photos);
   const approvals = Array.isArray(c.approvals) ? c.approvals : [];
