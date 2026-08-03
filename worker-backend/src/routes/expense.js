@@ -1986,7 +1986,9 @@ export async function handleGetExpenseDetails(request, env, params, query, user)
     };
   });
 
-  const submitter = await env.DB.prepare("SELECT * FROM users WHERE id = ?").bind(expense.user_id).first();
+  const submitter = await env.DB.prepare(
+    "SELECT * FROM users WHERE id = ? OR user_id = ? OR e_code = ?"
+  ).bind(expense.user_id, String(expense.user_id), String(expense.user_id)).first();
   
   let rateBike = 4.5;
   let rateCar = 9.0;
@@ -2011,12 +2013,12 @@ export async function handleGetExpenseDetails(request, env, params, query, user)
   const expIdStr = String(expense.id || "");
   
   const itineraries = await env.DB.prepare(
-    "SELECT * FROM expense_itineraries WHERE exp_id = ? OR exp_id = ? ORDER BY leg_number ASC"
-  ).bind(expCodeStr, expIdStr).all();
+    "SELECT * FROM expense_itineraries WHERE exp_id = ? OR exp_id = ? OR LOWER(exp_id) = LOWER(?) ORDER BY leg_number ASC"
+  ).bind(expCodeStr, expIdStr, expCodeStr).all();
 
   const attachments = await env.DB.prepare(
-    "SELECT * FROM expense_attachments WHERE exp_id = ? OR exp_id = ?"
-  ).bind(expCodeStr, expIdStr).all();
+    "SELECT * FROM expense_attachments WHERE exp_id = ? OR exp_id = ? OR LOWER(exp_id) = LOWER(?)"
+  ).bind(expCodeStr, expIdStr, expCodeStr).all();
 
   const editLogs = await env.DB.prepare(
     "SELECT * FROM expense_edit_logs WHERE expense_id = ? ORDER BY created_at DESC"

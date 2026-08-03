@@ -447,7 +447,8 @@ export default function ApprovalPage() {
     setExpenseDetails(null);
     setLoadingDetails(true);
 
-    const cacheKey = `cache_claim_detail_${app.expense_id}`;
+    const targetId = app.expense_code || app.expense_id || app.id;
+    const cacheKey = `cache_claim_detail_${targetId}`;
     const cached = localStorage.getItem(cacheKey);
     if (cached) {
       try {
@@ -461,7 +462,7 @@ export default function ApprovalPage() {
     }
 
     try {
-      const details = await expenseService.getExpenseDetails(app.expense_id);
+      const details = await expenseService.getExpenseDetails(targetId);
       if (details) {
         setExpenseDetails(details);
         initLegs(details);
