@@ -26,14 +26,11 @@ import {
   ShieldCheck,
   Car,
   Bike,
-  BookOpen,
-  ChevronDown,
-  ChevronUp,
   Search
 } from "lucide-react";
 import api from "../services/api";
 import { 
-  DatePicker, ConfigProvider, Modal, Button, Tag, Space, Card, Segmented, Input, Pagination 
+  DatePicker, ConfigProvider, Modal, Button, Tag, Space, Card, Pagination 
 } from "antd";
 import { 
   EditOutlined, DeleteOutlined, FileTextOutlined 
@@ -219,7 +216,6 @@ export default function ExpensePage() {
 
   // Date State (Strictly IST Asia/Kolkata timezone)
   const [date, setDate] = useState(() => getISTDate());
-  const [showPolicyPanel, setShowPolicyPanel] = useState<boolean>(false);
 
   // Init default helpers
   const createDefaultLeg = (num: number): ItineraryLeg => {
