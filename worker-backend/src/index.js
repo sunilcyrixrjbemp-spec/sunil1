@@ -64,6 +64,11 @@ import {
   handleGetPolicyRules, handleRetroactiveBasePolicyCheck, handleBulkRetroactivePolicyCheck, handleReverseExpense, handleEvaluatePolicy
 } from "./routes/expense.js";
 
+// Import Attendance handlers
+import {
+  handleGetAttendance, handleGetAttendanceSummary, handleGetAttendanceDiscrepancies
+} from "./routes/attendance.js";
+
 // CORS Headers Configuration
 function corsHeaders(origin) {
   return {
@@ -265,6 +270,11 @@ router.get("/api/reports/assets-stats", handleGetAssetsStats, true);
 router.get("/api/reports/assets-csv-template", handleGetAssetsCsvTemplate, true);
 router.post("/api/reports/upload-assets-csv", handleUploadAssetsCSV, true);
 router.post("/api/reports/upload-assets-chunk", handleUploadAssetsChunk, true);
+
+// ─── Attendance Endpoints (Requires Auth) ──────────────────────────────────────
+router.get("/api/attendance/summary", handleGetAttendanceSummary, true);
+router.get("/api/attendance/discrepancies", handleGetAttendanceDiscrepancies, true);
+router.get("/api/attendance", handleGetAttendance, true);
 
 
 // ─── Expense Endpoints (Requires Auth) ────────────────────────────────────────

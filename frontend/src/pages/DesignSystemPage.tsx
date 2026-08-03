@@ -29,8 +29,10 @@ import {
   Download, 
   Eye, 
   CornerDownRight,
-  Smartphone
+  Smartphone,
+  Sparkles
 } from "lucide-react";
+import { UIverseButton } from "../components/common/UIverseButton";
 
 const { Title, Text, Paragraph } = Typography;
 const { Option } = Select;
@@ -222,6 +224,42 @@ export default function DesignSystemPage() {
         className="bg-white p-4 rounded-lg border border-gray-200 shadow-xs"
         items={[
           {
+            key: "uiverse",
+            label: "UIverse & Interactive Elements",
+            children: (
+              <div className="space-y-6 pt-2">
+                <Alert
+                  message="UIverse.io Interactive Elements & Color Hunt Integration"
+                  description="Explore glowing 3D buttons, neon badges, dual-ring orbit loaders, and Color Hunt harmonized color tokens."
+                  type="success"
+                  showIcon
+                  icon={<Sparkles className="text-emerald-600" size={18} />}
+                />
+
+                <div>
+                  <Title level={5} className="mb-3">UIverse Interactive Buttons</Title>
+                  <div className="flex flex-wrap items-center gap-4 p-5 bg-slate-900 rounded-2xl">
+                    <UIverseButton variant="glow" iconLeft={<Sparkles size={16} />}>
+                      Glow Action
+                    </UIverseButton>
+                    <UIverseButton variant="cyber">
+                      Cyber Shimmer
+                    </UIverseButton>
+                    <UIverseButton variant="glass">
+                      Glassmorphism
+                    </UIverseButton>
+                    <UIverseButton variant="gradient">
+                      Gradient Pill
+                    </UIverseButton>
+                    <UIverseButton variant="neon">
+                      Neon Cyber
+                    </UIverseButton>
+                  </div>
+                </div>
+              </div>
+            )
+          },
+          {
             key: "palette",
             label: "Theme & Palette",
             children: (
@@ -237,30 +275,30 @@ export default function DesignSystemPage() {
                   <Title level={5} className="mb-3">Brand & Status Colors</Title>
                   <Row gutter={[16, 16]}>
                     <Col xs={12} sm={8} md={6}>
-                      <Card size="small" bodyStyle={{ padding: "12px" }} className="text-center border border-gray-200">
-                        <div className="h-12 w-full rounded mb-2 bg-[#4F46E5]"></div>
-                        <Text strong className="block">Primary Color</Text>
-                        <Text type="secondary" className="text-xs">#4F46E5 (Cyrix Blue)</Text>
+                      <Card size="small" bodyStyle={{ padding: "12px" }} className="text-center border border-gray-200 shadow-xs">
+                        <div className="h-12 w-full rounded-md mb-2 bg-[#2563EB]"></div>
+                        <Text strong className="block text-gray-900">Primary Accent</Text>
+                        <Text type="secondary" className="text-xs">#2563EB (Royal Blue)</Text>
                       </Card>
                     </Col>
                     <Col xs={12} sm={8} md={6}>
-                      <Card size="small" bodyStyle={{ padding: "12px" }} className="text-center border border-gray-200">
-                        <div className="h-12 w-full rounded mb-2 bg-[#16A34A]"></div>
-                        <Text strong className="block">Success (Approved)</Text>
+                      <Card size="small" bodyStyle={{ padding: "12px" }} className="text-center border border-gray-200 shadow-xs">
+                        <div className="h-12 w-full rounded-md mb-2 bg-[#16A34A]"></div>
+                        <Text strong className="block text-gray-900">Approved (Success)</Text>
                         <Text type="secondary" className="text-xs">#16A34A (Green-600)</Text>
                       </Card>
                     </Col>
                     <Col xs={12} sm={8} md={6}>
-                      <Card size="small" bodyStyle={{ padding: "12px" }} className="text-center border border-gray-200">
-                        <div className="h-12 w-full rounded mb-2 bg-[#D97706]"></div>
-                        <Text strong className="block">Warning (Pending)</Text>
+                      <Card size="small" bodyStyle={{ padding: "12px" }} className="text-center border border-gray-200 shadow-xs">
+                        <div className="h-12 w-full rounded-md mb-2 bg-[#D97706]"></div>
+                        <Text strong className="block text-gray-900">Pending (Warning)</Text>
                         <Text type="secondary" className="text-xs">#D97706 (Amber-600)</Text>
                       </Card>
                     </Col>
                     <Col xs={12} sm={8} md={6}>
-                      <Card size="small" bodyStyle={{ padding: "12px" }} className="text-center border border-gray-200">
-                        <div className="h-12 w-full rounded mb-2 bg-[#DC2626]"></div>
-                        <Text strong className="block">Error (Rejected)</Text>
+                      <Card size="small" bodyStyle={{ padding: "12px" }} className="text-center border border-gray-200 shadow-xs">
+                        <div className="h-12 w-full rounded-md mb-2 bg-[#DC2626]"></div>
+                        <Text strong className="block text-gray-900">Rejected (Error)</Text>
                         <Text type="secondary" className="text-xs">#DC2626 (Red-600)</Text>
                       </Card>
                     </Col>
@@ -270,24 +308,24 @@ export default function DesignSystemPage() {
                 <Divider style={{ margin: "16px 0" }} />
 
                 <div>
-                  <Title level={5} className="mb-3">Typography System</Title>
-                  <Card size="small" className="space-y-4 border border-gray-200 bg-gray-50/50">
+                  <Title level={5} className="mb-3">Typography System (Inter)</Title>
+                  <Card size="small" className="space-y-4 border border-gray-200 bg-slate-50/50 shadow-xs">
                     <div>
-                      <Title level={2} style={{ margin: 0 }}>Heading 2 (Title - 24px)</Title>
-                      <Text type="secondary" className="text-xs">Main page headings</Text>
+                      <Title level={2} style={{ margin: 0, color: "#0B0F19" }}>Heading 2 (28px/34px)</Title>
+                      <Text type="secondary" className="text-xs">Page titles and primary section headers</Text>
                     </div>
                     <div>
-                      <Title level={4} style={{ margin: 0 }}>Heading 4 (Section - 16px)</Title>
-                      <Text type="secondary" className="text-xs">Sub-sections or modal titles</Text>
+                      <Title level={4} style={{ margin: 0, color: "#0B0F19" }}>Heading 4 (18px/28px)</Title>
+                      <Text type="secondary" className="text-xs">Section headers or modal titles</Text>
                     </div>
                     <div>
-                      <Title level={5} style={{ margin: 0 }}>Heading 5 (Group - 14px)</Title>
+                      <Title level={5} style={{ margin: 0, color: "#0B0F19" }}>Heading 5 (16px/24px)</Title>
                       <Text type="secondary" className="text-xs">Card titles and table section tags</Text>
                     </div>
                     <div>
-                      <Text className="block text-sm font-semibold">Body Large / Bold - 13px Semibold</Text>
-                      <Text className="block text-sm">Body Regular - 13px Normal (Primary UI descriptions and user text)</Text>
-                      <Text type="secondary" style={{ fontSize: "11px" }}>Caption Text - 11px Regular (Timestamps, minor subtitles, employee codes)</Text>
+                      <Text className="block text-sm font-semibold text-gray-900">Body Medium - 14px/20px Semibold</Text>
+                      <Text className="block text-sm text-gray-700">Body Regular - 14px/20px Normal (Primary UI descriptions and body text)</Text>
+                      <Text type="secondary" style={{ fontSize: "12px" }}>Caption Text - 12px/16px Regular (Timestamps, minor subtitles, codes)</Text>
                     </div>
                   </Card>
                 </div>

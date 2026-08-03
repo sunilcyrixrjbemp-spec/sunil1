@@ -821,29 +821,29 @@ export default function NewDashboardPage() {
   return (
     <div className="p-4 md:p-6 bg-slate-50 min-h-screen font-sans antialiased text-slate-800">
 
-      {/* â”€â”€ Header Banner â”€â”€ */}
-      <div className="relative overflow-hidden bg-gradient-to-r from-indigo-900 via-violet-900 to-indigo-900 rounded-2xl p-6 mb-6 shadow-xl">
-        {backgroundSyncing && <div className="absolute top-0 left-0 w-full h-1 bg-indigo-400 animate-pulse" />}
-        {/* Decorative orbs */}
-        <div className="absolute -top-10 -right-10 w-48 h-48 bg-violet-500/20 rounded-full blur-3xl pointer-events-none" />
-        <div className="absolute -bottom-10 -left-10 w-48 h-48 bg-indigo-500/20 rounded-full blur-3xl pointer-events-none" />
+      {/* Header Banner */}
+      <div className="relative overflow-hidden bg-gradient-to-r from-slate-900 via-indigo-950 to-slate-900 rounded-2xl p-6 mb-6 shadow-xl border border-slate-800/80">
+        {backgroundSyncing && <div className="absolute top-0 left-0 w-full h-1 bg-indigo-500 animate-pulse" />}
+        {/* Decorative ambient glowing orbs */}
+        <div className="absolute -top-12 -right-12 w-48 h-48 bg-indigo-500/20 rounded-full blur-3xl pointer-events-none" />
+        <div className="absolute -bottom-12 -left-12 w-48 h-48 bg-blue-500/15 rounded-full blur-3xl pointer-events-none" />
 
         <div className="relative flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
           <div className="flex items-center gap-4">
-            <div className="p-3 bg-white/10 backdrop-blur rounded-2xl border border-white/20 shadow-lg">
+            <div className="p-3 bg-white/10 backdrop-blur rounded-2xl border border-white/15 shadow-lg">
               <TrendingUp className="w-7 h-7 text-white" />
             </div>
             <div>
-              <h1 className="text-2xl font-black text-white tracking-tight flex items-center gap-2">
-                Cyrix Operations Command Center
+              <h1 className="text-xl md:text-2xl font-black text-white tracking-tight flex items-center gap-2">
+                Operations Command Center
                 {backgroundSyncing && (
-                  <span className="text-[10px] font-bold text-indigo-200 bg-white/10 px-2.5 py-1 rounded-full animate-pulse border border-white/20">
-                    âš¡ Refreshing...
+                  <span className="text-[10px] font-bold text-indigo-300 bg-indigo-500/20 px-2.5 py-1 rounded-full animate-pulse border border-indigo-500/30">
+                    ⚡ Refreshing...
                   </span>
                 )}
               </h1>
-              <p className="text-indigo-200 text-xs font-semibold mt-0.5">
-                Live data from Google Sheets API â€¢ <span className="text-white font-black">{penaltyFile.length.toLocaleString()}</span> total records
+              <p className="text-slate-300 text-xs font-medium mt-0.5">
+                Live Data &amp; Operational Metrics • <span className="text-white font-black">{penaltyFile.length.toLocaleString()}</span> records
               </p>
             </div>
           </div>
@@ -853,7 +853,7 @@ export default function NewDashboardPage() {
             <button
               onClick={() => loadAllDashboardData(true)}
               disabled={backgroundSyncing}
-              className="flex items-center gap-2 h-10 px-5 bg-white/10 hover:bg-white/20 text-white text-xs font-black rounded-xl transition-all border border-white/20 active:scale-95 disabled:opacity-50 cursor-pointer backdrop-blur"
+              className="flex items-center gap-2 h-10 px-5 bg-gradient-to-r from-indigo-500 to-indigo-600 hover:from-indigo-600 hover:to-indigo-700 text-white text-xs font-bold rounded-xl transition-all shadow-md active:scale-95 disabled:opacity-50 cursor-pointer border border-indigo-400/30"
             >
               <RefreshCw className={`w-4 h-4 ${backgroundSyncing ? "animate-spin" : ""}`} />
               Sync Live

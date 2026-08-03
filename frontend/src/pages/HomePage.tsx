@@ -5,46 +5,25 @@ import { expenseService } from "../services/expenseService";
 import { approvalService } from "../services/approvalService";
 import toast from "react-hot-toast";
 import { prefetchManager } from "../utils/prefetchManager";
-import Loader from "../components/common/Loader";
 import { checkIsHeic, convertHeicToJpegUrl } from "../utils/heic";
 import { getISTMonth } from "../utils/dateUtils";
-import { formatToIST } from "../utils/timezone";
 import { hasFullAccess } from "../utils/constants";
-import { ResponsivePie } from "@nivo/pie";
-import ExpenseCalendar from "../components/common/ExpenseCalendar";
 import LocationFilters from "../components/common/LocationFilters";
 import DistrictBadge from "../components/common/DistrictBadge";
+import ClaimDetailsModal from "../components/common/ClaimDetailsModal";
 import { 
   Card, 
   Button, 
   Table, 
   Modal, 
-  Tabs, 
   Row, 
   Col, 
   Alert, 
   Typography, 
-  Tag,
-  Input,
-  Segmented,
-  Tooltip
+  Tag
 } from "antd";
 
 const { Title, Text } = Typography;
-const { TextArea } = Input;
-
-const getSegmentedClass = (status: string) => {
-  switch (status) {
-    case "approved":
-      return "status-segmented-approved";
-    case "rejected":
-      return "status-segmented-rejected";
-    case "pending":
-      return "status-segmented-pending";
-    default:
-      return "status-segmented-all";
-  }
-};
 
 const uniqueMonths = Array.from({ length: 12 }, (_, i) => {
   const d = new Date();
@@ -69,53 +48,39 @@ const getStatusCardStyle = (status: string) => {
 };
 import { 
   FileSpreadsheet, 
-  BarChart3, 
   Clock, 
   CheckCircle2, 
   XCircle, 
   Compass, 
-  Layers,
   Users,
   Loader2,
-  ShieldCheck,
   AlertTriangle,
-  ChevronUp
+  ChevronUp,
+  RefreshCw,
+  FileText,
+  Route,
+  Car
 } from "lucide-react";
 
-import api from "../services/api";
-
-const API_BASE = (api.defaults.baseURL || "").replace(/\/api$/, "");
-
-const getAttachmentsArray = (attachments: any): string[] => {
-  if (!attachments) return [];
-  if (Array.isArray(attachments)) return attachments.filter(Boolean);
-  if (typeof attachments === "string") {
-    const trimmed = attachments.trim();
-    if (!trimmed) return [];
-    if (trimmed.startsWith("[") || trimmed.startsWith("\"[")) {
-      try {
-        let parsed = JSON.parse(trimmed);
-        if (typeof parsed === "string") {
-          parsed = JSON.parse(parsed);
-        }
-        if (Array.isArray(parsed)) {
-          return parsed.filter(Boolean);
-        }
-      } catch (e) {
-        console.warn("Failed to parse attachments JSON string:", trimmed, e);
-      }
-    }
-    if (trimmed.includes(",")) {
-      return trimmed.split(",").map(x => x.trim()).filter(Boolean);
-    }
-    return [trimmed];
-  }
-  return [];
-};
-
-const GALLERY_COLORS = ["#2f5bb7", "#2b7d50", "#d28b2a", "#854aa5", "#d83b01", "#00a2ad", "#e81123"];
-
-
+// Reusable Apple iOS / Meta AI style soft gradient IconTile component
+const IconTile = ({ 
+  icon: Icon, 
+  gradientFrom, 
+  gradientTo, 
+  shadowColor = "rgba(0, 0, 0, 0.12)" 
+}: { 
+  icon: React.ElementType; 
+  gradientFrom: string; 
+  gradientTo: string; 
+  shadowColor?: string;
+}) => (
+  <div 
+    className={`w-7 h-7 rounded-lg bg-gradient-to-br ${gradientFrom} ${gradientTo} flex items-center justify-center text-white shrink-0`}
+    style={{ boxShadow: `0 2px 6px -1px ${shadowColor}` }}
+  >
+    <Icon className="w-3.5 h-3.5 text-white stroke-[2.2]" />
+  </div>
+);
 
 export default function HomePage() {
 
@@ -197,12 +162,16 @@ export default function HomePage() {
   const [showDetailsModal, setShowDetailsModal] = useState(false);
   const [comments, setComments] = useState("");
   const [actionLoading, setActionLoading] = useState(false);
+  const [fromDate, setFromDate] = useState<string>("");
+  const [toDate, setToDate] = useState<string>("");
+  const [searchClaimId, setSearchClaimId] = useState<string>("");
 
   // Popup modal for clicked stats card
   const [showStatsModal, setShowStatsModal] = useState(false);
   const [statsModalType, _setStatsModalType] = useState<"Total Claimed" | "Approved" | "Pending" | "Rejected">("Total Claimed");
   const [statsModalClaims, setStatsModalClaims] = useState<any[]>([]);
   const [homeClaimsPageSize, setHomeClaimsPageSize] = useState(25);
+  const [homeTeamPageSize, setHomeTeamPageSize] = useState(25);
   const [homeModalPageSize, setHomeModalPageSize] = useState(15);
 
   // In-app Lightbox state
@@ -223,41 +192,6 @@ export default function HomePage() {
     }
   }, [lightboxImage]);
 
-  const [showModalScrollTop, setShowModalScrollTop] = useState(false);
-
-  useEffect(() => {
-    if (!showDetailsModal) {
-      setShowModalScrollTop(false);
-      return;
-    }
-
-    let frameId: number | null = null;
-    const handleScroll = (e: Event) => {
-      if (frameId) return;
-      frameId = requestAnimationFrame(() => {
-        frameId = null;
-        const target = e.target as HTMLElement;
-        const shouldShow = target.scrollTop > 150;
-        setShowModalScrollTop(prev => prev === shouldShow ? prev : shouldShow);
-      });
-    };
-
-    const timer = setTimeout(() => {
-      const body = document.querySelector(".my-claims-modal-wrap .ant-modal-body");
-      if (body) {
-        body.addEventListener("scroll", handleScroll, { passive: true });
-      }
-    }, 300);
-
-    return () => {
-      clearTimeout(timer);
-      if (frameId) cancelAnimationFrame(frameId);
-      const body = document.querySelector(".my-claims-modal-wrap .ant-modal-body");
-      if (body) {
-        body.removeEventListener("scroll", handleScroll);
-      }
-    };
-  }, [showDetailsModal]);
 
   const [showPageScrollTop, setShowPageScrollTop] = useState(false);
 
@@ -427,11 +361,6 @@ export default function HomePage() {
     }
   };
 
-  const formatDateTime = (dateVal: any) => {
-    if (!dateVal) return "—";
-    return formatToIST(dateVal);
-  };
-
   const handleApprove = async () => {
     if (!claimDetails) return;
     setActionLoading(true);
@@ -544,14 +473,36 @@ export default function HomePage() {
   const isSpecialViewRole = ["admin", "project head", "mis", "travel desk", "travel tesk", "vp", "accountant", "hr"].includes(userRoleLower);
   const isReviewerRole = allowedWindows.includes("approval") || isSpecialViewRole;
 
+
+
   const getStatusBadgeClass = (status: string, record?: any) => {
     const s = (status || "").toLowerCase();
-    if (s === "auto_approved" || record?.is_auto_approved || record?.auto_approved) return "bg-emerald-100 border-emerald-300 text-emerald-800 font-extrabold";
-    if (s === "approved") return "bg-emerald-50 border-emerald-200 text-emerald-700 font-bold";
-    if (s === "rejected") return "bg-red-50 border-red-200 text-red-700 font-bold";
-    if (s === "returned_to_draft") return "bg-orange-50 border-orange-200 text-orange-700 font-bold";
-    if (s.startsWith("submitted")) return "bg-amber-50 border-amber-250 text-amber-800 font-bold";
-    return "bg-gray-50 border-gray-200 text-gray-600 font-bold";
+    if (s === "auto_approved" || record?.is_auto_approved || record?.auto_approved) {
+      return "bg-emerald-100 border-emerald-300 text-emerald-900 font-extrabold";
+    }
+    if (s === "approved") {
+      return "bg-emerald-50 border-emerald-300 text-emerald-800 font-extrabold";
+    }
+    if (s === "rejected") {
+      return "bg-rose-50 border-rose-300 text-rose-700 font-extrabold";
+    }
+    if (s === "returned_to_draft") {
+      return "bg-amber-100 border-amber-300 text-amber-900 font-extrabold";
+    }
+    // Level-specific distinct pending colors:
+    if (s === "submitted" || s === "submitted_l1" || s === "pending_l1") {
+      return "bg-amber-50 border-amber-300 text-amber-900 font-black";
+    }
+    if (s === "submitted_l2" || s === "pending_l2") {
+      return "bg-purple-50 border-purple-300 text-purple-900 font-black";
+    }
+    if (s === "submitted_l3" || s === "pending_l3" || s.startsWith("submitted_l") || s.startsWith("pending_l")) {
+      return "bg-indigo-50 border-indigo-300 text-indigo-900 font-black";
+    }
+    if (s === "draft") {
+      return "bg-slate-100 border-slate-300 text-slate-700 font-bold";
+    }
+    return "bg-slate-50 border-slate-200 text-slate-700 font-bold";
   };
 
   const getStatusLabel = (status: string, record?: any) => {
@@ -560,36 +511,42 @@ export default function HomePage() {
     if (s === "approved") return "Approved";
     if (s === "rejected") return "Rejected";
     if (s === "returned_to_draft") return "Returned";
-    if (s === "submitted") return "Pending L1";
+    if (s === "submitted" || s === "submitted_l1") return "Pending L1";
     if (s.startsWith("submitted_l")) {
       const lvl = s.replace("submitted_l", "");
-      return `Pending L${lvl}`;
+      return `Pending L${lvl.toUpperCase()}`;
+    }
+    if (s.startsWith("pending_l")) {
+      const lvl = s.replace("pending_l", "");
+      return `Pending L${lvl.toUpperCase()}`;
     }
     if (s === "draft") return "Draft";
-    if (s === "pending") return "Pending";
+    if (s === "pending") return "Pending L1";
     return (status || "").toUpperCase();
   };
 
-  const normalizeClaimObject = (raw: any) => {
+  const normalizeClaimObject = (raw: any, basicClaim?: any) => {
     if (!raw) return null;
     return {
       ...raw,
-      submitter_name: raw.submitter_name || user?.name || "",
-      submitter_code: raw.submitter_code || user?.user_id || "",
-      category: raw.category || raw.travel_mode || "Travel",
-      date: raw.date || raw.itinerary || "",
-      purpose: raw.purpose || raw.description || "",
+      submitter_name: raw.submitter_name || basicClaim?.submitter_name || user?.name || "",
+      submitter_code: raw.submitter_code || basicClaim?.submitter_code || user?.user_id || "",
+      zone: raw.zone || raw.submitter_zone || raw.user_zone || basicClaim?.zone || basicClaim?.submitter_zone || "",
+      home_district: raw.home_district || raw.district || raw.submitter_district || basicClaim?.submitter_district || basicClaim?.home_district || "",
+      designation: raw.designation || raw.submitter_designation || basicClaim?.submitter_designation || basicClaim?.designation || "",
+      category: raw.category || raw.travel_mode || basicClaim?.category || "Travel",
+      date: raw.date || raw.itinerary || basicClaim?.date || "",
+      purpose: raw.purpose || raw.description || basicClaim?.purpose || "",
       itineraries: (raw.itineraries && raw.itineraries.length > 0)
         ? raw.itineraries
-        : (raw.legs || []),
-      edit_history: raw.edit_history || raw.editHistory || raw.edit_logs || raw.logs || []
+        : (raw.legs || basicClaim?.itineraries || []),
+      edit_history: raw.edit_history || raw.editHistory || raw.edit_logs || raw.logs || basicClaim?.edit_history || []
     };
   };
 
   const handleOpenClaimDetails = async (claimId: number | string) => {
     setSelectedClaimId(claimId);
     setShowDetailsModal(true);
-
     const listExpenses = [
       ...(Array.isArray(myExpenses) ? myExpenses : []),
       ...(Array.isArray(teamExpenses) ? teamExpenses : [])
@@ -605,13 +562,13 @@ export default function HomePage() {
     const cached = localStorage.getItem(cacheKey);
     if (cached) {
       try {
-        setClaimDetails(normalizeClaimObject(JSON.parse(cached)));
+        setClaimDetails(normalizeClaimObject(JSON.parse(cached), basicClaim));
         setLoadingDetails(false);
       } catch (e) {}
       expenseService.getExpenseDetails(claimId)
         .then(data => {
           if (data) {
-            const norm = normalizeClaimObject(data);
+            const norm = normalizeClaimObject(data, basicClaim);
             setClaimDetails(norm);
             localStorage.setItem(cacheKey, JSON.stringify(norm));
           }
@@ -622,7 +579,7 @@ export default function HomePage() {
       try {
         const data = await expenseService.getExpenseDetails(claimId);
         if (data) {
-          const norm = normalizeClaimObject(data);
+          const norm = normalizeClaimObject(data, basicClaim);
           setClaimDetails(norm);
           localStorage.setItem(cacheKey, JSON.stringify(norm));
         }
@@ -649,6 +606,7 @@ export default function HomePage() {
       toast.error(err.response?.data?.detail || "Failed to delete expense claim.");
     }
   };
+
 
   const safeMyExpenses = Array.isArray(myExpenses) ? myExpenses : [];
   const safeTeamExpenses = Array.isArray(teamExpenses) ? teamExpenses : [];
@@ -745,13 +703,49 @@ export default function HomePage() {
   }, [safeTeamExpenses]);
 
 
+  const matchClaimSearch = (exp: any, searchStr: string): boolean => {
+    if (!searchStr || !searchStr.trim()) return true;
+    const q = searchStr.trim().toLowerCase();
+    
+    // 1. Raw expense code / claim ID match (e.g. "RJ-08/26-000094")
+    const code = String(exp.expense_code || exp.claim_id || exp.id || "").toLowerCase();
+    if (code.includes(q)) return true;
 
-  // Filter personal claims to match currently selected selectMonth (YYYY-MM format)
+    // 2. Match digits sequence (e.g. "0826000094" includes "094" or "94")
+    const codeDigitsOnly = code.replace(/\D/g, "");
+    const qDigitsOnly = q.replace(/\D/g, "");
+    if (qDigitsOnly && codeDigitsOnly.includes(qDigitsOnly)) return true;
+
+    // 3. Match last segment of claim ID (e.g. "000094" -> "094" or "94")
+    const parts = code.split(/[-/]/);
+    const lastPart = parts[parts.length - 1] || "";
+    if (lastPart.includes(q)) return true;
+    if (lastPart.replace(/^0+/, "").includes(q.replace(/^0+/, ""))) return true;
+
+    // 4. Submitter / Engineer Name
+    const name = String(exp.submitter_name || exp.user_name || exp.engineer_name || "").toLowerCase();
+    if (name.includes(q)) return true;
+
+    // 5. Employee Code (e.g. E1812)
+    const empCode = String(exp.submitter_code || exp.emp_code || exp.user_code || "").toLowerCase();
+    if (empCode.includes(q)) return true;
+
+    // 6. Purpose / Description
+    const desc = String(exp.description || exp.purpose || "").toLowerCase();
+    if (desc.includes(q)) return true;
+
+    return false;
+  };
+
+  // Filter personal claims to match currently selected selectMonth (YYYY-MM format), Date Range & Claim ID search
   const getFilteredPersonalExpenses = () => {
     return safeMyExpenses.filter(exp => {
       if (!exp) return false;
       const rawDate = exp.itinerary || exp.date;
       if (!(rawDate && rawDate.startsWith(selectMonth))) return false;
+      if (fromDate && rawDate < fromDate) return false;
+      if (toDate && rawDate > toDate) return false;
+      if (!matchClaimSearch(exp, searchClaimId)) return false;
       if (homeStatusFilter !== "all") {
         const s = (exp.status || "").toLowerCase();
         if (homeStatusFilter === "pending") {
@@ -767,12 +761,15 @@ export default function HomePage() {
   };
 
   const filteredPersonalExpenses = getFilteredPersonalExpenses();
-  const paginatedPersonalExpenses = filteredPersonalExpenses.slice((personalPage - 1) * 50, personalPage * 50);
+  const paginatedPersonalExpenses = filteredPersonalExpenses.slice((personalPage - 1) * homeClaimsPageSize, personalPage * homeClaimsPageSize);
 
   const getFilteredTeamExpenses = () => {
     return safeTeamExpenses.filter(exp => {
       const rawDate = exp.date || exp.itinerary;
       if (rawDate && !rawDate.startsWith(selectMonth)) return false;
+      if (fromDate && rawDate < fromDate) return false;
+      if (toDate && rawDate > toDate) return false;
+      if (!matchClaimSearch(exp, searchClaimId)) return false;
       if (filterZone !== "all" && cleanZone(exp.zone) !== cleanZone(filterZone)) return false;
       if (filterDistrict !== "all") {
         const expDist = String(exp.district || exp.submitter_district || exp.home_district || exp.from_district || "").trim();
@@ -794,94 +791,341 @@ export default function HomePage() {
   };
 
   const filteredTeamExpenses = getFilteredTeamExpenses();
-  const paginatedTeamExpenses = filteredTeamExpenses.slice((teamPage - 1) * 100, teamPage * 100);
+  const paginatedTeamExpenses = filteredTeamExpenses.slice((teamPage - 1) * homeTeamPageSize, teamPage * homeTeamPageSize);
   const totalFilteredKm = filteredTeamExpenses.filter(e => e.category !== "Limit Request").reduce((sum, e) => sum + (e.total_km || 0), 0);
   const totalFilteredAuto = filteredTeamExpenses.filter(e => e.category !== "Limit Request").reduce((sum, e) => sum + (e.total_auto || 0), 0);
-  const totalFilteredAmount = filteredTeamExpenses.filter(e => e.category !== "Limit Request").reduce((sum, e) => sum + (e.amount || 0), 0);
 
-  const pendingApprovalStep = claimDetails?.approvals?.find(
-    (app: any) => app.approver_code === user?.user_id && app.status === "pending"
-  );
-
-  const getPersonalChartData = () => {
-    let bike = 0, car = 0, auto = 0, da = 0, hotel = 0, lp = 0, other = 0;
-    filteredPersonalExpenses.forEach(e => {
-      if (e.category === "Limit Request") return;
-      bike += e.bike_amount || 0;
-      car += e.car_amount || 0;
-      auto += e.auto_amount || 0;
-      da += e.da_amount || 0;
-      hotel += e.hotel_amount || 0;
-      lp += e.local_purchase_amount || 0;
-      other += e.other_expense_amount || 0;
-    });
-
-    const total = bike + car + auto + da + hotel + lp + other || 1;
-    const isCarAllowed = allowanceStats?.vehicleType?.toLowerCase() === "car";
-
-    const items = [
-      { label: "Bike Travel", amount: bike, pct: Math.round((bike / total) * 100), colorStart: "#007bff", colorEnd: "#0056b3" },
-      { label: "Car Travel", amount: car, pct: Math.round((car / total) * 100), colorStart: "#28a745", colorEnd: "#1e7e34" },
-      { label: "Auto Fare", amount: auto, pct: Math.round((auto / total) * 100), colorStart: "#ffc107", colorEnd: "#d39e00" },
-      { label: "Daily Allowance (DA)", amount: da, pct: Math.round((da / total) * 100), colorStart: "#20c997", colorEnd: "#17a2b8" },
-      { label: "Hotel Stay", amount: hotel, pct: Math.round((hotel / total) * 100), colorStart: "#6f42c1", colorEnd: "#520dc2" },
-      { label: "Local Purchase", amount: lp, pct: Math.round((lp / total) * 100), colorStart: "#e83e8c", colorEnd: "#d63384" },
-      { label: "Other / Misc", amount: other, pct: Math.round((other / total) * 100), colorStart: "#dc3545", colorEnd: "#bd2130" }
-    ];
-
-    // Filter out Car Travel if not allowed
-    return isCarAllowed ? items : items.filter(item => item.label !== "Car Travel");
-  };
-
-
-  const getTeamChartTitle = () => {
-    if (filterZone !== "all" && filterDistrict !== "all") {
-      return "Engineer-wise Compare";
-    } else if (filterZone !== "all") {
-      return "District-wise Compare";
-    } else {
-      return "Zone-wise Compare";
+  // ----------------------------------------------------
+  // ENTERPRISE DATA-GRID TABLE COLUMNS & FORMATTERS
+  // ----------------------------------------------------
+  const formatDateDDMMMYY = (dateStr: string) => {
+    if (!dateStr) return "—";
+    const cleanStr = String(dateStr).trim().split(" ")[0].split("T")[0];
+    const parts = cleanStr.split("-");
+    const months = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
+    
+    if (parts.length === 3) {
+      if (parts[0].length === 4) {
+        // YYYY-MM-DD
+        const year = parts[0].slice(-2);
+        const monthIdx = parseInt(parts[1], 10) - 1;
+        const day = parts[2].padStart(2, "0");
+        if (monthIdx >= 0 && monthIdx < 12) return `${day}-${months[monthIdx]}-${year}`;
+      } else if (parts[2].length === 4) {
+        // DD-MM-YYYY
+        const year = parts[2].slice(-2);
+        const monthIdx = parseInt(parts[1], 10) - 1;
+        const day = parts[0].padStart(2, "0");
+        if (monthIdx >= 0 && monthIdx < 12) return `${day}-${months[monthIdx]}-${year}`;
+      }
     }
+    
+    const d = new Date(dateStr);
+    if (!isNaN(d.getTime())) {
+      return `${String(d.getDate()).padStart(2, "0")}-${months[d.getMonth()]}-${String(d.getFullYear()).slice(-2)}`;
+    }
+    return dateStr;
   };
 
-  const getTeamChartData = () => {
-    const grouped: Record<string, { name: string, amount: number }> = {};
-    filteredTeamExpenses.forEach(e => {
-      if (!e || e.category === "Limit Request") return;
-
-      let key = "";
-      if (filterZone !== "all" && filterDistrict !== "all") {
-        key = (e.submitter_name || "Unknown Engineer").trim();
-      } else if (filterZone !== "all") {
-        const d = (e.district || e.submitter_district || e.home_district || e.from_district || "").trim();
-        key = (!d || d.toLowerCase() === "unknown") ? "Unassigned District" : d;
-      } else {
-        let zone = (e.zone || "").trim();
-        if (!zone || zone.toLowerCase() === "unknown") zone = "Unassigned Zone";
-        else zone = zone.replace(/\s*[Zz]one\s*$/i, "");
-        key = zone;
-      }
-
-      if (!grouped[key]) {
-        grouped[key] = { name: key, amount: 0 };
-      }
-      grouped[key].amount += (e.amount || 0);
-    });
-
-    return Object.values(grouped).sort((a, b) => b.amount - a.amount);
+  const checkIsOutDistrict = (record: any): boolean => {
+    if (record.districtType === "outstation" || record.is_outstation || record.travel_type === "outstation" || record.is_out_district) return true;
+    if (record.from_district && record.to_district && record.from_district.trim().toLowerCase() !== record.to_district.trim().toLowerCase()) return true;
+    if (record.category && record.category.toLowerCase().includes("outstation")) return true;
+    return false;
   };
+
+  const getEnterpriseClaimsColumns = () => [
+    // 1. ENGINEER
+    {
+      title: "ENGINEER",
+      key: "engineer",
+      width: "14%",
+      render: (_: any, record: any) => {
+        const name = record.submitter_name || record.user_name || record.engineer_name || user?.name || "Engineer";
+        const code = record.submitter_code || record.user_code || record.emp_code || "";
+        const actualDesignation = record.designation || record.submitter_designation || record.user_designation || record.role_name || record.submitter_role || record.role || (code === user?.user_id ? user?.designation : "") || "";
+
+        return (
+          <div className="flex flex-col justify-center py-0.5 leading-tight">
+            <span className="font-bold text-slate-900 text-xs truncate max-w-[130px]" title={name}>
+              {name}
+            </span>
+            <span className="text-[10px] text-slate-500 font-medium truncate mt-0.5 max-w-[130px]" title={actualDesignation}>
+              {code ? `${code}${actualDesignation ? ` · ${actualDesignation}` : ""}` : (actualDesignation || "—")}
+            </span>
+          </div>
+        );
+      }
+    },
+
+    // 2. CLAIM ID
+    {
+      title: "CLAIM ID",
+      dataIndex: "expense_code",
+      key: "expense_code",
+      width: "11%",
+      render: (text: string, record: any) => {
+        const code = text || record.claim_id || `#${record.id}`;
+        const isOut = checkIsOutDistrict(record);
+
+        return (
+          <div className="flex items-center gap-1 whitespace-nowrap">
+            <span 
+              className={`w-1.5 h-1.5 rounded-full shrink-0 ${isOut ? "bg-amber-600 shadow-2xs" : "bg-blue-600 shadow-2xs"}`} 
+              title={isOut ? "Out-District Travel" : "In-District Travel"}
+            />
+            <span className={`font-mono text-[10.5px] font-extrabold px-1 py-0.5 rounded border ${
+              isOut 
+                ? "text-[#C2410C] bg-amber-50/90 border-amber-200/90" 
+                : "text-[#2563EB] bg-blue-50/90 border-blue-200/90"
+            }`}>
+              {code}
+            </span>
+          </div>
+        );
+      }
+    },
+
+    // 3. CLAIM DATE
+    {
+      title: "CLAIM DATE",
+      key: "claim_date",
+      width: "9%",
+      render: (_: any, record: any) => {
+        const dateVal = record.date || record.itinerary || record.created_at;
+        return (
+          <span className="text-[11px] font-semibold text-slate-700 whitespace-nowrap">
+            {formatDateDDMMMYY(dateVal)}
+          </span>
+        );
+      }
+    },
+
+    // 4. PURPOSE
+    {
+      title: "PURPOSE",
+      dataIndex: "description",
+      key: "purpose",
+      width: "18%",
+      render: (text: string, record: any) => {
+        const desc = text || record.purpose || "Field visit & operational claim";
+        return (
+          <div className="text-[11px] text-slate-700 font-medium line-clamp-2 leading-tight pr-1" title={desc}>
+            {desc}
+          </div>
+        );
+      }
+    },
+
+    // 5. TRAVEL MODE(S)
+    {
+      title: "TRAVEL MODE",
+      key: "travel_modes",
+      width: "11%",
+      render: (_: any, record: any) => {
+        const rawModes = record.travel_mode || record.travel_modes || record.category || "Bike";
+        const modesList = typeof rawModes === "string" 
+          ? rawModes.split(",").map((s: string) => s.trim()).filter(Boolean)
+          : Array.isArray(rawModes) ? rawModes : [String(rawModes)];
+
+        const getChipColor = (m: string) => {
+          const lower = m.toLowerCase();
+          if (lower.includes("bike") || lower.includes("two")) return "bg-cyan-50 text-cyan-800 border-cyan-200/90";
+          if (lower.includes("car") || lower.includes("four")) return "bg-indigo-50 text-indigo-800 border-indigo-200/90";
+          if (lower.includes("auto") || lower.includes("rickshaw")) return "bg-amber-50 text-amber-800 border-amber-200/90";
+          if (lower.includes("bus") || lower.includes("train")) return "bg-emerald-50 text-emerald-800 border-emerald-200/90";
+          return "bg-slate-100 text-slate-700 border-slate-200";
+        };
+
+        return (
+          <div className="flex flex-wrap gap-1 items-center">
+            {modesList.map((mode: string, idx: number) => (
+              <span
+                key={idx}
+                className={`inline-block px-1.5 py-0.5 rounded text-[9.5px] font-bold uppercase tracking-tight border ${getChipColor(mode)} shadow-2xs whitespace-nowrap`}
+              >
+                {mode}
+              </span>
+            ))}
+          </div>
+        );
+      }
+    },
+
+    // 6. TOTAL TA
+    {
+      title: "TOTAL TA",
+      key: "total_ta",
+      width: "8%",
+      align: "right" as const,
+      render: (_: any, record: any) => {
+        const ta = record.total_ta != null ? record.total_ta : (record.total_auto || 0) + ((record.total_km || 0) * 3.5);
+        return (
+          <span className="text-[11px] font-bold text-slate-800 whitespace-nowrap">
+            {ta > 0 ? `₹${Math.round(ta).toLocaleString()}` : "—"}
+          </span>
+        );
+      }
+    },
+
+    // 7. TOTAL DA
+    {
+      title: "TOTAL DA",
+      key: "total_da",
+      width: "7%",
+      align: "right" as const,
+      render: (_: any, record: any) => {
+        const da = record.total_da != null ? record.total_da : (record.da_amount || 0);
+        return (
+          <span className="text-[11px] font-bold text-slate-800 whitespace-nowrap">
+            {da > 0 ? `₹${Math.round(da).toLocaleString()}` : "—"}
+          </span>
+        );
+      }
+    },
+
+    // 8. TASK TYPE / ACTIVITY BOXES (Distinct Colored Boxes for Calls, PMS, etc.)
+    {
+      title: "WORK DONE",
+      key: "task_type",
+      width: "13%",
+      render: (_: any, record: any) => {
+        const boxes: React.ReactNode[] = [];
+
+        // 1. Calls Box (Blue)
+        const callsComp = record.calls_completed ?? record.calls ?? 0;
+        const callsAssign = record.calls_assigned ?? 0;
+        if (callsAssign > 0 || callsComp > 0) {
+          const text = callsAssign > 0 ? `${callsComp}/${callsAssign} Calls` : `${callsComp} Calls`;
+          boxes.push(
+            <span
+              key="calls"
+              className="inline-flex items-center px-1.5 py-0.5 rounded text-[9.5px] font-bold bg-blue-50 text-blue-700 border border-blue-200/90 shadow-2xs whitespace-nowrap"
+            >
+              📞 {text}
+            </span>
+          );
+        }
+
+        // 2. PMS Box (Emerald Green)
+        const pmsComp = record.pms_completed ?? record.pms_count ?? record.pms ?? 0;
+        const pmsAssign = record.pms_assigned ?? 0;
+        if (pmsAssign > 0 || pmsComp > 0) {
+          const text = pmsAssign > 0 ? `${pmsComp}/${pmsAssign} PMS` : `${pmsComp} PMS`;
+          boxes.push(
+            <span
+              key="pms"
+              className="inline-flex items-center px-1.5 py-0.5 rounded text-[9.5px] font-bold bg-emerald-50 text-emerald-700 border border-emerald-200/90 shadow-2xs whitespace-nowrap"
+            >
+              🔧 {text}
+            </span>
+          );
+        }
+
+        // 3. Dynamic Task Types (Calibration, Installation, Breakdown, etc.)
+        const rawTasks = record.task_type || record.work_type || record.tasks || record.call_types || "";
+        if (rawTasks) {
+          const taskList = typeof rawTasks === "string"
+            ? rawTasks.split(",").map((s: string) => s.trim()).filter(Boolean)
+            : Array.isArray(rawTasks) ? rawTasks : [String(rawTasks)];
+
+          taskList.forEach((task: string, idx: number) => {
+            const lower = task.toLowerCase();
+            let colorClass = "bg-purple-50 text-purple-700 border-purple-200/90";
+            let prefix = "⚡";
+
+            if (lower.includes("calib")) {
+              colorClass = "bg-purple-50 text-purple-700 border-purple-200/90";
+              prefix = "🎯";
+            } else if (lower.includes("install")) {
+              colorClass = "bg-indigo-50 text-indigo-700 border-indigo-200/90";
+              prefix = "⚙️";
+            } else if (lower.includes("breakdown") || lower.includes("repair")) {
+              colorClass = "bg-rose-50 text-rose-700 border-rose-200/90";
+              prefix = "🚨";
+            } else if (lower.includes("call") || lower.includes("pms")) {
+              return; // Already rendered with exact counts above
+            }
+
+            boxes.push(
+              <span
+                key={`task-${idx}`}
+                className={`inline-flex items-center px-1.5 py-0.5 rounded text-[9.5px] font-bold border shadow-2xs whitespace-nowrap ${colorClass}`}
+              >
+                {prefix} {task}
+              </span>
+            );
+          });
+        }
+
+        // Fallback if no specific call/pms/task found
+        if (boxes.length === 0) {
+          boxes.push(
+            <span
+              key="general"
+              className="inline-flex items-center px-1.5 py-0.5 rounded text-[9.5px] font-semibold bg-slate-100 text-slate-600 border border-slate-200/80 whitespace-nowrap"
+            >
+              Field Visit
+            </span>
+          );
+        }
+
+        return (
+          <div className="flex flex-wrap gap-1 items-center">
+            {boxes}
+          </div>
+        );
+      }
+    },
+
+    // 9. TOTAL AMOUNT
+    {
+      title: "TOTAL AMOUNT",
+      dataIndex: "amount",
+      key: "total_amount",
+      width: "9%",
+      align: "right" as const,
+      render: (val: number, record: any) => {
+        const amt = val != null ? val : record.total_amount || 0;
+        return (
+          <span className="text-xs font-extrabold text-slate-900 whitespace-nowrap">
+            ₹{amt.toLocaleString()}
+          </span>
+        );
+      }
+    },
+
+    // 10. STATUS
+    {
+      title: "STATUS",
+      dataIndex: "status",
+      key: "status",
+      width: "10%",
+      align: "center" as const,
+      render: (status: string, record: any) => (
+        <span className={`inline-block px-1.5 py-0.5 rounded border text-[9.5px] font-black uppercase tracking-tight whitespace-nowrap shadow-2xs ${getStatusBadgeClass(status, record)}`}>
+          {getStatusLabel(status, record)}
+        </span>
+      )
+    }
+  ];
 
   // Stats calculations based on current active tab, respecting zone, employee, and mode filters, but NOT the status tab filter
   const statsBasePersonalExpenses = safeMyExpenses.filter(exp => {
     if (!exp) return false;
     const rawDate = exp.itinerary || exp.date;
-    return rawDate && rawDate.startsWith(selectMonth);
+    if (fromDate && rawDate && rawDate < fromDate) return false;
+    if (toDate && rawDate && rawDate > toDate) return false;
+    if (!fromDate && !toDate && selectMonth && rawDate && !rawDate.startsWith(selectMonth)) return false;
+    return true;
   });
 
   const statsBaseTeamExpenses = safeTeamExpenses.filter(exp => {
     if (!exp) return false;
     const rawDate = exp.date || exp.itinerary;
-    if (rawDate && !rawDate.startsWith(selectMonth)) return false;
+    if (fromDate && rawDate && rawDate < fromDate) return false;
+    if (toDate && rawDate && rawDate > toDate) return false;
+    if (!fromDate && !toDate && selectMonth && rawDate && !rawDate.startsWith(selectMonth)) return false;
     if (filterZone !== "all" && cleanZone(exp.zone) !== cleanZone(filterZone)) return false;
     if (filterDistrict !== "all") {
       const expDist = String(exp.district || exp.submitter_district || exp.home_district || exp.from_district || "").trim();
@@ -917,6 +1161,21 @@ export default function HomePage() {
   return (
     <>
       <style>{`
+        @keyframes wave-animation {
+          0% { transform: rotate(0.0deg) }
+          10% { transform: rotate(14.0deg) }
+          20% { transform: rotate(-8.0deg) }
+          30% { transform: rotate(14.0deg) }
+          40% { transform: rotate(-4.0deg) }
+          50% { transform: rotate(10.0deg) }
+          60% { transform: rotate(0.0deg) }
+          100% { transform: rotate(0.0deg) }
+        }
+        .animate-wave {
+          animation: wave-animation 2.5s infinite;
+          transform-origin: 70% 70%;
+          display: inline-block;
+        }
         .status-segmented-all .ant-segmented-item-selected {
           background-color: #4f46e5 !important;
         }
@@ -982,16 +1241,44 @@ export default function HomePage() {
       `}</style>
       <div className="space-y-3 sm:space-y-4 animate-fadeIn text-[#212529] p-0 sm:p-2 md:p-4 w-full max-w-none">
         
-        {/* Welcome Banner - Clean Premium Card */}
-        <div className="relative overflow-hidden rounded-xl bg-gradient-to-r from-slate-900 via-slate-900 to-primary-900 py-3 px-4 text-white shadow-xs mb-4">
-          <div className="absolute -right-8 -top-8 h-16 w-16 rounded-full bg-white/5 blur-lg"></div>
-          <div className="absolute -left-8 -bottom-8 h-16 w-16 rounded-full bg-white/5 blur-lg"></div>
-          
-          <div className="relative flex items-center justify-between gap-4">
-            <div>
-              <h2 className="text-sm font-bold tracking-tight text-white leading-none">Hi, {user.name} 👋</h2>
-              <p className="text-primary-100 text-[10px] font-medium mt-1">Claims summary &amp; operations center.</p>
+        {/* Darker Slate-Blue Enterprise Header Bar (#4A6A8A) */}
+        <div className="bg-[#4A6A8A] text-white rounded-lg px-3 py-1.5 flex items-center justify-between shadow-2xs mb-2">
+          <div className="flex items-center gap-2">
+            <div className="w-6 h-6 rounded-md bg-white/15 text-white font-semibold text-xs flex items-center justify-center shrink-0">
+              {user?.name ? user.name.charAt(0).toUpperCase() : "U"}
             </div>
+            <div className="flex items-center gap-1.5">
+              <span className="text-xs font-medium text-white tracking-normal">
+                {(() => {
+                  const hour = new Date().getHours();
+                  if (hour < 12) return "Good Morning";
+                  if (hour < 17) return "Good Afternoon";
+                  return "Good Evening";
+                })()}, {user?.name || "User"}
+              </span>
+              <span className="animate-wave text-xs select-none">👋</span>
+              {user?.role && (
+                <span className="text-white/60 text-[10px] font-normal leading-none ml-1">
+                  ({user.role})
+                </span>
+              )}
+            </div>
+          </div>
+
+          <div className="flex items-center gap-1.5">
+            <Button 
+              onClick={() => navigate("/create-expense")}
+              className="bg-white/15 hover:bg-white/25 text-white border-0 font-medium text-[10px] h-6 px-2 rounded shadow-2xs transition-all flex items-center gap-1 cursor-pointer"
+            >
+              + New Claim
+            </Button>
+            <Button 
+              onClick={() => refreshDashboardData()}
+              className="bg-white/10 hover:bg-white/20 text-white border-0 font-medium text-[10px] h-6 px-2 rounded shadow-2xs transition-all flex items-center gap-1 cursor-pointer"
+            >
+              <RefreshCw size={12} className="text-white" />
+              Refresh
+            </Button>
           </div>
         </div>
 
@@ -1001,8 +1288,8 @@ export default function HomePage() {
             description="Policy data load नहीं हुआ, कृपया page reload करें"
             type="error"
             showIcon
-            icon={<AlertTriangle className="text-red-600 shrink-0" size={18} />}
-            className="mb-4 rounded-lg bg-red-50 border-red-200"
+            icon={<AlertTriangle className="text-red-600 shrink-0" size={14} />}
+            className="mb-2 py-0.5 px-2 rounded bg-red-50 border-red-200 text-xs"
           />
         )}
 
@@ -1012,390 +1299,453 @@ export default function HomePage() {
             description={`You have ${pendingLimitRequestsCount} pending limit request${pendingLimitRequestsCount > 1 ? 's' : ''} from your team awaiting your review.`}
             type="warning"
             showIcon
-            icon={<AlertTriangle className="text-amber-600 shrink-0" size={18} />}
-            className="mb-4 rounded-lg bg-amber-50/50 border-amber-200"
+            icon={<AlertTriangle className="text-amber-600 shrink-0" size={14} />}
+            className="mb-2 py-0.5 px-2 rounded bg-amber-50/70 border-amber-200 text-xs"
             action={
-              <Button size="small" type="primary" className="bg-amber-600 hover:bg-amber-700 text-white font-bold" onClick={() => navigate("/approval-center")}>
+              <Button size="small" type="primary" className="bg-amber-600 hover:bg-amber-700 text-white text-[10px] font-medium h-5 px-1.5 rounded" onClick={() => navigate("/approval-center")}>
                 Review Now
               </Button>
             }
           />
         )}
 
-        {/* Quick Stats Grid */}
-        <div className="space-y-3">
-          <div className="flex items-center justify-between">
-            <Title level={5} style={{ margin: 0, fontSize: "12px", color: "#4B5563" }} className="uppercase font-bold tracking-wider">
-              {activeTab === "my-claims" ? "My Expense Summary" : "Team Expense Summary"}
-            </Title>
-            
-            <div className="flex items-center gap-2">
-              <Text className="text-[10px] font-bold uppercase text-gray-400 tracking-wider">Select Month:</Text>
+        {/* Compact High-Density Stat Cards */}
+        <div className="space-y-1 mb-2">
+          <div className="bg-[#4A6A8A] text-white px-3 py-1 rounded-t-lg flex items-center justify-between">
+            <span className="text-[11px] font-medium tracking-normal text-white uppercase">
+              {activeTab === "my-claims" ? "MY EXPENSE SUMMARY" : "TEAM EXPENSE SUMMARY"}
+            </span>
+            <div className="flex items-center gap-1">
+              <span className="text-[9px] font-medium text-white/80 tracking-normal">MONTH:</span>
               <input 
                 type="month"
                 value={selectMonth}
                 onChange={(e) => setSelectMonth(e.target.value)}
-                className="bg-white border border-gray-250 rounded px-2 py-0.5 text-xs font-semibold text-gray-800 focus:outline-none focus:border-indigo-500 shadow-xs cursor-pointer"
+                className="bg-white/15 text-white border-0 rounded px-1.5 py-0.5 text-[10px] font-medium cursor-pointer focus:outline-none"
               />
             </div>
           </div>
           
-          {/* Metric Cards Grid */}
-          <Row gutter={[12, 12]}>
+          {/* Ultra-Slim Datacard Micro-Bar */}
+          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-2 sm:gap-2.5">
             {/* Card 1: Total Claimed */}
-            <Col xs={12} sm={6}>
-              <Card 
-                size="small" 
-                className="border border-slate-200 border-l-4 border-l-primary-600 shadow-2xs rounded-xl"
-                bodyStyle={{ padding: "10px" }}
-              >
-                <div className="flex items-center gap-2">
-                  <div className="p-1.5 bg-primary-50 text-primary-600 rounded-lg">
-                    <FileSpreadsheet size={16} />
+            <div className="bg-white border border-slate-200/80 rounded-lg py-1.5 px-2 flex items-center shadow-2xs hover:border-slate-300 transition-colors h-11">
+              <div className="flex items-center gap-2 min-w-0 w-full">
+                <IconTile icon={FileText} gradientFrom="from-blue-500" gradientTo="to-indigo-600" shadowColor="rgba(37, 99, 235, 0.25)" />
+                <div className="flex flex-col justify-center min-w-0 flex-1">
+                  <div className="flex items-center justify-between gap-1 w-full">
+                    <span className="text-[8.5px] font-medium uppercase tracking-normal text-slate-400 leading-none">TOTAL CLAIMED</span>
+                    <span className="text-[8px] font-medium text-slate-600 bg-slate-100/80 px-1 py-0.5 rounded border border-slate-200/80 leading-none shrink-0">{statsTotalClaims.length} Claims</span>
                   </div>
-                  <div>
-                    <Text type="secondary" className="text-[9px] uppercase font-bold tracking-wider block leading-none">Total Claimed</Text>
-                    <Text strong className="text-sm font-mono block mt-1">₹{(totalAmount || 0).toLocaleString()}</Text>
-                    <Text className="text-[9px] text-primary-600 font-bold block mt-0.5">{statsTotalClaims.length} Claims</Text>
-                  </div>
+                  <span className="text-[13px] font-mono font-bold text-slate-900 leading-none mt-1 whitespace-nowrap">₹{(totalAmount || 0).toLocaleString("en-IN")}</span>
                 </div>
-              </Card>
-            </Col>
+              </div>
+            </div>
 
-            {/* Card 2: Approved */}
-            <Col xs={12} sm={6}>
-              <Card 
-                size="small" 
-                className="border border-gray-205 border-l-4 border-l-green-600 shadow-xs"
-                bodyStyle={{ padding: "10px" }}
-              >
-                <div className="flex items-center gap-2">
-                  <div className="p-1.5 bg-green-50 text-green-605 rounded">
-                    <CheckCircle2 size={16} />
-                  </div>
-                  <div>
-                    <Text type="secondary" className="text-[9px] uppercase font-bold tracking-wider block leading-none">Approved</Text>
-                    <Text strong className="text-sm font-mono block mt-1">₹{(approvedAmount || 0).toLocaleString()}</Text>
-                    <Text className="text-[9px] text-green-600 font-bold block mt-0.5">{statsApprovedClaims.length} Claims</Text>
-                  </div>
+            {/* Card 2: Total KM */}
+            <div className="bg-white border border-slate-200/80 rounded-lg py-1.5 px-2 flex items-center shadow-2xs hover:border-slate-300 transition-colors h-11">
+              <div className="flex items-center gap-2 min-w-0 w-full">
+                <IconTile icon={Route} gradientFrom="from-amber-500" gradientTo="to-amber-600" shadowColor="rgba(245, 158, 11, 0.25)" />
+                <div className="flex flex-col justify-center min-w-0 flex-1">
+                  <span className="text-[8.5px] font-medium uppercase tracking-normal text-slate-400 leading-none">TOTAL KM</span>
+                  <span className="text-[13px] font-mono font-bold text-amber-900 leading-none mt-1 whitespace-nowrap">{(totalFilteredKm || 0).toFixed(1)} KM</span>
                 </div>
-              </Card>
-            </Col>
+              </div>
+            </div>
 
-            {/* Card 3: Pending */}
-            <Col xs={12} sm={6}>
-              <Card 
-                size="small" 
-                className="border border-gray-200 border-l-4 border-l-amber-600 shadow-xs"
-                bodyStyle={{ padding: "10px" }}
-              >
-                <div className="flex items-center gap-2">
-                  <div className="p-1.5 bg-amber-50 text-amber-600 rounded">
-                    <Clock size={16} />
-                  </div>
-                  <div>
-                    <Text type="secondary" className="text-[9px] uppercase font-bold tracking-wider block leading-none">Pending Review</Text>
-                    <Text strong className="text-sm font-mono block mt-1">₹{(pendingAmount || 0).toLocaleString()}</Text>
-                    <Text className="text-[9px] text-amber-600 font-bold block mt-0.5">{statsPendingClaims.length} Claims</Text>
-                  </div>
+            {/* Card 3: Total Auto */}
+            <div className="bg-white border border-slate-200/80 rounded-lg py-1.5 px-2 flex items-center shadow-2xs hover:border-slate-300 transition-colors h-11">
+              <div className="flex items-center gap-2 min-w-0 w-full">
+                <IconTile icon={Car} gradientFrom="from-purple-500" gradientTo="to-indigo-600" shadowColor="rgba(147, 51, 234, 0.25)" />
+                <div className="flex flex-col justify-center min-w-0 flex-1">
+                  <span className="text-[8.5px] font-medium uppercase tracking-normal text-slate-400 leading-none">TOTAL AUTO</span>
+                  <span className="text-[13px] font-mono font-bold text-purple-950 leading-none mt-1 whitespace-nowrap">₹{(totalFilteredAuto || 0).toLocaleString("en-IN")}</span>
                 </div>
-              </Card>
-            </Col>
+              </div>
+            </div>
 
-            {/* Card 4: Rejected */}
-            <Col xs={12} sm={6}>
-              <Card 
-                size="small" 
-                className="border border-gray-200 border-l-4 border-l-red-600 shadow-xs"
-                bodyStyle={{ padding: "10px" }}
-              >
-                <div className="flex items-center gap-2">
-                  <div className="p-1.5 bg-red-50 text-red-650 rounded">
-                    <XCircle size={16} />
+            {/* Card 4: Approved */}
+            <div className="bg-white border border-slate-200/80 rounded-lg py-1.5 px-2 flex items-center shadow-2xs hover:border-slate-300 transition-colors h-11">
+              <div className="flex items-center gap-2 min-w-0 w-full">
+                <IconTile icon={CheckCircle2} gradientFrom="from-emerald-500" gradientTo="to-teal-600" shadowColor="rgba(16, 185, 129, 0.25)" />
+                <div className="flex flex-col justify-center min-w-0 flex-1">
+                  <div className="flex items-center justify-between gap-1 w-full">
+                    <span className="text-[8.5px] font-medium uppercase tracking-normal text-slate-400 leading-none">APPROVED</span>
+                    <span className="text-[8px] font-medium text-emerald-700 bg-emerald-50 px-1 py-0.5 rounded border border-emerald-200/60 leading-none shrink-0">{statsApprovedClaims.length} Claims</span>
                   </div>
-                  <div>
-                    <Text type="secondary" className="text-[9px] uppercase font-bold tracking-wider block leading-none">Rejected</Text>
-                    <Text strong className="text-sm font-mono block mt-1">₹{(rejectedAmount || 0).toLocaleString()}</Text>
-                    <Text className="text-[9px] text-red-600 font-bold block mt-0.5">{statsRejectedClaims.length} Claims</Text>
-                  </div>
+                  <span className="text-[13px] font-mono font-bold text-emerald-800 leading-none mt-1 whitespace-nowrap">₹{(approvedAmount || 0).toLocaleString("en-IN")}</span>
                 </div>
-              </Card>
-            </Col>
-          </Row>
+              </div>
+            </div>
+
+            {/* Card 5: Pending */}
+            <div className="bg-white border border-slate-200/80 rounded-lg py-1.5 px-2 flex items-center shadow-2xs hover:border-slate-300 transition-colors h-11">
+              <div className="flex items-center gap-2 min-w-0 w-full">
+                <IconTile icon={Clock} gradientFrom="from-orange-500" gradientTo="to-amber-600" shadowColor="rgba(249, 115, 22, 0.25)" />
+                <div className="flex flex-col justify-center min-w-0 flex-1">
+                  <div className="flex items-center justify-between gap-1 w-full">
+                    <span className="text-[8.5px] font-medium uppercase tracking-normal text-slate-400 leading-none">PENDING</span>
+                    <span className="text-[8px] font-medium text-amber-800 bg-amber-50 px-1 py-0.5 rounded border border-amber-200/60 leading-none shrink-0">{statsPendingClaims.length} Claims</span>
+                  </div>
+                  <span className="text-[13px] font-mono font-bold text-amber-800 leading-none mt-1 whitespace-nowrap">₹{(pendingAmount || 0).toLocaleString("en-IN")}</span>
+                </div>
+              </div>
+            </div>
+
+            {/* Card 6: Rejected */}
+            <div className="bg-white border border-slate-200/80 rounded-lg py-1.5 px-2 flex items-center shadow-2xs hover:border-slate-300 transition-colors h-11">
+              <div className="flex items-center gap-2 min-w-0 w-full">
+                <IconTile icon={XCircle} gradientFrom="from-rose-500" gradientTo="to-red-600" shadowColor="rgba(239, 68, 68, 0.25)" />
+                <div className="flex flex-col justify-center min-w-0 flex-1">
+                  <div className="flex items-center justify-between gap-1 w-full">
+                    <span className="text-[8.5px] font-medium uppercase tracking-normal text-slate-400 leading-none">REJECTED</span>
+                    <span className="text-[8px] font-medium text-rose-700 bg-rose-50 px-1 py-0.5 rounded border border-rose-200/60 leading-none shrink-0">{statsRejectedClaims.length} Claims</span>
+                  </div>
+                  <span className="text-[13px] font-mono font-bold text-rose-800 leading-none mt-1 whitespace-nowrap">₹{(rejectedAmount || 0).toLocaleString("en-IN")}</span>
+                </div>
+              </div>
+            </div>
+          </div>
         </div>
-
-        {/* Main Grid Content */}
+        {/* Main Grid Content - Full Width Claims Workspace */}
         <Row gutter={[16, 16]}>
           
-          {/* Left Area: Tab list and Limits */}
-          <Col xs={24} lg={16} className="space-y-4">
+          {/* Main Workspace Area: Tab list and Claims Table (Full Width) */}
+          <Col span={24} className="space-y-4">
 
-            {/* TAB SYSTEM: My Claims vs Team Claims */}
-            <Card size="small" className="border border-gray-200 shadow-xs">
-              <Tabs 
-                activeKey={activeTab} 
-                onChange={(key) => handleTabChange(key as any)}
-                type="card"
-                items={[
-                  {
-                    key: "my-claims",
-                    label: `My Claims (${filteredPersonalExpenses.length})`,
-                    children: (
-                      <div className="space-y-3 pt-2">
-                        {/* Filters Row */}
-                        <div className="bg-gray-50 border border-gray-200 rounded-lg p-2 flex flex-col sm:flex-row sm:items-center justify-between gap-2">
-                          <div className="flex items-center gap-2">
-                            <Text type="secondary" className="text-[10px] uppercase font-bold tracking-wider">Select Month:</Text>
-                            <input 
-                              type="month"
-                              value={selectMonth}
-                              onChange={(e) => setSelectMonth(e.target.value)}
-                              className="bg-white border border-gray-200 rounded px-2.5 py-0.5 text-xs font-semibold text-gray-850 cursor-pointer w-32 focus:outline-none"
-                            />
-                          </div>
-                          <div className="flex-1 w-full max-w-md">
-                            <Segmented
-                              block
-                              size="small"
-                              value={homeStatusFilter}
-                              onChange={(val) => setHomeStatusFilter(val as any)}
-                              options={[
-                                { label: <span className="text-[9px] xs:text-[10px] tracking-tight">All</span>, value: 'all' },
-                                { label: <span className="text-[9px] xs:text-[10px] tracking-tight">Pending</span>, value: 'pending' },
-                                { label: <span className="text-[9px] xs:text-[10px] tracking-tight">Approved</span>, value: 'approved' },
-                                { label: <span className="text-[9px] xs:text-[10px] tracking-tight">Rejected</span>, value: 'rejected' }
-                              ]}
-                              className={`font-bold text-[10px] uppercase tracking-wider ${getSegmentedClass(homeStatusFilter)}`}
-                            />
-                          </div>
+            {/* TAB SYSTEM & SLATE-BLUE FILTER WORKSPACE */}
+            <div className="bg-white border border-slate-200/90 rounded-xl p-2.5 md:p-3 shadow-2xs space-y-2.5">
+              {/* Ultra-Compact Slate-Blue Tabs Header */}
+              <div className="flex items-center gap-1.5 border-b border-slate-200/80 pb-1.5 mb-1">
+                <button
+                  onClick={() => handleTabChange("my-claims")}
+                  className={`px-3 py-1 text-xs font-bold transition-all rounded-md cursor-pointer ${
+                    activeTab === "my-claims"
+                      ? "bg-[#4A6A8A] text-white shadow-2xs"
+                      : "text-slate-600 hover:text-slate-900 hover:bg-slate-100"
+                  }`}
+                >
+                  My Claims ({filteredPersonalExpenses.length})
+                </button>
+                {isReviewerRole && (
+                  <button
+                    onClick={() => handleTabChange("team-claims")}
+                    className={`px-3 py-1 text-xs font-bold transition-all rounded-md cursor-pointer ${
+                      activeTab === "team-claims"
+                        ? "bg-[#4A6A8A] text-white shadow-2xs"
+                        : "text-slate-600 hover:text-slate-900 hover:bg-slate-100"
+                    }`}
+                  >
+                    Team Claims ({filteredTeamExpenses.length})
+                  </button>
+                )}
+              </div>
+
+              {/* Tab Content 1: My Claims */}
+              {activeTab === "my-claims" && (
+                <div className="space-y-3 pt-0.5">
+                  {/* Slate-Blue Filter Bar (#4A6A8A) */}
+                  <div className="bg-[#4A6A8A] rounded-lg p-2 px-2.5 text-white shadow-2xs">
+                    <Row gutter={[6, 6]} align="middle" className="w-full">
+                      <Col xs={12} sm={6} md={3} lg={3}>
+                        <div className="flex flex-col gap-0.5">
+                          <span className="text-[9.5px] uppercase font-bold text-slate-200/90 tracking-wider whitespace-nowrap">MONTH</span>
+                          <input 
+                            type="month"
+                            value={selectMonth}
+                            onChange={(e) => setSelectMonth(e.target.value)}
+                            className="w-full bg-white border border-slate-200 rounded px-2 py-0.5 text-[11px] font-semibold text-slate-800 shadow-2xs focus:outline-none focus:ring-1 focus:ring-blue-500 cursor-pointer h-7"
+                          />
                         </div>
+                      </Col>
 
-                        {/* Claims Listing Table */}
-                        {filteredPersonalExpenses.length === 0 && !loadingMyExpenses ? (
-                          <div className="py-12 text-center text-gray-400 text-xs">
-                            <Compass className="w-8 h-8 mx-auto mb-2 text-gray-300" />
-                            <p className="font-bold">No expense claims found for this month.</p>
-                          </div>
-                        ) : (
-                          <>
-                            {/* Desktop Table */}
-                            <div className="hidden md:block border border-gray-100 rounded-lg overflow-hidden">
-                              <Table
-                                loading={loadingMyExpenses && filteredPersonalExpenses.length === 0}
-                                dataSource={filteredPersonalExpenses}
-                                rowKey="id"
-                                pagination={{ 
-                                  pageSize: homeClaimsPageSize, 
-                                  showSizeChanger: true, 
-                                  pageSizeOptions: ["10", "25", "50", "100"],
-                                  onChange: (_, size) => setHomeClaimsPageSize(size),
-                                  onShowSizeChange: (_, size) => setHomeClaimsPageSize(size),
-                                  size: "small" 
-                                }}
-                                size="small"
-                                onRow={(record) => ({
-                                  onClick: () => handleOpenClaimDetails(record.id),
-                                  className: "cursor-pointer hover:bg-indigo-50/15"
-                                })}
-                                columns={[
-                                  {
-                                    title: "Claim ID",
-                                    dataIndex: "expense_code",
-                                    key: "expense_code",
-                                    render: (text) => <Text className="font-mono font-bold text-indigo-600">{text}</Text>,
-                                  },
-                                  {
-                                    title: "Date",
-                                    dataIndex: "itinerary",
-                                    key: "itinerary",
-                                  },
-                                  {
-                                    title: "Purpose",
-                                    dataIndex: "description",
-                                    key: "description",
-                                    ellipsis: true,
-                                    render: (text) => <Text className="font-semibold text-gray-700">{text}</Text>,
-                                  },
-                                  {
-                                    title: "Travel Mode",
-                                    dataIndex: "travel_mode",
-                                    key: "travel_mode",
-                                    render: (text) => <Tag color="blue">{text}</Tag>,
-                                  },
-                                  {
-                                    title: "Distance",
-                                    dataIndex: "total_km",
-                                    key: "total_km",
-                                    align: "right" as const,
-                                    render: (val) => val ? `${val.toFixed(1)} KM` : "—",
-                                  },
-                                  {
-                                    title: "Auto Fare",
-                                    dataIndex: "total_auto",
-                                    key: "total_auto",
-                                    align: "right" as const,
-                                    render: (val) => val ? `₹${val.toLocaleString()}` : "—",
-                                  },
-                                  {
-                                    title: "Amount",
-                                    dataIndex: "amount",
-                                    key: "amount",
-                                    align: "right" as const,
-                                    render: (val) => <Text className="font-bold text-gray-900">₹{val.toLocaleString()}</Text>,
-                                  },
-                                  {
-                                    title: "Status",
-                                    dataIndex: "status",
-                                    key: "status",
-                                    align: "right" as const,
-                                    render: (status) => (
-                                      <span className={`inline-flex items-center px-2 py-0.5 rounded border text-[9px] font-bold uppercase tracking-wider ${getStatusBadgeClass(status)}`}>
-                                        {getStatusLabel(status)}
-                                      </span>
-                                    ),
-                                  }
-                                ]}
-                              />
-                            </div>
+                      <Col xs={12} sm={6} md={3} lg={3}>
+                        <div className="flex flex-col gap-0.5">
+                          <span className="text-[9.5px] uppercase font-bold text-slate-200/90 tracking-wider whitespace-nowrap">FROM DATE</span>
+                          <input 
+                            type="date"
+                            value={fromDate}
+                            onChange={(e) => setFromDate(e.target.value)}
+                            className="w-full bg-white border border-slate-200 rounded px-2 py-0.5 text-[11px] font-semibold text-slate-800 shadow-2xs focus:outline-none focus:ring-1 focus:ring-blue-500 cursor-pointer h-7"
+                          />
+                        </div>
+                      </Col>
 
-                            {/* Mobile Card List View */}
-                            <div className="block md:hidden space-y-3 pb-6 touch-pan-y overscroll-y-contain">
-                              {paginatedPersonalExpenses.map((exp) => (
-                                <Card
-                                  key={exp.id}
-                                  onClick={() => handleOpenClaimDetails(exp.id)}
-                                  className={`border ${getStatusCardStyle(exp.status)}`}
-                                  size="small"
-                                >
-                                  <div className="flex justify-between items-center pb-2 border-b border-gray-150">
-                                    <Text strong className="font-mono text-primary-600 text-xs whitespace-nowrap">{exp.expense_code}</Text>
-                                    <span className={`inline-flex items-center px-2 py-0.5 rounded border text-[8px] font-bold uppercase tracking-wider ${getStatusBadgeClass(exp.status)}`}>
-                                      {getStatusLabel(exp.status)}
+                      <Col xs={12} sm={6} md={3} lg={3}>
+                        <div className="flex flex-col gap-0.5">
+                          <span className="text-[9.5px] uppercase font-bold text-slate-200/90 tracking-wider whitespace-nowrap">TO DATE</span>
+                          <input 
+                            type="date"
+                            value={toDate}
+                            onChange={(e) => setToDate(e.target.value)}
+                            className="w-full bg-white border border-slate-200 rounded px-2 py-0.5 text-[11px] font-semibold text-slate-800 shadow-2xs focus:outline-none focus:ring-1 focus:ring-blue-500 cursor-pointer h-7"
+                          />
+                        </div>
+                      </Col>
+
+                      <Col xs={12} sm={6} md={3} lg={3.5}>
+                        <div className="flex flex-col gap-0.5">
+                          <span className="text-[9.5px] uppercase font-bold text-slate-200/90 tracking-wider whitespace-nowrap">SEARCH CLAIM ID</span>
+                          <input 
+                            type="text"
+                            placeholder="Search RJ-08 / Claim..."
+                            value={searchClaimId}
+                            onChange={(e) => setSearchClaimId(e.target.value)}
+                            className="w-full bg-white border border-slate-200 rounded px-2 py-0.5 text-[11px] font-semibold text-slate-800 shadow-2xs focus:outline-none focus:ring-1 focus:ring-blue-500 h-7"
+                          />
+                        </div>
+                      </Col>
+
+                      <Col xs={12} sm={6} md={3} lg={8.5}>
+                        <div className="flex flex-col gap-0.5">
+                          <span className="text-[9.5px] uppercase font-bold text-slate-200/90 tracking-wider whitespace-nowrap">STATUS</span>
+                          <select 
+                            value={homeStatusFilter} 
+                            onChange={(e) => setHomeStatusFilter(e.target.value as any)}
+                            className="w-full bg-white border border-slate-200 rounded px-2 py-0.5 text-[11px] font-semibold text-slate-800 shadow-2xs focus:outline-none focus:ring-1 focus:ring-blue-500 cursor-pointer h-7"
+                          >
+                            <option value="all">All Statuses</option>
+                            <option value="pending">Pending</option>
+                            <option value="approved">Approved</option>
+                            <option value="rejected">Rejected</option>
+                          </select>
+                        </div>
+                      </Col>
+                    </Row>
+                  </div>
+
+                  {/* Claims Listing Table */}
+                  {filteredPersonalExpenses.length === 0 && !loadingMyExpenses ? (
+                    <div className="py-12 text-center text-gray-400 text-xs">
+                      <Compass className="w-8 h-8 mx-auto mb-2 text-gray-300" />
+                      <p className="font-bold">No expense claims found for this month.</p>
+                    </div>
+                  ) : (
+                    <>
+                      {/* Desktop Enterprise Data-Grid Table */}
+                      <div className="hidden md:block border border-slate-200/90 rounded-lg overflow-hidden shadow-2xs bg-white">
+                        <div className="overflow-x-auto">
+                          <Table
+                            loading={loadingMyExpenses && filteredPersonalExpenses.length === 0}
+                            dataSource={filteredPersonalExpenses}
+                            rowKey="id"
+                            rowClassName={(_, idx) => 
+                              idx % 2 === 0 
+                                ? "bg-white hover:bg-slate-100/90 transition-colors cursor-pointer border-b border-slate-150/70" 
+                                : "bg-slate-50/60 hover:bg-slate-100/90 transition-colors cursor-pointer border-b border-slate-150/70"
+                            }
+                            components={{
+                              header: {
+                                cell: (props: any) => (
+                                  <th 
+                                    {...props} 
+                                    style={{ 
+                                      backgroundColor: "#4A6A8A", 
+                                      color: "#FFFFFF", 
+                                      whiteSpace: "nowrap", 
+                                      fontSize: "9.5px", 
+                                      fontWeight: 800, 
+                                      textTransform: "uppercase", 
+                                      letterSpacing: "0.04em", 
+                                      borderBottom: "2px solid #364F6B", 
+                                      padding: "7px 6px" 
+                                    }} 
+                                  />
+                                )
+                              }
+                            }}
+                            pagination={{ 
+                              pageSize: homeClaimsPageSize, 
+                              showSizeChanger: true, 
+                              pageSizeOptions: ["25", "50", "100", "200", "500", "1000"],
+                              showTotal: (total, range) => {
+                                const totalPages = Math.ceil(total / homeClaimsPageSize) || 1;
+                                const currentPage = Math.ceil(range[1] / homeClaimsPageSize) || 1;
+                                return (
+                                  <span className="text-xs font-bold text-slate-700 mr-1.5">
+                                    Page {currentPage} of {totalPages} (Total {total} claims)
+                                  </span>
+                                );
+                              },
+                              itemRender: (_page, type, originalElement) => {
+                                if (type === "prev") {
+                                  return (
+                                    <span className="px-2 py-0.5 border border-slate-300 rounded text-xs font-bold text-slate-700 bg-white hover:bg-slate-100 shadow-2xs cursor-pointer select-none">
+                                      Prev
                                     </span>
-                                  </div>
-                                  
-                                  <Row gutter={[4, 4]} className="text-[11px] pt-2">
-                                    <Col span={8}>
-                                      <span className="text-gray-400 font-bold uppercase text-[9px] block">Date</span>
-                                      <span className="text-gray-700 font-semibold">{exp.itinerary || exp.date}</span>
-                                    </Col>
-                                    <Col span={8}>
-                                      <span className="text-gray-400 font-bold uppercase text-[9px] block">Travel Mode</span>
-                                      <Tag color="blue" style={{ margin: 0, fontSize: "9px" }} className="uppercase font-bold">{exp.travel_mode || exp.category}</Tag>
-                                    </Col>
-                                    <Col span={8}>
-                                      <span className="text-gray-400 font-bold uppercase text-[9px] block">Calls Logs</span>
-                                      <span className="text-emerald-700 font-bold">{exp.calls_assigned > 0 ? `${exp.calls_completed || 0}/${exp.calls_assigned}` : "—"}</span>
-                                    </Col>
-                                    <Col span={12} className="mt-1.5">
-                                      <span className="text-gray-400 font-bold uppercase text-[9px] block">Distance / Auto</span>
-                                      <span className="text-gray-700 font-semibold">
-                                        {exp.total_km ? `${exp.total_km.toFixed(1)} KM` : "—"}{exp.total_auto ? ` / ₹${exp.total_auto.toLocaleString()}` : ""}
-                                      </span>
-                                    </Col>
-                                    <Col span={12} className="mt-1.5">
-                                      <span className="text-gray-400 font-bold uppercase text-[9px] block">Total Amount</span>
-                                      <span className="text-primary-600 font-black">₹{exp.amount.toLocaleString()}</span>
-                                    </Col>
-                                  </Row>
-                                  
-                                  {exp.description && (
-                                    <div className="border-t border-gray-100 mt-2.5 pt-2 text-[10px]">
-                                      <span className="text-gray-400 font-bold uppercase text-[8px] block">Purpose</span>
-                                      <p className="text-gray-600 font-semibold mt-0.5 truncate">{exp.description}</p>
-                                    </div>
-                                  )}
-                                </Card>
-                              ))}
-                            </div>
+                                  );
+                                }
+                                if (type === "next") {
+                                  return (
+                                    <span className="px-2 py-0.5 border border-slate-300 rounded text-xs font-bold text-slate-700 bg-white hover:bg-slate-100 shadow-2xs cursor-pointer select-none">
+                                      Next
+                                    </span>
+                                  );
+                                }
+                                return originalElement;
+                              },
+                              onChange: (page, size) => { setPersonalPage(page); setHomeClaimsPageSize(size); },
+                              onShowSizeChange: (_, size) => setHomeClaimsPageSize(size),
+                              size: "small" 
+                            }}
+                            size="small"
+                            onRow={(record) => ({
+                              onClick: () => handleOpenClaimDetails(record.id),
+                            })}
+                            columns={getEnterpriseClaimsColumns()}
+                          />
+                        </div>
+                      </div>
 
-                            {/* Pagination Controls */}
-                            {filteredPersonalExpenses.length > 50 && (
-                              <div className="flex justify-between items-center bg-gray-50 border border-gray-200 rounded-lg p-2.5 mt-4 mb-4 shadow-2xs">
-                                <Button
-                                  disabled={personalPage === 1}
-                                  onClick={() => setPersonalPage(prev => Math.max(prev - 1, 1))}
-                                  size="small"
-                                  className="font-bold text-xs"
-                                >
-                                  Prev
-                                </Button>
-                                <span className="text-xs font-bold text-slate-600">
-                                  Page {personalPage} of {Math.ceil(filteredPersonalExpenses.length / 50)} (Total {filteredPersonalExpenses.length} claims)
+                      {/* Mobile Card List View */}
+                      <div className="block md:hidden space-y-3 pb-6 touch-pan-y overscroll-y-contain">
+                        {paginatedPersonalExpenses.map((exp) => (
+                          <Card
+                            key={exp.id}
+                            onClick={() => handleOpenClaimDetails(exp.id)}
+                            className={`border ${getStatusCardStyle(exp.status)}`}
+                            size="small"
+                          >
+                            <div className="flex justify-between items-center pb-2 border-b border-gray-150">
+                              <Text strong className="font-mono text-primary-600 text-xs whitespace-nowrap">{exp.expense_code}</Text>
+                              <span className={`inline-flex items-center px-2 py-0.5 rounded border text-[8px] font-bold uppercase tracking-wider ${getStatusBadgeClass(exp.status)}`}>
+                                {getStatusLabel(exp.status)}
+                              </span>
+                            </div>
+                            
+                            <Row gutter={[4, 4]} className="text-[11px] pt-2">
+                              <Col span={8}>
+                                <span className="text-gray-400 font-bold uppercase text-[9px] block">Date</span>
+                                <span className="text-gray-700 font-semibold">{exp.itinerary || exp.date}</span>
+                              </Col>
+                              <Col span={8}>
+                                <span className="text-gray-400 font-bold uppercase text-[9px] block">Travel Mode</span>
+                                <Tag color="blue" style={{ margin: 0, fontSize: "9px" }} className="uppercase font-bold">{exp.travel_mode || exp.category}</Tag>
+                              </Col>
+                              <Col span={8}>
+                                <span className="text-gray-400 font-bold uppercase text-[9px] block">Calls Logs</span>
+                                <span className="text-emerald-700 font-bold">{exp.calls_assigned > 0 ? `${exp.calls_completed || 0}/${exp.calls_assigned}` : "—"}</span>
+                              </Col>
+                              <Col span={12} className="mt-1.5">
+                                <span className="text-gray-400 font-bold uppercase text-[9px] block">Distance / Auto</span>
+                                <span className="text-gray-700 font-semibold">
+                                  {exp.total_km ? `${exp.total_km.toFixed(1)} KM` : "—"}{exp.total_auto ? ` / ₹${exp.total_auto.toLocaleString()}` : ""}
                                 </span>
-                                <Button
-                                  disabled={personalPage >= Math.ceil(filteredPersonalExpenses.length / 50)}
-                                  onClick={() => setPersonalPage(prev => Math.min(prev + 1, Math.ceil(filteredPersonalExpenses.length / 50)))}
-                                  size="small"
-                                  className="font-bold text-xs"
-                                >
-                                  Next
-                                </Button>
+                              </Col>
+                              <Col span={12} className="mt-1.5">
+                                <span className="text-gray-400 font-bold uppercase text-[9px] block">Total Amount</span>
+                                <span className="text-primary-600 font-black">₹{exp.amount.toLocaleString()}</span>
+                              </Col>
+                            </Row>
+                            
+                            {exp.description && (
+                              <div className="border-t border-gray-100 mt-2.5 pt-2 text-[10px]">
+                                <span className="text-gray-400 font-bold uppercase text-[8px] block">Purpose</span>
+                                <p className="text-gray-600 font-semibold mt-0.5 truncate">{exp.description}</p>
                               </div>
                             )}
-                          </>
-                        )}
+                          </Card>
+                        ))}
                       </div>
-                    )
-                  },
-                  isReviewerRole ? {
-                    key: "team-claims",
-                    label: `Team Claims (${filteredTeamExpenses.length})`,
-                    children: (
-                      <div className="space-y-3 pt-2">
-                        {/* Filters Row */}
-                        <div className="bg-gray-50 border border-gray-200 rounded-lg p-2.5 space-y-2 text-xs font-bold text-slate-700">
-                          <Row gutter={[8, 8]} align="middle">
-                            <Col xs={12} sm={6}>
-                              <div className="flex flex-col gap-1">
-                                <span className="text-[9px] uppercase font-bold text-gray-500 tracking-wider">Month</span>
-                                <select 
-                                  value={selectMonth} 
-                                  onChange={(e) => setSelectMonth(e.target.value)}
-                                  className="w-full bg-white border border-gray-300 rounded px-2 py-1 text-xs font-semibold text-gray-800 shadow-2xs focus:outline-none focus:border-primary-500 cursor-pointer"
-                                  style={{ minHeight: "34px", height: "34px", borderRadius: "6px", fontSize: "11px", lineHeight: "1.2" }}
-                                >
-                                  {uniqueMonths.map(m => (
-                                    <option key={m.value} value={m.value}>
-                                      Month: {m.label}
-                                    </option>
-                                  ))}
-                                </select>
-                              </div>
-                            </Col>
+                    </>
+                  )}
+                </div>
+              )}
 
-                            <LocationFilters
-                              showZone={isReviewerRole}
-                              isGlobalAdmin={isGlobalAdminRole}
-                              selectedZone={filterZone}
-                              onZoneChange={setFilterZone}
-                              zones={uniqueZones}
-                              selectedDistrict={filterDistrict}
-                              onDistrictChange={setFilterDistrict}
-                              districts={uniqueDistricts}
-                              selectedEngineer={filterEmployee}
-                              onEngineerChange={setFilterEmployee}
-                              engineers={uniqueEmployees}
-                              colProps={{ xs: 12, sm: 6 }}
-                            />
-                          </Row>
-
-                          <div className="border-t border-gray-200 pt-2 w-full">
-                            <Segmented
-                              block
-                              size="small"
-                              value={homeStatusFilter}
-                              onChange={(val) => setHomeStatusFilter(val as any)}
-                              options={[
-                                { label: <span className="text-[9px] xs:text-[10px] tracking-tight">All</span>, value: 'all' },
-                                { label: <span className="text-[9px] xs:text-[10px] tracking-tight">Pending</span>, value: 'pending' },
-                                { label: <span className="text-[9px] xs:text-[10px] tracking-tight">Approved</span>, value: 'approved' },
-                                { label: <span className="text-[9px] xs:text-[10px] tracking-tight">Rejected</span>, value: 'rejected' }
-                              ]}
-                              className={`font-bold text-[10px] uppercase tracking-wider ${getSegmentedClass(homeStatusFilter)}`}
-                            />
-                          </div>
+              {/* Tab Content 2: Team Claims */}
+              {activeTab === "team-claims" && isReviewerRole && (
+                <div className="space-y-3 pt-0.5">
+                  {/* Slate-Blue Filter Bar (#4A6A8A) */}
+                  <div className="bg-[#4A6A8A] rounded-lg p-2 px-2.5 text-white shadow-2xs">
+                    <Row gutter={[6, 6]} align="middle" className="w-full">
+                      <Col xs={12} sm={6} md={3} lg={2.5}>
+                        <div className="flex flex-col gap-0.5">
+                          <span className="text-[9.5px] uppercase font-bold text-slate-200/90 tracking-wider whitespace-nowrap">MONTH</span>
+                          <select 
+                            value={selectMonth} 
+                            onChange={(e) => setSelectMonth(e.target.value)}
+                            className="w-full bg-white border border-slate-200 rounded px-2 py-0.5 text-[11px] font-semibold text-slate-800 shadow-2xs focus:outline-none focus:ring-1 focus:ring-blue-500 cursor-pointer h-7"
+                          >
+                            {uniqueMonths.map(m => (
+                              <option key={m.value} value={m.value}>
+                                {m.label}
+                              </option>
+                            ))}
+                          </select>
                         </div>
+                      </Col>
+
+                      <Col xs={12} sm={6} md={3} lg={2.5}>
+                        <div className="flex flex-col gap-0.5">
+                          <span className="text-[9.5px] uppercase font-bold text-slate-200/90 tracking-wider whitespace-nowrap">FROM DATE</span>
+                          <input 
+                            type="date"
+                            value={fromDate}
+                            onChange={(e) => setFromDate(e.target.value)}
+                            className="w-full bg-white border border-slate-200 rounded px-2 py-0.5 text-[11px] font-semibold text-slate-800 shadow-2xs focus:outline-none focus:ring-1 focus:ring-blue-500 cursor-pointer h-7"
+                          />
+                        </div>
+                      </Col>
+
+                      <Col xs={12} sm={6} md={3} lg={2.5}>
+                        <div className="flex flex-col gap-0.5">
+                          <span className="text-[9.5px] uppercase font-bold text-slate-200/90 tracking-wider whitespace-nowrap">TO DATE</span>
+                          <input 
+                            type="date"
+                            value={toDate}
+                            onChange={(e) => setToDate(e.target.value)}
+                            className="w-full bg-white border border-slate-200 rounded px-2 py-0.5 text-[11px] font-semibold text-slate-800 shadow-2xs focus:outline-none focus:ring-1 focus:ring-blue-500 cursor-pointer h-7"
+                          />
+                        </div>
+                      </Col>
+
+                      <Col xs={12} sm={6} md={3} lg={3.5}>
+                        <div className="flex flex-col gap-0.5">
+                          <span className="text-[9.5px] uppercase font-bold text-slate-200/90 tracking-wider whitespace-nowrap">SEARCH CLAIM ID</span>
+                          <input 
+                            type="text"
+                            placeholder="Search RJ-08 / Claim..."
+                            value={searchClaimId}
+                            onChange={(e) => setSearchClaimId(e.target.value)}
+                            className="w-full bg-white border border-slate-200 rounded px-2 py-0.5 text-[11px] font-semibold text-slate-800 shadow-2xs focus:outline-none focus:ring-1 focus:ring-blue-500 h-7"
+                          />
+                        </div>
+                      </Col>
+
+                      <LocationFilters
+                        showZone={isReviewerRole}
+                        isGlobalAdmin={isGlobalAdminRole}
+                        selectedZone={filterZone}
+                        onZoneChange={setFilterZone}
+                        zones={uniqueZones}
+                        selectedDistrict={filterDistrict}
+                        onDistrictChange={setFilterDistrict}
+                        districts={uniqueDistricts}
+                        selectedEngineer={filterEmployee}
+                        onEngineerChange={setFilterEmployee}
+                        engineers={uniqueEmployees}
+                        colProps={{ xs: 12, sm: 6, md: 3, lg: 3 }}
+                        labelClassName="text-[9.5px] uppercase font-bold text-slate-200/90 tracking-wider whitespace-nowrap"
+                        selectStyle={{ minHeight: "28px", height: "28px" }}
+                      />
+
+                      <Col xs={12} sm={6} md={3} lg={3}>
+                        <div className="flex flex-col gap-0.5">
+                          <span className="text-[9.5px] uppercase font-bold text-slate-200/90 tracking-wider whitespace-nowrap">STATUS</span>
+                          <select 
+                            value={homeStatusFilter} 
+                            onChange={(e) => setHomeStatusFilter(e.target.value as any)}
+                            className="w-full bg-white border border-slate-200 rounded px-2 py-0.5 text-[11px] font-semibold text-slate-800 shadow-2xs focus:outline-none focus:ring-1 focus:ring-blue-500 cursor-pointer h-7"
+                          >
+                            <option value="all">All Statuses</option>
+                            <option value="pending">Pending</option>
+                            <option value="approved">Approved</option>
+                            <option value="rejected">Rejected</option>
+                          </select>
+                        </div>
+                      </Col>
+                    </Row>
+                  </div>
 
                         {/* Team Claims Listing Table */}
                         {safeTeamExpenses.length === 0 && !loadingTeamExpenses ? (
@@ -1405,92 +1755,79 @@ export default function HomePage() {
                           </div>
                         ) : (
                           <>
-                            {/* Desktop View Table */}
-                            <div className="hidden md:block border border-gray-100 rounded-lg overflow-hidden">
-                              <Table
-                                loading={loadingTeamExpenses && safeTeamExpenses.length === 0}
-                                dataSource={paginatedTeamExpenses}
-                                rowKey="id"
-                                pagination={false}
-                                size="small"
-                                onRow={(record) => ({
-                                  onClick: () => handleOpenClaimDetails(record.id),
-                                  className: "cursor-pointer hover:bg-primary-50/15"
-                                })}
-                                columns={[
-                                  {
-                                    title: "Employee",
-                                    key: "employee",
-                                    render: (_, record) => (
-                                      <div>
-                                        <Text strong className="text-gray-900 block leading-none">{record.submitter_name}</Text>
-                                        <span className="text-[8px] font-mono uppercase block mt-0.5 text-primary-600 font-bold">{record.submitter_code}</span>
-                                      </div>
-                                    )
-                                  },
-                                  {
-                                    title: "Claim ID",
-                                    dataIndex: "expense_code",
-                                    key: "expense_code",
-                                    render: (text, exp) => (
-                                      <Tooltip title={<div className="p-1"><DistrictBadge districtType={exp.districtType} hasMismatch={exp.hasMismatch} /></div>} placement="top">
-                                        <Text className="font-mono font-bold text-primary-600 cursor-pointer hover:underline">{text}</Text>
-                                      </Tooltip>
-                                    ),
-                                  },
-                                  {
-                                    title: "Date",
-                                    dataIndex: "date",
-                                    key: "date",
-                                    render: (_, record) => record.itinerary || record.date || record.created_at,
-                                  },
-                                  {
-                                    title: "Purpose",
-                                    dataIndex: "description",
-                                    key: "description",
-                                    ellipsis: true,
-                                    render: (text, record) => <Text className="font-semibold text-gray-700">{text || record.purpose}</Text>,
-                                  },
-                                  {
-                                    title: "Mode",
-                                    dataIndex: "travel_mode",
-                                    key: "travel_mode",
-                                    render: (text, record) => <Tag color="blue">{text || record.category}</Tag>,
-                                  },
-                                  {
-                                    title: "Distance",
-                                    dataIndex: "total_km",
-                                    key: "total_km",
-                                    align: "right" as const,
-                                    render: (val) => val ? `${val.toFixed(1)} KM` : "—",
-                                  },
-                                  {
-                                    title: "Auto Fare",
-                                    dataIndex: "total_auto",
-                                    key: "total_auto",
-                                    align: "right" as const,
-                                    render: (val) => val ? `₹${val.toLocaleString()}` : "—",
-                                  },
-                                  {
-                                    title: "Amount",
-                                    dataIndex: "amount",
-                                    key: "amount",
-                                    align: "right" as const,
-                                    render: (val) => <Text className="font-bold text-gray-900">₹{val.toLocaleString()}</Text>,
-                                  },
-                                  {
-                                    title: "Status",
-                                    dataIndex: "status",
-                                    key: "status",
-                                    align: "right" as const,
-                                    render: (status) => (
-                                      <span className={`inline-flex items-center px-2 py-0.5 rounded border text-[9px] font-bold uppercase tracking-wider ${getStatusBadgeClass(status)}`}>
-                                        {getStatusLabel(status)}
-                                      </span>
-                                    ),
+                            {/* Desktop View Enterprise Data-Grid Table */}
+                            <div className="hidden md:block border border-slate-200/90 rounded-lg overflow-hidden shadow-2xs bg-white">
+                              <div className="overflow-x-auto">
+                                <Table
+                                  loading={loadingTeamExpenses && safeTeamExpenses.length === 0}
+                                  dataSource={filteredTeamExpenses}
+                                  rowKey="id"
+                                  rowClassName={(_, idx) => 
+                                    idx % 2 === 0 
+                                      ? "bg-white hover:bg-slate-100/90 transition-colors cursor-pointer border-b border-slate-150/70" 
+                                      : "bg-slate-50/60 hover:bg-slate-100/90 transition-colors cursor-pointer border-b border-slate-150/70"
                                   }
-                                ]}
-                              />
+                                  components={{
+                                    header: {
+                                      cell: (props: any) => (
+                                        <th 
+                                          {...props} 
+                                          style={{ 
+                                            backgroundColor: "#4A6A8A", 
+                                            color: "#FFFFFF", 
+                                            whiteSpace: "nowrap", 
+                                            fontSize: "9.5px", 
+                                            fontWeight: 800, 
+                                            textTransform: "uppercase", 
+                                            letterSpacing: "0.04em", 
+                                            borderBottom: "2px solid #364F6B", 
+                                            padding: "7px 6px" 
+                                          }} 
+                                        />
+                                      )
+                                    }
+                                  }}
+                                  pagination={{ 
+                                    pageSize: homeTeamPageSize, 
+                                    showSizeChanger: true, 
+                                    pageSizeOptions: ["25", "50", "100", "200", "500", "1000"],
+                                    showTotal: (total, range) => {
+                                      const totalPages = Math.ceil(total / homeTeamPageSize) || 1;
+                                      const currentPage = Math.ceil(range[1] / homeTeamPageSize) || 1;
+                                      return (
+                                        <span className="text-xs font-bold text-slate-700 mr-1.5">
+                                          Page {currentPage} of {totalPages} (Total {total} claims)
+                                        </span>
+                                      );
+                                    },
+                                    itemRender: (_page, type, originalElement) => {
+                                      if (type === "prev") {
+                                        return (
+                                          <span className="px-2 py-0.5 border border-slate-300 rounded text-xs font-bold text-slate-700 bg-white hover:bg-slate-100 shadow-2xs cursor-pointer select-none">
+                                            Prev
+                                          </span>
+                                        );
+                                      }
+                                      if (type === "next") {
+                                        return (
+                                          <span className="px-2 py-0.5 border border-slate-300 rounded text-xs font-bold text-slate-700 bg-white hover:bg-slate-100 shadow-2xs cursor-pointer select-none">
+                                            Next
+                                          </span>
+                                        );
+                                      }
+                                      return originalElement;
+                                    },
+                                    onChange: (page, size) => { setTeamPage(page); setHomeTeamPageSize(size); },
+                                    onShowSizeChange: (_, size) => setHomeTeamPageSize(size),
+                                    size: "small" 
+                                  }}
+                                  size="small"
+                                  onRow={(record) => ({
+                                    onClick: () => handleOpenClaimDetails(record.id),
+                                  })}
+                                  columns={getEnterpriseClaimsColumns()}
+                                />
+                              </div>
                             </div>
 
                             {/* Mobile Card List View */}
@@ -1550,1444 +1887,32 @@ export default function HomePage() {
                                 </Card>
                               ))}
                             </div>
-
-                            {/* Pagination Controls */}
-                            {filteredTeamExpenses.length > 100 && (
-                              <div className="flex justify-between items-center bg-gray-50 border border-gray-200 rounded-lg p-2.5 mt-4 mb-2 lg:mb-0 shadow-2xs">
-                                <Button
-                                  disabled={teamPage === 1}
-                                  onClick={() => setTeamPage(prev => Math.max(prev - 1, 1))}
-                                  size="small"
-                                  className="font-bold text-xs"
-                                >
-                                  Prev
-                                </Button>
-                                <span className="text-xs font-bold text-slate-600">
-                                  Page {teamPage} of {Math.ceil(filteredTeamExpenses.length / 100)} (Total {filteredTeamExpenses.length} claims)
-                                </span>
-                                <Button
-                                  disabled={teamPage >= Math.ceil(filteredTeamExpenses.length / 100)}
-                                  onClick={() => setTeamPage(prev => Math.min(prev + 1, Math.ceil(filteredTeamExpenses.length / 100)))}
-                                  size="small"
-                                  className="font-bold text-xs"
-                                >
-                                  Next
-                                </Button>
-                              </div>
-                            )}
                           </>
                         )}
                       </div>
-                    )
-                  } : null
-                ].filter(Boolean) as any}
-              />
-            </Card>
-          </Col>
-
-          {/* Right Sidebar: Dynamic Charts & Filters */}
-          <Col xs={24} lg={8} className="space-y-4 lg:sticky lg:top-16 lg:max-h-[calc(100vh-4.5rem)] lg:overflow-y-auto no-scrollbar">
-            
-            <div className="hidden lg:block">
-  {/* Claims Breakdown Chart Card */}
-              <Card 
-                size="small" 
-                className="border border-slate-200 shadow-2xs rounded-xl"
-                title={
-                  <div className="space-y-0.5">
-                    <span className="text-primary-600 font-extrabold text-[9px] uppercase tracking-widest block">Claims Analytics</span>
-                    <Title level={5} style={{ margin: 0, fontSize: "12px", color: "#0F172A" }} className="uppercase font-bold tracking-wider flex items-center gap-1.5">
-                      <BarChart3 size={14} className="text-primary-600" />
-                      {activeTab === "my-claims" ? "Personal Mode Breakdown" : getTeamChartTitle()}
-                    </Title>
-                  </div>
-                }
-              >
-                {activeTab === "my-claims" ? (
-                  safeMyExpenses.length === 0 ? (
-                    <div className="py-8 text-center text-slate-400 text-[10px] font-bold uppercase tracking-wider">
-                      No claims to analyze
-                    </div>
-                  ) : (
-                    <>
-                      <div style={{ height: 140 }} className="relative flex justify-center items-center">
-                        <ResponsivePie
-                          data={getPersonalChartData().map((c, i) => ({ id: c.label, label: c.label, value: c.amount, color: GALLERY_COLORS[i % GALLERY_COLORS.length] }))}
-                          margin={{ top: 5, right: 5, bottom: 5, left: 5 }}
-                          innerRadius={0.72}
-                          padAngle={3}
-                          colors={{ datum: 'data.color' }}
-                          borderWidth={2}
-                          borderColor="#ffffff"
-                          enableArcLinkLabels={false}
-                          enableArcLabels={false}
-                          tooltip={({ datum }) => (
-                            <div className="bg-slate-900/95 backdrop-blur-md text-white border border-slate-800 shadow-xl rounded-xl p-3 text-xs min-w-[120px] font-sans pointer-events-none z-50">
-                              <p className="font-extrabold text-[10px] uppercase text-slate-400 tracking-wider mb-1.5">{datum.label}</p>
-                              <div className="flex items-center justify-between gap-4">
-                                <span className="flex items-center gap-1.5 text-slate-300">
-                                  <span className="w-2 h-2 rounded-full" style={{ backgroundColor: datum.color }} />
-                                  Amount:
-                                </span>
-                                <span className="font-mono font-bold text-white">₹{datum.value?.toLocaleString()}</span>
-                              </div>
-                            </div>
-                          )}
-                        />
-                        <div className="absolute flex flex-col items-center justify-center pointer-events-none" style={{ top: '50%', left: '50%', transform: 'translate(-50%, -50%)' }}>
-                          <span className="text-[7px] text-slate-400 font-bold uppercase tracking-wider">Total Claimed</span>
-                          <span className="text-[11px] font-black text-slate-800 font-mono mt-0.5">
-                            ₹{getPersonalChartData().reduce((sum, item) => sum + item.amount, 0).toLocaleString()}
-                          </span>
-                        </div>
-                      </div>
-                      <div className="flex flex-wrap justify-center gap-x-2.5 gap-y-1 mt-2">
-                        {getPersonalChartData().map((item, i) => (
-                          <div key={i} className="flex items-center gap-1 text-[8px] font-bold text-slate-500">
-                            <span className="w-1.5 h-1.5 rounded-full shrink-0" style={{ backgroundColor: GALLERY_COLORS[i % GALLERY_COLORS.length] }} />
-                            <span>{item.label}</span>
-                          </div>
-                        ))}
-                      </div>
-                    </>
-                  )
-                ) : (
-                  <div className="space-y-4">
-                    {/* Filter Metrics Box */}
-                    <div className="border border-slate-200 p-3 bg-slate-50 rounded-xl space-y-2 text-xs font-semibold text-slate-700">
-                      <h4 className="text-[9px] font-black text-primary-700 uppercase tracking-widest leading-none">Filtered Team Totals</h4>
-                      <Row gutter={8}>
-                        <Col span={12}>
-                          <div className="bg-white p-2 border border-slate-200 rounded-lg text-center space-y-0.5 shadow-2xs">
-                            <span className="text-slate-400 font-bold uppercase tracking-wider block text-[7px] leading-none">Distance</span>
-                            <span className="text-xs font-black text-primary-600 font-mono leading-none">{totalFilteredKm.toFixed(1)} KM</span>
-                          </div>
-                        </Col>
-                        <Col span={12}>
-                          <div className="bg-white p-2 border border-slate-200 rounded-lg text-center space-y-0.5 shadow-2xs">
-                            <span className="text-slate-400 font-bold uppercase tracking-wider block text-[7px] leading-none">Auto Expense</span>
-                            <span className="text-xs font-black text-primary-600 font-mono leading-none">₹{totalFilteredAuto.toLocaleString()}</span>
-                          </div>
-                        </Col>
-                      </Row>
-                      <div className="bg-white p-2 border border-slate-200 rounded-lg text-center shadow-2xs">
-                        <span className="text-slate-400 font-bold uppercase tracking-wider block text-[7px] leading-none">Aggregate Reimbursement</span>
-                        <span className="text-xs font-black text-primary-700 font-mono">₹{totalFilteredAmount.toLocaleString()}</span>
-                      </div>
-                    </div>
-
-                    {/* SVG compare chart */}
-                    {filteredTeamExpenses.length === 0 ? (
-                      <div className="py-8 text-center text-gray-400 text-[10px] font-semibold uppercase tracking-wider">
-                        No matching claims
-                      </div>
-                    ) : (
-                      <div className="space-y-2 border-t border-gray-100 pt-3">
-                        <Text type="secondary" className="text-[9px] font-extrabold uppercase block tracking-wider text-center">
-                          {filterZone !== "all" && filterDistrict !== "all"
-                            ? `${filterDistrict} Engineer Expenditures`
-                            : filterZone !== "all"
-                            ? `${filterZone} District Expenditures`
-                            : "Zone Expenditures Comparison"}
-                        </Text>
-                        {(() => {
-                          const chartData = getTeamChartData();
-                          if (chartData.length === 0) return null;
-                          return (
-                            <>
-                              <div style={{ height: 140 }} className="relative flex justify-center items-center">
-                                <ResponsivePie
-                                  data={chartData.map((c, i) => ({ id: c.name, label: c.name, value: c.amount, color: GALLERY_COLORS[i % GALLERY_COLORS.length] }))}
-                                  margin={{ top: 5, right: 5, bottom: 5, left: 5 }}
-                                  innerRadius={0.72}
-                                  padAngle={3}
-                                  colors={{ datum: 'data.color' }}
-                                  borderWidth={2}
-                                  borderColor="#ffffff"
-                                  enableArcLinkLabels={false}
-                                  enableArcLabels={false}
-                                  tooltip={({ datum }) => (
-                                    <div className="bg-slate-900/95 backdrop-blur-md text-white border border-slate-800 shadow-2xl rounded-xl p-3 text-xs min-w-[120px] font-sans pointer-events-none z-50">
-                                      <p className="font-extrabold text-[10px] uppercase text-slate-400 tracking-wider mb-1.5">{datum.label}</p>
-                                      <div className="flex items-center justify-between gap-4">
-                                        <span className="flex items-center gap-1.5 text-slate-305">
-                                          <span className="w-2 h-2 rounded-full" style={{ backgroundColor: datum.color }} />
-                                          Amount:
-                                        </span>
-                                        <span className="font-mono font-bold text-white">₹{datum.value?.toLocaleString()}</span>
-                                      </div>
-                                    </div>
-                                  )}
-                                />
-                                <div className="absolute flex flex-col items-center justify-center pointer-events-none" style={{ top: '50%', left: '50%', transform: 'translate(-50%, -50%)' }}>
-                                  <span className="text-[7px] text-gray-400 font-bold uppercase tracking-wider">
-                                    {filterZone !== "all" && filterDistrict !== "all"
-                                      ? filterDistrict.toUpperCase()
-                                      : filterZone !== "all"
-                                      ? filterZone.toUpperCase()
-                                      : "TOTAL TEAM"}
-                                  </span>
-                                  <span className="text-[11px] font-black text-slate-800 font-mono mt-0.5">
-                                    ₹{chartData.reduce((sum, item) => sum + item.amount, 0).toLocaleString()}
-                                  </span>
-                                </div>
-                              </div>
-                              <div className="flex flex-wrap justify-center gap-x-2.5 gap-y-1">
-                                {chartData.map((item, i) => (
-                                  <div key={i} className="flex items-center gap-1 text-[8px] font-bold text-slate-505">
-                                    <span className="w-1.5 h-1.5 rounded-full shrink-0" style={{ backgroundColor: GALLERY_COLORS[i % GALLERY_COLORS.length] }} />
-                                    <span>{item.name}</span>
-                                  </div>
-                                ))}
-                              </div>
-                            </>
-                          );
-                        })()}
-                      </div>
                     )}
                   </div>
-                )}
-              </Card>
-            </div>
-
-            <div className="hidden lg:block">
-  {/* Expense Calendar Tracker Section */}
-              <Card size="small" className="border border-gray-200 shadow-xs p-1">
-                <ExpenseCalendar 
-                  expenses={activeTab === "my-claims" ? safeMyExpenses : filteredTeamExpenses} 
-                  isTeamView={activeTab !== "my-claims"}
-                  selectMonth={selectMonth}
-                />
-              </Card>
-            </div>
-
-          </Col>
+                </Col>
         </Row>
       </div>
 
       {/* ================= CLAIM DETAILS POPUP MODAL ================= */}
-      <Modal
-        className="app-redesigned-modal"
-        wrapClassName="my-claims-modal-wrap"
-        title={
-          <Title level={5} style={{ margin: 0 }} className="flex items-center gap-2 text-gray-805">
-            <Layers className="w-4 h-4 text-primary-600" />
-            <span className="flex items-center gap-2">
-              Claim Details {claimDetails ? `— ${claimDetails.expense_code}` : ""}
-              {claimDetails && <DistrictBadge districtType={claimDetails.districtType} hasMismatch={claimDetails.hasMismatch} />}
-            </span>
-          </Title>
-        }
+      <ClaimDetailsModal
         open={showDetailsModal}
-        onCancel={() => { setShowDetailsModal(false); setClaimDetails(null); }}
-        width={1000}
-        destroyOnClose
-        footer={[
-          <div className="flex justify-between items-center w-full" key="claim-details-footer">
-            <div className="flex gap-2">
-              {claimDetails && (claimDetails.submitter_code === user.user_id || claimDetails.user_id === user.id) && ["draft", "submitted", "returned_to_draft"].includes(claimDetails.status?.toLowerCase()) && (
-                <>
-                  <Button
-                    type="primary"
-                    onClick={() => navigate(`/submit-expense?edit=${claimDetails.id}`)}
-                    className="bg-amber-500 hover:bg-amber-600 border-amber-655"
-                  >
-                    ✏️ Edit
-                  </Button>
-                  <Button
-                    danger
-                    onClick={() => handleDeleteClaim(claimDetails.id)}
-                  >
-                    🗑️ Delete
-                  </Button>
-                </>
-              )}
-            </div>
-            <Button onClick={() => { setShowDetailsModal(false); setClaimDetails(null); }}>
-              Close
-            </Button>
-          </div>
-        ]}
-        bodyStyle={{ 
-          maxHeight: "72vh",
-          overflowY: "auto",
-          overflowX: "hidden",
-          padding: "16px",
-          background: "#ffffff",
-          WebkitOverflowScrolling: "touch"
-        }}
-      >
-        {!claimDetails ? (
-          <Loader message="Loading claim details..." />
-        ) : (
-          <div className="space-y-4 text-xs">
-            {/* Summary Info Cards */}
-            <Row gutter={[10, 10]}>
-              <Col xs={12} sm={6}>
-                <div className="p-3 bg-slate-50/80 rounded-xl space-y-0.5">
-                  <span className="text-xs text-slate-500 font-bold uppercase block tracking-wider">Submitted By</span>
-                  <span className="font-extrabold text-slate-900 block text-xs">{claimDetails.submitter_name || user?.name}</span>
-                  <span className="text-xs text-slate-500 font-mono block font-semibold">{claimDetails.submitter_code || user?.user_id}</span>
-                </div>
-              </Col>
-              <Col xs={12} sm={6}>
-                <div className="p-3 bg-slate-50/80 rounded-xl space-y-0.5">
-                  <span className="text-xs text-slate-500 font-bold uppercase block tracking-wider">Travel Date</span>
-                  <span className="font-extrabold text-slate-900 block text-xs">{claimDetails.date}</span>
-                  <span className="text-xs text-slate-500 block font-semibold">{claimDetails.month} {claimDetails.year}</span>
-                </div>
-              </Col>
-              <Col xs={12} sm={6}>
-                <div className="p-3 bg-slate-50/80 rounded-xl space-y-0.5">
-                  <span className="text-xs text-slate-500 font-bold uppercase block tracking-wider">Submitted At</span>
-                  <span className="font-extrabold text-slate-900 block text-xs">{formatDateTime(claimDetails.created_at)}</span>
-                </div>
-              </Col>
-              <Col xs={12} sm={6}>
-                <div className="p-3 bg-slate-50/80 rounded-xl space-y-0.5">
-                  <span className="text-xs text-slate-500 font-bold uppercase block tracking-wider">Status</span>
-                  <span className={`inline-flex items-center px-2.5 py-1 rounded-full text-xs font-black uppercase tracking-wider mt-1 ${getStatusBadgeClass(claimDetails.status)}`}>
-                    {getStatusLabel(claimDetails.status)}
-                  </span>
-                </div>
-              </Col>
-            </Row>
-
-            {claimDetails.original_amount > claimDetails.amount && (
-              <Alert
-                message={<strong>Policy Deductions Applied</strong>}
-                description={`A total deduction of ₹ ${(claimDetails.original_amount - claimDetails.amount).toFixed(0)} was applied to this claim in accordance with the base location policy.`}
-                type="warning"
-                showIcon
-                className="text-xs mb-2"
-              />
-            )}
-
-            {/* Purpose & Total Banner */}
-            <div className="flex items-center justify-between p-3 bg-blue-50/50 border border-blue-200 rounded text-xs">
-              <div>
-                <span className="text-[9px] text-gray-400 font-bold uppercase block">Purpose:</span>
-                <span className="font-semibold text-gray-805 text-xs">{claimDetails.purpose || claimDetails.description || "Field visits"}</span>
-              </div>
-              <div className="text-right">
-                {claimDetails.category === "Limit Request" ? (
-                  <div className="space-y-0.5">
-                    <span className="text-[8px] text-gray-455 font-bold uppercase block">Requested Limit</span>
-                    <span className="text-xs font-bold text-gray-655 font-mono">
-                      {claimDetails.travel_mode === "KM" ? `${claimDetails.requested_value || claimDetails.total_km} KM` : `₹${(claimDetails.requested_value || claimDetails.amount).toLocaleString()}`}
-                    </span>
-                    {claimDetails.status.toLowerCase() === "approved" && (
-                      <div className="mt-1">
-                        <span className="text-[8px] text-emerald-650 font-black uppercase block">Approved Limit</span>
-                        <span className="text-xs font-black text-emerald-705 font-mono">
-                          {claimDetails.travel_mode === "KM" ? `${claimDetails.approved_value ?? (claimDetails.requested_value || claimDetails.total_km)} KM` : `₹${(claimDetails.approved_value ?? (claimDetails.requested_value || claimDetails.amount)).toLocaleString()}`}
-                        </span>
-                      </div>
-                    )}
-                  </div>
-                ) : (
-                  <>
-                    <span className="text-[8px] text-gray-455 font-bold uppercase block">Total Reimbursement</span>
-                    <span className="text-base font-black text-indigo-700 font-mono">
-                      ₹{claimDetails.amount.toLocaleString()}
-                    </span>
-                  </>
-                )}
-              </div>
-            </div>
-
-            {/* Deduction Amount Badge & Approver Remark Section */}
-            {(() => {
-              let rawDeduction = claimDetails.deduction_amount;
-              if (rawDeduction === undefined || rawDeduction === null) {
-                if (claimDetails.original_amount && claimDetails.amount && parseFloat(claimDetails.original_amount) > parseFloat(claimDetails.amount)) {
-                  rawDeduction = parseFloat(claimDetails.original_amount) - parseFloat(claimDetails.amount);
-                } else {
-                  rawDeduction = 0;
-                }
-              }
-              const deductionAmt = typeof rawDeduction === "number" ? rawDeduction : parseFloat(rawDeduction || 0);
-              const hasDeduction = deductionAmt > 0;
-
-              let remarkText = (claimDetails.approver_remark || claimDetails.remark || claimDetails.deduction_remark || "").trim();
-              if (!remarkText && claimDetails.approvals && Array.isArray(claimDetails.approvals)) {
-                const appWithComment = claimDetails.approvals.find((a: any) => (a.comments || a.remark || "").trim());
-                if (appWithComment) {
-                  remarkText = (appWithComment.comments || appWithComment.remark || "").trim();
-                }
-              }
-
-              if (!hasDeduction && !remarkText) return null;
-
-              return (
-                <div className="p-3 bg-amber-50/90 border border-amber-300 rounded-lg space-y-2 text-xs text-amber-950 shadow-2xs">
-                  {hasDeduction && (
-                    <div className="flex items-center gap-2">
-                      <span className="inline-flex items-center px-2.5 py-1 rounded font-black text-xs bg-rose-600 text-white shadow-2xs uppercase tracking-wider">
-                        Deduction: ₹{deductionAmt.toLocaleString()}
-                      </span>
-                    </div>
-                  )}
-
-                  {remarkText && (
-                    <div className="space-y-1 pt-0.5">
-                      <span className="text-[9px] font-extrabold uppercase tracking-wider text-amber-900 block opacity-85">
-                        Remark:
-                      </span>
-                      <p className="font-semibold text-xs text-slate-800 leading-relaxed bg-white p-2.5 rounded border border-amber-200 shadow-2xs">
-                        "{remarkText}"
-                      </p>
-                    </div>
-                  )}
-                </div>
-              );
-            })()}
-
-{/* Legs Table */}
-            {claimDetails.category !== "Limit Request" && claimDetails.itineraries && claimDetails.itineraries.length > 0 && (
-              <div className="border border-gray-200 rounded overflow-hidden">
-                <div className="px-3 py-2 bg-gray-50 border-b border-gray-200">
-                  <h4 className="text-[10px] font-bold uppercase text-gray-600 tracking-wider">Visit Details</h4>
-                </div>
-                
-                {/* Desktop View Table */}
-                <div className="hidden lg:block overflow-x-auto">
-                  <table className="table-lte">
-                    <thead>
-                      <tr className="border-b border-gray-200 text-[9px] uppercase font-bold tracking-wider text-gray-400 bg-gray-50">
-                        <th className="py-2 px-3 text-center w-10">#</th>
-                        <th className="py-2 px-3">Route</th>
-                        <th className="py-2 px-3">Mode</th>
-                        <th className="py-2 px-3 text-right">KM</th>
-                        <th className="py-2 px-3 text-right">TA / Fare</th>
-                        <th className="py-2 px-3 text-right">DA</th>
-                        <th className="py-2 px-3 text-right">Hotel</th>
-                        <th className="py-2 px-3 text-right">Local Purchase</th>
-                        <th className="py-2 px-3">Other / Misc</th>
-                        <th className="py-2 px-3">Metrics</th>
-                        <th className="py-2 px-3 text-right font-bold">Total</th>
-                      </tr>
-                    </thead>
-                    <tbody className="divide-y divide-gray-100">
-                      {claimDetails.itineraries.map((leg: any, idx: number) => {
-                        const travelCost = leg.amount || 0;
-                        const subCost = leg.sub_amount || 0;
-                        const daCost = leg.da || 0;
-                        const hotelCost = leg.hotel || 0;
-                        const lpCost = leg.local_purchase || 0;
-                        const otherCost = leg.oth_amount || 0;
-                        
-                        const origTA = parseFloat(leg.original_amount ?? leg.amount ?? 0);
-                        const origSub = parseFloat(leg.original_sub_amount ?? leg.sub_amount ?? 0);
-                        const origDA = parseFloat(leg.original_da ?? leg.da ?? 0);
-
-                        const taDeducted = (origTA - travelCost) + (origSub - subCost);
-                        const daDeducted = origDA - daCost;
-
-                        const legTotal = travelCost + subCost + daCost + hotelCost + lpCost + otherCost;
-                        const origTotal = origTA + origSub + origDA + hotelCost + lpCost + otherCost;
-
-                        let actDetails: any = null;
-                        try {
-                          if (leg.activity_details) {
-                            actDetails = typeof leg.activity_details === "string" ? JSON.parse(leg.activity_details) : leg.activity_details;
-                          }
-                        } catch (e) {
-                          console.error("Error parsing activity details", e);
-                        }
-
-                        const callsList = actDetails?.calls_list || [];
-                        const pmsList = actDetails?.pms_list || [];
-                        const assetsList = actDetails?.assets_list || [];
-                        const selectedActs = actDetails?.selected_activities || leg.selected_activities || [];
-                        const mobiliseCount = parseInt(actDetails?.mobilise_asset_count || leg.mobilise_asset_count || "0") || 0;
-                        const calibrationCount = parseInt(actDetails?.calibration_count || leg.calibration_count || "0") || 0;
-                        const activityOtherDesc = actDetails?.activity_other_desc || leg.activity_other_desc || "";
-
-                        const hasActivities = selectedActs.length > 0 || callsList.length > 0 || pmsList.length > 0 || assetsList.length > 0;
-
-                        return (
-                          <React.Fragment key={idx}>
-                            <tr className="hover:bg-gray-50 transition-colors">
-                              <td className="py-2.5 px-3 text-center font-bold text-gray-400">{leg.leg}</td>
-                              <td className="py-2.5 px-3">
-                                <span className="font-bold text-gray-850">{leg.from_district === leg.to_district ? leg.to_district : `${leg.from_district} → ${leg.to_district}`}</span>
-                                <span className="text-[10px] text-gray-400 block">{leg.from || "Start"} → {leg.to || "End"}</span>
-                              </td>
-                              <td className="py-2.5 px-3">
-                                <span className="text-[9px] font-bold uppercase bg-blue-50 text-blue-700 px-1.5 py-0.5 rounded border border-blue-100">{leg.mode}</span>
-                                {leg.sub_mode && <span className="text-[9px] font-bold uppercase bg-purple-50 text-purple-700 px-1.5 py-0.5 rounded border border-purple-100 ml-1">+{leg.sub_mode}</span>}
-                              </td>
-                              <td className="py-2.5 px-3 text-right font-mono font-semibold text-gray-600">{leg.km || 0} KM</td>
-                              <td className="py-2.5 px-3 text-right font-mono font-semibold text-gray-650">
-                                <div className="flex flex-col items-end">
-                                  <span>₹{(travelCost + subCost).toLocaleString()}</span>
-                                  {taDeducted > 0 && (
-                                    <span className="text-[8px] font-bold text-rose-500 line-through" title="Claimed before policy deduction">
-                                      ₹{(origTA + origSub).toLocaleString()}
-                                    </span>
-                                  )}
-                                </div>
-                              </td>
-                              <td className="py-2.5 px-3 text-right font-mono font-semibold">
-                                <div className="flex flex-col items-end">
-                                  <span className="text-gray-650">₹{daCost.toLocaleString()}</span>
-                                  {daDeducted > 0 && (
-                                    <span className="text-[8px] font-bold text-rose-500 line-through" title="Claimed before policy deduction">
-                                      ₹{origDA.toLocaleString()}
-                                    </span>
-                                  )}
-                                </div>
-                              </td>
-                              <td className="py-2.5 px-3 text-right font-mono font-semibold">₹{hotelCost.toLocaleString()}</td>
-                              <td className="py-2.5 px-3 text-right font-mono font-semibold">
-                                <span>₹{lpCost.toLocaleString()}</span>
-                                {leg.local_purchase_remark && (
-                                  <span className="text-[9px] text-amber-700 block font-normal truncate max-w-[120px]" title={leg.local_purchase_remark}>"{leg.local_purchase_remark}"</span>
-                                )}
-                              </td>
-                              <td className="py-2.5 px-3">
-                                <span className="font-mono font-bold">₹{otherCost.toLocaleString()}</span>
-                                {leg.oth_desc && <span className="text-[9px] text-gray-400 block truncate max-w-[100px]" title={leg.oth_desc}>{leg.oth_desc}</span>}
-                              </td>
-                              <td className="py-2.5 px-3 text-[10px] text-gray-500">
-                                <span>Call Attended: {leg.ws_assigned||0}</span> <span className="text-green-600">Call Closed: {leg.ws_closed||0}</span> <span>P:{leg.ws_pms||0}</span> <span>A:{leg.ws_asset||0}</span>
-                              </td>
-                              <td className="py-2.5 px-3 text-right font-bold font-mono text-gray-900">
-                                <div className="flex flex-col items-end">
-                                  <span>₹{legTotal.toLocaleString()}</span>
-                                  {origTotal > legTotal && (
-                                    <span className="text-[8px] font-bold text-rose-500 line-through" title="Claimed before policy deduction">
-                                      ₹{origTotal.toLocaleString()}
-                                    </span>
-                                  )}
-                                </div>
-                              </td>
-                            </tr>
-
-                            {hasActivities && (
-                              <tr className="bg-slate-50/50">
-                                <td colSpan={11} className="py-2.5 px-4 border-t border-gray-150">
-                                  <div className="flex flex-col gap-2.5 text-left">
-                                    <div className="flex flex-wrap gap-2">
-                                      <span className="text-[9px] font-bold text-gray-500 uppercase mr-2 mt-0.5">Activities:</span>
-                                      {selectedActs.map((act: string, actIdx: number) => (
-                                        <span key={actIdx} className="px-1.5 py-0.5 rounded bg-gray-100 border border-gray-200 text-[8px] font-bold text-gray-700 uppercase">
-                                          {act}
-                                        </span>
-                                      ))}
-                                    </div>
-
-                                    {/* Sub-table for Calls */}
-                                    {selectedActs.includes("Calls") && callsList.length > 0 && (
-                                      <div className="space-y-1.5 max-w-full">
-                                        <div className="text-[9px] font-black text-indigo-700 uppercase tracking-wider">Support Calls Logs</div>
-                                        <div className="flex flex-wrap gap-2">
-                                          {callsList.map((c: any, cIdx: number) => (
-                                            <div key={cIdx} className="bg-white border border-gray-300 p-2.5 shadow-xs text-[10px] w-full sm:w-[220px] flex flex-col justify-between hover:border-indigo-400 transition-colors">
-                                              <div className="flex justify-between items-center border-b border-gray-100 pb-1 mb-1">
-                                                <span className="font-mono font-bold text-indigo-600">{c.barcode}</span>
-                                                <span className="px-1.5 py-0.2 rounded-sm font-black text-[7px] uppercase bg-blue-50 text-blue-700 border border-blue-100">{c.status || "Attend"}</span>
-                                              </div>
-                                              <div className="space-y-0.5 flex-1">
-                                                <p className="font-bold text-gray-800 line-clamp-1">{c.asset_details?.equipment_name || "—"}</p>
-                                                <p className="text-gray-500 truncate">{c.asset_details?.hospital_name || "—"}</p>
-                                                <p className="text-gray-400 text-[8px] uppercase tracking-wider">{c.asset_details?.district_name || "—"} | {c.type || "Support"}</p>
-                                              </div>
-                                              {c.photo_url && (
-                                                <button 
-                                                  onClick={() => setLightboxImage(`${API_BASE}${c.photo_url}`)}
-                                                  className="mt-1.5 w-full bg-slate-50 hover:bg-slate-100 py-1 text-center font-bold text-slate-700 rounded border border-gray-300 cursor-pointer text-[8px] uppercase"
-                                                >
-                                                  View Photo
-                                                </button>
-                                              )}
-                                            </div>
-                                          ))}
-                                        </div>
-                                      </div>
-                                    )}
-
-                                    {/* Sub-table for PMS */}
-                                    {selectedActs.includes("PMS") && pmsList.length > 0 && (
-                                      <div className="space-y-1.5 max-w-full">
-                                        <div className="text-[9px] font-black text-amber-700 uppercase tracking-wider">PMS Service Logs</div>
-                                        <div className="flex flex-wrap gap-2">
-                                          {pmsList.map((p: any, pIdx: number) => (
-                                            <div key={pIdx} className="bg-white border border-gray-300 p-2.5 shadow-xs text-[10px] w-full sm:w-[220px] flex flex-col justify-between hover:border-amber-400 transition-colors">
-                                              <div className="flex justify-between items-center border-b border-gray-100 pb-1 mb-1">
-                                                <span className="font-mono font-bold text-amber-600">{p.barcode}</span>
-                                                <span className="px-1.5 py-0.2 rounded-sm font-black text-[7px] uppercase bg-green-50 text-green-700 border border-green-205">{p.asset_details?.inventory_status || "Active"}</span>
-                                              </div>
-                                              <div className="space-y-0.5 flex-1">
-                                                <p className="font-bold text-gray-800 line-clamp-1">{p.asset_details?.equipment_name || "—"}</p>
-                                                <p className="text-gray-500 truncate">{p.asset_details?.hospital_name || "—"}</p>
-                                                <p className="text-gray-400 text-[8px] uppercase tracking-wider">{p.asset_details?.district_name || "—"} | Freq: {p.frequency || "3M"}</p>
-                                              </div>
-                                              {p.photo_url && (
-                                                <button 
-                                                  onClick={() => setLightboxImage(`${API_BASE}${p.photo_url}`)}
-                                                  className="mt-1.5 w-full bg-slate-50 hover:bg-slate-100 py-1 text-center font-bold text-slate-700 rounded border border-gray-300 cursor-pointer text-[8px] uppercase"
-                                                >
-                                                  View Photo
-                                                </button>
-                                              )}
-                                            </div>
-                                          ))}
-                                        </div>
-                                      </div>
-                                    )}
-
-                                    {/* Sub-table for Asset Tagging */}
-                                    {selectedActs.includes("Asset Tagging") && assetsList.length > 0 && (
-                                      <div className="space-y-1.5 max-w-full">
-                                        <div className="text-[9px] font-black text-emerald-700 uppercase tracking-wider">Asset Tagging Records</div>
-                                        <div className="flex flex-wrap gap-2">
-                                          {assetsList.map((a: any, aIdx: number) => {
-                                            const qty = parseInt(a.quantity || "0") || 0;
-                                            return (
-                                              <div key={aIdx} className="bg-white border border-gray-300 p-2.5 shadow-xs text-[10px] w-full sm:w-[180px] flex items-center justify-between hover:border-emerald-400 transition-colors">
-                                                <div className="space-y-0.5">
-                                                  <p className="font-bold text-gray-800 line-clamp-1">{a.equipment_name}</p>
-                                                  <span className="text-[7px] text-gray-400 uppercase tracking-wider">Asset Tagged</span>
-                                                </div>
-                                                <div className="bg-emerald-50 text-emerald-700 font-extrabold text-xs px-2.5 py-1 rounded border border-emerald-100">
-                                                  {qty}
-                                                </div>
-                                              </div>
-                                            );
-                                          })}
-                                        </div>
-                                      </div>
-                                    )}
-
-                                    {/* Quantities for Mobilise, Calibration or Other */}
-                                    <div className="flex flex-wrap gap-4 text-[10px] text-gray-600 bg-white p-2 rounded border border-gray-100 max-w-4xl">
-                                      {selectedActs.includes("Mobilise Asset Update") && (
-                                        <div>
-                                          <span className="font-bold text-gray-400 uppercase text-[8px] block">Mobilise Qty</span>
-                                          <span className="font-bold text-indigo-700">{mobiliseCount} units</span>
-                                        </div>
-                                      )}
-                                      {selectedActs.includes("Calibration") && (
-                                        <div>
-                                          <span className="font-bold text-gray-400 uppercase text-[8px] block">Calibration Qty</span>
-                                          <span className="font-bold text-purple-700">{calibrationCount} units</span>
-                                        </div>
-                                      )}
-                                      {selectedActs.includes("Other") && activityOtherDesc && (
-                                        <div className="w-full mt-2 bg-amber-50 border-2 border-amber-300 rounded-lg p-2.5 shadow-xs">
-                                          <span className="font-black text-amber-900 uppercase text-[9px] block mb-1 tracking-wider flex items-center gap-1">
-                                            <span>✏️</span> OTHER ACTIVITY REMARK / PURPOSE:
-                                          </span>
-                                          <span className="font-black text-amber-950 text-xs leading-relaxed block bg-white/90 p-2 rounded border border-amber-200">
-                                            {activityOtherDesc}
-                                          </span>
-                                        </div>
-                                      )}
-                                    </div>
-                                  </div>
-                                </td>
-                              </tr>
-                            )}
-                          </React.Fragment>
-                        );
-                      })}
-                    </tbody>
-                  </table>
-                </div>
-
-                {/* Mobile View Card List */}
-                <div className="block lg:hidden space-y-3 p-3 bg-gray-50/30">
-                  {claimDetails.itineraries.map((leg: any, idx: number) => {
-                    const travelCost = leg.amount || 0;
-                    const subCost = leg.sub_amount || 0;
-                    const daCost = leg.da || 0;
-                    const hotelCost = leg.hotel || 0;
-                    const lpCost = leg.local_purchase || 0;
-                    const otherCost = leg.oth_amount || 0;
-
-                    const origTA = parseFloat(leg.original_amount ?? leg.amount ?? 0);
-                    const origSub = parseFloat(leg.original_sub_amount ?? leg.sub_amount ?? 0);
-                    const origDA = parseFloat(leg.original_da ?? leg.da ?? 0);
-
-                    const taDeducted = (origTA - travelCost) + (origSub - subCost);
-                    const daDeducted = origDA - daCost;
-
-                    const legTotal = travelCost + subCost + daCost + hotelCost + lpCost + otherCost;
-                    const origTotal = origTA + origSub + origDA + hotelCost + lpCost + otherCost;
-
-                    let actDetails: any = null;
-                    try {
-                      if (leg.activity_details) {
-                        actDetails = typeof leg.activity_details === "string" ? JSON.parse(leg.activity_details) : leg.activity_details;
-                      }
-                    } catch (e) {
-                      console.error("Error parsing activity details", e);
-                    }
-
-                    const callsList = actDetails?.calls_list || [];
-                    const pmsList = actDetails?.pms_list || [];
-                    const assetsList = actDetails?.assets_list || [];
-                    const selectedActs = actDetails?.selected_activities || leg.selected_activities || [];
-                    const mobiliseCount = parseInt(actDetails?.mobilise_asset_count || leg.mobilise_asset_count || "0") || 0;
-                    const calibrationCount = parseInt(actDetails?.calibration_count || leg.calibration_count || "0") || 0;
-                    const activityOtherDesc = actDetails?.activity_other_desc || leg.activity_other_desc || "";
-
-                    const hasActivities = selectedActs.length > 0 || callsList.length > 0 || pmsList.length > 0 || assetsList.length > 0;
-
-                    return (
-                      <div key={idx} className="bg-white border border-gray-200 rounded-lg p-3.5 space-y-3 shadow-xs">
-                        {/* Card Header */}
-                        <div className="flex justify-between items-center border-b border-gray-100 pb-2">
-                          <span className="font-extrabold text-blue-600 font-mono text-xs">Visit #{leg.leg}</span>
-                          <div className="flex flex-col items-end">
-                            <span className="font-extrabold text-gray-900 text-sm">₹{legTotal.toLocaleString()}</span>
-                            {origTotal > legTotal && (
-                              <span className="text-[8px] font-bold text-rose-500 line-through">₹{origTotal.toLocaleString()}</span>
-                            )}
-                          </div>
-                        </div>
-
-                        {/* Route & Mode */}
-                        <div className="space-y-1.5">
-                          <div>
-                            <span className="text-[9px] text-gray-400 font-bold uppercase block">Route</span>
-                            <span className="font-bold text-gray-800 text-[11px]">
-                              {leg.from_district === leg.to_district ? leg.to_district : `${leg.from_district} → ${leg.to_district}`}
-                            </span>
-                            <span className="text-[10px] text-gray-500 block">
-                              {leg.from || "Start"} → {leg.to || "End"}
-                            </span>
-                          </div>
-
-                          <div className="flex flex-wrap gap-1.5 pt-0.5">
-                            <span className="text-[9px] font-bold uppercase bg-blue-50 text-blue-700 px-1.5 py-0.5 rounded border border-blue-100">
-                              {leg.mode}
-                            </span>
-                            {leg.sub_mode && (
-                              <span className="text-[9px] font-bold uppercase bg-purple-50 text-purple-700 px-1.5 py-0.5 rounded border border-purple-100">
-                                +{leg.sub_mode}
-                              </span>
-                            )}
-                            {leg.km > 0 && (
-                              <span className="text-[9px] font-bold uppercase bg-gray-50 text-gray-650 px-1.5 py-0.5 rounded border border-gray-200 font-mono">
-                                {leg.km} KM
-                              </span>
-                            )}
-                          </div>
-                        </div>
-
-                        {/* Breakdown of costs */}
-                        <div className="grid grid-cols-2 gap-2.5 bg-gray-50/50 p-2.5 rounded-lg border border-gray-150 text-[10px] font-bold">
-                          <div>
-                            <span className="text-gray-400 text-[8px] uppercase block">TA / Fare</span>
-                            <span className="text-gray-700 font-mono">₹{(travelCost + subCost).toLocaleString()}</span>
-                            {taDeducted > 0 && (
-                              <span className="text-[8px] font-bold text-rose-500 line-through block">₹{(origTA + origSub).toLocaleString()}</span>
-                            )}
-                          </div>
-                          <div>
-                            <span className="text-gray-400 text-[8px] uppercase block">DA</span>
-                            <span className="text-gray-700 font-mono">₹{daCost.toLocaleString()}</span>
-                            {daDeducted > 0 && (
-                              <span className="text-[8px] font-bold text-rose-500 line-through block">₹{origDA.toLocaleString()}</span>
-                            )}
-                          </div>
-                          <div>
-                            <span className="text-gray-400 text-[8px] uppercase block">Hotel</span>
-                            <span className="text-gray-700 font-mono">₹{hotelCost.toLocaleString()}</span>
-                          </div>
-                          <div>
-                            <span className="text-gray-400 text-[8px] uppercase block">Local Purc.</span>
-                            <span className="text-gray-700 font-mono">₹{lpCost.toLocaleString()}</span>
-                          </div>
-                          {otherCost > 0 && (
-                            <div className="col-span-2 border-t border-gray-100 pt-1.5 mt-0.5">
-                              <span className="text-gray-400 text-[8px] uppercase block">Other/Misc (₹{otherCost.toLocaleString()})</span>
-                              <span className="text-gray-655 block text-[9px] font-normal italic">{leg.oth_desc || "No description"}</span>
-                            </div>
-                          )}
-                        </div>
-
-                        {/* Work Summary */}
-                        <div className="text-[10px] text-gray-500 bg-gray-50/50 px-2.5 py-1.5 rounded border border-gray-100 flex justify-between font-bold">
-                          <span>Call Attended: {leg.ws_assigned||0}</span>
-                          <span className="text-green-600">Call Closed: {leg.ws_closed||0}</span>
-                          <span>PMS: {leg.ws_pms||0}</span>
-                          <span>Asset: {leg.ws_asset||0}</span>
-                        </div>
-
-                        {/* Activities & Sub logs */}
-                        {hasActivities && (
-                          <div className="border-t border-gray-100 pt-2.5 space-y-3">
-                            <div className="flex flex-wrap gap-1.5">
-                              {selectedActs.map((act: string, actIdx: number) => (
-                                <span key={actIdx} className="px-1.5 py-0.5 rounded bg-gray-100 border border-gray-200 text-[8px] font-bold text-gray-700 uppercase">
-                                  {act}
-                                </span>
-                              ))}
-                            </div>
-
-                            {/* Calls card list */}
-                            {selectedActs.includes("Calls") && callsList.length > 0 && (
-                              <div className="space-y-2 w-full">
-                                <div className="text-[11px] font-black text-slate-700 uppercase tracking-wider text-left flex items-center gap-1.5">
-                                  <span className="w-2 h-2 rounded-full bg-indigo-600 animate-pulse"></span>
-                                  Support Calls Logs ({callsList.length})
-                                </div>
-                                {callsList.map((c: any, cIdx: number) => (
-                                  <div key={cIdx} className="bg-slate-50 border border-slate-200 rounded-lg p-2.5 space-y-2 text-xs text-left w-full">
-                                    <div className="flex justify-between items-start pb-1 border-b border-slate-200">
-                                      <div>
-                                        <span className="font-bold text-slate-900 text-xs block leading-tight">{c.asset_details?.equipment_name || "—"}</span>
-                                        <span className="text-[10px] text-slate-500 font-medium block">{c.asset_details?.hospital_name || "—"}</span>
-                                      </div>
-                                      <span className="px-2 py-0.5 rounded font-bold text-[10px] uppercase bg-indigo-600 text-white shrink-0 ml-2">
-                                        {c.status || "Attend"}
-                                      </span>
-                                    </div>
-                                    <div className="grid grid-cols-2 sm:grid-cols-4 gap-1.5">
-                                      <div className="bg-white border border-slate-200 rounded p-1.5">
-                                        <span className="text-[9px] text-slate-400 font-bold uppercase block">District</span>
-                                        <span className="text-[11px] font-bold text-slate-900 block truncate">{c.asset_details?.district_name || "—"}</span>
-                                      </div>
-                                      <div className="bg-white border border-slate-200 rounded p-1.5">
-                                        <span className="text-[9px] text-slate-400 font-bold uppercase block">Model</span>
-                                        <span className="text-[11px] font-bold text-slate-900 block truncate">{c.asset_details?.model_name || "—"}</span>
-                                      </div>
-                                      <div className="bg-white border border-slate-200 rounded p-1.5">
-                                        <span className="text-[9px] text-slate-400 font-bold uppercase block">Barcode</span>
-                                        <span className="text-[11px] font-bold text-indigo-700 font-mono block truncate">{c.barcode || "—"}</span>
-                                      </div>
-                                      <div className="bg-white border border-slate-200 rounded p-1.5">
-                                        <span className="text-[9px] text-slate-400 font-bold uppercase block">Call Type</span>
-                                        <span className={`text-[11px] font-black block truncate ${
-                                          (c.type || c.call_type || "").toLowerCase().includes("online") ? "text-purple-700" : "text-blue-700"
-                                        }`}>
-                                          {c.type || c.call_type || (c.is_online ? "Online Call" : "Support Call")}
-                                        </span>
-                                      </div>
-                                    </div>
-                                    {c.photo_url && (
-                                      <div className="pt-0.5">
-                                        <div className="relative rounded-lg overflow-hidden bg-slate-900 border border-slate-700 h-28 flex items-center justify-center p-1">
-                                          <img
-                                            src={`${API_BASE}${c.photo_url}`}
-                                            alt="Call verification"
-                                            className="w-full h-full object-contain cursor-pointer"
-                                            onClick={() => setLightboxImage(`${API_BASE}${c.photo_url}`)}
-                                          />
-                                          <button
-                                            type="button"
-                                            onClick={() => setLightboxImage(`${API_BASE}${c.photo_url}`)}
-                                            className="absolute bottom-1 right-1 bg-slate-900/80 text-white font-bold text-[9px] px-2 py-0.5 rounded cursor-pointer border border-white/20"
-                                          >
-                                            Full View
-                                          </button>
-                                        </div>
-                                      </div>
-                                    )}
-                                  </div>
-                                ))}
-                              </div>
-                            )}
-
-                            {/* PMS card list */}
-                            {selectedActs.includes("PMS") && pmsList.length > 0 && (
-                              <div className="space-y-2 w-full">
-                                <div className="text-[11px] font-black text-slate-700 uppercase tracking-wider text-left flex items-center gap-1.5">
-                                  <span className="w-2 h-2 rounded-full bg-emerald-600 animate-pulse"></span>
-                                  PMS Service Logs ({pmsList.length})
-                                </div>
-                                {pmsList.map((p: any, pIdx: number) => (
-                                  <div key={pIdx} className="bg-slate-50 border border-slate-200 rounded-lg p-2.5 space-y-2 text-xs text-left w-full">
-                                    <div className="flex justify-between items-start pb-1 border-b border-slate-200">
-                                      <div>
-                                        <span className="font-bold text-slate-900 text-xs block leading-tight">{p.asset_details?.equipment_name || "—"}</span>
-                                        <span className="text-[10px] text-slate-500 font-medium block">{p.asset_details?.hospital_name || "—"}</span>
-                                      </div>
-                                      <span className="px-2 py-0.5 rounded font-bold text-[10px] uppercase bg-emerald-600 text-white shrink-0 ml-2">
-                                        {p.frequency || "3 month"}
-                                      </span>
-                                    </div>
-                                    <div className="grid grid-cols-2 sm:grid-cols-4 gap-1.5">
-                                      <div className="bg-white border border-slate-200 rounded p-1.5">
-                                        <span className="text-[9px] text-slate-400 font-bold uppercase block">District</span>
-                                        <span className="text-[11px] font-bold text-slate-900 block truncate">{p.asset_details?.district_name || "—"}</span>
-                                      </div>
-                                      <div className="bg-white border border-slate-200 rounded p-1.5">
-                                        <span className="text-[9px] text-slate-400 font-bold uppercase block">Model</span>
-                                        <span className="text-[11px] font-bold text-slate-900 block truncate">{p.asset_details?.model_name || "—"}</span>
-                                      </div>
-                                      <div className="bg-white border border-slate-200 rounded p-1.5">
-                                        <span className="text-[9px] text-slate-400 font-bold uppercase block">Barcode</span>
-                                        <span className="text-[11px] font-bold text-slate-900 font-mono block truncate">{p.barcode || "—"}</span>
-                                      </div>
-                                      <div className="bg-white border border-slate-200 rounded p-1.5">
-                                        <span className="text-[9px] text-slate-400 font-bold uppercase block">Status</span>
-                                        <span className="text-[11px] font-bold text-slate-900 block truncate">{p.asset_details?.inventory_status || "Active"}</span>
-                                      </div>
-                                    </div>
-                                    {p.photo_url && (
-                                      <div className="pt-0.5">
-                                        <div className="relative rounded-lg overflow-hidden bg-slate-900 border border-slate-700 h-28 flex items-center justify-center p-1">
-                                          <img
-                                            src={p.photo_url ? `${API_BASE}${p.photo_url}` : undefined}
-                                            alt="PMS verification"
-                                            className="w-full h-full object-contain cursor-pointer"
-                                            onClick={() => setLightboxImage(`${API_BASE}${p.photo_url}`)}
-                                          />
-                                          <button
-                                            type="button"
-                                            onClick={() => setLightboxImage(`${API_BASE}${p.photo_url}`)}
-                                            className="absolute bottom-1 right-1 bg-slate-900/80 text-white font-bold text-[9px] px-2 py-0.5 rounded cursor-pointer border border-white/20"
-                                          >
-                                            Full View
-                                          </button>
-                                        </div>
-                                      </div>
-                                    )}
-                                  </div>
-                                ))}
-                              </div>
-                            )}
-
-                            {/* Asset Tagging list */}
-                            {selectedActs.includes("Asset Tagging") && assetsList.length > 0 && (
-                              <div className="space-y-2">
-                                <div className="text-[9px] font-bold text-emerald-700 uppercase">Asset Tagging Records</div>
-                                {assetsList.map((a: any, aIdx: number) => (
-                                  <div key={aIdx} className="bg-emerald-50/30 border border-emerald-100 rounded-lg p-2.5 flex justify-between items-center text-[10px] text-left">
-                                    <span className="font-extrabold text-gray-800">{a.equipment_name}</span>
-                                    <span className="px-2 py-0.5 rounded bg-white border border-emerald-200 text-gray-700 font-bold font-mono">Qty: {a.quantity}</span>
-                                  </div>
-                                ))}
-                              </div>
-                            )}
-
-                            {/* Quantities for Mobilise, Calibration or Other */}
-                            {(selectedActs.includes("Mobilise Asset Update") || selectedActs.includes("Calibration") || (selectedActs.includes("Other") && activityOtherDesc)) && (
-                              <div className="bg-gray-50/50 p-2.5 rounded-lg border border-gray-150 text-[10px] font-bold space-y-1">
-                                {selectedActs.includes("Mobilise Asset Update") && (
-                                  <div className="flex justify-between">
-                                    <span className="text-gray-500">Mobilise Qty:</span>
-                                    <span className="text-indigo-700 font-extrabold">{mobiliseCount} units</span>
-                                  </div>
-                                )}
-                                {selectedActs.includes("Calibration") && (
-                                  <div className="flex justify-between">
-                                    <span className="text-gray-500">Calibration Qty:</span>
-                                    <span className="text-purple-700 font-extrabold">{calibrationCount} units</span>
-                                  </div>
-                                )}
-                                {selectedActs.includes("Other") && activityOtherDesc && (
-                                  <div className="border-t border-gray-100 pt-1.5 mt-1 font-normal text-left">
-                                    <span className="text-gray-400 text-[8px] uppercase block font-bold">Other Activity Description</span>
-                                    <span className="italic text-gray-700 block">{activityOtherDesc}</span>
-                                  </div>
-                                )}
-                              </div>
-                            )}
-                          </div>
-                        )}
-                      </div>
-                    );
-                  })}
-                </div>
-              </div>
-            )}
-
-                        {/* Attachments Section with Category Purpose Labels */}
-            {/* Attachments Section with Visual Image Cards & Previews */}
-            {claimDetails.category !== "Limit Request" && (
-              <div className="space-y-2 pt-2 border-t border-gray-200">
-                <Text type="secondary" className="text-[10px] uppercase font-black tracking-wider text-indigo-700 block">
-                  📄 Expense Bill Invoices &amp; Attachments
-                </Text>
-
-                {(() => {
-                  const allAttsMap = new Map<string, { url: string; label: string }>();
-
-                  // Top-level attachments
-                  const topAtts = getAttachmentsArray(claimDetails.attachments);
-                  topAtts.forEach((u: string, i: number) => {
-                    if (u && typeof u === "string") {
-                      allAttsMap.set(u, { url: u, label: `Bill Attachment #${i + 1}` });
-                    }
-                  });
-
-                  // Leg-level candidate fields
-                  if (claimDetails.itineraries && Array.isArray(claimDetails.itineraries)) {
-                    claimDetails.itineraries.forEach((leg: any, legIdx: number) => {
-                      const legNum = leg.leg || (legIdx + 1);
-                      const candidates = [
-                        { key: "hotel_receipt", label: `Visit #${legNum} Hotel Bill` },
-                        { key: "local_purchase_bill", label: `Visit #${legNum} Local Purchase Bill` },
-                        { key: "other_bill", label: `Visit #${legNum} Other Expense Bill` },
-                        { key: "receipt_url", label: `Visit #${legNum} Travel Receipt` },
-                        { key: "bill_url", label: `Visit #${legNum} Travel Ticket` },
-                        { key: "attachment_url", label: `Visit #${legNum} Bill Attachment` },
-                        { key: "file_url", label: `Visit #${legNum} File Attachment` },
-                        { key: "bill_copy", label: `Visit #${legNum} Bill Copy` },
-                        { key: "receipt", label: `Visit #${legNum} Receipt` }
-                      ];
-
-                      candidates.forEach(c => {
-                        const val = leg[c.key];
-                        if (val && typeof val === "string" && val.trim() && !allAttsMap.has(val)) {
-                          allAttsMap.set(val, { url: val, label: c.label });
-                        }
-                      });
-
-                      if (Array.isArray(leg.attachments)) {
-                        leg.attachments.forEach((aItem: any, aIdx: number) => {
-                          const aUrl = typeof aItem === "string" ? aItem : (aItem.file_url || aItem.url);
-                          if (aUrl && !allAttsMap.has(aUrl)) {
-                            allAttsMap.set(aUrl, { url: aUrl, label: `Visit #${legNum} Attachment #${aIdx + 1}` });
-                          }
-                        });
-                      }
-                    });
-                  }
-
-                  const finalAtts = Array.from(allAttsMap.values());
-
-                  if (finalAtts.length === 0) {
-                    return <Text type="secondary" className="italic text-xs block pl-1">No bill attachments uploaded for this claim.</Text>;
-                  }
-
-                  return (
-                    <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3">
-                      {finalAtts.map((item, index) => {
-                        const fullUrl = item.url.startsWith("http") || item.url.startsWith("data:") ? item.url : `${API_BASE}${item.url}`;
-                        const isPdf = item.url.toLowerCase().split("?")[0].endsWith(".pdf") || item.url.startsWith("data:application/pdf");
-
-                        return (
-                          <div key={index} className="bg-white border border-gray-300 rounded-lg p-2.5 shadow-2xs hover:border-indigo-400 transition-all flex flex-col justify-between space-y-2">
-                            <div className="flex justify-between items-center border-b border-gray-100 pb-1.5">
-                              <span className="font-extrabold text-[10px] text-gray-800 truncate max-w-[170px]" title={item.label}>
-                                🧾 {item.label}
-                              </span>
-                              <span className="text-[8px] font-black uppercase px-1.5 py-0.5 rounded bg-blue-50 text-blue-700 border border-blue-100">
-                                {isPdf ? "PDF" : "IMAGE"}
-                              </span>
-                            </div>
-
-                            {!isPdf ? (
-                              <div className="relative rounded overflow-hidden border border-gray-200 bg-gray-50 h-36 flex items-center justify-center">
-                                <img
-                                  src={fullUrl}
-                                  alt={item.label}
-                                  className="w-full h-full object-contain cursor-pointer"
-                                  onClick={() => setLightboxImage(fullUrl)}
-                                />
-                              </div>
-                            ) : (
-                              <div className="p-3 bg-blue-50/60 border border-blue-100 rounded text-center space-y-1 my-auto">
-                                <p className="font-bold text-xs text-blue-800">📄 PDF Document</p>
-                                <p className="text-[9px] text-gray-500">Uploaded Bill Attachment</p>
-                              </div>
-                            )}
-
-                            <button
-                              type="button"
-                              onClick={() => {
-                                if (!isPdf) {
-                                  setLightboxImage(fullUrl);
-                                } else {
-                                  window.open(fullUrl, "_blank");
-                                }
-                              }}
-                              className="w-full bg-indigo-50 hover:bg-indigo-100 text-indigo-700 font-extrabold text-[9px] py-1.5 px-2 rounded border border-indigo-200 cursor-pointer uppercase flex items-center justify-center gap-1 transition-colors"
-                            >
-                              🔍 View Full {isPdf ? "PDF" : "Image"}
-                            </button>
-                          </div>
-                        );
-                      })}
-                    </div>
-                  );
-                })()}
-              </div>
-            )}
-
-            {/* Approval History Section with Decision-Based Color Coding */}
-            {claimDetails.approvals && claimDetails.approvals.length > 0 && (
-              <div className="border border-gray-200 rounded-lg overflow-hidden shadow-2xs">
-                <div className="px-3.5 py-2.5 bg-slate-50 border-b border-gray-200">
-                  <h4 className="text-[10.5px] font-bold uppercase text-gray-700 tracking-wider flex items-center gap-1.5">
-                    <ShieldCheck size={14} className="text-indigo-600" />
-                    Approval History &amp; Decision Remarks
-                  </h4>
-                </div>
-                <div className="p-3 bg-white space-y-3">
-                  {claimDetails.approvals.map((app: any, idx: number) => {
-                    const statusVal = (app.status || "").toLowerCase();
-                    const claimStatusVal = (claimDetails.status || "").toLowerCase();
-
-                    // Check if any prior approval level rejected the claim
-                    const isPriorRejected = claimDetails.approvals.some(
-                      (prevApp: any, prevIdx: number) => prevIdx < idx && (prevApp.status || "").toLowerCase() === "rejected"
-                    );
-
-                    const isApproved = statusVal === "approved";
-                    const isRejected = statusVal === "rejected";
-                    const isReturned = statusVal === "returned" || statusVal === "returned_to_draft" || statusVal === "return";
-                    const isCancelled = statusVal === "cancelled" || isPriorRejected || (claimStatusVal === "rejected" && !isApproved && !isRejected);
-
-                    const isAutoApproved = isApproved && (
-                      parseFloat(claimDetails.amount || claimDetails.approved_amount || 0) === 0 ||
-                      ((app.comments || "").toLowerCase().includes("auto-approved")) ||
-                      claimDetails.auto_approved === true
-                    );
-
-                    let containerBgClass = "bg-amber-50/70 border-amber-300 border-l-4 text-amber-950";
-                    let statusBadge = <Tag color="warning" className="font-bold text-[9px] uppercase tracking-wider">PENDING</Tag>;
-                    let remarkBgClass = "bg-amber-100/60 border-amber-300 text-amber-950";
-
-                    if (isAutoApproved) {
-                      containerBgClass = "bg-cyan-50/70 border-cyan-400 border-l-4 text-cyan-950";
-                      statusBadge = <Tag color="cyan" className="font-bold text-[9px] uppercase tracking-wider">AUTO APPROVED</Tag>;
-                      remarkBgClass = "bg-cyan-100/60 border-cyan-300 text-cyan-950";
-                    } else if (isApproved) {
-                      containerBgClass = "bg-emerald-50/70 border-emerald-400 border-l-4 text-emerald-950";
-                      statusBadge = <Tag color="success" className="font-bold text-[9px] uppercase tracking-wider">APPROVED</Tag>;
-                      remarkBgClass = "bg-emerald-100/60 border-emerald-300 text-emerald-950";
-                    } else if (isRejected) {
-                      containerBgClass = "bg-rose-50/70 border-rose-400 border-l-4 text-rose-950";
-                      statusBadge = <Tag color="error" className="font-bold text-[9px] uppercase tracking-wider">REJECTED</Tag>;
-                      remarkBgClass = "bg-rose-100/60 border-rose-300 text-rose-950";
-                    } else if (isReturned) {
-                      containerBgClass = "bg-purple-50/70 border-purple-400 border-l-4 text-purple-950";
-                      statusBadge = <Tag color="volcano" className="font-bold text-[9px] uppercase tracking-wider">RETURNED TO DRAFT</Tag>;
-                      remarkBgClass = "bg-purple-100/60 border-purple-300 text-purple-950";
-                    } else if (isCancelled) {
-                      containerBgClass = "bg-slate-100/80 border-slate-400 border-l-4 text-slate-700 opacity-80";
-                      statusBadge = <Tag color="default" className="font-bold text-[9px] uppercase tracking-wider">CANCELLED</Tag>;
-                      remarkBgClass = "bg-slate-200/70 border-slate-300 text-slate-800";
-                    } else if (statusVal === "waiting") {
-                      containerBgClass = "bg-slate-50 border-slate-300 border-l-4 text-slate-900";
-                      statusBadge = <Tag color="default" className="font-bold text-[9px] uppercase tracking-wider">WAITING</Tag>;
-                      remarkBgClass = "bg-slate-100 border-slate-200 text-slate-900";
-                    }
-
-                    const commentText = app.comments || app.remark || app.rejection_reason || (isAutoApproved ? "Auto-approved by System Policy: Total claim amount is ₹0.00 after base location policy evaluation. No manager approval required." : null);
-
-                    return (
-                      <div key={idx} className={`flex gap-3 text-xs pl-3 py-2 p-3 rounded-md shadow-2xs ${containerBgClass}`}>
-                        <div className="flex-1 space-y-1">
-                          <div className="flex items-center justify-between">
-                            <div>
-                              <span className="font-bold text-gray-900 text-xs">{app.approver_name}</span>
-                              <span className="text-[9.5px] text-gray-600 font-bold uppercase ml-1.5">({app.approver_role || `L${app.level_number} Approver`})</span>
-                            </div>
-                            <span className="text-[10px] text-gray-500 font-mono font-medium">
-                              {app.updated_at ? formatDateTime(app.updated_at) : "—"}
-                            </span>
-                          </div>
-                          <div className="flex items-center gap-2 mt-1">
-                            <span className="text-gray-500 font-bold text-[9px] uppercase tracking-wider">Decision:</span>
-                            {statusBadge}
-                          </div>
-                          {commentText && (
-                            <div className={`mt-2 p-2.5 rounded-md border ${remarkBgClass}`}>
-                              <span className="text-[9px] font-bold uppercase tracking-wider block opacity-80 mb-0.5">Decision Remark / Comment:</span>
-                              <p className="font-semibold text-xs leading-relaxed">
-                                "{commentText}"
-                              </p>
-                            </div>
-                          )}
-                        </div>
-                      </div>
-                    );
-                  })}
-                </div>
-              </div>
-            )}
-
-            {/* Complete Policy Deductions & Audit Remarks Center */}
-            {(() => {
-              const origAmt = parseFloat(claimDetails.original_amount || claimDetails.total_original_amount || 0);
-              const appAmt = parseFloat(claimDetails.amount || claimDetails.approved_amount || 0);
-              const overallDeduction = (origAmt > appAmt) ? (origAmt - appAmt) : 0;
-
-              // Check leg deductions
-              let totalLegDeductions = 0;
-              const legDeductionsList: any[] = [];
-              const editHistoryList: any[] = Array.isArray(claimDetails.edit_history)
-                ? claimDetails.edit_history
-                : Array.isArray(claimDetails.editLogs)
-                ? claimDetails.editLogs
-                : Array.isArray(claimDetails.logs)
-                ? claimDetails.logs
-                : [];
-
-              if (claimDetails.itineraries && Array.isArray(claimDetails.itineraries)) {
-                claimDetails.itineraries.forEach((leg: any) => {
-                  const travelCost = parseFloat(leg.amount || 0);
-                  const subCost = parseFloat(leg.sub_amount || 0);
-                  const daCost = parseFloat(leg.da || 0);
-                  const origTA = parseFloat(leg.original_amount ?? leg.amount ?? 0);
-                  const origSub = parseFloat(leg.original_sub_amount ?? leg.sub_amount ?? 0);
-                  const origDA = parseFloat(leg.original_da ?? leg.da ?? 0);
-
-                  const taDeduction = (origTA - travelCost) + (origSub - subCost);
-                  const daDeduction = (origDA - daCost);
-                  const legTotalDeduction = Math.max(0, taDeduction) + Math.max(0, daDeduction);
-
-                  // Extract specific reason for field from edit history
-                  const findFieldRemark = (fieldNames: string[]) => {
-                    const found = editHistoryList.find(
-                      (log: any) =>
-                        (Number(log.leg_number) === Number(leg.leg) || Number(log.leg) === Number(leg.leg)) &&
-                        fieldNames.includes(log.field_name) &&
-                        log.comment &&
-                        log.comment.trim() !== ""
-                    );
-                    return found ? found.comment.trim() : null;
-                  };
-
-                  const legAnyRemark = (() => {
-                    const found = editHistoryList.find(
-                      (log: any) =>
-                        (Number(log.leg_number) === Number(leg.leg) || Number(log.leg) === Number(leg.leg)) &&
-                        log.comment &&
-                        log.comment.trim() !== ""
-                    );
-                    return found ? found.comment.trim() : null;
-                  })();
-
-                  const taReason =
-                    findFieldRemark(["travel_amount", "distance_km", "sub_amount", "travel_mode"]) ||
-                    leg.ta_reason ||
-                    leg.travel_reason ||
-                    leg.remarks?.travel_amount ||
-                    leg.remarks?.distance_km ||
-                    leg.deduction_reason ||
-                    leg.remark ||
-                    leg.comment ||
-                    legAnyRemark;
-
-                  const daReason =
-                    findFieldRemark(["da_amount", "da"]) ||
-                    leg.da_reason ||
-                    leg.remarks?.da_amount ||
-                    leg.remarks?.da ||
-                    leg.deduction_reason ||
-                    leg.remark ||
-                    leg.comment ||
-                    legAnyRemark;
-
-                  const generalReason =
-                    legAnyRemark ||
-                    leg.deduction_reason ||
-                    leg.remark ||
-                    leg.comment;
-
-                  if (legTotalDeduction > 0 || leg.deduction_reason || leg.remark || taReason || daReason) {
-                    totalLegDeductions += legTotalDeduction;
-                    legDeductionsList.push({
-                      leg: leg.leg,
-                      from: leg.from_district,
-                      to: leg.to_district,
-                      taDeducted: Math.max(0, taDeduction),
-                      origTA: origTA + origSub,
-                      allowedTA: travelCost + subCost,
-                      daDeducted: Math.max(0, daDeduction),
-                      origDA: origDA,
-                      allowedDA: daCost,
-                      totalLegDeducted: legTotalDeduction,
-                      reason: generalReason,
-                      taReason: taReason,
-                      daReason: daReason
-                    });
-                  }
-                });
-              }
-
-              const finalDeductionAmount = Math.max(overallDeduction, totalLegDeductions);
-              const hasDeductionsOrRemarks = finalDeductionAmount > 0 || claimDetails.deduction_remark || claimDetails.rejection_reason;
-
-              if (!hasDeductionsOrRemarks) return null;
-
-              return (
-                <div className="border border-rose-300 rounded-lg overflow-hidden bg-rose-50/40 shadow-2xs">
-                  <div className="px-3.5 py-2.5 bg-rose-100/80 border-b border-rose-300 flex items-center justify-between">
-                    <h4 className="text-[10.5px] font-bold uppercase text-rose-800 tracking-wider flex items-center gap-1.5">
-                      <AlertTriangle size={14} className="text-rose-600" />
-                      Policy Deductions &amp; Audit Remarks Center
-                    </h4>
-                    {finalDeductionAmount > 0 && (
-                      <span className="text-xs font-mono font-bold text-rose-700 bg-white px-2.5 py-0.5 rounded border border-rose-300 shadow-2xs">
-                        Total Deducted: ₹{finalDeductionAmount.toLocaleString()}
-                      </span>
-                    )}
-                  </div>
-
-                  <div className="p-3 space-y-3 bg-white">
-                    {/* Claim Audit Remark / Reason */}
-                    {(claimDetails.deduction_remark || claimDetails.rejection_reason) && (
-                      <div className="p-2.5 bg-rose-50 border border-rose-200 rounded-md text-xs text-rose-950">
-                        <span className="font-bold uppercase text-[9px] text-rose-700 block mb-0.5">Audit Deduction / Rejection Reason Remark:</span>
-                        <p className="font-semibold italic leading-relaxed">
-                          "{claimDetails.deduction_remark || claimDetails.rejection_reason}"
-                        </p>
-                      </div>
-                    )}
-
-                    {/* Leg-by-Leg Deductions Detail */}
-                    {legDeductionsList.length > 0 && (
-                      <div className="space-y-2">
-                        <span className="text-[9px] font-bold uppercase tracking-wider text-gray-500 block">Leg-Wise Deduction Details:</span>
-                        {legDeductionsList.map((item: any, idx: number) => (
-                          <div key={idx} className="flex flex-col gap-1.5 border-l-4 border-rose-500 pl-3 py-2 bg-rose-50/20 p-2.5 text-xs rounded-md border border-rose-200">
-                            <div className="flex justify-between items-center font-bold text-gray-900">
-                              <span>Visit Leg #{item.leg} ({item.from === item.to ? item.to : `${item.from} → ${item.to}`})</span>
-                              {item.totalLegDeducted > 0 && (
-                                <span className="text-rose-700 font-mono font-bold bg-white px-2 py-0.5 rounded border border-rose-300 shadow-2xs">
-                                  Deducted: ₹{item.totalLegDeducted.toLocaleString()}
-                                </span>
-                              )}
-                            </div>
-
-                            <div className="space-y-1.5 mt-1 text-[11px] text-gray-700">
-                              {item.taDeducted > 0 && (
-                                <p className="bg-white p-2 rounded border border-gray-200">
-                                  <strong className="text-rose-700 font-bold">Travel Fare:</strong> Deducted ₹{item.taDeducted.toLocaleString()} (Claimed: ₹{item.origTA.toLocaleString()} | Allowed: ₹{item.allowedTA.toLocaleString()}).
-                                  <span className="italic text-gray-600 block mt-0.5">Reason: {item.taReason || "Claimed travel fare exceeded grade policy limits."}</span>
-                                </p>
-                              )}
-                              {item.daDeducted > 0 && (
-                                <p className="bg-white p-2 rounded border border-gray-200">
-                                  <strong className="text-rose-700 font-bold">Daily Allowance (DA):</strong> Deducted ₹{item.daDeducted.toLocaleString()} (Claimed: ₹{item.origDA.toLocaleString()} | Allowed: ₹{item.allowedDA.toLocaleString()}).
-                                  <span className="italic text-gray-600 block mt-0.5">Reason: {item.daReason || "DA claimed value exceeded daily policy ceiling limits."}</span>
-                                </p>
-                              )}
-                              {item.taDeducted === 0 && item.daDeducted === 0 && (item.reason || item.taReason || item.daReason) && (
-                                <p className="bg-white p-2 rounded border border-gray-200 italic text-gray-700">
-                                  <strong>Audit Note:</strong> "{item.taReason || item.daReason || item.reason}"
-                                </p>
-                              )}
-                            </div>
-                          </div>
-                        ))}
-                      </div>
-                    )}
-                  </div>
-                </div>
-              );
-            })()}
-
-            {/* Audit Log / History list */}
-            {claimDetails.logs && claimDetails.logs.length > 0 && (
-              <div className="border border-gray-200 rounded overflow-hidden">
-                <div className="px-3 py-2 bg-gray-50 border-b border-gray-200">
-                  <h4 className="text-[10px] font-bold uppercase text-gray-655 tracking-wider">Audit Log &amp; Workflow History</h4>
-                </div>
-                <div className="max-h-40 overflow-y-auto">
-                  <table className="table-lte">
-                    <thead>
-                      <tr className="border-b border-gray-200 text-[8.5px] uppercase font-bold tracking-wider text-gray-455 bg-gray-50">
-                        <th className="py-2 px-3">Field</th>
-                        <th className="py-2 px-3">Comment / Reason Remarks</th>
-                        <th className="py-2 px-3">Actor</th>
-                        <th className="py-2 px-3 text-right">Timestamp</th>
-                      </tr>
-                    </thead>
-                    <tbody className="divide-y divide-gray-100 text-xs text-gray-700">
-                      {claimDetails.logs.map((log: any, logIdx: number) => {
-                        let cleanField = (log.field_name || "").replace(/_/g, " ").toUpperCase();
-                        if (cleanField === "STATUS") cleanField = "DECISION";
-                        return (
-                          <tr key={logIdx} className="hover:bg-gray-50 bg-white">
-                            <td className="py-2 px-3 font-semibold text-gray-655">{cleanField}</td>
-                            <td className="py-2 px-3 italic text-gray-600 max-w-[200px] break-words" title={log.comment}>{log.comment || "—"}</td>
-                            <td className="py-2 px-3">
-                              <span className="font-semibold block">{log.editor_name}</span>
-                              <span className="text-[8px] text-amber-600 font-bold block">{log.editor_role}</span>
-                            </td>
-                            <td className="py-2 px-3 text-right text-gray-500 font-mono text-[9px]">{formatDateTime(log.created_at)}</td>
-                          </tr>
-                        );
-                      })}
-                    </tbody>
-                  </table>
-                </div>
-              </div>
-            )}
-
-            {/* Approver Decision Center */}
-            {pendingApprovalStep && (
-              <div className="p-3 bg-amber-50 border border-amber-250 rounded space-y-3">
-                <div className="font-bold text-amber-805 uppercase tracking-wide flex items-center gap-1.5 text-xs">
-                  <ShieldCheck className="w-4 h-4 text-amber-605 animate-pulse" />
-                  <span>Approver Decision Center</span>
-                </div>
-                <div className="space-y-1 text-xs">
-                  <label className="text-[9px] font-bold text-gray-550 uppercase block">
-                    Remarks / Decision Comments <span className="text-red-500 font-bold">* Required for Rejection</span>
-                  </label>
-                  <TextArea
-                    value={comments}
-                    onChange={(e: any) => setComments(e.target.value)}
-                    placeholder="Enter approval remarks or rejection comments reason..."
-                    rows={2}
-                    className="text-xs"
-                  />
-                </div>
-                <div className="flex gap-2">
-                  <Button
-                    type="primary"
-                    disabled={actionLoading}
-                    onClick={handleApprove}
-                    className="flex-1 bg-emerald-600 hover:bg-emerald-700 border-emerald-600 text-white font-bold"
-                  >
-                    Approve Claim
-                  </Button>
-                  <Button
-                    danger
-                    disabled={actionLoading}
-                    onClick={handleReject}
-                    className="flex-1 bg-rose-600 hover:bg-rose-700 border-rose-600 text-white font-bold"
-                  >
-                    Reject Claim
-                  </Button>
-                </div>
-              </div>
-            )}
-            {showModalScrollTop && (
-              <button
-                type="button"
-                onClick={() => {
-                  const body = document.querySelector(".my-claims-modal-wrap .ant-modal-body");
-                  if (body) body.scrollTo({ top: 0, behavior: "smooth" });
-                }}
-                style={{
-                  position: "fixed",
-                  right: "24px",
-                  bottom: "76px",
-                  width: "36px",
-                  height: "36px",
-                  borderRadius: "50%",
-                  backgroundColor: "#4f46e5",
-                  color: "#ffffff",
-                  border: "none",
-                  boxShadow: "0 4px 12px rgba(79, 70, 229, 0.4)",
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "center",
-                  cursor: "pointer",
-                  zIndex: 9999
-                }}
-                className="hover:scale-110 active:scale-95 transition-all"
-              >
-                <ChevronUp className="w-5 h-5 text-white" />
-              </button>
-            )}
-          </div>
-        )}
-      </Modal>
+        claimDetails={claimDetails}
+        user={user}
+        comments={comments}
+        setComments={setComments}
+        actionLoading={actionLoading}
+        handleApprove={handleApprove}
+        handleReject={handleReject}
+        handleDeleteClaim={handleDeleteClaim}
+        onClose={() => { setShowDetailsModal(false); setClaimDetails(null); }}
+        navigate={navigate}
+        setLightboxImage={setLightboxImage}
+        getStatusBadgeClass={getStatusBadgeClass}
+        getStatusLabel={getStatusLabel}
+      />
 
       {/* ================= STATS CLAIMS POPUP MODAL ================= */}
       <Modal

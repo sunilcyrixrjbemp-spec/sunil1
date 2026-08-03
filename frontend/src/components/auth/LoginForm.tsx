@@ -8,16 +8,27 @@ import { nativeConfig } from "../../utils/persistence";
 import { Filesystem, Directory, Encoding } from '@capacitor/filesystem';
 import { Preferences } from '@capacitor/preferences';
 
-
+// ─── Props ────────────────────────────────────────────────────────────────────
 interface LoginFormProps {
   onForgotPassword: () => void;
   onUnlockAccount: () => void;
 }
 
-const PremiumSpinner = () => (
-  <span className="animate-spin rounded-full h-3.5 w-3.5 border-2 border-slate-200 border-t-blue-600 inline-block mr-1.5 shrink-0"></span>
+// ─── Spinner ─────────────────────────────────────────────────────────────────
+const Spinner = () => (
+  <span
+    className="inline-block shrink-0"
+    style={{
+      width: 14, height: 14,
+      border: "2px solid rgba(255,255,255,0.30)",
+      borderTopColor: "#ffffff",
+      borderRadius: "50%",
+      animation: "spin 0.6s linear infinite",
+    }}
+  />
 );
 
+// ─── Component ────────────────────────────────────────────────────────────────
 export default function LoginForm({ onForgotPassword, onUnlockAccount }: LoginFormProps) {
   const navigate = useNavigate();
   const [userId, setUserId] = useState("");
@@ -41,11 +52,11 @@ export default function LoginForm({ onForgotPassword, onUnlockAccount }: LoginFo
     writeTestResult: ""
   });
 
+  // ── Diagnostics — UNTOUCHED logic ─────────────────────────────────────────
   const runDiagnostics = async () => {
     try {
       const lsToken = localStorage.getItem("access_token");
       const lsUser = localStorage.getItem("user");
-      
       let pToken = "N/A";
       let pUser = "N/A";
       try {
@@ -56,31 +67,20 @@ export default function LoginForm({ onForgotPassword, onUnlockAccount }: LoginFo
       } catch (e: any) {
         pToken = `Error: ${e.message}`;
       }
-
       let fdToken = "N/A";
       try {
-        const result = await Filesystem.readFile({
-          path: "CyrixField/session.json",
-          directory: Directory.Data,
-          encoding: Encoding.UTF8
-        });
+        const result = await Filesystem.readFile({ path: "CyrixField/session.json", directory: Directory.Data, encoding: Encoding.UTF8 });
         fdToken = result?.data ? "Exists (Read success)" : "Empty";
       } catch (e: any) {
         fdToken = `Error: ${e.message || 'File not found'}`;
       }
-
       let feToken = "N/A";
       try {
-        const result = await Filesystem.readFile({
-          path: "CyrixField/session.json",
-          directory: Directory.External,
-          encoding: Encoding.UTF8
-        });
+        const result = await Filesystem.readFile({ path: "CyrixField/session.json", directory: Directory.External, encoding: Encoding.UTF8 });
         feToken = result?.data ? "Exists (Read success)" : "Empty";
       } catch (e: any) {
         feToken = `Error: ${e.message || 'File not found'}`;
       }
-
       setDiagData((prev: any) => ({
         ...prev,
         localStorageToken: lsToken || "null",
@@ -98,40 +98,16 @@ export default function LoginForm({ onForgotPassword, onUnlockAccount }: LoginFo
   const testWrite = async () => {
     try {
       setDiagData((prev: any) => ({ ...prev, writeTestResult: "Writing..." }));
-      
-      // Test localStorage
       localStorage.setItem("test_write", "success");
-      
-      // Test Preferences
       await Preferences.set({ key: "test_write", value: "success" });
-      
-      // Test Filesystem Data
-      await Filesystem.writeFile({
-        path: "CyrixField/test_write.txt",
-        data: "success",
-        directory: Directory.Data,
-        encoding: Encoding.UTF8,
-        recursive: true
-      });
-
-      // Test Filesystem External
+      await Filesystem.writeFile({ path: "CyrixField/test_write.txt", data: "success", directory: Directory.Data, encoding: Encoding.UTF8, recursive: true });
       let extStatus = "success";
       try {
-        await Filesystem.writeFile({
-          path: "CyrixField/test_write.txt",
-          data: "success",
-          directory: Directory.External,
-          encoding: Encoding.UTF8,
-          recursive: true
-        });
+        await Filesystem.writeFile({ path: "CyrixField/test_write.txt", data: "success", directory: Directory.External, encoding: Encoding.UTF8, recursive: true });
       } catch (e: any) {
         extStatus = `Failed: ${e.message}`;
       }
-
-      setDiagData((prev: any) => ({ 
-        ...prev, 
-        writeTestResult: `localStorage: OK, Preferences: OK, DataFS: OK, ExternalFS: ${extStatus}` 
-      }));
+      setDiagData((prev: any) => ({ ...prev, writeTestResult: `localStorage: OK, Preferences: OK, DataFS: OK, ExternalFS: ${extStatus}` }));
       await runDiagnostics();
     } catch (e: any) {
       setDiagData((prev: any) => ({ ...prev, writeTestResult: `Error: ${e.message}` }));
@@ -140,28 +116,21 @@ export default function LoginForm({ onForgotPassword, onUnlockAccount }: LoginFo
 
   const { biometricAvailable, biometryType, biometricEnabled, loginWithBiometric, enableBiometricLogin } = useBiometricLogin();
 
-
-
+  // ── Submit — UNTOUCHED logic ──────────────────────────────────────────────
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (isSubmitting.current) return;
     isSubmitting.current = true;
     setStatusMessage(null);
-    
     if (!userId.trim() || !password) {
       setStatusMessage({ type: "error", text: "Please fill in all fields." });
       isSubmitting.current = false;
       return;
     }
-
     setLoading(true);
     setLoadingMessage("Authenticating...");
-
     try {
-      // Force: true is always passed so other sessions are terminated automatically
       await authService.login({ user_id: userId, password, force: true });
-      
-      // If running as native app, check if biometric login is available but not enabled yet
       if (isNativeApp()) {
         try {
           const available = await biometricAuth.isAvailable();
@@ -174,7 +143,6 @@ export default function LoginForm({ onForgotPassword, onUnlockAccount }: LoginFo
           }
         } catch (_) {}
       }
-      
       navigate("/home");
     } catch (err: any) {
       if (err.response?.status === 409 && err.response?.data?.detail === "ALREADY_LOGGED_IN") {
@@ -196,6 +164,7 @@ export default function LoginForm({ onForgotPassword, onUnlockAccount }: LoginFo
     }
   };
 
+  // ── Force login — UNTOUCHED logic ─────────────────────────────────────────
   const handleForceLogin = async () => {
     if (isSubmitting.current) return;
     isSubmitting.current = true;
@@ -204,8 +173,6 @@ export default function LoginForm({ onForgotPassword, onUnlockAccount }: LoginFo
     setStatusMessage(null);
     try {
       await authService.login({ user_id: userId, password, force: true });
-      
-      // Check biometric for force login as well
       if (isNativeApp()) {
         try {
           const available = await biometricAuth.isAvailable();
@@ -218,7 +185,6 @@ export default function LoginForm({ onForgotPassword, onUnlockAccount }: LoginFo
           }
         } catch (_) {}
       }
-      
       navigate("/home");
     } catch (err: any) {
       let errorMsg = "Invalid User ID or Password";
@@ -235,115 +201,156 @@ export default function LoginForm({ onForgotPassword, onUnlockAccount }: LoginFo
   };
 
   React.useEffect(() => {
-    if (showDiagnostics) {
-      runDiagnostics();
-    }
+    if (showDiagnostics) runDiagnostics();
   }, [showDiagnostics]);
 
+  // ─────────────────────────────────────────────────────────────────────────
   return (
-    <div className="p-6 sm:p-8 space-y-6">
-      <div className="text-center py-2 border-b border-slate-100">
-        <img 
-          src="/brand.png" 
-          alt="Logo" 
-          className="h-14 w-auto mx-auto object-contain cursor-pointer active:scale-95 transition-transform bg-white rounded-lg p-1.5 shadow-sm" 
+    <div style={{ padding: "40px 36px 32px" }}>
+
+      {/* ── Logo + Title ────────────────────────────────────────────────── */}
+      <div className="text-center mb-8">
+        <img
+          src="/brand.png"
+          alt="Cyrix Field Ops"
+          className="mx-auto object-contain cursor-pointer"
+          style={{ height: 52, width: "auto", marginBottom: 16 }}
           onClick={() => {
             const clicks = logoClicks + 1;
             setLogoClicks(clicks);
-            if (clicks >= 5) {
-              setShowDiagnostics(true);
-              setLogoClicks(0);
-            }
+            if (clicks >= 5) { setShowDiagnostics(true); setLogoClicks(0); }
           }}
         />
-        <p className="text-slate-500 text-[10px] mt-2 font-black uppercase tracking-widest">Account Sign In</p>
+        <h1
+          className="m-0"
+          style={{
+            fontFamily: "'Inter Tight', 'Inter', sans-serif",
+            fontSize: 22, fontWeight: 700, letterSpacing: "-0.02em",
+            color: "var(--ink-900)",
+          }}
+        >
+          Welcome back
+        </h1>
+        <p className="mt-1 m-0" style={{ fontSize: 13, color: "var(--ink-500)" }}>
+          Sign in to your Cyrix Field Ops account
+        </p>
       </div>
 
+      {/* ── Status Message ──────────────────────────────────────────────── */}
       {statusMessage && (
-        <div className={`p-3.5 border rounded-xl text-xs font-bold leading-relaxed ${
-          statusMessage.type === "success" 
-            ? "bg-emerald-50 border-emerald-200 text-emerald-700" 
-            : "bg-rose-50 border-rose-200 text-rose-700"
-        }`}>
-          {statusMessage.text}
+        <div
+          className="mb-5 flex items-start gap-2.5 rounded-lg"
+          style={{
+            padding: "11px 14px",
+            backgroundColor: statusMessage.type === "error" ? "var(--rejected-bg)" : "var(--approved-bg)",
+            border: `1px solid ${statusMessage.type === "error" ? "var(--rejected-border)" : "var(--approved-border)"}`,
+            borderLeft: `3px solid ${statusMessage.type === "error" ? "var(--rejected-text)" : "var(--approved-text)"}`,
+          }}
+        >
+          <AlertTriangle
+            style={{
+              width: 14, height: 14, marginTop: 1, flexShrink: 0,
+              color: statusMessage.type === "error" ? "var(--rejected-text)" : "var(--approved-text)",
+            }}
+          />
+          <span style={{ fontSize: 13, color: statusMessage.type === "error" ? "var(--rejected-text)" : "var(--approved-text)", fontWeight: 500, lineHeight: "18px" }}>
+            {statusMessage.text}
+          </span>
         </div>
       )}
 
-      <form onSubmit={handleSubmit} className="space-y-4">
+      {/* ── Form ────────────────────────────────────────────────────────── */}
+      <form onSubmit={handleSubmit} style={{ display: "flex", flexDirection: "column", gap: 16 }}>
+
+        {/* User ID Field */}
         <div>
-          <label htmlFor="userId" className="text-slate-500 font-extrabold uppercase tracking-widest text-[9px] mb-1.5 block">User ID</label>
+          <label
+            htmlFor="userId"
+            style={{
+              display: "block", marginBottom: 6,
+              fontSize: 11, fontWeight: 600, letterSpacing: "0.05em", textTransform: "uppercase",
+              color: "var(--ink-500)",
+            }}
+          >
+            User ID
+          </label>
           <div className="relative">
-            <span className="absolute inset-y-0 left-0 pl-3.5 flex items-center text-slate-400">
-              <User size={14} />
+            <span
+              className="absolute inset-y-0 left-0 flex items-center pointer-events-none"
+              style={{ paddingLeft: 12, color: "var(--ink-300)" }}
+            >
+              <User size={15} />
             </span>
             <input
               id="userId"
               type="text"
-              placeholder="Enter User ID (e.g. E1704)"
+              placeholder="e.g. E1704"
               value={userId}
-              onChange={(e) => {
-                setUserId(e.target.value);
-                setStatusMessage(null);
-              }}
+              onChange={(e) => { setUserId(e.target.value); setStatusMessage(null); }}
               disabled={loading}
-              className="input-lte-icon w-full bg-white border border-slate-200 rounded-xl py-3 text-xs text-slate-800 placeholder-slate-400 focus:outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20 transition-all font-semibold shadow-inner"
-              style={{ paddingLeft: '2.75rem', paddingRight: '0.875rem' }}
               required
+              className="input-lte"
+              style={{ paddingLeft: 40 }}
             />
           </div>
         </div>
 
+        {/* Password Field */}
         <div>
-          <label htmlFor="password" className="text-slate-500 font-extrabold uppercase tracking-widest text-[9px] mb-1.5 block">Password</label>
+          <label
+            htmlFor="password"
+            style={{
+              display: "block", marginBottom: 6,
+              fontSize: 11, fontWeight: 600, letterSpacing: "0.05em", textTransform: "uppercase",
+              color: "var(--ink-500)",
+            }}
+          >
+            Password
+          </label>
           <div className="relative">
-            <span className="absolute inset-y-0 left-0 pl-3.5 flex items-center text-slate-400">
-              <Lock size={14} />
+            <span
+              className="absolute inset-y-0 left-0 flex items-center pointer-events-none"
+              style={{ paddingLeft: 12, color: "var(--ink-300)" }}
+            >
+              <Lock size={15} />
             </span>
             <input
               id="password"
               type={showPassword ? "text" : "password"}
-              placeholder="Enter Password"
+              placeholder="Enter your password"
               value={password}
-              onChange={(e) => {
-                setPassword(e.target.value);
-                setStatusMessage(null);
-              }}
+              onChange={(e) => { setPassword(e.target.value); setStatusMessage(null); }}
               disabled={loading}
-              className="w-full bg-white border border-slate-350 rounded-xl pr-10 py-3 text-xs text-slate-800 placeholder-slate-400 focus:outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20 transition-all font-semibold shadow-inner"
-              style={{ paddingLeft: '2.75rem' }}
               required
+              className="input-lte"
+              style={{ paddingLeft: 40, paddingRight: 40 }}
             />
             <button
               type="button"
               onClick={() => setShowPassword(!showPassword)}
-              className="absolute inset-y-0 right-0 pr-3.5 flex items-center text-slate-400 hover:text-slate-650 transition-colors border-0 bg-transparent cursor-pointer"
+              className="absolute inset-y-0 right-0 flex items-center border-0 bg-transparent cursor-pointer"
+              style={{ paddingRight: 12, color: "var(--ink-300)" }}
             >
-              {showPassword ? <EyeOff size={14} /> : <Eye size={14} />}
+              {showPassword ? <EyeOff size={15} /> : <Eye size={15} />}
             </button>
           </div>
         </div>
 
-        <div className="pt-2">
-          <button
-            type="submit"
-            disabled={loading}
-            className="w-full h-11 bg-indigo-600 hover:bg-indigo-700 text-white font-extrabold uppercase tracking-wider rounded-xl transition-all shadow-md shadow-indigo-600/10 hover:shadow-indigo-600/25 flex items-center justify-center gap-2 border-0 cursor-pointer text-xs"
-          >
-            {loading ? (
-              <>
-                <PremiumSpinner />
-                <span>{loadingMessage}</span>
-              </>
-            ) : (
-              <>
-                <span>Sign In</span>
-                <ArrowRight size={14} />
-              </>
-            )}
-          </button>
-        </div>
+        {/* Submit */}
+        <button
+          type="submit"
+          disabled={loading}
+          className="btn-lte-primary w-full"
+          style={{ height: 44, fontSize: 14, fontWeight: 600, gap: 8, marginTop: 4 }}
+        >
+          {loading ? (
+            <><Spinner /><span>{loadingMessage}</span></>
+          ) : (
+            <><span>Sign In</span><ArrowRight size={15} /></>
+          )}
+        </button>
 
-        {/* Biometric Login Button — only shown in native app when enabled */}
+        {/* Biometric Login — native app only */}
         {biometricAvailable && biometricEnabled && (
           <button
             type="button"
@@ -354,170 +361,268 @@ export default function LoginForm({ onForgotPassword, onUnlockAccount }: LoginFo
               if (success) navigate("/home");
             }}
             disabled={loading}
-            className="w-full h-11 flex items-center justify-center gap-2 border border-slate-250 bg-slate-50 hover:bg-slate-100 text-slate-700 rounded-xl font-extrabold uppercase tracking-wider text-[10px] transition-all cursor-pointer"
+            className="w-full flex items-center justify-center gap-2 border-0 cursor-pointer transition-all rounded-lg"
+            style={{
+              height: 44, fontSize: 13, fontWeight: 600,
+              backgroundColor: "var(--surface-sunken)",
+              border: "1px solid var(--line)",
+              color: "var(--ink-700)",
+            }}
           >
-            <Fingerprint size={16} className="text-indigo-600" />
+            <Fingerprint size={16} style={{ color: "var(--accent-600)" }} />
             <span>{biometryType === 'face' ? 'Login with Face ID' : 'Login with Fingerprint'}</span>
           </button>
         )}
       </form>
 
-      <div className="flex items-center justify-between text-[11px] pt-4 border-t border-slate-100 text-slate-500 font-bold uppercase tracking-wider">
+      {/* ── Footer links ────────────────────────────────────────────────── */}
+      <div
+        className="flex items-center justify-between mt-6 pt-5"
+        style={{ borderTop: "1px solid var(--line)" }}
+      >
         <button
           onClick={onForgotPassword}
-          className="hover:text-indigo-600 text-slate-500 transition-all border-0 bg-transparent cursor-pointer"
+          className="border-0 bg-transparent cursor-pointer"
+          style={{ fontSize: 12, fontWeight: 600, color: "var(--ink-500)" }}
+          onMouseEnter={e => (e.currentTarget.style.color = "var(--accent-600)")}
+          onMouseLeave={e => (e.currentTarget.style.color = "var(--ink-500)")}
         >
           Forgot Password?
         </button>
         <button
           onClick={onUnlockAccount}
-          className="hover:text-indigo-600 text-slate-500 transition-all border-0 bg-transparent cursor-pointer"
+          className="border-0 bg-transparent cursor-pointer"
+          style={{ fontSize: 12, fontWeight: 600, color: "var(--ink-500)" }}
+          onMouseEnter={e => (e.currentTarget.style.color = "var(--accent-600)")}
+          onMouseLeave={e => (e.currentTarget.style.color = "var(--ink-500)")}
         >
           Unlock Account
         </button>
       </div>
 
-      {/* Already Logged In Overlay Modal */}
+      {/* ── Attribution ─────────────────────────────────────────────────── */}
+      <p className="text-center mt-4 m-0" style={{ fontSize: 11, color: "var(--ink-300)" }}>
+        Designed by{" "}
+        <a
+          href="https://sunilbishnoi.co.in/"
+          target="_blank"
+          rel="noopener noreferrer"
+          style={{ color: "var(--accent-600)", fontWeight: 600, textDecoration: "none" }}
+        >
+          Sunil Bishnoi
+        </a>
+      </p>
+
+      {/* ══════════════════════════════════════════════════════════════════
+          MODALS — all logic UNTOUCHED, only visual rebuilt
+      ══════════════════════════════════════════════════════════════════ */}
+
+      {/* Already Logged In Modal */}
       {showAlreadyLoggedInModal && (
-        <div className="fixed inset-0 bg-black/60 backdrop-blur-xs flex items-center justify-center p-4 z-50 animate-fadeIn text-slate-800">
-          <div className="bg-white border border-slate-200 rounded-2xl shadow-2xl w-full max-w-sm overflow-hidden animate-scaleIn">
-            
-            {/* Modal Header */}
-            <div className="px-4 py-3 bg-amber-50 border-b border-amber-100 flex items-center justify-between">
-              <h3 className="text-[10px] font-black uppercase tracking-widest text-amber-600 flex items-center gap-2">
-                <AlertTriangle className="w-4 h-4 text-amber-650" />
-                Active Session Detected
-              </h3>
-              <button 
+        <div
+          className="fixed inset-0 flex items-center justify-center p-4 z-50 animate-fade-in"
+          style={{ backgroundColor: "rgba(18,21,26,0.60)", backdropFilter: "blur(4px)" }}
+        >
+          <div
+            className="w-full animate-scale-up"
+            style={{
+              maxWidth: 380, backgroundColor: "var(--surface)",
+              border: "1px solid var(--line)", borderRadius: 10, overflow: "hidden",
+              boxShadow: "0 8px 24px -4px rgba(18,21,26,0.14)",
+            }}
+          >
+            {/* Modal header */}
+            <div
+              className="flex items-center justify-between"
+              style={{
+                padding: "12px 16px",
+                backgroundColor: "var(--pending-bg)",
+                borderBottom: "1px solid var(--pending-border)",
+              }}
+            >
+              <div className="flex items-center gap-2">
+                <AlertTriangle style={{ width: 15, height: 15, color: "var(--pending-text)" }} />
+                <span style={{ fontSize: 12, fontWeight: 700, letterSpacing: "0.05em", textTransform: "uppercase", color: "var(--pending-text)" }}>
+                  Active Session Detected
+                </span>
+              </div>
+              <button
                 onClick={() => setShowAlreadyLoggedInModal(false)}
-                className="p-1 hover:bg-slate-100 rounded text-slate-400 hover:text-slate-700 border-0 bg-transparent cursor-pointer"
+                className="flex items-center justify-center rounded border-0 bg-transparent cursor-pointer"
+                style={{ width: 28, height: 28, color: "var(--ink-500)" }}
               >
-                <X className="w-4 h-4" />
+                <X style={{ width: 15, height: 15 }} />
               </button>
             </div>
 
-            {/* Modal Body */}
-            <div className="p-5 text-xs space-y-3 leading-relaxed">
-              <p className="font-bold text-slate-700">
-                You are currently logged in on another device or browser tab. 
+            {/* Modal body */}
+            <div style={{ padding: "20px 16px", display: "flex", flexDirection: "column", gap: 8 }}>
+              <p className="m-0" style={{ fontSize: 13, fontWeight: 600, color: "var(--ink-900)" }}>
+                You are currently logged in on another device or browser tab.
               </p>
-              <p className="text-slate-500">
+              <p className="m-0" style={{ fontSize: 13, color: "var(--ink-500)", lineHeight: "20px" }}>
                 Logging in here will automatically terminate your session on the other device. Do you want to proceed?
               </p>
             </div>
 
-            {/* Modal Footer */}
-            <div className="px-4 py-3 bg-slate-50 border-t border-slate-100 flex items-center justify-end gap-2">
+            {/* Modal footer */}
+            <div
+              className="flex items-center justify-end gap-2"
+              style={{ padding: "12px 16px", borderTop: "1px solid var(--line)", backgroundColor: "var(--surface-sunken)" }}
+            >
               <button
                 type="button"
                 onClick={() => setShowAlreadyLoggedInModal(false)}
-                className="px-3.5 py-2 bg-slate-100 hover:bg-slate-200 text-slate-750 rounded-xl text-[10px] font-extrabold uppercase tracking-wider border-0 cursor-pointer transition-all"
+                className="btn-lte-outline"
+                style={{ height: 36, fontSize: 12 }}
               >
                 Cancel
               </button>
               <button
                 type="button"
                 onClick={handleForceLogin}
-                className="px-3.5 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-[10px] font-extrabold uppercase tracking-wider border-0 cursor-pointer shadow-md shadow-indigo-600/10 transition-all"
+                className="btn-lte-primary"
+                style={{ height: 36, fontSize: 12 }}
               >
                 Yes, Log In Here
               </button>
             </div>
-
           </div>
         </div>
       )}
 
       {/* Biometric Enable Prompt */}
       {showBiometricPrompt && (
-        <div className="fixed inset-0 bg-black/60 backdrop-blur-xs flex items-center justify-center p-4 z-50 animate-fadeIn">
-          <div className="bg-slate-900 border border-slate-800 rounded-2xl shadow-2xl w-full max-w-sm overflow-hidden animate-scaleIn">
-            <div className="px-4 py-3 bg-indigo-500/10 border-b border-indigo-500/20">
-              <h3 className="text-[10px] font-black uppercase tracking-widest text-indigo-400 flex items-center gap-2">
-                <Fingerprint className="w-4 h-4" />
+        <div
+          className="fixed inset-0 flex items-center justify-center p-4 z-50 animate-fade-in"
+          style={{ backgroundColor: "rgba(18,21,26,0.70)", backdropFilter: "blur(4px)" }}
+        >
+          <div
+            className="w-full animate-scale-up"
+            style={{
+              maxWidth: 380,
+              backgroundColor: "var(--accent-900)",
+              border: "1px solid rgba(99,102,241,0.20)",
+              borderRadius: 10, overflow: "hidden",
+              boxShadow: "0 8px 24px -4px rgba(18,21,26,0.30)",
+            }}
+          >
+            <div
+              className="flex items-center gap-2"
+              style={{ padding: "12px 16px", borderBottom: "1px solid rgba(99,102,241,0.15)" }}
+            >
+              <Fingerprint style={{ width: 15, height: 15, color: "var(--accent-400)" }} />
+              <span style={{ fontSize: 12, fontWeight: 700, letterSpacing: "0.05em", textTransform: "uppercase", color: "var(--accent-400)" }}>
                 Enable {biometryType === 'face' ? 'Face ID' : 'Fingerprint'} Login
-              </h3>
+              </span>
             </div>
-            <div className="p-5 text-xs space-y-3 leading-relaxed text-slate-300">
-              <p className="font-bold text-slate-200">
+            <div style={{ padding: "20px 16px", display: "flex", flexDirection: "column", gap: 8 }}>
+              <p className="m-0" style={{ fontSize: 13, fontWeight: 600, color: "rgba(255,255,255,0.90)" }}>
                 Would you like to use {biometryType === 'face' ? 'Face ID' : 'Fingerprint'} for faster login next time?
               </p>
-              <p className="text-slate-400">You can disable this anytime from Profile settings.</p>
+              <p className="m-0" style={{ fontSize: 13, color: "rgba(255,255,255,0.50)" }}>
+                You can disable this anytime from Profile settings.
+              </p>
             </div>
-            <div className="px-4 py-3 bg-slate-950/40 border-t border-slate-850/60 flex items-center justify-end gap-2">
+            <div
+              className="flex items-center justify-end gap-2"
+              style={{ padding: "12px 16px", borderTop: "1px solid rgba(99,102,241,0.12)" }}
+            >
               <button
                 type="button"
                 onClick={() => { setShowBiometricPrompt(false); navigate("/home"); }}
-                className="px-3.5 py-2 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-xl text-[10px] font-extrabold uppercase tracking-wider border-0 cursor-pointer transition-all"
+                className="flex items-center justify-center gap-1.5 rounded-lg border-0 cursor-pointer transition-all"
+                style={{ height: 36, padding: "0 14px", fontSize: 12, fontWeight: 600, backgroundColor: "rgba(255,255,255,0.08)", color: "rgba(255,255,255,0.60)" }}
               >
                 Skip
               </button>
               <button
                 type="button"
-                onClick={async () => {
-                  await enableBiometricLogin(userId, password);
-                  setShowBiometricPrompt(false);
-                  navigate("/home");
-                }}
-                className="px-3.5 py-2 bg-primary-600 hover:bg-primary-700 text-white rounded-xl text-[10px] font-extrabold uppercase tracking-wider border-0 cursor-pointer shadow-2xs transition-all flex items-center gap-1"
+                onClick={async () => { await enableBiometricLogin(userId, password); setShowBiometricPrompt(false); navigate("/home"); }}
+                className="btn-lte-primary flex items-center gap-1.5"
+                style={{ height: 36, fontSize: 12 }}
               >
-                <Fingerprint size={12} /> Enable
+                <Fingerprint size={13} /> Enable
               </button>
             </div>
           </div>
         </div>
       )}
 
-      {/* Developer Storage Diagnostic Modal */}
+      {/* Developer Diagnostic Modal */}
       {showDiagnostics && (
-        <div className="fixed inset-0 bg-black/70 backdrop-blur-xs flex items-center justify-center p-4 z-50 overflow-y-auto">
-          <div className="bg-slate-955 border border-slate-800 text-slate-100 rounded-2xl shadow-2xl w-full max-w-md overflow-hidden my-8">
-            <div className="px-4 py-3.5 bg-slate-900 border-b border-slate-800 flex items-center justify-between">
-              <h3 className="text-xs font-black uppercase tracking-widest text-indigo-400 flex items-center gap-2">
+        <div
+          className="fixed inset-0 flex items-center justify-center p-4 z-50 overflow-y-auto"
+          style={{ backgroundColor: "rgba(18,21,26,0.80)", backdropFilter: "blur(4px)" }}
+        >
+          <div
+            className="w-full my-8"
+            style={{
+              maxWidth: 440,
+              backgroundColor: "#0D1117",
+              border: "1px solid rgba(99,102,241,0.20)",
+              borderRadius: 10, overflow: "hidden",
+            }}
+          >
+            <div
+              className="flex items-center justify-between"
+              style={{ padding: "12px 16px", borderBottom: "1px solid rgba(255,255,255,0.08)" }}
+            >
+              <span style={{ fontSize: 12, fontWeight: 700, letterSpacing: "0.05em", textTransform: "uppercase", color: "var(--accent-400)", fontFamily: "'IBM Plex Mono', monospace" }}>
                 Developer Diagnostic Panel
-              </h3>
-              <button 
-                type="button" 
-                onClick={() => setShowDiagnostics(false)} 
-                className="text-slate-400 hover:text-white bg-transparent border-0 cursor-pointer text-lg font-bold"
+              </span>
+              <button
+                type="button"
+                onClick={() => setShowDiagnostics(false)}
+                className="flex items-center justify-center border-0 bg-transparent cursor-pointer text-lg font-bold"
+                style={{ color: "rgba(255,255,255,0.40)" }}
               >
                 &times;
               </button>
             </div>
-            <div className="p-5 text-[11px] space-y-4 font-mono max-h-[60vh] overflow-y-auto bg-slate-950 text-slate-300">
-              <div className="space-y-1">
-                <span className="text-slate-500 block font-bold">[LocalStorage Token]</span>
-                <span className="text-emerald-400 break-all bg-slate-900 p-2.5 rounded-lg block border border-slate-850 shadow-inner">{diagData.localStorageToken}</span>
-              </div>
-              <div className="space-y-1">
-                <span className="text-slate-500 block font-bold">[Preferences Token]</span>
-                <span className="text-emerald-400 break-all bg-slate-900 p-2.5 rounded-lg block border border-slate-850 shadow-inner">{diagData.prefToken}</span>
-              </div>
-              <div className="space-y-1">
-                <span className="text-slate-500 block font-bold">[Directory.Data Session File]</span>
-                <span className="text-amber-450 break-all bg-slate-900 p-2.5 rounded-lg block border border-slate-850 shadow-inner">{diagData.fileDataToken}</span>
-              </div>
-              <div className="space-y-1">
-                <span className="text-slate-500 block font-bold">[Directory.External Session File]</span>
-                <span className="text-amber-450 break-all bg-slate-900 p-2.5 rounded-lg block border border-slate-850 shadow-inner">{diagData.fileExternalToken}</span>
-              </div>
-              <div className="space-y-1 border-t border-slate-800 pt-3">
-                <span className="text-slate-500 block font-bold">[Test Write Status]</span>
-                <span className="text-cyan-400 break-all bg-slate-900 p-2.5 rounded-lg block border border-slate-850 shadow-inner">{diagData.writeTestResult || "Click Test Write to start"}</span>
-              </div>
+            <div
+              className="space-y-4"
+              style={{ padding: "16px", maxHeight: "55vh", overflowY: "auto", fontFamily: "'IBM Plex Mono', monospace", fontSize: 11 }}
+            >
+              {[
+                { label: "[LocalStorage Token]", value: diagData.localStorageToken, color: "#3FB950" },
+                { label: "[Preferences Token]", value: diagData.prefToken, color: "#3FB950" },
+                { label: "[Directory.Data Session File]", value: diagData.fileDataToken, color: "#E3B341" },
+                { label: "[Directory.External Session File]", value: diagData.fileExternalToken, color: "#E3B341" },
+                { label: "[Test Write Status]", value: diagData.writeTestResult || "Click Test Write to start", color: "#58A6FF" },
+              ].map(({ label, value, color }) => (
+                <div key={label} style={{ display: "flex", flexDirection: "column", gap: 4 }}>
+                  <span style={{ color: "rgba(255,255,255,0.35)", fontWeight: 700 }}>{label}</span>
+                  <span
+                    style={{
+                      color, wordBreak: "break-all",
+                      backgroundColor: "rgba(255,255,255,0.04)",
+                      padding: "8px 10px", borderRadius: 6,
+                      border: "1px solid rgba(255,255,255,0.08)",
+                    }}
+                  >
+                    {value}
+                  </span>
+                </div>
+              ))}
             </div>
-            <div className="px-4 py-3 bg-slate-900 border-t border-slate-800 flex items-center justify-between gap-2">
+            <div
+              className="flex items-center justify-between gap-2"
+              style={{ padding: "12px 16px", borderTop: "1px solid rgba(255,255,255,0.08)" }}
+            >
               <button
                 type="button"
                 onClick={testWrite}
-                className="px-3.5 py-2 bg-cyan-600 hover:bg-cyan-700 text-white rounded-xl text-[10px] font-extrabold uppercase tracking-wider border-0 cursor-pointer transition-all shadow-md shadow-cyan-600/10"
+                className="flex items-center justify-center rounded-lg border-0 cursor-pointer transition-all"
+                style={{ height: 36, padding: "0 14px", fontSize: 12, fontWeight: 600, backgroundColor: "#0E7490", color: "#ffffff" }}
               >
                 Run Write Test
               </button>
               <button
                 type="button"
                 onClick={runDiagnostics}
-                className="px-3.5 py-2 bg-slate-800 hover:bg-slate-700 text-slate-100 rounded-xl text-[10px] font-extrabold uppercase tracking-wider border-0 cursor-pointer transition-all"
+                className="flex items-center justify-center rounded-lg border-0 cursor-pointer transition-all"
+                style={{ height: 36, padding: "0 14px", fontSize: 12, fontWeight: 600, backgroundColor: "rgba(255,255,255,0.08)", color: "rgba(255,255,255,0.70)" }}
               >
                 Refresh Data
               </button>

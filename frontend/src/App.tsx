@@ -23,6 +23,7 @@ import PenaltyReportPage from "./pages/PenaltyReportPage";
 import AnalysisPage from "./pages/AnalysisPage";
 import MonthSummaryPage from "./pages/MonthSummaryPage";
 import ConsolidatedReportPage from "./pages/ConsolidatedReportPage";
+import AttendancePage from "./pages/AttendancePage";
 import NotificationsPage from "./pages/NotificationsPage";
 import HelpPage from "./pages/HelpPage";
 import ProfilePage from "./pages/ProfilePage";
@@ -68,9 +69,10 @@ function App() {
         id: "offline-toast",
         duration: 6000,
         style: {
-          background: "#fff3cd",
-          color: "#856404",
-          border: "1px solid #ffeeba",
+          background: "#FCF6EB",
+          color: "#B7791F",
+          border: "1px solid #F1E1BC",
+          borderLeft: "3px solid #B7791F",
         },
       });
     };
@@ -192,43 +194,72 @@ function App() {
 
   if (isAppLocked) {
     return (
-      <div className="min-h-screen bg-[#e9ecef] flex flex-col items-center justify-center p-6 text-gray-800 font-sans antialiased select-none">
-        <div className="w-full max-w-sm flex flex-col items-center space-y-8 text-center bg-white p-8 rounded-lg shadow-md border border-gray-200 animate-fadeIn">
+      <div
+        className="min-h-screen flex flex-col items-center justify-center p-6 antialiased select-none"
+        style={{ backgroundColor: "var(--canvas)" }}
+      >
+        <div
+          className="w-full max-w-sm flex flex-col items-center space-y-8 text-center animate-fade-in"
+          style={{
+            backgroundColor: "var(--surface)",
+            border: "1px solid var(--line)",
+            borderRadius: 10,
+            padding: 36,
+          }}
+        >
           {/* Brand Logo Header */}
-          <div className="space-y-2">
-            <img src="/brand.png" alt="Cyrix Logo" className="h-16 w-auto object-contain mx-auto" />
-            <h2 className="text-sm font-bold text-gray-400 tracking-wider">CYRIX FIELD</h2>
+          <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 8 }}>
+            <img src="/brand.png" alt="Cyrix Logo" style={{ height: 52, width: "auto", objectFit: "contain" }} />
+            <p
+              className="m-0"
+              style={{ fontSize: 11, fontWeight: 700, letterSpacing: "0.07em", textTransform: "uppercase", color: "var(--ink-300)" }}
+            >
+              Cyrix Field
+            </p>
           </div>
 
-          {/* Secure Lock Badge */}
+          {/* Lock Icon */}
           <div className="relative">
-            <div className="w-24 h-24 rounded-full bg-blue-50 border border-blue-100 flex items-center justify-center text-blue-500 shadow-sm">
-              <Lock className="w-10 h-10 animate-pulse" />
+            <div
+              className="flex items-center justify-center rounded-full"
+              style={{
+                width: 72, height: 72,
+                backgroundColor: "var(--accent-50)",
+                border: "1px solid var(--accent-100)",
+              }}
+            >
+              <Lock style={{ width: 28, height: 28, color: "var(--accent-600)" }} />
             </div>
-            <div className="absolute -bottom-1 -right-1 w-8 h-8 rounded-full bg-blue-600 flex items-center justify-center text-white border-2 border-white shadow">
-              {biometryType === 'face' ? <ScanFace className="w-4 h-4" /> : <Fingerprint className="w-4 h-4" />}
+            <div
+              className="absolute -bottom-1 -right-1 flex items-center justify-center rounded-full"
+              style={{
+                width: 28, height: 28,
+                backgroundColor: "var(--accent-600)",
+                border: "2px solid var(--surface)",
+              }}
+            >
+              {biometryType === 'face' ? <ScanFace style={{ width: 14, height: 14, color: "#ffffff" }} /> : <Fingerprint style={{ width: 14, height: 14, color: "#ffffff" }} />}
             </div>
           </div>
 
-          {/* Locked Status Message */}
-          <div className="space-y-2">
-            <p className="text-sm font-bold text-gray-700">App is Locked</p>
-            <p className="text-[11px] text-gray-400 max-w-xs mx-auto">
+          {/* Status text */}
+          <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+            <p className="m-0" style={{ fontSize: 15, fontWeight: 700, color: "var(--ink-900)", fontFamily: "'Inter Tight', sans-serif" }}>App is Locked</p>
+            <p className="m-0" style={{ fontSize: 13, color: "var(--ink-500)", lineHeight: "20px", maxWidth: 280 }}>
               Please authenticate using your device's {biometryType === 'face' ? 'Face ID' : 'Fingerprint'} to access your workspace.
             </p>
           </div>
 
-          {/* Action Button */}
-          <div className="w-full pt-4">
-            <button
-              type="button"
-              onClick={triggerUnlock}
-              className="w-full h-11 flex items-center justify-center gap-2.5 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-bold text-xs shadow-sm active:scale-95 transition-all border-0 cursor-pointer"
-            >
-              {biometryType === 'face' ? <ScanFace className="w-4 h-4" /> : <Fingerprint className="w-4 h-4" />}
-              <span>{biometryType === 'face' ? 'Unlock with Face ID' : 'Unlock with Fingerprint'}</span>
-            </button>
-          </div>
+          {/* Unlock button */}
+          <button
+            type="button"
+            onClick={triggerUnlock}
+            className="btn-lte-primary w-full"
+            style={{ height: 44, fontSize: 14, gap: 8 }}
+          >
+            {biometryType === 'face' ? <ScanFace style={{ width: 16, height: 16 }} /> : <Fingerprint style={{ width: 16, height: 16 }} />}
+            <span>{biometryType === 'face' ? 'Unlock with Face ID' : 'Unlock with Fingerprint'}</span>
+          </button>
         </div>
       </div>
     );
@@ -238,14 +269,11 @@ function App() {
     <ErrorBoundary>
       <ConfigProvider theme={antdTheme}>
         <Router>
-        <div className="min-h-screen bg-[#f4f6f9] text-[#212529] font-sans antialiased relative">
+        <div className="min-h-screen antialiased relative" style={{ backgroundColor: "var(--canvas)", color: "var(--ink-900)" }}>
         {isOffline && (
-          <div 
-            style={{ 
-              background: "linear-gradient(90deg, #f59e0b, #ea580c)",
-              boxShadow: "0 2px 10px rgba(234, 88, 12, 0.25)"
-            }}
-            className="sticky top-0 z-[9999] w-full text-white text-[10px] font-extrabold uppercase tracking-wider py-1.5 px-4 text-center flex items-center justify-center gap-2 transition-all"
+          <div
+            style={{ backgroundColor: "var(--pending-text)" }}
+            className="sticky top-0 z-[9999] w-full text-white text-[11px] font-semibold py-1.5 px-4 text-center flex items-center justify-center gap-2 transition-all"
           >
             <span className="w-1.5 h-1.5 rounded-full bg-white animate-ping shrink-0" />
             <span>Working Offline — Showing Cached Data</span>
@@ -273,6 +301,7 @@ function App() {
                 <Route path="/new-dashboard" element={<NewDashboardPage />} />
                 <Route path="/month-report" element={<MonthSummaryPage />} />
                 <Route path="/consolidated-report" element={<ConsolidatedReportPage />} />
+                <Route path="/attendance" element={<AttendancePage />} />
                 <Route path="/notifications" element={<NotificationsPage />} />
                 <Route path="/help-center" element={<HelpPage />} />
                 <Route path="/profile" element={<ProfilePage />} />
@@ -292,27 +321,28 @@ function App() {
             <Route path="*" element={<Navigate to="/not-found" replace />} />
           </Routes>
         </Suspense>
-        <Toaster 
+        <Toaster
           position="top-right"
           toastOptions={{
             duration: 4000,
             style: {
-              background: "#FFFFFF",
-              color: "#212529",
-              border: "1px solid #dee2e6",
-              borderRadius: "4px",
-              fontSize: "12px",
-              fontWeight: "600",
+              background: "#12151A",
+              color: "#FFFFFF",
+              border: "1px solid rgba(255,255,255,0.10)",
+              borderRadius: "8px",
+              fontSize: "13px",
+              fontWeight: "500",
+              boxShadow: "0 4px 12px -2px rgba(18,21,26,0.20)",
             },
             success: {
               iconTheme: {
-                primary: "#28a745",
+                primary: "#0F7A4C",
                 secondary: "#FFFFFF",
               },
             },
             error: {
               iconTheme: {
-                primary: "#dc3545",
+                primary: "#B3261E",
                 secondary: "#FFFFFF",
               },
             },

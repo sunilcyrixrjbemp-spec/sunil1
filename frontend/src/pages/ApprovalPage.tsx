@@ -293,6 +293,9 @@ export default function ApprovalPage() {
       return;
     }
 
+    // IMMEDIATELY set image URL synchronously for 0ms instant display!
+    setDisplayImageUrl(lightboxImage);
+
     const isPdfUrl = lightboxImage.toLowerCase().includes(".pdf") || 
                      lightboxImage.toLowerCase().includes("pdf") || 
                      lightboxImage.includes("gdrive/");
@@ -323,30 +326,31 @@ export default function ApprovalPage() {
       };
     }
 
-    checkIsHeic(lightboxImage).then(isHeicImg => {
-      if (!active) return;
-      if (isHeicImg) {
-        setIsConvertingHeic(true);
-        convertHeicToJpegUrl(lightboxImage)
-          .then((url) => {
-            if (!active) {
-              URL.revokeObjectURL(url);
-              return;
-            }
-            localUrl = url;
-            setDisplayImageUrl(url);
-            setIsConvertingHeic(false);
-          })
-          .catch(() => {
-            if (active) {
-              setDisplayImageUrl(lightboxImage);
+    // Check HEIC asynchronously in background only if needed
+    if (lightboxImage.toLowerCase().endsWith(".heic") || lightboxImage.toLowerCase().endsWith(".heif")) {
+      checkIsHeic(lightboxImage).then(isHeicImg => {
+        if (!active) return;
+        if (isHeicImg) {
+          setIsConvertingHeic(true);
+          convertHeicToJpegUrl(lightboxImage)
+            .then((url) => {
+              if (!active) {
+                URL.revokeObjectURL(url);
+                return;
+              }
+              localUrl = url;
+              setDisplayImageUrl(url);
               setIsConvertingHeic(false);
-            }
-          });
-      } else {
-        setDisplayImageUrl(lightboxImage);
-      }
-    });
+            })
+            .catch(() => {
+              if (active) {
+                setDisplayImageUrl(lightboxImage);
+                setIsConvertingHeic(false);
+              }
+            });
+        }
+      });
+    }
 
     return () => {
       active = false;

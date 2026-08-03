@@ -1,10 +1,9 @@
-import { useState, useRef } from "react";
+import { useState } from "react";
 
 interface PieChart3DDataItem {
   label: string;
   amount: number;
-  color: string;
-  colorDark?: string;
+  color?: string;
 }
 
 interface PieChart3DProps {
@@ -12,329 +11,134 @@ interface PieChart3DProps {
   height?: number | string;
 }
 
-// Professional SaaS palettes: HSL-derived soft harmonized colors (Sleek design system)
 const SaaSColors = [
-  "#3b82f6", // Royal Blue
-  "#10b981", // Emerald Green
-  "#f59e0b", // Warm Amber
-  "#6366f1", // Indigo
-  "#ec4899", // Rose Pink
-  "#14b8a6", // Teal
-  "#8b5cf6", // Violet
-  "#f97316"  // Coral Orange
+  "#2563EB", // Royal Blue accent
+  "#16A34A", // Green
+  "#D97706", // Amber
+  "#7C3AED", // Violet
+  "#0EA5E9", // Cyan
+  "#DC2626", // Red
+  "#475569", // Slate
 ];
 
-function adjustColor(hex: string, percent: number) {
-  const cleanHex = hex.startsWith("#") ? hex.substring(1) : hex;
-  let R = parseInt(cleanHex.substring(0, 2), 16);
-  let G = parseInt(cleanHex.substring(2, 4), 16);
-  let B = parseInt(cleanHex.substring(4, 6), 16);
-
-  if (isNaN(R) || isNaN(G) || isNaN(B)) return hex;
-
-  R = Math.max(0, Math.min(255, R + percent));
-  G = Math.max(0, Math.min(255, G + percent));
-  B = Math.max(0, Math.min(255, B + percent));
-
-  const rHex = R.toString(16).padStart(2, "0");
-  const gHex = G.toString(16).padStart(2, "0");
-  const bHex = B.toString(16).padStart(2, "0");
-
-  return `#${rHex}${gHex}${bHex}`;
-}
-
-export default function PieChart3D({ data, height = 145 }: PieChart3DProps) {
+export default function PieChart3D({ data, height = 180 }: PieChart3DProps) {
   const [hoveredIdx, setHoveredIdx] = useState<number | null>(null);
-  const containerRef = useRef<HTMLDivElement>(null);
 
-  // Filter non-zero items
-  const activeData = data.filter(item => item.amount > 0);
+  const activeData = data.filter((item) => item.amount > 0);
   const total = activeData.reduce((sum, item) => sum + item.amount, 0);
 
   if (total === 0) {
     return (
-      <div className="flex flex-col items-center justify-center py-10 text-gray-400 text-[10px] font-bold uppercase tracking-wider">
+      <div className="flex flex-col items-center justify-center py-8 text-ink-500 text-xs font-medium">
         No allocations to display
       </div>
     );
   }
 
-  // Modern isometric tilted 3D layout parameters:
-  const cx = 150;
-  const cy = 72;
-  const rx = 85;  // Extended radius
-  const ry = 32;  // Tighter isometric ratio (3D disk perspective)
-  const depth = 16; // Low profile premium SaaS 3D depth
+  let cumulativePercent = 0;
 
-  let currentAngle = 0;
+  // Compute SVG doughnut slices
+  const getCoordinatesForPercent = (percent: number) => {
+    const x = Math.cos(2 * Math.PI * percent);
+    const y = Math.sin(2 * Math.PI * percent);
+    return [x, y];
+  };
 
   const slices = activeData.map((item, idx) => {
-    const pct = item.amount / total;
-    const angleDelta = pct * 2 * Math.PI;
-    const startAngle = currentAngle;
-    const endAngle = currentAngle + angleDelta;
-    currentAngle = endAngle;
+    const startPercent = cumulativePercent;
+    const slicePercent = item.amount / total;
+    cumulativePercent += slicePercent;
+    const endPercent = cumulativePercent;
 
-    const midAngle = startAngle + angleDelta / 2;
+    const [startX, startY] = getCoordinatesForPercent(startPercent);
+    const [endX, endY] = getCoordinatesForPercent(endPercent);
 
-    // Apply SaaS Color Scheme if color is default or generic
-    const baseColor = item.color.startsWith("#") ? item.color : SaaSColors[idx % SaaSColors.length];
-    
-    // Low-contrast elegant metallic shading values
-    const highlightColor = adjustColor(baseColor, 20);
-    const shadowColor = adjustColor(baseColor, -15);
-    const darkWallStart = adjustColor(baseColor, -12);
-    const darkWallEnd = adjustColor(baseColor, -35);
+    const largeArcFlag = slicePercent > 0.5 ? 1 : 0;
+
+    const pathData = [
+      `M ${startX} ${startY}`,
+      `A 1 1 0 ${largeArcFlag} 1 ${endX} ${endY}`,
+      `L 0 0`,
+    ].join(" ");
+
+    const color = item.color && item.color.startsWith("#") ? item.color : SaaSColors[idx % SaaSColors.length];
 
     return {
       item,
       idx,
-      startAngle,
-      endAngle,
-      midAngle,
-      pct,
-      baseColor,
-      highlightColor,
-      shadowColor,
-      darkWallStart,
-      darkWallEnd
+      slicePercent,
+      color,
+      pathData,
     };
   });
 
-  const sortedSlices = [...slices].sort((a, b) => Math.sin(a.midAngle) - Math.sin(b.midAngle));
-  const isSingleSegment = activeData.length === 1;
-
-  const handleMouseMove = (e: React.MouseEvent<SVGSVGElement>) => {
-    if (!containerRef.current) return;
-    const rect = containerRef.current.getBoundingClientRect();
-    const x = e.clientX - rect.left;
-    const y = e.clientY - rect.top;
-
-    const svgX = (x / rect.width) * 360;
-    const svgY = (y / rect.height) * 180;
-
-    const dx = svgX - cx;
-    const dy = (svgY - cy) * (rx / ry);
-    let mouseAngle = Math.atan2(dy, dx);
-    if (mouseAngle < 0) mouseAngle += 2 * Math.PI;
-
-    let foundIdx = null;
-    for (let s of slices) {
-      if (mouseAngle >= s.startAngle && mouseAngle <= s.endAngle) {
-        foundIdx = s.idx;
-        break;
-      }
-    }
-    setHoveredIdx(foundIdx);
-  };
-
-  const handleMouseLeave = () => {
-    setHoveredIdx(null);
-  };
-
   return (
-    <div ref={containerRef} className="flex flex-col items-center justify-center w-full py-1 select-none overflow-visible">
-      <div className="relative shrink-0 flex items-center justify-center" style={{ width: "320px", height: `${height}px` }}>
-        <svg 
-          viewBox="-20 0 340 180" 
-          className="w-full h-full overflow-visible"
-          onMouseMove={handleMouseMove}
-          onMouseLeave={handleMouseLeave}
-        >
-          <defs>
-            {/* Flat SaaS drop shadows */}
-            <filter id="saasFlatShadow" x="-20%" y="-20%" width="140%" height="140%">
-              <feGaussianBlur in="SourceAlpha" stdDeviation="6" />
-              <feOffset dx="0" dy="10" result="offsetblur" />
-              <feComponentTransfer>
-                <feFuncA type="linear" slope="0.08" />
-              </feComponentTransfer>
-              <feMerge> 
-                <feMergeNode />
-                <feMergeNode in="SourceGraphic" />
-              </feMerge>
-            </filter>
-            
-            {slices.map((s, idx) => (
-              <g key={`grads-${idx}`}>
-                <linearGradient id={`lidGrad-${idx}`} x1="0%" y1="0%" x2="0%" y2="100%">
-                  <stop offset="0%" stopColor={s.highlightColor} />
-                  <stop offset="100%" stopColor={s.shadowColor} />
-                </linearGradient>
-                <linearGradient id={`wallGrad-${idx}`} x1="0%" y1="0%" x2="100%" y2="100%">
-                  <stop offset="0%" stopColor={s.darkWallStart} />
-                  <stop offset="100%" stopColor={s.darkWallEnd} />
-                </linearGradient>
-              </g>
-            ))}
-          </defs>
-
-          {/* Premium Base Soft shadow */}
-          <ellipse 
-            cx={cx} 
-            cy={cy + depth + 4} 
-            rx={rx + 4} 
-            ry={ry + 2} 
-            fill="rgba(15, 23, 42, 0.08)" 
-            className="blur-[4px]"
-          />
-
-          {/* Render Wall Extrusions (Isometric side edge) */}
-          {sortedSlices.map(({ idx, startAngle, endAngle, midAngle }) => {
-            const isHovered = hoveredIdx === idx;
-            const explodeDist = isHovered ? 8 : 0;
-            const ox = Math.cos(midAngle) * explodeDist;
-            const oy = Math.sin(midAngle) * explodeDist;
-
-            const x1 = cx + ox + rx * Math.cos(startAngle);
-            const y1 = cy + oy + ry * Math.sin(startAngle);
-            const x2 = cx + ox + rx * Math.cos(endAngle);
-            const y2 = cy + oy + ry * Math.sin(endAngle);
-
-            const largeArc = endAngle - startAngle > Math.PI ? 1 : 0;
-
-            let wallPath = "";
-            if (isSingleSegment) {
-              wallPath = `
-                M ${cx + ox - rx} ${cy + oy}
-                A ${rx} ${ry} 0 0 0 ${cx + ox + rx} ${cy + oy}
-                L ${cx + ox + rx} ${cy + oy + depth}
-                A ${rx} ${ry} 0 0 1 ${cx + ox - rx} ${cy + oy + depth}
-                Z
-              `;
-            } else {
-              wallPath = `
-                M ${x1} ${y1} 
-                A ${rx} ${ry} 0 ${largeArc} 1 ${x2} ${y2} 
-                L ${x2} ${y2 + depth} 
-                A ${rx} ${ry} 0 ${largeArc} 0 ${x1} ${y1 + depth} 
-                Z
-              `;
-            }
-
+    <div className="w-full flex flex-col md:flex-row items-center justify-between gap-6 py-2" style={{ minHeight: height }}>
+      {/* SVG Doughnut */}
+      <div className="relative shrink-0 flex items-center justify-center" style={{ width: 140, height: 140 }}>
+        <svg viewBox="-1.15 -1.15 2.3 2.3" className="w-full h-full -rotate-90">
+          {slices.map((slice) => {
+            const isHovered = hoveredIdx === slice.idx;
             return (
               <path
-                key={`wall-${idx}`}
-                d={wallPath}
-                fill={`url(#wallGrad-${idx})`}
-                stroke={adjustColor(slices[idx].baseColor, -25)}
-                strokeWidth="0.3"
-                className="transition-all duration-300 ease-out"
+                key={slice.idx}
+                d={slice.pathData}
+                fill={slice.color}
+                className="transition-all duration-200 cursor-pointer"
+                style={{
+                  transform: isHovered ? "scale(1.04)" : "scale(1)",
+                  transformOrigin: "0 0",
+                  opacity: hoveredIdx === null || isHovered ? 1 : 0.65,
+                }}
+                onMouseEnter={() => setHoveredIdx(slice.idx)}
+                onMouseLeave={() => setHoveredIdx(null)}
               />
             );
           })}
-
-          {/* Render Top Slices (Lids) */}
-          {sortedSlices.map(({ idx, startAngle, endAngle, midAngle }) => {
-            const isHovered = hoveredIdx === idx;
-            const explodeDist = isHovered ? 8 : 0;
-            const ox = Math.cos(midAngle) * explodeDist;
-            const oy = Math.sin(midAngle) * explodeDist;
-
-            let lidPath = "";
-            if (isSingleSegment) {
-              return (
-                <ellipse
-                  key={`lid-${idx}`}
-                  cx={cx + ox}
-                  cy={cy + oy}
-                  rx={rx}
-                  ry={ry}
-                  fill={`url(#lidGrad-${idx})`}
-                  stroke="#ffffff"
-                  strokeWidth="1.0"
-                  filter="url(#saasFlatShadow)"
-                  className="transition-all duration-300 ease-out"
-                />
-              );
-            } else {
-              const tx1 = cx + ox + rx * Math.cos(startAngle);
-              const ty1 = cy + oy + ry * Math.sin(startAngle);
-              const tx2 = cx + ox + rx * Math.cos(endAngle);
-              const ty2 = cy + oy + ry * Math.sin(endAngle);
-              const largeArc = endAngle - startAngle > Math.PI ? 1 : 0;
-              lidPath = `
-                M ${cx + ox} ${cy + oy} 
-                L ${tx1} ${ty1} 
-                A ${rx} ${ry} 0 ${largeArc} 1 ${tx2} ${ty2} 
-                Z
-              `;
-            }
-
-            return (
-              <path
-                key={`lid-${idx}`}
-                d={lidPath}
-                fill={`url(#lidGrad-${idx})`}
-                stroke="#ffffff"
-                strokeWidth="1.0"
-                filter={isHovered ? "url(#saasFlatShadow)" : "none"}
-                className="transition-all duration-300 ease-out"
-              />
-            );
-          })}
-
-          {/* SaaS labels with clean pointer lines */}
-          {slices.map(({ idx, midAngle, item }) => {
-            const isHovered = hoveredIdx === idx;
-            const explodeDist = isHovered ? 8 : 0;
-
-            const sx = cx + (rx + explodeDist) * Math.cos(midAngle);
-            const sy = cy + (ry + explodeDist) * Math.sin(midAngle);
-
-            const labelDist = 22;
-            const tx = cx + (rx + labelDist) * Math.cos(midAngle);
-            const ty = cy + (ry + labelDist) * Math.sin(midAngle);
-
-            const textAnchor = Math.cos(midAngle) >= 0 ? "start" : "end";
-            const textOffset = Math.cos(midAngle) >= 0 ? 5 : -5;
-            const labelColor = item.color;
-
-            return (
-              <g key={`label-${idx}`} className="select-none pointer-events-none">
-                <line
-                  x1={sx}
-                  y1={sy}
-                  x2={tx}
-                  y2={ty}
-                  stroke="#cbd5e1"
-                  strokeWidth="0.8"
-                  strokeDasharray="2,2"
-                />
-                <line
-                  x1={tx}
-                  y1={ty}
-                  x2={tx + textOffset}
-                  y2={ty}
-                  stroke="#cbd5e1"
-                  strokeWidth="0.8"
-                />
-                <text
-                  x={tx + textOffset + (textOffset > 0 ? 2 : -2)}
-                  y={ty + 3}
-                  textAnchor={textAnchor}
-                  fill={labelColor}
-                  className="text-[9px] font-black uppercase tracking-wider"
-                  style={{
-                    fontFamily: "'Aptos', sans-serif",
-                    filter: "drop-shadow(0px 1px 1px rgba(255,255,255,0.9))"
-                  }}
-                >
-                  {item.label}
-                </text>
-                <text
-                  x={tx + textOffset + (textOffset > 0 ? 2 : -2)}
-                  y={ty + 13}
-                  textAnchor={textAnchor}
-                  fill="#475569"
-                  className="text-[8px] font-bold font-mono"
-                >
-                  ₹{item.amount.toLocaleString()}
-                </text>
-              </g>
-            );
-          })}
+          {/* Inner cutout for donut */}
+          <circle cx="0" cy="0" r="0.65" fill="#FFFFFF" />
         </svg>
+
+        {/* Center label */}
+        <div className="absolute inset-0 flex flex-col items-center justify-center text-center pointer-events-none">
+          <span className="text-[10px] uppercase font-semibold text-ink-500 tracking-wider">Total</span>
+          <span className="text-sm font-bold text-ink-900 font-mono">
+            ₹{total >= 100000 ? `${(total / 100000).toFixed(1)}L` : total.toLocaleString("en-IN")}
+          </span>
+        </div>
+      </div>
+
+      {/* Legend list */}
+      <div className="flex-1 w-full space-y-2">
+        {slices.map((slice) => {
+          const isHovered = hoveredIdx === slice.idx;
+          return (
+            <div
+              key={slice.idx}
+              className={`flex items-center justify-between p-1.5 rounded-md transition-colors cursor-pointer text-xs ${
+                isHovered ? "bg-slate-100" : "hover:bg-slate-50"
+              }`}
+              onMouseEnter={() => setHoveredIdx(slice.idx)}
+              onMouseLeave={() => setHoveredIdx(null)}
+            >
+              <div className="flex items-center gap-2 min-w-0">
+                <span
+                  className="w-2.5 h-2.5 rounded-full shrink-0"
+                  style={{ backgroundColor: slice.color }}
+                />
+                <span className="font-medium text-ink-700 truncate">{slice.item.label}</span>
+              </div>
+              <div className="flex items-center gap-3 shrink-0">
+                <span className="font-mono text-ink-500 text-[11px]">
+                  {(slice.slicePercent * 100).toFixed(1)}%
+                </span>
+                <span className="font-mono font-semibold text-ink-900">
+                  ₹{slice.item.amount.toLocaleString("en-IN")}
+                </span>
+              </div>
+            </div>
+          );
+        })}
       </div>
     </div>
   );

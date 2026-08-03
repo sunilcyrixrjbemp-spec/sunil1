@@ -63,11 +63,11 @@ export const CurrentTimeWidget: React.FC<CurrentTimeWidgetProps> = ({
 
   // Default: Navbar / Header style
   return (
-    <div className={`flex items-center gap-2 px-3 py-1.5 rounded-lg bg-slate-50 border border-slate-200/80 text-slate-700 text-xs font-mono font-bold shadow-2xs ${className}`}>
-      {showIcon && <Clock className="w-3.5 h-3.5 text-indigo-600 shrink-0 animate-pulse" />}
+    <div className={`flex items-center gap-2 px-3 py-1.5 rounded-md bg-surface-0 border border-border text-ink-900 text-xs font-mono font-medium shadow-xs ${className}`}>
+      {showIcon && <Clock className="w-3.5 h-3.5 text-accent-600 shrink-0" />}
       <span className="tracking-tight leading-none">{currentTimeIST}</span>
       {showBadge && (
-        <span className="text-[9px] font-black text-indigo-700 bg-indigo-50 border border-indigo-200 px-1.5 py-0.5 rounded leading-none">
+        <span className="text-[10px] font-semibold text-accent-700 bg-accent-subtle border border-accent-100 px-1.5 py-0.5 rounded leading-none">
           IST
         </span>
       )}

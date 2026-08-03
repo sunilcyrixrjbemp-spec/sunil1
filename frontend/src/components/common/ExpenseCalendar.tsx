@@ -166,19 +166,19 @@ export default function ExpenseCalendar({ expenses, isTeamView = false, selectMo
             return (
               <div 
                 key={idx}
-                className={`aspect-square relative rounded border flex flex-col items-center justify-between p-1 transition-all ${
+                className={`min-h-[46px] relative rounded-md border flex flex-col items-center justify-between p-1 transition-all ${
                   hasData 
-                    ? "bg-blue-50 border-blue-200 text-blue-800" 
+                    ? "bg-blue-50/90 border-blue-200 text-blue-900 shadow-2xs" 
                     : "bg-white border-gray-200 text-gray-700"
                 }`}
               >
                 {/* Day number */}
-                <span className="text-[10px] font-bold self-start">{cell.day}</span>
+                <span className="text-[9.5px] font-extrabold self-start leading-none">{cell.day}</span>
                 
-                {/* Sum badge */}
+                {/* Full Sum badge without truncation */}
                 {hasData && (
-                  <span className="text-[7.5px] font-black truncate max-w-full font-mono mt-auto text-blue-700">
-                    ₹{dataEntry.total.toLocaleString()}
+                  <span className="text-[7.5px] font-mono font-black text-center leading-tight text-blue-700 block w-full mt-1">
+                    ₹{dataEntry.total.toLocaleString("en-IN")}
                   </span>
                 )}
               </div>

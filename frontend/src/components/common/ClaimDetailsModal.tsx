@@ -1,0 +1,1817 @@
+/**
+ * ClaimDetailsModal.tsx
+ * Ultra-Clean Enterprise Data Panel - Instant Photo Loading with Browser Memory Pre-fetching, 1-Line Daily Summary Strip with Exact From/To Locations & Districts, Other Expense Remark Display, Compact Rejection Panel ("Rejection Remark:"), Daily DA Restricted to Leg #1 Only
+ * 
+ * - EXACT FROM/TO LOCATION NAMES & DISTRICTS IN SUMMARY: Leg route displays full `District (Location)` format (e.g. `Hanumangarh (Resi) ➔ Hanumangarh (DH)`).
+ * - INSTANT PHOTO & BILL LOADING (0ms Delay): All bill photos, attachment images, and travel tickets are automatically pre-loaded into browser RAM/disk cache as soon as claimDetails modal opens! Clicking "View Photo" or "View Bill" displays images instantly!
+ * - ULTRA-COMPACT 1-LINE DAILY SUMMARY STRIP: Single-line executive narrative overview showing route, KMs, exact itemized expenses with remarks (e.g. `Other Exp: ₹1,560 (Ventilator Training)`), and work completed in minimal height!
+ * - OTHER EXP: Displays exact remark / description (e.g. `OTHER EXP: ₹1,560 (Ventilator Training)`) right next to the amount!
+ * - Rejection Panel made ULTRA COMPACT (takes minimal vertical height)
+ * - Label strictly set to "Rejection Remark:" as requested
+ * - DAILY DA is strictly displayed ONLY on Leg #1 (Leg Index 0). Completely hidden from Leg #2, Leg #3, Leg #4, etc.!
+ * - When claim is Rejected -> Net Card displays strictly ₹0!
+ * - Smart Bill-to-Leg Attachment Isolation (Prevents Bus ticket of ₹1,050 from showing on ₹80 Auto leg!)
+ * - Excel-Style Single-Row Data Tables for Calls & PMS
+ * - Simple Normal English & 24-Hour Time Format
+ */
+
+import React, { useState, useEffect } from "react";
+import { Modal } from "antd";
+import {
+  X, Calendar, User, ShieldCheck, AlertTriangle, Package,
+  FileText, Eye, Pencil, Activity, CheckCircle2, XCircle, Trash2, Route,
+  Zap, MapPin, Building2, PhoneCall, Wrench, Crosshair, Truck, Tag,
+  ArrowRight, Info, Navigation
+} from "lucide-react";
+import api from "../../services/api";
+
+const API_BASE = (api.defaults.baseURL || "").replace(/\/api$/, "");
+
+const isValidText = (val: any): boolean => {
+  if (val === null || val === undefined) return false;
+  const str = String(val).trim();
+  if (str.length === 0 || str === "0" || str === "null" || str === "undefined" || str === "false" || str === "—") return false;
+  if (str.toLowerCase() === "other" || str.toLowerCase() === "activities: other" || str.toLowerCase() === "activities:other") return false;
+  return true;
+};
+
+const getAttachmentsArray = (attachments: any): any[] => {
+  if (!attachments) return [];
+  if (Array.isArray(attachments)) return attachments.filter(Boolean);
+  if (typeof attachments === "string") {
+    try {
+      const parsed = JSON.parse(attachments);
+      if (Array.isArray(parsed)) return parsed.filter(Boolean);
+      return [attachments];
+    } catch { return [attachments]; }
+  }
+  return [];
+};
+
+/**
+ * 24-Hour Format Date Time Formatter
+ * Output: DD-MMM-YY HH:mm:ss (e.g., 03-Aug-26 20:16:43)
+ */
+const formatDateTime24 = (dt: any) => {
+  if (!dt) return "—";
+  try {
+    const d = new Date(dt);
+    if (isNaN(d.getTime())) return String(dt);
+    const day = String(d.getDate()).padStart(2, "0");
+    const months = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
+    const month = months[d.getMonth()];
+    const yy = String(d.getFullYear()).slice(-2);
+    const hh = String(d.getHours()).padStart(2, "0");
+    const mm = String(d.getMinutes()).padStart(2, "0");
+    const ss = String(d.getSeconds()).padStart(2, "0");
+    return `${day}-${month}-${yy} ${hh}:${mm}:${ss}`;
+  } catch { return String(dt); }
+};
+
+const formatDateDDMMMYY = (dateStr: string) => {
+  if (!dateStr) return "—";
+  const cleanStr = String(dateStr).trim().split(" ")[0].split("T")[0];
+  const parts = cleanStr.split("-");
+  if (parts.length !== 3) return dateStr;
+  const [y, m, d] = parts;
+  const months = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
+  const mIdx = parseInt(m, 10) - 1;
+  if (mIdx < 0 || mIdx > 11) return dateStr;
+  const yy = y.slice(-2);
+  return `${d}-${months[mIdx]}-${yy}`;
+};
+
+const rupee = (val: any) => {
+  if (val === null || val === undefined || val === "") return "—";
+  const n = parseFloat(val);
+  if (isNaN(n)) return "—";
+  if (n === 0) return "₹0";
+  return `₹${Math.round(n).toLocaleString("en-IN")}`;
+};
+
+interface ParsedActivity {
+  text: string;
+  parsed: any;
+  callsList: any[];
+  pmsList: any[];
+  assetsList: any[];
+  otherDesc: string;
+  selected: string;
+  hospitalName: string;
+  equipmentName: string;
+  equipmentModel: string;
+  department: string;
+  barcode: string;
+  schedule: string;
+  callsType: string;
+  callsStatus: string;
+  attachmentUrl: string;
+  callsBarcode: string;
+  callsVerified: boolean;
+  pmsBarcode: string;
+  pmsVerified: boolean;
+  pmsFrequency: string;
+  assetEquipment: string;
+  assetQuantity: number;
+}
+
+const defaultParsedActivity: ParsedActivity = {
+  text: "",
+  parsed: null,
+  callsList: [],
+  pmsList: [],
+  assetsList: [],
+  otherDesc: "",
+  selected: "",
+  hospitalName: "",
+  equipmentName: "",
+  equipmentModel: "",
+  department: "",
+  barcode: "",
+  schedule: "",
+  callsType: "",
+  callsStatus: "",
+  attachmentUrl: "",
+  callsBarcode: "",
+  callsVerified: false,
+  pmsBarcode: "",
+  pmsVerified: false,
+  pmsFrequency: "",
+  assetEquipment: "",
+  assetQuantity: 0
+};
+
+/**
+ * Deep JSON Parser for Activity Details, Calls, PMS, Hospital, Equipment & Barcode
+ */
+const parseActivityDetails = (raw: any): ParsedActivity => {
+  if (!raw) return defaultParsedActivity;
+  let obj = raw;
+  if (typeof raw === "string") {
+    const trimmed = raw.trim();
+    if (trimmed.startsWith("{") || trimmed.startsWith("[")) {
+      try {
+        obj = JSON.parse(trimmed);
+      } catch {
+        return { ...defaultParsedActivity, text: isValidText(trimmed) ? trimmed : "" };
+      }
+    } else {
+      return { ...defaultParsedActivity, text: isValidText(trimmed) ? trimmed : "" };
+    }
+  }
+
+  if (typeof obj !== "object" || obj === null) return { ...defaultParsedActivity, text: isValidText(obj) ? String(obj) : "" };
+
+  const hospitalName = obj.hospital_name || obj.hospital || obj.facility_name || obj.location_visited || obj.calls_asset_details?.hospital_name || "";
+  const equipmentName = obj.equipment_name || obj.equipment || obj.asset_name || obj.calls_asset_details?.equipment_name || obj.asset_tagging_equipment || "";
+  const equipmentModel = obj.equipment_model || obj.model || obj.model_no || obj.make || obj.brand || "";
+  const department = obj.department || obj.dept || obj.ward || obj.location_in_facility || "";
+  const barcode = obj.barcode || obj.calls_barcode || obj.pms_barcode || obj.asset_barcode || obj.serial_no || obj.serial_number || "";
+  const schedule = obj.schedule || obj.pms_frequency || obj.frequency || "";
+
+  // Call Type
+  const callsTypeRaw = obj.calls_type || obj.call_type || "";
+  let callsType = callsTypeRaw;
+  if (callsTypeRaw.toLowerCase().includes("support") || callsTypeRaw.toLowerCase().includes("online")) callsType = "Online Support";
+  else if (callsTypeRaw.toLowerCase().includes("field")) callsType = "Field Support";
+  else if (callsTypeRaw.toLowerCase().includes("breakdown")) callsType = "Breakdown Call";
+
+  // Call Status
+  const callsStatusRaw = obj.calls_status || obj.call_status || "";
+  let callsStatus = callsStatusRaw;
+  if (callsStatusRaw.toLowerCase() === "attend" || callsStatusRaw.toLowerCase() === "attended") callsStatus = "Attended";
+  else if (callsStatusRaw.toLowerCase() === "close" || callsStatusRaw.toLowerCase() === "closed") callsStatus = "Closed";
+  else if (callsStatusRaw.toLowerCase().includes("both")) callsStatus = "Attended & Closed";
+
+  const attachmentUrl = obj.attachment_url || obj.service_report_url || obj.photo_url || obj.calls_asset_details?.attachment_url || obj.image_url || "";
+
+  const otherDesc = isValidText(obj.activity_other_desc) ? obj.activity_other_desc : (isValidText(obj.other_desc) ? obj.other_desc : (isValidText(obj.remark) ? obj.remark : (isValidText(obj.reason) ? obj.reason : "")));
+  const selected = Array.isArray(obj.selected_activities) ? obj.selected_activities.filter(isValidText).join(", ") : (isValidText(obj.selected_activities) ? obj.selected_activities : "");
+  const mainText = otherDesc || selected || "";
+
+  const callsList = Array.isArray(obj.calls_list) ? obj.calls_list : (Array.isArray(obj.calls) ? obj.calls : []);
+  const pmsList = Array.isArray(obj.pms_list) ? obj.pms_list : (Array.isArray(obj.pms) ? obj.pms : []);
+  const assetsList = Array.isArray(obj.assets_list) ? obj.assets_list : (Array.isArray(obj.assets) ? obj.assets : []);
+
+  return {
+    text: mainText,
+    otherDesc,
+    selected,
+    hospitalName,
+    equipmentName,
+    equipmentModel,
+    department,
+    barcode,
+    schedule,
+    callsType,
+    callsStatus,
+    attachmentUrl,
+    callsBarcode: obj.calls_barcode || barcode || "",
+    callsVerified: obj.calls_verified || false,
+    pmsBarcode: obj.pms_barcode || barcode || "",
+    pmsVerified: obj.pms_verified || false,
+    pmsFrequency: obj.pms_frequency || schedule || "",
+    assetEquipment: obj.asset_tagging_equipment || equipmentName || "",
+    assetQuantity: parseInt(obj.asset_tagging_quantity || obj.quantity || "0", 10) || 0,
+    callsList,
+    pmsList,
+    assetsList,
+    parsed: obj
+  };
+};
+
+// ─── TRAVEL MODE CHIP ────────────────────────────────────────────────────────
+
+const ModeChip = ({ mode }: { mode: string }) => {
+  if (!mode) return null;
+  const lower = mode.toLowerCase();
+  let cls = "bg-slate-100 text-slate-700 border-slate-200";
+  if (lower.includes("bike") || lower.includes("two")) cls = "bg-cyan-50 text-cyan-800 border-cyan-200/90";
+  else if (lower.includes("car") || lower.includes("four")) cls = "bg-indigo-50 text-indigo-800 border-indigo-200/90";
+  else if (lower.includes("auto") || lower.includes("rickshaw")) cls = "bg-amber-50 text-amber-800 border-amber-200/90";
+  else if (lower.includes("bus") || lower.includes("train")) cls = "bg-emerald-50 text-emerald-800 border-emerald-200/90";
+  return (
+    <span className={`inline-block px-1.5 py-0.2 rounded text-[9px] font-bold uppercase tracking-tight border ${cls} shadow-2xs whitespace-nowrap`}>
+      {mode}
+    </span>
+  );
+};
+
+// ─── STATUS BADGE ────────────────────────────────────────────────────────────
+
+const StatusBadge = ({ status, record, getStatusBadgeClass, getStatusLabel }: any) => (
+  <span className={`inline-flex items-center px-2 py-0.2 rounded-full text-[9.5px] font-bold border ${getStatusBadgeClass(status, record)}`}>
+    {getStatusLabel(status, record)}
+  </span>
+);
+
+// ─── SECTION HEADER ──────────────────────────────────────────────────────────
+
+const SectionHeader = ({ icon: Icon, label, accent = "#4A6A8A", count }: { icon: any; label: string; accent?: string; count?: number | string }) => (
+  <div className="flex items-center justify-between gap-1.5 mb-2">
+    <div className="flex items-center gap-1.5">
+      <div className="w-5 h-5 rounded flex items-center justify-center shrink-0" style={{ background: `${accent}15`, border: `1px solid ${accent}30` }}>
+        <Icon size={11} style={{ color: accent }} strokeWidth={2.2} />
+      </div>
+      <span className="text-[10px] font-extrabold uppercase tracking-wider text-slate-600">{label}</span>
+      {count !== undefined && (
+        <span className="text-[9px] font-bold px-1.5 py-0.2 rounded bg-slate-100 text-slate-600 border border-slate-200">
+          {count}
+        </span>
+      )}
+    </div>
+    <div className="flex-1 h-px bg-slate-200/60 ml-1.5" />
+  </div>
+);
+
+// ─── MINIMAL AMOUNT STAT BOX ──────────────────────────────────────────────────
+
+const MiniAmountBox = ({ label, value, subtext, color = "#4A6A8A" }: { label: string; value: string; subtext?: string; color?: string }) => (
+  <div className="flex flex-col items-center justify-center rounded-lg border border-slate-200 bg-white px-2 py-1.5 flex-1 min-w-[80px] shadow-2xs">
+    <span className="text-[8.5px] font-extrabold uppercase tracking-wider text-slate-400 text-center leading-none mb-0.5">{label}</span>
+    <span className="text-[12px] font-black leading-tight" style={{ color }}>{value}</span>
+    {subtext && <span className="text-[8px] text-slate-400 font-semibold">{subtext}</span>}
+  </div>
+);
+
+// ─── ATTACHMENT CARD ──────────────────────────────────────────────────────────
+
+const AttachmentCard = ({ att, index, setLightboxImage }: { att: any; index: number; setLightboxImage: (u: string) => void }) => {
+  const url = typeof att === "string" ? att : (att.file_url || att.url || "");
+  if (!url) return null;
+
+  const fullUrl = url.startsWith("http") || url.startsWith("data:") ? url : `${API_BASE}${url}`;
+  const isPdf = url.toLowerCase().split("?")[0].endsWith(".pdf");
+  const billType = typeof att === "object" ? att.bill_type : null;
+
+  return (
+    <div
+      className="group relative rounded-lg border border-slate-200 bg-white overflow-hidden shadow-2xs hover:border-[#4A6A8A] transition-all cursor-pointer flex items-center gap-2 p-1.5"
+      onClick={() => isPdf ? window.open(fullUrl, "_blank") : setLightboxImage(fullUrl)}
+    >
+      <div className="w-10 h-10 rounded bg-slate-100 overflow-hidden flex items-center justify-center shrink-0 border border-slate-200 relative">
+        {isPdf ? (
+          <FileText size={16} className="text-red-500" />
+        ) : (
+          <img src={fullUrl} alt={`Bill ${index + 1}`} loading="eager" className="w-full h-full object-cover" onError={(e) => { (e.target as HTMLElement).style.display = "none"; }} />
+        )}
+      </div>
+      <div className="flex-1 min-w-0">
+        <div className="text-[10px] font-bold text-slate-800 truncate">
+          {billType ? `${billType} Bill` : `Attachment #${index + 1}`}
+        </div>
+        <div className="text-[8.5px] text-slate-400 truncate">
+          {isPdf ? "PDF Document" : "Image File"}
+        </div>
+      </div>
+      <Eye size={12} className="text-slate-300 group-hover:text-[#4A6A8A] shrink-0" />
+    </div>
+  );
+};
+
+// ─── LEG DETAILS CARD ─────────────────────────────────────────────────────────
+
+const LegDetailCard = ({
+  leg, index, totalLegsCount, setLightboxImage, barcodeMap, claimDistrictType, userAllowance, claimMaster, allAttachments
+}: {
+  leg: any; index: number; totalLegsCount: number; setLightboxImage: (u: string) => void;
+  barcodeMap: Record<string, { equipment: string; hospital: string }>;
+  claimDistrictType?: string;
+  userAllowance?: any;
+  claimMaster?: any;
+  allAttachments?: any[];
+}) => {
+  const legNum = leg.leg || leg.leg_number || index + 1;
+  const isFirstLeg = index === 0; // STRICT: DA is attached ONLY to the 1st Leg of the day!
+
+  const fromDist = leg.from_district || leg.from_dist || "—";
+  const toDist = leg.to_district || leg.to_dist || "—";
+  const fromLoc = leg.from || leg.from_location || "—";
+  const toLoc = leg.to || leg.to_location || "—";
+  const mode = leg.mode || leg.travel_mode || "Bike";
+  const subMode = leg.sub_mode || "";
+  const km = leg.km ?? leg.distance_km ?? 0;
+  const origKm = leg.original_km ?? leg.original_distance_km;
+
+  // DYNAMIC RATES FETCHED FROM DB ALLOWANCE MASTER BY GRADE
+  const dbBikeRate = leg.rate_bike || leg.bike_rate || userAllowance?.rate_bike || claimMaster?.rate_bike || claimMaster?.allowance?.rate_bike || 4.5;
+  const dbCarRate = leg.rate_car || leg.car_rate || userAllowance?.rate_car || claimMaster?.rate_car || claimMaster?.allowance?.rate_car || 9.0;
+  const dbOutDistrictDa = userAllowance?.daily_out_district || claimMaster?.daily_out_district || claimMaster?.allowance?.daily_out_district || 150;
+  
+  const isCar = mode.toLowerCase().includes("car") || mode.toLowerCase().includes("four");
+  const ratePerKm = leg.rate_per_km
+    ? parseFloat(leg.rate_per_km)
+    : (leg.rate ? parseFloat(leg.rate) : (isCar ? dbCarRate : dbBikeRate));
+  
+  // Deep Parse activity details / meta
+  const act = parseActivityDetails(leg.activity_details || leg.activity || leg.meta);
+
+  // Per-Leg Current Net Amounts
+  const taAmt = parseFloat(leg.amount ?? leg.travel_amount ?? 0);
+  const origTa = parseFloat(leg.original_amount ?? leg.original_travel_amount ?? 0);
+  const daAmt = parseFloat(leg.da ?? leg.da_amount ?? 0);
+  const origDa = parseFloat(leg.original_da ?? leg.original_da_amount ?? 0);
+  const hotelAmt = parseFloat(leg.hotel ?? leg.hotel_amount ?? 0);
+  const localPur = parseFloat(leg.local_purchase ?? leg.local_purchase_amount ?? 0);
+  const localPurRemark = leg.local_purchase_remark || leg.local_purchase_reason || "";
+  const othAmt = parseFloat(leg.oth_amount ?? leg.other_amount ?? leg.sub_amount ?? leg.parcel_amount ?? 0);
+  
+  // ROBUST OTHER EXPENSE REMARK / REASON RESOLVER
+  const othDesc = isValidText(leg.parcel_desc) ? leg.parcel_desc
+    : (isValidText(leg.sub_mode_desc) ? leg.sub_mode_desc
+    : (isValidText(leg.other_desc) ? leg.other_desc
+    : (isValidText(leg.other_expense_remark) ? leg.other_expense_remark
+    : (isValidText(leg.other_expense_reason) ? leg.other_expense_reason
+    : (isValidText(leg.other_reason) ? leg.other_reason
+    : (isValidText(leg.oth_remark) ? leg.oth_remark
+    : (isValidText(leg.oth_desc) ? leg.oth_desc
+    : (isValidText(act.otherDesc) ? act.otherDesc
+    : (isValidText(leg.remark) ? leg.remark : "")))))))));
+  
+  const netLegAmt = taAmt + (isFirstLeg ? daAmt : 0) + hotelAmt + localPur + othAmt;
+
+  const estimatedSubmittedTa = origTa > 0 ? origTa : ((km > 0 && taAmt === 0) ? (km * ratePerKm) : taAmt);
+
+  const isInDistrictLeg = (fromDist && toDist && fromDist.toLowerCase() === toDist.toLowerCase() && fromDist !== "—") || claimDistrictType === "In-District";
+
+  // Check if DA was claimed by engineer on LEG #1 ONLY
+  const isDaClaimed = isFirstLeg && (leg.is_da_claimed ?? leg.da_claimed ?? (origDa > 0 || (leg.da !== undefined && parseFloat(leg.da) === 0 && isInDistrictLeg)));
+  
+  // Estimated Submitted DA: Only Leg #1 gets evaluated for DA deduction!
+  const estimatedSubmittedDa = isFirstLeg
+    ? (origDa > 0 ? origDa : (isDaClaimed ? dbOutDistrictDa : daAmt))
+    : 0;
+
+  const submittedLegAmt = (leg.claimed_amount || leg.original_total)
+    ? parseFloat(leg.claimed_amount || leg.original_total)
+    : (estimatedSubmittedTa + estimatedSubmittedDa + hotelAmt + localPur + othAmt);
+
+  // Leg Deductions & Reasons
+  const legDeductionAmt = parseFloat(leg.deduction_amount ?? leg.deduction_amt ?? 0);
+  const kmDeductionReason = leg.km_deduction_reason || leg.system_km_reason || "";
+  
+  // DA deduction reasons ONLY apply on Leg #1!
+  const daDeductionReason = isFirstLeg ? (leg.da_deduction_reason || leg.system_da_reason || "") : "";
+  const baseLocationDeductionReason = leg.base_location_deduction_reason || leg.base_location_reason || leg.base_location_policy || leg.location_policy_reason || "";
+
+  const isKmEdited = origKm && parseFloat(origKm) !== parseFloat(km);
+  const isTaEdited = estimatedSubmittedTa > taAmt;
+  
+  // DA is edited ONLY if isFirstLeg is true!
+  const isDaEdited = isFirstLeg && (estimatedSubmittedDa > daAmt);
+
+  const calculatedDeduction = (legDeductionAmt > 0)
+    ? legDeductionAmt
+    : ((submittedLegAmt > netLegAmt) ? (submittedLegAmt - netLegAmt) : 0);
+
+  // STRICT PER-LEG DEDUCTION CHECK: Only show if there's an explicit per-leg adjustment
+  const hasLegDeduction = (calculatedDeduction > 0 || isTaEdited || isDaEdited || isKmEdited || isValidText(kmDeductionReason) || isValidText(daDeductionReason) || (isFirstLeg && isValidText(baseLocationDeductionReason)));
+
+  // Work Metrics
+  const callsClosed = leg.calls_completed || leg.ws_closed || 0;
+  const pmsCount = leg.pms_count || leg.ws_pms || 0;
+  const calibCount = leg.calibration_count || 0;
+  const mobiCount = leg.mobilise_count || leg.mobilise_asset_count || 0;
+  const assetTagging = leg.asset_tagging || leg.ws_asset || 0;
+  
+  const hospitalName = leg.hospital_name || leg.hospital || leg.location_visited || act.hospitalName || "";
+  const equipmentName = leg.equipment_name || leg.equipment || act.equipmentName || "";
+  const equipmentModel = leg.equipment_model || leg.model || act.equipmentModel || "";
+  const department = leg.department || leg.dept || act.department || "";
+  const barcode = leg.barcode || act.barcode || "";
+  const schedule = leg.schedule || act.schedule || "";
+
+  // Validate Purpose & Reasons
+  const rawPurpose = leg.visit_purpose || leg.purpose || act.text || "";
+  const purpose = isValidText(rawPurpose) ? String(rawPurpose).trim() : "";
+  
+  const rawOtherReason = leg.other_reason || leg.other_desc || leg.local_purchase_remark || act.otherDesc || "";
+  const otherReason = isValidText(rawOtherReason) ? String(rawOtherReason).trim() : "";
+
+  // STRICT ZERO WORK CHECK: Calls badge ONLY IF callsClosed > 0!
+  const hasCalls = callsClosed > 0;
+  const hasPms = pmsCount > 0 || (act.pmsList && act.pmsList.length > 0) || !!act.pmsBarcode;
+  const hasCalib = calibCount > 0;
+  const hasMobi = mobiCount > 0;
+  const hasAssetTagging = assetTagging > 0 || (act.assetsList && act.assetsList.length > 0);
+
+  const isOtherCategory = mode.toLowerCase().includes("other") || (otherReason && !hospitalName && !equipmentName && act.pmsList.length === 0);
+
+  // Strict URL Normalizer
+  const toFullUrl = (u: any) => {
+    if (!u || typeof u !== "string") return "";
+    const clean = u.trim();
+    if (!clean) return "";
+    return clean.startsWith("http") || clean.startsWith("data:") ? clean : `${API_BASE}${clean}`;
+  };
+
+  // ─── HIGH-PRECISION BILL TO LEG ATTACHMENT MATCHER ─────────────────────────
+  const getLegTravelBillUrl = (): string => {
+    if (leg.travel_bill || leg.ta_bill || leg.ticket_url || leg.bus_bill || leg.train_ticket) {
+      return toFullUrl(leg.travel_bill || leg.ta_bill || leg.ticket_url || leg.bus_bill || leg.train_ticket);
+    }
+    if (leg.attachment_url || leg.photo_url || leg.bill_url || leg.service_report_url || act.attachmentUrl) {
+      const candidate = toFullUrl(leg.attachment_url || leg.photo_url || leg.bill_url || leg.service_report_url || act.attachmentUrl);
+      const lower = candidate.toLowerCase();
+      if (!lower.includes("hotel") && !lower.includes("local_purchase") && !lower.includes("stay_bill")) {
+        return candidate;
+      }
+    }
+
+    const legAtts = getAttachmentsArray(leg.attachments || leg.bills || leg.photos);
+    for (const a of legAtts) {
+      const urlStr = typeof a === "string" ? a : (a.file_url || a.url || a.path || "");
+      if (urlStr) return toFullUrl(urlStr);
+    }
+
+    if (allAttachments && allAttachments.length > 0) {
+      for (let aIdx = 0; aIdx < allAttachments.length; aIdx++) {
+        const att = allAttachments[aIdx];
+        if (!att) continue;
+
+        const attLegIdx = typeof att === "object" ? (att.leg_index ?? att.leg_idx ?? att.legIndex) : undefined;
+        const attLegNum = typeof att === "object" ? (att.leg_number ?? att.leg_num ?? att.legNum ?? att.leg) : undefined;
+        const attAmount = typeof att === "object" ? parseFloat(att.amount || att.travel_amount || att.leg_amount || 0) : 0;
+        const attMode = typeof att === "object" ? String(att.mode || att.travel_mode || att.bill_type || "").toLowerCase() : "";
+        const urlStr = typeof att === "string" ? att : (att.file_url || att.url || att.path || "");
+        if (!urlStr) continue;
+        const lowerUrl = urlStr.toLowerCase();
+
+        if (attLegIdx !== undefined && attLegIdx !== null && parseInt(attLegIdx, 10) === index) return toFullUrl(urlStr);
+        if (attLegNum !== undefined && attLegNum !== null && parseInt(attLegNum, 10) === legNum) return toFullUrl(urlStr);
+
+        if (attAmount > 0 && (Math.abs(attAmount - taAmt) < 2 || Math.abs(attAmount - netLegAmt) < 2)) return toFullUrl(urlStr);
+
+        const isBusTrainTicket = attMode.includes("bus") || attMode.includes("train") || lowerUrl.includes("bus") || lowerUrl.includes("train") || lowerUrl.includes("ticket");
+        const isLegBusTrain = mode.toLowerCase().includes("bus") || mode.toLowerCase().includes("train");
+        if (isBusTrainTicket && isLegBusTrain) return toFullUrl(urlStr);
+
+        if (allAttachments.length === totalLegsCount && aIdx === index) {
+          if (!lowerUrl.includes("hotel") && !lowerUrl.includes("local_purchase") && !lowerUrl.includes("stay_bill")) {
+            return toFullUrl(urlStr);
+          }
+        }
+      }
+    }
+    return "";
+  };
+
+  const travelTaBillUrl = getLegTravelBillUrl();
+
+  // 2. Hotel / Stay Specific Bill URL FOR THIS LEG ONLY
+  const getLegHotelBillUrl = (): string => {
+    if (hotelAmt <= 0) return "";
+    const directUrl = toFullUrl(leg.hotel_bill || leg.hotel_photo || leg.hotel_url || leg.stay_bill);
+    if (directUrl) return directUrl;
+
+    if (allAttachments && allAttachments.length > 0) {
+      for (const att of allAttachments) {
+        if (!att) continue;
+        const attLegIdx = typeof att === "object" ? (att.leg_index ?? att.leg_idx ?? att.legIndex) : undefined;
+        const attLegNum = typeof att === "object" ? (att.leg_number ?? att.leg_num ?? att.legNum ?? att.leg) : undefined;
+        const urlStr = typeof att === "string" ? att : (att.file_url || att.url || att.path || "");
+        if (!urlStr) continue;
+        const lowerUrl = urlStr.toLowerCase();
+        const billType = typeof att === "object" ? String(att.bill_type || att.category || "").toLowerCase() : "";
+
+        if (attLegIdx !== undefined && parseInt(attLegIdx, 10) === index) return toFullUrl(urlStr);
+        if (attLegNum !== undefined && parseInt(attLegNum, 10) === legNum) return toFullUrl(urlStr);
+        if (billType.includes("hotel") || billType.includes("stay") || lowerUrl.includes("hotel") || lowerUrl.includes("stay")) return toFullUrl(urlStr);
+      }
+    }
+    return "";
+  };
+  const hotelBillUrl = getLegHotelBillUrl();
+
+  // 3. Local Purchase Specific Bill URL FOR THIS LEG ONLY
+  const getLegLocalPurchaseBillUrl = (): string => {
+    if (localPur <= 0) return "";
+    const directUrl = toFullUrl(leg.local_purchase_bill || leg.local_purchase_photo || leg.local_purchase_url || leg.lp_bill);
+    if (directUrl) return directUrl;
+
+    if (allAttachments && allAttachments.length > 0) {
+      for (const att of allAttachments) {
+        if (!att) continue;
+        const attLegIdx = typeof att === "object" ? (att.leg_index ?? att.leg_idx ?? att.legIndex) : undefined;
+        const attLegNum = typeof att === "object" ? (att.leg_number ?? att.leg_num ?? att.legNum ?? att.leg) : undefined;
+        const urlStr = typeof att === "string" ? att : (att.file_url || att.url || att.path || "");
+        if (!urlStr) continue;
+        const lowerUrl = urlStr.toLowerCase();
+        const billType = typeof att === "object" ? String(att.bill_type || att.category || "").toLowerCase() : "";
+
+        if (attLegIdx !== undefined && parseInt(attLegIdx, 10) === index) return toFullUrl(urlStr);
+        if (attLegNum !== undefined && parseInt(attLegNum, 10) === legNum) return toFullUrl(urlStr);
+        if (billType.includes("local") || billType.includes("purchase") || lowerUrl.includes("local") || lowerUrl.includes("purchase")) return toFullUrl(urlStr);
+      }
+    }
+    return "";
+  };
+  const localPurchaseBillUrl = getLegLocalPurchaseBillUrl();
+
+  // 4. Other Expense / Parcel Specific Bill URL FOR THIS LEG ONLY
+  const getLegOtherBillUrl = (): string => {
+    if (othAmt <= 0) return "";
+    const directUrl = toFullUrl(leg.other_bill || leg.other_photo || leg.parcel_photo || leg.oth_bill);
+    if (directUrl) return directUrl;
+
+    if (allAttachments && allAttachments.length > 0) {
+      for (const att of allAttachments) {
+        if (!att) continue;
+        const attLegIdx = typeof att === "object" ? (att.leg_index ?? att.leg_idx ?? att.legIndex) : undefined;
+        const attLegNum = typeof att === "object" ? (att.leg_number ?? att.leg_num ?? att.legNum ?? att.leg) : undefined;
+        const urlStr = typeof att === "string" ? att : (att.file_url || att.url || att.path || "");
+        if (!urlStr) continue;
+        const lowerUrl = urlStr.toLowerCase();
+        const billType = typeof att === "object" ? String(att.bill_type || att.category || "").toLowerCase() : "";
+
+        if (attLegIdx !== undefined && parseInt(attLegIdx, 10) === index) return toFullUrl(urlStr);
+        if (attLegNum !== undefined && parseInt(attLegNum, 10) === legNum) return toFullUrl(urlStr);
+        if (billType.includes("other") || billType.includes("parcel") || lowerUrl.includes("other") || lowerUrl.includes("parcel")) return toFullUrl(urlStr);
+      }
+    }
+    return "";
+  };
+  const otherBillUrl = getLegOtherBillUrl();
+
+  // Construct Effective Calls List for Excel Table Format
+  const effectiveCallsList = act.callsList.length > 0 ? act.callsList : (
+    (callsClosed > 0 || isValidText(act.callsBarcode) || isValidText(act.callsType) || isValidText(act.callsStatus)) ? [{
+      barcode: act.callsBarcode || barcode || "—",
+      equipment: act.equipmentName || equipmentName || "—",
+      hospital: act.parsed?.calls_asset_details?.hospital_name || act.hospitalName || hospitalName || "—",
+      call_type: act.callsType || "Service Call",
+      status: act.callsStatus || "Attended & Closed",
+      attachment_url: act.attachmentUrl || travelTaBillUrl || ""
+    }] : []
+  );
+
+  return (
+    <div className="rounded-lg border border-slate-200 bg-white p-2.5 shadow-2xs space-y-2">
+      {/* Leg Header */}
+      <div className="flex items-center justify-between flex-wrap gap-1.5 pb-1.5 border-b border-slate-100">
+        <div className="flex items-center gap-1.5">
+          <span className="w-5 h-5 rounded bg-[#4A6A8A] text-white flex items-center justify-center text-[9.5px] font-extrabold shrink-0">
+            #{legNum}
+          </span>
+          <div className="flex items-center gap-1 text-[11px] font-extrabold text-slate-800">
+            <span>{fromDist} {fromLoc !== "—" && fromLoc !== fromDist ? `(${fromLoc})` : ""}</span>
+            <ArrowRight size={10} className="text-slate-400" />
+            <span>{toDist} {toLoc !== "—" && toLoc !== toDist ? `(${toLoc})` : ""}</span>
+          </div>
+        </div>
+
+        <div className="flex items-center gap-1 flex-wrap">
+          <ModeChip mode={mode} />
+          {subMode && <span className="text-[8.5px] font-bold px-1.5 py-0.2 rounded bg-indigo-50 text-indigo-700 border border-indigo-200">Sub: {subMode}</span>}
+          {km > 0 && (
+            <span className={`text-[9.5px] font-extrabold px-1.5 py-0.2 rounded border ${isKmEdited ? "bg-amber-50 text-amber-800 border-amber-200" : "bg-slate-100 text-slate-700 border-slate-200"}`}>
+              {km} km (@ ₹{ratePerKm}/km) {isKmEdited ? `(Orig: ${origKm}km)` : ""}
+            </span>
+          )}
+          {submittedLegAmt > netLegAmt && (
+            <span className="text-[9px] font-bold px-1.5 py-0.2 rounded bg-slate-100 text-slate-500 border border-slate-200">
+              Claimed: {rupee(submittedLegAmt)}
+            </span>
+          )}
+          <span className="text-[10px] font-extrabold px-1.5 py-0.2 rounded bg-emerald-50 text-emerald-700 border border-emerald-200">
+            Net: {rupee(netLegAmt)}
+          </span>
+        </div>
+      </div>
+
+      {/* Locations */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-1.5 text-[10px]">
+        <div className="flex items-center gap-1 bg-slate-50 px-2 py-1 rounded border border-slate-100">
+          <Navigation size={10} className="text-slate-400 shrink-0" />
+          <span className="text-slate-400 font-bold uppercase text-[8.5px]">From:</span>
+          <span className="font-semibold text-slate-800 truncate">{fromDist} {fromLoc !== "—" ? `(${fromLoc})` : ""}</span>
+        </div>
+        <div className="flex items-center gap-1 bg-slate-50 px-2 py-1 rounded border border-slate-100">
+          <MapPin size={10} className="text-[#4A6A8A] shrink-0" />
+          <span className="text-slate-400 font-bold uppercase text-[8.5px]">To:</span>
+          <span className="font-semibold text-slate-800 truncate">{toDist} {toLoc !== "—" ? `(${toLoc})` : ""}</span>
+        </div>
+      </div>
+
+      {/* PER-LEG FINANCIAL BREAKDOWN STRIP WITH STRICT CATEGORY & PER-LEG ISOLATED BILL ATTACHMENT MAPPINGS */}
+      <div className="bg-slate-50/80 p-1.5 rounded-lg border border-slate-200 flex flex-wrap gap-1 items-center justify-between text-[9.5px]">
+        <div className="flex flex-wrap gap-2 items-center">
+          
+          {/* 1. TRAVEL TA & ITS BUS/TRAIN/TRAVEL TICKET (STRICTLY FOR THIS LEG ONLY) */}
+          <div className="flex items-center gap-1 flex-wrap">
+            <span className="text-slate-400 font-bold uppercase text-[8.5px]">Travel TA:</span>
+            <b className="text-slate-900">{rupee(taAmt)}</b>
+            {isTaEdited && <span className="text-[8px] text-amber-700 font-bold">(Orig: {rupee(estimatedSubmittedTa)})</span>}
+            {travelTaBillUrl && (
+              <button
+                onClick={() => setLightboxImage(travelTaBillUrl)}
+                className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded bg-[#4A6A8A] text-white text-[8.5px] font-bold hover:bg-[#3b546e] transition-colors cursor-pointer ml-0.5"
+                title="View Bus/Train Travel Ticket for Leg #"
+              >
+                <Eye size={10} /> View Bill
+              </button>
+            )}
+          </div>
+
+          {/* 2. DAILY DA (STRICTLY RESTRICTED TO LEG #1 ONLY - COMPLETELY HIDDEN ON LEG #2, #3, #4...) */}
+          {isFirstLeg && (
+            <div className="flex items-center gap-1 border-l border-slate-200 pl-2">
+              <span className="text-slate-400 font-bold uppercase text-[8.5px]">Daily DA:</span>
+              <b className="text-emerald-800">{rupee(daAmt)}</b>
+              {isDaEdited && <span className="text-[8px] text-amber-700 font-bold">(Orig: {rupee(estimatedSubmittedDa)})</span>}
+            </div>
+          )}
+
+          {/* 3. LOCAL PURCHASE & ITS LOCAL PURCHASE BILL (STRICTLY FOR THIS LEG ONLY) */}
+          {localPur > 0 && (
+            <div className="flex items-center gap-1 border-l border-slate-200 pl-2 flex-wrap">
+              <span className="text-amber-800 font-bold uppercase text-[8.5px]">Local Purchase:</span>
+              <b className="text-amber-900">{rupee(localPur)}</b>
+              {localPurRemark && <span className="text-[8.5px] text-slate-600 font-medium">({localPurRemark})</span>}
+              {localPurchaseBillUrl && (
+                <button
+                  onClick={() => setLightboxImage(localPurchaseBillUrl)}
+                  className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded bg-amber-700 text-white text-[8.5px] font-bold hover:bg-amber-800 transition-colors cursor-pointer ml-0.5"
+                  title="View Local Purchase Bill for Leg #"
+                >
+                  <Eye size={10} /> View Bill
+                </button>
+              )}
+            </div>
+          )}
+
+          {/* 4. HOTEL / STAY & ITS HOTEL BILL (STRICTLY FOR THIS LEG ONLY) */}
+          {hotelAmt > 0 && (
+            <div className="flex items-center gap-1 border-l border-slate-200 pl-2 flex-wrap">
+              <span className="text-purple-800 font-bold uppercase text-[8.5px]">Hotel:</span>
+              <b className="text-purple-900">{rupee(hotelAmt)}</b>
+              {hotelBillUrl && (
+                <button
+                  onClick={() => setLightboxImage(hotelBillUrl)}
+                  className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded bg-purple-700 text-white text-[8.5px] font-bold hover:bg-purple-800 transition-colors cursor-pointer ml-0.5"
+                  title="View Hotel Bill for Leg #"
+                >
+                  <Eye size={10} /> View Bill
+                </button>
+              )}
+            </div>
+          )}
+
+          {/* 5. OTHER EXPENSE / PARCEL WITH EXACT REMARK / DESCRIPTION DISPLAYED */}
+          {othAmt > 0 && (
+            <div className="flex items-center gap-1 border-l border-slate-200 pl-2 flex-wrap">
+              <span className="text-amber-800 font-bold uppercase text-[8.5px]">Other Exp:</span>
+              <b className="text-amber-900">{rupee(othAmt)}</b>
+              {othDesc && (
+                <span className="text-[8.5px] text-[#4A6A8A] font-extrabold bg-amber-100/90 px-1.5 py-0.5 rounded border border-amber-200/90">
+                  ({othDesc})
+                </span>
+              )}
+              {otherBillUrl && (
+                <button
+                  onClick={() => setLightboxImage(otherBillUrl)}
+                  className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded bg-amber-700 text-white text-[8.5px] font-bold hover:bg-amber-800 transition-colors cursor-pointer ml-0.5"
+                  title="View Other Expense Bill for Leg #"
+                >
+                  <Eye size={10} /> View Bill
+                </button>
+              )}
+            </div>
+          )}
+        </div>
+      </div>
+
+      {/* PER-LEG ADJUSTMENTS CARD (ONLY IF EXPLICIT LEG KM/TA EDITS EXIST) */}
+      {hasLegDeduction && (
+        <div className="bg-rose-50/90 p-2.5 rounded-lg border border-rose-200 space-y-1.5 text-[9.5px]">
+          {/* Header */}
+          <div className="flex items-center justify-between font-extrabold text-rose-900 border-b border-rose-200/80 pb-1">
+            <span className="flex items-center gap-1.5 text-[10px]">
+              <AlertTriangle size={12} className="text-rose-600" /> Leg #{legNum} Policy Adjustments
+            </span>
+            {calculatedDeduction > 0 && (
+              <span className="text-[11px] font-black text-rose-600">
+                Total Leg Deduction: -{rupee(calculatedDeduction)}
+              </span>
+            )}
+          </div>
+
+          {/* Itemized Calculation Grid */}
+          <div className="bg-white/80 p-1.5 rounded border border-rose-100 grid grid-cols-2 sm:grid-cols-3 gap-1 text-[9px] text-slate-700">
+            {isTaEdited && (
+              <div>
+                <span className="text-slate-400 font-bold uppercase text-[8px] block">Travel TA ({km} km @ ₹{ratePerKm}/km)</span>
+                <span className="font-bold text-slate-800">Claimed: {rupee(estimatedSubmittedTa)}</span> → <span className="font-bold text-rose-600">Net: {rupee(taAmt)}</span>
+              </div>
+            )}
+            {isDaEdited && (
+              <div>
+                <span className="text-slate-400 font-bold uppercase text-[8px] block">Daily DA (1st Leg)</span>
+                <span className="font-bold text-slate-800">Claimed: {rupee(estimatedSubmittedDa)}</span> → <span className="font-bold text-rose-600">Net: {rupee(daAmt)}</span>
+              </div>
+            )}
+            {calculatedDeduction > 0 && (
+              <div>
+                <span className="text-slate-400 font-bold uppercase text-[8.5px] block">Deducted Amount</span>
+                <span className="font-extrabold text-rose-600">-{rupee(calculatedDeduction)}</span>
+              </div>
+            )}
+          </div>
+
+          {/* Base Working Location Policy Reason (ONLY SHOWN ON LEG #1 FOR DA DEDUCTION) */}
+          {isFirstLeg && (baseLocationDeductionReason || (daAmt === 0 && isInDistrictLeg)) && (
+            <div className="bg-white p-1.5 rounded border border-indigo-200/80 text-slate-900 font-medium">
+              <span className="text-indigo-800 font-extrabold text-[8.5px] uppercase block mb-0.5">📍 Base Working Location Policy:</span>
+              <span>
+                {baseLocationDeductionReason || "As per Company Expense Policy, Daily Allowance (DA) and Travel Allowance (TA) are not applicable when working at assigned Base Working Location."}
+              </span>
+            </div>
+          )}
+
+          {/* System Policy (KM/TA Capped) */}
+          {(isKmEdited || kmDeductionReason || (isTaEdited && !isInDistrictLeg)) && (
+            <div className="bg-white p-1.5 rounded border border-amber-200/80 text-slate-900 font-medium">
+              <span className="text-amber-800 font-extrabold text-[8.5px] uppercase block mb-0.5">⚙️ System Policy (KM / Fare Limit):</span>
+              <span>
+                {kmDeductionReason || (isKmEdited ? `Travel distance adjusted to ${km} km (Original claimed: ${origKm} km)` : `Travel Allowance adjusted for ${km} km @ ₹${ratePerKm}/km limit.`)}
+              </span>
+            </div>
+          )}
+
+          {/* System Policy (DA Capped) - LEG #1 ONLY */}
+          {isFirstLeg && (daDeductionReason || (isDaEdited && !isInDistrictLeg && !baseLocationDeductionReason)) && (
+            <div className="bg-white p-1.5 rounded border border-amber-200/80 text-slate-900 font-medium">
+              <span className="text-amber-800 font-extrabold text-[8.5px] uppercase block mb-0.5">⚙️ System Policy (DA Grade Cap):</span>
+              <span>{daDeductionReason || `Daily Allowance (DA) capped according to Grade Allowance limits (Original claimed: ${rupee(estimatedSubmittedDa)}).`}</span>
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* IF REASON IS OTHER: ONLY RENDER THE CLEAN OTHER REASON BOX AND NOTHING ELSE! */}
+      {isOtherCategory && otherReason ? (
+        <div className="bg-amber-50 p-2.5 rounded-lg border border-amber-200 text-amber-950 font-semibold text-[10.5px] flex items-center gap-2">
+          <Info size={14} className="text-amber-700 shrink-0" />
+          <div>
+            <span className="text-amber-800 font-bold block text-[9px] uppercase">Reason for Other Mode / Category:</span>
+            <span className="text-slate-900 font-bold">{otherReason}</span>
+          </div>
+        </div>
+      ) : (
+        <>
+          {/* HOSPITAL & EQUIPMENT DETAILS BOX (ONLY IF HOSPITAL NAME OR EQUIPMENT NAME EXISTS) */}
+          {(hospitalName || equipmentName || barcode) && (
+            <div className="bg-slate-50 p-2 rounded border border-slate-200/80 space-y-1 text-[10px]">
+              {hospitalName && (
+                <div className="font-bold text-slate-700 border-b border-slate-200 pb-1 flex items-center justify-between">
+                  <span className="flex items-center gap-1 text-emerald-800 font-extrabold"><Building2 size={11} /> {hospitalName}</span>
+                  {travelTaBillUrl && (
+                    <button
+                      onClick={() => setLightboxImage(travelTaBillUrl)}
+                      className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded bg-[#4A6A8A] text-white text-[8.5px] font-bold hover:bg-[#3b546e] transition-colors"
+                    >
+                      <Eye size={10} /> View Photo
+                    </button>
+                  )}
+                </div>
+              )}
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-1 pt-0.5 text-[9.5px]">
+                {equipmentName && <div><b className="text-slate-500 uppercase text-[8.5px]">Equipment:</b> <span className="font-bold text-slate-900">{equipmentName}</span></div>}
+                {equipmentModel && <div><b className="text-slate-500 uppercase text-[8.5px]">Model:</b> <span className="font-semibold text-slate-800">{equipmentModel}</span></div>}
+                {barcode && <div><b className="text-slate-500 uppercase text-[8.5px]">Barcode:</b> <span className="font-mono font-bold text-[#4A6A8A]">{barcode}</span></div>}
+                {schedule && <div><b className="text-slate-500 uppercase text-[8.5px]">Schedule:</b> <span className="font-bold text-emerald-700">{schedule}</span></div>}
+                {department && <div><b className="text-slate-500 uppercase text-[8.5px]">Department:</b> <span className="font-semibold text-slate-800">{department}</span></div>}
+              </div>
+            </div>
+          )}
+
+          {/* Work Badges Summary - ONLY SHOW TAGS IF WORK COMPLETED IS STRICTLY > 0 */}
+          {(hasCalls || hasPms || hasCalib || hasMobi || hasAssetTagging) && (
+            <div className="flex flex-wrap gap-1 items-center">
+              {hasCalls && (
+                <span className="inline-flex items-center gap-1 px-1.5 py-0.2 rounded text-[9px] font-bold bg-blue-50 text-blue-700 border border-blue-200">
+                  <PhoneCall size={9} /> {callsClosed} Calls Done {act.callsType ? `(${act.callsType})` : ""}
+                </span>
+              )}
+              {hasPms && (
+                <span className="inline-flex items-center gap-1 px-1.5 py-0.2 rounded text-[9px] font-bold bg-emerald-50 text-emerald-700 border border-emerald-200">
+                  <Wrench size={9} /> {pmsCount || (act.pmsList ? act.pmsList.length : 1)} PMS Done {act.pmsFrequency ? `(${act.pmsFrequency})` : ""}
+                </span>
+              )}
+              {hasCalib && (
+                <span className="inline-flex items-center gap-1 px-1.5 py-0.2 rounded text-[9px] font-bold bg-purple-50 text-purple-700 border border-purple-200">
+                  <Crosshair size={9} /> {calibCount} Calibration
+                </span>
+              )}
+              {hasMobi && (
+                <span className="inline-flex items-center gap-1 px-1.5 py-0.2 rounded text-[9px] font-bold bg-amber-50 text-amber-700 border border-amber-200">
+                  <Truck size={9} /> {mobiCount} Mobilisation
+                </span>
+              )}
+              {hasAssetTagging && (
+                <span className="inline-flex items-center gap-1 px-1.5 py-0.2 rounded text-[9px] font-bold bg-indigo-50 text-indigo-700 border border-indigo-200">
+                  <Tag size={9} /> {assetTagging || act.assetQuantity || 1} Tagged
+                </span>
+              )}
+            </div>
+          )}
+
+          {/* CALLS WORK LIST - EXCEL TABLE FORMAT */}
+          {hasCalls && effectiveCallsList.length > 0 && (
+            <div className="space-y-1 text-[9.5px]">
+              <div className="flex items-center justify-between font-bold text-blue-900 border-b border-blue-100 pb-1">
+                <span className="flex items-center gap-1"><PhoneCall size={10} /> Calls Work List ({effectiveCallsList.length})</span>
+              </div>
+
+              <div className="overflow-x-auto border border-blue-200 rounded-lg shadow-2xs">
+                <table className="w-full text-left border-collapse text-[10px]">
+                  <thead>
+                    <tr className="bg-blue-50/80 text-blue-900 font-extrabold uppercase border-b border-blue-200 text-[9px]">
+                      <th className="py-1 px-2">#</th>
+                      <th className="py-1 px-2">Barcode</th>
+                      <th className="py-1 px-2">Equipment Name</th>
+                      <th className="py-1 px-2">Hospital Name</th>
+                      <th className="py-1 px-2">Call Type</th>
+                      <th className="py-1 px-2">Status</th>
+                      <th className="py-1 px-2 text-center">Attachment</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-blue-100 bg-white">
+                    {effectiveCallsList.map((cItem: any, cIdx: number) => {
+                      const cCode = cItem.barcode || cItem.calls_barcode || cItem.code || cItem.serial_no || barcode || "—";
+                      
+                      const rawEquipment = cItem.equipment || cItem.equipment_name || cItem.asset_name || equipmentName || (cCode !== "—" ? barcodeMap[cCode]?.equipment : "");
+                      const cEquipment = isValidText(rawEquipment) ? rawEquipment : (cCode !== "—" && barcodeMap[cCode]?.equipment ? barcodeMap[cCode].equipment : "—");
+                      
+                      const rawHospital = cItem.hospital || cItem.hospital_name || cItem.facility_name || hospitalName || (cCode !== "—" ? barcodeMap[cCode]?.hospital : "");
+                      const cHospital = isValidText(rawHospital) ? rawHospital : (cCode !== "—" && barcodeMap[cCode]?.hospital ? barcodeMap[cCode].hospital : "—");
+
+                      const cType = cItem.call_type || cItem.calls_type || cItem.type || act.callsType || "Service Call";
+                      const cStatus = cItem.status || cItem.calls_status || act.callsStatus || "Attended & Closed";
+                      
+                      const cUrl = cItem.attachment_url || cItem.service_report_url || cItem.photo_url || cItem.image_url || "";
+                      const fullCUrl = cUrl ? (cUrl.startsWith("http") || cUrl.startsWith("data:") ? cUrl : `${API_BASE}${cUrl}`) : "";
+
+                      return (
+                        <tr key={cIdx} className="hover:bg-blue-50/40 font-medium">
+                          <td className="py-1 px-2 font-bold text-blue-800">{cIdx + 1}</td>
+                          <td className="py-1 px-2 font-mono font-bold text-[#4A6A8A]">{cCode}</td>
+                          <td className="py-1 px-2 font-bold text-slate-800">{cEquipment}</td>
+                          <td className="py-1 px-2 text-slate-700">{cHospital}</td>
+                          <td className="py-1 px-2 font-semibold text-blue-800">{cType}</td>
+                          <td className="py-1 px-2 font-bold text-emerald-700">{cStatus}</td>
+                          <td className="py-1 px-2 text-center">
+                            {fullCUrl ? (
+                              <button
+                                onClick={() => setLightboxImage(fullCUrl)}
+                                className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded bg-[#4A6A8A] text-white text-[8.5px] font-bold hover:bg-[#3b546e] transition-colors"
+                              >
+                                <Eye size={10} /> View Photo
+                              </button>
+                            ) : "—"}
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          )}
+
+          {/* PMS WORK LIST - EXCEL TABLE FORMAT */}
+          {act.pmsList.length > 0 && (
+            <div className="space-y-1 text-[9.5px]">
+              <div className="flex items-center justify-between font-bold text-emerald-900 border-b border-emerald-100 pb-1">
+                <span className="flex items-center gap-1"><Wrench size={10} /> PMS Work List ({act.pmsList.length})</span>
+              </div>
+
+              <div className="overflow-x-auto border border-emerald-200 rounded-lg shadow-2xs">
+                <table className="w-full text-left border-collapse text-[10px]">
+                  <thead>
+                    <tr className="bg-emerald-50/80 text-emerald-900 font-extrabold uppercase border-b border-emerald-200 text-[9px]">
+                      <th className="py-1 px-2">#</th>
+                      <th className="py-1 px-2">Barcode</th>
+                      <th className="py-1 px-2">Equipment Name</th>
+                      <th className="py-1 px-2">Hospital Name</th>
+                      <th className="py-1 px-2">Schedule</th>
+                      <th className="py-1 px-2 text-center">Attachment</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-emerald-100 bg-white">
+                    {act.pmsList.map((pItem: any, pIdx: number) => {
+                      const pCode = pItem.barcode || pItem.pms_barcode || pItem.code || pItem.serial_no || pItem.asset_barcode || "—";
+                      
+                      const rawEquipment = pItem.equipment || pItem.equipment_name || pItem.asset_name || pItem.equipment_model || pItem.model || equipmentName || (pCode !== "—" ? barcodeMap[pCode]?.equipment : "");
+                      const pEquipment = isValidText(rawEquipment) ? rawEquipment : (pCode !== "—" && barcodeMap[pCode]?.equipment ? barcodeMap[pCode].equipment : "—");
+                      
+                      const rawHospital = pItem.hospital || pItem.hospital_name || pItem.facility_name || hospitalName || (pCode !== "—" ? barcodeMap[pCode]?.hospital : "");
+                      const pHospital = isValidText(rawHospital) ? rawHospital : (pCode !== "—" && barcodeMap[pCode]?.hospital ? barcodeMap[pCode].hospital : "—");
+
+                      const pSched = pItem.schedule || pItem.pms_frequency || pItem.frequency || act.pmsFrequency || schedule || "—";
+                      const pUrl = pItem.attachment_url || pItem.service_report_url || pItem.photo_url || pItem.image_url || "";
+                      const fullPUrl = pUrl ? (pUrl.startsWith("http") || pUrl.startsWith("data:") ? pUrl : `${API_BASE}${pUrl}`) : "";
+
+                      return (
+                        <tr key={pIdx} className="hover:bg-emerald-50/40 font-medium">
+                          <td className="py-1 px-2 font-bold text-emerald-800">{pIdx + 1}</td>
+                          <td className="py-1 px-2 font-mono font-bold text-[#4A6A8A]">{pCode}</td>
+                          <td className="py-1 px-2 font-bold text-slate-800">{pEquipment}</td>
+                          <td className="py-1 px-2 text-slate-700">{pHospital}</td>
+                          <td className="py-1 px-2 font-semibold text-emerald-700">{pSched}</td>
+                          <td className="py-1 px-2 text-center">
+                            {fullPUrl ? (
+                              <button
+                                onClick={() => setLightboxImage(fullPUrl)}
+                                className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded bg-[#4A6A8A] text-white text-[8.5px] font-bold hover:bg-[#3b546e] transition-colors"
+                              >
+                                <Eye size={10} /> View Photo
+                              </button>
+                            ) : "—"}
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          )}
+
+          {/* Clean Purpose & Other Reason Text */}
+          {(purpose || otherReason) && (
+            <div className="bg-slate-50 p-2 rounded border border-slate-100 space-y-1 text-[10px]">
+              {purpose && <div><b className="text-slate-500">Purpose / Details:</b> <span className="text-slate-700 font-medium">{purpose}</span></div>}
+              {otherReason && <div className="bg-amber-50 p-1.5 rounded border border-amber-200 text-amber-900 font-medium"><b className="text-amber-800">Reason for Other Mode / Category:</b> {otherReason}</div>}
+            </div>
+          )}
+        </>
+      )}
+    </div>
+  );
+};
+
+// ─── APPROVAL STEP BADGE (24-HOUR TIME FORMAT) ────────────────────────────────
+
+const ApprovalStep = ({ step, index }: { step: any; index: number }) => {
+  const s = (step.status || "").toLowerCase();
+  let dotColor = "#94a3b8";
+  let label = step.status || "Pending";
+  let bg = "bg-slate-50 border-slate-200";
+  let textColor = "text-slate-600";
+
+  if (s === "approved") { dotColor = "#10b981"; label = "Approved"; bg = "bg-emerald-50 border-emerald-200"; textColor = "text-emerald-700"; }
+  else if (s === "rejected") { dotColor = "#ef4444"; label = "Rejected"; bg = "bg-rose-50 border-rose-200"; textColor = "text-rose-700"; }
+  else if (s === "pending") { dotColor = "#f59e0b"; label = "Pending"; bg = "bg-amber-50 border-amber-200"; textColor = "text-amber-700"; }
+
+  return (
+    <div className={`flex items-start gap-2 rounded-lg border px-2.5 py-2 ${bg}`}>
+      <div className="w-4 h-4 rounded-full flex items-center justify-center text-[8.5px] font-bold text-white shrink-0 mt-0.5" style={{ background: dotColor }}>
+        {step.level_number || index + 1}
+      </div>
+      <div className="flex-1 min-w-0">
+        <div className="flex items-center justify-between gap-1 flex-wrap">
+          <span className="text-[10.5px] font-bold text-slate-800">{step.approver_name || step.approver || `Approver ${index + 1}`}</span>
+          <span className={`text-[9px] font-bold uppercase tracking-wide px-1.5 py-0.2 rounded border ${bg} ${textColor}`}>{label}</span>
+        </div>
+        <div className="text-[9.5px] text-slate-400">
+          {step.approver_code && <span className="font-mono text-slate-500 mr-1">[{step.approver_code}]</span>}
+          {(step.approver_role || step.approver_designation) && <span>· {step.approver_role || step.approver_designation}</span>}
+        </div>
+        {step.updated_at && (
+          <div className="text-[8.5px] text-slate-400 mt-0.5 font-mono">{formatDateTime24(step.updated_at)}</div>
+        )}
+      </div>
+    </div>
+  );
+};
+
+// ─── MAIN COMPONENT ───────────────────────────────────────────────────────────
+
+interface ClaimDetailsModalProps {
+  open: boolean;
+  claimDetails: any;
+  user: any;
+  comments: string;
+  setComments: (v: string) => void;
+  actionLoading: boolean;
+  handleApprove: () => void;
+  handleReject: () => void;
+  handleDeleteClaim: (id: number) => void;
+  onClose: () => void;
+  navigate: (path: string) => void;
+  setLightboxImage: (url: string) => void;
+  getStatusBadgeClass: (status: string, record?: any) => string;
+  getStatusLabel: (status: string, record?: any) => string;
+}
+
+const ClaimDetailsModal: React.FC<ClaimDetailsModalProps> = ({
+  open, claimDetails, user,
+  comments, setComments, actionLoading, handleApprove, handleReject,
+  handleDeleteClaim, onClose, navigate, setLightboxImage,
+  getStatusBadgeClass, getStatusLabel
+}) => {
+  const [showRejectBox, setShowRejectBox] = useState(false);
+  const [barcodeMap, setBarcodeMap] = useState<Record<string, { equipment: string; hospital: string }>>({});
+  const [userAllowance, setUserAllowance] = useState<any>(null);
+
+  // INSTANT PHOTO PREFETCHER INTO BROWSER MEMORY (0ms DELAY WHEN CLICKING VIEW PHOTO / VIEW BILL)
+  useEffect(() => {
+    if (!claimDetails) return;
+    const urlsToPreload: string[] = [];
+
+    const attachments = getAttachmentsArray(claimDetails.attachments_detailed || claimDetails.attachments || claimDetails.bills || claimDetails.photos);
+    attachments.forEach((att: any) => {
+      const url = typeof att === "string" ? att : (att.file_url || att.url || "");
+      if (url) {
+        const fullUrl = url.startsWith("http") || url.startsWith("data:") ? url : `${API_BASE}${url}`;
+        if (!fullUrl.toLowerCase().endsWith(".pdf")) urlsToPreload.push(fullUrl);
+      }
+    });
+
+    const itineraries = Array.isArray(claimDetails.itineraries) && claimDetails.itineraries.length > 0
+      ? claimDetails.itineraries
+      : (Array.isArray(claimDetails.legs) ? claimDetails.legs : []);
+
+    itineraries.forEach((leg: any) => {
+      const act = parseActivityDetails(leg.activity_details || leg.activity || leg.meta);
+      const candidateUrls = [
+        leg.travel_bill, leg.ta_bill, leg.ticket_url, leg.bus_bill, leg.train_ticket,
+        leg.attachment_url, leg.photo_url, leg.bill_url, leg.service_report_url, act.attachmentUrl,
+        leg.hotel_bill, leg.hotel_photo, leg.hotel_url, leg.stay_bill,
+        leg.local_purchase_bill, leg.local_purchase_photo, leg.local_purchase_url, leg.lp_bill,
+        leg.other_bill, leg.other_photo, leg.parcel_photo, leg.oth_bill
+      ];
+
+      candidateUrls.forEach((u: any) => {
+        if (u && typeof u === "string") {
+          const fullUrl = u.startsWith("http") || u.startsWith("data:") ? u : `${API_BASE}${u}`;
+          if (!fullUrl.toLowerCase().endsWith(".pdf")) urlsToPreload.push(fullUrl);
+        }
+      });
+
+      if (act.callsList) {
+        act.callsList.forEach((cItem: any) => {
+          const u = cItem.attachment_url || cItem.service_report_url || cItem.photo_url || cItem.image_url;
+          if (u && typeof u === "string") {
+            const fullUrl = u.startsWith("http") || u.startsWith("data:") ? u : `${API_BASE}${u}`;
+            if (!fullUrl.toLowerCase().endsWith(".pdf")) urlsToPreload.push(fullUrl);
+          }
+        });
+      }
+
+      if (act.pmsList) {
+        act.pmsList.forEach((pItem: any) => {
+          const u = pItem.attachment_url || pItem.service_report_url || pItem.photo_url || pItem.image_url;
+          if (u && typeof u === "string") {
+            const fullUrl = u.startsWith("http") || u.startsWith("data:") ? u : `${API_BASE}${u}`;
+            if (!fullUrl.toLowerCase().endsWith(".pdf")) urlsToPreload.push(fullUrl);
+          }
+        });
+      }
+    });
+
+    urlsToPreload.forEach((src) => {
+      const img = new Image();
+      img.src = src;
+    });
+  }, [claimDetails]);
+
+  // Dynamic Allowance Master Grade Rates Fetcher
+  useEffect(() => {
+    if (!claimDetails) return;
+    const subCode = claimDetails.submitter_code || claimDetails.user_id;
+    if (subCode) {
+      api.get(`/expense/init?userId=${encodeURIComponent(subCode)}`)
+        .then(res => {
+          if (res.data && res.data.allowance) {
+            setUserAllowance(res.data.allowance);
+          }
+        })
+        .catch(() => {});
+    }
+  }, [claimDetails]);
+
+  // Auto-resolve missing barcode details via backend asset API
+  useEffect(() => {
+    if (!claimDetails) return;
+    const itineraries = Array.isArray(claimDetails.itineraries) && claimDetails.itineraries.length > 0
+      ? claimDetails.itineraries
+      : (Array.isArray(claimDetails.legs) ? claimDetails.legs : []);
+
+    const barcodesToFetch: string[] = [];
+
+    itineraries.forEach((leg: any) => {
+      const act = parseActivityDetails(leg.activity_details || leg.activity || leg.meta);
+      
+      // PMS barcodes
+      act.pmsList.forEach((pItem: any) => {
+        const code = pItem.barcode || pItem.pms_barcode || pItem.code || pItem.serial_no || pItem.asset_barcode;
+        const eq = pItem.equipment || pItem.equipment_name || pItem.asset_name || act.equipmentName || leg.equipment_name;
+        const hosp = pItem.hospital || pItem.hospital_name || pItem.facility_name || act.hospitalName || leg.hospital_name;
+        if (code && code !== "—" && (!isValidText(eq) || !isValidText(hosp)) && !barcodeMap[code]) {
+          if (!barcodesToFetch.includes(code)) barcodesToFetch.push(code);
+        }
+      });
+
+      // Calls barcodes
+      const effectiveCalls = act.callsList.length > 0 ? act.callsList : (
+        (leg.calls_completed > 0 || isValidText(act.callsBarcode)) ? [{
+          barcode: act.callsBarcode || leg.barcode,
+          equipment: act.equipmentName || leg.equipment_name,
+          hospital: act.parsed?.calls_asset_details?.hospital_name || act.hospitalName || leg.hospital_name
+        }] : []
+      );
+
+      effectiveCalls.forEach((cItem: any) => {
+        const code = cItem.barcode || cItem.calls_barcode || cItem.code || cItem.serial_no;
+        const eq = cItem.equipment || cItem.equipment_name || cItem.asset_name || act.equipmentName || leg.equipment_name;
+        const hosp = cItem.hospital || cItem.hospital_name || cItem.facility_name || act.hospitalName || leg.hospital_name;
+        if (code && code !== "—" && (!isValidText(eq) || !isValidText(hosp)) && !barcodeMap[code]) {
+          if (!barcodesToFetch.includes(code)) barcodesToFetch.push(code);
+        }
+      });
+    });
+
+    if (barcodesToFetch.length > 0) {
+      barcodesToFetch.forEach((code) => {
+        api.get(`/expense/verify-barcode?barcode=${encodeURIComponent(code)}`)
+          .then((res: any) => {
+            const data = res.data;
+            if (data && (data.valid || data.success)) {
+              const eq = data.data?.equipment_name || data.asset_name || "";
+              const hosp = data.data?.hospital_name || data.hospital_name || "";
+              if (eq || hosp) {
+                setBarcodeMap((prev) => ({
+                  ...prev,
+                  [code]: { equipment: eq, hospital: hosp }
+                }));
+              }
+            }
+          })
+          .catch(() => {});
+      });
+    }
+  }, [claimDetails]);
+
+  if (!claimDetails) return null;
+
+  const c = claimDetails;
+  const isOwn = c.submitter_code === user?.user_id || c.user_id === user?.id;
+  const isEditable = isOwn && ["draft", "submitted", "returned_to_draft"].includes((c.status || "").toLowerCase());
+  const isDeletable = isOwn && ["draft", "returned_to_draft"].includes((c.status || "").toLowerCase());
+
+  const pendingStep = c.approvals?.find((a: any) => a.approver_code === user?.user_id && a.status === "pending");
+  const canApprove = !!pendingStep;
+
+  const isOutDistrict = c.districtType === "outstation" || c.is_outstation || c.districtType === "OUT_DISTRICT" ||
+    (c.from_district && c.to_district && c.from_district !== c.to_district);
+
+  // Parse lists
+  const itineraries = Array.isArray(c.itineraries) && c.itineraries.length > 0
+    ? c.itineraries
+    : (Array.isArray(c.legs) ? c.legs : []);
+
+  const attachments = getAttachmentsArray(c.attachments_detailed || c.attachments || c.bills || c.photos);
+  const approvals = Array.isArray(c.approvals) ? c.approvals : [];
+
+  // Rejection & Approval Status Flags
+  const isApproved = (c.status || "").toLowerCase() === "approved";
+  const rejectedStep = approvals.find((a: any) => (a.status || "").toLowerCase() === "rejected");
+  const isClaimRejected = (c.status || "").toLowerCase().includes("reject") || !!rejectedStep;
+
+  const rejectorName = rejectedStep?.approver_name || rejectedStep?.approver || c.rejected_by_name || c.rejector_name || c.rejected_by || "Manager / Coordinator";
+  const rejectorCode = rejectedStep?.approver_code || c.rejector_code || "";
+  const rejectorRole = rejectedStep?.approver_role || rejectedStep?.approver_designation || c.rejector_role || "";
+
+  const rejectionRemark = rejectedStep?.remark || c.rejection_reason || c.rejection_remark || c.deduction_remark || c.approver_remark || c.remark || "";
+
+  // Parse Travel Modes
+  const modesList = typeof c.travel_mode === "string"
+    ? c.travel_mode.split(",").map((s: string) => s.trim()).filter(Boolean)
+    : (typeof c.category === "string" ? c.category.split(",").map((s: string) => s.trim()).filter(Boolean) : []);
+
+  // Zone & Home District fallback resolution
+  const zoneVal = c.zone || c.submitter_zone || c.user_zone || (c.submitter_code === user?.user_id ? user?.zone : "") || "";
+  const firstLegFromDist = itineraries.length > 0 ? (itineraries[0].from_district || itineraries[0].from_dist || "") : "";
+  const homeDistVal = c.home_district || c.district || c.submitter_district || firstLegFromDist || (c.submitter_code === user?.user_id ? user?.district : "") || "";
+
+  // Approved Net Amount: FORCED TO 0 WHEN CLAIM IS REJECTED!
+  const rawApprovedAmt = c.approved_amount ?? c.final_amount ?? c.amount ?? c.total_amount ?? 0;
+  const approvedAmt = isClaimRejected ? 0 : rawApprovedAmt;
+
+  // Calculate Total Submitted Sum across all legs using DYNAMIC ALLOWANCE MASTER RATES
+  const legSubmittedSum = itineraries.reduce((sum: number, leg: any, idx: number) => {
+    const isFirstLeg = idx === 0;
+    const mode = leg.mode || leg.travel_mode || "Bike";
+    const km = leg.km ?? leg.distance_km ?? 0;
+    const isCar = mode.toLowerCase().includes("car") || mode.toLowerCase().includes("four");
+    
+    // Dynamic rate_per_km from database allowance_master by Grade
+    const dbBikeRate = leg.rate_bike || leg.bike_rate || userAllowance?.rate_bike || c.rate_bike || c.allowance?.rate_bike || 4.5;
+    const dbCarRate = leg.rate_car || leg.car_rate || userAllowance?.rate_car || c.rate_car || c.allowance?.rate_car || 9.0;
+    const dbOutDistrictDa = userAllowance?.daily_out_district || c.daily_out_district || c.allowance?.daily_out_district || 150;
+
+    const ratePerKm = leg.rate_per_km
+      ? parseFloat(leg.rate_per_km)
+      : (leg.rate ? parseFloat(leg.rate) : (isCar ? dbCarRate : dbBikeRate));
+
+    const ta = parseFloat(leg.amount ?? leg.travel_amount ?? 0);
+    const origTa = parseFloat(leg.original_amount ?? leg.original_travel_amount ?? 0);
+    const estimatedTa = origTa > 0 ? origTa : (ta > 0 ? ta : (km > 0 ? km * ratePerKm : 0));
+    const da = parseFloat(leg.da ?? leg.da_amount ?? 0);
+    const origDa = parseFloat(leg.original_da ?? leg.original_da_amount ?? 0);
+    const fromDist = leg.from_district || leg.from_dist || "";
+    const toDist = leg.to_district || leg.to_dist || "";
+    const isInDistrictLeg = (fromDist && toDist && fromDist.toLowerCase() === toDist.toLowerCase() && fromDist !== "—") || !isOutDistrict;
+    
+    // ONLY Leg #1 gets DA evaluated!
+    const isDaClaimed = isFirstLeg && (leg.is_da_claimed ?? leg.da_claimed ?? (origDa > 0 || (leg.da !== undefined && parseFloat(leg.da) === 0 && isInDistrictLeg)));
+    const estimatedDa = isFirstLeg ? (origDa > 0 ? origDa : (isDaClaimed ? dbOutDistrictDa : da)) : 0;
+    
+    const hotel = parseFloat(leg.hotel ?? leg.hotel_amount ?? 0);
+    const local = parseFloat(leg.local_purchase ?? leg.local_purchase_amount ?? 0);
+    const oth = parseFloat(leg.oth_amount ?? leg.other_amount ?? leg.sub_amount ?? 0);
+    return sum + estimatedTa + estimatedDa + hotel + local + oth;
+  }, 0);
+
+  const rawClaimedTotal = c.original_amount ?? c.original_total ?? c.claimed_amount ?? c.total_claimed ?? c.amount ?? c.total_amount ?? 0;
+  const originalClaimedTotal = (rawClaimedTotal > 0 && rawClaimedTotal > rawApprovedAmt)
+    ? rawClaimedTotal
+    : (legSubmittedSum > rawApprovedAmt ? legSubmittedSum : (rawClaimedTotal || rawApprovedAmt));
+
+  const totalTaSum = itineraries.reduce((sum: number, i: any) => sum + parseFloat(i.travel_amount || i.amount || 0), 0);
+  const totalTa = c.total_ta ?? c.ta_amount ?? c.travel_amount ?? (totalTaSum > 0 ? totalTaSum : 0);
+
+  const totalDaSum = itineraries.length > 0 ? parseFloat(itineraries[0].da_amount || itineraries[0].da || 0) : 0;
+  const totalDa = c.total_da ?? c.da_amount ?? (totalDaSum > 0 ? totalDaSum : 0);
+
+  const totalHotelSum = itineraries.reduce((sum: number, i: any) => sum + parseFloat(i.hotel_amount || i.hotel || 0), 0);
+  const totalHotel = c.hotel_amount ?? (totalHotelSum > 0 ? totalHotelSum : 0);
+
+  const localPurchaseSum = itineraries.reduce((sum: number, i: any) => sum + parseFloat(i.local_purchase || 0), 0);
+  const localPurchase = c.local_purchase_amount ?? c.local_purchase ?? (localPurchaseSum > 0 ? localPurchaseSum : 0);
+
+  const otherAmountSum = itineraries.reduce((sum: number, i: any) => sum + parseFloat(i.other_amount || i.oth_amount || i.sub_amount || 0), 0);
+  const otherAmount = c.other_expense_amount ?? c.other_amount ?? c.sub_amount ?? (otherAmountSum > 0 ? otherAmountSum : 0);
+
+  // Extract all other expense remarks across legs
+  const allOtherRemarks = itineraries.map((leg: any) => {
+    const act = parseActivityDetails(leg.activity_details || leg.activity || leg.meta);
+    return isValidText(leg.parcel_desc) ? leg.parcel_desc
+      : (isValidText(leg.sub_mode_desc) ? leg.sub_mode_desc
+      : (isValidText(leg.other_desc) ? leg.other_desc
+      : (isValidText(leg.other_expense_remark) ? leg.other_expense_remark
+      : (isValidText(leg.other_expense_reason) ? leg.other_expense_reason
+      : (isValidText(leg.other_reason) ? leg.other_reason
+      : (isValidText(leg.oth_remark) ? leg.oth_remark
+      : (isValidText(act.otherDesc) ? act.otherDesc : "")))))));
+  }).filter(Boolean).join(", ");
+
+  const deductionAmt = isClaimRejected
+    ? originalClaimedTotal
+    : ((c.deduction_amount ?? c.deduction_amt ?? 0) > 0
+        ? (c.deduction_amount ?? c.deduction_amt ?? 0)
+        : (originalClaimedTotal > approvedAmt ? (originalClaimedTotal - approvedAmt) : 0));
+
+  const overallBaseLocationReason = c.base_location_deduction_reason || c.base_location_reason || c.base_location_policy || c.location_policy_reason || "";
+  const overallSystemReason = c.system_deduction_reason || c.policy_deduction_reason || c.policy_reason || "";
+
+  const hasOverallDeduction = deductionAmt > 0 ||
+    isValidText(c.km_deduction_reason) ||
+    isValidText(c.da_deduction_reason) ||
+    isValidText(overallBaseLocationReason) ||
+    isValidText(overallSystemReason) ||
+    isValidText(c.deduction_remark) ||
+    isValidText(c.approver_remark);
+
+  // Work done totals (STRICT 0 CHECK)
+  const totalCallsCompleted = c.calls_completed ?? itineraries.reduce((sum: number, i: any) => sum + (i.calls_completed || i.ws_closed || 0), 0);
+  const totalCallsAssigned = c.calls_assigned ?? itineraries.reduce((sum: number, i: any) => sum + (i.calls_assigned || i.ws_assigned || 0), 0);
+  const totalPms = c.pms_completed ?? c.pms_count ?? itineraries.reduce((sum: number, i: any) => sum + (i.pms_count || i.ws_pms || 0), 0);
+  const totalCalibration = c.calibration_count ?? itineraries.reduce((sum: number, i: any) => sum + (i.calibration_count || 0), 0);
+  const totalMobilise = c.mobilise_count ?? c.mobilise_asset_count ?? itineraries.reduce((sum: number, i: any) => sum + (i.mobilise_count || 0), 0);
+  const totalAssetTagging = c.asset_tagging ?? itineraries.reduce((sum: number, i: any) => sum + (i.asset_tagging || i.ws_asset || 0), 0);
+
+  // Total Distance calculation
+  const calculatedTotalKm = c.total_km ?? itineraries.reduce((sum: number, i: any) => sum + parseFloat(i.km || i.distance_km || 0), 0);
+
+  // Parse overall Purpose & Activity
+  const parsedOverallActivity = parseActivityDetails(c.description || c.purpose || c.activity_details || c.meta);
+  const cleanPurpose = isValidText(parsedOverallActivity.text) ? parsedOverallActivity.text : (isValidText(c.purpose) ? c.purpose : (isValidText(c.description) ? c.description : ""));
+  const overallOtherReason = isValidText(c.other_reason) ? c.other_reason : (isValidText(c.other_desc) ? c.other_desc : (isValidText(c.category_remark) ? c.category_remark : (isValidText(parsedOverallActivity.otherDesc) ? parsedOverallActivity.otherDesc : "")));
+
+  return (
+    <Modal
+      open={open}
+      onCancel={onClose}
+      centered={true}
+      width={860}
+      destroyOnClose
+      className="claim-details-compact-modal"
+      wrapClassName="my-claims-modal-wrap"
+      maskStyle={{ backdropFilter: "blur(3px)", background: "rgba(15, 23, 42, 0.5)" }}
+      bodyStyle={{ padding: 0, background: "#f8fafc", maxHeight: "82vh", overflowY: "auto" }}
+      styles={{
+        header: { display: "none" },
+        footer: { borderTop: "1px solid #e2e8f0", padding: "8px 12px", background: "#ffffff", margin: 0 },
+      }}
+      footer={
+        <div className="flex items-center justify-between flex-wrap gap-2">
+          {/* Action buttons */}
+          <div className="flex items-center gap-1.5 flex-wrap">
+            {isEditable && (
+              <button
+                onClick={() => { onClose(); navigate(`/submit-expense?edit=${c.id}`); }}
+                className="inline-flex items-center gap-1 px-3 py-1 rounded text-[10.5px] font-bold bg-amber-50 text-amber-700 border border-amber-200 hover:bg-amber-100 transition-colors"
+              >
+                <Pencil size={10} /> Edit
+              </button>
+            )}
+            {isDeletable && (
+              <button
+                onClick={() => handleDeleteClaim(c.id)}
+                className="inline-flex items-center gap-1 px-3 py-1 rounded text-[10.5px] font-bold bg-rose-50 text-rose-600 border border-rose-200 hover:bg-rose-100 transition-colors"
+              >
+                <Trash2 size={10} /> Delete
+              </button>
+            )}
+            {canApprove && !showRejectBox && (
+              <>
+                <button
+                  onClick={handleApprove}
+                  disabled={actionLoading}
+                  className="inline-flex items-center gap-1 px-3.5 py-1 rounded text-[10.5px] font-bold bg-emerald-600 text-white border border-emerald-700 hover:bg-emerald-700 transition-colors disabled:opacity-50"
+                >
+                  <CheckCircle2 size={10} /> {actionLoading ? "Processing…" : "Approve"}
+                </button>
+                <button
+                  onClick={() => setShowRejectBox(true)}
+                  className="inline-flex items-center gap-1 px-3 py-1 rounded text-[10.5px] font-bold bg-rose-50 text-rose-600 border border-rose-200 hover:bg-rose-100 transition-colors"
+                >
+                  <XCircle size={10} /> Reject
+                </button>
+              </>
+            )}
+            {showRejectBox && (
+              <div className="flex items-center gap-1.5">
+                <input
+                  type="text"
+                  value={comments}
+                  onChange={e => setComments(e.target.value)}
+                  placeholder="Rejection reason…"
+                  className="text-[10.5px] border border-slate-200 rounded px-2 py-1 bg-white text-slate-700 focus:outline-none focus:border-[#4A6A8A] min-w-[180px]"
+                />
+                <button
+                  onClick={handleReject}
+                  disabled={actionLoading || !comments.trim()}
+                  className="inline-flex items-center gap-1 px-2.5 py-1 rounded text-[10.5px] font-bold bg-rose-600 text-white hover:bg-rose-700 transition-colors disabled:opacity-50"
+                >
+                  <XCircle size={10} /> Confirm
+                </button>
+                <button
+                  onClick={() => { setShowRejectBox(false); setComments(""); }}
+                  className="text-[10px] text-slate-400 hover:text-slate-600 transition-colors px-1"
+                >
+                  Cancel
+                </button>
+              </div>
+            )}
+          </div>
+
+          <button
+            onClick={onClose}
+            className="inline-flex items-center gap-1 px-3 py-1 rounded text-[10.5px] font-semibold text-slate-600 border border-slate-200 bg-white hover:bg-slate-50 transition-colors"
+          >
+            <X size={10} /> Close
+          </button>
+        </div>
+      }
+    >
+      {/* ─── MODAL HEADER ─────────────────────────────────────────────────── */}
+      <div className="flex items-center justify-between px-3 py-2 bg-white border-b border-slate-200 sticky top-0 z-20 shadow-2xs">
+        <div className="flex items-center gap-2 min-w-0">
+          <div className={`w-1 h-6 rounded-full shrink-0 ${isOutDistrict ? "bg-orange-500" : "bg-[#4A6A8A]"}`} />
+          <div className="flex items-center gap-2 flex-wrap">
+            <span className={`text-[13px] font-extrabold font-mono tracking-tight ${isOutDistrict ? "text-orange-600" : "text-[#4A6A8A]"}`}>
+              {c.expense_code || c.claim_id || `#${c.id}`}
+            </span>
+            <span className={`text-[9px] font-bold px-1.5 py-0.2 rounded border ${
+              isOutDistrict ? "bg-orange-50 text-orange-600 border-orange-200" : "bg-blue-50 text-blue-600 border-blue-200"
+            }`}>
+              {isOutDistrict ? "Out-District" : "In-District"}
+            </span>
+            {c.hasMismatch && (
+              <span className="text-[9px] font-bold px-1.5 py-0.2 rounded border bg-amber-50 text-amber-700 border-amber-200">
+                ⚠️ Mismatch
+              </span>
+            )}
+            <StatusBadge status={c.status} record={c} getStatusBadgeClass={getStatusBadgeClass} getStatusLabel={getStatusLabel} />
+          </div>
+        </div>
+        <button
+          onClick={onClose}
+          className="w-6 h-6 rounded flex items-center justify-center text-slate-400 hover:text-slate-700 hover:bg-slate-100 transition-all shrink-0"
+        >
+          <X size={14} />
+        </button>
+      </div>
+
+      <div className="px-3 py-3 space-y-3">
+
+        {/* ─── HEADER DATA STRIP ────────────────────────────────────────────── */}
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-1.5">
+          {/* Card 1: Identity */}
+          <div className="bg-white rounded-lg border border-slate-200 p-2 shadow-2xs space-y-0.5">
+            <div className="flex items-center gap-1 text-slate-400 text-[8.5px] font-bold uppercase tracking-wider">
+              <FileText size={10} className="text-[#4A6A8A]" /> Claim Identity
+            </div>
+            <div className="text-[11.5px] font-extrabold text-[#4A6A8A] font-mono truncate">
+              {c.expense_code || c.claim_id || `#${c.id}`}
+            </div>
+            <div className="text-[9px] text-slate-500 font-semibold truncate flex items-center gap-1 flex-wrap">
+              <span>Category: <b className="text-slate-800">{c.category || c.travel_mode || "Auto"}</b></span>
+              {modesList.map((m: string, idx: number) => <ModeChip key={idx} mode={m} />)}
+            </div>
+          </div>
+
+          {/* Card 2: Submitter */}
+          <div className="bg-white rounded-lg border border-slate-200 p-2 shadow-2xs space-y-0.5">
+            <div className="flex items-center gap-1 text-slate-400 text-[8.5px] font-bold uppercase tracking-wider">
+              <User size={10} className="text-indigo-600" /> Submitted By
+            </div>
+            <div className="text-[11.5px] font-extrabold text-slate-800 truncate">
+              {c.submitter_name || c.name || "—"}
+            </div>
+            <div className="text-[9px] text-slate-500 font-medium truncate">
+              {c.submitter_code && <span className="font-mono text-slate-600 mr-1">[{c.submitter_code}]</span>}
+              {c.designation || c.submitter_designation || ""}
+            </div>
+          </div>
+
+          {/* Card 3: Mapped Zone & District */}
+          <div className="bg-white rounded-lg border border-slate-200 p-2 shadow-2xs space-y-0.5">
+            <div className="flex items-center gap-1 text-slate-400 text-[8.5px] font-bold uppercase tracking-wider">
+              <Building2 size={10} className="text-emerald-600" /> Mapped Zone & District
+            </div>
+            <div className="text-[11.5px] font-extrabold text-slate-800 truncate">
+              {zoneVal ? `Zone ${zoneVal}` : (homeDistVal ? `${homeDistVal} Zone` : "—")}
+            </div>
+            <div className="text-[9px] text-slate-500 font-medium truncate">
+              Home: <b>{homeDistVal || "—"}</b>
+            </div>
+          </div>
+
+          {/* Card 4: Timing (24-HOUR FORMAT) */}
+          <div className="bg-white rounded-lg border border-slate-200 p-2 shadow-2xs space-y-0.5">
+            <div className="flex items-center gap-1 text-slate-400 text-[8.5px] font-bold uppercase tracking-wider">
+              <Calendar size={10} className="text-amber-600" /> Claim Date (24H)
+            </div>
+            <div className="text-[11.5px] font-extrabold text-slate-800 truncate">
+              {formatDateDDMMMYY(c.date || c.itinerary)}
+            </div>
+            <div className="text-[8.5px] text-slate-400 truncate font-mono">
+              {formatDateTime24(c.created_at || c.submitted_at)}
+            </div>
+          </div>
+        </div>
+
+        {/* ─── FINANCIAL SUMMARY CARDS (APPROVED NET ONLY WHEN APPROVED) ─── */}
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-1.5">
+          <MiniAmountBox label="Total Claimed" value={rupee(originalClaimedTotal)} color="#4A6A8A" />
+          <MiniAmountBox
+            label={isApproved ? "Approved Net" : (isClaimRejected ? "Approved Net" : "Estimated Net")}
+            value={isClaimRejected ? "₹0" : rupee(approvedAmt)}
+            color={isApproved ? "#10b981" : (isClaimRejected ? "#dc2626" : "#4A6A8A")}
+          />
+          <MiniAmountBox label="Travel TA" value={rupee(totalTa)} subtext={c.total_km ? `${c.total_km} km` : undefined} color="#0284c7" />
+          <MiniAmountBox label="Daily DA" value={rupee(totalDa)} color="#059669" />
+          {otherAmount > 0 && <MiniAmountBox label="Other Exp." value={rupee(otherAmount)} color="#d97706" />}
+          {localPurchase > 0 && <MiniAmountBox label="Local Purchase" value={rupee(localPurchase)} color="#b45309" />}
+          {totalHotel > 0 && <MiniAmountBox label="Hotel / Stay" value={rupee(totalHotel)} color="#7c3aed" />}
+          {deductionAmt > 0 && <MiniAmountBox label="Deduction" value={`-${rupee(deductionAmt)}`} color="#dc2626" />}
+        </div>
+
+        {/* ─── ULTRA-COMPACT 1-LINE DAILY SUMMARY STRIP WITH EXACT FROM/TO LOCATION & DISTRICT ─── */}
+        <div className="bg-[#4A6A8A]/5 border-2 border-[#4A6A8A] rounded-lg p-2 shadow-2xs space-y-1">
+          <div className="flex items-center justify-between border-b border-[#4A6A8A]/20 pb-1 flex-wrap gap-1">
+            <div className="flex items-center gap-1.5">
+              <span className="w-4 h-4 rounded bg-[#4A6A8A] text-white flex items-center justify-center text-[9px] shrink-0 font-extrabold">
+                ✨
+              </span>
+              <span className="text-[10px] font-extrabold uppercase tracking-wider text-[#4A6A8A]">
+                Daily Summary
+              </span>
+              <span className="text-[9.5px] text-slate-500 font-semibold">
+                ({formatDateDDMMMYY(c.date || c.itinerary)})
+              </span>
+            </div>
+            <div className="flex items-center gap-1.5 text-[9px]">
+              <span className="font-bold text-slate-600">
+                Claimed: <b className="text-slate-900">{rupee(originalClaimedTotal)}</b>
+              </span>
+              <span className={`font-extrabold px-1.5 py-0.2 rounded border ${
+                isApproved
+                  ? "bg-emerald-100 text-emerald-800 border-emerald-300"
+                  : (isClaimRejected ? "bg-rose-100 text-rose-800 border-rose-300" : "bg-blue-100 text-blue-900 border-blue-300")
+              }`}>
+                {isApproved
+                  ? `Approved Net: ${rupee(approvedAmt)}`
+                  : (isClaimRejected ? "Approved Net: ₹0 (Rejected)" : `Estimated Net: ${rupee(approvedAmt)}`)}
+              </span>
+            </div>
+          </div>
+
+          {/* 1-Line Clean Narrative with Location Names & Districts */}
+          <div className="text-[10px] text-slate-800 font-medium leading-snug bg-white p-1.5 rounded border border-[#4A6A8A]/20">
+            <span>
+              <b>{c.submitter_name || c.name || "Engineer"}</b>
+              {calculatedTotalKm > 0 ? <span> traveled <b>{calculatedTotalKm} km</b></span> : " local movement"}
+              {modesList.length > 0 ? <span> via <b>{modesList.join(", ")}</b></span> : ""}
+              {itineraries.length > 0 && (
+                <span> ({itineraries.map((l: any) => {
+                  const fD = l.from_district || l.from_dist || "—";
+                  const tD = l.to_district || l.to_dist || "—";
+                  const fL = l.from || l.from_location || "";
+                  const tL = l.to || l.to_location || "";
+                  const fStr = fL && fL !== "—" && fL !== fD ? `${fD} (${fL})` : fD;
+                  const tStr = tL && tL !== "—" && tL !== tD ? `${tD} (${tL})` : tD;
+                  return `${fStr} ➔ ${tStr}`;
+                }).join(", ")})</span>
+              )}.
+            </span>{" "}
+            <span>
+              Expenses: <b>TA {rupee(totalTa)}</b>
+              {totalDa > 0 ? `, Daily DA ${rupee(totalDa)}` : ""}
+              {totalHotel > 0 ? `, Hotel ${rupee(totalHotel)}` : ""}
+              {localPurchase > 0 ? `, Local Pur. ${rupee(localPurchase)}` : ""}
+              {otherAmount > 0 ? `, Other Exp ${rupee(otherAmount)}${allOtherRemarks ? ` (${allOtherRemarks})` : ""}` : ""}.
+            </span>{" "}
+            {(totalCallsCompleted > 0 || totalPms > 0 || totalCalibration > 0 || totalMobilise > 0 || totalAssetTagging > 0) && (
+              <span>
+                Work: {totalCallsCompleted > 0 ? <b>{totalCallsCompleted} Call(s) Closed</b> : ""}
+                {totalPms > 0 ? <span>{totalCallsCompleted > 0 ? ", " : ""}<b>{totalPms} PMS Done</b></span> : ""}
+                {totalCalibration > 0 ? <span>, <b>{totalCalibration} Calib</b></span> : ""}
+                {totalMobilise > 0 ? <span>, <b>{totalMobilise} Mobi</b></span> : ""}
+                {totalAssetTagging > 0 ? <span>, <b>{totalAssetTagging} Tagged</b></span> : ""}.
+              </span>
+            )}
+          </div>
+        </div>
+
+        {/* ─── DEEP LEG-BY-LEG CARDS ────────────────────────────────────────── */}
+        {itineraries.length > 0 && (
+          <div className="space-y-2">
+            <SectionHeader
+              icon={Route}
+              label="Travel & Field Visit Details"
+              count={`${itineraries.length} Legs`}
+            />
+
+            <div className="space-y-2">
+              {itineraries.map((leg: any, idx: number) => (
+                <LegDetailCard
+                  key={idx}
+                  leg={leg}
+                  index={idx}
+                  totalLegsCount={itineraries.length}
+                  setLightboxImage={setLightboxImage}
+                  barcodeMap={barcodeMap}
+                  claimDistrictType={c.districtType || (isOutDistrict ? "Out-District" : "In-District")}
+                  userAllowance={userAllowance}
+                  claimMaster={c}
+                  allAttachments={attachments}
+                />
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* ─── PURPOSE OF VISIT & REASON DETAILS (PLACED BELOW LEGS) ─────────── */}
+        {(cleanPurpose || overallOtherReason) && (
+          <div className="bg-[#4A6A8A]/5 rounded-lg border border-[#4A6A8A]/20 shadow-2xs p-2.5 space-y-1.5">
+            <SectionHeader icon={Activity} label="Purpose of Visit & Reason Details" />
+            {cleanPurpose && (
+              <div className="text-[10.5px] text-slate-700 font-medium leading-normal bg-white p-2 rounded border border-slate-100">
+                {cleanPurpose}
+              </div>
+            )}
+            {overallOtherReason && (
+              <div className="bg-amber-50/90 p-2 rounded border border-amber-200 text-[10.5px] text-amber-950 font-medium flex items-start gap-1.5">
+                <Info size={13} className="text-amber-700 shrink-0 mt-0.5" />
+                <div>
+                  <b className="text-amber-800">Reason for Other Category / Travel:</b>
+                  <div className="mt-0.5 text-slate-800 font-semibold">{overallOtherReason}</div>
+                </div>
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* ─── WORK DONE SUMMARY (ONLY RENDER IF WORK COMPLETED IS STRICTLY > 0) ─── */}
+        {(totalCallsCompleted > 0 || totalPms > 0 || totalCalibration > 0 || totalMobilise > 0 || totalAssetTagging > 0) && (
+          <div className="bg-white rounded-lg border border-slate-200 shadow-2xs p-2.5">
+            <SectionHeader icon={Zap} label="Work Done Summary" />
+            <div className="flex flex-wrap gap-1.5 text-[10px]">
+              {totalCallsCompleted > 0 && (
+                <div className="flex items-center gap-1.5 px-2.5 py-1 rounded bg-blue-50/60 border border-blue-100 font-bold text-blue-900">
+                  📞 Calls Done: <b>{totalCallsCompleted} / {totalCallsAssigned || totalCallsCompleted}</b>
+                </div>
+              )}
+              {totalPms > 0 && (
+                <div className="flex items-center gap-1.5 px-2.5 py-1 rounded bg-emerald-50/60 border border-emerald-100 font-bold text-emerald-900">
+                  🔧 PMS Done: <b>{totalPms}</b>
+                </div>
+              )}
+              {totalCalibration > 0 && (
+                <div className="flex items-center gap-1.5 px-2.5 py-1 rounded bg-purple-50/60 border border-purple-100 font-bold text-purple-900">
+                  🎯 Calibration: <b>{totalCalibration}</b>
+                </div>
+              )}
+              {totalMobilise > 0 && (
+                <div className="flex items-center gap-1.5 px-2.5 py-1 rounded bg-amber-50/60 border border-amber-100 font-bold text-amber-900">
+                  📦 Mobilisation: <b>{totalMobilise}</b>
+                </div>
+              )}
+              {totalAssetTagging > 0 && (
+                <div className="flex items-center gap-1.5 px-2.5 py-1 rounded bg-indigo-50/60 border border-indigo-100 font-bold text-indigo-900">
+                  🏷️ Asset Tagging: <b>{totalAssetTagging}</b>
+                </div>
+              )}
+            </div>
+          </div>
+        )}
+
+        {/* ─── ATTACHMENTS & BILL INVOICES GALLERY ──────────────────────────── */}
+        <div className="bg-white rounded-lg border border-slate-200 shadow-2xs p-2.5">
+          <SectionHeader icon={Package} label="Attachments & Invoices" count={attachments.length} />
+          {attachments.length === 0 ? (
+            <div className="text-center py-3 text-[10px] text-slate-400">
+              No bills uploaded for this claim
+            </div>
+          ) : (
+            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-1.5">
+              {attachments.map((att: any, i: number) => (
+                <AttachmentCard
+                  key={i}
+                  att={att}
+                  index={i}
+                  setLightboxImage={setLightboxImage}
+                />
+              ))}
+            </div>
+          )}
+        </div>
+
+        {/* ─── REMARKS & DEDUCTIONS (FOR DEDUCTIONS / ADJUSTMENTS WHEN NOT FULLY REJECTED) ─── */}
+        {hasOverallDeduction && !isClaimRejected && (
+          <div className="bg-white rounded-lg border border-rose-200 shadow-2xs p-2.5">
+            <SectionHeader icon={AlertTriangle} label="Deductions & Policy Remarks" accent="#ef4444" />
+            <div className="space-y-1 text-[10px]">
+              {deductionAmt > 0 && (
+                <div className="flex items-start gap-2 py-1 border-b border-slate-100">
+                  <span className="text-[9.5px] font-bold text-slate-400 uppercase tracking-wide min-w-[140px] shrink-0">Total Deduction</span>
+                  <span className="text-[11px] font-black text-rose-600">-{rupee(deductionAmt)}</span>
+                </div>
+              )}
+              {overallBaseLocationReason && (
+                <div className="flex items-start gap-2 py-1 border-b border-slate-100 bg-indigo-50/60 p-1.5 rounded border border-indigo-200">
+                  <span className="text-[9px] font-bold text-indigo-900 uppercase tracking-wide min-w-[140px] shrink-0 flex items-center gap-1">
+                    📍 Base Working Location
+                  </span>
+                  <span className="text-[10px] font-semibold text-slate-800">{overallBaseLocationReason}</span>
+                </div>
+              )}
+              {c.km_deduction_reason && (
+                <div className="flex items-start gap-2 py-1 border-b border-slate-100 bg-amber-50/60 p-1.5 rounded border border-amber-200">
+                  <span className="text-[9px] font-bold text-amber-900 uppercase tracking-wide min-w-[140px] shrink-0 flex items-center gap-1">
+                    ⚙️ System KM Policy
+                  </span>
+                  <span className="text-[10px] font-semibold text-slate-800">{c.km_deduction_reason}</span>
+                </div>
+              )}
+              {c.da_deduction_reason && (
+                <div className="flex items-start gap-2 py-1 border-b border-slate-100 bg-amber-50/60 p-1.5 rounded border border-amber-200">
+                  <span className="text-[9px] font-bold text-amber-900 uppercase tracking-wide min-w-[140px] shrink-0 flex items-center gap-1">
+                    ⚙️ System DA Policy
+                  </span>
+                  <span className="text-[10px] font-semibold text-slate-800">{c.da_deduction_reason}</span>
+                </div>
+              )}
+              {overallSystemReason && (
+                <div className="flex items-start gap-2 py-1 border-b border-slate-100 bg-amber-50/60 p-1.5 rounded border border-amber-200">
+                  <span className="text-[9px] font-bold text-amber-900 uppercase tracking-wide min-w-[140px] shrink-0 flex items-center gap-1">
+                    ⚙️ System Base Policy
+                  </span>
+                  <span className="text-[10px] font-semibold text-slate-800">{overallSystemReason}</span>
+                </div>
+              )}
+              {(c.deduction_remark || c.approver_remark || c.remark) && (
+                <div className="flex items-start gap-2 py-1 bg-rose-50/60 p-1.5 rounded border border-rose-200">
+                  <span className="text-[9px] font-bold text-rose-900 uppercase tracking-wide min-w-[140px] shrink-0 flex items-center gap-1">
+                    👤 Rejection Remark:
+                  </span>
+                  <span className="text-[10px] font-semibold text-slate-800">{c.deduction_remark || c.approver_remark || c.remark}</span>
+                </div>
+              )}
+            </div>
+          </div>
+        )}
+
+        {/* ─── ULTRA-COMPACT REJECTION BANNER & POLICY NOTICE ─── */}
+        {isClaimRejected && (
+          <div className="rounded-lg border border-rose-200 bg-rose-50/70 p-2 space-y-1.5">
+            {/* Header & Rejector Info */}
+            <div className="flex items-center justify-between border-b border-rose-200/60 pb-1 flex-wrap gap-1">
+              <div className="flex items-center gap-1">
+                <div className="w-3.5 h-3.5 rounded-full bg-rose-600 text-white flex items-center justify-center font-extrabold text-[8.5px]">
+                  ✕
+                </div>
+                <span className="text-[10px] font-extrabold text-rose-900 uppercase tracking-tight">
+                  Expense Claim Rejected
+                </span>
+              </div>
+              <div className="px-1.5 py-0.2 rounded bg-rose-100 text-rose-900 text-[9px] font-bold border border-rose-200/80">
+                Rejected By: <b>{rejectorName}</b> {rejectorCode ? `[${rejectorCode}]` : ""} {rejectorRole ? `(${rejectorRole})` : ""}
+              </div>
+            </div>
+
+            {/* Rejection Remark - EXACT TITLE REQUESTED: Rejection Remark: */}
+            {rejectionRemark && (
+              <div className="bg-white px-2 py-1 rounded border-l-3 border-rose-500 border-y border-r border-rose-200/60 text-[10px] text-slate-800">
+                <span className="text-rose-800 font-extrabold text-[8.5px] uppercase tracking-wider block">
+                  👤 Rejection Remark:
+                </span>
+                <div className="text-slate-900 font-semibold leading-snug">
+                  "{rejectionRemark}"
+                </div>
+              </div>
+            )}
+
+            {/* Ultra-Compact English Policy Notice */}
+            <div className="text-[9px] text-slate-700 font-medium flex items-center gap-1 bg-rose-100/50 px-2 py-0.5 rounded border border-rose-200/50">
+              <AlertTriangle size={11} className="text-rose-600 shrink-0" />
+              <span>
+                <b>Policy Notice:</b> Expense claim for <b>{formatDateDDMMMYY(c.date || c.itinerary)}</b> was rejected. No re-submission or reimbursement is allowed for this date.
+              </span>
+            </div>
+          </div>
+        )}
+
+        {/* ─── APPROVAL WORKFLOW (24-HOUR TIME FORMAT) ──────────────────────── */}
+        {approvals.length > 0 && (
+          <div className="bg-white rounded-lg border border-slate-200 shadow-2xs p-2.5">
+            <SectionHeader icon={ShieldCheck} label="Approval Workflow" count={`${approvals.length} Levels`} />
+            <div className="space-y-1.5">
+              {approvals.map((step: any, i: number) => <ApprovalStep key={i} step={step} index={i} />)}
+            </div>
+          </div>
+        )}
+
+      </div>
+    </Modal>
+  );
+};
+
+export default ClaimDetailsModal;
