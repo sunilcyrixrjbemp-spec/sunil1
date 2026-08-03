@@ -178,6 +178,7 @@ export default function HomePage() {
   const [lightboxImage, setLightboxImage] = useState<string | null>(null);
   const [displayImageUrl, setDisplayImageUrl] = useState<string | null>(null);
   const [isConvertingHeic, setIsConvertingHeic] = useState(false);
+  const [lbZoom, setLbZoom] = useState(1);
 
   useEffect(() => {
     if (lightboxImage) {
@@ -2055,6 +2056,7 @@ export default function HomePage() {
         footer={null}
         onCancel={() => {
           setLightboxImage(null);
+          setLbZoom(1);
           document.body.style.overflow = '';
           document.body.style.pointerEvents = '';
           document.body.style.touchAction = '';
@@ -2063,25 +2065,48 @@ export default function HomePage() {
           document.documentElement.style.touchAction = '';
         }}
         width={750}
-        bodyStyle={{ padding: 16, textAlign: "center", background: "#111827" }}
+        bodyStyle={{ padding: 0, background: "#ffffff", borderRadius: "0 0 8px 8px", overflow: "hidden" }}
         className="lightbox-modal"
         closeIcon={
-          <div className="bg-slate-800 hover:bg-slate-700 text-white rounded-full w-8 h-8 flex items-center justify-center text-sm border border-slate-700 transition-colors shadow-lg font-bold">✕</div>
+          <div className="bg-white hover:bg-slate-100 text-slate-700 rounded-full w-8 h-8 flex items-center justify-center text-sm border border-slate-300 transition-colors shadow font-bold">✕</div>
         }
         centered
+        afterClose={() => setLbZoom(1)}
       >
-        {isConvertingHeic ? (
-          <div className="text-white flex flex-col items-center justify-center gap-3 p-8">
-            <Loader2 className="w-8 h-8 animate-spin text-blue-500" />
-            <span className="text-xs font-bold tracking-wide">Converting Apple HEIC image...</span>
-          </div>
-        ) : (
-          <img 
-            src={displayImageUrl || lightboxImage || undefined} 
-            alt="Receipt Invoice Lightbox" 
-            className="max-w-full max-h-[75vh] rounded object-contain mx-auto"
-          />
-        )}
+        {/* Zoom Controls */}
+        <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 8, padding: "8px 12px", background: "#f8fafc", borderBottom: "1px solid #e2e8f0" }}>
+          <button
+            onClick={() => setLbZoom(z => Math.max(0.2, parseFloat((z - 0.25).toFixed(2))))}
+            style={{ background: "#334155", color: "#fff", border: "none", borderRadius: 6, width: 32, height: 32, fontSize: 20, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", fontWeight: "bold" }}
+            title="Zoom Out"
+          >−</button>
+          <span style={{ fontSize: 12, fontWeight: 700, color: "#475569", minWidth: 44, textAlign: "center" }}>{Math.round(lbZoom * 100)}%</span>
+          <button
+            onClick={() => setLbZoom(z => Math.min(5, parseFloat((z + 0.25).toFixed(2))))}
+            style={{ background: "#334155", color: "#fff", border: "none", borderRadius: 6, width: 32, height: 32, fontSize: 20, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", fontWeight: "bold" }}
+            title="Zoom In"
+          >+</button>
+          <button
+            onClick={() => setLbZoom(1)}
+            style={{ background: "#e2e8f0", color: "#334155", border: "none", borderRadius: 6, padding: "0 10px", height: 32, fontSize: 11, cursor: "pointer", fontWeight: 700 }}
+            title="Reset Zoom"
+          >Reset</button>
+        </div>
+        {/* Image Area */}
+        <div style={{ background: "#ffffff", overflow: "auto", maxHeight: "78vh", display: "flex", alignItems: "flex-start", justifyContent: "center", padding: 12 }}>
+          {isConvertingHeic ? (
+            <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 12, padding: 32 }}>
+              <Loader2 className="w-8 h-8 animate-spin text-blue-500" />
+              <span style={{ fontSize: 12, fontWeight: 700 }}>Converting Apple HEIC image...</span>
+            </div>
+          ) : (
+            <img
+              src={displayImageUrl || lightboxImage || undefined}
+              alt="Receipt Invoice Lightbox"
+              style={{ transform: `scale(${lbZoom})`, transformOrigin: "top center", transition: "transform 0.2s", maxWidth: "100%", display: "block", borderRadius: 4 }}
+            />
+          )}
+        </div>
       </Modal>
 
       {showPageScrollTop && (
